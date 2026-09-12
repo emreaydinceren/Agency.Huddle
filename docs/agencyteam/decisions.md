@@ -1,0 +1,282 @@
+# Decision record
+
+Five dated entries from 2026-09-11, newest first, each recording what changed
+and — more usefully — what was considered and rejected. Read it when you are
+about to revisit a decision, or when an older Markdown file in this repo
+disagrees with current vocabulary and you need the old-to-new mapping.
+
+This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
+and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
+
+**2026-09-12 — the product is Agency.Huddle; the code stays `Team`.**
+
+"Team" is a generic noun one word from Microsoft Teams, so it fails as a name
+anyone can search for. The product joins the Agency brand family in the dotted
+grammar the sibling repo already uses (`Agency.Harness`).
+
+**Ten names were checked; every descriptive one was taken.** Rooms, Council,
+Roundtable, BrainTrust, BoardRoom and HQ are each already the name of a
+multi-agent product or a large neighbour — GitHub's *Agent HQ* is one letter from
+"Agency HQ". The one collision-free candidate, Cabinet, was declined on register.
+`Agency.HQ` was chosen on 2026-09-11 and set aside the next day for the same
+reason: it reads as uptight. Huddle is warmer and names the act — what the Chief
+of Staff does when it pulls the CMO and CFO into a Room — rather than the
+building or the staff.
+
+**Huddle's collisions were known and accepted.** Slack Huddles is a named feature
+of the product this one is shaped like, and `mcp-huddle` is an existing MCP server
+with rooms, JSONL storage and a dashboard for humans to watch. This is a
+non-commercial project; the repo owner weighed both against warmth and chose
+warmth. The post's argument — the human in every Room by schema, a one-line reply
+rule, verbs not stages, no engine — is what has to carry the differentiation.
+
+**What changed: the marketing surface only.** `README.md`, the hub's title,
+`docs/why-agency-huddle.md`, `CONTEXT-MAP.md` and the domain-context page.
+
+**What did not change: two identifiers, deliberately.** The `mcp__team__` tool
+prefix is model-facing prompt text in 12 code files and every persona, a test pins
+it, and a model never reads it as a brand. The `Team:` configuration root is a
+breaking change for any running install. Neither has a brand benefit that pays for
+its cost. Glossary terms are untouched: *Teammate* and *Team Directory* are
+domain words.
+
+**Namespaces were the separate decision, and it was taken on 2026-09-12.** The
+root is now `Agency.Huddle.*` across all six projects. The wire derived nothing
+from them — every discriminator is a string literal — and the predicted
+verification held exactly: warnings-as-errors gave a 0-warning rebuild of both
+solutions, and both suites passed unchanged at 309 and 251 (8 E2E skipped).
+Projects, assemblies, folders and the two solution files stay `Team.*`;
+`<RootNamespace>` in each `.csproj` carries the split, and `AcpReferenceTests`
+pins the assembly name.
+
+Two things the rename did cost, neither of which the compiler could see. The
+`Logging:LogLevel` filters are category prefixes and had to move with the
+namespaces or degrade silently — see [Traps](traps.md). And the open argument
+from the original entry survives: `Team.Acp` is a chat-agnostic library that
+arguably should not carry the product's name. It was renamed with the rest for
+consistency inside one solution; reversing that root alone stays a
+self-contained change if the library is ever extracted.
+
+**The wire did not change.** `ProtocolVersion.Current` stays `2`.
+
+**2026-09-11 — a Persona's frontmatter becomes its job description.**
+
+`mcp__team__list_agents` told a caller *who* exists and nothing about what
+each teammate does — `Chief of Staff.md` even told its own reader to work
+around that by reading frontmatter off disk by hand, since the tool couldn't.
+Every Persona file already carried a YAML frontmatter block (`role`,
+`summary`, `consult_when`, ...); nothing in the code read it.
+
+**What changed: `PersonaFrontmatter`.** A hand-rolled, dependency-free parser
+(ported from a sibling repo's `Agency.Harness.Markdown.FrontmatterParser`, not
+referenced across the repo boundary) splits a Persona's optional leading
+`---`-delimited block into ordered fields. `list_agents` composes them into a
+"Key: Value" line per non-`_`-prefixed field, title-cased, in file order —
+`_`-prefixed fields are reserved for future programmatic use and never shown.
+
+**Where the port diverges, and why.** The source parser guesses a scalar is a
+list from commas, spaces or brackets when a caller asks for a named field as
+one. Team's real frontmatter has quoted scalars *containing* commas — `role:
+'Router, triage, and cross-workstation continuity'` — so that guess would have
+split a sentence into fields. A field counts as a list here only when it
+actually uses YAML block-list syntax. The port also strips YAML's `'...'`/
+`"..."` quoting and unescapes `''` to `'`, neither of which the source parser
+does, because Team's persona authors quote almost every scalar.
+
+**A second bug came free with the parser.** `PersonaRunner.BuildDescription`
+took the first line of a Persona's raw file for the pipe `Hello.Description`
+— always `"---"` once frontmatter existed, silently, since nothing validated
+it. It now reads the first line of `PersonaFrontmatter.Parse(...).Body`
+instead.
+
+**`PersonaStore`'s docstring no longer claims "no frontmatter and no
+schema."** That was already false the day frontmatter first appeared in
+`personas/*.md`; nothing enforces a schema still — no required fields, no
+allowlist, unlike the source repo's `PersonaParser` — so a Persona with none
+at all still works exactly as before.
+
+**The wire did not change.** `ProtocolVersion.Current` stays `2`. Frontmatter
+is read only by `PersonaFrontmatter`; `Persona.Text` — frontmatter included —
+still becomes the whole system prompt, unchanged. The Model's decision to live
+in SQLite, not front matter, below, is untouched: this is informational
+metadata, not schema to extend.
+
+**2026-09-11 — the system prompt names one tool, and that tool names the rest.**
+
+Every App Tool added so far had been added twice: once to the factory, and once
+to the prose in `SystemPromptComposer`. That is a list with no compiler behind it,
+paid for on every Turn of every session, and the second copy is the one that
+silently goes stale.
+
+**What changed: `mcp__team__get_help`.** The prompt now opens with a canned
+orientation — this is a chat application, call `get_help` when unsure — and the
+tool answers with the Room model, the Reply Gate, the Mention rules and the whole
+catalog, each tool named with its `mcp__team__` prefix and its own `Description`.
+The catalog is built *from the tools the factory registered*, so a tool added
+there documents itself. `GetHelpTool` therefore takes the other tools rather than
+sitting among them, and is constructed last.
+
+**The old block was kept, deliberately.** The fixed text below the Persona still
+states the chat rules inline. Progressive discovery is then an amplification
+rather than a precondition: an Agent that never calls a tool still behaves
+correctly, and a model that does call `get_help` gets the detail that would be
+wasteful to send every Turn. The cost is a duplicated rule, recorded in [Known
+limits](known-limits.md).
+
+**And an Invitation stopped being the Human's alone.** `InviteAsync` had existed
+since the `/invite` command and had exactly one caller. It now has three:
+the command, **Add teammate** on the Room header (`InviteTeammate.razor`), and
+`mcp__team__invite_agent`. Nothing about the Invitation itself moved — the point
+is that no door reimplements it.
+
+**That exposed a real gap.** `invite_agent` and `post_message` both take a room
+id, and **nothing in a Turn had carried one**: the prompt label was
+`[Room: name]`. Both tools could therefore only ever reach a Room the Agent had
+created itself in that session, and the failure was invisible, because a wrong id
+comes back as ordinary tool error text. The label is now
+`[Room: name (id: …)]`, and `get_help` says that is where a room id comes from.
+
+**The wire did not change.** `ProtocolVersion.Current` stays `2`. App Tools are
+settled between `Team.App` and the adapter over MCP; the pipe never learns a tool
+exists.
+
+**2026-09-11 — a Persona chooses its Model, and the list is discovered.**
+
+Every Persona ran on whatever the adapter defaulted to, so every Agent cost the
+same and reasoned the same. Giving a Persona a Model made it the *second* thing a
+Persona is — the first time that record held anything but a name and a body.
+
+**Where it is stored: SQLite, not front matter.** A `.md` a user can drop in has
+nowhere to put a Model without inventing a schema, and `PersonaStore`'s own
+docstring promises there is none. The table is new rather than a column on
+`users` for a blunt mechanical reason: the schema is created with
+`CREATE TABLE IF NOT EXISTS`, which **silently ignores an added column** on a
+database that predates it. A new column would have forced everyone to delete
+`App_Data`; a new table does not. A test builds a pre-change database and then
+opens it with `PersonaModelStore` to pin exactly that.
+
+**Where the list comes from: the agent, not a constant.** ACP has no
+`models/list`; a catalog only arrives as a side effect of `session/new`
+(`docs/acp/session-config-options.md`). So `ModelCatalogProbe` spawns a throwaway
+adapter, handshakes, reads `configOptions`, and stops **before any Turn** — a
+process, but no tokens. That is what makes it acceptable to run while
+`Acp:Enabled` is `false`. The alternative, a hardcoded list of model ids, ages
+the moment a new model ships and can offer something the installed adapter cannot
+actually run. Every value in the picker provably came from the agent itself.
+
+**How it is applied: `session/set_config_option`.** The vendored adapter
+advertises no `models`/`SessionModelState`, so `session/set_model` does not exist
+for us. A Model absent from the catalog is a logged warning and nothing more —
+the session starts on the agent's default. A stale stored value must never be
+able to brick a Persona.
+
+**The restart came for free, after one correction.** The first design added a
+`ModelsChanged` event, because `PersonaSupervisor` learns about Persona edits from
+a `FileSystemWatcher` and a database write fires no filesystem event. That was
+unnecessary. Putting `PersonaModelStore` behind `PersonaStore` made `Get` the
+single place where file and database join, and `PersonasChanged` — already
+raised, already subscribed by both the supervisor and the page — carried it. The
+supervisor's diff widened from `Text` to the whole `Persona` and nothing else
+moved. `Update` deliberately takes text and Model *together* and has no default
+for the Model: two writes would raise two events and spawn two `node` processes
+per save, and a default would let a surviving two-argument call silently wipe a
+stored Model.
+
+`PersonaStore` did gain a database dependency, which is a real loss. The property
+that actually mattered survives intact: it still has no reference to
+`ITeamDirectory`, so removing a Persona still cannot cascade into Agents, Rooms
+or Transcripts.
+
+**The wire did not change.** `ProtocolVersion.Current` stays `2`. Nothing about a
+Model crosses the pipe — it is settled between `Team.App` and the adapter over
+ACP, and the chat surface never learns what is behind an Agent.
+
+**2026-09-11 — a Name is a display name, and the card that shows it.**
+
+Two changes with one cause. `^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$` forced
+`chief-of-staff` on something a person would write as `Chief of Staff`, which
+made a Teammate read as a record rather than as somebody. Slack's own directory
+was the reference: people there have names with spaces, and clicking one opens a
+profile.
+
+Allowing the space cost far more than the regex, because a Name is three things
+at once — a wire identity, a Persona's filename, and a token parsed out of
+message text. The third is the one that broke. **No pattern can find the end of
+`@Emily Lee`**: it is the same characters as `@Emily` followed by the word "Lee",
+and only the Room's membership can say which was meant. So `MentionParser` stopped
+reading a Mention's shape out of the text and started matching Member Names
+against it, longest first — the member list it had always been handed became the
+authority it had never been asked to be. `/invite` had the same bug in miniature
+and now captures everything after the command, leaving `InviteAsync` to reject
+what the Team Directory does not hold.
+
+A quoting syntax — `@"Emily Lee"` — was considered and rejected. Nobody types it,
+Slack does not ask for it, and it would have put the burden of the ambiguity on
+every writer instead of resolving it once.
+
+The filename half stayed strict. Leading, trailing and doubled spaces are
+refused, because Windows silently strips a trailing space and `coo ` would
+otherwise be one file presenting as two Teammates. Chasing that turned up an
+older hole: `$` in .NET matches before a trailing newline, so the previous rule
+had accepted `"coo\n"`. Both guards now anchor with `\A` and `\z`.
+
+With Names reading as people, the `/teammates` page no longer could. A flat list
+with an inline `<textarea>` and an add form pinned to the bottom is file
+management, so it became a grid of tiles opening one card — `TeammateCard`, with
+viewing, editing and creating as three modes of a single layout rather than three
+layouts that would drift. The parent holds the draft text so that switching
+Teammates cannot show you the previous one's.
+
+Renaming was deliberately left out; see [Known limits](known-limits.md).
+
+**The wire did not change.** `ProtocolVersion.Current` stays `2`. Widening the
+set of accepted Names is backward compatible — every Name an old client could
+send is still valid, `tools/echo-bot.ps1` never validated one locally, and the
+`Mentioned` flag every Agent relies on has always been computed server-side.
+
+| Old | New |
+| --- | --- |
+| `^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$` | `\A(?=.{1,64}\z)[A-Za-z0-9](?:[ ]?[A-Za-z0-9_-])*\z` |
+| Mentions found by regex | Mentions resolved against the Room's Members, longest Name first |
+| `/invite` captured a Name by shape | `/invite` captures the rest of the line |
+| `^` and `$` in `NameRules` | `\A` and `\z` |
+| A list, an inline edit form, a bottom-of-page add form | A tile grid and one `TeammateCard` in three modes |
+
+**2026-09-11 — one vocabulary across UX and code.**
+
+The glossary that preceded this document banned the word "agent", yet `agent`
+appeared 116 times in `src/` — more often than `Bot` (92) — because the App Tool
+contract needed a word for *a Bot or a Persona* and nothing supplied one. A
+prohibition that removes a word without replacing the concept does not get
+obeyed; it gets routed around. Alongside that, the `/agents` page managed Persona
+files, `Sandbox` named a directory that had to be documented as "not a jail", and
+the UI still said "Direct Room" at a newcomer.
+
+The resolution makes **Teammate** the umbrella, which frees **Agent** to carry
+the single meaning the tool contract already gave it. `list_agents`,
+`create_room` and the `agents[]` parameter were therefore correct as they stood
+and were not renamed — no system-prompt edit, and no re-derivation of the
+`mcp__team__` naming rule.
+
+| Old | New |
+| --- | --- |
+| Bot | Agent |
+| — | Teammate (new umbrella: the Human plus Agents) |
+| Agent Host, Persona Bot | Agent, or `PersonaRunner` for the runtime |
+| Agent Session | session |
+| Direct Room, Group Room | Room (behaviour follows from member count) |
+| Persona Library | the Persona library, lower case; `PersonaStore` in code |
+| Sandbox, `Acp:SandboxDir` | Work Dir, `Acp:WorkDir` |
+| `IDirectory`, `SqliteDirectory` | `ITeamDirectory`, `SqliteTeamDirectory` |
+| `Team:DemoBot:*` | `Team:DemoAgent:*` |
+| `/agents` page | `/teammates` page |
+
+The wire and the database changed with the code: `welcome.botId` is now
+`welcome.agentId`, the `kind` value `"bot"` is now `"agent"`, and
+`ProtocolVersion.Current` went from `1` to `2`. Existing `App_Data` was discarded
+rather than migrated.
+
+Two things were deliberately left alone. **`Team.Acp` keeps ACP's vocabulary**,
+for the reason given in [Two bounded contexts](../AgencyTeam.md#two-bounded-contexts). And
+**`tools/echo-bot.ps1` keeps its filename**, because it is referenced by path from
+documents that are not being edited; a file path is not vocabulary.

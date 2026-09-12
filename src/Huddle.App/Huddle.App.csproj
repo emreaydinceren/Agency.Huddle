@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>Agency.Huddle.App</RootNamespace>
+    <NoWarn>$(NoWarn);CA1031;CA1848;CA2007</NoWarn>
+    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Huddle.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="Markdig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Huddle.Contracts\Huddle.Contracts.csproj" />
+    <ProjectReference Include="..\Huddle.Acp\Huddle.Acp.csproj" />
+  </ItemGroup>
+
+</Project>

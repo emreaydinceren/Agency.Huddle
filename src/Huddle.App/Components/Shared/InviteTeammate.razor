@@ -1,0 +1,149 @@
+@implements IDisposable
+@using Agency.Huddle.App.Pipes
+@inject ITeamDirectory TeamDirectory
+@inject IAgentGateway Gateway
+@inject ChatService Chat
+@inject RoomEvents Events
+
+<div class="invite-teammate">
+    <button type="button" class="invite-toggle" @onclick="this.TogglePanel">Add teammate</button>
+    <div class="invite-panel" hidden="@(!this.isOpen)">
+        @if (this.errorText is not null)
+        {
+            <div class="composer-error">@this.errorText</div>
+        }
+        else if (this.infoText is not null)
+        {
+            <div class="composer-info">@this.infoText</div>
+        }
+
+        @if (this.candidates.Count == 0)
+        {
+            <p class="empty-state">Every agent is already in this room.</p>
+        }
+        else
+        {
+            <ul class="invite-agents">
+                @foreach (var agent in this.candidates)
+                {
+                    var online = this.Gateway.IsOnline(agent.Id);
+                    var name = agent.Name;
+                    <li>
+                        <button type="button" class="invite-agent" @onclick="@(() => this.InviteAsync(name))">
+                            <span class="agent-dot @(online ? "online" : "offline")" title="@(online ? "online" : "offline")"></span>
+                            @name
+                        </button>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>The Room an Agent is invited into.</summary>
+    [Parameter, EditorRequired]
+    public string RoomId { get; set; } = "";
+
+    private IReadOnlyList<User> candidates = [];
+    private string? loadedRoomId;
+    private bool isOpen;
+    private string? errorText;
+    private string? infoText;
+
+    protected override void OnInitialized()
+    {
+        this.Events.RoomsChanged += this.OnRoomsChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (this.RoomId == this.loadedRoomId)
+        {
+            return;
+        }
+
+        // Switching Rooms must not carry the previous Room's panel state across, the same reason
+        // Teammates.razor holds the card's draft text in the parent.
+        this.loadedRoomId = this.RoomId;
+        this.isOpen = false;
+        this.errorText = null;
+        this.infoText = null;
+        await this.LoadCandidatesAsync();
+    }
+
+    public void Dispose()
+    {
+        // The hub is a singleton: a component that does not unsubscribe here never dies.
+        this.Events.RoomsChanged -= this.OnRoomsChanged;
+    }
+
+    private void TogglePanel()
+    {
+        this.isOpen = !this.isOpen;
+        if (!this.isOpen)
+        {
+            this.errorText = null;
+            this.infoText = null;
+        }
+    }
+
+    private async Task InviteAsync(string agentName)
+    {
+        this.errorText = null;
+        this.infoText = null;
+
+        try
+        {
+            // The same call the /invite command and mcp__team__invite_agent make, so a Room is
+            // renamed after its Agents however the Invitation was issued.
+            var room = await this.Chat.InviteAsync(this.RoomId, agentName);
+            this.infoText = $"Invited {agentName}. Room is now \"{room.Name}\".";
+        }
+        catch (ChatException ex)
+        {
+            this.errorText = ex.Message;
+        }
+
+        await this.LoadCandidatesAsync();
+    }
+
+    /// <summary>Loads the Agents that are not already Members of this Room.</summary>
+    private async Task LoadCandidatesAsync()
+    {
+        if (string.IsNullOrEmpty(this.RoomId))
+        {
+            this.candidates = [];
+            return;
+        }
+
+        var users = await this.TeamDirectory.GetUsersAsync();
+        var members = await this.TeamDirectory.GetRoomMembersAsync(this.RoomId);
+        var memberIds = members.Select(m => m.Id).ToHashSet(StringComparer.Ordinal);
+
+        this.candidates = [.. users.Where(u => u.Kind == UserKind.Agent && !memberIds.Contains(u.Id))];
+    }
+
+    private void OnRoomsChanged()
+    {
+        _ = this.DispatchAsync(async () =>
+        {
+            await this.LoadCandidatesAsync();
+            this.StateHasChanged();
+        });
+    }
+
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+}

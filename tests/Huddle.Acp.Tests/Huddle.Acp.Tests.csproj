@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Agency.Huddle.Acp.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <NoWarn>$(NoWarn);CA1707;CA1861</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Nerdbank.Streams" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Huddle.Acp\Huddle.Acp.csproj" />
+    <ProjectReference Include="..\..\src\Huddle.App\Huddle.App.csproj" />
+    <ProjectReference Include="..\..\src\Huddle.Console\Huddle.Console.csproj" />
+    <ProjectReference Include="..\..\src\Huddle.Contracts\Huddle.Contracts.csproj" />
+  </ItemGroup>
+</Project>

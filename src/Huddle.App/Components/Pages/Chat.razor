@@ -1,0 +1,138 @@
+@page "/"
+@page "/rooms/{RoomId}"
+@implements IDisposable
+@inject ITeamDirectory TeamDirectory
+@inject IChatStore Store
+@inject RoomEvents Events
+@inject NavigationManager Navigation
+
+@if (this.room is null)
+{
+    <p class="empty-state">No rooms yet. Start an agent to create one.</p>
+}
+else
+{
+    <div class="chat-page">
+        <header class="chat-header">
+            <div class="chat-header-row">
+                <div>
+                    <h1>@this.room.Name</h1>
+                    <p class="chat-members">@string.Join(", ", this.members.Select(m => m.Name))</p>
+                </div>
+                @* The leading @ is load-bearing: RoomId="this.room.Id" would pass that literal text. *@
+                <InviteTeammate RoomId="@this.room.Id" />
+            </div>
+        </header>
+        <MessageList Messages="this.messages" />
+        <Composer RoomId="@this.room.Id" />
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string? RoomId { get; set; }
+
+    private string? loadedRoomId;
+    private Room? room;
+    private IReadOnlyList<User> members = [];
+    private List<ChatMessage> messages = [];
+
+    protected override void OnInitialized()
+    {
+        this.Events.MessagePosted += this.OnMessagePosted;
+        this.Events.RoomsChanged += this.OnRoomsChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (this.RoomId is null)
+        {
+            var rooms = await this.TeamDirectory.GetRoomsAsync();
+            if (rooms.Count > 0)
+            {
+                this.Navigation.NavigateTo($"/rooms/{rooms[0].Id}");
+                return;
+            }
+
+            this.room = null;
+            this.loadedRoomId = null;
+            return;
+        }
+
+        if (this.RoomId == this.loadedRoomId)
+        {
+            return;
+        }
+
+        this.loadedRoomId = this.RoomId;
+        await this.LoadRoomAsync(this.RoomId);
+    }
+
+    public void Dispose()
+    {
+        this.Events.MessagePosted -= this.OnMessagePosted;
+        this.Events.RoomsChanged -= this.OnRoomsChanged;
+    }
+
+    private async Task LoadRoomAsync(string roomId)
+    {
+        this.room = await this.TeamDirectory.GetRoomAsync(roomId);
+        this.members = this.room is null ? [] : await this.TeamDirectory.GetRoomMembersAsync(roomId);
+        this.messages = this.room is null ? [] : [.. await this.Store.ReadAllAsync(roomId)];
+    }
+
+    private void OnMessagePosted(MessagePostedEvent e)
+    {
+        if (e.Room.Id != this.loadedRoomId)
+        {
+            return;
+        }
+
+        _ = this.DispatchAsync(() =>
+        {
+            this.messages.Add(e.Message);
+            this.StateHasChanged();
+        });
+    }
+
+    private void OnRoomsChanged()
+    {
+        _ = this.DispatchAsync(async () =>
+        {
+            if (this.loadedRoomId is not null)
+            {
+                await this.LoadRoomAsync(this.loadedRoomId);
+            }
+
+            this.StateHasChanged();
+        });
+    }
+
+    private async Task DispatchAsync(Action action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+}

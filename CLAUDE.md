@@ -1,0 +1,52 @@
+# Agency.Huddle
+
+The product is **Agency.Huddle**. The code is **`Team`**. Two identifiers must not be
+renamed to match the brand: the `mcp__team__` tool prefix (model-facing prompt text
+in 12 code files and every persona; a test pins it; no brand benefit) and the
+`Team:` config root (a breaking change for any running install). Namespaces were
+the separate, compiler-verified decision: they moved to `Agency.Huddle.*` on
+2026-09-12. Projects, assemblies, folders and both solution files did not move,
+so `Team.App` the project declares `Agency.Huddle.App`.
+
+## Orientation
+
+`docs/AgencyTeam.md` is the source of truth for the chat surface. It is a hub:
+read it, then follow only the rows in its map that your task needs. Two of those
+pages are binding — `docs/agencyteam/rules.md` before editing `src/Team.App`,
+and `docs/agencyteam/traps.md` before touching `Team.Acp`, `Team.Contracts` or
+the wire protocol.
+
+Do **not** orient from `README.md`. It belongs to the ACP effort, and its chat
+section is several milestones behind — it still reports the app as "not yet
+functional" and links a spec that no longer exists.
+
+## Two projects, one build root
+
+Independently owned; neither side edits the other's subtree, and root files are
+shared — announce changes before making them.
+
+| | ACP effort | Chat surface |
+| --- | --- | --- |
+| Solution | `Team.slnx` | `Team.sln` |
+| Source | `src/Team.Acp`, `src/Team.Console` | `src/Team.App`, `src/Team.Contracts` |
+| Tests | `tests/Team.Acp.Tests` | `tests/Team.Tests` |
+| Docs | `docs/acp/**`, `README.md` | `docs/AgencyTeam.md`, `docs/agencyteam/**`, `docs/adr/**` |
+
+## C# code
+
+Whenever you write or edit a C# file in this repo (`.cs`, `.csx`, `.razor`, `.cshtml`),
+follow `agents/CSharpPrinciples.md`. It is not advisory — it defines the house style for
+this solution, and a `PreToolUse` hook in `.claude/settings.json` re-states it on every
+C# write or edit.
+
+Warnings are errors and nullable is on (`Directory.Build.props`). Package versions
+live only in `Directory.Packages.props` — a `Version` on a `PackageReference` is an
+error. Both solutions have tests, and the trailing `--` is required or the run
+reports "Zero tests ran" and reads as a no-op:
+
+```powershell
+dotnet build Team.sln && dotnet build Team.slnx
+dotnet test  Team.sln -- && dotnet test Team.slnx --
+```
+
+@agents/CSharpPrinciples.md

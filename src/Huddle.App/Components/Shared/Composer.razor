@@ -1,0 +1,66 @@
+@implements IDisposable
+@inject ChatService Chat
+@inject IJSRuntime JS
+
+<div class="composer">
+    @if (this.errorText is not null)
+    {
+        <div class="composer-error">@this.errorText</div>
+    }
+    else if (this.infoText is not null)
+    {
+        <div class="composer-info">@this.infoText</div>
+    }
+    <textarea @ref="this.textarea" class="composer-input" placeholder="Message… (/invite @@agent)"></textarea>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string RoomId { get; set; } = "";
+
+    private ElementReference textarea;
+    private DotNetObjectReference<Composer>? selfReference;
+    private string? errorText;
+    private string? infoText;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        this.selfReference = DotNetObjectReference.Create(this);
+        await this.JS.InvokeVoidAsync("teamComposer.attach", this.textarea, this.selfReference);
+    }
+
+    [JSInvokable]
+    public async Task SendAsync(string text)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.Length == 0)
+        {
+            return;
+        }
+
+        this.errorText = null;
+        this.infoText = null;
+
+        try
+        {
+            var result = await this.Chat.SubmitFromComposerAsync(this.RoomId, KnownIds.Human, trimmed);
+            this.infoText = result.Info;
+        }
+        catch (ChatException ex)
+        {
+            this.errorText = ex.Message;
+        }
+
+        this.StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        this.selfReference?.Dispose();
+    }
+}

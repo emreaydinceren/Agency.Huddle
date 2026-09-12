@@ -1,0 +1,64 @@
+@implements IDisposable
+@inject ITeamDirectory TeamDirectory
+@inject RoomEvents Events
+
+<div class="room-list">
+    @if (this.rooms.Count == 0)
+    {
+        <p class="empty-state">No rooms yet. Start an agent to create one.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var room in this.rooms)
+            {
+                <li>
+                    <NavLink href="@($"/rooms/{room.Id}")">@room.Name</NavLink>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<Room> rooms = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.Events.RoomsChanged += this.OnRoomsChanged;
+        await this.LoadAsync();
+    }
+
+    public void Dispose()
+    {
+        this.Events.RoomsChanged -= this.OnRoomsChanged;
+    }
+
+    private void OnRoomsChanged()
+    {
+        _ = this.DispatchAsync(async () =>
+        {
+            await this.LoadAsync();
+            this.StateHasChanged();
+        });
+    }
+
+    private async Task LoadAsync()
+    {
+        this.rooms = await this.TeamDirectory.GetRoomsAsync();
+    }
+
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+}

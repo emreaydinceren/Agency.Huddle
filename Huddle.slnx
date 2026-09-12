@@ -1,0 +1,17 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/src/">
+    <Project Path="src/Huddle.App/Huddle.App.csproj" />
+    <Project Path="src/Huddle.Console/Huddle.Console.csproj" />
+    <Project Path="src/Huddle.Acp/Huddle.Acp.csproj" />
+    <Project Path="src/Huddle.Contracts/Huddle.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Huddle.Acp.Tests/Huddle.Acp.Tests.csproj" />
+    <Project Path="tests/Huddle.Tests/Huddle.Tests.csproj" />
+  </Folder>
+</Solution>

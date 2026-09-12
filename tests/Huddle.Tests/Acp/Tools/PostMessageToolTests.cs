@@ -1,0 +1,93 @@
+namespace Agency.Huddle.Tests.Acp.Tools;
+
+using Microsoft.Extensions.Logging.Abstractions;
+using System.Text.Json.Nodes;
+using Agency.Huddle.App.Acp.Tools;
+using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Services;
+
+public sealed class PostMessageToolTests
+{
+    [Fact]
+    public async Task PostMessage_AppendsToTheTranscript()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
+        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var chat = new ChatService(directory, store, events, NullLogger<ChatService>.Instance);
+        var tool = new PostMessageTool(chat, echo.Id);
+        var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello there" };
+
+        var result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Contains("Posted", result, StringComparison.Ordinal);
+        var stored = await store.ReadAllAsync(room.Id, ct);
+        var message = Assert.Single(stored);
+        Assert.Equal("hello there", message.Text);
+        Assert.Equal(echo.Id, message.SenderId);
+    }
+
+    [Fact]
+    public async Task PostMessage_NonMemberRoom_ReturnsErrorText()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var chat = new ChatService(directory, store, events, NullLogger<ChatService>.Instance);
+        var tool = new PostMessageTool(chat, echo.Id);
+        var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello" };
+
+        var result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Contains("Could not post", result, StringComparison.Ordinal);
+        var stored = await store.ReadAllAsync(room.Id, ct);
+        Assert.Empty(stored);
+    }
+
+    [Fact]
+    public async Task PostMessage_FromToolThread_ReachesRoomEventsSubscribers()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
+        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var chat = new ChatService(directory, store, events, NullLogger<ChatService>.Instance);
+        var tool = new PostMessageTool(chat, echo.Id);
+        var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "from a threadpool thread" };
+        var tcs = new TaskCompletionSource<MessagePostedEvent>(TaskCreationOptions.RunContinuationsAsynchronously);
+        events.MessagePosted += e => tcs.TrySetResult(e);
+
+        var toolThread = Task.Run(
+            async () =>
+            {
+                Assert.Null(SynchronizationContext.Current);
+                await tool.InvokeAsync(arguments, ct);
+            },
+            ct);
+
+        var completed = await Task.WhenAny(tcs.Task, Task.Delay(TimeSpan.FromSeconds(5), ct));
+        await toolThread;
+
+        Assert.Same(tcs.Task, completed);
+        var published = await tcs.Task;
+        Assert.Equal(room.Id, published.Room.Id);
+        Assert.Equal("from a threadpool thread", published.Message.Text);
+    }
+}

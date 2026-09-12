@@ -1,0 +1,453 @@
+@page "/teammates"
+@implements IDisposable
+@using System.Diagnostics
+@using Agency.Huddle.Acp.Abstractions
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Pipes
+@inject PersonaStore Personas
+@inject ITeamDirectory TeamDirectory
+@inject IAgentGateway Gateway
+@inject RoomEvents Events
+@inject IModelCatalog ModelCatalog
+
+<div class="teammates-page">
+    <header class="teammates-header">
+        <h1>Teammates</h1>
+        <button type="button" class="teammate-card-primary teammates-new" @onclick="this.BeginCreate">New teammate</button>
+    </header>
+
+    <p class="teammates-intro">
+        A Persona is a Markdown file describing how one teammate should behave, plus the model it
+        thinks with. Add one and that teammate comes online with a chat of its own. Editing the file,
+        or changing its model, restarts it, which clears what it remembers. Removing the file only
+        takes it offline — its chats and their history stay.
+    </p>
+
+    @if (this.error is not null)
+    {
+        <p class="composer-error">@this.error</p>
+    }
+
+    @if (this.personas.Count == 0)
+    {
+        <p class="empty-state">No Personas yet. Choose <strong>New teammate</strong> to add one.</p>
+    }
+    else
+    {
+        <ul class="teammates-list">
+            @foreach (var name in this.personas)
+            {
+                var online = this.IsOnline(name);
+                <li class="teammates-item">
+                    @* The whole tile opens the card, the way a person in Slack's directory does. *@
+                    <button type="button" class="teammate-tile" @onclick="() => this.OpenCard(name)">
+                        <span class="teammate-avatar" aria-hidden="true">@Monogram(name)</span>
+                        <span class="teammate-tile-text">
+                            <span class="teammates-item-name">@name</span>
+                            <span class="teammate-tile-status">
+                                <span class="agent-dot @(online ? "online" : "offline")"></span>
+                                @(online ? "Online" : "Offline")
+                            </span>
+                        </span>
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@if (this.cardMode is not null)
+{
+    @* Every attribute here binding a string/string? parameter (Name, Text, Model, Effort, RoomId,
+       FilePath, Error) MUST keep its leading @. Drop it and Razor treats the value as a plain
+       string literal rather than a field reference — the card would show "this.cardName" as its
+       Name instead of the Persona's actual name. The compiler cannot catch this: a literal is
+       legal wherever a string is expected, so it compiles clean and only misbehaves at runtime.
+       Parameters of any other type (enum, bool, list, EventCallback) are unambiguous either way,
+       which is why only the seven string ones below need the @. *@
+    <TeammateCard Mode="this.cardMode.Value"
+                  Name="@this.cardName"
+                  NameChanged="this.OnCardNameChanged"
+                  Text="@this.cardText"
+                  TextChanged="this.OnCardTextChanged"
+                  Model="@this.cardModel"
+                  ModelChanged="this.OnCardModelChanged"
+                  AvailableModels="this.availableModels"
+                  ModelsLoading="this.modelsLoading"
+                  Effort="@this.cardEffort"
+                  EffortChanged="this.OnCardEffortChanged"
+                  AvailableEfforts="this.availableEfforts"
+                  EffortsLoading="this.effortsLoading"
+                  IsOnline="this.IsOnline(this.cardName)"
+                  RoomId="@this.cardRoomId"
+                  FilePath="@this.cardFilePath"
+                  Error="@this.cardError"
+                  ConfirmingRemove="this.confirmingRemove"
+                  OnClose="this.CloseCard"
+                  OnSave="this.SaveCardAsync"
+                  OnEdit="this.BeginEdit"
+                  OnOpen="this.OpenInEditor"
+                  OnRemove="this.BeginRemove"
+                  OnConfirmRemove="this.ConfirmRemoveAsync"
+                  OnCancelRemove="this.CancelRemove" />
+}
+
+@code {
+    private IReadOnlyList<string> personas = [];
+    private readonly Dictionary<string, string?> agentIdByPersona = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string?> roomIdByPersona = new(StringComparer.Ordinal);
+    private string? error;
+
+    // The open card, entirely. Null means no card is open; every other field below is only
+    // meaningful while it is not, and CloseCard() clears the lot so no state survives a close.
+    private TeammateCardMode? cardMode;
+    private string cardName = string.Empty;
+    private string cardText = string.Empty;
+    private string? cardModel;
+    private string? cardEffort;
+    private string? cardRoomId;
+    private string? cardFilePath;
+    private string? cardError;
+    private bool confirmingRemove;
+
+    // Only populated while a Create/Edit card is open — see LoadModelsAsync for why the probe never
+    // runs before then.
+    private IReadOnlyList<AgentModelOption> availableModels = [];
+    private bool modelsLoading;
+
+    // Only populated while a Create/Edit card is open — see LoadEffortsAsync for why the probe
+    // never runs before then.
+    private IReadOnlyList<AgentEffortOption> availableEfforts = [];
+    private bool effortsLoading;
+
+    // Guards a superseded probe. Unlike the model catalog, the effort catalog is re-read whenever
+    // the model <select> changes, so the user can start a second probe while the first is still in
+    // flight; without this, a slow answer for the abandoned model lands on the new choice.
+    private int effortProbeGeneration;
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.Personas.PersonasChanged += this.OnPersonasChanged;
+        this.Events.RoomsChanged += this.OnRoomsChanged;
+        await this.LoadAsync();
+    }
+
+    public void Dispose()
+    {
+        this.Personas.PersonasChanged -= this.OnPersonasChanged;
+        this.Events.RoomsChanged -= this.OnRoomsChanged;
+    }
+
+    // Initials from the first and last word: "Emily Lee" reads as EL and "Chief of Staff" as CS.
+    // First-and-last rather than the first two words, so a middle word like "of" does not get a
+    // letter it does not deserve. A one-word Name such as "echo" reads as E.
+    private static string Monogram(string name)
+    {
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return words.Length switch
+        {
+            0 => "?",
+            1 => char.ToUpperInvariant(words[0][0]).ToString(),
+            _ => string.Concat(char.ToUpperInvariant(words[0][0]), char.ToUpperInvariant(words[^1][0])),
+        };
+    }
+
+    private bool IsOnline(string personaName)
+    {
+        var agentId = this.agentIdByPersona.GetValueOrDefault(personaName);
+        return agentId is not null && this.Gateway.IsOnline(agentId);
+    }
+
+    // Stays synchronous, and deliberately does not probe: this is the tile-click path, which must
+    // stay instant. It reuses the Persona this call already fetched rather than calling Get again.
+    private void OpenCard(string personaName)
+    {
+        var persona = this.Personas.Get(personaName);
+
+        this.cardMode = TeammateCardMode.View;
+        this.cardName = personaName;
+        this.cardText = persona?.Text ?? string.Empty;
+        this.cardModel = persona?.Model;
+        this.cardEffort = persona?.Effort;
+        this.cardRoomId = this.roomIdByPersona.GetValueOrDefault(personaName);
+        this.cardFilePath = this.TryPathFor(personaName);
+        this.cardError = null;
+        this.confirmingRemove = false;
+        this.error = null;
+    }
+
+    private async Task BeginCreate()
+    {
+        this.cardMode = TeammateCardMode.Create;
+        this.cardName = string.Empty;
+        this.cardText = string.Empty;
+        this.cardModel = null;
+        this.cardEffort = null;
+        this.cardRoomId = null;
+        this.cardFilePath = null;
+        this.cardError = null;
+        this.confirmingRemove = false;
+        this.error = null;
+
+        // Sequential, not parallel: the probe's single SemaphoreSlim serialises them anyway, and on
+        // Create the second call is a pure cache hit (no model chosen yet means the default-model
+        // effort ladder, which the model probe's own session already populated).
+        await this.LoadModelsAsync();
+        await this.LoadEffortsAsync();
+    }
+
+    private async Task BeginEdit()
+    {
+        this.cardMode = TeammateCardMode.Edit;
+        var persona = this.Personas.Get(this.cardName);
+        this.cardText = persona?.Text ?? this.cardText;
+        this.cardModel = persona?.Model ?? this.cardModel;
+        this.cardEffort = persona?.Effort ?? this.cardEffort;
+        this.cardError = null;
+        this.confirmingRemove = false;
+
+        await this.LoadModelsAsync();
+        await this.LoadEffortsAsync();
+    }
+
+    private void CloseCard()
+    {
+        this.cardMode = null;
+        this.cardName = string.Empty;
+        this.cardText = string.Empty;
+        this.cardModel = null;
+        this.cardEffort = null;
+        this.cardRoomId = null;
+        this.cardFilePath = null;
+        this.cardError = null;
+        this.confirmingRemove = false;
+        this.availableModels = [];
+        this.availableEfforts = [];
+
+        // Bumps past whatever generation an in-flight probe is holding, so a slow answer that lands
+        // after the card is closed cannot repaint state nobody is looking at any more.
+        this.effortProbeGeneration++;
+    }
+
+    private void OnCardNameChanged(string value)
+    {
+        this.cardName = value;
+    }
+
+    private void OnCardTextChanged(string value)
+    {
+        this.cardText = value;
+    }
+
+    private async Task OnCardModelChanged(string? value)
+    {
+        this.cardModel = value;
+
+        // The effort ladder belongs to the model. The adapter rebuilds thought_level on every
+        // model switch and silently clamps a level the new model does not support, so a level
+        // chosen against the old model is not a level for this one: clear it rather than carry a
+        // choice across that the user never made for this model.
+        this.cardEffort = null;
+
+        await this.LoadEffortsAsync();
+    }
+
+    private void OnCardEffortChanged(string? value)
+    {
+        this.cardEffort = value;
+    }
+
+    // Runs on form-open, never on page-load: spawning the throwaway adapter this probes with costs
+    // a real process, so it must never happen just from browsing to /teammates. Awaiting it here
+    // yields at least once, so Blazor renders the card (with ModelsLoading true) before the probe
+    // answers — no manual StateHasChanged() needed.
+    private async Task LoadModelsAsync()
+    {
+        this.modelsLoading = true;
+        try
+        {
+            this.availableModels = await this.ModelCatalog.GetAsync(CancellationToken.None);
+        }
+        finally
+        {
+            this.modelsLoading = false;
+        }
+    }
+
+    // Runs on card-open AND on every model change - the effort catalog is per model, so unlike the
+    // model catalog it cannot be read once and reused. Awaiting yields at least once, so Blazor
+    // renders with EffortsLoading true before the probe answers; no manual StateHasChanged needed.
+    private async Task LoadEffortsAsync()
+    {
+        var generation = ++this.effortProbeGeneration;
+        this.effortsLoading = true;
+        try
+        {
+            var efforts = await this.ModelCatalog.GetEffortLevelsAsync(this.cardModel, CancellationToken.None);
+            if (generation == this.effortProbeGeneration)
+            {
+                this.availableEfforts = efforts;
+            }
+        }
+        finally
+        {
+            if (generation == this.effortProbeGeneration)
+            {
+                this.effortsLoading = false;
+            }
+        }
+    }
+
+    // One handler for both writing modes: Create adds a file, Edit overwrites one. A failure keeps
+    // the card open and shows why, so the text the user typed is never thrown away by an error.
+    private async Task SaveCardAsync()
+    {
+        var creating = this.cardMode == TeammateCardMode.Create;
+
+        try
+        {
+            if (creating)
+            {
+                this.Personas.Add(this.cardName, this.cardText, this.cardModel, this.cardEffort);
+            }
+            else
+            {
+                this.Personas.Update(this.cardName, this.cardText, this.cardModel, this.cardEffort);
+            }
+        }
+        catch (ChatException ex)
+        {
+            this.cardError = ex.Message;
+            return;
+        }
+
+        var saved = this.cardName;
+        await this.LoadAsync();
+
+        // Land on the saved Teammate's details rather than closing outright, so a new teammate can
+        // be read back immediately and an edit visibly took.
+        this.OpenCard(saved);
+    }
+
+    private void BeginRemove()
+    {
+        this.confirmingRemove = true;
+        this.cardError = null;
+    }
+
+    private void CancelRemove()
+    {
+        this.confirmingRemove = false;
+    }
+
+    private async Task ConfirmRemoveAsync()
+    {
+        try
+        {
+            this.Personas.Remove(this.cardName);
+        }
+        catch (ChatException ex)
+        {
+            this.cardError = ex.Message;
+            this.confirmingRemove = false;
+            return;
+        }
+
+        this.CloseCard();
+        this.error = null;
+        await this.LoadAsync();
+    }
+
+    // Opens a Persona's file in whatever the OS has registered for .md. This launches a process on
+    // the SERVER, not the browser (a browser cannot open a local file from an http:// page). It is
+    // deliberately ungated: this app is expected to run on the user's own machine, where "open the
+    // file I'm looking at" on the same machine is unsurprising. If this app were ever hosted for
+    // remote users, this action would need to be removed rather than gated.
+    private void OpenInEditor()
+    {
+        try
+        {
+            var path = this.Personas.PathFor(this.cardName);
+            using var process = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+            this.cardError = null;
+        }
+        catch (ChatException ex)
+        {
+            this.cardError = ex.Message;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            this.cardError = $"Could not open '{this.cardName}': {ex.Message}";
+        }
+    }
+
+    private string? TryPathFor(string personaName)
+    {
+        try
+        {
+            return this.Personas.PathFor(personaName);
+        }
+        catch (ChatException)
+        {
+            return null;
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        this.personas = this.Personas.ListNames();
+
+        this.agentIdByPersona.Clear();
+        this.roomIdByPersona.Clear();
+        foreach (var personaName in this.personas)
+        {
+            var agent = await this.TeamDirectory.FindUserByNameAsync(personaName);
+            this.agentIdByPersona[personaName] = agent?.Id;
+
+            // Only a Teammate that has actually connected has a Room to be messaged in, so the
+            // card's Message action is absent rather than broken for one that never has.
+            this.roomIdByPersona[personaName] = agent is null
+                ? null
+                : (await this.TeamDirectory.FindRoomWithExactMembersAsync(KnownIds.Human, agent.Id))?.Id;
+        }
+
+        // An open card is showing a snapshot taken when it opened, so refresh the one field that a
+        // background event can change under it: the Teammate may have just come online.
+        if (this.cardMode == TeammateCardMode.View && this.cardName.Length > 0)
+        {
+            this.cardRoomId = this.roomIdByPersona.GetValueOrDefault(this.cardName);
+        }
+    }
+
+    private void OnPersonasChanged()
+    {
+        _ = this.DispatchAsync(async () =>
+        {
+            await this.LoadAsync();
+            this.StateHasChanged();
+        });
+    }
+
+    private void OnRoomsChanged()
+    {
+        _ = this.DispatchAsync(async () =>
+        {
+            await this.LoadAsync();
+            this.StateHasChanged();
+        });
+    }
+
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+}

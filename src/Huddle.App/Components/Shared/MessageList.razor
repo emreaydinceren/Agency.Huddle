@@ -1,0 +1,33 @@
+@inject IJSRuntime JS
+
+<div class="message-list" @ref="this.container">
+    @foreach (var message in this.Messages)
+    {
+        <div class="message-row">
+            <div class="message-meta">
+                <span class="message-sender">@message.SenderName</span>
+                <span class="message-time">@message.Timestamp.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.CurrentCulture)</span>
+            </div>
+            <div class="message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text))</div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public IReadOnlyList<ChatMessage> Messages { get; set; } = [];
+
+    private ElementReference container;
+    private int lastRenderedCount;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (this.Messages.Count == this.lastRenderedCount)
+        {
+            return;
+        }
+
+        this.lastRenderedCount = this.Messages.Count;
+        await this.JS.InvokeVoidAsync("teamScroll.toBottom", this.container);
+    }
+}

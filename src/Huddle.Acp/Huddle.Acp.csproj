@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Agency.Huddle.Acp</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="dotacp.client" />
+    <PackageReference Include="dotacp.protocol" />
+    <PackageReference Include="StreamJsonRpc" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Huddle.Acp.Tests" />
+  </ItemGroup>
+</Project>

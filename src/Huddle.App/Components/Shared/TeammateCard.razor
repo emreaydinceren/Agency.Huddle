@@ -1,0 +1,366 @@
+
+@*
+    A Teammate's details, shown the way Slack shows a profile: one card, opened over the page.
+    Viewing, editing and creating are three modes of this same card rather than three layouts, so a
+    Teammate presents identically whichever verb brought you here.
+
+    The card is deliberately a plain overlay <div> and not a <dialog>: a real dialog needs
+    showModal() from JavaScript to get its backdrop, and nothing else on this page needs interop.
+*@
+
+@using Agency.Huddle.Acp.Abstractions
+
+<div class="teammate-overlay" @onclick="this.OnClose">
+    @* The card swallows clicks so that clicking inside it does not reach the backdrop above. *@
+    <div class="teammate-card-panel" role="dialog" aria-modal="true" aria-label="@this.CardTitle" @onclick:stopPropagation="true">
+        <header class="teammate-card-header">
+            <h2>@this.CardTitle</h2>
+            <button type="button" class="teammate-card-close" title="Close" aria-label="Close" @onclick="this.OnClose">&times;</button>
+        </header>
+
+        <div class="teammate-card-body">
+            @if (this.Error is not null)
+            {
+                <p class="composer-error">@this.Error</p>
+            }
+
+            <div class="teammate-card-identity">
+                <span class="teammate-avatar" aria-hidden="true">@this.Monogram</span>
+
+                @if (this.Mode == TeammateCardMode.Create)
+                {
+                    <label class="teammates-field teammate-card-name-field">
+                        Name
+                        <input type="text" placeholder="Chief of Staff"
+                               value="@this.Name"
+                               @oninput="this.OnNameInput" />
+                        <span class="teammate-card-hint">Letters, digits, spaces, <code>-</code> and <code>_</code>. Spaces are fine.</span>
+                    </label>
+                }
+                else
+                {
+                    <div class="teammate-card-identity-text">
+                        <h3 class="teammate-card-name">@this.Name</h3>
+                        <p class="teammate-card-status">
+                            <span class="agent-dot @(this.IsOnline ? "online" : "offline")"></span>
+                            @(this.IsOnline ? "Online" : "Offline")
+                        </p>
+                    </div>
+                }
+            </div>
+
+            @if (this.Mode == TeammateCardMode.View)
+            {
+                <div class="teammate-card-actions">
+                    @if (this.RoomId is not null)
+                    {
+                        <a class="teammate-card-action" href="@($"/rooms/{this.RoomId}")">Message</a>
+                    }
+                    <button type="button" class="teammate-card-action" @onclick="this.OnEdit">Edit</button>
+                    <button type="button" class="teammate-card-action" @onclick="this.OnOpen">Open</button>
+                    @if (this.ConfirmingRemove)
+                    {
+                        <button type="button" class="teammate-card-action teammates-danger" @onclick="this.OnConfirmRemove">Confirm</button>
+                        <button type="button" class="teammate-card-action" @onclick="this.OnCancelRemove">Cancel</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="teammate-card-action teammates-danger" @onclick="this.OnRemove">Remove</button>
+                    }
+                </div>
+
+                <section class="teammate-card-section">
+                    <h4>Persona</h4>
+                    <pre class="teammate-card-persona">@this.Text</pre>
+                </section>
+
+                <section class="teammate-card-section">
+                    <h4>Model</h4>
+                    <p>@this.ModelDisplayText</p>
+                </section>
+
+                <section class="teammate-card-section">
+                    <h4>Effort</h4>
+                    <p>@this.EffortDisplayText</p>
+                </section>
+
+                @if (this.FilePath is not null)
+                {
+                    <section class="teammate-card-section">
+                        <h4>Persona file</h4>
+                        <p class="teammate-card-path">@this.FilePath</p>
+                    </section>
+                }
+            }
+            else
+            {
+                <form class="teammate-card-form" @onsubmit="this.OnSave">
+                    <label class="teammates-field">
+                        Persona text
+                        <textarea placeholder="You are the Chief of Staff. You keep the team honest."
+                                  value="@this.Text"
+                                  @oninput="this.OnTextInput"></textarea>
+                        <span class="teammate-card-hint">
+                            Markdown. This becomes the teammate's system prompt.
+                            @if (this.Mode == TeammateCardMode.Edit)
+                            {
+                                <text>Saving restarts it, which clears what it remembers.</text>
+                            }
+                        </span>
+                    </label>
+                    <label class="teammates-field">
+                        Model
+                        @* @onchange, not @oninput: a <select> does not raise "input" reliably, and
+                           Blazor's own select binding uses "change". *@
+                        <select value="@this.Model" @onchange="this.OnModelChanged">
+                            <option value="">Use the agent's default</option>
+                            @foreach (var choice in this.ModelChoices)
+                            {
+                                <option value="@choice.Id">@choice.Name</option>
+                            }
+                        </select>
+                        <span class="teammate-card-hint">
+                            @if (this.ModelsLoading)
+                            {
+                                <text>Reading the models this agent offers&hellip;</text>
+                            }
+                            else if (this.AvailableModels.Count == 0)
+                            {
+                                <text>This agent advertises no models, so it will use its own default.</text>
+                            }
+                            else
+                            {
+                                <text>Which model this teammate thinks with. Changing it restarts the teammate, which clears what it remembers.</text>
+                            }
+                        </span>
+                    </label>
+                    <label class="teammates-field">
+                        Effort
+                        <select value="@this.Effort" @onchange="this.OnEffortChanged">
+                            <option value="">Use the agent's default</option>
+                            @foreach (var choice in this.EffortChoices)
+                            {
+                                <option value="@choice.Id">@choice.Name</option>
+                            }
+                        </select>
+                        <span class="teammate-card-hint">
+                            @if (this.EffortsLoading)
+                            {
+                                <text>Reading the effort levels this model offers&hellip;</text>
+                            }
+                            else if (this.AvailableEfforts.Count == 0)
+                            {
+                                <text>This model offers no effort choice, so it will think as it normally does.</text>
+                            }
+                            else
+                            {
+                                <text>How hard this teammate thinks. Changing it restarts the teammate, which clears what it remembers.</text>
+                            }
+                        </span>
+                    </label>
+                    <div class="teammate-card-actions">
+                        <button type="submit" class="teammate-card-action teammate-card-primary">
+                            @(this.Mode == TeammateCardMode.Create ? "Add teammate" : "Save")
+                        </button>
+                        <button type="button" class="teammate-card-action" @onclick="this.OnClose">Cancel</button>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public TeammateCardMode Mode { get; set; }
+
+    [Parameter]
+    public string Name { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> NameChanged { get; set; }
+
+    [Parameter]
+    public string Text { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> TextChanged { get; set; }
+
+    [Parameter]
+    public string? Model { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> ModelChanged { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<AgentModelOption> AvailableModels { get; set; } = [];
+
+    [Parameter]
+    public bool ModelsLoading { get; set; }
+
+    [Parameter]
+    public string? Effort { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> EffortChanged { get; set; }
+
+    [Parameter]
+    public IReadOnlyList<AgentEffortOption> AvailableEfforts { get; set; } = [];
+
+    [Parameter]
+    public bool EffortsLoading { get; set; }
+
+    [Parameter]
+    public bool IsOnline { get; set; }
+
+    /// <summary>The Room this Teammate shares with the Human, when one exists yet.</summary>
+    [Parameter]
+    public string? RoomId { get; set; }
+
+    [Parameter]
+    public string? FilePath { get; set; }
+
+    [Parameter]
+    public string? Error { get; set; }
+
+    [Parameter]
+    public bool ConfirmingRemove { get; set; }
+
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    [Parameter]
+    public EventCallback OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnEdit { get; set; }
+
+    [Parameter]
+    public EventCallback OnOpen { get; set; }
+
+    [Parameter]
+    public EventCallback OnRemove { get; set; }
+
+    [Parameter]
+    public EventCallback OnConfirmRemove { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancelRemove { get; set; }
+
+    private string CardTitle => this.Mode switch
+    {
+        TeammateCardMode.Create => "New teammate",
+        TeammateCardMode.Edit => $"Edit {this.Name}",
+        _ => "Teammate",
+    };
+
+    // Initials from the first and last word: "Emily Lee" reads as EL and "Chief of Staff" as CS.
+    // First-and-last rather than the first two words, so a middle word like "of" does not get a
+    // letter it does not deserve. A one-word Name such as "echo" reads as E.
+    private string Monogram
+    {
+        get
+        {
+            var words = this.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            return words.Length switch
+            {
+                0 => "?",
+                1 => char.ToUpperInvariant(words[0][0]).ToString(),
+                _ => string.Concat(char.ToUpperInvariant(words[0][0]), char.ToUpperInvariant(words[^1][0])),
+            };
+        }
+    }
+
+    // Opening Edit must not silently reset a stored choice to default when saved: if the Persona's
+    // stored Model is no longer (or never was) in AvailableModels — the probe failed, or the
+    // adapter's own catalog changed — synthesise an entry for it so the <select> still shows and
+    // keeps the stored value instead of falling back to the first option.
+    private IReadOnlyList<AgentModelOption> ModelChoices
+    {
+        get
+        {
+            if (this.Model is null || this.AvailableModels.Any(m => string.Equals(m.Id, this.Model, StringComparison.Ordinal)))
+            {
+                return this.AvailableModels;
+            }
+
+            return [new AgentModelOption(this.Model, this.Model, null), .. this.AvailableModels];
+        }
+    }
+
+    private string ModelDisplayText
+    {
+        get
+        {
+            if (this.Model is null)
+            {
+                return "Agent default";
+            }
+
+            var match = this.AvailableModels.FirstOrDefault(m => string.Equals(m.Id, this.Model, StringComparison.Ordinal));
+            return match?.Name ?? this.Model;
+        }
+    }
+
+    // Opening Edit must not silently reset a stored choice to default when saved: if the Persona's
+    // stored Effort is no longer (or never was) in AvailableEfforts — the probe failed, or the
+    // adapter's own catalog changed — synthesise an entry for it so the <select> still shows and
+    // keeps the stored value instead of falling back to the first option.
+    private IReadOnlyList<AgentEffortOption> EffortChoices
+    {
+        get
+        {
+            if (this.Effort is null || this.AvailableEfforts.Any(e => string.Equals(e.Id, this.Effort, StringComparison.Ordinal)))
+            {
+                return this.AvailableEfforts;
+            }
+
+            return [new AgentEffortOption(this.Effort, this.Effort, null), .. this.AvailableEfforts];
+        }
+    }
+
+    // "Model default", not "Agent default": effort is resolved by the model, not the agent, so the
+    // null sentinel hands resolution back to the model's own default.
+    private string EffortDisplayText
+    {
+        get
+        {
+            if (this.Effort is null)
+            {
+                return "Model default";
+            }
+
+            var match = this.AvailableEfforts.FirstOrDefault(e => string.Equals(e.Id, this.Effort, StringComparison.Ordinal));
+            return match?.Name ?? this.Effort;
+        }
+    }
+
+    private Task OnNameInput(ChangeEventArgs e)
+    {
+        return this.NameChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+    }
+
+    private Task OnTextInput(ChangeEventArgs e)
+    {
+        return this.TextChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+    }
+
+    private Task OnModelChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+
+        // An empty-string model must never reach the database: it would be a row that exists but
+        // never resolves, warning on every restart (see PersonaModelStore.Set).
+        return this.ModelChanged.InvokeAsync(string.IsNullOrWhiteSpace(value) ? null : value);
+    }
+
+    private Task OnEffortChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+
+        // An empty-string effort must never reach the database: it would be a row that exists but
+        // never resolves, warning on every restart (see PersonaEffortStore.Set).
+        return this.EffortChanged.InvokeAsync(string.IsNullOrWhiteSpace(value) ? null : value);
+    }
+}

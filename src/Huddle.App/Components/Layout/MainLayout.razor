@@ -1,0 +1,18 @@
+@inherits LayoutComponentBase
+
+<div class="app-grid">
+    <nav class="sidebar">
+        <NewChat />
+        <RoomList />
+        <a class="sidebar-link" href="/teammates">Teammates</a>
+    </nav>
+    <main class="main-column">
+        @Body
+    </main>
+</div>
+
+<div id="blazor-error-ui" data-nosnippet>
+    An unhandled error has occurred.
+    <a href="." class="reload">Reload</a>
+    <span class="dismiss">🗙</span>
+</div>

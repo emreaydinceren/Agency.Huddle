@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Team.Console": {
+      "commandName": "Project",
+      "commandLineArgs": "--cwd e:\\repos\\team"
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/csharp-principles.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking C# principles"
+          }
+        ]
+      }
+    ]
+  }
+}

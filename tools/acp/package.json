@@ -1,0 +1,7 @@
+{
+  "name": "team-acp-tools",
+  "private": true,
+  "dependencies": {
+    "@agentclientprotocol/claude-agent-acp": "0.75.1"
+  }
+}

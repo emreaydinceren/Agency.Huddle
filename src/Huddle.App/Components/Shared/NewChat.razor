@@ -1,0 +1,111 @@
+@implements IDisposable
+@using Agency.Huddle.App.Pipes
+@inject ITeamDirectory TeamDirectory
+@inject IAgentGateway Gateway
+@inject ChatService Chat
+@inject RoomEvents Events
+@inject NavigationManager Navigation
+
+<div class="new-chat">
+    <button type="button" class="new-chat-toggle" @onclick="this.TogglePanel">New chat</button>
+    <div class="new-chat-panel" hidden="@(!this.isOpen)">
+        @if (this.agents.Count == 0)
+        {
+            <p class="empty-state">No agents have connected yet. Start one with <code>tools/echo-bot.ps1</code>, or enable the demo agent in <code>appsettings.json</code>.</p>
+        }
+        else
+        {
+            <ul class="new-chat-agents">
+                @foreach (var agent in this.agents)
+                {
+                    var online = this.Gateway.IsOnline(agent.Id);
+                    <li>
+                        <label>
+                            <input type="checkbox" checked="@this.selectedAgentIds.Contains(agent.Id)" @onchange="@(e => this.ToggleAgent(agent.Id, e.Value))" />
+                            <span class="agent-dot @(online ? "online" : "offline")" title="@(online ? "online" : "offline")"></span>
+                            @agent.Name
+                        </label>
+                    </li>
+                }
+            </ul>
+            <button type="button" class="new-chat-start" disabled="@(this.selectedAgentIds.Count == 0)" @onclick="this.StartChatAsync">Start chat</button>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly HashSet<string> selectedAgentIds = new(StringComparer.Ordinal);
+    private IReadOnlyList<User> agents = [];
+    private bool isOpen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.Events.RoomsChanged += this.OnRoomsChanged;
+        await this.LoadAgentsAsync();
+    }
+
+    public void Dispose()
+    {
+        this.Events.RoomsChanged -= this.OnRoomsChanged;
+    }
+
+    private void TogglePanel()
+    {
+        this.isOpen = !this.isOpen;
+    }
+
+    private void ToggleAgent(string agentId, object? isChecked)
+    {
+        if (isChecked is true)
+        {
+            this.selectedAgentIds.Add(agentId);
+        }
+        else
+        {
+            this.selectedAgentIds.Remove(agentId);
+        }
+    }
+
+    private async Task StartChatAsync()
+    {
+        if (this.selectedAgentIds.Count == 0)
+        {
+            return;
+        }
+
+        var room = await this.Chat.CreateRoomForAsync([.. this.selectedAgentIds]);
+
+        this.isOpen = false;
+        this.selectedAgentIds.Clear();
+        this.Navigation.NavigateTo($"/rooms/{room.Id}");
+    }
+
+    private async Task LoadAgentsAsync()
+    {
+        var users = await this.TeamDirectory.GetUsersAsync();
+        this.agents = [.. users.Where(u => u.Kind == UserKind.Agent)];
+    }
+
+    private void OnRoomsChanged()
+    {
+        _ = this.DispatchAsync(async () =>
+        {
+            await this.LoadAgentsAsync();
+            this.StateHasChanged();
+        });
+    }
+
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+}
