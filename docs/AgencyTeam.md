@@ -33,17 +33,17 @@ question is yours; the cost column is roughly what it will spend.
 
 | Page | Open it when you need | Cost |
 | --- | --- | --- |
-| [Language](agencyteam/language.md) | To name something, or write prose or interface copy | ~1.5k |
-| [Code map](agencyteam/code-map.md) | To find which file does a thing | ~1.3k |
+| [Language](agencyteam/language.md) | To name something, or write prose or interface copy | ~3.1k |
+| [Code map](agencyteam/code-map.md) | To find which file does a thing | ~2.8k |
 | [Runtime architecture](agencyteam/architecture.md) | To know how a Message actually travels | ~1.1k |
-| **[Rules](agencyteam/rules.md)** | **Before editing anything in `src/Huddle.App`** | ~2k |
-| **[Traps](agencyteam/traps.md)** | **Before editing `Huddle.Acp`, `Huddle.Contracts` or the wire** | ~1k |
-| [Testing](agencyteam/testing.md) | To add a test, or to verify what no test can prove | ~1.2k |
-| [Known limits](agencyteam/known-limits.md) | Before "fixing" something that looks missing | ~1.4k |
-| [Roadmap](agencyteam/roadmap.md) | Before work in `PersonaRunner`, `ReplyGate`, `IAgentHostFactory`, Persona frontmatter or `app.css` | ~8.4k |
-| [Decision record](agencyteam/decisions.md) | To revisit a decision, or to read an older doc | ~2.7k |
+| **[Rules](agencyteam/rules.md)** | **Before editing anything in `src/Huddle.App`** | ~3.9k |
+| **[Traps](agencyteam/traps.md)** | **Before editing `Huddle.Acp`, `Huddle.Contracts` or the wire** | ~2.6k |
+| [Testing](agencyteam/testing.md) | To add a test, or to verify what no test can prove | ~2.3k |
+| [Known limits](agencyteam/known-limits.md) | Before "fixing" something that looks missing | ~1.9k |
+| [Roadmap](agencyteam/roadmap.md) | Before work in `PersonaRunner`, `ReplyGate`, `IAgentHostFactory`, Persona frontmatter or `app.css` | ~10.7k |
+| [Decision record](agencyteam/decisions.md) | To revisit a decision, or to read an older doc | ~6.3k |
 | [Domain context](agencyteam/CONTEXT.md) | To see the vocabulary used in dialogue, not defined | ~0.6k |
-| [ADRs](adr/) | To read one decision in full, with what was rejected | ~0.5k each |
+| [ADRs](adr/) | To read one decision in full, with what was rejected | ~1.4k each |
 
 The two bold rows are **binding, not informative**. They are the only two pages
 whose contents can cost you a day, and neither is summarised here: a rule copied
@@ -201,6 +201,19 @@ All under the `Team:` section — `TeamOptions.cs` and `Acp/AcpOptions.cs`.
 | `Acp:TraceWire` | `false` | **Dumps the bearer token.** Debugging only. |
 | `Acp:CatchUpMessages` | `20` | Per-Room catch-up buffer size. |
 | `Acp:TokenBudget` | `1000000` | Per-Persona token Budget, summed from the rises in `UsageUpdated.Used` and reset by any Human Message. Catches a loop that mints fresh Rooms, which the per-Room Budget cannot. Zero or less disables it. |
+
+Two runtime files sit outside that section, because neither is a setting: the
+Persona library under `{DataDir}/{Acp:TeamsDir}`, and `{DataDir}/hooks.json`.
+
+| File | Holds |
+| --- | --- |
+| `{DataDir}/hooks.json` | **Overrides only**, one key per changed Hook. Absent is normal and means nothing is overridden; the app does not create it, and it appears on the first save from `/settings`. Hand-editing it is supported and watched — a save in an editor reaches the next Turn without a restart. |
+| `hooks.default.json` (beside the binary) | Every Hook's shipped wording, **generated** from `HookCatalog` and copied to the output folder. The restore source, and readable as a reference. It is not the authority: delete both files and the app still runs on exactly the text it shipped with. |
+
+A Hook is one piece of text sent to a model. See [Language](agencyteam/language.md)
+for the word, [ADR-0007](adr/0007-model-facing-text-is-configuration.md) for why
+defaults live in code, and [Rules](agencyteam/rules.md) for the two things an edit
+must never do.
 
 `Logging:LogLevel` is the one place that looks like it belongs to this section
 and does not. Its keys are log-category prefixes, and a category comes from
