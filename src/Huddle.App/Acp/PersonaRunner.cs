@@ -35,7 +35,6 @@ internal sealed class PersonaRunner : IAsyncDisposable
     private readonly CancellationTokenSource runCts = new();
     private readonly Channel<WorkItem> workItems = Channel.CreateUnbounded<WorkItem>();
     private readonly Lock turnLock = new();
-    private readonly StringBuilder currentTurnText = new();
 
     // Per-Room catch-up buffers for Messages the Agent received but was not Mentioned in (ADR-0004).
     // In memory only, per instance, keyed by Room id: a restart loses them, and an Agent that was
@@ -52,7 +51,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
     private long tokensConsumed;
     private long lastUsed;
 
-    private TaskCompletionSource<string>? currentTurnTcs;
+    private ActiveTurn? activeTurn;
     private JsonLineStream? stream;
     private IAgentHost? host;
     private IAgentSession? session;
@@ -88,9 +87,18 @@ internal sealed class PersonaRunner : IAsyncDisposable
         var welcomeMessage = await jsonLineStream.ReadAsync(cancellationToken);
         if (welcomeMessage is not Welcome welcome)
         {
+            // A ProtocolError carries the one useful fact in this failure - which of invalidName or
+            // nameReserved the server refused the handshake for (AgentConnection lines 62-73) - so it
+            // is spelled out rather than discarded behind its type name.
+            var received = welcomeMessage switch
+            {
+                null => "end of stream.",
+                ProtocolError error => $"a ProtocolError ({error.Code}: {error.Message}).",
+                _ => $"{welcomeMessage.GetType().Name}.",
+            };
+
             throw new InvalidOperationException(
-                $"Expected a Welcome envelope for Persona '{this.persona.Name}' but received "
-                + (welcomeMessage is null ? "end of stream." : $"{welcomeMessage.GetType().Name}."));
+                $"Expected a Welcome envelope for Persona '{this.persona.Name}' but received {received}");
         }
 
         // Only now, with Registration complete, does the Agent id exist, so only now can the session
@@ -203,8 +211,9 @@ internal sealed class PersonaRunner : IAsyncDisposable
                 {
                     // Dropped silently until now, which made a refused post - a spent Budget, a Room
                     // this Agent is not a Member of - invisible outside the server's own log. The Room
-                    // cannot be named: this runner sends a null messageId, so RelatedMessageId comes
-                    // back null and there is nothing to correlate against.
+                    // can now be named: ProcessWorkItemAsync mints a messageId for every post, so
+                    // error.RelatedMessageId correlates back to the Turn that sent it. Wiring that
+                    // correlation into this log line is a later task.
                     this.logger.LogWarning(
                         "Persona '{PersonaName}' had a message refused: {Code} - {Reason}",
                         this.persona.Name,
@@ -256,22 +265,34 @@ internal sealed class PersonaRunner : IAsyncDisposable
         // Exactly one session serves every Room the Agent is in (there is one session per Persona),
         // so a failed turn must log and continue rather than end the loop: a dying agent process must
         // not silently deafen the Agent for every other Room.
-        var tcs = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        //
+        // The Message id is minted here, before the prompt is sent, in the same form
+        // ChatService.PostAsync uses when its own messageId argument is null: a 32-character
+        // lowercase-hex Guid, which NameRules.IsValidId accepts. Carrying it on PostMessage is what
+        // lets a ProtocolError's RelatedMessageId, and later a MessageDelta, correlate back to this
+        // Turn.
+        var messageId = Guid.CreateVersion7().ToString("N");
+        var completion = new TaskCompletionSource<TurnOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var turnCancellation = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        var turn = new ActiveTurn(item.RoomId, messageId, new StringBuilder(), completion, turnCancellation);
         lock (this.turnLock)
         {
-            this.currentTurnText.Clear();
-            this.currentTurnTcs = tcs;
+            this.activeTurn = turn;
         }
 
         try
         {
             var prompt = BuildPrompt(item, this.hooks);
             await this.session!.PromptAsync(prompt, ct);
-            var replyText = await tcs.Task.WaitAsync(ct);
+            var outcome = await completion.Task.WaitAsync(ct);
 
-            if (!string.IsNullOrWhiteSpace(replyText))
+            // A refusal or a cancelled Turn is not a successful reply, even if some text arrived
+            // before the stop: neither is fit to post into the Room.
+            var isPostable = outcome.Reason is not (StopReason.Refusal or StopReason.Cancelled)
+                && !string.IsNullOrWhiteSpace(outcome.Text);
+            if (isPostable)
             {
-                await this.stream!.WriteAsync(new PostMessage(item.RoomId, null, replyText), ct);
+                await this.stream!.WriteAsync(new PostMessage(item.RoomId, messageId, outcome.Text), ct);
             }
         }
         catch (OperationCanceledException)
@@ -281,6 +302,18 @@ internal sealed class PersonaRunner : IAsyncDisposable
         catch (Exception ex)
         {
             this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to process a turn in room {RoomId}.", this.persona.Name, item.RoomId);
+        }
+        finally
+        {
+            lock (this.turnLock)
+            {
+                if (ReferenceEquals(this.activeTurn, turn))
+                {
+                    this.activeTurn = null;
+                }
+            }
+
+            turnCancellation.Dispose();
         }
     }
 
@@ -294,22 +327,21 @@ internal sealed class PersonaRunner : IAsyncDisposable
                 {
                     lock (this.turnLock)
                     {
-                        this.currentTurnText.Append(chunk.Text);
+                        this.activeTurn?.Text.Append(chunk.Text);
                     }
                 }
-                else if (agentEvent is TurnCompleted)
+                else if (agentEvent is TurnCompleted completed)
                 {
-                    TaskCompletionSource<string>? completedTcs;
+                    ActiveTurn? completedTurn;
                     string text;
                     lock (this.turnLock)
                     {
-                        completedTcs = this.currentTurnTcs;
-                        text = this.currentTurnText.ToString();
-                        this.currentTurnText.Clear();
-                        this.currentTurnTcs = null;
+                        completedTurn = this.activeTurn;
+                        text = completedTurn?.Text.ToString() ?? string.Empty;
+                        this.activeTurn = null;
                     }
 
-                    completedTcs?.TrySetResult(text);
+                    completedTurn?.Completion.TrySetResult(new TurnOutcome(text, completed.StopReason));
                 }
                 else if (agentEvent is UsageUpdated usage)
                 {
@@ -332,6 +364,28 @@ internal sealed class PersonaRunner : IAsyncDisposable
         catch (OperationCanceledException)
         {
             // Normal shutdown.
+        }
+        catch (Exception ex)
+        {
+            this.logger.LogWarning(ex, "Persona '{PersonaName}' agent event stream ended unexpectedly.", this.persona.Name);
+        }
+        finally
+        {
+            // Whatever ended this loop - a fault, or ordinary shutdown mid-turn - the single consumer
+            // must not be left awaiting a TurnCompleted that can now never arrive: this channel is
+            // done, for good, in every case. Without this, a crashed adapter process left
+            // ProcessWorkItemAsync blocked on completion.Task forever, deafening the Agent in every
+            // Room with no signal of any kind.
+            ActiveTurn? strandedTurn;
+            lock (this.turnLock)
+            {
+                strandedTurn = this.activeTurn;
+                this.activeTurn = null;
+            }
+
+            strandedTurn?.Completion.TrySetException(
+                new InvalidOperationException(
+                    $"Persona '{this.persona.Name}': the agent event stream ended before its in-flight turn completed."));
         }
     }
 
@@ -514,4 +568,15 @@ internal sealed class PersonaRunner : IAsyncDisposable
         IReadOnlyList<CaughtUpMessage> MissedMessages);
 
     internal sealed record CaughtUpMessage(string SenderName, string Text);
+
+    /// <summary>The Turn currently in flight: its Room, its minted Message id, the text so far, and how it ends.</summary>
+    private sealed record ActiveTurn(
+        string RoomId,
+        string MessageId,
+        StringBuilder Text,
+        TaskCompletionSource<TurnOutcome> Completion,
+        CancellationTokenSource Cancellation);
+
+    /// <summary>How a Turn ended: the text it produced, and why it stopped.</summary>
+    private sealed record TurnOutcome(string Text, StopReason Reason);
 }

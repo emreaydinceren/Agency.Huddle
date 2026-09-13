@@ -60,11 +60,38 @@ internal sealed class FakeAgentSession : IAgentSession
         }
     }
 
+    /// <summary>
+    /// Completes <see cref="Events"/> with an exception, exactly as
+    /// <c>DotAcpAgentSession.Fault</c> does when the underlying agent connection dies mid-turn. A
+    /// channel completed this way stays completed: once called, no further event this fake writes
+    /// (via a still-in-flight <see cref="PromptAsync"/>) will actually reach a reader.
+    /// </summary>
+    /// <param name="exception">The exception <see cref="Events"/>' reader should observe.</param>
+    public void FaultEvents(Exception exception)
+    {
+        this.events.Writer.TryComplete(exception);
+    }
+
     public void EnqueueDelayedReply(TimeSpan delay, params string[] chunks)
     {
         lock (this.gate)
         {
             this.plannedTurns.Enqueue(new TurnPlan(chunks, null, delay, []));
+        }
+    }
+
+    /// <summary>
+    /// Queues a turn that ends in a <see cref="StopReason"/> other than <see cref="StopReason.EndTurn"/> -
+    /// a Refusal or a Cancellation - so a test can prove such a Turn is handled differently even when
+    /// text arrived before the stop.
+    /// </summary>
+    /// <param name="reason">The <see cref="TurnCompleted"/> this turn reports.</param>
+    /// <param name="chunks">The reply text, if any, published before the stop.</param>
+    public void EnqueueReplyEndingIn(StopReason reason, params string[] chunks)
+    {
+        lock (this.gate)
+        {
+            this.plannedTurns.Enqueue(new TurnPlan(chunks, null, TimeSpan.Zero, [], reason));
         }
     }
 
@@ -142,9 +169,9 @@ internal sealed class FakeAgentSession : IAgentSession
                 this.events.Writer.TryWrite(new MessageChunk(this.SessionId, chunk));
             }
 
-            this.events.Writer.TryWrite(new TurnCompleted(this.SessionId, StopReason.EndTurn));
+            this.events.Writer.TryWrite(new TurnCompleted(this.SessionId, plan.Reason));
 
-            return new PromptResult(StopReason.EndTurn);
+            return new PromptResult(plan.Reason);
         }
         finally
         {
@@ -156,5 +183,9 @@ internal sealed class FakeAgentSession : IAgentSession
     }
 
     private sealed record TurnPlan(
-        IReadOnlyList<string> Chunks, Exception? Exception, TimeSpan Delay, IReadOnlyList<long> UsageLevels);
+        IReadOnlyList<string> Chunks,
+        Exception? Exception,
+        TimeSpan Delay,
+        IReadOnlyList<long> UsageLevels,
+        StopReason Reason = StopReason.EndTurn);
 }
