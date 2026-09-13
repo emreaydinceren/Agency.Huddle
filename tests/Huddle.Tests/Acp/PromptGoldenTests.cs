@@ -20,10 +20,30 @@ using Agency.Huddle.Tests.Acp.Tools;
 /// changed no behaviour, byte-for-byte.
 /// </summary>
 /// <remarks>
-/// These tests, and the golden files beside them, are temporary: task T1.11 deletes both once
-/// equivalent assertions live elsewhere. A test whose golden file is missing writes it and fails with
-/// a message explaining that, so the first run of a freshly added golden test seeds its own file for
-/// inspection before it is committed.
+/// <para>
+/// These tests, and the golden files beside them, are permanent: a byte-level regression net on every
+/// model-facing string this application composes, sitting above the per-hook checks in
+/// <c>Hooks/HookCatalogTests.cs</c> and <c>Hooks/HookValidatorTests.cs</c> and the shipped-default
+/// checks in <c>Hooks/HookDefaultsTests.cs</c>. Those other suites can each pass while a change to how
+/// several hooks are joined, wrapped or spaced still alters what a model actually reads; only a full
+/// composed-output diff catches that. (Task T1.11 originally scheduled these for deletion once
+/// equivalent assertions existed elsewhere; that decision was reversed — the per-hook and
+/// per-default checks turned out to complement this byte-level net rather than replace it.)
+/// </para>
+/// <para>
+/// A test whose golden file is missing writes it and fails with a message explaining that, so the
+/// first run of a freshly added golden test seeds its own file for inspection before it is committed.
+/// </para>
+/// <para>
+/// <b>Regenerating a golden file on purpose.</b> A red test here after a hook's <see cref="Agency.Huddle.App.Hooks.HookDefinition.Default"/>
+/// changes is not automatically a bug — it may simply mean the composed output was meant to change.
+/// To accept a deliberate wording change: delete the affected file(s) under
+/// <c>tests/Huddle.Tests/Acp/Golden</c>, re-run the test project so each now-missing golden file is
+/// reseeded from the current (deliberately changed) output, inspect every reseeded file by hand to
+/// confirm it reads the way you intended, and commit the updated <c>.txt</c> files alongside the
+/// production change that caused them to move. Never hand-edit a golden file directly — always let a
+/// test reseed it, so what is committed is provably what the code actually produces today.
+/// </para>
 /// </remarks>
 public sealed class PromptGoldenTests
 {

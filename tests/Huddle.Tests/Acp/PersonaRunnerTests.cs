@@ -500,41 +500,25 @@ public sealed class PersonaRunnerTests
         await WaitForHistoryCountAsync(store, roomId, 2, ct);
 
         var prompt = Assert.Single(factory.Session.Prompts);
-        Assert.DoesNotContain("context only", prompt, StringComparison.Ordinal);
+
+        // "context only" used to be a literal in BuildPrompt; it now lives entirely inside the
+        // turn.catchUpHeader hook default. Deriving the expected phrase from HookCatalog rather than
+        // typing it here means a reworded default still fails this test loudly when the header leaks
+        // into a no-catch-up prompt, instead of silently asserting against wording nobody owns anymore.
+        // Do not "simplify" this back to a literal — see task T1.11.
+        var catchUpHeaderDefault = HookCatalog.Get("turn.catchUpHeader").Default;
+        var distinctivePortion = HookRenderer
+            .Render(catchUpHeaderDefault, new Dictionary<string, string> { ["{{roomLabel}}"] = string.Empty })
+            .Trim();
+
+        Assert.DoesNotContain(distinctivePortion, prompt, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void SystemPromptComposer_NamesEveryToolWithMcpPrefix()
-    {
-        var persona = new Persona("nova", "You are Nova.");
-
-        var prompt = SystemPromptComposer.Compose(persona, new FakeHookSource(), "mcp__team__get_help", ToolNames);
-
-        Assert.Contains("mcp__team__get_help", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__list_agents", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__create_room", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__invite_agent", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__post_message", prompt, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// The canned orientation is what makes progressive discovery work: it has to say what kind of
-    /// application this is, and point at get_help, before the Persona's own text begins.
-    /// </summary>
-    [Fact]
-    public void SystemPromptComposer_OpensWithTheCannedOrientationNamingGetHelp()
-    {
-        var persona = new Persona("nova", "You are Nova.");
-
-        var prompt = SystemPromptComposer.Compose(persona, new FakeHookSource(), "mcp__team__get_help", ToolNames);
-
-        var orientation = prompt.IndexOf("chat application", StringComparison.Ordinal);
-        var help = prompt.IndexOf("mcp__team__get_help", StringComparison.Ordinal);
-        var personaText = prompt.IndexOf("You are Nova.", StringComparison.Ordinal);
-
-        Assert.True(orientation >= 0 && orientation < personaText);
-        Assert.True(help >= 0 && help < personaText);
-    }
+    // The mcp__team__ five-name pin and the orientation-ordering pin both moved to
+    // Hooks/HookDefaultsTests.cs (task T1.11): rendered against a caller-supplied toolNames argument,
+    // they proved only that Compose's own argument came back out of its own output, not anything about
+    // the product's shipped wording. HookDefaultsTests re-anchors both against HookCatalog's actual
+    // defaults, which is the thing that can vary now.
 
     [Fact]
     public void SystemPromptComposer_IncludesPersonaText()

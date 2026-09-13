@@ -77,6 +77,15 @@ public sealed class GetHelpToolTests
         Assert.Contains("@-mentioned", help, StringComparison.Ordinal);
 
         // The room id is only ever learned from the prompt's Room label, so help has to say so.
+        // This literal is doing double duty by design (task T1.11): it pins the documented Room-label
+        // format the getHelp.messages default advertises, AND it is the regression test proving
+        // HookRenderer's {{...}} substitution does not eat literal angle brackets. Do not "modernise"
+        // this into "{{roomName}}" wording — that would destroy both purposes at once.
+        //
+        // TODO(follow-up, out of scope for T1.11): nothing yet asserts that this documented format —
+        // "[Room: <name> (id: <id>)]" — actually matches what turn.roomLabel's default renders in
+        // PersonaRunner.BuildPrompt. The two hooks (getHelp.messages and turn.roomLabel) can drift
+        // apart with no test noticing, now that each is independently overridable.
         Assert.Contains("[Room: <name> (id: <id>)]", help, StringComparison.Ordinal);
     }
 
