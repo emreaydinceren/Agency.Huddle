@@ -1,13 +1,19 @@
 @page "/settings"
 @page "/settings/{Tab}"
+@implements IDisposable
 @using Agency.Huddle.App.Hooks
 @using Agency.Huddle.App.Components.Settings
-@inject IHookSource Hooks
+@inject HookStore Hooks
 @inject NavigationManager Navigation
 
 <div class="settings-page">
     <header class="settings-header">
         <h1>Settings</h1>
+        <ResetAllControl AnyModified="this.AnyModified"
+                          Confirming="this.confirmingResetAll"
+                          OnBeginReset="this.BeginResetAll"
+                          OnConfirm="this.ConfirmResetAll"
+                          OnCancel="this.CancelResetAll" />
     </header>
 
     <p class="teammates-intro">
@@ -16,6 +22,17 @@
         teammate is told, not how the application itself behaves, and a hook you have changed can
         always be restored to the wording it shipped with.
     </p>
+
+    <p class="settings-hooks-file-path">
+        Overrides are stored at <code>@this.Hooks.FilePath</code>, which holds only the hooks you have
+        changed — hand-edit it for fast prototyping if you like. The file does not exist until the
+        first time you save here, so it being absent is expected, not a bug.
+    </p>
+
+    @if (this.error is not null)
+    {
+        <p class="composer-error">@this.error</p>
+    }
 
     <div class="settings-layout">
         <nav class="settings-tab-rail">
@@ -29,7 +46,14 @@
             {
                 case SettingsTab.Hooks:
                 default:
-                    <HooksPanel Groups="this.groups" />
+                    <form @onsubmit="this.Save">
+                        <HooksPanel Groups="this.groups"
+                                    ValueChanged="this.OnFieldValueChanged"
+                                    ResetRequested="this.OnResetRequested" />
+                        <div class="teammate-card-actions">
+                            <button type="submit" class="teammate-card-action teammate-card-primary" disabled="@(!this.HasUnsavedChanges)">Save</button>
+                        </div>
+                    </form>
                     break;
             }
         </div>
@@ -37,7 +61,17 @@
 </div>
 
 @code {
+    // The parent owns all state, the same split Teammates.razor uses with TeammateCard: HooksPanel
+    // itself holds nothing. pendingEdits is every uncommitted keystroke, keyed by hook key; groups is
+    // rebuilt from it (and from the store) whenever either changes, so a render never has to
+    // reconcile two sources of truth for the same field.
+    private readonly Dictionary<string, string> pendingEdits = new(StringComparer.Ordinal);
     private IReadOnlyList<HookFieldGroup> groups = [];
+    private string? error;
+
+    // Guards ResetAllControl's destructive action, the same inline-confirm field Teammates.razor
+    // keeps for Remove (confirmingRemove) rather than a dialog or a JS confirm().
+    private bool confirmingResetAll;
 
     /// <summary>
     /// The route segment naming the active tab, e.g. <c>"hooks"</c>. Optional: <c>/settings</c> with
@@ -54,9 +88,22 @@
     private SettingsTab CurrentTab =>
         Enum.TryParse<SettingsTab>(this.Tab, ignoreCase: true, out var parsed) ? parsed : SettingsTab.Hooks;
 
+    // Drives the Save button: nothing to commit means nothing to submit. Recomputed from groups
+    // rather than tracked separately, so it can never drift from what HooksPanel is actually showing.
+    private bool HasUnsavedChanges => this.groups.SelectMany(group => group.Fields).Any(row => row.HasUnsavedChange);
+
+    // Drives ResetAllControl's enabled state: nothing modified means nothing for "reset all" to do.
+    private bool AnyModified => this.groups.SelectMany(group => group.Fields).Any(row => row.IsModified);
+
     protected override void OnInitialized()
     {
-        this.groups = HookFieldFactory.Build(this.Hooks);
+        this.Hooks.HooksChanged += this.OnHooksChanged;
+        this.RebuildGroups();
+    }
+
+    public void Dispose()
+    {
+        this.Hooks.HooksChanged -= this.OnHooksChanged;
     }
 
     // Navigates to the tab's own route rather than just flipping local state, so the URL always
@@ -65,5 +112,105 @@
     private void SelectTab(SettingsTab tab)
     {
         this.Navigation.NavigateTo($"/settings/{tab.ToString().ToLowerInvariant()}");
+    }
+
+    private void OnFieldValueChanged(HookEdit edit)
+    {
+        this.pendingEdits[edit.Key] = edit.Text;
+        this.RebuildGroups();
+    }
+
+    // Reset stages the default rather than writing immediately: it puts DefaultValue into
+    // pendingEdits for this key, exactly like any other edit, and only Save commits it. This keeps
+    // one commit point for the whole form and lets the user change their mind (or undo a mis-click)
+    // before anything actually reaches disk - an immediate HookStore.Reset call here would bypass
+    // that and surprise-write the file the moment a button is clicked.
+    private void OnResetRequested(string key)
+    {
+        this.pendingEdits[key] = HookCatalog.Get(key).Default;
+        this.RebuildGroups();
+    }
+
+    private void BeginResetAll()
+    {
+        this.confirmingResetAll = true;
+    }
+
+    private void CancelResetAll()
+    {
+        this.confirmingResetAll = false;
+    }
+
+    // Exactly like a per-field Reset, just for every key at once: stages every catalog default into
+    // pendingEdits rather than writing immediately, so Save is still the only commit point and the
+    // diff stays visible (and a mis-click recoverable) until then.
+    private void ConfirmResetAll()
+    {
+        HookFieldFactory.StageAllDefaults(this.pendingEdits);
+        this.confirmingResetAll = false;
+        this.RebuildGroups();
+    }
+
+    // Validation issues are shown but never gate this call: HookValidator's whole contract is that a
+    // finding is advisory, never a refusal, and a save that blocks on it is a save users learn to
+    // route around while still typing prompt experiments no validator can fully judge in advance.
+    private void Save()
+    {
+        var edits = this.groups
+            .SelectMany(group => group.Fields)
+            .Where(field => field.HasUnsavedChange)
+            .ToDictionary(field => field.Key, field => field.Value, StringComparer.Ordinal);
+
+        try
+        {
+            this.Hooks.SaveMany(edits);
+        }
+        catch (IOException ex)
+        {
+            this.error = $"Could not save: {ex.Message}";
+            return;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            this.error = $"Could not save: {ex.Message}";
+            return;
+        }
+
+        this.error = null;
+        this.pendingEdits.Clear();
+
+        // HooksChanged fires from inside SaveMany above and will itself rebuild groups against the
+        // now-current store, but rebuilding here too means the just-cleared pendingEdits are
+        // reflected immediately rather than waiting on the dispatched handler below.
+        this.RebuildGroups();
+    }
+
+    private void RebuildGroups()
+    {
+        this.groups = HookFieldFactory.Build(this.Hooks, this.pendingEdits);
+    }
+
+    private void OnHooksChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.RebuildGroups();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
     }
 }

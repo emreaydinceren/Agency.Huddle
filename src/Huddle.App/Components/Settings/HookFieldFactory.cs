@@ -40,11 +40,17 @@ internal static class HookFieldFactory
     /// prefix in <see cref="GroupOrder"/>'s order, keeping <see cref="HookCatalog.All"/>'s order
     /// within each group.
     /// </summary>
-    /// <param name="hooks">The current hook source, used to resolve each field's current text.</param>
+    /// <param name="hooks">The current hook source, used to resolve each field's stored text.</param>
+    /// <param name="pendingEdits">
+    /// The user's uncommitted edits, keyed by <see cref="HookDefinition.Key"/> — text typed but not
+    /// yet saved. A key present here wins over <paramref name="hooks"/>'s stored value for that
+    /// field's <see cref="HookFieldState.Value"/>; a key absent here falls back to the stored value.
+    /// </param>
     /// <returns>Every non-empty group, in display order.</returns>
-    internal static IReadOnlyList<HookFieldGroup> Build(IHookSource hooks)
+    internal static IReadOnlyList<HookFieldGroup> Build(IHookSource hooks, IReadOnlyDictionary<string, string> pendingEdits)
     {
         ArgumentNullException.ThrowIfNull(hooks);
+        ArgumentNullException.ThrowIfNull(pendingEdits);
 
         var groups = new List<HookFieldGroup>();
 
@@ -56,7 +62,7 @@ internal static class HookFieldFactory
             {
                 if (definition.Key.StartsWith(prefix, StringComparison.Ordinal))
                 {
-                    fields.Add(ToFieldState(definition, hooks));
+                    fields.Add(ToFieldState(definition, hooks, pendingEdits));
                 }
             }
 
@@ -67,6 +73,25 @@ internal static class HookFieldFactory
         }
 
         return groups;
+    }
+
+    /// <summary>
+    /// Stages every catalog key's default text into <paramref name="pendingEdits"/> — the pure logic
+    /// behind the Settings page's "Reset all to defaults" button, pulled out here for the same reason
+    /// <see cref="Build"/> is: a plain test can call it directly, where a rendered click cannot be
+    /// simulated. Mirrors a single-field Reset exactly, just for every key at once: it only ever
+    /// writes into the in-memory pending-edits map, never <c>HookStore</c> itself, so nothing reaches
+    /// disk until a caller goes on to save.
+    /// </summary>
+    /// <param name="pendingEdits">The Settings page's uncommitted-edits map to stage every default into.</param>
+    internal static void StageAllDefaults(IDictionary<string, string> pendingEdits)
+    {
+        ArgumentNullException.ThrowIfNull(pendingEdits);
+
+        foreach (var definition in HookCatalog.All)
+        {
+            pendingEdits[definition.Key] = definition.Default;
+        }
     }
 
     /// <summary>How many rows a textarea needs to show <paramref name="value"/> without scrolling, within reason.</summary>
@@ -93,10 +118,12 @@ internal static class HookFieldFactory
 
     /// <summary>Resolves one <see cref="HookDefinition"/> into the row its Settings field renders.</summary>
     /// <param name="definition">The catalog entry to resolve.</param>
-    /// <param name="hooks">The current hook source.</param>
-    private static HookFieldState ToFieldState(HookDefinition definition, IHookSource hooks)
+    /// <param name="hooks">The current hook source, giving this field's stored value.</param>
+    /// <param name="pendingEdits">The user's uncommitted edits; see <see cref="Build"/>.</param>
+    private static HookFieldState ToFieldState(HookDefinition definition, IHookSource hooks, IReadOnlyDictionary<string, string> pendingEdits)
     {
-        var value = hooks.Raw(definition.Key);
+        var stored = hooks.Raw(definition.Key);
+        var value = pendingEdits.TryGetValue(definition.Key, out var pending) ? pending : stored;
 
         return new HookFieldState(
             Key: definition.Key,
@@ -106,6 +133,8 @@ internal static class HookFieldFactory
             DefaultValue: definition.Default,
             Placeholders: definition.Placeholders,
             Timing: definition.Timing,
-            IsModified: !string.Equals(value, definition.Default, StringComparison.Ordinal));
+            IsModified: !string.Equals(value, definition.Default, StringComparison.Ordinal),
+            HasUnsavedChange: !string.Equals(value, stored, StringComparison.Ordinal),
+            Issues: HookValidator.Validate(definition, value));
     }
 }

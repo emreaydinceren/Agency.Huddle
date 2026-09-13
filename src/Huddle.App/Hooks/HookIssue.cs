@@ -2,9 +2,12 @@ namespace Agency.Huddle.App.Hooks;
 
 /// <summary>
 /// How serious a single <see cref="HookIssue"/> is. Neither value is grounds to refuse a save — see
-/// the governing rule documented on <see cref="HookValidator"/>.
+/// the governing rule documented on <see cref="HookValidator"/>. Public — alongside
+/// <see cref="HookIssue"/> itself — because <c>HookFieldState.Issues</c> is a public record consumed
+/// by the Settings UI, and a public record cannot expose an internal type; this is the same reasoning
+/// that made <see cref="HookTiming"/> public.
 /// </summary>
-internal enum HookIssueSeverity
+public enum HookIssueSeverity
 {
     /// <summary>Worth a second look — most often an unrecognised placeholder token, likely a typo.</summary>
     Warning,
@@ -19,7 +22,7 @@ internal enum HookIssueSeverity
 
 /// <summary>
 /// One finding reported by <see cref="HookValidator"/>, against either a single hook's text or a fully
-/// rendered and composed system prompt.
+/// rendered and composed system prompt. Public for the same reason <see cref="HookIssueSeverity"/> is.
 /// </summary>
 /// <param name="Key">
 /// The <see cref="HookDefinition.Key"/> this finding is about, or the tool name it names when it comes
@@ -30,4 +33,4 @@ internal enum HookIssueSeverity
 /// A human-readable explanation of what was found and, for an <see cref="HookIssueSeverity.Error"/>,
 /// what breaks because of it.
 /// </param>
-internal sealed record HookIssue(string Key, HookIssueSeverity Severity, string Message);
+public sealed record HookIssue(string Key, HookIssueSeverity Severity, string Message);

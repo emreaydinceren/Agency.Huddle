@@ -91,6 +91,67 @@ public sealed class SettingsPageTests
         Assert.Equal(0, factory.FakeModelCatalog.ProbeCount);
     }
 
+    /// <summary>With nothing pending, the Save button renders disabled - there is nothing yet to commit.</summary>
+    [Fact]
+    public async Task SettingsHooksPage_WithNothingPending_SaveButtonIsDisabled()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/settings/hooks", ct);
+
+        var buttonStart = html.IndexOf("type=\"submit\"", StringComparison.Ordinal);
+        Assert.True(buttonStart >= 0, "Could not find the submit button in the rendered page.");
+        var tagStart = html.LastIndexOf('<', buttonStart);
+        var tagEnd = html.IndexOf('>', buttonStart);
+        var tag = html[tagStart..(tagEnd + 1)];
+
+        Assert.Contains("disabled", tag, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The page tells a user exactly where <c>hooks.json</c> lives - matched against the factory's
+    /// own configured path (see <see cref="TeamWebApplicationFactory.HooksJsonPath"/>) rather than a
+    /// hardcoded guess, since <c>Team:DataDir</c> is redirected to a fresh temp directory per factory.
+    /// </summary>
+    [Fact]
+    public async Task SettingsHooksPage_ShowsTheOverrideFilePath()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/settings/hooks", ct);
+
+        Assert.Contains(factory.HooksJsonPath, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>With no override configured, the "Reset all to defaults" button renders disabled.</summary>
+    [Fact]
+    public async Task SettingsHooksPage_WithNothingModified_ResetAllButtonIsDisabled()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/settings/hooks", ct);
+
+        var buttonStart = html.IndexOf("Reset all to defaults", StringComparison.Ordinal);
+        Assert.True(buttonStart >= 0, "Could not find the Reset all button in the rendered page.");
+        var tagStart = html.LastIndexOf("<button", buttonStart, StringComparison.Ordinal);
+        var tagEnd = html.IndexOf('>', tagStart);
+        var tag = html[tagStart..(tagEnd + 1)];
+
+        Assert.Contains("disabled", tag, StringComparison.Ordinal);
+    }
+
     /// <summary>The sidebar link to Settings appears on every page, alongside the Teammates link.</summary>
     [Fact]
     public async Task Sidebar_LinksToSettingsPage()

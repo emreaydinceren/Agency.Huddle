@@ -1,14 +1,17 @@
 @*
-    The Hooks tab's content: every model-facing hook, grouped and read-only. Stage 2 is display only
-    - no save, no reset, no @oninput - so the <textarea> below carries the "readonly" attribute Stage
-    3 will drop rather than restructure.
+    The Hooks tab's content: every model-facing hook, grouped and editable. The parent
+    (Settings.razor) owns all state - this component holds none of its own, the same split
+    Teammates.razor uses with TeammateCard: Groups already carries each field's pending value,
+    computed flags and validation Issues, and every edit or reset request is handed back to the
+    parent through a callback rather than written here.
 
-    Takes exactly one [Parameter], Groups, already resolved to plain HookFieldState rows by
-    HookFieldFactory. A component with twenty string parameters is exactly the shape that let
-    Teammates.razor's <TeammateCard ... /> usage silently pass a literal instead of a value when an
-    "@" went missing (see TeammatesRazorSourceTests) - a single non-string parameter cannot be bound
-    that way at all, so this component sidesteps the trap by construction rather than needing a guard
-    test of its own.
+    Every [Parameter] below is deliberately non-string (HookEdit for the edited value, plain string
+    only for ResetRequested's key - see the note there) for the same reason TeammateCard's are: a
+    string parameter bound as Foo="this.bar" compiles cleanly and silently passes the literal text
+    instead of a field's value (see TeammatesRazorSourceTests), and a non-string parameter cannot be
+    mis-bound that way at all. HookEdit itself carries the one string value this panel does hand
+    back (the edited text), wrapped so the Razor attribute binds a record instance rather than a bare
+    string.
 *@
 
 @using Agency.Huddle.App.Hooks
@@ -31,9 +34,16 @@
                     {
                         <span class="hooks-field-badge hooks-field-badge-modified">Modified</span>
                     }
+                    @if (field.HasUnsavedChange)
+                    {
+                        <span class="hooks-field-badge hooks-field-badge-unsaved">Unsaved</span>
+                    }
                 </div>
 
-                <textarea class="hooks-field-value" rows="@HookFieldFactory.RowsFor(field.Value)" readonly>@field.Value</textarea>
+                <textarea class="hooks-field-value"
+                          rows="@HookFieldFactory.RowsFor(field.Value)"
+                          value="@field.Value"
+                          @oninput="e => this.OnFieldInput(field.Key, e)"></textarea>
 
                 <span class="teammate-card-hint">@field.HelperText</span>
 
@@ -47,6 +57,25 @@
                         }
                     </p>
                 }
+
+                @if (field.Issues.Count > 0)
+                {
+                    <ul class="hooks-field-issues">
+                        @foreach (var issue in field.Issues)
+                        {
+                            <li class="hooks-field-issue @(issue.Severity == HookIssueSeverity.Error ? "hooks-field-issue-error" : "hooks-field-issue-warning")">
+                                @issue.Message
+                            </li>
+                        }
+                    </ul>
+                }
+
+                <div class="hooks-field-actions">
+                    <button type="button"
+                            class="teammate-card-action"
+                            disabled="@(!field.IsModified)"
+                            @onclick="() => this.OnResetClicked(field.Key)">Reset</button>
+                </div>
             </div>
         }
     </section>
@@ -57,4 +86,22 @@
     [Parameter]
     [EditorRequired]
     public IReadOnlyList<HookFieldGroup> Groups { get; set; } = [];
+
+    /// <summary>Raised whenever a field's textarea changes, carrying the edited key and its new pending text.</summary>
+    [Parameter]
+    public EventCallback<HookEdit> ValueChanged { get; set; }
+
+    /// <summary>Raised when a field's Reset button is clicked, carrying that field's key.</summary>
+    [Parameter]
+    public EventCallback<string> ResetRequested { get; set; }
+
+    private Task OnFieldInput(string key, ChangeEventArgs e)
+    {
+        return this.ValueChanged.InvokeAsync(new HookEdit(key, e.Value?.ToString() ?? string.Empty));
+    }
+
+    private Task OnResetClicked(string key)
+    {
+        return this.ResetRequested.InvokeAsync(key);
+    }
 }

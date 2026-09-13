@@ -3,6 +3,7 @@ namespace Agency.Huddle.Tests.Hooks;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App.Components.Settings;
 using Agency.Huddle.App.Hooks;
 using Agency.Huddle.Contracts;
 
@@ -206,6 +207,129 @@ public sealed class HookStoreTests
         store.Save("getHelp.intro", "Freshly saved text.");
 
         Assert.Equal("Freshly saved text.", seenInsideHandler);
+    }
+
+    /// <summary>
+    /// <see cref="HookStore.SaveMany"/>'s whole reason to exist: several edits applied together raise
+    /// <see cref="HookStore.HooksChanged"/> exactly once, not once per edited key.
+    /// </summary>
+    [Fact]
+    public void SaveMany_SeveralEdits_RaisesHooksChangedExactlyOnce()
+    {
+        using var dataDir = new TempDataDir();
+        var store = new HookStore(dataDir.Options(), NullLogger<HookStore>.Instance);
+        var invocationCount = 0;
+        store.HooksChanged += () => invocationCount++;
+
+        store.SaveMany(new Dictionary<string, string>
+        {
+            ["getHelp.intro"] = "A brand new introduction.",
+            ["getHelp.budget"] = "A brand new budget line.",
+            ["turn.roomLabel"] = "[Room: {{roomName}} #{{roomId}}]",
+        });
+
+        Assert.Equal(1, invocationCount);
+        Assert.Equal("A brand new introduction.", store.Raw("getHelp.intro"));
+        Assert.Equal("A brand new budget line.", store.Raw("getHelp.budget"));
+        Assert.Equal("[Room: {{roomName}} #{{roomId}}]", store.Raw("turn.roomLabel"));
+    }
+
+    /// <summary>Among a batch of edits, one whose text equals the catalog default removes that key's override rather than storing a redundant copy.</summary>
+    [Fact]
+    public void SaveMany_OneEditEqualsTheCatalogDefault_RemovesThatOverrideOnly()
+    {
+        using var dataDir = new TempDataDir();
+        var store = new HookStore(dataDir.Options(), NullLogger<HookStore>.Instance);
+        store.Save("getHelp.intro", "A previously saved override.");
+
+        store.SaveMany(new Dictionary<string, string>
+        {
+            ["getHelp.intro"] = HookCatalog.Get("getHelp.intro").Default,
+            ["getHelp.budget"] = "A brand new budget line.",
+        });
+
+        var onDisk = ReadHooksJson(dataDir.Path);
+        Assert.False(onDisk.ContainsKey("getHelp.intro"));
+        Assert.Equal("A brand new budget line.", onDisk["getHelp.budget"]);
+    }
+
+    /// <summary>A batch save re-reads the file first, so a key the batch never touches survives on disk.</summary>
+    [Fact]
+    public void SaveMany_UnrelatedKeyOnDisk_Survives()
+    {
+        using var dataDir = new TempDataDir();
+        WriteHooksJson(dataDir.Path, new Dictionary<string, string> { ["not.a.real.hook"] = "keep-me" });
+        var store = new HookStore(dataDir.Options(), NullLogger<HookStore>.Instance);
+
+        store.SaveMany(new Dictionary<string, string> { ["getHelp.intro"] = "A brand new introduction." });
+
+        var onDisk = ReadHooksJson(dataDir.Path);
+        Assert.Equal("keep-me", onDisk["not.a.real.hook"]);
+        Assert.Equal("A brand new introduction.", onDisk["getHelp.intro"]);
+    }
+
+    /// <summary>An empty edit set is a no-op: no file write and no <see cref="HookStore.HooksChanged"/>.</summary>
+    [Fact]
+    public void SaveMany_EmptyEditSet_RaisesNothingAndWritesNoFile()
+    {
+        using var dataDir = new TempDataDir();
+        var store = new HookStore(dataDir.Options(), NullLogger<HookStore>.Instance);
+        var invocationCount = 0;
+        store.HooksChanged += () => invocationCount++;
+
+        store.SaveMany(new Dictionary<string, string>());
+
+        Assert.Equal(0, invocationCount);
+        Assert.False(File.Exists(Path.Combine(dataDir.Path, "hooks.json")));
+    }
+
+    /// <summary>
+    /// The full "Reset all to defaults" flow end to end: staging every default via
+    /// <see cref="HookFieldFactory.StageAllDefaults"/> touches only the in-memory pending-edits map,
+    /// leaving the override file exactly as it was until a caller goes on to call
+    /// <see cref="HookStore.SaveMany"/>, at which point every previously overridden key reverts.
+    /// </summary>
+    [Fact]
+    public void ResetAllFlow_StageDefaultsThenSaveMany_LeavesFileUntouchedUntilSaveAndThenRestoresEveryKey()
+    {
+        using var dataDir = new TempDataDir();
+        var store = new HookStore(dataDir.Options(), NullLogger<HookStore>.Instance);
+        store.Save("getHelp.intro", "A previously saved override.");
+        store.Save("turn.roomLabel", "[Room: {{roomName}} #{{roomId}}]");
+
+        var pendingEdits = new Dictionary<string, string>(StringComparer.Ordinal);
+        HookFieldFactory.StageAllDefaults(pendingEdits);
+
+        // Staging alone must not have touched the file: both overrides saved above are still there.
+        var onDiskBeforeSave = ReadHooksJson(dataDir.Path);
+        Assert.True(onDiskBeforeSave.ContainsKey("getHelp.intro"));
+        Assert.True(onDiskBeforeSave.ContainsKey("turn.roomLabel"));
+
+        store.SaveMany(pendingEdits);
+
+        foreach (var hook in HookCatalog.All)
+        {
+            Assert.Equal(hook.Default, store.Raw(hook.Key));
+        }
+
+        var onDiskAfterSave = ReadHooksJson(dataDir.Path);
+        Assert.False(onDiskAfterSave.ContainsKey("getHelp.intro"));
+        Assert.False(onDiskAfterSave.ContainsKey("turn.roomLabel"));
+    }
+
+    /// <summary><see cref="HookStore.FilePath"/> reports the exact override-file path this instance was constructed with, whether or not the file exists yet.</summary>
+    [Fact]
+    public void FilePath_ReportsTheOverrideFilePath()
+    {
+        using var dataDir = new TempDataDir();
+        var store = new HookStore(dataDir.Options(), NullLogger<HookStore>.Instance);
+
+        Assert.Equal(Path.Combine(dataDir.Path, "hooks.json"), store.FilePath);
+        Assert.False(File.Exists(store.FilePath));
+
+        store.Save("getHelp.intro", "Freshly saved text.");
+
+        Assert.True(File.Exists(store.FilePath));
     }
 
     /// <summary>The same rebuild-before-notify invariant, exercised through <see cref="HookStore.Reset"/> instead of <see cref="HookStore.Save"/>.</summary>

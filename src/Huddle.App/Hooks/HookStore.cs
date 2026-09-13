@@ -70,6 +70,14 @@ internal sealed class HookStore : IHookSource
     private readonly ILogger<HookStore> logger;
     private readonly Lock writeGate = new();
 
+    /// <summary>
+    /// The absolute path to the override file, <c>hooks.json</c> under <see cref="TeamOptions.DataDir"/>,
+    /// whether or not it currently exists on disk yet — see the class remarks on why a missing file is
+    /// the normal case rather than an error. Exposed so the Settings UI can tell a user exactly where
+    /// to hand-edit it, and that it is created only on first save.
+    /// </summary>
+    public string FilePath => this.path;
+
     // The whole resolved state - one text per catalog key - swapped in as one immutable reference.
     // FrozenDictionary rather than Dictionary: this snapshot is read on every tool Description getter
     // and every turn render but written almost never, exactly the read-many/write-rarely shape
@@ -144,14 +152,46 @@ internal sealed class HookStore : IHookSource
         lock (this.writeGate)
         {
             var overrides = this.ReadOverridesFromDisk();
+            ApplyEdit(overrides, definition, text);
+            this.WriteOverridesToDisk(overrides);
+            this.resolved = this.ApplyResolved(overrides);
+        }
 
-            if (string.Equals(text, definition.Default, StringComparison.Ordinal))
+        this.HooksChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Applies several edits as one save: one re-read of the override file, one write, one snapshot
+    /// rebuild, and — the reason this exists rather than a caller looping over <see cref="Save"/> —
+    /// exactly one <see cref="HooksChanged"/> event, however many keys <paramref name="edits"/>
+    /// carries. Saving five edited fields through five calls to <see cref="Save"/> would write the
+    /// file five times and raise five events, which is exactly the failure
+    /// <see cref="Agency.Huddle.App.Acp.PersonaStore"/>'s remarks warn against: three writes raising
+    /// three events would restart a listening Persona three times for one logical save. Each entry
+    /// follows the same default-removes-the-override rule <see cref="Save"/> documents.
+    /// </summary>
+    /// <param name="edits">
+    /// The text to store for each edited key, keyed by <see cref="HookDefinition.Key"/>. An empty
+    /// dictionary is a no-op: no file write and no <see cref="HooksChanged"/>.
+    /// </param>
+    /// <exception cref="KeyNotFoundException">A key in <paramref name="edits"/> names no hook in <see cref="HookCatalog"/>.</exception>
+    public void SaveMany(IReadOnlyDictionary<string, string> edits)
+    {
+        ArgumentNullException.ThrowIfNull(edits);
+
+        if (edits.Count == 0)
+        {
+            return;
+        }
+
+        lock (this.writeGate)
+        {
+            var overrides = this.ReadOverridesFromDisk();
+
+            foreach (var (key, text) in edits)
             {
-                overrides.Remove(key);
-            }
-            else
-            {
-                overrides[key] = text;
+                var definition = HookCatalog.Get(key);
+                ApplyEdit(overrides, definition, text);
             }
 
             this.WriteOverridesToDisk(overrides);
@@ -159,6 +199,27 @@ internal sealed class HookStore : IHookSource
         }
 
         this.HooksChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Stores or removes one key's override in an in-memory copy of the file's contents, following
+    /// <see cref="Save"/>'s rule: text equal to <paramref name="definition"/>'s catalog default
+    /// removes any existing override rather than storing a redundant copy. Shared by <see cref="Save"/>
+    /// and <see cref="SaveMany"/> so the rule is written once.
+    /// </summary>
+    /// <param name="overrides">The mutable overrides dictionary being built up before it is written to disk.</param>
+    /// <param name="definition">The hook definition <paramref name="text"/> is being applied against.</param>
+    /// <param name="text">The override text to store.</param>
+    private static void ApplyEdit(Dictionary<string, string> overrides, HookDefinition definition, string text)
+    {
+        if (string.Equals(text, definition.Default, StringComparison.Ordinal))
+        {
+            overrides.Remove(definition.Key);
+        }
+        else
+        {
+            overrides[definition.Key] = text;
+        }
     }
 
     /// <summary>
