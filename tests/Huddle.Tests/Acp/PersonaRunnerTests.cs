@@ -1258,6 +1258,601 @@ public sealed class PersonaRunnerTests
     }
 
     /// <summary>
+    /// Proves T4.3 item 1: a stored Model absent from a genuinely non-empty catalog is a warning, not
+    /// a failure - the session still starts, and <see cref="PersonaState.Degraded"/> is reported naming
+    /// the Model.
+    /// </summary>
+    [Fact]
+    public async Task StoredModelNotInTheCatalog_ReportsDegraded()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.Models = [new AgentModelOption("claude-3", "Claude 3", null)];
+        var persona = new Persona("nova", "You are Nova.", Model: "claude-99");
+        List<PersonaStatus> statuses = [];
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        agentHost.StatusChanged += statuses.Add;
+        await agentHost.StartAsync(ct);
+
+        await WaitForDirectRoomAsync(fixture, "nova", ct);
+
+        Assert.Contains(
+            statuses,
+            s => s.State == PersonaState.Degraded && s.Reason!.Contains("claude-99", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Proves T4.3 item 1's other half: <see cref="IAgentSession.Models"/>' own doc comment says an
+    /// EMPTY list means unknown, never "no models" - so it must never produce a Degraded report, even
+    /// though a Model is stored.
+    /// </summary>
+    [Fact]
+    public async Task EmptyModelCatalog_ReportsNothing()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        var persona = new Persona("nova", "You are Nova.", Model: "claude-99");
+        List<PersonaStatus> statuses = [];
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        agentHost.StatusChanged += statuses.Add;
+        await agentHost.StartAsync(ct);
+
+        await WaitForDirectRoomAsync(fixture, "nova", ct);
+
+        // Bounded grace period: give a misbehaving check every chance to report anyway.
+        await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+
+        Assert.Empty(statuses);
+    }
+
+    /// <summary>A Turn whose prompt throws is reported as Degraded, naming it as a single failure.</summary>
+    [Fact]
+    public async Task AFailedTurn_ReportsDegraded()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
+        var persona = new Persona("nova", "You are Nova.");
+        List<PersonaStatus> statuses = [];
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        agentHost.StatusChanged += statuses.Add;
+        await agentHost.StartAsync(ct);
+
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (!statuses.Exists(s => s.State == PersonaState.Degraded) && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains(
+            statuses,
+            s => s.State == PersonaState.Degraded && s.Reason!.Contains("A Turn failed", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// The third consecutive Turn failure escalates the reason's wording, without ever matching on the
+    /// Adapter's own (changeable) message text.
+    /// </summary>
+    [Fact]
+    public async Task ThreeConsecutiveFailures_EscalateTheReason()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueFailure(new InvalidOperationException("one"));
+        factory.Session.EnqueueFailure(new InvalidOperationException("two"));
+        factory.Session.EnqueueFailure(new InvalidOperationException("three"));
+        var persona = new Persona("nova", "You are Nova.");
+        List<PersonaStatus> statuses = [];
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        agentHost.StatusChanged += statuses.Add;
+        await agentHost.StartAsync(ct);
+
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+
+        await chat.PostAsync(roomId, KnownIds.Human, "one", ct: ct);
+        await chat.PostAsync(roomId, KnownIds.Human, "two", ct: ct);
+        await chat.PostAsync(roomId, KnownIds.Human, "three", ct: ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (factory.Session.Prompts.Count < 3 && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains(
+            statuses,
+            s => s.State == PersonaState.Degraded &&
+                s.Reason!.Contains("3 consecutive Turns have failed", StringComparison.Ordinal));
+    }
+
+    /// <summary>A Turn that completes normally clears whatever Degraded state a prior failure reported.</summary>
+    [Fact]
+    public async Task ASuccessfulTurn_ClearsADegradedState()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
+        factory.Session.EnqueueReply("recovered");
+        var persona = new Persona("nova", "You are Nova.");
+        List<PersonaStatus> statuses = [];
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        agentHost.StatusChanged += statuses.Add;
+        await agentHost.StartAsync(ct);
+
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+
+        await chat.PostAsync(roomId, KnownIds.Human, "first message", ct: ct);
+        await chat.PostAsync(roomId, KnownIds.Human, "second message", ct: ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while ((statuses.Count == 0 || statuses[^1].State != PersonaState.Online) && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains(statuses, s => s.State == PersonaState.Degraded);
+        Assert.NotEmpty(statuses);
+        Assert.Equal(PersonaState.Online, statuses[^1].State);
+    }
+
+    /// <summary>An <see cref="AgentDisconnectedException"/> from a Turn is reported as Offline.</summary>
+    [Fact]
+    public async Task Disconnected_ReportsOffline()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueFailure(new AgentDisconnectedException());
+        var persona = new Persona("nova", "You are Nova.");
+        List<PersonaStatus> statuses = [];
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        agentHost.StatusChanged += statuses.Add;
+        await agentHost.StartAsync(ct);
+
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (!statuses.Exists(s => s.State == PersonaState.Offline) && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains(statuses, s => s.State == PersonaState.Offline);
+    }
+
+    /// <summary>The three StopReasons a Turn can end in without producing a reply are all reported as Degraded.</summary>
+    /// <param name="reason">The StopReason this run of the theory exercises.</param>
+    [Theory]
+    [MemberData(nameof(IncompleteStopReasons))]
+    public async Task EachStopReason_ReportsDegraded(StopReason reason)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReplyEndingIn(reason, "partial");
+        var persona = new Persona("nova", "You are Nova.");
+        List<PersonaStatus> statuses = [];
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        agentHost.StatusChanged += statuses.Add;
+        await agentHost.StartAsync(ct);
+
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (!statuses.Exists(s => s.State == PersonaState.Degraded) && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains(
+            statuses,
+            s => s.State == PersonaState.Degraded && s.Reason!.Contains("without a reply", StringComparison.Ordinal));
+    }
+
+    /// <summary>The three <see cref="StopReason"/> values <see cref="EachStopReason_ReportsDegraded"/> exercises.</summary>
+    /// <returns>One row per incomplete-stop reason.</returns>
+    public static TheoryData<StopReason> IncompleteStopReasons() => new()
+    {
+        StopReason.MaxTokens,
+        StopReason.MaxTurnRequests,
+        StopReason.Refusal,
+    };
+
+    /// <summary>A Turn the Human stopped reports nothing at all - a Stop is not a failure.</summary>
+    [Fact]
+    public async Task AStoppedTurn_ReportsNothing()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "never posted");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        List<PersonaStatus> statuses = [];
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        runner.StatusChanged += statuses.Add;
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        await server.SendAsync(new StopTurn("room-1"), ct);
+        await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+
+        // Bounded grace period for a misbehaving Stop to report something anyway.
+        await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+
+        Assert.Empty(statuses);
+    }
+
+    /// <summary>
+    /// A Stop between two failures neither counts as a failure itself nor resets the streak: fail,
+    /// stop, fail, fail must still escalate on the fourth Turn - if the Stop had reset the counter,
+    /// the fourth Turn would only be the second consecutive failure and would not escalate.
+    /// </summary>
+    [Fact]
+    public async Task AStoppedTurn_DoesNotBreakTheFailureStreak()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueFailure(new InvalidOperationException("one"));
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "never posted");
+        factory.Session.EnqueueFailure(new InvalidOperationException("three"));
+        factory.Session.EnqueueFailure(new InvalidOperationException("four"));
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        List<PersonaStatus> statuses = [];
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        runner.StatusChanged += statuses.Add;
+        await server.HandshakeAsync(runner, ct);
+
+        // Turn 1: fails.
+        await server.SendAsync(NewMessagePosted("room-1", "one"), ct);
+        await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+
+        // Turn 2: stopped.
+        await server.SendAsync(NewMessagePosted("room-1", "two"), ct);
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (factory.Session.Prompts.Count < 2 && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        await server.SendAsync(new StopTurn("room-1"), ct);
+        await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+
+        // Turns 3 and 4: fail again.
+        await server.SendAsync(NewMessagePosted("room-1", "three"), ct);
+        await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+        await server.SendAsync(NewMessagePosted("room-1", "four"), ct);
+        await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+
+        Assert.Contains(
+            statuses,
+            s => s.State == PersonaState.Degraded &&
+                s.Reason!.Contains("3 consecutive Turns have failed", StringComparison.Ordinal));
+    }
+
+    /// <summary>Spending the per-Persona token Budget is reported as Degraded.</summary>
+    [Fact]
+    public async Task SpentTokenBudget_ReportsDegraded()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?>
+            {
+                ["Team:AgentMessageBudget"] = "0",
+                ["Team:Acp:TokenBudget"] = "100",
+            },
+            ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReplyWithUsage([150], "first reply");
+        var persona = new Persona("nova", "You are Nova.");
+        List<PersonaStatus> statuses = [];
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        agentHost.StatusChanged += statuses.Add;
+        await agentHost.StartAsync(ct);
+        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+
+        var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
+        await chat.PostAsync(room.Id, friendId, "@nova one", ct: ct);
+        await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+
+        await chat.PostAsync(room.Id, friendId, "@nova two", ct: ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (!statuses.Exists(s => s.State == PersonaState.Degraded) && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains(
+            statuses,
+            s => s.State == PersonaState.Degraded && s.Reason!.Contains("token Budget", StringComparison.Ordinal));
+    }
+
+    /// <summary>A Human Message clears the Degraded state a spent token Budget reported.</summary>
+    [Fact]
+    public async Task AHumanMessage_ClearsTheDegradedTokenBudget()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?>
+            {
+                ["Team:AgentMessageBudget"] = "0",
+                ["Team:Acp:TokenBudget"] = "100",
+            },
+            ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReplyWithUsage([150], "first reply");
+        factory.Session.EnqueueReply("after the human spoke");
+        var persona = new Persona("nova", "You are Nova.");
+        List<PersonaStatus> statuses = [];
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        agentHost.StatusChanged += statuses.Add;
+        await agentHost.StartAsync(ct);
+        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+
+        var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
+        await chat.PostAsync(room.Id, friendId, "@nova one", ct: ct);
+        await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+
+        await chat.PostAsync(room.Id, friendId, "@nova two", ct: ct);
+        var degradedDeadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (!statuses.Exists(s => s.State == PersonaState.Degraded) && DateTimeOffset.UtcNow < degradedDeadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains(statuses, s => s.State == PersonaState.Degraded);
+
+        await chat.PostAsync(room.Id, KnownIds.Human, "@nova carry on", ct: ct);
+
+        // Five, not four: unlike TokenBudget_ResetsOnAHumanMessage, "two" is also in this Room's
+        // history (declined for a spent Budget, but still posted and still counted).
+        var history = await WaitForHistoryCountAsync(store, room.Id, 5, ct);
+
+        Assert.Equal("after the human spoke", history[^1].Text);
+        Assert.Equal(PersonaState.Online, statuses[^1].State);
+    }
+
+    /// <summary>
+    /// Proves T4.4 item 1: if the read loop dies for any reason other than the run being cancelled
+    /// - here, the server end of the pipe dropping without the runner's own shutdown ever running -
+    /// Offline is reported.
+    /// </summary>
+    [Fact]
+    public async Task AReadLoopThatDies_ReportsOffline()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        List<PersonaStatus> statuses = [];
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        runner.StatusChanged += statuses.Add;
+        await server.HandshakeAsync(runner, ct);
+
+        // Kills the server side of the pipe without the runner's own shutdown ever running, so the
+        // read loop's stream.ReadAsync throws instead of observing a cooperative cancellation.
+        await server.DisposeAsync();
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (!statuses.Exists(s => s.State == PersonaState.Offline) && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains(statuses, s => s.State == PersonaState.Offline);
+    }
+
+    /// <summary>
+    /// A <see cref="PersonaRunner.StatusChanged"/> subscriber that throws is logged and skipped, and
+    /// the Agent keeps taking Turns. Health reporting must never be able to kill the Agent it
+    /// reports on: all three of the runner's loops raise this event, two of them from a
+    /// <c>finally</c>, so an unguarded subscriber could end a loop and mask the exception that
+    /// ended it — turning a diagnostic into the outage it exists to describe.
+    /// </summary>
+    [Fact]
+    public async Task AThrowingStatusSubscriber_DoesNotKillTheRunner()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReply("first");
+        factory.Session.EnqueueReply("second");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        var logger = new RecordingLogger<PersonaRunner>();
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), logger);
+        runner.StatusChanged += _ => throw new InvalidOperationException("Simulated subscriber failure.");
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+        var first = await ReceiveUntilAsync<PostMessage>(server, ct);
+
+        // The second Turn is the assertion: a throwing subscriber on the first one must not have
+        // ended the consumer loop.
+        await server.SendAsync(NewMessagePosted("room-1", "again"), ct);
+        var second = await ReceiveUntilAsync<PostMessage>(server, ct);
+
+        Assert.Equal("first", first.Text);
+        Assert.Equal("second", second.Text);
+        Assert.Contains(logger.Entries, e => e.Message.Contains("StatusChanged", StringComparison.Ordinal));
+    }
+
+    /// <summary>Proves T4.4 item 1 for the event reader: a faulted agent event stream is reported as Offline.</summary>
+    [Fact]
+    public async Task EventReaderEnding_ReportsOffline()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "never posted");
+        var persona = new Persona("nova", "You are Nova.");
+        List<PersonaStatus> statuses = [];
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        agentHost.StatusChanged += statuses.Add;
+        await agentHost.StartAsync(ct);
+
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        await chat.PostAsync(roomId, KnownIds.Human, "first message", ct: ct);
+
+        await Task.Delay(TimeSpan.FromMilliseconds(50), ct);
+        factory.Session.FaultEvents(new IOException("adapter process died"));
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (!statuses.Exists(s => s.State == PersonaState.Offline) && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains(statuses, s => s.State == PersonaState.Offline);
+    }
+
+    /// <summary>An ordinary shutdown reports nothing - the regression that would otherwise paint every tile red on Ctrl-C.</summary>
+    [Fact]
+    public async Task NormalShutdown_ReportsNothing()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        var persona = new Persona("nova", "You are Nova.");
+        List<PersonaStatus> statuses = [];
+
+        var agentHost = CreateHost(fixture, persona, factory);
+        agentHost.StatusChanged += statuses.Add;
+        await agentHost.StartAsync(ct);
+        await WaitForDirectRoomAsync(fixture, "nova", ct);
+
+        await agentHost.DisposeAsync();
+
+        Assert.Empty(statuses);
+    }
+
+    /// <summary>A refused post naming a real misconfiguration - not a Member, an unknown Room, or a bad Message - is reported as Degraded.</summary>
+    [Fact]
+    public async Task ARefusedPost_ReportsDegraded()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        List<PersonaStatus> statuses = [];
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        runner.StatusChanged += statuses.Add;
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(new ProtocolError(ErrorCodes.NotMember, "Not a member of that room."), ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (!statuses.Exists(s => s.State == PersonaState.Degraded) && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains(
+            statuses,
+            s => s.State == PersonaState.Degraded && s.Reason!.Contains("Not a member", StringComparison.Ordinal));
+    }
+
+    /// <summary>ADR-0006 already owns the spent-Budget surface, so that refusal alone must report nothing.</summary>
+    [Fact]
+    public async Task ABudgetExhaustedRefusal_ReportsNothing()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        List<PersonaStatus> statuses = [];
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        runner.StatusChanged += statuses.Add;
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(new ProtocolError(ErrorCodes.BudgetExhausted, "The room has spent its budget."), ct);
+
+        // Bounded grace period for a misbehaving refusal to report something anyway.
+        await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+
+        Assert.Empty(statuses);
+    }
+
+    /// <summary>
     /// Puts Nova in a Room with a second Agent, so a test can post agent-authored Messages - the only
     /// kind that spends Budget. The friend is a bare pipe client: it never replies, which keeps every
     /// Message in these Rooms one the test asked for.

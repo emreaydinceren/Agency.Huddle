@@ -35,7 +35,7 @@ public sealed class PersonaSupervisorTests
             new Agency.Huddle.App.Data.PersonaEffortStore(options),
             NullLogger<PersonaStore>.Instance);
         var factory = new FakeAgentHostFactory();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, NewHealth(), new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         using var startCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await supervisor.StartAsync(startCts.Token);
@@ -59,7 +59,7 @@ public sealed class PersonaSupervisorTests
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, NewHealth(), new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => supervisor.RunningHostCount >= 2, ct);
@@ -81,7 +81,7 @@ public sealed class PersonaSupervisorTests
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, NewHealth(), new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         await supervisor.StartAsync(ct);
         Assert.Equal(0, supervisor.RunningHostCount);
@@ -106,7 +106,7 @@ public sealed class PersonaSupervisorTests
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, NewHealth(), new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         personaStore.Add(Identity("nova"), "You are Nova.", "claude-opus-4");
 
@@ -137,7 +137,7 @@ public sealed class PersonaSupervisorTests
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, NewHealth(), new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         personaStore.Add(Identity("nova"), "You are Nova.", "claude-opus-4", "high");
 
@@ -163,7 +163,7 @@ public sealed class PersonaSupervisorTests
         var directory = fixture.Services.GetRequiredService<Agency.Huddle.App.Data.ITeamDirectory>();
         var gateway = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.IAgentGateway>();
         var factory = new FakeAgentHostFactory();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, NewHealth(), new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
@@ -190,8 +190,8 @@ public sealed class PersonaSupervisorTests
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var inner = new FakeAgentHostFactory();
-        var factory = new FailingForOneAgentHostFactory("bad", inner);
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        var factory = new FailingForOneAgentHostFactory("bad", new InvalidOperationException("Simulated failure starting Persona 'bad'."), inner);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, NewHealth(), new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
@@ -221,7 +221,7 @@ public sealed class PersonaSupervisorTests
         var directory = fixture.Services.GetRequiredService<Agency.Huddle.App.Data.ITeamDirectory>();
         var gateway = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.IAgentGateway>();
         var factory = new FakeAgentHostFactory();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, NewHealth(), new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         // Two personas, so removing one has something to leave alone: "zeta" proves the
         // supervisor stops only the removed persona's host, not every host it manages.
@@ -262,7 +262,7 @@ public sealed class PersonaSupervisorTests
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, NewHealth(), new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         personaStore.Add(Identity("nova"), "You are Nova.");
         await supervisor.StartAsync(ct);
@@ -292,7 +292,7 @@ public sealed class PersonaSupervisorTests
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, NewHealth(), new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         personaStore.Add(Identity("nova"), "You are Nova.", "a");
         await supervisor.StartAsync(ct);
@@ -320,7 +320,7 @@ public sealed class PersonaSupervisorTests
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         WritePersonaFile(options.Value, "zeta");
         var factory = new FakeAgentHostFactory();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, NewHealth(), new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
@@ -348,7 +348,7 @@ public sealed class PersonaSupervisorTests
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, NewHealth(), new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         personaStore.Add(Identity("zeta"), "You are a persona.", "a");
         await supervisor.StartAsync(ct);
@@ -389,7 +389,7 @@ public sealed class PersonaSupervisorTests
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, NewHealth(), new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         personaStore.Add(Identity("nova"), "You are Nova.", "a", "low");
         await supervisor.StartAsync(ct);
@@ -417,7 +417,7 @@ public sealed class PersonaSupervisorTests
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, NewHealth(), new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         personaStore.Add(Identity("zeta"), "You are a persona.", "a", "high");
         await supervisor.StartAsync(ct);
@@ -441,6 +441,179 @@ public sealed class PersonaSupervisorTests
 
         Assert.Single(factory.Calls, call => call.Persona.Name == "zeta");
     }
+
+    /// <summary>An adapter-not-installed <see cref="InvalidOperationException"/> - the same shape <c>DotAcpAgentHostFactory</c> throws - is recorded as Offline, carrying the exception's own actionable message.</summary>
+    [Fact]
+    public async Task MissingAdapter_IsRecordedAsOfflineWithItsReason()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        WritePersonaFile(options.Value, "nova");
+
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var exception = new InvalidOperationException(
+            "No ACP adapter is installed for Persona 'nova'. Run tools/acp/install.ps1 "
+            + "(or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.");
+        var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
+        var health = NewHealth();
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, health, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => health.Get("nova") is { State: PersonaState.Offline }, ct);
+        await supervisor.StopAsync(ct);
+
+        var status = health.Get("nova");
+        Assert.NotNull(status);
+        Assert.Equal(PersonaState.Offline, status.State);
+        Assert.Contains("tools/acp/install.ps1", status.Reason, StringComparison.Ordinal);
+    }
+
+    /// <summary>An <see cref="AgentAuthenticationRequiredException"/> is recorded as Offline, and when it carries auth methods their names are the actionable text in the reason.</summary>
+    [Fact]
+    public async Task AuthenticationRequired_IsRecordedAsOfflineAndNamesTheAuthMethods()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        WritePersonaFile(options.Value, "nova");
+
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var exception = new AgentAuthenticationRequiredException([new AuthMethodInfo("oauth", "OAuth", null)]);
+        var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
+        var health = NewHealth();
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, health, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => health.Get("nova") is { State: PersonaState.Offline }, ct);
+        await supervisor.StopAsync(ct);
+
+        var status = health.Get("nova");
+        Assert.NotNull(status);
+        Assert.Equal(PersonaState.Offline, status.State);
+        Assert.Contains("OAuth", status.Reason, StringComparison.Ordinal);
+    }
+
+    /// <summary>An <see cref="AgentProcessStartException"/> is recorded as Offline, carrying the exception's own message verbatim - it already names the path and the OS error.</summary>
+    [Fact]
+    public async Task AdapterProcessFailingToStart_IsRecordedAsOfflineWithItsReason()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        WritePersonaFile(options.Value, "nova");
+
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var exception = new AgentProcessStartException("Failed to start 'node'.", new IOException("No such file or directory"));
+        var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
+        var health = NewHealth();
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, health, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => health.Get("nova") is { State: PersonaState.Offline }, ct);
+        await supervisor.StopAsync(ct);
+
+        var status = health.Get("nova");
+        Assert.NotNull(status);
+        Assert.Equal(PersonaState.Offline, status.State);
+        Assert.Equal("Failed to start 'node'.", status.Reason);
+    }
+
+    /// <summary>A bare <see cref="AgentException"/> - the shape a failed <c>session/new</c> call throws - is recorded as Offline, carrying its own message verbatim.</summary>
+    [Fact]
+    public async Task SessionNewFailing_IsRecordedAsOfflineWithItsReason()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        WritePersonaFile(options.Value, "nova");
+
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var exception = new AgentException("session/new failed: the adapter rejected the request.");
+        var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
+        var health = NewHealth();
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, health, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => health.Get("nova") is { State: PersonaState.Offline }, ct);
+        await supervisor.StopAsync(ct);
+
+        var status = health.Get("nova");
+        Assert.NotNull(status);
+        Assert.Equal(PersonaState.Offline, status.State);
+        Assert.Equal("session/new failed: the adapter rejected the request.", status.Reason);
+    }
+
+    /// <summary>An exception type nothing here anticipated still produces a reason - never a blank badge - naming the exception's own type and message.</summary>
+    [Fact]
+    public async Task AnUnanticipatedException_StillProducesAReason()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        WritePersonaFile(options.Value, "nova");
+
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var exception = new FormatException("weird format.");
+        var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
+        var health = NewHealth();
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, health, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => health.Get("nova") is { State: PersonaState.Offline }, ct);
+        await supervisor.StopAsync(ct);
+
+        var status = health.Get("nova");
+        Assert.NotNull(status);
+        Assert.Equal(PersonaState.Offline, status.State);
+        Assert.Equal("FormatException: weird format.", status.Reason);
+    }
+
+    /// <summary>Removing a Persona - which stops and disposes its host - also drops its now-stale health entry, rather than leaving an Online badge for an Agent that no longer exists.</summary>
+    [Fact]
+    public async Task StoppingAHost_RemovesItsHealthEntry()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var health = NewHealth();
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, health, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+
+        personaStore.Add(Identity("nova"), "You are Nova.");
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
+        Assert.NotNull(health.Get("nova"));
+
+        personaStore.Remove("nova");
+
+        await WaitUntilAsync(() => health.Get("nova") is null, ct);
+        await supervisor.StopAsync(ct);
+
+        Assert.Null(health.Get("nova"));
+    }
+
+    /// <summary>Builds a fresh <see cref="PersonaHealth"/> against the real clock - nothing in this file asserts against <see cref="PersonaStatus.Since"/> precisely enough to need a controllable one.</summary>
+    private static PersonaHealth NewHealth() => new(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
 
     private static void WritePersonaFile(TeamOptions options, string name, string body = "You are a persona.")
     {
@@ -478,7 +651,8 @@ public sealed class PersonaSupervisorTests
         }
     }
 
-    private sealed class FailingForOneAgentHostFactory(string failingPersonaName, FakeAgentHostFactory inner) : IAgentHostFactory
+    /// <summary>A test double for <see cref="IAgentHostFactory"/> that throws a caller-supplied exception for one named Persona and otherwise delegates to <paramref name="inner"/>.</summary>
+    private sealed class FailingForOneAgentHostFactory(string failingPersonaName, Exception exception, FakeAgentHostFactory inner) : IAgentHostFactory
     {
         public Task<(IAgentHost Host, IAgentSession Session)> CreateAsync(Persona persona, string agentId, CancellationToken cancellationToken)
         {
@@ -486,7 +660,7 @@ public sealed class PersonaSupervisorTests
 
             if (string.Equals(persona.Name, failingPersonaName, StringComparison.Ordinal))
             {
-                throw new InvalidOperationException($"Simulated failure starting Persona '{persona.Name}'.");
+                throw exception;
             }
 
             return inner.CreateAsync(persona, agentId, cancellationToken);

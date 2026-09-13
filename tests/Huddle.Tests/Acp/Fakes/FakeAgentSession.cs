@@ -27,7 +27,13 @@ internal sealed class FakeAgentSession : IAgentSession
 
     public ChannelReader<AgentEvent> Events => this.events.Reader;
 
-    public IReadOnlyList<AgentModelOption> Models { get; } = [];
+    /// <summary>
+    /// The models this fake advertises through <see cref="IAgentSession.Models"/>. Empty by default,
+    /// matching the interface's own "empty means unknown" contract; a test proving the Model-not-in-
+    /// catalog warning sets this before <see cref="Agency.Huddle.App.Acp.PersonaRunner.StartAsync"/>
+    /// reads it.
+    /// </summary>
+    public IReadOnlyList<AgentModelOption> Models { get; set; } = [];
 
     public IReadOnlyList<AgentEffortOption> EffortLevels { get; } = [];
 

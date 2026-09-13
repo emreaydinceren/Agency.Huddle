@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using System.Globalization;
 using System.IO.Pipes;
 using System.Text;
 using System.Threading.Channels;
@@ -59,6 +60,11 @@ internal sealed class PersonaRunner : IAsyncDisposable
     private long sequenceCounter;
     private long stopHighWaterMark;
 
+    // Health reporting (T4.3). Touched only from RunConsumerAsync's single-threaded call into
+    // ProcessWorkItemAsync, so - unlike tokensConsumed above - this needs no Interlocked: there is
+    // never a second thread that could observe it mid-update.
+    private int consecutiveTurnFailures;
+
     private ActiveTurn? activeTurn;
     private JsonLineStream? stream;
     private IAgentHost? host;
@@ -82,6 +88,17 @@ internal sealed class PersonaRunner : IAsyncDisposable
         this.hooks = hooks;
         this.logger = logger;
     }
+
+    /// <summary>
+    /// Raised whenever this runner observes something worth reporting about its own Agent's session
+    /// or Turns — everything it knows arrives in an Envelope or an <see cref="AgentEvent"/>, so this is
+    /// the only channel it has. Deliberately not backed by a <see cref="PersonaHealth"/> reference:
+    /// this class has no privileged in-process access and stays testable with no DI container.
+    /// <see cref="PersonaSupervisor"/> subscribes when it constructs a runner and forwards every raised
+    /// <see cref="PersonaStatus"/> into <see cref="PersonaHealth.Report"/>, which alone decides whether
+    /// anything actually changed.
+    /// </summary>
+    public event Action<PersonaStatus>? StatusChanged;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -114,6 +131,20 @@ internal sealed class PersonaRunner : IAsyncDisposable
         var created = await this.factory.CreateAsync(this.persona, welcome.AgentId, cancellationToken);
         this.host = created.Host;
         this.session = created.Session;
+
+        // IAgentSession.Models' own doc comment: an EMPTY list means unknown, never "no models are
+        // available", so it must never produce a Degraded report. Only a genuinely non-empty catalog
+        // that omits the stored Model is worth a warning - and only a warning: the session still
+        // started on the Adapter's own default, and the Persona still answers (rules.md: "A Model the
+        // agent does not advertise is a warning, never a failure").
+        if (this.persona.Model is { Length: > 0 } storedModel &&
+            this.session.Models.Count > 0 &&
+            !this.session.Models.Any(model => string.Equals(model.Id, storedModel, StringComparison.Ordinal)))
+        {
+            this.RaiseStatusChanged(
+                PersonaState.Degraded,
+                $"The Model '{storedModel}' is not in the Adapter's catalog; running on its default.");
+        }
 
         this.eventReaderTask = this.RunEventReaderAsync(this.runCts.Token);
         this.consumerTask = this.RunConsumerAsync(this.runCts.Token);
@@ -164,6 +195,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
 
     private async Task RunReadLoopAsync(CancellationToken ct)
     {
+        Exception? terminatingException = null;
         try
         {
             while (true)
@@ -182,6 +214,10 @@ internal sealed class PersonaRunner : IAsyncDisposable
                     if (SenderIsHuman(posted))
                     {
                         Interlocked.Exchange(ref this.tokensConsumed, 0);
+
+                        // Clears whatever Degraded state the spent token Budget reported - the only
+                        // thing this specific signal is documented to clear (T4.3).
+                        this.RaiseStatusChanged(PersonaState.Online, null);
                     }
 
                     switch (ReplyGate.Decide(
@@ -228,6 +264,15 @@ internal sealed class PersonaRunner : IAsyncDisposable
                         this.persona.Name,
                         error.Code,
                         error.Message);
+
+                    // notMember/unknownRoom/badMessage are a real misconfiguration the Human should
+                    // see. budgetExhausted is deliberately excluded: ADR-0006 already owns that
+                    // surface (the Room view asks the Human, with Continue), and a Degraded badge
+                    // there would mark an Agent that is working exactly as designed.
+                    if (error.Code is ErrorCodes.NotMember or ErrorCodes.UnknownRoom or ErrorCodes.BadMessage)
+                    {
+                        this.RaiseStatusChanged(PersonaState.Degraded, $"A post was refused — {error.Message}");
+                    }
                 }
                 else if (message is StopTurn)
                 {
@@ -258,12 +303,18 @@ internal sealed class PersonaRunner : IAsyncDisposable
         }
         catch (Exception ex)
         {
+            terminatingException = ex;
             this.logger.LogWarning(ex, "Persona '{PersonaName}' read loop stopped unexpectedly.", this.persona.Name);
+        }
+        finally
+        {
+            this.ReportLoopEndedUnlessShuttingDown("read loop", terminatingException, ct);
         }
     }
 
     private async Task RunConsumerAsync(CancellationToken ct)
     {
+        Exception? terminatingException = null;
         try
         {
             await foreach (var queued in this.workItems.Reader.ReadAllAsync(ct))
@@ -282,6 +333,18 @@ internal sealed class PersonaRunner : IAsyncDisposable
         {
             // Normal shutdown.
         }
+        catch (Exception ex)
+        {
+            // An exception escaping ProcessWorkItemAsync's own finally - or the channel read itself
+            // faulting - must not leave this loop silently dead: nothing else drains workItems, so a
+            // deaf Agent would otherwise sit behind a pipe AgentGateway.IsOnline still reports as up.
+            terminatingException = ex;
+            this.logger.LogWarning(ex, "Persona '{PersonaName}' consumer loop stopped unexpectedly.", this.persona.Name);
+        }
+        finally
+        {
+            this.ReportLoopEndedUnlessShuttingDown("consumer loop", terminatingException, ct);
+        }
     }
 
     private async Task ProcessWorkItemAsync(WorkItem item, CancellationToken ct)
@@ -296,6 +359,11 @@ internal sealed class PersonaRunner : IAsyncDisposable
                 "Persona '{PersonaName}' has spent its token budget of {TokenBudget} and is taking no more turns until a human speaks to it.",
                 this.persona.Name,
                 tokenBudget);
+            this.RaiseStatusChanged(
+                PersonaState.Degraded,
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"The per-Persona token Budget of {tokenBudget} is spent; no more Turns until a Human speaks."));
             return;
         }
 
@@ -331,6 +399,27 @@ internal sealed class PersonaRunner : IAsyncDisposable
             {
                 await this.stream!.WriteAsync(new PostMessage(item.RoomId, messageId, outcome.Text), ct);
             }
+
+            // Health reporting (T4.3): every StopReason but Cancelled is a Turn that completed, so
+            // it resets the escalating-failure counter below - Cancelled is the Human stopping it,
+            // reported as nothing, and the one outcome that must leave the counter untouched.
+            switch (outcome.Reason)
+            {
+                case StopReason.EndTurn:
+                    this.consecutiveTurnFailures = 0;
+                    this.RaiseStatusChanged(PersonaState.Online, null);
+                    break;
+                case StopReason.MaxTokens:
+                case StopReason.MaxTurnRequests:
+                case StopReason.Refusal:
+                    this.consecutiveTurnFailures = 0;
+                    this.RaiseStatusChanged(
+                        PersonaState.Degraded,
+                        $"The last Turn ended without a reply — {DescribeIncompleteStop(outcome.Reason)}.");
+                    break;
+                case StopReason.Cancelled:
+                    break;
+            }
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -352,8 +441,25 @@ internal sealed class PersonaRunner : IAsyncDisposable
         {
             throw;
         }
+        catch (AgentDisconnectedException ex)
+        {
+            this.RaiseStatusChanged(PersonaState.Offline, "The Adapter process disconnected.");
+            this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to process a turn in room {RoomId}.", this.persona.Name, item.RoomId);
+        }
         catch (Exception ex)
         {
+            // Quota, a network failure and expiring credentials all arrive as the same AgentException
+            // ("session/prompt failed: ..."), and its wording belongs to the Adapter and will change -
+            // so this escalates on repetition alone, never on message content. Stays Degraded rather
+            // than Offline: the session and the pipe may both be healthy while the model provider is
+            // refusing, and Offline would be a claim this runner cannot support.
+            this.consecutiveTurnFailures++;
+            var reason = this.consecutiveTurnFailures >= 3
+                ? string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"{this.consecutiveTurnFailures} consecutive Turns have failed; this is unlikely to be transient — {ex.Message}")
+                : $"A Turn failed — {ex.Message}";
+            this.RaiseStatusChanged(PersonaState.Degraded, reason);
             this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to process a turn in room {RoomId}.", this.persona.Name, item.RoomId);
         }
         finally
@@ -395,6 +501,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
 
     private async Task RunEventReaderAsync(CancellationToken ct)
     {
+        Exception? terminatingException = null;
         try
         {
             await foreach (var agentEvent in this.session!.Events.ReadAllAsync(ct))
@@ -449,6 +556,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
         }
         catch (Exception ex)
         {
+            terminatingException = ex;
             this.logger.LogWarning(ex, "Persona '{PersonaName}' agent event stream ended unexpectedly.", this.persona.Name);
         }
         finally
@@ -468,6 +576,8 @@ internal sealed class PersonaRunner : IAsyncDisposable
             strandedTurn?.Completion.TrySetException(
                 new InvalidOperationException(
                     $"Persona '{this.persona.Name}': the agent event stream ended before its in-flight turn completed."));
+
+            this.ReportLoopEndedUnlessShuttingDown("event reader", terminatingException, ct);
         }
     }
 
@@ -552,6 +662,77 @@ internal sealed class PersonaRunner : IAsyncDisposable
                 turn.RoomId);
         }
     }
+
+    /// <summary>
+    /// Raises <see cref="StatusChanged"/>. This runner never decides whether anything actually
+    /// changed - <see cref="PersonaHealth.Report"/>, reached through <see cref="PersonaSupervisor"/>'s
+    /// subscription, is the sole judge of that, so every call here is unconditional.
+    /// </summary>
+    /// <param name="state">What is now known about this Persona's Agent.</param>
+    /// <param name="reason">Why, when known; otherwise <see langword="null"/>.</param>
+    private void RaiseStatusChanged(PersonaState state, string? reason)
+    {
+        if (this.StatusChanged is not { } handlers)
+        {
+            return;
+        }
+
+        var status = new PersonaStatus(state, reason, DateTimeOffset.UtcNow);
+        foreach (var handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                ((Action<PersonaStatus>)handler).Invoke(status);
+            }
+            catch (Exception ex)
+            {
+                // Reporting health must never be able to kill the Agent it is reporting on. Every
+                // one of this runner's three loops raises this, two of them from a finally, so an
+                // unguarded subscriber could both end the loop and mask the exception that ended it
+                // - turning a diagnostic into the outage it exists to describe. Same reasoning, and
+                // the same shape, as RoomEvents.Publish.
+                this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.StatusChanged));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Reports <see cref="PersonaState.Offline"/> when one of this runner's three long-lived loops has
+    /// ended for any reason other than the run itself being cancelled. A dead loop otherwise leaves
+    /// the pipe open with nothing left reading or writing it, and <c>AgentGateway.IsOnline</c> alone
+    /// cannot tell a deaf Agent from a healthy one - see <see cref="PersonaStatusResolver"/>.
+    /// </summary>
+    /// <param name="loopName">Which loop ended, named in the reported reason.</param>
+    /// <param name="exception">The exception that ended the loop, if any reached its catch clause.</param>
+    /// <param name="ct">The run token; cancelled means this is ordinary shutdown, not a failure.</param>
+    private void ReportLoopEndedUnlessShuttingDown(string loopName, Exception? exception, CancellationToken ct)
+    {
+        if (ct.IsCancellationRequested)
+        {
+            // Normal shutdown: nothing to report.
+            return;
+        }
+
+        var reason = exception switch
+        {
+            null => $"Its {loopName} ended unexpectedly.",
+            IOException => $"The pipe '{this.options.PipeName}' broke: {exception.Message}",
+            _ => $"Its {loopName} ended unexpectedly: {exception.Message}",
+        };
+
+        this.RaiseStatusChanged(PersonaState.Offline, reason);
+    }
+
+    /// <summary>Names, in words fit for the Human, why a Turn ended without producing a reply.</summary>
+    /// <param name="reason">One of <see cref="StopReason.MaxTokens"/>, <see cref="StopReason.MaxTurnRequests"/> or <see cref="StopReason.Refusal"/>.</param>
+    /// <returns>A short clause completing "The last Turn ended without a reply — ...".</returns>
+    private static string DescribeIncompleteStop(StopReason reason) => reason switch
+    {
+        StopReason.MaxTokens => "it ran out of tokens",
+        StopReason.MaxTurnRequests => "it made too many requests",
+        StopReason.Refusal => "the Model refused to answer",
+        _ => throw new ArgumentOutOfRangeException(nameof(reason), reason, "Not an incomplete-stop reason."),
+    };
 
     /// <summary>Maps an ACP tool call's lifecycle state to the wire enum shown to the Human.</summary>
     /// <param name="status">The ACP status to map.</param>
