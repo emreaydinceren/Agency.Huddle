@@ -360,7 +360,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
             $"Persona '{this.persona.Name}' failed to connect to pipe '{this.options.PipeName}' after {MaxConnectAttempts} attempts.");
     }
 
-    private static string BuildPrompt(WorkItem item)
+    internal static string BuildPrompt(WorkItem item)
     {
         // The Room's id rides along with its name because it is the only way an Agent can learn one.
         // mcp__team__post_message and mcp__team__invite_agent both take a room id, and nothing else
@@ -474,12 +474,12 @@ internal sealed class PersonaRunner : IAsyncDisposable
         }
     }
 
-    private sealed record WorkItem(
+    internal sealed record WorkItem(
         string RoomId,
         string RoomName,
         string SenderName,
         string Text,
         IReadOnlyList<CaughtUpMessage> MissedMessages);
 
-    private sealed record CaughtUpMessage(string SenderName, string Text);
+    internal sealed record CaughtUpMessage(string SenderName, string Text);
 }
