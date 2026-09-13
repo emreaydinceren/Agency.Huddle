@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Pipes;
 using Agency.Huddle.Tests.Acp.Fakes;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -42,6 +43,14 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     /// </summary>
     public FakeModelCatalog FakeModelCatalog { get; } = new();
 
+    /// <summary>
+    /// The <see cref="IAgentGateway"/> this factory wires in place of the real <c>AgentGateway</c>.
+    /// Both default to every Agent offline, so a test that never touches this behaves exactly as one
+    /// that never knew this fake existed; a test can call <see cref="FakeAgentGateway.SetOnline"/> to
+    /// prove the member-health strip and status badges reflect a truly connected Agent.
+    /// </summary>
+    internal FakeAgentGateway FakeAgentGateway { get; } = new();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -59,7 +68,10 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
         builder.UseSetting("Team:Acp:Enabled", "false");
 
         builder.ConfigureTestServices(services =>
-            services.AddSingleton<IModelCatalog>(this.FakeModelCatalog));
+        {
+            services.AddSingleton<IModelCatalog>(this.FakeModelCatalog);
+            services.AddSingleton<IAgentGateway>(this.FakeAgentGateway);
+        });
     }
 
     protected override void Dispose(bool disposing)

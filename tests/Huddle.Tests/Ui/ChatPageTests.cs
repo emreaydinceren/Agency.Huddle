@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -139,6 +140,11 @@ public sealed class ChatPageTests
         var room = await chat.EnsureRoomForAsync(agent, ct);
         var messageId = Guid.CreateVersion7().ToString("N");
 
+        // Otherwise this Agent is offline by the same default TeammatesPageTests relies on (nothing
+        // ever registers a real pipe connection), and the member-health strip (a separate, correct
+        // alert) would fire for the wrong reason and make this assertion meaningless.
+        factory.FakeAgentGateway.SetOnline(agent.Id);
+
         drafts.Append(messageId, room.Id, agent.Id, agent.Name, "Cut off partway through");
 
         // What a Stop looks like from this Room's point of view: the terminator arrives and the
@@ -178,6 +184,85 @@ public sealed class ChatPageTests
 
         Assert.Contains("tool-activity", html, StringComparison.Ordinal);
         Assert.Contains("Reading Persona.cs", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// An Agent that is simply not running - no health report of any kind - produces no strip. This
+    /// is the stock configuration, not an edge case: Team:Acp:Enabled is false by default, so no
+    /// Persona has ever started and every Agent resolves to Offline. Listing those would put a
+    /// permanent alert in every Room saying nothing the Teammate tile does not already show, and an
+    /// alert that is always on is one nobody reads.
+    /// </summary>
+    [Fact]
+    public async Task ChatPage_ShowsNoStripForAnAgentThatSimplyNeverStarted()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+
+        // Deliberately no PersonaHealth.Report: the Agent is offline because nothing ever started
+        // it, which is absence, not failure.
+        using var client = factory.CreateClient();
+        var html = await client.GetStringAsync($"/rooms/{room.Id}", ct);
+
+        Assert.DoesNotContain("member-health-alert", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>An Offline Member's reason renders in the strip between the transcript and the composer, as an alert.</summary>
+    [Fact]
+    public async Task ChatPage_ShowsAStripForAnOfflineMember()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+
+        // PersonaHealth is keyed by Persona Name, which - for an Agent backed by a real Persona -
+        // is the same string as the Agent's own Name, exactly the mapping Teammates.razor already
+        // relies on for the tile and card.
+        var health = factory.Services.GetRequiredService<PersonaHealth>();
+        health.Report(agent.Name, PersonaState.Offline, "The Adapter needs authentication.");
+
+        using var client = factory.CreateClient();
+        var html = await client.GetStringAsync($"/rooms/{room.Id}", ct);
+
+        Assert.Contains("role=\"alert\"", html, StringComparison.Ordinal);
+        Assert.Contains(agent.Name, html, StringComparison.Ordinal);
+        Assert.Contains("The Adapter needs authentication.", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>Every Member online and reporting no health problem shows no strip at all - the same rule the budget prompt already follows for a Stop and a spent Budget, neither of which may ever land here either.</summary>
+    [Fact]
+    public async Task ChatPage_ShowsNoStripWhenEveryMemberIsHealthy()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+
+        factory.FakeAgentGateway.SetOnline(agent.Id);
+
+        using var client = factory.CreateClient();
+        var html = await client.GetStringAsync($"/rooms/{room.Id}", ct);
+
+        Assert.DoesNotContain("member-health-alert", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("role=\"alert\"", html, StringComparison.Ordinal);
     }
 
     private static (ITeamDirectory Directory, ChatService Chat, Drafts Drafts) Services(TeamWebApplicationFactory factory)

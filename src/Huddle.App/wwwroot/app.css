@@ -76,6 +76,14 @@ html, body {
     background: #b32121;
 }
 
+.agent-dot.degraded {
+    background: #c77d00;
+}
+
+.agent-dot.starting {
+    background: #e0a83e;
+}
+
 .new-chat-start {
     width: 100%;
     padding: 0.4rem 0.6rem;
@@ -389,6 +397,28 @@ html, body {
     font-size: 0.85rem;
 }
 
+/* ---- Room member health: an Agent that is Offline or Degraded, surfaced where it matters most --- */
+
+.member-health-alert {
+    border-top: 1px solid #d0d0d0;
+    padding: 0.75rem 1rem;
+}
+
+.member-health-alert-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.member-health-alert-item {
+    margin: 0;
+    color: #b32121;
+    font-size: 0.85rem;
+}
+
 /* ---- Room budget: the pause, and the question that offers to lift it ----- */
 
 .budget-prompt {
@@ -606,6 +636,14 @@ html, body {
     margin: 0.25rem 0 0 0;
     font-size: 0.85rem;
     color: #666;
+}
+
+/* The reason under the status line - same idea as .teammates-rejected-reason: a diagnostic surfaced
+   as domain state, not just logged. */
+.teammate-card-reason {
+    margin: 0.15rem 0 0 0;
+    font-size: 0.85rem;
+    color: #8a2b2b;
 }
 
 .teammate-card-name-field {

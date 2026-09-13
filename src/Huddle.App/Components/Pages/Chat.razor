@@ -1,6 +1,7 @@
 @page "/"
 @page "/rooms/{RoomId}"
 @implements IDisposable
+@using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Pipes
 @inject ITeamDirectory TeamDirectory
 @inject IChatStore Store
@@ -8,6 +9,7 @@
 @inject ChatService ChatService
 @inject Drafts Drafts
 @inject IAgentGateway Gateway
+@inject PersonaHealth Health
 @inject NavigationManager Navigation
 
 @if (this.room is null)
@@ -32,6 +34,29 @@ else
             Drafts="this.drafts"
             StoppingAgentIds="this.stoppingAgentIds"
             OnStop="this.StopDraftAsync" />
+        @* Same slot as the budget prompt below, and for the same reason: this is the thing you need
+           to read before the composer, not after. Rendered inline rather than as a component for the
+           same reason the budget prompt is - a string Parameter missing its leading @ passes the
+           literal text, compiles clean and fails only on screen - see docs/agencyteam/rules.md.
+           Offline and Degraded ONLY: a stopped Turn and a spent Room Budget both leave every Member
+           healthy, and a Stop is a normal outcome, not a failure - see StopDraftAsync and the
+           budget-prompt block just below, which already own those two cases. *@
+        @{
+            var unhealthyMembers = this.UnhealthyMembers();
+        }
+        @if (unhealthyMembers.Count > 0)
+        {
+            <div class="member-health-alert" role="alert">
+                <ul class="member-health-alert-list">
+                    @foreach (var (member, status) in unhealthyMembers)
+                    {
+                        <li class="member-health-alert-item">
+                            @member.Name is @(status.State == PersonaState.Degraded ? "Degraded" : "Offline"): @status.Reason
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
         @* Between the transcript and the composer on purpose: the exchange that spent the Budget is
            the thing you need to read before deciding whether to grant another one. Rendered inline
            rather than as a component because a string Parameter missing its leading @ passes the
@@ -92,6 +117,12 @@ else
         this.Events.MessagePosted += this.OnMessagePosted;
         this.Events.RoomsChanged += this.OnRoomsChanged;
         this.Events.DraftChanged += this.OnDraftChanged;
+
+        // Health and pipe liveness are the two facts PersonaStatusResolver combines, so either one
+        // changing must repaint the member-health strip - the same reasoning rules.md gives for
+        // RoomEvents applies to any singleton event. Unsubscribed in Dispose, below.
+        this.Health.Changed += this.OnHealthOrPresenceChanged;
+        this.Gateway.PresenceChanged += this.OnHealthOrPresenceChanged;
     }
 
     protected override Task OnAfterRenderAsync(bool firstRender)
@@ -130,6 +161,8 @@ else
         this.Events.MessagePosted -= this.OnMessagePosted;
         this.Events.RoomsChanged -= this.OnRoomsChanged;
         this.Events.DraftChanged -= this.OnDraftChanged;
+        this.Health.Changed -= this.OnHealthOrPresenceChanged;
+        this.Gateway.PresenceChanged -= this.OnHealthOrPresenceChanged;
     }
 
     private async Task LoadRoomAsync(string roomId)
@@ -211,6 +244,59 @@ else
 
             this.StateHasChanged();
         });
+    }
+
+    /// <summary>
+    /// Repaints the member-health strip when either half of <see cref="PersonaStatusResolver.Resolve"/>'s
+    /// input changes - a health report or a pipe connect/disconnect. No data needs reloading:
+    /// <see cref="UnhealthyMembers"/> reads <see cref="Health"/> and <see cref="Gateway"/> live on
+    /// every render.
+    /// </summary>
+    private void OnHealthOrPresenceChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.StateHasChanged();
+        });
+    }
+
+    /// <summary>
+    /// Every Agent Member of the loaded Room whose resolved <see cref="PersonaStatus"/> is Offline or
+    /// Degraded, paired with that status - never the Human, who has no pipe connection or Persona
+    /// health to resolve at all and would otherwise read as "Offline" through the same fallback a
+    /// disconnected Agent gets. A stopped Turn and a spent Room Budget both leave every Member
+    /// healthy (rules.md's own reasoning for why this list must stay empty in both cases), so this is
+    /// the only place this page checks Persona health at all - <see cref="StopDraftAsync"/> and the
+    /// budget-prompt block own those two cases and never touch <see cref="Health"/>.
+    /// </summary>
+    /// <returns>The unhealthy Members of the currently loaded Room, in Room-member order.</returns>
+    private List<(User Member, PersonaStatus Status)> UnhealthyMembers()
+    {
+        List<(User Member, PersonaStatus Status)> unhealthy = [];
+        foreach (var member in this.members)
+        {
+            if (member.Kind != UserKind.Agent)
+            {
+                continue;
+            }
+
+            var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(member.Id), this.Health.Get(member.Name));
+
+            // A reason is required, not just an unhealthy state, and that is what keeps this strip
+            // worth reading. A Reason exists exactly when something REPORTED a failure - every start
+            // failure records one, and so does every degraded condition. An Agent that is merely not
+            // running has none, which is the ordinary case: Team:Acp:Enabled is false by default, so
+            // in a stock configuration no Persona has ever started and every Agent is Offline. Listing
+            // those would put a permanent role="alert" in every Room, telling the Human nothing the
+            // Teammate tile does not already show - and an alert that is always on is one nobody reads,
+            // which is exactly the failure this strip exists to prevent.
+            if (status is { State: PersonaState.Offline or PersonaState.Degraded, Reason: not null })
+            {
+                unhealthy.Add((member, status));
+            }
+        }
+
+        return unhealthy;
     }
 
     private void OnDraftChanged(string roomId)

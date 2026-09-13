@@ -84,7 +84,15 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<DataInitializer>();
         services.AddHostedService<PipeServer>();
         services.AddHostedService<DemoAgentHost>();
-        services.AddHostedService<PersonaSupervisor>();
+
+        // Same instance as the hosted service, not a second registration - mirrors every other pair
+        // in this file (AgentGateway/IAgentGateway, PersonaStore/IMentionAliasSource, HookStore/IHookSource).
+        // A Restart button (T7.2) needs to reach the very PersonaSupervisor the host is running, not a
+        // second, independently constructed one - the same class of intermittent test flake those other
+        // pairs' remarks already document, this time for a component resolving it directly rather than
+        // for a second FileSystemWatcher.
+        services.AddSingleton<PersonaSupervisor>();
+        services.AddHostedService(sp => sp.GetRequiredService<PersonaSupervisor>());
 
         return services;
     }

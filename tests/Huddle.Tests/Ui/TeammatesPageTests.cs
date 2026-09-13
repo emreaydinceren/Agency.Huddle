@@ -1,3 +1,15 @@
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Components.Pages;
+using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Pipes;
+using Agency.Huddle.App.Services;
+using Agency.Huddle.Tests.Acp.Fakes;
+
 namespace Agency.Huddle.Tests.Ui;
 
 public sealed class TeammatesPageTests
@@ -268,6 +280,77 @@ public sealed class TeammatesPageTests
         Assert.Contains("All teams", html, StringComparison.Ordinal);
         Assert.Contains("Business", html, StringComparison.Ordinal);
         Assert.Contains("Household", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Proves the T7.1 subscription actually repaints, rather than the page merely reading live
+    /// state on every fresh request. An HTTP GET is a brand-new prerender every time and could never
+    /// tell those two apart, so this is the one test in this file that renders <see cref="Teammates"/>
+    /// directly with <c>HtmlRenderer</c> and re-reads its HTML after an event, the same technique
+    /// <c>TeammateCardTests</c> uses to render a component in isolation.
+    /// </summary>
+    [Fact]
+    public async Task TeammatesPage_RepaintsWhenAnAgentGoesOffline()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+        using var dataDir = new TempDataDir();
+        Directory.CreateDirectory(Path.Combine(dataDir.Path, "Teams"));
+        await File.WriteAllTextAsync(Path.Combine(dataDir.Path, "Teams", "coo.md"), PersonaText("coo", "You are the Chief of Staff."), ct);
+
+        var directory = new SqliteTeamDirectory(dataDir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+
+        var gateway = new FakeAgentGateway();
+        gateway.SetOnline(agent.Id);
+
+        var health = new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
+
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSingleton<ITeamDirectory>(directory);
+        services.AddSingleton<IAgentGateway>(gateway);
+        services.AddSingleton(health);
+        services.AddSingleton(new RoomEvents(NullLogger<RoomEvents>.Instance));
+        services.AddSingleton<IModelCatalog>(new FakeModelCatalog());
+
+        using var personas = new PersonaStore(
+            dataDir.Options(), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+        services.AddSingleton(personas);
+
+        // Never started - Teammates.razor only needs a PersonaSupervisor it can inject, for the T7.2
+        // Restart button this test does not exercise.
+        using var supervisor = new PersonaSupervisor(
+            dataDir.Options(), personas, new FakeAgentHostFactory(), health, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        services.AddSingleton(supervisor);
+
+        await using var provider = services.BuildServiceProvider();
+        await using var renderer = new HtmlRenderer(provider, provider.GetRequiredService<ILoggerFactory>());
+
+        var output = await renderer.Dispatcher.InvokeAsync(() => renderer.RenderComponentAsync<Teammates>(ParameterView.Empty));
+        var before = await renderer.Dispatcher.InvokeAsync(() => Task.FromResult(output.ToHtmlString()));
+        Assert.Contains("Online", before, StringComparison.Ordinal);
+        Assert.DoesNotContain("Offline", before, StringComparison.Ordinal);
+
+        gateway.SetOffline(agent.Id);
+
+        // The repaint happens off OnHealthOrPresenceChanged's fire-and-forget dispatch, not
+        // synchronously with the call above, so this polls rather than reading the HTML once more.
+        string after;
+        while (true)
+        {
+            after = await renderer.Dispatcher.InvokeAsync(() => Task.FromResult(output.ToHtmlString()));
+            if (after.Contains("Offline", StringComparison.Ordinal))
+            {
+                break;
+            }
+
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains("Offline", after, StringComparison.Ordinal);
     }
 
     /// <summary>Counts non-overlapping occurrences of <paramref name="needle"/> in <paramref name="haystack"/>.</summary>

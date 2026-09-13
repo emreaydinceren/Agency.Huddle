@@ -81,6 +81,26 @@ internal sealed class PersonaSupervisor : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Restarts one Persona's host on demand - the Human-triggered counterpart to the restart
+    /// <see cref="OnPersonasChanged"/> performs automatically when a Persona's file, Model or Effort
+    /// changes. Wraps <see cref="RestartHostAsync"/> directly, so it shares the same <see cref="gate"/>-protected
+    /// <see cref="restarting"/> set that already stops two concurrent restarts of the same Persona - a
+    /// Restart button is exactly the new way to provoke that race. A Persona with no host currently
+    /// running still starts one: <see cref="RestartHostAsync"/> removes whatever host is running (none,
+    /// here) and then calls <see cref="StartHostIfMissingAsync"/> unconditionally, which is the whole
+    /// point for a Persona that failed to start in the first place - a Restart on it must not be a
+    /// no-op.
+    /// </summary>
+    /// <param name="personaName">The Persona to restart.</param>
+    /// <param name="cancellationToken">Cancels the restart.</param>
+    public Task RestartAsync(string personaName, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(personaName);
+
+        return this.RestartHostAsync(personaName, cancellationToken);
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Starting an agent process spends real money on the user's Claude subscription

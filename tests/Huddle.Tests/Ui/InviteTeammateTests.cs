@@ -12,7 +12,6 @@ using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
-using Agency.Huddle.Tests.Acp.Tools;
 
 /// <summary>
 /// Renders <see cref="InviteTeammate"/> on its own. The control lives behind a click on the Room
@@ -155,6 +154,7 @@ public sealed class InviteTeammateTests
         services.AddSingleton(directory);
         services.AddSingleton(chat);
         services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
+        services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
         services.AddSingleton(new RoomEvents(NullLogger<RoomEvents>.Instance));
 
         // The panel's own team filter needs a PersonaStore; created and disposed within this one

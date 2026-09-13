@@ -1,7 +1,9 @@
 @implements IDisposable
+@using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Pipes
 @inject ITeamDirectory TeamDirectory
 @inject IAgentGateway Gateway
+@inject PersonaHealth Health
 @inject ChatService Chat
 @inject RoomEvents Events
 @inject NavigationManager Navigation
@@ -18,11 +20,11 @@
             <ul class="new-chat-agents">
                 @foreach (var agent in this.agents)
                 {
-                    var online = this.Gateway.IsOnline(agent.Id);
+                    var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(agent.Id), this.Health.Get(agent.Name));
                     <li>
                         <label>
                             <input type="checkbox" checked="@this.selectedAgentIds.Contains(agent.Id)" @onchange="@(e => this.ToggleAgent(agent.Id, e.Value))" />
-                            <span class="agent-dot @(online ? "online" : "offline")" title="@(online ? "online" : "offline")"></span>
+                            <span class="agent-dot @NewChat.StatusClass(status.State)" title="@NewChat.StatusClass(status.State)"></span>
                             @agent.Name
                         </label>
                     </li>
@@ -53,6 +55,16 @@
     {
         this.isOpen = !this.isOpen;
     }
+
+    /// <summary>The CSS class (and this panel's own tooltip text) for <paramref name="state"/>'s <c>agent-dot</c>.</summary>
+    /// <param name="state">The state to classify.</param>
+    private static string StatusClass(PersonaState state) => state switch
+    {
+        PersonaState.Starting => "starting",
+        PersonaState.Online => "online",
+        PersonaState.Degraded => "degraded",
+        _ => "offline",
+    };
 
     private void ToggleAgent(string agentId, object? isChecked)
     {

@@ -117,13 +117,46 @@ public sealed class PipeHostFixture : IAsyncDisposable
     /// </para>
     /// </remarks>
     /// <param name="services">The fixture's service collection, already populated by <see cref="ServiceCollectionExtensions.AddTeamServices"/>.</param>
+    /// <remarks>
+    /// <para>
+    /// The Restart button changed <see cref="ServiceCollectionExtensions.AddTeamServices"/> to register
+    /// <see cref="PersonaSupervisor"/> twice - once as itself (<c>AddSingleton&lt;PersonaSupervisor&gt;()</c>), so a
+    /// component's Restart button can resolve the very instance the host is running, and once as
+    /// <see cref="IHostedService"/> via <c>sp.GetRequiredService&lt;PersonaSupervisor&gt;()</c>, so the host still
+    /// starts it. Both registrations must go, or the second one - a factory closing over the first -
+    /// throws trying to resolve a <see cref="PersonaSupervisor"/> this method just removed. The factory
+    /// registration carries no <see cref="ServiceDescriptor.ImplementationType"/> (it is a delegate, not
+    /// a type), so it cannot be found the same way as the singleton; <see cref="ServiceDescriptor.ImplementationFactory"/>
+    /// being non-null is what distinguishes it from <c>DataInitializer</c>, <c>PipeServer</c> and
+    /// <c>DemoAgentHost</c> above it, which are all registered by type.
+    /// </para>
+    /// </remarks>
     private static void RemovePersonaSupervisorHostedService(IServiceCollection services)
     {
-        var descriptor = services.FirstOrDefault(d => d.ImplementationType == typeof(PersonaSupervisor))
+        var singleton = services.FirstOrDefault(d => d.ServiceType == typeof(PersonaSupervisor))
             ?? throw new InvalidOperationException(
                 $"Expected {nameof(ServiceCollectionExtensions.AddTeamServices)} to register {nameof(PersonaSupervisor)} " +
-                "as an IHostedService, but no such registration was found. Has it been renamed or moved?");
+                "as a singleton, but no such registration was found. Has it been renamed or moved?");
+        services.Remove(singleton);
 
-        services.Remove(descriptor);
+        // SingleOrDefault, not FirstOrDefault: a factory is the only thing that tells this
+        // registration apart from DataInitializer, PipeServer and DemoAgentHost, which are all
+        // registered by type. The day something else is added by factory, that stops being a unique
+        // identifier - and picking the first match would quietly remove the wrong hosted service and
+        // leave this fixture running a PersonaSupervisor it believes it removed. Failing loudly here
+        // costs one confusing test run; getting it wrong silently costs an afternoon.
+        var hostedServiceFactories = services
+            .Where(d => d.ServiceType == typeof(IHostedService) && d.ImplementationFactory is not null)
+            .ToList();
+
+        if (hostedServiceFactories.Count != 1)
+        {
+            throw new InvalidOperationException(
+                $"Expected exactly one factory-registered IHostedService - {nameof(PersonaSupervisor)}'s - but found "
+                + $"{hostedServiceFactories.Count}. Another hosted service is now registered by factory too, so this "
+                + "method can no longer tell them apart; identify them explicitly rather than by shape.");
+        }
+
+        services.Remove(hostedServiceFactories[0]);
     }
 }
