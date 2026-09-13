@@ -28,6 +28,11 @@ the hub: [AgencyTeam.md](../AgencyTeam.md).
 | `Components/Pages/Chat.razor` | The Room view. |
 | `Components/Pages/Teammates.razor` | The Persona library UI, at `/teammates`. Teammate tiles grouped by Team with a Team filter, the rejected-file list above them; owns the open card's state. |
 | `Components/Pages/TeammateGrouping.cs` | The grouping and filtering behind that page, as a pure function — extracted because `HtmlRenderer` cannot simulate choosing a `<select>` option, so inline it would have been untestable. |
+| `Components/Pages/Settings.razor` | The settings shell at `/settings`, with a hand-rolled tab rail — this repo has no tab, dialog or accordion primitive. Owns every editable Hook value; `HooksPanel` holds none. One tab so far. |
+| `Components/Settings/HooksPanel.razor` | The twenty-two Hooks, grouped and editable. Takes exactly one non-string parameter, so it cannot hit the missing-`@` trap [Rules](rules.md) describes and needs no source-regex guard of its own. |
+| `Components/Settings/HookFieldFactory.cs` | The grouping, the three-state flags and the textarea sizing, as pure functions — extracted for the same reason `TeammateGrouping` is: `HtmlRenderer` cannot dispatch a click, so logic inside a component is untestable here. |
+| `Components/Settings/HookFieldState.cs` | One row's view-model, plus `HookEdit` and the group record. Public because a Razor `[Parameter]` may not be of an internal type; the catalog and the store stay internal behind it. |
+| `Components/Settings/ResetAllControl.razor` | Restore every Hook to its default, with an inline confirm rather than a dialog. Stages the defaults like any other edit — Save is still the only thing that writes. |
 | `Components/Shared/TeammateCard.razor` | One Teammate's details, opened over the page. Viewing, editing and creating are three modes of this one card. |
 | `Components/Shared/InviteTeammate.razor` | **Add teammate** on the Room header. Offers only Agents that are not already Members; calls the same `InviteAsync` the `/invite` command and the App Tool do. |
 | `Demo/DemoAgentHost.cs` | The echo agents. Its connect-retry loop was the model for `PersonaRunner`. |
@@ -45,7 +50,7 @@ the hub: [AgencyTeam.md](../AgencyTeam.md).
 | `PersonaRunner.cs` | **The join.** Pipe client on one side, ACP session on the other. Keeps no Budget count of its own — it passes the Envelope's labels to `ReplyGate` — but does hold the per-Persona token Budget, summed from the rises in `UsageUpdated.Used`. Not a `BackgroundService` — see [Traps](traps.md). |
 | `IAgentHostFactory.cs` | The test seam. A fake here is why the suite spends zero tokens. |
 | `DotAcpAgentHostFactory.cs` | The real one: work dir, bearer token, one `AppToolServer` per Persona, then the agent process. |
-| `SystemPromptComposer.cs` | A canned orientation naming `mcp__team__get_help`, then Persona text, then a fixed block naming every tool **with its `mcp__team__` prefix**. |
+| `SystemPromptComposer.cs` | Four Hooks and the Persona's own text, joined in a fixed order. Holds no wording of its own. Receives the tool names already carrying their `mcp__team__` prefix — see [Rules](rules.md) for why it never builds one. |
 | `AdapterLocator.cs` | Finds `node_modules/.../claude-agent-acp/dist/index.js`. Returns null rather than throwing — a missing install must never break `dotnet run`. |
 | `IModelCatalog.cs`, `ModelCatalogProbe.cs` | The model list offered by the picker, **and** a per-model effort list. ACP has no `models/list`, so this spawns a throwaway adapter, does `initialize` → `session/new` **with the requested model selected**, reads both catalogs off that one session and disposes. **No prompt turn, so no tokens.** Returns an empty list rather than throwing when nothing is installed; `WithoutAdapterDefault` drops the adapter's `"default"` sentinel from the effort list here, at the app layer. |
 | `Tools/GetHelpTool.cs` | How this application works, then the whole tool catalog. Built from the other tools, so a tool added to the factory documents itself. |
@@ -53,6 +58,15 @@ the hub: [AgencyTeam.md](../AgencyTeam.md).
 | `Tools/CreateRoomTool.cs` | Takes `agents[]` and no name — a Room is named after its Agents. |
 | `Tools/InviteAgentTool.cs` | Adds an Agent to a Room that already exists. Takes the Room's id, which a Turn's `[Room: …]` label carries. |
 | `Tools/PostMessageTool.cs` | Speak into a Room other than the current one. Without this an agent-created Room stays silent. |
+
+`src/Huddle.App/Hooks` — the model-facing text:
+
+| Path | Responsibility |
+| --- | --- |
+| `HookCatalog.cs` | Every Hook's default wording, its placeholders, and whether an edit reaches the next Turn or only the next session. The authority: `hooks.default.json` is generated from this, not the other way round. |
+| `HookRenderer.cs` | `{{name}}` substitution. Single-pass by construction — matches are found against the original template and the output is built from literal slices, so a substituted value containing `{{b}}` is never re-expanded. |
+| `HookValidator.cs`, `HookIssue.cs` | The two failures that are otherwise invisible: a prompt that stopped naming a tool, a Room label that lost its id. Reports and never refuses — see [Rules](rules.md). |
+| `HookStore.cs`, `IHookSource.cs` | Resolves overrides over defaults per key. One frozen snapshot behind a volatile field, rebuilt before `HooksChanged` is raised and never mutated after publish. Debounced `FileSystemWatcher`, same recipe as `PersonaStore` — see [Traps](traps.md). Synchronous, because a tool's `Description` getter and a Razor render cannot await. |
 
 `src/Huddle.Acp` — the ACP client:
 

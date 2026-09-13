@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.Tests.Acp.Fakes;
 
 public sealed class ListAgentsToolTests
 {
@@ -21,7 +22,7 @@ public sealed class ListAgentsToolTests
         gateway.SetOnline(echo.Id);
         using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         personaStore.Add(new PersonaIdentity("coo", "coo", "coo", []), "You are the Chief of Staff.");
-        var tool = new ListAgentsTool(directory, gateway, personaStore);
+        var tool = new ListAgentsTool(directory, gateway, personaStore, new FakeHookSource());
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -54,7 +55,7 @@ public sealed class ListAgentsToolTests
             ct);
 
         using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
-        var tool = new ListAgentsTool(directory, gateway, personaStore);
+        var tool = new ListAgentsTool(directory, gateway, personaStore, new FakeHookSource());
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -74,7 +75,7 @@ public sealed class ListAgentsToolTests
         var gateway = new FakeAgentGateway();
         gateway.SetOnline(echo.Id);
         using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
-        var tool = new ListAgentsTool(directory, gateway, personaStore);
+        var tool = new ListAgentsTool(directory, gateway, personaStore, new FakeHookSource());
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);
 

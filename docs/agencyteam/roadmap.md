@@ -4,7 +4,7 @@ Read this before starting work that touches `PersonaRunner`'s event loop,
 `ReplyGate`, `IAgentHostFactory`, or `wwwroot/app.css`. Back to the hub:
 [AgencyTeam.md](../AgencyTeam.md).
 
-Twelve items. **Item 10 shipped on 2026-09-12**; the other eleven are decided but not built. They sit here rather than in [Known
+Thirteen items. **Items 2 and 10 shipped on 2026-09-12, and item 13 on 2026-09-13**, and each keeps its entry below - the delivered note first, then the reasoning that produced it. Item 13 was never on this list before it was built, and is recorded after the fact because it changed files the other items name and leaves a decision open that item 9 has to close. The other ten are decided but not built. They sit here rather than in [Known
 limits](known-limits.md) because that section records what is deliberately absent;
 these have moved from *declined* to *not yet*. Three appear in both places, and
 the Known limits entry now points here rather than warning you off.
@@ -18,13 +18,14 @@ Nothing here is scheduled, and nothing here is a deadline. What each entry
 carries is the single place to change and what already exists — because in
 several of them the plumbing is largely built and currently discarded, most of it
 on one line: `PersonaRunner` ignores `ThoughtChunk`, `ToolCallStarted` and
-`ToolCallUpdated` together. `UsageUpdated` used to sit on that line too; item 2
-took it off, which is what a cheap item looks like when it lands.
+`ToolCallUpdated` together. `UsageUpdated` used to sit on that line too until
+item 2 read it, which is what a cheap item looks like when it lands — and a
+reminder that the remaining three on that line are cheap for the same reason.
 
 | # | Item | Single place to change | Already in the code |
 | --- | --- | --- | --- |
 | 1 | Renaming a Teammate | `PersonaStore`, and every per-Persona store | — |
-| 2 | ~~A cap on agent-to-agent conversation~~ **built** | — | shipped 2026-09-12, [ADR-0006](../adr/0006-a-room-has-a-budget-for-agent-replies.md) |
+| ~~2~~ | ~~A cap on agent-to-agent conversation~~ — **delivered 2026-09-12** | `ChatService`, then `ReplyGate.cs` and `PersonaRunner` | shipped; the two counts moved onto the Envelope, which the plan did not foresee |
 | 3 | Streaming and failure surfacing | `PersonaRunner`, `Chat.razor` | `MessageDelta`, `MessageChunk` |
 | 4 | Stopping a turn | `PersonaRunner`, `Chat.razor` | `IAgentSession.CancelAsync` |
 | 5 | Tool-call visibility | `PersonaRunner`'s event loop | `ToolCallStarted`, `ToolCallUpdated` |
@@ -35,6 +36,7 @@ took it off, which is what a cheap item looks like when it lands.
 | ~~10~~ | ~~Persona frontmatter becomes the Member's identity~~ — **delivered 2026-09-12** | `PersonaIndex`, `PersonaStore`, `MentionParser` | shipped; `Persona.cs` was not touched |
 | 11 | Notifying an Agent when a watched file changes | a new watcher beside `PersonaStore`, then `ChatService` | `PersonaStore`'s debounced `FileSystemWatcher`; frontmatter lists parse already |
 | 12 | Running a Persona on a local Model | a second `IAgentHostFactory`, then `ServiceCollectionExtensions` | `IAgentHostFactory` already has two implementations |
+| ~~13~~ | ~~Model-facing text is configuration~~ — **delivered 2026-09-13** | `Hooks/`, then the five sites that held the literals | shipped; never on this list before it was built, and it collides with item 9 — see [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) |
 
 ## 1. Renaming a Teammate
 
@@ -50,44 +52,65 @@ Removal leaves the Agent, its Rooms and its Transcripts behind on purpose; for a
 rename the same no-cascade rule reads as a bug, because the Teammate is still
 there and the history is filed under a Name that no longer exists.
 
-## 2. A cap on agent-to-agent conversation — **built**
+## 2. A cap on agent-to-agent conversation — DELIVERED 2026-09-12
 
-Shipped on 2026-09-12 as a **Budget**:
-[ADR-0006](../adr/0006-a-room-has-a-budget-for-agent-replies.md) is the decision
-in full, [Known limits](known-limits.md) records what it does not cover, and
-[Language](language.md) defines the word. What follows is only where the
-original plan was wrong, kept because each mistake is worth not repeating.
+> **Delivered** as a **Budget**, with
+> [ADR-0006](../adr/0006-a-room-has-a-budget-for-agent-replies.md) as the decision
+> in full, [Known limits](known-limits.md) recording what it does not cover, and
+> [Language](language.md) defining the word. Three layers shipped as planned —
+> cheapest first, each useful alone — but two things below are **wrong**, and both
+> mattered.
+>
+> **Layer one does not keep a client-side streak.** The plan has `ReplyGate`
+> counting what one Agent received, and accepts that the count is coarse. It
+> cannot work at all once the Human can extend a Budget: the grant lives in
+> `ChatService`, so a runner comparing against its own configured default would
+> decline the re-delivered Message and Continue would silently do nothing. The two
+> counts ride on the Envelope instead, as labels in exactly ADR-0004's sense, and
+> `PersonaRunner` holds no count of its own. That also retires the "three-way loop
+> trips each counter at a third of the rate" problem rather than living with it.
+>
+> **"It has to say so in the Room" is reversed.** A posted Message needs a sender
+> and there is no honest one — a `system` sender costs a third `UserKind` (a SQL
+> `CHECK` wanting a fresh `App_Data`, *and* a wire enum inside `MemberInfo`), the
+> capped Agent posting it is circular, and the Human posting it resets the Budget
+> it reports. The Room view shows the pause and goes further than the plan asked:
+> it **asks**, and Continue re-delivers the Room's last Message, because a Turn
+> only ever begins with a delivered Message.
+>
+> The plan's closing question is answered: **per Room for layers one and two, per
+> Persona for the token Budget** — one ACP session spans every Room its Agent is
+> in, so the third layer could not be per Room even if it wanted to be. The
+> "reading it is an `if` and a counter" estimate for that layer held, with one
+> correction: `UsageUpdated.Used` is a context-window level, not a bill, so it
+> falls on compaction and only the rises may be summed.
+>
+> The text below is kept as the reasoning that produced it.
 
-**Three layers, and the middle one owns the only counter.** `ChatService` counts,
-labels every Envelope with `agentMessagesSinceHuman` and `budget`, and refuses the
-post that would exceed it. `ReplyGate` compares the two labels and declines the
-Turn before it is billed. `PersonaRunner` sums the *rises* in `UsageUpdated.Used`
-into a per-Persona token Budget — `Used` is a context-window level, not a bill, so
-it falls on compaction and summing it outright would count the window again on
-every update.
+`ReplyGate` is the right place for the simplest version and the wrong place for
+the whole thing. It is a pure function over one delivery, so it sees only what
+*one* Agent received: three Agents in a Room each keep their own streak, and a
+three-way loop trips each counter at a third of the rate. Message count is also a
+poor proxy for money — forty one-line replies cost less than three that each read
+a file.
 
-**The plan had layer one keeping its own client-side streak. That cannot work.**
-Once the Human can extend a Budget the grant lives in `ChatService`, so a runner
-comparing against its own configured default would decline the re-delivered
-Message and Continue would silently do nothing. Two counts on the Envelope are
-labels in exactly ADR-0004's sense, the comparison stays client-side, and the
-runner keeps no state at all. It is also strictly less code.
+Three layers, cheapest first. Each is useful on its own:
 
-**"It has to say so in the Room" is reversed, for two reasons rather than one.**
-A posted Message needs a sender and there is no honest one: a `system` sender
-costs a third `UserKind` — a SQL `CHECK` constraint needing a fresh `App_Data`
-*and* a wire enum inside `MemberInfo` — which is the same conclusion
-[item 11](#11-notifying-an-agent-when-a-file-it-depends-on-changes) reaches on its
-own; and posting it as the capped Agent is circular, because the announcement
-would itself be an agent-authored Message needing exemption from the cap it
-announces. The Room view shows the pause instead, and goes further than the plan
-did: it **asks**. Continue grants one more Budget and re-delivers the Room's last
-Message — without that re-delivery it would raise a number nothing reads, since a
-Turn only ever begins with a delivered Message.
+| Layer | Where | Catches |
+| --- | --- | --- |
+| Consecutive agent-authored Messages since the Human last spoke | `ReplyGate`, with the count passed in so it stays pure | The two-Agent ping-pong |
+| A per-Room budget for one autonomous run, reset by any Human Message | `ChatService` — the only writer, and the only thing that sees every Message | The N-way loop layer one misses |
+| A token budget | `PersonaRunner`, from `UsageUpdated(SessionId, Size, Used)` | Actual cost |
 
-**The open question is settled: per Room for layers one and two, per Persona for
-the token Budget** — one ACP session spans every Room its Agent is in, so the
-third layer could not be per Room even if it wanted to be.
+The third layer sounds like the expensive one and is not. `UsageUpdated` is
+already mapped in `SessionUpdateMapper` and already arriving; reading it is an
+`if` and a counter, not new protocol work.
+
+Whatever trips, **it has to say so in the Room**. A cap that stops an Agent
+silently is indistinguishable from an Agent that is broken, which is the same
+failure as item 3. A posted Message — *paused after 40 agent turns; say anything
+to resume* — makes the cap legible, and settling that wording also settles
+whether a budget is per Room, per Persona, or global.
 
 ## 3. Streaming replies, and failures the human can see
 
@@ -232,6 +255,14 @@ prove a real model remembers — a manual-checklist question, like whether a mod
 finds any App Tool at all.
 
 ## 9. Per-Persona tool grants
+
+> **Read [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) before
+> starting this.** Hooks shipped on 2026-09-13 and made the same `get_help`
+> body and the same `DotAcpAgentHostFactory` block configurable, through a
+> *global* JSON file. This item proposes a *per-Persona* channel for the same
+> tool surface. Both are coherent; having both without deciding which wins
+> where is not. That ADR states the two options and leaves the choice to
+> whoever builds this.
 
 Every Agent holds every tool. `DotAcpAgentHostFactory` builds
 `[new GetHelpTool(chatTools), .. chatTools]`, an identical list for everyone, so
@@ -568,7 +599,7 @@ retiring the first time.
   Personas long before they suit coordinators.
 
 - **Free is not the same as cheap.**
-  [Item 2](#2-a-cap-on-agent-to-agent-conversation--built)'s third layer is a
+  [Item 2](#2-a-cap-on-agent-to-agent-conversation--delivered-2026-09-12)'s third layer is a
   token Budget read from `UsageUpdated`, and a local backend emits none — there is
   no bill to read, so that layer is simply inert there. Layers one and two are
   untouched, and they are the two that actually catch a loop. But the resource a runaway local Persona exhausts is the machine every
@@ -590,17 +621,21 @@ Six dependencies here are real:
   decision. A renamed Teammate leaves its Agent, Rooms and Transcripts behind
   under the old Name, and the card exposes a rename only by editing the raw file.
 
-- **2 before 8 — satisfied.** A following Agent is woken by every Message in that
-  Room, including exchanges it is not part of, and each wake is a billed Turn. The
-  Budget is what makes following affordable, so it gated the feature outright
-  rather than improving it. It shipped on 2026-09-12; item 8 is unblocked.
+- ~~**2 before 8.**~~ **Settled — 2 shipped 2026-09-12.** A following Agent is
+  woken by every Message in that Room, including exchanges it is not part of, and
+  each wake is a billed Turn. The Budget is what made following affordable, so it
+  gated the feature outright rather than improving it. Item 8 is unblocked, with
+  one sizing question it now owns: a five-stage pipeline can spend a Room's Budget
+  quickly, and 40 agent Messages across every specialist in one Room may prove too
+  few.
 - **8 before 9.** Both come from ADR-0005, but a coordinator that cannot be woken
   cannot use a tool grant either way round. Following is the load-bearing half.
-- **2 before 11 — satisfied.** A watched-file notification lands in a two-Member
-  Room, where the Reply Gate always passes, so every file change spends a Turn no
-  Human asked for. Same reasoning as 2 before 8, and the same Budget covers both.
-  Item 11 is unblocked, with the caveat in its own section: do not send the
-  notification as the Human, or it resets the Budget it relies on.
+- ~~**2 before 11.**~~ **Settled — 2 shipped 2026-09-12.** A watched-file
+  notification lands in a two-Member Room, where the Reply Gate always passes, so
+  every file change spends a Turn no Human asked for. Same reasoning as 2 before 8,
+  and the same Budget covers both. Item 11 is unblocked, and inherits a trap its
+  own section now records: do **not** send the notification as the Human, or every
+  file save resets the Budget the item depends on.
 - **6 before 7.** There is nothing for a generator to write until the tokens
   exist.
 - **1 before the next per-Persona store.** Each store added is one more place a
@@ -636,3 +671,40 @@ and in memory, and App Tools are settled over MCP — the pipe never learns a to
 exists. Item 12 costs none for a different reason: the backend sits *behind*
 `PersonaRunner`, which is an ordinary pipe client whichever way it is built, so
 the wire cannot tell what is answering.
+
+## 13. Model-facing text is configuration — DELIVERED 2026-09-13
+
+> Added here after the fact: this was never one of the twelve. It is recorded
+> because it changed five files the other items name, and because it leaves one
+> decision open that item 9 has to close.
+
+Twenty-two strings moved out of C# into `HookCatalog` (defaults, in code) with
+per-key overrides in `{DataDir}/hooks.json`, edited at `/settings`. Four golden
+files pin the composed output of all four surfaces, and every one reproduced
+byte-for-byte on the first run of its conversion — the refactor is provably
+inert, not assumed so.
+
+[ADR-0007](../adr/0007-model-facing-text-is-configuration.md) carries the
+decisions. Three are worth knowing before touching anything nearby:
+
+**A Hook edit never restarts a session.** A system prompt is fixed at
+`session/new`, so a `NextSession` Hook is silently inert on a running Teammate
+and the settings page badges exactly those fields. Restarting instead would have
+thrown away an Agent's conversation memory on every reworded sentence.
+
+**No Hook's text contains `mcp__team__`.** The prefix is built from the same
+constant handed to `AppToolServer`, so one line of executable code names the tool
+server. That closes the `rules.md` failure mode by construction rather than by
+anyone remembering — which matters more here than elsewhere, because a
+hand-editable prompt is exactly how it would have come back.
+
+**What stayed literal.** Tool *result* strings, `ChatService.BudgetRefusal` and
+`AppToolServer`'s error results are behaviour rather than wording, and several
+are pinned character-for-character by tests. That line was drawn deliberately and
+can move; the Budget refusal in particular must stay exactly one source feeding
+both doors into a post.
+
+What it did **not** do is decide how this coexists with item 9's per-Persona
+`_tools:` frontmatter. Two config channels for one tool surface is a real
+collision, and the ADR states the options rather than guessing at a design for an
+item nobody has started.

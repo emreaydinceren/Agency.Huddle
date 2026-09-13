@@ -3,6 +3,7 @@ using System.IO.Pipes;
 using System.Text;
 using System.Threading.Channels;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Hooks;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Acp;
@@ -29,6 +30,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
     private readonly Persona persona;
     private readonly TeamOptions options;
     private readonly IAgentHostFactory factory;
+    private readonly IHookSource hooks;
     private readonly ILogger<PersonaRunner> logger;
     private readonly CancellationTokenSource runCts = new();
     private readonly Channel<WorkItem> workItems = Channel.CreateUnbounded<WorkItem>();
@@ -59,16 +61,18 @@ internal sealed class PersonaRunner : IAsyncDisposable
     private Task? eventReaderTask;
     private bool disposed;
 
-    public PersonaRunner(Persona persona, IOptions<TeamOptions> options, IAgentHostFactory factory, ILogger<PersonaRunner> logger)
+    public PersonaRunner(Persona persona, IOptions<TeamOptions> options, IAgentHostFactory factory, IHookSource hooks, ILogger<PersonaRunner> logger)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(factory);
+        ArgumentNullException.ThrowIfNull(hooks);
         ArgumentNullException.ThrowIfNull(logger);
 
         this.persona = persona;
         this.options = options.Value;
         this.factory = factory;
+        this.hooks = hooks;
         this.logger = logger;
     }
 
@@ -261,7 +265,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
 
         try
         {
-            var prompt = BuildPrompt(item);
+            var prompt = BuildPrompt(item, this.hooks);
             await this.session!.PromptAsync(prompt, ct);
             var replyText = await tcs.Task.WaitAsync(ct);
 
@@ -360,37 +364,65 @@ internal sealed class PersonaRunner : IAsyncDisposable
             $"Persona '{this.persona.Name}' failed to connect to pipe '{this.options.PipeName}' after {MaxConnectAttempts} attempts.");
     }
 
-    private static string BuildPrompt(WorkItem item)
+    /// <summary>Builds the prompt text delivered to the model for one Turn.</summary>
+    /// <param name="item">The Turn's Room, sender, text and any catch-up context.</param>
+    /// <param name="hooks">Resolves each <c>turn.*</c> hook's current text — a configured override, or the <see cref="HookCatalog"/> default.</param>
+    /// <returns>
+    /// The full prompt: with no catch-up context, the <c>turn.message</c> line alone; with catch-up
+    /// context, a <c>turn.catchUpHeader</c> line, one <c>turn.catchUpLine</c> per missed message, a
+    /// blank line, then the <c>turn.message</c> line.
+    /// </returns>
+    internal static string BuildPrompt(WorkItem item, IHookSource hooks)
     {
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(hooks);
+
         // The Room's id rides along with its name because it is the only way an Agent can learn one.
         // mcp__team__post_message and mcp__team__invite_agent both take a room id, and nothing else
         // in a turn carries it: without this they reach only Rooms the Agent created itself.
-        var room = RoomLabel(item);
+        var room = RoomLabel(item, hooks);
 
         if (item.MissedMessages.Count == 0)
         {
-            return $"{room} {item.SenderName}: {item.Text}";
+            return RenderMessage(hooks, room, item.SenderName, item.Text);
         }
 
         var builder = new StringBuilder();
-        builder.Append(room).Append(" You were not addressed in these earlier messages, they are context only:");
+        builder.Append(hooks.Render("turn.catchUpHeader", new Dictionary<string, string> { ["{{roomLabel}}"] = room }));
         builder.Append('\n');
         foreach (var missed in item.MissedMessages)
         {
-            builder.Append(missed.SenderName).Append(": ").Append(missed.Text);
+            builder.Append(hooks.Render(
+                "turn.catchUpLine",
+                new Dictionary<string, string> { ["{{sender}}"] = missed.SenderName, ["{{text}}"] = missed.Text }));
             builder.Append('\n');
         }
 
         builder.Append('\n');
-        builder.Append(room).Append(' ').Append(item.SenderName).Append(": ").Append(item.Text);
+        builder.Append(RenderMessage(hooks, room, item.SenderName, item.Text));
 
         return builder.ToString();
     }
 
     /// <summary>Builds the bracketed Room label that opens every line of a prompt.</summary>
     /// <param name="item">The work item whose Room is being labelled.</param>
+    /// <param name="hooks">Resolves the <c>turn.roomLabel</c> hook's current text.</param>
     /// <returns>The label, carrying both the Room's name and its id.</returns>
-    private static string RoomLabel(WorkItem item) => $"[Room: {item.RoomName} (id: {item.RoomId})]";
+    private static string RoomLabel(WorkItem item, IHookSource hooks) =>
+        hooks.Render(
+            "turn.roomLabel",
+            new Dictionary<string, string> { ["{{roomName}}"] = item.RoomName, ["{{roomId}}"] = item.RoomId });
+
+    /// <summary>Renders one <c>turn.message</c> line: a Room label, its sender, and its text.</summary>
+    /// <param name="hooks">Resolves the <c>turn.message</c> hook's current text.</param>
+    /// <param name="roomLabel">The already-rendered Room label to open the line with.</param>
+    /// <param name="sender">The message's sender name.</param>
+    /// <param name="text">The message's text.</param>
+    /// <returns>The rendered <c>turn.message</c> line.</returns>
+    private static string RenderMessage(IHookSource hooks, string roomLabel, string sender, string text) =>
+        hooks.Render(
+            "turn.message",
+            new Dictionary<string, string> { ["{{roomLabel}}"] = roomLabel, ["{{sender}}"] = sender, ["{{text}}"] = text });
 
     /// <summary>
     /// Whether a delivery was authored by the Human. A sender who has left the Room since posting
@@ -474,12 +506,12 @@ internal sealed class PersonaRunner : IAsyncDisposable
         }
     }
 
-    private sealed record WorkItem(
+    internal sealed record WorkItem(
         string RoomId,
         string RoomName,
         string SenderName,
         string Text,
         IReadOnlyList<CaughtUpMessage> MissedMessages);
 
-    private sealed record CaughtUpMessage(string SenderName, string Text);
+    internal sealed record CaughtUpMessage(string SenderName, string Text);
 }

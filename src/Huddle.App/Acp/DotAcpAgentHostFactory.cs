@@ -5,6 +5,7 @@ using Agency.Huddle.Acp.DotAcp;
 using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.Acp.Tools;
 using Agency.Huddle.App.Acp.Tools;
+using Agency.Huddle.App.Hooks;
 
 namespace Agency.Huddle.App.Acp;
 
@@ -21,6 +22,14 @@ namespace Agency.Huddle.App.Acp;
 /// </remarks>
 internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 {
+    /// <summary>
+    /// The MCP tool-server name handed to <see cref="AppToolServer"/>. Every tool name in the system
+    /// prompt must carry this same value as its <c>mcp__{name}__</c> prefix, so it is held here once
+    /// and never retyped into a hook's template — see <see cref="SystemPromptComposer"/>'s remarks on
+    /// why that prefix is applied in code.
+    /// </summary>
+    private const string ToolServerName = "team";
+
     private readonly TeamOptions options;
     private readonly IServiceProvider serviceProvider;
     private readonly ILoggerFactory loggerFactory;
@@ -64,12 +73,24 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             ActivatorUtilities.CreateInstance<PostMessageTool>(this.serviceProvider, agentId),
         ];
 
+        var hooks = this.serviceProvider.GetRequiredService<IHookSource>();
+
+        // The mcp__{server}__ prefix is derived from the same server name above, never typed into a
+        // hook's template - see the ToolServerName remarks and SystemPromptComposer's. GetHelpTool
+        // takes it explicitly rather than hard-coding its own copy, for the same reason.
+        var toolNamePrefix = $"mcp__{ToolServerName}__";
+
         // get_help is offered first and knows every other tool, so the system prompt can name one
         // tool instead of all of them. It is built last for the obvious reason: it takes the rest.
-        IReadOnlyList<IAppTool> tools = [new GetHelpTool(chatTools), .. chatTools];
+        // Captured in its own local, rather than only in the tools array below, so the system prompt
+        // can name it from its own Name below - never retyping "get_help" either.
+        var getHelpTool = new GetHelpTool(chatTools, hooks, toolNamePrefix);
+        IReadOnlyList<IAppTool> tools = [getHelpTool, .. chatTools];
 
-        var toolServer = new AppToolServer("team", tools, this.loggerFactory, 0, authToken);
+        var toolServer = new AppToolServer(ToolServerName, tools, this.loggerFactory, 0, authToken);
         await toolServer.StartAsync(cancellationToken).ConfigureAwait(false);
+
+        IReadOnlyList<string> toolNames = [.. tools.Select(tool => $"{toolNamePrefix}{tool.Name}")];
 
         DotAcpAgentHost innerHost;
         try
@@ -92,7 +113,9 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                 new AgentSessionOptions(
                     workDir,
                     new AutoApprovePermissionHandler(),
-                    new SystemPromptOptions(SystemPromptComposer.Compose(persona), SystemPromptMode.Append),
+                    new SystemPromptOptions(
+                        SystemPromptComposer.Compose(persona, hooks, toolNamePrefix + getHelpTool.Name, toolNames),
+                        SystemPromptMode.Append),
                     toolServer.Endpoint,
                     persona.Model,
                     persona.Effort),

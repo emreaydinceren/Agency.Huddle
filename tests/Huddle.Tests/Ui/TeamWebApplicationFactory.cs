@@ -26,6 +26,15 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     public string TeamsDirPath => Path.Combine(this.dataDir.Path, "Teams");
 
     /// <summary>
+    /// The path <see cref="Agency.Huddle.App.Hooks.HookStore"/> resolves its override file to under
+    /// this factory's isolated data directory, i.e. <see cref="Agency.Huddle.App.Hooks.HookStore.FilePath"/>'s
+    /// value for the instance this factory's app composes. Tests assert the Settings page shows this
+    /// exact path rather than a hardcoded guess, since <c>Team:DataDir</c> is redirected to a fresh
+    /// temp directory per factory.
+    /// </summary>
+    public string HooksJsonPath => Path.Combine(this.dataDir.Path, "hooks.json");
+
+    /// <summary>
     /// The <see cref="IModelCatalog"/> this factory wires in place of the real
     /// <see cref="ModelCatalogProbe"/>. Both fixtures must set <c>DemoAgent:Enabled=false</c>
     /// because a real demo agent spends nothing but still needs a Human to be online; this is the

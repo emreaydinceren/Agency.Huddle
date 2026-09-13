@@ -8,6 +8,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.Tests.Acp.Fakes;
 
 public sealed class ToolNamesTests
 {
@@ -25,11 +26,11 @@ public sealed class ToolNamesTests
 
         var tools = new IAppTool[]
         {
-            new ListAgentsTool(directory, gateway, personaStore),
-            new CreateRoomTool(chat, directory, "caller-id", aliasSource),
-            new InviteAgentTool(chat, directory, aliasSource),
-            new PostMessageTool(chat, "caller-id"),
-            new GetHelpTool([]),
+            new ListAgentsTool(directory, gateway, personaStore, new FakeHookSource()),
+            new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakeHookSource()),
+            new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource()),
+            new PostMessageTool(chat, "caller-id", new FakeHookSource()),
+            new GetHelpTool([], new FakeHookSource(), "mcp__team__"),
         };
 
         Assert.Equal("list_agents", tools[0].Name);

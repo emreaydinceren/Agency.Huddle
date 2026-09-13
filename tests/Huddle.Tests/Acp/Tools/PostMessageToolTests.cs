@@ -7,6 +7,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.Tests.Acp.Fakes;
 
 public sealed class PostMessageToolTests
 {
@@ -23,7 +24,7 @@ public sealed class PostMessageToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
-        var tool = new PostMessageTool(chat, echo.Id);
+        var tool = new PostMessageTool(chat, echo.Id, new FakeHookSource());
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello there" };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -48,7 +49,7 @@ public sealed class PostMessageToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
-        var tool = new PostMessageTool(chat, echo.Id);
+        var tool = new PostMessageTool(chat, echo.Id, new FakeHookSource());
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello" };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -71,7 +72,7 @@ public sealed class PostMessageToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
-        var tool = new PostMessageTool(chat, echo.Id);
+        var tool = new PostMessageTool(chat, echo.Id, new FakeHookSource());
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "from a threadpool thread" };
         var tcs = new TaskCompletionSource<MessagePostedEvent>(TaskCreationOptions.RunContinuationsAsynchronously);
         events.MessagePosted += e => tcs.TrySetResult(e);

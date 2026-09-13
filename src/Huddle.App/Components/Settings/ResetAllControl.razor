@@ -1,0 +1,45 @@
+@*
+    The Settings page's "Reset all to defaults" control, in the header area. Guarded the way
+    Teammates.razor guards Remove: an inline confirm step that swaps the button for Confirm/Cancel in
+    place, never a dialog and never a JS confirm() - discarding every customisation in one click with
+    no confirmation would be the single most destructive thing this page can do.
+
+    The parent (Settings.razor) owns all state, the same split HooksPanel uses: Confirming and
+    AnyModified are both parameters rather than fields here, so the confirm step can be rendered
+    directly from a test via ParameterView.FromDictionary, exactly how TeammateCardTests renders
+    TeammateCard's ConfirmingRemove state - HtmlRenderer cannot dispatch a click, so there is no other
+    way to see this component's confirm step from a test. Every parameter is deliberately non-string
+    (two bools, three plain EventCallbacks with no payload) for the same reason HooksPanel's are.
+*@
+
+@if (this.Confirming)
+{
+    <button type="button" class="teammate-card-action teammates-danger" @onclick="this.OnConfirm">Yes, reset everything</button>
+    <button type="button" class="teammate-card-action" @onclick="this.OnCancel">Cancel</button>
+}
+else
+{
+    <button type="button" class="teammate-card-action teammates-danger" disabled="@(!this.AnyModified)" @onclick="this.OnBeginReset">Reset all to defaults</button>
+}
+
+@code {
+    /// <summary>Whether any hook currently differs from its catalog default - this drives whether the plain (non-confirming) button is enabled.</summary>
+    [Parameter]
+    public bool AnyModified { get; set; }
+
+    /// <summary>Whether the inline confirm step is currently showing, in place of the plain button.</summary>
+    [Parameter]
+    public bool Confirming { get; set; }
+
+    /// <summary>Raised when the plain button is clicked, asking the parent to show the confirm step.</summary>
+    [Parameter]
+    public EventCallback OnBeginReset { get; set; }
+
+    /// <summary>Raised when the confirm step's "Yes, reset everything" is clicked.</summary>
+    [Parameter]
+    public EventCallback OnConfirm { get; set; }
+
+    /// <summary>Raised when the confirm step's Cancel is clicked, abandoning the reset.</summary>
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+}

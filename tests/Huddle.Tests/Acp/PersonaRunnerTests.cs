@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Hooks;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -18,6 +19,19 @@ namespace Agency.Huddle.Tests.Acp;
 /// </summary>
 public sealed class PersonaRunnerTests
 {
+    /// <summary>
+    /// The five real chat tools' names, each carrying its full <c>mcp__team__</c> prefix, in the same
+    /// order <see cref="DotAcpAgentHostFactory"/> builds them in.
+    /// </summary>
+    private static readonly IReadOnlyList<string> ToolNames =
+    [
+        "mcp__team__get_help",
+        "mcp__team__list_agents",
+        "mcp__team__create_room",
+        "mcp__team__invite_agent",
+        "mcp__team__post_message",
+    ];
+
     [Fact]
     public async Task Start_RegistersAgentAndCreatesDirectRoom()
     {
@@ -486,50 +500,67 @@ public sealed class PersonaRunnerTests
         await WaitForHistoryCountAsync(store, roomId, 2, ct);
 
         var prompt = Assert.Single(factory.Session.Prompts);
-        Assert.DoesNotContain("context only", prompt, StringComparison.Ordinal);
+
+        // "context only" used to be a literal in BuildPrompt; it now lives entirely inside the
+        // turn.catchUpHeader hook default. Deriving the expected phrase from HookCatalog rather than
+        // typing it here means a reworded default still fails this test loudly when the header leaks
+        // into a no-catch-up prompt, instead of silently asserting against wording nobody owns anymore.
+        // Do not "simplify" this back to a literal — see task T1.11.
+        var catchUpHeaderDefault = HookCatalog.Get("turn.catchUpHeader").Default;
+        var distinctivePortion = HookRenderer
+            .Render(catchUpHeaderDefault, new Dictionary<string, string> { ["{{roomLabel}}"] = string.Empty })
+            .Trim();
+
+        Assert.DoesNotContain(distinctivePortion, prompt, StringComparison.Ordinal);
     }
 
-    [Fact]
-    public void SystemPromptComposer_NamesEveryToolWithMcpPrefix()
-    {
-        var persona = new Persona("nova", "You are Nova.");
-
-        var prompt = SystemPromptComposer.Compose(persona);
-
-        Assert.Contains("mcp__team__get_help", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__list_agents", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__create_room", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__invite_agent", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__post_message", prompt, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// The canned orientation is what makes progressive discovery work: it has to say what kind of
-    /// application this is, and point at get_help, before the Persona's own text begins.
-    /// </summary>
-    [Fact]
-    public void SystemPromptComposer_OpensWithTheCannedOrientationNamingGetHelp()
-    {
-        var persona = new Persona("nova", "You are Nova.");
-
-        var prompt = SystemPromptComposer.Compose(persona);
-
-        var orientation = prompt.IndexOf("chat application", StringComparison.Ordinal);
-        var help = prompt.IndexOf("mcp__team__get_help", StringComparison.Ordinal);
-        var personaText = prompt.IndexOf("You are Nova.", StringComparison.Ordinal);
-
-        Assert.True(orientation >= 0 && orientation < personaText);
-        Assert.True(help >= 0 && help < personaText);
-    }
+    // The mcp__team__ five-name pin and the orientation-ordering pin both moved to
+    // Hooks/HookDefaultsTests.cs (task T1.11): rendered against a caller-supplied toolNames argument,
+    // they proved only that Compose's own argument came back out of its own output, not anything about
+    // the product's shipped wording. HookDefaultsTests re-anchors both against HookCatalog's actual
+    // defaults, which is the thing that can vary now.
 
     [Fact]
     public void SystemPromptComposer_IncludesPersonaText()
     {
         var persona = new Persona("nova", "# Nova\nYou are a helpful assistant named Nova.");
 
-        var prompt = SystemPromptComposer.Compose(persona);
+        var prompt = SystemPromptComposer.Compose(persona, new FakeHookSource(), "mcp__team__get_help", ToolNames);
 
         Assert.Contains("You are a helpful assistant named Nova.", prompt, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Proves the feature this task adds: a configured override for a hook's text reaches the composed
+    /// prompt in place of <see cref="HookCatalog"/>'s default.
+    /// </summary>
+    [Fact]
+    public void SystemPromptComposer_HookOverride_ReachesTheComposedPrompt()
+    {
+        var persona = new Persona("nova", "You are Nova.");
+        var hooks = new FakeHookSource();
+        hooks.SetOverride("systemPrompt.identity", "You are, unusually, called \"{{personaName}}\" here.");
+
+        var prompt = SystemPromptComposer.Compose(persona, hooks, "mcp__team__get_help", ToolNames);
+
+        Assert.Contains("You are, unusually, called \"nova\" here.", prompt, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Proves the same feature for the per-turn prompt: a configured override for the Room label hook
+    /// reaches the text <see cref="PersonaRunner.BuildPrompt"/> produces, in place of the catalog
+    /// default.
+    /// </summary>
+    [Fact]
+    public void BuildPrompt_HookOverride_ReachesTheTurnPrompt()
+    {
+        var hooks = new FakeHookSource();
+        hooks.SetOverride("turn.roomLabel", "<<{{roomName}}/{{roomId}}>>");
+        var item = new PersonaRunner.WorkItem("room-9", "Nova & You", "You", "hello", []);
+
+        var prompt = PersonaRunner.BuildPrompt(item, hooks);
+
+        Assert.Contains("<<Nova & You/room-9>>", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -781,7 +812,7 @@ public sealed class PersonaRunnerTests
     private static PersonaRunner CreateHost(PipeHostFixture fixture, Persona persona, FakeAgentHostFactory factory)
     {
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        return new PersonaRunner(persona, options, factory, NullLogger<PersonaRunner>.Instance);
+        return new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
     }
 
     private static async Task<(string AgentId, string RoomId)> WaitForDirectRoomAsync(

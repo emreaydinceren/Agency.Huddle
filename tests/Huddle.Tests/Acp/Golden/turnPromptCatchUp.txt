@@ -1,0 +1,5 @@
+[Room: Nova & Friends (id: room-2)] You were not addressed in these earlier messages, they are context only:
+Alice: did anyone see the release notes?
+Bob: I have not, checking now
+
+[Room: Nova & Friends (id: room-2)] Bob: @Nova are you there?

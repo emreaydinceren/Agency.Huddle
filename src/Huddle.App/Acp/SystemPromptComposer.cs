@@ -1,5 +1,7 @@
 namespace Agency.Huddle.App.Acp;
 
+using Agency.Huddle.App.Hooks;
+
 /// <summary>
 /// Builds the full system prompt for an Agent's session: a short canned orientation naming
 /// <c>mcp__team__get_help</c>, then the Persona's own text, then a fixed block that explains the
@@ -7,9 +9,21 @@ namespace Agency.Huddle.App.Acp;
 /// </summary>
 /// <remarks>
 /// <para>
+/// Every part of the prompt except the Persona's own <see cref="Persona.Text"/> is a hook: its text
+/// comes from <see cref="IHookSource"/>, which resolves a configured override or falls back to
+/// <see cref="HookCatalog"/>'s default. The Persona's text has no hook key — it is structural, not
+/// model-facing configuration, so it is spliced in as-is between the orientation and the identity
+/// hook. The composition order itself, and the blank line joining the five parts, are fixed here in
+/// code and are not configurable.
+/// </para>
+/// <para>
 /// agent-guide.md §3.6 is binding here: the tools must be named with their full <c>mcp__team__</c>
 /// prefix, or a deferred-tool-mode model reports that no such tool exists rather than finding it by a
-/// looser name. Getting this wrong cost a previous author four rounds of debugging.
+/// looser name. Getting this wrong cost a previous author four rounds of debugging. That prefix is
+/// applied by the caller, in code, from the same tool-server name it hands to <c>AppToolServer</c> —
+/// never typed into a hook's template — so <see cref="Compose"/> receives both <c>toolNames</c> and
+/// <c>helpToolName</c> already prefixed, and only has to join and wrap them. This type holds no
+/// <c>"mcp__team__"</c> literal of its own, for either one.
 /// </para>
 /// <para>
 /// The leading block is the progressive-discovery entry point. It says what kind of application this
@@ -21,36 +35,84 @@ namespace Agency.Huddle.App.Acp;
 /// </remarks>
 internal static class SystemPromptComposer
 {
-    internal static string Compose(Persona persona)
+    /// <summary>
+    /// The column at which <see cref="WrapToolNames"/> wraps the joined tool list. Chosen to reproduce
+    /// the hand-wrapped literal this composer replaced; see the type-level remarks.
+    /// </summary>
+    private const int ToolNameWrapWidth = 80;
+
+    /// <summary>Composes a Persona's full system prompt from its hooks and its own text.</summary>
+    /// <param name="persona">The Persona whose <see cref="Persona.Text"/> and <see cref="Persona.Name"/> are spliced in.</param>
+    /// <param name="hooks">Resolves each hook's current text — a configured override, or the <see cref="HookCatalog"/> default.</param>
+    /// <param name="helpToolName">
+    /// <see cref="Tools.GetHelpTool"/>'s own name, already carrying its full <c>mcp__team__</c> prefix
+    /// (e.g. <c>"mcp__team__get_help"</c>). Named by the caller from the same tool instance it built,
+    /// so this composer never retypes <c>"get_help"</c> or the prefix.
+    /// </param>
+    /// <param name="toolNames">
+    /// Every tool name this session exposes, already carrying its full <c>mcp__team__</c> prefix, in
+    /// the order they should be listed.
+    /// </param>
+    /// <returns>The five parts — orientation, Persona text, identity, chat rules, tools — joined with a blank line.</returns>
+    internal static string Compose(Persona persona, IHookSource hooks, string helpToolName, IReadOnlyList<string> toolNames)
     {
         ArgumentNullException.ThrowIfNull(persona);
+        ArgumentNullException.ThrowIfNull(hooks);
+        ArgumentException.ThrowIfNullOrWhiteSpace(helpToolName);
+        ArgumentNullException.ThrowIfNull(toolNames);
 
-        return $"""
-            You are a teammate in Team, a chat application. You talk to a human and to other agents
-            in chat Rooms; you are not working alone at a terminal.
+        var orientation = hooks.Render(
+            "systemPrompt.orientation",
+            new Dictionary<string, string> { ["{{helpTool}}"] = helpToolName });
 
-            Before you use any Team tool, and whenever you are unsure how something here works, call
-            mcp__team__get_help. It explains Rooms, mentions and who is expected to reply when, and
-            it lists every tool available to you with its exact name. It takes no arguments.
+        var identity = hooks.Render(
+            "systemPrompt.identity",
+            new Dictionary<string, string> { ["{{personaName}}"] = persona.Name });
 
-            {persona.Text}
+        var chatRules = hooks.Render("systemPrompt.chatRules", new Dictionary<string, string>());
 
-            You are a member of the Team chat application. You speak as "{persona.Name}".
+        var tools = hooks.Render(
+            "systemPrompt.tools",
+            new Dictionary<string, string> { ["{{toolNames}}"] = WrapToolNames(toolNames) });
 
-            A Room with two members is a private conversation with the human: answer every
-            message. A Room with three or more members is a group: answer only when you are
-            @-mentioned. Address another member by writing @ followed by their exact name.
-            A name may contain spaces, so "@Chief of Staff" is one mention of one member;
-            write the name exactly as it is given to you, with no quotes around it.
+        return string.Join("\n\n", orientation, persona.Text, identity, chatRules, tools);
+    }
 
-            These tools run inside the application process:
-            mcp__team__get_help, mcp__team__list_agents, mcp__team__create_room,
-            mcp__team__invite_agent, mcp__team__post_message.
-            Use them to learn how this application works, to find out who exists, to start a
-            Room with other agents, to add an agent to a Room that already exists, and to speak
-            into a Room other than the one you were addressed in. Your reply to the current
-            message is just your answer text — do not also post it with a tool.
-            Never answer questions about agents or Rooms from the codebase.
-            """;
+    /// <summary>
+    /// Joins <paramref name="toolNames"/> with <c>", "</c> and word-wraps the result at
+    /// <see cref="ToolNameWrapWidth"/> columns, breaking only between names, never inside one. The
+    /// list is dynamic, so this is a general wrapping rule rather than a hand-copied line break — it
+    /// happens to reproduce the original hand-wrapped literal's break today, and keeps working
+    /// whichever names, or however many, arrive here in future.
+    /// </summary>
+    /// <param name="toolNames">Each tool's full, prefixed name, in the order they should be listed.</param>
+    /// <returns>
+    /// <paramref name="toolNames"/> joined with <c>", "</c> and split across as many lines as needed so
+    /// that no line exceeds <see cref="ToolNameWrapWidth"/> columns. Every line but the last carries the
+    /// trailing comma from the join; the caller's template supplies the closing period.
+    /// </returns>
+    private static string WrapToolNames(IReadOnlyList<string> toolNames)
+    {
+        var lines = new List<string>();
+        var current = string.Empty;
+
+        foreach (var name in toolNames)
+        {
+            var candidate = current.Length == 0 ? name : $"{current}, {name}";
+
+            if (candidate.Length > ToolNameWrapWidth && current.Length > 0)
+            {
+                lines.Add($"{current},");
+                current = name;
+            }
+            else
+            {
+                current = candidate;
+            }
+        }
+
+        lines.Add(current);
+
+        return string.Join("\n", lines);
     }
 }

@@ -1,12 +1,49 @@
 # Decision record
 
-Eight dated entries from 2026-09-11 onward, newest first, each recording what
+Nine dated entries from 2026-09-11 onward, newest first, each recording what
 changed and — more usefully — what was considered and rejected. Read it when you are
 about to revisit a decision, or when an older Markdown file in this repo
 disagrees with current vocabulary and you need the old-to-new mapping.
 
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
+
+**2026-09-13 — model-facing text is configuration, not source.**
+
+Twenty-two string literals across five files became Hooks: defaults in
+`HookCatalog`, overrides in `{DataDir}/hooks.json`, edited at `/settings`.
+[ADR-0007](../adr/0007-model-facing-text-is-configuration.md) is the decision in
+full. Recorded on [Roadmap](roadmap.md) as item 13, after the fact — it was never
+on that list before it was built.
+
+**Defaults live in code, and the shipped JSON is generated from them.** Rejected:
+the shipped file *being* the defaults, which admits a state where the file and the
+code disagree about what the application does bare. With the catalog as the
+authority that state cannot be represented — delete every file and the app still
+runs on exactly the text it shipped with. A test pins the two together so the
+generated file cannot rot.
+
+**Editing a Hook never restarts a session.** Rejected: restarting so every edit
+lands immediately, which would throw away an Agent's conversation memory each time
+someone reworded a sentence. The accepted cost is that a `NextSession` Hook is
+silently inert on a running Teammate, paid for with a badge on exactly those
+fields — a system prompt is fixed at `session/new` and no design choice changes
+that.
+
+**`{{name}}` and not `<name>`.** `get_help` sends the model the literal line
+`"[Room: <name> (id: <id>)]"` as documentation, which an angle-bracket syntax
+would have silently eaten. A regression test pins that exact line.
+
+**A Hook is a template, not an event.** The word is the repo owner's and the
+panel is named for it, but nothing executes and nothing subscribes. Recorded
+because it spends the word: executable extension points at these same sites will
+need a different one.
+
+**Left open, deliberately.** [Roadmap](roadmap.md) item 9 proposes a
+*per-Persona* channel for the same tool surface this made globally configurable.
+Both readings are coherent; having both without deciding which wins where is not.
+The ADR states the options rather than inventing a design for an item nobody has
+started.
 
 **2026-09-12 — a Room has a Budget for agent replies, and the Human is asked
 before it is raised.**

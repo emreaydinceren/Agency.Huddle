@@ -9,6 +9,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.Tests.Acp.Fakes;
 
 /// <summary>
 /// Covers the progressive-discovery entry point: the system prompt names one tool, and this tool has
@@ -31,12 +32,12 @@ public sealed class GetHelpToolTests
 
         IAppTool[] others =
         [
-            new ListAgentsTool(directory, new FakeAgentGateway(), personaStore),
-            new CreateRoomTool(chat, directory, "caller-id", aliasSource),
-            new InviteAgentTool(chat, directory, aliasSource),
-            new PostMessageTool(chat, "caller-id"),
+            new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakeHookSource()),
+            new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakeHookSource()),
+            new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource()),
+            new PostMessageTool(chat, "caller-id", new FakeHookSource()),
         ];
-        var tool = new GetHelpTool(others);
+        var tool = new GetHelpTool(others, new FakeHookSource(), "mcp__team__");
 
         var help = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -48,11 +49,25 @@ public sealed class GetHelpToolTests
         }
     }
 
+    /// <summary>An override configured on a hook <see cref="GetHelpTool"/> renders must actually reach its output.</summary>
+    [Fact]
+    public async Task GetHelp_OverriddenBudgetHook_AppearsInHelp()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var hooks = new FakeHookSource();
+        hooks.SetOverride("getHelp.budget", "BUDGET\nCustom budget wording for this test.");
+        var tool = new GetHelpTool([], hooks, "mcp__team__");
+
+        var help = await tool.InvokeAsync(new JsonObject(), ct);
+
+        Assert.Contains("Custom budget wording for this test.", help, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task GetHelp_ExplainsTheReplyRuleAndHowARoomIdArrives()
     {
         var ct = TestContext.Current.CancellationToken;
-        var tool = new GetHelpTool([]);
+        var tool = new GetHelpTool([], new FakeHookSource(), "mcp__team__");
 
         var help = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -62,6 +77,15 @@ public sealed class GetHelpToolTests
         Assert.Contains("@-mentioned", help, StringComparison.Ordinal);
 
         // The room id is only ever learned from the prompt's Room label, so help has to say so.
+        // This literal is doing double duty by design (task T1.11): it pins the documented Room-label
+        // format the getHelp.messages default advertises, AND it is the regression test proving
+        // HookRenderer's {{...}} substitution does not eat literal angle brackets. Do not "modernise"
+        // this into "{{roomName}}" wording — that would destroy both purposes at once.
+        //
+        // TODO(follow-up, out of scope for T1.11): nothing yet asserts that this documented format —
+        // "[Room: <name> (id: <id>)]" — actually matches what turn.roomLabel's default renders in
+        // PersonaRunner.BuildPrompt. The two hooks (getHelp.messages and turn.roomLabel) can drift
+        // apart with no test noticing, now that each is independently overridable.
         Assert.Contains("[Room: <name> (id: <id>)]", help, StringComparison.Ordinal);
     }
 
@@ -72,7 +96,7 @@ public sealed class GetHelpToolTests
     public async Task GetHelp_MentionsTheRoomBudget()
     {
         var ct = TestContext.Current.CancellationToken;
-        var tool = new GetHelpTool([]);
+        var tool = new GetHelpTool([], new FakeHookSource(), "mcp__team__");
 
         var help = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -86,14 +110,14 @@ public sealed class GetHelpToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         var others = new List<IAppTool>();
-        var tool = new GetHelpTool(others);
+        var tool = new GetHelpTool(others, new FakeHookSource(), "mcp__team__");
 
         // The caller's list is copied on the way in, so a later mutation cannot change what an
         // Agent is told exists: the tool server was handed a fixed set at the same moment.
         using var dir = new TempDataDir();
         var directory = new SqliteTeamDirectory(dir.Options());
         using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
-        others.Add(new ListAgentsTool(directory, new FakeAgentGateway(), personaStore));
+        others.Add(new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakeHookSource()));
 
         var help = await tool.InvokeAsync(new JsonObject(), ct);
 

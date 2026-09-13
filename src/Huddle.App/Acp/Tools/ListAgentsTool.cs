@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Hooks;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.Contracts;
 
@@ -12,15 +13,13 @@ using Agency.Huddle.Contracts;
 /// Agents are online and each entry's job description composed from its Persona's frontmatter
 /// (see <see cref="PersonaFrontmatter"/>), when one is present.
 /// </summary>
-internal sealed class ListAgentsTool(ITeamDirectory teamDirectory, IAgentGateway agentGateway, PersonaStore personaStore) : IAppTool
+internal sealed class ListAgentsTool(ITeamDirectory teamDirectory, IAgentGateway agentGateway, PersonaStore personaStore, IHookSource hooks) : IAppTool
 {
+    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
+
     public string Name => "list_agents";
 
-    public string Description =>
-        "Lists every agent known to the Team application: each registered Agent, noting whether it is currently " +
-        "online, and each available Persona that could be brought online. Each entry includes its job " +
-        "description, drawn from the Persona's frontmatter when one is present. Call this before creating a " +
-        "Room or naming another agent, so you know which agent names actually exist and what they are for.";
+    public string Description => hooks.Render("tool.listAgents.description", NoValues);
 
     public JsonObject InputSchema => new JsonObject
     {

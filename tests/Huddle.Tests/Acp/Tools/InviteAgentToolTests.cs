@@ -7,6 +7,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.Tests.Acp.Fakes;
 
 /// <summary>
 /// Covers the Invitation issued by an Agent. The Human's two routes into the same behaviour — the
@@ -28,7 +29,7 @@ public sealed class InviteAgentToolTests
         var aliasSource = new FakeMentionAliasSource();
         var chat = CreateChatService(dir, directory, aliasSource);
         var room = await chat.EnsureRoomForAsync(caller, ct);
-        var tool = new InviteAgentTool(chat, directory, aliasSource);
+        var tool = new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource());
         var arguments = new JsonObject { ["roomId"] = room.Id, ["agent"] = "alpha" };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -58,7 +59,7 @@ public sealed class InviteAgentToolTests
         var aliasSource = new FakeMentionAliasSource();
         var chat = CreateChatService(dir, directory, aliasSource);
         var room = await chat.EnsureRoomForAsync(caller, ct);
-        var tool = new InviteAgentTool(chat, directory, aliasSource);
+        var tool = new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource());
         var arguments = new JsonObject { ["roomId"] = room.Id, ["agent"] = "Chief of Staff" };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -82,7 +83,7 @@ public sealed class InviteAgentToolTests
         var aliasSource = new FakeMentionAliasSource { Aliases = [new MentionAlias("jar", "Jarvis")] };
         var chat = CreateChatService(dir, directory, aliasSource);
         var room = await chat.EnsureRoomForAsync(caller, ct);
-        var tool = new InviteAgentTool(chat, directory, aliasSource);
+        var tool = new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource());
         var arguments = new JsonObject { ["roomId"] = room.Id, ["agent"] = "jar" };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -104,7 +105,7 @@ public sealed class InviteAgentToolTests
         var aliasSource = new FakeMentionAliasSource();
         var chat = CreateChatService(dir, directory, aliasSource);
         var room = await chat.EnsureRoomForAsync(caller, ct);
-        var tool = new InviteAgentTool(chat, directory, aliasSource);
+        var tool = new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource());
         var arguments = new JsonObject { ["roomId"] = room.Id, ["agent"] = "nobody" };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -132,7 +133,7 @@ public sealed class InviteAgentToolTests
         var aliasSource = new FakeMentionAliasSource { Aliases = [new MentionAlias("ghost", "Nobody")] };
         var chat = CreateChatService(dir, directory, aliasSource);
         var room = await chat.EnsureRoomForAsync(caller, ct);
-        var tool = new InviteAgentTool(chat, directory, aliasSource);
+        var tool = new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource());
         var arguments = new JsonObject { ["roomId"] = room.Id, ["agent"] = "ghost" };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -152,7 +153,7 @@ public sealed class InviteAgentToolTests
         Assert.NotNull(alpha);
         var aliasSource = new FakeMentionAliasSource();
         var chat = CreateChatService(dir, directory, aliasSource);
-        var tool = new InviteAgentTool(chat, directory, aliasSource);
+        var tool = new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource());
         var arguments = new JsonObject { ["roomId"] = "no-such-room", ["agent"] = "alpha" };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -172,7 +173,7 @@ public sealed class InviteAgentToolTests
         var aliasSource = new FakeMentionAliasSource();
         var chat = CreateChatService(dir, directory, aliasSource);
         var room = await chat.EnsureRoomForAsync(caller, ct);
-        var tool = new InviteAgentTool(chat, directory, aliasSource);
+        var tool = new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource());
         var arguments = new JsonObject { ["roomId"] = room.Id, ["agent"] = "caller" };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -191,7 +192,7 @@ public sealed class InviteAgentToolTests
         await directory.InitializeAsync("You", ct);
         var aliasSource = new FakeMentionAliasSource();
         var chat = CreateChatService(dir, directory, aliasSource);
-        var tool = new InviteAgentTool(chat, directory, aliasSource);
+        var tool = new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource());
 
         var result = await tool.InvokeAsync(new JsonObject { ["roomId"] = "some-room" }, ct);
 

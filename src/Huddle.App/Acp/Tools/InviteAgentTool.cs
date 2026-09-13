@@ -3,6 +3,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Hooks;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
@@ -12,17 +13,15 @@ using Agency.Huddle.Contracts;
 /// on the Room header: all three end in <see cref="ChatService.InviteAsync"/>, so a Room renames
 /// itself after its Agents the same way whoever issued the Invitation.
 /// </remarks>
-internal sealed class InviteAgentTool(ChatService chat, ITeamDirectory teamDirectory, IMentionAliasSource aliasSource) : IAppTool
+internal sealed class InviteAgentTool(ChatService chat, ITeamDirectory teamDirectory, IMentionAliasSource aliasSource, IHookSource hooks) : IAppTool
 {
+    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
+
     /// <inheritdoc />
     public string Name => "invite_agent";
 
     /// <inheritdoc />
-    public string Description =>
-        "Adds an agent to a Room that already exists, so it starts receiving that Room's messages. Give the " +
-        "Room's id — the id shown in the '[Room: ...]' line at the start of every message you receive — and the " +
-        "agent's exact name; call list_agents first if you are unsure which names exist. Use create_room instead " +
-        "when the Room does not exist yet. The Room is renamed after its Agents, as it is on every other change.";
+    public string Description => hooks.Render("tool.inviteAgent.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject
