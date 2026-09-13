@@ -1,0 +1,98 @@
+# gitleaks configuration for the Agency.Huddle repo.
+#
+# Extends the built-in ruleset and allowlists this repo's *intended* placeholders so the CI
+# gate flags only genuine leaked secrets. Kept deliberately close to the sibling Agency repo's
+# config: same rule ids, same triage vocabulary, so a finding reads the same way in both.
+# Docs: https://github.com/gitleaks/gitleaks#configuration
+
+[extend]
+useDefault = true
+
+# Path-based rules: these files are dangerous because of their name and location, not because
+# a value inside them matches a token-format regex, so the default ruleset misses them
+# entirely. A match here flags the file's mere presence, regardless of content.
+[[rules]]
+id = "env-file"
+description = "Dotenv / environment file committed"
+path = '''(^|/)\.env(\..+)?$'''
+
+[[rules]]
+id = "dotnet-secrets-json"
+description = ".NET user-secrets or secrets.json committed"
+path = '''(^|/)secrets\.json$'''
+
+[[rules]]
+id = "registry-auth-file"
+description = "Package/registry auth file committed"
+path = '''(^|/)(\.npmrc|\.pypirc|\.netrc|\.dockercfg)$'''
+
+[[rules]]
+id = "mcp-config"
+description = "MCP config may embed static API tokens"
+path = '''(^|/)\.?mcp\.json$'''
+
+[[rules]]
+id = "docker-registry-auth"
+description = "Docker registry auth config committed"
+path = '''(^|/)\.docker/config\.json$'''
+
+# PII / operational-infra rules: valid, non-secret strings that still should not be public —
+# personal email and internal LAN hostnames. gitleaks ships no default rules for these.
+[[rules]]
+id = "personal-email"
+description = "Maintainer personal email"
+regex = '''user@example\.com'''
+
+[[rules]]
+id = "generic-personal-email"
+description = "Any bare email address (triage: real vs example/placeholder via allowlist)"
+regex = '''[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'''
+
+[[rules]]
+id = "internal-mdns-host"
+description = "Personal/internal .local (mDNS) hostname — must be followed by a URL/text delimiter, not another dot, so *.local.json / *.local.xml filenames don't match"
+regex = '''\b[a-z0-9][a-z0-9-]*\.local(?::[0-9]+)?(?:[/'"`:;,)\]}<>|\s]|$)'''
+
+[[rules]]
+id = "private-ipv4"
+description = "Private / RFC1918 IP address committed"
+regex = '''\b(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})\b'''
+
+  [rules.allowlist]
+  description = "SonarAnalyzer.CSharp uses an unusual 4-segment version scheme (10.32.0.713), which coincidentally matches the 10.x.x.x private-IP shape. Update this alongside the pinned version in Directory.Packages.props when it changes."
+  regexes = [
+    '''10\.32\.0\.713''',
+  ]
+
+[[rules]]
+id = "chat-webhook-url"
+description = "Slack/Discord/Teams webhook URL (embeds a token)"
+regex = '''https://(hooks\.slack\.com/services/[A-Za-z0-9/_-]+|discord(app)?\.com/api/webhooks/\d+/[A-Za-z0-9._-]+|[a-z0-9.]*webhook\.office\.com/[A-Za-z0-9@/_-]+)'''
+
+[allowlist]
+description = "Intended placeholders and local-only development config"
+
+regexes = [
+  # ${Team:Acp:ApiKey} and friends — configuration placeholders, never values
+  '''\$\{[^}]+\}''',
+  # ${{ secrets.X }} — Gitea/GitHub Actions expressions (never contain the value)
+  '''\$\{\{\s*secrets\.[^}]+\}\}''',
+  # The app binds and the docs reference a loopback dev URL, e.g. http://localhost:5100
+  '''\blocalhost\b''',
+  '''127\.0\.0\.1''',
+  # Deliberate neutral hosts in docs and tests — redacted placeholders, not real leaks
+  '''example\.(com|org)''',
+  '''[a-z0-9-]+\.example\b''',
+  # Bot/commit noreply addresses, incl. the maintainer's public GitHub noreply identity
+  '''noreply@''',
+  # GitHub's numbered per-user noreply format (id+username@users.noreply.github.com) —
+  # "noreply" lands after the @, not before it, so the rule above does not catch it.
+  '''\d+\+[\w-]+@users\.noreply\.github\.com''',
+]
+
+paths = [
+  # Local-only, gitignored MCP config — holds a real token that is never committed.
+  '''\.mcp\.json$''',
+  # Dotenv example/template files — placeholders only, safe to commit.
+  '''(^|/)\.env\.(example|sample|template)$''',
+]
