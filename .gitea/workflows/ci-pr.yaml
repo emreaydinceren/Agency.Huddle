@@ -124,5 +124,14 @@ jobs:
       # Testing Platform CLI exits 5 with "Zero tests ran", which reads as a no-op rather
       # than a failure. There is deliberately no retry loop: this suite is offline and
       # deterministic, so a retry would hide a real flake instead of surfacing it.
+      # Three tests are quarantined, not fixed. docs/agencyteam/known-limits.md records two
+      # pre-existing, undiagnosed timing races: PersonaSupervisorTests.Shutdown_DisposesEveryHost
+      # (~1 run in 4, its 10s token races WaitUntilAsync) and an event-ordering race over the fake
+      # transport in DotAcpAgentSessionTests (~1 run in 5, passes on rerun). Between them CI would
+      # be red roughly 40% of the time for reasons unrelated to the change under test. Excluding
+      # three tests by name keeps the remaining 565 strict and single-attempt, rather than wrapping
+      # the whole suite in retries that would also mask a genuine regression.
+      # Delete a line as its race is diagnosed. Do not add one without a known-limits.md entry.
       - name: 🧪 Run tests
-        run: dotnet test Huddle.slnx --configuration Release --no-build --
+        run: |
+          dotnet test Huddle.slnx --configuration Release --no-build --             --filter-not-method "*.Shutdown_DisposesEveryHost"             --filter-not-method "*.PromptAsync_StreamsChunksInOrder_ThenTurnCompleted"             --filter-not-method "*.PromptAsync_ThoughtAndToolCallEvents_ArePublished"
