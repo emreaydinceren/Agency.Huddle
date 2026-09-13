@@ -1,0 +1,69 @@
+@page "/settings"
+@page "/settings/{Tab}"
+@using Agency.Huddle.App.Hooks
+@using Agency.Huddle.App.Components.Settings
+@inject IHookSource Hooks
+@inject NavigationManager Navigation
+
+<div class="settings-page">
+    <header class="settings-header">
+        <h1>Settings</h1>
+    </header>
+
+    <p class="teammates-intro">
+        A hook is one piece of wording this application sends to a model — part of a system prompt,
+        a turn, <code>get_help</code>'s output, or a tool's own description. Editing one changes what every
+        teammate is told, not how the application itself behaves, and a hook you have changed can
+        always be restored to the wording it shipped with.
+    </p>
+
+    <div class="settings-layout">
+        <nav class="settings-tab-rail">
+            <button type="button"
+                    class="settings-tab @(this.CurrentTab == SettingsTab.Hooks ? "settings-tab-active" : string.Empty)"
+                    @onclick="() => this.SelectTab(SettingsTab.Hooks)">Hooks</button>
+        </nav>
+
+        <div class="settings-content">
+            @switch (this.CurrentTab)
+            {
+                case SettingsTab.Hooks:
+                default:
+                    <HooksPanel Groups="this.groups" />
+                    break;
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<HookFieldGroup> groups = [];
+
+    /// <summary>
+    /// The route segment naming the active tab, e.g. <c>"hooks"</c>. Optional: <c>/settings</c> with
+    /// no segment lands here as <see langword="null"/>, which parses the same as any other unknown
+    /// value, so both fall back to <see cref="SettingsTab.Hooks"/>.
+    /// </summary>
+    [Parameter]
+    public string? Tab { get; set; }
+
+    // Routes.razor has no NotFound branch, so an unrecognised {Tab} (missing, misspelled, or a tab
+    // that once existed and was removed) must resolve to something rather than throw or 404 - the
+    // same reasoning a case-insensitive parse with a safe fallback would need for any future second
+    // tab, not just this one.
+    private SettingsTab CurrentTab =>
+        Enum.TryParse<SettingsTab>(this.Tab, ignoreCase: true, out var parsed) ? parsed : SettingsTab.Hooks;
+
+    protected override void OnInitialized()
+    {
+        this.groups = HookFieldFactory.Build(this.Hooks);
+    }
+
+    // Navigates to the tab's own route rather than just flipping local state, so the URL always
+    // names the active tab - the same route a bookmark or a direct link to /settings/hooks resolves
+    // to via CurrentTab above.
+    private void SelectTab(SettingsTab tab)
+    {
+        this.Navigation.NavigateTo($"/settings/{tab.ToString().ToLowerInvariant()}");
+    }
+}

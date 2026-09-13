@@ -1,0 +1,60 @@
+@*
+    The Hooks tab's content: every model-facing hook, grouped and read-only. Stage 2 is display only
+    - no save, no reset, no @oninput - so the <textarea> below carries the "readonly" attribute Stage
+    3 will drop rather than restructure.
+
+    Takes exactly one [Parameter], Groups, already resolved to plain HookFieldState rows by
+    HookFieldFactory. A component with twenty string parameters is exactly the shape that let
+    Teammates.razor's <TeammateCard ... /> usage silently pass a literal instead of a value when an
+    "@" went missing (see TeammatesRazorSourceTests) - a single non-string parameter cannot be bound
+    that way at all, so this component sidesteps the trap by construction rather than needing a guard
+    test of its own.
+*@
+
+@using Agency.Huddle.App.Hooks
+
+@foreach (var group in this.Groups)
+{
+    <section class="hooks-group">
+        <h2 class="hooks-group-heading">@group.Label</h2>
+
+        @foreach (var field in group.Fields)
+        {
+            <div class="hooks-field">
+                <div class="hooks-field-header">
+                    <span class="hooks-field-label">@field.Label</span>
+                    @if (field.Timing == HookTiming.NextSession)
+                    {
+                        <span class="hooks-field-badge" title="Applies to teammates started after the change">Next session</span>
+                    }
+                    @if (field.IsModified)
+                    {
+                        <span class="hooks-field-badge hooks-field-badge-modified">Modified</span>
+                    }
+                </div>
+
+                <textarea class="hooks-field-value" rows="@HookFieldFactory.RowsFor(field.Value)" readonly>@field.Value</textarea>
+
+                <span class="teammate-card-hint">@field.HelperText</span>
+
+                @if (field.Placeholders.Count > 0)
+                {
+                    <p class="hooks-field-placeholders">
+                        Placeholders:
+                        @foreach (var placeholder in field.Placeholders)
+                        {
+                            <code class="hooks-field-placeholder">@placeholder</code>
+                        }
+                    </p>
+                }
+            </div>
+        }
+    </section>
+}
+
+@code {
+    /// <summary>Every hook field to render, already grouped and ordered by <see cref="HookFieldFactory"/>.</summary>
+    [Parameter]
+    [EditorRequired]
+    public IReadOnlyList<HookFieldGroup> Groups { get; set; } = [];
+}

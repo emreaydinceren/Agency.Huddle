@@ -5,7 +5,7 @@ namespace Agency.Huddle.App.Hooks;
 /// value is read, not a setting a hook author chooses: it tells the settings UI whether to warn that
 /// a save needs a restart to take effect.
 /// </summary>
-internal enum HookTiming
+public enum HookTiming
 {
     /// <summary>
     /// Rendered fresh on every invocation, so an edit reaches the very next turn of every Persona,

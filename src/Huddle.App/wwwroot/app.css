@@ -711,6 +711,129 @@ html, body {
     overflow-wrap: anywhere;
 }
 
+/* ---- Settings: tab rail and the read-only Hooks panel -------------------------------------- */
+
+.settings-page {
+    padding: 1rem;
+    max-width: 56rem;
+}
+
+.settings-header h1 {
+    margin: 0 0 0.5rem 0;
+}
+
+.settings-layout {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.settings-tab-rail {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    min-width: 9rem;
+}
+
+.settings-tab {
+    padding: 0.5rem 0.8rem;
+    font: inherit;
+    text-align: left;
+    color: #444;
+    background: none;
+    border: none;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+}
+
+.settings-tab:hover {
+    background: #eef3ff;
+}
+
+.settings-tab-active {
+    color: #222;
+    font-weight: 600;
+    border-left-color: #3a6fd8;
+    background: #eef3ff;
+}
+
+.settings-content {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.hooks-group {
+    margin-bottom: 1.4rem;
+}
+
+.hooks-group-heading {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    color: #444;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid #e3e3e3;
+}
+
+.hooks-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.hooks-field-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.hooks-field-label {
+    font-weight: 600;
+    color: #333;
+}
+
+.hooks-field-badge {
+    font-size: 0.72rem;
+    padding: 0.1rem 0.4rem;
+    color: #555;
+    background: #eee;
+    border-radius: 999px;
+}
+
+.hooks-field-badge-modified {
+    color: #6b4b00;
+    background: #fff3d6;
+}
+
+.hooks-field-value {
+    font: inherit;
+    font-size: 0.85rem;
+    min-height: 0;
+    padding: 0.5rem;
+    color: #333;
+    background: #fafafa;
+    border: 1px solid #d5d5d5;
+    border-radius: 4px;
+    resize: vertical;
+}
+
+.hooks-field-placeholders {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    align-items: center;
+    margin: 0;
+    font-size: 0.78rem;
+    color: #777;
+}
+
+.hooks-field-placeholder {
+    padding: 0.05rem 0.35rem;
+    background: #eee;
+    border-radius: 3px;
+}
+
 /* ---- Title/Alias/Teams shown in the card's View mode --------------------------------------- */
 
 .teammate-card-title {
