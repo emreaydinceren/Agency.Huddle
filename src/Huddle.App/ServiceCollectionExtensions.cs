@@ -40,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IChatStore, FileChatStore>();
 
         services.AddSingleton<ChatService>();
+        services.AddSingleton<Drafts>();
 
         services.AddSingleton<AgentGateway>();
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());
