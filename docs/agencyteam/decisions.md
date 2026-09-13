@@ -1,12 +1,62 @@
 # Decision record
 
-Nine dated entries from 2026-09-11 onward, newest first, each recording what
+Ten dated entries from 2026-09-11 onward, newest first, each recording what
 changed and — more usefully — what was considered and rejected. Read it when you are
 about to revisit a decision, or when an older Markdown file in this repo
 disagrees with current vocabulary and you need the old-to-new mapping.
 
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
+
+**2026-09-13 — a Turn is visible while it happens, can be stopped, and says when
+it fails.**
+
+Roadmap items 3, 4 and 5 shipped together, because all three lived in
+`PersonaRunner`'s event loop and the Room view and two of them needed the same
+protocol bump.
+[ADR-0008](../adr/0008-a-turn-is-visible-stoppable-and-says-when-it-fails.md) is
+the decision in full.
+
+**A half-arrived reply is a Draft, not a Message.** [Language](language.md)
+defines a Message as one *persisted* unit of text, and a Draft is never written to
+the Transcript. Rejected: teaching the append-only JSONL Transcript to revise a
+line — the roadmap predicted that keeping deltas in memory would be far cheaper
+and it was, `FileChatStore` was not touched at all.
+
+**The wire changed, and `ProtocolVersion.Current` is now 3.** Say both halves:
+this is the first entry since the original vocabulary rename to move it, and it
+moved only because two new **types** were added — `ToolActivity` and `StopTurn` —
+and `[JsonPolymorphic]` is closed, so an unregistered `"type"` throws in
+`Deserialize`. New *properties* and new `ErrorCodes` values remain additive and
+must never bump; [Traps](traps.md) is explicit that doing so is its own mistake.
+`MessageDelta` was already registered at V2 and cost nothing to activate. Every
+pipe client moved in the same commit: `PersonaRunner`, `DemoAgentHost`,
+`tools/echo-bot.ps1` and the tests pinning literal JSON. Rejected: making the
+protocol tolerate unknown types while we were breaking every client anyway — it
+would have made this the last forced bump, but it weakens a strict-equality check
+that catches real mistakes loudly, and it is its own decision.
+
+**Stop means this Agent, now.** The live Turn ends and everything queued behind it
+is discarded. Rejected: stopping only the live Turn, which the roadmap itself
+warned reads as broken when five queued prompts then run anyway. A stopped Turn is
+**not a failure** — it reports no health state and raises no alert, which has to be
+said because the mechanism underneath it is a `CancellationToken` and everywhere
+else here that means shutdown.
+
+**Failures needed a model, not a badge.** The roadmap named three; the code had
+twenty-one. `PersonaHealth` records them and `PersonaStatusResolver` combines them
+with pipe liveness — health outranking connectivity, because any of the runner's
+three loops can die and leave the pipe open, so an Agent can be deaf and still
+report online. Rejected: pattern-matching the Adapter's own exception text to tell
+quota from a network failure from expired credentials — that wording is not ours
+and will change, so persistence is reported instead.
+
+**"Plus a posted Message" is reversed**, exactly as ADR-0006 reversed it for the
+Budget pause, and for a fourth reason that applies only here: an Agent that failed
+to start cannot post anything. It is a strip in the Room view, and it requires a
+*reason* rather than merely an unhealthy state — `Acp:Enabled` is false by
+default, so listing every not-running Agent would have put a permanent alert in
+every Room.
 
 **2026-09-13 — model-facing text is configuration, not source.**
 

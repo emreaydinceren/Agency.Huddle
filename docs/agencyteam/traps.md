@@ -141,3 +141,13 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   golden tests still normalise both sides before comparing, which is right for the
   files on disk — but the normalisation is not hiding a platform difference in the
   prompts themselves. Verified by serialising the catalog and finding zero `\r`.
+
+- **Two types can be named for the same ACP concept, and one file has both in
+  scope.** `Agency.Huddle.Acp.Abstractions` already owns `ToolCallStarted` and
+  `ToolCallUpdated`; `PersonaRunner` imports that namespace *and*
+  `Agency.Huddle.Contracts` and bridges between them. The wire type is therefore
+  called `ToolActivity` - one type, not two, since the ACP pair differ only in
+  which raw JSON blob they carry and neither is rendered. Roadmap item 12 records
+  the same hazard waiting for `AgentEvent`, where the collision would be exact. A
+  `using` alias in the one bridging file is the fix if it ever happens; renaming
+  either side is not.

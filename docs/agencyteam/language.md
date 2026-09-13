@@ -142,6 +142,10 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 : One prompt-to-completion cycle on a session. Load-bearing:
   `IAgentSession.PromptAsync` throws if a turn is already in flight, which is why
   the work queue in `PersonaRunner` is mandatory rather than an optimisation.
+: A Turn ends in one of three ways - **completed**, **stopped** by the Human, or
+  **failed** - and only the last is a fault. The distinction is load-bearing in
+  four files, because the mechanism underneath a Stop is a `CancellationToken` and
+  everywhere else here that means shutdown.
 : *Avoid*: request, exchange, round.
 
 **App Tool**
@@ -200,6 +204,25 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 **Envelope**
 : One JSON line on the pipe carrying exactly one protocol message.
 : *Avoid*: packet, frame, payload (that is the inner object).
+
+**Draft**
+: The text of a Turn in progress, shown in the Room before it becomes a Message.
+  In memory only - never written to the Transcript, lost on restart, and capped so
+  one runaway Turn cannot grow a Singleton without bound. Held by `Drafts`, keyed
+  by the Message id the Turn will post under, because two Agents can stream into
+  one Room at once.
+: *Avoid*: partial, streaming message, preview, buffer, and **delta** - that is the
+  Envelope that carries one, not the thing itself.
+
+**Stop**
+: The Human ending a Turn in progress. It ends the live Turn and discards whatever
+  that Agent had queued behind it, so it means *this Agent, now* rather than *this
+  one Turn*. A normal outcome, not a failure: nothing is posted, no badge changes,
+  and the Room stays usable. Because one session spans every Room, stopping an
+  Agent stops it everywhere.
+: *Avoid*: cancel - that is ACP's own verb and stays inside `Huddle.Acp` - abort,
+  kill, interrupt, pause (pausing a Room is a Budget of zero, which is a different
+  thing).
 
 **Transcript**
 : The append-only JSON Lines file holding all Messages of one Room, under
