@@ -128,12 +128,12 @@ public sealed class PromptGoldenTests
 
         IAppTool[] others =
         [
-            new ListAgentsTool(directory, new FakeAgentGateway(), personaStore),
-            new CreateRoomTool(chat, directory, "caller-id", aliasSource),
-            new InviteAgentTool(chat, directory, aliasSource),
-            new PostMessageTool(chat, "caller-id"),
+            new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakeHookSource()),
+            new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakeHookSource()),
+            new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource()),
+            new PostMessageTool(chat, "caller-id", new FakeHookSource()),
         ];
-        var getHelp = new GetHelpTool(others);
+        var getHelp = new GetHelpTool(others, new FakeHookSource(), "mcp__team__");
 
         return (getHelp, others);
     }

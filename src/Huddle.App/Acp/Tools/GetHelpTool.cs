@@ -3,6 +3,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Hooks;
 
 /// <summary>
 /// Explains the chat application and lists every App Tool available to the calling Agent, so the
@@ -17,33 +18,53 @@ using Agency.Huddle.Acp.Abstractions;
 /// <para>
 /// Every tool is listed with its full <c>mcp__team__</c> prefix, for the same reason
 /// <see cref="SystemPromptComposer"/> uses it: a model in deferred-tool mode looks a name up
-/// verbatim and reports that no such tool exists when it is named loosely.
+/// verbatim and reports that no such tool exists when it is named loosely. That prefix is supplied
+/// by the caller as <c>toolNamePrefix</c>, computed from the same tool-server name it hands to
+/// <c>AppToolServer</c> — never typed into a hook's template, and never a second, independently
+/// hard-coded copy of that literal here.
+/// </para>
+/// <para>
+/// Every piece of this tool's own model-facing text — its <see cref="Description"/> and every
+/// section of <see cref="BuildHelp"/> — is a hook, resolved through <see cref="IHookSource"/>. The
+/// help body is assembled by joining <c>getHelp.intro</c> through <c>getHelp.budget</c> with a blank
+/// line, then a tools block: <c>getHelp.toolsHeader</c>, one <c>getHelp.toolEntry</c> per tool (each
+/// of which already carries its own trailing blank line), then <c>getHelp.footer</c>.
 /// </para>
 /// </remarks>
 internal sealed class GetHelpTool : IAppTool
 {
+    private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
+
     private readonly IReadOnlyList<IAppTool> otherTools;
+    private readonly IHookSource hooks;
+    private readonly string toolNamePrefix;
 
     /// <summary>Initialises a new instance of the <see cref="GetHelpTool"/> class.</summary>
     /// <param name="otherTools">
     /// Every other tool offered to the same session. Copied on the way in, so the caller's array
     /// cannot change what this tool reports. This tool is not in the list and adds itself.
     /// </param>
-    public GetHelpTool(IReadOnlyList<IAppTool> otherTools)
+    /// <param name="hooks">Resolves each hook's current text — a configured override, or the <see cref="HookCatalog"/> default.</param>
+    /// <param name="toolNamePrefix">
+    /// The full <c>mcp__&lt;server&gt;__</c> prefix every tool name carries in this help text, e.g.
+    /// <c>"mcp__team__"</c>. Supplied by the caller — this type never hard-codes it.
+    /// </param>
+    public GetHelpTool(IReadOnlyList<IAppTool> otherTools, IHookSource hooks, string toolNamePrefix)
     {
         ArgumentNullException.ThrowIfNull(otherTools);
+        ArgumentNullException.ThrowIfNull(hooks);
+        ArgumentException.ThrowIfNullOrWhiteSpace(toolNamePrefix);
 
         this.otherTools = [.. otherTools];
+        this.hooks = hooks;
+        this.toolNamePrefix = toolNamePrefix;
     }
 
     /// <inheritdoc />
     public string Name => "get_help";
 
     /// <inheritdoc />
-    public string Description =>
-        "Explains how the Team chat application works — Rooms, members, mentions, and who is expected to reply " +
-        "when — and lists every tool you can call here with its exact name. Call this before using any other Team " +
-        "tool, and whenever you are unsure how something in the chat works. It takes no arguments.";
+    public string Description => this.hooks.Render("tool.getHelp.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject
@@ -65,57 +86,43 @@ internal sealed class GetHelpTool : IAppTool
     /// <returns>The help text handed back to the model.</returns>
     private string BuildHelp()
     {
+        string[] sections =
+        [
+            this.hooks.Render("getHelp.intro", NoValues),
+            this.hooks.Render("getHelp.rooms", NoValues),
+            this.hooks.Render("getHelp.messages", NoValues),
+            this.hooks.Render("getHelp.mentions", NoValues),
+            this.hooks.Render("getHelp.replying", NoValues),
+            this.hooks.Render("getHelp.budget", NoValues),
+            this.BuildToolsSection(),
+        ];
+
+        return string.Join("\n\n", sections);
+    }
+
+    /// <summary>
+    /// Builds the TOOLS section: its heading, one <c>getHelp.toolEntry</c> per tool (each already
+    /// ending in a blank line), then the footer.
+    /// </summary>
+    /// <returns>The joined tools section, ready to take its place among <see cref="BuildHelp"/>'s other sections.</returns>
+    private string BuildToolsSection()
+    {
         var builder = new StringBuilder();
 
-        builder.Append(
-            """
-            Team is a chat application. You are one Teammate in it, talking to a human and to other
-            agents in Rooms. You are not working alone at a terminal.
-
-            ROOMS
-            A Room is a conversation with a fixed set of members. There is only one kind of Room, and
-            how you behave in it follows from how many members it has:
-              - two members  — a private conversation with the human. Answer every message.
-              - three or more — a group. Answer only when you are @-mentioned.
-
-            MESSAGES
-            Every message you are given starts with the Room it came from, written as
-            "[Room: <name> (id: <id>)]". That id is what the tools below mean by a room id.
-            Messages marked "context only" are ones you were not addressed in; read them for
-            background, do not answer them.
-
-            MENTIONS
-            Address another member by writing @ followed by their exact name. A name may contain
-            spaces, so "@Chief of Staff" is one mention of one member. Write the name exactly as it
-            was given to you, with no quotes around it.
-
-            REPLYING
-            Your reply to the message you were given is simply your answer text. Do not also post it
-            with a tool — that would deliver it twice.
-
-            BUDGET
-            A Room takes only so many agent messages between one human message and the next, so that
-            two agents answering each other cannot run on unattended. When a Room reaches that limit
-            it stops accepting agent messages and tells the human, who can allow more. A refusal that
-            says the budget is spent is final: do not retry it, and do not work around it by posting
-            to another Room. Say nothing further there until the human speaks.
-
-            TOOLS
-
-            """);
+        builder.Append(this.hooks.Render("getHelp.toolsHeader", NoValues)).Append('\n');
 
         foreach (var tool in this.AllTools())
         {
-            builder.Append("  mcp__team__").Append(tool.Name).Append('\n');
-            builder.Append("      ").Append(tool.Description).Append('\n');
-            builder.Append('\n');
+            var values = new Dictionary<string, string>
+            {
+                ["{{toolName}}"] = this.toolNamePrefix + tool.Name,
+                ["{{toolDescription}}"] = tool.Description,
+            };
+
+            builder.Append(this.hooks.Render("getHelp.toolEntry", values));
         }
 
-        builder.Append(
-            """
-            Never answer a question about who exists, or about Rooms, from a codebase or from memory.
-            Call the tools: they are the only source of truth about this application.
-            """);
+        builder.Append(this.hooks.Render("getHelp.footer", NoValues));
 
         return builder.ToString();
     }

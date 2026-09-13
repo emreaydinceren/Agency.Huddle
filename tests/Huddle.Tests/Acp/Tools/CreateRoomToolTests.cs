@@ -7,6 +7,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.Tests.Acp.Fakes;
 
 public sealed class CreateRoomToolTests
 {
@@ -23,7 +24,7 @@ public sealed class CreateRoomToolTests
         Assert.NotNull(alpha);
         var aliasSource = new FakeMentionAliasSource();
         var chat = CreateChatService(dir, directory, aliasSource);
-        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource);
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakeHookSource());
         var arguments = new JsonObject { ["agents"] = new JsonArray { "alpha" } };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -51,7 +52,7 @@ public sealed class CreateRoomToolTests
         Assert.NotNull(jarvis);
         var aliasSource = new FakeMentionAliasSource { Aliases = [new MentionAlias("jar", "Jarvis")] };
         var chat = CreateChatService(dir, directory, aliasSource);
-        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource);
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakeHookSource());
         var arguments = new JsonObject { ["agents"] = new JsonArray { "jar" } };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -76,7 +77,7 @@ public sealed class CreateRoomToolTests
         Assert.NotNull(alpha);
         var aliasSource = new FakeMentionAliasSource();
         var chat = CreateChatService(dir, directory, aliasSource);
-        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource);
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakeHookSource());
         var arguments = new JsonObject { ["agents"] = new JsonArray { "nobody" } };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -98,7 +99,7 @@ public sealed class CreateRoomToolTests
         Assert.NotNull(caller);
         var aliasSource = new FakeMentionAliasSource();
         var chat = CreateChatService(dir, directory, aliasSource);
-        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource);
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakeHookSource());
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);
 

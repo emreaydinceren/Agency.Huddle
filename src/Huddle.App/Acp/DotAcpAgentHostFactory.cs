@@ -73,17 +73,21 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             ActivatorUtilities.CreateInstance<PostMessageTool>(this.serviceProvider, agentId),
         ];
 
+        var hooks = this.serviceProvider.GetRequiredService<IHookSource>();
+
+        // The mcp__{server}__ prefix is derived from the same server name above, never typed into a
+        // hook's template - see the ToolServerName remarks and SystemPromptComposer's. GetHelpTool
+        // takes it explicitly rather than hard-coding its own copy, for the same reason.
+        var toolNamePrefix = $"mcp__{ToolServerName}__";
+
         // get_help is offered first and knows every other tool, so the system prompt can name one
         // tool instead of all of them. It is built last for the obvious reason: it takes the rest.
-        IReadOnlyList<IAppTool> tools = [new GetHelpTool(chatTools), .. chatTools];
+        IReadOnlyList<IAppTool> tools = [new GetHelpTool(chatTools, hooks, toolNamePrefix), .. chatTools];
 
         var toolServer = new AppToolServer(ToolServerName, tools, this.loggerFactory, 0, authToken);
         await toolServer.StartAsync(cancellationToken).ConfigureAwait(false);
 
-        // The mcp__{server}__ prefix is derived from the same server name above, never typed into a
-        // hook's template - see the ToolServerName remarks and SystemPromptComposer's.
-        IReadOnlyList<string> toolNames = [.. tools.Select(tool => $"mcp__{ToolServerName}__{tool.Name}")];
-        var hooks = this.serviceProvider.GetRequiredService<IHookSource>();
+        IReadOnlyList<string> toolNames = [.. tools.Select(tool => $"{toolNamePrefix}{tool.Name}")];
 
         DotAcpAgentHost innerHost;
         try

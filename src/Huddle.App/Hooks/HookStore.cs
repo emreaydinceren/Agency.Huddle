@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Contracts;
@@ -47,7 +48,23 @@ internal sealed class HookStore : IHookSource
     // through it here (rather than an unrelated fresh JsonSerializerOptions) keeps every other
     // setting - camelCase, case-insensitive reads - in step with the rest of the app while adding only
     // the indentation this file specifically needs.
-    private static readonly JsonSerializerOptions IndentedJsonOptions = new(ProtocolJson.Options) { WriteIndented = true };
+    //
+    // ProtocolJson.Options also sets no Encoder, so it inherits JavaScriptEncoder.Default, which escapes
+    // anything unsafe to drop into HTML or script - every em-dash, apostrophe, quote and angle bracket
+    // becomes a \uXXXX sequence. That is the right call for wire JSON that might be interpolated
+    // somewhere unknown, and the wrong one here: this file is written to disk and read back by this
+    // same serializer, never embedded in HTML or script, so JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    // is not unsafe in this use - "unsafe" names the HTML/script-injection risk this encoder accepts,
+    // and no such context exists for a file that only ever round-trips through JsonSerializer. The
+    // reason to choose it is simply that a human hand-edits this file, and escaped em-dashes and angle
+    // brackets make it unreadable - worse, a user who types a literal "<name>" into hooks.json would see
+    // the app rewrite it as "\u003Cname\u003E" on the very next save, which reads as corruption rather
+    // than as a JSON encoding detail.
+    private static readonly JsonSerializerOptions IndentedJsonOptions = new(ProtocolJson.Options)
+    {
+        WriteIndented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
 
     private readonly string path;
     private readonly ILogger<HookStore> logger;
