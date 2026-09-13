@@ -15,7 +15,7 @@ using Agency.Huddle.Tests.Acp.Tools;
 /// <summary>
 /// Golden-output safety net for task T1.1. Every model-facing string produced by
 /// <see cref="SystemPromptComposer"/>, <see cref="GetHelpTool"/>, the four real chat tools, and
-/// <see cref="PersonaRunner.BuildPrompt(PersonaRunner.WorkItem)"/> is captured here as committed text
+/// <see cref="PersonaRunner.BuildPrompt(PersonaRunner.WorkItem, Agency.Huddle.App.Hooks.IHookSource)"/> is captured here as committed text
 /// under <c>Acp/Golden</c>, so the later move of these strings into a JSON config file can prove it
 /// changed no behaviour, byte-for-byte.
 /// </summary>
@@ -46,7 +46,7 @@ public sealed class PromptGoldenTests
     {
         var persona = new Persona("Nova", "You are Nova.");
 
-        var actual = SystemPromptComposer.Compose(persona, new FakeHookSource(), ToolNames);
+        var actual = SystemPromptComposer.Compose(persona, new FakeHookSource(), "mcp__team__get_help", ToolNames);
 
         AssertMatchesGolden("systemPrompt.txt", actual);
     }
@@ -86,7 +86,7 @@ public sealed class PromptGoldenTests
     {
         var item = new PersonaRunner.WorkItem("room-1", "Nova & You", "You", "hello there", []);
 
-        var actual = PersonaRunner.BuildPrompt(item);
+        var actual = PersonaRunner.BuildPrompt(item, new FakeHookSource());
 
         AssertMatchesGolden("turnPromptPlain.txt", actual);
     }
@@ -102,7 +102,7 @@ public sealed class PromptGoldenTests
         ];
         var item = new PersonaRunner.WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed);
 
-        var actual = PersonaRunner.BuildPrompt(item);
+        var actual = PersonaRunner.BuildPrompt(item, new FakeHookSource());
 
         AssertMatchesGolden("turnPromptCatchUp.txt", actual);
     }

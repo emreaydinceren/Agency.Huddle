@@ -508,7 +508,7 @@ public sealed class PersonaRunnerTests
     {
         var persona = new Persona("nova", "You are Nova.");
 
-        var prompt = SystemPromptComposer.Compose(persona, new FakeHookSource(), ToolNames);
+        var prompt = SystemPromptComposer.Compose(persona, new FakeHookSource(), "mcp__team__get_help", ToolNames);
 
         Assert.Contains("mcp__team__get_help", prompt, StringComparison.Ordinal);
         Assert.Contains("mcp__team__list_agents", prompt, StringComparison.Ordinal);
@@ -526,7 +526,7 @@ public sealed class PersonaRunnerTests
     {
         var persona = new Persona("nova", "You are Nova.");
 
-        var prompt = SystemPromptComposer.Compose(persona, new FakeHookSource(), ToolNames);
+        var prompt = SystemPromptComposer.Compose(persona, new FakeHookSource(), "mcp__team__get_help", ToolNames);
 
         var orientation = prompt.IndexOf("chat application", StringComparison.Ordinal);
         var help = prompt.IndexOf("mcp__team__get_help", StringComparison.Ordinal);
@@ -541,7 +541,7 @@ public sealed class PersonaRunnerTests
     {
         var persona = new Persona("nova", "# Nova\nYou are a helpful assistant named Nova.");
 
-        var prompt = SystemPromptComposer.Compose(persona, new FakeHookSource(), ToolNames);
+        var prompt = SystemPromptComposer.Compose(persona, new FakeHookSource(), "mcp__team__get_help", ToolNames);
 
         Assert.Contains("You are a helpful assistant named Nova.", prompt, StringComparison.Ordinal);
     }
@@ -557,9 +557,26 @@ public sealed class PersonaRunnerTests
         var hooks = new FakeHookSource();
         hooks.SetOverride("systemPrompt.identity", "You are, unusually, called \"{{personaName}}\" here.");
 
-        var prompt = SystemPromptComposer.Compose(persona, hooks, ToolNames);
+        var prompt = SystemPromptComposer.Compose(persona, hooks, "mcp__team__get_help", ToolNames);
 
         Assert.Contains("You are, unusually, called \"nova\" here.", prompt, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Proves the same feature for the per-turn prompt: a configured override for the Room label hook
+    /// reaches the text <see cref="PersonaRunner.BuildPrompt"/> produces, in place of the catalog
+    /// default.
+    /// </summary>
+    [Fact]
+    public void BuildPrompt_HookOverride_ReachesTheTurnPrompt()
+    {
+        var hooks = new FakeHookSource();
+        hooks.SetOverride("turn.roomLabel", "<<{{roomName}}/{{roomId}}>>");
+        var item = new PersonaRunner.WorkItem("room-9", "Nova & You", "You", "hello", []);
+
+        var prompt = PersonaRunner.BuildPrompt(item, hooks);
+
+        Assert.Contains("<<Nova & You/room-9>>", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -811,7 +828,7 @@ public sealed class PersonaRunnerTests
     private static PersonaRunner CreateHost(PipeHostFixture fixture, Persona persona, FakeAgentHostFactory factory)
     {
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        return new PersonaRunner(persona, options, factory, NullLogger<PersonaRunner>.Instance);
+        return new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
     }
 
     private static async Task<(string AgentId, string RoomId)> WaitForDirectRoomAsync(

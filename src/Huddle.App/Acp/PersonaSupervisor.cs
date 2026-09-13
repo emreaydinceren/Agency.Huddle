@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Hooks;
 
 namespace Agency.Huddle.App.Acp;
 
@@ -12,6 +13,7 @@ internal sealed class PersonaSupervisor : BackgroundService
     private readonly TeamOptions options;
     private readonly PersonaStore personaStore;
     private readonly IAgentHostFactory factory;
+    private readonly IHookSource hooks;
     private readonly ILoggerFactory loggerFactory;
     private readonly ILogger<PersonaSupervisor> logger;
 
@@ -42,18 +44,21 @@ internal sealed class PersonaSupervisor : BackgroundService
         IOptions<TeamOptions> options,
         PersonaStore personaStore,
         IAgentHostFactory factory,
+        IHookSource hooks,
         ILoggerFactory loggerFactory,
         ILogger<PersonaSupervisor> logger)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
         ArgumentNullException.ThrowIfNull(factory);
+        ArgumentNullException.ThrowIfNull(hooks);
         ArgumentNullException.ThrowIfNull(loggerFactory);
         ArgumentNullException.ThrowIfNull(logger);
 
         this.options = options.Value;
         this.personaStore = personaStore;
         this.factory = factory;
+        this.hooks = hooks;
         this.loggerFactory = loggerFactory;
         this.logger = logger;
     }
@@ -306,7 +311,7 @@ internal sealed class PersonaSupervisor : BackgroundService
                 return;
             }
 
-            var host = new PersonaRunner(persona, Options.Create(this.options), this.factory, this.loggerFactory.CreateLogger<PersonaRunner>());
+            var host = new PersonaRunner(persona, Options.Create(this.options), this.factory, this.hooks, this.loggerFactory.CreateLogger<PersonaRunner>());
 
             try
             {

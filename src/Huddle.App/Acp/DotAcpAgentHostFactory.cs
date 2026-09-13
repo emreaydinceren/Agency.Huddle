@@ -82,7 +82,10 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
         // get_help is offered first and knows every other tool, so the system prompt can name one
         // tool instead of all of them. It is built last for the obvious reason: it takes the rest.
-        IReadOnlyList<IAppTool> tools = [new GetHelpTool(chatTools, hooks, toolNamePrefix), .. chatTools];
+        // Captured in its own local, rather than only in the tools array below, so the system prompt
+        // can name it from its own Name below - never retyping "get_help" either.
+        var getHelpTool = new GetHelpTool(chatTools, hooks, toolNamePrefix);
+        IReadOnlyList<IAppTool> tools = [getHelpTool, .. chatTools];
 
         var toolServer = new AppToolServer(ToolServerName, tools, this.loggerFactory, 0, authToken);
         await toolServer.StartAsync(cancellationToken).ConfigureAwait(false);
@@ -110,7 +113,9 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                 new AgentSessionOptions(
                     workDir,
                     new AutoApprovePermissionHandler(),
-                    new SystemPromptOptions(SystemPromptComposer.Compose(persona, hooks, toolNames), SystemPromptMode.Append),
+                    new SystemPromptOptions(
+                        SystemPromptComposer.Compose(persona, hooks, toolNamePrefix + getHelpTool.Name, toolNames),
+                        SystemPromptMode.Append),
                     toolServer.Endpoint,
                     persona.Model,
                     persona.Effort),

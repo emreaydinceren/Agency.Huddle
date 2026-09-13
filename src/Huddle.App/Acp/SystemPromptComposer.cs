@@ -21,8 +21,9 @@ using Agency.Huddle.App.Hooks;
 /// prefix, or a deferred-tool-mode model reports that no such tool exists rather than finding it by a
 /// looser name. Getting this wrong cost a previous author four rounds of debugging. That prefix is
 /// applied by the caller, in code, from the same tool-server name it hands to <c>AppToolServer</c> —
-/// never typed into a hook's template — so <see cref="Compose"/> receives its tool names already
-/// prefixed and only has to join and wrap them.
+/// never typed into a hook's template — so <see cref="Compose"/> receives both <c>toolNames</c> and
+/// <c>helpToolName</c> already prefixed, and only has to join and wrap them. This type holds no
+/// <c>"mcp__team__"</c> literal of its own, for either one.
 /// </para>
 /// <para>
 /// The leading block is the progressive-discovery entry point. It says what kind of application this
@@ -43,20 +44,26 @@ internal static class SystemPromptComposer
     /// <summary>Composes a Persona's full system prompt from its hooks and its own text.</summary>
     /// <param name="persona">The Persona whose <see cref="Persona.Text"/> and <see cref="Persona.Name"/> are spliced in.</param>
     /// <param name="hooks">Resolves each hook's current text — a configured override, or the <see cref="HookCatalog"/> default.</param>
+    /// <param name="helpToolName">
+    /// <see cref="Tools.GetHelpTool"/>'s own name, already carrying its full <c>mcp__team__</c> prefix
+    /// (e.g. <c>"mcp__team__get_help"</c>). Named by the caller from the same tool instance it built,
+    /// so this composer never retypes <c>"get_help"</c> or the prefix.
+    /// </param>
     /// <param name="toolNames">
     /// Every tool name this session exposes, already carrying its full <c>mcp__team__</c> prefix, in
     /// the order they should be listed.
     /// </param>
     /// <returns>The five parts — orientation, Persona text, identity, chat rules, tools — joined with a blank line.</returns>
-    internal static string Compose(Persona persona, IHookSource hooks, IReadOnlyList<string> toolNames)
+    internal static string Compose(Persona persona, IHookSource hooks, string helpToolName, IReadOnlyList<string> toolNames)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(hooks);
+        ArgumentException.ThrowIfNullOrWhiteSpace(helpToolName);
         ArgumentNullException.ThrowIfNull(toolNames);
 
         var orientation = hooks.Render(
             "systemPrompt.orientation",
-            new Dictionary<string, string> { ["{{helpTool}}"] = "mcp__team__get_help" });
+            new Dictionary<string, string> { ["{{helpTool}}"] = helpToolName });
 
         var identity = hooks.Render(
             "systemPrompt.identity",
