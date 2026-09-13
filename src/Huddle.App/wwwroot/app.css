@@ -312,6 +312,55 @@ html, body {
     margin: 0.25rem 0;
 }
 
+/* ---- Drafts: a Turn's text as it streams in, before it becomes a Message ------------------- */
+
+.message-body.streaming {
+    white-space: pre-wrap;
+}
+
+.draft-caret {
+    display: inline-block;
+    width: 0.5em;
+    margin-left: 0.1em;
+    border-right: 2px solid #888;
+    animation: draft-caret-blink 1s step-end infinite;
+}
+
+@keyframes draft-caret-blink {
+    50% {
+        border-color: transparent;
+    }
+}
+
+.tool-activity {
+    margin-top: 0.2rem;
+    color: #888;
+    font-size: 0.8rem;
+    font-style: italic;
+}
+
+/* Deliberately styled like an ordinary secondary action, never like .composer-error or
+   .budget-prompt: a Stop is one of three normal ways a Turn ends, not a fault. */
+.draft-stop {
+    padding: 0.15rem 0.5rem;
+    font: inherit;
+    font-size: 0.75rem;
+    color: #444;
+    background: #fff;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.draft-stop:hover {
+    background: #eef3ff;
+}
+
+.draft-stop:disabled {
+    cursor: default;
+    opacity: 0.6;
+}
+
 .composer {
     border-top: 1px solid #d0d0d0;
     padding: 0.75rem 1rem;
