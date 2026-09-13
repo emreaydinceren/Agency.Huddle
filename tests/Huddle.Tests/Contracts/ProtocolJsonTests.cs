@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.Tests.Contracts;
@@ -65,7 +66,7 @@ public sealed class ProtocolJsonTests
     public void MessagePosted_WithUnknownProperties_StillDeserialises()
     {
         var json = """
-            {"type":"messagePosted","version":2,"roomId":"room-1","roomName":"echo",
+            {"type":"messagePosted","version":3,"roomId":"room-1","roomName":"echo",
              "message":{"id":"m1","timestamp":"2026-09-12T00:00:00+00:00","senderId":"human","senderName":"You","text":"hi"},
              "mentioned":false,"mentions":[],"members":[],
              "agentMessagesSinceHuman":2,"budget":40,"somethingFromALaterVersion":"ignored"}
@@ -76,5 +77,45 @@ public sealed class ProtocolJsonTests
         Assert.Equal("room-1", result.RoomId);
         Assert.Equal(2, result.AgentMessagesSinceHuman);
         Assert.Equal(40, result.Budget);
+    }
+
+    /// <summary>A V3 <see cref="ToolActivity"/> pins the exact wire shape and round-trips through <see cref="ProtocolJson"/>.</summary>
+    [Fact]
+    public void ProtocolJson_RoundTripsToolActivity()
+    {
+        ToolActivity activity = new("room-1", "m-7", "tc-1", "Reading file.cs", ToolActivityStatus.InProgress);
+
+        string json = ProtocolJson.Serialize(activity);
+
+        Assert.Equal(
+            "{\"type\":\"toolActivity\",\"roomId\":\"room-1\",\"messageId\":\"m-7\",\"toolCallId\":\"tc-1\"," +
+            "\"title\":\"Reading file.cs\",\"status\":\"inProgress\",\"version\":3}",
+            json);
+
+        ToolActivity result = Assert.IsType<ToolActivity>(ProtocolJson.Deserialize(json));
+        Assert.Equal(activity, result);
+    }
+
+    /// <summary>A V3 <see cref="StopTurn"/> pins the exact wire shape and round-trips through <see cref="ProtocolJson"/>.</summary>
+    [Fact]
+    public void ProtocolJson_RoundTripsStopTurn()
+    {
+        StopTurn stopTurn = new("room-1");
+
+        string json = ProtocolJson.Serialize(stopTurn);
+
+        Assert.Equal("{\"type\":\"stopTurn\",\"roomId\":\"room-1\",\"version\":3}", json);
+
+        StopTurn result = Assert.IsType<StopTurn>(ProtocolJson.Deserialize(json));
+        Assert.Equal(stopTurn, result);
+    }
+
+    /// <summary>A hand-written line carrying the retired V2 version number is rejected by the strict version check.</summary>
+    [Fact]
+    public void ProtocolJson_RejectsAVersionTwoLine()
+    {
+        const string json = "{\"type\":\"hello\",\"version\":2,\"name\":\"x\"}";
+
+        Assert.Throws<JsonException>(() => ProtocolJson.Deserialize(json));
     }
 }
