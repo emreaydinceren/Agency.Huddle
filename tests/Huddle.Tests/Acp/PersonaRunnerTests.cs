@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Hooks;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -18,6 +19,19 @@ namespace Agency.Huddle.Tests.Acp;
 /// </summary>
 public sealed class PersonaRunnerTests
 {
+    /// <summary>
+    /// The five real chat tools' names, each carrying its full <c>mcp__team__</c> prefix, in the same
+    /// order <see cref="DotAcpAgentHostFactory"/> builds them in.
+    /// </summary>
+    private static readonly IReadOnlyList<string> ToolNames =
+    [
+        "mcp__team__get_help",
+        "mcp__team__list_agents",
+        "mcp__team__create_room",
+        "mcp__team__invite_agent",
+        "mcp__team__post_message",
+    ];
+
     [Fact]
     public async Task Start_RegistersAgentAndCreatesDirectRoom()
     {
@@ -494,7 +508,7 @@ public sealed class PersonaRunnerTests
     {
         var persona = new Persona("nova", "You are Nova.");
 
-        var prompt = SystemPromptComposer.Compose(persona);
+        var prompt = SystemPromptComposer.Compose(persona, new FakeHookSource(), ToolNames);
 
         Assert.Contains("mcp__team__get_help", prompt, StringComparison.Ordinal);
         Assert.Contains("mcp__team__list_agents", prompt, StringComparison.Ordinal);
@@ -512,7 +526,7 @@ public sealed class PersonaRunnerTests
     {
         var persona = new Persona("nova", "You are Nova.");
 
-        var prompt = SystemPromptComposer.Compose(persona);
+        var prompt = SystemPromptComposer.Compose(persona, new FakeHookSource(), ToolNames);
 
         var orientation = prompt.IndexOf("chat application", StringComparison.Ordinal);
         var help = prompt.IndexOf("mcp__team__get_help", StringComparison.Ordinal);
@@ -527,9 +541,25 @@ public sealed class PersonaRunnerTests
     {
         var persona = new Persona("nova", "# Nova\nYou are a helpful assistant named Nova.");
 
-        var prompt = SystemPromptComposer.Compose(persona);
+        var prompt = SystemPromptComposer.Compose(persona, new FakeHookSource(), ToolNames);
 
         Assert.Contains("You are a helpful assistant named Nova.", prompt, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Proves the feature this task adds: a configured override for a hook's text reaches the composed
+    /// prompt in place of <see cref="HookCatalog"/>'s default.
+    /// </summary>
+    [Fact]
+    public void SystemPromptComposer_HookOverride_ReachesTheComposedPrompt()
+    {
+        var persona = new Persona("nova", "You are Nova.");
+        var hooks = new FakeHookSource();
+        hooks.SetOverride("systemPrompt.identity", "You are, unusually, called \"{{personaName}}\" here.");
+
+        var prompt = SystemPromptComposer.Compose(persona, hooks, ToolNames);
+
+        Assert.Contains("You are, unusually, called \"nova\" here.", prompt, StringComparison.Ordinal);
     }
 
     [Fact]

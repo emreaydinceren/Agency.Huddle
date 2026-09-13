@@ -20,4 +20,8 @@
     <ProjectReference Include="..\Huddle.Acp\Huddle.Acp.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="hooks.default.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

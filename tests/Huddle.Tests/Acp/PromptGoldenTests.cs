@@ -9,6 +9,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
 
 /// <summary>
@@ -26,13 +27,26 @@ using Agency.Huddle.Tests.Acp.Tools;
 /// </remarks>
 public sealed class PromptGoldenTests
 {
-    /// <summary>Pins <see cref="SystemPromptComposer.Compose(Persona)"/>'s output for a plain Persona.</summary>
+    /// <summary>
+    /// The five real chat tools' names, each carrying its full <c>mcp__team__</c> prefix, in the same
+    /// order <see cref="DotAcpAgentHostFactory"/> builds them in.
+    /// </summary>
+    private static readonly IReadOnlyList<string> ToolNames =
+    [
+        "mcp__team__get_help",
+        "mcp__team__list_agents",
+        "mcp__team__create_room",
+        "mcp__team__invite_agent",
+        "mcp__team__post_message",
+    ];
+
+    /// <summary>Pins <see cref="SystemPromptComposer.Compose"/>'s output for a plain Persona.</summary>
     [Fact]
     public void SystemPrompt_MatchesGolden()
     {
         var persona = new Persona("Nova", "You are Nova.");
 
-        var actual = SystemPromptComposer.Compose(persona);
+        var actual = SystemPromptComposer.Compose(persona, new FakeHookSource(), ToolNames);
 
         AssertMatchesGolden("systemPrompt.txt", actual);
     }
