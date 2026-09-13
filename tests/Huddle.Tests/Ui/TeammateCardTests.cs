@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components;
 using Agency.Huddle.App.Components.Shared;
 
@@ -24,7 +25,7 @@ public sealed class TeammateCardTests
             ["Mode"] = TeammateCardMode.View,
             ["Name"] = "Chief of Staff",
             ["Text"] = "You keep the team honest.",
-            ["IsOnline"] = true,
+            ["Status"] = new PersonaStatus(PersonaState.Online, null, DateTimeOffset.UtcNow),
             ["FilePath"] = @"C:\App_Data\personas\Chief of Staff.md",
         });
 
@@ -511,6 +512,77 @@ public sealed class TeammateCardTests
         // default empty list here. "Model default", not "Agent default": effort is resolved by the
         // model, not the agent.
         Assert.Contains("Model default", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>An Offline status's reason renders as its own line under the status, not just the badge.</summary>
+    [Fact]
+    public async Task TeammateCard_ShowsTheReasonWhenOffline()
+    {
+        var html = await RenderAsync(new Dictionary<string, object?>
+        {
+            ["Mode"] = TeammateCardMode.View,
+            ["Name"] = "coo",
+            ["Status"] = new PersonaStatus(PersonaState.Offline, "The Adapter needs authentication.", DateTimeOffset.UtcNow),
+        });
+
+        Assert.Contains("Offline", html, StringComparison.Ordinal);
+        Assert.Contains("The Adapter needs authentication.", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>A Degraded status renders its own label and reason, distinct from Offline - the same reason is connected but not doing what was asked of it.</summary>
+    [Fact]
+    public async Task TeammateCard_ShowsDegraded()
+    {
+        var html = await RenderAsync(new Dictionary<string, object?>
+        {
+            ["Mode"] = TeammateCardMode.View,
+            ["Name"] = "coo",
+            ["Status"] = new PersonaStatus(PersonaState.Degraded, "The Reply Gate has not answered in a while.", DateTimeOffset.UtcNow),
+        });
+
+        Assert.Contains("Degraded", html, StringComparison.Ordinal);
+        Assert.Contains("The Reply Gate has not answered in a while.", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Offline", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>A Starting status renders "Starting", never "Offline" - a Persona launching for the first time must not read as a fault.</summary>
+    [Fact]
+    public async Task TeammateCard_ShowsStartingRatherThanOffline()
+    {
+        var html = await RenderAsync(new Dictionary<string, object?>
+        {
+            ["Mode"] = TeammateCardMode.View,
+            ["Name"] = "coo",
+            ["Status"] = new PersonaStatus(PersonaState.Starting, null, DateTimeOffset.UtcNow),
+        });
+
+        Assert.Contains("Starting", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Offline", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>Restart is offered only while the resolved state is Offline or Degraded - never for a healthy or still-starting teammate, which has nothing for it to fix.</summary>
+    [Theory]
+    [InlineData(PersonaState.Offline, true)]
+    [InlineData(PersonaState.Degraded, true)]
+    [InlineData(PersonaState.Online, false)]
+    [InlineData(PersonaState.Starting, false)]
+    public async Task TeammateCard_ShowsRestartOnlyWhenOfflineOrDegraded(PersonaState state, bool expectRestart)
+    {
+        var html = await RenderAsync(new Dictionary<string, object?>
+        {
+            ["Mode"] = TeammateCardMode.View,
+            ["Name"] = "coo",
+            ["Status"] = new PersonaStatus(state, null, DateTimeOffset.UtcNow),
+        });
+
+        if (expectRestart)
+        {
+            Assert.Contains(">Restart<", html, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.DoesNotContain(">Restart<", html, StringComparison.Ordinal);
+        }
     }
 
     private static async Task<string> RenderAsync(Dictionary<string, object?> parameters)

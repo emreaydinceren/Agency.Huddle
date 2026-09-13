@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
@@ -40,6 +41,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IChatStore, FileChatStore>();
 
         services.AddSingleton<ChatService>();
+        services.AddSingleton<Drafts>();
+
+        // PersonaHealth takes a TimeProvider so a test can prove that a no-op report leaves a
+        // status's Since alone, rather than racing the real clock's resolution. Nothing else in the
+        // application injects one, so the registration lives here; TryAdd keeps it harmless if the
+        // host or a test ever supplies its own.
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<PersonaHealth>();
 
         services.AddSingleton<AgentGateway>();
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());
@@ -75,7 +84,15 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<DataInitializer>();
         services.AddHostedService<PipeServer>();
         services.AddHostedService<DemoAgentHost>();
-        services.AddHostedService<PersonaSupervisor>();
+
+        // Same instance as the hosted service, not a second registration - mirrors every other pair
+        // in this file (AgentGateway/IAgentGateway, PersonaStore/IMentionAliasSource, HookStore/IHookSource).
+        // A Restart button (T7.2) needs to reach the very PersonaSupervisor the host is running, not a
+        // second, independently constructed one - the same class of intermittent test flake those other
+        // pairs' remarks already document, this time for a component resolving it directly rather than
+        // for a second FileSystemWatcher.
+        services.AddSingleton<PersonaSupervisor>();
+        services.AddHostedService(sp => sp.GetRequiredService<PersonaSupervisor>());
 
         return services;
     }

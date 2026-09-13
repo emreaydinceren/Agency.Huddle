@@ -17,15 +17,23 @@ internal sealed class FakeAgentSession : IAgentSession
     private readonly Channel<AgentEvent> events = Channel.CreateUnbounded<AgentEvent>();
     private readonly Lock gate = new();
     private readonly Queue<TurnPlan> plannedTurns = new();
+    private readonly Queue<IReadOnlyList<AgentEvent>> plannedToolEvents = new();
     private readonly List<string> prompts = [];
 
     private bool promptInFlight;
+    private int cancelCallCount;
 
     public string SessionId { get; } = Guid.NewGuid().ToString("N");
 
     public ChannelReader<AgentEvent> Events => this.events.Reader;
 
-    public IReadOnlyList<AgentModelOption> Models { get; } = [];
+    /// <summary>
+    /// The models this fake advertises through <see cref="IAgentSession.Models"/>. Empty by default,
+    /// matching the interface's own "empty means unknown" contract; a test proving the Model-not-in-
+    /// catalog warning sets this before <see cref="Agency.Huddle.App.Acp.PersonaRunner.StartAsync"/>
+    /// reads it.
+    /// </summary>
+    public IReadOnlyList<AgentModelOption> Models { get; set; } = [];
 
     public IReadOnlyList<AgentEffortOption> EffortLevels { get; } = [];
 
@@ -44,6 +52,18 @@ internal sealed class FakeAgentSession : IAgentSession
 
     public string DefaultReplyText { get; set; } = "ok";
 
+    /// <summary>How many times <see cref="CancelAsync"/> has been called, for a Stop test to assert against.</summary>
+    public int CancelCallCount
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.cancelCallCount;
+            }
+        }
+    }
+
     public void EnqueueReply(params string[] chunks)
     {
         lock (this.gate)
@@ -60,11 +80,38 @@ internal sealed class FakeAgentSession : IAgentSession
         }
     }
 
+    /// <summary>
+    /// Completes <see cref="Events"/> with an exception, exactly as
+    /// <c>DotAcpAgentSession.Fault</c> does when the underlying agent connection dies mid-turn. A
+    /// channel completed this way stays completed: once called, no further event this fake writes
+    /// (via a still-in-flight <see cref="PromptAsync"/>) will actually reach a reader.
+    /// </summary>
+    /// <param name="exception">The exception <see cref="Events"/>' reader should observe.</param>
+    public void FaultEvents(Exception exception)
+    {
+        this.events.Writer.TryComplete(exception);
+    }
+
     public void EnqueueDelayedReply(TimeSpan delay, params string[] chunks)
     {
         lock (this.gate)
         {
             this.plannedTurns.Enqueue(new TurnPlan(chunks, null, delay, []));
+        }
+    }
+
+    /// <summary>
+    /// Queues a turn that ends in a <see cref="StopReason"/> other than <see cref="StopReason.EndTurn"/> -
+    /// a Refusal or a Cancellation - so a test can prove such a Turn is handled differently even when
+    /// text arrived before the stop.
+    /// </summary>
+    /// <param name="reason">The <see cref="TurnCompleted"/> this turn reports.</param>
+    /// <param name="chunks">The reply text, if any, published before the stop.</param>
+    public void EnqueueReplyEndingIn(StopReason reason, params string[] chunks)
+    {
+        lock (this.gate)
+        {
+            this.plannedTurns.Enqueue(new TurnPlan(chunks, null, TimeSpan.Zero, [], reason));
         }
     }
 
@@ -83,6 +130,20 @@ internal sealed class FakeAgentSession : IAgentSession
         }
     }
 
+    /// <summary>
+    /// Queues zero or more ACP tool-call events to be published on the next <see cref="PromptAsync"/>
+    /// call, before its reply chunks - so a test can prove <see cref="ToolCallStarted"/> and
+    /// <see cref="ToolCallUpdated"/> events reach the wire as <c>ToolActivity</c> envelopes.
+    /// </summary>
+    /// <param name="events">The tool-call events to publish, in order.</param>
+    public void EnqueueToolActivity(params AgentEvent[] events)
+    {
+        lock (this.gate)
+        {
+            this.plannedToolEvents.Enqueue(events);
+        }
+    }
+
     public Task<PromptResult> PromptAsync(string text, CancellationToken cancellationToken)
     {
         return this.RunPromptAsync(text, cancellationToken);
@@ -90,6 +151,11 @@ internal sealed class FakeAgentSession : IAgentSession
 
     public Task CancelAsync(CancellationToken cancellationToken)
     {
+        lock (this.gate)
+        {
+            this.cancelCallCount++;
+        }
+
         return Task.CompletedTask;
     }
 
@@ -132,6 +198,17 @@ internal sealed class FakeAgentSession : IAgentSession
                 throw plan.Exception;
             }
 
+            IReadOnlyList<AgentEvent> toolEvents;
+            lock (this.gate)
+            {
+                toolEvents = this.plannedToolEvents.Count > 0 ? this.plannedToolEvents.Dequeue() : [];
+            }
+
+            foreach (var toolEvent in toolEvents)
+            {
+                this.events.Writer.TryWrite(toolEvent);
+            }
+
             foreach (var level in plan.UsageLevels)
             {
                 this.events.Writer.TryWrite(new UsageUpdated(this.SessionId, ContextWindowSize, level));
@@ -142,9 +219,9 @@ internal sealed class FakeAgentSession : IAgentSession
                 this.events.Writer.TryWrite(new MessageChunk(this.SessionId, chunk));
             }
 
-            this.events.Writer.TryWrite(new TurnCompleted(this.SessionId, StopReason.EndTurn));
+            this.events.Writer.TryWrite(new TurnCompleted(this.SessionId, plan.Reason));
 
-            return new PromptResult(StopReason.EndTurn);
+            return new PromptResult(plan.Reason);
         }
         finally
         {
@@ -156,5 +233,9 @@ internal sealed class FakeAgentSession : IAgentSession
     }
 
     private sealed record TurnPlan(
-        IReadOnlyList<string> Chunks, Exception? Exception, TimeSpan Delay, IReadOnlyList<long> UsageLevels);
+        IReadOnlyList<string> Chunks,
+        Exception? Exception,
+        TimeSpan Delay,
+        IReadOnlyList<long> UsageLevels,
+        StopReason Reason = StopReason.EndTurn);
 }

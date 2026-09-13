@@ -11,23 +11,89 @@
             <div class="message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text))</div>
         </div>
     }
+    @foreach (var draft in this.Drafts)
+    {
+        <div class="message-row streaming">
+            <div class="message-meta">
+                <span class="message-sender">@draft.SenderName</span>
+                <button
+                    type="button"
+                    class="draft-stop"
+                    disabled="@this.StoppingAgentIds.Contains(draft.AgentId)"
+                    @onclick="() => this.OnStop.InvokeAsync(draft)">
+                    Stop
+                </button>
+            </div>
+            @* A Draft is rendered as plain text, through Razor's own default @ escaping, never through
+               MarkdownRenderer - white-space: pre-wrap in app.css does the rest. Two reasons, both in
+               docs/agencyteam/rules.md's territory even though neither is that rule directly: first, a
+               half-written triple-backtick fence would render as a plain paragraph and then flip to a
+               code block the instant it completes, which reads as broken rather than as a reply still
+               arriving. Second, rules.md's "Never use UseAdvancedExtensions() in the markdown pipeline"
+               exists because agent text is model output; running *partial* model output through the
+               markdown path more often than necessary is the wrong direction from that rule, not a
+               harmless extra step. The text settles into rendered Markdown the moment the real Message
+               arrives and this row is replaced. *@
+            <div class="message-body streaming">@draft.Text<span class="draft-caret"></span></div>
+            @if (draft.ToolTitle is not null)
+            {
+                <div class="tool-activity">@draft.ToolTitle</div>
+            }
+        </div>
+    }
 </div>
 
 @code {
     [Parameter]
     public IReadOnlyList<ChatMessage> Messages { get; set; } = [];
 
+    /// <summary>Every Draft currently open in this Room, rendered after every Message.</summary>
+    [Parameter]
+    public IReadOnlyList<Draft> Drafts { get; set; } = [];
+
+    /// <summary>
+    /// The Agent ids whose Stop button is disabled because a Stop request for them is already in
+    /// flight - the busy-flag idiom <c>Chat.razor</c>'s Continue button uses, applied per Agent
+    /// rather than per Room since more than one Draft can be live at once.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyCollection<string> StoppingAgentIds { get; set; } = [];
+
+    /// <summary>Raised when the Human clicks Stop beside a live Draft.</summary>
+    [Parameter]
+    public EventCallback<Draft> OnStop { get; set; }
+
     private ElementReference container;
-    private int lastRenderedCount;
+    private int lastRenderedSignature;
+
+    /// <summary>
+    /// How much content this Room has rendered, as one number. A growing Draft never changes
+    /// <c>Messages.Count</c>, so counting Messages alone would leave a streaming reply on screen
+    /// and never scroll to it; folding the Draft text length into the same signature means either
+    /// kind of growth moves it.
+    /// <para>
+    /// A pure static rather than an expression inside <c>OnAfterRenderAsync</c> so the scroll
+    /// decision can be tested for what it is - arithmetic - instead of by driving a component's
+    /// render lifecycle. <c>HtmlRenderer</c> never calls <c>OnAfterRenderAsync</c> at all, so the
+    /// alternative was reflection into a private injected property, which would go on compiling and
+    /// silently stop testing anything the first time something here is renamed.
+    /// </para>
+    /// </summary>
+    /// <param name="messages">The Messages currently rendered.</param>
+    /// <param name="drafts">The Drafts currently rendered.</param>
+    /// <returns>A value that differs whenever the rendered content has grown or shrunk.</returns>
+    internal static int RenderedSignature(IReadOnlyList<ChatMessage> messages, IReadOnlyList<Draft> drafts) =>
+        messages.Count + drafts.Sum(draft => draft.Text.Length);
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (this.Messages.Count == this.lastRenderedCount)
+        var renderedSignature = MessageList.RenderedSignature(this.Messages, this.Drafts);
+        if (renderedSignature == this.lastRenderedSignature)
         {
             return;
         }
 
-        this.lastRenderedCount = this.Messages.Count;
+        this.lastRenderedSignature = renderedSignature;
         await this.JS.InvokeVoidAsync("teamScroll.toBottom", this.container);
     }
 }

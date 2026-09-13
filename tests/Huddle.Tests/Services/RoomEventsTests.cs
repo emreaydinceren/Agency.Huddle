@@ -7,6 +7,25 @@ namespace Agency.Huddle.Tests.Services;
 
 public sealed class RoomEventsTests
 {
+    /// <summary>
+    /// A throwing <see cref="RoomEvents.DraftChanged"/> subscriber must not stop a later subscriber
+    /// from being called — the same fan-out guarantee <see cref="RoomEvents.RoomsChanged"/> and the
+    /// Message events already give.
+    /// </summary>
+    [Fact]
+    public void PublishDraftChanged_InvokesAllHandlers_EvenIfOneThrows()
+    {
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var secondInvokedWithRoomId = string.Empty;
+        events.DraftChanged += _ => throw new InvalidOperationException("boom");
+        events.DraftChanged += roomId => secondInvokedWithRoomId = roomId;
+
+        var exception = Record.Exception(() => events.PublishDraftChanged("room1"));
+
+        Assert.Null(exception);
+        Assert.Equal("room1", secondInvokedWithRoomId);
+    }
+
     [Fact]
     public void Publish_InvokesAllHandlers_EvenIfOneThrows()
     {

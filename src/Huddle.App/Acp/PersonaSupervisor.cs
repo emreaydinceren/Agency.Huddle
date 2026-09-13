@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Hooks;
 
 namespace Agency.Huddle.App.Acp;
@@ -13,12 +14,14 @@ internal sealed class PersonaSupervisor : BackgroundService
     private readonly TeamOptions options;
     private readonly PersonaStore personaStore;
     private readonly IAgentHostFactory factory;
+    private readonly PersonaHealth health;
     private readonly IHookSource hooks;
     private readonly ILoggerFactory loggerFactory;
     private readonly ILogger<PersonaSupervisor> logger;
 
     private readonly Lock gate = new();
     private readonly Dictionary<string, PersonaRunner> hosts = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Action<PersonaStatus>> statusHandlers = new(StringComparer.Ordinal);
     private readonly HashSet<string> starting = new(StringComparer.Ordinal);
     private readonly HashSet<string> restarting = new(StringComparer.Ordinal);
 
@@ -44,6 +47,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         IOptions<TeamOptions> options,
         PersonaStore personaStore,
         IAgentHostFactory factory,
+        PersonaHealth health,
         IHookSource hooks,
         ILoggerFactory loggerFactory,
         ILogger<PersonaSupervisor> logger)
@@ -51,6 +55,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
         ArgumentNullException.ThrowIfNull(factory);
+        ArgumentNullException.ThrowIfNull(health);
         ArgumentNullException.ThrowIfNull(hooks);
         ArgumentNullException.ThrowIfNull(loggerFactory);
         ArgumentNullException.ThrowIfNull(logger);
@@ -58,6 +63,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         this.options = options.Value;
         this.personaStore = personaStore;
         this.factory = factory;
+        this.health = health;
         this.hooks = hooks;
         this.loggerFactory = loggerFactory;
         this.logger = logger;
@@ -73,6 +79,26 @@ internal sealed class PersonaSupervisor : BackgroundService
                 return this.hosts.Count;
             }
         }
+    }
+
+    /// <summary>
+    /// Restarts one Persona's host on demand - the Human-triggered counterpart to the restart
+    /// <see cref="OnPersonasChanged"/> performs automatically when a Persona's file, Model or Effort
+    /// changes. Wraps <see cref="RestartHostAsync"/> directly, so it shares the same <see cref="gate"/>-protected
+    /// <see cref="restarting"/> set that already stops two concurrent restarts of the same Persona - a
+    /// Restart button is exactly the new way to provoke that race. A Persona with no host currently
+    /// running still starts one: <see cref="RestartHostAsync"/> removes whatever host is running (none,
+    /// here) and then calls <see cref="StartHostIfMissingAsync"/> unconditionally, which is the whole
+    /// point for a Persona that failed to start in the first place - a Restart on it must not be a
+    /// no-op.
+    /// </summary>
+    /// <param name="personaName">The Persona to restart.</param>
+    /// <param name="cancellationToken">Cancels the restart.</param>
+    public Task RestartAsync(string personaName, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(personaName);
+
+        return this.RestartHostAsync(personaName, cancellationToken);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -118,16 +144,22 @@ internal sealed class PersonaSupervisor : BackgroundService
 
         await base.StopAsync(cancellationToken).ConfigureAwait(false);
 
-        List<PersonaRunner> hostsToDispose;
+        List<(PersonaRunner Host, Action<PersonaStatus>? Handler)> hostsToDispose;
         lock (this.gate)
         {
-            hostsToDispose = [.. this.hosts.Values];
+            hostsToDispose = [.. this.hosts.Select(pair => (pair.Value, this.statusHandlers.GetValueOrDefault(pair.Key)))];
             this.hosts.Clear();
             this.startedByName.Clear();
+            this.statusHandlers.Clear();
         }
 
-        foreach (var host in hostsToDispose)
+        foreach (var (host, handler) in hostsToDispose)
         {
+            if (handler is not null)
+            {
+                host.StatusChanged -= handler;
+            }
+
             await host.DisposeAsync().ConfigureAwait(false);
         }
     }
@@ -211,6 +243,27 @@ internal sealed class PersonaSupervisor : BackgroundService
         started is null || persona != started;
 
     /// <summary>
+    /// Classifies a start failure into interface copy for <see cref="PersonaHealth.Report"/> —
+    /// read by the Human, so <c>docs/agencyteam/language.md</c> is binding for it. Order matters:
+    /// <see cref="AgentAuthenticationRequiredException"/> and <see cref="AgentProcessStartException"/>
+    /// are both sealed subtypes of <see cref="AgentException"/>, so they are matched before the base
+    /// type, and <see cref="OperationCanceledException"/> never reaches here at all - the caller's own
+    /// <c>when</c> clause excludes it, because that exception means shutdown, not a failure.
+    /// </summary>
+    /// <param name="ex">The exception <see cref="IAgentHostFactory.CreateAsync"/> or <c>StartAsync</c> threw.</param>
+    /// <returns>A Human-facing reason naming what went wrong, when the exception itself does not already say so plainly.</returns>
+    private static string DescribeStartFailure(Exception ex) => ex switch
+    {
+        AgentAuthenticationRequiredException authEx => authEx.AuthMethods.Count > 0
+            ? $"The Adapter needs authentication: {string.Join(", ", authEx.AuthMethods.Select(m => m.Name))}."
+            : "The Adapter needs authentication.",
+        AgentProcessStartException processEx => processEx.Message,
+        InvalidOperationException invalidOperationEx => invalidOperationEx.Message,
+        AgentException agentEx => agentEx.Message,
+        _ => $"{ex.GetType().Name}: {ex.Message}",
+    };
+
+    /// <summary>
     /// Stops and disposes the runner for a Persona whose file is gone (Remove, or an external
     /// delete noticed by the watcher). Only the runner goes away; per PersonaStore.Remove's
     /// documented semantics, the Agent, its Rooms and its Transcripts are untouched.
@@ -218,6 +271,7 @@ internal sealed class PersonaSupervisor : BackgroundService
     private async Task StopHostAsync(string name)
     {
         PersonaRunner? host;
+        Action<PersonaStatus>? handler;
         lock (this.gate)
         {
             if (!this.hosts.Remove(name, out host))
@@ -226,6 +280,12 @@ internal sealed class PersonaSupervisor : BackgroundService
             }
 
             this.startedByName.Remove(name);
+            this.statusHandlers.Remove(name, out handler);
+        }
+
+        if (handler is not null)
+        {
+            host.StatusChanged -= handler;
         }
 
         try
@@ -237,6 +297,11 @@ internal sealed class PersonaSupervisor : BackgroundService
             // One Persona failing to stop cleanly must not affect any other Persona.
             this.logger.LogWarning(ex, "Persona '{PersonaName}' host failed to stop cleanly after removal.", name);
         }
+
+        // The Persona is gone, and PersonaRunner.StopAsync above (via DisposeAsync) sees its own
+        // run token already cancelled, so its loops report nothing on their way out (T4.4) - this is
+        // the one place that removes the now-stale health entry rather than leaving it to rot.
+        this.health.Remove(name);
     }
 
     /// <summary>
@@ -260,14 +325,21 @@ internal sealed class PersonaSupervisor : BackgroundService
         try
         {
             PersonaRunner? oldHost;
+            Action<PersonaStatus>? oldHandler;
             lock (this.gate)
             {
                 this.hosts.Remove(name, out oldHost);
                 this.startedByName.Remove(name);
+                this.statusHandlers.Remove(name, out oldHandler);
             }
 
             if (oldHost is not null)
             {
+                if (oldHandler is not null)
+                {
+                    oldHost.StatusChanged -= oldHandler;
+                }
+
                 try
                 {
                     await oldHost.DisposeAsync().ConfigureAwait(false);
@@ -313,23 +385,37 @@ internal sealed class PersonaSupervisor : BackgroundService
 
             var host = new PersonaRunner(persona, Options.Create(this.options), this.factory, this.hooks, this.loggerFactory.CreateLogger<PersonaRunner>());
 
+            // Forwards every health signal the runner itself observes (T4.3) - a session/Turn
+            // fact, arriving over the wire - into the one table every UI surface reads.
+            // Unsubscribed in StopHostAsync, RestartHostAsync's old-host teardown, and StopAsync.
+            void OnStatusChanged(PersonaStatus status) => this.health.Report(name, status.State, status.Reason);
+            host.StatusChanged += OnStatusChanged;
+
             try
             {
+                this.health.Report(name, PersonaState.Starting, null);
                 await host.StartAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // One Persona failing to start (bad config, adapter missing, agent process dies)
-                // must not stop any other Persona from coming online.
+                // must not stop any other Persona from coming online. Classified most-derived
+                // exception type first: AgentAuthenticationRequiredException and
+                // AgentProcessStartException are both sealed AgentException subtypes, so a bare
+                // AgentException arm ahead of them would swallow both.
+                this.health.Report(name, PersonaState.Offline, DescribeStartFailure(ex));
                 this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to start.", name);
                 await host.DisposeAsync().ConfigureAwait(false);
                 return;
             }
 
+            this.health.Report(name, PersonaState.Online, null);
+
             lock (this.gate)
             {
                 this.hosts[name] = host;
                 this.startedByName[name] = persona;
+                this.statusHandlers[name] = OnStatusChanged;
             }
         }
         finally

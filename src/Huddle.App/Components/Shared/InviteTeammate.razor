@@ -3,6 +3,7 @@
 @using Agency.Huddle.App.Pipes
 @inject ITeamDirectory TeamDirectory
 @inject IAgentGateway Gateway
+@inject PersonaHealth Health
 @inject ChatService Chat
 @inject RoomEvents Events
 @inject PersonaStore Personas
@@ -50,11 +51,11 @@
                 <ul class="invite-agents">
                     @foreach (var agent in filtered)
                     {
-                        var online = this.Gateway.IsOnline(agent.Id);
+                        var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(agent.Id), this.Health.Get(agent.Name));
                         var name = agent.Name;
                         <li>
                             <button type="button" class="invite-agent" @onclick="@(() => this.InviteAsync(name))">
-                                <span class="agent-dot @(online ? "online" : "offline")" title="@(online ? "online" : "offline")"></span>
+                                <span class="agent-dot @InviteTeammate.StatusClass(status.State)" title="@InviteTeammate.StatusClass(status.State)"></span>
                                 @name
                             </button>
                         </li>
@@ -149,6 +150,16 @@
 
         this.candidates = [.. users.Where(u => u.Kind == UserKind.Agent && !memberIds.Contains(u.Id))];
     }
+
+    /// <summary>The CSS class (and this panel's own tooltip text) for <paramref name="state"/>'s <c>agent-dot</c>.</summary>
+    /// <param name="state">The state to classify.</param>
+    private static string StatusClass(PersonaState state) => state switch
+    {
+        PersonaState.Starting => "starting",
+        PersonaState.Online => "online",
+        PersonaState.Degraded => "degraded",
+        _ => "offline",
+    };
 
     // Never touches PersonaStore's write path or ModelCatalog - selecting a team is pure display
     // narrowing over candidates already loaded.

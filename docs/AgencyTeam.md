@@ -5,7 +5,7 @@ are real Claude agents running as child processes. This page is the hub of its
 documentation: read it whole if you are picking the codebase up cold, then follow
 only the links your task needs.
 
-Applies to the repo as of 2026-09-12: one solution, `Huddle.slnx`, holding all
+Applies to the repo as of 2026-09-13: one solution, `Huddle.slnx`, holding all
 six projects, builds with zero warnings and its tests pass — see [Build, test,
 run](#build-test-run).
 
@@ -57,7 +57,7 @@ them without opening [Language](agencyteam/language.md):
 > Teammate · Human · Agent · Name · Alias · Title · Team · Adapter · Room ·
 > Member · Invitation · Persona · Rejected file · Model · Effort · Turn ·
 > App Tool · Reply Gate · Budget · Catch-up · Progressive discovery · Work Dir ·
-> Message · Mention · Envelope · Transcript · Team Directory
+> Message · Draft · Mention · Envelope · Transcript · Stop · Team Directory
 
 Words that are *wrong here* and have a right replacement: bot, user, channel,
 direct room, group room, agent session, sandbox, profile, prompt, database.

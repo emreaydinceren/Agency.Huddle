@@ -11,7 +11,7 @@ namespace Agency.Huddle.App.Pipes;
 /// translates <see cref="PostMessage"/> traffic into <see cref="ChatService.PostAsync"/> calls.
 /// See Team-Specifications.md §6.2 and §8.1 for the normative flow.
 /// </summary>
-public sealed class AgentConnection
+internal sealed class AgentConnection
 {
     private static readonly TimeSpan HelloTimeout = TimeSpan.FromSeconds(5);
 
@@ -19,24 +19,43 @@ public sealed class AgentConnection
     private readonly ITeamDirectory teamDirectory;
     private readonly ChatService chat;
     private readonly AgentGateway gateway;
+    private readonly Drafts drafts;
+    private readonly RoomEvents roomEvents;
     private readonly ILogger<AgentConnection> logger;
 
     private JsonLineStream? stream;
     private int closed;
 
+    // The membership decision for the most recently checked Draft, keyed by its MessageId. A Draft
+    // is one Turn's worth of MessageDelta/ToolActivity envelopes - often one per token of model
+    // output - so re-checking membership through teamDirectory (a SQLite query) for every single one
+    // would be a query per token. A Draft's Room and sender never change mid-Turn, so one cached
+    // entry, replaced whenever the MessageId changes, is sufficient.
+    private (string RoomId, string MessageId, ProtocolError? Error)? membershipCache;
+
     public AgentConnection(
-        NamedPipeServerStream pipe, ITeamDirectory teamDirectory, ChatService chat, AgentGateway gateway, ILogger<AgentConnection> logger)
+        NamedPipeServerStream pipe,
+        ITeamDirectory teamDirectory,
+        ChatService chat,
+        AgentGateway gateway,
+        Drafts drafts,
+        RoomEvents roomEvents,
+        ILogger<AgentConnection> logger)
     {
         ArgumentNullException.ThrowIfNull(pipe);
         ArgumentNullException.ThrowIfNull(teamDirectory);
         ArgumentNullException.ThrowIfNull(chat);
         ArgumentNullException.ThrowIfNull(gateway);
+        ArgumentNullException.ThrowIfNull(drafts);
+        ArgumentNullException.ThrowIfNull(roomEvents);
         ArgumentNullException.ThrowIfNull(logger);
 
         this.pipe = pipe;
         this.teamDirectory = teamDirectory;
         this.chat = chat;
         this.gateway = gateway;
+        this.drafts = drafts;
+        this.roomEvents = roomEvents;
         this.logger = logger;
     }
 
@@ -204,8 +223,10 @@ public sealed class AgentConnection
                 await this.HandlePostMessageAsync(lineStream, post, ct);
                 break;
                 case MessageDelta delta:
-                await lineStream.WriteAsync(
-                    new ProtocolError(ErrorCodes.NotSupported, "messageDelta is reserved for a later protocol version", delta.MessageId), ct);
+                await this.HandleMessageDeltaAsync(lineStream, delta, ct);
+                break;
+                case ToolActivity activity:
+                await this.HandleToolActivityAsync(lineStream, activity, ct);
                 break;
                 case Hello:
                 await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "already registered"), ct);
@@ -232,7 +253,111 @@ public sealed class AgentConnection
         catch (ChatException ex)
         {
             await lineStream.WriteAsync(new ProtocolError(ex.Code, ex.Message, post.MessageId), ct);
+            return;
         }
+
+        // The real Message now exists under this id, so the Draft that led up to it is gone the
+        // instant the Room view has something better to show.
+        if (post.MessageId is not null)
+        {
+            this.drafts.Complete(post.MessageId);
+            this.roomEvents.PublishDraftChanged(post.RoomId);
+        }
+    }
+
+    private async Task HandleMessageDeltaAsync(JsonLineStream lineStream, MessageDelta delta, CancellationToken ct)
+    {
+        if (!NameRules.IsValidId(delta.MessageId))
+        {
+            await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "Invalid message id.", delta.MessageId), ct);
+            return;
+        }
+
+        var membershipError = await this.CheckMembershipAsync(delta.RoomId, delta.MessageId, ct);
+        if (membershipError is not null)
+        {
+            await lineStream.WriteAsync(membershipError, ct);
+            return;
+        }
+
+        if (delta.IsFinal)
+        {
+            this.drafts.Complete(delta.MessageId);
+        }
+        else
+        {
+            this.drafts.Append(delta.MessageId, delta.RoomId, this.Agent!.Id, this.Agent!.Name, delta.Text);
+        }
+
+        this.roomEvents.PublishDraftChanged(delta.RoomId);
+    }
+
+    private async Task HandleToolActivityAsync(JsonLineStream lineStream, ToolActivity activity, CancellationToken ct)
+    {
+        if (!NameRules.IsValidId(activity.MessageId))
+        {
+            await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "Invalid message id.", activity.MessageId), ct);
+            return;
+        }
+
+        var membershipError = await this.CheckMembershipAsync(activity.RoomId, activity.MessageId, ct);
+        if (membershipError is not null)
+        {
+            await lineStream.WriteAsync(membershipError, ct);
+            return;
+        }
+
+        this.drafts.Activity(
+            activity.MessageId, activity.ToolCallId, activity.RoomId, this.Agent!.Id, this.Agent!.Name, activity.Title, activity.Status);
+
+        this.roomEvents.PublishDraftChanged(activity.RoomId);
+    }
+
+    /// <summary>
+    /// Resolves whether <see cref="Agent"/> may write a Draft into <paramref name="roomId"/> under
+    /// <paramref name="messageId"/>, reusing the last decision when <paramref name="messageId"/> is
+    /// unchanged from the previous call. See <see cref="membershipCache"/> for why one cached entry
+    /// is enough.
+    /// </summary>
+    /// <returns>
+    /// <see langword="null"/> when the Agent is a Member of the Room; otherwise the
+    /// <see cref="ProtocolError"/> to send back.
+    /// </returns>
+    private async Task<ProtocolError?> CheckMembershipAsync(string roomId, string messageId, CancellationToken ct)
+    {
+        // Keyed on the Room AND the Message id, never the Message id alone. This connection is the
+        // validation boundary for anything that dials the pipe, not just for PersonaRunner: a client
+        // is free to reuse one message id across two Rooms, and a cache keyed only on the id would
+        // then hand Room A's verdict to Room B and let an Agent write a Draft into a Room it is not
+        // a Member of.
+        if (this.membershipCache is { } cached
+            && string.Equals(cached.RoomId, roomId, StringComparison.Ordinal)
+            && string.Equals(cached.MessageId, messageId, StringComparison.Ordinal))
+        {
+            return cached.Error;
+        }
+
+        var error = await this.ResolveMembershipErrorAsync(roomId, messageId, ct);
+        this.membershipCache = (roomId, messageId, error);
+        return error;
+    }
+
+    private async Task<ProtocolError?> ResolveMembershipErrorAsync(string roomId, string messageId, CancellationToken ct)
+    {
+        var room = await this.teamDirectory.GetRoomAsync(roomId, ct);
+        if (room is null)
+        {
+            return new ProtocolError(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.", messageId);
+        }
+
+        var members = await this.teamDirectory.GetRoomMembersAsync(roomId, ct);
+        var isMember = members.Any(m => m.Id == this.Agent!.Id);
+        if (!isMember)
+        {
+            return new ProtocolError(ErrorCodes.NotMember, $"'{this.Agent!.Id}' is not a member of room '{roomId}'.", messageId);
+        }
+
+        return null;
     }
 
     private static async Task SendBestEffortAsync(JsonLineStream lineStream, ProtocolError error, CancellationToken ct)

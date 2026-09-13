@@ -18,10 +18,11 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   - **An Agent can mint a fresh Budget by creating a Room.** `create_room` is
     uncapped, and each new Room starts with a full allowance. Only the per-Persona
     token Budget catches that, which is the strongest argument for it.
-  - **The token Budget is silent.** It is per Persona, so it has no per-Room
-    surface and no Continue prompt: it stops that Agent taking Turns and writes a
-    warning to the log, and nothing else. The honest home for it is the Teammate
-    tile's degraded badge — [Roadmap](roadmap.md) item 3.
+  - ~~**The token Budget is silent.**~~ **Closed 2026-09-13.** It is per Persona,
+    so it still has no per-Room surface and no Continue prompt, but it no longer
+    only writes to the log: a Persona that has spent it reads as Degraded on the
+    Teammate tile, with the reason — exactly where this entry predicted the honest
+    home was. See [ADR-0008](../adr/0008-a-turn-is-visible-stoppable-and-says-when-it-fails.md).
   - **A Message declined for Budget is not kept as Catch-up.** It is held for
     re-delivery instead. If you leave a Room paused and then type something rather
     than clicking Continue, the Agent's prompt will not carry the Message it was
@@ -50,9 +51,10 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   exist, not who is asking. Acceptable while every Room contains the one Human.
 - **Open-in-editor launches a process on the server, ungated in every
   environment.** Deliberate for a single-user PoC; unacceptable deployed.
-- **Streaming replies.** The `messageDelta` Envelope is reserved and answered
-  with `notSupported`. The shape exists so adding it later is not breaking.
-  Now planned — [Roadmap](roadmap.md) item 3.
+- ~~**Streaming replies.**~~ **Built 2026-09-13**, and the reserved shape did
+  exactly what it was reserved for: `messageDelta` needed no version change to
+  activate. What it lands in is a **Draft** — in memory, never in the Transcript.
+  Its own limits are below.
 - **Authentication and authorisation.** None, by design, at this stage.
 - **More than one Human.** The data model allows it; the seeding and UI do not.
   When it arrives, `/teammates` is already named correctly for it — add a filter
@@ -92,6 +94,31 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
 - **A failed probe and a cancelled one look alike in the log.** Both return an
   empty catalog; the warning names the cause, but an authentication failure and a
   missing adapter both present to the user as "this agent advertises no models".
+  Narrowed 2026-09-13: a *Persona that failed to start* for either reason now says
+  which, on its tile. The model **picker** is still the ambiguous surface.
+- **What a Draft does not survive.** It is in memory, per process, so a restart
+  loses every Turn in flight and the Room shows only what had been posted. Its
+  text is capped at 256 KB; past that it stops growing rather than truncating what
+  is already there. Both are deliberate — it is a Singleton holding model output
+  for the life of the process, and an Agent killed without a clean disconnect
+  never sends the terminator that would clear it.
+- **Stopping an Agent stops it in every Room.** One ACP session spans every Room
+  its Agent is in, so there is nothing narrower to stop. `StopTurn` carries the
+  Room the Human asked from as a label, not as a selector — the same
+  one-session-per-Persona limit that makes context bleed between Rooms.
+- **Tool activity is never written to the Transcript.** It belongs to the Draft
+  and goes when the Draft does, so scrollback shows what an Agent said and not
+  what it did.
+- **Quota, a network failure, and credentials expiring mid-session are
+  indistinguishable.** All three arrive as one exception type carrying
+  Adapter-authored wording, which nothing here pattern-matches, because it is not
+  ours and it will change. They are reported by *persistence* instead: one failed
+  Turn is noise, three in a row escalates the reason to say so. The Agent stays
+  Degraded rather than Offline, because the session and the pipe may both be fine
+  while the provider refuses.
+- **A Degraded Agent is never restarted automatically.** The Human clicks Restart
+  on the Teammate card. Automatic recovery would need a policy nobody has asked
+  for, and a restart clears what that Teammate remembers.
 - **Threads, reactions, edits, deletes, attachments, search, notifications.**
 - **Known flake, pre-existing:** `PersonaSupervisorTests.Shutdown_DisposesEveryHost`
   fails roughly one run in four, always on a slow run — its 10-second token races

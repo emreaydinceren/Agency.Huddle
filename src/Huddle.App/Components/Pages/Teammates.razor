@@ -7,6 +7,8 @@
 @inject PersonaStore Personas
 @inject ITeamDirectory TeamDirectory
 @inject IAgentGateway Gateway
+@inject PersonaHealth Health
+@inject PersonaSupervisor Supervisor
 @inject RoomEvents Events
 @inject IModelCatalog ModelCatalog
 
@@ -80,7 +82,7 @@
                     <ul class="teammates-list">
                         @foreach (var entry in group.Members)
                         {
-                            var online = this.IsOnline(entry.Name);
+                            var status = this.ResolveStatus(entry.Name);
                             <li class="teammates-item">
                                 @* The whole tile opens the card, the way a person in Slack's directory does. *@
                                 <button type="button" class="teammate-tile" @onclick="() => this.OpenCard(entry.Name)">
@@ -88,9 +90,12 @@
                                     <span class="teammate-tile-text">
                                         <span class="teammates-item-name">@entry.Name</span>
                                         <span class="teammate-tile-role">@entry.Title &middot; @(FormattedAlias(entry.Alias))</span>
-                                        <span class="teammate-tile-status">
-                                            <span class="agent-dot @(online ? "online" : "offline")"></span>
-                                            @(online ? "Online" : "Offline")
+                                        @* The reason (when one is known) is a tooltip here rather than a second line - the
+                                           tile is already the densest surface on the page. TeammateCard.razor shows the
+                                           same reason as a full line, where there is room for it. *@
+                                        <span class="teammate-tile-status" title="@status.Reason">
+                                            <span class="agent-dot @Teammates.StatusClass(status.State)"></span>
+                                            @Teammates.StatusLabel(status.State)
                                         </span>
                                     </span>
                                 </button>
@@ -131,7 +136,8 @@
                   EffortChanged="this.OnCardEffortChanged"
                   AvailableEfforts="this.availableEfforts"
                   EffortsLoading="this.effortsLoading"
-                  IsOnline="this.IsOnline(this.cardName)"
+                  Status="this.ResolveStatus(this.cardName)"
+                  Restarting="this.restartingCard"
                   RoomId="@this.cardRoomId"
                   FilePath="@this.cardFilePath"
                   Error="@this.cardError"
@@ -140,6 +146,7 @@
                   OnSave="this.SaveCardAsync"
                   OnEdit="this.BeginEdit"
                   OnOpen="this.OpenInEditor"
+                  OnRestart="this.RestartCardAsync"
                   OnRemove="this.BeginRemove"
                   OnConfirmRemove="this.ConfirmRemoveAsync"
                   OnCancelRemove="this.CancelRemove" />
@@ -172,6 +179,7 @@
     private string? cardFilePath;
     private string? cardError;
     private bool confirmingRemove;
+    private bool restartingCard;
 
     // Only populated while a Create/Edit card is open — see LoadModelsAsync for why the probe never
     // runs before then.
@@ -192,6 +200,12 @@
     {
         this.Personas.PersonasChanged += this.OnPersonasChanged;
         this.Events.RoomsChanged += this.OnRoomsChanged;
+
+        // Health and pipe liveness are the two facts PersonaStatusResolver combines, so either one
+        // changing must repaint every tile and the open card - the same reasoning rules.md gives for
+        // RoomEvents applies to any singleton event: unsubscribed in Dispose, below.
+        this.Health.Changed += this.OnHealthOrPresenceChanged;
+        this.Gateway.PresenceChanged += this.OnHealthOrPresenceChanged;
         await this.LoadAsync();
     }
 
@@ -199,6 +213,8 @@
     {
         this.Personas.PersonasChanged -= this.OnPersonasChanged;
         this.Events.RoomsChanged -= this.OnRoomsChanged;
+        this.Health.Changed -= this.OnHealthOrPresenceChanged;
+        this.Gateway.PresenceChanged -= this.OnHealthOrPresenceChanged;
     }
 
     // Initials from the first and last word: "Emily Lee" reads as EL and "Chief of Staff" as CS.
@@ -219,11 +235,39 @@
     // the app already shows an Alias (e.g. Chat's own Mention text).
     private static string FormattedAlias(string alias) => $"@{alias}";
 
-    private bool IsOnline(string personaName)
+    /// <summary>
+    /// The one <see cref="PersonaStatus"/> every surface on this page renders for
+    /// <paramref name="personaName"/>, resolved through <see cref="PersonaStatusResolver.Resolve"/>
+    /// from pipe liveness (<see cref="Gateway"/>) and reported health (<see cref="Health"/>) - never
+    /// derived independently by the tile and the card.
+    /// </summary>
+    /// <param name="personaName">The Persona to resolve a status for.</param>
+    private PersonaStatus ResolveStatus(string personaName)
     {
         var agentId = this.agentIdByPersona.GetValueOrDefault(personaName);
-        return agentId is not null && this.Gateway.IsOnline(agentId);
+        var connected = agentId is not null && this.Gateway.IsOnline(agentId);
+        return PersonaStatusResolver.Resolve(connected, this.Health.Get(personaName));
     }
+
+    /// <summary>The Human-facing label for <paramref name="state"/> - "Starting" rather than "Offline" so a Persona launching for the first time does not read as a fault.</summary>
+    /// <param name="state">The state to label.</param>
+    private static string StatusLabel(PersonaState state) => state switch
+    {
+        PersonaState.Starting => "Starting",
+        PersonaState.Online => "Online",
+        PersonaState.Degraded => "Degraded",
+        _ => "Offline",
+    };
+
+    /// <summary>The CSS class for <paramref name="state"/>'s <c>agent-dot</c>, matching <see cref="StatusLabel"/> one-for-one.</summary>
+    /// <param name="state">The state to classify.</param>
+    private static string StatusClass(PersonaState state) => state switch
+    {
+        PersonaState.Starting => "starting",
+        PersonaState.Online => "online",
+        PersonaState.Degraded => "degraded",
+        _ => "offline",
+    };
 
     // Stays synchronous, and deliberately does not probe: this is the tile-click path, which must
     // stay instant. It reuses the Persona this call already fetched rather than calling Get again.
@@ -244,6 +288,7 @@
         this.cardFilePath = this.TryPathFor(personaName);
         this.cardError = null;
         this.confirmingRemove = false;
+        this.restartingCard = false;
         this.error = null;
     }
 
@@ -261,6 +306,7 @@
         this.cardFilePath = null;
         this.cardError = null;
         this.confirmingRemove = false;
+        this.restartingCard = false;
         this.error = null;
 
         // Sequential, not parallel: the probe's single SemaphoreSlim serialises them anyway, and on
@@ -298,6 +344,7 @@
         this.cardFilePath = null;
         this.cardError = null;
         this.confirmingRemove = false;
+        this.restartingCard = false;
         this.availableModels = [];
         this.availableEfforts = [];
 
@@ -435,6 +482,38 @@
     private static IReadOnlyList<string> ParseTeams(string raw) =>
         raw.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 
+    /// <summary>
+    /// Restarts the open card's Persona on demand - the Human-triggered counterpart to the automatic
+    /// restart a file edit causes, and the whole reason T7.2 exists: a failure the Human can see but
+    /// not act on is only half of roadmap item 3. Busy-flagged like <c>Chat.razor</c>'s Continue
+    /// button, and any exception is surfaced through <see cref="cardError"/> rather than left to
+    /// crash the circuit - <see cref="PersonaSupervisor.RestartAsync"/> already reports an
+    /// ordinary start failure through <see cref="Health"/> instead of throwing, so this catch exists
+    /// only for whatever it does not anticipate.
+    /// </summary>
+    private async Task RestartCardAsync()
+    {
+        if (this.restartingCard)
+        {
+            return;
+        }
+
+        this.restartingCard = true;
+        try
+        {
+            await this.Supervisor.RestartAsync(this.cardName, CancellationToken.None);
+            this.cardError = null;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            this.cardError = ex.Message;
+        }
+        finally
+        {
+            this.restartingCard = false;
+        }
+    }
+
     private void BeginRemove()
     {
         this.confirmingRemove = true;
@@ -542,6 +621,22 @@
         {
             await this.LoadAsync();
             this.StateHasChanged();
+        });
+    }
+
+    /// <summary>
+    /// Repaints every tile and the open card when either half of <see cref="PersonaStatusResolver.Resolve"/>'s
+    /// input changes - a health report or a pipe connect/disconnect - so the badge never lags behind
+    /// either fact. No data needs reloading here, unlike <see cref="OnPersonasChanged"/> and
+    /// <see cref="OnRoomsChanged"/>: <see cref="ResolveStatus"/> reads <see cref="Health"/> and
+    /// <see cref="Gateway"/> live on every render.
+    /// </summary>
+    private void OnHealthOrPresenceChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
         });
     }
 

@@ -32,6 +32,20 @@ public sealed class RoomEvents
 
     public event Action? RoomsChanged;
 
+    /// <summary>
+    /// A Room's Drafts changed — one grew, one's tool activity changed, or one was removed. Carries
+    /// the Room id, not the Draft itself, so a subscriber re-reads <c>Drafts.ForRoom</c> for the
+    /// current picture rather than trusting a value that may already be stale by the time it runs.
+    /// <para>
+    /// The inverse of <see cref="MessageRedelivered"/>'s warning above: the Room view is the only
+    /// subscriber, and must stay so. <c>AgentGateway</c> must never deliver a Draft to an Agent — an
+    /// Agent reacting to another Agent's half-finished text would be reacting to something that was
+    /// never said, a strictly worse version of the echo loop that rules.md's "An Agent never receives
+    /// its own Message" exists to prevent.
+    /// </para>
+    /// </summary>
+    public event Action<string>? DraftChanged;
+
     public void PublishMessagePosted(MessagePostedEvent e)
     {
         this.Publish(this.MessagePosted, e, nameof(this.MessagePosted));
@@ -78,6 +92,33 @@ public sealed class RoomEvents
             catch (Exception ex)
             {
                 this.logger.LogError(ex, "A {Event} handler threw and was skipped.", nameof(this.RoomsChanged));
+            }
+        }
+    }
+
+    /// <summary>Publishes <see cref="DraftChanged"/> for <paramref name="roomId"/>.</summary>
+    /// <param name="roomId">The Room whose Drafts changed.</param>
+    public void PublishDraftChanged(string roomId)
+    {
+        this.PublishRoomId(this.DraftChanged, roomId, nameof(this.DraftChanged));
+    }
+
+    private void PublishRoomId(Action<string>? handlers, string roomId, string eventName)
+    {
+        if (handlers is null)
+        {
+            return;
+        }
+
+        foreach (var handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                ((Action<string>)handler).Invoke(roomId);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(ex, "A {Event} handler threw and was skipped.", eventName);
             }
         }
     }

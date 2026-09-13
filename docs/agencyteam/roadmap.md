@@ -4,7 +4,7 @@ Read this before starting work that touches `PersonaRunner`'s event loop,
 `ReplyGate`, `IAgentHostFactory`, or `wwwroot/app.css`. Back to the hub:
 [AgencyTeam.md](../AgencyTeam.md).
 
-Thirteen items. **Items 2 and 10 shipped on 2026-09-12, and item 13 on 2026-09-13**, and each keeps its entry below - the delivered note first, then the reasoning that produced it. Item 13 was never on this list before it was built, and is recorded after the fact because it changed files the other items name and leaves a decision open that item 9 has to close. The other ten are decided but not built. They sit here rather than in [Known
+Thirteen items. **Items 2 and 10 shipped on 2026-09-12, and items 3, 4, 5 and 13 on 2026-09-13**, and each keeps its entry below - the delivered note first, then the reasoning that produced it. Item 13 was never on this list before it was built, and is recorded after the fact because it changed files the other items name and leaves a decision open that item 9 has to close. The other six are decided but not built. They sit here rather than in [Known
 limits](known-limits.md) because that section records what is deliberately absent;
 these have moved from *declined* to *not yet*. Three appear in both places, and
 the Known limits entry now points here rather than warning you off.
@@ -26,9 +26,9 @@ reminder that the remaining three on that line are cheap for the same reason.
 | --- | --- | --- | --- |
 | 1 | Renaming a Teammate | `PersonaStore`, and every per-Persona store | — |
 | ~~2~~ | ~~A cap on agent-to-agent conversation~~ — **delivered 2026-09-12** | `ChatService`, then `ReplyGate.cs` and `PersonaRunner` | shipped; the two counts moved onto the Envelope, which the plan did not foresee |
-| 3 | Streaming and failure surfacing | `PersonaRunner`, `Chat.razor` | `MessageDelta`, `MessageChunk` |
-| 4 | Stopping a turn | `PersonaRunner`, `Chat.razor` | `IAgentSession.CancelAsync` |
-| 5 | Tool-call visibility | `PersonaRunner`'s event loop | `ToolCallStarted`, `ToolCallUpdated` |
+| ~~3~~ | ~~Streaming and failure surfacing~~ — **delivered 2026-09-13** | `PersonaRunner`, `Chat.razor` | shipped with 4 and 5; the roadmap named three failures and the code had twenty-one |
+| ~~4~~ | ~~Stopping a turn~~ — **delivered 2026-09-13** | `PersonaRunner`, `Chat.razor` | shipped; Stop means this Agent now, and a stopped Turn is not a failure |
+| ~~5~~ | ~~Tool-call visibility~~ — **delivered 2026-09-13** | `PersonaRunner`'s event loop | shipped as one `ToolActivity` Envelope, not two; the bump it forced was spent on 3 as well |
 | 6 | CSS tokenisation and dark mode | `wwwroot/app.css` | — |
 | 7 | Theme import | a new generator that writes CSS | — |
 | 8 | Following a Room without being Mentioned | `ReplyGate.cs`, a new App Tool pair | `create_room` returns the Room id |
@@ -112,7 +112,41 @@ failure as item 3. A posted Message — *paused after 40 agent turns; say anythi
 to resume* — makes the cap legible, and settling that wording also settles
 whether a budget is per Room, per Persona, or global.
 
-## 3. Streaming replies, and failures the human can see
+## 3. Streaming replies, and failures the human can see — DELIVERED 2026-09-13
+
+> **Delivered** together with items 4 and 5, with
+> [ADR-0008](../adr/0008-a-turn-is-visible-stoppable-and-says-when-it-fails.md) as
+> the decision in full. The half below called "mostly built" was: `MessageDelta`
+> was already registered at V2 and cost nothing to activate, and the storage
+> question was answered exactly as predicted — deltas stay in memory, only the
+> final Message is written, and `FileChatStore` was not touched. The word for what
+> stays in memory is a **Draft**; [Language](language.md) defines it, because a
+> Message is *persisted* by definition and this is not.
+>
+> **"Failure surfacing has no plumbing at all and is the cheaper half" was right
+> about the plumbing and wrong about the size.** This entry names three failures.
+> Walking the code found **twenty-one**, and the three named here are only the ones
+> that happen at startup. The rest needed a model, not a badge:
+> `PersonaHealth`, and `PersonaStatusResolver` to combine it with pipe liveness —
+> because "connected" and "working" turn out to be different facts. Any of
+> `PersonaRunner`'s three loops can die and leave the pipe open, so an Agent can be
+> deaf and still report online.
+>
+> **"Plus a posted Message" is reversed**, for the reasons ADR-0006 gave when it
+> reversed the same instinct for the Budget pause, and a fourth that applies only
+> here: an Agent that failed to start cannot post anything. It is a strip in the
+> Room view — and one that requires a *reason*, not merely an unhealthy state,
+> because `Acp:Enabled` is false by default and listing every not-running Agent
+> would have put a permanent alert in every Room.
+>
+> One thing this entry did not foresee at all: the item's own opening sentence was
+> **live as a bug**. A crashed adapter faults the event channel *with* an
+> exception, the reader caught only `OperationCanceledException`, and the
+> in-flight Turn's completion source was never resolved — so the consumer blocked
+> forever, in every Room, with nothing logged anywhere.
+>
+> The text below is kept as the reasoning that produced it.
+
 
 Two features with one reason: today an Agent thinking for thirty seconds and an
 Agent that has crashed look identical in the browser. Both show nothing.
@@ -135,7 +169,27 @@ warning by deliberate design. An offline or degraded badge on the Teammate tile
 plus a posted Message covers all three, and the value rises with every Adapter
 added, because each one brings its own ways to be misconfigured.
 
-## 4. Stopping a turn
+## 4. Stopping a turn — DELIVERED 2026-09-13
+
+> **Delivered** with items 3 and 5;
+> [ADR-0008](../adr/0008-a-turn-is-visible-stoppable-and-says-when-it-fails.md) is
+> the decision in full. The interaction this entry says is easy to miss was the
+> whole design: **Stop means this Agent, now** — the live Turn ends and everything
+> already queued behind it is discarded, through a sequence number compared
+> against a high-water mark, which drains the queue without putting a second
+> reader on a channel that is single-consumer by design.
+>
+> Two things this entry did not cover. A Stop needed a **wire type** —
+> `IAgentSession.CancelAsync` is agent-side, and the Human clicks in a browser
+> while `PersonaRunner` is an ordinary pipe client — so `StopTurn` rode the bump
+> item 5 was paying for anyway. And **a stopped Turn is not a failure**: it
+> reports no health state, raises no alert and does not break the
+> consecutive-failure streak. That needs stating because the mechanism underneath
+> it is a `CancellationToken`, and everywhere else here an
+> `OperationCanceledException` means shutdown.
+>
+> The text below is kept as the reasoning that produced it.
+
 
 `IAgentSession.CancelAsync` is implemented in `DotAcpAgentSession` and has no
 caller anywhere in `Huddle.App`. Today the only way to stop a turn in flight is to
@@ -150,7 +204,27 @@ cancelling the live turn does **not** drain the queue behind it. A stop button
 that cancels one turn and then watches five queued prompts run anyway will read
 as broken. Decide up front whether stop means *this turn* or *this Agent, now*.
 
-## 5. Tool-call visibility
+## 5. Tool-call visibility — DELIVERED 2026-09-13
+
+> **Delivered** with items 3 and 4;
+> [ADR-0008](../adr/0008-a-turn-is-visible-stoppable-and-says-when-it-fails.md) is
+> the decision in full. This entry's argument — that the bump is the real cost and
+> an argument for spending it on 3 and 5 together — held, and `StopTurn` rode along
+> too, so one bump bought all three.
+>
+> **It shipped as one Envelope, not two.** `ToolCallStarted` and
+> `ToolCallUpdated` differ only in which raw JSON blob they carry, and neither is
+> rendered, so `ToolActivity` carries the title and the status and nothing else.
+> The name is not an accident either: both ACP names are in scope in the very file
+> that bridges the two namespaces, which is the same trap item 12 records for
+> `AgentEvent`.
+>
+> Tool activity is **never written to the Transcript** — it belongs to the Draft
+> and goes when the Draft does. Scrollback shows what an Agent said, not what it
+> did.
+>
+> The text below is kept as the reasoning that produced it.
+
 
 `ToolCallStarted` and `ToolCallUpdated` are mapped, carry a title and a status,
 and are discarded on the same line as `UsageUpdated`. Rendering them turns dead
@@ -651,11 +725,16 @@ Six dependencies here are real:
   value into `title:` instead. Changing `name:` afterwards is a rename, and costs
   what a rename costs.
 
-Items 3, 4 and 5 are independent of everything else but not of each other: all
-three live in `PersonaRunner`'s event loop and the Room view, and 3 and 5
-together cost one protocol bump instead of two. Item 3's failure-surfacing half
-rises in value once 8 ships, because a coordinator that has stalled and one that
-is thinking look identical in the browser.
+~~**Items 3, 4 and 5 together.**~~ **Settled — all three shipped 2026-09-13**, for
+exactly the reason this bullet gave: one pass over `PersonaRunner`'s event loop
+and the Room view instead of three, and one protocol bump instead of two. It was
+`StopTurn` as well as `ToolActivity` that rode that bump, which this bullet did
+not foresee — item 4 reads as a purely local change, but the Human clicks in a
+browser and `PersonaRunner` is an ordinary pipe client, so a Stop has to cross
+the wire. What is still true is the last sentence: item 3's failure surfacing
+rises in value again once 8 ships, because a coordinator that has stalled and one
+that is thinking look identical — and a following coordinator stalls in ways
+nothing else on this list produces.
 
 Item 12 is independent of all eleven others and gates none of them — it is a
 third implementation of an interface that already has two. It moves two things

@@ -9,19 +9,22 @@ namespace Agency.Huddle.App.Pipes;
 /// Registry of live Agent connections keyed by Agent id. Subscribes to <see cref="RoomEvents.MessagePosted"/>
 /// and fans messages out to every online Agent member except the sender. See Team-Specifications.md §6.2, §8.6.
 /// </summary>
-public sealed class AgentGateway : IAgentGateway, IDisposable
+internal sealed class AgentGateway : IAgentGateway, IDisposable
 {
     private readonly RoomEvents events;
+    private readonly Drafts drafts;
     private readonly ILogger<AgentGateway> logger;
     private readonly ConcurrentDictionary<string, AgentConnection> connections = new(StringComparer.Ordinal);
     private readonly Action<MessagePostedEvent> onMessagePosted;
 
-    public AgentGateway(RoomEvents events, ILogger<AgentGateway> logger)
+    public AgentGateway(RoomEvents events, Drafts drafts, ILogger<AgentGateway> logger)
     {
         ArgumentNullException.ThrowIfNull(events);
+        ArgumentNullException.ThrowIfNull(drafts);
         ArgumentNullException.ThrowIfNull(logger);
 
         this.events = events;
+        this.drafts = drafts;
         this.logger = logger;
 
         // A re-delivery takes exactly the same path: it is the same Message, and an Agent is not told
@@ -31,9 +34,28 @@ public sealed class AgentGateway : IAgentGateway, IDisposable
         this.events.MessageRedelivered += this.onMessagePosted;
     }
 
+    /// <inheritdoc />
+    public event Action? PresenceChanged;
+
     public bool IsOnline(string agentId) => this.connections.ContainsKey(agentId);
 
     public IReadOnlyCollection<string> OnlineAgentIds => this.connections.Keys.ToArray();
+
+    /// <inheritdoc />
+    public async Task StopTurnAsync(string agentId, string roomId, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+
+        // A missing connection is the case where there is nothing to stop - the Agent is already
+        // gone - so this is a silent no-op rather than an error.
+        if (!this.connections.TryGetValue(agentId, out var connection))
+        {
+            return;
+        }
+
+        await connection.SendAsync(new StopTurn(roomId), cancellationToken);
+    }
 
     internal void Register(AgentConnection connection)
     {
@@ -55,6 +77,8 @@ public sealed class AgentGateway : IAgentGateway, IDisposable
         {
             stale.Close();
         }
+
+        this.RaisePresenceChanged();
     }
 
     internal void Unregister(AgentConnection connection)
@@ -66,7 +90,23 @@ public sealed class AgentGateway : IAgentGateway, IDisposable
             return;
         }
 
-        this.connections.TryRemove(new KeyValuePair<string, AgentConnection>(agentId, connection));
+        if (!this.connections.TryRemove(new KeyValuePair<string, AgentConnection>(agentId, connection)))
+        {
+            // A stale connection losing a reconnect race unregisters too, but the registry already
+            // moved on to the new one - nothing here actually changed, so there is nothing to clear
+            // or announce.
+            return;
+        }
+
+        // The Agent's session ended without a terminator for whatever Turn was in flight. Left
+        // behind, that Draft would freeze on screen forever - the exact failure streaming exists to
+        // remove.
+        foreach (var roomId in this.drafts.ClearForAgent(agentId))
+        {
+            this.events.PublishDraftChanged(roomId);
+        }
+
+        this.RaisePresenceChanged();
     }
 
     internal async Task DeliverAsync(MessagePostedEvent e, CancellationToken ct = default)
@@ -127,6 +167,26 @@ public sealed class AgentGateway : IAgentGateway, IDisposable
         catch (Exception ex)
         {
             this.logger.LogWarning(ex, "Failed to deliver a message to an agent connection.");
+        }
+    }
+
+    private void RaisePresenceChanged()
+    {
+        if (this.PresenceChanged is not { } handlers)
+        {
+            return;
+        }
+
+        foreach (var handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                ((Action)handler).Invoke();
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogWarning(ex, "A PresenceChanged handler threw and was skipped.");
+            }
         }
     }
 

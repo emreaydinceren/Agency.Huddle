@@ -45,7 +45,7 @@ function Send-Envelope {
 
 Send-Envelope @{
     type        = 'hello'
-    version     = 2
+    version     = 3
     name        = $Name
     description = 'PowerShell echo agent'
 }
@@ -75,7 +75,7 @@ try {
             $replyText = "**{0}:** {1}" -f $Name, $quotedText
             $reply = @{
                 type      = 'postMessage'
-                version   = 2
+                version   = 3
                 roomId    = $envelope.roomId
                 messageId = [guid]::NewGuid().ToString('N')
                 text      = $replyText

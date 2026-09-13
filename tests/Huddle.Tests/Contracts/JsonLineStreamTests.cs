@@ -25,6 +25,8 @@ public sealed class JsonLineStreamTests
             new PostMessage(room.Id, "reply-1", "**pong**"),
             new MessagePosted(room.Id, "echo", chatMessage, true, new List<MemberInfo> { member }, new List<MemberInfo> { member }, 1, 40),
             new MessageDelta(room.Id, "m-7", "par", false),
+            new ToolActivity(room.Id, "m-7", "tc-1", "Reading file.cs", ToolActivityStatus.InProgress),
+            new StopTurn(room.Id),
             new ProtocolError(ErrorCodes.NotMember, "Agent 'echo' is not a member of room", "reply-1"),
         };
     }

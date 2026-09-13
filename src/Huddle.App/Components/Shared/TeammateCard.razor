@@ -9,6 +9,7 @@
 *@
 
 @using Agency.Huddle.Acp.Abstractions
+@using Agency.Huddle.App.Acp
 
 <div class="teammate-overlay" @onclick="this.OnClose">
     @* The card swallows clicks so that clicking inside it does not reach the backdrop above. *@
@@ -69,9 +70,16 @@
                             <p class="teammate-card-title">@this.Title</p>
                         }
                         <p class="teammate-card-status">
-                            <span class="agent-dot @(this.IsOnline ? "online" : "offline")"></span>
-                            @(this.IsOnline ? "Online" : "Offline")
+                            <span class="agent-dot @TeammateCard.StatusClass(this.Status.State)"></span>
+                            @TeammateCard.StatusLabel(this.Status.State)
                         </p>
+                        @* The reason (when one is known) is a full line here - there is room for it on the
+                           card, unlike the tile's tooltip in Teammates.razor. Follows the same pattern as
+                           the "Files that didn't load" section: a diagnostic surfaced as domain state. *@
+                        @if (this.Status.Reason is not null)
+                        {
+                            <p class="teammate-card-reason">@this.Status.Reason</p>
+                        }
                         @if (this.Mode == TeammateCardMode.View)
                         {
                             <p class="teammate-card-meta">Alias: @this.Alias</p>
@@ -93,6 +101,15 @@
                     }
                     <button type="button" class="teammate-card-action" @onclick="this.OnEdit">Edit</button>
                     <button type="button" class="teammate-card-action" @onclick="this.OnOpen">Open</button>
+                    @* Offered only once there is something to fix: a healthy teammate needs no button
+                       that would just restart a session for nothing. See rules.md's "Editing a Persona
+                       or changing its Model or its Effort restarts its session and loses its conversation
+                       memory" - a manual Restart is the same trade, so the warning uses the Edit form's
+                       own words for it. *@
+                    @if (this.Status.State is PersonaState.Offline or PersonaState.Degraded)
+                    {
+                        <button type="button" class="teammate-card-action" disabled="@this.Restarting" @onclick="this.OnRestart">@(this.Restarting ? "Restarting…" : "Restart")</button>
+                    }
                     @if (this.ConfirmingRemove)
                     {
                         <button type="button" class="teammate-card-action teammates-danger" @onclick="this.OnConfirmRemove">Confirm</button>
@@ -103,6 +120,11 @@
                         <button type="button" class="teammate-card-action teammates-danger" @onclick="this.OnRemove">Remove</button>
                     }
                 </div>
+
+                @if (this.Status.State is PersonaState.Offline or PersonaState.Degraded)
+                {
+                    <p class="teammate-card-hint">Like saving an edit, this restarts the teammate, which clears what it remembers.</p>
+                }
 
                 <section class="teammate-card-section">
                     <h4>Persona</h4>
@@ -272,8 +294,24 @@
     [Parameter]
     public bool EffortsLoading { get; set; }
 
+    /// <summary>
+    /// The one status every surface renders, resolved by the caller through
+    /// <see cref="PersonaStatusResolver.Resolve"/> - never re-derived here from a plain online/offline
+    /// bool, which is exactly what <see cref="PersonaStatusResolver"/> exists to prevent. Defaults to
+    /// an unknown Offline rather than <see langword="null"/>: <see cref="PersonaState"/> has no
+    /// "unset" member, so a caller that has not resolved a real status yet still gets a value this
+    /// card can render.
+    /// </summary>
     [Parameter]
-    public bool IsOnline { get; set; }
+    public PersonaStatus Status { get; set; } = new(PersonaState.Offline, null, DateTimeOffset.MinValue);
+
+    /// <summary>Whether a Restart requested through <see cref="OnRestart"/> is still in flight - disables the button exactly like <c>Chat.razor</c>'s Continue busy-flag, so a slow restart cannot be double-clicked.</summary>
+    [Parameter]
+    public bool Restarting { get; set; }
+
+    /// <summary>Raised when the Human clicks Restart, offered only while <see cref="Status"/> is Offline or Degraded.</summary>
+    [Parameter]
+    public EventCallback OnRestart { get; set; }
 
     /// <summary>The Room this Teammate shares with the Human, when one exists yet.</summary>
     [Parameter]
@@ -332,6 +370,26 @@
             };
         }
     }
+
+    /// <summary>The Human-facing label for <paramref name="state"/> - "Starting" rather than "Offline" so a Persona launching for the first time does not read as a fault.</summary>
+    /// <param name="state">The state to label.</param>
+    private static string StatusLabel(PersonaState state) => state switch
+    {
+        PersonaState.Starting => "Starting",
+        PersonaState.Online => "Online",
+        PersonaState.Degraded => "Degraded",
+        _ => "Offline",
+    };
+
+    /// <summary>The CSS class for <paramref name="state"/>'s <c>agent-dot</c>, matching <see cref="StatusLabel"/> one-for-one.</summary>
+    /// <param name="state">The state to classify.</param>
+    private static string StatusClass(PersonaState state) => state switch
+    {
+        PersonaState.Starting => "starting",
+        PersonaState.Online => "online",
+        PersonaState.Degraded => "degraded",
+        _ => "offline",
+    };
 
     // Opening Edit must not silently reset a stored choice to default when saved: if the Persona's
     // stored Model is no longer (or never was) in AvailableModels — the probe failed, or the

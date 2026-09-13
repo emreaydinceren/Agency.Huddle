@@ -15,7 +15,8 @@ the hub: [AgencyTeam.md](../AgencyTeam.md).
 | Path | Responsibility |
 | --- | --- |
 | `Services/ChatService.cs` | The only thing that posts a Message, so also the only thing that counts one: it owns each Room's Budget, refuses the post that would exceed it, and `ExtendBudgetAsync` grants one more and re-delivers. Per-Room semaphore — the Budget is read and written inside it. `/invite` lives here. |
-| `Services/RoomEvents.cs` | Singleton pub/sub. A handler that throws is logged and skipped, never propagated. |
+| `Services/RoomEvents.cs` | Singleton pub/sub. A handler that throws is logged and skipped, never propagated. `DraftChanged` is the one event the Room view subscribes to and `AgentGateway` must not. |
+| `Services/Drafts.cs`, `Draft.cs` | Every Turn's text while it is still arriving, keyed by the Message id it will post under — not by Room, because two Agents can stream into one Room at once. In memory, capped, and cleared when the Message lands or the Agent disconnects. `Draft` is public only because the Room view takes one as a `[Parameter]`. |
 | `Services/MentionParser.cs` | Finds Mentions. Resolves `@name` against the Room's Members, longest handle first — **not** by pattern. Candidates are every Member's Name plus every Persona Alias whose owner is in the Room; a Name beats an equal-length Alias. See [Rules](rules.md). |
 | `Services/MentionAlias.cs`, `IMentionAliasSource.cs` | Supplies the Aliases in force, so `ChatService` and the invite tools need no dependency on `PersonaStore`. Implemented by `PersonaStore`, registered to the same singleton instance. |
 | `Services/MarkdownRenderer.cs` | Markdig. **Never call `UseAdvancedExtensions()`**. |
@@ -48,6 +49,8 @@ the hub: [AgencyTeam.md](../AgencyTeam.md).
 | `PersonaFrontmatter.cs`, `PersonaFrontmatterField.cs` | Parses a Persona's leading YAML frontmatter into ordered fields, reads the structural identity out of it, composes the job description `list_agents` shows (holding `name` back, since the bullet above already prints it), and composes the frontmatter `Add` writes. Ported from a sibling repo, not referenced across it — see [Decision record](decisions.md). |
 | `PersonaSupervisor.cs` | The only hosted service here. Returns immediately when `Acp:Enabled` is false. One runner per Persona; diffs on change to start, stop or restart. |
 | `PersonaRunner.cs` | **The join.** Pipe client on one side, ACP session on the other. Keeps no Budget count of its own — it passes the Envelope's labels to `ReplyGate` — but does hold the per-Persona token Budget, summed from the rises in `UsageUpdated.Used`. Not a `BackgroundService` — see [Traps](traps.md). |
+| `PersonaHealth.cs` | What is known about each Persona's Agent right now, keyed by Persona name, with a reason and a since. Written by `PersonaSupervisor` (start failures) and by `PersonaRunner` over an event, so the runner keeps no privileged in-process dependency. |
+| `PersonaStatusResolver.cs` | Combines pipe liveness with health into the one status four surfaces render. Health outranks connectivity, and that ordering is the rule — see [Rules](rules.md). Pure, like `ReplyGate`. |
 | `IAgentHostFactory.cs` | The test seam. A fake here is why the suite spends zero tokens. |
 | `DotAcpAgentHostFactory.cs` | The real one: work dir, bearer token, one `AppToolServer` per Persona, then the agent process. |
 | `SystemPromptComposer.cs` | Four Hooks and the Persona's own text, joined in a fixed order. Holds no wording of its own. Receives the tool names already carrying their `mcp__team__` prefix — see [Rules](rules.md) for why it never builds one. |
