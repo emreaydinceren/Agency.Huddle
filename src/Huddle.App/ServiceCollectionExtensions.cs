@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
@@ -41,6 +42,13 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ChatService>();
         services.AddSingleton<Drafts>();
+
+        // PersonaHealth takes a TimeProvider so a test can prove that a no-op report leaves a
+        // status's Since alone, rather than racing the real clock's resolution. Nothing else in the
+        // application injects one, so the registration lives here; TryAdd keeps it harmless if the
+        // host or a test ever supplies its own.
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<PersonaHealth>();
 
         services.AddSingleton<AgentGateway>();
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());

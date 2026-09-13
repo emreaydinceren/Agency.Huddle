@@ -377,10 +377,312 @@ public sealed class PersonaRunnerTests
                 Budget: 0),
             ct);
 
-        var posted = await server.ReceiveAsync<PostMessage>(ct);
+        // Deltas now precede the post on the wire, so skip past them rather than demanding
+        // that the very first envelope be the PostMessage.
+        var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
 
         Assert.NotNull(posted.MessageId);
         Assert.True(NameRules.IsValidId(posted.MessageId));
+    }
+
+    /// <summary>
+    /// Proves item 1 of task T2.2: each <see cref="MessageChunk"/> the agent emits is published as a
+    /// <see cref="MessageDelta"/> carrying the same minted Message id the eventual
+    /// <see cref="PostMessage"/> carries.
+    /// </summary>
+    [Fact]
+    public async Task MessageChunks_AreWrittenAsDeltas_UnderTheMintedId()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReply("Hello, ", "world!");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        var firstDelta = await server.ReceiveAsync<MessageDelta>(ct);
+        Assert.Equal("Hello, ", firstDelta.Text);
+        Assert.False(firstDelta.IsFinal);
+
+        var secondDelta = await server.ReceiveAsync<MessageDelta>(ct);
+        Assert.Equal("world!", secondDelta.Text);
+        Assert.False(secondDelta.IsFinal);
+        Assert.Equal(firstDelta.MessageId, secondDelta.MessageId);
+
+        var posted = await server.ReceiveAsync<PostMessage>(ct);
+        Assert.Equal(firstDelta.MessageId, posted.MessageId);
+    }
+
+    /// <summary>
+    /// Proves item 3 of task T2.2: whatever ends a Turn - success, an empty reply, a throwing
+    /// prompt, or a Stop - <c>ProcessWorkItemAsync</c>'s <c>finally</c> always writes the
+    /// terminating <see cref="MessageDelta"/> with <see cref="MessageDelta.IsFinal"/> true, so a
+    /// partial reply can never outlive its Turn on screen.
+    /// </summary>
+    /// <param name="scenario">Which way the Turn ends.</param>
+    [Theory]
+    [MemberData(nameof(TurnScenarios))]
+    public async Task EveryTurn_EndsWithAFinalDelta(TurnScenario scenario)
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        switch (scenario)
+        {
+            case TurnScenario.Success:
+                factory.Session.EnqueueReply("hi back");
+                break;
+            case TurnScenario.EmptyReply:
+                factory.Session.EnqueueReply("   ");
+                break;
+            case TurnScenario.ThrowingPrompt:
+                factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
+                break;
+            case TurnScenario.Stop:
+                factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "never delivered");
+                break;
+        }
+
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        if (scenario == TurnScenario.Stop)
+        {
+            // Give PromptAsync a moment to start its delay before the Stop lands.
+            var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+            while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
+            {
+                await Task.Delay(20, ct);
+            }
+
+            await server.SendAsync(new StopTurn("room-1"), ct);
+        }
+
+        var finalDelta = await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+
+        Assert.Equal(string.Empty, finalDelta.Text);
+        Assert.Equal("room-1", finalDelta.RoomId);
+        Assert.True(NameRules.IsValidId(finalDelta.MessageId));
+    }
+
+    /// <summary>
+    /// Proves item 2 of task T2.2: a <see cref="ToolCallStarted"/> and a following
+    /// <see cref="ToolCallUpdated"/> each become one <see cref="ToolActivity"/> envelope, carrying
+    /// the active Turn's Room and Message id and the mapped <see cref="ToolActivityStatus"/>.
+    /// </summary>
+    [Fact]
+    public async Task ToolCalls_AreWrittenAsToolActivity()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueToolActivity(
+            new ToolCallStarted("session-1", "call-1", "Reading a file", ToolKind.Read, ToolCallStatus.Pending, null),
+            new ToolCallUpdated("session-1", "call-1", "Reading a file", ToolKind.Read, ToolCallStatus.Completed, null));
+        factory.Session.EnqueueReply("done reading");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        var started = await ReceiveUntilAsync<ToolActivity>(server, ct);
+        Assert.Equal("call-1", started.ToolCallId);
+        Assert.Equal("Reading a file", started.Title);
+        Assert.Equal(ToolActivityStatus.Pending, started.Status);
+        Assert.Equal("room-1", started.RoomId);
+
+        var updated = await ReceiveUntilAsync<ToolActivity>(server, ct);
+        Assert.Equal("call-1", updated.ToolCallId);
+        Assert.Equal(ToolActivityStatus.Completed, updated.Status);
+        Assert.Equal(started.MessageId, updated.MessageId);
+    }
+
+    /// <summary>
+    /// Proves item 4 of task T2.2: a Stop ends the live Turn - <see cref="IAgentSession.CancelAsync"/>
+    /// is called exactly once - and discards every Turn still queued behind it, none of which ever
+    /// reaches <see cref="FakeAgentSession.PromptAsync"/>.
+    /// </summary>
+    [Fact]
+    public async Task Stop_EndsTheLiveTurnAndDiscardsTheQueue()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "live reply");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await server.HandshakeAsync(runner, ct);
+
+        for (var i = 0; i < 3; i++)
+        {
+            await server.SendAsync(NewMessagePosted("room-1", $"message {i}"), ct);
+        }
+
+        // Give the first (live) turn a moment to reach PromptAsync before the Stop lands.
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Single(factory.Session.Prompts);
+
+        await server.SendAsync(new StopTurn("room-1"), ct);
+
+        var finalDelta = await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+        Assert.Equal("room-1", finalDelta.RoomId);
+
+        // Bounded grace period for the two discarded, queued turns to (misbehave and) run anyway.
+        await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+
+        Assert.Equal(1, factory.Session.CancelCallCount);
+        Assert.Single(factory.Session.Prompts);
+    }
+
+    /// <summary>
+    /// The regression that matters most: a Stop must not end the single consumer loop. A Message
+    /// delivered after a Stop still produces a Turn, proving the consumer moved past the stopped
+    /// Turn rather than propagating its cancellation out of <c>RunConsumerAsync</c>.
+    /// </summary>
+    [Fact]
+    public async Task Stop_DoesNotEndTheConsumerLoop()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "never posted");
+        factory.Session.EnqueueReply("after the stop");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "first"), ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        await server.SendAsync(new StopTurn("room-1"), ct);
+
+        // The stopped Turn's own terminator, discarded before proving the next Turn still runs.
+        await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "second"), ct);
+
+        var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
+        Assert.Equal("after the stop", posted.Text);
+    }
+
+    /// <summary>
+    /// Proves item 6 of task T2.2: a stopped Turn posts no Message, even though text may have
+    /// arrived before the Stop landed - the same stance already taken for a Refusal.
+    /// </summary>
+    [Fact]
+    public async Task AStoppedTurn_PostsNoMessage()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "should not be posted");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        await server.SendAsync(new StopTurn("room-1"), ct);
+
+        var finalDelta = await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+        Assert.Equal(string.Empty, finalDelta.Text);
+
+        // Bounded grace period for a (misbehaving) stopped turn to post anyway: the read is
+        // expected to time out, proving nothing further ever arrives.
+        using var raceCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        raceCts.CancelAfter(TimeSpan.FromMilliseconds(500));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => server.ReceiveRawAsync(raceCts.Token));
+    }
+
+    /// <summary>
+    /// Proves item 6 of task T2.2: a stopped Turn is logged at Information, never at Warning or
+    /// Error - a Stop is a normal outcome, not a failure.
+    /// </summary>
+    [Fact]
+    public async Task AStoppedTurn_IsNotLoggedAsAFailure()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "should not be posted");
+        var persona = new Persona("nova", "You are Nova.");
+        var logger = new RecordingLogger<PersonaRunner>();
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), logger);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        await server.SendAsync(new StopTurn("room-1"), ct);
+        await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+
+        // Bounded grace period for the Information entry, written from the consumer's catch clause,
+        // to actually land before asserting against it.
+        var logDeadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (!logger.Entries.Exists(entry => entry.Level == LogLevel.Information) && DateTimeOffset.UtcNow < logDeadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Information);
+        Assert.DoesNotContain(logger.Entries, entry => entry.Level == LogLevel.Warning);
+        Assert.DoesNotContain(logger.Entries, entry => entry.Level == LogLevel.Error);
     }
 
     /// <summary>
@@ -984,6 +1286,86 @@ public sealed class PersonaRunnerTests
         return new PersonaRunner(persona, options, factory, new FakeHookSource(), logger ?? NullLogger<PersonaRunner>.Instance);
     }
 
+    /// <summary>
+    /// Builds a Mentioned <see cref="MessagePosted"/> for the <see cref="FakePersonaServer"/> tests,
+    /// which talk to a bare <see cref="PersonaRunner"/> directly and so have no <c>ChatService</c> to
+    /// mint one through.
+    /// </summary>
+    /// <param name="roomId">The Room the delivery is attributed to.</param>
+    /// <param name="text">The Message text.</param>
+    /// <returns>A delivery this Agent is Mentioned in, with no other Members and no Budget cap.</returns>
+    private static MessagePosted NewMessagePosted(string roomId, string text) =>
+        new(
+            roomId,
+            "Room",
+            new ChatMessage(Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow, "human", "You", text),
+            Mentioned: true,
+            Mentions: [],
+            Members: [],
+            AgentMessagesSinceHuman: 0,
+            Budget: 0);
+
+    /// <summary>
+    /// Reads raw envelopes from <paramref name="server"/> until one of type <typeparamref name="T"/>
+    /// arrives, discarding everything else - a <see cref="MessagePosted"/> Turn can write several
+    /// envelope types before the one a test cares about.
+    /// </summary>
+    /// <typeparam name="T">The envelope type to wait for.</typeparam>
+    /// <param name="server">The server to read from.</param>
+    /// <param name="ct">Bounds the read.</param>
+    /// <returns>The first matching envelope.</returns>
+    private static Task<T> ReceiveUntilAsync<T>(FakePersonaServer server, CancellationToken ct)
+        where T : ProtocolMessage =>
+        ReceiveUntilAsync<T>(server, static _ => true, ct);
+
+    /// <summary>
+    /// Reads raw envelopes from <paramref name="server"/> until one of type <typeparamref name="T"/>
+    /// matching <paramref name="predicate"/> arrives, discarding everything else.
+    /// </summary>
+    /// <typeparam name="T">The envelope type to wait for.</typeparam>
+    /// <param name="server">The server to read from.</param>
+    /// <param name="predicate">Which envelope of type <typeparamref name="T"/> to stop on.</param>
+    /// <param name="ct">Bounds the read.</param>
+    /// <returns>The first matching envelope.</returns>
+    private static async Task<T> ReceiveUntilAsync<T>(FakePersonaServer server, Func<T, bool> predicate, CancellationToken ct)
+        where T : ProtocolMessage
+    {
+        while (true)
+        {
+            var message = await server.ReceiveRawAsync(ct);
+            if (message is T typed && predicate(typed))
+            {
+                return typed;
+            }
+        }
+    }
+
+    /// <summary>The ways a Turn can end, exercised by <see cref="EveryTurn_EndsWithAFinalDelta"/>.</summary>
+    public enum TurnScenario
+    {
+        /// <summary>The agent replies normally.</summary>
+        Success,
+
+        /// <summary>The agent replies with only whitespace.</summary>
+        EmptyReply,
+
+        /// <summary><see cref="IAgentSession.PromptAsync"/> itself throws.</summary>
+        ThrowingPrompt,
+
+        /// <summary>The Human stops the Turn while it is still in flight.</summary>
+        Stop,
+    }
+
+    /// <summary>The scenarios <see cref="EveryTurn_EndsWithAFinalDelta"/> runs as a Theory.</summary>
+    /// <returns>One row per <see cref="TurnScenario"/>.</returns>
+    public static TheoryData<TurnScenario> TurnScenarios() => new()
+    {
+        TurnScenario.Success,
+        TurnScenario.EmptyReply,
+        TurnScenario.ThrowingPrompt,
+        TurnScenario.Stop,
+    };
+
     private static async Task<(string AgentId, string RoomId)> WaitForDirectRoomAsync(
         PipeHostFixture fixture, string agentName, CancellationToken ct)
     {
@@ -1127,6 +1509,14 @@ public sealed class PersonaRunnerTests
         {
             var message = await this.stream!.ReadAsync(ct);
             return Assert.IsType<T>(message);
+        }
+
+        /// <summary>Reads the next envelope the runner writes, without asserting its type.</summary>
+        /// <param name="ct">Cancels the read.</param>
+        /// <returns>The envelope, or <see langword="null"/> at end of stream.</returns>
+        public Task<ProtocolMessage?> ReceiveRawAsync(CancellationToken ct)
+        {
+            return this.stream!.ReadAsync(ct);
         }
 
         /// <summary>Disposes the line stream if the handshake reached it, otherwise the bare pipe.</summary>

@@ -202,8 +202,111 @@ public sealed class PipeEndToEndTests
         Assert.Equal("m2", evt.Message.Id);
     }
 
+    /// <summary>A Member's <see cref="MessageDelta"/> grows that Message id's Draft and publishes <see cref="RoomEvents.DraftChanged"/>.</summary>
     [Fact]
-    public async Task MessageDelta_GetsNotSupported()
+    public async Task MessageDelta_FromAMember_IsAccepted()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var events = fixture.Services.GetRequiredService<RoomEvents>();
+        var drafts = fixture.Services.GetRequiredService<Drafts>();
+
+        await using var client = await fixture.ConnectClientAsync(ct);
+        await client.WriteAsync(new Hello("echo", null), ct);
+        var welcome = Assert.IsType<Welcome>(await client.ReadAsync(ct));
+        var roomId = Assert.Single(welcome.Rooms).Id;
+
+        var changed = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        events.DraftChanged += room => changed.TrySetResult(room);
+
+        await client.WriteAsync(new MessageDelta(roomId, "m-delta-1", "Hel", false), ct);
+
+        using var registration = ct.Register(() => changed.TrySetCanceled(ct));
+        var changedRoomId = await changed.Task;
+        Assert.Equal(roomId, changedRoomId);
+
+        var draft = Assert.Single(drafts.ForRoom(roomId));
+        Assert.Equal("Hel", draft.Text);
+    }
+
+    /// <summary>An Agent that is not a Member of the target Room is refused, and no Draft is created.</summary>
+    [Fact]
+    public async Task MessageDelta_FromANonMember_IsRefused()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var drafts = fixture.Services.GetRequiredService<Drafts>();
+
+        await using var echo = await fixture.ConnectClientAsync(ct);
+        await echo.WriteAsync(new Hello("echo", null), ct);
+        var echoWelcome = Assert.IsType<Welcome>(await echo.ReadAsync(ct));
+        var echoRoomId = Assert.Single(echoWelcome.Rooms).Id;
+
+        await using var alpha = await fixture.ConnectClientAsync(ct);
+        await alpha.WriteAsync(new Hello("alpha", null), ct);
+        Assert.IsType<Welcome>(await alpha.ReadAsync(ct));
+
+        await alpha.WriteAsync(new MessageDelta(echoRoomId, "m-delta-2", "Hi", false), ct);
+
+        var error = Assert.IsType<ProtocolError>(await alpha.ReadAsync(ct));
+        Assert.Equal(ErrorCodes.NotMember, error.Code);
+        Assert.Empty(drafts.ForRoom(echoRoomId));
+    }
+
+    /// <summary>
+    /// Reusing one MessageId across two Rooms re-checks membership for the second Room. The
+    /// per-connection membership cache exists so a Draft does not cost one SQLite round trip per
+    /// token of model output, and keying it on the MessageId alone would let an Agent bank an
+    /// allowed verdict in its own Room and then spend it on a Room it is not a Member of.
+    /// </summary>
+    [Fact]
+    public async Task MessageDelta_ReusingAMessageIdInAnotherRoom_IsStillRefused()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var drafts = fixture.Services.GetRequiredService<Drafts>();
+
+        await using var echo = await fixture.ConnectClientAsync(ct);
+        await echo.WriteAsync(new Hello("echo", null), ct);
+        var echoWelcome = Assert.IsType<Welcome>(await echo.ReadAsync(ct));
+        var echoRoomId = Assert.Single(echoWelcome.Rooms).Id;
+
+        await using var alpha = await fixture.ConnectClientAsync(ct);
+        await alpha.WriteAsync(new Hello("alpha", null), ct);
+        var alphaWelcome = Assert.IsType<Welcome>(await alpha.ReadAsync(ct));
+        var alphaRoomId = Assert.Single(alphaWelcome.Rooms).Id;
+
+        // Allowed: alpha's own Room, which caches an "is a Member" verdict under this MessageId.
+        const string messageId = "m-delta-shared";
+        await alpha.WriteAsync(new MessageDelta(alphaRoomId, messageId, "mine", false), ct);
+
+        // An accepted delta draws no reply, so there is nothing to await: poll until the server has
+        // processed it, bounded so a regression fails rather than hangs.
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (drafts.ForRoom(alphaRoomId).Count == 0 && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(25, ct);
+        }
+
+        Assert.Single(drafts.ForRoom(alphaRoomId));
+
+        // The same MessageId, a Room alpha is not a Member of. The cached verdict must not carry over.
+        await alpha.WriteAsync(new MessageDelta(echoRoomId, messageId, "not mine", false), ct);
+
+        var error = Assert.IsType<ProtocolError>(await alpha.ReadAsync(ct));
+        Assert.Equal(ErrorCodes.NotMember, error.Code);
+        Assert.Empty(drafts.ForRoom(echoRoomId));
+    }
+
+    /// <summary>A <see cref="MessageDelta"/> whose MessageId fails <c>NameRules.IsValidId</c> is refused as a bad message.</summary>
+    [Fact]
+    public async Task MessageDelta_WithAnInvalidMessageId_IsRefused()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
@@ -215,10 +318,38 @@ public sealed class PipeEndToEndTests
         var welcome = Assert.IsType<Welcome>(await client.ReadAsync(ct));
         var roomId = Assert.Single(welcome.Rooms).Id;
 
-        await client.WriteAsync(new MessageDelta(roomId, "m-7", "par", false), ct);
+        await client.WriteAsync(new MessageDelta(roomId, "bad/id", "Hi", false), ct);
 
         var error = Assert.IsType<ProtocolError>(await client.ReadAsync(ct));
-        Assert.Equal(ErrorCodes.NotSupported, error.Code);
+        Assert.Equal(ErrorCodes.BadMessage, error.Code);
+    }
+
+    /// <summary>A Draft is never delivered to another Agent - only the Room view subscribes to <see cref="RoomEvents.DraftChanged"/>.</summary>
+    [Fact]
+    public async Task Drafts_AreNeverDeliveredToAnotherAgent()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+
+        await using var alpha = await fixture.ConnectClientAsync(ct);
+        await alpha.WriteAsync(new Hello("alpha", null), ct);
+        var alphaWelcome = Assert.IsType<Welcome>(await alpha.ReadAsync(ct));
+        var alphaRoomId = Assert.Single(alphaWelcome.Rooms).Id;
+
+        await using var beta = await fixture.ConnectClientAsync(ct);
+        await beta.WriteAsync(new Hello("beta", null), ct);
+        Assert.IsType<Welcome>(await beta.ReadAsync(ct));
+
+        await chat.SubmitFromComposerAsync(alphaRoomId, KnownIds.Human, "/invite @beta", ct);
+
+        await alpha.WriteAsync(new MessageDelta(alphaRoomId, "m-delta-3", "secret draft text", false), ct);
+
+        using var noDraftCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        noDraftCts.CancelAfter(TimeSpan.FromMilliseconds(500));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => beta.ReadAsync(noDraftCts.Token));
     }
 
     [Fact]
@@ -291,6 +422,44 @@ public sealed class PipeEndToEndTests
         }
 
         Assert.False(gateway.IsOnline(welcome.AgentId));
+    }
+
+    /// <summary>An Agent's open Drafts are cleared when its connection drops, so a crashed Agent leaves no frozen Draft on screen.</summary>
+    [Fact]
+    public async Task Disconnect_ClearsTheAgentsDrafts()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
+        var drafts = fixture.Services.GetRequiredService<Drafts>();
+        var events = fixture.Services.GetRequiredService<RoomEvents>();
+
+        var client = await fixture.ConnectClientAsync(ct);
+        await client.WriteAsync(new Hello("echo", null), ct);
+        var welcome = Assert.IsType<Welcome>(await client.ReadAsync(ct));
+        var roomId = Assert.Single(welcome.Rooms).Id;
+
+        var changed = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        events.DraftChanged += room => changed.TrySetResult(room);
+
+        await client.WriteAsync(new MessageDelta(roomId, "m-delta-4", "partial", false), ct);
+
+        using var registration = ct.Register(() => changed.TrySetCanceled(ct));
+        await changed.Task;
+        Assert.Single(drafts.ForRoom(roomId));
+
+        await client.DisposeAsync();
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(2);
+        while (gateway.IsOnline(welcome.AgentId) && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(50, ct);
+        }
+
+        Assert.False(gateway.IsOnline(welcome.AgentId));
+        Assert.Empty(drafts.ForRoom(roomId));
     }
 
     [Fact]
@@ -372,5 +541,112 @@ public sealed class PipeEndToEndTests
 
         Assert.IsType<Welcome>(await firstWelcomeTask);
         Assert.IsType<Welcome>(await secondWelcomeTask);
+    }
+
+    /// <summary>A successful <see cref="PostMessage"/> completes the Draft that shares its MessageId.</summary>
+    [Fact]
+    public async Task PostMessage_CompletesTheDraftWithTheSameId()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var drafts = fixture.Services.GetRequiredService<Drafts>();
+        var events = fixture.Services.GetRequiredService<RoomEvents>();
+
+        await using var client = await fixture.ConnectClientAsync(ct);
+        await client.WriteAsync(new Hello("echo", null), ct);
+        var welcome = Assert.IsType<Welcome>(await client.ReadAsync(ct));
+        var roomId = Assert.Single(welcome.Rooms).Id;
+
+        var changed = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        events.DraftChanged += room => changed.TrySetResult(room);
+        await client.WriteAsync(new MessageDelta(roomId, "reply-9", "partial reply", false), ct);
+
+        using var registration = ct.Register(() => changed.TrySetCanceled(ct));
+        await changed.Task;
+        Assert.Single(drafts.ForRoom(roomId));
+
+        await client.WriteAsync(new PostMessage(roomId, "reply-9", "full reply"), ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(2);
+        while (drafts.ForRoom(roomId).Count > 0 && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(50, ct);
+        }
+
+        Assert.Empty(drafts.ForRoom(roomId));
+    }
+
+    /// <summary><see cref="IAgentGateway.StopTurnAsync"/> writes a <see cref="StopTurn"/> Envelope to the Agent's own connection.</summary>
+    [Fact]
+    public async Task StopTurnAsync_ReachesTheAgentsConnection()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
+
+        await using var client = await fixture.ConnectClientAsync(ct);
+        await client.WriteAsync(new Hello("echo", null), ct);
+        var welcome = Assert.IsType<Welcome>(await client.ReadAsync(ct));
+        var roomId = Assert.Single(welcome.Rooms).Id;
+
+        // The read is started BEFORE the stop is awaited, and that ordering is the test, not a
+        // stylistic choice. JsonLineStream.WriteAsync ends in FlushAsync, which on a Windows named
+        // pipe is FlushFileBuffers: it does not return until the other end drains the buffer. Await
+        // the stop first and nothing is left to read it, so the write blocks until the token fires.
+        // In the real system the Agent's read loop is always parked in ReadAsync, which is exactly
+        // what this ordering reproduces.
+        var reading = client.ReadAsync(ct);
+
+        await gateway.StopTurnAsync(welcome.AgentId, roomId, ct);
+
+        var stop = Assert.IsType<StopTurn>(await reading);
+        Assert.Equal(roomId, stop.RoomId);
+    }
+
+    /// <summary>Stopping an Agent that is not connected is a silent no-op, not an error.</summary>
+    [Fact]
+    public async Task StopTurnAsync_ForAnOfflineAgent_IsHarmless()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
+
+        await gateway.StopTurnAsync("no-such-agent", "no-such-room", ct);
+
+        Assert.False(gateway.IsOnline("no-such-agent"));
+    }
+
+    /// <summary>A Member's <see cref="ToolActivity"/> updates that Message id's Draft and publishes <see cref="RoomEvents.DraftChanged"/>.</summary>
+    [Fact]
+    public async Task ToolActivity_FromAMember_IsAccepted()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var events = fixture.Services.GetRequiredService<RoomEvents>();
+        var drafts = fixture.Services.GetRequiredService<Drafts>();
+
+        await using var client = await fixture.ConnectClientAsync(ct);
+        await client.WriteAsync(new Hello("echo", null), ct);
+        var welcome = Assert.IsType<Welcome>(await client.ReadAsync(ct));
+        var roomId = Assert.Single(welcome.Rooms).Id;
+
+        var changed = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        events.DraftChanged += room => changed.TrySetResult(room);
+
+        await client.WriteAsync(new ToolActivity(roomId, "m-tool-1", "call-1", "Searching", ToolActivityStatus.InProgress), ct);
+
+        using var registration = ct.Register(() => changed.TrySetCanceled(ct));
+        await changed.Task;
+
+        var draft = Assert.Single(drafts.ForRoom(roomId));
+        Assert.Equal("Searching", draft.ToolTitle);
     }
 }

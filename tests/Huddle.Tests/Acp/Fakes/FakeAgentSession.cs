@@ -17,9 +17,11 @@ internal sealed class FakeAgentSession : IAgentSession
     private readonly Channel<AgentEvent> events = Channel.CreateUnbounded<AgentEvent>();
     private readonly Lock gate = new();
     private readonly Queue<TurnPlan> plannedTurns = new();
+    private readonly Queue<IReadOnlyList<AgentEvent>> plannedToolEvents = new();
     private readonly List<string> prompts = [];
 
     private bool promptInFlight;
+    private int cancelCallCount;
 
     public string SessionId { get; } = Guid.NewGuid().ToString("N");
 
@@ -43,6 +45,18 @@ internal sealed class FakeAgentSession : IAgentSession
     public bool OverlapDetected { get; private set; }
 
     public string DefaultReplyText { get; set; } = "ok";
+
+    /// <summary>How many times <see cref="CancelAsync"/> has been called, for a Stop test to assert against.</summary>
+    public int CancelCallCount
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.cancelCallCount;
+            }
+        }
+    }
 
     public void EnqueueReply(params string[] chunks)
     {
@@ -110,6 +124,20 @@ internal sealed class FakeAgentSession : IAgentSession
         }
     }
 
+    /// <summary>
+    /// Queues zero or more ACP tool-call events to be published on the next <see cref="PromptAsync"/>
+    /// call, before its reply chunks - so a test can prove <see cref="ToolCallStarted"/> and
+    /// <see cref="ToolCallUpdated"/> events reach the wire as <c>ToolActivity</c> envelopes.
+    /// </summary>
+    /// <param name="events">The tool-call events to publish, in order.</param>
+    public void EnqueueToolActivity(params AgentEvent[] events)
+    {
+        lock (this.gate)
+        {
+            this.plannedToolEvents.Enqueue(events);
+        }
+    }
+
     public Task<PromptResult> PromptAsync(string text, CancellationToken cancellationToken)
     {
         return this.RunPromptAsync(text, cancellationToken);
@@ -117,6 +145,11 @@ internal sealed class FakeAgentSession : IAgentSession
 
     public Task CancelAsync(CancellationToken cancellationToken)
     {
+        lock (this.gate)
+        {
+            this.cancelCallCount++;
+        }
+
         return Task.CompletedTask;
     }
 
@@ -157,6 +190,17 @@ internal sealed class FakeAgentSession : IAgentSession
             if (plan.Exception is not null)
             {
                 throw plan.Exception;
+            }
+
+            IReadOnlyList<AgentEvent> toolEvents;
+            lock (this.gate)
+            {
+                toolEvents = this.plannedToolEvents.Count > 0 ? this.plannedToolEvents.Dequeue() : [];
+            }
+
+            foreach (var toolEvent in toolEvents)
+            {
+                this.events.Writer.TryWrite(toolEvent);
             }
 
             foreach (var level in plan.UsageLevels)

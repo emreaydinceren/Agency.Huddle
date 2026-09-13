@@ -33,7 +33,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
     private readonly IHookSource hooks;
     private readonly ILogger<PersonaRunner> logger;
     private readonly CancellationTokenSource runCts = new();
-    private readonly Channel<WorkItem> workItems = Channel.CreateUnbounded<WorkItem>();
+    private readonly Channel<QueuedWork> workItems = Channel.CreateUnbounded<QueuedWork>();
     private readonly Lock turnLock = new();
 
     // Per-Room catch-up buffers for Messages the Agent received but was not Mentioned in (ADR-0004).
@@ -50,6 +50,14 @@ internal sealed class PersonaRunner : IAsyncDisposable
     // catch that. lastUsed is touched only by the event reader and needs no such care.
     private long tokensConsumed;
     private long lastUsed;
+
+    // The Stop mechanism (roadmap item 5). sequenceCounter is assigned to every enqueued WorkItem;
+    // stopHighWaterMark is the sequence value a Stop recorded most recently. sequenceCounter is
+    // written on the read loop only but read by both the read loop and the consumer, and
+    // stopHighWaterMark is written on the read loop and read on the consumer - the same
+    // cross-thread reason tokensConsumed goes through Interlocked applies to both.
+    private long sequenceCounter;
+    private long stopHighWaterMark;
 
     private ActiveTurn? activeTurn;
     private JsonLineStream? stream;
@@ -182,9 +190,10 @@ internal sealed class PersonaRunner : IAsyncDisposable
                         case ReplyDecision.Reply:
                             var missed = this.TakeCatchUp(posted.RoomId);
                             var item = new WorkItem(posted.RoomId, posted.RoomName, posted.Message.SenderName, posted.Message.Text, missed);
+                            var sequence = Interlocked.Increment(ref this.sequenceCounter);
 
                             // Never call the agent from the read loop: hand the item to the single consumer.
-                            this.workItems.Writer.TryWrite(item);
+                            this.workItems.Writer.TryWrite(new QueuedWork(sequence, item));
                             break;
 
                         case ReplyDecision.CatchUp:
@@ -220,6 +229,27 @@ internal sealed class PersonaRunner : IAsyncDisposable
                         error.Code,
                         error.Message);
                 }
+                else if (message is StopTurn)
+                {
+                    // The mark is taken before anything else: anything already queued (sequence at
+                    // or below it) must drain without spending anything, the same stance the
+                    // token-budget guard in ProcessWorkItemAsync takes for a spent Budget.
+                    Interlocked.Exchange(ref this.stopHighWaterMark, Interlocked.Read(ref this.sequenceCounter));
+
+                    ActiveTurn? turn;
+                    lock (this.turnLock)
+                    {
+                        turn = this.activeTurn;
+                    }
+
+                    // Unblocks ProcessWorkItemAsync's await on this Turn immediately, without
+                    // waiting on the agent process to acknowledge the cancel notification below.
+                    turn?.Cancellation.Cancel();
+
+                    // Safe from any thread: locks internally and no-ops when no prompt is in
+                    // flight (src/Huddle.Acp/DotAcp/DotAcpAgentSession.cs:144-171).
+                    await this.session!.CancelAsync(ct);
+                }
             }
         }
         catch (OperationCanceledException)
@@ -236,9 +266,16 @@ internal sealed class PersonaRunner : IAsyncDisposable
     {
         try
         {
-            await foreach (var item in this.workItems.Reader.ReadAllAsync(ct))
+            await foreach (var queued in this.workItems.Reader.ReadAllAsync(ct))
             {
-                await this.ProcessWorkItemAsync(item, ct);
+                if (queued.Sequence <= Interlocked.Read(ref this.stopHighWaterMark))
+                {
+                    // Queued at or before the last Stop: drain it without spending anything,
+                    // rather than working through a backlog the Human already asked to clear.
+                    continue;
+                }
+
+                await this.ProcessWorkItemAsync(queued.Item, ct);
             }
         }
         catch (OperationCanceledException)
@@ -283,8 +320,8 @@ internal sealed class PersonaRunner : IAsyncDisposable
         try
         {
             var prompt = BuildPrompt(item, this.hooks);
-            await this.session!.PromptAsync(prompt, ct);
-            var outcome = await completion.Task.WaitAsync(ct);
+            await this.session!.PromptAsync(prompt, turnCancellation.Token);
+            var outcome = await completion.Task.WaitAsync(turnCancellation.Token);
 
             // A refusal or a cancelled Turn is not a successful reply, even if some text arrived
             // before the stop: neither is fit to post into the Room.
@@ -293,6 +330,22 @@ internal sealed class PersonaRunner : IAsyncDisposable
             if (isPostable)
             {
                 await this.stream!.WriteAsync(new PostMessage(item.RoomId, messageId, outcome.Text), ct);
+            }
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            // The Human stopped this Turn; the run itself is not shutting down. A Turn ends in one
+            // of three ways - completed, stopped, or failed - and a stopped one is a normal
+            // outcome, never a failure: logged at Information, its partial text discarded rather
+            // than saved, and no Message posted. The exception type alone cannot tell a Stop apart
+            // from shutdown - both surface as OperationCanceledException - so the run token, not
+            // the exception, is what is checked above.
+            if (this.logger.IsEnabled(LogLevel.Information))
+            {
+                this.logger.LogInformation(
+                    "Persona '{PersonaName}' turn in room {RoomId} was stopped.",
+                    this.persona.Name,
+                    item.RoomId);
             }
         }
         catch (OperationCanceledException)
@@ -313,6 +366,29 @@ internal sealed class PersonaRunner : IAsyncDisposable
                 }
             }
 
+            // Written on every path a Turn can end while this runner is alive - success, refusal,
+            // exception, and Stop - so a partial reply can never outlive its Turn on screen.
+            //
+            // Shutdown is the one path that deliberately skips it, and skipping is not a gap: the
+            // pipe is closing, and AgentGateway.Unregister clears every Draft this Agent owns as the
+            // connection drops, so the Room is left clean either way. Writing it anyway needed an
+            // uncancellable token - the run token is already cancelled by then - and an unbounded
+            // write into a pipe that is being torn down simply blocks, hanging teardown until
+            // something else happens to cancel it.
+            if (this.stream is not null && !ct.IsCancellationRequested)
+            {
+                try
+                {
+                    await this.stream.WriteAsync(new MessageDelta(item.RoomId, messageId, string.Empty, IsFinal: true), ct);
+                }
+                catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+                {
+                    // The pipe died before the terminator could be written; the Turn already ended
+                    // one way or another, so there is nothing left to signal and nothing to retry.
+                    this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to write the final delta for a turn in room {RoomId}.", this.persona.Name, item.RoomId);
+                }
+            }
+
             turnCancellation.Dispose();
         }
     }
@@ -325,10 +401,15 @@ internal sealed class PersonaRunner : IAsyncDisposable
             {
                 if (agentEvent is MessageChunk chunk)
                 {
-                    lock (this.turnLock)
-                    {
-                        this.activeTurn?.Text.Append(chunk.Text);
-                    }
+                    await this.AppendAndPublishDeltaAsync(chunk.Text, ct);
+                }
+                else if (agentEvent is ToolCallStarted started)
+                {
+                    await this.WriteToolActivityAsync(started.ToolCallId, started.Title, MapToolCallStatus(started.Status), ct);
+                }
+                else if (agentEvent is ToolCallUpdated updated)
+                {
+                    await this.WriteToolActivityAsync(updated.ToolCallId, updated.Title, MapToolCallStatus(updated.Status), ct);
                 }
                 else if (agentEvent is TurnCompleted completed)
                 {
@@ -358,7 +439,8 @@ internal sealed class PersonaRunner : IAsyncDisposable
                     }
                 }
 
-                // ThoughtChunk, ToolCallStarted, ToolCallUpdated and the rest are ignored.
+                // ThoughtChunk, PlanUpdated, ModeChanged, UserMessageChunk, UnsupportedContent and
+                // UnknownUpdate are ignored.
             }
         }
         catch (OperationCanceledException)
@@ -388,6 +470,111 @@ internal sealed class PersonaRunner : IAsyncDisposable
                     $"Persona '{this.persona.Name}': the agent event stream ended before its in-flight turn completed."));
         }
     }
+
+    /// <summary>
+    /// Appends one increment of Message text to the active Turn's running total, then publishes it
+    /// to <see cref="stream"/> as a <see cref="MessageDelta"/> so the Room can show the reply as it
+    /// arrives. No throttling here - the browser is where that cost belongs.
+    /// </summary>
+    /// <param name="text">The increment of text this event carries.</param>
+    /// <param name="ct">Cancels the delta write.</param>
+    private async Task AppendAndPublishDeltaAsync(string text, CancellationToken ct)
+    {
+        ActiveTurn? turn;
+        lock (this.turnLock)
+        {
+            turn = this.activeTurn;
+            if (turn is null)
+            {
+                return;
+            }
+
+            turn.Text.Append(text);
+        }
+
+        // DeltaWriteFailed and the write below are touched only from this single-threaded event
+        // reader loop, so no lock is needed to read or set it here.
+        if (turn.DeltaWriteFailed || this.stream is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await this.stream.WriteAsync(new MessageDelta(turn.RoomId, turn.MessageId, text, IsFinal: false), ct);
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+        {
+            // A dead pipe must not also kill the event reader: the turn keeps running, and this is
+            // logged once per turn rather than once per chunk, since a stream of identical warnings
+            // is worse than one.
+            turn.DeltaWriteFailed = true;
+            this.logger.LogWarning(
+                ex,
+                "Persona '{PersonaName}' failed to write a message delta for a turn in room {RoomId}.",
+                this.persona.Name,
+                turn.RoomId);
+        }
+    }
+
+    /// <summary>
+    /// Publishes one tool call's current lifecycle state to <see cref="stream"/> as a
+    /// <see cref="ToolActivity"/>, attributed to the active Turn's Room and Message id. A no-op
+    /// when there is no active Turn, or the pipe is not connected.
+    /// </summary>
+    /// <param name="toolCallId">The id of the tool call this activity reports on.</param>
+    /// <param name="title">A human-readable label for the call, if the agent supplied one.</param>
+    /// <param name="status">The call's current lifecycle state, already mapped to the wire enum.</param>
+    /// <param name="ct">Cancels the write.</param>
+    private async Task WriteToolActivityAsync(string toolCallId, string? title, ToolActivityStatus status, CancellationToken ct)
+    {
+        ActiveTurn? turn;
+        lock (this.turnLock)
+        {
+            turn = this.activeTurn;
+        }
+
+        if (turn is null || this.stream is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await this.stream.WriteAsync(new ToolActivity(turn.RoomId, turn.MessageId, toolCallId, title, status), ct);
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+        {
+            this.logger.LogWarning(
+                ex,
+                "Persona '{PersonaName}' failed to write a tool activity update for a turn in room {RoomId}.",
+                this.persona.Name,
+                turn.RoomId);
+        }
+    }
+
+    /// <summary>Maps an ACP tool call's lifecycle state to the wire enum shown to the Human.</summary>
+    /// <param name="status">The ACP status to map.</param>
+    /// <returns>The equivalent <see cref="ToolActivityStatus"/>.</returns>
+    /// <remarks>
+    /// One arm per declared member and deliberately <em>no</em> discard arm, so that adding a member
+    /// to ACP's <see cref="ToolCallStatus"/> fails this build (<c>CS8509</c>) instead of degrading
+    /// into a run-time throw nobody sees until a model happens to use it - the two enums are a
+    /// hand-maintained pair, and the compiler is the only thing that will notice them drifting apart.
+    /// <c>CS8524</c> is a different complaint: it is about a value cast from an integer that names no
+    /// member at all, which cannot arrive here, because the only values passed in are ones
+    /// <c>SessionUpdateMapper</c> itself produced from a declared member. Suppressing that one is
+    /// what keeps <c>CS8509</c> live.
+    /// </remarks>
+#pragma warning disable CS8524 // Only SessionUpdateMapper's own declared members reach this; see remarks.
+    private static ToolActivityStatus MapToolCallStatus(ToolCallStatus status) => status switch
+    {
+        ToolCallStatus.Pending => ToolActivityStatus.Pending,
+        ToolCallStatus.InProgress => ToolActivityStatus.InProgress,
+        ToolCallStatus.Completed => ToolActivityStatus.Completed,
+        ToolCallStatus.Failed => ToolActivityStatus.Failed,
+    };
+#pragma warning restore CS8524
 
     private async Task<NamedPipeClientStream> ConnectAsync(CancellationToken ct)
     {
@@ -569,13 +756,24 @@ internal sealed class PersonaRunner : IAsyncDisposable
 
     internal sealed record CaughtUpMessage(string SenderName, string Text);
 
+    /// <summary>One queued Turn, with the sequence number a Stop compares against.</summary>
+    private sealed record QueuedWork(long Sequence, WorkItem Item);
+
     /// <summary>The Turn currently in flight: its Room, its minted Message id, the text so far, and how it ends.</summary>
     private sealed record ActiveTurn(
         string RoomId,
         string MessageId,
         StringBuilder Text,
         TaskCompletionSource<TurnOutcome> Completion,
-        CancellationTokenSource Cancellation);
+        CancellationTokenSource Cancellation)
+    {
+        /// <summary>
+        /// Whether a <see cref="MessageDelta"/> write has already failed for this Turn. Set once a
+        /// write throws, so a dead pipe is logged at most once per Turn rather than once per chunk.
+        /// Touched only from the single-threaded event-reader loop, so it needs no lock of its own.
+        /// </summary>
+        public bool DeltaWriteFailed { get; set; }
+    }
 
     /// <summary>How a Turn ended: the text it produced, and why it stopped.</summary>
     private sealed record TurnOutcome(string Text, StopReason Reason);
