@@ -14,7 +14,11 @@ jobs:
   secret-scan:
     runs-on: dotnet-10
     container:
-      image: mcr.microsoft.com/dotnet/sdk:10.0
+      # Exact patch, not the floating :10.0 tag. global.json requires 10.0.400 with
+      # rollForward=latestPatch, so only a 10.0.4xx SDK satisfies it, and a runner holding a
+      # stale :10.0 (10.0.300, which is what failed run 581) dies at restore before any code
+      # runs. An exact tag forces the pull. Bump this together with global.json — one decision.
+      image: mcr.microsoft.com/dotnet/sdk:10.0.401
     defaults:
       run:
         shell: bash
@@ -59,7 +63,11 @@ jobs:
   validate:
     runs-on: dotnet-10
     container:
-      image: mcr.microsoft.com/dotnet/sdk:10.0
+      # Exact patch, not the floating :10.0 tag. global.json requires 10.0.400 with
+      # rollForward=latestPatch, so only a 10.0.4xx SDK satisfies it, and a runner holding a
+      # stale :10.0 (10.0.300, which is what failed run 581) dies at restore before any code
+      # runs. An exact tag forces the pull. Bump this together with global.json — one decision.
+      image: mcr.microsoft.com/dotnet/sdk:10.0.401
     defaults:
       run:
         shell: bash

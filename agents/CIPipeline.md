@@ -4,8 +4,10 @@ How Gitea Actions validates this repo, and how to reproduce a failing run on you
 machine in about two minutes. Read this before debugging a red run — the failure modes
 recorded here are environmental, and none of them are code regressions.
 
-Verified end to end on 2026-09-12 against SDK 10.0.401 in the CI container: **593 tests,
-585 passed, 8 skipped, 0 failed** — identical to a Windows `dotnet test` run.
+Verified end to end on 2026-09-12 against SDK 10.0.401 in the CI container: **568 tests,
+560 passed, 8 skipped, 0 failed**, matching a Windows `dotnet test` run of the same tree. A
+tree that also carries the in-flight `Team.*` to `Huddle.*` rename work runs 593/585/8/0 —
+the difference is that work's added tests.
 
 This page covers validation only. There is no packaging, publishing, or release step yet;
 when one arrives it belongs in a new job in `ci-main.yaml`, not inside `validate`.
@@ -18,7 +20,14 @@ when one arrives it belongs in a new job in `ci-main.yaml`, not inside `validate
 > on an `internal-mdns-host` finding. Read the real one from `git remote -v`.
 
 Both workflows run on a self-hosted runner labelled `dotnet-10`, inside the
-`mcr.microsoft.com/dotnet/sdk:10.0` container (Ubuntu 24.04), with `shell: bash`.
+`mcr.microsoft.com/dotnet/sdk:10.0.401` container (Ubuntu 24.04), with `shell: bash`.
+
+The image is pinned to an **exact SDK patch**, not the floating `:10.0` tag, and that pin is
+half of a pair: `global.json` requires `10.0.400` with `rollForward: latestPatch`, so only a
+`10.0.4xx` SDK satisfies it. A floating tag leaves you at the mercy of whatever the runner
+happens to have cached — which is what broke the very first run on this repo (see
+[Reflection](#reflection--2026-09-12-the-first-run-died-on-a-cached-image)). Bump the two
+together, or not at all.
 
 | Workflow | Trigger | Jobs |
 | --- | --- | --- |
@@ -79,7 +88,7 @@ and about two minutes. Run it from the repo root.
 docker volume create huddle-nuget
 
 docker run --rm -v "$PWD:/work" -v huddle-nuget:/root/.nuget/packages \
-  -w /work -e TEAM_E2E=0 mcr.microsoft.com/dotnet/sdk:10.0 bash -c "
+  -w /work -e TEAM_E2E=0 mcr.microsoft.com/dotnet/sdk:10.0.401 bash -c "
     set -euo pipefail
     apt-get update -qq && apt-get install -y -qq nodejs
     dotnet restore Huddle.slnx
@@ -90,9 +99,9 @@ docker run --rm -v "$PWD:/work" -v huddle-nuget:/root/.nuget/packages \
 
 ```text
 Test run summary: Passed!
-  total: 593
+  total: 568
   failed: 0
-  succeeded: 585
+  succeeded: 560
   skipped: 8
 ```
 
@@ -111,7 +120,7 @@ Check these before reading the code.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| `Requested SDK version: 10.0.400 ... Install the [10.0.400] .NET SDK` at the restore step | `global.json` pins `10.0.400` with `rollForward: latestPatch`, which only accepts a `10.0.4xx` SDK. The runner's cached image is older. | `docker pull mcr.microsoft.com/dotnet/sdk:10.0` on the runner host. Do not edit `global.json` to chase the image. |
+| `Requested SDK version: 10.0.400 ... Install the [10.0.400] .NET SDK` at the restore step | `global.json` moved ahead of the image pinned in the workflows, so the container's SDK no longer satisfies `rollForward: latestPatch` | Bump `image:` in **both** workflows to a tag whose SDK matches. Do not loosen `global.json` to chase the image, and do not go back to the floating `:10.0` tag |
 | Six `AgentProcessLauncherTests` fail with `Failed to start 'node'` | The Install Node.js step was removed, reordered after the test step, or its `apt-get` failed | Restore the step; confirm `node --version` printed in the log |
 | `Zero tests ran`, job exits 5, and the step reads as a no-op rather than a failure | The trailing `--` was dropped from `dotnet test` | Put it back. This SDK's Microsoft Testing Platform CLI requires it; it is not a typo |
 | `The following test projects are using VSTest test runner` | Restore assets are stale or missing, so the `xunit.v3` props never imported and the test projects evaluated as `Library` instead of `Exe`. The message names the wrong cause. | Delete `bin/` and `obj/`, then restore again in the same container as the build |
@@ -132,11 +141,43 @@ git ls-files --eol -- 'src/**/*.razor'
 ```
 
 ```text
-i/lf    w/crlf  attr/                 	src/Huddle.App/Components/Pages/Teammates.razor
+i/lf    w/crlf  attr/                  src/Huddle.App/Components/Pages/Teammates.razor
 ```
 
 The sibling Agency repo added a root `.gitattributes` forcing `*.cs text eol=crlf` after
 exactly this class of bug cost it a debugging session. This repo has not needed one.
+
+## Reflection — 2026-09-12: the first run died on a cached image
+
+**Failure:** run 581, the very first CI run this repo ever had (PR #1, the commit that added
+these workflows). `secret-scan` passed; `validate` failed at "Restore dependencies" with
+`Requested SDK version: 10.0.400 ... Installed SDKs: 10.0.300`.
+
+**Root cause:** the workflows asked for the floating `mcr.microsoft.com/dotnet/sdk:10.0` tag,
+and the runner had a cached image from that tag holding SDK **10.0.300**. `global.json` pins
+`10.0.400` with `rollForward: latestPatch`, which rolls forward only inside the `10.0.4xx`
+feature band, so 10.0.300 does not satisfy it. Nothing about the code was wrong — no compile
+ran at all.
+
+**Proof:** the same failure reproduced locally before the PR was even opened. A stale local
+`sdk:10.0` (10.0.301) refused the restore with the identical message; `docker pull` brought
+10.0.401 and every subsequent local run was green. The CI log then showed the same message
+with 10.0.300, one patch band lower still.
+
+**Fix:** pinned both jobs in both workflows to `mcr.microsoft.com/dotnet/sdk:10.0.401`. An
+exact tag the runner does not have forces a pull, so the SDK CI uses is stated in the repo
+rather than inherited from whatever the host last cached.
+
+**Lessons for future agents:**
+
+- A floating image tag is not a version. Two machines on `:10.0` can hold SDKs a whole feature
+  band apart, and `rollForward: latestPatch` turns that gap into a hard failure.
+- `global.json` and the workflow `image:` are two halves of one decision. Bumping either alone
+  breaks CI, and the error names `global.json` — the file that is *correct* — which points
+  debugging at the wrong half.
+- Everything upstream of the failing step is still evidence. This run confirmed the
+  `dotnet-10` runner label, the hand-rolled clone, and Gitea's `GITHUB_SHA` handling on
+  `pull_request` all work, because `secret-scan` passed end to end and Node installed cleanly.
 
 ## Related
 
