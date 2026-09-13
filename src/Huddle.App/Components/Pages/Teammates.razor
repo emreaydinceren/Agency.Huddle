@@ -28,46 +28,99 @@
         <p class="composer-error">@this.error</p>
     }
 
-    @if (this.personas.Count == 0)
+    @* Above the list on purpose: a required-field decision only pays off if the file that fails to
+       load is impossible to miss, rather than just silently absent from the directory below. *@
+    @if (this.rejectedFiles.Count > 0)
+    {
+        <section class="teammates-rejected">
+            <h2>Files that didn't load</h2>
+            <ul class="teammates-rejected-list">
+                @foreach (var rejected in this.rejectedFiles)
+                {
+                    <li class="teammates-rejected-item">
+                        <span class="teammates-rejected-path">@rejected.Path</span>
+                        <span class="teammates-rejected-reason">@rejected.Reason</span>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+
+    @if (this.entries.Count == 0)
     {
         <p class="empty-state">No Personas yet. Choose <strong>New teammate</strong> to add one.</p>
     }
     else
     {
-        <ul class="teammates-list">
-            @foreach (var name in this.personas)
+        <label class="teammates-field teammates-filter">
+            Team
+            @* @onchange, not @oninput: a <select> does not raise "input" reliably, and Blazor's
+               own select binding uses "change" (see the same comment on TeammateCard.razor). *@
+            <select value="@this.selectedTeam" @onchange="this.OnTeamFilterChanged">
+                <option value="">All teams</option>
+                @foreach (var team in this.teams)
+                {
+                    <option value="@team">@team</option>
+                }
+            </select>
+        </label>
+
+        var groups = TeammateGrouping.Group(this.entries, this.teams, this.selectedTeam);
+
+        if (groups.Count == 0)
+        {
+            <p class="empty-state">No teammates in this team.</p>
+        }
+        else
+        {
+            foreach (var group in groups)
             {
-                var online = this.IsOnline(name);
-                <li class="teammates-item">
-                    @* The whole tile opens the card, the way a person in Slack's directory does. *@
-                    <button type="button" class="teammate-tile" @onclick="() => this.OpenCard(name)">
-                        <span class="teammate-avatar" aria-hidden="true">@Monogram(name)</span>
-                        <span class="teammate-tile-text">
-                            <span class="teammates-item-name">@name</span>
-                            <span class="teammate-tile-status">
-                                <span class="agent-dot @(online ? "online" : "offline")"></span>
-                                @(online ? "Online" : "Offline")
-                            </span>
-                        </span>
-                    </button>
-                </li>
+                <section class="teammates-group">
+                    <h2 class="teammates-group-heading">@group.Heading</h2>
+                    <ul class="teammates-list">
+                        @foreach (var entry in group.Members)
+                        {
+                            var online = this.IsOnline(entry.Name);
+                            <li class="teammates-item">
+                                @* The whole tile opens the card, the way a person in Slack's directory does. *@
+                                <button type="button" class="teammate-tile" @onclick="() => this.OpenCard(entry.Name)">
+                                    <span class="teammate-avatar" aria-hidden="true">@Monogram(entry.Name)</span>
+                                    <span class="teammate-tile-text">
+                                        <span class="teammates-item-name">@entry.Name</span>
+                                        <span class="teammate-tile-role">@entry.Title &middot; @(FormattedAlias(entry.Alias))</span>
+                                        <span class="teammate-tile-status">
+                                            <span class="agent-dot @(online ? "online" : "offline")"></span>
+                                            @(online ? "Online" : "Offline")
+                                        </span>
+                                    </span>
+                                </button>
+                            </li>
+                        }
+                    </ul>
+                </section>
             }
-        </ul>
+        }
     }
 </div>
 
 @if (this.cardMode is not null)
 {
-    @* Every attribute here binding a string/string? parameter (Name, Text, Model, Effort, RoomId,
-       FilePath, Error) MUST keep its leading @. Drop it and Razor treats the value as a plain
-       string literal rather than a field reference — the card would show "this.cardName" as its
-       Name instead of the Persona's actual name. The compiler cannot catch this: a literal is
-       legal wherever a string is expected, so it compiles clean and only misbehaves at runtime.
-       Parameters of any other type (enum, bool, list, EventCallback) are unambiguous either way,
-       which is why only the seven string ones below need the @. *@
+    @* Every attribute here binding a string/string? parameter (Name, Title, Alias, Teams, Text,
+       Model, Effort, RoomId, FilePath, Error) MUST keep its leading @. Drop it and Razor treats the
+       value as a plain string literal rather than a field reference — the card would show
+       "this.cardName" as its Name instead of the Persona's actual name. The compiler cannot catch
+       this: a literal is legal wherever a string is expected, so it compiles clean and only
+       misbehaves at runtime. Parameters of any other type (enum, bool, list, EventCallback) are
+       unambiguous either way, which is why only the ten string ones below need the @. *@
     <TeammateCard Mode="this.cardMode.Value"
                   Name="@this.cardName"
                   NameChanged="this.OnCardNameChanged"
+                  Title="@this.cardTitle"
+                  TitleChanged="this.OnCardTitleChanged"
+                  Alias="@this.cardAlias"
+                  AliasChanged="this.OnCardAliasChanged"
+                  Teams="@this.cardTeams"
+                  TeamsChanged="this.OnCardTeamsChanged"
                   Text="@this.cardText"
                   TextChanged="this.OnCardTextChanged"
                   Model="@this.cardModel"
@@ -93,7 +146,14 @@
 }
 
 @code {
-    private IReadOnlyList<string> personas = [];
+    // The whole discovered state of the Teams directory, refreshed together in LoadAsync so a
+    // group heading, the filter's own options and a tile's Title/Alias never read from three
+    // different moments in time.
+    private IReadOnlyList<PersonaEntry> entries = [];
+    private IReadOnlyList<RejectedPersonaFile> rejectedFiles = [];
+    private IReadOnlyList<string> teams = [];
+    private string selectedTeam = string.Empty;
+
     private readonly Dictionary<string, string?> agentIdByPersona = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string?> roomIdByPersona = new(StringComparer.Ordinal);
     private string? error;
@@ -102,6 +162,9 @@
     // meaningful while it is not, and CloseCard() clears the lot so no state survives a close.
     private TeammateCardMode? cardMode;
     private string cardName = string.Empty;
+    private string cardTitle = string.Empty;
+    private string cardAlias = string.Empty;
+    private string cardTeams = string.Empty;
     private string cardText = string.Empty;
     private string? cardModel;
     private string? cardEffort;
@@ -152,6 +215,10 @@
         };
     }
 
+    // A leading "@" reads as a working handle rather than a second Name, matching how the rest of
+    // the app already shows an Alias (e.g. Chat's own Mention text).
+    private static string FormattedAlias(string alias) => $"@{alias}";
+
     private bool IsOnline(string personaName)
     {
         var agentId = this.agentIdByPersona.GetValueOrDefault(personaName);
@@ -163,9 +230,13 @@
     private void OpenCard(string personaName)
     {
         var persona = this.Personas.Get(personaName);
+        var entry = this.entries.FirstOrDefault(candidate => string.Equals(candidate.Name, personaName, StringComparison.Ordinal));
 
         this.cardMode = TeammateCardMode.View;
         this.cardName = personaName;
+        this.cardTitle = entry?.Title ?? string.Empty;
+        this.cardAlias = entry?.Alias ?? string.Empty;
+        this.cardTeams = entry is null ? string.Empty : string.Join(", ", entry.Teams);
         this.cardText = persona?.Text ?? string.Empty;
         this.cardModel = persona?.Model;
         this.cardEffort = persona?.Effort;
@@ -180,6 +251,9 @@
     {
         this.cardMode = TeammateCardMode.Create;
         this.cardName = string.Empty;
+        this.cardTitle = string.Empty;
+        this.cardAlias = string.Empty;
+        this.cardTeams = string.Empty;
         this.cardText = string.Empty;
         this.cardModel = null;
         this.cardEffort = null;
@@ -214,6 +288,9 @@
     {
         this.cardMode = null;
         this.cardName = string.Empty;
+        this.cardTitle = string.Empty;
+        this.cardAlias = string.Empty;
+        this.cardTeams = string.Empty;
         this.cardText = string.Empty;
         this.cardModel = null;
         this.cardEffort = null;
@@ -232,6 +309,21 @@
     private void OnCardNameChanged(string value)
     {
         this.cardName = value;
+    }
+
+    private void OnCardTitleChanged(string value)
+    {
+        this.cardTitle = value;
+    }
+
+    private void OnCardAliasChanged(string value)
+    {
+        this.cardAlias = value;
+    }
+
+    private void OnCardTeamsChanged(string value)
+    {
+        this.cardTeams = value;
     }
 
     private void OnCardTextChanged(string value)
@@ -255,6 +347,13 @@
     private void OnCardEffortChanged(string? value)
     {
         this.cardEffort = value;
+    }
+
+    // Never touches ModelCatalog or PersonaStore's write path — selecting a team is pure display
+    // narrowing over state already loaded, the same "never probes" guarantee a plain page load has.
+    private void OnTeamFilterChanged(ChangeEventArgs e)
+    {
+        this.selectedTeam = e.Value?.ToString() ?? string.Empty;
     }
 
     // Runs on form-open, never on page-load: spawning the throwaway adapter this probes with costs
@@ -308,7 +407,8 @@
         {
             if (creating)
             {
-                this.Personas.Add(this.cardName, this.cardText, this.cardModel, this.cardEffort);
+                var identity = new PersonaIdentity(this.cardName, this.cardTitle, this.cardAlias, ParseTeams(this.cardTeams));
+                this.Personas.Add(identity, this.cardText, this.cardModel, this.cardEffort);
             }
             else
             {
@@ -328,6 +428,12 @@
         // be read back immediately and an edit visibly took.
         this.OpenCard(saved);
     }
+
+    // The Create card's Teams input is one comma-separated text field (see TeammateCard.razor's
+    // hint), mirroring the comma form PersonaFrontmatter.TryReadIdentity itself accepts, so what a
+    // user types here round-trips through Add -> ValidateCandidate -> TryReadIdentity unchanged.
+    private static IReadOnlyList<string> ParseTeams(string raw) =>
+        raw.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 
     private void BeginRemove()
     {
@@ -395,18 +501,20 @@
 
     private async Task LoadAsync()
     {
-        this.personas = this.Personas.ListNames();
+        this.entries = this.Personas.Entries;
+        this.rejectedFiles = this.Personas.RejectedFiles;
+        this.teams = this.Personas.Teams;
 
         this.agentIdByPersona.Clear();
         this.roomIdByPersona.Clear();
-        foreach (var personaName in this.personas)
+        foreach (var entry in this.entries)
         {
-            var agent = await this.TeamDirectory.FindUserByNameAsync(personaName);
-            this.agentIdByPersona[personaName] = agent?.Id;
+            var agent = await this.TeamDirectory.FindUserByNameAsync(entry.Name);
+            this.agentIdByPersona[entry.Name] = agent?.Id;
 
             // Only a Teammate that has actually connected has a Room to be messaged in, so the
             // card's Message action is absent rather than broken for one that never has.
-            this.roomIdByPersona[personaName] = agent is null
+            this.roomIdByPersona[entry.Name] = agent is null
                 ? null
                 : (await this.TeamDirectory.FindRoomWithExactMembersAsync(KnownIds.Human, agent.Id))?.Id;
         }

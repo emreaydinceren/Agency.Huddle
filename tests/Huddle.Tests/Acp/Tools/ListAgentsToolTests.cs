@@ -1,6 +1,7 @@
 namespace Agency.Huddle.Tests.Acp.Tools;
 
 using System.Text.Json.Nodes;
+using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
@@ -18,8 +19,8 @@ public sealed class ListAgentsToolTests
         Assert.NotNull(echo);
         var gateway = new FakeAgentGateway();
         gateway.SetOnline(echo.Id);
-        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()));
-        personaStore.Add("coo", "You are the Chief of Staff.");
+        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        personaStore.Add(new PersonaIdentity("coo", "coo", "coo", []), "You are the Chief of Staff.");
         var tool = new ListAgentsTool(directory, gateway, personaStore);
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);
@@ -40,10 +41,19 @@ public sealed class ListAgentsToolTests
         Assert.NotNull(coo);
         var gateway = new FakeAgentGateway();
         gateway.SetOnline(coo.Id);
-        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()));
-        personaStore.Add(
-            "coo",
-            "---\nrole: 'Router, triage, and cross-workstation continuity'\n---\nYou are the Chief of Staff.");
+
+        // "role" is not one of the four structural identity fields PersonaStore.Add composes, so
+        // this file - proving ListAgentsTool surfaces an OTHER frontmatter field through
+        // PersonaFrontmatter.ComposeJobDescription - is written directly, as a hand-authored file
+        // would be, rather than through Add.
+        var teamsDir = Path.Combine(dir.Path, "Teams");
+        Directory.CreateDirectory(teamsDir);
+        await File.WriteAllTextAsync(
+            Path.Combine(teamsDir, "coo.md"),
+            "---\nName: coo\nTitle: coo\nAlias: coo\nrole: 'Router, triage, and cross-workstation continuity'\n---\nYou are the Chief of Staff.",
+            ct);
+
+        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         var tool = new ListAgentsTool(directory, gateway, personaStore);
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);
@@ -63,11 +73,14 @@ public sealed class ListAgentsToolTests
         Assert.NotNull(echo);
         var gateway = new FakeAgentGateway();
         gateway.SetOnline(echo.Id);
-        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()));
+        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         var tool = new ListAgentsTool(directory, gateway, personaStore);
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);
 
         Assert.Equal("Agents:\n- echo (online)\n\nPersonas: none", result);
     }
+
+    /// <summary>Minimal valid Persona frontmatter (Name, Title and Alias all <paramref name="name"/>) wrapped around <paramref name="body"/> - identity is front-matter driven from this phase on.</summary>
+    private static string PersonaText(string name, string body) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}";
 }

@@ -1,9 +1,9 @@
 # Traps
 
 **Binding.** Things that fail silently, mostly on the ACP and wire side. Read
-this before changing `Team.Acp`, `Team.Contracts`, the protocol version, or the
-model-config path — and alongside [Rules](rules.md) before any change to
-`src/Team.App`.
+this before changing `Huddle.Acp`, `Huddle.Contracts`, the protocol version, or
+the model-config path — and alongside [Rules](rules.md) before any change to
+`src/Huddle.App`.
 
 What these share: none of them produce an error. A wrong `configId`, a missing
 `type` discriminator, a renamed contract property and a `$` anchor all build
@@ -34,7 +34,7 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
 - **The wire contract has no explicit declaration.** There are no
   `[JsonPropertyName]` attributes anywhere in `src/`; `ProtocolJson` derives every
   wire name from its C# member name via `JsonNamingPolicy.CamelCase`. **Renaming
-  a property in `Team.Contracts` silently changes the protocol** with no compiler
+  a property in `Huddle.Contracts` silently changes the protocol** with no compiler
   or analyser signal. One test, in `ProtocolJsonTests`, pins the literal JSON.
 - **The protocol version is a strict equality check.** `ProtocolJson` throws on
   any version that is not `ProtocolVersion.Current`, so bumping it means updating
@@ -43,7 +43,7 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   rename moved it and the `Team:` config root did not.** `ILogger<T>` takes its
   category from `typeof(T).FullName`, so the filters now read `"Agency.Huddle"`.
   A stale `"Team"` key matches nothing, every logger falls back to `Default`, and
-  nothing anywhere reports it — in `Team.Console`, where `Default` is `Warning`,
+  nothing anywhere reports it — in `Huddle.Console`, where `Default` is `Warning`,
   that means its Information logs simply stop appearing. The hand-written
   `Agency.Huddle.Acp.Wire` trace category in `DotAcpAgentHost` is a string, not a
   type, so it has to be kept in step by hand; no test pins it.
@@ -52,7 +52,7 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   The schema is created with `CREATE TABLE IF NOT EXISTS`, so an existing
   `team.db` keeps its old constraint forever. Delete `App_Data` instead.
 - **ACP spends real money — but only the `E2E/` folder does.** This warning used
-  to say "never run `tests/Team.Acp.Tests`", which is broader than the truth and
+  to say "never run `tests/Huddle.Acp.Tests`", which is broader than the truth and
   contradicts [Build, test, run](../AgencyTeam.md#build-test-run). `E2E.Enabled` gates on
   `TEAM_E2E == "1"`, so with that variable unset the project runs free and its
   eight E2E tests report as skipped. Never *set* `TEAM_E2E` unless you mean to.
@@ -80,3 +80,33 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   models, empty means "the agent never told us". For effort, empty means "this
   model offers no effort choice" — a real answer. Treating them alike puts a
   ghost option in the picker.
+- **`FileSystemWatcher.IncludeSubdirectories` defaults to `false`.** Leave it
+  unset and a Persona under a Team sub-folder is found once by the startup scan
+  and then never reloads, no matter how often it is edited. No error, no log,
+  nothing — the file simply stops mattering. This is the single easiest way to
+  break the Teams directory.
+- **A watcher's filename filter applies to the thing that changed, not to what
+  is under it.** `new FileSystemWatcher(dir, "*.md")` never sees
+  `Teams/Business` being renamed to `Teams/BusinessOps`, because the event's
+  name is the *directory*. The filter is `"*"` and the narrowing happens in the
+  handler for exactly this reason, with `NotifyFilters.DirectoryName` set so the
+  event is raised at all. A directory *deleted* is the same hazard from the
+  other side: its name has no extension, so the handler accepts extensionless
+  names too.
+- **`FileSystemWatcher` drops events when its buffer overflows, and only says so
+  through `Error`.** The internal buffer is 8 KB by default; a `git checkout` or
+  a script touching a dozen Persona files at once is enough. The OS discards the
+  overflow and the app's view stays wrong until something unrelated happens to
+  touch a file. `PersonaStore` subscribes to `Error` and forces a rebuild, and
+  runs a 64 KB buffer to make it rarer. An unhandled `Error` is a silent,
+  permanent desync.
+- **Extra flags before the trailing `--` make `dotnet test` report "Zero tests
+  ran".** The documented `dotnet test Huddle.slnx --` is exact. Adding
+  `--nologo` or `-v minimal` ahead of the `--` exits 5 having run nothing, which
+  scrolls past looking like a pass. Run the command verbatim.
+- **Editing a Persona's `name:` renames the Teammate, and only the Model and
+  Effort follow it.** `PersonaStore.Update` moves those two rows by hand
+  precisely because nothing else would. The old Agent row, its Rooms and its
+  Transcripts stay behind under the old Name — the same non-cascading semantics
+  removing a Persona has, and deliberate, but it means a rename leaves a ghost
+  in the Team Directory.

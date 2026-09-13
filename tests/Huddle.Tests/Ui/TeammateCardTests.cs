@@ -39,6 +39,41 @@ public sealed class TeammateCardTests
         Assert.DoesNotContain("<textarea", html, StringComparison.Ordinal);
     }
 
+    /// <summary>View mode is the one place Title, Alias and Teams are shown alongside the Name - Edit's identity area stays exactly as before (see <see cref="EditMode_DoesNotShowTitleAliasOrTeams"/>).</summary>
+    [Fact]
+    public async Task ViewMode_ShowsTitleAliasAndTeams()
+    {
+        var html = await RenderAsync(new Dictionary<string, object?>
+        {
+            ["Mode"] = TeammateCardMode.View,
+            ["Name"] = "Jarvis",
+            ["Title"] = "Chief of Staff",
+            ["Alias"] = "jar",
+            ["Teams"] = "Business, Household",
+            ["Text"] = "x",
+        });
+
+        Assert.Contains("Chief of Staff", html, StringComparison.Ordinal);
+        Assert.Contains("jar", html, StringComparison.Ordinal);
+        Assert.Contains("Business, Household", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>An empty Teams string (a Persona with no Teams field) shows no "Teams:" line at all rather than an empty one.</summary>
+    [Fact]
+    public async Task ViewMode_WithNoTeams_ShowsNoTeamsLine()
+    {
+        var html = await RenderAsync(new Dictionary<string, object?>
+        {
+            ["Mode"] = TeammateCardMode.View,
+            ["Name"] = "echo",
+            ["Title"] = "Echo",
+            ["Alias"] = "echo",
+            ["Text"] = "x",
+        });
+
+        Assert.DoesNotContain("Teams:", html, StringComparison.Ordinal);
+    }
+
     [Theory]
     [InlineData("Emily Lee", ">EL<")]
     [InlineData("Chief of Staff", ">CS<")]
@@ -108,6 +143,28 @@ public sealed class TeammateCardTests
         Assert.Contains("clears what it remembers", html, StringComparison.Ordinal);
     }
 
+    /// <summary>Edit's identity area is unchanged by this phase: only the Name and online status show, never Title/Alias/Teams - the textarea is still a raw-file editor over the whole file, front matter included, so those fields would be redundant with it.</summary>
+    [Fact]
+    public async Task EditMode_DoesNotShowTitleAliasOrTeams()
+    {
+        var html = await RenderAsync(new Dictionary<string, object?>
+        {
+            ["Mode"] = TeammateCardMode.Edit,
+            ["Name"] = "coo",
+            ["Title"] = "Legendary Assistant",
+            ["Alias"] = "coo",
+            ["Teams"] = "Business",
+            ["Text"] = "---\nName: coo\n---\nx",
+        });
+
+        // "Chief of Staff" is deliberately avoided as the Title here: it is also the textarea's own
+        // hardcoded placeholder sample text, which would make this assertion pass for the wrong
+        // reason.
+        Assert.DoesNotContain("Legendary Assistant", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Alias:", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("Teams:", html, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task CreateMode_OffersBothNameAndText()
     {
@@ -122,6 +179,47 @@ public sealed class TeammateCardTests
 
         // The card is where a user learns that a Name may hold spaces at all.
         Assert.Contains("Spaces are fine.", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>Create mode's identity area offers all four structural fields, not just the Name - the whole point of Phase 5's Add signature is that they arrive at PersonaStore structured rather than typed into the body.</summary>
+    [Fact]
+    public async Task CreateMode_OffersTitleAliasAndTeamsInputs()
+    {
+        var html = await RenderAsync(new Dictionary<string, object?>
+        {
+            ["Mode"] = TeammateCardMode.Create,
+            ["Title"] = "Chief of Staff",
+            ["Alias"] = "coo",
+            ["Teams"] = "Business, Household",
+        });
+
+        Assert.Contains("Title", html, StringComparison.Ordinal);
+        Assert.Contains("Alias", html, StringComparison.Ordinal);
+        Assert.Contains("Teams", html, StringComparison.Ordinal);
+        Assert.Contains("value=\"Chief of Staff\"", html, StringComparison.Ordinal);
+        Assert.Contains("value=\"coo\"", html, StringComparison.Ordinal);
+        Assert.Contains("value=\"Business, Household\"", html, StringComparison.Ordinal);
+
+        // The hint text this phase asks for, verbatim.
+        Assert.Contains("Business, Household", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>The Create textarea is the Persona's BODY only, not the whole file - its label and hint must say so, distinct from Edit's "whole file" wording.</summary>
+    [Fact]
+    public async Task CreateMode_TextareaIsExplicitlyTheBodyOnly()
+    {
+        var html = await RenderAsync(new Dictionary<string, object?>
+        {
+            ["Mode"] = TeammateCardMode.Create,
+        });
+
+        Assert.Contains("Persona body", html, StringComparison.Ordinal);
+        Assert.Contains("no front matter needed here", html, StringComparison.Ordinal);
+
+        // "Persona text" (Edit's label) and "front matter included" (Edit's hint) must not leak
+        // into Create's copy - the two modes describe two different things in the same textarea.
+        Assert.DoesNotContain("Persona text", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("front matter included", html, StringComparison.Ordinal);
     }
 
     [Fact]

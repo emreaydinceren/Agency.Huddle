@@ -29,22 +29,57 @@
 
                 @if (this.Mode == TeammateCardMode.Create)
                 {
-                    <label class="teammates-field teammate-card-name-field">
-                        Name
-                        <input type="text" placeholder="Chief of Staff"
-                               value="@this.Name"
-                               @oninput="this.OnNameInput" />
-                        <span class="teammate-card-hint">Letters, digits, spaces, <code>-</code> and <code>_</code>. Spaces are fine.</span>
-                    </label>
+                    <div class="teammate-card-identity-fields">
+                        <label class="teammates-field teammate-card-name-field">
+                            Name
+                            <input type="text" placeholder="Chief of Staff"
+                                   value="@this.Name"
+                                   @oninput="this.OnNameInput" />
+                            <span class="teammate-card-hint">Letters, digits, spaces, <code>-</code> and <code>_</code>. Spaces are fine.</span>
+                        </label>
+                        <label class="teammates-field">
+                            Title
+                            <input type="text" placeholder="Chief of Staff"
+                                   value="@this.Title"
+                                   @oninput="this.OnTitleInput" />
+                            <span class="teammate-card-hint">A short role description, shown alongside the Name.</span>
+                        </label>
+                        <label class="teammates-field">
+                            Alias
+                            <input type="text" placeholder="coo"
+                                   value="@this.Alias"
+                                   @oninput="this.OnAliasInput" />
+                            <span class="teammate-card-hint">A short working handle, for mentions and quick reference.</span>
+                        </label>
+                        <label class="teammates-field">
+                            Teams
+                            <input type="text" placeholder="Business, Household"
+                                   value="@this.Teams"
+                                   @oninput="this.OnTeamsInput" />
+                            <span class="teammate-card-hint">Comma-separated. Leave blank for no team.</span>
+                        </label>
+                    </div>
                 }
                 else
                 {
                     <div class="teammate-card-identity-text">
                         <h3 class="teammate-card-name">@this.Name</h3>
+                        @if (this.Mode == TeammateCardMode.View)
+                        {
+                            <p class="teammate-card-title">@this.Title</p>
+                        }
                         <p class="teammate-card-status">
                             <span class="agent-dot @(this.IsOnline ? "online" : "offline")"></span>
                             @(this.IsOnline ? "Online" : "Offline")
                         </p>
+                        @if (this.Mode == TeammateCardMode.View)
+                        {
+                            <p class="teammate-card-meta">Alias: @this.Alias</p>
+                            @if (this.Teams.Length > 0)
+                            {
+                                <p class="teammate-card-meta">Teams: @this.Teams</p>
+                            }
+                        }
                     </div>
                 }
             </div>
@@ -96,17 +131,24 @@
             {
                 <form class="teammate-card-form" @onsubmit="this.OnSave">
                     <label class="teammates-field">
-                        Persona text
+                        @(this.Mode == TeammateCardMode.Create ? "Persona body" : "Persona text")
                         <textarea placeholder="You are the Chief of Staff. You keep the team honest."
                                   value="@this.Text"
                                   @oninput="this.OnTextInput"></textarea>
-                        <span class="teammate-card-hint">
-                            Markdown. This becomes the teammate's system prompt.
-                            @if (this.Mode == TeammateCardMode.Edit)
-                            {
-                                <text>Saving restarts it, which clears what it remembers.</text>
-                            }
-                        </span>
+                        @if (this.Mode == TeammateCardMode.Create)
+                        {
+                            <span class="teammate-card-hint">
+                                Markdown. Becomes the teammate's system prompt, placed after the Name, Title, Alias
+                                and Teams above — no front matter needed here.
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="teammate-card-hint">
+                                Markdown. This is the whole Persona file, front matter included, and becomes the
+                                teammate's system prompt. Saving restarts it, which clears what it remembers.
+                            </span>
+                        }
                     </label>
                     <label class="teammates-field">
                         Model
@@ -180,6 +222,25 @@
 
     [Parameter]
     public EventCallback<string> NameChanged { get; set; }
+
+    [Parameter]
+    public string Title { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> TitleChanged { get; set; }
+
+    [Parameter]
+    public string Alias { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> AliasChanged { get; set; }
+
+    /// <summary>A single comma-separated string of Team names, exactly as the Create card's Teams input and the View card's Teams line both show it - see <see cref="OnTeamsInput"/>.</summary>
+    [Parameter]
+    public string Teams { get; set; } = string.Empty;
+
+    [Parameter]
+    public EventCallback<string> TeamsChanged { get; set; }
 
     [Parameter]
     public string Text { get; set; } = string.Empty;
@@ -339,6 +400,21 @@
     private Task OnNameInput(ChangeEventArgs e)
     {
         return this.NameChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+    }
+
+    private Task OnTitleInput(ChangeEventArgs e)
+    {
+        return this.TitleChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+    }
+
+    private Task OnAliasInput(ChangeEventArgs e)
+    {
+        return this.AliasChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
+    }
+
+    private Task OnTeamsInput(ChangeEventArgs e)
+    {
+        return this.TeamsChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty);
     }
 
     private Task OnTextInput(ChangeEventArgs e)

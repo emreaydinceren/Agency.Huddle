@@ -15,16 +15,17 @@ public sealed class ToolNamesTests
         using var dir = new TempDataDir();
         var directory = new SqliteTeamDirectory(dir.Options());
         var gateway = new FakeAgentGateway();
-        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()));
+        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var chat = new ChatService(directory, store, events, NullLogger<ChatService>.Instance);
+        var aliasSource = new FakeMentionAliasSource();
+        var chat = new ChatService(directory, store, events, aliasSource, NullLogger<ChatService>.Instance);
 
         var tools = new IAppTool[]
         {
             new ListAgentsTool(directory, gateway, personaStore),
-            new CreateRoomTool(chat, directory, "caller-id"),
-            new InviteAgentTool(chat, directory),
+            new CreateRoomTool(chat, directory, "caller-id", aliasSource),
+            new InviteAgentTool(chat, directory, aliasSource),
             new PostMessageTool(chat, "caller-id"),
             new GetHelpTool([]),
         };

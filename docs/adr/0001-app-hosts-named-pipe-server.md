@@ -24,7 +24,7 @@ local-machine only.
 
 ## Consequences
 
-- The protocol is defined once in `Team.Contracts` and versioned in every
+- The protocol is defined once in `Huddle.Contracts` and versioned in every
   envelope.
 - A single Team instance per pipe name; running two splits clients
   unpredictably.

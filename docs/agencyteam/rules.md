@@ -1,11 +1,11 @@
 # Rules that are not visible in the code
 
-**Binding.** Read this in full before changing anything in `src/Team.App`.
+**Binding.** Read this in full before changing anything in `src/Huddle.App`.
 Each row cost real time to discover, and several were found by running the app
 rather than by testing it — the compiler will not catch any of them.
 
 Protocol, ACP and wire gotchas live in [Traps](traps.md); read that too if you
-are touching `Team.Acp`, `Team.Contracts`, or the model-config path. Back to the
+are touching `Huddle.Acp`, `Huddle.Contracts`, or the model-config path. Back to the
 hub: [AgencyTeam.md](../AgencyTeam.md).
 
 These cost real time to discover. Several were found by running the app, not by
@@ -15,9 +15,14 @@ testing it. This table is binding.
 | --- | --- |
 | **Never use `UseAdvancedExtensions()` in the markdown pipeline.** | It enables generic attributes, so `# Hi {onclick="alert(1)"}` renders a live event handler. `DisableHtml()` does not stop it. Agent text is model output, so this is reachable. |
 | **A Name may contain single interior spaces; a Mention is resolved against the Members, not by a pattern.** | `@Emily Lee` and `@Emily` followed by the word "Lee" are the same characters, so no regex can tell them apart. `MentionParser` matches Member Names against the text, longest first, and the Room's membership decides where a Name ends. Anything that parses a Name — `/invite`, a new command — must resolve it the same way or it will silently truncate at the first space. |
-| **Leading, trailing and doubled spaces in a Name are rejected.** | A Name is also a Persona's filename, and Windows silently strips a trailing space, so `coo ` and `coo` would be one file presenting as two Teammates. `NameRules` anchors with `\A`/`\z` rather than `^`/`$` for the same reason: .NET's `$` matches before a trailing newline. |
+| **Leading, trailing and doubled spaces in a Name are rejected.** | Mention resolution matches a Name character by character against message text, so `Emily  Lee` beside `Emily Lee` is a distinction no reader can see. `NameRules` anchors with `\A`/`\z` rather than `^`/`$` for a related reason: .NET's `$` matches before a trailing newline, so `^[a-z]+$` would accept `"coo\n"`. This rule was *also* justified by a Name being a Persona's filename; identity moved to frontmatter and that half retired, but the rule did not — `PersonaStore.Add` still builds `{Name}.md`, and `NameRules` is still the path-traversal guard there. |
+| **A Persona's identity is its frontmatter, never its filename or its folder.** | `name`, `title` and `alias` are required; `teams` is optional. `PersonaIndex` keys everything on the frontmatter `name` — the `persona_models` and `persona_efforts` rows, the work dir, the `hello` identity. A file is free to be named anything and to live in any sub-folder, and **moving it between Team sub-folders is a complete no-op**. That is the whole point of Team membership being a field: sub-folders are the human's filing system and the code must never read meaning into them. |
+| **A malformed Persona file is reported, never swallowed.** | A missing required field, or a Name or Alias colliding with another file's, makes the file a `RejectedPersonaFile` carrying its path and reason, listed on `/teammates`. A file that fails to load must be visible — the alternative is a Teammate that silently does not exist and a human who cannot tell why. |
+| **A duplicate Name or Alias rejects *every* colliding file, not all but one.** | Picking a winner by enumeration order means editing the loser does nothing at all, with no feedback anywhere. Comparison is case-insensitive, matching `persona_models`' `COLLATE NOCASE` and `MentionParser`'s `OrdinalIgnoreCase` — so `Jarvis` and `jarvis` collide rather than becoming two runners sharing one Model row. |
+| **`Teams: a, b` is split at the consumer and never in `PersonaFrontmatter`.** | The generic parser deliberately refuses to read a comma-separated scalar as a list, because real frontmatter contains `role: 'Router, triage, and cross-workstation continuity'` and splitting that would shred a sentence into fields. Only the `teams` key is ever split, after the generic parse. The cost, accepted: a Team name can never contain a comma. |
+| **An Alias is accepted anywhere a Name is.** | `mcp__team__list_agents` advertises each Teammate's Alias in its job description, so `@jar`, `/invite @jar`, `mcp__team__invite_agent` and `mcp__team__create_room` must all take it. A tool that rejects a handle the model was just told about costs a turn and teaches the model not to trust the catalog. |
 | **Sample agents must strip `@` from quoted text.** | Two agents that quote what they received answer each other forever. A failing test recorded 4299 messages in two seconds. |
-| **`Team:DataDir` must not be `data`.** | Windows paths are case-insensitive, so it collides with the `src/Team.App/Data/` source folder, and the ignore rule then hides the storage layer from git. |
+| **`Team:DataDir` must not be `data`.** | Windows paths are case-insensitive, so it collides with the `src/Huddle.App/Data/` source folder, and the ignore rule then hides the storage layer from git. |
 | **Collection options need no initialiser.** | `ConfigurationBinder` *appends* to a pre-populated collection instead of replacing it, silently doubling the value. Declare nullable, default inside the consumer. |
 | **Both test fixtures must set `Team:DemoAgent:Enabled=false`.** | The demo agents use the names `echo` and `alpha`, which collide with the names the pipe tests register, and one test asserts the sidebar is empty. |
 | **Create the next pipe server instance before any I/O on the accepted one.** | Otherwise the next client fails with "all pipe instances are busy". |

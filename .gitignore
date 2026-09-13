@@ -6,7 +6,9 @@ tools/acp/node_modules/
 TestResults/
 App_Data/
 
-# Personal Persona library. The app reads App_Data/personas/, not this folder,
-# so ignoring it changes no behaviour - it keeps private personas out of a
-# public repo. Ship neutral samples under a different name if you want examples.
+# Personal Persona library. The app reads App_Data/Teams/, not this folder, so
+# ignoring it changes no behaviour - it keeps private personas out of a public
+# repo. Ship neutral samples under a different name if you want examples.
+# tools/migrate-personas-to-teams.ps1 copies from here to there, adding the
+# frontmatter the Teams directory now requires.
 personas/

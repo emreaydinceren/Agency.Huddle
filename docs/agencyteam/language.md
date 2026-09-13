@@ -1,11 +1,11 @@
 # Language
 
-The binding glossary for `Team.App` and `Team.Contracts`. Read it before naming
+The binding glossary for `Huddle.App` and `Huddle.Contracts`. Read it before naming
 anything, writing interface copy, or writing prose about this codebase. Match
 this vocabulary in code and in prose. Each entry lists words to avoid; those are
 not bad words, they are words that are imprecise *here*.
 
-`Team.Acp` is out of scope and keeps ACP's own vocabulary; see [Two bounded
+`Huddle.Acp` is out of scope and keeps ACP's own vocabulary; see [Two bounded
 contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 [AgencyTeam.md](../AgencyTeam.md).
 
@@ -30,11 +30,43 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 **Name**
 : What a Teammate is called — a display name, not a slug. Letters, digits, `_`,
   `-` and single interior spaces, at most 64 characters, opening on a letter or a
-  digit. `NameRules.IsValidAgentName` is the whole rule. A Name is three things at
-  once, which is why it is narrow: a wire identity at `hello`, the filename of a
-  Persona (`{name}.md`), and the token a Mention is resolved against.
+  digit. `NameRules.IsValidAgentName` is the whole rule. A Name is a wire identity
+  at `hello`, the `name` field of a Persona's frontmatter, the key its **Model**
+  and **Effort** rows are stored under, and a token a Mention is resolved against.
+  A Persona's *filename* is none of those: it is storage, and nothing reads it.
+: The rule stays narrow even though the filename justification retired with
+  frontmatter identity — `MentionParser` still matches a Name character by
+  character against message text, and that is what single interior spaces and the
+  letter-or-digit opening are for.
 : *Avoid*: id, slug, handle, username. An **id** is a different thing —
   `NameRules.IsValidId`, no spaces, used for Rooms and Messages.
+
+**Alias**
+: A second handle that resolves to the same Teammate, so `@jar` reaches
+  `@Jarvis`. Required on every Persona, validated exactly like a **Name**, and
+  unique across the library — no two Personas may share one, and one may not
+  equal another Persona's Name. A Name always wins a tie. Aliases work wherever
+  a Name does: Mentions, `/invite`, `mcp__team__invite_agent` and
+  `mcp__team__create_room`.
+: *Avoid*: nickname, shortname, handle on its own.
+
+**Title**
+: A Teammate's job, as free display text — `Chief of Staff` for a Persona whose
+  Name is `Jarvis`. Required, but never validated as a Name, never an identity,
+  and never resolved against: a Title is prose. It is the one structural
+  frontmatter field `mcp__team__list_agents` still renders.
+: *Avoid*: role — `role:` is an ordinary, unstructured frontmatter field and a
+  different thing.
+
+**Team**
+: A label naming a group of Teammates, listed in a Persona's `teams` frontmatter
+  field. A Teammate may belong to several, or to none. A Team is a **view** —
+  it groups and filters the Teammates page and the invite dialog, and nothing
+  more. It is never a permission: every Agent still sees every other Agent
+  through `mcp__team__list_agents`, and any Agent can be invited to any Room.
+: A Team is emphatically **not a folder**. Sub-folders under the Teams directory
+  are organisational only, and moving a file between them changes nothing at all.
+: *Avoid*: group, squad, workspace, tenant.
 
 **Adapter**
 : The `claude-agent-acp` Node package under `node_modules` that actually speaks
@@ -65,15 +97,30 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 
 **Persona**
 : The Markdown instructions defining one Agent's character, stored as one file
-  under `{DataDir}/{Acp:PersonaDir}`, together with the **Model** and the
-  **Effort** it runs on, stored in the `persona_models` and `persona_efforts`
-  tables. The file body *becomes* part of a system prompt; it is not one. An
-  optional leading YAML frontmatter block carries the Persona's job
-  description: every top-level field whose key does not start with `_` becomes
-  one title-cased line of what `mcp__team__list_agents` shows for that
-  teammate, in file order. `_`-prefixed fields are reserved for future
-  programmatic use. See `PersonaFrontmatter`.
+  anywhere under `{DataDir}/{Acp:TeamsDir}` — enumerated recursively, so Team
+  sub-folders are free to exist and mean nothing — together with the **Model**
+  and the **Effort** it runs on, stored in the `persona_models` and
+  `persona_efforts` tables. The file body *becomes* part of a system prompt; it
+  is not one.
+: Its leading YAML frontmatter block is **partly schema**. `name`, `title` and
+  `alias` are required and `teams` is optional; a file missing any required one
+  is not a Persona at all — it is a rejected file, listed with its reason on the
+  Teammates page rather than silently ignored. Every *other* top-level field
+  whose key does not start with `_` becomes one title-cased line of the job
+  description `mcp__team__list_agents` shows, in file order, as before;
+  `_`-prefixed fields stay reserved for future programmatic use. `name` alone is
+  held back from that dump, because the bullet above it already prints the Name.
+  See `PersonaFrontmatter` and `PersonaIndex`.
 : *Avoid*: profile, character, role, prompt.
+
+**Rejected file**
+: A `.md` file under the Teams directory that did not become a Persona — a
+  required frontmatter field missing or invalid, or a Name or Alias colliding
+  with another file's. Both sides of a collision are rejected, never one
+  arbitrary winner. Rejected files are surfaced on the Teammates page with their
+  path and reason; being wrong is loud, not invisible. See `RejectedPersonaFile`.
+: *Avoid*: invalid persona, broken persona — it is a file, and it is not a
+  Persona.
 
 **Model**
 : The LLM one Persona's session runs on, chosen from the catalog the Adapter
@@ -96,7 +143,7 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: request, exchange, round.
 
 **App Tool**
-: A tool named by us whose body runs inside `Team.App`, offered to a session over
+: A tool named by us whose body runs inside `Huddle.App`, offered to a session over
   MCP. This is what lets an Agent genuinely create a Room without reaching into
   the database.
 : *Avoid*: MCP tool (that is the transport), function, plugin.

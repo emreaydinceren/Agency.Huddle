@@ -22,7 +22,8 @@ public sealed class TeammatesRazorSourceTests
 {
     // Every TeammateCard [Parameter] typed string or string? — the ones a missing @ silently
     // turns into a literal instead of a compile error. Keep this in sync with TeammateCard.razor.
-    private static readonly string[] StringTypedParameters = ["Name", "Text", "Model", "Effort", "RoomId", "FilePath", "Error"];
+    private static readonly string[] StringTypedParameters =
+        ["Name", "Title", "Alias", "Teams", "Text", "Model", "Effort", "RoomId", "FilePath", "Error"];
 
     [Fact]
     public void TeammateCardUsage_BindsEveryStringParameterWithAnAtSign()

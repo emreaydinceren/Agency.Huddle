@@ -41,7 +41,7 @@ For which file holds what, see [Code map](code-map.md). Back to the hub:
 Two boundaries matter:
 
 1. **The pipe.** Everything an Agent knows arrives as an Envelope. No shortcuts.
-2. **The tool server.** Tool *bodies* execute inside `Team.App`, holding the real
+2. **The tool server.** Tool *bodies* execute inside `Huddle.App`, holding the real
    `ChatService`. That is what lets an Agent genuinely create a Room. The agent
    cannot reach in; it can only call the App Tools we published.
 
