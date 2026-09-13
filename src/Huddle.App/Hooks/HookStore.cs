@@ -41,8 +41,31 @@ namespace Agency.Huddle.App.Hooks;
 /// silently deleted from a user's file — but ignored for resolution.
 /// </para>
 /// </remarks>
-internal sealed class HookStore : IHookSource
+internal sealed class HookStore : IHookSource, IDisposable
 {
+    // Editors commonly fire several filesystem events per save (a temp-file write plus a rename,
+    // or several partial writes), so raising HooksChanged straight off FileSystemWatcher would
+    // thrash every observer. Coalesce a burst of events into one HooksChanged per pause in
+    // activity - the same reasoning and the same value PersonaStore's WatcherDebounceMilliseconds
+    // documents.
+    private const int WatcherDebounceMilliseconds = 500;
+
+    // FileSystemWatcher buffers events in a fixed-size kernel window (8 KB by default) and the OS
+    // drops events outright - no exception, no log, nothing - when it overflows; it raises the
+    // Error event instead. See PersonaStore.WatcherInternalBufferSize's remarks; this file is a
+    // single small document rather than a whole directory tree, so an overflow here is rarer
+    // still, but the fix costs nothing and OnWatcherError is the real backstop either way.
+    private const int WatcherInternalBufferSize = 64 * 1024;
+
+    // A watcher event can fire while an editor is still mid-write (a partial line, an unterminated
+    // object). Retrying a few times with a short pause lets a same-process, in-place write settle
+    // before this gives up - most editors finish writing well within this window. This is deliberately
+    // separate from the constructor's ReadOverridesFromDisk, whose failure has no earlier snapshot to
+    // fall back to and so must default; see ReadOverridesForWatcherRebuild's remarks for why a
+    // watcher-triggered failure is handled differently.
+    private const int WatcherReadRetryAttempts = 3;
+    private const int WatcherReadRetryDelayMilliseconds = 20;
+
     // ProtocolJson.Options writes compact (non-indented) JSON, appropriate for the line-delimited wire
     // protocol it was built for. hooks.json is a file a human is expected to hand-edit, so writing
     // through it here (rather than an unrelated fresh JsonSerializerOptions) keeps every other
@@ -69,6 +92,9 @@ internal sealed class HookStore : IHookSource
     private readonly string path;
     private readonly ILogger<HookStore> logger;
     private readonly Lock writeGate = new();
+    private readonly FileSystemWatcher watcher;
+    private readonly Timer debounceTimer;
+    private bool disposed;
 
     /// <summary>
     /// The absolute path to the override file, <c>hooks.json</c> under <see cref="TeamOptions.DataDir"/>,
@@ -98,19 +124,59 @@ internal sealed class HookStore : IHookSource
         this.path = Path.Combine(options.Value.DataDir, "hooks.json");
 
         var directory = Path.GetDirectoryName(this.path);
-        if (!string.IsNullOrEmpty(directory))
+        if (string.IsNullOrEmpty(directory))
         {
-            Directory.CreateDirectory(directory);
+            // TeamOptions.DataDir is always absolutised by ServiceCollectionExtensions's
+            // PostConfigure before this constructor runs, so Path.Combine(dataDir, "hooks.json")
+            // always has a non-empty parent directory in practice. This guard only exists so the
+            // watcher below always has a real directory to construct against.
+            throw new InvalidOperationException($"'{this.path}' has no parent directory to watch.");
         }
 
+        Directory.CreateDirectory(directory);
+
         this.resolved = this.ApplyResolved(this.ReadOverridesFromDisk());
+
+        this.debounceTimer = new Timer(this.OnDebounceElapsed, null, Timeout.Infinite, Timeout.Infinite);
+
+        // FileSystemWatcher cannot watch a single file directly - it watches a directory and
+        // matches Filter against the names inside it. A rename-over save (a temp file written
+        // then File.Move'd/File.Replace'd into place - common in editors and the exact idiom
+        // WriteOverridesToDisk itself could adopt later) arrives as a Renamed event whose Filter
+        // match is against the NEW name, which is "hooks.json" again, so the plain Filter below
+        // is enough to catch it without PersonaStore's extra directory-rename logic - there are no
+        // subdirectories here to worry about.
+        this.watcher = new FileSystemWatcher(directory, "hooks.json")
+        {
+            InternalBufferSize = WatcherInternalBufferSize,
+            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName,
+        };
+        this.watcher.Changed += this.OnWatcherEvent;
+        this.watcher.Created += this.OnWatcherEvent;
+        this.watcher.Deleted += this.OnWatcherEvent;
+        this.watcher.Renamed += this.OnWatcherEvent;
+        this.watcher.Error += this.OnWatcherError;
+        this.watcher.EnableRaisingEvents = true;
     }
 
     /// <summary>
     /// Raised after <see cref="Save"/> or <see cref="Reset"/> has written the file and rebuilt the
-    /// resolved snapshot, never before. Raised outside <see cref="writeGate"/> so a future subscriber
-    /// that takes a lock of its own cannot deadlock against a concurrent write.
+    /// resolved snapshot, never before, and after an external edit to <see cref="path"/> is picked
+    /// up by the filesystem watcher and its debounce settles. Raised outside <see cref="writeGate"/>
+    /// so a future subscriber that takes a lock of its own cannot deadlock against a concurrent
+    /// write or watcher rebuild.
     /// </summary>
+    /// <remarks>
+    /// An external edit made while <see cref="Save"/>/<see cref="SaveMany"/>/<see cref="Reset"/> is
+    /// also writing will make the watcher fire a second time roughly
+    /// <see cref="WatcherDebounceMilliseconds"/> later, raising this event again for what looks
+    /// like the same change. That second raise is deliberately NOT suppressed: a rebuild is
+    /// idempotent (it reads the same bytes just written) and the Settings page rebuilds its view
+    /// from this store plus its own pending edits, so the redundant raise costs nothing. A
+    /// "was that my own write?" flag would instead risk swallowing a genuine external edit that
+    /// happens to land inside the suppression window - a much worse failure than one extra,
+    /// harmless notification.
+    /// </remarks>
     public event Action? HooksChanged;
 
     /// <summary>The hook's current text (override or catalog default) with placeholders substituted.</summary>
@@ -324,11 +390,7 @@ internal sealed class HookStore : IHookSource
 
         try
         {
-            var json = File.ReadAllText(this.path);
-            var overrides = JsonSerializer.Deserialize<Dictionary<string, string>>(json, ProtocolJson.Options);
-            return overrides is null
-                ? new Dictionary<string, string>(StringComparer.Ordinal)
-                : new Dictionary<string, string>(overrides, StringComparer.Ordinal);
+            return ParseOverridesFile(this.path);
         }
         catch (JsonException ex)
         {
@@ -343,5 +405,180 @@ internal sealed class HookStore : IHookSource
     {
         var json = JsonSerializer.Serialize(overrides, IndentedJsonOptions);
         File.WriteAllText(this.path, json);
+    }
+
+    /// <summary>
+    /// Reads and parses <paramref name="path"/>'s current contents, throwing <see cref="JsonException"/>
+    /// on malformed JSON rather than swallowing it - the two callers (<see cref="ReadOverridesFromDisk"/>
+    /// and <see cref="ReadOverridesForWatcherRebuild"/>) each need to react to a parse failure
+    /// differently, so the parsing itself carries no fallback policy of its own.
+    /// </summary>
+    /// <param name="path">The override file's path. Always exists; callers check <see cref="File.Exists(string)"/> first.</param>
+    private static Dictionary<string, string> ParseOverridesFile(string path)
+    {
+        var json = File.ReadAllText(path);
+        var overrides = JsonSerializer.Deserialize<Dictionary<string, string>>(json, ProtocolJson.Options);
+        return overrides is null
+            ? new Dictionary<string, string>(StringComparer.Ordinal)
+            : new Dictionary<string, string>(overrides, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Rebuilds the resolved snapshot for an external edit to <see cref="path"/>, once the watcher's
+    /// debounce settles.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Why a watcher-triggered parse failure is handled differently from a construction-time one.</b>
+    /// <see cref="ReadOverridesFromDisk"/> (used by the constructor, <see cref="Save"/>,
+    /// <see cref="SaveMany"/> and <see cref="Reset"/>) falls back to defaults wholesale on malformed
+    /// JSON because, at construction, there is no earlier resolved snapshot to prefer instead - and
+    /// at a Save/Reset, the write this method just performed is presumed well-formed by construction,
+    /// so a parse failure there would mean something else raced the write. A watcher rebuild is a
+    /// different situation: a hand-edit is very likely to be caught mid-write (an editor's "write, then
+    /// rename" or a direct in-place save can both leave a transiently truncated or unterminated file on
+    /// disk for a few milliseconds), and reverting every override to its catalog default for that whole
+    /// window - only to flip back once the file finishes writing - would be a visible, spurious flicker
+    /// for every observer of <see cref="HooksChanged"/>, not a real edit.
+    /// </para>
+    /// <para>
+    /// So this retries a few times with a short pause first (see <see cref="WatcherReadRetryAttempts"/>),
+    /// which is enough for an in-place write to settle in practice. If the file still will not parse
+    /// after every attempt, this returns <see langword="null"/> rather than an empty dictionary: the
+    /// caller (<see cref="OnDebounceElapsed"/>) then keeps the PREVIOUS resolved snapshot untouched
+    /// instead of wiping every override - a genuinely malformed hand-edit is a real possibility, but the
+    /// user's last-good overrides staying live until they fix it (or until a later event, such as the
+    /// file finally settling, retries this again) is a far better failure mode than an editing session's
+    /// worth of intentional overrides vanishing over a save-in-progress race.
+    /// </para>
+    /// </remarks>
+    /// <returns>
+    /// The freshly parsed overrides; an empty dictionary if <see cref="path"/> no longer exists
+    /// (a legitimate delete, reverting every key to its catalog default); or <see langword="null"/> if
+    /// every parse attempt failed, meaning the caller should keep its current snapshot.
+    /// </returns>
+    private Dictionary<string, string>? ReadOverridesForWatcherRebuild()
+    {
+        if (!File.Exists(this.path))
+        {
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        for (var attempt = 1; attempt <= WatcherReadRetryAttempts; attempt++)
+        {
+            try
+            {
+                return ParseOverridesFile(this.path);
+            }
+            catch (Exception ex) when (attempt < WatcherReadRetryAttempts && (ex is JsonException or IOException))
+            {
+                // JsonException: caught mid-write, the partial text does not parse yet.
+                // IOException: an editor can hold the file open with a sharing lock while it writes.
+                // Both are plausible transient states for a file a human is actively saving; a short
+                // pause gives the write time to finish before the next attempt.
+                Thread.Sleep(WatcherReadRetryDelayMilliseconds);
+            }
+            catch (JsonException ex)
+            {
+                this.logger.LogWarning(
+                    ex,
+                    "Could not parse hook overrides file '{Path}' after a filesystem change, even after retrying; keeping the previously resolved hook text rather than reverting every hook to its catalog default over what may be a mid-write race.",
+                    this.path);
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    private void OnWatcherEvent(object sender, FileSystemEventArgs e)
+    {
+        lock (this.writeGate)
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
+        }
+    }
+
+    // FileSystemWatcher raises this instead of a normal change event when its internal buffer
+    // overflows and the OS drops events - see WatcherInternalBufferSize's remarks. There is no way
+    // to know which change was dropped, so the only correct response is the same one a normal
+    // change takes: schedule a refresh on the existing debounce path rather than trust whatever the
+    // watcher's view of the world now is.
+    private void OnWatcherError(object sender, ErrorEventArgs e)
+    {
+        this.logger.LogWarning(
+            e.GetException(),
+            "HookStore's FileSystemWatcher reported an error (likely a dropped-event buffer overflow); scheduling a refresh.");
+
+        lock (this.writeGate)
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
+        }
+    }
+
+    private void OnDebounceElapsed(object? state)
+    {
+        Action? changed;
+        lock (this.writeGate)
+        {
+            // Checked and captured under the same lock Dispose() takes, so a Dispose() racing this
+            // callback either finishes first (this returns without capturing anything) or this
+            // captures the delegate before Dispose() can flip the flag - never both.
+            if (this.disposed)
+            {
+                return;
+            }
+
+            var overrides = this.ReadOverridesForWatcherRebuild();
+            if (overrides is null)
+            {
+                // See ReadOverridesForWatcherRebuild's remarks: every parse attempt failed, so the
+                // existing resolved snapshot is left exactly as it was and nothing is raised - there
+                // is nothing new to tell an observer about.
+                return;
+            }
+
+            // Rebuilt under the same lock, and BEFORE the delegate capture below: an observer reading
+            // this store from inside its own HooksChanged handler must see the state the filesystem
+            // change just produced, not whatever was true before it - the same ordering
+            // PersonaStore.OnDebounceElapsed documents and depends on.
+            this.resolved = this.ApplyResolved(overrides);
+            changed = this.HooksChanged;
+        }
+
+        changed?.Invoke();
+    }
+
+    /// <summary>Stops watching <see cref="path"/> and releases the debounce timer.</summary>
+    public void Dispose()
+    {
+        lock (this.writeGate)
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            this.disposed = true;
+        }
+
+        this.watcher.EnableRaisingEvents = false;
+        this.watcher.Changed -= this.OnWatcherEvent;
+        this.watcher.Created -= this.OnWatcherEvent;
+        this.watcher.Deleted -= this.OnWatcherEvent;
+        this.watcher.Renamed -= this.OnWatcherEvent;
+        this.watcher.Error -= this.OnWatcherError;
+        this.watcher.Dispose();
+        this.debounceTimer.Dispose();
     }
 }

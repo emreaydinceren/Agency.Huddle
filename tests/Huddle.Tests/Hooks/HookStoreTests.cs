@@ -347,6 +347,156 @@ public sealed class HookStoreTests
         Assert.Equal(HookCatalog.Get("getHelp.intro").Default, seenInsideHandler);
     }
 
+    /// <summary>An external write to <c>hooks.json</c> (no <see cref="HookStore.Save"/> call) is picked up and resolves through <see cref="HookStore.Raw"/>.</summary>
+    [Fact]
+    public async Task Raw_ExternalWriteToOverrideFile_PicksUpNewValue()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new HookStore(dataDir.Options(), NullLogger<HookStore>.Instance);
+
+        WriteHooksJson(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Externally edited text." });
+
+        await WaitForAsync(
+            () => string.Equals(store.Raw("getHelp.intro"), "Externally edited text.", StringComparison.Ordinal),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("Externally edited text.", store.Raw("getHelp.intro"));
+    }
+
+    /// <summary>An external edit to <c>hooks.json</c> raises <see cref="HookStore.HooksChanged"/> once the watcher's debounce settles.</summary>
+    [Fact]
+    public async Task HooksChanged_ExternalEdit_IsRaised()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new HookStore(dataDir.Options(), NullLogger<HookStore>.Instance);
+        var raised = false;
+        store.HooksChanged += () => raised = true;
+
+        WriteHooksJson(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Externally edited text." });
+
+        await WaitForAsync(() => raised, TestContext.Current.CancellationToken);
+
+        Assert.True(raised);
+    }
+
+    /// <summary>Deleting the override file reverts every key to its catalog default - "no overrides" is a legitimate, not an error, state.</summary>
+    [Fact]
+    public async Task Raw_OverrideFileDeleted_EveryKeyRevertsToCatalogDefault()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new HookStore(dataDir.Options(), NullLogger<HookStore>.Instance);
+        store.Save("getHelp.intro", "A previously saved override.");
+        Assert.Equal("A previously saved override.", store.Raw("getHelp.intro"));
+
+        File.Delete(Path.Combine(dataDir.Path, "hooks.json"));
+
+        await WaitForAsync(
+            () => string.Equals(store.Raw("getHelp.intro"), HookCatalog.Get("getHelp.intro").Default, StringComparison.Ordinal),
+            TestContext.Current.CancellationToken);
+
+        foreach (var hook in HookCatalog.All)
+        {
+            Assert.Equal(hook.Default, store.Raw(hook.Key));
+        }
+    }
+
+    /// <summary>
+    /// A rename-over save - writing a temp file, then <see cref="File.Move(string, string, bool)"/>'ing
+    /// it over <c>hooks.json</c>, the idiom many editors and <see cref="File.Replace(string, string, string?)"/>
+    /// use - arrives as a <see cref="WatcherChangeTypes.Renamed"/> event, not <see cref="WatcherChangeTypes.Changed"/>,
+    /// and must still be picked up. A watcher that only subscribed to <c>Changed</c> would miss this.
+    /// </summary>
+    [Fact]
+    public async Task Raw_RenameOverSave_IsPickedUp()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new HookStore(dataDir.Options(), NullLogger<HookStore>.Instance);
+        var targetPath = Path.Combine(dataDir.Path, "hooks.json");
+        var tempPath = Path.Combine(dataDir.Path, "hooks.json.tmp");
+
+        File.WriteAllText(tempPath, JsonSerializer.Serialize(
+            new Dictionary<string, string> { ["getHelp.intro"] = "Renamed into place." },
+            ProtocolJson.Options));
+        File.Move(tempPath, targetPath, overwrite: true);
+
+        await WaitForAsync(
+            () => string.Equals(store.Raw("getHelp.intro"), "Renamed into place.", StringComparison.Ordinal),
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal("Renamed into place.", store.Raw("getHelp.intro"));
+    }
+
+    /// <summary>Disposing stops the watcher: an edit made after <see cref="HookStore.Dispose"/> raises nothing and is not picked up.</summary>
+    [Fact]
+    public async Task Dispose_StopsWatcher_NoFurtherRaisesOrPickups()
+    {
+        using var dataDir = new TempDataDir();
+        var store = new HookStore(dataDir.Options(), NullLogger<HookStore>.Instance);
+        var raised = false;
+        store.HooksChanged += () => raised = true;
+
+        store.Dispose();
+
+        WriteHooksJson(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = "Written after dispose." });
+
+        // No event to wait for a positive signal on, so this waits out a window comfortably longer
+        // than the debounce and the retry budget, then asserts nothing happened - the only way to
+        // assert an absence for a timing-dependent watcher.
+        await Task.Delay(TimeSpan.FromMilliseconds(800), TestContext.Current.CancellationToken);
+
+        Assert.False(raised);
+        Assert.Equal(HookCatalog.Get("getHelp.intro").Default, store.Raw("getHelp.intro"));
+    }
+
+    /// <summary>A rapid burst of external writes collapses to fewer <see cref="HookStore.HooksChanged"/> raises than writes, via the debounce.</summary>
+    [Fact]
+    public async Task HooksChanged_RapidBurstOfWrites_CollapsesToFewerRaisesThanWrites()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new HookStore(dataDir.Options(), NullLogger<HookStore>.Instance);
+        var invocationCount = 0;
+        store.HooksChanged += () => Interlocked.Increment(ref invocationCount);
+        const int writeCount = 10;
+
+        for (var i = 0; i < writeCount; i++)
+        {
+            WriteHooksJson(dataDir.Path, new Dictionary<string, string> { ["getHelp.intro"] = $"Burst write {i}." });
+        }
+
+        // The last write must have settled and been observed before asserting the raise count, or
+        // this could read a count captured mid-burst.
+        await WaitForAsync(
+            () => string.Equals(store.Raw("getHelp.intro"), $"Burst write {writeCount - 1}.", StringComparison.Ordinal),
+            TestContext.Current.CancellationToken);
+
+        // A generous upper bound rather than an exact count: exactly how many debounce windows a
+        // tight burst on this machine's filesystem collapses into is itself timing-dependent, and
+        // asserting an exact number would be its own flake. What matters is that it collapsed at
+        // all - far fewer raises than the ten writes above.
+        Assert.True(invocationCount < writeCount);
+    }
+
+    /// <summary>
+    /// Polls <paramref name="condition"/> until it is true or a generous timeout elapses, for
+    /// asserting on a <see cref="FileSystemWatcher"/>-driven, timing-dependent side effect without a
+    /// bare <see cref="Task.Delay(TimeSpan, CancellationToken)"/> whose length is only a guess.
+    /// </summary>
+    /// <param name="condition">Checked repeatedly until it returns <see langword="true"/>.</param>
+    /// <param name="cancellationToken">Cancels the wait.</param>
+    private static async Task WaitForAsync(Func<bool> condition, CancellationToken cancellationToken)
+    {
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+        while (!condition())
+        {
+            if (DateTime.UtcNow > deadline)
+            {
+                Assert.Fail("Timed out waiting for the filesystem watcher to pick up the change.");
+            }
+
+            await Task.Delay(TimeSpan.FromMilliseconds(50), cancellationToken);
+        }
+    }
+
     /// <summary>Writes a flat override JSON object directly, as a human editing the file by hand would.</summary>
     /// <param name="dataDir">The temp data directory a <see cref="HookStore"/> will be pointed at.</param>
     /// <param name="overrides">The override keys and text to write.</param>
