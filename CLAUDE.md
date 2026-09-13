@@ -65,4 +65,8 @@ repro and the environmental failure modes, including the two that look like code
 regressions and are not: a stale SDK image against `global.json`'s `latestPatch` pin,
 and the six tests that need `node` on PATH.
 
+Read `agents/GiteaOperations.md` before talking to the remote directly — opening a PR,
+listing or deleting a branch, or re-running a workflow via the Gitea API rather than the
+web UI. `origin` is a self-hosted Gitea instance, not GitHub, so `gh` does not work here.
+
 @agents/CSharpPrinciples.md
