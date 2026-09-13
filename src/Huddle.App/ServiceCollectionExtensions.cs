@@ -1,6 +1,7 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
+using Agency.Huddle.App.Hooks;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 
@@ -56,6 +57,14 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAgentHostFactory, DotAcpAgentHostFactory>();
         services.AddSingleton<PersonaModelStore>();
         services.AddSingleton<PersonaEffortStore>();
+
+        // Same instance as HookStore below, not a second registration - mirrors the
+        // PersonaStore/IMentionAliasSource pair above. A second, independently constructed HookStore
+        // would mean a second file handle on hooks.json now and (once T4.1 adds one) a second
+        // FileSystemWatcher on it, the same class of intermittent test flake PersonaStore's remarks
+        // already document for the closely related PersonaSupervisor case.
+        services.AddSingleton<HookStore>();
+        services.AddSingleton<IHookSource>(sp => sp.GetRequiredService<HookStore>());
 
         // Unconditional too, and for the same reason: the probe spends nothing on its own (it never
         // calls PromptAsync), so registering it costs nothing when Team:Acp:Enabled is off. What
