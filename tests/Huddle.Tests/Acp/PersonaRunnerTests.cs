@@ -532,6 +532,252 @@ public sealed class PersonaRunnerTests
         Assert.Contains("You are a helpful assistant named Nova.", prompt, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task GroupRoom_AtBudget_MentionedAgentTakesNoTurn()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReply("should not appear");
+        var persona = new Persona("nova", "You are Nova.");
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        await agentHost.StartAsync(ct);
+        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+
+        var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
+
+        // The friend's message is itself the first - and only - agent message this Room allows, so by
+        // the time it reaches Nova the Room is already spent.
+        await chat.PostAsync(room.Id, friendId, "@nova hello", ct: ct);
+
+        // Bounded wait: give a misbehaving agent every chance to reply before asserting it did not.
+        await Task.Delay(TimeSpan.FromSeconds(1), ct);
+
+        var history = await store.ReadAllAsync(room.Id, ct);
+        Assert.Single(history);
+    }
+
+    // The payoff of the three-state gate. A Catch-up Message was missed and rides along later; a
+    // Message declined for Budget is being held for re-delivery, so buffering it would show it to the
+    // model twice in one prompt.
+    [Fact]
+    public async Task BudgetExhausted_DoesNotBufferAsCatchUp()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReply("woken by the human");
+        var persona = new Persona("nova", "You are Nova.");
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        await agentHost.StartAsync(ct);
+        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+
+        var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
+        await chat.PostAsync(room.Id, friendId, "@nova declined for budget", ct: ct);
+        await Task.Delay(TimeSpan.FromSeconds(1), ct);
+
+        await chat.PostAsync(room.Id, KnownIds.Human, "@nova carry on", ct: ct);
+        await WaitForHistoryCountAsync(store, room.Id, 3, ct);
+
+        var prompt = Assert.Single(factory.Session.Prompts);
+        Assert.DoesNotContain("declined for budget", prompt, StringComparison.Ordinal);
+    }
+
+    // Continue is only meaningful if it wakes the exchange it paused: a Turn never starts on its own.
+    [Fact]
+    public async Task Redelivery_AfterExtend_ProducesATurn()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReply("resumed");
+        var persona = new Persona("nova", "You are Nova.");
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        await agentHost.StartAsync(ct);
+        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+
+        var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
+        await chat.PostAsync(room.Id, friendId, "@nova hello", ct: ct);
+        await Task.Delay(TimeSpan.FromSeconds(1), ct);
+        Assert.Single(await store.ReadAllAsync(room.Id, ct));
+
+        var extended = await chat.ExtendBudgetAsync(room.Id, ct);
+
+        Assert.True(extended);
+        var history = await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+        Assert.Equal("resumed", history[^1].Text);
+        Assert.Equal(novaId, history[^1].SenderId);
+    }
+
+    [Fact]
+    public async Task TokenBudget_WhenExhausted_StopsTakingTurns()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        // The message Budget is off so only the token Budget can stop anything.
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?>
+            {
+                ["Team:AgentMessageBudget"] = "0",
+                ["Team:Acp:TokenBudget"] = "100",
+            },
+            ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReplyWithUsage([150], "first reply");
+        factory.Session.EnqueueReply("second reply");
+        var persona = new Persona("nova", "You are Nova.");
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        await agentHost.StartAsync(ct);
+        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+
+        var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
+        await chat.PostAsync(room.Id, friendId, "@nova one", ct: ct);
+        await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+
+        await chat.PostAsync(room.Id, friendId, "@nova two", ct: ct);
+        await Task.Delay(TimeSpan.FromSeconds(1), ct);
+
+        // Two posts from the friend and one reply: the second turn never ran.
+        var history = await store.ReadAllAsync(room.Id, ct);
+        Assert.Equal(3, history.Count);
+        Assert.DoesNotContain(history, m => m.Text == "second reply");
+    }
+
+    // UsageUpdated.Used is a level, so a compaction makes it fall. Levels 100, 150, 20, 60 are 190
+    // tokens of work; summing the levels themselves would read 330 and trip a 200 budget that should
+    // not trip.
+    [Fact]
+    public async Task TokenBudget_IgnoresDropsInUsed()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?>
+            {
+                ["Team:AgentMessageBudget"] = "0",
+                ["Team:Acp:TokenBudget"] = "200",
+            },
+            ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReplyWithUsage([100, 150, 20, 60], "first reply");
+        factory.Session.EnqueueReply("second reply");
+        var persona = new Persona("nova", "You are Nova.");
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        await agentHost.StartAsync(ct);
+        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+
+        var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
+        await chat.PostAsync(room.Id, friendId, "@nova one", ct: ct);
+        await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+
+        await chat.PostAsync(room.Id, friendId, "@nova two", ct: ct);
+        var history = await WaitForHistoryCountAsync(store, room.Id, 4, ct);
+
+        Assert.Contains(history, m => m.Text == "second reply");
+    }
+
+    [Fact]
+    public async Task TokenBudget_ResetsOnAHumanMessage()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?>
+            {
+                ["Team:AgentMessageBudget"] = "0",
+                ["Team:Acp:TokenBudget"] = "100",
+            },
+            ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReplyWithUsage([150], "first reply");
+        factory.Session.EnqueueReply("after the human spoke");
+        var persona = new Persona("nova", "You are Nova.");
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        await agentHost.StartAsync(ct);
+        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+
+        var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
+        await chat.PostAsync(room.Id, friendId, "@nova one", ct: ct);
+        await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+
+        await chat.PostAsync(room.Id, KnownIds.Human, "@nova carry on", ct: ct);
+        var history = await WaitForHistoryCountAsync(store, room.Id, 4, ct);
+
+        Assert.Equal("after the human spoke", history[^1].Text);
+    }
+
+    [Fact]
+    public async Task TokenBudget_ZeroDisablesTheCap()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?>
+            {
+                ["Team:AgentMessageBudget"] = "0",
+                ["Team:Acp:TokenBudget"] = "0",
+            },
+            ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReplyWithUsage([999_999], "first reply");
+        factory.Session.EnqueueReply("second reply");
+        var persona = new Persona("nova", "You are Nova.");
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        await agentHost.StartAsync(ct);
+        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+
+        var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
+        await chat.PostAsync(room.Id, friendId, "@nova one", ct: ct);
+        await WaitForHistoryCountAsync(store, room.Id, 2, ct);
+
+        await chat.PostAsync(room.Id, friendId, "@nova two", ct: ct);
+        var history = await WaitForHistoryCountAsync(store, room.Id, 4, ct);
+
+        Assert.Contains(history, m => m.Text == "second reply");
+    }
+
+    /// <summary>
+    /// Puts Nova in a Room with a second Agent, so a test can post agent-authored Messages - the only
+    /// kind that spends Budget. The friend is a bare pipe client: it never replies, which keeps every
+    /// Message in these Rooms one the test asked for.
+    /// </summary>
+    /// <param name="fixture">The running host.</param>
+    /// <param name="novaId">The Agent id of the Persona under test.</param>
+    /// <param name="ct">Cancels the handshake and the Room creation.</param>
+    /// <returns>The chat service, the store, the Room, and the friend's Agent id.</returns>
+    private static async Task<(ChatService Chat, IChatStore Store, Room Room, string FriendId)> CreateGroupWithFriendAsync(
+        PipeHostFixture fixture, string novaId, CancellationToken ct)
+    {
+        var friend = await fixture.ConnectClientAsync(ct);
+        await friend.WriteAsync(new Hello("friend", null), ct);
+        var friendWelcome = Assert.IsType<Welcome>(await friend.ReadAsync(ct));
+
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        var store = fixture.Services.GetRequiredService<IChatStore>();
+        var room = await chat.CreateRoomForAsync([novaId, friendWelcome.AgentId], ct);
+        return (chat, store, room, friendWelcome.AgentId);
+    }
+
     private static PersonaRunner CreateHost(PipeHostFixture fixture, Persona persona, FakeAgentHostFactory factory)
     {
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();

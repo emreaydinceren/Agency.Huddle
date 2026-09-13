@@ -340,6 +340,52 @@ html, body {
     font-size: 0.85rem;
 }
 
+/* ---- Room budget: the pause, and the question that offers to lift it ----- */
+
+.budget-prompt {
+    border-top: 1px solid #d0d0d0;
+    padding: 0.75rem 1rem 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.budget-prompt-text {
+    margin: 0;
+    color: #b32121;
+    font-size: 0.85rem;
+    flex: 1 1 16rem;
+}
+
+.budget-prompt-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.budget-continue,
+.budget-dismiss {
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.budget-continue:disabled,
+.budget-dismiss:disabled {
+    cursor: default;
+    opacity: 0.6;
+}
+
+.budget-note {
+    margin: 0;
+    padding: 0.5rem 1rem 0;
+    color: #666;
+    font-size: 0.8rem;
+}
+
 /* ---- Teammates: directory tiles and the profile card -------------------- */
 
 .teammates-header {

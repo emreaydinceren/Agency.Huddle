@@ -56,7 +56,7 @@ them without opening [Language](agencyteam/language.md):
 
 > Teammate · Human · Agent · Name · Alias · Title · Team · Adapter · Room ·
 > Member · Invitation · Persona · Rejected file · Model · Effort · Turn ·
-> App Tool · Reply Gate · Catch-up · Progressive discovery · Work Dir ·
+> App Tool · Reply Gate · Budget · Catch-up · Progressive discovery · Work Dir ·
 > Message · Mention · Envelope · Transcript · Team Directory
 
 Words that are *wrong here* and have a right replacement: bot, user, channel,
@@ -85,8 +85,11 @@ that property. It is what keeps the design honest.
 
 The second idea: a Room's behaviour is defined by **how many Members it has**,
 not by a type column. Two Members is a private conversation (answer everything);
-three or more is a group (answer only when `@`-mentioned). See `ReplyGate` — six
-lines, and the whole of that rule.
+three or more is a group (answer only when `@`-mentioned). One thing overrides
+both — a Room that has spent its **Budget** answers nothing until the Human speaks
+or grants more. `ReplyGate` is still the whole of that rule and still a pure
+function: the Budget reaches it as two numbers on the Envelope, so the server is
+labelling, not deciding.
 
 ## Relationships
 
@@ -186,6 +189,7 @@ All under the `Team:` section — `TeamOptions.cs` and `Acp/AcpOptions.cs`.
 | `DataDir` | `App_Data` | Everything created at runtime lives here. |
 | `PipeName` | `team` | |
 | `HumanName` | `You` | |
+| `AgentMessageBudget` | `40` | Agent-authored Messages one Room takes between Human Messages. Any Human Message resets it; the Room view offers the Human one more Budget at a time. **Zero or less removes the runaway-loop guard entirely.** |
 | `DemoAgent:Enabled` | `true` | The echo agents. |
 | `DemoAgent:Names` | `["echo", "alpha"]` | |
 | `Acp:Enabled` | `false` | **Spends money when true.** |
@@ -196,6 +200,7 @@ All under the `Team:` section — `TeamOptions.cs` and `Acp/AcpOptions.cs`.
 | `Acp:WorkDir` | `work` | One subdirectory per Persona. Relative to `DataDir`. |
 | `Acp:TraceWire` | `false` | **Dumps the bearer token.** Debugging only. |
 | `Acp:CatchUpMessages` | `20` | Per-Room catch-up buffer size. |
+| `Acp:TokenBudget` | `1000000` | Per-Persona token Budget, summed from the rises in `UsageUpdated.Used` and reset by any Human Message. Catches a loop that mints fresh Rooms, which the per-Room Budget cannot. Zero or less disables it. |
 
 `Logging:LogLevel` is the one place that looks like it belongs to this section
 and does not. Its keys are log-category prefixes, and a category comes from

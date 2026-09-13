@@ -45,16 +45,27 @@ Two boundaries matter:
    `ChatService`. That is what lets an Agent genuinely create a Room. The agent
    cannot reach in; it can only call the App Tools we published.
 
-## Four flows worth tracing
+## Five flows worth tracing
 
 **A human sends a message.** `Composer.razor` →
-`ChatService.SubmitFromComposerAsync` → writes JSONL, updates SQLite →
+`ChatService.SubmitFromComposerAsync` → writes JSONL, updates SQLite → resets that
+Room's Budget to zero, which is what "say anything to resume" actually is →
 `RoomEvents.PublishMessagePosted` → both the Blazor components (which re-render)
 and `AgentGateway`, which writes a `messagePosted` Envelope to every connected
-Agent member — *including* the sender's own, which discards it client-side.
+Agent member **except the sender's own** — `DeliverAsync` skips it, which is what
+stops a naive client echo-looping.
+
+**The human grants a paused Room more Budget.** `Chat.razor`'s Continue button →
+`ChatService.ExtendBudgetAsync` → raises the grant by one Budget under the Room's
+own semaphore → rebuilds a `MessagePostedEvent` from the Room, its Members and the
+last Transcript entry → `RoomEvents.PublishMessageRedelivered`. Only
+`AgentGateway` subscribes to that event, so the Agents are woken again and the Room
+view does not render a Message it is already showing.
 
 **An Agent replies.** `PersonaRunner`'s read loop receives `messagePosted` →
-`ReplyGate.ShouldReply` → if it passes, writes a work item to a `Channel`.
+`ReplyGate.Decide` → `Reply` writes a work item to a `Channel`; `CatchUp` buffers
+the Message for the next Mention; `BudgetExhausted` does neither, because that
+Message is being held for re-delivery rather than missed.
 **Never call the agent from the read loop.** A single consumer calls
 `PromptAsync` one item at a time; one long-lived reader over `session.Events`
 accumulates `MessageChunk.Text` and completes the turn's

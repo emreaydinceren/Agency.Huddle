@@ -4,6 +4,7 @@
 @inject ITeamDirectory TeamDirectory
 @inject IChatStore Store
 @inject RoomEvents Events
+@inject ChatService ChatService
 @inject NavigationManager Navigation
 
 @if (this.room is null)
@@ -24,6 +25,34 @@ else
             </div>
         </header>
         <MessageList Messages="this.messages" />
+        @* Between the transcript and the composer on purpose: the exchange that spent the Budget is
+           the thing you need to read before deciding whether to grant another one. Rendered inline
+           rather than as a component because a string Parameter missing its leading @ passes the
+           literal text, compiles clean and fails only on screen - see docs/agencyteam/rules.md. *@
+        @if (this.budget.Exhausted && !this.budgetPromptDismissed)
+        {
+            <div class="budget-prompt" role="alert">
+                <p class="budget-prompt-text">
+                    Agents have sent @this.budget.Used replies since you last spoke, and are paused.
+                </p>
+                <div class="budget-prompt-actions">
+                    <button type="button" class="budget-continue" disabled="@this.extending" @onclick="this.ContinueAsync">
+                        @(this.extending ? "Continuing…" : "Continue")
+                    </button>
+                    <button type="button" class="budget-dismiss" disabled="@this.extending" @onclick="this.DismissBudgetPrompt">
+                        Leave paused
+                    </button>
+                </div>
+            </div>
+        }
+        else if (this.budget.Exhausted)
+        {
+            <p class="budget-note">Paused — @this.budget.Used of @this.budget.Granted agent replies since you last spoke.</p>
+        }
+        else if (this.budget.Used > 0 && this.budget.Granted > 0)
+        {
+            <p class="budget-note">@this.budget.Used of @this.budget.Granted agent replies since you last spoke.</p>
+        }
         <Composer RoomId="@this.room.Id" />
     </div>
 }
@@ -36,6 +65,9 @@ else
     private Room? room;
     private IReadOnlyList<User> members = [];
     private List<ChatMessage> messages = [];
+    private RoomBudget budget = new(0, 0);
+    private bool budgetPromptDismissed;
+    private bool extending;
 
     protected override void OnInitialized()
     {
@@ -79,6 +111,11 @@ else
         this.room = await this.TeamDirectory.GetRoomAsync(roomId);
         this.members = this.room is null ? [] : await this.TeamDirectory.GetRoomMembersAsync(roomId);
         this.messages = this.room is null ? [] : [.. await this.Store.ReadAllAsync(roomId)];
+
+        // Read rather than waited for: a prerender and a reconnected circuit both have to show the
+        // right figure without having witnessed the Message that produced it.
+        this.budget = this.room is null ? new RoomBudget(0, 0) : this.ChatService.GetBudget(roomId);
+        this.budgetPromptDismissed = false;
     }
 
     private void OnMessagePosted(MessagePostedEvent e)
@@ -91,8 +128,45 @@ else
         _ = this.DispatchAsync(() =>
         {
             this.messages.Add(e.Message);
+            this.budget = e.Budget;
+
+            // A Message means the Room is moving again, so a dismissal from the last pause must not
+            // suppress the next one.
+            if (!this.budget.Exhausted)
+            {
+                this.budgetPromptDismissed = false;
+            }
+
             this.StateHasChanged();
         });
+    }
+
+    private async Task ContinueAsync()
+    {
+        if (this.loadedRoomId is null || this.extending)
+        {
+            return;
+        }
+
+        // Granting Budget lets real money be spent, so the button must not be clickable twice while
+        // the first grant is still in flight.
+        this.extending = true;
+        try
+        {
+            await this.ChatService.ExtendBudgetAsync(this.loadedRoomId);
+            this.budget = this.ChatService.GetBudget(this.loadedRoomId);
+        }
+        finally
+        {
+            this.extending = false;
+        }
+    }
+
+    private void DismissBudgetPrompt()
+    {
+        // Hides the question, not the pause: the Room stays paused, and saying anything still
+        // resumes it. Per-view, so it clears on navigation and on the next Message.
+        this.budgetPromptDismissed = true;
     }
 
     private void OnRoomsChanged()

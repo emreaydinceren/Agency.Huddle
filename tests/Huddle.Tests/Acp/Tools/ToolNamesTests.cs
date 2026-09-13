@@ -1,7 +1,9 @@
 namespace Agency.Huddle.Tests.Acp.Tools;
 
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
@@ -19,7 +21,7 @@ public sealed class ToolNamesTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var aliasSource = new FakeMentionAliasSource();
-        var chat = new ChatService(directory, store, events, aliasSource, NullLogger<ChatService>.Instance);
+        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
 
         var tools = new IAppTool[]
         {

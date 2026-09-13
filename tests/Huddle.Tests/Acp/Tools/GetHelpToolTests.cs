@@ -2,7 +2,9 @@ namespace Agency.Huddle.Tests.Acp.Tools;
 
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
@@ -25,7 +27,7 @@ public sealed class GetHelpToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var aliasSource = new FakeMentionAliasSource();
-        var chat = new ChatService(directory, store, events, aliasSource, NullLogger<ChatService>.Instance);
+        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
 
         IAppTool[] others =
         [
@@ -61,6 +63,22 @@ public sealed class GetHelpToolTests
 
         // The room id is only ever learned from the prompt's Room label, so help has to say so.
         Assert.Contains("[Room: <name> (id: <id>)]", help, StringComparison.Ordinal);
+    }
+
+    // A model that reads a Budget refusal as transient retries, spending the Turn the refusal exists to
+    // save - and one that treats it as a routing problem moves to another Room, which is worse. Both
+    // are addressed in words here rather than only in the refusal itself.
+    [Fact]
+    public async Task GetHelp_MentionsTheRoomBudget()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tool = new GetHelpTool([]);
+
+        var help = await tool.InvokeAsync(new JsonObject(), ct);
+
+        Assert.Contains("budget", help, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("do not retry", help, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("another Room", help, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
