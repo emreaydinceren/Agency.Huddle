@@ -1,5 +1,8 @@
 namespace Agency.Huddle.App.Acp;
 
+using System.Diagnostics.CodeAnalysis;
+using Agency.Huddle.Contracts;
+
 /// <summary>
 /// Splits a Persona file's optional leading YAML frontmatter block into an ordered list of
 /// top-level fields and the body that follows it, and composes those fields into the job
@@ -11,19 +14,43 @@ namespace Agency.Huddle.App.Acp;
 /// uses one of those two explicit list syntaxes: Team's persona frontmatter has quoted scalars
 /// containing commas (for example <c>role: 'Router, triage, and cross-workstation
 /// continuity'</c>), so guessing a list from comma- or space-separated scalar content, as the
-/// source parser does, would misparse them.
+/// source parser does, would misparse them. <see cref="TryReadIdentity"/> is the one deliberate
+/// exception: it splits the <c>Teams</c> field on commas, but only that field, and only after
+/// this generic parse has already run.
 /// </summary>
 internal static class PersonaFrontmatter
 {
     private const string FrontmatterDelimiter = "---";
+    // Case here is cosmetic, not functional: every lookup against these compares with
+    // StringComparison.OrdinalIgnoreCase, so "Name" matches a file's "name:" line just as well.
+    // PascalCase is used because these constants also flow straight into error messages (a
+    // duplicate-key message names the key as written here), and the new frontmatter spec writes
+    // them capitalized.
+    private const string NameKey = "Name";
+    private const string TitleKey = "Title";
+    private const string AliasKey = "Alias";
+    private const string TeamsKey = "Teams";
+
+    /// <summary>
+    /// Frontmatter keys excluded from <see cref="ComposeJobDescription"/> beyond the <c>_</c>-prefix
+    /// rule — today just <c>Name</c>, because <c>list_agents</c> already prints the Persona's name
+    /// on the bullet line above the job description, and repeating it as "Name: Jarvis" immediately
+    /// under that bullet is noise. <c>Title</c>, <c>Alias</c> and <c>Teams</c> stay: they are useful
+    /// to a reading agent, and <c>Alias</c> in particular tells one that <c>@jar</c> is a working
+    /// handle.
+    /// </summary>
+    private static readonly HashSet<string> JobDescriptionExcludedKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        NameKey,
+    };
 
     /// <summary>
     /// Composes a Persona's job description from its frontmatter: every top-level field whose
-    /// key does not start with <c>_</c> becomes one "Key: Value" line, in file order, with the
-    /// key title-cased (<c>consult_when</c> becomes <c>Consult When</c>). Fields starting with
-    /// <c>_</c> are reserved for future programmatic use and never appear here. Returns
-    /// <see cref="string.Empty"/>, never <see langword="null"/>, when the Persona has no
-    /// frontmatter or only <c>_</c>-prefixed fields.
+    /// key does not start with <c>_</c>, and is not in <see cref="JobDescriptionExcludedKeys"/>,
+    /// becomes one "Key: Value" line, in file order, with the key title-cased (<c>consult_when</c>
+    /// becomes <c>Consult When</c>). Fields starting with <c>_</c> are reserved for future
+    /// programmatic use and never appear here. Returns <see cref="string.Empty"/>, never
+    /// <see langword="null"/>, when the Persona has no frontmatter or only excluded fields.
     /// </summary>
     /// <param name="personaText">The Persona's raw file text.</param>
     internal static string ComposeJobDescription(string personaText)
@@ -31,10 +58,205 @@ internal static class PersonaFrontmatter
         var (fields, _) = Parse(personaText);
 
         var lines = fields
-            .Where(field => !field.Key.StartsWith('_'))
+            .Where(field => !field.Key.StartsWith('_') && !JobDescriptionExcludedKeys.Contains(field.Key))
             .Select(field => $"{TitleCase(field.Key)}: {field.Value}");
 
         return string.Join('\n', lines);
+    }
+
+    /// <summary>
+    /// Reads and validates the structural identity fields (<see cref="PersonaIdentity.Name"/>,
+    /// <see cref="PersonaIdentity.Title"/>, <see cref="PersonaIdentity.Alias"/> and
+    /// <see cref="PersonaIdentity.Teams"/>) out of a Persona's raw file text, reusing
+    /// <see cref="Parse"/>. A malformed Persona file — a required field that is missing, blank, or
+    /// repeated, or a Name/Alias that fails <see cref="NameRules.IsValidAgentName(string?)"/> — is
+    /// an expected outcome here, not an exceptional one, so this never throws: it returns
+    /// <see langword="false"/> and an <paramref name="error"/> naming the offending field instead.
+    /// Key lookup is case-insensitive, so both <c>Name:</c> and <c>name:</c> are recognised.
+    /// </summary>
+    /// <param name="personaText">The Persona's raw file text.</param>
+    /// <param name="identity">
+    /// The parsed, validated identity when this returns <see langword="true"/>; otherwise
+    /// <see langword="null"/>.
+    /// </param>
+    /// <param name="error">
+    /// A message naming the field that failed when this returns <see langword="false"/>;
+    /// otherwise <see cref="string.Empty"/>.
+    /// </param>
+    /// <returns><see langword="true"/> if every required field was present and valid.</returns>
+    internal static bool TryReadIdentity(
+        string personaText,
+        [NotNullWhen(true)] out PersonaIdentity? identity,
+        out string error)
+    {
+        identity = null;
+        var (fields, _) = Parse(personaText);
+
+        if (!TryGetField(fields, NameKey, out var rawName, out error)
+            || !TryGetField(fields, TitleKey, out var rawTitle, out error)
+            || !TryGetField(fields, AliasKey, out var rawAlias, out error)
+            || !TryGetField(fields, TeamsKey, out var rawTeams, out error))
+        {
+            return false;
+        }
+
+        if (!TryRequireNonBlank(rawName, "Name", out var name, out error)
+            || !TryRequireNonBlank(rawTitle, "Title", out var title, out error)
+            || !TryRequireNonBlank(rawAlias, "Alias", out var alias, out error))
+        {
+            return false;
+        }
+
+        if (!NameRules.IsValidAgentName(name))
+        {
+            error = $"Persona frontmatter field 'Name' has an invalid value: '{name}'.";
+            return false;
+        }
+
+        if (!NameRules.IsValidAgentName(alias))
+        {
+            error = $"Persona frontmatter field 'Alias' has an invalid value: '{alias}'.";
+            return false;
+        }
+
+        identity = new PersonaIdentity(name, title, alias, SplitTeams(rawTeams));
+        error = string.Empty;
+        return true;
+    }
+
+    /// <summary>
+    /// Composes a brand-new Persona file's full text: a canonical frontmatter block built from
+    /// <paramref name="identity"/>'s four fields, followed by <paramref name="body"/> unchanged.
+    /// The write-side counterpart to <see cref="TryReadIdentity"/> - <see cref="PersonaStore.Add"/>
+    /// calls this so a saved Persona's file always agrees with the identity its caller collected,
+    /// rather than composing frontmatter of its own that could drift from what this parser accepts.
+    /// Every scalar is single-quoted, with YAML's own escape for an embedded apostrophe (<c>''</c>)
+    /// applied, and every key is lowercase - the style real Persona files already use.
+    /// <see cref="PersonaIdentity.Teams"/> becomes a bracketed flow list, and the whole
+    /// <c>teams:</c> line is omitted when it is empty: <see cref="PersonaIdentity.Teams"/> is
+    /// optional, and an empty field is not how a person would write "no Teams" by hand.
+    /// </summary>
+    /// <param name="identity">The Persona's Name, Title, Alias and Teams to write as frontmatter.</param>
+    /// <param name="body">The Persona's system-prompt body, written back unchanged after the frontmatter.</param>
+    internal static string Compose(PersonaIdentity identity, string body)
+    {
+        ArgumentNullException.ThrowIfNull(identity);
+        ArgumentNullException.ThrowIfNull(body);
+
+        var lines = new List<string>
+        {
+            FrontmatterDelimiter,
+            $"name: {QuoteScalar(identity.Name)}",
+            $"title: {QuoteScalar(identity.Title)}",
+            $"alias: {QuoteScalar(identity.Alias)}",
+        };
+
+        if (identity.Teams.Count > 0)
+        {
+            lines.Add($"teams: [{string.Join(", ", identity.Teams.Select(QuoteScalar))}]");
+        }
+
+        lines.Add(FrontmatterDelimiter);
+        lines.Add(body);
+
+        return string.Join('\n', lines);
+    }
+
+    /// <summary>Single-quotes a scalar, doubling any interior <c>'</c> per YAML's own escape for it - the inverse of <see cref="StripYamlQuotes"/>'s single-quote branch.</summary>
+    private static string QuoteScalar(string value) => $"'{value.Replace("'", "''")}'";
+
+    /// <summary>
+    /// Looks up one top-level frontmatter field by key, case-insensitively. Fails, naming the key,
+    /// if it was written more than once — Team's shallow parser keeps every occurrence in file
+    /// order with no de-duplication, so a repeat can only be an authoring mistake, never a silent
+    /// "last one wins".
+    /// </summary>
+    private static bool TryGetField(
+        IReadOnlyList<PersonaFrontmatterField> fields,
+        string key,
+        out string? value,
+        out string error)
+    {
+        value = null;
+        var found = false;
+
+        foreach (var field in fields)
+        {
+            if (!string.Equals(field.Key, key, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (found)
+            {
+                value = null;
+                error = $"Persona frontmatter has a duplicate '{key}' field.";
+                return false;
+            }
+
+            value = field.Value;
+            found = true;
+        }
+
+        error = string.Empty;
+        return true;
+    }
+
+    /// <summary>
+    /// Requires a field's raw value to be present and non-blank. Missing, empty and
+    /// whitespace-only are all the same failure — a required field with nothing meaningful in it —
+    /// and are reported alike, naming <paramref name="fieldName"/>.
+    /// </summary>
+    private static bool TryRequireNonBlank(
+        string? rawValue,
+        string fieldName,
+        [NotNullWhen(true)] out string? value,
+        out string error)
+    {
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            value = null;
+            error = $"Persona frontmatter is missing required field '{fieldName}'.";
+            return false;
+        }
+
+        value = rawValue;
+        error = string.Empty;
+        return true;
+    }
+
+    /// <summary>
+    /// Splits an already-parsed <c>Teams</c> value into individual team names. <see cref="Parse"/>
+    /// hands this exactly one line, in one of three shapes: a comma-separated plain scalar (for
+    /// example <c>Business, Household</c>), or a bracketed flow list or a block list, both of which
+    /// <see cref="Parse"/> has already joined with <c>"; "</c> — so splitting on both <c>,</c> and
+    /// <c>;</c> here covers every shape uniformly, and only for this one field: the generic
+    /// <see cref="Parse"/> above never guesses a list from comma content, on purpose. Each item is
+    /// trimmed and empty items are dropped; a name repeated later, compared case-insensitively, is
+    /// collapsed into its first occurrence, so the list carries no duplicates, but order among the
+    /// surviving items is otherwise preserved. Returns an empty list, never <see langword="null"/>,
+    /// for a missing or blank field.
+    /// </summary>
+    private static List<string> SplitTeams(string? rawTeams)
+    {
+        if (string.IsNullOrWhiteSpace(rawTeams))
+        {
+            return [];
+        }
+
+        var teams = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var rawTeam in rawTeams.Split([',', ';']))
+        {
+            var team = rawTeam.Trim();
+            if (team.Length > 0 && seen.Add(team))
+            {
+                teams.Add(team);
+            }
+        }
+
+        return teams;
     }
 
     /// <summary>

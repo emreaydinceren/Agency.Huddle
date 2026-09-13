@@ -28,19 +28,31 @@ public sealed partial class ChatService
     private readonly ITeamDirectory teamDirectory;
     private readonly IChatStore store;
     private readonly RoomEvents events;
+    private readonly IMentionAliasSource aliasSource;
     private readonly ILogger<ChatService> logger;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> postLocks = new(StringComparer.Ordinal);
 
-    public ChatService(ITeamDirectory teamDirectory, IChatStore store, RoomEvents events, ILogger<ChatService> logger)
+    /// <param name="teamDirectory">The Team's Users and Rooms.</param>
+    /// <param name="store">Where a posted Message's transcript is appended.</param>
+    /// <param name="events">The hub a posted Message or a Room change is published on.</param>
+    /// <param name="aliasSource">
+    /// Every Persona's Alias, library-wide - folded into <see cref="MentionParser"/>'s candidate list
+    /// at <see cref="PostAsync"/>, and consulted by <see cref="InviteAsync"/> when a typed handle does
+    /// not match any Name directly.
+    /// </param>
+    /// <param name="logger">Used to log Room creation and Invitation events.</param>
+    public ChatService(ITeamDirectory teamDirectory, IChatStore store, RoomEvents events, IMentionAliasSource aliasSource, ILogger<ChatService> logger)
     {
         ArgumentNullException.ThrowIfNull(teamDirectory);
         ArgumentNullException.ThrowIfNull(store);
         ArgumentNullException.ThrowIfNull(events);
+        ArgumentNullException.ThrowIfNull(aliasSource);
         ArgumentNullException.ThrowIfNull(logger);
 
         this.teamDirectory = teamDirectory;
         this.store = store;
         this.events = events;
+        this.aliasSource = aliasSource;
         this.logger = logger;
     }
 
@@ -66,7 +78,7 @@ public sealed partial class ChatService
         try
         {
             var id = messageId ?? Guid.CreateVersion7().ToString("N");
-            var mentions = MentionParser.Parse(text, members);
+            var mentions = MentionParser.Parse(text, members, this.aliasSource.Aliases);
             var message = new ChatMessage(id, DateTimeOffset.UtcNow, sender.Id, sender.Name, text);
             await this.store.AppendAsync(roomId, message, ct);
             this.events.PublishMessagePosted(new MessagePostedEvent(room, message, members, mentions));
@@ -172,6 +184,21 @@ public sealed partial class ChatService
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
 
         var user = await this.teamDirectory.FindUserByNameAsync(agentName, ct);
+        if (user is null || user.Kind != UserKind.Agent)
+        {
+            // agentName may be a Persona's Alias rather than its Name - docs/agencyteam/traps.md is
+            // explicit that anything resolving a typed Name must resolve it against the Members (or
+            // here, the Team) rather than reject it outright, and an Alias is just the Persona's
+            // second, shorter spelling of the same identity. PersonaIndex guarantees Aliases are
+            // unique library-wide and never equal a DIFFERENT Persona's Name, so at most one Alias can
+            // match here; resolve it back to the owning Name and retry exactly once.
+            var alias = this.aliasSource.Aliases.FirstOrDefault(a => string.Equals(a.Alias, agentName, StringComparison.OrdinalIgnoreCase));
+            if (alias is not null)
+            {
+                user = await this.teamDirectory.FindUserByNameAsync(alias.Name, ct);
+            }
+        }
+
         if (user is null || user.Kind != UserKind.Agent)
         {
             throw new ChatException(ErrorCodes.BadMessage, $"Unknown agent @{agentName}");

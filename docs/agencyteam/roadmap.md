@@ -81,7 +81,7 @@ Two features with one reason: today an Agent thinking for thirty seconds and an
 Agent that has crashed look identical in the browser. Both show nothing.
 
 **Streaming is mostly built, and costs no protocol bump.** `MessageDelta(RoomId,
-MessageId, Text, IsFinal)` is a real record in `Team.Contracts`, answered with
+MessageId, Text, IsFinal)` is a real record in `Huddle.Contracts`, answered with
 `notSupported` in `AgentConnection`, and `PersonaRunner` already accumulates
 `MessageChunk.Text` — it just withholds everything until `TurnCompleted`. The
 open question is not transport but storage: a Transcript is an append-only JSONL
@@ -101,7 +101,7 @@ added, because each one brings its own ways to be misconfigured.
 ## 4. Stopping a turn
 
 `IAgentSession.CancelAsync` is implemented in `DotAcpAgentSession` and has no
-caller anywhere in `Team.App`. Today the only way to stop a turn in flight is to
+caller anywhere in `Huddle.App`. Today the only way to stop a turn in flight is to
 stop the app.
 
 This is the manual complement to item 2: a cap protects an unattended run, a
@@ -236,7 +236,21 @@ what makes "critique this" reliably produce a critique instead of a rewrite. One
 paragraph of text, no schema. See
 [ADR-0005](../adr/0005-agent-topologies-are-emergent.md).
 
-## 10. Persona frontmatter becomes the Member's identity
+## 10. Persona frontmatter becomes the Member's identity — DELIVERED 2026-09-12
+
+> **Delivered**, together with the Teams concept this item did not cover. What
+> shipped differs from the plan below in one deliberate way, recorded in the
+> [Decision record](decisions.md): the SQLite keying went the **opposite** way
+> from the recommendation in "The open question this item must settle". Keying by
+> filename is only safe while a file's path is immutable, and Team sub-folders
+> make the path something a human is expected to change — so `persona_models` and
+> `persona_efforts` are keyed on the frontmatter `name`, and `PersonaStore.Update`
+> moves both rows when that field is edited. `alias` also shipped as a single
+> required field rather than "one or more" optional handles. The rest of the item
+> — `name` becoming authoritative and excluded from the job description, `title`
+> as an ordinary rendered field, `NameRules` carrying over unchanged,
+> `MentionParser` widening to a candidate set, and no wire change — shipped as
+> written. The text below is kept as the reasoning that produced it.
 
 Today a Member's Name is an accident of storage, not a designed field. `Persona`
 is built as `Path.GetFileNameWithoutExtension(path)`; that string is sent as
@@ -321,7 +335,7 @@ or Effort change already does.
 
 An Agent writes files. `Bash` and `Write` run agent-side against the real disk —
 the Work Dir is not a jail — so a Persona that keeps notes, a memory file, or any
-working document is already doing so today, and `Team.App` never hears about it.
+working document is already doing so today, and `Huddle.App` never hears about it.
 
 That matters because **a session's knowledge of a file is frozen at
 `session/new`.** `Persona.Text` becomes part of the system prompt, and a system
@@ -351,7 +365,7 @@ one of them changes, the system tells that Agent.
 Nothing about the parser needs to move. `PersonaFrontmatter` already reads
 arbitrary top-level fields, block lists included, with no schema — `watches` is
 an ordinary field the same way `consult_when` is, which is also why this lands
-naturally alongside [item 10](#10-persona-frontmatter-becomes-the-members-identity):
+naturally alongside [item 10](#10-persona-frontmatter-becomes-the-members-identity--delivered-2026-09-12):
 both turn frontmatter from prose into a real configuration surface.
 
 **The watcher has a precedent to copy.** `PersonaStore` already runs a debounced
@@ -375,7 +389,7 @@ means the Human sees every notification, in a Room they are already a Member of.
 - **A `FileSystemWatcher` knows *what* changed and *when*, not *who* changed
   it.** There is no OS audit trail here, so the notification can name the file
   and the time and little else. Attribution would need the write to go through
-  something `Team.App` controls — an App Tool for shared memory, say — which is a
+  something `Huddle.App` controls — an App Tool for shared memory, say — which is a
   larger feature and not this one. Resist inventing a `system` sender to carry
   it: `UserKind` is guarded by a SQL `CHECK` constraint that
   [Traps](traps.md) records as needing a fresh database to change.
@@ -418,7 +432,7 @@ is answering.
 
 The mapping is close enough to be unremarkable:
 
-| `Team.Acp.Abstractions` | Agency.NET |
+| `Huddle.Acp.Abstractions` | Agency.NET |
 | --- | --- |
 | `IAgentSession.PromptAsync` | `Agency.Harness.Agent.ChatAsync` |
 | `IAgentSession.Events` | that call's `IAsyncEnumerable<AgentEvent>` |

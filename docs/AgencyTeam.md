@@ -5,13 +5,14 @@ are real Claude agents running as child processes. This page is the hub of its
 documentation: read it whole if you are picking the codebase up cold, then follow
 only the links your task needs.
 
-Applies to the repo as of 2026-09-12: 309 tests passing in `Team.sln` and 251
-in `Team.slnx` (8 more skipped), zero build warnings. **Both solutions have
-tests** — see [Build, test, run](#build-test-run).
+Applies to the repo as of 2026-09-12: one solution, `Huddle.slnx`, holding all
+six projects, builds with zero warnings and its tests pass — see [Build, test,
+run](#build-test-run).
 
-The product is Agency.Huddle, and since 2026-09-12 so is every namespace. The
-projects, assemblies, folders and both solution files are still `Team` — see the
-last rule in [Repository and toolchain rules](#repository-and-toolchain-rules).
+The product is Agency.Huddle, and since 2026-09-12 so is every namespace.
+Projects, assemblies, folders and the solution followed and are now `Huddle.*`
+too — see the last rule in [Repository and toolchain
+rules](#repository-and-toolchain-rules).
 
 It is a proof of concept. Simple over complete, deliberately — do not add
 abstraction layers, retry policies, or configuration surfaces that no current
@@ -35,8 +36,8 @@ question is yours; the cost column is roughly what it will spend.
 | [Language](agencyteam/language.md) | To name something, or write prose or interface copy | ~1.5k |
 | [Code map](agencyteam/code-map.md) | To find which file does a thing | ~1.3k |
 | [Runtime architecture](agencyteam/architecture.md) | To know how a Message actually travels | ~1.1k |
-| **[Rules](agencyteam/rules.md)** | **Before editing anything in `src/Team.App`** | ~2k |
-| **[Traps](agencyteam/traps.md)** | **Before editing `Team.Acp`, `Team.Contracts` or the wire** | ~1k |
+| **[Rules](agencyteam/rules.md)** | **Before editing anything in `src/Huddle.App`** | ~2k |
+| **[Traps](agencyteam/traps.md)** | **Before editing `Huddle.Acp`, `Huddle.Contracts` or the wire** | ~1k |
 | [Testing](agencyteam/testing.md) | To add a test, or to verify what no test can prove | ~1.2k |
 | [Known limits](agencyteam/known-limits.md) | Before "fixing" something that looks missing | ~1.4k |
 | [Roadmap](agencyteam/roadmap.md) | Before work in `PersonaRunner`, `ReplyGate`, `IAgentHostFactory`, Persona frontmatter or `app.css` | ~8.4k |
@@ -53,10 +54,10 @@ into two files is a rule that goes stale in one of them. Follow the link.
 The defined terms, so you can tell whether a word you are about to use is one of
 them without opening [Language](agencyteam/language.md):
 
-> Teammate · Human · Agent · Name · Adapter · Room · Member · Invitation ·
-> Persona · Model · Effort · Turn · App Tool · Reply Gate · Catch-up ·
-> Progressive discovery · Work Dir · Message · Mention · Envelope · Transcript ·
-> Team Directory
+> Teammate · Human · Agent · Name · Alias · Title · Team · Adapter · Room ·
+> Member · Invitation · Persona · Rejected file · Model · Effort · Turn ·
+> App Tool · Reply Gate · Catch-up · Progressive discovery · Work Dir ·
+> Message · Mention · Envelope · Transcript · Team Directory
 
 Words that are *wrong here* and have a right replacement: bot, user, channel,
 direct room, group room, agent session, sandbox, profile, prompt, database.
@@ -102,7 +103,10 @@ lines, and the whole of that rule.
 - Reconnecting under the same name re-attaches to the same **Agent** id.
 - An **Invitation** adds a Member to a Room and renames it after its Agents.
 - A **Persona** brought online registers exactly one **Agent**, with one session
-  spanning every Room that Agent is in.
+  spanning every Room that Agent is in. Its identity is its frontmatter `name`,
+  not its filename and not its folder — a **Team** is a label in its `teams`
+  field, so a Persona may belong to several Teams or none, and moving its file
+  between Team sub-folders changes nothing at all.
 
 Cardinality down the ACP side is 1:1:1:1 — one Persona file produces one runner,
 one session, and one registered identity:
@@ -122,48 +126,46 @@ Nothing here is per-Room. That is exactly why context bleeds between Rooms — s
 
 ## Solution layout
 
-Four projects in `Team.sln` — `Team.Contracts`, `Team.Acp`, `Team.App` and
-`tests/Team.Tests`. `Team.Console` is in `Team.slnx` only, and appears below
-because the dependency arrows do not read correctly without it. Dependencies
-point downward only:
+All six projects live in the one solution, `Huddle.slnx`. Dependencies point
+downward only:
 
 ```text
-Team.App  ────────────┐          Blazor Server: the chat UI, the pipe server,
-   │                  │          the Persona library, the Persona supervisor
-   │                  ↓
-   │            Team.Acp         reusable ACP client: spawns an agent process,
-   │                  ↑          talks JSON-RPC over its stdio, hosts MCP tools
-   ↓                  │
-Team.Contracts   Team.Console    a terminal REPL against one agent — the
-(wire protocol)                  original ACP proof of concept
+Huddle.App    ──────────┐        Blazor Server: the chat UI, the pipe server,
+   │                    │        the Persona library, the Persona supervisor
+   │                    ↓
+   │              Huddle.Acp     reusable ACP client: spawns an agent process,
+   │                    ↑        talks JSON-RPC over its stdio, hosts MCP tools
+   ↓                    │
+Huddle.Contracts   Huddle.Console  a terminal REPL against one agent — the
+(wire protocol)                    original ACP proof of concept
 ```
 
-- **`Team.Contracts`** — the named-pipe wire protocol. Records and JSON only, no
+- **`Huddle.Contracts`** — the named-pipe wire protocol. Records and JSON only, no
   behaviour. Both the app and any external client depend on it.
-- **`Team.Acp`** — knows nothing about chat. Given a command line it starts an
+- **`Huddle.Acp`** — knows nothing about chat. Given a command line it starts an
   agent process, opens a session, streams events, and can expose your own C#
   methods to the model as MCP tools.
-- **`Team.App`** — the application. Depends on both.
-- **`Team.Console`** — a separate, standalone REPL. **Not part of the chat app.**
+- **`Huddle.App`** — the application. Depends on both.
+- **`Huddle.Console`** — a separate, standalone REPL. **Not part of the chat app.**
 
 **Project names and namespaces differ, deliberately.** Every project, assembly,
-folder and solution file is still `Team.*`; every namespace inside them is
-`Agency.Huddle.*`. The project `Team.Acp` builds `Team.Acp.dll` and declares
+folder and the solution file are `Huddle.*`; every namespace inside them is
+`Agency.Huddle.*`. The project `Huddle.Acp` builds `Huddle.Acp.dll` and declares
 `Agency.Huddle.Acp`. The two are independent in .NET; `<RootNamespace>` in each
 of the six `.csproj` files is what carries the split, and `AcpReferenceTests`
 pins the assembly name so the project side cannot drift by accident.
 
 > [!NOTE]
-> `src/Team.Console`, `tests/Team.Acp.Tests`, `tools/acp` and `Team.slnx` were
-> historically owned by a parallel effort. Expect them to change under you; do
-> not edit them without a reason.
+> `src/Huddle.Console`, `tests/Huddle.Acp.Tests` and `tools/acp` are owned by a
+> parallel effort. Expect them to change under you; do not edit them without a
+> reason. The solution file, `Huddle.slnx`, is shared by both efforts.
 
 ### Two bounded contexts
 
-The vocabulary in [Language](agencyteam/language.md) governs **`Team.App`**
-and **`Team.Contracts`** only.
+The vocabulary in [Language](agencyteam/language.md) governs **`Huddle.App`**
+and **`Huddle.Contracts`** only.
 
-**`Team.Acp` uses ACP's own words and is deliberately untouched by the
+**`Huddle.Acp` uses ACP's own words and is deliberately untouched by the
 *vocabulary* rename.** The 2026-09-12 *namespace* rename did reach it — it
 declares `Agency.Huddle.Acp` now — but that moved the namespace root only, and
 not one type name. ACP is the *Agent Client Protocol*, so `IAgentHost`,
@@ -173,7 +175,7 @@ chat. Pushing Team's vocabulary into it would break the layering the dependency
 arrows exist to protect.
 
 The boundary holds empirically: there are zero occurrences of chat vocabulary in
-`Team.Acp`, `Team.Console` or `tests/Team.Acp.Tests`.
+`Huddle.Acp`, `Huddle.Console` or `tests/Huddle.Acp.Tests`.
 
 ## Configuration
 
@@ -190,7 +192,7 @@ All under the `Team:` section — `TeamOptions.cs` and `Acp/AcpOptions.cs`.
 | `Acp:Command` | `node` | |
 | `Acp:AdapterPath` | `null` | Otherwise located by probing upward. |
 | `Acp:Args` | `null` | |
-| `Acp:PersonaDir` | `personas` | Relative to `DataDir`. |
+| `Acp:TeamsDir` | `Teams` | Relative to `DataDir`. Scanned recursively — sub-folders are organisational only; Team membership comes from each Persona's `teams` frontmatter field, not its location. Setting the old `Acp:PersonaDir` key throws at startup rather than silently scanning nothing. |
 | `Acp:WorkDir` | `work` | One subdirectory per Persona. Relative to `DataDir`. |
 | `Acp:TraceWire` | `false` | **Dumps the bearer token.** Debugging only. |
 | `Acp:CatchUpMessages` | `20` | Per-Room catch-up buffer size. |
@@ -204,25 +206,19 @@ everything in the table above stays under `Team:`. See
 ## Build, test, run
 
 ```powershell
-dotnet build Team.sln          # must be 0 warnings
-dotnet build Team.slnx         # must be 0 warnings
-dotnet test  Team.sln --       # 309 passing, no tokens spent
-dotnet test  Team.slnx --      # 251 passing, 8 E2E skipped
-dotnet run --project src/Team.App --urls http://localhost:5100
+dotnet build Huddle.slnx                             # must be 0 warnings
+dotnet test  Huddle.slnx --                          # 8 E2E tests skipped when Acp:Enabled is off
+dotnet run --project src/Huddle.App --urls http://localhost:5100
 ```
 
 > [!IMPORTANT]
-> Two ways to skip tests without noticing, both of which look like success.
->
-> **`Team.sln` does not contain `tests/Team.Acp.Tests`** — that project is in
-> `Team.slnx`, along with `Team.Acp` and `Team.Console`. Testing only `Team.sln`
-> leaves the whole ACP client unverified. Run both.
+> One thing about this is easy to get wrong, and one is easy to overpay for.
 >
 > **The trailing `--` is required.** Without it, `dotnet test` exits code 5 with
 > "Zero tests ran" — a Microsoft Testing Platform CLI quirk under this SDK. It
 > reads as a no-op, not as a failure.
 >
-> Only the `E2E/` folder of `Team.Acp.Tests` spends money, and it is gated on
+> Only the `E2E/` folder of `Huddle.Acp.Tests` spends money, and it is gated on
 > `TEAM_E2E=1`. Leave that unset and the whole suite is free.
 
 Development configuration sets `Acp:Enabled: true`, so `dotnet run` starts one
@@ -231,7 +227,7 @@ without that:
 
 ```powershell
 $env:Team__Acp__Enabled = 'false'
-dotnet run --project src/Team.App --urls http://localhost:5100
+dotnet run --project src/Huddle.App --urls http://localhost:5100
 ```
 
 Open `http://localhost:5100`. Two Rooms, `echo` and `alpha`, are already there,
@@ -263,4 +259,4 @@ These four apply to every change, which is why they are here rather than in
 | **Warnings are errors.** | Inherited from the root build props. Watch for CA1859 (return concrete types) and CA1305 (culture). |
 | **Tests are xunit v3 under the Microsoft Testing Platform runner.** | Selected in `global.json`, required on .NET 10. |
 | **Trust the compiler, not the editor.** | The IDE language server reports large numbers of phantom errors in this repo. If `dotnet build` is clean, the code is fine. |
-| **The product is Agency.Huddle; the code is `Team`. Never rename `mcp__team__` or the `Team:` config root to match.** | The tool prefix is model-facing prompt text in 12 code files and every persona, and a test pins it — a model never sees it as a brand. The config root is a breaking change for any running install. Namespaces were the separate question, and on 2026-09-12 they moved to `Agency.Huddle.*` — the wire derived nothing from them, and both suites passed unchanged. Projects, assemblies and solution files did not move. See the [Decision record](agencyteam/decisions.md). |
+| **The product is Agency.Huddle. Two identifiers still carry the old code name `Team` and must never be renamed to match: the `mcp__team__` tool prefix and the `Team:` config root.** | The tool prefix is model-facing prompt text in 12 code files and every persona, and a test pins it — a model never sees it as a brand. The config root is a breaking change for any running install. Namespaces were the separate question, and on 2026-09-12 they moved to `Agency.Huddle.*` — the wire derived nothing from them, and both suites passed unchanged. Projects, assemblies, folders and the solution followed afterward and are now `Huddle.*` too; only those two identifiers and the domain vocabulary (Teammate, Team Directory, `team.db`, the `team` pipe name) still say `Team`. See the [Decision record](agencyteam/decisions.md). |

@@ -42,17 +42,22 @@ Three entries have since been planned; each one says so and names its
 - **More than one Human.** The data model allows it; the seeding and UI do not.
   When it arrives, `/teammates` is already named correctly for it — add a filter
   toggle rather than a second page.
-- **Renaming a Teammate.** The card fixes the Name once a Persona exists. A rename
-  is a file rename *and* a re-registration under a new identity on the pipe, with
-  the old Agent, its Rooms and its Transcripts left behind — the same
-  no-cascade decision as removal. Now planned — [Roadmap](roadmap.md) items 1 and
-  10; item 10 is the cheaper half, making a rename an edit to one frontmatter
-  field rather than a file rename and a new pipe identity.
+- **Renaming a Teammate is now an edit to one frontmatter field**, not a file
+  rename — [Roadmap](roadmap.md) item 10 delivered that half. `PersonaStore.Update`
+  moves the Model and Effort rows to the new Name. What remains is the
+  no-cascade half, unchanged and deliberate: the old Agent, its Rooms and its
+  Transcripts stay behind under the old Name, so a rename leaves a ghost in the
+  Team Directory. That is [Roadmap](roadmap.md) item 1's to solve. The card also
+  still exposes a rename only by editing the raw file, not as its own action.
 - **Windows reserved device names are accepted as Names.** `CON`, `NUL`, `COM1`
   pass `NameRules` and become `CON.md`, which Windows will not create. Pre-dates
   the space change and is not guarded against.
 - **Two Members whose Names differ only in case** resolve to whichever the
-  longest-first ordering reaches first. Nothing prevents the collision today.
+  longest-first ordering reaches first. `PersonaIndex` now prevents this between
+  two *Personas* — `Jarvis` and `jarvis` are a case-insensitive collision and
+  both files are rejected — but Members are not only Personas. Two raw pipe
+  clients, or a pipe client and a Persona, can still register Names differing
+  only in case, and nothing catches that.
 - **The Model is per Persona.** Not per Room, not per Turn, and not switchable
   on a running session.
 - **No live mid-session Effort switching.** Restart-on-change is the only
@@ -76,7 +81,7 @@ Three entries have since been planned; each one says so and names its
 - **Known flake, pre-existing:** `PersonaSupervisorTests.Shutdown_DisposesEveryHost`
   fails roughly one run in four, always on a slow run — its 10-second token races
   `WaitUntilAsync`. It is a timing bug in the test, not in `PersonaSupervisor`.
-- **Second known flake, pre-existing:** a test in `Team.Acp.Tests` fails roughly
+- **Second known flake, pre-existing:** a test in `Huddle.Acp.Tests` fails roughly
   one run in five and passes on rerun —
   `PromptAsync_StreamsChunksInOrder_ThenTurnCompleted` is the one seen by name, a
   timing race in event ordering over the fake transport. Seen from two separate

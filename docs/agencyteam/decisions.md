@@ -1,12 +1,82 @@
 # Decision record
 
-Five dated entries from 2026-09-11, newest first, each recording what changed
-and — more usefully — what was considered and rejected. Read it when you are
+Seven dated entries from 2026-09-11 onward, newest first, each recording what
+changed and — more usefully — what was considered and rejected. Read it when you are
 about to revisit a decision, or when an older Markdown file in this repo
 disagrees with current vocabulary and you need the old-to-new mapping.
 
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
+
+**2026-09-12 — a Persona's identity moves into its frontmatter, and Teams
+become a field.**
+
+The `personas/` folder became `Teams/`, enumerated recursively, and a Persona's
+Name stopped being its filename. `name`, `title` and `alias` are now required
+frontmatter; `teams` is optional. This is [Roadmap](roadmap.md) item 10,
+delivered, plus the Teams concept item 10 did not cover.
+
+**Team membership is a field, not a folder.** Sub-folders under `Teams/` exist
+purely so a human can file things, and the code reads no meaning into them at
+all — a Persona in `Teams/Household/` whose frontmatter says `teams: Business`
+is on the Business team, and moving that file changes nothing. The alternative,
+folder-as-team, was rejected on two counts: a Teammate could then only belong to
+one Team, and renaming a folder would silently re-home everyone inside it.
+
+**The SQLite keying went the opposite way from item 10's own recommendation,
+for a reason item 10 did not have.** Item 10 recommended keeping
+`persona_models` and `persona_efforts` keyed by *filename*, treated as a stable
+internal id, so that editing `name:` would cost nothing. That reasoning holds
+only while a file's path is immutable. Once Team sub-folders exist, the path is
+something a human is *expected* to change, and a path-derived key would turn a
+filing decision into a silent identity change — the exact no-op this feature
+promises. Keying on the frontmatter `name` instead makes the move free and needs
+no schema change, since `PRIMARY KEY(persona_name) COLLATE NOCASE` was already
+the right comparison for a display Name. The accepted cost is the one item 10
+was trying to avoid: editing `name:` is a rename, and `Update` has to move both
+rows by hand or the Teammate silently loses its Model.
+
+**Both sides of a collision are rejected, not one winner.** Two Personas sharing
+a Name or an Alias, or one Alias equalling another's Name, takes out every file
+involved. "First one wins" was rejected because the loser then cannot be fixed
+by editing it — the edit simply does nothing, with no feedback anywhere. Loud
+beats tidy. Comparison is case-insensitive to match `COLLATE NOCASE` and
+`MentionParser`, which also closed the `Jarvis`/`jarvis` collision
+[Known limits](known-limits.md) had recorded as unprevented between Personas.
+
+**Required fields replaced "no schema, ever".** `PersonaStore`'s docstring used
+to promise a plain-prose file with no frontmatter would work. That promise is
+gone: identity has to come from somewhere, and a file that cannot supply it is
+now a rejected file, listed on `/teammates` with its path and reason. Silently
+ignoring it was rejected — a Teammate that does not appear, for no visible
+reason, is the worst version of this.
+
+**`alias` being required was challenged during the build and confirmed.** The
+case against: `name` and `title` are obviously required, but a required `alias`
+forces a handle to be invented for every Persona and creates a second namespace
+that has to stay collision-free against every Name forever — all for
+convenience, when `@Jarvis` already works. Making it optional, and unique only
+when present, was one line. The repo owner kept it required. Treat this as settled
+rather than an oversight; the migration script suggests a collision-free alias
+per file precisely because the field cannot be left empty.
+
+**`Title`/`Alias`/`Teams` were deliberately kept OFF the `Persona` record.** They
+live only in `PersonaIndex`. `Persona.Text` already contains them, so
+`PersonaSupervisor`'s whole-record value-equality diff still restarts a session
+when any of them changes, without anyone having to remember to extend a
+comparison — and `PersonaRunner`, `DotAcpAgentHostFactory` and
+`SystemPromptComposer` needed no changes at all.
+
+**Splitting `teams` on commas is done at the consumer, never in the parser.**
+`PersonaFrontmatter` still refuses to read a comma-separated scalar as a list,
+because `role: 'Router, triage, and cross-workstation continuity'` is real and
+splitting it would shred a sentence into fields. Only the `teams` key is split,
+after the generic parse. The accepted cost: a Team name can never contain a
+comma.
+
+**The wire did not change.** `Hello(Name, Description)` keeps its shape and
+`ProtocolVersion.Current` stays `2`; only where the `Name` value comes from
+moved.
 
 **2026-09-12 — the product is Agency.Huddle; the code stays `Team`.**
 
@@ -45,14 +115,15 @@ root is now `Agency.Huddle.*` across all six projects. The wire derived nothing
 from them — every discriminator is a string literal — and the predicted
 verification held exactly: warnings-as-errors gave a 0-warning rebuild of both
 solutions, and both suites passed unchanged at 309 and 251 (8 E2E skipped).
-Projects, assemblies, folders and the two solution files stay `Team.*`;
-`<RootNamespace>` in each `.csproj` carries the split, and `AcpReferenceTests`
-pins the assembly name.
+Projects, assemblies, folders and the two solution files stayed `Team.*` at the
+time; `<RootNamespace>` in each `.csproj` carried the split, and
+`AcpReferenceTests` pinned the assembly name. They were renamed to `Huddle.*`
+afterward, and the two solutions were collapsed into the single `Huddle.slnx`.
 
 Two things the rename did cost, neither of which the compiler could see. The
 `Logging:LogLevel` filters are category prefixes and had to move with the
 namespaces or degrade silently — see [Traps](traps.md). And the open argument
-from the original entry survives: `Team.Acp` is a chat-agnostic library that
+from the original entry survives: `Huddle.Acp` is a chat-agnostic library that
 arguably should not carry the product's name. It was renamed with the rest for
 consistency inside one solution; reversing that root alone stays a
 self-contained change if the library is ever extracted.
@@ -137,7 +208,7 @@ comes back as ordinary tool error text. The label is now
 `[Room: name (id: …)]`, and `get_help` says that is where a room id comes from.
 
 **The wire did not change.** `ProtocolVersion.Current` stays `2`. App Tools are
-settled between `Team.App` and the adapter over MCP; the pipe never learns a tool
+settled between `Huddle.App` and the adapter over MCP; the pipe never learns a tool
 exists.
 
 **2026-09-11 — a Persona chooses its Model, and the list is discovered.**
@@ -188,7 +259,7 @@ that actually mattered survives intact: it still has no reference to
 or Transcripts.
 
 **The wire did not change.** `ProtocolVersion.Current` stays `2`. Nothing about a
-Model crosses the pipe — it is settled between `Team.App` and the adapter over
+Model crosses the pipe — it is settled between `Huddle.App` and the adapter over
 ACP, and the chat surface never learns what is behind an Agent.
 
 **2026-09-11 — a Name is a display name, and the card that shows it.**
@@ -276,7 +347,7 @@ The wire and the database changed with the code: `welcome.botId` is now
 `ProtocolVersion.Current` went from `1` to `2`. Existing `App_Data` was discarded
 rather than migrated.
 
-Two things were deliberately left alone. **`Team.Acp` keeps ACP's vocabulary**,
+Two things were deliberately left alone. **`Huddle.Acp` keeps ACP's vocabulary**,
 for the reason given in [Two bounded contexts](../AgencyTeam.md#two-bounded-contexts). And
 **`tools/echo-bot.ps1` keeps its filename**, because it is referenced by path from
 documents that are not being edited; a file path is not vocabulary.

@@ -19,11 +19,11 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     public string PipeName { get; } = "team-test-" + Guid.NewGuid().ToString("N");
 
     /// <summary>
-    /// The Persona Library directory this factory's data dir resolves to, matching
-    /// <see cref="Agency.Huddle.App.Acp.AcpOptions"/>'s default <c>PersonaDir</c> ("personas"), which is never
+    /// The Team Library directory this factory's data dir resolves to, matching
+    /// <see cref="Agency.Huddle.App.Acp.AcpOptions"/>'s default <c>TeamsDir</c> ("Teams"), which is never
     /// overridden by <see cref="ConfigureWebHost"/>. Tests use this to seed Persona files directly.
     /// </summary>
-    public string PersonaDirPath => Path.Combine(this.dataDir.Path, "personas");
+    public string TeamsDirPath => Path.Combine(this.dataDir.Path, "Teams");
 
     /// <summary>
     /// The <see cref="IModelCatalog"/> this factory wires in place of the real

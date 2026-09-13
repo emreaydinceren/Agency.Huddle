@@ -1,19 +1,21 @@
 # Agency.Huddle
 
-The product is **Agency.Huddle**. The code is **`Team`**. Two identifiers must not be
-renamed to match the brand: the `mcp__team__` tool prefix (model-facing prompt text
-in 12 code files and every persona; a test pins it; no brand benefit) and the
-`Team:` config root (a breaking change for any running install). Namespaces were
-the separate, compiler-verified decision: they moved to `Agency.Huddle.*` on
-2026-09-12. Projects, assemblies, folders and both solution files did not move,
-so `Team.App` the project declares `Agency.Huddle.App`.
+The product is **Agency.Huddle**. Two identifiers still carry the old code name
+`Team` and must not be renamed to match the brand: the `mcp__team__` tool prefix
+(model-facing prompt text in 12 code files and every persona; a test pins it; no
+brand benefit) and the `Team:` config root (a breaking change for any running
+install). Everything else moved: namespaces moved to `Agency.Huddle.*` on
+2026-09-12 — the separate, compiler-verified decision — and projects, assemblies,
+folders and the solution followed, so the project `Huddle.App` declares
+`Agency.Huddle.App`, and the two former solution files are now the single
+`Huddle.slnx` at the repo root.
 
 ## Orientation
 
 `docs/AgencyTeam.md` is the source of truth for the chat surface. It is a hub:
 read it, then follow only the rows in its map that your task needs. Two of those
-pages are binding — `docs/agencyteam/rules.md` before editing `src/Team.App`,
-and `docs/agencyteam/traps.md` before touching `Team.Acp`, `Team.Contracts` or
+pages are binding — `docs/agencyteam/rules.md` before editing `src/Huddle.App`,
+and `docs/agencyteam/traps.md` before touching `Huddle.Acp`, `Huddle.Contracts` or
 the wire protocol.
 
 Do **not** orient from `README.md`. It belongs to the ACP effort, and its chat
@@ -22,14 +24,14 @@ functional" and links a spec that no longer exists.
 
 ## Two projects, one build root
 
-Independently owned; neither side edits the other's subtree, and root files are
-shared — announce changes before making them.
+Both efforts build from the single solution `Huddle.slnx` at the repo root.
+Beyond that they are independently owned; neither side edits the other's
+subtree, and root files are shared — announce changes before making them.
 
 | | ACP effort | Chat surface |
 | --- | --- | --- |
-| Solution | `Team.slnx` | `Team.sln` |
-| Source | `src/Team.Acp`, `src/Team.Console` | `src/Team.App`, `src/Team.Contracts` |
-| Tests | `tests/Team.Acp.Tests` | `tests/Team.Tests` |
+| Source | `src/Huddle.Acp`, `src/Huddle.Console` | `src/Huddle.App`, `src/Huddle.Contracts` |
+| Tests | `tests/Huddle.Acp.Tests` | `tests/Huddle.Tests` |
 | Docs | `docs/acp/**`, `README.md` | `docs/AgencyTeam.md`, `docs/agencyteam/**`, `docs/adr/**` |
 
 ## C# code
@@ -41,12 +43,12 @@ C# write or edit.
 
 Warnings are errors and nullable is on (`Directory.Build.props`). Package versions
 live only in `Directory.Packages.props` — a `Version` on a `PackageReference` is an
-error. Both solutions have tests, and the trailing `--` is required or the run
+error. The solution has tests, and the trailing `--` is required or the run
 reports "Zero tests ran" and reads as a no-op:
 
 ```powershell
-dotnet build Team.sln && dotnet build Team.slnx
-dotnet test  Team.sln -- && dotnet test Team.slnx --
+dotnet build Huddle.slnx
+dotnet test  Huddle.slnx --
 ```
 
 ## CI

@@ -287,6 +287,42 @@ public sealed class ChatServiceTests
         Assert.Equal(3, members.Count);
     }
 
+    /// <summary>
+    /// Phase 4: <c>/invite</c> resolves a Persona's Alias the same way <see cref="MentionParser"/>
+    /// does. <see cref="ChatService.InviteAsync"/> only reaches its Alias fallback after
+    /// <see cref="ITeamDirectory.FindUserByNameAsync"/> misses on the typed handle, so this proves the
+    /// whole path end to end - the fallback firing, resolving to the real Name, and adding the right
+    /// Agent to the Room - rather than just the fallback's own resolution logic in isolation.
+    /// </summary>
+    [Fact]
+    public async Task Submit_Invite_ByAlias_ResolvesToTheOwningAgent()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        var jarvis = await directory.UpsertAgentUserAsync("Jarvis", null, ct);
+        Assert.NotNull(echo);
+        Assert.NotNull(jarvis);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
+        var (service, events) = CreateService(dir, directory, [new MentionAlias("jar", "Jarvis")]);
+        var roomsChangedCount = 0;
+        events.RoomsChanged += () => roomsChangedCount++;
+
+        var result = await service.SubmitFromComposerAsync(room.Id, KnownIds.Human, "/invite @jar", ct);
+
+        Assert.Null(result.Posted);
+        Assert.NotNull(result.Info);
+        var members = await directory.GetRoomMembersAsync(room.Id, ct);
+        Assert.Equal(3, members.Count);
+        Assert.Contains(members, m => m.Id == jarvis.Id);
+        var updatedRoom = await directory.GetRoomAsync(room.Id, ct);
+        Assert.NotNull(updatedRoom);
+        Assert.Equal("echo, Jarvis", updatedRoom.Name);
+        Assert.Equal(1, roomsChangedCount);
+    }
+
     [Fact]
     public async Task Submit_Invite_UnknownAgent_ThrowsBadMessage()
     {
@@ -442,11 +478,13 @@ public sealed class ChatServiceTests
         Assert.Contains("select at least one agent", exception.Message, StringComparison.Ordinal);
     }
 
-    private static (ChatService Service, RoomEvents Events) CreateService(TempDataDir dir, ITeamDirectory directory)
+    private static (ChatService Service, RoomEvents Events) CreateService(
+        TempDataDir dir, ITeamDirectory directory, IReadOnlyList<MentionAlias>? aliases = null)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var service = new ChatService(directory, store, events, NullLogger<ChatService>.Instance);
+        var aliasSource = new FakeMentionAliasSource { Aliases = aliases ?? [] };
+        var service = new ChatService(directory, store, events, aliasSource, NullLogger<ChatService>.Instance);
         return (service, events);
     }
 }

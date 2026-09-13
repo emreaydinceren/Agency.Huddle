@@ -7,7 +7,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
 /// <summary>Creates a Room containing the calling Agent, the Human, and the named agents.</summary>
-internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirectory, string callerAgentId) : IAppTool
+internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirectory, string callerAgentId, IMentionAliasSource aliasSource) : IAppTool
 {
     public string Name => "create_room";
 
@@ -46,11 +46,27 @@ internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirect
             return "Every entry in 'agents' must be a non-empty agent name.";
         }
 
+        // Alias-aware, matching ChatService.InviteAsync: PersonaFrontmatter.ComposeJobDescription
+        // deliberately keeps a Persona's Alias visible in list_agents' job description precisely so a
+        // reading agent learns "@jar" is a working handle for "Jarvis" - rejecting that same handle
+        // here would make the tool contradict what it just told the model. Each entry in 'agents' is
+        // a complete JSON string the model filled in, never carved out of free text by a pattern, so
+        // resolving it is a plain lookup, not the truncation-prone parsing docs/agencyteam/traps.md
+        // warns about.
         var agentIds = new List<string> { callerAgentId };
         var unknown = new List<string>();
         foreach (var name in names)
         {
             var user = await teamDirectory.FindUserByNameAsync(name!, cancellationToken);
+            if (user is null || user.Kind != UserKind.Agent)
+            {
+                var alias = aliasSource.Aliases.FirstOrDefault(a => string.Equals(a.Alias, name, StringComparison.OrdinalIgnoreCase));
+                if (alias is not null)
+                {
+                    user = await teamDirectory.FindUserByNameAsync(alias.Name, cancellationToken);
+                }
+            }
+
             if (user is null || user.Kind != UserKind.Agent)
             {
                 unknown.Add(name!);

@@ -21,16 +21,17 @@ public sealed class GetHelpToolTests
         using var dir = new TempDataDir();
         var directory = new SqliteTeamDirectory(dir.Options());
         await directory.InitializeAsync("You", ct);
-        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()));
+        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        var chat = new ChatService(directory, store, events, NullLogger<ChatService>.Instance);
+        var aliasSource = new FakeMentionAliasSource();
+        var chat = new ChatService(directory, store, events, aliasSource, NullLogger<ChatService>.Instance);
 
         IAppTool[] others =
         [
             new ListAgentsTool(directory, new FakeAgentGateway(), personaStore),
-            new CreateRoomTool(chat, directory, "caller-id"),
-            new InviteAgentTool(chat, directory),
+            new CreateRoomTool(chat, directory, "caller-id", aliasSource),
+            new InviteAgentTool(chat, directory, aliasSource),
             new PostMessageTool(chat, "caller-id"),
         ];
         var tool = new GetHelpTool(others);
@@ -73,7 +74,7 @@ public sealed class GetHelpToolTests
         // Agent is told exists: the tool server was handed a fixed set at the same moment.
         using var dir = new TempDataDir();
         var directory = new SqliteTeamDirectory(dir.Options());
-        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()));
+        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         others.Add(new ListAgentsTool(directory, new FakeAgentGateway(), personaStore));
 
         var help = await tool.InvokeAsync(new JsonObject(), ct);

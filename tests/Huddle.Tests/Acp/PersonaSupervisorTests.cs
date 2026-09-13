@@ -29,7 +29,11 @@ public sealed class PersonaSupervisorTests
         var options = dataDir.Options();
         WritePersonaFile(options.Value, "nova");
 
-        using var personaStore = new PersonaStore(options, new Agency.Huddle.App.Data.PersonaModelStore(options), new Agency.Huddle.App.Data.PersonaEffortStore(options));
+        using var personaStore = new PersonaStore(
+            options,
+            new Agency.Huddle.App.Data.PersonaModelStore(options),
+            new Agency.Huddle.App.Data.PersonaEffortStore(options),
+            NullLogger<PersonaStore>.Instance);
         var factory = new FakeAgentHostFactory();
         using var supervisor = new PersonaSupervisor(options, personaStore, factory, NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
@@ -82,7 +86,7 @@ public sealed class PersonaSupervisorTests
         await supervisor.StartAsync(ct);
         Assert.Equal(0, supervisor.RunningHostCount);
 
-        personaStore.Add("nova", "You are Nova.");
+        personaStore.Add(Identity("nova"), "You are Nova.");
 
         await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
         await supervisor.StopAsync(ct);
@@ -104,7 +108,7 @@ public sealed class PersonaSupervisorTests
         var factory = new FakeAgentHostFactory();
         using var supervisor = new PersonaSupervisor(options, personaStore, factory, NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
-        personaStore.Add("nova", "You are Nova.", "claude-opus-4");
+        personaStore.Add(Identity("nova"), "You are Nova.", "claude-opus-4");
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
@@ -135,7 +139,7 @@ public sealed class PersonaSupervisorTests
         var factory = new FakeAgentHostFactory();
         using var supervisor = new PersonaSupervisor(options, personaStore, factory, NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
-        personaStore.Add("nova", "You are Nova.", "claude-opus-4", "high");
+        personaStore.Add(Identity("nova"), "You are Nova.", "claude-opus-4", "high");
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
@@ -221,8 +225,8 @@ public sealed class PersonaSupervisorTests
 
         // Two personas, so removing one has something to leave alone: "zeta" proves the
         // supervisor stops only the removed persona's host, not every host it manages.
-        personaStore.Add("nova", "You are Nova.");
-        personaStore.Add("zeta", "You are Zeta.");
+        personaStore.Add(Identity("nova"), "You are Nova.");
+        personaStore.Add(Identity("zeta"), "You are Zeta.");
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => supervisor.RunningHostCount >= 2, ct);
         var novaId = await WaitForAgentOnlineAsync(directory, gateway, "nova", ct);
@@ -260,18 +264,18 @@ public sealed class PersonaSupervisorTests
         var factory = new FakeAgentHostFactory();
         using var supervisor = new PersonaSupervisor(options, personaStore, factory, NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
-        personaStore.Add("nova", "You are Nova.");
+        personaStore.Add(Identity("nova"), "You are Nova.");
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
 
-        personaStore.Update("nova", "You are a changed Nova.", model: null, effort: null);
+        personaStore.Update("nova", PersonaText("nova", "You are a changed Nova."), model: null, effort: null);
 
         await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
         await supervisor.StopAsync(ct);
 
         Assert.Equal(2, factory.Calls.Count);
         Assert.All(factory.Calls, call => Assert.Equal("nova", call.Persona.Name));
-        Assert.Equal("You are a changed Nova.", factory.Calls[^1].Persona.Text);
+        Assert.Equal(PersonaText("nova", "You are a changed Nova."), factory.Calls[^1].Persona.Text);
     }
 
     [Fact]
@@ -290,18 +294,18 @@ public sealed class PersonaSupervisorTests
         var factory = new FakeAgentHostFactory();
         using var supervisor = new PersonaSupervisor(options, personaStore, factory, NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
-        personaStore.Add("nova", "You are Nova.", "a");
+        personaStore.Add(Identity("nova"), "You are Nova.", "a");
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
 
-        personaStore.Update("nova", "You are Nova.", "b", effort: null);
+        personaStore.Update("nova", PersonaText("nova", "You are Nova."), "b", effort: null);
 
         await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
         await supervisor.StopAsync(ct);
 
         Assert.Equal(2, factory.Calls.Count);
         Assert.Equal("b", factory.Calls[^1].Persona.Model);
-        Assert.Equal("You are Nova.", factory.Calls[^1].Persona.Text);
+        Assert.Equal(PersonaText("nova", "You are Nova."), factory.Calls[^1].Persona.Text);
     }
 
     [Fact]
@@ -323,7 +327,7 @@ public sealed class PersonaSupervisorTests
 
         // Adding an unrelated Persona raises PersonasChanged without touching "zeta"'s file, which
         // is exactly the shape of event a debounced watcher can deliver after a no-op save.
-        personaStore.Add("other", "You are Other.");
+        personaStore.Add(Identity("other"), "You are Other.");
         await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
 
         // Bounded grace period: prove no further, unwanted restart of "zeta" happens.
@@ -346,18 +350,23 @@ public sealed class PersonaSupervisorTests
         var factory = new FakeAgentHostFactory();
         using var supervisor = new PersonaSupervisor(options, personaStore, factory, NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
-        personaStore.Add("zeta", "You are a persona.", "a");
+        personaStore.Add(Identity("zeta"), "You are a persona.", "a");
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
 
         // Same text AND same model: PersonasChanged still fires (Update always raises it), but
-        // there is nothing for the supervisor to act on.
-        personaStore.Update("zeta", "You are a persona.", "a", effort: null);
+        // there is nothing for the supervisor to act on. Resubmitting the text Add itself just
+        // composed - rather than a separately re-typed PersonaText string - is what makes this a
+        // genuine no-op: Add's own frontmatter (lowercase keys, quoted scalars) does not match
+        // PersonaText's capitalised, unquoted style, so re-typing it here would be a real text
+        // change and a real restart, defeating the point of this test.
+        var unchangedText = personaStore.Get("zeta")!.Text;
+        personaStore.Update("zeta", unchangedText, "a", effort: null);
 
         // Adding an unrelated Persona proves PersonasChanged was actually observed after the
         // no-op Update above, without which the absence of a second "zeta" call would be
         // meaningless.
-        personaStore.Add("other", "You are Other.");
+        personaStore.Add(Identity("other"), "You are Other.");
         await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
 
         // Bounded grace period: prove no further, unwanted restart of "zeta" happens.
@@ -382,11 +391,11 @@ public sealed class PersonaSupervisorTests
         var factory = new FakeAgentHostFactory();
         using var supervisor = new PersonaSupervisor(options, personaStore, factory, NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
-        personaStore.Add("nova", "You are Nova.", "a", "low");
+        personaStore.Add(Identity("nova"), "You are Nova.", "a", "low");
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
 
-        personaStore.Update("nova", "You are Nova.", "a", "high");
+        personaStore.Update("nova", PersonaText("nova", "You are Nova."), "a", "high");
 
         await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
         await supervisor.StopAsync(ct);
@@ -394,7 +403,7 @@ public sealed class PersonaSupervisorTests
         Assert.Equal(2, factory.Calls.Count);
         Assert.Equal("high", factory.Calls[^1].Persona.Effort);
         Assert.Equal("a", factory.Calls[^1].Persona.Model);
-        Assert.Equal("You are Nova.", factory.Calls[^1].Persona.Text);
+        Assert.Equal(PersonaText("nova", "You are Nova."), factory.Calls[^1].Persona.Text);
     }
 
     [Fact]
@@ -410,18 +419,20 @@ public sealed class PersonaSupervisorTests
         var factory = new FakeAgentHostFactory();
         using var supervisor = new PersonaSupervisor(options, personaStore, factory, NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
-        personaStore.Add("zeta", "You are a persona.", "a", "high");
+        personaStore.Add(Identity("zeta"), "You are a persona.", "a", "high");
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
 
         // Same text, Model AND Effort: PersonasChanged still fires (Update always raises it), but
-        // there is nothing for the supervisor to act on.
-        personaStore.Update("zeta", "You are a persona.", "a", "high");
+        // there is nothing for the supervisor to act on. See PersonaModelUnchanged_DoesNotRestartItsHost
+        // for why the text resubmitted here has to be whatever Add itself just composed.
+        var unchangedText = personaStore.Get("zeta")!.Text;
+        personaStore.Update("zeta", unchangedText, "a", "high");
 
         // Adding an unrelated Persona proves PersonasChanged was actually observed after the
         // no-op Update above, without which the absence of a second "zeta" call would be
         // meaningless.
-        personaStore.Add("other", "You are Other.");
+        personaStore.Add(Identity("other"), "You are Other.");
         await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
 
         // Bounded grace period: prove no further, unwanted restart of "zeta" happens.
@@ -431,12 +442,18 @@ public sealed class PersonaSupervisorTests
         Assert.Single(factory.Calls, call => call.Persona.Name == "zeta");
     }
 
-    private static void WritePersonaFile(TeamOptions options, string name, string text = "You are a persona.")
+    private static void WritePersonaFile(TeamOptions options, string name, string body = "You are a persona.")
     {
-        var personaDir = Path.Combine(options.DataDir, options.Acp.PersonaDir);
-        Directory.CreateDirectory(personaDir);
-        File.WriteAllText(Path.Combine(personaDir, $"{name}.md"), text);
+        var teamsDir = Path.Combine(options.DataDir, options.Acp.TeamsDir);
+        Directory.CreateDirectory(teamsDir);
+        File.WriteAllText(Path.Combine(teamsDir, $"{name}.md"), PersonaText(name, body));
     }
+
+    /// <summary>Minimal valid Persona frontmatter (Name, Title and Alias all <paramref name="name"/>) wrapped around <paramref name="body"/> - identity is front-matter driven from this phase on, so every seeded Persona needs one to be discoverable at all.</summary>
+    private static string PersonaText(string name, string body) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}";
+
+    /// <summary>A valid <see cref="PersonaIdentity"/> for <paramref name="name"/>, with Title and Alias both <paramref name="name"/> too and no Teams - the structured input <see cref="PersonaStore.Add"/> now takes.</summary>
+    private static PersonaIdentity Identity(string name) => new(name, name, name, []);
 
     private static async Task<string> WaitForAgentOnlineAsync(
         Agency.Huddle.App.Data.ITeamDirectory directory, Agency.Huddle.App.Pipes.IAgentGateway gateway, string agentName, CancellationToken ct)

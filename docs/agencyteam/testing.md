@@ -1,6 +1,6 @@
 # Testing
 
-How this repo tests, why component tests come in two shapes, and the 19-step
+How this repo tests, why component tests come in two shapes, and the 24-step
 manual checklist for what no test can prove. Read it before adding a test, and
 work the checklist before calling an ACP-facing change done.
 
@@ -10,7 +10,7 @@ in the hub: [AgencyTeam.md](../AgencyTeam.md).
 ## How the suite is built
 
 This repo is test-first. Real stores over temp directories, and **no mocking
-framework** — hand-written fakes under `tests/Team.Tests/Acp/Fakes/`.
+framework** — hand-written fakes under `tests/Huddle.Tests/Acp/Fakes/`.
 
 Components are tested two ways, and the difference matters. A page test fetches
 `/teammates` over HTTP and sees only the **prerender** — `Routes` is
@@ -44,6 +44,11 @@ steps 14–19 below.
 The suite covers the agent path end to end through `FakeAgentHostFactory`, so it
 is fast and free. What it cannot prove is that a *real* model finds the App
 Tools. With `Team:Acp:Enabled=true` — which spends money — check:
+
+> [!NOTE]
+> Steps 20–23 are the exception: they are filesystem and page behaviour only, so
+> they cost nothing and are worth running with `Team:Acp:Enabled=false` before
+> you spend anything on the rest. Only step 24 needs a live agent.
 
 1. `/teammates` loads, the sidebar link reads **Teammates**, and the page is
    styled (catches a missed CSS class rename). Clicking a tile opens the card;
@@ -100,3 +105,23 @@ Tools. With `Team:Acp:Enabled=true` — which spends money — check:
 18. Save with Effort unchanged — the teammate does **not** restart.
 19. Remove a teammate and recreate it with the same name — the old Effort must
     not resurrect.
+20. **The Teams no-op.** Put a Persona in `App_Data/Teams/Business/`, give it a
+    Model, then move the file to `App_Data/Teams/`. Nothing changes — same Name,
+    same groups on `/teammates`, same Model. This is the check that most
+    distinguishes Team-as-a-field from Team-as-a-folder, and the one most likely
+    to regress if someone reintroduces a path-derived key.
+21. **Folders are cosmetic.** A Persona filed under `Teams/Household/` whose
+    frontmatter says `teams: Business` appears under Business, not Household.
+22. **A malformed file is loud.** Delete `title:` from a Persona. It vanishes
+    from the tile list and appears by path and reason in the rejected-files
+    block. Then give two Personas the same `alias:` — *both* disappear and both
+    are named.
+23. **The watcher is live and recursive.** Edit a Persona nested in a Team
+    sub-folder and confirm it reloads without a restart; rename the sub-folder
+    and confirm every teammate in it stays reachable. These are two of the four
+    silent watcher failures in [Traps](traps.md) and neither produces an error
+    when it breaks.
+24. **An Alias works everywhere a Name does.** With `alias: jar` on Jarvis:
+    `@jar` reaches it in a Room of three or more, `/invite @jar` adds it, and a
+    teammate calling `mcp__team__invite_agent` with `jar` succeeds — the Alias is
+    advertised in `list_agents`' job description, so all three must accept it.

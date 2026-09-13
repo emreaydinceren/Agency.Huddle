@@ -4,6 +4,12 @@ using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.Tests.Services;
 
+/// <summary>
+/// Covers <see cref="MentionParser"/>'s Name-matching behaviour end to end, plus - from
+/// <see cref="Parse_ResolvesAliasToTheOwningMember"/> onward - the Alias resolution Phase 4 adds. Every
+/// Name-only fact above that line is the pre-existing regression suite and is intentionally left
+/// untouched by that work.
+/// </summary>
 public sealed class MentionParserTests
 {
     [Fact]
@@ -172,5 +178,127 @@ public sealed class MentionParserTests
         var result = MentionParser.Parse("@You", [human]);
 
         Assert.Equal([human], result);
+    }
+
+    /// <summary>An Alias resolves to the Member it belongs to, exactly as its owning Name would.</summary>
+    [Fact]
+    public void Parse_ResolvesAliasToTheOwningMember()
+    {
+        var jarvis = new User("1", "Jarvis", UserKind.Agent, null);
+        var aliases = new[] { new MentionAlias("jar", "Jarvis") };
+
+        var result = MentionParser.Parse("@jar, can you help?", [jarvis], aliases);
+
+        Assert.Equal([jarvis], result);
+    }
+
+    /// <summary>An Alias resolves case-insensitively, matching every other handle this parser matches.</summary>
+    [Fact]
+    public void Parse_MatchesAliasCaseInsensitively()
+    {
+        var jarvis = new User("1", "Jarvis", UserKind.Agent, null);
+        var aliases = new[] { new MentionAlias("jar", "Jarvis") };
+
+        var result = MentionParser.Parse("@JAR", [jarvis], aliases);
+
+        Assert.Equal([jarvis], result);
+    }
+
+    /// <summary>
+    /// A Member's Name and one of their own Aliases, both mentioned in the same Message, still
+    /// dedupe to one User - the existing seenIds dedupe (keyed by Member.Id, not by which handle
+    /// matched) already gives this for free, but it is load-bearing enough for an Alias to earn its
+    /// own pinning test.
+    /// </summary>
+    [Fact]
+    public void Parse_NameAndItsOwnAliasInOneMessage_YieldsOneUser()
+    {
+        var jarvis = new User("1", "Jarvis", UserKind.Agent, null);
+        var aliases = new[] { new MentionAlias("jar", "Jarvis") };
+
+        var result = MentionParser.Parse("@Jarvis and @jar", [jarvis], aliases);
+
+        Assert.Equal([jarvis], result);
+    }
+
+    /// <summary>
+    /// An Alias whose owning Name is not a Member of this Room resolves to nothing - Aliases are
+    /// unique library-wide (PersonaIndex guarantees this), not Room-wide, so an Alias can legitimately
+    /// name someone who simply is not here.
+    /// </summary>
+    [Fact]
+    public void Parse_AliasForMemberNotInTheRoom_ResolvesToNothing()
+    {
+        var echo = new User("1", "echo", UserKind.Agent, null);
+        var aliases = new[] { new MentionAlias("jar", "Jarvis") };
+
+        var result = MentionParser.Parse("@jar", [echo], aliases);
+
+        Assert.Empty(result);
+    }
+
+    /// <summary>
+    /// Mirrors <see cref="Parse_PrefersTheLongestMatchingName"/>, but the longer handle is an Alias
+    /// owned by a DIFFERENT Member than the shorter Name it overlaps with. A two-pass implementation
+    /// - scan every Name longest-first, then fall back to Aliases only if nothing matched - would
+    /// match "Emily" here (the space after it is not a boundary blocker, exactly the "Emily"/"Emily
+    /// Lee" trap) before it ever looked at the Alias list. Names and Aliases have to be one sorted
+    /// list for the Alias to get a fair shot at winning.
+    /// </summary>
+    [Fact]
+    public void Parse_LongerAliasBeatsAShorterNameBelongingToSomeoneElse()
+    {
+        var emily = new User("1", "Emily", UserKind.Agent, null);
+        var other = new User("2", "Other", UserKind.Agent, null);
+        var aliases = new[] { new MentionAlias("Emily Lee", "Other") };
+
+        var result = MentionParser.Parse("@Emily Lee", [emily, other], aliases);
+
+        Assert.Equal([other], result);
+    }
+
+    /// <summary>
+    /// Pins the ordering <see cref="MentionParser.Parse(string, IReadOnlyList{User}, IReadOnlyList{MentionAlias})"/>
+    /// relies on to break a length tie: Names are appended to the candidate list before Aliases, and
+    /// LINQ's <c>OrderByDescending</c> is a stable sort, so a Name wins a tie in length over an Alias.
+    /// Swapping the order of the two appends in <see cref="MentionParser"/> would make this fail with
+    /// no compiler signal at all. (PersonaIndex guarantees a real Alias can never equal a DIFFERENT
+    /// Persona's Name, so this exact collision cannot arise from real Persona files - but
+    /// <see cref="MentionParser"/> cannot see that guarantee and must not depend on it silently holding.)
+    /// </summary>
+    [Fact]
+    public void Parse_NameBeatsAnEqualLengthAlias()
+    {
+        var byName = new User("1", "Jar", UserKind.Agent, null);
+        var byAlias = new User("2", "Jarvis", UserKind.Agent, null);
+        var aliases = new[] { new MentionAlias("Jar", "Jarvis") };
+
+        var result = MentionParser.Parse("@Jar", [byName, byAlias], aliases);
+
+        Assert.Equal([byName], result);
+    }
+
+    /// <summary>An Alias respects the same "@" boundary rule as a Name: "x@jar" is not a Mention.</summary>
+    [Fact]
+    public void Parse_AliasDoesNotMatchAfterAWordCharacter()
+    {
+        var jarvis = new User("1", "Jarvis", UserKind.Agent, null);
+        var aliases = new[] { new MentionAlias("jar", "Jarvis") };
+
+        var result = MentionParser.Parse("x@jar", [jarvis], aliases);
+
+        Assert.Empty(result);
+    }
+
+    /// <summary>An Alias respects the same word-boundary rule as a Name: "@jarring" does not Mention "jar".</summary>
+    [Fact]
+    public void Parse_AliasDoesNotMatchAsAPrefixOfALongerWord()
+    {
+        var jarvis = new User("1", "Jarvis", UserKind.Agent, null);
+        var aliases = new[] { new MentionAlias("jar", "Jarvis") };
+
+        var result = MentionParser.Parse("@jarring", [jarvis], aliases);
+
+        Assert.Empty(result);
     }
 }

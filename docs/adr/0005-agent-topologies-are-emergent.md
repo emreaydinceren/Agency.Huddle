@@ -169,7 +169,7 @@ it.
   rejected for the reason [ADR-0003](0003-mention-gated-replies-and-membership-defined-direct-rooms.md)
   rejected a `kind` column — it must be kept in sync on every membership change
   and will drift.
-- **A dedicated orchestrator service inside `Team.App`**: rejected. It would make
+- **A dedicated orchestrator service inside `Huddle.App`**: rejected. It would make
   the app the coordinator, breaking the property the design exists to protect —
   everything an Agent knows arrives in an Envelope.
 - **Server-computed `shouldReply`**: rejected again, as in ADR-0004. The server

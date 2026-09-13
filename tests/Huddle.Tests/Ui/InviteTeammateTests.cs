@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
@@ -101,11 +102,46 @@ public sealed class InviteTeammateTests
         Assert.Equal(3, members.Count);
     }
 
+    /// <summary>
+    /// The filter must not blind the panel to Agents with no Persona at all (a raw pipe client with
+    /// no file behind it, or the echo/alpha demo agents): such an Agent has no Teams, so it can
+    /// only ever appear under "All teams" - this proves it still does, and that the filter's own
+    /// options come from <see cref="PersonaStore.Teams"/>, even once a Persona-backed Team exists.
+    /// </summary>
+    [Fact]
+    public async Task Panel_OffersATeamFilter_AndStillInvitesAnAgentWithNoPersonaBehindIt()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        Directory.CreateDirectory(Path.Combine(dir.Path, "Teams"));
+        await File.WriteAllTextAsync(
+            Path.Combine(dir.Path, "Teams", "coo.md"),
+            "---\nName: coo\nTitle: Chief of Staff\nAlias: coo\nTeams: Business\n---\nbody",
+            ct);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var member = await directory.UpsertAgentUserAsync("member", null, ct);
+        var raw = await directory.UpsertAgentUserAsync("rawagent", null, ct);
+        Assert.NotNull(member);
+        Assert.NotNull(raw);
+        var chat = CreateChatService(dir, directory);
+
+        // The Room is with "member" only, so "rawagent" is not yet a Member and shows up as an
+        // invite candidate - the whole point of this test.
+        var room = await chat.EnsureRoomForAsync(member, ct);
+
+        var html = await RenderAsync(dir, directory, chat, room.Id);
+
+        Assert.Contains("All teams", html, StringComparison.Ordinal);
+        Assert.Contains("Business", html, StringComparison.Ordinal);
+        Assert.Contains("rawagent", html, StringComparison.Ordinal);
+    }
+
     private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        return new ChatService(directory, store, events, NullLogger<ChatService>.Instance);
+        return new ChatService(directory, store, events, new FakeMentionAliasSource(), NullLogger<ChatService>.Instance);
     }
 
     private static async Task<string> RenderAsync(
@@ -118,6 +154,12 @@ public sealed class InviteTeammateTests
         services.AddSingleton(chat);
         services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
         services.AddSingleton(new RoomEvents(NullLogger<RoomEvents>.Instance));
+
+        // The panel's own team filter needs a PersonaStore; created and disposed within this one
+        // render so its FileSystemWatcher never outlives the test.
+        using var personas = new PersonaStore(
+            dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        services.AddSingleton(personas);
         await using var provider = services.BuildServiceProvider();
 
         await using var renderer = new HtmlRenderer(provider, provider.GetRequiredService<ILoggerFactory>());

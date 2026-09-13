@@ -19,8 +19,9 @@ public sealed class CreateRoomToolTests
         var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
         Assert.NotNull(caller);
         Assert.NotNull(alpha);
-        var chat = CreateChatService(dir, directory);
-        var tool = new CreateRoomTool(chat, directory, caller.Id);
+        var aliasSource = new FakeMentionAliasSource();
+        var chat = CreateChatService(dir, directory, aliasSource);
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource);
         var arguments = new JsonObject { ["agents"] = new JsonArray { "alpha" } };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -36,6 +37,31 @@ public sealed class CreateRoomToolTests
     }
 
     [Fact]
+    public async Task CreateRoom_ResolvesAnAliasToItsOwningAgent()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var caller = await directory.UpsertAgentUserAsync("caller", null, ct);
+        var jarvis = await directory.UpsertAgentUserAsync("Jarvis", null, ct);
+        Assert.NotNull(caller);
+        Assert.NotNull(jarvis);
+        var aliasSource = new FakeMentionAliasSource { Aliases = [new MentionAlias("jar", "Jarvis")] };
+        var chat = CreateChatService(dir, directory, aliasSource);
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource);
+        var arguments = new JsonObject { ["agents"] = new JsonArray { "jar" } };
+
+        var result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Contains("Created room", result, StringComparison.Ordinal);
+        var rooms = await directory.GetRoomsAsync(ct);
+        var room = Assert.Single(rooms);
+        var members = await directory.GetRoomMembersAsync(room.Id, ct);
+        Assert.Contains(members, m => m.Id == jarvis.Id);
+    }
+
+    [Fact]
     public async Task CreateRoom_UnknownAgent_ReturnsErrorTextNotThrow()
     {
         var ct = TestContext.Current.CancellationToken;
@@ -46,8 +72,9 @@ public sealed class CreateRoomToolTests
         var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
         Assert.NotNull(caller);
         Assert.NotNull(alpha);
-        var chat = CreateChatService(dir, directory);
-        var tool = new CreateRoomTool(chat, directory, caller.Id);
+        var aliasSource = new FakeMentionAliasSource();
+        var chat = CreateChatService(dir, directory, aliasSource);
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource);
         var arguments = new JsonObject { ["agents"] = new JsonArray { "nobody" } };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -67,8 +94,9 @@ public sealed class CreateRoomToolTests
         await directory.InitializeAsync("You", ct);
         var caller = await directory.UpsertAgentUserAsync("caller", null, ct);
         Assert.NotNull(caller);
-        var chat = CreateChatService(dir, directory);
-        var tool = new CreateRoomTool(chat, directory, caller.Id);
+        var aliasSource = new FakeMentionAliasSource();
+        var chat = CreateChatService(dir, directory, aliasSource);
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource);
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -77,10 +105,10 @@ public sealed class CreateRoomToolTests
         Assert.Empty(rooms);
     }
 
-    private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory)
+    private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory, IMentionAliasSource aliasSource)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        return new ChatService(directory, store, events, NullLogger<ChatService>.Instance);
+        return new ChatService(directory, store, events, aliasSource, NullLogger<ChatService>.Instance);
     }
 }

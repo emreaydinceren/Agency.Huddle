@@ -28,7 +28,7 @@ additive: `version` legitimately stays `1`, and an older Agent Host that does
 not read the new field is unaffected and keeps behaving exactly as before.
 
 The rule itself is a pure function, `ReplyGate.ShouldReply(mentioned,
-memberCount)`, living in `src/Team.App/Acp/ReplyGate.cs`. Keeping it pure and
+memberCount)`, living in `src/Huddle.App/Acp/ReplyGate.cs`. Keeping it pure and
 free of the pipe or an agent is what makes it provable by a plain unit test.
 
 ## Considered options

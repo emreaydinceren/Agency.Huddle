@@ -13,6 +13,23 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
+        // Acp.PersonaDir was renamed to Acp.TeamsDir (the "Teams" rename) with no back-compat
+        // fallback: nothing in appsettings*.json still sets the old key, so a fallback would be
+        // dead weight. But a value left behind in a user secret or an environment variable would
+        // otherwise bind to nothing, and PersonaStore would quietly scan an empty default "Teams"
+        // folder - zero teammates, no exception, no log anywhere. That silent-degradation shape is
+        // exactly what docs/agencyteam/traps.md exists to catch, so fail loudly at startup instead,
+        // naming the new key. This runs ahead of Configure<TeamOptions> below, in the one place
+        // both this app's Program.cs and every test that composes it (TeamWebApplicationFactory)
+        // are guaranteed to pass through.
+        if (configuration[$"{TeamOptions.SectionName}:Acp:PersonaDir"] is not null)
+        {
+            throw new InvalidOperationException(
+                $"Configuration key '{TeamOptions.SectionName}:Acp:PersonaDir' was renamed to " +
+                $"'{TeamOptions.SectionName}:Acp:TeamsDir'. Update the configuration source that sets it " +
+                "(environment variable, user secret, etc.) - there is no automatic fallback.");
+        }
+
         services.Configure<TeamOptions>(configuration.GetSection(TeamOptions.SectionName));
         services.PostConfigure<TeamOptions>(options => options.DataDir = Path.GetFullPath(options.DataDir));
 
@@ -29,6 +46,13 @@ public static class ServiceCollectionExtensions
         // Unconditional: this is what lets the /teammates page be built and tested with no agent
         // process and no tokens, regardless of whether Team:Acp:Enabled is set.
         services.AddSingleton<PersonaStore>();
+
+        // Same instance as PersonaStore above, not a second registration - mirrors the
+        // AgentGateway/IAgentGateway pair just above. A second, independently constructed PersonaStore
+        // would mean a second FileSystemWatcher on the same Teams directory, which
+        // PipeHostFixture.RemovePersonaSupervisorHostedService's remarks document as the cause of a
+        // real, intermittent test flake once already, for the closely related PersonaSupervisor case.
+        services.AddSingleton<IMentionAliasSource>(sp => sp.GetRequiredService<PersonaStore>());
         services.AddSingleton<IAgentHostFactory, DotAcpAgentHostFactory>();
         services.AddSingleton<PersonaModelStore>();
         services.AddSingleton<PersonaEffortStore>();

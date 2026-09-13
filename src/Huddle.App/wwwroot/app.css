@@ -594,3 +594,96 @@ html, body {
     font-size: 0.78rem;
     color: #777;
 }
+
+/* ---- Rejected Persona files: shown so a bad file is visible, not silently missing --------- */
+
+.teammates-rejected {
+    margin-bottom: 1rem;
+    padding: 0.6rem 0.8rem;
+    background: #fff6f6;
+    border: 1px solid #e3b6b6;
+    border-radius: 6px;
+}
+
+.teammates-rejected h2 {
+    margin: 0 0 0.4rem 0;
+    font-size: 0.9rem;
+    color: #8a2b2b;
+}
+
+.teammates-rejected-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.teammates-rejected-item {
+    padding: 0.25rem 0;
+    font-size: 0.85rem;
+}
+
+.teammates-rejected-path {
+    display: block;
+    font-weight: 600;
+    color: #6b2020;
+    overflow-wrap: anywhere;
+}
+
+.teammates-rejected-reason {
+    display: block;
+    color: #6b2020;
+}
+
+/* ---- The team filter above the grouped tiles, and its InviteTeammate sibling --------------- */
+
+.teammates-filter {
+    max-width: 16rem;
+    margin-bottom: 1rem;
+}
+
+.invite-filter {
+    margin-bottom: 0.5rem;
+}
+
+/* ---- Tiles grouped by Team ------------------------------------------------------------------ */
+
+.teammates-group {
+    margin-bottom: 1.4rem;
+}
+
+.teammates-group-heading {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+    color: #444;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid #e3e3e3;
+}
+
+.teammate-tile-role {
+    font-size: 0.8rem;
+    color: #666;
+    overflow-wrap: anywhere;
+}
+
+/* ---- Title/Alias/Teams shown in the card's View mode --------------------------------------- */
+
+.teammate-card-title {
+    margin: 0.1rem 0 0 0;
+    color: #555;
+}
+
+.teammate-card-meta {
+    margin: 0.15rem 0 0 0;
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* ---- The Create card's stacked identity inputs (Name, Title, Alias, Teams) ----------------- */
+
+.teammate-card-identity-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    min-width: 0;
+}

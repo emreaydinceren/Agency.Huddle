@@ -6,6 +6,6 @@
   Messages and the Agents that join them. Vocabulary in
   [`docs/agencyteam/language.md`](./docs/agencyteam/language.md).
 
-`Team.Acp` is not a second context. It is a reusable ACP client that knows
+`Huddle.Acp` is not a second context. It is a reusable ACP client that knows
 nothing about chat and deliberately keeps ACP's own vocabulary — see
 [Two bounded contexts](./docs/AgencyTeam.md#two-bounded-contexts).
