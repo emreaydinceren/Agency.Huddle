@@ -49,4 +49,18 @@ dotnet build Team.sln && dotnet build Team.slnx
 dotnet test  Team.sln -- && dotnet test Team.slnx --
 ```
 
+## CI
+
+Gitea Actions validates every PR into `main` and every push to `main`: restore,
+build and test `Huddle.slnx` (trailing `--` included), plus a gitleaks secret scan
+and a vulnerable-dependency check. The workflows are `.gitea/workflows/ci-pr.yaml`
+and `ci-main.yaml`; their `validate` jobs are byte-identical on purpose, so change
+both or neither. `.gitea/**` and `.gitleaks.toml` are shared root-level files —
+announce changes the same way as any other.
+
+Read `agents/CIPipeline.md` before debugging a red run. It carries the local Docker
+repro and the environmental failure modes, including the two that look like code
+regressions and are not: a stale SDK image against `global.json`'s `latestPatch` pin,
+and the six tests that need `node` on PATH.
+
 @agents/CSharpPrinciples.md

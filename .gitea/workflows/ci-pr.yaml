@@ -1,0 +1,120 @@
+name: CI (Pull Request)
+
+# Validation gate for every PR into main. The `validate` job here and the one in
+# ci-main.yaml are deliberately identical — diff the two files whenever you change
+# either, so a PR can never be greener than the merge that follows it.
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+
+jobs:
+  secret-scan:
+    runs-on: dotnet-10
+    container:
+      image: mcr.microsoft.com/dotnet/sdk:10.0
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      # No actions/checkout. It is a Node.js action, and this container ships no Node
+      # (the validate job apt-installs one, but that is inside the job, too late for an
+      # action). Cloning by hand is the only option that works here.
+      - name: 📥 Checkout
+        env:
+          GIT_TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          AUTH_URL="${GITHUB_SERVER_URL/http:\/\//http:\/\/x-access-token:$GIT_TOKEN@}"
+          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          git clone --branch "$BRANCH" "$AUTH_URL/$GITHUB_REPOSITORY.git" "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" -c advice.detachedHead=false checkout "$GITHUB_SHA"
+
+      - name: 🔐 Install gitleaks
+        run: |
+          set -euo pipefail
+          case "$(uname -m)" in
+            x86_64) ARCH=x64 ;;
+            aarch64|arm64) ARCH=arm64 ;;
+            *) echo "Unsupported arch: $(uname -m)"; exit 1 ;;
+          esac
+          VER=$(curl -sSLf https://api.github.com/repos/gitleaks/gitleaks/releases/latest \
+                | grep -oE '"tag_name": *"v[^"]+"' | head -1 | sed -E 's/.*"v?([^"]+)".*/\1/')
+          echo "Installing gitleaks $VER (linux_$ARCH)"
+          curl -sSLf "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_${ARCH}.tar.gz" -o /tmp/gitleaks.tgz
+          tar -xzf /tmp/gitleaks.tgz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: 🔎 Scan working tree for secrets
+        run: |
+          gitleaks dir . \
+            --config .gitleaks.toml \
+            --redact \
+            --no-banner \
+            --verbose
+
+  validate:
+    runs-on: dotnet-10
+    container:
+      image: mcr.microsoft.com/dotnet/sdk:10.0
+    defaults:
+      run:
+        shell: bash
+
+    env:
+      # Pinned off, not merely left unset. The E2E/ folder of Huddle.Acp.Tests drives a real
+      # adapter against a real model and spends money; E2E.Enabled is `TEAM_E2E == "1"`.
+      # Writing "0" here means a runner-level environment variable can never switch it on by
+      # accident. Those 8 tests are expected to report as skipped in every CI run.
+      TEAM_E2E: "0"
+
+    steps:
+      - name: 📥 Checkout
+        env:
+          GIT_TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          AUTH_URL="${GITHUB_SERVER_URL/http:\/\//http:\/\/x-access-token:$GIT_TOKEN@}"
+          BRANCH="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          git clone --branch "$BRANCH" "$AUTH_URL/$GITHUB_REPOSITORY.git" "$GITHUB_WORKSPACE"
+          git -C "$GITHUB_WORKSPACE" -c advice.detachedHead=false checkout "$GITHUB_SHA"
+
+      # Huddle.Acp.Tests' AgentProcessLauncherTests ([Trait("Category", "Process")]) launch a
+      # real `node -e` subprocess to prove the stdio pipe wiring works. The dotnet SDK image
+      # has no Node, and those 6 tests fail with `Failed to start 'node'` without this step.
+      # Ubuntu 24.04 (this image's base) ships Node 18, which is plenty for `node -e`. The ACP
+      # adapter itself wants something newer, but it only runs under TEAM_E2E=1, which CI pins off.
+      - name: 🟩 Install Node.js
+        run: |
+          set -euo pipefail
+          apt-get update -qq
+          apt-get install -y -qq nodejs
+          node --version
+
+      # global.json pins SDK 10.0.400 with rollForward=latestPatch, so only a 10.0.4xx SDK
+      # satisfies it. A stale cached sdk:10.0 image fails here with "Requested SDK version:
+      # 10.0.400 ... Install the [10.0.400] .NET SDK" — pull the image, don't debug the code.
+      - name: 📦 Restore dependencies
+        run: dotnet restore Huddle.slnx
+
+      - name: 🔒 Check for vulnerable dependencies
+        run: |
+          dotnet list Huddle.slnx package --vulnerable --include-transitive 2>&1 | tee vuln-scan.log
+          if grep -q "has the following vulnerable packages" vuln-scan.log; then
+            echo "::error::Vulnerable dependency detected — see log above. Bump the version in Directory.Packages.props (central package management is on, so the version lives only there)."
+            exit 1
+          fi
+
+      # Directory.Build.props sets TreatWarningsAsErrors, so this step is the style gate too.
+      - name: 🛠️ Build solution
+        run: dotnet build Huddle.slnx --configuration Release --no-restore
+
+      # The trailing `--` is required and is not a typo. Without it this SDK's Microsoft
+      # Testing Platform CLI exits 5 with "Zero tests ran", which reads as a no-op rather
+      # than a failure. There is deliberately no retry loop: this suite is offline and
+      # deterministic, so a retry would hide a real flake instead of surfacing it.
+      - name: 🧪 Run tests
+        run: dotnet test Huddle.slnx --configuration Release --no-build --
