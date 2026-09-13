@@ -5,12 +5,27 @@ and before filing a bug: most entries below are decisions, two are known flakes,
 and one is a known bug left in place deliberately. Do not treat any of them as
 oversights or quietly add them.
 
-Three entries have since been planned; each one says so and names its
-[Roadmap](roadmap.md) item. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
+Two entries have since been planned and one has since been built; each one says
+so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
 
-- **No runaway-loop guard.** Two Agents that tag each other will spend tokens
-  until you stop the app. Now planned — [Roadmap](roadmap.md) item 2, which also
-  explains why `ReplyGate` on its own cannot be the whole fix.
+- **The runaway-loop guard is built, and here is what it does not cover.** A Room
+  now has a Budget of agent-authored Messages between one Human Message and the
+  next, and asks before granting another — [ADR-0006](../adr/0006-a-room-has-a-budget-for-agent-replies.md).
+  Four gaps are deliberate:
+  - **The counter is in memory and per Room.** A restart un-pauses every Room and
+    shows a fresh Budget over a Transcript that already spent one. The same trade
+    ADR-0004 accepted for the Catch-up buffer.
+  - **An Agent can mint a fresh Budget by creating a Room.** `create_room` is
+    uncapped, and each new Room starts with a full allowance. Only the per-Persona
+    token Budget catches that, which is the strongest argument for it.
+  - **The token Budget is silent.** It is per Persona, so it has no per-Room
+    surface and no Continue prompt: it stops that Agent taking Turns and writes a
+    warning to the log, and nothing else. The honest home for it is the Teammate
+    tile's degraded badge — [Roadmap](roadmap.md) item 3.
+  - **A Message declined for Budget is not kept as Catch-up.** It is held for
+    re-delivery instead. If you leave a Room paused and then type something rather
+    than clicking Continue, the Agent's prompt will not carry the Message it was
+    paused on; it is still in the Transcript and still on screen.
 - **One session per Persona spans every Room it is in**, so context bleeds
   between Rooms. The `[Room: name (id: …)]` prefix on each prompt is a convention
   the model may ignore. A session per (Persona, Room) would multiply processes and

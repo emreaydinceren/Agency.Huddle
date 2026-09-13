@@ -1,12 +1,47 @@
 # Decision record
 
-Seven dated entries from 2026-09-11 onward, newest first, each recording what
+Eight dated entries from 2026-09-11 onward, newest first, each recording what
 changed and — more usefully — what was considered and rejected. Read it when you are
 about to revisit a decision, or when an older Markdown file in this repo
 disagrees with current vocabulary and you need the old-to-new mapping.
 
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
+
+**2026-09-12 — a Room has a Budget for agent replies, and the Human is asked
+before it is raised.**
+
+Two Agents that Mention each other used to reply until the app was stopped —
+recorded in ADR-0004 as a deliberate omission, not an oversight. A Room now takes
+only so many agent-authored Messages between one Human Message and the next. This
+is [Roadmap](roadmap.md) item 2, delivered;
+[ADR-0006](../adr/0006-a-room-has-a-budget-for-agent-replies.md) is the decision
+in full.
+
+**`ChatService` owns the only counter, and labels the Envelope with it.** The
+original plan had `ReplyGate` keeping a client-side streak of its own. That cannot
+survive the Human being able to extend a Budget: the grant lives in `ChatService`,
+so a runner comparing against its own configured default would decline the
+re-delivered Message and Continue would silently do nothing. Two counts on the
+Envelope keep the comparison client-side and leave the runner holding no state.
+
+**The pause is a question in the Room view, not a Message in the Room.** Rejected:
+a `system` sender, which needs a third `UserKind` — a SQL `CHECK` constraint
+wanting a fresh `App_Data`, and a wire enum inside `MemberInfo`; posting it as the
+capped Agent, which would need exempting from the cap it announces; and posting it
+as the Human, which would reset the Budget it was reporting. Continue grants one
+more Budget and asks again at the next threshold, rather than lifting the cap for
+the rest of the run.
+
+**Continue re-delivers the Room's last Message**, because a Turn only ever begins
+with a delivered Message and raising the allowance alone wakes nobody.
+
+**The wire changed, additively, and `ProtocolVersion.Current` stays `2`.** Say both
+halves: `MessagePosted` gained `agentMessagesSinceHuman` and `budget`, and
+`ErrorCodes` gained `budgetExhausted`. An older client parses the line and ignores
+what it does not know, which is the precedent ADR-0004 set when `Members` was
+added — so bumping the version here would break every client for nothing.
+[Traps](traps.md) now records that in both directions.
 
 **2026-09-12 — a Persona's identity moves into its frontmatter, and Teams
 become a field.**

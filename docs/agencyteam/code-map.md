@@ -14,7 +14,7 @@ the hub: [AgencyTeam.md](../AgencyTeam.md).
 
 | Path | Responsibility |
 | --- | --- |
-| `Services/ChatService.cs` | The only thing that posts a Message. Per-Room semaphore. `/invite` lives here. |
+| `Services/ChatService.cs` | The only thing that posts a Message, so also the only thing that counts one: it owns each Room's Budget, refuses the post that would exceed it, and `ExtendBudgetAsync` grants one more and re-delivers. Per-Room semaphore — the Budget is read and written inside it. `/invite` lives here. |
 | `Services/RoomEvents.cs` | Singleton pub/sub. A handler that throws is logged and skipped, never propagated. |
 | `Services/MentionParser.cs` | Finds Mentions. Resolves `@name` against the Room's Members, longest handle first — **not** by pattern. Candidates are every Member's Name plus every Persona Alias whose owner is in the Room; a Name beats an equal-length Alias. See [Rules](rules.md). |
 | `Services/MentionAlias.cs`, `IMentionAliasSource.cs` | Supplies the Aliases in force, so `ChatService` and the invite tools need no dependency on `PersonaStore`. Implemented by `PersonaStore`, registered to the same singleton instance. |
@@ -36,13 +36,13 @@ the hub: [AgencyTeam.md](../AgencyTeam.md).
 
 | Path | Responsibility |
 | --- | --- |
-| `ReplyGate.cs` | The reply rule, entire. `memberCount <= 2` or `mentioned`. A pure function, so the rule is provable without a pipe or an agent. |
+| `ReplyGate.cs` | The reply rule, entire. Budget first, then `memberCount <= 2` or `mentioned`, returning `Reply`, `CatchUp` or `BudgetExhausted`. Still a pure function over labels the server put on the Envelope, so the rule is provable without a pipe or an agent. |
 | `Persona.cs`, `PersonaStore.cs` | The Persona library. One `.md` per Persona, anywhere under `{DataDir}/{Acp:TeamsDir}`. Holds an immutable `PersonaIndex`, swapped as one reference and rebuilt before `PersonasChanged` is raised. A recursive, debounced (500 ms) `FileSystemWatcher` drives it; see [Traps](traps.md) for the four ways that watcher fails silently. |
 | `PersonaIndex.cs`, `PersonaEntry.cs`, `RejectedPersonaFile.cs` | The pure parse/validate/collision engine, built from `(path, text)` pairs with no I/O — so the write path validates a candidate edit through the very same code the read path uses. |
 | `PersonaIdentity.cs` | The four structural frontmatter fields: `Name`, `Title`, `Alias` (all required) and `Teams` (optional). |
 | `PersonaFrontmatter.cs`, `PersonaFrontmatterField.cs` | Parses a Persona's leading YAML frontmatter into ordered fields, reads the structural identity out of it, composes the job description `list_agents` shows (holding `name` back, since the bullet above already prints it), and composes the frontmatter `Add` writes. Ported from a sibling repo, not referenced across it — see [Decision record](decisions.md). |
 | `PersonaSupervisor.cs` | The only hosted service here. Returns immediately when `Acp:Enabled` is false. One runner per Persona; diffs on change to start, stop or restart. |
-| `PersonaRunner.cs` | **The join.** Pipe client on one side, ACP session on the other. Not a `BackgroundService` — see [Traps](traps.md). |
+| `PersonaRunner.cs` | **The join.** Pipe client on one side, ACP session on the other. Keeps no Budget count of its own — it passes the Envelope's labels to `ReplyGate` — but does hold the per-Persona token Budget, summed from the rises in `UsageUpdated.Used`. Not a `BackgroundService` — see [Traps](traps.md). |
 | `IAgentHostFactory.cs` | The test seam. A fake here is why the suite spends zero tokens. |
 | `DotAcpAgentHostFactory.cs` | The real one: work dir, bearer token, one `AppToolServer` per Persona, then the agent process. |
 | `SystemPromptComposer.cs` | A canned orientation naming `mcp__team__get_help`, then Persona text, then a fixed block naming every tool **with its `mcp__team__` prefix**. |

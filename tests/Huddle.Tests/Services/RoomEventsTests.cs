@@ -31,7 +31,8 @@ public sealed class RoomEventsTests
                 new Room("r1", "room", DateTimeOffset.UtcNow),
                 new ChatMessage("m1", DateTimeOffset.UtcNow, "human", "You", "hi"),
                 [],
-                [])));
+                [],
+                new RoomBudget(0, 40))));
         var roomsException = Record.Exception((Action)(() => events.PublishRoomsChanged()));
 
         Assert.Null(messageException);

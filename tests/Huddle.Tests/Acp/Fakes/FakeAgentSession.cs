@@ -11,6 +11,9 @@ namespace Agency.Huddle.Tests.Acp.Fakes;
 /// </summary>
 internal sealed class FakeAgentSession : IAgentSession
 {
+    // Arbitrary: nothing under test reads Size, only the movement of Used.
+    private const long ContextWindowSize = 200_000;
+
     private readonly Channel<AgentEvent> events = Channel.CreateUnbounded<AgentEvent>();
     private readonly Lock gate = new();
     private readonly Queue<TurnPlan> plannedTurns = new();
@@ -45,7 +48,7 @@ internal sealed class FakeAgentSession : IAgentSession
     {
         lock (this.gate)
         {
-            this.plannedTurns.Enqueue(new TurnPlan(chunks, null, TimeSpan.Zero));
+            this.plannedTurns.Enqueue(new TurnPlan(chunks, null, TimeSpan.Zero, []));
         }
     }
 
@@ -53,7 +56,7 @@ internal sealed class FakeAgentSession : IAgentSession
     {
         lock (this.gate)
         {
-            this.plannedTurns.Enqueue(new TurnPlan([], exception, TimeSpan.Zero));
+            this.plannedTurns.Enqueue(new TurnPlan([], exception, TimeSpan.Zero, []));
         }
     }
 
@@ -61,7 +64,22 @@ internal sealed class FakeAgentSession : IAgentSession
     {
         lock (this.gate)
         {
-            this.plannedTurns.Enqueue(new TurnPlan(chunks, null, delay));
+            this.plannedTurns.Enqueue(new TurnPlan(chunks, null, delay, []));
+        }
+    }
+
+    /// <summary>
+    /// Queues a turn that reports context-window levels before it completes. These are LEVELS, not
+    /// increments - the real adapter publishes how full the window is, so a level lower than the one
+    /// before it is a compaction and must not be read as tokens spent.
+    /// </summary>
+    /// <param name="usageLevels">The <c>Used</c> values to publish, in order, before the reply.</param>
+    /// <param name="chunks">The reply text.</param>
+    public void EnqueueReplyWithUsage(IReadOnlyList<long> usageLevels, params string[] chunks)
+    {
+        lock (this.gate)
+        {
+            this.plannedTurns.Enqueue(new TurnPlan(chunks, null, TimeSpan.Zero, usageLevels));
         }
     }
 
@@ -101,7 +119,7 @@ internal sealed class FakeAgentSession : IAgentSession
             {
                 plan = this.plannedTurns.Count > 0
                     ? this.plannedTurns.Dequeue()
-                    : new TurnPlan([this.DefaultReplyText], null, TimeSpan.Zero);
+                    : new TurnPlan([this.DefaultReplyText], null, TimeSpan.Zero, []);
             }
 
             if (plan.Delay > TimeSpan.Zero)
@@ -112,6 +130,11 @@ internal sealed class FakeAgentSession : IAgentSession
             if (plan.Exception is not null)
             {
                 throw plan.Exception;
+            }
+
+            foreach (var level in plan.UsageLevels)
+            {
+                this.events.Writer.TryWrite(new UsageUpdated(this.SessionId, ContextWindowSize, level));
             }
 
             foreach (var chunk in plan.Chunks)
@@ -132,5 +155,6 @@ internal sealed class FakeAgentSession : IAgentSession
         }
     }
 
-    private sealed record TurnPlan(IReadOnlyList<string> Chunks, Exception? Exception, TimeSpan Delay);
+    private sealed record TurnPlan(
+        IReadOnlyList<string> Chunks, Exception? Exception, TimeSpan Delay, IReadOnlyList<long> UsageLevels);
 }

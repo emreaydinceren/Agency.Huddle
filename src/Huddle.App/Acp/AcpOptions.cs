@@ -37,4 +37,21 @@ public sealed class AcpOptions
     // Per-Room catch-up buffer size (docs/adr/0004-direct-rooms-reply-without-mention.md): the most
     // recent unmentioned Messages that ride along once the Agent is finally Mentioned in that Room.
     public int CatchUpMessages { get; set; } = 20;
+
+    // The third layer of the cap (docs/agencyteam/roadmap.md item 2): a per-Persona token Budget,
+    // accumulated in PersonaRunner from UsageUpdated.
+    //
+    // UsageUpdated.Used is how full the context window is, not a running bill - Huddle.Console's
+    // ConsoleRenderer prints it as "{Used}/{Size}" - so it FALLS when the session compacts. Only the
+    // rises are summed, which makes this a proxy for tokens fed through the session and never an
+    // invoice. Like the per-Room Budget it resets when the Persona sees a Human Message, so it caps
+    // unattended spend rather than the session's whole life.
+    //
+    // Per Persona because one ACP session spans every Room its Agent is in, which is also what lets
+    // it catch what TeamOptions.AgentMessageBudget cannot: an Agent that loops by creating fresh
+    // Rooms, each with a fresh Budget of its own.
+    //
+    // Roughly five full context refills. Zero or less disables it. A local Model emits no
+    // UsageUpdated at all, so this is inert there (roadmap item 12).
+    public long TokenBudget { get; set; } = 1_000_000;
 }

@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
@@ -141,7 +143,7 @@ public sealed class InviteTeammateTests
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        return new ChatService(directory, store, events, new FakeMentionAliasSource(), NullLogger<ChatService>.Instance);
+        return new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
     }
 
     private static async Task<string> RenderAsync(

@@ -45,7 +45,8 @@ public sealed class ProtocolJsonTests
         var mentioned = new MemberInfo("agent-1", "echo", UserKind.Agent);
         var human = new MemberInfo("human", "You", UserKind.Human);
         var posted = new MessagePosted(
-            "room-1", "echo", chatMessage, true, new List<MemberInfo> { mentioned }, new List<MemberInfo> { human, mentioned });
+            "room-1", "echo", chatMessage, true, new List<MemberInfo> { mentioned }, new List<MemberInfo> { human, mentioned },
+            AgentMessagesSinceHuman: 3, Budget: 40);
 
         var json = ProtocolJson.Serialize(posted);
         var result = Assert.IsType<MessagePosted>(ProtocolJson.Deserialize(json));
@@ -53,5 +54,27 @@ public sealed class ProtocolJsonTests
         Assert.Equal(2, result.Members.Count);
         Assert.Contains(result.Members, m => m.Id == "human" && m.Kind == UserKind.Human);
         Assert.Contains(result.Members, m => m.Id == "agent-1" && m.Kind == UserKind.Agent);
+        Assert.Equal(3, result.AgentMessagesSinceHuman);
+        Assert.Equal(40, result.Budget);
+    }
+
+    // The reason a new field on a server-to-client record costs no ProtocolVersion bump: a client
+    // built before it still parses the line and ignores what it does not know. traps.md records the
+    // opposite case - renaming a property silently changes the protocol with no signal at all.
+    [Fact]
+    public void MessagePosted_WithUnknownProperties_StillDeserialises()
+    {
+        var json = """
+            {"type":"messagePosted","version":2,"roomId":"room-1","roomName":"echo",
+             "message":{"id":"m1","timestamp":"2026-09-12T00:00:00+00:00","senderId":"human","senderName":"You","text":"hi"},
+             "mentioned":false,"mentions":[],"members":[],
+             "agentMessagesSinceHuman":2,"budget":40,"somethingFromALaterVersion":"ignored"}
+            """.ReplaceLineEndings(string.Empty);
+
+        var result = Assert.IsType<MessagePosted>(ProtocolJson.Deserialize(json));
+
+        Assert.Equal("room-1", result.RoomId);
+        Assert.Equal(2, result.AgentMessagesSinceHuman);
+        Assert.Equal(40, result.Budget);
     }
 }

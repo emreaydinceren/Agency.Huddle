@@ -48,7 +48,9 @@ Tools. With `Team:Acp:Enabled=true` — which spends money — check:
 > [!NOTE]
 > Steps 20–23 are the exception: they are filesystem and page behaviour only, so
 > they cost nothing and are worth running with `Team:Acp:Enabled=false` before
-> you spend anything on the rest. Only step 24 needs a live agent.
+> you spend anything on the rest. Steps 24–27 all need a live agent, and 25–27
+> deliberately spend a Budget's worth of Turns — set `Team:AgentMessageBudget`
+> low before starting them.
 
 1. `/teammates` loads, the sidebar link reads **Teammates**, and the page is
    styled (catches a missed CSS class rename). Clicking a tile opens the card;
@@ -125,3 +127,20 @@ Tools. With `Team:Acp:Enabled=true` — which spends money — check:
     `@jar` reaches it in a Room of three or more, `/invite @jar` adds it, and a
     teammate calling `mcp__team__invite_agent` with `jar` succeeds — the Alias is
     advertised in `list_agents`' job description, so all three must accept it.
+25. **A two-Agent loop actually stops.** Set `Team:AgentMessageBudget` low (6 or
+    so — this checklist spends money) and put two Personas in one Room with
+    instructions to keep talking to each other. The exchange must halt at the
+    Budget rather than running on. This is the whole point of
+    [ADR-0006](../adr/0006-a-room-has-a-budget-for-agent-replies.md), and the
+    suite can only prove it against `FakeAgentHostFactory`.
+26. **Continue resumes the same exchange, and the prompt survives a refresh.**
+    At the pause, reload the page first — the prompt must still be there, which
+    is the prerender path rather than the event path. Then click **Continue**:
+    the Agent that was about to reply does so with no Human Message having been
+    typed, and the Room halts again one Budget later. Check the resumed Agent's
+    prompt does not contain the re-delivered Message twice, once as context-only
+    Catch-up and once live.
+27. **A refused Agent does not retry.** Watch a Persona that gets
+    `budgetExhausted` back from `mcp__team__post_message`. It must stop rather
+    than retry or post the same thing into another Room. Only a real model can
+    prove the terminal wording works — same class as steps 11 and 12.

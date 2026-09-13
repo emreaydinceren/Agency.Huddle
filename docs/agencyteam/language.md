@@ -134,7 +134,9 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   advertises *for that Model*. Unset means the Model's own default, which is
   the normal case. Model-dependent — some Models offer none. Fixed for the life
   of a session, exactly like a Model and a system prompt.
-: *Avoid*: thinking level, reasoning level, thought level, budget, tokens.
+: *Avoid*: thinking level, reasoning level, thought level. Not **Budget**
+  either — that is a defined term meaning something else entirely, and Effort is
+  not one: it buys no allowance and is not spent.
 
 **Turn**
 : One prompt-to-completion cycle on a session. Load-bearing:
@@ -150,8 +152,19 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 
 **Reply Gate**
 : The client-side rule deciding whether an Agent answers a Message: always in a
-  Room of two Members, only when Mentioned in a Room of three or more.
+  Room of two Members, only when Mentioned in a Room of three or more — and never
+  once the Room has spent its Budget, which is checked first, so a Mention does
+  not buy a Turn past the cap.
 : *Avoid*: policy, filter, trigger.
+
+**Budget**
+: How many agent-authored Messages a Room may take between one Human Message and
+  the next. Any Human Message in that Room resets it, so a Budget caps one
+  unattended run rather than the Room. A spent Room stops accepting agent
+  Messages and asks the Human, who may grant one more Budget at a time. The
+  per-Persona token Budget is the same word over a different unit — tokens rather
+  than Messages, and per session rather than per Room. See ADR-0006.
+: *Avoid*: quota, limit, cap, rate limit, throttle, allowance.
 
 **Catch-up**
 : The Messages an Agent missed in a Room while unmentioned, carried along the

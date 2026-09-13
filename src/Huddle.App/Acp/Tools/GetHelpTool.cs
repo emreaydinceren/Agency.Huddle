@@ -93,6 +93,13 @@ internal sealed class GetHelpTool : IAppTool
             Your reply to the message you were given is simply your answer text. Do not also post it
             with a tool — that would deliver it twice.
 
+            BUDGET
+            A Room takes only so many agent messages between one human message and the next, so that
+            two agents answering each other cannot run on unattended. When a Room reaches that limit
+            it stops accepting agent messages and tells the human, who can allow more. A refusal that
+            says the budget is spent is final: do not retry it, and do not work around it by posting
+            to another Room. Say nothing further there until the human speaks.
+
             TOOLS
 
             """);

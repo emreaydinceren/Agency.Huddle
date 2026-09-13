@@ -23,8 +23,12 @@ public sealed class AgentGateway : IAgentGateway, IDisposable
 
         this.events = events;
         this.logger = logger;
+
+        // A re-delivery takes exactly the same path: it is the same Message, and an Agent is not told
+        // it has seen it before. The sender is still skipped, which is right - it already knows.
         this.onMessagePosted = e => _ = this.DeliverAsync(e);
         this.events.MessagePosted += this.onMessagePosted;
+        this.events.MessageRedelivered += this.onMessagePosted;
     }
 
     public bool IsOnline(string agentId) => this.connections.ContainsKey(agentId);
@@ -88,7 +92,9 @@ public sealed class AgentGateway : IAgentGateway, IDisposable
                 e.Message,
                 e.Mentions.Any(m => m.Id == member.Id),
                 e.Mentions.Select(ToMemberInfo).ToList(),
-                e.Members.Select(ToMemberInfo).ToList());
+                e.Members.Select(ToMemberInfo).ToList(),
+                e.Budget.Used,
+                e.Budget.Granted);
 
             sends.Add(this.SendSafeAsync(connection, payload, ct));
         }
@@ -109,6 +115,7 @@ public sealed class AgentGateway : IAgentGateway, IDisposable
     public void Dispose()
     {
         this.events.MessagePosted -= this.onMessagePosted;
+        this.events.MessageRedelivered -= this.onMessagePosted;
     }
 
     private async Task SendSafeAsync(AgentConnection connection, MessagePosted payload, CancellationToken ct)

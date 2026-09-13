@@ -4,25 +4,27 @@ Read this before starting work that touches `PersonaRunner`'s event loop,
 `ReplyGate`, `IAgentHostFactory`, or `wwwroot/app.css`. Back to the hub:
 [AgencyTeam.md](../AgencyTeam.md).
 
-Twelve items, decided but not built. They sit here rather than in [Known
+Twelve items. **Item 10 shipped on 2026-09-12**; the other eleven are decided but not built. They sit here rather than in [Known
 limits](known-limits.md) because that section records what is deliberately absent;
 these have moved from *declined* to *not yet*. Three appear in both places, and
 the Known limits entry now points here rather than warning you off.
 
 Items 8 and 9 come from
-[ADR-0005](../adr/0005-agent-topologies-are-emergent.md), which also makes item 2
-a prerequisite rather than an independent entry — see [Ordering](#ordering).
+[ADR-0005](../adr/0005-agent-topologies-are-emergent.md), whose sequencing made
+item 2 a prerequisite for both. That prerequisite is now met — see
+[Ordering](#ordering).
 
 Nothing here is scheduled, and nothing here is a deadline. What each entry
-carries is the single place to change and what already exists — because in four
-of the twelve the plumbing is largely built and currently discarded, most of it on
-one line: `PersonaRunner` ignores `ThoughtChunk`, `ToolCallStarted`,
-`ToolCallUpdated` and `UsageUpdated` together.
+carries is the single place to change and what already exists — because in
+several of them the plumbing is largely built and currently discarded, most of it
+on one line: `PersonaRunner` ignores `ThoughtChunk`, `ToolCallStarted` and
+`ToolCallUpdated` together. `UsageUpdated` used to sit on that line too; item 2
+took it off, which is what a cheap item looks like when it lands.
 
 | # | Item | Single place to change | Already in the code |
 | --- | --- | --- | --- |
 | 1 | Renaming a Teammate | `PersonaStore`, and every per-Persona store | — |
-| 2 | A cap on agent-to-agent conversation | `ReplyGate.cs`, then `ChatService` | `UsageUpdated` events |
+| 2 | ~~A cap on agent-to-agent conversation~~ **built** | — | shipped 2026-09-12, [ADR-0006](../adr/0006-a-room-has-a-budget-for-agent-replies.md) |
 | 3 | Streaming and failure surfacing | `PersonaRunner`, `Chat.razor` | `MessageDelta`, `MessageChunk` |
 | 4 | Stopping a turn | `PersonaRunner`, `Chat.razor` | `IAgentSession.CancelAsync` |
 | 5 | Tool-call visibility | `PersonaRunner`'s event loop | `ToolCallStarted`, `ToolCallUpdated` |
@@ -30,7 +32,7 @@ one line: `PersonaRunner` ignores `ThoughtChunk`, `ToolCallStarted`,
 | 7 | Theme import | a new generator that writes CSS | — |
 | 8 | Following a Room without being Mentioned | `ReplyGate.cs`, a new App Tool pair | `create_room` returns the Room id |
 | 9 | Per-Persona tool grants | `DotAcpAgentHostFactory`, `PersonaFrontmatter` | tools already built per `agentId`; `_` fields reserved |
-| 10 | Persona frontmatter becomes the Member's identity | `Persona.cs`, `SqliteTeamDirectory`, `MentionParser` | `name` already parsed; the `_`-exclusion convention already exists |
+| ~~10~~ | ~~Persona frontmatter becomes the Member's identity~~ — **delivered 2026-09-12** | `PersonaIndex`, `PersonaStore`, `MentionParser` | shipped; `Persona.cs` was not touched |
 | 11 | Notifying an Agent when a watched file changes | a new watcher beside `PersonaStore`, then `ChatService` | `PersonaStore`'s debounced `FileSystemWatcher`; frontmatter lists parse already |
 | 12 | Running a Persona on a local Model | a second `IAgentHostFactory`, then `ServiceCollectionExtensions` | `IAgentHostFactory` already has two implementations |
 
@@ -48,32 +50,44 @@ Removal leaves the Agent, its Rooms and its Transcripts behind on purpose; for a
 rename the same no-cascade rule reads as a bug, because the Teammate is still
 there and the history is filed under a Name that no longer exists.
 
-## 2. A cap on agent-to-agent conversation
+## 2. A cap on agent-to-agent conversation — **built**
 
-`ReplyGate` is the right place for the simplest version and the wrong place for
-the whole thing. It is a pure function over one delivery, so it sees only what
-*one* Agent received: three Agents in a Room each keep their own streak, and a
-three-way loop trips each counter at a third of the rate. Message count is also a
-poor proxy for money — forty one-line replies cost less than three that each read
-a file.
+Shipped on 2026-09-12 as a **Budget**:
+[ADR-0006](../adr/0006-a-room-has-a-budget-for-agent-replies.md) is the decision
+in full, [Known limits](known-limits.md) records what it does not cover, and
+[Language](language.md) defines the word. What follows is only where the
+original plan was wrong, kept because each mistake is worth not repeating.
 
-Three layers, cheapest first. Each is useful on its own:
+**Three layers, and the middle one owns the only counter.** `ChatService` counts,
+labels every Envelope with `agentMessagesSinceHuman` and `budget`, and refuses the
+post that would exceed it. `ReplyGate` compares the two labels and declines the
+Turn before it is billed. `PersonaRunner` sums the *rises* in `UsageUpdated.Used`
+into a per-Persona token Budget — `Used` is a context-window level, not a bill, so
+it falls on compaction and summing it outright would count the window again on
+every update.
 
-| Layer | Where | Catches |
-| --- | --- | --- |
-| Consecutive agent-authored Messages since the Human last spoke | `ReplyGate`, with the count passed in so it stays pure | The two-Agent ping-pong |
-| A per-Room budget for one autonomous run, reset by any Human Message | `ChatService` — the only writer, and the only thing that sees every Message | The N-way loop layer one misses |
-| A token budget | `PersonaRunner`, from `UsageUpdated(SessionId, Size, Used)` | Actual cost |
+**The plan had layer one keeping its own client-side streak. That cannot work.**
+Once the Human can extend a Budget the grant lives in `ChatService`, so a runner
+comparing against its own configured default would decline the re-delivered
+Message and Continue would silently do nothing. Two counts on the Envelope are
+labels in exactly ADR-0004's sense, the comparison stays client-side, and the
+runner keeps no state at all. It is also strictly less code.
 
-The third layer sounds like the expensive one and is not. `UsageUpdated` is
-already mapped in `SessionUpdateMapper` and already arriving; reading it is an
-`if` and a counter, not new protocol work.
+**"It has to say so in the Room" is reversed, for two reasons rather than one.**
+A posted Message needs a sender and there is no honest one: a `system` sender
+costs a third `UserKind` — a SQL `CHECK` constraint needing a fresh `App_Data`
+*and* a wire enum inside `MemberInfo` — which is the same conclusion
+[item 11](#11-notifying-an-agent-when-a-file-it-depends-on-changes) reaches on its
+own; and posting it as the capped Agent is circular, because the announcement
+would itself be an agent-authored Message needing exemption from the cap it
+announces. The Room view shows the pause instead, and goes further than the plan
+did: it **asks**. Continue grants one more Budget and re-delivers the Room's last
+Message — without that re-delivery it would raise a number nothing reads, since a
+Turn only ever begins with a delivered Message.
 
-Whatever trips, **it has to say so in the Room**. A cap that stops an Agent
-silently is indistinguishable from an Agent that is broken, which is the same
-failure as item 3. A posted Message — *paused after 40 agent turns; say anything
-to resume* — makes the cap legible, and settling that wording also settles
-whether a budget is per Room, per Persona, or global.
+**The open question is settled: per Room for layers one and two, per Persona for
+the token Budget** — one ACP session spans every Room its Agent is in, so the
+third layer could not be per Room even if it wanted to be.
 
 ## 3. Streaming replies, and failures the human can see
 
@@ -183,7 +197,10 @@ buffers it — but nothing happens, and the stall produces no error.
 
 Two App Tools close it: `mcp__team__follow_room(room_id)` and
 `unfollow_room(room_id)`. A following Agent is woken by every Message in that
-Room. `ReplyGate.ShouldReply` gains a third pure input and stays client-side.
+Room. `ReplyGate.Decide` gains a further pure input and stays client-side. Note that
+its signature moved with item 2: it takes the Room's Budget figures and returns a
+three-valued `ReplyDecision` rather than a `bool`, so `following` is a new
+parameter on that, not on `ShouldReply`.
 
 Three details are load-bearing, and
 [ADR-0005](../adr/0005-agent-topologies-are-emergent.md) argues each:
@@ -203,6 +220,11 @@ Three details are load-bearing, and
 Alongside it, an optional `seed` parameter on `create_room` posts the opening
 Message as part of creation, so a Room cannot exist with Agents in it and no
 statement of why. Whoever creates a Room is responsible for seeding it.
+
+One sizing question item 2 leaves open: a following coordinator takes a Turn per
+Message in its working Room, so a five-stage pipeline can spend a Room's Budget
+quickly, and 40 agent Messages across every specialist in one Room may prove too
+few. That is a number to revisit when this ships, not a design problem.
 
 The residual risk is that a coordinator forgets to call `follow_room`. That is
 one Persona's text to get right rather than every specialist's, but no test can
@@ -386,6 +408,10 @@ means the Human sees every notification, in a Room they are already a Member of.
 
 **Two honest limits to design around.**
 
+- **Do not send the notification as the Human.** It is the obvious way to
+  guarantee a Turn in a two-Member Room, and it would reset that Room's Budget on
+  every file change — quietly disabling item 2's cap for exactly the Rooms this
+  item spends unasked-for Turns in.
 - **A `FileSystemWatcher` knows *what* changed and *when*, not *who* changed
   it.** There is no OS audit trail here, so the notification can name the file
   and the time and little else. Attribution would need the write to go through
@@ -401,8 +427,8 @@ means the Human sees every notification, in a Room they are already a Member of.
 **This spends Turns nobody asked for**, which puts it in the same class as
 [item 8](#8-following-a-room-without-being-mentioned): a notification lands in a
 two-Member Room, the Reply Gate always passes there, and the Agent takes a billed
-Turn with no Human Message having caused it. Item 2's budget is what makes that
-safe.
+Turn with no Human Message having caused it. Item 2's Budget is what makes that
+safe, and it is now built.
 
 ## 12. Running a Persona on a local Model, via Agency.NET
 
@@ -542,10 +568,10 @@ retiring the first time.
   Personas long before they suit coordinators.
 
 - **Free is not the same as cheap.**
-  [Item 2](#2-a-cap-on-agent-to-agent-conversation)'s third layer is a token budget
-  read from `UsageUpdated`, and a local backend emits none — there is no bill to
-  read. Layers one and two are untouched, and they are the two that actually catch
-  a loop. But the resource a runaway local Persona exhausts is the machine every
+  [Item 2](#2-a-cap-on-agent-to-agent-conversation--built)'s third layer is a
+  token Budget read from `UsageUpdated`, and a local backend emits none — there is
+  no bill to read, so that layer is simply inert there. Layers one and two are
+  untouched, and they are the two that actually catch a loop. But the resource a runaway local Persona exhausts is the machine every
   other Persona is sharing, and item 2's wording should say so once local Models
   exist.
 
@@ -553,30 +579,42 @@ retiring the first time.
 
 Six dependencies here are real:
 
-- **10 before 1.** Item 1 is the harder problem — removing a Persona's no-cascade
-  decision, and every per-Persona store a rename has to touch. Item 10 is the
-  cheap three-quarters of it: once the filename is a stable internal key and
-  `name:` is the Member's own, most renames need item 1's harder half only when
-  a Teammate is removed, not every time one is renamed.
+- ~~**10 before 1.**~~ **Settled — 10 shipped 2026-09-12**, and not the way this
+  bullet assumed. It predicted the filename would become the stable internal key;
+  the opposite shipped, because Team sub-folders make a file's path something a
+  human is expected to change, and a path-derived key would turn filing a document
+  into a silent identity change. `persona_models` and `persona_efforts` are keyed
+  on the frontmatter `name`, so **editing `name:` is a rename** and
+  `PersonaStore.Update` moves both rows by hand.
+  What item 1 still owns is the harder half this bullet named: the no-cascade
+  decision. A renamed Teammate leaves its Agent, Rooms and Transcripts behind
+  under the old Name, and the card exposes a rename only by editing the raw file.
 
-- **2 before 8.** A following Agent is woken by every Message in that Room,
-  including exchanges it is not part of, and each wake is a billed Turn. The
-  budget is what makes following affordable, so it gates the feature outright
-  rather than improving it.
+- **2 before 8 — satisfied.** A following Agent is woken by every Message in that
+  Room, including exchanges it is not part of, and each wake is a billed Turn. The
+  Budget is what makes following affordable, so it gated the feature outright
+  rather than improving it. It shipped on 2026-09-12; item 8 is unblocked.
 - **8 before 9.** Both come from ADR-0005, but a coordinator that cannot be woken
   cannot use a tool grant either way round. Following is the load-bearing half.
-- **2 before 11.** A watched-file notification lands in a two-Member Room, where
-  the Reply Gate always passes, so every file change spends a Turn no Human asked
-  for. Same reasoning as 2 before 8, and the same budget covers both.
+- **2 before 11 — satisfied.** A watched-file notification lands in a two-Member
+  Room, where the Reply Gate always passes, so every file change spends a Turn no
+  Human asked for. Same reasoning as 2 before 8, and the same Budget covers both.
+  Item 11 is unblocked, with the caveat in its own section: do not send the
+  notification as the Human, or it resets the Budget it relies on.
 - **6 before 7.** There is nothing for a generator to write until the tokens
   exist.
 - **1 before the next per-Persona store.** Each store added is one more place a
   rename has to touch, and that cost never goes down. Item 9 is such a store, and
-  `PersonaEffortStore` has already overtaken this warning once. Item 10 adds no
-  new store, but re-keys the two that exist — `persona_models` and
-  `persona_efforts` move from `PRIMARY KEY(persona_name)` meaning "the filename"
-  to meaning "a stable internal id", a one-time migration rather than a schema
-  change `CREATE TABLE IF NOT EXISTS` can absorb silently.
+  `PersonaEffortStore` has already overtaken this warning once. Item 10 added no
+  new store and re-keyed the two that exist: `persona_models` and
+  `persona_efforts` now hold the frontmatter `name` where they used to hold the
+  filename. No migration and no schema change were needed —
+  `PRIMARY KEY(persona_name) COLLATE NOCASE` was already the right comparison for
+  a display Name. An existing `App_Data` keeps its stored Models and Efforts only
+  while a migrated file's `name:` still equals its old filename — which is why
+  `tools/migrate-personas-to-teams.ps1` leaves `name:` alone and moves the old
+  value into `title:` instead. Changing `name:` afterwards is a rename, and costs
+  what a rename costs.
 
 Items 3, 4 and 5 are independent of everything else but not of each other: all
 three live in `PersonaRunner`'s event loop and the Room view, and 3 and 5

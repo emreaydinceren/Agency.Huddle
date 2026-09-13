@@ -39,6 +39,16 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
 - **The protocol version is a strict equality check.** `ProtocolJson` throws on
   any version that is not `ProtocolVersion.Current`, so bumping it means updating
   every client in the same commit, `tools/echo-bot.ps1` included.
+- **Adding to the wire is not the same as changing it, and bumping the version
+  over an addition is its own mistake.** A new property on a server-to-client
+  record, and a new `ErrorCodes` value, are both additive: an older client parses
+  the line and ignores what it does not recognise. `ProtocolVersion.Current` stays
+  where it is — ADR-0004 set the precedent when `Members` was added, and ADR-0006
+  followed it for `agentMessagesSinceHuman`, `budget` and `budgetExhausted`.
+  Bumping anyway breaks every client for nothing, because of the strict-equality
+  rule directly above. The real cost of a new `ErrorCodes` value is quieter: a
+  client that does not know the code degrades to a generic failure, so a refused
+  post can look to an old Agent Host like a Message that simply vanished.
 - **A `Logging:LogLevel` key is a namespace prefix, so the 2026-09-12 namespace
   rename moved it and the `Team:` config root did not.** `ILogger<T>` takes its
   category from `typeof(T).FullName`, so the filters now read `"Agency.Huddle"`.

@@ -23,7 +23,7 @@ public sealed class JsonLineStreamTests
             new Hello("echo", "PowerShell echo agent"),
             new Welcome(member.Id, "echo", new List<RoomInfo> { room }),
             new PostMessage(room.Id, "reply-1", "**pong**"),
-            new MessagePosted(room.Id, "echo", chatMessage, true, new List<MemberInfo> { member }, new List<MemberInfo> { member }),
+            new MessagePosted(room.Id, "echo", chatMessage, true, new List<MemberInfo> { member }, new List<MemberInfo> { member }, 1, 40),
             new MessageDelta(room.Id, "m-7", "par", false),
             new ProtocolError(ErrorCodes.NotMember, "Agent 'echo' is not a member of room", "reply-1"),
         };

@@ -326,6 +326,31 @@ public sealed class PipeEndToEndTests
         Assert.Contains(secondDelivered.Members, m => m.Id == echoWelcome.AgentId);
     }
 
+    // The contract a third-party pipe client sees. The code is new, so an old client will not know it;
+    // ProtocolError already carries an arbitrary code string, which is why this needs no version bump.
+    [Fact]
+    public async Task AgentPostOverBudget_ReturnsABudgetExhaustedError()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
+
+        await using var client = await fixture.ConnectClientAsync(ct);
+        await client.WriteAsync(new Hello("echo", null), ct);
+        var welcome = Assert.IsType<Welcome>(await client.ReadAsync(ct));
+        var roomId = Assert.Single(welcome.Rooms).Id;
+
+        await client.WriteAsync(new PostMessage(roomId, "m1", "spends the budget"), ct);
+        await client.WriteAsync(new PostMessage(roomId, "m2", "one too many"), ct);
+
+        var error = Assert.IsType<ProtocolError>(await client.ReadAsync(ct));
+        Assert.Equal(ErrorCodes.BudgetExhausted, error.Code);
+        Assert.Equal("m2", error.RelatedMessageId);
+        Assert.Contains("Do not retry", error.Message, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task TwoClients_ConnectConcurrently()
     {

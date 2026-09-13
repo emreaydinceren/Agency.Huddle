@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
+using Agency.Huddle.App;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -68,8 +70,8 @@ public sealed class ChatServiceTests
         var directory = new SqliteTeamDirectory(dir.Options());
         await directory.InitializeAsync("You", ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
-        var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
         Assert.NotNull(echo);
+        var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
         Assert.NotNull(alpha);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id, alpha.Id], ct);
         var (service, events) = CreateService(dir, directory);
@@ -194,8 +196,8 @@ public sealed class ChatServiceTests
         var directory = new SqliteTeamDirectory(dir.Options());
         await directory.InitializeAsync("You", ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
-        var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
         Assert.NotNull(echo);
+        var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
         Assert.NotNull(alpha);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
         var (service, events) = CreateService(dir, directory);
@@ -247,8 +249,8 @@ public sealed class ChatServiceTests
         var directory = new SqliteTeamDirectory(dir.Options());
         await directory.InitializeAsync("You", ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
-        var emily = await directory.UpsertAgentUserAsync("Emily Lee", null, ct);
         Assert.NotNull(echo);
+        var emily = await directory.UpsertAgentUserAsync("Emily Lee", null, ct);
         Assert.NotNull(emily);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
         var (service, _) = CreateService(dir, directory);
@@ -274,8 +276,8 @@ public sealed class ChatServiceTests
         var directory = new SqliteTeamDirectory(dir.Options());
         await directory.InitializeAsync("You", ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
-        var chief = await directory.UpsertAgentUserAsync("Chief of Staff", null, ct);
         Assert.NotNull(echo);
+        var chief = await directory.UpsertAgentUserAsync("Chief of Staff", null, ct);
         Assert.NotNull(chief);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
         var (service, _) = CreateService(dir, directory);
@@ -302,8 +304,8 @@ public sealed class ChatServiceTests
         var directory = new SqliteTeamDirectory(dir.Options());
         await directory.InitializeAsync("You", ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
-        var jarvis = await directory.UpsertAgentUserAsync("Jarvis", null, ct);
         Assert.NotNull(echo);
+        var jarvis = await directory.UpsertAgentUserAsync("Jarvis", null, ct);
         Assert.NotNull(jarvis);
         var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
         var (service, events) = CreateService(dir, directory, [new MentionAlias("jar", "Jarvis")]);
@@ -389,8 +391,8 @@ public sealed class ChatServiceTests
         var directory = new SqliteTeamDirectory(dir.Options());
         await directory.InitializeAsync("You", ct);
         var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
-        var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
         Assert.NotNull(echo);
+        var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
         Assert.NotNull(alpha);
         var (service, _) = CreateService(dir, directory);
         var firstRoom = await service.EnsureRoomForAsync(echo, ct);
@@ -410,8 +412,8 @@ public sealed class ChatServiceTests
         var directory = new SqliteTeamDirectory(dir.Options());
         await directory.InitializeAsync("You", ct);
         var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
-        var beta = await directory.UpsertAgentUserAsync("beta", null, ct);
         Assert.NotNull(alpha);
+        var beta = await directory.UpsertAgentUserAsync("beta", null, ct);
         Assert.NotNull(beta);
         var (service, events) = CreateService(dir, directory);
         var roomsChangedCount = 0;
@@ -478,13 +480,391 @@ public sealed class ChatServiceTests
         Assert.Contains("select at least one agent", exception.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Post_ByAgent_IncrementsTheRoomBudget()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, _) = CreateService(dir, directory);
+
+        await service.PostAsync(room.Id, agent.Id, "one", ct: ct);
+        await service.PostAsync(room.Id, agent.Id, "two", ct: ct);
+
+        Assert.Equal(2, service.GetBudget(room.Id).Used);
+    }
+
+    [Fact]
+    public async Task Post_ByHuman_ResetsTheRoomBudget()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, _) = CreateService(dir, directory);
+        await service.PostAsync(room.Id, agent.Id, "one", ct: ct);
+
+        await service.PostAsync(room.Id, KnownIds.Human, "hello", ct: ct);
+
+        Assert.Equal(0, service.GetBudget(room.Id).Used);
+    }
+
+    [Fact]
+    public async Task Post_ByAgentAtBudget_ThrowsBudgetExhausted_AndAppendsNothing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 2);
+        await service.PostAsync(room.Id, agent.Id, "one", ct: ct);
+        await service.PostAsync(room.Id, agent.Id, "two", ct: ct);
+
+        var exception = await Assert.ThrowsAsync<ChatException>(
+            () => service.PostAsync(room.Id, agent.Id, "three", ct: ct));
+
+        Assert.Equal(ErrorCodes.BudgetExhausted, exception.Code);
+        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var stored = await store.ReadAllAsync(room.Id, ct);
+        Assert.Equal(2, stored.Count);
+    }
+
+    [Fact]
+    public async Task Post_ByHumanAtBudget_IsNeverRefused()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 1);
+        await service.PostAsync(room.Id, agent.Id, "one", ct: ct);
+
+        var posted = await service.PostAsync(room.Id, KnownIds.Human, "carry on", ct: ct);
+
+        Assert.Equal("carry on", posted.Text);
+    }
+
+    [Fact]
+    public async Task Post_ByAgentAfterAHumanMessage_IsAllowedAgain()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 1);
+        await service.PostAsync(room.Id, agent.Id, "one", ct: ct);
+        await service.PostAsync(room.Id, KnownIds.Human, "carry on", ct: ct);
+
+        var posted = await service.PostAsync(room.Id, agent.Id, "two", ct: ct);
+
+        Assert.Equal("two", posted.Text);
+    }
+
+    [Fact]
+    public async Task Budget_IsPerRoom()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var first = await directory.CreateRoomAsync("one", [KnownIds.Human, agent.Id], ct);
+        var second = await directory.CreateRoomAsync("two", [KnownIds.Human, agent.Id], ct);
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 1);
+        await service.PostAsync(first.Id, agent.Id, "spends the first room", ct: ct);
+
+        var posted = await service.PostAsync(second.Id, agent.Id, "the second is untouched", ct: ct);
+
+        Assert.Equal("the second is untouched", posted.Text);
+        Assert.True(service.GetBudget(first.Id).Exhausted);
+    }
+
+    // A model that reads a refusal as transient retries, spending the very Turn the refusal exists to
+    // save. rules.md makes the terminal wording binding, so pin it rather than trusting prose.
+    [Fact]
+    public async Task BudgetExhausted_MessageTellsTheAgentNotToRetry()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 1);
+        await service.PostAsync(room.Id, agent.Id, "one", ct: ct);
+
+        var exception = await Assert.ThrowsAsync<ChatException>(
+            () => service.PostAsync(room.Id, agent.Id, "two", ct: ct));
+
+        Assert.Contains("Do not retry", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task ZeroBudget_NeverRefusesAnAgentPost()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 0);
+
+        for (var i = 0; i < 25; i++)
+        {
+            await service.PostAsync(room.Id, agent.Id, $"message {i}", ct: ct);
+        }
+
+        Assert.False(service.GetBudget(room.Id).Exhausted);
+    }
+
+    [Fact]
+    public async Task Post_PublishesTheBudgetOnTheEvent()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, events) = CreateService(dir, directory, agentMessageBudget: 5);
+        RoomBudget? published = null;
+        events.MessagePosted += e => published = e.Budget;
+
+        await service.PostAsync(room.Id, agent.Id, "one", ct: ct);
+
+        Assert.Equal(new RoomBudget(1, 5), published);
+    }
+
+    [Fact]
+    public async Task GetBudget_ForARoomWithNoAgentMessages_ReturnsZeroUsed()
+    {
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 7);
+
+        var budget = service.GetBudget("a-room-nobody-has-posted-to");
+
+        Assert.Equal(new RoomBudget(0, 7), budget);
+    }
+
+    // The test that fails if the check or the increment ever leaves the per-Room semaphore:
+    // check-then-act on a ConcurrentDictionary is still a race, and the Room would then take more
+    // Messages than it granted.
+    [Fact]
+    public async Task ConcurrentAgentPosts_StopExactlyAtTheBudget()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 10);
+        var refused = 0;
+
+        await Parallel.ForEachAsync(Enumerable.Range(0, 50), ct, async (i, token) =>
+        {
+            try
+            {
+                await service.PostAsync(room.Id, agent.Id, $"message {i}", ct: token);
+            }
+            catch (ChatException ex) when (ex.Code == ErrorCodes.BudgetExhausted)
+            {
+                Interlocked.Increment(ref refused);
+            }
+        });
+
+        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var stored = await store.ReadAllAsync(room.Id, ct);
+        Assert.Equal(10, stored.Count);
+        Assert.Equal(40, refused);
+    }
+
+    [Fact]
+    public async Task Extend_RaisesTheGrantByOneBudget()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 2);
+        await service.PostAsync(room.Id, agent.Id, "one", ct: ct);
+        await service.PostAsync(room.Id, agent.Id, "two", ct: ct);
+
+        var extended = await service.ExtendBudgetAsync(room.Id, ct);
+
+        Assert.True(extended);
+        Assert.Equal(new RoomBudget(2, 4), service.GetBudget(room.Id));
+    }
+
+    [Fact]
+    public async Task Extend_AllowsExactlyOneMoreBudget()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 1);
+        await service.PostAsync(room.Id, agent.Id, "one", ct: ct);
+        await service.ExtendBudgetAsync(room.Id, ct);
+
+        await service.PostAsync(room.Id, agent.Id, "two", ct: ct);
+        var exception = await Assert.ThrowsAsync<ChatException>(
+            () => service.PostAsync(room.Id, agent.Id, "three", ct: ct));
+
+        Assert.Equal(ErrorCodes.BudgetExhausted, exception.Code);
+    }
+
+    // The re-delivery is the whole of the extension: raising the allowance alone changes a number
+    // nothing reads, because a Turn only ever begins with a delivered Message.
+    [Fact]
+    public async Task Extend_RepublishesTheLastMessageForRedeliveryOnly()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, events) = CreateService(dir, directory, agentMessageBudget: 1);
+        var last = await service.PostAsync(room.Id, agent.Id, "the message that spent it", ct: ct);
+        var posted = new List<string>();
+        var redelivered = new List<MessagePostedEvent>();
+        events.MessagePosted += e => posted.Add(e.Message.Id);
+        events.MessageRedelivered += redelivered.Add;
+
+        await service.ExtendBudgetAsync(room.Id, ct);
+
+        Assert.Empty(posted);
+        var only = Assert.Single(redelivered);
+        Assert.Equal(last.Id, only.Message.Id);
+        Assert.Equal(new RoomBudget(1, 2), only.Budget);
+    }
+
+    // The Mentions are re-parsed rather than remembered, so whoever the Message woke the first time is
+    // woken again - otherwise Continue would resume the Room but not the conversation.
+    [Fact]
+    public async Task Extend_PreservesTheOriginalMentions()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var author = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(author);
+        var mentioned = await directory.UpsertAgentUserAsync("Jarvis", null, ct);
+        Assert.NotNull(mentioned);
+        var room = await directory.CreateRoomAsync("echo, Jarvis", [KnownIds.Human, author.Id, mentioned.Id], ct);
+        var (service, events) = CreateService(dir, directory, agentMessageBudget: 1);
+        await service.PostAsync(room.Id, author.Id, "over to you @Jarvis", ct: ct);
+        MessagePostedEvent? redelivered = null;
+        events.MessageRedelivered += e => redelivered = e;
+
+        await service.ExtendBudgetAsync(room.Id, ct);
+
+        Assert.NotNull(redelivered);
+        var only = Assert.Single(redelivered.Mentions);
+        Assert.Equal(mentioned.Id, only.Id);
+    }
+
+    // A second click must grant nothing, or the prompt becomes a way to spend without deciding to.
+    [Fact]
+    public async Task Extend_OnARoomThatIsNotPaused_DoesNothing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 5);
+        await service.PostAsync(room.Id, agent.Id, "one", ct: ct);
+
+        var extended = await service.ExtendBudgetAsync(room.Id, ct);
+
+        Assert.False(extended);
+        Assert.Equal(new RoomBudget(1, 5), service.GetBudget(room.Id));
+    }
+
+    [Fact]
+    public async Task Extend_OnAnEmptyRoom_DoesNothing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 1);
+
+        var extended = await service.ExtendBudgetAsync(room.Id, ct);
+
+        Assert.False(extended);
+    }
+
+    // An extension is granted for one unattended run. Speaking ends that run, so the next one starts
+    // from the configured Budget rather than from whatever the Human last allowed.
+    [Fact]
+    public async Task HumanMessage_ResetsTheGrantToOneBudget()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 1);
+        await service.PostAsync(room.Id, agent.Id, "one", ct: ct);
+        await service.ExtendBudgetAsync(room.Id, ct);
+
+        await service.PostAsync(room.Id, KnownIds.Human, "hello", ct: ct);
+
+        Assert.Equal(new RoomBudget(0, 1), service.GetBudget(room.Id));
+    }
+
+    // Defaults to the production Budget so every test written before it stays a test about something
+    // else; the Budget's own tests pass a small number so they do not have to post forty Messages.
     private static (ChatService Service, RoomEvents Events) CreateService(
-        TempDataDir dir, ITeamDirectory directory, IReadOnlyList<MentionAlias>? aliases = null)
+        TempDataDir dir,
+        ITeamDirectory directory,
+        IReadOnlyList<MentionAlias>? aliases = null,
+        int agentMessageBudget = 40)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var aliasSource = new FakeMentionAliasSource { Aliases = aliases ?? [] };
-        var service = new ChatService(directory, store, events, aliasSource, NullLogger<ChatService>.Instance);
+        var options = Options.Create(new TeamOptions { AgentMessageBudget = agentMessageBudget });
+        var service = new ChatService(directory, store, events, aliasSource, options, NullLogger<ChatService>.Instance);
         return (service, events);
     }
 }
