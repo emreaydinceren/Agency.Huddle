@@ -120,3 +120,24 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   Transcripts stay behind under the old Name — the same non-cascading semantics
   removing a Persona has, and deliberate, but it means a rename leaves a ghost
   in the Team Directory.
+
+- **`ProtocolJson.Options` escapes anything unsafe for HTML, which ruins a file
+  a human edits.** It sets no `Encoder`, so it inherits `JavaScriptEncoder.Default`:
+  every em-dash becomes `—`, every quote `"`, and `get_help`'s
+  documentation line reads `"[Room: <name> (id: <id>)]"`. Correct
+  for wire JSON that might land in a page, wrong for `hooks.json`. Worse than
+  unreadable — a user who hand-types `<name>` sees it rewritten as an escape on the
+  next save and reads that as corruption. `HookStore` derives its own options with
+  `JavaScriptEncoder.UnsafeRelaxedJsonEscaping`; "unsafe" there means HTML and
+  script contexts, which a local file round-tripping through `JsonSerializer` is not.
+  Reuse `ProtocolJson.Options` verbatim for anything on the wire, and derive from it
+  for anything a person opens.
+
+- **Raw string literals normalise line endings to `\n`, whatever the file has.**
+  Worth knowing before "fixing" a golden test: `.cs` files here are CRLF in the
+  working tree (`core.autocrlf` is `true`, `.editorconfig` sets `end_of_line = crlf`),
+  yet a `"""` literal in one of them yields `\n` only. So `HookCatalog`'s defaults,
+  and therefore every prompt sent to a model, carry no `\r` on any platform. The
+  golden tests still normalise both sides before comparing, which is right for the
+  files on disk — but the normalisation is not hiding a platform difference in the
+  prompts themselves. Verified by serialising the catalog and finding zero `\r`.
