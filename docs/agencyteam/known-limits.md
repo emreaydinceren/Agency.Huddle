@@ -88,6 +88,15 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   actually applied is re-resolved against the live session every time one starts.
   A deliberate deviation from `session-config-options.md`'s "caching across spawns is
   not fine", which protects selection rather than presentation.
+- **That probe runs even with `Team:Acp:Enabled` false.** Opening a New/Edit
+  teammate card, and changing its Model select, spawns a throwaway Adapter
+  regardless of the money flag — see [Rules](rules.md). It spends nothing,
+  because it never starts a Turn; the flag exists for the thing that does.
+  Gating the probe on `Acp:Enabled` would leave the picker empty in the default
+  configuration and defeat the feature, so the row is expected, and it is
+  expected to be short-lived: it appears and disappears within seconds. An
+  Adapter from this path that PERSISTS is not the probe — that is a real
+  Adapter, spending the operator's money in a configuration they switched off.
 - **`session/set_model` is unavailable.** The vendored adapter advertises only
   `configOptions`, never the unstable `models`/`SessionModelState`. If a future
   adapter adds it, `ModelConfigOptions` is the single place to teach.

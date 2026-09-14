@@ -30,7 +30,7 @@ What a test's **Before you start** means by each name.
 | Id | Means |
 | --- | --- |
 | **E-BUILT** | `P-BUILD` has passed in this working tree. |
-| **E-FREE** | App running, adapters off — started by `P-LAUNCH-FREE`. Spends nothing. |
+| **E-FREE** | App running, adapters off at rest — started by `P-LAUNCH-FREE`. A picker probe can still start one short-lived Adapter (`O-ADAPTERS`). Spends nothing. |
 | **E-PAID** | App running, adapters on with budget caps — started by `P-LAUNCH-PAID`. 💰 |
 | **E-STOPPED** | No app running; nothing answers on `http://localhost:5100`. |
 | **E-FRESH** | `E-STOPPED` plus `P-RESET-ALL` since, so `App_Data` is what a first run creates. |
@@ -156,8 +156,12 @@ Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
   Measure-Object | Select-Object -ExpandProperty Count
 ```
 
-`0` is the resting value in `E-FREE`. In `E-PAID` it equals the number of Online
-Teammates, plus a short-lived extra whenever a Model or Effort picker probes.
+`0` is the resting value in `E-FREE`. In `E-PAID` it equals the number of Online Teammates. In
+BOTH lanes, opening a Model or Effort picker adds one short-lived extra row — the catalog probe
+runs even with `Acp:Enabled=false`, by design (`docs/agencyteam/rules.md`), because it spends
+nothing: it never starts a Turn. That row disappearing within seconds is the probe finishing,
+not a cost-guard failure. A row that PERSISTS in `E-FREE` is not a probe — it is a real Adapter,
+and that is the failure PERSONALIFECYCLE-01 exists to catch.
 
 It returns `0` cleanly when nothing is running — unlike `Get-Process node`, which
 errors with `Cannot find a process with the name "node"` and has to be read as a

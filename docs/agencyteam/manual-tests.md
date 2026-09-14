@@ -70,6 +70,13 @@ Anything above `0` means the guard did not take. Stop the app, set the variable 
 window, and relaunch. The variable lives only in that terminal session — reopen the terminal and
 you must set it again.
 
+> [!NOTE]
+> Opening a Model or Effort picker — the New/Edit teammate form — spawns one short-lived probe
+> Adapter even with the guard on. That is by design: the probe never starts a Turn, so it spends
+> nothing, and gating it on `Acp:Enabled` would leave the picker empty in the default
+> configuration (`docs/agencyteam/rules.md` has the reasoning). Expect that row to appear and
+> disappear within seconds — it is not a guard failure. A row that persists is.
+
 Three more rules that cost money when broken:
 
 | Rule | Why |
@@ -171,6 +178,7 @@ These are documented decisions in [Known limits](known-limits.md). Observing one
 | Tool activity never appears in scrollback | It belongs to the Draft and goes when the Draft does. |
 | An editing Hook does not restart a running Teammate | A `Next session` Hook is deliberately inert until that Teammate restarts. The badge says so. |
 | The Model picker is stale after upgrading the Adapter | The catalog is probed once per app run and cached. Restart the app. |
+| A `node` row appears in `O-ADAPTERS` right after New/Edit, in a lane the guard says spends nothing | The Model/Effort probe runs even with `Acp:Enabled` false — it never starts a Turn, so it costs nothing. Only a row that persists is a real Adapter. |
 | `mcp__team__` appears in tool names | Deliberate. The `Team:` config root and the `mcp__team__` prefix are the two identifiers that keep the old code name. |
 
 ### 0.7 Recording results

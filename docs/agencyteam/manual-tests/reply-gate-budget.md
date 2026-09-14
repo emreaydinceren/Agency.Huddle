@@ -54,7 +54,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 - The heading reads `echo` and the member line reads exactly `You, echo`.
 - After step 6 your Message `hello` appears in the transcript with the sender name `You`.
 - Through the whole of step 7 nothing else appears: no second Message, no streaming row, no red block, no grey line above the composer.
-- After step 8 a streaming row appears with sender `echo` and a **Stop** button beside the name, then settles into an ordinary Message whose body reads `echo: hello` with `echo:` in bold and no `@` anywhere in it.
+- After step 8 a streaming row appears with sender `echo` and a **Stop** button beside the name, then settles into an ordinary Message whose body reads `echo: hello echo`, with `echo:` in bold and no `@` anywhere in it. The demo agent strips only the `@` character from what it quotes, so the mention word survives even though the at-sign does not.
 - A grey line reading exactly `1 of 40 agent replies since you last spoke.` appears between the transcript and the composer.
 - The `.jsonl` file holds exactly three lines: `hello` from `human`, `hello @echo` from `human`, and the reply from the agent.
 

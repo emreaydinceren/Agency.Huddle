@@ -56,7 +56,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 14. Hover the mouse over the status line under `Nova` in the tile list and hold it for three seconds.
 15. Look at the sidebar Room list.
 16. Click the Room named `echo` in the sidebar.
-17. Click into the composer (placeholder `Message… (/invite @agent)`), type `hello there` and press Enter.
+17. Click into the composer (placeholder `Message… (/invite @agent)`), type `hello there @echo` and press Enter.
 18. In `T-B` run `Adapters` again.
 19. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'`.
 
@@ -68,7 +68,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 - The card for `Nova` shows no reason line under the status, and its action row has **Edit**, **Open**, **Restart** and **Remove** but NO **Message** link.
 - The sidebar Room list contains `echo` and `alpha` and does NOT contain a Room named `Nova`.
 - The `echo` Room shows NO red alert strip anywhere above the composer.
-- Typing `hello there` in `echo` produces a reply beginning `**echo:**` followed by the quoted text.
+- Typing `hello there @echo` in `echo` produces a reply beginning `**echo:**` followed by the quoted text.
 - `Adapters` lists no more `node.exe` rows than it did at step 2 (the picker probe processes from steps 10-11 are short-lived and may already be gone).
 - `App_Data\work` contains no folder named `Nova` (a bare `work` folder with nothing in it is expected — the Model picker creates it).
 
