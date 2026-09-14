@@ -239,7 +239,7 @@ Reply Gate, Mentions and Room Budget — [area file](reply-gate-budget.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [REPLYGATEBUDGET-01](reply-gate-budget.md#replygatebudget-01-a-demo-two-member-room-no-mention-is-silent-a-mention-streams-a-reply) |  | Active | | Re-run: the step-8 Pass if line was corrected to `echo: hello echo` (a41cdb8). The recorded Pass was judged against a body the code cannot produce. |
+| [REPLYGATEBUDGET-01](reply-gate-budget.md#replygatebudget-01-a-demo-two-member-room-no-mention-is-silent-a-mention-streams-a-reply) |  | Pass |  | Re-run 2026-09-14 on the corrected step-8 expectation: body read `echo: hello echo`, `echo:` bold, no `@`. Silence held 15s on the bare `hello`; transcript held exactly three lines. |
 | [REPLYGATEBUDGET-02](reply-gate-budget.md#replygatebudget-02-three-or-more-members-makes-the-same-room-mention-gated) |  | Pass | |  |
 | [REPLYGATEBUDGET-03](reply-gate-budget.md#replygatebudget-03-invite-from-the-composer-and-its-two-error-strips-never-touch-the-transcript) |  | Active | | |
 | [REPLYGATEBUDGET-04](reply-gate-budget.md#replygatebudget-04-a-mention-is-case-insensitive-and-ends-at-trailing-punctuation) |  | Active | | |
@@ -330,7 +330,7 @@ Teammate card: view, edit, create, delete — [area file](teammate-card.md)
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | [TEAMMATECARD-01](teammate-card.md#teammatecard-01-empty-teammates-page-and-the-new-teammate-entry-point) |  | Active | | |
-| [TEAMMATECARD-02](teammate-card.md#teammatecard-02-clicking-new-teammate-opens-a-card-at-all-blank-name-crash-probe) |  | Active | | Re-run: the blank-name render crash is fixed (#10, 779cd19). Unblocks the Create tests 05-11, 18-21, 27, 28 and 33. |
+| [TEAMMATECARD-02](teammate-card.md#teammatecard-02-clicking-new-teammate-opens-a-card-at-all-blank-name-crash-probe) |  | Pass |  | Re-run 2026-09-14: card opens on both attempts and survives an empty Name and a single-space Name; no exception in the console. Fix confirmed. Unblocks the Create tests 05-11, 18-21, 27, 28, 33. |
 | [TEAMMATECARD-03](teammate-card.md#teammatecard-03-create-card-every-label-placeholder-and-hint) |  | Active | | |
 | [TEAMMATECARD-04](teammate-card.md#teammatecard-04-monogram-tracks-the-name-as-you-type) |  | Active | | |
 | [TEAMMATECARD-05](teammate-card.md#teammatecard-05-create-the-exact-name-acceptreject-set) |  | Active | | |
@@ -609,7 +609,7 @@ Persona lifecycle: supervisor, work dirs, health and restarts — [area file](pe
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [PERSONALIFECYCLE-01](persona-lifecycle.md#personalifecycle-01-with-acp-disabled-every-teammate-reads-offline-with-an-empty-tooltip-and-no-room-raises-an-alert) |  | Active | | Re-run: the step-4 crash is fixed (#11, 779cd19) and step 17 now Mentions. Conditions not needing `Nova` already held, so only the `Nova` half needs walking. |
+| [PERSONALIFECYCLE-01](persona-lifecycle.md#personalifecycle-01-with-acp-disabled-every-teammate-reads-offline-with-an-empty-tooltip-and-no-room-raises-an-alert) |  | Pass |  | Re-run 2026-09-14: `Nova` created Haiku/low, card and tile read Offline with no tooltip and no reason line, no `Nova` Room, no alert strip, adapters 0 before and after, `work` empty. Corrected step 17 (`hello there @echo`) drew the `**echo:**` reply. |
 | [PERSONALIFECYCLE-02](persona-lifecycle.md#personalifecycle-02-a-persona-name-with-a-leading-trailing-or-doubled-space-is-refused-on-the-card-and-never-written-to-disk) |  | Active | | |
 | [PERSONALIFECYCLE-03](persona-lifecycle.md#personalifecycle-03-browsing-teammates-spawns-no-adapter-opening-a-card-spawns-exactly-one-and-reopening-spawns-none) |  | Active | | |
 | [PERSONALIFECYCLE-04](persona-lifecycle.md#personalifecycle-04-a-missing-adapter-degrades-the-model-and-effort-pickers-with-a-plain-language-hint-and-restoring-it-works-with-no-app-restart) |  | Active | | |
