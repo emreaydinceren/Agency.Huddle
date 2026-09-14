@@ -465,7 +465,7 @@ If the list never becomes scrollable (a very tall window), shrink the browser wi
 3. With the Draft still visibly streaming, press Ctrl+C in `T-C` to kill the client without letting it post.
 4. Watch the browser without reloading for 10 seconds.
 5. In devtools Elements, search for `streaming` and record the match count.
-6. Check the `T-A` console for a line reading `Agent connection <id> ended.`
+6. Check the `T-A` console for a line reading `Agent connection <id> ended.` It is NOT a pass condition and is often absent: `AgentConnection` logs it only from its `catch (IOException)`, so a client that dies in a way which ends the read loop cleanly leaves no line at all. Judge on the browser and the transcript.
 7. In `T-D` run: `Get-Content "src\Huddle.App\App_Data\rooms\<DRIPROOM>.jsonl" -Tail 1` and confirm the half-reply text is not there.
 8. Reload the page and confirm the Room shows only real Messages.
 
