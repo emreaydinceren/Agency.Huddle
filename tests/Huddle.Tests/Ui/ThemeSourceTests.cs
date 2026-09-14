@@ -97,6 +97,53 @@ public sealed class ThemeSourceTests
         }
     }
 
+    /// <summary>
+    /// <c>app.css</c> declares no colour literal: every colour comes from a token declared in
+    /// <c>theme.css</c>, the selected theme layered over it, or the Human's own overrides. The
+    /// failure message names the offending line number and its text - <see cref="CssSource.FindColourLiterals"/>
+    /// formats each hit that way - so this test exists to be read by whoever trips it.
+    /// </summary>
+    [Fact]
+    public void AppCss_DeclaresNoColourLiteral()
+    {
+        var hits = CssSource.FindColourLiterals(AppCssPath);
+
+        Assert.Empty(hits);
+    }
+
+    /// <summary>
+    /// <c>app.css</c> declares no font-family literal: every <c>font-family</c> value is a
+    /// single <c>var(--token)</c> reference. The <c>font: inherit</c> shorthand declarations are
+    /// not literals and must not be flagged - <see cref="CssSource.FindFontFamilyLiterals"/>'s
+    /// rule is "not a single <c>var(--...)</c>", and <c>inherit</c> is explicitly allowed.
+    /// </summary>
+    [Fact]
+    public void AppCss_DeclaresNoFontFamilyLiteral()
+    {
+        var hits = CssSource.FindFontFamilyLiterals(AppCssPath);
+
+        Assert.Empty(hits);
+    }
+
+    /// <summary>
+    /// Every token <c>app.css</c> references through <c>var(...)</c> is one of the tokens
+    /// <c>theme.css</c> declares - the mechanical half of "one source of truth" for tokens;
+    /// roadmap item 7 adds the mirror assertion over the same helpers.
+    /// </summary>
+    [Fact]
+    public void AppCss_UsesOnlyTokensDeclaredInThemeCss()
+    {
+        var referenced = CssSource.ReadReferencedTokens(AppCssPath).Distinct(StringComparer.Ordinal);
+        var declared = CssSource.ReadDeclaredTokens(ThemeCssPath).ToHashSet(StringComparer.Ordinal);
+
+        var undeclared = referenced.Where(token => !declared.Contains(token)).ToList();
+
+        Assert.Empty(undeclared);
+    }
+
+    private static string AppCssPath =>
+        CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css");
+
     private static string ThemeCssPath =>
         CssSource.RepoPath("src", "Huddle.App", "wwwroot", "theme.css");
 

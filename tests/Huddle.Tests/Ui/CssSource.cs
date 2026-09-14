@@ -108,8 +108,12 @@ internal static partial class CssSource
 
     /// <summary>
     /// Every <c>font-family:</c> or <c>font:</c> declaration in <paramref name="cssPath"/> whose
-    /// value is not a single <c>var(--name)</c> reference, formatted as <c>"line N: text"</c>. The
-    /// typography equivalent of <see cref="FindColourLiterals"/>.
+    /// value is neither a single <c>var(--name)</c> reference nor one of the CSS-wide keywords in
+    /// <see cref="CssWideKeywords"/> (<c>inherit</c>, <c>initial</c>, <c>unset</c>, <c>revert</c>),
+    /// formatted as <c>"line N: text"</c>. Those keywords carry no literal font of their own - they
+    /// resolve to whatever the cascade already produced - so they are not literals for this rule's
+    /// purpose, even though they are not a token reference either. The typography equivalent of
+    /// <see cref="FindColourLiterals"/>.
     /// </summary>
     /// <param name="cssPath">Path to the stylesheet to read.</param>
     public static IReadOnlyList<string> FindFontFamilyLiterals(string cssPath)
@@ -125,7 +129,7 @@ internal static partial class CssSource
             }
 
             var value = match.Groups["value"].Value.Trim();
-            if (!SingleVarReferencePattern().IsMatch(value))
+            if (!SingleVarReferencePattern().IsMatch(value) && !CssWideKeywords.Contains(value))
             {
                 hits.Add($"line {i + 1}: {lines[i].Trim()}");
             }
@@ -171,4 +175,13 @@ internal static partial class CssSource
 
     [GeneratedRegex(@"^var\(\s*--[a-zA-Z0-9-]+\s*\)$", RegexOptions.CultureInvariant)]
     private static partial Regex SingleVarReferencePattern();
+
+    /// <summary>
+    /// The CSS-wide keywords a <c>font</c>/<c>font-family</c> value may carry without being a
+    /// literal: each one defers to the cascade (an ancestor's resolved value, the property's
+    /// initial value, or the cascade's own conflict resolution) rather than naming a font, so
+    /// <see cref="FindFontFamilyLiterals"/> does not flag it.
+    /// </summary>
+    private static readonly HashSet<string> CssWideKeywords =
+        new(StringComparer.Ordinal) { "inherit", "initial", "unset", "revert" };
 }

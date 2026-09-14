@@ -1,11 +1,27 @@
+/* ---- Every colour and every font here is a token -------------------------------------------
+   Every colour and every font-family in this file comes from theme.css's base layer, from the
+   Human's selected theme layered over it, or from the Human's own overrides. A literal here
+   fails AppCss_DeclaresNoColourLiteral or AppCss_DeclaresNoFontFamilyLiteral. */
+
 html, body {
     height: 100%;
     margin: 0;
-    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--surface-base);
+    color: var(--text-primary);
+    font-family: var(--font-ui);
+}
+
+/* 100% honours the browser's own font-size setting; every existing rem scales from this one token. */
+html {
+    font-size: var(--font-size-base);
 }
 
 * {
     box-sizing: border-box;
+}
+
+code, kbd, samp, pre {
+    font-family: var(--font-mono);
 }
 
 .app-grid {
@@ -15,13 +31,13 @@ html, body {
 }
 
 .sidebar {
-    border-right: 1px solid #d0d0d0;
-    background: #f5f5f5;
+    border-right: 1px solid var(--border-default);
+    background: var(--surface-sidebar);
     overflow-y: auto;
 }
 
 .new-chat {
-    border-bottom: 1px solid #d0d0d0;
+    border-bottom: 1px solid var(--border-default);
     padding: 0.6rem 1rem;
 }
 
@@ -29,14 +45,14 @@ html, body {
     width: 100%;
     padding: 0.4rem 0.6rem;
     font: inherit;
-    background: #fff;
-    border: 1px solid #bbb;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-control);
     border-radius: 4px;
     cursor: pointer;
 }
 
 .new-chat-toggle:hover {
-    background: #eef3ff;
+    background: var(--surface-hover);
 }
 
 .new-chat-panel {
@@ -65,39 +81,39 @@ html, body {
     width: 0.6rem;
     height: 0.6rem;
     border-radius: 50%;
-    background: #b32121;
+    background: var(--status-offline);
 }
 
 .agent-dot.online {
-    background: #2e9e44;
+    background: var(--status-online);
 }
 
 .agent-dot.offline {
-    background: #b32121;
+    background: var(--status-offline);
 }
 
 .agent-dot.degraded {
-    background: #c77d00;
+    background: var(--status-degraded);
 }
 
 .agent-dot.starting {
-    background: #e0a83e;
+    background: var(--status-starting);
 }
 
 .new-chat-start {
     width: 100%;
     padding: 0.4rem 0.6rem;
     font: inherit;
-    background: #dbe7ff;
-    border: 1px solid #9fb8e8;
+    background: var(--surface-selected);
+    border: 1px solid var(--border-emphasis);
     border-radius: 4px;
     cursor: pointer;
 }
 
 .new-chat-start:disabled {
-    background: #eee;
-    border-color: #ccc;
-    color: #999;
+    background: var(--surface-muted);
+    border-color: var(--border-subtle);
+    color: var(--text-disabled);
     cursor: not-allowed;
 }
 
@@ -110,35 +126,35 @@ html, body {
 .room-list li a {
     display: block;
     padding: 0.6rem 1rem;
-    color: #222;
+    color: var(--text-primary);
     text-decoration: none;
 }
 
 .room-list li a:hover {
-    background: #e8e8e8;
+    background: var(--surface-hover);
 }
 
 .room-list li a.active {
-    background: #dbe7ff;
+    background: var(--surface-selected);
     font-weight: 600;
 }
 
 .empty-state {
     padding: 1rem;
-    color: #666;
+    color: var(--text-muted);
 }
 
 .sidebar-link {
     display: block;
     padding: 0.6rem 1rem;
-    color: #444;
+    color: var(--text-secondary);
     text-decoration: none;
-    border-top: 1px solid #d0d0d0;
+    border-top: 1px solid var(--border-default);
     font-size: 0.9rem;
 }
 
 .sidebar-link:hover {
-    background: #e8e8e8;
+    background: var(--surface-hover);
 }
 
 .teammates-page {
@@ -147,7 +163,7 @@ html, body {
 }
 
 .teammates-intro {
-    color: #666;
+    color: var(--text-muted);
 }
 
 .teammates-list {
@@ -164,7 +180,7 @@ html, body {
 
 
 .teammates-danger {
-    color: #b32121;
+    color: var(--danger-fg);
 }
 
 
@@ -173,7 +189,7 @@ html, body {
     flex-direction: column;
     gap: 0.2rem;
     font-size: 0.85rem;
-    color: #444;
+    color: var(--text-secondary);
 }
 
 .teammates-field input,
@@ -181,7 +197,7 @@ html, body {
 .teammates-field textarea {
     font: inherit;
     padding: 0.4rem;
-    border: 1px solid #bbb;
+    border: 1px solid var(--border-control);
     border-radius: 4px;
 }
 
@@ -205,7 +221,7 @@ html, body {
 
 .chat-header {
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid #d0d0d0;
+    border-bottom: 1px solid var(--border-default);
 }
 
 .chat-header h1 {
@@ -215,7 +231,7 @@ html, body {
 
 .chat-members {
     margin: 0;
-    color: #666;
+    color: var(--text-muted);
     font-size: 0.85rem;
 }
 
@@ -237,14 +253,14 @@ html, body {
     padding: 0.3rem 0.6rem;
     font: inherit;
     font-size: 0.85rem;
-    background: #fff;
-    border: 1px solid #bbb;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-control);
     border-radius: 4px;
     cursor: pointer;
 }
 
 .invite-toggle:hover {
-    background: #eef3ff;
+    background: var(--surface-hover);
 }
 
 .invite-panel {
@@ -254,10 +270,10 @@ html, body {
     z-index: 10;
     min-width: 14rem;
     padding: 0.6rem;
-    background: #fff;
-    border: 1px solid #d0d0d0;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-default);
     border-radius: 4px;
-    box-shadow: 0 2px 8px rgb(0 0 0 / 12%);
+    box-shadow: 0 2px 8px var(--shadow-soft);
 }
 
 .invite-agents {
@@ -285,7 +301,7 @@ html, body {
 }
 
 .invite-agent:hover {
-    background: #eef3ff;
+    background: var(--surface-hover);
 }
 
 .message-list {
@@ -303,17 +319,18 @@ html, body {
     gap: 0.5rem;
     align-items: baseline;
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-muted);
     margin-bottom: 0.15rem;
 }
 
 .message-sender {
     font-weight: 600;
-    color: #222;
+    color: var(--text-primary);
 }
 
 .message-body {
     line-height: 1.4;
+    font-family: var(--font-chat);
 }
 
 .message-body p {
@@ -330,7 +347,7 @@ html, body {
     display: inline-block;
     width: 0.5em;
     margin-left: 0.1em;
-    border-right: 2px solid #888;
+    border-right: 2px solid var(--text-faint);
     animation: draft-caret-blink 1s step-end infinite;
 }
 
@@ -342,7 +359,7 @@ html, body {
 
 .tool-activity {
     margin-top: 0.2rem;
-    color: #888;
+    color: var(--text-faint);
     font-size: 0.8rem;
     font-style: italic;
 }
@@ -353,15 +370,15 @@ html, body {
     padding: 0.15rem 0.5rem;
     font: inherit;
     font-size: 0.75rem;
-    color: #444;
-    background: #fff;
-    border: 1px solid #bbb;
+    color: var(--text-secondary);
+    background: var(--surface-raised);
+    border: 1px solid var(--border-control);
     border-radius: 4px;
     cursor: pointer;
 }
 
 .draft-stop:hover {
-    background: #eef3ff;
+    background: var(--surface-hover);
 }
 
 .draft-stop:disabled {
@@ -370,7 +387,7 @@ html, body {
 }
 
 .composer {
-    border-top: 1px solid #d0d0d0;
+    border-top: 1px solid var(--border-default);
     padding: 0.75rem 1rem;
 }
 
@@ -381,18 +398,18 @@ html, body {
     resize: vertical;
     font: inherit;
     padding: 0.5rem;
-    border: 1px solid #bbb;
+    border: 1px solid var(--border-control);
     border-radius: 4px;
 }
 
 .composer-error {
-    color: #b32121;
+    color: var(--danger-fg);
     margin-bottom: 0.4rem;
     font-size: 0.85rem;
 }
 
 .composer-info {
-    color: #256029;
+    color: var(--success-fg);
     margin-bottom: 0.4rem;
     font-size: 0.85rem;
 }
@@ -400,7 +417,7 @@ html, body {
 /* ---- Room member health: an Agent that is Offline or Degraded, surfaced where it matters most --- */
 
 .member-health-alert {
-    border-top: 1px solid #d0d0d0;
+    border-top: 1px solid var(--border-default);
     padding: 0.75rem 1rem;
 }
 
@@ -415,14 +432,14 @@ html, body {
 
 .member-health-alert-item {
     margin: 0;
-    color: #b32121;
+    color: var(--danger-fg);
     font-size: 0.85rem;
 }
 
 /* ---- Room budget: the pause, and the question that offers to lift it ----- */
 
 .budget-prompt {
-    border-top: 1px solid #d0d0d0;
+    border-top: 1px solid var(--border-default);
     padding: 0.75rem 1rem 0;
     display: flex;
     flex-wrap: wrap;
@@ -432,7 +449,7 @@ html, body {
 
 .budget-prompt-text {
     margin: 0;
-    color: #b32121;
+    color: var(--danger-fg);
     font-size: 0.85rem;
     flex: 1 1 16rem;
 }
@@ -447,7 +464,7 @@ html, body {
     font: inherit;
     font-size: 0.85rem;
     padding: 0.3rem 0.75rem;
-    border: 1px solid #d0d0d0;
+    border: 1px solid var(--border-default);
     border-radius: 4px;
     cursor: pointer;
 }
@@ -461,7 +478,7 @@ html, body {
 .budget-note {
     margin: 0;
     padding: 0.5rem 1rem 0;
-    color: #666;
+    color: var(--text-muted);
     font-size: 0.8rem;
 }
 
@@ -504,15 +521,15 @@ html, body {
     font: inherit;
     text-align: left;
     color: inherit;
-    background: #fff;
-    border: 1px solid #d0d0d0;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-default);
     border-radius: 8px;
     cursor: pointer;
 }
 
 .teammate-tile:hover {
-    background: #f3f6fb;
-    border-color: #b9c8e0;
+    background: var(--surface-hover);
+    border-color: var(--border-emphasis);
 }
 
 .teammate-tile-text {
@@ -527,7 +544,7 @@ html, body {
     align-items: center;
     gap: 0.35rem;
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-muted);
 }
 
 /* The monogram stands in for Slack's avatar photo. */
@@ -539,8 +556,8 @@ html, body {
     width: 2.4rem;
     height: 2.4rem;
     border-radius: 8px;
-    background: #4a154b;
-    color: #fff;
+    background: var(--accent);
+    color: var(--text-on-accent);
     font-size: 0.95rem;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -555,15 +572,15 @@ html, body {
     justify-content: center;
     padding: 3rem 1rem;
     overflow-y: auto;
-    background: rgba(0, 0, 0, 0.4);
+    background: var(--scrim);
 }
 
 .teammate-card-panel {
     width: 100%;
     max-width: 26rem;
-    background: #fff;
+    background: var(--surface-raised);
     border-radius: 10px;
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+    box-shadow: 0 8px 28px var(--shadow-strong);
 }
 
 .teammate-card-header {
@@ -572,7 +589,7 @@ html, body {
     justify-content: space-between;
     gap: 1rem;
     padding: 0.8rem 1rem;
-    border-bottom: 1px solid #e3e3e3;
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .teammate-card-header h2 {
@@ -585,7 +602,7 @@ html, body {
     padding: 0 0.4rem;
     font-size: 1.3rem;
     line-height: 1;
-    color: #555;
+    color: var(--text-secondary);
     background: none;
     border: 0;
     border-radius: 4px;
@@ -593,7 +610,7 @@ html, body {
 }
 
 .teammate-card-close:hover {
-    background: #eee;
+    background: var(--surface-muted);
 }
 
 .teammate-card-body {
@@ -635,7 +652,7 @@ html, body {
     gap: 0.35rem;
     margin: 0.25rem 0 0 0;
     font-size: 0.85rem;
-    color: #666;
+    color: var(--text-muted);
 }
 
 /* The reason under the status line - same idea as .teammates-rejected-reason: a diagnostic surfaced
@@ -643,7 +660,7 @@ html, body {
 .teammate-card-reason {
     margin: 0.15rem 0 0 0;
     font-size: 0.85rem;
-    color: #8a2b2b;
+    color: var(--danger-fg);
 }
 
 .teammate-card-name-field {
@@ -660,30 +677,30 @@ html, body {
 .teammate-card-action {
     padding: 0.4rem 0.8rem;
     font: inherit;
-    color: #222;
+    color: var(--text-primary);
     text-decoration: none;
-    background: #fff;
-    border: 1px solid #bbb;
+    background: var(--surface-raised);
+    border: 1px solid var(--border-control);
     border-radius: 6px;
     cursor: pointer;
 }
 
 .teammate-card-action:hover {
-    background: #f0f0f0;
+    background: var(--surface-hover);
 }
 
 .teammate-card-primary {
     padding: 0.4rem 0.8rem;
     font: inherit;
-    color: #fff;
-    background: #4a154b;
-    border: 1px solid #4a154b;
+    color: var(--text-on-accent);
+    background: var(--accent);
+    border: 1px solid var(--accent);
     border-radius: 6px;
     cursor: pointer;
 }
 
 .teammate-card-primary:hover {
-    background: #611f69;
+    background: var(--accent-hover);
 }
 
 .teammate-card-section h4 {
@@ -691,7 +708,7 @@ html, body {
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #666;
+    color: var(--text-muted);
 }
 
 /* The Persona is Markdown the user wrote, so it is shown as written. It is NOT
@@ -705,15 +722,15 @@ html, body {
     font: inherit;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    background: #f7f7f7;
-    border: 1px solid #e3e3e3;
+    background: var(--surface-sunken);
+    border: 1px solid var(--border-subtle);
     border-radius: 6px;
 }
 
 .teammate-card-path {
     margin: 0;
     font-size: 0.8rem;
-    color: #555;
+    color: var(--text-secondary);
     overflow-wrap: anywhere;
 }
 
@@ -725,7 +742,7 @@ html, body {
 
 .teammate-card-hint {
     font-size: 0.78rem;
-    color: #777;
+    color: var(--text-faint);
 }
 
 /* ---- Rejected Persona files: shown so a bad file is visible, not silently missing --------- */
@@ -733,15 +750,15 @@ html, body {
 .teammates-rejected {
     margin-bottom: 1rem;
     padding: 0.6rem 0.8rem;
-    background: #fff6f6;
-    border: 1px solid #e3b6b6;
+    background: var(--danger-bg);
+    border: 1px solid var(--danger-border);
     border-radius: 6px;
 }
 
 .teammates-rejected h2 {
     margin: 0 0 0.4rem 0;
     font-size: 0.9rem;
-    color: #8a2b2b;
+    color: var(--danger-fg);
 }
 
 .teammates-rejected-list {
@@ -758,13 +775,13 @@ html, body {
 .teammates-rejected-path {
     display: block;
     font-weight: 600;
-    color: #6b2020;
+    color: var(--danger-fg);
     overflow-wrap: anywhere;
 }
 
 .teammates-rejected-reason {
     display: block;
-    color: #6b2020;
+    color: var(--danger-fg);
 }
 
 /* ---- The team filter above the grouped tiles, and its InviteTeammate sibling --------------- */
@@ -787,14 +804,14 @@ html, body {
 .teammates-group-heading {
     margin: 0 0 0.5rem 0;
     font-size: 1rem;
-    color: #444;
+    color: var(--text-secondary);
     padding-bottom: 0.25rem;
-    border-bottom: 1px solid #e3e3e3;
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .teammate-tile-role {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-muted);
     overflow-wrap: anywhere;
 }
 
@@ -819,7 +836,7 @@ html, body {
 
 .settings-hooks-file-path {
     font-size: 0.8rem;
-    color: #666;
+    color: var(--text-muted);
     margin: 0.4rem 0 0.6rem 0;
 }
 
@@ -840,7 +857,7 @@ html, body {
     padding: 0.5rem 0.8rem;
     font: inherit;
     text-align: left;
-    color: #444;
+    color: var(--text-secondary);
     background: none;
     border: none;
     border-left: 3px solid transparent;
@@ -848,14 +865,14 @@ html, body {
 }
 
 .settings-tab:hover {
-    background: #eef3ff;
+    background: var(--surface-hover);
 }
 
 .settings-tab-active {
-    color: #222;
+    color: var(--text-primary);
     font-weight: 600;
-    border-left-color: #3a6fd8;
-    background: #eef3ff;
+    border-left-color: var(--accent-indicator);
+    background: var(--surface-selected);
 }
 
 .settings-content {
@@ -870,9 +887,9 @@ html, body {
 .hooks-group-heading {
     margin: 0 0 0.5rem 0;
     font-size: 1rem;
-    color: #444;
+    color: var(--text-secondary);
     padding-bottom: 0.25rem;
-    border-bottom: 1px solid #e3e3e3;
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .hooks-field {
@@ -880,7 +897,7 @@ html, body {
     flex-direction: column;
     gap: 0.25rem;
     padding: 0.7rem 0;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border-subtle);
 }
 
 .hooks-field-header {
@@ -891,25 +908,25 @@ html, body {
 
 .hooks-field-label {
     font-weight: 600;
-    color: #333;
+    color: var(--text-primary);
 }
 
 .hooks-field-badge {
     font-size: 0.72rem;
     padding: 0.1rem 0.4rem;
-    color: #555;
-    background: #eee;
+    color: var(--text-secondary);
+    background: var(--surface-muted);
     border-radius: 999px;
 }
 
 .hooks-field-badge-modified {
-    color: #6b4b00;
-    background: #fff3d6;
+    color: var(--warning-fg);
+    background: var(--warning-bg);
 }
 
 .hooks-field-badge-unsaved {
-    color: #1d4f8f;
-    background: #e3edfb;
+    color: var(--info-fg);
+    background: var(--info-bg);
 }
 
 .hooks-field-value {
@@ -917,9 +934,9 @@ html, body {
     font-size: 0.85rem;
     min-height: 0;
     padding: 0.5rem;
-    color: #333;
-    background: #fafafa;
-    border: 1px solid #d5d5d5;
+    color: var(--text-primary);
+    background: var(--surface-sunken);
+    border: 1px solid var(--border-control);
     border-radius: 4px;
     resize: vertical;
 }
@@ -931,12 +948,12 @@ html, body {
     align-items: center;
     margin: 0;
     font-size: 0.78rem;
-    color: #777;
+    color: var(--text-faint);
 }
 
 .hooks-field-placeholder {
     padding: 0.05rem 0.35rem;
-    background: #eee;
+    background: var(--surface-muted);
     border-radius: 3px;
 }
 
@@ -956,13 +973,13 @@ html, body {
 }
 
 .hooks-field-issue-warning {
-    color: #6b4b00;
-    background: #fff3d6;
+    color: var(--warning-fg);
+    background: var(--warning-bg);
 }
 
 .hooks-field-issue-error {
-    color: #7a1f1f;
-    background: #fbe4e4;
+    color: var(--danger-fg);
+    background: var(--danger-bg);
 }
 
 .hooks-field-actions {
@@ -974,13 +991,13 @@ html, body {
 
 .teammate-card-title {
     margin: 0.1rem 0 0 0;
-    color: #555;
+    color: var(--text-secondary);
 }
 
 .teammate-card-meta {
     margin: 0.15rem 0 0 0;
     font-size: 0.85rem;
-    color: #666;
+    color: var(--text-muted);
 }
 
 /* ---- The Create card's stacked identity inputs (Name, Title, Alias, Teams) ----------------- */

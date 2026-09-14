@@ -1,0 +1,8 @@
+/* Built-in light theme. It declares no tokens on purpose: all 39 fall through to
+   theme.css's values, and the colour ones resolve to the first argument of their
+   light-dark() because of the color-scheme below. That fall-through is the whole
+   layering contract, and shipping a theme that relies on it entirely is the cheapest
+   possible proof it works. See ADR-0009. */
+:root {
+    color-scheme: light;
+}

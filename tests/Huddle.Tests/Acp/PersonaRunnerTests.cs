@@ -332,7 +332,7 @@ public sealed class PersonaRunnerTests
         factory.Session.FaultEvents(new IOException("adapter process died"));
 
         var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (!logger.Entries.Exists(entry => entry.Level == LogLevel.Warning) && DateTimeOffset.UtcNow < deadline)
+        while (!logger.Entries.Any(entry => entry.Level == LogLevel.Warning) && DateTimeOffset.UtcNow < deadline)
         {
             await Task.Delay(50, ct);
         }
@@ -675,7 +675,7 @@ public sealed class PersonaRunnerTests
         // Bounded grace period for the Information entry, written from the consumer's catch clause,
         // to actually land before asserting against it.
         var logDeadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (!logger.Entries.Exists(entry => entry.Level == LogLevel.Information) && DateTimeOffset.UtcNow < logDeadline)
+        while (!logger.Entries.Any(entry => entry.Level == LogLevel.Information) && DateTimeOffset.UtcNow < logDeadline)
         {
             await Task.Delay(20, ct);
         }
@@ -2003,11 +2003,39 @@ public sealed class PersonaRunnerTests
     /// assert against a log call rather than a chat side effect. Every other test in this file uses
     /// <see cref="NullLogger{T}"/>, which by design cannot be asserted against.
     /// </summary>
+    /// <remarks>
+    /// A <see cref="PersonaRunner"/> under test logs concurrently from three long-lived background
+    /// loops - its read loop, its consumer, and its event reader - while the test thread reads
+    /// <see cref="Entries"/>. A plain <see cref="List{T}"/> enumerated on one thread while another
+    /// appends to it throws "Collection was modified; enumeration operation may not execute.", which
+    /// is exactly the intermittent failure this fake once produced. <see cref="gate"/> serialises
+    /// every write, and <see cref="Entries"/> hands back a snapshot taken under the same lock, so a
+    /// caller enumerating it can never observe a background loop's in-progress mutation. Do not
+    /// "simplify" this back to a bare <see cref="List{T}"/> property - that is the bug this type
+    /// exists to avoid.
+    /// </remarks>
     /// <typeparam name="T">The logger's category type.</typeparam>
     private sealed class RecordingLogger<T> : ILogger<T>
     {
-        /// <summary>Every call made to this logger so far, in call order.</summary>
-        public List<(LogLevel Level, string Message)> Entries { get; } = [];
+        private readonly Lock gate = new();
+
+        private readonly List<(LogLevel Level, string Message)> entries = [];
+
+        /// <summary>
+        /// An immutable snapshot of every call made to this logger so far, in call order. Each read
+        /// takes a fresh copy under <see cref="gate"/>, so two calls in a row may return different
+        /// snapshots if a background loop logged in between - which is expected, not a bug.
+        /// </summary>
+        public IReadOnlyList<(LogLevel Level, string Message)> Entries
+        {
+            get
+            {
+                lock (this.gate)
+                {
+                    return [.. this.entries];
+                }
+            }
+        }
 
         /// <summary>Not used by this fake: scoping is irrelevant to the one test that needs it, so this returns a no-op.</summary>
         /// <typeparam name="TState">The scope state type.</typeparam>
@@ -2037,7 +2065,11 @@ public sealed class PersonaRunnerTests
         {
             ArgumentNullException.ThrowIfNull(formatter);
 
-            this.Entries.Add((logLevel, formatter(state, exception)));
+            var message = formatter(state, exception);
+            lock (this.gate)
+            {
+                this.entries.Add((logLevel, message));
+            }
         }
     }
 
