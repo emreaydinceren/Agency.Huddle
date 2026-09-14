@@ -86,9 +86,9 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [SHELLNAV-01](shell-nav.md#shellnav-01-every-stylesheet-the-shell-links-is-fingerprinted-and-actually-serves) |  | Active | | |
-| [SHELLNAV-02](shell-nav.md#shellnav-02-both-shell-scripts-are-fingerprinted-and-serve---the-gap-the-automated-guard-does-not-cover) |  | Active | | |
-| [SHELLNAV-03](shell-nav.md#shellnav-03-the-scoped-css-bundle-is-applied-the-error-banner-stays-hidden-below-the-fold) |  | Active | | |
+| [SHELLNAV-01](shell-nav.md#shellnav-01-every-stylesheet-the-shell-links-is-fingerprinted-and-actually-serves) |  | Pass | |  |
+| [SHELLNAV-02](shell-nav.md#shellnav-02-both-shell-scripts-are-fingerprinted-and-serve---the-gap-the-automated-guard-does-not-cover) |  | Pass | |  |
+| [SHELLNAV-03](shell-nav.md#shellnav-03-the-scoped-css-bundle-is-applied-the-error-banner-stays-hidden-below-the-fold) |  | Pass | |  |
 | [SHELLNAV-04](shell-nav.md#shellnav-04-get-redirects-to-the-oldest-room) |  | Active | | |
 | [SHELLNAV-05](shell-nav.md#shellnav-05-roomsunknown-id-returns-200-and-shows-the-shared-empty-state-while-the-sidebar-still-lists-rooms) |  | Active | | |
 | [SHELLNAV-06](shell-nav.md#shellnav-06-an-unmatched-route-returns-a-bare-http-404-with-a-zero-byte-body) |  | Active | | |
@@ -122,10 +122,10 @@ Startup, configuration and first-run state — [area file](startup-config.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [STARTUPCONFIG-01](startup-config.md#startupconfig-01-the-documented-launch-command-serves-the-styled-app-shell-on-httplocalhost5100) |  | Active | | |
+| [STARTUPCONFIG-01](startup-config.md#startupconfig-01-the-documented-launch-command-serves-the-styled-app-shell-on-httplocalhost5100) |  | Pass | |  |
 | [STARTUPCONFIG-02](startup-config.md#startupconfig-02-every-stylesheet-in-the-document-head-returns-200-the-silent-assets-regression) |  | Active | | |
-| [STARTUPCONFIG-03](startup-config.md#startupconfig-03-two-demo-rooms-echo-and-alpha-exist-at-startup-with-no-user-action) |  | Active | | |
-| [STARTUPCONFIG-04](startup-config.md#startupconfig-04-a-demo-agent-answers-only-when--mentioned-and-answers-in-bold) |  | Active | | |
+| [STARTUPCONFIG-03](startup-config.md#startupconfig-03-two-demo-rooms-echo-and-alpha-exist-at-startup-with-no-user-action) |  | Pass | |  |
+| [STARTUPCONFIG-04](startup-config.md#startupconfig-04-a-demo-agent-answers-only-when--mentioned-and-answers-in-bold) |  | Pass | |  |
 | [STARTUPCONFIG-05](startup-config.md#startupconfig-05-the-demo-agent-streams-a-draft-before-posting-the-real-streaming-path-free) |  | Active | | |
 | [STARTUPCONFIG-06](startup-config.md#startupconfig-06-every-navigation-surface-is-reachable-from-a-cold-start) |  | Active | | |
 | [STARTUPCONFIG-07](startup-config.md#startupconfig-07-start-chat-on-one-known-agent-reuses-its-room-two-agents-create-one-new-named-room) |  | Active | | |
@@ -164,8 +164,8 @@ Room view, posting Messages and Transcript rendering — [area file](room-messag
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | [ROOMMESSAGING-01](room-messaging.md#roommessaging-01-landing-on-redirects-into-the-first-room-and-roomsid-deep-links) |  | Active | | |
-| [ROOMMESSAGING-02](room-messaging.md#roommessaging-02-enter-sends-the-message-clears-the-textarea-and-appends-exactly-one-jsonl-line) |  | Active | | |
-| [ROOMMESSAGING-03](room-messaging.md#roommessaging-03-shiftenter-inserts-a-newline-and-does-not-send) |  | Active | | |
+| [ROOMMESSAGING-02](room-messaging.md#roommessaging-02-enter-sends-the-message-clears-the-textarea-and-appends-exactly-one-jsonl-line) |  | Pass | |  |
+| [ROOMMESSAGING-03](room-messaging.md#roommessaging-03-shiftenter-inserts-a-newline-and-does-not-send) |  | Active | | Inconclusive: browser automation cannot insert a newline into any textarea, so the "two lines" condition is unanswerable. Shift+Enter posted nothing, and a newline survived storage as a two-character escape in the JSONL. |
 | [ROOMMESSAGING-04](room-messaging.md#roommessaging-04-an-empty-or-whitespace-only-enter-posts-nothing-and-shows-no-error) |  | Active | | |
 | [ROOMMESSAGING-05](room-messaging.md#roommessaging-05-leading-and-trailing-whitespace-is-trimmed-before-the-message-is-stored) |  | Active | | |
 | [ROOMMESSAGING-06](room-messaging.md#roommessaging-06-a-soft-line-break-collapses-to-a-space-a-blank-line-makes-two-paragraphs-a-list-still-works) |  | Active | | |
@@ -203,7 +203,7 @@ Turn streaming, Drafts, Stop and failure surfacing — [area file](streaming-tur
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | [STREAMINGTURN-01](streaming-turn.md#streamingturn-01-in-the-stock-configuration-no-room-shows-a-member-health-alert-strip) |  | Active | | |
-| [STREAMINGTURN-02](streaming-turn.md#streamingturn-02-a-draft-appears-as-a-distinct-live-row-while-a-turn-is-being-written) |  | Active | | |
+| [STREAMINGTURN-02](streaming-turn.md#streamingturn-02-a-draft-appears-as-a-distinct-live-row-while-a-turn-is-being-written) |  | Pass | |  |
 | [STREAMINGTURN-03](streaming-turn.md#streamingturn-03-draft-text-renders-as-plain-text-and-becomes-markdown-only-when-the-message-lands) |  | Active | | |
 | [STREAMINGTURN-04](streaming-turn.md#streamingturn-04-the-draft-is-replaced-by-exactly-one-message-and-never-shown-twice) |  | Active | | |
 | [STREAMINGTURN-05](streaming-turn.md#streamingturn-05-the-stop-button-exists-beside-a-live-draft-and-nowhere-else-styled-as-an-ordinary-secondary-action) |  | Active | | |
@@ -239,8 +239,8 @@ Reply Gate, Mentions and Room Budget — [area file](reply-gate-budget.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [REPLYGATEBUDGET-01](reply-gate-budget.md#replygatebudget-01-a-demo-two-member-room-no-mention-is-silent-a-mention-streams-a-reply) |  | Active | | |
-| [REPLYGATEBUDGET-02](reply-gate-budget.md#replygatebudget-02-three-or-more-members-makes-the-same-room-mention-gated) |  | Active | | |
+| [REPLYGATEBUDGET-01](reply-gate-budget.md#replygatebudget-01-a-demo-two-member-room-no-mention-is-silent-a-mention-streams-a-reply) |  | Active | | Re-run: the step-8 Pass if line was corrected to `echo: hello echo` (a41cdb8). The recorded Pass was judged against a body the code cannot produce. |
+| [REPLYGATEBUDGET-02](reply-gate-budget.md#replygatebudget-02-three-or-more-members-makes-the-same-room-mention-gated) |  | Pass | |  |
 | [REPLYGATEBUDGET-03](reply-gate-budget.md#replygatebudget-03-invite-from-the-composer-and-its-two-error-strips-never-touch-the-transcript) |  | Active | | |
 | [REPLYGATEBUDGET-04](reply-gate-budget.md#replygatebudget-04-a-mention-is-case-insensitive-and-ends-at-trailing-punctuation) |  | Active | | |
 | [REPLYGATEBUDGET-05](reply-gate-budget.md#replygatebudget-05-repeating-a-mention-wakes-an-agent-once-and-the-human-can-be-mentioned-harmlessly) |  | Active | | |
@@ -282,7 +282,7 @@ Teammates page: tiles, Teams grouping, filter and rejected files — [area file]
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [TEAMMATESLIBRARY-01](teammates-library.md#teammateslibrary-01-the-page-loads-is-styled-and-spawns-nothing) |  | Active | | |
+| [TEAMMATESLIBRARY-01](teammates-library.md#teammateslibrary-01-the-page-loads-is-styled-and-spawns-nothing) |  | Pass | |  |
 | [TEAMMATESLIBRARY-02](teammates-library.md#teammateslibrary-02-empty-library-shows-its-sentence-and-no-team-filter) |  | Active | | |
 | [TEAMMATESLIBRARY-03](teammates-library.md#teammateslibrary-03-the-fixture-library-loads-and-one-tile-shows-monogram-name-title-alias-and-status) |  | Active | | |
 | [TEAMMATESLIBRARY-04](teammates-library.md#teammateslibrary-04-one-heading-per-team-ordinal-order-no-team-last-no-empty-groups) |  | Active | | |
@@ -330,7 +330,7 @@ Teammate card: view, edit, create, delete — [area file](teammate-card.md)
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | [TEAMMATECARD-01](teammate-card.md#teammatecard-01-empty-teammates-page-and-the-new-teammate-entry-point) |  | Active | | |
-| [TEAMMATECARD-02](teammate-card.md#teammatecard-02-clicking-new-teammate-opens-a-card-at-all-blank-name-crash-probe) |  | Active | | |
+| [TEAMMATECARD-02](teammate-card.md#teammatecard-02-clicking-new-teammate-opens-a-card-at-all-blank-name-crash-probe) |  | Active | | Re-run: the blank-name render crash is fixed (#10, 779cd19). Unblocks the Create tests 05-11, 18-21, 27, 28 and 33. |
 | [TEAMMATECARD-03](teammate-card.md#teammatecard-03-create-card-every-label-placeholder-and-hint) |  | Active | | |
 | [TEAMMATECARD-04](teammate-card.md#teammatecard-04-monogram-tracks-the-name-as-you-type) |  | Active | | |
 | [TEAMMATECARD-05](teammate-card.md#teammatecard-05-create-the-exact-name-acceptreject-set) |  | Active | | |
@@ -422,7 +422,7 @@ Creating Rooms, inviting Agents, Room naming — [area file](invite-rooms.md)
 | --- | --- | --- | --- | --- |
 | [INVITEROOMS-01](invite-rooms.md#inviterooms-01-a-virgin-install-seeds-one-room-per-demo-agent-named-after-it-and-lands-you-in-the-first) |  | Active | | |
 | [INVITEROOMS-02](invite-rooms.md#inviterooms-02-routing-redirects-to-the-first-room-and-an-unknown-room-id-shows-the-empty-state-instead-of-crashing) |  | Active | | |
-| [INVITEROOMS-03](invite-rooms.md#inviterooms-03-the-new-chat-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-start-chat-disabled-until-something-is-ticked) |  | Active | | |
+| [INVITEROOMS-03](invite-rooms.md#inviterooms-03-the-new-chat-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-start-chat-disabled-until-something-is-ticked) |  | Pass | |  |
 | [INVITEROOMS-04](invite-rooms.md#inviterooms-04-a-pipe-client-connecting-creates-its-room-and-it-appears-in-the-sidebar-with-no-page-refresh) |  | Active | | |
 | [INVITEROOMS-05](invite-rooms.md#inviterooms-05-reconnecting-under-the-same-name-re-attaches-to-the-existing-room-it-never-mints-a-second-one) |  | Active | | |
 | [INVITEROOMS-06](invite-rooms.md#inviterooms-06-a-name-differing-only-in-case-re-attaches-to-the-existing-agent-instead-of-creating-a-second-one) |  | Active | | |
@@ -458,10 +458,10 @@ Settings: the 22 Hooks, editing, per-field reset and Save — [area file](hooks-
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [HOOKSSETTINGS-01](hooks-settings.md#hookssettings-01-settings-opens-on-the-hooks-tab-with-a-two-button-tab-rail) |  | Active | | |
+| [HOOKSSETTINGS-01](hooks-settings.md#hookssettings-01-settings-opens-on-the-hooks-tab-with-a-two-button-tab-rail) |  | Pass | |  |
 | [HOOKSSETTINGS-02](hooks-settings.md#hookssettings-02-tab-clicks-change-the-url-and-an-unknown-tab-segment-falls-back-to-hooks-instead-of-404ing) |  | Active | | |
 | [HOOKSSETTINGS-03](hooks-settings.md#hookssettings-03-the-hooks-tab-prints-the-real-absolute-path-of-hooksjson-and-says-the-files-absence-is-expected) |  | Active | | |
-| [HOOKSSETTINGS-04](hooks-settings.md#hookssettings-04-exactly-22-hook-fields-in-four-named-groups-in-a-fixed-order) |  | Active | | |
+| [HOOKSSETTINGS-04](hooks-settings.md#hookssettings-04-exactly-22-hook-fields-in-four-named-groups-in-a-fixed-order) |  | Pass | |  |
 | [HOOKSSETTINGS-05](hooks-settings.md#hookssettings-05-the-next-session-badge-appears-on-exactly-the-9-hooks-whose-edits-cannot-reach-a-running-teammate) |  | Active | | |
 | [HOOKSSETTINGS-06](hooks-settings.md#hookssettings-06-placeholder-chips-are-listed-on-exactly-the-8-hooks-that-take-placeholders-with-full-braces) |  | Active | | |
 | [HOOKSSETTINGS-07](hooks-settings.md#hookssettings-07-no-hooks-default-text-contains-the-literal-string-mcp__team__) |  | Active | | |
@@ -507,8 +507,8 @@ Appearance tab, Themes, Tokens and overrides — [area file](appearance-theme.md
 | --- | --- | --- | --- | --- |
 | [APPEARANCETHEME-01](appearance-theme.md#appearancetheme-01-the-appearance-tab-is-on-the-settings-rail-and-is-reachable-by-its-own-route) |  | Active | | |
 | [APPEARANCETHEME-02](appearance-theme.md#appearancetheme-02-the-appearance-tab-shows-its-own-prose-and-the-real-absolute-override-path-and-none-of-the-hooks-tabs-prose) |  | Active | | |
-| [APPEARANCETHEME-03](appearance-theme.md#appearancetheme-03-the-theme-dropdown-offers-exactly-system-light-and-dark-in-that-order) |  | Active | | |
-| [APPEARANCETHEME-04](appearance-theme.md#appearancetheme-04-choosing-a-theme-stores-its-id-and-forces-a-full-document-load-not-an-in-place-repaint) |  | Active | | |
+| [APPEARANCETHEME-03](appearance-theme.md#appearancetheme-03-the-theme-dropdown-offers-exactly-system-light-and-dark-in-that-order) |  | Pass | |  |
+| [APPEARANCETHEME-04](appearance-theme.md#appearancetheme-04-choosing-a-theme-stores-its-id-and-forces-a-full-document-load-not-an-in-place-repaint) |  | Pass | |  |
 | [APPEARANCETHEME-05](appearance-theme.md#appearancetheme-05-the-three-cascade-layers-appear-in-head-in-exactly-the-right-order-and-every-stylesheet-is-actually-served) |  | Active | | |
 | [APPEARANCETHEME-06](appearance-theme.md#appearancetheme-06-the-saved-theme-is-shown-as-selected-in-the-dropdown-after-a-full-load) |  | Active | | |
 | [APPEARANCETHEME-07](appearance-theme.md#appearancetheme-07-no-flash-of-light-on-a-hard-reload-with-dark-chosen) |  | Active | | |
@@ -540,7 +540,7 @@ The named pipe: external agents and the wire — [area file](pipe-external.md)
 | [PIPEEXTERNAL-01](pipe-external.md#pipeexternal-01-the-two-demo-agents-are-already-there-and-they-reply-to-a-mention) |  | Active | | |
 | [PIPEEXTERNAL-02](pipe-external.md#pipeexternal-02-a-demo-agent-streams-a-draft-then-replaces-it-with-the-finished-message) |  | Active | | |
 | [PIPEEXTERNAL-03](pipe-external.md#pipeexternal-03-new-chat-builds-a-group-room-named-after-its-agents-and-that-room-is-mention-gated) |  | Active | | |
-| [PIPEEXTERNAL-04](pipe-external.md#pipeexternal-04-a-room-appears-in-the-sidebar-the-moment-an-external-agent-says-hello-with-no-refresh) |  | Active | | |
+| [PIPEEXTERNAL-04](pipe-external.md#pipeexternal-04-a-room-appears-in-the-sidebar-the-moment-an-external-agent-says-hello-with-no-refresh) |  | Pass | |  |
 | [PIPEEXTERNAL-05](pipe-external.md#pipeexternal-05-the-welcome-envelope-shape-fields-and-version-3) |  | Active | | |
 | [PIPEEXTERNAL-06](pipe-external.md#pipeexternal-06-the-echo-round-trip-a-mention-produces-a-bold-reply-in-the-room) |  | Active | | |
 | [PIPEEXTERNAL-07](pipe-external.md#pipeexternal-07-an-agent-never-receives-its-own-message-and-nothing-loops) |  | Active | | |
@@ -609,7 +609,7 @@ Persona lifecycle: supervisor, work dirs, health and restarts — [area file](pe
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [PERSONALIFECYCLE-01](persona-lifecycle.md#personalifecycle-01-with-acp-disabled-every-teammate-reads-offline-with-an-empty-tooltip-and-no-room-raises-an-alert) |  | Active | | |
+| [PERSONALIFECYCLE-01](persona-lifecycle.md#personalifecycle-01-with-acp-disabled-every-teammate-reads-offline-with-an-empty-tooltip-and-no-room-raises-an-alert) |  | Active | | Re-run: the step-4 crash is fixed (#11, 779cd19) and step 17 now Mentions. Conditions not needing `Nova` already held, so only the `Nova` half needs walking. |
 | [PERSONALIFECYCLE-02](persona-lifecycle.md#personalifecycle-02-a-persona-name-with-a-leading-trailing-or-doubled-space-is-refused-on-the-card-and-never-written-to-disk) |  | Active | | |
 | [PERSONALIFECYCLE-03](persona-lifecycle.md#personalifecycle-03-browsing-teammates-spawns-no-adapter-opening-a-card-spawns-exactly-one-and-reopening-spawns-none) |  | Active | | |
 | [PERSONALIFECYCLE-04](persona-lifecycle.md#personalifecycle-04-a-missing-adapter-degrades-the-model-and-effort-pickers-with-a-plain-language-hint-and-restoring-it-works-with-no-app-restart) |  | Active | | |
