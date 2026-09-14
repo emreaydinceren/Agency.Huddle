@@ -149,15 +149,15 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 - **Start chat** is clickable with nothing ticked -> the `disabled` binding regressed and the server will be asked to create a Room with zero Agents.
 - `You` appears as a tickable row -> the list is no longer filtering on `UserKind.Agent`; creating a chat with the Human would produce a nonsense Room name.
 - Only one Agent listed, or the order is reversed -> the panel is not reading `users ORDER BY rowid`, so the list will not be stable between visits.
-- Every dot is grey/`offline` while both bots are demonstrably connected (`T-A` logged them in INVITEROOMS-01) -> the presence lookup is broken and the tester can no longer tell a live Agent from a dead one anywhere in the app.
+- Every dot is red/`offline` while both bots are demonstrably connected (`T-A` logged them in INVITEROOMS-01) -> the presence lookup is broken and the tester can no longer tell a live Agent from a dead one anywhere in the app.
 - The panel is already open on first page load -> the `hidden` binding on `.new-chat-panel` regressed.
 
 **Inconclusive if**
 
-If the dots are grey and you are NOT sure the demo agents are connected, re-read `T-A` for the two `Created direct room` lines and check no `failed to connect` line followed them. If you cannot establish whether the agents are live, the dot colours are inconclusive — judge only the list contents and the disabled button, and say so.
+If the dots are red and you are NOT sure the demo agents are connected, re-read `T-A` for the two `Created direct room` lines and check no `failed to connect` line followed them. If you cannot establish whether the agents are live, the dot colours are inconclusive — judge only the list contents and the disabled button, and say so.
 
 > [!NOTE]
-> The status dots in this panel repaint only on RoomsChanged, not on presence changes. Do NOT test 'disconnect an agent with the panel open and watch the dot go grey' — that is a documented known limit, not a defect.
+> The status dots in this panel repaint only on RoomsChanged, not on presence changes. Do NOT test 'disconnect an agent with the panel open and watch the dot go red' — that is a documented known limit, not a defect.
 
 ### INVITEROOMS-04 — A pipe client connecting creates its Room and it appears in the sidebar with no page refresh
 

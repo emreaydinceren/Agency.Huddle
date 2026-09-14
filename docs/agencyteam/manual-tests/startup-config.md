@@ -761,7 +761,7 @@ This test has no failing outcome in the usual sense; its job is to calibrate the
 
 - The sidebar still lists `echo` and `alpha`.
 - The `echo` transcript still shows every earlier message.
-- The `New chat` panel still lists both agents, each with a grey dot whose tooltip reads `offline`.
+- The `New chat` panel still lists both agents, each carrying `class="agent-dot offline"` and a tooltip reading `offline`. The dot is RED, not grey: `--status-offline` is `light-dark(#b32121, #e05a5a)` in `theme.css` by design.
 - The Human message posts and NOTHING answers it for the full 30 seconds.
 - NO alert strip, banner or error appears anywhere in the Room.
 - The console contains no `Demo agent` lines.
@@ -1081,8 +1081,8 @@ This test is diagnostic, not a pass/fail gate. The symptoms it produces — 'rep
 4. Run `dotnet run --project src/Huddle.App --no-launch-profile`.
 5. Read the console's `Hosting environment:` and `Now listening on:` lines again.
 6. Try to open http://localhost:5100 in the browser and note what happens.
-7. Open the URL the console actually named and confirm the app renders there.
-8. Compare the two runs' console verbosity — note whether `Agency.Huddle` category lines differ in level.
+7. Open the URL the console actually named. The app will answer, but it will render UNSTYLED and non-interactive - see the pass condition. Confirm the routes resolve (a 302 from `/` to a room) rather than that the page looks right.
+8. Compare the two runs' configured log level for `Agency.Huddle`: `appsettings.Development.json` sets it to `Debug`, `appsettings.json` leaves it at `Information`. Do NOT expect run (a)'s console to be visibly longer - see the pass condition.
 9. Stop the app.
 
 **Pass if — all of these**
@@ -1091,7 +1091,8 @@ This test is diagnostic, not a pass/fail gate. The symptoms it produces — 'rep
 - Run (b) reports `Hosting environment: Production` and listens on `http://localhost:5000` (not 5100).
 - In run (b), http://localhost:5100 gives connection refused.
 - In run (b), no Persona starts even if Persona files exist, because only `appsettings.json` applies and ACP is off there.
-- Run (a)'s console is noticeably more verbose for `Agency.Huddle` categories than run (b)'s.
+- In run (b) the app answers but renders UNSTYLED and non-interactive, and exactly three assets return **500**: `Huddle.App.<hash>.styles.css`, `Components/Layout/ReconnectModal.<hash>.razor.js` and `_framework/blazor.web.<hash>.js`. The console says why - `The application is not running against the published output and Static Web Assets are not enabled.` followed by a `FileNotFoundException` per asset. This is stock ASP.NET Core behaviour for an UNPUBLISHED build run in the Production environment, NOT a defect: those three assets live outside `wwwroot` until `dotnet publish` copies them there. Verified on 2026-09-14 - a published build in Production serves all six assets 200.
+- The configured `Agency.Huddle` level differs between the two: `Debug` from `appsettings.Development.json` in run (a), `Information` from `appsettings.json` in run (b). The two consoles will nonetheless look the SAME in the free lane, and that is correct - `Huddle.App` and `Huddle.Contracts` contain zero `Debug`-level log statements, so the extra level buys nothing until ACP is on. The only three live in `Huddle.Acp` (`DotAcpClientAdapter`, `AppToolServer` x2).
 
 **Fail if — any of these**
 
@@ -1257,11 +1258,15 @@ If the tile never appears even at startup, first confirm the file really is unde
 
 1. Run `git status` and confirm the working tree is clean, so you can revert cleanly.
 2. Launch normally and confirm the baseline: the console contains `Demo agent echo connected.` Then stop the app.
-3. Open `src/Huddle.App/appsettings.Development.json` and change the `Logging.LogLevel` key `"Agency.Huddle"` to the stale name `"Team"`, leaving its value `"Debug"` unchanged. Save.
+3. Make the stale rename in BOTH settings files, and drop the fallback that would otherwise rescue the category. Three edits, all of which are needed - see the note below for why one alone does nothing:
+   - `src/Huddle.App/appsettings.json`: change the `Logging.LogLevel` key `"Agency.Huddle"` to the stale name `"Team"`, value `"Information"` unchanged.
+   - `src/Huddle.App/appsettings.Development.json`: change the `Logging.LogLevel` key `"Agency.Huddle"` to the stale name `"Team"`, value unchanged.
+   - `src/Huddle.App/appsettings.Development.json`: change `"Default": "Information"` to `"Default": "Warning"`.
+   Save both.
 4. Relaunch and open http://localhost:5100.
 5. Read the sidebar room list and send `hi @echo` in the `echo` Room.
 6. Search the WHOLE console output for `Demo agent`, for `Created direct room` and for any `Agency.Huddle` category line.
-7. Stop the app and run `git checkout -- src/Huddle.App/appsettings.Development.json`.
+7. Stop the app and run `git checkout -- src/Huddle.App/appsettings.json src/Huddle.App/appsettings.Development.json`.
 8. Relaunch and confirm the `Demo agent echo connected.` line is back.
 
 **Pass if — all of these**
@@ -1275,7 +1280,7 @@ If the tile never appears even at startup, first confirm the file really is unde
 
 - The app behaves differently in the browser with the stale key -> log configuration is affecting behaviour, which it must not.
 - A warning IS emitted naming the unmatched key -> record as an observation; a loud failure would be an improvement over the documented silence.
-- The `Agency.Huddle` lines are still present with the `"Team"` key -> log categories are not derived from the namespace as documented, and the whole prefix model is different from what the docs describe.
+- The `Agency.Huddle` lines are still present after ALL THREE edits -> log categories are not derived from the namespace as documented, and the whole prefix model is different from what the docs describe. Before concluding that, run the control: put `"Agency.Huddle": "Warning"` in `appsettings.Development.json` on its own. If the `Demo agent` lines vanish for that, the prefix model is fine and one of the three edits was missed.
 
 **Inconclusive if**
 
@@ -1283,6 +1288,8 @@ If `git status` is not clean at step 1, do NOT run this test — you risk revert
 
 > [!NOTE]
 > Log categories come from the type's full namespace, which moved to `Agency.Huddle.*`, while the `Team:` CONFIG root deliberately did not move — that mismatch is what makes a stale `"Team"` log key so plausible and so silent.
+>
+> WHY ALL THREE EDITS: renaming the key in `appsettings.Development.json` alone changes nothing observable, for two independent reasons. First, that file's value is `Debug`, and there is no `Debug`-level log statement anywhere in `Huddle.App` or `Huddle.Contracts` — every line this script quotes is `info:`. Second, `appsettings.json` sets `"Agency.Huddle": "Information"` in its own right, and configuration MERGES, so that base key keeps the category alive whatever the overlay is called. The category only goes dark once no file names it AND `Default` no longer rescues it. Verified 2026-09-14: all three edits together produce a completely silent console against a working app; any one of them alone produces the full console.
 
 ### STARTUPCONFIG-31 — With ACP on and one Persona present, that Persona starts at launch and its tile goes Starting then Online
 
@@ -1356,13 +1363,14 @@ An `Offline` tile WITH a reason is a configuration result, not a product failure
 **Steps**
 
 1. Stop the app. Run `$env:Team__Acp__TraceWire = 'true'`.
-2. Launch: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-3. Watch the console as the Persona starts.
-4. Search the console output for the category `Agency.Huddle.Acp.Wire`.
-5. Look for an `Authorization` header value in the traced JSON-RPC traffic.
-6. Open http://localhost:5100 and `/teammates`, and look for ANY visual indication anywhere in the browser that tracing is enabled.
-7. Stop the app IMMEDIATELY and run `Remove-Item Env:Team__Acp__TraceWire`.
-8. Close the console window, or clear its scrollback, so the token is not left on screen.
+2. Also raise the log level, or you will see nothing at all: `${env:Logging__LogLevel__Agency.Huddle} = 'Trace'`. `LoggerTraceListener` forwards the wire trace at **Trace**, while `appsettings.Development.json` pins `Agency.Huddle` at `Debug`, which does not include it. Note the spelling - a literal dot before `Huddle`, and `${env:...}` braces because of that dot.
+3. Launch: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+4. Watch the console as the Persona starts.
+5. Search the console output for the category `Agency.Huddle.Acp.Wire`.
+6. Look for an `Authorization` header value in the traced JSON-RPC traffic.
+7. Open http://localhost:5100 and `/teammates`, and look for ANY visual indication anywhere in the browser that tracing is enabled.
+8. Stop the app IMMEDIATELY, then run `Remove-Item Env:Team__Acp__TraceWire` and `Remove-Item ${env:Logging__LogLevel__Agency.Huddle}`.
+9. Close the console window, or clear its scrollback, so the token is not left on screen.
 
 **Pass if — all of these**
 

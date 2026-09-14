@@ -372,16 +372,17 @@ If the console commands return `null`, the page had not finished rendering - wai
 
 1. In the browser, click `echo` in the sidebar.
 2. In the DevTools Console, type `document.querySelectorAll('.room-list a.active').length` and press Enter.
-3. Look at the sidebar: confirm `echo` has a tinted background and heavier text, and `alpha` has neither.
-4. Read the `<h1>` in the main column.
-5. Click `alpha` in the sidebar.
-6. Repeat steps 2, 3 and 4, expecting `alpha` to be the highlighted one and `echo` to be plain.
-7. Read the `<h1>` in the main column again.
+3. In the Console, type `[...document.querySelectorAll('.room-list a')].filter(a => a.getAttribute('aria-current')).map(a => a.textContent.trim() + ' | ' + a.getAttribute('aria-current'))` and press Enter.
+4. Look at the sidebar: confirm `echo` has a tinted background and heavier text, and `alpha` has neither.
+5. Read the `<h1>` in the main column.
+6. Click `alpha` in the sidebar.
+7. Repeat steps 2, 3, 4 and 5, expecting `alpha` to be the highlighted one and `echo` to be plain.
+8. Read the `<h1>` in the main column again.
 
 **Pass if — all of these**
 
 - Step 2 printed `1` both times.
-- Step 3 printed `echo | page` the first time and `alpha | page` the second time.
+- Step 3 printed `echo | page` the first time and `alpha | page` the second time - one entry, never two.
 - Exactly one room link is tinted and bold at a time; the other is plain.
 - The `<h1>` matches the highlighted room name each time.
 
@@ -396,7 +397,7 @@ If the console commands return `null`, the page had not finished rendering - wai
 If only one room exists, the 'other room is plain' half cannot be judged - note it as partially inconclusive and run SHELLNAV-18 first to create a second room.
 
 > [!NOTE]
-> The highlight is `--surface-selected` plus `font-weight: 600`. If the tint is invisible but `aria-current` is correct, suspect the stylesheet rather than the routing - check SHELLNAV-01. An assertion on `aria-current` was removed: Blazor's built-in NavLink has never emitted that attribute, so the assertion would fail against correct code. Judge the active-link state by the applied CSS class alone.
+> The highlight is `--surface-selected` plus `font-weight: 600`. If the tint is invisible but `aria-current` is correct, suspect the stylesheet rather than the routing - check SHELLNAV-01. The room list is built from Blazor's built-in `<NavLink>` (`Components/Shared/RoomList.razor`), which DOES emit `aria-current="page"` on the active link - so the CSS class and the attribute are two independent oracles and both must agree.
 
 ### SHELLNAV-10 — /teammates renders, and a bare page load spawns no node process
 
@@ -1107,19 +1108,22 @@ If your machine is fast enough that you cannot judge the first paint by eye, tru
 2. In TAB A, click **New chat**, tick `echo` and `alpha`, and click **Start chat**.
 3. Without touching TAB B, switch to it and read its sidebar.
 4. Switch back to TAB A and navigate to `http://localhost:5100/settings/appearance`.
-5. Select **Dark** from the **Theme** dropdown and let TAB A reload.
-6. Confirm TAB A is now dark.
-7. Switch to TAB B WITHOUT reloading it and note whether it is still light.
-8. In TAB B, click **Settings** in the sidebar (a normal navigation, not a refresh).
-9. Note whether TAB B is now dark.
-10. In TAB A, set the **Theme** dropdown back to **System**.
+5. Select the theme that contrasts with your device setting from the **Theme** dropdown - **Light** on a dark OS, **Dark** on a light one - and let TAB A reload. On a dark OS, choosing **Dark** changes nothing visible, because **System** already resolves dark.
+6. Confirm TAB A now shows the chosen theme.
+7. Switch to TAB B WITHOUT reloading it and note whether it still shows the old appearance.
+8. In TAB B, click **Settings** in the sidebar - an *enhanced* navigation, which replaces the render tree but NOT `<head>`.
+9. Note whether TAB B's appearance changed. It must not: see the note below.
+10. In TAB B, load the same URL again as a full document load (address bar + Enter, or Ctrl+Shift+R).
+11. Note whether TAB B now shows the chosen theme.
+12. In TAB A, set the **Theme** dropdown back to **System**.
 
 **Pass if — all of these**
 
 - TAB B's sidebar gained the `echo, alpha` room with no refresh and no navigation.
-- TAB A reloads into the Dark theme.
-- TAB B keeps the old appearance until its next load or navigation.
-- After navigating in TAB B (step 8), TAB B is dark too.
+- TAB A reloads into the chosen theme.
+- TAB B keeps the old appearance until its next FULL document load.
+- After the enhanced navigation (step 8), TAB B is still on the old appearance and still links only the three fingerprinted stylesheets.
+- After the full document load (step 10), TAB B shows the chosen theme and links the `themes/…` stylesheet fourth.
 
 **Fail if — any of these**
 
@@ -1129,10 +1133,10 @@ If your machine is fast enough that you cannot judge the first paint by eye, tru
 
 **Inconclusive if**
 
-If TAB B was on a route with no visible theme difference, you cannot judge the theme half - put TAB B on a room page with messages, where the surfaces are large, and repeat steps 4 to 9.
+If TAB B was on a route with no visible theme difference, you cannot judge the theme half - put TAB B on a room page with messages, where the surfaces are large, and repeat steps 4 to 11. If you chose the theme that matches your device's own setting, the two look identical and nothing is judgeable - redo step 5 with the opposite one. Where the eye cannot settle it, `[...document.querySelectorAll('link[rel=stylesheet]')].map(l => l.getAttribute('href'))` is decisive: three hrefs means no theme, four means a theme.
 
 > [!NOTE]
-> KNOWN LIMIT, NOT A BUG: the theme choice is per INSTALLATION, not per browser - it lives in `{DataDir}/appearance.json`. A second browser, a private window and a phone on the same install all see the same theme, and a second open tab keeps the old one until its next load. That is the deliberate consequence of this feature having no JavaScript and no localStorage. TAB B keeping the old theme until you navigate is correct.
+> KNOWN LIMIT, NOT A BUG: the theme choice is per INSTALLATION, not per browser - it lives in `{DataDir}/appearance.json`. A second browser, a private window and a phone on the same install all see the same theme, and a second open tab keeps the old one until its next FULL document load. That is the deliberate consequence of this feature having no JavaScript and no localStorage. An enhanced navigation is NOT enough: the `themes/…` link lives in `<head>`, which belongs to the server, and Blazor's render tree cannot reach it - the same reason [Section 0.6](../manual-tests.md#06-not-a-defect) gives for a theme change reloading the whole page. TAB B keeping the old theme through sidebar clicks, and picking it up on the next full load, is correct.
 
 ### SHELLNAV-26 — The reconnect modal shows exactly one state paragraph at a time when the server goes away
 
@@ -1148,7 +1152,7 @@ If TAB B was on a route with no visible theme difference, you cannot judge the t
 **Steps**
 
 1. In the browser, open a room page and wait for the `_blazor` websocket to appear in DevTools Network (filter WS).
-2. In `T-B` run: `$h = curl.exe -s http://localhost:5100/ | Out-String; [regex]::Matches($h, 'ReconnectModal\.razor\.[^"]*\.js') | ForEach-Object { $_.Value }`. Record the fingerprinted path from the import map.
+2. In `T-B` run: `$h = curl.exe -s http://localhost:5100/ | Out-String; [regex]::Matches($h, '[^"]*ReconnectModal[^"]*\.js') | ForEach-Object { $_.Value } | Select-Object -Unique`. Record the fingerprinted path from the import map - the one that carries a hash, e.g. `Components/Layout/ReconnectModal.abdmv1u4y3.razor.js`. The fingerprint sits BEFORE `.razor`, not after it.
 3. Run: `curl.exe -s -o NUL -w "%{http_code}" "http://localhost:5100/<paste that path>"`
 4. Switch to `T-A` and press Ctrl+C to stop the app.
 5. Watch the browser for up to ten seconds.

@@ -139,9 +139,12 @@ streams. Names allow letters, digits, `_`, `-` and single interior spaces, up to
 
 ### O-LOG
 
-`T-A`'s scrolling output. `Agency.Huddle` logs at `Debug` in Development, so every
-log line these tests quote is visible without configuration, and adapter stderr
-arrives as `[agent stderr] {Line}`. Scroll to the bottom before each test so you
+`T-A`'s scrolling output. Development sets the `Agency.Huddle` level to `Debug`, so
+every log line these tests quote is visible without configuration, and adapter stderr
+arrives as `[agent stderr] {Line}`. That level buys nothing in the free lane: there
+are no `Debug`-level log statements in `Huddle.App` or `Huddle.Contracts` at all, and
+the only three in the solution live in `Huddle.Acp`. Every line quoted in this script
+is `info:` or `warn:`, so a free-lane console with no `dbug:` line in it is correct. Scroll to the bottom before each test so you
 can tell new lines from old, and never filter it — the *absence* of a line is the
 oracle in several tests.
 
