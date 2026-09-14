@@ -141,6 +141,36 @@ public sealed class ThemeSourceTests
         Assert.Empty(undeclared);
     }
 
+    /// <summary>
+    /// Every scoped stylesheet under <c>Components/**/*.razor.css</c> declares no colour literal,
+    /// with one documented exemption - <c>MainLayout.razor.css</c>. That file's
+    /// <c>#blazor-error-ui</c> banner declares <c>color-scheme: light only</c> and a hard-coded
+    /// <c>lightyellow</c> background on purpose: it is the banner Blazor shows once the circuit has
+    /// already failed, the one moment a theme cannot be trusted, so it must stay legible regardless
+    /// of which theme or override is in force. Enumerating the directory, rather than naming
+    /// <c>ReconnectModal.razor.css</c> the way T3.2 tokenised it, is the point: a scoped stylesheet
+    /// added later is covered by this test the day it appears, with no test change required.
+    /// </summary>
+    [Fact]
+    public void ScopedCss_DeclaresNoColourLiteral()
+    {
+        var componentsDirectory = CssSource.RepoPath("src", "Huddle.App", "Components");
+        var scopedStylesheets = Directory
+            .EnumerateFiles(componentsDirectory, "*.razor.css", SearchOption.AllDirectories)
+            .Where(path => !string.Equals(Path.GetFileName(path), ExemptScopedStylesheet, StringComparison.Ordinal))
+            .ToList();
+
+        Assert.NotEmpty(scopedStylesheets);
+
+        var hits = scopedStylesheets.SelectMany(CssSource.FindColourLiterals).ToList();
+
+        Assert.Empty(hits);
+    }
+
+    // The one scoped stylesheet this sweep does not tokenise, and why: see the summary on
+    // ScopedCss_DeclaresNoColourLiteral.
+    private const string ExemptScopedStylesheet = "MainLayout.razor.css";
+
     private static string AppCssPath =>
         CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css");
 
