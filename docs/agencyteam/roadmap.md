@@ -1,10 +1,10 @@
 # Roadmap
 
 Read this before starting work that touches `PersonaRunner`'s event loop,
-`ReplyGate`, `IAgentHostFactory`, or `wwwroot/app.css`. Back to the hub:
+`ReplyGate`, `IAgentHostFactory`, `wwwroot/app.css` or `wwwroot/theme.css`. Back to the hub:
 [AgencyTeam.md](../AgencyTeam.md).
 
-Thirteen items. **Items 2 and 10 shipped on 2026-09-12, and items 3, 4, 5 and 13 on 2026-09-13**, and each keeps its entry below - the delivered note first, then the reasoning that produced it. Item 13 was never on this list before it was built, and is recorded after the fact because it changed files the other items name and leaves a decision open that item 9 has to close. The other six are decided but not built. They sit here rather than in [Known
+Thirteen items. **Items 2 and 10 shipped on 2026-09-12, and items 3, 4, 5, 6 and 13 on 2026-09-13**, and each keeps its entry below - the delivered note first, then the reasoning that produced it. Item 13 was never on this list before it was built, and is recorded after the fact because it changed files the other items name and leaves a decision open that item 9 has to close. The other six are decided but not built. They sit here rather than in [Known
 limits](known-limits.md) because that section records what is deliberately absent;
 these have moved from *declined* to *not yet*. Three appear in both places, and
 the Known limits entry now points here rather than warning you off.
@@ -29,8 +29,8 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~3~~ | ~~Streaming and failure surfacing~~ — **delivered 2026-09-13** | `PersonaRunner`, `Chat.razor` | shipped with 4 and 5; the roadmap named three failures and the code had twenty-one |
 | ~~4~~ | ~~Stopping a turn~~ — **delivered 2026-09-13** | `PersonaRunner`, `Chat.razor` | shipped; Stop means this Agent now, and a stopped Turn is not a failure |
 | ~~5~~ | ~~Tool-call visibility~~ — **delivered 2026-09-13** | `PersonaRunner`'s event loop | shipped as one `ToolActivity` Envelope, not two; the bump it forced was spent on 3 as well |
-| 6 | CSS tokenisation and dark mode | `wwwroot/app.css` | — |
-| 7 | Theme import | a new generator that writes CSS | — |
+| ~~6~~ | ~~CSS tokenisation and dark mode~~ — **delivered 2026-09-13** | `wwwroot/app.css`, then `theme.css` and `themes/` beside it | shipped; the file was twice the size this list claimed, and a stylesheet that had never loaded had to be fixed first |
+| 7 | Theme import | a new generator that writes CSS | the 39 tokens, `ThemeTokens.All`, `ThemeCatalog`, and a per-token fallback that already works |
 | 8 | Following a Room without being Mentioned | `ReplyGate.cs`, a new App Tool pair | `create_room` returns the Room id |
 | 9 | Per-Persona tool grants | `DotAcpAgentHostFactory`, `PersonaFrontmatter` | tools already built per `agentId`; `_` fields reserved |
 | ~~10~~ | ~~Persona frontmatter becomes the Member's identity~~ — **delivered 2026-09-12** | `PersonaIndex`, `PersonaStore`, `MentionParser` | shipped; `Persona.cs` was not touched |
@@ -240,7 +240,46 @@ type means bumping the version and updating every client in the same commit —
 `tools/echo-bot.ps1` included. That is the real cost of this item, and it is an
 argument for spending it on items 3 and 5 together rather than twice.
 
-## 6. CSS tokenisation and dark mode
+## 6. CSS tokenisation and dark mode — DELIVERED 2026-09-13
+
+> **Delivered**, with
+> [ADR-0009](../adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md) as the
+> decision in full, [Language](language.md) defining **Theme**, **Token** and
+> **Appearance**, and [Rules](rules.md) carrying the four things a future change here
+> must not undo. Three cascade layers: `wwwroot/theme.css` (39 tokens — 35 colours as
+> `light-dark(light, dark)`, 4 typography — always loaded), then
+> `wwwroot/themes/<id>.css` for the selected Theme, then a server-rendered inline
+> `<style>` of the Human's per-Token overrides. All three target plain `:root`, so
+> source order decides **per token, independently**. The selection and the overrides
+> live in `{DataDir}/appearance.json`, and **the override key is the Token name — there
+> is no friendly alias vocabulary**. The Appearance tab renders `ThemeCatalog`, not a
+> list of its own. No JavaScript, and no `data-theme`.
+>
+> **The numbers in this entry are wrong.** `app.css` was **994 lines with 117 colour
+> literals**, not 527 and 58 — nearly twice the file and twice the work. The entry also
+> names only `app.css`, and there were **three** stylesheets: `MainLayout.razor.css` and
+> `ReconnectModal.razor.css` are never mentioned here, and one of them had **never reached
+> the browser at all**.
+>
+> **That last part is the real correction.** *"Tokenising it is mechanical, reversible,
+> and depends on nothing else on this list"* was true of the substitution and false of the
+> item. `App.razor` linked `Team.App.styles.css` while the build emitted
+> `Huddle.App.styles.css` — a leftover from the 2026-09-12 project rename — and
+> `@Assets[...]` returns an unresolved key **verbatim rather than throwing**, so the page
+> had been emitting a 404ing href for a month with no build warning, no log line and no
+> test. `#blazor-error-ui` was therefore visible on every page and the reconnect modal
+> was entirely unstyled: two false positives for this item's own acceptance test. It was
+> fixed first. `html, body` also needed a ground and a base font size that had never
+> existed, because a pure substitution leaves the page ground white. And *"two
+> hand-written themes"* became two one-declaration **files** plus a catalogue, a token list, a
+> store, a validator and a Settings tab.
+>
+> **What item 7 gets from this, free.** A generated Theme is one `:root` block layered
+> after `theme.css`, so the per-token fallback this list asks for below already exists and
+> no generator code implements it — see the `## 7` section, which has been rewritten to
+> say what it may now assume and what it must never break.
+>
+> The text below is kept as the reasoning that produced it.
 
 `wwwroot/app.css` is 527 lines holding 58 hard-coded colour literals and not one
 custom property. Tokenising it is mechanical, reversible, and depends on nothing
@@ -268,12 +307,19 @@ token, so a theme that omits a key degrades instead of emitting an empty value
 and blanking a surface:
 
 ```text
-~20 Team tokens   ←   mapping + fallback   ←   VSCode colors.*
---room-list-bg    ←   sideBar.background
---transcript-bg   ←   editor.background
---card-bg         ←   editorWidget.background
---room-selected   ←   list.activeSelectionBackground
+35 colour tokens    ←   mapping + fallback   ←   VSCode colors.*
+--surface-sidebar   ←   sideBar.background
+--surface-base      ←   editor.background
+--surface-raised    ←   editorWidget.background
+--surface-selected  ←   list.activeSelectionBackground
 ```
+
+Those four are the **real** names, substituted into this sketch on 2026-09-13. The
+sketch originally named tokens after the elements they paint — `--room-list-bg`,
+`--transcript-bg`, `--card-bg`, `--room-selected` — and item 6 deliberately overrode
+that in favour of role names; [ADR-0009](../adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md)
+says why. Every colour token in `theme.css` already carries its intended mapping key as
+a trailing comment, so the name and the mapping cannot separate.
 
 Two practical notes. Marketplace themes ship as JSON **inside a `.vsix`**, which
 is a zip, so importing on demand means either accepting pasted JSON or unzipping
@@ -285,6 +331,46 @@ The trap to design against: the token list and the mapping must have one source
 of truth. Add a token to the stylesheet and not to the mapping, and every
 previously imported theme silently has no value for it — a failure that appears
 only on whichever screen uses that token.
+
+### What item 6 already built, and what it constrains
+
+Item 6 delivered on 2026-09-13, and five of the things this entry asks for now exist.
+
+**The per-token fallback is already there, and it came from the cascade rather than
+from generator code.** A generated Theme is one `:root` block layered *after*
+`theme.css`, which is always loaded. Any token the generated file cannot fill keeps
+`theme.css`'s `light-dark()` value, resolved against the `color-scheme` that Theme
+declares. So a generated Theme **must always declare `color-scheme`, and must never be
+self-contained**: a self-contained stylesheet resolves an unmapped token to *empty*,
+which is exactly the surface-blanking failure this entry names as the trap. For the
+same reason it must never rewrite `theme.css`'s own `:root` block — that block is where
+the fallback lives.
+
+**`ThemeTokens.All` is the mapping's key set, and `ThemeCatalog` is the dropdown's
+single source.** Item 7 adds a directory enumeration that appends descriptors to the
+catalogue; it never adds a second list. `ThemeFileTests` already pins `ThemeTokens`
+against `theme.css` in both directions, so the one-source-of-truth trap above is a
+build failure rather than a discipline.
+
+**Where item 7 writes, and why not `wwwroot`.** Imported Themes go to
+`{DataDir}/themes/<id>.css`. `MapStaticAssets` is **manifest-driven and serves only
+build-time assets**, so it cannot serve a file written at run time — item 7 adds a
+`UseStaticFiles` + `PhysicalFileProvider` at its own path such as `/imported-themes`,
+or a single probing endpoint if it prefers one URL space. The built-in Themes are
+linked by convention (`href="themes/{id}.css"`), which works because `MapStaticAssets`
+registers the plain unfingerprinted route alongside the fingerprinted one.
+
+**The four typography tokens exist and the importer will not fill them.** A VSCode
+colour theme carries no fonts at all, so `--font-ui`, `--font-chat`, `--font-mono` and
+`--font-size-base` stay on their base values under any imported Theme. That is fine —
+they are there for the Human's override layer. `tokenColors` work is still item 7's,
+and `--font-mono` is the hook it hangs off, since fenced code blocks now have a
+monospace family for the first time.
+
+**Where the mapping's counterpart assertion belongs.** `ThemeCss_EveryTokenHasAMappingEntry`
+sits beside `AppCss_UsesOnlyTokensDeclaredInThemeCss` in `ThemeSourceTests`, reusing
+`CssSource` — the same source-text technique, for the same reason: nothing in this suite
+renders a browser.
 
 ## 8. Following a Room without being Mentioned
 
@@ -710,8 +796,17 @@ Six dependencies here are real:
   and the same Budget covers both. Item 11 is unblocked, and inherits a trap its
   own section now records: do **not** send the notification as the Human, or every
   file save resets the Budget the item depends on.
-- **6 before 7.** There is nothing for a generator to write until the tokens
-  exist.
+- ~~**6 before 7.**~~ **Settled — 6 shipped 2026-09-13**, and the bullet understated
+  it. There was indeed nothing for a generator to write until the tokens existed; what
+  it did not foresee is that item 7 would inherit *constraints* from this work, not just
+  a list of names. Item 7 is unblocked and now owns four of them, all in the `## 7`
+  section above: a generated Theme must declare `color-scheme` and must never be
+  self-contained, because the per-token fallback it asked for is `theme.css`'s own
+  `:root` block resolved through the cascade; `ThemeTokens.All` and `ThemeCatalog` are
+  the single sources it extends rather than duplicates; and `MapStaticAssets` cannot
+  serve what item 7 writes, so imported Themes land in `{DataDir}/themes/` behind a file
+  provider of their own. The mapping key for every colour token is already written into
+  `theme.css` as a trailing comment.
 - **1 before the next per-Persona store.** Each store added is one more place a
   rename has to touch, and that cost never goes down. Item 9 is such a store, and
   `PersonaEffortStore` has already overtaken this warning once. Item 10 added no

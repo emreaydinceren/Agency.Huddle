@@ -1,12 +1,67 @@
 # Decision record
 
-Ten dated entries from 2026-09-11 onward, newest first, each recording what
+Eleven dated entries from 2026-09-11 onward, newest first, each recording what
 changed and — more usefully — what was considered and rejected. Read it when you are
 about to revisit a decision, or when an older Markdown file in this repo
 disagrees with current vocabulary and you need the old-to-new mapping.
 
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
+
+**2026-09-13 — a Theme is a stylesheet layered over the tokens, and the choice lives
+in a file.**
+
+Roadmap item 6 shipped: every colour and font left the stylesheets for 39 Tokens in
+`wwwroot/theme.css`, and a Theme became a CSS file layered over that base.
+[ADR-0009](../adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md) is the
+decision in full, and [Language](language.md) now defines **Theme**, **Token** and
+**Appearance**.
+
+**The wire did not change.** `ProtocolVersion.Current` stays where ADR-0008 left it.
+Nothing in this item crosses the pipe, touches `Huddle.Contracts` or reaches an Agent
+at all — it is `<head>`, three stylesheets and one config file. Saying so because
+almost every entry above this one moved something on the wire, and this one is the
+shape that does not.
+
+**Three layers, all targeting plain `:root`.** `theme.css`, then
+`wwwroot/themes/<id>.css`, then a server-rendered inline `<style>` of the Human's
+overrides — source order decides per token, independently, which is why an override
+needs no `!important` and a Theme needs no knowledge of what else is loaded. Rejected:
+a self-contained stylesheet per Theme, which resolves a token it forgot to *empty*
+rather than to that mode's built-in value, blanking a surface. Rejected too: a fourth
+generated file for the overrides, when an inline `<style>` has its cascade position
+guaranteed by document order and needs nothing served or invalidated.
+
+**The base layer turned out to be roadmap item 7's per-token fallback, obtained from
+the cascade rather than from generator code.** The two built-in Themes are one `:root`
+block apiece — `color-scheme` and nothing else — so all 39 Tokens fall through and resolve to
+that mode's half of their `light-dark()`. Shipping a Theme that relies on the
+fall-through entirely is the cheapest possible proof it works.
+
+**The override key is the Token name**, `{"--font-chat": "Sans"}`. Rejected: a friendly
+alias vocabulary, because a second naming layer is a second thing to keep in step — the
+exact trap item 7's entry names. Friendliness belongs on the Appearance tab, as a
+labelled control that writes the Token name for you.
+
+**Override values are allowlisted, and the allowlist is the sole defence.** Razor
+HTML-encodes `@` expressions and CSS does not decode entities, so `"Segoe UI"` would
+arrive as an escape and be dropped — the CSS has to be a `MarkupString`, which leaves
+nothing downstream to escape it. The Human owns the file, so this is a typo guard rather
+than a privilege boundary, and it is `NameRules`' argument exactly.
+
+**No JavaScript, and the selection is per installation.** Rejected: `localStorage` plus
+an inline loader, which is per browser and needs a pre-paint script *and* an
+`enhancedload` repair; and a cookie, transmitted on every request to carry something only
+the page render reads. The accepted cost is a full page load when the Theme changes,
+because `<head>` belongs to the server and Blazor's render tree cannot reach it.
+
+**A stylesheet had never loaded, and nothing said so.** `App.razor` linked
+`Team.App.styles.css` where the build emits `Huddle.App.styles.css` — a 2026-09-12 rename
+leftover — and `@Assets[...]` returns an unresolved key verbatim rather than throwing.
+`#blazor-error-ui` had therefore been visible on every page for a month, and
+`ReconnectModal.razor.css` had never applied at all. Fixed before any tokenisation, and
+recorded in [Traps](traps.md): the framework's not-found behaviour here is to return the
+input.
 
 **2026-09-13 — a Turn is visible while it happens, can be stopped, and says when
 it fails.**
