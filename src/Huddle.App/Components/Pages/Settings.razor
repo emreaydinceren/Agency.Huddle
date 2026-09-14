@@ -16,19 +16,6 @@
                           OnCancel="this.CancelResetAll" />
     </header>
 
-    <p class="teammates-intro">
-        A hook is one piece of wording this application sends to a model — part of a system prompt,
-        a turn, <code>get_help</code>'s output, or a tool's own description. Editing one changes what every
-        teammate is told, not how the application itself behaves, and a hook you have changed can
-        always be restored to the wording it shipped with.
-    </p>
-
-    <p class="settings-hooks-file-path">
-        Overrides are stored at <code>@this.Hooks.FilePath</code>, which holds only the hooks you have
-        changed — hand-edit it for fast prototyping if you like. The file does not exist until the
-        first time you save here, so it being absent is expected, not a bug.
-    </p>
-
     @if (this.error is not null)
     {
         <p class="composer-error">@this.error</p>
@@ -39,13 +26,32 @@
             <button type="button"
                     class="settings-tab @(this.CurrentTab == SettingsTab.Hooks ? "settings-tab-active" : string.Empty)"
                     @onclick="() => this.SelectTab(SettingsTab.Hooks)">Hooks</button>
+            <button type="button"
+                    class="settings-tab @(this.CurrentTab == SettingsTab.Appearance ? "settings-tab-active" : string.Empty)"
+                    @onclick="() => this.SelectTab(SettingsTab.Appearance)">Appearance</button>
         </nav>
 
         <div class="settings-content">
             @switch (this.CurrentTab)
             {
+                case SettingsTab.Appearance:
+                    <Appearance />
+                    break;
                 case SettingsTab.Hooks:
                 default:
+                    <p class="teammates-intro">
+                        A hook is one piece of wording this application sends to a model — part of a system prompt,
+                        a turn, <code>get_help</code>'s output, or a tool's own description. Editing one changes what every
+                        teammate is told, not how the application itself behaves, and a hook you have changed can
+                        always be restored to the wording it shipped with.
+                    </p>
+
+                    <p class="settings-hooks-file-path">
+                        Overrides are stored at <code>@this.Hooks.FilePath</code>, which holds only the hooks you have
+                        changed — hand-edit it for fast prototyping if you like. The file does not exist until the
+                        first time you save here, so it being absent is expected, not a bug.
+                    </p>
+
                     <form @onsubmit="this.Save">
                         <HooksPanel Groups="this.groups"
                                     ValueChanged="this.OnFieldValueChanged"

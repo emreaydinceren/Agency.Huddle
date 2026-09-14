@@ -151,3 +151,23 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   the same hazard waiting for `AgentEvent`, where the collision would be exact. A
   `using` alias in the one bridging file is the fix if it ever happens; renaming
   either side is not.
+
+- **`@Assets["..."]` returns an unresolved key verbatim instead of throwing.** The
+  framework's not-found behaviour here is to hand back the input, so a stale asset
+  name renders as an ordinary-looking `href` that 404s — with no build warning, no
+  startup error, no log line and nothing a string assertion could match, because a
+  *resolved* href is fingerprinted (`theme.ce2n94aiaf.css`) and never contains the
+  key you wrote. This was live for a month: `App.razor` asked for
+  `Team.App.styles.css` after the 2026-09-12 project rename made it
+  `Huddle.App.styles.css`, so the whole scoped-CSS bundle silently stopped applying.
+  `#blazor-error-ui` — whose only `display: none` is in `MainLayout.razor.css` —
+  rendered *"An unhandled error has occurred"* on every page, unnoticed only because
+  the `position: fixed` that would have floated it is in the same unloaded file,
+  leaving it one viewport below the fold; and all 157 lines of
+  `ReconnectModal.razor.css` never reached the browser, so the modal showed its six
+  mutually exclusive state paragraphs at once. **Only an HTTP round-trip can see
+  this.** `AppStylesheetTests.AppShell_EveryLinkedStylesheetIsServed` fetches every
+  stylesheet the shell links and requires a success status; add any new `<link>` to
+  that page and it is covered automatically. It is also why a Theme's URL is built by
+  convention (`href="themes/{id}.css"`, served by `MapStaticAssets`'s plain
+  unfingerprinted route) rather than through `@Assets`.

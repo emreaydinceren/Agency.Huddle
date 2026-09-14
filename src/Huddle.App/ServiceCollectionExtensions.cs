@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
 using Agency.Huddle.App.Hooks;
@@ -74,6 +75,12 @@ public static class ServiceCollectionExtensions
         // already document for the closely related PersonaSupervisor case.
         services.AddSingleton<HookStore>();
         services.AddSingleton<IHookSource>(sp => sp.GetRequiredService<HookStore>());
+
+        // No interface: nothing needs to substitute this, and CSharpPrinciples.md says not to add
+        // abstraction a feature has not asked for. This is state the app writes (a chosen theme, a
+        // few token overrides), not host-supplied configuration, so it is registered here rather
+        // than bound onto TeamOptions - see rules.md's "Collection options need no initialiser."
+        services.AddSingleton<AppearanceStore>();
 
         // Unconditional too, and for the same reason: the probe spends nothing on its own (it never
         // calls PromptAsync), so registering it costs nothing when Team:Acp:Enabled is off. What

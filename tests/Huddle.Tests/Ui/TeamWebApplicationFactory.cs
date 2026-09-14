@@ -36,6 +36,15 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     public string HooksJsonPath => Path.Combine(this.dataDir.Path, "hooks.json");
 
     /// <summary>
+    /// The path <see cref="Agency.Huddle.App.Appearance.AppearanceStore"/> resolves its override file
+    /// to under this factory's isolated data directory, i.e.
+    /// <see cref="Agency.Huddle.App.Appearance.AppearanceStore.FilePath"/>'s value for the instance
+    /// this factory's app composes. Tests write here before <see cref="WebApplicationFactory{TEntryPoint}.CreateClient()"/>
+    /// so the store's constructor reads it on first resolve.
+    /// </summary>
+    public string AppearanceJsonPath => Path.Combine(this.dataDir.Path, "appearance.json");
+
+    /// <summary>
     /// The <see cref="IModelCatalog"/> this factory wires in place of the real
     /// <see cref="ModelCatalogProbe"/>. Both fixtures must set <c>DemoAgent:Enabled=false</c>
     /// because a real demo agent spends nothing but still needs a Human to be online; this is the

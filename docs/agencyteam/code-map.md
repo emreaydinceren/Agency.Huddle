@@ -34,9 +34,30 @@ the hub: [AgencyTeam.md](../AgencyTeam.md).
 | `Components/Settings/HookFieldFactory.cs` | The grouping, the three-state flags and the textarea sizing, as pure functions — extracted for the same reason `TeammateGrouping` is: `HtmlRenderer` cannot dispatch a click, so logic inside a component is untestable here. |
 | `Components/Settings/HookFieldState.cs` | One row's view-model, plus `HookEdit` and the group record. Public because a Razor `[Parameter]` may not be of an internal type; the catalog and the store stay internal behind it. |
 | `Components/Settings/ResetAllControl.razor` | Restore every Hook to its default, with an inline confirm rather than a dialog. Stages the defaults like any other edit — Save is still the only thing that writes. |
+| `Components/Settings/Appearance.razor` | The Appearance tab: the Theme dropdown, the path to `appearance.json`, and any overrides that were rejected. Renders `ThemeCatalog` rather than a list of its own. Saving forces a full page load — `<head>` belongs to the server and Blazor's render tree cannot reach it. Note the injected field is named `AppearanceStore`, not `Appearance`: a service named after its own component collides with the generated class (`CS0542`). |
+| `Components/Settings/SettingsTab.cs` | Which pane the tab rail is showing. Public for the same reason `TeammateCardMode` is — see [Rules](rules.md). |
+| `Themes/ThemeTokens.cs` | The 39 Token names `theme.css` declares, as a `HashSet` — the set an override key must belong to, checked in-process with no file access. Pinned against the stylesheet in both directions by `ThemeFileTests`. Roadmap item 7 needs exactly this key set for its mapping. |
+| `Themes/ThemeCatalog.cs` | The fixed list of built-in Themes (`ThemeDescriptor(Id, Label, IsDark)`) and the Appearance dropdown's single source. Item 7 extends it by enumerating `{DataDir}/themes/*.css` — a directory to read, never a second list. |
+| `Appearance/AppearanceStore.cs` | `HookStore`'s sibling at about a third of the size, over `{DataDir}/appearance.json`: volatile snapshot, one write lock, debounced `FileSystemWatcher`, malformed falls back wholesale, unknown keys kept and never deleted, an absent file normal and never created just to read from. Synchronous, because Razor renders cannot await. A `theme` naming no catalogue entry is a warning, never a failure. |
+| `Appearance/AppearanceSettings.cs` | The resolved snapshot a render reads: the Theme id to link, the validated inline CSS, and one line per rejection for the tab to show. |
+| `Appearance/ThemeOverrides.cs` | Pure. Validates the Human's Token-keyed overrides and builds the inline `:root { … }` body. **The allowlist here is the sole defence** — the CSS is emitted as a `MarkupString`, so nothing downstream escapes it. See [Rules](rules.md). |
 | `Components/Shared/TeammateCard.razor` | One Teammate's details, opened over the page. Viewing, editing and creating are three modes of this one card. |
 | `Components/Shared/InviteTeammate.razor` | **Add teammate** on the Room header. Offers only Agents that are not already Members; calls the same `InviteAsync` the `/invite` command and the App Tool do. |
 | `Demo/DemoAgentHost.cs` | The echo agents. Its connect-retry loop was the model for `PersonaRunner`. |
+
+`src/Huddle.App/wwwroot` — the stylesheets, in cascade order:
+
+| Path | Responsibility |
+| --- | --- |
+| `theme.css` | **Layer 1, always loaded.** The 39 Tokens and nothing else: 35 colours as `light-dark(light, dark)`, 4 typography values as plain values, each colour carrying its intended VSCode mapping key as a trailing comment. Every colour and font in this application is declared here — a literal anywhere else fails the build. |
+| `themes/huddle-light.css`, `themes/huddle-dark.css` | **Layer 2, linked only when a Theme is selected.** One `:root` block each, declaring `color-scheme` and nothing else, so all 39 Tokens fall through to `theme.css` and resolve to that mode's half of their `light-dark()`. That is the design, not a stub — see [Rules](rules.md) and [ADR-0009](../adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md). Served at their plain unfingerprinted route, which is what lets `App.razor` build the href by convention. |
+| `app.css` | Every rule for the chat surface. No colour and no font-family literal: 123 `var()` references and nothing else on the right-hand side of a colour or font declaration. |
+| `Components/Layout/MainLayout.razor.css` | Scoped CSS, and the one **written exemption** from tokenisation: `#blazor-error-ui` keeps `lightyellow` and `color-scheme: light only`, because it is the banner shown when the application has already failed. |
+| `Components/Layout/ReconnectModal.razor.css` | Scoped CSS for the reconnect dialog, tokenised. Had never reached the browser at all until 2026-09-13 — see [Traps](traps.md). |
+
+Layer 3 is not a file: `App.razor` renders the Human's validated overrides as an
+inline `<style>` after both links. All three layers target plain `:root`, so source
+order decides per Token, independently.
 
 `src/Huddle.App/Acp` — the join:
 

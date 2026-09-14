@@ -273,3 +273,32 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   prompt is fixed at `session/new` and there is no later event that re-reads it.
   Editing a Hook never restarts a session; see [Rules](rules.md).
 : *Avoid*: scope, refresh, reload.
+
+## Appearance
+
+**Theme**
+: One stylesheet that overrides some or all of the 39 Tokens, layered over
+  `wwwroot/theme.css` rather than replacing it. Two ship built in — `huddle-light`
+  and `huddle-dark` — and each declares nothing but its `color-scheme`, leaving
+  every Token to fall through to the base layer. A Theme is identified by its
+  **id**, which is its filename, what `appearance.json` stores and what the URL
+  carries; never by its display label, for the reason [Rules](rules.md) gives for a
+  Model. Roadmap item 7 adds imported Themes, generated into `{DataDir}/themes/`.
+: *Avoid*: skin, palette (that is the set of values, not the named thing), colour
+  scheme (`color-scheme` is a CSS property here and means something narrower).
+
+**Token**
+: One named value a Theme can set — 35 colours and 4 typography values, declared
+  once in `theme.css` and listed in `ThemeTokens.All`. A Token's name is also the
+  key an override uses in `appearance.json`; there is deliberately no second,
+  friendlier vocabulary. Every Token has a consumer, because one that does not is a
+  mapping entry item 7 could never observe to be wrong.
+: *Avoid*: variable, custom property (that is the CSS mechanism), setting.
+
+**Appearance**
+: The Appearance tab of `/settings`, and `{DataDir}/appearance.json` behind it: the
+  selected Theme id and the Human's per-Token overrides. Per installation,
+  hand-editable and watched, exactly like `hooks.json`. Nothing selected means no
+  Theme is layered on and the built-in values follow the operating system.
+  Appearance is the choice; a **Theme** is what it selects.
+: *Avoid*: dark mode (that is one Theme), preference, display settings.

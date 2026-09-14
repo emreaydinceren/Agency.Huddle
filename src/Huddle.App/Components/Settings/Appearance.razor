@@ -1,0 +1,112 @@
+@*
+    The Settings page's Appearance tab: pick a theme from ThemeCatalog.BuiltIn (or System, to follow
+    the device), and see where to hand-edit token overrides plus any that were rejected.
+
+    No JavaScript, no data-theme, and no way for this component to change what is already in <head> -
+    App.razor owns that, and Blazor's render tree does not reach it. Choosing a theme calls
+    AppearanceStore.Save and then forces a full page reload, exactly as OnThemeChanged below explains,
+    so the server re-renders <head> with the new links and stays the single writer of it.
+
+    Subscribes to AppearanceStore.AppearanceChanged the same way Settings.razor subscribes to
+    HookStore.HooksChanged: the store is a singleton, so a hand-edit to appearance.json (or a save
+    from another browser tab) must repaint this tab without a restart, and rules.md's "unsubscribe in
+    Dispose" reasoning for RoomEvents applies here for the same reason - a leaked subscription to a
+    singleton never dies.
+*@
+
+@using Agency.Huddle.App.Appearance
+@using Agency.Huddle.App.Themes
+@implements IDisposable
+@inject AppearanceStore AppearanceStore
+@inject NavigationManager Navigation
+
+<p class="teammates-intro">
+    Pick a theme, or leave it on System to follow your device's own light or dark setting.
+</p>
+
+<label class="teammates-field">
+    Theme
+    <select value="@(this.AppearanceStore.Current.ThemeId ?? string.Empty)" @onchange="this.OnThemeChanged">
+        <option value="">System</option>
+        @foreach (var theme in ThemeCatalog.BuiltIn)
+        {
+            <option value="@theme.Id">@theme.Label</option>
+        }
+    </select>
+</label>
+
+<p class="settings-hooks-file-path">
+    Overrides are stored at <code>@this.AppearanceStore.FilePath</code>, keyed by token name (for example
+    <code>--font-chat</code> or <code>--surface-base</code>) rather than a friendly name - hand-edit
+    it for fast prototyping if you like. The file does not exist until you save a theme choice here, so
+    it being absent is expected, not a bug.
+</p>
+
+@if (this.AppearanceStore.Current.Problems.Count > 0)
+{
+    <section class="teammates-rejected">
+        <h2>Overrides that didn't load</h2>
+        <ul class="teammates-rejected-list">
+            @foreach (var problem in this.AppearanceStore.Current.Problems)
+            {
+                <li class="teammates-rejected-item">
+                    <span class="teammates-rejected-reason">@problem</span>
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        this.AppearanceStore.AppearanceChanged += this.OnAppearanceChanged;
+    }
+
+    /// <summary>Unsubscribes from <see cref="AppearanceStore.AppearanceChanged"/> - see the file-level comment for why this matters.</summary>
+    public void Dispose()
+    {
+        this.AppearanceStore.AppearanceChanged -= this.OnAppearanceChanged;
+    }
+
+    // Saves the selection (or clears it for System) and forces a full reload rather than trying to
+    // repaint in place. The <link> and <style> for a theme live in <head>, which App.razor renders and
+    // Blazor's render tree does not own, so this component cannot change them directly - a full reload
+    // makes the server re-render <head> with the new theme instead. That keeps this feature free of
+    // JavaScript and leaves the server the single writer of <head>, so the document and the file can
+    // never disagree. It is instantaneous on localhost; do not "optimise" this into a JS interop call
+    // that swaps the href - that was considered and rejected because it reintroduces a second writer
+    // and an IJSRuntime dependency this design does not have.
+    private void OnThemeChanged(ChangeEventArgs e)
+    {
+        var raw = e.Value?.ToString();
+        var themeId = string.IsNullOrEmpty(raw) ? null : raw;
+        this.AppearanceStore.Save(themeId);
+        this.Navigation.NavigateTo(this.Navigation.Uri, forceLoad: true);
+    }
+
+    private void OnAppearanceChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    // Mirrors Settings.razor's DispatchAsync exactly: a store event can still fire while this
+    // component's circuit is winding down, and both exceptions mean there is nothing left to repaint.
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+}

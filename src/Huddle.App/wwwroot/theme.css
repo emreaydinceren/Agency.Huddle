@@ -1,0 +1,79 @@
+/* ---- Theme tokens: the base layer -------------------------------------------
+   Every colour and every font in this application is declared here and nowhere else.
+
+   This file is ALWAYS loaded, and it is layer 1 of three. A selected theme is a second
+   stylesheet linked after it (wwwroot/themes/<id>.css, or an imported one under
+   {DataDir}); the Human's overrides are an inline <style> after that. All three target
+   plain :root, so source order decides, per token, independently.
+
+   A token no later layer sets keeps the light-dark() below, resolved against the
+   color-scheme the selected theme declared. That fall-through is roadmap item 7's
+   per-token fallback, obtained from the cascade rather than from code. See ADR-0009.
+   ---------------------------------------------------------------------------- */
+
+:root {
+    /* Follows the operating system. A theme file narrows this to light or dark, which is
+       also what makes the fall-through above resolve to that theme's palette. */
+    color-scheme: light dark;
+
+    /* ======== Colour tokens: light-dark(lightValue, darkValue) ================= */
+
+    /* -- Surfaces ------------------------------------------------------------ */
+    --surface-base: light-dark(#ffffff, #1b1b1f);   /* item 7: editor.background */
+    --surface-sidebar: light-dark(#f5f5f5, #232328);   /* item 7: sideBar.background */
+    --surface-raised: light-dark(#ffffff, #2a2a31);   /* item 7: editorWidget.background */
+    --surface-sunken: light-dark(#f7f7f7, #17171b);   /* item 7: input.background */
+    --surface-muted: light-dark(#eeeeee, #35353d);   /* item 7: badge.background */
+    --surface-hover: light-dark(#eef3ff, #32323b);   /* item 7: list.hoverBackground */
+    --surface-selected: light-dark(#dbe7ff, #2f3d57);   /* item 7: list.activeSelectionBackground */
+
+    /* -- Borders --------------------------------------------------------------- */
+    --border-default: light-dark(#d0d0d0, #3a3a44);   /* item 7: panel.border */
+    --border-subtle: light-dark(#e3e3e3, #30303a);   /* item 7: editorWidget.border */
+    --border-control: light-dark(#bbbbbb, #4a4a56);   /* item 7: input.border */
+    --border-emphasis: light-dark(#9fb8e8, #5a6f99);   /* item 7: focusBorder */
+
+    /* -- Text -------------------------------------------------------------------- */
+    --text-primary: light-dark(#222222, #e6e6ea);   /* item 7: foreground */
+    --text-secondary: light-dark(#444444, #c3c3cc);   /* item 7: foreground */
+    --text-muted: light-dark(#666666, #9a9aa5);   /* item 7: descriptionForeground */
+    --text-faint: light-dark(#888888, #7d7d88);   /* item 7: disabledForeground */
+    --text-disabled: light-dark(#999999, #6a6a74);   /* item 7: disabledForeground */
+    --text-on-accent: light-dark(#ffffff, #ffffff);   /* item 7: button.foreground */
+
+    /* -- Accent ------------------------------------------------------------------ */
+    --accent: light-dark(#4a154b, #5e2b60);   /* item 7: button.background */
+    --accent-hover: light-dark(#611f69, #7a3a7e);   /* item 7: button.hoverBackground */
+    --accent-indicator: light-dark(#3a6fd8, #7aa2f7);   /* item 7: focusBorder */
+
+    /* -- Status: the Teammate dot. Names match PersonaState's four values. ------ */
+    --status-online: light-dark(#2e9e44, #3fbf5a);   /* item 7: charts.green */
+    --status-offline: light-dark(#b32121, #e05a5a);   /* item 7: charts.red */
+    --status-degraded: light-dark(#c77d00, #e0a33e);   /* item 7: charts.orange */
+    --status-starting: light-dark(#e0a83e, #e8c46a);   /* item 7: charts.yellow */
+
+    /* -- Feedback ----------------------------------------------------------------- */
+    --danger-fg: light-dark(#b32121, #ff8a8a);   /* item 7: errorForeground */
+    --danger-bg: light-dark(#fff6f6, #3a1f1f);   /* item 7: inputValidation.errorBackground */
+    --danger-border: light-dark(#e3b6b6, #6b3535);   /* item 7: inputValidation.errorBorder */
+    --warning-fg: light-dark(#6b4b00, #e8c46a);   /* item 7: editorWarning.foreground */
+    --warning-bg: light-dark(#fff3d6, #3a3020);   /* item 7: inputValidation.warningBackground */
+    --info-fg: light-dark(#1d4f8f, #8ab4f8);   /* item 7: editorInfo.foreground */
+    --info-bg: light-dark(#e3edfb, #1f2b3d);   /* item 7: inputValidation.infoBackground */
+    --success-fg: light-dark(#256029, #6fc97a);   /* item 7: charts.green */
+
+    /* -- Depth: colour only, offsets and blur stay in the rule (D10). ------------ */
+    --shadow-soft: light-dark(rgb(0 0 0 / 12%), rgb(0 0 0 / 45%));   /* item 7: widget.shadow */
+    --shadow-strong: light-dark(rgb(0 0 0 / 28%), rgb(0 0 0 / 60%));   /* item 7: widget.shadow */
+    --scrim: light-dark(rgb(0 0 0 / 40%), rgb(0 0 0 / 60%));   /* item 7: (no analogue - always falls through) */
+
+    /* ======== Typography tokens: one value, no light/dark =====================
+       light-dark() takes <color> arguments only, and a font stack has no light and dark
+       form. A theme MAY set these; the two built-ins do not, and item 7's importer will
+       not, because a VSCode colour theme carries no fonts at all. They exist mainly for
+       the Human's override layer. Never a `font` shorthand - see D10. */
+    --font-ui: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-chat: var(--font-ui);
+    --font-mono: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+    --font-size-base: 100%;
+}

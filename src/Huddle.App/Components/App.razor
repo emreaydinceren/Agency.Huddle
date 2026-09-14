@@ -1,3 +1,5 @@
+@inject Agency.Huddle.App.Appearance.AppearanceStore Appearance
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -6,8 +8,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["theme.css"]" />
     <link rel="stylesheet" href="@Assets["app.css"]" />
-    <link rel="stylesheet" href="@Assets["Team.App.styles.css"]" />
+    <link rel="stylesheet" href="@Assets["Huddle.App.styles.css"]" />
+    @if (this.Appearance.Current.ThemeId is { } themeId)
+    {
+        <link rel="stylesheet" href="@($"themes/{themeId}.css")" />
+    }
+    @if (this.Appearance.Current.OverrideCss.Length > 0)
+    {
+        @* MarkupString is required and safe here: Razor HTML-encodes @ expressions, and CSS does not
+           decode entities, so a value such as "Segoe UI" would otherwise arrive as
+           &quot;Segoe UI&quot; and be dropped. ThemeOverrides.Build is the sole allowlist standing
+           between a hand-edited appearance.json and this markup - see its remarks. *@
+        <style>@((MarkupString)this.Appearance.Current.OverrideCss)</style>
+    }
     <ImportMap />
     <HeadOutlet />
 </head>

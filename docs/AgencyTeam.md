@@ -5,9 +5,9 @@ are real Claude agents running as child processes. This page is the hub of its
 documentation: read it whole if you are picking the codebase up cold, then follow
 only the links your task needs.
 
-Applies to the repo as of 2026-09-13: one solution, `Huddle.slnx`, holding all
-six projects, builds with zero warnings and its tests pass — see [Build, test,
-run](#build-test-run).
+Applies to the repo as of 2026-09-13, after roadmap item 6 (CSS tokenisation and
+dark mode): one solution, `Huddle.slnx`, holding all six projects, builds with
+zero warnings and its 961 tests pass — see [Build, test, run](#build-test-run).
 
 The product is Agency.Huddle, and since 2026-09-12 so is every namespace.
 Projects, assemblies, folders and the solution followed and are now `Huddle.*`
@@ -40,7 +40,7 @@ question is yours; the cost column is roughly what it will spend.
 | **[Traps](agencyteam/traps.md)** | **Before editing `Huddle.Acp`, `Huddle.Contracts` or the wire** | ~2.6k |
 | [Testing](agencyteam/testing.md) | To add a test, or to verify what no test can prove | ~2.3k |
 | [Known limits](agencyteam/known-limits.md) | Before "fixing" something that looks missing | ~1.9k |
-| [Roadmap](agencyteam/roadmap.md) | Before work in `PersonaRunner`, `ReplyGate`, `IAgentHostFactory`, Persona frontmatter or `app.css` | ~10.7k |
+| [Roadmap](agencyteam/roadmap.md) | Before work in `PersonaRunner`, `ReplyGate`, `IAgentHostFactory`, Persona frontmatter, `app.css` or `theme.css` | ~10.7k |
 | [Decision record](agencyteam/decisions.md) | To revisit a decision, or to read an older doc | ~6.3k |
 | [Domain context](agencyteam/CONTEXT.md) | To see the vocabulary used in dialogue, not defined | ~0.6k |
 | [ADRs](adr/) | To read one decision in full, with what was rejected | ~1.4k each |
@@ -57,7 +57,8 @@ them without opening [Language](agencyteam/language.md):
 > Teammate · Human · Agent · Name · Alias · Title · Team · Adapter · Room ·
 > Member · Invitation · Persona · Rejected file · Model · Effort · Turn ·
 > App Tool · Reply Gate · Budget · Catch-up · Progressive discovery · Work Dir ·
-> Message · Draft · Mention · Envelope · Transcript · Stop · Team Directory
+> Message · Draft · Mention · Envelope · Transcript · Stop · Team Directory ·
+> Hook · Placeholder · Default · Timing · Theme · Token · Appearance
 
 Words that are *wrong here* and have a right replacement: bot, user, channel,
 direct room, group room, agent session, sandbox, profile, prompt, database.
@@ -202,18 +203,27 @@ All under the `Team:` section — `TeamOptions.cs` and `Acp/AcpOptions.cs`.
 | `Acp:CatchUpMessages` | `20` | Per-Room catch-up buffer size. |
 | `Acp:TokenBudget` | `1000000` | Per-Persona token Budget, summed from the rises in `UsageUpdated.Used` and reset by any Human Message. Catches a loop that mints fresh Rooms, which the per-Room Budget cannot. Zero or less disables it. |
 
-Two runtime files sit outside that section, because neither is a setting: the
-Persona library under `{DataDir}/{Acp:TeamsDir}`, and `{DataDir}/hooks.json`.
+Three runtime files sit outside that section, because none of them is a setting: the
+Persona library under `{DataDir}/{Acp:TeamsDir}`, `{DataDir}/hooks.json`, and
+`{DataDir}/appearance.json`.
 
 | File | Holds |
 | --- | --- |
 | `{DataDir}/hooks.json` | **Overrides only**, one key per changed Hook. Absent is normal and means nothing is overridden; the app does not create it, and it appears on the first save from `/settings`. Hand-editing it is supported and watched — a save in an editor reaches the next Turn without a restart. |
+| `{DataDir}/appearance.json` | The selected Theme and the Human's per-Token overrides. **Overrides only**; absent is normal and means the built-in values follow the operating system, and the app does not create it. Hand-editable and watched, exactly like `hooks.json`. Override keys are Token names — `"--font-chat"`, not `chat_font` — and values are allowlisted before they reach the page. Not a setting under `Team:`: it is state this application writes. |
 | `hooks.default.json` (beside the binary) | Every Hook's shipped wording, **generated** from `HookCatalog` and copied to the output folder. The restore source, and readable as a reference. It is not the authority: delete both files and the app still runs on exactly the text it shipped with. |
 
 A Hook is one piece of text sent to a model. See [Language](agencyteam/language.md)
 for the word, [ADR-0007](adr/0007-model-facing-text-is-configuration.md) for why
 defaults live in code, and [Rules](agencyteam/rules.md) for the two things an edit
 must never do.
+
+A Theme is one stylesheet layered over the 39 Tokens in `wwwroot/theme.css`, chosen
+on the Appearance tab of `/settings`. See [Language](agencyteam/language.md) for
+**Theme**, **Token** and **Appearance**,
+[ADR-0009](adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md) for why it
+is a file rather than `localStorage` and why this feature has no JavaScript, and
+[Rules](agencyteam/rules.md) for the four things a change here must not undo.
 
 `Logging:LogLevel` is the one place that looks like it belongs to this section
 and does not. Its keys are log-category prefixes, and a category comes from

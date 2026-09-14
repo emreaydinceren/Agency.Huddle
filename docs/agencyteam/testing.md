@@ -1,6 +1,6 @@
 # Testing
 
-How this repo tests, why component tests come in two shapes, and the 24-step
+How this repo tests, why component tests come in two shapes, and the 35-step
 manual checklist for what no test can prove. Read it before adding a test, and
 work the checklist before calling an ACP-facing change done.
 
@@ -32,6 +32,22 @@ exactly that shape shipped once (see the `@`-binding rule in [Rules](rules.md)),
 A source assertion is an unusual test; it is here because it is the only layer
 that can see the defect at all.
 
+**The stylesheet suites assert on source text for the same reason, and it is the
+clearest case of it.** `ThemeSourceTests`, `ThemeFileTests` and the shared `CssSource`
+parser read `theme.css`, `app.css` and the `.razor.css` files as *text* and count what
+is declared. They do that because **nothing in this suite renders a browser**, and a
+CSS custom property resolves entirely inside the browser's cascade: *"did this element
+switch to the dark value?"* is unreachable here, while *"is there a colour literal left
+in this file?"* is exact and total. So the suite asserts the thing it can decide — no
+literals outside `theme.css`, every `var()` naming a declared Token, every Token having
+a consumer, every Theme file declaring `color-scheme` and exactly one `:root` block,
+`ThemeTokens.All` equal to the stylesheet in both directions. `TeammatesRazorSourceTests`
+is the precedent, and the argument is identical: a source assertion is an unusual test,
+and it is here because it is the only layer that can see the defect at all. What it
+cannot see is covered by manual checklist steps 28–35, and by one HTTP round-trip —
+`AppShell_EveryLinkedStylesheetIsServed`, because whether a `<link>` actually resolves
+is a fact about the server, not about the text.
+
 **The re-probe on model change is the second behaviour this suite structurally
 cannot reach, for the same reason.** `Teammates.razor`'s `OnCardModelChanged`
 only runs off a real `<select>` change event under `InteractiveServer`, and
@@ -50,7 +66,9 @@ Tools. With `Team:Acp:Enabled=true` — which spends money — check:
 > they cost nothing and are worth running with `Team:Acp:Enabled=false` before
 > you spend anything on the rest. Steps 24–27 all need a live agent, and 25–27
 > deliberately spend a Budget's worth of Turns — set `Team:AgentMessageBudget`
-> low before starting them.
+> low before starting them. **Steps 28–35 are free too** — no agent, no money,
+> browser and filesystem only — and they are the whole of what the stylesheet
+> suites cannot see, because no test here renders a browser.
 
 1. `/teammates` loads, the sidebar link reads **Teammates**, and the page is
    styled (catches a missed CSS class rename). Clicking a tile opens the card;
@@ -144,3 +162,39 @@ Tools. With `Team:Acp:Enabled=true` — which spends money — check:
     `budgetExhausted` back from `mcp__team__post_message`. It must stop rather
     than retry or post the same thing into another Room. Only a real model can
     prove the terminal wording works — same class as steps 11 and 12.
+28. **Dark mode is the test.** Set Settings → Appearance to **Dark**. Walk `/`, a
+    Room with a Draft streaming, `/teammates` with the card open and a rejected
+    file present, and `/settings` on both tabs. Any element that stays light is a
+    literal that survived tokenisation.
+29. **System is pure CSS.** Choose **System** (or delete
+    `App_Data/appearance.json`) and flip the operating system's theme with the app
+    open. It must follow **with no reload and no navigation** — that path involves
+    no script and no server.
+30. **No flash.** With **Dark** chosen, hard-reload: the page must never paint
+    light first. The Theme is a `<link>` the server emits, so a flash would mean it
+    is not being emitted at all.
+31. **The choice is per installation.** Open the app in a second browser or a
+    private window: **the same Theme**. Restart the app: still the same. This is
+    the deliberate consequence of the choice living in a file rather than in the
+    browser.
+32. **Overrides, by Token name.** Put
+    `{"theme":"huddle-dark","overrides":{"--font-chat":"Georgia, serif","--accent":"#c14bd0"}}`
+    in `App_Data/appearance.json` with the app running. The next page load shows
+    Message text in a serif face and magenta avatar monograms — **and nothing else
+    changes**, because every other Token falls through to the Theme. Keys are Token
+    names; `chat_font` is not a key and never will be.
+33. **A bad override is reported, not swallowed.** Set
+    `"--surface-base": "red; } :root{"`. The app renders normally, the Appearance
+    tab lists the rejected value, the log carries one warning, and **the file is
+    unchanged**. Then set `"--not-a-token": "x"` and confirm the same treatment.
+    Finally set `"theme": "dracula"` and confirm the built-in pair applies and the
+    file still says `dracula`.
+34. **Layering does what it claims.** Hand-write `wwwroot/themes/probe.css`
+    containing only `:root { color-scheme: dark; --accent: #ff00ff; }`, add `probe`
+    to `ThemeCatalog`, rebuild and select it. The accent must be magenta and
+    **everything else must be the built-in dark palette** — not light, and not
+    blank. Delete both afterwards.
+35. **The reconnect modal.** Stop the server with the browser open. The dialog
+    shows **one** state paragraph, on a themed panel, over a dimmed backdrop — in
+    both Themes. All six at once means the scoped-CSS bundle is not loading again,
+    which is the [Traps](traps.md) entry on `@Assets[...]`.

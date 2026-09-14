@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Themes;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -165,5 +166,121 @@ public sealed class SettingsPageTests
         var html = await client.GetStringAsync("/", ct);
 
         Assert.Contains("href=\"/settings\"", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>The tab rail includes an Appearance button alongside Hooks.</summary>
+    [Fact]
+    public async Task SettingsPage_Renders_AppearanceTabInTheRail()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/settings", ct);
+
+        Assert.Contains(">Appearance<", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The Appearance tab lists System plus every <see cref="ThemeCatalog.BuiltIn"/> label, and renders
+    /// none of the Hooks tab's own content.
+    /// </summary>
+    [Fact]
+    public async Task SettingsAppearancePage_RendersEveryCatalogThemeAndSystem()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/settings/appearance", ct);
+
+        Assert.Contains(">System<", html, StringComparison.Ordinal);
+        foreach (var theme in ThemeCatalog.BuiltIn)
+        {
+            Assert.Contains($">{theme.Label}<", html, StringComparison.Ordinal);
+        }
+
+        Assert.DoesNotContain("hooks-group", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The paragraph move in T4.1 must not regress: the Appearance tab never shows the Hooks intro's
+    /// file-path paragraph, which talked about <c>hooks.json</c> and would make no sense here.
+    /// </summary>
+    [Fact]
+    public async Task SettingsAppearancePage_DoesNotRenderTheHooksIntro()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/settings/appearance", ct);
+
+        Assert.DoesNotContain(factory.HooksJsonPath, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The Appearance tab tells a user exactly where <c>appearance.json</c> lives, the same guarantee
+    /// <see cref="SettingsHooksPage_ShowsTheOverrideFilePath"/> gives the Hooks tab.
+    /// </summary>
+    [Fact]
+    public async Task SettingsAppearancePage_NamesTheOverrideFile()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/settings/appearance", ct);
+
+        Assert.Contains(factory.AppearanceJsonPath, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>A rejected override is reported on the page rather than swallowed - the "reported, never swallowed" rule applied to appearance.json.</summary>
+    [Fact]
+    public async Task SettingsAppearancePage_ListsARejectedOverride()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"not-a-real-theme\"}");
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/settings/appearance", ct);
+
+        Assert.Contains("not-a-real-theme", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The override-key example must render as the literal key a Human types into
+    /// <c>appearance.json</c> - <c>--font-chat</c>, exactly as declared in <c>theme.css</c> and
+    /// <see cref="ThemeTokens.All"/> - with no leading <c>@</c>. Razor's <c>@@</c> escape sequence
+    /// renders one literal <c>@</c>, and <c>--font-chat</c> contains no <c>@</c> to escape in the
+    /// first place, so a stray <c>@@</c> in the markup would teach the Human to type a key
+    /// <see cref="Agency.Huddle.App.Appearance.ThemeOverrides.Build"/> then rejects because it is
+    /// not in the token list - the page would look broken when the code is fine.
+    /// </summary>
+    [Fact]
+    public async Task SettingsAppearancePage_ShowsTheOverrideKeyWithoutAStrayEscapeCharacter()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/settings/appearance", ct);
+
+        Assert.Contains("--font-chat", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("@--font-chat", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("@--surface-base", html, StringComparison.Ordinal);
     }
 }
