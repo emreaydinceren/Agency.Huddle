@@ -1403,24 +1403,41 @@ If you see no trace lines, this test is inconclusive rather than failing until y
 - The `claude` CLI is logged in.
 - The app is stopped.
 
+> [!IMPORTANT]
+> This cap can only be reached by an **Agent-to-Agent** exchange, never by typing at it. Every
+> Human Message resets the counter to zero (`PersonaRunner` does `Interlocked.Exchange(ref
+> this.tokensConsumed, 0)` the moment it sees one), and the check runs at the START of a work item
+> — so a Turn you prompted yourself is always measured against a freshly-zeroed counter. That is
+> the point of the cap: it bounds *unattended* spend. The test therefore needs a SECOND Persona,
+> so one Agent's reply wakes the other with no Human Message in between.
+
 **Steps**
 
 1. Confirm the Persona's Model is Haiku and Effort is low: open `/teammates`, click the tile, and read the Model and Effort shown. Fix them via `Edit` if not.
-2. Stop the app. Run `$env:Team__Acp__TokenBudget = '2000'` — small enough that one Turn exceeds it.
-3. Relaunch and wait for the `Tester` tile to read `Online`.
-4. Open the `Tester` Room in the sidebar. Type exactly `Say hi in five words.` and press Enter.
-5. Wait for the reply and confirm it arrives normally.
-6. Type exactly `Say bye in five words.` and press Enter.
-7. Wait 30 seconds and record whether any reply arrives.
-8. Go to `/teammates` and read the `Tester` tile's status line. Hover the status and read the tooltip in full.
-9. Go back to the `Tester` Room and read the area between the message list and the message box.
-10. Search the console for a line containing `token budget`.
-11. Do NOT stop the app or clear the variable — STARTUPCONFIG-34 continues from this exact state.
+2. Stop the app. Rewrite `src\Huddle.App\App_Data\Teams\tester.md`'s body to `You are a test teammate. Reply with one very short sentence that ends with @tester2.` and add a second Persona at `src\Huddle.App\App_Data\Teams\tester2.md`:
+```
+---
+name: 'Tester2'
+title: 'Second test teammate'
+alias: 'tester2'
+---
+You are a second test teammate. Reply with one very short sentence that ends with @tester.
+```
+3. Run `$env:Team__Acp__TokenBudget = '2000'` — small enough that one Turn exceeds it — and `$env:Team__AgentMessageBudget = '4'`, which bounds the ping-pong and therefore the spend.
+4. Relaunch and wait for BOTH tiles to read `Online`. Set Model = Haiku and Effort = low on `Tester2` as well.
+5. Click **New chat**, tick `Tester` and `Tester2` only, and click **Start chat**. The Room heading reads `Tester, Tester2`.
+6. Type exactly `Say hi @tester` and press Enter.
+7. Watch the exchange: `Tester` answers mentioning `@tester2`, then `Tester2` answers mentioning `@tester`. That second reply is an AGENT Message, so it wakes `Tester` with no reset — and that is the Turn the cap refuses.
+8. Wait 30 seconds and record that no third Agent Message arrives.
+9. Go to `/teammates` and read the `Tester` tile's status line. Hover the status and read the tooltip in full.
+10. Go back to the Room and read the area between the message list and the message box.
+11. Search the console for a line containing `token budget`.
+12. Do NOT stop the app or clear the variable — STARTUPCONFIG-34 continues from this exact state.
 
 **Pass if — all of these**
 
-- The FIRST message gets a normal reply.
-- The SECOND message gets NO reply.
+- The Human Message gets a normal reply from `Tester`, and `Tester2` answers that.
+- `Tester` does NOT answer `Tester2` — the Agent-triggered Turn is the one refused.
 - The `/teammates` tile reads `Degraded` with an amber dot.
 - The tile's tooltip reads exactly `The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.`
 - The Room shows an alert strip between the message list and the message box reading `Tester is Degraded: The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.`
@@ -1435,10 +1452,10 @@ If you see no trace lines, this test is inconclusive rather than failing until y
 
 **Inconclusive if**
 
-The check runs at the START of a work item, so the FIRST Turn ALWAYS completes no matter how small the Budget. A tester expecting the very first message to be refused will wrongly report the cap as broken — do not file that. If the second message DOES get a reply, the Turn simply did not exceed 2000 yet: send one more short message and re-check before judging. The Budget is also per Persona, not per Room, and has no Continue prompt: it only ever reads as Degraded.
+The check runs at the START of a work item, so the FIRST Turn ALWAYS completes no matter how small the Budget. A tester expecting the very first message to be refused will wrongly report the cap as broken — do not file that. If `Tester` DOES answer `Tester2`, do NOT reach for the keyboard: typing another Message resets the counter and moves you further from the state under test. Let the ping-pong run instead — `Team__AgentMessageBudget` stops it — or check that both Personas really are mentioning each other by alias. The Budget is per Persona, not per Room, and has no Continue prompt: it only ever reads as Degraded.
 
 > [!NOTE]
-> COST: roughly two short Haiku turns at low effort — a few cents at most. Keep every prompt to a handful of words. A local model emits no usage updates at all, so this cap is inert against one; use the Claude adapter.
+> COST: roughly three short Haiku turns at low effort — a few cents at most. Keep every prompt to a handful of words. A local model emits no usage updates at all, so this cap is inert against one; use the Claude adapter. For reference, the Claude adapter's first `usage_update` on a fresh session reported `used=49628` of `size=200000`, so a Budget of `2000` is exceeded by the opening Turn — the cap fires on the very next Agent-triggered Turn, not later.
 
 ### STARTUPCONFIG-34 — A Human Message clears a token-Budget Degraded state and lets the Persona work again
 
@@ -1457,8 +1474,8 @@ The check runs at the START of a work item, so the FIRST Turn ALWAYS completes n
 3. Wait up to 60 seconds and watch the message area.
 4. Look at the area between the message list and the message box.
 5. Go to `/teammates` and read the `Tester` tile's status line and dot colour.
-6. Stop the app. Run `Remove-Item Env:Team__Acp__TokenBudget`.
-7. Delete the test Persona: `Remove-Item src\Huddle.App\App_Data\Teams\tester.md`.
+6. Stop the app. Run `Remove-Item Env:Team__Acp__TokenBudget` and `Remove-Item Env:Team__AgentMessageBudget`.
+7. Delete both test Personas: `Remove-Item src\Huddle.App\App_Data\Teams\tester.md, src\Huddle.App\App_Data\Teams\tester2.md`.
 8. Run `Get-ChildItem Env:Team__*` and confirm nothing remains set.
 
 **Pass if — all of these**
