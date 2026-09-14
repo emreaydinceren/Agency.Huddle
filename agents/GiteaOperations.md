@@ -24,8 +24,8 @@ Actions there. Everything below talks to the Gitea instance directly via its RES
   supports (`tea pr create`, `tea pr list`, `tea login`, etc.).
 - **CI/Actions internals** (workflow topology, failure modes, backing services, reading a run's
   log) live in [CIPipeline.md](CIPipeline.md) — this doc only covers *talking to the remote*:
-  branches, pull requests, and the couple of Actions calls that touch a run rather than debug
-  one.
+  branches, pull requests, issues, and the couple of Actions calls that touch a run rather than
+  debug one.
 
 ## Known issue: this repo's `origin` points at a stale host
 
@@ -114,6 +114,90 @@ The branch must already be pushed to `origin` before opening the PR. If neither 
 `tea` works, push the branch and hand the user the compare URL to open manually — build it from
 the same `$base` above: `$base/compare/main...feat/some-branch`.
 
+## Issues
+
+Issues are how a failed manual test is recorded — [the manual test
+tracker](../docs/agencyteam/manual-tests/tracker.md#failures-are-tracked-as-gitea-issues) owns
+the policy (when a Fail earns an issue, the `TESTID-NN: what broke` title format, what the body
+must quote). This section owns the mechanics: the endpoints, and the four ways they surprise you.
+
+The `$API` below is the one derived in [Branches](#branches); the browsable list is at
+`$base/issues`, with `$base` from the same snippet.
+
+### Read
+
+```bash
+# Open issues only. type=issues is NOT optional - see the traps below.
+curl "$API/issues?state=open&type=issues" -H "Authorization: token ${GITEA_ACCESS_TOKEN}"
+
+# One issue, by the number shown in the UI and in the tracker's Issue column.
+curl "$API/issues/12" -H "Authorization: token ${GITEA_ACCESS_TOKEN}"
+
+# Already reported? q= matches title AND body, so a test id also finds the issues it blocks.
+curl "$API/issues?state=all&type=issues&q=TEAMMATECARD-02" -H "Authorization: token ${GITEA_ACCESS_TOKEN}"
+
+curl "$API/issues/12/comments" -H "Authorization: token ${GITEA_ACCESS_TOKEN}"
+```
+
+Useful query parameters: `state` (`open` | `closed` | `all`, default `open`), `type`
+(`issues` | `pulls`), `q`, `labels` (comma-separated names), `milestones`, `page` and `limit`
+(default 10, hence `limit=50` when you want the lot).
+
+### Write
+
+```bash
+curl -X POST "$API/issues" \
+  -H "Authorization: token ${GITEA_ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"TEAMMATECARD-02: New teammate opens no card", "body":"..."}'
+
+# Comment on one.
+curl -X POST "$API/issues/12/comments" \
+  -H "Authorization: token ${GITEA_ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"body":"Still reproduces on ..."}'
+
+# Close one. PATCH edits any field; state is just another field.
+curl -X PATCH "$API/issues/12" \
+  -H "Authorization: token ${GITEA_ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"state":"closed"}'
+```
+
+PowerShell follows the [Pull Requests](#pull-requests) shape exactly — same `$api`, same
+`Authorization: token ...` header, same `ConvertTo-Json` body:
+
+```powershell
+$body = @{ title = "TESTID-NN: ..."; body = "..." } | ConvertTo-Json
+
+Invoke-RestMethod `
+    -Uri "$api/issues" `
+    -Method Post `
+    -Headers @{ Authorization = "token $env:GITEA_ACCESS_TOKEN" } `
+    -ContentType "application/json" `
+    -Body $body
+```
+
+Opening an issue is a visible action on a shared tracker. Draft the title and body, show them to
+the user, and post once they say go — the same bar this doc applies to opening a PR.
+
+### Four traps
+
+1. **`/issues` returns pull requests too.** Gitea models a PR as an issue, so a bare
+   `GET $API/issues` mixes both, numbered in one sequence — on this repo today #1-#9 are PRs and
+   #10 upward are issues. Pass `type=issues`, or filter on the `pull_request` field being `null`.
+   Skip it and your "open issues" answer is wrong in a way that looks plausible.
+2. **A missing or bad token gives `404`, not `401`.** The repo is private, so Gitea hides its
+   existence rather than admitting an auth failure. A 404 from `/issues` means *check that
+   `GITEA_ACCESS_TOKEN` is set in this shell* far more often than it means the path is wrong.
+   Confirm with `curl -s -o /dev/null -w "%{http_code}" "$API"` before rewriting the URL.
+3. **`labels` and `milestones` on create take IDs, not names** — the read-side `labels=` query
+   parameter takes names, so the two sides are not symmetric. This repo defines **no labels and
+   no milestones** as of 2026-09-14: `GET $API/labels` returns `[]`, and any label passed by name
+   is rejected. Create the label first, or leave the field out.
+4. **`limit` defaults to 10.** Concluding "there are only 10 issues" from an unpaged call is the
+   same class of quiet, believable error as trap 1.
+
 ## Actions (workflow runs)
 
 For re-running a job or checking a run's status without the web UI, use the endpoints already
@@ -121,13 +205,17 @@ documented in [CIPipeline.md § Reading CI results from a
 session](CIPipeline.md#reading-ci-results-from-a-session) — that page owns the full endpoint
 table and the three API traps already hit (`/actions/tasks` returning an empty list,
 `/rerun` on a run that isn't done, and a run reporting `in_progress` while the failure is
-already in its log). Come here only for branches and PRs; go there for anything Actions-shaped.
+already in its log). Come here only for branches, PRs and issues; go there for anything
+Actions-shaped.
 
 ## Validation status
 
 The environment facts above (`tea` absence, the per-hostname credential caching behavior, the
-gitleaks `internal-mdns-host` rule) are confirmed as of 2026-09-13. **The API request shapes
-(PR creation, branch delete, Actions rerun) are documented from Gitea's published REST API
+gitleaks `internal-mdns-host` rule) are confirmed as of 2026-09-13. The **read** side of
+[Issues](#issues) was exercised against this instance on 2026-09-14, running Gitea **1.26.4** —
+the listing, `type=issues`, `q=`, the comments endpoint, the empty label set and the
+404-not-401 behaviour are observed, not inferred. **The write shapes (issue create, comment and
+close, PR creation, branch delete, Actions rerun) are documented from Gitea's published REST API
 conventions but have not been exercised end-to-end against this instance from within this
 repo** — creating a real PR/deleting a branch/re-running a job are visible, non-trivial-to-undo
 actions, so they weren't tested just to validate this doc. Treat the request bodies as a strong
@@ -138,4 +226,6 @@ version's field names before assuming the whole approach is wrong.
 
 - [CIPipeline.md](CIPipeline.md) — CI/Actions internals: workflow topology, failure modes, and
   the full Actions API reference this doc points to above
+- [Manual test tracker](../docs/agencyteam/manual-tests/tracker.md) — when an issue gets opened
+  and how it is titled; this doc covers how to open it
 - [C# Principles](CSharpPrinciples.md) — the house style the build enforces
