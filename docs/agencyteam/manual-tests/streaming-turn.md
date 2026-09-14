@@ -661,8 +661,16 @@ The store returns a Room's Drafts in no particular order, so the two rows may sw
 **Steps**
 
 1. Open devtools, go to the **Network** tab and set throttling to **Slow 3G** - this widens the in-flight window enough to see.
-2. In `T-C` run: `pwsh $env:TEMP\drip.ps1 -Name drip -RoomId <GROUPROOM> -DelaySeconds 8`.
-3. In `T-D` run: `pwsh $env:TEMP\drip.ps1 -Name drop -RoomId <GROUPROOM> -DelaySeconds 8`.
+2. Use the LISTENING client from STREAMINGTURN-17 for both Agents, not `drip.ps1`. In `T-C` run: `pwsh $env:TEMP\drip-listen.ps1 -Name drip -RoomId <GROUPROOM>`.
+3. In `T-D` run: `pwsh $env:TEMP\drip-listen.ps1 -Name drop -RoomId <GROUPROOM>`.
+
+   > WHY: `drip.ps1` reads only the welcome line and never drains what the server sends it (see
+   > setup note 6). The `stopTurn` envelope is a WRITE to that client, so against a non-draining
+   > client it can block, `StopDraftAsync` never returns, its `finally` never clears the busy flag,
+   > and the button stays disabled for the rest of the run. That looks exactly like this test's
+   > "stays disabled indefinitely" Fail-if and is NOT the app's doing. Verified 2026-09-14: with
+   > `drip.ps1` the button never re-enabled; with `drip-listen.ps1` it disabled and re-enabled
+   > cleanly on every click.
 4. Open the `drip, drop` Room and confirm both streaming rows are present with a Stop button each.
 5. Click **Stop** on drip's row once, and immediately watch both buttons.
 6. Immediately double-click drip's Stop button and note whether anything visibly changes.
@@ -898,13 +906,18 @@ If the app fails to restart (port in use), wait for the old process to exit full
 
 1. Press Ctrl+C in `T-A`. In the same window run: `$env:Team__AgentMessageBudget="2"; $env:Team__Acp__Enabled="false"; dotnet run --project src/Huddle.App`.
 2. Reload the browser and open the `echo` room. If it does not exist, click **New chat**, tick `echo`, click **Start chat**.
-3. Click into the composer, type `@echo hello one` and press Enter. Wait for the reply.
-4. Type `@echo hello two` and press Enter. Wait for the reply.
-5. Type `@echo hello three` and press Enter. Wait five seconds.
+3. Click into the composer, type `@echo hello one` and press Enter. Wait for the reply, and read the grey line: `1 of 2 agent replies since you last spoke.`
+4. Put a SECOND Agent in the Room - type `/invite @alpha` and press Enter.
+5. Send ONE Message mentioning both: `hello @echo and @alpha`. Wait for both replies.
+
+   > A Human Message RESETS this counter, so sending `@echo hello two` and `@echo hello three`
+   > can never fill a budget of 2: each Message you type zeroes it and draws exactly one reply,
+   > leaving the line at `1 of 2` forever. Two replies must arrive between two Human Messages,
+   > which needs two Agents. Same rule as `ROOMMESSAGING-30` and `STARTUPCONFIG-33`.
 6. Read the area between the transcript and the composer.
 7. In devtools Elements, search for `member-health-alert` and record the count; then search for `budget-prompt`.
 8. Click **Teammates** and read the status label and dot for `echo`.
-9. Check `T-A` for a Warning line reading `Room '<id>' refused a message from 'echo': its budget of 2 agent messages since a human last spoke is spent.`
+9. The refusal needs its own configuration, because at a budget of 2 with two Agents both replies are accepted. Stop the app, relaunch with `$env:Team__AgentMessageBudget="1"`, and send one `hello again @echo and @alpha`: the first Agent to answer spends the budget and the second is refused. Check `T-A` for a Warning line reading `Room '<id>' refused a message from '<agent>': its budget of 1 agent messages since a human last spoke is spent.` - the number is the configured budget.
 10. Return to the Room and click **Continue**, then send `@echo hello four` and confirm a reply arrives.
 11. Press Ctrl+C in `T-A` and restart without the variable: `Remove-Item Env:Team__AgentMessageBudget; dotnet run --project src/Huddle.App`.
 
