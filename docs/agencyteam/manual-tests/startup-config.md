@@ -309,7 +309,7 @@ If the `New chat` panel says `No agents have connected yet…` instead of listin
 
 **Inconclusive if**
 
-If you have already created extra Rooms by hand in earlier exploration, the counts will not match. Do a clean slate (stop, delete `src\Huddle.App\App_Data`, relaunch) and start this test from step 1. If step 6's behaviour is ambiguous, record it verbatim as an observation rather than a verdict — the reuse rule is defined for single-agent selection; multi-agent Room reuse is not specified here.
+If you have already created extra Rooms by hand in earlier exploration, the counts will not match. Run `P-RESET-ALL`, relaunch, and start this test from step 1. If step 6's behaviour is ambiguous, record it verbatim as an observation rather than a verdict — the reuse rule is defined for single-agent selection; multi-agent Room reuse is not specified here.
 
 > [!NOTE]
 > Optional oracle if `sqlite3` is available: `sqlite3 src\Huddle.App\App_Data\team.db "SELECT COUNT(*) FROM rooms;"` before and after each Start chat.
@@ -363,7 +363,7 @@ Expecting `echo` and `alpha` here is a category error, not a defect — do not f
 
 **Steps**
 
-1. In a second pwsh window run `Test-Path src\Huddle.App\App_Data\hooks.json` and note the result.
+1. In `T-B` run `Test-Path src\Huddle.App\App_Data\hooks.json` and note the result.
 2. In the browser click `Settings` in the sidebar.
 3. Read the page heading and the two tab buttons in the tab rail.
 4. Read the paragraph that names where overrides are stored, and note the absolute path it prints.
@@ -412,7 +412,7 @@ Do not confuse `hooks.json` (the override file, under App_Data, absent until sav
 
 **Steps**
 
-1. In a second pwsh window run `Test-Path src\Huddle.App\App_Data\appearance.json` and note the result.
+1. In `T-B` run `Test-Path src\Huddle.App\App_Data\appearance.json` and note the result.
 2. In the browser go to `/settings` and click the `Appearance` tab.
 3. Read the intro paragraph.
 4. Open the `Theme` dropdown and read every option it offers, and which one is currently selected.
@@ -504,7 +504,7 @@ A Draft that was mid-stream when you pressed Ctrl+C is simply gone — that is a
 4. Run `Test-Path src\Huddle.App\App_Data` and confirm it returns False.
 5. Relaunch: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 6. Open http://localhost:5100 and read the sidebar room list.
-7. In the second window run `Get-ChildItem -Recurse -Force src\Huddle.App\App_Data` and read the full listing.
+7. In `T-B` run `Get-ChildItem -Recurse -Force src\Huddle.App\App_Data` and read the full listing.
 
 **Pass if — all of these**
 
@@ -814,7 +814,7 @@ The silence here is CORRECT. Judging 'no reply' requires checking the dot in the
 
 **Inconclusive if**
 
-If App_Data was not deleted between steps, old Rooms persist alongside new ones and the count means nothing — redo from a clean slate. If a name you chose contains characters outside letters, digits, spaces, `-` and `_`, the handshake rejects it and no Room appears; that is correct behaviour, not a binding failure.
+If `App_Data` was not deleted between steps, old Rooms persist alongside new ones and the count means nothing — redo from `P-RESET-ALL`. If a name you chose contains characters outside letters, digits, spaces, `-` and `_`, the handshake rejects it and no Room appears; that is correct behaviour, not a binding failure.
 
 > [!NOTE]
 > Windows reserved device names (`CON`, `NUL`, `COM1`) pass the name rules and then fail to become files — do not use them as demo names.
@@ -837,7 +837,7 @@ If App_Data was not deleted between steps, old Rooms persist alongside new ones 
 3. Open http://localhost:5100 and read the main column immediately, then again after 10 seconds.
 4. Open each Room and read its transcript.
 5. Click `Settings` and read the absolute path printed in the Hooks tab's overrides paragraph.
-6. In a second pwsh window run `Get-ChildItem -Recurse -Force src\Huddle.App\App_Data_test`.
+6. In `T-B` run `Get-ChildItem -Recurse -Force src\Huddle.App\App_Data_test`.
 7. Stop the app, run `Remove-Item Env:Team__DataDir`, and relaunch.
 8. Open each Room and read its transcript again.
 
@@ -1000,7 +1000,7 @@ The `version` field in the welcome envelope must equal the CURRENT protocol vers
 1. Run `$env:Team__PipeName = 'team-test'`.
 2. Launch in the same window: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 3. Open http://localhost:5100, wait 10 seconds, and read the sidebar room list.
-4. In a second pwsh window run `pwsh tools/echo-bot.ps1 -Name mybot`.
+4. In `T-B` run `pwsh tools/echo-bot.ps1 -Name mybot`.
 5. Read what the script prints and how long it takes to finish or fail.
 6. Look at the browser sidebar for a full 30 seconds WITHOUT refreshing.
 7. Stop the app and run `Remove-Item Env:Team__PipeName`.
@@ -1119,10 +1119,10 @@ If you launched by running the built DLL (`dotnet src/Huddle.App/bin/Debug/net10
 
 **Steps**
 
-1. In a second pwsh window run `Get-Process node -ErrorAction SilentlyContinue` and note what is already running (you must not blame the app for a pre-existing node process).
+1. In `T-B` run `O-ADAPTERS`. It should print `0` — it counts only Adapters, so an unrelated node process can never be blamed on the app.
 2. In the run window set `$env:Team__Acp__Enabled = 'false'` and launch: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 3. Wait 20 seconds after the app is listening.
-4. In the second window run `Get-Process node -ErrorAction SilentlyContinue` again and compare against step 1.
+4. In `T-B` run `O-ADAPTERS` again.
 5. In the browser click `Teammates` and read the heading, the button beside it, the intro paragraph and the body.
 6. Search the console for `Persona` and for `adapter`.
 7. Stop the app and run `Remove-Item Env:Team__Acp__Enabled`.
@@ -1143,7 +1143,7 @@ If you launched by running the built DLL (`dotnet src/Huddle.App/bin/Debug/net10
 
 **Inconclusive if**
 
-If `node` was already running before you launched (step 1 found processes), do not count those. If you cannot tell which node processes belong to the app, stop the app and re-run `Get-Process node` — anything that survives the app's exit was not the app's.
+`O-ADAPTERS` counts only processes whose command line contains `claude-agent-acp`, so unrelated node processes are already excluded and no baseline subtraction is needed.
 
 > [!NOTE]
 > This is the recommended default configuration for every free test in this area.
@@ -1156,18 +1156,18 @@ If `node` was already running before you launched (step 1 found processes), do n
 
 **Before you start**
 
-- `src\Huddle.App\App_Data\Teams` is empty — `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams` prints nothing. Do a clean slate if unsure.
+- `src\Huddle.App\App_Data\Teams` is empty — `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams` prints nothing. Run `P-RESET-ALL` if unsure.
 - No `Team__Acp__Enabled` variable set, so Development's `true` applies.
 
 **Steps**
 
 1. Run `Get-ChildItem Env:Team__*` and confirm nothing is set.
-2. In a second window run `Get-Process node -ErrorAction SilentlyContinue` and note the baseline.
+2. In `T-B` run `O-ADAPTERS`. It should print `0`.
 3. Launch: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 4. Wait 20 seconds after the app is listening.
-5. In the second window run `Get-Process node -ErrorAction SilentlyContinue` again.
+5. In `T-B` run `O-ADAPTERS` again.
 6. Open the browser, click `Teammates`, and read the body.
-7. In the second window run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams` and confirm it is still empty.
+7. In `T-B` run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams` and confirm it is still empty.
 
 **Pass if — all of these**
 
@@ -1309,14 +1309,14 @@ alias: 'tester'
 ---
 You are a test teammate. Answer in one short sentence.
 ```
-2. In a second window note the `node` baseline: `Get-Process node -ErrorAction SilentlyContinue`.
+2. In `T-B` run `O-ADAPTERS`. It should print `0`.
 3. Launch: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 4. Open the browser and go straight to `/teammates` — do not wait.
 5. Read the tile: its monogram, its second line, and its status line (a coloured dot plus a word).
 6. Keep watching the status line for up to 30 seconds and record every state it passes through.
 7. Open the tile by clicking it, then click `Edit`. In the `Model` dropdown choose the option whose name contains `Haiku`; in the `Effort` dropdown choose `low`. Click `Save`.
 8. Look at the sidebar room list.
-9. In the second window run `Get-Process node -ErrorAction SilentlyContinue` and compare with the baseline.
+9. In `T-B` run `O-ADAPTERS` again.
 10. If the status ever reads `Offline`, hover the status line and read the tooltip text in full; record it verbatim.
 11. When finished, stop the app and delete `src\Huddle.App\App_Data\Teams\tester.md`.
 

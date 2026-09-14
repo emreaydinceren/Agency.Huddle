@@ -37,11 +37,11 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Steps**
 
-1. In the second PowerShell window run `Get-Process node` and note the result (most likely: no processes).
+1. In `T-B` run `O-ADAPTERS`. It should print `0`.
 2. In the browser, click **Teammates** in the left sidebar.
 3. Confirm the address bar now reads http://localhost:5100/teammates .
 4. Read the page's top heading, the button beside it, and the paragraph beneath them.
-5. Run `Get-Process node` again in the second PowerShell window.
+5. Run `O-ADAPTERS` again in `T-B`.
 
 **Pass if — all of these**
 
@@ -49,7 +49,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 - A button labelled exactly `New teammate` sits on the same row as the heading.
 - The paragraph under them begins `A Persona is a Markdown file describing how one teammate should behave, plus the model it thinks with.` and ends `Removing the file only takes it offline — its chats and their history stay.`
 - The page is visibly styled — heading and button laid out as a row, page gutters, a non-default font — not a bare stack of black serif text on white.
-- `Get-Process node` returns the same (empty) result as before the page was loaded.
+- `O-ADAPTERS` still prints `0` — loading the page spawned no Adapter.
 
 **Fail if — any of these**
 
@@ -77,7 +77,7 @@ Browser shows 'connection refused' or the page never finishes loading -> the app
 
 **Steps**
 
-1. In the second PowerShell window run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter *.md` and confirm it lists nothing.
+1. In `T-B` run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter *.md` and confirm it lists nothing.
 2. In the browser, go to http://localhost:5100/teammates and press F5.
 3. Read the whole page from top to bottom.
 
@@ -774,7 +774,7 @@ alias: 'jvb'
 You are jarvis.
 3. Wait about two seconds and read the page without refreshing.
 4. Read both entries in the `Files that didn't load` block.
-5. In the second PowerShell window run `sqlite3 src/Huddle.App/App_Data/team.db "select * from persona_models;"` (skip if you have no sqlite3).
+5. In `T-B` run `sqlite3 src/Huddle.App/App_Data/team.db "select * from persona_models;"` (skip if you have no sqlite3).
 6. Delete both files.
 
 **Pass if — all of these**
@@ -882,7 +882,7 @@ No title here.
 4. Choose `All teams` again.
 5. Now break the whole library: in the file explorer, delete the `title:` line from `Nova.md`, `Vale.md`, `Quill.md`, `Household\Rune.md`, `Emily Lee.md` and `cos.md`, saving each.
 6. Wait two seconds, read the whole page.
-7. In the second PowerShell window run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter *.md | Measure-Object` and compare the count with the number of entries in the rejected block plus the number of tiles.
+7. In `T-B` run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter *.md | Measure-Object` and compare the count with the number of entries in the rejected block plus the number of tiles.
 8. Restore all six `title:` lines and delete the three `*-broken.md` files.
 
 **Pass if — all of these**
@@ -1231,7 +1231,7 @@ The card does not open at all and other clicks on the page are also dead -> the 
 3. Hover the mouse over a tile's status line for three seconds and note whether a tooltip appears.
 4. Click the Nova tile and read the lines under the Name.
 5. Note which buttons are in the card's action row, and read any hint sentence below it.
-6. In the second PowerShell window run `Get-Process node` and, if you have sqlite3, `sqlite3 src/Huddle.App/App_Data/team.db "select id,name,kind from users;"`.
+6. In `T-B` run `O-ADAPTERS` and, if you have sqlite3, `sqlite3 src/Huddle.App/App_Data/team.db "select id,name,kind from users;"`.
 
 **Pass if — all of these**
 
@@ -1240,7 +1240,7 @@ The card does not open at all and other clicks on the page are also dead -> the 
 - The card shows the same `Offline` status line and NO reason paragraph under it.
 - The card's action row contains `Edit`, `Open`, `Restart` and `Remove` (a `Message` link appears only if that teammate already has a Room).
 - A hint below the action row reads `Like saving an edit, this restarts the teammate, which clears what it remembers.`
-- `Get-Process node` returns nothing.
+- `O-ADAPTERS` prints `0`.
 - In `users`, the only `agent` rows are the demo agents `echo` and `alpha`.
 
 **Fail if — any of these**
@@ -1432,7 +1432,7 @@ No adapter is installed, so the Model dropdown offers only `Use the agent's defa
 6. Click **Add teammate**.
 7. Read the card that is now on screen: its header, Name, and `Teams:` line. Close it.
 8. Read where the Wren tile appears on the page.
-9. In the second PowerShell window run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter Wren.md` and then `Get-Content src\Huddle.App\App_Data\Teams\Wren.md`.
+9. In `T-B` run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter Wren.md` and then `Get-Content src\Huddle.App\App_Data\Teams\Wren.md`.
 10. Confirm there is no `Files that didn't load` block on the page.
 
 **Pass if — all of these**
@@ -1471,7 +1471,7 @@ The Model dropdown is empty of real models -> that means no adapter is installed
 
 **Steps**
 
-1. In the second PowerShell window run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter *.md | Measure-Object` and write down the Count.
+1. In `T-B` run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter *.md | Measure-Object` and write down the Count.
 2. Click **New teammate**. Type Name `Nova`, Title `Clash`, Alias `cl1`, Teams `Business`, body `You are a clash test.` Click **Add teammate**. Record the message shown and whether your typed text is still in the fields.
 3. Change only the Name to `Rune` (a Persona that lives in a SUB-FOLDER) and click **Add teammate** again. Record the message.
 4. Change only the Name to `rune` (lower case) and click **Add teammate**. Record the message.
@@ -1523,7 +1523,7 @@ A message appears but its wording differs slightly from the text above -> record
 4. In the textarea (which holds the WHOLE file, frontmatter included), change `name: 'Mira'` to `name: 'Mira Prime'`. Change nothing else. Click **Save**.
 5. Close whatever card is on screen, then look at the tile grid: find the renamed tile and read its Name and monogram.
 6. Click the renamed tile and read its `Model`, `Effort` and `Persona file` lines.
-7. In the second PowerShell window run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter Mira*.md`.
+7. In `T-B` run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter Mira*.md`.
 8. If you have sqlite3, run `sqlite3 src/Huddle.App/App_Data/team.db "select * from persona_models; select * from persona_efforts;"`.
 9. Look at the left sidebar and note whether a Room named after the OLD name is still listed.
 
@@ -1648,13 +1648,13 @@ Nothing opens AND the card shows an error line beginning `Could not open '...'` 
 
 **Steps**
 
-1. In the second PowerShell window run `Get-Process node` and note every PID (probably none).
+1. In `T-B` run `O-ADAPTERS-LIST` and note every PID (probably none).
 2. In the browser, navigate to http://localhost:5100/teammates.
-3. Run `Get-Process node` again.
+3. Run `O-ADAPTERS-LIST` again.
 4. Open the **Team** dropdown and select each Team in turn, ending on `All teams`.
-5. Run `Get-Process node` again.
-6. Click a tile to open its card in View mode. Read it, then run `Get-Process node` again.
-7. Now click **Edit** on that card. Wait for the Model dropdown's hint to settle, then run `Get-Process node` again.
+5. Run `O-ADAPTERS-LIST` again.
+6. Click a tile to open its card in View mode. Read it, then run `O-ADAPTERS-LIST` again.
+7. Now click **Edit** on that card. Wait for the Model dropdown's hint to settle, then run `O-ADAPTERS-LIST` again.
 8. Check the `dotnet run` console for probe lines.
 9. Click **Cancel** to close the card.
 
@@ -1689,11 +1689,11 @@ No adapter is installed, so no probe could ever spawn -> this test cannot distin
 
 **Steps**
 
-1. In the second PowerShell window run `Get-Process node` and note the PIDs.
+1. In `T-B` run `O-ADAPTERS-LIST` and note the PIDs.
 2. Confirm the app was started with no `--Team:Acp:Enabled` argument (check the `dotnet run` command line you used).
 3. Go to /teammates, press F5, click an Offline teammate's tile (e.g. Nova) and read the hint under the action row.
-4. Click **Restart**. Start watching `Get-Process node` and the `dotnet run` console immediately.
-5. Within ten seconds, run `Get-Process node` again and check `Get-ChildItem src\Huddle.App\App_Data\work`.
+4. Click **Restart**. Start watching `O-ADAPTERS-LIST` and the `dotnet run` console immediately.
+5. Within ten seconds, run `O-ADAPTERS-LIST` again and check `Get-ChildItem src\Huddle.App\App_Data\work`.
 6. Read the tile's and the card's status labels.
 7. Do NOT send the teammate a message. Close the card.
 
@@ -1728,12 +1728,12 @@ No adapter installed -> the Restart will simply fail with a reason (see TEAMMATE
 
 **Steps**
 
-1. In the second PowerShell window run `Get-Process node` and count the processes.
+1. In `T-B` run `O-ADAPTERS` and count the processes.
 2. Open an Offline teammate's card.
 3. Click **Restart** and immediately click it two more times as fast as you can.
 4. Watch the button's label and whether it responds to the extra clicks.
 5. When it settles, read the button row again.
-6. Run `Get-Process node` and compare the count with step 1.
+6. Run `O-ADAPTERS` and compare the count with step 1.
 
 **Pass if — all of these**
 

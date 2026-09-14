@@ -36,7 +36,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 **Before you start**
 
 - App started with `$env:Team__Acp__Enabled = "false"` set in the same PowerShell window.
-- A fresh `App_Data` (or at least no `App_Data/hooks.json` file). If `hooks.json` already exists, stop the app, delete just that file, and restart.
+- A fresh `App_Data`, or at least no `App_Data/hooks.json`. If it already exists, run `P-RESET-SETTINGS` and relaunch.
 
 **Steps**
 
@@ -80,7 +80,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Inconclusive if**
 
-If the Settings page shows the red `composer-error` paragraph, or the tab rail is missing, the app did not start cleanly — read the console window for an unhandled startup exception and fix that before judging this test. If `App_Data/hooks.json` already existed before you started, the defaults you are reading may be overrides; that is INCONCLUSIVE, not a fail: stop the app, delete `hooks.json`, restart, and rerun. Do NOT file the absence of `hooks.json` as a bug — its absence is the documented normal state.
+If the Settings page shows the red `composer-error` paragraph, or the tab rail is missing, the app did not start cleanly — read the console window for an unhandled startup exception and fix that before judging this test. If `App_Data/hooks.json` already existed before you started, the defaults you are reading may be overrides; that is INCONCLUSIVE, not a fail: run `P-RESET-SETTINGS`, relaunch and rerun. Do NOT file the absence of `hooks.json` as a bug — its absence is the documented normal state.
 
 > [!NOTE]
 > This is the cheapest test in the area and the one most likely to catch a regression introduced by a well-meaning edit to prompt text. Run it first, every time.
@@ -520,7 +520,7 @@ If the reply lists the right names but gives no online/offline state, rerun once
 1. Open http://localhost:5100/teammates and confirm the `Jarvis` tile's second line reads `Researcher · @jar`.
 2. FREE PATH FIRST — in the three-member room (`Nova, echo`), click into the composer and type exactly `/invite @jar` then press Enter.
 3. Confirm the sidebar entry and the chat header `<h1>` both rename to include `Jarvis`, with no page refresh.
-4. Now undo it so the tool path can be tested: stop the app, delete `App_Data/`, restart, recreate `Nova` and `Jarvis` (Haiku/low), and create a fresh three-member room with `Nova` and `echo` via **New chat**.
+4. Now undo it so the tool path can be tested: run `P-RESET-ALL`, relaunch, recreate `Nova` and `Jarvis` (Haiku/low), and create a fresh three-member room with `Nova` and `echo` via **New chat**.
 5. In that fresh room, click into the composer and type exactly: `List the agents here with their handles, then use mcp__team__invite_agent to add jar to this room.`
 6. Press Enter and wait for the turn to finish.
 7. Confirm Nova's reply quotes `Alias: jar` (or clearly reports `jar` as Jarvis's handle) from the job description it read.

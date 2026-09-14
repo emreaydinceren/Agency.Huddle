@@ -657,15 +657,15 @@ If `Confirm` produces a red line `Persona 'Nova' does not exist.`, the file was 
 
 - The Create card can be opened.
 - `App_Data\Teams` is empty.
-- A PowerShell window is available to run `Get-Process node`.
+- `T-B` is open for `O-ADAPTERS`.
 
 **Steps**
 
 1. Create three teammates from the card, deleting nothing in between: (a) Name `Nova`, Title `T`, Alias `nov`, Teams `Business`, body `x`; (b) Name `Atlas`, Title `T`, Alias `atl`, Teams left EMPTY, body `x`; (c) Name `Iris`, Title `T`, Alias `iri`, Teams `Business, Household`, body `x`.
 2. Close the card and read the group headings and which tiles sit under each.
-3. Run `Get-Process node` in PowerShell and note the result.
+3. Run `O-ADAPTERS` in `T-B` and note the result.
 4. Open the **Team** select and read its options.
-5. Select `Business`, then run `Get-Process node` again.
+5. Select `Business`, then run `O-ADAPTERS` again.
 6. Select `Household`, then `All teams`, reading the list after each.
 7. In File Explorer create the folder `App_Data\Teams\Household` and MOVE `Nova.md` into it, without editing the file.
 8. Wait about one second, then read the group headings again.
@@ -675,7 +675,7 @@ If `Confirm` produces a red line `Persona 'Nova' does not exist.`, the file was 
 - Headings show `Business` containing `Nova` and `Iris`, `Household` containing `Iris`, and `No team` containing `Atlas`. `Iris` appears once under each of its two teams.
 - The **Team** select lists `All teams` plus `Business` and `Household`.
 - Selecting a team narrows the page to that one heading; `All teams` restores all of them.
-- `Get-Process node` returns the same result before and after changing the filter (no new node process).
+- `O-ADAPTERS` prints the same count before and after changing the filter — no Adapter was spawned.
 - After moving `Nova.md` into the `Household` folder, `Nova` is STILL under the `Business` heading.
 
 **Fail if — any of these**
@@ -687,7 +687,7 @@ If `Confirm` produces a red line `Persona 'Nova' does not exist.`, the file was 
 
 **Inconclusive if**
 
-If a team with members shows `No teammates in this team.`, first confirm the frontmatter really carries that team (open the `.md`); a typo in the Teams input produces a genuinely empty team. If `Get-Process node` errors with `Cannot find a process with the name "node"`, that is the zero-process result — treat it as zero, not as an error.
+If a team with members shows `No teammates in this team.`, first confirm the frontmatter really carries that team (open the `.md`); a typo in the Teams input produces a genuinely empty team. `O-ADAPTERS` prints `0` when nothing is running; it does not error the way `O-ADAPTERS` does.
 
 > [!NOTE]
 > Leave `Nova`, `Atlas` and `Iris` in place if you are running TEAMMATECARD-18 next; otherwise delete all three files and the `Household` folder.
@@ -1356,7 +1356,7 @@ If the Name is rejected with `'CON' is not a valid Persona name.`, the rule has 
 4. In tab A, close the card, click the `Sync` tile, click `Remove`, then `Confirm`.
 5. Look at tab B's list again without reloading it.
 6. Recreate `Sync`. In tab A click its tile then `Edit`; in tab B click the same tile then `Edit`, so both cards are open at once.
-7. Run `Get-Process node` in PowerShell and count the node processes.
+7. Run `O-ADAPTERS` in `T-B` and count the node processes.
 8. Close tab B while its Edit card is still open. Read the app console.
 9. Delete `Sync`'s file afterwards.
 
@@ -1471,15 +1471,15 @@ If the app was started before the rows were inserted, reload the browser page an
 
 **Steps**
 
-1. In PowerShell run `Get-Process node` and record the count (an error saying no process was found counts as zero).
+1. In `T-B` run `O-ADAPTERS` and record the count (an error saying no process was found counts as zero).
 2. In the browser, load http://localhost:5100/teammates and reload it three more times.
-3. Run `Get-Process node` again and read the app console for any line containing `Model catalog probe`.
+3. Run `O-ADAPTERS` again and read the app console for any line containing `Model catalog probe`.
 4. Change the **Team** filter to a team, then back to `All teams`.
-5. Run `Get-Process node` again.
+5. Run `O-ADAPTERS` again.
 6. Click a teammate tile to open the VIEW card.
-7. Run `Get-Process node` again.
+7. Run `O-ADAPTERS` again.
 8. Now click `Edit` on that card.
-9. Run `Get-Process node` again within a couple of seconds, and watch the **Model** hint text on the card.
+9. Run `O-ADAPTERS` again within a couple of seconds, and watch the **Model** hint text on the card.
 
 **Pass if — all of these**
 
@@ -1552,7 +1552,7 @@ An empty catalog is a LEGITIMATE result when node is missing, the adapter is not
 
 - A real model catalog is available (TEAMMATECARD-38 returned a populated list).
 - A teammate exists.
-- A PowerShell window is available for `Get-Process node`.
+- `T-B` is open for `O-ADAPTERS`.
 
 **Steps**
 
@@ -1560,7 +1560,7 @@ An empty catalog is a LEGITIMATE result when node is missing, the adapter is not
 2. Set **Model** to Haiku and **Effort** to low.
 3. Change **Model** to Sonnet.
 4. IMMEDIATELY read the **Effort** select's selected option and its hint text.
-5. Run `Get-Process node` and note whether a new process appeared.
+5. Run `O-ADAPTERS` and note whether a new process appeared.
 6. Confirm the **Model** select still shows Sonnet.
 7. Now change **Model** to Haiku, and within a second change it back to Sonnet.
 8. Wait for the Effort hint to settle, then open the **Effort** select and compare its options against what Sonnet offered in step 3-4.
@@ -1684,10 +1684,10 @@ If the Effort select offers only the blank option for Haiku, this model advertis
 **Steps**
 
 1. Confirm every tile on /teammates reads `Offline`.
-2. Run `Get-Process node` and record the count.
+2. Run `O-ADAPTERS` and record the count.
 3. Click a teammate tile and confirm the card offers a `Restart` button.
 4. Click `Restart` once and immediately read the button's label.
-5. Within five seconds run `Get-Process node` again and record the count.
+5. Within five seconds run `O-ADAPTERS` again and record the count.
 6. Watch the card's status line and the tile behind it for up to 30 seconds; record every state it passes through.
 7. Read the app console for any line naming this Persona.
 8. Run `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "SELECT name, kind FROM users;"` and note whether a row now exists for this teammate's Name.
@@ -1727,13 +1727,13 @@ If no node process spawns and the console says the adapter is missing or needs a
 
 **Steps**
 
-1. Run `Get-Process node` and record the count.
+1. Run `O-ADAPTERS` and record the count.
 2. Create a teammate from the card: Name `Live`, Title `T`, Alias `lvo`, body `You are Live.`, Model Haiku, Effort low.
 3. Leave the resulting View card OPEN and watch its status line, without reloading, for up to 60 seconds. Record every state it shows.
 4. Watch the tile behind the overlay at the same time.
-5. Run `Get-Process node` again and count how many NEW processes appeared for this one teammate.
+5. Run `O-ADAPTERS` again and count how many NEW processes appeared for this one teammate.
 6. Read the app console for any line naming `Live`.
-7. Close the card, click `Remove` then `Confirm`, and run `Get-Process node` once more after 10 seconds.
+7. Close the card, click `Remove` then `Confirm`, and run `O-ADAPTERS` once more after 10 seconds.
 
 **Pass if — all of these**
 
@@ -1846,11 +1846,11 @@ If you cannot get a teammate to `Online` at all, only the Offline half is testab
 
 **Steps**
 
-1. Run `Get-Process node` and note the process id of the teammate's adapter.
+1. Run `O-ADAPTERS-LIST` and note the process id of the teammate's adapter.
 2. Open the teammate's card and confirm the badge reads `Online`.
 3. Click `Edit`, touch nothing at all, and click `Save`.
 4. Watch the badge continuously for 15 seconds and record every state it shows.
-5. Run `Get-Process node` again and compare the process id.
+5. Run `O-ADAPTERS-LIST` again and compare the process id.
 6. Read the console for a fresh adapter launch sequence.
 7. Now click `Edit` again, add a single space to the END of the body text, and click `Save`.
 8. Watch the badge again for 15 seconds, and compare the node process id once more.
@@ -1889,10 +1889,10 @@ If the badge is never `Online` to begin with, this test cannot distinguish a res
 
 **Steps**
 
-1. Note the teammate's node process id with `Get-Process node`.
+1. Note the teammate's node process id with `O-ADAPTERS-LIST`.
 2. Open the card, click `Edit`, change ONLY the **Model** from Haiku to Sonnet (do not touch the text), and click `Save`.
 3. Watch the badge for 20 seconds and record the states.
-4. Run `Get-Process node` and compare process ids.
+4. Run `O-ADAPTERS-LIST` and compare process ids.
 5. Run `sqlite3 "E:\Repos\Huddle\src\Huddle.App\App_Data\team.db" "SELECT * FROM persona_models WHERE persona_name='<Name>';"`.
 6. Wait for `Online`, then click `Edit` and change ONLY the **Effort** from the blank option to low (the model change cleared it), and click `Save`.
 7. Watch the badge for 20 seconds and compare node process ids again.

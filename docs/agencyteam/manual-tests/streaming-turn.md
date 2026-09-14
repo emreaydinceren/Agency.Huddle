@@ -1347,11 +1347,11 @@ If pulling the network also kills the browser's connection to the app, do not ju
 **Before you start**
 
 - Nova **Online**, Model = Haiku, Effort = low.
-- Task Manager, or `Get-Process node` in `T-D`, available to find the adapter's child process.
+- `O-ADAPTERS-LIST` in `T-D`, or Task Manager, available to find the Adapter's child process.
 
 **Steps**
 
-1. In `T-D` run `Get-Process node | Format-Table Id,StartTime` and note the process that started when Nova came online. (Or open Task Manager's **Details** tab and sort by **Name**.)
+1. In `T-D` run `O-ADAPTERS-LIST` and note the process that started when Nova came online. (Or open Task Manager's **Details** tab and sort by **Name**.)
 2. Open Nova's Room and note its id as NOVAROOM. In `T-D` record the transcript line count as BEFORE.
 3. Type `@Nova count from 1 to 300, one number per line` and press Enter.
 4. As soon as the Draft is visibly streaming, end that `node` process (Task Manager **End task**, or `Stop-Process -Id <id> -Force`).

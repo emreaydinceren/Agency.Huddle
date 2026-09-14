@@ -159,6 +159,26 @@ Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
 `0` is the resting value in `E-FREE`. In `E-PAID` it equals the number of Online
 Teammates, plus a short-lived extra whenever a Model or Effort picker probes.
 
+It returns `0` cleanly when nothing is running — unlike `Get-Process node`, which
+errors with `Cannot find a process with the name "node"` and has to be read as a
+zero.
+
+### O-ADAPTERS-LIST
+
+The same filter, listing rows instead of counting them. Use it wherever a test
+needs a process **id** — to watch one survive, to see it replaced, or to kill it
+with `Stop-Process -Id <ProcessId>` to simulate a crashed Adapter.
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='node.exe'" |
+  Where-Object { $_.CommandLine -like '*claude-agent-acp*' } |
+  Select-Object ProcessId, CreationDate, CommandLine | Format-Table -Wrap
+```
+
+One row per running Persona Adapter, plus a short-lived extra row whenever a Model
+or Effort picker probes. `CommandLine` names the Persona, so this is also how you
+tell which Adapter belongs to which Teammate.
+
 ### O-TRANSCRIPT
 
 `App_Data\rooms\{RoomId}.jsonl` — one JSON Message per line, appended only when a

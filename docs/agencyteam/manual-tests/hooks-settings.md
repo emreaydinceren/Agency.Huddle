@@ -446,7 +446,7 @@ If you cannot distinguish the amber `Modified` pill from the blue `Unsaved` pill
 Step 7 depends on retyping the default byte-for-byte. If `Modified` refuses to clear, suspect a trailing space, a smart-quote substitution by your editor, or CRLF vs LF line endings rather than a defect — click that field's `Reset` button instead (which stages the exact default) and re-read the badges. If `Modified` clears after Reset but not after your paste, this test is INCONCLUSIVE on step 7 and you have instead reproduced HOOKSSETTINGS-35; note it there.
 
 > [!NOTE]
-> Reset to a clean state before the next test: stop the app, delete `App_Data\hooks.json`, restart.
+> Run `P-RESET-SETTINGS` and relaunch before the next test.
 
 ### HOOKSSETTINGS-11 — Per-field "Reset" stages the shipped default without writing anything to disk
 
@@ -490,7 +490,7 @@ Step 7 depends on retyping the default byte-for-byte. If `Modified` refuses to c
 If the Date modified column shows only minutes and both operations happen inside the same minute, do not guess — open the file and compare CONTENT instead. Content is the authoritative oracle here.
 
 > [!NOTE]
-> Reset to a clean state afterwards (stop app, delete hooks.json, restart).
+> Run `P-RESET-SETTINGS` and relaunch afterwards.
 
 ### HOOKSSETTINGS-12 — hooks.json does not exist until the first Save, and then holds ONLY the keys you changed
 
@@ -531,7 +531,7 @@ If the Date modified column shows only minutes and both operations happen inside
 
 **Inconclusive if**
 
-If the file was already present at step 1, you did not reset state — stop the app, delete `hooks.json`, restart, and begin the test again. Do not judge from a dirty starting state.
+If the file was already present at step 1, you did not reset state — run `P-RESET-SETTINGS`, relaunch and begin the test again. Do not judge from a dirty starting state.
 
 > [!NOTE]
 > This is the highest-value cheap test in the area: it pins the documented 'absent is correct' behaviour that testers most often misreport as a bug.
@@ -798,7 +798,7 @@ The file NOT being deleted is correct — the app never deletes it, it only ever
 **Steps**
 
 1. Type ` SEED` into `Room label` and click `Save`, so `hooks.json` exists. Copy its content to a scratch file.
-2. In a PowerShell prompt, run: `Set-ItemProperty -Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\hooks.json' -Name IsReadOnly -Value $true` (substitute the path the Settings page prints if it differs).
+2. In `T-B` run: `Set-ItemProperty -Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\hooks.json' -Name IsReadOnly -Value $true` (substitute the path the Settings page prints if it differs).
 3. Back in the browser, type ` WILLFAIL` into `Help: budget` and into `Identity`.
 4. Click `Save`.
 5. Read the area directly under the `Settings` heading.
@@ -872,7 +872,7 @@ If the read-only attribute does not cause a failure on your machine (some enviro
 If you cannot judge red from amber, inspect the `<li>` in devtools: `hooks-field-issue-error` is the error class and `hooks-field-issue-warning` is the warning class. Judge from the class.
 
 > [!NOTE]
-> Reset to a clean state afterwards (stop app, delete hooks.json, restart).
+> Run `P-RESET-SETTINGS` and relaunch afterwards.
 
 ### HOOKSSETTINGS-21 — Removing a required placeholder raises an Error naming that placeholder — and an optional one does not
 
@@ -1041,7 +1041,7 @@ If nothing updates live at all, first re-run HOOKSSETTINGS-08 — if the textare
 If your browser blocks alert() dialogs by policy, do not conclude the payload was inert — watch the devtools Console instead, and add `console.log('XSS')` style payloads if needed. If you cannot observe script execution either way, mark INCONCLUSIVE and say the environment suppressed the oracle.
 
 > [!NOTE]
-> Reset to a clean state afterwards (stop app, delete hooks.json, restart) — leaving these payloads saved will confuse later tests.
+> Run `P-RESET-SETTINGS` and relaunch afterwards — leaving these payloads saved will confuse later tests.
 
 ### HOOKSSETTINGS-25 — Typing in a long hook field stays responsive and loses no characters
 
@@ -1131,7 +1131,7 @@ If you are testing over a slow or remote connection, latency is expected and is 
 The absence of an unsaved-changes prompt is documented designed behaviour, not a defect. If you believe there should be one, file it as a UX suggestion, not a bug. If the `Theme` dropdown is missing or empty, the Appearance tab has its own problem — report that against the Appearance area and mark step 8 inconclusive here.
 
 > [!NOTE]
-> Clean up afterwards: stop the app, delete `App_Data\appearance.json` (created by the theme change) and `App_Data\hooks.json` if present, restart.
+> Clean up afterwards with `P-RESET-SETTINGS`, which removes both the `appearance.json` this test created and any `hooks.json`, then relaunch.
 
 ### HOOKSSETTINGS-27 — "Reset all to defaults" is also rendered on the Appearance tab, where it acts on Hooks
 
@@ -1527,9 +1527,9 @@ A `Modified` badge with no visible difference is NOT a defect in itself — the 
 
 **Steps**
 
-1. In a PowerShell prompt, run `Get-Process node -ErrorAction SilentlyContinue | Select-Object Id, StartTime` and note the result (probably nothing).
+1. In `T-B` run `O-ADAPTERS-LIST` and note the result (probably nothing).
 2. In the browser, load `http://localhost:5100/settings`.
-3. Re-run the `Get-Process node` command.
+3. Re-run `O-ADAPTERS-LIST`.
 4. Press F5 on the page five times, then re-run the command.
 5. Click the `Appearance` tab and the `Hooks` tab three times each, then re-run the command.
 6. Type into three fields and click `Save`, then re-run the command.
