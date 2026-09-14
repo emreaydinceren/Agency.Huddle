@@ -12,13 +12,21 @@
     mis-bound that way at all. HookEdit itself carries the one string value this panel does hand
     back (the edited text), wrapped so the Razor attribute binds a record instance rather than a bare
     string.
+
+    Stage 3 (the MudBlazor migration) converts this panel's controls per docs/agencyteam's rules and
+    the migration brief's Part A mapping: the textarea becomes a MudTextField (with the old
+    ".teammate-card-hint" helper span folded into its HelperText), the three status spans become
+    MudChip, the issue list becomes one MudAlert per issue, the section wrapper becomes a MudPaper,
+    and the Reset button becomes a secondary MudButton. The field wrapper, its header row, the field
+    label and the placeholder list are left exactly as they were - Part A does not name them, and
+    changing them would be inventing a conversion the brief did not ask for.
 *@
 
 @using Agency.Huddle.App.Hooks
 
 @foreach (var group in this.Groups)
 {
-    <section class="hooks-group">
+    <MudPaper Class="pa-4 mb-4">
         <h2 class="hooks-group-heading">@group.Label</h2>
 
         @foreach (var field in group.Fields)
@@ -28,24 +36,25 @@
                     <span class="hooks-field-label">@field.Label</span>
                     @if (field.Timing == HookTiming.NextSession)
                     {
-                        <span class="hooks-field-badge" title="Applies to teammates started after the change">Next session</span>
+                        <MudChip T="string" Size="Size.Small" title="Applies to teammates started after the change">Next session</MudChip>
                     }
                     @if (field.IsModified)
                     {
-                        <span class="hooks-field-badge hooks-field-badge-modified">Modified</span>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">Modified</MudChip>
                     }
                     @if (field.HasUnsavedChange)
                     {
-                        <span class="hooks-field-badge hooks-field-badge-unsaved">Unsaved</span>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info">Unsaved</MudChip>
                     }
                 </div>
 
-                <textarea class="hooks-field-value"
-                          rows="@HookFieldFactory.RowsFor(field.Value)"
-                          value="@field.Value"
-                          @oninput="e => this.OnFieldInput(field.Key, e)"></textarea>
-
-                <span class="teammate-card-hint">@field.HelperText</span>
+                <MudTextField T="string"
+                              Value="@field.Value"
+                              ValueChanged="@(text => this.OnFieldInput(field.Key, text))"
+                              Lines="@HookFieldFactory.RowsFor(field.Value)"
+                              HelperText="@field.HelperText"
+                              Variant="Variant.Outlined"
+                              Immediate="true" />
 
                 @if (field.Placeholders.Count > 0)
                 {
@@ -60,25 +69,20 @@
 
                 @if (field.Issues.Count > 0)
                 {
-                    <ul class="hooks-field-issues">
-                        @foreach (var issue in field.Issues)
-                        {
-                            <li class="hooks-field-issue @(issue.Severity == HookIssueSeverity.Error ? "hooks-field-issue-error" : "hooks-field-issue-warning")">
-                                @issue.Message
-                            </li>
-                        }
-                    </ul>
+                    @foreach (var issue in field.Issues)
+                    {
+                        <MudAlert Severity="@(issue.Severity == HookIssueSeverity.Error ? Severity.Error : Severity.Warning)" Dense="true" Class="mb-1">@issue.Message</MudAlert>
+                    }
                 }
 
                 <div class="hooks-field-actions">
-                    <button type="button"
-                            class="teammate-card-action"
-                            disabled="@(!field.IsModified)"
-                            @onclick="() => this.OnResetClicked(field.Key)">Reset</button>
+                    <MudButton Variant="Variant.Outlined"
+                               Disabled="@(!field.IsModified)"
+                               OnClick="@(() => this.OnResetClicked(field.Key))">Reset</MudButton>
                 </div>
             </div>
         }
-    </section>
+    </MudPaper>
 }
 
 @code {
@@ -87,7 +91,7 @@
     [EditorRequired]
     public IReadOnlyList<HookFieldGroup> Groups { get; set; } = [];
 
-    /// <summary>Raised whenever a field's textarea changes, carrying the edited key and its new pending text.</summary>
+    /// <summary>Raised whenever a field's value changes, carrying the edited key and its new pending text.</summary>
     [Parameter]
     public EventCallback<HookEdit> ValueChanged { get; set; }
 
@@ -95,9 +99,9 @@
     [Parameter]
     public EventCallback<string> ResetRequested { get; set; }
 
-    private Task OnFieldInput(string key, ChangeEventArgs e)
+    private Task OnFieldInput(string key, string? text)
     {
-        return this.ValueChanged.InvokeAsync(new HookEdit(key, e.Value?.ToString() ?? string.Empty));
+        return this.ValueChanged.InvokeAsync(new HookEdit(key, text ?? string.Empty));
     }
 
     private Task OnResetClicked(string key)

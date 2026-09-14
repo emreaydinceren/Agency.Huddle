@@ -1,20 +1,19 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Bunit;
 using Agency.Huddle.App.Components.Settings;
 using Agency.Huddle.App.Hooks;
 
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Renders <see cref="HooksPanel"/> on its own from a plain <see cref="HookFieldGroup"/> list, the
-/// same <c>HtmlRenderer</c> + <c>ParameterView.FromDictionary</c> approach <see cref="TeammateCardTests"/>
-/// uses for <c>TeammateCard</c>. <c>HtmlRenderer</c> cannot dispatch a click or change an element, so
-/// these tests only ever assert on rendered HTML - the Reset button's disabled state, which badges
-/// appear, and that the textarea is editable rather than the actual click/input behaviour, which
-/// <see cref="HookFieldFactoryTests"/> and <see cref="SettingsPageTests"/> cover from the other two
-/// angles this suite has available.
+/// Renders <see cref="HooksPanel"/> on its own from a plain <see cref="HookFieldGroup"/> list, using
+/// <see cref="MudBunitContext"/> rather than the <c>HtmlRenderer</c> this suite used before the
+/// MudBlazor migration. Unlike <c>HtmlRenderer</c>, bUnit can dispatch a real click, so the Reset
+/// button's callback is now exercised end to end rather than only its disabled state; the rest of
+/// these tests still assert on rendered markup, exactly as they did before, because none of the rest
+/// of this panel needs a click to be visible. Every test disposes the context with <c>await using</c>
+/// rather than <c>using</c>: MudBlazor's <c>KeyInterceptorService</c> (registered by
+/// <c>AddMudServices</c>) implements only <see cref="IAsyncDisposable"/>, so a synchronous
+/// <c>Dispose</c> throws once a MudBlazor component that needs it has actually been rendered.
 /// </summary>
 public sealed class HooksPanelTests
 {
@@ -22,57 +21,87 @@ public sealed class HooksPanelTests
     [Fact]
     public async Task UnmodifiedField_ResetButtonIsDisabled()
     {
-        var html = await RenderAsync(SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false)));
+        await using MudBunitContext ctx = new();
 
-        Assert.Contains("disabled", ExtractElement(html, "button"), StringComparison.Ordinal);
+        var cut = ctx.Render<HooksPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false))));
+
+        Assert.True(cut.Find("button").HasAttribute("disabled"));
     }
 
-    /// <summary>A modified field's Reset button renders enabled.</summary>
+    /// <summary>
+    /// A modified field's Reset button renders enabled, and clicking it - something only bUnit, not
+    /// the old <c>HtmlRenderer</c>-based version of this test, can actually do - raises
+    /// <see cref="HooksPanel.ResetRequested"/> carrying that field's key.
+    /// </summary>
     [Fact]
-    public async Task ModifiedField_ResetButtonIsEnabled()
+    public async Task ModifiedField_ResetButtonIsEnabled_AndClickingRaisesResetRequestedWithTheFieldKey()
     {
-        var html = await RenderAsync(SingleGroup(MakeField("turn.roomLabel", isModified: true, hasUnsavedChange: false)));
+        await using MudBunitContext ctx = new();
+        string? requestedKey = null;
 
-        Assert.DoesNotContain("disabled", ExtractElement(html, "button"), StringComparison.Ordinal);
+        var cut = ctx.Render<HooksPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: true, hasUnsavedChange: false)))
+            .Add(p => p.ResetRequested, key => requestedKey = key));
+
+        var button = cut.Find("button");
+        Assert.False(button.HasAttribute("disabled"));
+
+        button.Click();
+
+        Assert.Equal("turn.roomLabel", requestedKey);
     }
 
     /// <summary>The "Modified" badge shows only when <see cref="HookFieldState.IsModified"/> is true.</summary>
     [Fact]
     public async Task IsModified_ShowsTheModifiedBadge()
     {
-        var modified = await RenderAsync(SingleGroup(MakeField("turn.roomLabel", isModified: true, hasUnsavedChange: false)));
-        var unmodified = await RenderAsync(SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false)));
+        await using MudBunitContext ctx = new();
 
-        Assert.Contains("hooks-field-badge-modified", modified, StringComparison.Ordinal);
-        Assert.DoesNotContain("hooks-field-badge-modified", unmodified, StringComparison.Ordinal);
+        var modified = ctx.Render<HooksPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: true, hasUnsavedChange: false))));
+        var unmodified = ctx.Render<HooksPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false))));
+
+        Assert.Contains("Modified", modified.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Modified", unmodified.Markup, StringComparison.Ordinal);
     }
 
     /// <summary>The "Unsaved" badge shows only when <see cref="HookFieldState.HasUnsavedChange"/> is true.</summary>
     [Fact]
     public async Task HasUnsavedChange_ShowsTheUnsavedBadge()
     {
-        var unsaved = await RenderAsync(SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: true)));
-        var saved = await RenderAsync(SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false)));
+        await using MudBunitContext ctx = new();
 
-        Assert.Contains("hooks-field-badge-unsaved", unsaved, StringComparison.Ordinal);
-        Assert.DoesNotContain("hooks-field-badge-unsaved", saved, StringComparison.Ordinal);
+        var unsaved = ctx.Render<HooksPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: true))));
+        var saved = ctx.Render<HooksPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false))));
+
+        Assert.Contains("Unsaved", unsaved.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Unsaved", saved.Markup, StringComparison.Ordinal);
     }
 
     /// <summary>The "Next session" badge shows only for a <see cref="HookTiming.NextSession"/> field.</summary>
     [Fact]
     public async Task NextSessionTiming_ShowsTheNextSessionBadge()
     {
-        var next = await RenderAsync(SingleGroup(MakeField("systemPrompt.identity", isModified: false, hasUnsavedChange: false, timing: HookTiming.NextSession)));
-        var live = await RenderAsync(SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false, timing: HookTiming.Live)));
+        await using MudBunitContext ctx = new();
 
-        Assert.Contains("Next session", next, StringComparison.Ordinal);
-        Assert.DoesNotContain("Next session", live, StringComparison.Ordinal);
+        var next = ctx.Render<HooksPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(MakeField("systemPrompt.identity", isModified: false, hasUnsavedChange: false, timing: HookTiming.NextSession))));
+        var live = ctx.Render<HooksPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false, timing: HookTiming.Live))));
+
+        Assert.Contains("Next session", next.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Next session", live.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>A field's issues render, distinguishing an error from a warning by CSS class.</summary>
+    /// <summary>A field's issues render as alerts, distinguishing an error from a warning by MudBlazor's own severity styling.</summary>
     [Fact]
     public async Task Issues_RenderWithSeverityDistinguishedByClass()
     {
+        await using MudBunitContext ctx = new();
         var definition = HookCatalog.Get("turn.roomLabel");
         var issues = new List<HookIssue>
         {
@@ -81,44 +110,54 @@ public sealed class HooksPanelTests
         };
         var field = MakeField(definition.Key, isModified: true, hasUnsavedChange: true, issues: issues);
 
-        var html = await RenderAsync(SingleGroup(field));
+        var cut = ctx.Render<HooksPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(field)));
 
-        Assert.Contains("This is missing a required placeholder.", html, StringComparison.Ordinal);
-        Assert.Contains("This token looks like a typo.", html, StringComparison.Ordinal);
-        Assert.Contains("hooks-field-issue-error", html, StringComparison.Ordinal);
-        Assert.Contains("hooks-field-issue-warning", html, StringComparison.Ordinal);
+        var alerts = cut.FindAll(".mud-alert").ToList();
+        Assert.Equal(2, alerts.Count);
+        Assert.Contains(alerts, alert => alert.TextContent.Contains("This is missing a required placeholder.", StringComparison.Ordinal) && alert.ClassList.Any(c => c.Contains("error", StringComparison.OrdinalIgnoreCase)));
+        Assert.Contains(alerts, alert => alert.TextContent.Contains("This token looks like a typo.", StringComparison.Ordinal) && alert.ClassList.Any(c => c.Contains("warning", StringComparison.OrdinalIgnoreCase)));
     }
 
-    /// <summary>A field with no issues renders no issue list at all.</summary>
+    /// <summary>A field with no issues renders no alert at all.</summary>
     [Fact]
     public async Task NoIssues_RendersNoIssueList()
     {
-        var html = await RenderAsync(SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false)));
+        await using MudBunitContext ctx = new();
 
-        Assert.DoesNotContain("hooks-field-issues", html, StringComparison.Ordinal);
+        var cut = ctx.Render<HooksPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false))));
+
+        Assert.Empty(cut.FindAll(".mud-alert"));
     }
 
-    /// <summary>Stage 3 drops the "readonly" attribute Stage 2 shipped: the textarea is now editable.</summary>
+    /// <summary>The field's value is edited through a real, non-readonly text field rendered as a multiline textarea.</summary>
     [Fact]
-    public async Task Textarea_IsNoLongerReadonly()
+    public async Task TextField_RendersAsATextareaAndIsEditable()
     {
-        var html = await RenderAsync(SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false)));
+        await using MudBunitContext ctx = new();
 
-        Assert.DoesNotContain("readonly", html, StringComparison.Ordinal);
-        Assert.Contains("<textarea", html, StringComparison.Ordinal);
+        var cut = ctx.Render<HooksPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false))));
+
+        var textarea = cut.Find("textarea");
+        Assert.False(textarea.HasAttribute("readonly"));
     }
 
-    /// <summary>The field's pending value is what the textarea shows, not necessarily the default.</summary>
+    /// <summary>The field's pending value is what the text field shows, not necessarily the default.</summary>
     [Fact]
-    public async Task Textarea_ShowsTheFieldsPendingValue()
+    public async Task TextField_ShowsTheFieldsPendingValue()
     {
+        await using MudBunitContext ctx = new();
         var field = MakeField("turn.roomLabel", isModified: true, hasUnsavedChange: true, value: "a pending edit not yet saved");
 
-        var html = await RenderAsync(SingleGroup(field));
+        var cut = ctx.Render<HooksPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(field)));
 
-        Assert.Contains("a pending edit not yet saved", html, StringComparison.Ordinal);
+        Assert.Contains("a pending edit not yet saved", cut.Find("textarea").TextContent, StringComparison.Ordinal);
     }
 
+    /// <summary>Builds a single <see cref="HookFieldState"/> for <see cref="HookCatalog.Get(string)"/>'s <paramref name="key"/>, overriding only the flags and value a given test cares about.</summary>
     private static HookFieldState MakeField(
         string key,
         bool isModified,
@@ -141,37 +180,7 @@ public sealed class HooksPanelTests
             Issues: issues ?? []);
     }
 
+    /// <summary>Wraps a single field in its own one-field group, for tests that do not care about grouping.</summary>
     private static IReadOnlyList<HookFieldGroup> SingleGroup(HookFieldState field) =>
         [new HookFieldGroup("Test group", [field])];
-
-    private static async Task<string> RenderAsync(IReadOnlyList<HookFieldGroup> groups)
-    {
-        var services = new ServiceCollection();
-        services.AddLogging();
-        await using var provider = services.BuildServiceProvider();
-
-        await using var renderer = new HtmlRenderer(provider, provider.GetRequiredService<ILoggerFactory>());
-
-        return await renderer.Dispatcher.InvokeAsync(async () =>
-        {
-            var output = await renderer.RenderComponentAsync<HooksPanel>(
-                ParameterView.FromDictionary(new Dictionary<string, object?> { ["Groups"] = groups }));
-
-            return output.ToHtmlString();
-        });
-    }
-
-    /// <summary>Pulls out the first element with the given tag name, for asserting attributes on it in isolation from the rest of the page.</summary>
-    /// <param name="html">The full rendered HTML.</param>
-    /// <param name="tagName">The tag to find, e.g. <c>"button"</c>.</param>
-    private static string ExtractElement(string html, string tagName)
-    {
-        var start = html.IndexOf($"<{tagName}", StringComparison.Ordinal);
-        Assert.True(start >= 0, $"No <{tagName}> element found in the rendered HTML.");
-
-        var end = html.IndexOf('>', start);
-        Assert.True(end >= 0, $"Unterminated <{tagName}> element in the rendered HTML.");
-
-        return html[start..(end + 1)];
-    }
 }

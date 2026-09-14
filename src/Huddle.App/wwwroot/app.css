@@ -817,7 +817,7 @@ code, kbd, samp, pre {
     overflow-wrap: anywhere;
 }
 
-/* ---- Settings: tab rail and the read-only Hooks panel -------------------------------------- */
+/* ---- Settings: page shell and the Hooks panel's field layout (tab rail and status badges are MudBlazor) -- */
 
 .settings-page {
     padding: 1rem;
@@ -840,50 +840,6 @@ code, kbd, samp, pre {
     font-size: 0.8rem;
     color: var(--mud-palette-text-secondary);
     margin: 0.4rem 0 0.6rem 0;
-}
-
-.settings-layout {
-    display: flex;
-    gap: 1.5rem;
-    margin-top: 1rem;
-}
-
-.settings-tab-rail {
-    display: flex;
-    flex-direction: column;
-    flex: 0 0 auto;
-    min-width: 9rem;
-}
-
-.settings-tab {
-    padding: 0.5rem 0.8rem;
-    font: inherit;
-    text-align: left;
-    color: var(--mud-palette-text-secondary);
-    background: none;
-    border: none;
-    border-left: 3px solid transparent;
-    cursor: pointer;
-}
-
-.settings-tab:hover {
-    background: var(--mud-palette-table-hover);
-}
-
-.settings-tab-active {
-    color: var(--mud-palette-text-primary);
-    font-weight: 600;
-    border-left-color: var(--mud-palette-secondary);
-    background: var(--mud-palette-primary-hover);
-}
-
-.settings-content {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.hooks-group {
-    margin-bottom: 1.4rem;
 }
 
 .hooks-group-heading {
@@ -913,36 +869,6 @@ code, kbd, samp, pre {
     color: var(--mud-palette-text-primary);
 }
 
-.hooks-field-badge {
-    font-size: 0.72rem;
-    padding: 0.1rem 0.4rem;
-    color: var(--mud-palette-text-secondary);
-    background: var(--mud-palette-background-gray);
-    border-radius: 999px;
-}
-
-.hooks-field-badge-modified {
-    color: var(--mud-palette-warning);
-    background: var(--mud-palette-warning-hover);
-}
-
-.hooks-field-badge-unsaved {
-    color: var(--mud-palette-info);
-    background: var(--mud-palette-info-hover);
-}
-
-.hooks-field-value {
-    font: inherit;
-    font-size: 0.85rem;
-    min-height: 0;
-    padding: 0.5rem;
-    color: var(--mud-palette-text-primary);
-    background: var(--mud-palette-background-gray);
-    border: 1px solid var(--mud-palette-lines-inputs);
-    border-radius: 4px;
-    resize: vertical;
-}
-
 .hooks-field-placeholders {
     display: flex;
     flex-wrap: wrap;
@@ -957,31 +883,6 @@ code, kbd, samp, pre {
     padding: 0.05rem 0.35rem;
     background: var(--mud-palette-background-gray);
     border-radius: 3px;
-}
-
-.hooks-field-issues {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-}
-
-.hooks-field-issue {
-    font-size: 0.78rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 3px;
-}
-
-.hooks-field-issue-warning {
-    color: var(--mud-palette-warning);
-    background: var(--mud-palette-warning-hover);
-}
-
-.hooks-field-issue-error {
-    color: var(--mud-palette-error);
-    background: var(--mud-palette-error-hover);
 }
 
 .hooks-field-actions {
