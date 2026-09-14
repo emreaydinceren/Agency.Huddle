@@ -547,8 +547,7 @@ If the Elements panel cannot be opened, clicking alone cannot distinguish "neutr
 **Pass if — all of these**
 
 - On screen, before and after the reload, the row reads exactly `He said "go" — A&B 😀 日本語` with real characters, not escapes.
-- In the JSONL line, the double quotes around `go` appear as `"`, the ampersand as `&`, and the em dash as `—`.
-- In the JSONL line, the emoji and the CJK characters appear as `\uXXXX` escape sequences rather than as literal characters.
+- In the JSONL line, EVERY one of those characters appears as a `\uXXXX` escape, not just the non-ASCII ones: `"` for each double quote around `go`, `&` for the ampersand, `—` for the em dash, `😀` for the emoji and `日本語` for the CJK. That is `System.Text.Json`'s default `JavaScriptEncoder`, which escapes `"`, `&`, `<`, `>`, `'` and `+` along with all non-ASCII — stricter than strictly necessary, and the safe direction. Do NOT expect a raw `"`, `&` or `—` in the file.
 - The `Select-String` search for the literal CJK text finds no match.
 - The reload proves the round trip is lossless — the screen is identical before and after.
 
