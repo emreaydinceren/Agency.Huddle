@@ -41,6 +41,7 @@ question is yours; the cost column is roughly what it will spend.
 | [Testing](agencyteam/testing.md) | To add a test, or to verify what no test can prove | ~2.3k |
 | [Manual test script](agencyteam/manual-tests.md) | To test the running app in a browser, by hand | ~2.6k |
 | [Test planning](agencyteam/manual-tests/planning.md) | To choose which manual tests to run, or to see what they cost | ~6.4k |
+| [Test tracker](agencyteam/manual-tests/tracker.md) | To see where a manual test stands, or to record a result | ~19k |
 | [Known limits](agencyteam/known-limits.md) | Before "fixing" something that looks missing | ~1.9k |
 | [Roadmap](agencyteam/roadmap.md) | Before work in `PersonaRunner`, `ReplyGate`, `IAgentHostFactory`, Persona frontmatter, `app.css` or `theme.css` | ~10.7k |
 | [Decision record](agencyteam/decisions.md) | To revisit a decision, or to read an older doc | ~6.3k |

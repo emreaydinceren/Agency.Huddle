@@ -136,7 +136,7 @@ applies wins.
 | --- | --- | --- |
 | **Blocked** | A precondition could not be met, or an earlier test this one depends on failed. | Record the blocking test id. Do not guess the result. |
 | **Inconclusive** | You ran the steps but the environment cannot answer — no Adapter installed, no Haiku in the list, `curl.exe` missing. | Record which condition was absent. Not a defect. |
-| **Fail** | Any line under *Fail if* was observed, **or** any line under *Pass if* was not. | Record what you saw, verbatim, plus the implication the *Fail if* line gives. |
+| **Fail** | Any line under *Fail if* was observed, **or** any line under *Pass if* was not. | Record what you saw, verbatim, plus the implication the *Fail if* line gives, then open a Gitea issue and link it from the [Tracker](manual-tests/tracker.md). |
 | **Pass** | Every line under *Pass if* held, and no *Fail if* line was observed. | Record it and move on. |
 
 Four rules make results comparable between testers:
@@ -149,6 +149,10 @@ Four rules make results comparable between testers:
    only the stated pass condition is.
 4. **Check section 0.6 before filing a defect.** Some behaviour that looks broken is a documented
    decision.
+5. **A Fail is tracked as a Gitea issue**, one per failing test, titled with the test id first —
+   `SHELLNAV-01: app.css href has no fingerprint and 404s`. The
+   [Tracker](manual-tests/tracker.md) is the index of which tests have one; the issue holds what
+   you saw. Blocked and Inconclusive get no issue: nothing is known to be wrong yet.
 
 ### 0.6 Not a defect
 
@@ -171,13 +175,13 @@ These are documented decisions in [Known limits](known-limits.md). Observing one
 
 ### 0.7 Recording results
 
-Copy this table per area and fill one row per test.
+Results go in the [Tracker](manual-tests/tracker.md) — one row per test, all 464 of them,
+carrying a status and the issue number of anything that failed.
 
-```text
-| Test id | Outcome | Observed | Tester | Date |
-| --- | --- | --- | --- | --- |
-| SHELLNAV-01 | Pass |  |  |  |
-```
+Set a row to **Testing** when you pick a test up, so a second tester does not start the same
+one, then to **Pass** or **Fail** when you conclude. A Blocked or Inconclusive run leaves the
+row **Active** with the reason in Notes, because the test is still unanswered. The Tracker's
+own header carries the full status vocabulary and how it maps onto the four outcomes above.
 
 ---
 
@@ -188,11 +192,13 @@ single file holding all of them would be too large for a git web UI to render. E
 area file carries only what is true of that area alone and names
 [Common procedures](manual-tests/common.md) for the rest.
 
-[**Planning**](manual-tests/planning.md) carries everything about *choosing* a
-run and nothing you need while executing one: the 14 areas with their counts and
-estimates, the 20-test smoke pass, the paid-test register, the corrections
-already applied to this script, and its known gaps. Open it to pick a run, then
-close it — this page and the area file are the two you keep open.
+Two pages exist for the run around the run, and neither is needed while executing:
+[**Planning**](manual-tests/planning.md) to pick what to run — the 14 areas with
+their counts and estimates, the 20-test smoke pass, the paid-test register, the
+corrections already applied and the known gaps — and the
+[**Tracker**](manual-tests/tracker.md) to record what came of it, one row per test
+with its status and any issue. Open them at either end of a run and close them in
+between; this page, Common procedures and one area file are what you keep open.
 
 > [!TIP]
 > If you are running the smoke pass, start with `SHELLNAV-01`. It catches the one

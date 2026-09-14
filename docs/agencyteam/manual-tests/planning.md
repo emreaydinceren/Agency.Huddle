@@ -5,6 +5,9 @@ Read this to **choose** a run. You do not need it while executing one: the rules
 that bind a run live in [the script](../manual-tests.md), which is the page to
 have open instead.
 
+Results go in the [Tracker](tracker.md), not here — this page is what to run, that
+one is what happened.
+
 Back to [the manual test script](../manual-tests.md).
 
 ---
