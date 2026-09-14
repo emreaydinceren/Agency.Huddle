@@ -244,6 +244,19 @@
     /// <param name="personaName">The Persona to resolve a status for.</param>
     private PersonaStatus ResolveStatus(string personaName)
     {
+        // The Create card has no Persona yet - cardName starts out empty, and neither
+        // agentIdByPersona nor PersonaHealth has ever heard of a name that does not exist yet.
+        // PersonaHealth.Get rightly guards against a blank name with
+        // ArgumentException.ThrowIfNullOrWhiteSpace (it is a public method on a public type - see
+        // CSharpPrinciples.md), so asking it about "no Persona" would throw during render instead of
+        // reporting a status. Nothing has ever been reported for this Persona, so the honest answer
+        // is exactly what PersonaStatusResolver.Resolve(connected: false, health: null) already
+        // returns: Offline, with no reason.
+        if (string.IsNullOrWhiteSpace(personaName))
+        {
+            return PersonaStatusResolver.Resolve(connected: false, health: null);
+        }
+
         var agentId = this.agentIdByPersona.GetValueOrDefault(personaName);
         var connected = agentId is not null && this.Gateway.IsOnline(agentId);
         return PersonaStatusResolver.Resolve(connected, this.Health.Get(personaName));
