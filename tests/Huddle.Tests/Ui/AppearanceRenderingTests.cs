@@ -25,7 +25,14 @@ public sealed class AppearanceRenderingTests
         var html = await client.GetStringAsync("/", ct);
 
         Assert.DoesNotContain("themes/", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("<style", html, StringComparison.Ordinal);
+
+        // MudBlazor's MudThemeProvider (installed in Stage 1) always emits its own
+        // <style class='mud-theme-provider'> block, so a bare "<style" check no longer proves
+        // anything about the appearance override. ThemeOverrides.Build always opens its own block
+        // with the literal text ":root {" (a space before the brace); MudBlazor's generated blocks
+        // use ":root{" with no space. Checking for that exact marker still proves the override
+        // <style> block was never emitted.
+        Assert.DoesNotContain(":root {", html, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -95,7 +102,13 @@ public sealed class AppearanceRenderingTests
         var html = await client.GetStringAsync("/", ct);
 
         Assert.DoesNotContain("} :root{", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("<style", html, StringComparison.Ordinal);
+
+        // See AppShell_WithNoAppearanceFile_LinksNoThemeAndEmitsNoOverrideStyle: MudThemeProvider's
+        // own <style> blocks make a bare "<style" check meaningless post-MudBlazor. ":root {" (with
+        // the space ThemeOverrides.Build always writes) remains a precise fingerprint for the
+        // override block, so its absence still proves the rejected value produced no override
+        // <style> element at all.
+        Assert.DoesNotContain(":root {", html, StringComparison.Ordinal);
     }
 
     /// <summary>
