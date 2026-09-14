@@ -9,4 +9,7 @@ public enum SettingsTab
 {
     /// <summary>The read-only view of every model-facing hook, grouped by area.</summary>
     Hooks,
+
+    /// <summary>Choosing a theme, and where to override its tokens.</summary>
+    Appearance,
 }
