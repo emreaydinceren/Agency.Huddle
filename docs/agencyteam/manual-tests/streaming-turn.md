@@ -1268,21 +1268,40 @@ If ROOM A's prompt never queued because Nova answered it before you clicked Stop
 
 - Nova exists with Model = Haiku, Effort = low.
 
+> [!IMPORTANT]
+> This cap can only be reached by an **Agent-to-Agent** exchange, never by typing at it. Every
+> Human Message resets the counter to zero (`PersonaRunner`'s read loop does `Interlocked.Exchange(ref
+> this.tokensConsumed, 0)` the moment it sees one, *before* queueing the work item), and the check
+> runs at the START of a work item — so a Turn you prompted yourself is always measured against a
+> freshly-zeroed counter and can never be refused. That is the point of the cap: it bounds
+> *unattended* spend. The test therefore needs a SECOND Persona, so one Agent's reply wakes the
+> other with no Human Message in between. Same rule as `STARTUPCONFIG-33` and `ROOMMESSAGING-30`.
+
 **Steps**
 
-1. Press Ctrl+C in `T-A`. In the same window run: `$env:Team__Acp__Enabled="true"; $env:Team__Acp__TokenBudget="1"; dotnet run --project src/Huddle.App`.
-2. Wait for Nova to reach **Online** on /teammates.
-3. Open Nova's Room, type `@Nova say ok` and press Enter. Wait for her reply to land.
-4. Type `@Nova say ok again` and press Enter.
-5. Watch the Room for 15 seconds and note whether any Draft appears.
-6. Read the strip between the transcript and the composer, word for word, and screenshot it before typing anything else.
-7. Check `T-A` for `Persona 'Nova' has spent its token budget of 1 and is taking no more turns until a human speaks to it.` at Warning.
-8. Type `@Nova one more time` and press Enter, then watch for a Draft and a reply.
-9. Press Ctrl+C in `T-A` and restart without the variable: `Remove-Item Env:Team__Acp__TokenBudget; dotnet run --project src/Huddle.App`.
+1. Press Ctrl+C in `T-A`. Add a second Persona at `src\Huddle.App\App_Data\Teams\nova2.md`:
+```
+---
+name: 'Nova2'
+title: 'Second test persona'
+alias: 'nova2'
+---
+You are Nova2. Reply with one very short sentence that ends with @nova.
+```
+   and rewrite Nova's body in `src\Huddle.App\App_Data\Teams\Nova.md` to `You are Nova. Reply with one very short sentence that ends with @nova2.` Write both down so you can restore them in step 10.
+2. In the same window run: `$env:Team__Acp__Enabled="true"; $env:Team__Acp__TokenBudget="1"; $env:Team__AgentMessageBudget="4"; dotnet run --project src/Huddle.App`. The Room Budget bounds the ping-pong, and therefore the spend.
+3. Wait for BOTH Nova and Nova2 to reach **Online** on /teammates, and set Model = Haiku and Effort = low on Nova2.
+4. Click **New chat**, tick `Nova` and `Nova2` only, and click **Start chat**.
+5. Type exactly `Say hi @nova` and press Enter. Nova answers mentioning `@nova2`, then Nova2 answers mentioning `@nova`. That second reply is an AGENT Message, so it wakes Nova with no reset — and that is the Turn the cap refuses.
+6. Watch the Room for 15 seconds and note whether any third Draft appears.
+7. Read the strip between the transcript and the composer, word for word, and screenshot it before typing anything else.
+8. Check `T-A` for `Persona 'Nova' has spent its token budget of 1 and is taking no more turns until a human speaks to it.` at Warning.
+9. Type `@Nova one more time` and press Enter, then watch for a Draft and a reply.
+10. Press Ctrl+C in `T-A`. Restore Nova's original body, delete `src\Huddle.App\App_Data\Teams\nova2.md`, then restart without the variables: `Remove-Item Env:Team__Acp__TokenBudget, Env:Team__AgentMessageBudget; dotnet run --project src/Huddle.App`.
 
 **Pass if — all of these**
 
-- The second prompt produces NO Draft at all.
+- The Agent-to-Agent Turn produces NO Draft at all.
 - The Room shows the strip `Nova is Degraded: The per-Persona token Budget of 1 is spent; no more Turns until a Human speaks.`
 - `T-A` logs the quoted Warning line.
 - The wording avoids vocabulary this product does not use - no 'rate limit', 'quota' or 'cap'.
@@ -1297,10 +1316,10 @@ If ROOM A's prompt never queued because Nova answered it before you clicked Stop
 
 **Inconclusive if**
 
-The window in which the strip is visible is short by design - if you missed it because you typed again too quickly, repeat from step 4 and screenshot before typing. If the first prompt produces no reply at all, the Budget was already spent by an earlier run; restart the app to reset the counter.
+The window in which the strip is visible is short by design - if you missed it because you typed again too quickly, repeat from step 5 and screenshot before typing. If the first prompt produces no reply at all, the Budget was already spent by an earlier run; restart the app to reset the counter. If the exchange never reaches a second Agent reply, neither Persona is Mentioning the other - check both bodies and that both aliases resolve.
 
 > [!NOTE]
-> COSTS MONEY: one short Haiku turn at low effort plus one more to prove the reset - a few dozen tokens.
+> COSTS MONEY: two short Haiku turns at low effort to set up the Agent-to-Agent exchange, plus one more to prove the reset - a few dozen tokens.
 
 ### STREAMINGTURN-29 — A Turn that fails mid-flight reports Degraded in the Adapter's own words, and escalates on the third failure in a row
 
