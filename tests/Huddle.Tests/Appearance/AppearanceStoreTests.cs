@@ -4,15 +4,15 @@ using Agency.Huddle.App.Appearance;
 namespace Agency.Huddle.Tests.Appearance;
 
 /// <summary>
-/// Tests for <see cref="AppearanceStore"/>: that it joins the built-in theme pair with an override
-/// file, tolerates every shape of a missing or malformed file without throwing, never drops a
-/// user's unrelated data (an unknown theme id or override key stays in the file), and rebuilds its
-/// resolved snapshot before raising <see cref="AppearanceStore.AppearanceChanged"/> rather than
+/// Tests for <see cref="AppearanceStore"/>: that it joins <see cref="Agency.Huddle.App.Themes.ThemeCatalog"/>
+/// with a selection file, tolerates every shape of a missing or malformed file without throwing,
+/// never drops a user's unrelated data (an unknown top-level key stays in the file), and rebuilds
+/// its resolved snapshot before raising <see cref="AppearanceStore.AppearanceChanged"/> rather than
 /// after.
 /// </summary>
 public sealed class AppearanceStoreTests
 {
-    /// <summary>A missing override file is the normal first-run case: everything resolves empty and the constructor never creates one.</summary>
+    /// <summary>A missing selection file is the normal first-run case: everything resolves to the default and the constructor never creates one.</summary>
     [Fact]
     public void Current_WithNoFile_IsEmptyAndCreatesNothing()
     {
@@ -20,12 +20,11 @@ public sealed class AppearanceStoreTests
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
         Assert.Null(store.Current.ThemeId);
-        Assert.Equal(string.Empty, store.Current.OverrideCss);
-        Assert.Empty(store.Current.Problems);
+        Assert.Equal(DarkModePreference.System, store.Current.Dark);
         Assert.False(File.Exists(Path.Combine(dataDir.Path, "appearance.json")));
     }
 
-    /// <summary>Malformed JSON falls back to no theme and no overrides, and does not throw.</summary>
+    /// <summary>Malformed JSON falls back to the default appearance, and does not throw.</summary>
     [Fact]
     public void Current_WithMalformedFile_FallsBackToEmpty()
     {
@@ -35,12 +34,13 @@ public sealed class AppearanceStoreTests
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
         Assert.Null(store.Current.ThemeId);
-        Assert.Equal(string.Empty, store.Current.OverrideCss);
+        Assert.Equal(DarkModePreference.System, store.Current.Dark);
     }
 
     /// <summary>
-    /// A theme id naming no catalogue entry is a warning, never a failure: the built-in theme
-    /// applies and the file is left exactly as it was, so re-adding the theme restores the choice.
+    /// A theme id naming no catalogue entry is a warning, never a failure: no theme is selected
+    /// (so the caller falls back to the catalog's first entry) and the file is left exactly as it
+    /// was, so fixing the id restores the choice with no further edit.
     /// </summary>
     [Fact]
     public void Current_WithAnUnknownThemeId_SelectsNoThemeAndLeavesTheFileUnchanged()
@@ -52,38 +52,38 @@ public sealed class AppearanceStoreTests
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
         Assert.Null(store.Current.ThemeId);
-        Assert.NotEmpty(store.Current.Problems);
         Assert.Contains("nonsense", File.ReadAllText(path), StringComparison.Ordinal);
     }
 
-    /// <summary>An override key naming no theme token is dropped from resolution but kept in the file, never silently deleted.</summary>
+    /// <summary>
+    /// A <c>dark</c> value that is not <c>"system"</c>, <c>"light"</c> or <c>"dark"</c> is a
+    /// warning, never a failure: System applies and the file is left exactly as it was.
+    /// </summary>
     [Fact]
-    public void Current_WithAnUnknownOverrideKey_KeepsItInTheFile()
+    public void Current_WithAnUnknownDarkValue_FallsBackToSystemAndLeavesTheFileUnchanged()
     {
         using var dataDir = new TempDataDir();
         var path = Path.Combine(dataDir.Path, "appearance.json");
-        File.WriteAllText(path, "{\"overrides\":{\"--not-a-token\":\"red\"}}");
+        File.WriteAllText(path, "{\"dark\":\"nonsense\"}");
 
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
-        Assert.Equal(string.Empty, store.Current.OverrideCss);
-        Assert.NotEmpty(store.Current.Problems);
-        Assert.Contains("--not-a-token", File.ReadAllText(path), StringComparison.Ordinal);
+        Assert.Equal(DarkModePreference.System, store.Current.Dark);
+        Assert.Contains("nonsense", File.ReadAllText(path), StringComparison.Ordinal);
     }
 
-    /// <summary>A file naming both a known theme and valid overrides resolves both at once.</summary>
+    /// <summary>A file naming both a known theme and a dark-mode preference resolves both at once.</summary>
     [Fact]
-    public void Current_WithAThemeAndOverrides_ResolvesBoth()
+    public void Current_WithAThemeAndDark_ResolvesBoth()
     {
         using var dataDir = new TempDataDir();
         var path = Path.Combine(dataDir.Path, "appearance.json");
-        File.WriteAllText(path, "{\"theme\":\"huddle-dark\",\"overrides\":{\"--font-chat\":\"Georgia, serif\"}}");
+        File.WriteAllText(path, "{\"theme\":\"huddle\",\"dark\":\"dark\"}");
 
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
-        Assert.Equal("huddle-dark", store.Current.ThemeId);
-        Assert.Equal(":root {\n    --font-chat: Georgia, serif;\n}", store.Current.OverrideCss);
-        Assert.Empty(store.Current.Problems);
+        Assert.Equal("huddle", store.Current.ThemeId);
+        Assert.Equal(DarkModePreference.Dark, store.Current.Dark);
     }
 
     /// <summary>An edit made outside the process (a human hand-editing the file) is picked up by the filesystem watcher once its debounce settles.</summary>
@@ -94,32 +94,34 @@ public sealed class AppearanceStoreTests
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
         var path = Path.Combine(dataDir.Path, "appearance.json");
 
-        File.WriteAllText(path, "{\"theme\":\"huddle-dark\"}");
+        File.WriteAllText(path, "{\"theme\":\"huddle\"}");
 
         await WaitForAsync(
-            () => string.Equals(store.Current.ThemeId, "huddle-dark", StringComparison.Ordinal),
+            () => string.Equals(store.Current.ThemeId, "huddle", StringComparison.Ordinal),
             TestContext.Current.CancellationToken);
     }
 
     /// <summary>
-    /// Saving a theme re-reads the file first, so a hand-edited <c>overrides</c> block already on
-    /// disk survives the round-trip untouched - the tab must not be able to clobber it.
+    /// Saving re-reads the file first, so an unknown top-level key already on disk survives the
+    /// round-trip untouched - the tab must not be able to clobber data it does not understand.
     /// </summary>
     [Fact]
-    public void Save_WritesTheThemeAndLeavesOverridesUntouched()
+    public void Save_WritesTheThemeAndDarkAndLeavesUnknownKeysUntouched()
     {
         using var dataDir = new TempDataDir();
         var path = Path.Combine(dataDir.Path, "appearance.json");
-        File.WriteAllText(path, "{\"overrides\":{\"--font-chat\":\"Georgia, serif\"}}");
+        File.WriteAllText(path, "{\"custom-note\":\"left alone\"}");
 
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
-        store.Save("huddle-dark");
+        store.Save("huddle", DarkModePreference.Dark);
 
-        Assert.Equal("huddle-dark", store.Current.ThemeId);
+        Assert.Equal("huddle", store.Current.ThemeId);
+        Assert.Equal(DarkModePreference.Dark, store.Current.Dark);
         var json = File.ReadAllText(path);
-        Assert.Contains("huddle-dark", json, StringComparison.Ordinal);
-        Assert.Contains("Georgia, serif", json, StringComparison.Ordinal);
+        Assert.Contains("huddle", json, StringComparison.Ordinal);
+        Assert.Contains("\"dark\"", json, StringComparison.Ordinal);
+        Assert.Contains("left alone", json, StringComparison.Ordinal);
     }
 
     /// <summary>Saving raises <see cref="AppearanceStore.AppearanceChanged"/> after the write and the rebuild.</summary>
@@ -131,7 +133,7 @@ public sealed class AppearanceStoreTests
         var raised = false;
         store.AppearanceChanged += () => raised = true;
 
-        store.Save("huddle-light");
+        store.Save("huddle", DarkModePreference.Light);
 
         Assert.True(raised);
     }

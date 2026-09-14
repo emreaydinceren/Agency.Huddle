@@ -1,12 +1,37 @@
 # Decision record
 
-Eleven dated entries from 2026-09-11 onward, newest first, each recording what
+Twelve dated entries from 2026-09-11 onward, newest first, each recording what
 changed and — more usefully — what was considered and rejected. Read it when you are
 about to revisit a decision, or when an older Markdown file in this repo
 disagrees with current vocabulary and you need the old-to-new mapping.
 
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
+
+**2026-09-14 — a Theme is a MudBlazor `MudTheme`, and the hand-built Tokens are gone.**
+
+MudBlazor was adopted as the component library, and keeping a second theming system
+beside it was rejected as the worst of both: every colour decided twice, in two
+vocabularies, kept in step by discipline. `theme.css`, `wwwroot/themes/`,
+`ThemeOverrides` and `ThemeTokens` are deleted; every stylesheet reads `--mud-*`.
+[ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md) is the decision in full.
+
+**Rejected: keeping the Tokens as the authority and bridging MudBlazor onto them.** It
+works — a higher-specificity block can repoint all 77 `--mud-palette-*` variables at the
+39 Tokens — but eight of those variables have `-rgb` companions that CSS cannot derive
+from a hex, so the colours would have had to be written twice, in two forms. That is the
+drift ADR-0009's one-declaration-per-Token rule existed to prevent.
+
+**Rejected: parking collapsed Tokens in unused palette slots.** Seven Tokens collapse
+because 39 do not fit MudBlazor's palette one-to-one. `Skeleton` and `TableStriped` were
+free and would have preserved the colours, at the cost of palette entries whose names
+mean nothing like what they hold.
+
+What it cost: JavaScript is back for the System preference, a flash of the wrong Theme is
+possible on first paint, per-Token customisation is gone, and the selected-row colour
+changed because MudBlazor computes `primary-hover` rather than exposing it. What it
+bought: one vocabulary, no page reload on a Theme change, and roadmap item 7 reduced from
+a CSS generator plus a file provider to a JSON-to-object mapping.
 
 **2026-09-13 — a Theme is a stylesheet layered over the tokens, and the choice lives
 in a file.**

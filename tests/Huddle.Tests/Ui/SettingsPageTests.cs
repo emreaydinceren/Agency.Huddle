@@ -1,3 +1,4 @@
+using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Hooks;
 using Agency.Huddle.App.Themes;
 
@@ -184,11 +185,17 @@ public sealed class SettingsPageTests
     }
 
     /// <summary>
-    /// The Appearance tab lists System plus every <see cref="ThemeCatalog.BuiltIn"/> label, and renders
-    /// none of the Hooks tab's own content.
+    /// The Appearance tab shows a Theme select and an Appearance (dark-mode) select, each already
+    /// showing its resolved current value - the catalog's default theme's label and "System" - and
+    /// renders none of the Hooks tab's own content. <c>MudSelect</c> only renders its list of items
+    /// into a popover once opened by a real click, which a plain GET can never trigger - the same
+    /// "anything behind a click is absent from that HTML" limitation <c>testing.md</c> documents for
+    /// <c>TeammateCard</c>'s own controls - so this cannot also assert that every catalog theme
+    /// label or every <see cref="DarkModePreference"/> option appears; only the two selects'
+    /// pre-rendered current values can be checked here.
     /// </summary>
     [Fact]
-    public async Task SettingsAppearancePage_RendersEveryCatalogThemeAndSystem()
+    public async Task SettingsAppearancePage_RendersTheSelectedThemeAndDarkModeLabels()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
@@ -198,11 +205,10 @@ public sealed class SettingsPageTests
 
         var html = await client.GetStringAsync("/settings/appearance", ct);
 
+        Assert.Contains("aria-label=\"Theme\"", html, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Appearance\"", html, StringComparison.Ordinal);
+        Assert.Contains($">{ThemeCatalog.BuiltIn[0].Label}<", html, StringComparison.Ordinal);
         Assert.Contains(">System<", html, StringComparison.Ordinal);
-        foreach (var theme in ThemeCatalog.BuiltIn)
-        {
-            Assert.Contains($">{theme.Label}<", html, StringComparison.Ordinal);
-        }
 
         Assert.DoesNotContain("hooks-group", html, StringComparison.Ordinal);
     }
@@ -243,44 +249,4 @@ public sealed class SettingsPageTests
         Assert.Contains(factory.AppearanceJsonPath, html, StringComparison.Ordinal);
     }
 
-    /// <summary>A rejected override is reported on the page rather than swallowed - the "reported, never swallowed" rule applied to appearance.json.</summary>
-    [Fact]
-    public async Task SettingsAppearancePage_ListsARejectedOverride()
-    {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var ct = cts.Token;
-
-        await using var factory = new TeamWebApplicationFactory();
-        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"not-a-real-theme\"}");
-        using var client = factory.CreateClient();
-
-        var html = await client.GetStringAsync("/settings/appearance", ct);
-
-        Assert.Contains("not-a-real-theme", html, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// The override-key example must render as the literal key a Human types into
-    /// <c>appearance.json</c> - <c>--font-chat</c>, exactly as declared in <c>theme.css</c> and
-    /// <see cref="ThemeTokens.All"/> - with no leading <c>@</c>. Razor's <c>@@</c> escape sequence
-    /// renders one literal <c>@</c>, and <c>--font-chat</c> contains no <c>@</c> to escape in the
-    /// first place, so a stray <c>@@</c> in the markup would teach the Human to type a key
-    /// <see cref="Agency.Huddle.App.Appearance.ThemeOverrides.Build"/> then rejects because it is
-    /// not in the token list - the page would look broken when the code is fine.
-    /// </summary>
-    [Fact]
-    public async Task SettingsAppearancePage_ShowsTheOverrideKeyWithoutAStrayEscapeCharacter()
-    {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var ct = cts.Token;
-
-        await using var factory = new TeamWebApplicationFactory();
-        using var client = factory.CreateClient();
-
-        var html = await client.GetStringAsync("/settings/appearance", ct);
-
-        Assert.Contains("--font-chat", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("@--font-chat", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("@--surface-base", html, StringComparison.Ordinal);
-    }
 }
