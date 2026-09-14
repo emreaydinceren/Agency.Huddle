@@ -211,16 +211,22 @@ Actions-shaped.
 ## Validation status
 
 The environment facts above (`tea` absence, the per-hostname credential caching behavior, the
-gitleaks `internal-mdns-host` rule) are confirmed as of 2026-09-13. The **read** side of
-[Issues](#issues) was exercised against this instance on 2026-09-14, running Gitea **1.26.4** —
-the listing, `type=issues`, `q=`, the comments endpoint, the empty label set and the
-404-not-401 behaviour are observed, not inferred. **The write shapes (issue create, comment and
-close, PR creation, branch delete, Actions rerun) are documented from Gitea's published REST API
-conventions but have not been exercised end-to-end against this instance from within this
-repo** — creating a real PR/deleting a branch/re-running a job are visible, non-trivial-to-undo
-actions, so they weren't tested just to validate this doc. Treat the request bodies as a strong
-starting point, not a guarantee; if one 4xxs, check the response body for the actual Gitea
-version's field names before assuming the whole approach is wrong.
+gitleaks `internal-mdns-host` rule) are confirmed as of 2026-09-13. Everything below was
+exercised against this instance on 2026-09-14, running Gitea **1.26.4**.
+
+**Observed, not inferred.** The whole **read** side of [Issues](#issues) — the listing,
+`type=issues`, `q=`, the comments endpoint, the empty label set and the 404-not-401 behaviour.
+Three **write** shapes, each returning `201`: commenting on an issue
+(`POST /issues/{n}/comments`), closing one (`PATCH /issues/{n}` with `{"state":"closed"}`), and
+[creating a pull request](#pull-requests) (`POST /pulls` with `title`/`head`/`base`/`body`).
+Listing Actions runs (`GET /actions/runs`) also works as described, and the `.git` suffix strip
+plus `cut -d/ -f1-3` in the [Branches](#branches) snippet derives the right base URL unchanged.
+
+**Still documented from Gitea's published REST API conventions rather than observed:** issue
+**create**, branch **delete**, and Actions **rerun**. Each is visible and non-trivial to undo, so
+none was run just to validate this page. Treat those three request bodies as a strong starting
+point, not a guarantee; if one 4xxs, check the response body for the actual Gitea version's field
+names before assuming the whole approach is wrong.
 
 ## Related
 
