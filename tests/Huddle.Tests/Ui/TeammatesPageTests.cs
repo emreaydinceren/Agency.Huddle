@@ -1,7 +1,6 @@
-using System.Reflection;
+using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.AspNetCore.Components.Web.HtmlRendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -111,63 +110,45 @@ public sealed class TeammatesPageTests
     /// blank name anyway. <see cref="PersonaHealth.Get"/>'s own
     /// <c>ArgumentException.ThrowIfNullOrWhiteSpace</c> guard is correct - it is a public method on
     /// a public type - so it threw during <c>BuildRenderTree</c>, which is exactly what took the
-    /// circuit down. The click is dispatched through the real render pipeline (see
-    /// <see cref="ClickNewTeammateAsync"/>), not by calling the private handler directly, so this
+    /// circuit down. bUnit dispatches a real click on the rendered "New teammate" button (see
+    /// <see cref="NewTeammateSelector"/>), not by calling the private handler directly, so this
     /// test fails the same way the reported crash did: with the same
     /// <see cref="ArgumentException"/>, thrown from the same render pass.
     /// </summary>
     [Fact]
     public async Task TeammatesPage_OpeningTheCreateCard_RendersWithoutThrowing()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var ct = cts.Token;
-
         await using var factory = new TeamWebApplicationFactory();
+        Directory.CreateDirectory(factory.TeamsDirPath);
 
-        // A fresh ServiceCollection wired from the factory's own real, fully-composed services - the
-        // same pattern TeammatesPage_RepaintsWhenAnAgentGoesOffline uses for HtmlRenderer, which needs
-        // its own root provider rather than factory.Services' request-scoped one. NavigationManager is
-        // the one addition: Create mode's <form> makes StaticHtmlRenderer resolve it while writing the
-        // form's action attribute, and nothing outside a real HTTP request ever initializes the real one.
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
-        services.AddSingleton(factory.Services.GetRequiredService<ITeamDirectory>());
-        services.AddSingleton(factory.Services.GetRequiredService<IAgentGateway>());
-        services.AddSingleton(factory.Services.GetRequiredService<PersonaHealth>());
-        services.AddSingleton(factory.Services.GetRequiredService<PersonaSupervisor>());
-        services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
-        services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
-        services.AddSingleton<NavigationManager>(new TestNavigationManager());
+        // bUnit's own TestContext wires the component's services - the same real, fully-composed
+        // instances TeamWebApplicationFactory built, so the render exercises the app's actual wiring
+        // rather than a hand-assembled substitute. bUnit registers its own fake NavigationManager by
+        // default, so unlike the HtmlRenderer version of this test, nothing extra is needed for
+        // Create mode's <form> to resolve one while writing its action attribute.
+        using BunitContext ctx = new();
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ITeamDirectory>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IAgentGateway>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaHealth>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSupervisor>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
 
-        await using var provider = services.BuildServiceProvider();
-        await using var renderer = new HtmlRenderer(provider, provider.GetRequiredService<ILoggerFactory>());
-        var output = await renderer.Dispatcher.InvokeAsync(() => renderer.RenderComponentAsync<Teammates>(ParameterView.Empty));
+        // No-argument Render<Teammates>() rather than Render<Teammates>(_ => { }): an empty lambda
+        // satisfies both the Action<ComponentParameterCollectionBuilder<T>> overload and the
+        // RenderFragment overload (delegate void RenderFragment(RenderTreeBuilder)), and bUnit marks
+        // the RenderFragment overload higher-priority, so a lambda binds to *that* one - producing an
+        // empty fragment that never opens a Teammates component at all, rather than the "no
+        // parameters" render this test means to do.
+        var cut = ctx.Render<Teammates>();
 
-        await ClickNewTeammateAsync(renderer, output, ct);
-
-        var html = await renderer.Dispatcher.InvokeAsync(() => Task.FromResult(output.ToHtmlString()));
+        cut.Find(NewTeammateSelector).Click();
 
         // The Create card itself, fully rendered - proof this got past ResolveStatus rather than
         // the page having quietly swallowed the crash and shown nothing.
-        Assert.Contains("Persona body", html, StringComparison.Ordinal);
-        Assert.Contains("Add teammate", html, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// A minimal, initialized <see cref="NavigationManager"/> for <see cref="HtmlRenderer"/> tests
-    /// that render a <c>&lt;form&gt;</c>. <see cref="Microsoft.AspNetCore.Components.HtmlRendering.Infrastructure.StaticHtmlRenderer"/>
-    /// resolves <see cref="NavigationManager"/> from the render's own service provider to compute a
-    /// form's implicit relative action URL, and the real one is only ever initialized by a live
-    /// circuit's HTTP request - never by an <see cref="HtmlRenderer"/> used standalone, as this suite
-    /// does throughout.
-    /// </summary>
-    private sealed class TestNavigationManager : NavigationManager
-    {
-        public TestNavigationManager()
-        {
-            this.Initialize("http://localhost/", "http://localhost/teammates");
-        }
+        Assert.Contains("Persona body", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Add teammate", cut.Markup, StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -183,20 +164,25 @@ public sealed class TeammatesPageTests
     [Fact]
     public async Task TeammatesPage_OpeningTheCreateCard_ProbesForModelsEvenWithAcpDisabled()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var ct = cts.Token;
-
         await using var factory = new TeamWebApplicationFactory();
+        Directory.CreateDirectory(factory.TeamsDirPath);
 
-        // HtmlRenderer needs a scoped provider - Microsoft.AspNetCore.Components.ComponentsActivitySource
-        // is a scoped service, and factory.Services is the host's root provider.
-        using var scope = factory.Services.CreateScope();
-        await using var renderer = new HtmlRenderer(scope.ServiceProvider, scope.ServiceProvider.GetRequiredService<ILoggerFactory>());
-        var output = await renderer.Dispatcher.InvokeAsync(() => renderer.RenderComponentAsync<Teammates>(ParameterView.Empty));
+        // The same IModelCatalog instance the factory tracks, so the probe count assertion below
+        // reflects the click rather than a disconnected fake.
+        using BunitContext ctx = new();
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ITeamDirectory>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IAgentGateway>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaHealth>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSupervisor>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
+        ctx.Services.AddSingleton<IModelCatalog>(factory.FakeModelCatalog);
+
+        var cut = ctx.Render<Teammates>();
 
         Assert.Equal(0, factory.FakeModelCatalog.ProbeCount);
 
-        await ClickNewTeammateAsync(renderer, output, ct);
+        cut.Find(NewTeammateSelector).Click();
 
         Assert.Equal(1, factory.FakeModelCatalog.ProbeCount);
     }
@@ -453,69 +439,11 @@ public sealed class TeammatesPageTests
     }
 
     /// <summary>
-    /// Clicks "New teammate" by dispatching the click <c>@onclick="this.BeginCreate"</c> compiles to,
-    /// the same way a live circuit drives a real click - rather than invoking
-    /// <c>Teammates.BeginCreate</c> directly. That distinction matters here: a throw from
-    /// <c>BuildRenderTree</c> during the follow-up render must surface exactly as it would in
-    /// production, which calling the private handler and skipping the render would not prove. This
-    /// suite has neither bUnit nor a live circuit to click through, and <see cref="HtmlRenderer"/>
-    /// does not expose event dispatch on its public surface - only the internal <c>Renderer</c> it
-    /// wraps does, in the <c>Microsoft.AspNetCore.Components.RenderTree</c> namespace the framework
-    /// itself warns (<c>BL0006</c>) is "not recommended for use outside of the Blazor framework" and
-    /// may change shape release to release. Every one of its types is therefore reached here only as
-    /// an untyped <see cref="object"/>, whose <see cref="object.GetType()"/> is asked for members by
-    /// name at run time rather than named through a compile-time <c>typeof</c>, so this file never
-    /// spells a symbol from that namespace and carries no suppression for it - the trade is a helper
-    /// that reads by member name rather than by type, and would need updating if a future SDK renamed
-    /// one of those members.
+    /// The CSS selector for the "New teammate" button that <c>@onclick="this.BeginCreate"</c>
+    /// compiles to, shared by the two bUnit tests that click it through the real render pipeline
+    /// rather than invoking <c>Teammates.BeginCreate</c> directly.
     /// </summary>
-    /// <param name="renderer">The renderer <paramref name="output"/> was produced from.</param>
-    /// <param name="output">The already-rendered <see cref="Teammates"/> root component to click within.</param>
-    /// <param name="ct">Cancellation for the dispatch.</param>
-    private static async Task ClickNewTeammateAsync(HtmlRenderer renderer, HtmlRootComponent output, CancellationToken ct)
-    {
-        var componentId = typeof(HtmlRootComponent)
-            .GetField("_componentId", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .GetValue(output)!;
-        var internalRenderer = typeof(HtmlRootComponent)
-            .GetField("_renderer", BindingFlags.NonPublic | BindingFlags.Instance)!
-            .GetValue(output)!;
-
-        var rendererType = internalRenderer.GetType().BaseType!;
-        var getCurrentRenderTreeFrames = rendererType.GetMethod("GetCurrentRenderTreeFrames", BindingFlags.NonPublic | BindingFlags.Instance)!;
-        var dispatchEventAsync = rendererType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
-            .Single(m => string.Equals(m.Name, "DispatchEventAsync", StringComparison.Ordinal) && m.GetParameters().Length == 3);
-
-        var handlerId = await renderer.Dispatcher.InvokeAsync(() =>
-        {
-            var framesRange = getCurrentRenderTreeFrames.Invoke(internalRenderer, [componentId])!;
-            var frames = (Array)framesRange.GetType().GetField("Array")!.GetValue(framesRange)!;
-            var frameCount = (int)framesRange.GetType().GetField("Count")!.GetValue(framesRange)!;
-
-            for (var i = 0; i < frameCount; i++)
-            {
-                var frame = frames.GetValue(i)!;
-                var frameType = frame.GetType();
-                var kind = frameType.GetProperty("FrameType")!.GetValue(frame)!.ToString();
-                if (!string.Equals(kind, "Attribute", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                var attributeName = frameType.GetProperty("AttributeName")!.GetValue(frame) as string;
-                var eventHandlerId = (ulong)frameType.GetProperty("AttributeEventHandlerId")!.GetValue(frame)!;
-                if (string.Equals(attributeName, "onclick", StringComparison.Ordinal) && eventHandlerId != 0)
-                {
-                    return eventHandlerId;
-                }
-            }
-
-            throw new InvalidOperationException("Teammates did not render an 'onclick' handler for 'New teammate'.");
-        });
-
-        ct.ThrowIfCancellationRequested();
-        await renderer.Dispatcher.InvokeAsync(() => (Task)dispatchEventAsync.Invoke(internalRenderer, [handlerId, null, new MouseEventArgs()])!);
-    }
+    private const string NewTeammateSelector = "button.teammates-new";
 
     /// <summary>Counts non-overlapping occurrences of <paramref name="needle"/> in <paramref name="haystack"/>.</summary>
     private static int CountOccurrences(string haystack, string needle)
