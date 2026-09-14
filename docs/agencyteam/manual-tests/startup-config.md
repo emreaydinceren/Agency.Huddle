@@ -795,7 +795,7 @@ The silence here is CORRECT. Judging 'no reply' requires checking the dot in the
 2. Launch in the same window: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 3. Open http://localhost:5100, wait 10 seconds, and read the sidebar room list. Write down every entry.
 4. Search the console for lines containing `connected.` and write down each agent name.
-5. Stop the app. Delete App_Data again. Now ALSO run `$env:Team__DemoAgent__Names__2 = 'gamma'` and relaunch.
+5. Run `P-RESET-ALL`. Now ALSO run `$env:Team__DemoAgent__Names__2 = 'gamma'` and relaunch.
 6. Read the sidebar room list again and write down every entry.
 7. Stop the app and run `Remove-Item Env:Team__DemoAgent__Names__0; Remove-Item Env:Team__DemoAgent__Names__2`.
 
