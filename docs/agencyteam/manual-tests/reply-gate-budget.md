@@ -309,7 +309,7 @@ If one of the two Agents is offline at step 3 only one reply arrives and the lin
 
 **Pass if — all of these**
 
-- `echo`'s reply lands, and then a red-bordered block appears between the transcript and the composer reading exactly `Agents have sent 1 replies since you last spoke, and are paused.`
+- `echo`'s reply lands, and then a `budget-prompt` block appears between the transcript and the composer, separated from the transcript by a plain rule, whose `budget-prompt-text` paragraph is in the danger colour and reads exactly `Agents have sent 1 replies since you last spoke, and are paused.`
 - That block carries exactly two buttons, labelled **Continue** and **Leave paused**.
 - No other strip appears above the composer — in particular no alert listing `echo is Degraded` or `echo is Offline`.
 - Every Message in the transcript is from `You` or from `echo`; there is no Message from a `system` or similar sender announcing the pause.
