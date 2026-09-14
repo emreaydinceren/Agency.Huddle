@@ -4,25 +4,25 @@ Prove, in a real browser against a real `node` adapter, everything between "a Pe
 
 **32 tests** · 25 free, 7 paid 💰 · about 6.5 hours.
 
-Read [the manual test script](../manual-tests.md) first — it carries the cost guard, the Model
-and Effort convention, and the rules for concluding a result. This page assumes all three.
+Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
+convention, and the rules for concluding a result — then [Common procedures](common.md), which
+defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
 ## Setup
 
-1. Open PowerShell 7 (`pwsh`) at `E:\Repos\Huddle`. Run `dotnet build Huddle.slnx`. It must report 0 errors. If it does not, stop: every test below is inconclusive until the solution builds.
-2. Confirm the ACP adapter is installed. Run `Test-Path 'E:\Repos\Huddle\tools\acp\node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js'`. It must print `True`. If it prints `False`, run `pwsh E:\Repos\Huddle\tools\acp\install.ps1` and check again.
-3. Confirm `node` is on PATH: run `node --version` and expect a version number. Without it no adapter can start and every test from PERSONALIFECYCLE-06 onward is inconclusive.
-4. Meet the Claude login requirement in [§0.1 of the script](../manual-tests.md#01-what-you-need) — the adapter authenticates against that login, so nothing from PERSONALIFECYCLE-06 onward starts without it. If start failures later read "The Adapter needs authentication: …", stop and log in — do not report those as defects.
-5. Know where the state lives. Everything the app writes is under `E:\Repos\Huddle\src\Huddle.App\App_Data\`: `Teams\` holds the Persona `.md` files (scanned recursively), `work\<Persona>\` is each Persona's Work Dir, `team.db` is the SQLite database, `rooms\<roomId>.jsonl` are the Transcripts, `hooks.json` and `appearance.json` are settings overrides. A full reset is: stop the app, delete `App_Data`, start again — the app recreates it.
-6. Open TWO PowerShell windows. Window A runs the app. Window B is the oracle window (processes, files, database) and must never be used to start the app.
-7. In window A, learn the two ways to run. WITH adapters (the default `http` profile sets `ASPNETCORE_ENVIRONMENT=Development`, and `appsettings.Development.json` sets `Team:Acp:Enabled=true`): `dotnet run --project src\Huddle.App --urls http://localhost:5100`. WITHOUT adapters: `$env:Team__Acp__Enabled='false'; dotnet run --project src\Huddle.App --urls http://localhost:5100`. Environment overrides use DOUBLE underscores: `Team__Acp__Enabled`, `Team__Acp__TokenBudget`, `Team__AgentMessageBudget`, `Team__Acp__AdapterPath`, `Team__Acp__WorkDir`. An override set with `$env:` lasts only for that PowerShell window; open a fresh window to clear it.
-8. Stop the app with Ctrl+C in window A. Always wait for the prompt to return before starting it again — two copies cannot bind port 5100.
-9. In window B, set up the PROCESS ORACLE. Paste this once per window: `function Adapters { Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Select-Object ProcessId, CreationDate, CommandLine | Format-Table -Wrap }`. Running `Adapters` then lists one row per running Persona adapter (plus a short-lived extra row whenever a Model or Effort picker probes). `Stop-Process -Id <pid>` simulates a crashed adapter.
-10. In window B, check for the DATABASE ORACLE: run `sqlite3 -version`. If it is missing, database checks in the tests below are OPTIONAL and you record them as not-checked — except PERSONALIFECYCLE-17, which cannot run at all without it. To get it, run `winget install -e --id SQLite.SQLite` and open a fresh window B.
-11. Use the browser you will test in, with two tabs available. Navigate with the sidebar links (`New chat`, the Room list, `Teammates`, `Settings`) and with the URLs `http://localhost:5100/teammates`, `/settings` and `/rooms/<roomId>`. Never test through a private window for the multi-tab test.
-12. MODEL AND EFFORT CONVENTION, binding for every test: create every Persona with Model = the entry whose label contains `Haiku` and Effort = `low`. The only model switch any test performs is Haiku -> Sonnet (PERSONALIFECYCLE-28). The only effort switch is low -> medium (PERSONALIFECYCLE-29). Never select Opus, and never select high, xhigh or max.
-13. WATCH THE CONSOLE. Window A is the second oracle: `Agency.Huddle` logs at Debug in Development and adapter stderr arrives as `[agent stderr] {Line}`. Before each test, scroll window A to the bottom so you can tell new lines from old ones.
-14. MONEY. Starting a Persona's session is free — no prompt turn, no tokens. Only a Message that produces a reply costs. Tests PERSONALIFECYCLE-01 to -25 are free. Tests -26 to -32 are explicitly marked and each says how many Turns it costs.
+Run [`P-BUILD`](common.md#p-build) then the lane named below from
+[Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
+oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four resets,
+`P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
+
+1. Confirm the Adapter is installed: `Test-Path 'E:\Repos\Huddle\tools\acp\node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js'` must print `True`. If `False`, run `pwsh E:\Repos\Huddle\tools\acp\install.ps1` and check again. Confirm `node --version` prints a version. Without both, every test from PERSONALIFECYCLE-06 onward is inconclusive.
+2. Meet the Claude login requirement in [§0.1](../manual-tests.md#01-what-you-need) — the Adapter authenticates against that login, so nothing from PERSONALIFECYCLE-06 onward starts without it. If start failures later read "The Adapter needs authentication: …", stop and log in; do not report those as defects.
+3. Two lanes. WITHOUT Adapters is `P-LAUNCH-FREE`. WITH Adapters is a plain `dotnet run --project src\Huddle.App --urls http://localhost:5100`, since the Development profile already sets `Team:Acp:Enabled=true`. The overrides this area uses are `Team__Acp__Enabled`, `Team__Acp__TokenBudget`, `Team__AgentMessageBudget`, `Team__Acp__AdapterPath` and `Team__Acp__WorkDir`.
+4. In `T-B`, paste this once — it is `O-ADAPTERS` as a listing rather than a count: `function Adapters { Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId, CreationDate, CommandLine | Format-Table -Wrap }`. Running `Adapters` lists one row per running Persona Adapter, plus a short-lived extra row whenever a Model or Effort picker probes. `Stop-Process -Id <pid>` simulates a crashed Adapter.
+5. `O-DB` is optional here and recorded as not-checked when absent — except PERSONALIFECYCLE-17, which cannot run at all without it.
+6. `work\<Persona>\` under `App_Data` is each Persona's Work Dir, keyed on the frontmatter Name. Several tests read it directly.
+7. Use the browser you will test in, with two tabs available. Never test through a private window for the multi-tab test.
+8. MONEY. Starting a Persona's session is free — no prompt turn, no tokens. Only a Message that produces a reply costs. PERSONALIFECYCLE-01 to -25 are free; -26 to -32 are marked and each says how many Turns it costs.
 
 ## Tests
 
@@ -40,8 +40,8 @@ and Effort convention, and the rules for concluding a result. This page assumes 
 
 **Steps**
 
-1. In window A run `$env:Team__Acp__Enabled='false'; dotnet run --project src\Huddle.App --urls http://localhost:5100` and wait for the line `Now listening on: http://localhost:5100`.
-2. In window B run `Adapters`. Note the row count (expected: none).
+1. In `T-A` run `$env:Team__Acp__Enabled='false'; dotnet run --project src\Huddle.App --urls http://localhost:5100` and wait for the line `Now listening on: http://localhost:5100`.
+2. In `T-B` run `Adapters`. Note the row count (expected: none).
 3. In the browser open `http://localhost:5100/teammates`.
 4. Click **New teammate**.
 5. In the **Name** field type `Nova`.
@@ -57,8 +57,8 @@ and Effort convention, and the rules for concluding a result. This page assumes 
 15. Look at the sidebar Room list.
 16. Click the Room named `echo` in the sidebar.
 17. Click into the composer (placeholder `Message… (/invite @agent)`), type `hello there` and press Enter.
-18. In window B run `Adapters` again.
-19. In window B run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'`.
+18. In `T-B` run `Adapters` again.
+19. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'`.
 
 **Pass if — all of these**
 
@@ -101,7 +101,7 @@ If the Model select shows only `Use the agent's default` with the hint "This age
 
 **Steps**
 
-1. In window B run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams' -Recurse -Filter *.md | Select-Object Name` and write down the list.
+1. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams' -Recurse -Filter *.md | Select-Object Name` and write down the list.
 2. In the browser go to `http://localhost:5100/teammates` and click **New teammate**.
 3. In **Name** type ` Nova Two` (one leading space before the N).
 4. In **Title** type `Test teammate`. In **Alias** type `novatwo`. In the **Persona body** textarea type `You are Nova Two.`
@@ -113,7 +113,7 @@ If the Model select shows only `Use the agent's default` with the hint "This age
 10. Click **Add teammate** and read the card again.
 11. Clear the **Name** field and retype it as `Nova Two` (exactly one interior space).
 12. Click **Add teammate**.
-13. In window B re-run the `Get-ChildItem` command from step 1.
+13. In `T-B` re-run the `Get-ChildItem` command from step 1.
 
 **Pass if — all of these**
 
@@ -145,24 +145,24 @@ If the browser or an input method silently trims the spaces you type (check by s
 **Before you start**
 
 - The ACP-disabled app from PERSONALIFECYCLE-01 is still running (the probe is deliberately NOT gated on `Team:Acp:Enabled`, so this test is free of adapters that stay alive).
-- The adapter is installed (setup step 2).
+- The adapter is installed (setup step 1).
 - At least one Persona exists (`Nova` from PERSONALIFECYCLE-01).
 
 **Steps**
 
-1. In window B run `Adapters` and write down the exact rows.
+1. In `T-B` run `Adapters` and write down the exact rows.
 2. In the browser navigate to `http://localhost:5100/teammates`.
-3. In window B run `Adapters` immediately.
+3. In `T-B` run `Adapters` immediately.
 4. In the browser press F5 to reload `/teammates`, twice.
-5. In window B run `Adapters` immediately.
+5. In `T-B` run `Adapters` immediately.
 6. In the browser change the **Team** filter select from `All teams` to another option and back (skip this step if the select is not shown because no Persona has a Team).
-7. In window B run `Adapters` immediately.
+7. In `T-B` run `Adapters` immediately.
 8. In the browser click **New teammate**.
-9. Within one second, in window B, run `Adapters` repeatedly (about once a second for 25 seconds) and record the highest number of rows you see and when they disappear.
+9. Within one second, in `T-B`, run `Adapters` repeatedly (about once a second for 25 seconds) and record the highest number of rows you see and when they disappear.
 10. In the browser read the grey hint text under the **Model** select and under the **Effort** select while the card is loading, then again once it settles.
 11. Click **Cancel** to close the card.
 12. In the browser click **New teammate** again.
-13. In window B run `Adapters` repeatedly for 15 seconds and record the highest row count.
+13. In `T-B` run `Adapters` repeatedly for 15 seconds and record the highest row count.
 
 **Pass if — all of these**
 
@@ -199,7 +199,7 @@ If another program on the machine runs `node.exe` (a dev server, an editor exten
 
 **Steps**
 
-1. In window B run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules' 'node_modules.off'`. If it fails with a file-in-use error, close any editor indexing that folder and retry.
+1. In `T-B` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules' 'node_modules.off'`. If it fails with a file-in-use error, close any editor indexing that folder and retry.
 2. In the browser reload `http://localhost:5100/teammates` with F5.
 3. Read the whole page: the heading, the tile list, the **Team** filter and the `Files that didn't load` block if present.
 4. Click **New teammate**.
@@ -208,9 +208,9 @@ If another program on the machine runs `node.exe` (a dev server, an editor exten
 7. In **Name** type `Orphan`, in **Title** type `No adapter`, in **Alias** type `orphan`, in the **Persona body** textarea type `You are Orphan.`
 8. Click **Add teammate**.
 9. Read the card that results, in particular its **Model** and **Effort** sections.
-10. In window B check the console in window A for a line containing `No ACP adapter is installed; the model catalog is empty.`
-11. In window B run `Adapters` and confirm no probe process was spawned during steps 4-8.
-12. In window B run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules.off' 'node_modules'`.
+10. In `T-B` check the console in `T-A` for a line containing `No ACP adapter is installed; the model catalog is empty.`
+11. In `T-B` run `Adapters` and confirm no probe process was spawned during steps 4-8.
+12. In `T-B` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules.off' 'node_modules'`.
 13. In the browser click the `Orphan` tile, then click **Edit**.
 14. Read the **Model** select and its hint again.
 
@@ -220,7 +220,7 @@ If another program on the machine runs `node.exe` (a dev server, an editor exten
 - The Model select contains exactly one option, `Use the agent's default`, and its hint reads exactly `This agent advertises no models, so it will use its own default.`
 - The Effort select contains exactly one option, `Use the agent's default`, and its hint reads exactly `This model offers no effort choice, so it will think as it normally does.`
 - Saving still works: the card switches to `Teammate` showing `Orphan`, its **Model** section reads `Agent default` and its **Effort** section reads `Model default`.
-- Window A's console carries `No ACP adapter is installed; the model catalog is empty.` at Information level.
+- `T-A`'s console carries `No ACP adapter is installed; the model catalog is empty.` at Information level.
 - No `node.exe` was spawned while the folder was renamed aside.
 - After restoring the folder and reopening the card in step 13 — with NO app restart — the Model select lists real models again, including one labelled with `Haiku`.
 
@@ -252,18 +252,18 @@ If the rename in step 1 fails because a file is locked, the test cannot start �
 
 **Steps**
 
-1. In window B run `Adapters` and write down the rows.
+1. In `T-B` run `Adapters` and write down the rows.
 2. In the browser go to `http://localhost:5100/teammates` and click the `Nova` tile.
 3. Confirm the card's status line reads **Offline** and that a **Restart** button is present in the action row.
 4. Click **Restart** ONCE. Do not click it again.
 5. Watch the button's own label for the next five seconds and write down every label you see.
 6. Watch the card's status line for 30 seconds and write down every status word it shows, in order.
-7. In window B run `Adapters` every two seconds for 30 seconds and write down the highest row count and whether any new row persists.
-8. Read window A's console for new lines mentioning `Nova`.
+7. In `T-B` run `Adapters` every two seconds for 30 seconds and write down the highest row count and whether any new row persists.
+8. Read `T-A`'s console for new lines mentioning `Nova`.
 9. Whatever happened, write it down verbatim — this test reports behaviour, it does not assume one.
 10. If an adapter did start, click the `Nova` tile again and check whether a **Message** link is now on the card and whether a Room named `Nova` has appeared in the sidebar.
-11. Stop the app in window A with Ctrl+C.
-12. In window B run `Adapters` one final time.
+11. Stop the app in `T-A` with Ctrl+C.
+12. In `T-B` run `Adapters` one final time.
 
 **Pass if — all of these**
 
@@ -282,7 +282,7 @@ If the rename in step 1 fails because a file is locked, the test cannot start �
 
 **Inconclusive if**
 
-If the tile was already Online (because a previous test left ACP enabled in this window), the Restart button will not be offered — check window A's startup output for `Team:Acp:Enabled` and re-run in a fresh window with `$env:Team__Acp__Enabled='false'`. If outcome (A) occurs, note in the report that the teammate is now LIVE in a configuration the operator switched off, so the next Message typed in its Room would spend real money — this is the finding, not a bug to fix on the spot.
+If the tile was already Online (because a previous test left ACP enabled in this window), the Restart button will not be offered — check `T-A`'s startup output for `Team:Acp:Enabled` and re-run in a fresh window with `$env:Team__Acp__Enabled='false'`. If outcome (A) occurs, note in the report that the teammate is now LIVE in a configuration the operator switched off, so the next Message typed in its Room would spend real money — this is the finding, not a bug to fix on the spot.
 
 > [!NOTE]
 > Either outcome is defensible; the tester's job is to state which one this build does. `Team:Acp:Enabled` is consulted only where the supervisor starts everything at app startup, so the manual restart path plausibly never sees it.
@@ -297,12 +297,12 @@ If the tile was already Online (because a previous test left ACP enabled in this
 
 - No app is running.
 - The adapter is installed and the machine is logged in to Claude.
-- You have a fresh PowerShell window A with no `Team__` environment variables set (open a new one to be sure).
+- You have a fresh PowerShell `T-A` with no `Team__` environment variables set (open a new one to be sure).
 
 **Steps**
 
-1. In window A run `dotnet run --project src\Huddle.App --urls http://localhost:5100` and wait for `Now listening on: http://localhost:5100`.
-2. In window B run `Adapters` and write down the row count.
+1. In `T-A` run `dotnet run --project src\Huddle.App --urls http://localhost:5100` and wait for `Now listening on: http://localhost:5100`.
+2. In `T-B` run `Adapters` and write down the row count.
 3. In the browser open `http://localhost:5100/teammates`.
 4. Click **New teammate**.
 5. In **Name** type `Nova`. In **Title** type `Test teammate`. In **Alias** type `nova`. Leave **Teams** empty.
@@ -310,10 +310,10 @@ If the tile was already Online (because a previous test left ACP enabled in this
 7. In the **Model** select choose the entry whose label contains `Haiku`. In the **Effort** select choose `low`.
 8. Click **Add teammate** and immediately start watching the status line on the card. Write down every status word it shows, in order, with rough timings.
 9. Without reloading the page, watch the sidebar Room list for 30 seconds.
-10. In window B run `Adapters`.
-11. In window B run `Get-Content 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md'`.
-12. In window A, read the console for a line containing `Created direct room` and for any line containing `failed to start`.
-13. OPTIONAL (needs sqlite3): in window B run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select id,name,kind from users; select id,name from rooms; select * from persona_models;"`
+10. In `T-B` run `Adapters`.
+11. In `T-B` run `Get-Content 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md'`.
+12. In `T-A`, read the console for a line containing `Created direct room` and for any line containing `failed to start`.
+13. OPTIONAL (needs sqlite3): in `T-B` run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select id,name,kind from users; select id,name from rooms; select * from persona_models;"`
 
 **Pass if — all of these**
 
@@ -323,7 +323,7 @@ If the tile was already Online (because a previous test left ACP enabled in this
 - Within a few seconds and with NO page refresh, the sidebar gains a Room named exactly `Nova`.
 - `Adapters` has gained exactly ONE persistent `node.exe` row whose CommandLine contains `claude-agent-acp`.
 - `Nova.md` begins with `---`, then `name: 'Nova'`, `title: 'Test teammate'`, `alias: 'nova'`, then `---`, then the body text verbatim.
-- Window A's console contains `Created direct room` naming `Nova`, and contains NO `Persona 'Nova' failed to start.` warning.
+- `T-A`'s console contains `Created direct room` naming `Nova`, and contains NO `Persona 'Nova' failed to start.` warning.
 - If sqlite3 was available: `users` has a row named `Nova`, `rooms` has a row named `Nova`, and `persona_models` holds a model ID string for `Nova` (an id such as `claude-haiku-…`, not a display label like `Haiku 4.5`).
 
 **Fail if — any of these**
@@ -355,17 +355,17 @@ If the Model select is empty, you cannot honour the Haiku convention — record 
 
 **Steps**
 
-1. In window B run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
+1. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
 2. Confirm there is a folder named exactly `Nova`.
-3. In window B run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work\Nova'` and note whether it is empty.
-4. In window B run `Rename-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md' 'nova-renamed.md'`.
-5. Wait 10 seconds and watch window A's console and the browser's `/teammates` page without reloading it.
+3. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work\Nova'` and note whether it is empty.
+4. In `T-B` run `Rename-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md' 'nova-renamed.md'`.
+5. Wait 10 seconds and watch `T-A`'s console and the browser's `/teammates` page without reloading it.
 6. Read the tile list.
 7. Click the `Nova` tile and read the **Persona file** section at the bottom of the card.
 8. Close the card and look at the sidebar Room list.
-9. In window B re-run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
-10. In window B run `Get-Content 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\nova-renamed.md' | Select-Object -First 3` and confirm `name: 'Nova'` is unchanged.
-11. In window B run `Rename-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\nova-renamed.md' 'Nova.md'` to restore.
+9. In `T-B` re-run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
+10. In `T-B` run `Get-Content 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\nova-renamed.md' | Select-Object -First 3` and confirm `name: 'Nova'` is unchanged.
+11. In `T-B` run `Rename-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\nova-renamed.md' 'Nova.md'` to restore.
 
 **Pass if — all of these**
 
@@ -409,8 +409,8 @@ If the rename in step 4 is blocked because an editor holds the file open, close 
 5. Click **Add teammate**.
 6. Read the round avatar badge (the monogram) on the card and on the new tile.
 7. Wait until the tile reads **Online**, then look at the sidebar Room list.
-8. In window B run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
-9. In window B run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams' | Select-Object Name`.
+8. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
+9. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams' | Select-Object Name`.
 10. OPTIONAL (sqlite3): run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select name from rooms;"`
 
 **Pass if — all of these**
@@ -431,7 +431,7 @@ If the rename in step 4 is blocked because an editor holds the file open, close 
 
 **Inconclusive if**
 
-If the teammate reaches only **Starting** and stalls, wait a full 60 seconds before judging — a second adapter starting while others are running is slower. If it is still Starting, check window A for a start failure and treat an authentication or missing-adapter reason as inconclusive for THIS test.
+If the teammate reaches only **Starting** and stalls, wait a full 60 seconds before judging — a second adapter starting while others are running is slower. If it is still Starting, check `T-A` for a start failure and treat an authentication or missing-adapter reason as inconclusive for THIS test.
 
 > [!NOTE]
 > Whether a real model can write `@Chief of Staff` out in full to reach it in a group Room is a separate, money-spending concern and is deliberately not tested here.
@@ -449,16 +449,16 @@ If the teammate reaches only **Starting** and stalls, wait a full 60 seconds bef
 
 **Steps**
 
-1. In window B run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules' 'node_modules.off'`.
+1. In `T-B` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules' 'node_modules.off'`.
 2. In the browser go to `http://localhost:5100/teammates` and click the `Nova` tile, then click **Restart**.
 3. Wait 15 seconds, then read the card's status line and the line directly under it.
 4. Close the card and hover the mouse over the `Nova` tile's status line for three seconds; read the tooltip.
 5. Read the `Chief of Staff` tile's status line.
 6. In the sidebar click the Room named `Nova` and read the area directly above the composer.
 7. In the sidebar click the Room named `Chief of Staff` and read the area directly above the composer.
-8. In window A read the console for a warning containing `Persona 'Nova' failed to start.`
-9. In window B run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
-10. In window B run `Adapters` and count the rows containing `claude-agent-acp`.
+8. In `T-A` read the console for a warning containing `Persona 'Nova' failed to start.`
+9. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
+10. In `T-B` run `Adapters` and count the rows containing `claude-agent-acp`.
 11. OPTIONAL (sqlite3): run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select name from users;"` and confirm `Nova` is still listed.
 12. Leave the adapter folder renamed aside — PERSONALIFECYCLE-10 restores it.
 
@@ -469,7 +469,7 @@ If the teammate reaches only **Starting** and stalls, wait a full 60 seconds bef
 - The `Nova` Room shows a red alert strip above the composer reading `Nova is Offline: No ACP adapter is installed for Persona 'Nova'. …`.
 - The `Chief of Staff` tile still reads **Online**, its Room shows NO alert strip, and its `node.exe` row is still in `Adapters`.
 - `App_Data\work\Nova` still exists — the Work Dir is created before the adapter is located, so its presence proves the start was entered and the adapter lookup is what failed.
-- Window A's console carries a Warning `Persona 'Nova' failed to start.` naming one Persona only.
+- `T-A`'s console carries a Warning `Persona 'Nova' failed to start.` naming one Persona only.
 - If sqlite3 was available, `Nova` is still a row in `users` — registration happened; only the adapter launch did not.
 
 **Fail if — any of these**
@@ -502,15 +502,15 @@ If the rename in step 1 fails (file in use), the test cannot start. If `Nova` wa
 
 1. In the browser open the `Nova` card and click **Restart** once, while the adapter is still missing.
 2. Read the card for 10 seconds: the button label, the status line and the reason line.
-3. In window B run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules.off' 'node_modules'`.
-4. In window B run `Adapters` and write down the rows.
+3. In `T-B` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules.off' 'node_modules'`.
+4. In `T-B` run `Adapters` and write down the rows.
 5. In the browser, on the `Nova` card, click **Restart** ONCE. Do not click again.
 6. Watch the button label for the first two seconds and write down what it reads.
 7. Watch the status line for 40 seconds and write down every word it shows, in order.
 8. Watch the reason line under the status.
 9. In the sidebar click the Room named `Nova` and look above the composer.
-10. In window B run `Adapters` and compare with step 4.
-11. In window A read the console for `failed to start` warnings written after step 5.
+10. In `T-B` run `Adapters` and compare with step 4.
+11. In `T-A` read the console for `failed to start` warnings written after step 5.
 
 **Pass if — all of these**
 
@@ -532,7 +532,7 @@ If the rename in step 1 fails (file in use), the test cannot start. If `Nova` wa
 
 **Inconclusive if**
 
-If step 3's rename fails, stop and fix it — everything after depends on the adapter being back at its real path. If the status reaches Starting and stalls past 60 seconds, check window A for an authentication failure and treat that as inconclusive, not a fail. If you accidentally double-click, restart the app and re-run; a double-click result cannot be attributed.
+If step 3's rename fails, stop and fix it — everything after depends on the adapter being back at its real path. If the status reaches Starting and stalls past 60 seconds, check `T-A` for an authentication failure and treat that as inconclusive, not a fail. If you accidentally double-click, restart the app and re-run; a double-click result cannot be attributed.
 
 > [!NOTE]
 > A Degraded or Offline teammate is never restarted automatically by design — the human clicking this button is the whole recovery policy.
@@ -554,8 +554,8 @@ If step 3's rename fails, stop and fix it — everything after depends on the ad
 3. Read every button in the card's action row, left to right, and write them down.
 4. Look immediately under the action row for any hint line.
 5. Close the card.
-6. In window B find `Nova`'s adapter with `Adapters` (match the CommandLine containing `claude-agent-acp` and the newest CreationDate, or cross-check by stopping the app and starting it with only `Nova` present if you cannot attribute the row).
-7. In window B run `Stop-Process -Id <pid>` for that adapter.
+6. In `T-B` find `Nova`'s adapter with `Adapters` (match the CommandLine containing `claude-agent-acp` and the newest CreationDate, or cross-check by stopping the app and starting it with only `Nova` present if you cannot attribute the row).
+7. In `T-B` run `Stop-Process -Id <pid>` for that adapter.
 8. In the browser, without reloading, wait up to 10 seconds and click the `Nova` tile again.
 9. Read every button in the action row again, and read the hint line under it, word for word.
 
@@ -594,24 +594,24 @@ If you cannot attribute a `node.exe` row to `Nova` specifically, do not kill any
 **Steps**
 
 1. Arrange the browser so `/teammates` is visible in one tab and the `Nova` Room in another.
-2. In window B run `Adapters` and identify `Nova`'s `node.exe` row by CreationDate (it was created when `Nova` came Online).
-3. In window B run `Stop-Process -Id <pid>` for that row.
+2. In `T-B` run `Adapters` and identify `Nova`'s `node.exe` row by CreationDate (it was created when `Nova` came Online).
+3. In `T-B` run `Stop-Process -Id <pid>` for that row.
 4. Do NOT touch the browser. Watch the `/teammates` tab for 15 seconds and write down every status word the `Nova` tile shows and roughly when it changes.
 5. Hover the `Nova` tile's status line and read the tooltip.
 6. Click the `Nova` tile and read the reason line on the card, word for word.
 7. Switch to the `Nova` Room tab and read the area above the composer.
-8. In window A read the console for a Warning naming a loop (`read loop`, `consumer loop` or `event reader`) and for `The agent process disconnected.`
+8. In `T-A` read the console for a Warning naming a loop (`read loop`, `consumer loop` or `event reader`) and for `The agent process disconnected.`
 9. Check the other teammate's tile and Room: status and alert strip.
 10. In the `Nova` Room, type `are you there` and press Enter, then watch the Room for 60 seconds.
 11. Open the `Nova` card and click **Restart**; watch the status line until it settles.
-12. In window B run `Adapters` and confirm a fresh row exists.
+12. In `T-B` run `Adapters` and confirm a fresh row exists.
 
 **Pass if — all of these**
 
 - Within a second or two of the kill and with NO interaction, the `Nova` tile changes to **Offline**.
 - The reason names which loop died — text of the shape `Its event reader ended unexpectedly.` or `Its read loop ended unexpectedly: …` or `The pipe 'team' broke: …` — on both the tooltip and the card.
 - The `Nova` Room grows a red alert strip reading `Nova is Offline: Its … ended unexpectedly…`.
-- Window A's console carries `The agent process disconnected.` and a warning naming the loop.
+- `T-A`'s console carries `The agent process disconnected.` and a warning naming the loop.
 - The other teammate stays **Online** with no alert strip in its Room.
 - Typing into the dead `Nova` Room does NOT hang the page: either the Message posts with no reply, or an error is reported — the browser stays responsive and no draft spins forever.
 - Clicking **Restart** brings `Nova` back to **Online** and a fresh `node.exe` row appears.
@@ -627,7 +627,7 @@ If you cannot attribute a `node.exe` row to `Nova` specifically, do not kill any
 
 **Inconclusive if**
 
-If you cannot attribute a `node.exe` row to `Nova`, do not kill anything — re-run with only `Nova` present. If the browser tab had been backgrounded by the OS, bring it to the front and allow 5 extra seconds before judging. If `Stop-Process` is denied by permissions, run window B as the same user that started the app.
+If you cannot attribute a `node.exe` row to `Nova`, do not kill anything — re-run with only `Nova` present. If the browser tab had been backgrounded by the OS, bring it to the front and allow 5 extra seconds before judging. If `Stop-Process` is denied by permissions, run `T-B` as the same user that started the app.
 
 > [!NOTE]
 > Do not file the fact that the Room and Transcript survive as a bug — no-cascade is deliberate.
@@ -646,22 +646,22 @@ If you cannot attribute a `node.exe` row to `Nova`, do not kill anything — re-
 **Steps**
 
 1. In the browser at `/teammates` ensure three teammates exist and all read **Online**: `Nova`, `Chief of Staff`, and a third created via **New teammate** with Name `Ada`, Title `Third teammate`, Alias `ada`, body `You are Ada. Answer in one short sentence.`, Model containing `Haiku`, Effort `low`.
-2. In window B run `Adapters` and confirm three `claude-agent-acp` rows.
-3. In window B identify `Ada`'s row (newest CreationDate) and run `Stop-Process -Id <pid>` on it.
+2. In `T-B` run `Adapters` and confirm three `claude-agent-acp` rows.
+3. In `T-B` identify `Ada`'s row (newest CreationDate) and run `Stop-Process -Id <pid>` on it.
 4. Wait 10 seconds without touching the browser.
 5. Read all three tiles' status lines.
 6. Open the `Nova` Room and the `Chief of Staff` Room and look above each composer.
-7. In window A count how many distinct Persona names appear in new warning lines.
-8. In window B run `Adapters` and count rows.
-9. Now provoke a second, different failure: in window B run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules' 'node_modules.off'`, then in the browser click **New teammate** and add Name `Ghost`, Title `Fourth`, Alias `ghost`, body `You are Ghost.` and click **Add teammate**.
+7. In `T-A` count how many distinct Persona names appear in new warning lines.
+8. In `T-B` run `Adapters` and count rows.
+9. Now provoke a second, different failure: in `T-B` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules' 'node_modules.off'`, then in the browser click **New teammate** and add Name `Ghost`, Title `Fourth`, Alias `ghost`, body `You are Ghost.` and click **Add teammate**.
 10. Read all four tiles' status lines and the two healthy Rooms again.
-11. In window B run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules.off' 'node_modules'` to restore.
+11. In `T-B` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules.off' 'node_modules'` to restore.
 
 **Pass if — all of these**
 
 - After `Ada`'s adapter is killed, only the `Ada` tile changes state; `Nova` and `Chief of Staff` still read **Online**.
 - `Nova`'s and `Chief of Staff`'s Rooms show no alert strip.
-- Window A's warnings name exactly ONE Persona (`Ada`).
+- `T-A`'s warnings name exactly ONE Persona (`Ada`).
 - `Adapters` keeps exactly two `claude-agent-acp` rows.
 - After `Ghost` fails to start with the adapter missing, `Nova` and `Chief of Staff` are STILL Online with no alert strips, and the app keeps responding.
 - Restoring the adapter folder leaves the healthy teammates untouched (no forced restart of anyone).
@@ -693,20 +693,20 @@ If you cannot attribute adapter rows to Personas, skip step 3 and use only the a
 
 **Steps**
 
-1. In window B run `New-Item -ItemType Directory 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Business'`.
-2. In window B run `Move-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md' 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Business\Nova.md'`.
+1. In `T-B` run `New-Item -ItemType Directory 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Business'`.
+2. In `T-B` run `Move-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md' 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Business\Nova.md'`.
 3. In the browser at `/teammates`, WITHOUT reloading, wait 10 seconds and confirm the `Nova` tile is still present and still named `Nova`.
 4. Click the `Nova` tile and read its **Persona file** section; close the card.
-5. In window B run `Adapters` and write down `Nova`'s row (CreationDate).
+5. In `T-B` run `Adapters` and write down `Nova`'s row (CreationDate).
 6. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Business\Nova.md` in a text editor.
 7. Append a new line at the end of the body: `Always mention that you are Nova.` and save the file ONCE.
 8. Watch the `/teammates` page (no reload) for 30 seconds and write down every status word the `Nova` tile shows.
-9. In window B run `Adapters` and compare `Nova`'s row with step 5.
+9. In `T-B` run `Adapters` and compare `Nova`'s row with step 5.
 10. In the browser click the `Nova` tile and read the **Persona** section of the card.
 11. Now test the debounce: in the editor add a space at the end of the file, save, and within one second remove it and save again.
 12. Watch the tile for 30 seconds and count how many separate Offline/Starting/Online cycles occur, and count how many new `node.exe` rows appear in `Adapters`.
-13. In window B run `Set-Content 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\notes.txt' 'not a persona'` and watch every tile for 15 seconds.
-14. In window B run `Remove-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\notes.txt'`.
+13. In `T-B` run `Set-Content 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\notes.txt' 'not a persona'` and watch every tile for 15 seconds.
+14. In `T-B` run `Remove-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\notes.txt'`.
 
 **Pass if — all of these**
 
@@ -727,7 +727,7 @@ If you cannot attribute adapter rows to Personas, skip step 3 and use only the a
 
 **Inconclusive if**
 
-Some editors write a temp file and rename, some write twice; if you cannot tell a debounce failure from your editor saving twice, repeat step 11 using `Add-Content` from window B, which writes exactly once. If the app was started with `Team:Acp:Enabled=false`, you will see the card text reload but no restart — that half of the test is still valid; record that you ran the reload half only.
+Some editors write a temp file and rename, some write twice; if you cannot tell a debounce failure from your editor saving twice, repeat step 11 using `Add-Content` from `T-B`, which writes exactly once. If the app was started with `Team:Acp:Enabled=false`, you will see the card text reload but no restart — that half of the test is still valid; record that you ran the reload half only.
 
 > [!NOTE]
 > Leave `Nova.md` in `Teams\Business\` — PERSONALIFECYCLE-15 needs it there.
@@ -746,16 +746,16 @@ Some editors write a temp file and rename, some write twice; if you cannot tell 
 **Steps**
 
 1. In the browser at `/teammates`, confirm `Nova` reads **Online** and note the sidebar has a Room named `Nova`.
-2. In window B run `Rename-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Business' 'BusinessOps'`.
+2. In `T-B` run `Rename-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Business' 'BusinessOps'`.
 3. Wait 10 seconds. WITHOUT reloading the browser, read the `Nova` tile: its Name, its Title/Alias line and its status.
 4. Click the `Nova` tile and read the **Persona file** section, then the **Model** section.
 5. Close the card and check the sidebar for the `Nova` Room.
 6. Now prove the cached text is not stale: open `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\BusinessOps\Nova.md`, append the line `Renamed folder marker.` and save.
 7. Wait 10 seconds, open the `Nova` card and check whether the **Persona** section shows `Renamed folder marker.`
-8. In window B run `Move-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\BusinessOps' 'E:\Repos\Huddle\src\Huddle.App\App_Data\BusinessOps'` (out of the Teams directory entirely).
+8. In `T-B` run `Move-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\BusinessOps' 'E:\Repos\Huddle\src\Huddle.App\App_Data\BusinessOps'` (out of the Teams directory entirely).
 9. Wait 10 seconds and read the tile list and the sidebar.
-10. In window B run `Adapters`.
-11. In window B run `Move-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\BusinessOps\Nova.md' 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md'` and `Remove-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\BusinessOps' -Recurse` to restore.
+10. In `T-B` run `Adapters`.
+11. In `T-B` run `Move-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\BusinessOps\Nova.md' 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md'` and `Remove-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\BusinessOps' -Recurse` to restore.
 
 **Pass if — all of these**
 
@@ -795,12 +795,12 @@ If the rename is blocked because a file in the folder is open in an editor, clos
 **Steps**
 
 1. In the browser go to `http://localhost:5100/teammates` and note the tile list and whether a `Files that didn't load` block is present.
-2. In window B open `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md` in a text editor.
+2. In `T-B` open `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md` in a text editor.
 3. Delete the whole `title: 'Test teammate'` line and save the file.
 4. Wait 10 seconds. WITHOUT reloading, read the top of the `/teammates` page and the tile list.
 5. Read the entry in the `Files that didn't load` block: its path and its reason.
 6. Check the sidebar for the Room named `Nova`, open it and look above the composer.
-7. In window B run `Adapters` and check whether `Nova`'s adapter row is gone.
+7. In `T-B` run `Adapters` and check whether `Nova`'s adapter row is gone.
 8. Put the `title: 'Test teammate'` line back into the file exactly as it was and save.
 9. Wait 15 seconds and confirm the tile returns and (with adapters enabled) reaches **Online** again.
 10. Now the collision: edit `Chief of Staff.md` and change its `alias:` line to `alias: 'nova'` so it matches `Nova`'s alias exactly. Save.
@@ -827,7 +827,7 @@ If the rename is blocked because a file in the folder is open in an editor, clos
 
 **Inconclusive if**
 
-If your editor rewrites line endings or reorders the file on save, the reason text may differ; check the file contents in window B with `Get-Content` before concluding. If the `Files that didn't load` block already listed entries at step 1, judge only the entries that appear during the test.
+If your editor rewrites line endings or reorders the file on save, the reason text may differ; check the file contents in `T-B` with `Get-Content` before concluding. If the `Files that didn't load` block already listed entries at step 1, judge only the entries that appear during the test.
 
 > [!NOTE]
 > Alias-versus-Name collisions are also rejected on both sides; you can extend step 10 by setting `Chief of Staff`'s alias to `Nova` (matching the other's Name) and expecting the same both-rejected result.
@@ -840,31 +840,31 @@ If your editor rewrites line endings or reorders the file on save, the reason te
 
 **Before you start**
 
-- `sqlite3` is on PATH (setup step 10). Without it this test CANNOT run.
+- `O-DB` is available. Without it this test CANNOT run.
 - A Persona `Nova` exists with a stored Model (created with Haiku in PERSONALIFECYCLE-06).
 - The adapter is installed and authenticated.
 
 **Steps**
 
-1. In window A press Ctrl+C to stop the app and wait for the prompt.
-2. In window B run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select * from persona_models;"` and write down the current row for `Nova`.
-3. In window B run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "update persona_models set model='claude-does-not-exist' where persona_name='Nova';"`.
+1. In `T-A` press Ctrl+C to stop the app and wait for the prompt.
+2. In `T-B` run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select * from persona_models;"` and write down the current row for `Nova`.
+3. In `T-B` run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "update persona_models set model='claude-does-not-exist' where persona_name='Nova';"`.
 4. Re-run the select from step 2 and confirm the value changed.
-5. In window A run `dotnet run --project src\Huddle.App --urls http://localhost:5100`.
+5. In `T-A` run `dotnet run --project src\Huddle.App --urls http://localhost:5100`.
 6. In the browser open `http://localhost:5100/teammates` and watch the `Nova` tile until it settles (up to 60 seconds). Write down every status word.
 7. Hover the tile's status line and read the tooltip.
 8. Click the tile and read the reason line on the card, word for word.
 9. Open the Room named `Nova` and read the area above the composer.
-10. In window A read the console for a Warning containing `not in the agent's advertised model catalog`.
-11. In window B run `Adapters` and confirm `Nova` has a live adapter row.
-12. In window A press Ctrl+C. In window B run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "update persona_models set model=NULL where persona_name='Nova';"` to clear the stale row, then restart the app and confirm `Nova` returns to **Online** with no reason.
+10. In `T-A` read the console for a Warning containing `not in the agent's advertised model catalog`.
+11. In `T-B` run `Adapters` and confirm `Nova` has a live adapter row.
+12. In `T-A` press Ctrl+C. In `T-B` run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "update persona_models set model=NULL where persona_name='Nova';"` to clear the stale row, then restart the app and confirm `Nova` returns to **Online** with no reason.
 
 **Pass if — all of these**
 
 - `Nova` reaches a settled state of **Degraded** — NOT Offline — with a live `node.exe` adapter row.
 - The card's reason line reads exactly: `The Model 'claude-does-not-exist' is not in the Adapter's catalog; running on its default.`
 - The tile's tooltip carries the same reason, and the `Nova` Room shows the strip `Nova is Degraded: The Model 'claude-does-not-exist' is not in the Adapter's catalog; running on its default.`
-- Window A's console carries the Warning `Requested model 'claude-does-not-exist' is not in the agent's advertised model catalog; continuing on the agent's default.`
+- `T-A`'s console carries the Warning `Requested model 'claude-does-not-exist' is not in the agent's advertised model catalog; continuing on the agent's default.`
 - After clearing the row and restarting, `Nova` is **Online** with no reason line anywhere.
 
 **Fail if — any of these**
@@ -895,7 +895,7 @@ If `sqlite3` is unavailable, record this test as NOT RUN — there is no UI path
 **Steps**
 
 1. In the browser go to `http://localhost:5100/teammates` and confirm at least one tile reads **Online**.
-2. In window B run `Adapters` and write down every row's ProcessId and CreationDate.
+2. In `T-B` run `Adapters` and write down every row's ProcessId and CreationDate.
 3. In the sidebar click **Settings**.
 4. Confirm the **Hooks** tab is selected (it is the default).
 5. Find the first hook field. Note whether it carries a `Next session` badge.
@@ -903,10 +903,10 @@ If `sqlite3` is unavailable, record this test as NOT RUN — there is no UI path
 7. Confirm a `Unsaved` badge appears next to that field's label.
 8. Click **Save** at the bottom of the form.
 9. Switch back to `/teammates` and watch every tile for 30 seconds.
-10. In window B run `Adapters` and compare every ProcessId and CreationDate with step 2.
-11. In window B run `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\hooks.json'`.
+10. In `T-B` run `Adapters` and compare every ProcessId and CreationDate with step 2.
+11. In `T-B` run `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\hooks.json'`.
 12. Return to **Settings**, click the **Reset** button on the field you edited, and click **Save** to restore the shipped wording.
-13. In window B run `Adapters` once more.
+13. In `T-B` run `Adapters` once more.
 
 **Pass if — all of these**
 
@@ -944,8 +944,8 @@ If no teammate is Online (adapters disabled, or all failed), this test cannot di
 
 **Steps**
 
-1. In window B run `Adapters` and identify the target teammate's `node.exe` row if you can.
-2. In window B run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\rooms'` and note the files.
+1. In `T-B` run `Adapters` and identify the target teammate's `node.exe` row if you can.
+2. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\rooms'` and note the files.
 3. OPTIONAL (sqlite3): run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select name from users; select id,name from rooms; select * from persona_models; select * from persona_efforts;"` and save the output.
 4. In the browser at `/teammates`, click the `Chief of Staff` tile.
 5. Click **Remove**.
@@ -954,8 +954,8 @@ If no teammate is Online (adapters disabled, or all failed), this test cannot di
 8. Click **Remove** again, then click **Confirm**.
 9. Read the page: the card, the tile list, and the sidebar.
 10. Click the Room named `Chief of Staff` in the sidebar and read the whole Room, especially above the composer.
-11. In window B run `Adapters` and count rows.
-12. In window B run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams' | Select-Object Name` and `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
+11. In `T-B` run `Adapters` and count rows.
+12. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams' | Select-Object Name` and `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
 13. OPTIONAL (sqlite3): re-run the query from step 3 and compare.
 
 **Pass if — all of these**
@@ -1007,7 +1007,7 @@ If sqlite3 is not installed, run PERSONALIFECYCLE-20 immediately after this test
 5. Click **Add teammate**.
 6. On the resulting `Teammate` card read the **Model** section and the **Effort** section.
 7. Close the card, click the tile again and read both sections once more.
-8. OPTIONAL (sqlite3): in window B run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select * from persona_models where persona_name='Chief of Staff'; select * from persona_efforts where persona_name='Chief of Staff';"`
+8. OPTIONAL (sqlite3): in `T-B` run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select * from persona_models where persona_name='Chief of Staff'; select * from persona_efforts where persona_name='Chief of Staff';"`
 
 **Pass if — all of these**
 
@@ -1042,7 +1042,7 @@ If PERSONALIFECYCLE-19 was not run immediately before this, the Name may never h
 
 **Steps**
 
-1. In window B run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams' -Recurse -Filter *.md | Select-Object FullName` and write down the exact filenames.
+1. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams' -Recurse -Filter *.md | Select-Object FullName` and write down the exact filenames.
 2. OPTIONAL (sqlite3): run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select * from persona_models; select * from persona_efforts; select name from users;"` and save the output.
 3. In the browser at `/teammates` click the `Nova` tile, read its **Model** and **Effort** sections, then click **Edit**.
 4. In the **Persona text** textarea, find the line `name: 'Nova'` and change it to `name: 'Nova Prime'`. Change nothing else.
@@ -1050,10 +1050,10 @@ If PERSONALIFECYCLE-19 was not run immediately before this, the Name may never h
 6. Read the resulting card: its title, its Name, its **Model** section and its **Effort** section.
 7. Close the card and read the tile list.
 8. Watch the sidebar Room list for 30 seconds.
-9. In window B re-run the `Get-ChildItem` from step 1.
-10. In window B run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
+9. In `T-B` re-run the `Get-ChildItem` from step 1.
+10. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
 11. OPTIONAL (sqlite3): re-run the query from step 2 and compare.
-12. In window B run `Adapters` and confirm a fresh adapter row exists.
+12. In `T-B` run `Adapters` and confirm a fresh adapter row exists.
 
 **Pass if — all of these**
 
@@ -1097,7 +1097,7 @@ If the save is refused with a message on the card, read it: a collision with an 
 2. Open tab 2 at `http://localhost:5100/teammates`.
 3. Open tab 3 at the Room for that teammate (`/rooms/<its room>` — click it in the sidebar).
 4. Arrange the windows so you can see at least tab 1 and tab 3 at once, and keep tab 2 reachable with one click.
-5. In window B run `Adapters` and identify the teammate's adapter process.
+5. In `T-B` run `Adapters` and identify the teammate's adapter process.
 6. Run `Stop-Process -Id <pid>` on it.
 7. Without touching any tab, watch tab 1 and tab 3 for 10 seconds and write down when each changes.
 8. Click to tab 2 and read the tile's status WITHOUT reloading.
@@ -1140,17 +1140,17 @@ If the browser throttles background tabs (some do aggressively), bring each tab 
 
 **Steps**
 
-1. In window B run `Adapters` and write down every row.
-2. In window B run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\rooms' | Select-Object Name, Length` and write the output down.
+1. In `T-B` run `Adapters` and write down every row.
+2. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\rooms' | Select-Object Name, Length` and write the output down.
 3. In the browser open one Room and note the last three visible Messages.
-4. In window A press Ctrl+C and wait for the prompt to return.
-5. In window B run `Adapters` immediately, then again 10 seconds later.
-6. In window A run `dotnet run --project src\Huddle.App --urls http://localhost:5100`.
+4. In `T-A` press Ctrl+C and wait for the prompt to return.
+5. In `T-B` run `Adapters` immediately, then again 10 seconds later.
+6. In `T-A` run `dotnet run --project src\Huddle.App --urls http://localhost:5100`.
 7. In the browser open `http://localhost:5100/teammates` and watch every tile until they settle (up to 90 seconds). Write down the status sequence for each.
 8. Check the sidebar Room list against what it held before the restart.
 9. Open the Room from step 3 and compare the last three Messages.
-10. In window B re-run the commands from steps 1 and 2 and compare.
-11. In window A read the console for any `failed to start` warnings.
+10. In `T-B` re-run the commands from steps 1 and 2 and compare.
+11. In `T-A` read the console for any `failed to start` warnings.
 
 **Pass if — all of these**
 
@@ -1190,14 +1190,14 @@ If Ctrl+C does not stop the app within 30 seconds, note it and use Ctrl+C again 
 
 **Steps**
 
-1. In window B confirm `App_Data\Teams\` holds exactly four `.md` files. If not, create the missing Personas through **New teammate** (Names `Nova`, `Ada`, `Bram`, `Cleo`; Title `Test teammate`; Aliases `nova`, `ada`, `bram`, `cleo`; body `You are <Name>. Answer in one short sentence.`; Model containing `Haiku`; Effort `low`), then stop the app with Ctrl+C.
-2. In window A run `dotnet run --project src\Huddle.App --urls http://localhost:5100` and note the time.
+1. In `T-B` confirm `App_Data\Teams\` holds exactly four `.md` files. If not, create the missing Personas through **New teammate** (Names `Nova`, `Ada`, `Bram`, `Cleo`; Title `Test teammate`; Aliases `nova`, `ada`, `bram`, `cleo`; body `You are <Name>. Answer in one short sentence.`; Model containing `Haiku`; Effort `low`), then stop the app with Ctrl+C.
+2. In `T-A` run `dotnet run --project src\Huddle.App --urls http://localhost:5100` and note the time.
 3. In the browser open `http://localhost:5100/teammates` and watch all four tiles until they settle, up to 120 seconds. Write down how long the last one takes.
-4. In window B run `Adapters` and count rows containing `claude-agent-acp`.
-5. In window B run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
+4. In `T-B` run `Adapters` and count rows containing `claude-agent-acp`.
+5. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' | Select-Object Name`.
 6. Click between two Rooms and back to `/teammates` and note whether the UI stays responsive (any click taking more than about two seconds to paint is worth recording).
-7. In window A press Ctrl+C and wait for the prompt.
-8. In window B run `Adapters` immediately and again 10 seconds later.
+7. In `T-A` press Ctrl+C and wait for the prompt.
+8. In `T-B` run `Adapters` immediately and again 10 seconds later.
 
 **Pass if — all of these**
 
@@ -1235,13 +1235,13 @@ If authentication fails for all four, this measures nothing — fix the login an
 **Steps**
 
 1. Reach the unauthenticated state without damaging the tester's own credentials: preferably run the app as a different OS user, or on a machine that has never logged in to Claude. Do not delete or move another user's credential files.
-2. In window A start the app with adapters enabled: `dotnet run --project src\Huddle.App --urls http://localhost:5100`.
+2. In `T-A` start the app with adapters enabled: `dotnet run --project src\Huddle.App --urls http://localhost:5100`.
 3. In the browser open `http://localhost:5100/teammates` and wait for the tiles to settle.
 4. Read the tile status and hover for the tooltip.
 5. Click the tile and read the reason line, word for word.
 6. Open that teammate's Room and read the strip above the composer.
-7. In window A read the console for a Warning containing `failed to start` and note the exception type it carries.
-8. In window A also look for a line containing `Model catalog probe skipped: the adapter needs authentication.`
+7. In `T-A` read the console for a Warning containing `failed to start` and note the exception type it carries.
+8. In `T-A` also look for a line containing `Model catalog probe skipped: the adapter needs authentication.`
 9. Click **New teammate** and read the Model select's hint.
 
 **Pass if — all of these**
@@ -1249,7 +1249,7 @@ If authentication fails for all four, this measures nothing — fix the login an
 - The tile reads **Offline** and the card's reason line reads either `The Adapter needs authentication: <method names>.` or, when the adapter names no methods, exactly `The Adapter needs authentication.`
 - That reason is NOT the missing-adapter text, and is NOT a bare exception type name.
 - The tooltip and the Room strip carry the same reason as the card.
-- Window A's console carries a Warning naming an authentication-required exception.
+- `T-A`'s console carries a Warning naming an authentication-required exception.
 - The Model picker shows `This agent advertises no models, so it will use its own default.` — the picker being ambiguous here is EXPECTED and recorded, and the console line about a skipped probe is what disambiguates it.
 
 **Fail if — any of these**
@@ -1279,7 +1279,7 @@ If you cannot safely produce an unauthenticated adapter, record this test as NOT
 
 **Steps**
 
-1. In window B run `Adapters` and write down `Nova`'s ProcessId and CreationDate.
+1. In `T-B` run `Adapters` and write down `Nova`'s ProcessId and CreationDate.
 2. In the browser open the Room named `Nova`.
 3. In the composer type `Remember the word ZEBRA. Reply with just OK.` and press Enter. Wait for the reply.
 4. Go to `/teammates` and click the `Nova` tile.
@@ -1287,7 +1287,7 @@ If you cannot safely produce an unauthenticated adapter, record this test as NOT
 6. Change NOTHING. Do not click into the textarea, do not touch the Model or Effort selects.
 7. Click **Save**.
 8. Watch the tile's status line for 30 seconds and write down every word it shows.
-9. In window B run `Adapters` and compare `Nova`'s ProcessId and CreationDate with step 1.
+9. In `T-B` run `Adapters` and compare `Nova`'s ProcessId and CreationDate with step 1.
 10. Go back to the Room named `Nova`.
 11. In the composer type `What word did I ask you to remember?` and press Enter. Wait for the reply.
 12. Read the reply.
@@ -1325,7 +1325,7 @@ If the first reply does not acknowledge the word at all (the model answered some
 
 **Steps**
 
-1. In window B run `Adapters` and write down `Nova`'s ProcessId.
+1. In `T-B` run `Adapters` and write down `Nova`'s ProcessId.
 2. In the browser open the Room named `Nova`, type `Say hello in one sentence.` and press Enter. Read the reply and note whether it starts with the word `PLUM`.
 3. Go to `/teammates`, click the `Nova` tile, and click **Edit**.
 4. Read the textarea's label and the grey hint under it, word for word.
@@ -1333,8 +1333,8 @@ If the first reply does not acknowledge the word at all (the model answered some
 6. Click at the very end of the textarea text and type a new line: `Always begin every reply with the word PLUM.`
 7. Click **Save**.
 8. Watch the tile's status line for 40 seconds and write down every word.
-9. In window B run `Adapters` and compare `Nova`'s ProcessId with step 1.
-10. In window B run `Get-Content 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md'` and check that the frontmatter block is intact AND the new line is present.
+9. In `T-B` run `Adapters` and compare `Nova`'s ProcessId with step 1.
+10. In `T-B` run `Get-Content 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Nova.md'` and check that the frontmatter block is intact AND the new line is present.
 11. Once the tile reads **Online**, return to the Room, type `Say hello in one sentence.` and press Enter.
 12. Read the reply.
 
@@ -1375,7 +1375,7 @@ If the model ignores the PLUM instruction even after a confirmed restart (models
 
 **Steps**
 
-1. In window B run `Adapters` and write down `Nova`'s ProcessId.
+1. In `T-B` run `Adapters` and write down `Nova`'s ProcessId.
 2. In the browser open the Room named `Nova`. Type `Remember the word ZEBRA. Reply with just OK.` and press Enter; wait for the reply.
 3. Type `Which model are you? Answer in one short sentence.` and press Enter; write the answer down verbatim.
 4. Go to `/teammates`, click the `Nova` tile, and click **Edit**.
@@ -1383,13 +1383,13 @@ If the model ignores the PLUM instruction even after a confirmed restart (models
 6. Observe what happens to the **Effort** select immediately after the model change.
 7. Click **Save**.
 8. Watch the tile's status for 40 seconds and write down every word.
-9. In window B run `Adapters` and compare `Nova`'s ProcessId with step 1.
+9. In `T-B` run `Adapters` and compare `Nova`'s ProcessId with step 1.
 10. Click the `Nova` tile and read its **Model** section.
 11. Click **Edit** again and confirm the Model select still shows the Sonnet entry (not `Use the agent's default`), then click **Cancel**.
 12. Return to the Room and type `What word did I ask you to remember?`; press Enter and read the reply.
 13. Type `Which model are you? Answer in one short sentence.`; press Enter and compare with step 3.
-14. In window A search the console for any line containing `not in the agent's advertised model catalog`.
-15. OPTIONAL (sqlite3): in window B run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select * from persona_models;"`.
+14. In `T-A` search the console for any line containing `not in the agent's advertised model catalog`.
+15. OPTIONAL (sqlite3): in `T-B` run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select * from persona_models;"`.
 16. **Restore.** Open the Nova card, click **Edit**, set **Model** back to the Haiku entry, click **Save**, and wait for the tile to read Online. Every later test states Haiku as a precondition.
 
 **Pass if — all of these**
@@ -1398,7 +1398,7 @@ If the model ignores the PLUM instruction even after a confirmed restart (models
 - The card's **Model** section now names the Sonnet entry, and reopening Edit still shows Sonnet selected.
 - The reply to step 12 does NOT know `ZEBRA` — the session was genuinely replaced.
 - The answer to step 13 differs from step 3 — a different model is answering.
-- Window A's console contains NO `not in the agent's advertised model catalog` warning.
+- `T-A`'s console contains NO `not in the agent's advertised model catalog` warning.
 - If sqlite3 was available: `persona_models` holds a model ID string (for example one beginning `claude-sonnet-`), not a human display label.
 
 **Fail if — any of these**
@@ -1429,21 +1429,21 @@ If the model's answer to "Which model are you?" is vague or identical both times
 
 **Steps**
 
-1. In window B run `Adapters` and write down `Nova`'s ProcessId.
+1. In `T-B` run `Adapters` and write down `Nova`'s ProcessId.
 2. In the browser open the Room named `Nova`, type `Remember the word QUINCE. Reply with just OK.` and press Enter; wait for the reply.
 3. Go to `/teammates`, click the `Nova` tile, click **Edit**.
 4. Confirm the **Effort** select currently shows `low`.
 5. In the **Effort** select choose `medium`. Leave the **Model** select alone.
 6. Click **Save**.
 7. Watch the tile's status for 40 seconds and write down every word.
-8. In window B run `Adapters` and compare `Nova`'s ProcessId with step 1.
+8. In `T-B` run `Adapters` and compare `Nova`'s ProcessId with step 1.
 9. Click the `Nova` tile and read its **Effort** section.
 10. Return to the Room, type `What word did I ask you to remember?`, press Enter and read the reply.
 11. Now test the model-change interaction: open the card, click **Edit**, and note the current Effort value.
 12. In the **Model** select change the model (Haiku to Sonnet, or Sonnet back to Haiku — never Opus).
 13. Immediately read the **Effort** select and its hint, and watch them for 20 seconds.
 14. Click **Cancel** (do not save).
-15. In window A search the console for any line containing `not in the agent's advertised effort catalog`.
+15. In `T-A` search the console for any line containing `not in the agent's advertised effort catalog`.
 16. OPTIONAL (sqlite3): run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select * from persona_efforts;"`.
 17. **Restore.** Open the Nova card, click **Edit**, set **Effort** back to `low`, click **Save**, and wait for Online.
 
@@ -1453,7 +1453,7 @@ If the model's answer to "Which model are you?" is vague or identical both times
 - The card's **Effort** section reads `medium`.
 - The reply to step 10 does NOT know `QUINCE`.
 - When the Model is changed in the Edit card, the Effort select resets to `Use the agent's default` and its hint shows `Reading the effort levels this model offers…` while the new ladder is read.
-- Window A's console contains NO `not in the agent's advertised effort catalog` warning.
+- `T-A`'s console contains NO `not in the agent's advertised effort catalog` warning.
 - If sqlite3 was available: `persona_efforts` holds an effort ID, not a display label.
 - The Effort select does NOT offer the adapter's own `default` entry alongside the blank `Use the agent's default` option — there is exactly one way to say "default".
 
@@ -1497,8 +1497,8 @@ If the Model has no effort ladder at all, the select will show only `Use the age
 8. Read the reply and note whether it says `quince`.
 9. Check WHICH Room the reply appeared in.
 10. Go back to the two-member `Nova` Room and confirm no stray reply appeared there.
-11. In window B run `Adapters` and count rows for `Nova`.
-12. In window B run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\rooms'` and confirm each Room has its own `.jsonl` file.
+11. In `T-B` run `Adapters` and count rows for `Nova`.
+12. In `T-B` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\rooms'` and confirm each Room has its own `.jsonl` file.
 
 **Pass if — all of these**
 
@@ -1536,8 +1536,8 @@ If `Nova` says it does not know the fruit, that is also acceptable — the memor
 
 **Steps**
 
-1. Open a FRESH window A (so no stale `Team__` variables remain).
-2. In window A run `$env:Team__Acp__TokenBudget='1'; $env:Team__AgentMessageBudget='4'; dotnet run --project src\Huddle.App --urls http://localhost:5100`.
+1. Open a FRESH `T-A` (so no stale `Team__` variables remain).
+2. In `T-A` run `$env:Team__Acp__TokenBudget='1'; $env:Team__AgentMessageBudget='4'; dotnet run --project src\Huddle.App --urls http://localhost:5100`.
 3. In the browser open `http://localhost:5100/teammates` and wait until both `Nova` and `Ada` read **Online**.
 4. In the sidebar click **New chat**, tick `Nova` and `Ada`, and click **Start chat**.
 5. Open the new Room.
@@ -1546,17 +1546,17 @@ If `Nova` says it does not know the fruit, that is also acceptable — the memor
 8. When a tile flips to **Degraded**, hover its status line and read the tooltip.
 9. Click that tile and read the reason line on the card, word for word.
 10. Go back to the group Room and read the area above the composer.
-11. In window A find the Warning line about a spent token budget and copy it.
+11. In `T-A` find the Warning line about a spent token budget and copy it.
 12. Now clear it: in ANY Room that the Degraded Persona is a Member of, type `hello` and press Enter.
 13. Watch that Persona's tile for 15 seconds.
 14. Read the card's reason line again.
-15. When finished, press Ctrl+C in window A and close that window so the overrides do not leak into later tests.
+15. When finished, press Ctrl+C in `T-A` and close that window so the overrides do not leak into later tests.
 
 **Pass if — all of these**
 
 - One of the two tiles reaches **Degraded** (NOT Offline) with the reason, on the card, reading exactly: `The per-Persona token Budget of 1 is spent; no more Turns until a Human speaks.`
 - The same reason appears in the tile's tooltip and in the Room as a strip reading `<Name> is Degraded: The per-Persona token Budget of 1 is spent; no more Turns until a Human speaks.`
-- Window A's console carries the Warning `Persona '<Name>' has spent its token budget of 1 and is taking no more turns until a human speaks to it.`
+- `T-A`'s console carries the Warning `Persona '<Name>' has spent its token budget of 1 and is taking no more turns until a human speaks to it.`
 - After a Human Message in any Room that Persona is a Member of, the tile returns to **Online** and the reason line disappears.
 - The exchange also stops at the per-Room Budget with the prompt `Agents have sent 4 replies since you last spoke, and are paused.` plus **Continue** and **Leave paused** buttons — and that pause leaves every member HEALTHY (no Degraded badge from the Room budget).
 
@@ -1590,25 +1590,25 @@ IMPORTANT: this Degraded state is UNREACHABLE in a plain two-member Human-to-Per
 
 **Steps**
 
-1. Open a FRESH window A.
-2. In window A run `$env:Team__Acp__TokenBudget='0'; $env:Team__AgentMessageBudget='4'; dotnet run --project src\Huddle.App --urls http://localhost:5100`.
+1. Open a FRESH `T-A`.
+2. In `T-A` run `$env:Team__Acp__TokenBudget='0'; $env:Team__AgentMessageBudget='4'; dotnet run --project src\Huddle.App --urls http://localhost:5100`.
 3. In the browser wait until `Nova` and `Ada` both read **Online** on `/teammates`.
 4. Open (or create with **New chat**) a Room containing both `Nova` and `Ada`.
 5. In the composer type `@Nova please ask @Ada a question, then keep the conversation going.` and press Enter.
 6. Watch the Room until the exchange stops. Count the agent replies.
 7. Read the area above the composer.
 8. Switch to `/teammates` and read both tiles' statuses and tooltips.
-9. In window A search the whole console for the text `has spent its token budget`.
+9. In `T-A` search the whole console for the text `has spent its token budget`.
 10. Back in the Room, click **Continue** and confirm the exchange resumes without you typing a Message.
 11. Let it pause again, then click **Leave paused** and confirm the prompt is replaced by the quieter paused note.
-12. Press Ctrl+C in window A and close that window so the overrides do not leak.
+12. Press Ctrl+C in `T-A` and close that window so the overrides do not leak.
 
 **Pass if — all of these**
 
 - The exchange runs on with NO Degraded badge on either tile at any point.
 - It stops at the per-Room Budget: the Room shows `Agents have sent 4 replies since you last spoke, and are paused.` with **Continue** and **Leave paused** buttons.
 - Both tiles stay **Online** throughout, with empty tooltips.
-- Window A's console contains NO line matching `has spent its token budget`.
+- `T-A`'s console contains NO line matching `has spent its token budget`.
 - **Continue** resumes the same exchange with no Human Message typed, and it halts again one Budget later.
 - **Leave paused** replaces the prompt with the note `Paused — N of M agent replies since you last spoke.`
 
@@ -1622,7 +1622,7 @@ IMPORTANT: this Degraded state is UNREACHABLE in a plain two-member Human-to-Per
 
 **Inconclusive if**
 
-If the two agents will not talk to each other, re-word the prompt as in PERSONALIFECYCLE-31's inconclusive note. If the Room pauses after fewer replies than the configured budget, check whether a Turn failed (read window A) before concluding. If you cannot get four replies out of the pair within a few minutes, stop the test rather than spending more — record it inconclusive.
+If the two agents will not talk to each other, re-word the prompt as in PERSONALIFECYCLE-31's inconclusive note. If the Room pauses after fewer replies than the configured budget, check whether a Turn failed (read `T-A`) before concluding. If you cannot get four replies out of the pair within a few minutes, stop the test rather than spending more — record it inconclusive.
 
 > [!NOTE]
 > A Turn a Human stopped is not a failure and a spent per-Room Budget is not either: neither may ever show as Degraded or Offline. The Budget pause belongs to the Continue prompt above the composer, and that is the only place it should appear.

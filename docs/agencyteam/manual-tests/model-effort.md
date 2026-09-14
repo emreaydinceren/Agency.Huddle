@@ -4,23 +4,25 @@ Prove, in a real browser, that the Model and Effort `<select>` pair on the Teamm
 
 **27 tests** · 26 free, 1 paid 💰 · about 3.6 hours.
 
-Read [the manual test script](../manual-tests.md) first — it carries the cost guard, the Model
-and Effort convention, and the rules for concluding a result. This page assumes all three.
+Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
+convention, and the rules for concluding a result — then [Common procedures](common.md), which
+defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
 ## Setup
 
-1. Work from the repository root E:\Repos\Huddle on Windows with PowerShell 7 (pwsh). All paths below are absolute and must be used exactly as written.
-2. Confirm the prerequisites: run `dotnet --version` (an SDK must be present), `node --version` (must print v22.5 or newer - the database helper below uses Node's built-in `node:sqlite`), and confirm the adapter file exists: `Test-Path 'E:\Repos\Huddle\tools\acp\node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js'` must print True. If it prints False, run `pwsh E:\Repos\Huddle\tools\acp\install.ps1` once and re-check.
-3. Learn the four paths this whole area lives in. App data root: `E:\Repos\Huddle\src\Huddle.App\App_Data`. Persona files: `...\App_Data\Teams`. Database: `...\App_Data\team.db` (tables `persona_models` and `persona_efforts`). Probe working directory: `...\App_Data\work`.
-4. Open three PowerShell windows and keep them open for the whole run. Call them WINDOW A (runs the app and shows its console log), WINDOW B (the adapter-process watcher), WINDOW C (database and file checks).
-5. In WINDOW C, paste these two helper functions once. Query: `function Get-TeamDb($sql) { node --no-warnings -e "const {DatabaseSync}=require('node:sqlite');const db=new DatabaseSync('E:/Repos/Huddle/src/Huddle.App/App_Data/team.db',{readOnly:true});console.log(JSON.stringify(db.prepare(process.argv[1]).all(),null,1));" $sql }`. Write: `function Set-TeamDb($sql) { node --no-warnings -e "const {DatabaseSync}=require('node:sqlite');const db=new DatabaseSync('E:/Repos/Huddle/src/Huddle.App/App_Data/team.db');db.exec(process.argv[1]);console.log('ok');" $sql }`. Verify with `Get-TeamDb "SELECT name FROM sqlite_master WHERE type='table'"` - it must list `persona_models` and `persona_efforts`.
-6. In WINDOW B, paste this adapter-spawn watcher and leave it running: `while ($true) { '{0}  {1}' -f (Get-Date -Format HH:mm:ss.fff), (Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Measure-Object).Count; Start-Sleep -Milliseconds 200 }`. It counts ONLY adapter processes, not every `node.exe` on the machine - this machine normally has a dozen unrelated node processes, so never count with a bare `Get-Process node`. Its resting value must be 0 before any test begins.
-7. FREE LANE (tests MODELEFFORT-01 through MODELEFFORT-21). In WINDOW A: `$env:Team__Acp__Enabled='false'` then `dotnet run --project E:\Repos\Huddle\src\Huddle.App --urls http://localhost:5100`. The probe deliberately still spawns an adapter in this lane - that is documented behaviour, not the money switch leaking. No teammate runner starts, so WINDOW B's resting count stays 0, which is what makes spawn counting readable.
-8. RESTART LANE (tests MODELEFFORT-22 through MODELEFFORT-27). In WINDOW A: `Remove-Item Env:Team__Acp__Enabled -ErrorAction SilentlyContinue` then the same `dotnet run` line. Teammate runners now start, so WINDOW B's resting count equals the number of Online teammates. Starting a session is not a prompt turn, so this lane still spends nothing as long as you never type a message into a Room.
-9. "Restart the app" always means: press Ctrl+C in WINDOW A, wait for the prompt to return, then re-run the `dotnet run` line for the lane the test names. Both catalog caches are per app run, so several tests below are only valid on the FIRST card open after a restart - each says so in its preconditions.
-10. Read the app's log in WINDOW A. The Development environment sets the `Agency.Huddle` category to Debug, so every log line quoted in these tests is visible there. NEVER set `Team:Acp:TraceWire` or `Team__Acp__TraceWire` - it dumps a bearer token. NEVER set `TEAM_E2E` - nothing here needs it and it turns the automated suite into a spender.
-11. Model and Effort convention for every test: configure teammates as Model = Haiku, Effort = Low. Where a test switches models it goes Haiku -> Sonnet. Where it switches effort it goes Low -> Medium. Never select Opus, and never High, Xhigh or Max.
-12. Run MODELEFFORT-02 before any test that mentions LADDER-MODEL or NO-LADDER-MODEL. Whether Haiku advertises an effort ladder is a runtime fact of the installed adapter, not a defect either way, and MODELEFFORT-02 is the walk that records it.
+Run [`P-BUILD`](common.md#p-build) then the lane named below from
+[Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
+oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four resets,
+`P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
+
+1. Confirm the prerequisites: `dotnet --version` prints an SDK, `node --version` prints **v22.5 or newer** (the database helper below uses Node's built-in `node:sqlite`), and `Test-Path 'E:\Repos\Huddle\tools\acp\node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js'` prints True. If False, run `pwsh E:\Repos\Huddle\tools\acp\install.ps1` once and re-check.
+2. This area uses three terminals: `T-A` (the app), `T-B` (the Adapter-spawn watcher) and `T-C` (database and file checks).
+3. In `T-C`, paste these two helpers once — they stand in for `O-DB` on a machine with no `sqlite3`. Query: `function Get-TeamDb($sql) { node --no-warnings -e "const {DatabaseSync}=require('node:sqlite');const db=new DatabaseSync('E:/Repos/Huddle/src/Huddle.App/App_Data/team.db',{readOnly:true});console.log(JSON.stringify(db.prepare(process.argv[1]).all(),null,1));" $sql }`. Write: `function Set-TeamDb($sql) { node --no-warnings -e "const {DatabaseSync}=require('node:sqlite');const db=new DatabaseSync('E:/Repos/Huddle/src/Huddle.App/App_Data/team.db');db.exec(process.argv[1]);console.log('ok');" $sql }`. Verify with `Get-TeamDb "SELECT name FROM sqlite_master WHERE type='table'"` — it must list `persona_models` and `persona_efforts`.
+4. In `T-B`, leave this spawn watcher running. It is `O-ADAPTERS` sampled continuously: `while ($true) { '{0}  {1}' -f (Get-Date -Format HH:mm:ss.fff), (Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Measure-Object).Count; Start-Sleep -Milliseconds 200 }`. Its resting value must be 0 before any test begins.
+5. **FREE LANE** (MODELEFFORT-01 to -21) is `P-LAUNCH-FREE`. The catalog probe deliberately still spawns an Adapter in this lane — that is documented behaviour, not the money switch leaking. No teammate runner starts, so `T-B`'s resting count stays 0, which is what makes spawn counting readable.
+6. **RESTART LANE** (MODELEFFORT-22 to -27): `Remove-Item Env:Team__Acp__Enabled -ErrorAction SilentlyContinue` then the same `dotnet run` line. Teammate runners now start, so `T-B`'s resting count equals the number of Online teammates. Starting a session is not a prompt turn, so this lane still spends nothing as long as you never type a Message into a Room.
+7. "Restart the app" always means `P-STOP` then the `dotnet run` line for the lane the test names. Both catalog caches are per app run, so several tests below are only valid on the FIRST card open after a restart — each says so in its preconditions.
+8. Run MODELEFFORT-02 before any test mentioning LADDER-MODEL or NO-LADDER-MODEL. Whether Haiku advertises an effort ladder is a runtime fact of the installed Adapter, not a defect either way, and MODELEFFORT-02 is the walk that records it.
 
 ## Tests
 
@@ -33,47 +35,47 @@ and Effort convention, and the rules for concluding a result. This page assumes 
 **Before you start**
 
 - Free lane. The app has just been restarted, so no card has been opened in this app run.
-- WINDOW B is running and resting at 0.
-- The adapter is installed (see setup).
+- `T-B` is running and resting at 0.
+- The Adapter is installed (setup step 1).
 
 **Steps**
 
-1. In WINDOW C run `Remove-Item -Recurse -Force 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' -ErrorAction SilentlyContinue` and then `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'` - it must print False.
-2. In WINDOW A, note the last line currently in the app log so you can tell new lines from old.
+1. In `T-C` run `Remove-Item -Recurse -Force 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' -ErrorAction SilentlyContinue` and then `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'` - it must print False.
+2. In `T-A`, note the last line currently in the app log so you can tell new lines from old.
 3. Open a browser at `http://localhost:5100/teammates`. Confirm the page heading reads **Teammates** and the sidebar link reads **Teammates**.
 4. Click the **New teammate** button in the page header (top right of the heading row).
-5. Immediately look at WINDOW B and keep watching for 30 seconds. Write down the highest number it ever shows and how many separate times it rises from 0 and falls back to 0.
+5. Immediately look at `T-B` and keep watching for 30 seconds. Write down the highest number it ever shows and how many separate times it rises from 0 and falls back to 0.
 6. In the card titled **New teammate**, read the hint directly under the **Model** select. Immediately after the click it should read `Reading the models this agent offers…`; wait until it stops.
 7. Open the **Model** select and write down, in order, every option's visible text. Also note the first option's text exactly.
 8. Read the hint under the **Model** select again now that the list has arrived.
 9. Open the **Effort** select and confirm it is populated too (it contains at least the blank first option, and the hint under it is no longer `Reading the effort levels this model offers…`).
-10. In WINDOW C run `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'`.
-11. In WINDOW A, read every new log line since step 2.
-12. Click **Cancel** at the bottom of the card. Then click **New teammate** again and watch WINDOW B for 15 seconds.
+10. In `T-C` run `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'`.
+11. In `T-A`, read every new log line since step 2.
+12. Click **Cancel** at the bottom of the card. Then click **New teammate** again and watch `T-B` for 15 seconds.
 13. Confirm both selects are populated on this second open, and note how quickly.
 
 **Pass if — all of these**
 
 - The first option of the **Model** select reads exactly `Use the agent's default`.
 - Below it the select lists at least one real model entry, and the entries read as human labels (for example `Sonnet 4.5`, `Haiku 4.5`) rather than raw ids of the shape `claude-sonnet-4-5`.
-- During the first card open WINDOW B rises to exactly 1 and returns to 0 - one spawn, not two, and not two spawns in sequence.
+- During the first card open `T-B` rises to exactly 1 and returns to 0 - one spawn, not two, and not two spawns in sequence.
 - After the list arrives the Model hint reads exactly `Which model this teammate thinks with. Changing it restarts the teammate, which clears what it remembers.`
 - `App_Data\work` exists again after the card open (step 10 prints True).
 - The app log contains NO line reading `No ACP adapter is installed; the model catalog is empty.` and no line beginning `Model catalog probe `.
-- On the second card open WINDOW B stays at 0 for the whole 15 seconds, and both selects are populated immediately.
+- On the second card open `T-B` stays at 0 for the whole 15 seconds, and both selects are populated immediately.
 
 **Fail if — any of these**
 
-- Both selects populate but WINDOW B shows a peak of 2 -> the model probe and the effort probe are no longer sharing the single semaphore, and every card open costs two adapter processes.
-- WINDOW B rises to 1, falls to 0, then rises to 1 again during ONE card open -> the model probe stopped seeding the default-model effort list from its own session; functionally invisible, exactly twice the cost.
-- WINDOW B rises above 0 on the SECOND card open -> the successful catalog is no longer cached for the app run, so browsing the card now costs a process every time.
+- Both selects populate but `T-B` shows a peak of 2 -> the model probe and the effort probe are no longer sharing the single semaphore, and every card open costs two adapter processes.
+- `T-B` rises to 1, falls to 0, then rises to 1 again during ONE card open -> the model probe stopped seeding the default-model effort list from its own session; functionally invisible, exactly twice the cost.
+- `T-B` rises above 0 on the SECOND card open -> the successful catalog is no longer cached for the app run, so browsing the card now costs a process every time.
 - The Model select contains only `Use the agent's default` while the log shows no `Model catalog probe ...` warning and no `No ACP adapter is installed` line -> the probe succeeded and returned nothing: suspect a grouped `options` catalog being read only on the flat branch, which silently reads as 'this agent advertises none'.
 - Every model entry reads as a raw id (`claude-haiku-4-5`) instead of a label (`Haiku 4.5`) -> the label is being read from the wrong field (`displayName` instead of `name`), which silently degrades every label.
 - `App_Data\work` does not exist after the card open -> no probe ran at all, so whatever is in the select is not coming from the adapter.
 
 **Inconclusive if**
 
-If the Model select is empty AND the log carries one of `No ACP adapter is installed; the model catalog is empty.`, `Model catalog probe failed to start or talk to the adapter.`, `Model catalog probe skipped: the adapter needs authentication.` or `Model catalog probe timed out after 00:00:20.`, this test is INCONCLUSIVE, not a fail: the environment, not the code, is the cause. Fix the named cause (re-run install.ps1, authenticate the Claude CLI, check `node` on PATH) and re-run from a restarted app. If WINDOW B never leaves 0 but `App_Data\work` was recreated and the list is populated, the 200 ms poll simply missed a short spawn - record INCONCLUSIVE on the count half and re-run that half only.
+If the Model select is empty AND the log carries one of `No ACP adapter is installed; the model catalog is empty.`, `Model catalog probe failed to start or talk to the adapter.`, `Model catalog probe skipped: the adapter needs authentication.` or `Model catalog probe timed out after 00:00:20.`, this test is INCONCLUSIVE, not a fail: the environment, not the code, is the cause. Fix the named cause (re-run install.ps1, authenticate the Claude CLI, check `node` on PATH) and re-run from a restarted app. If `T-B` never leaves 0 but `App_Data\work` was recreated and the list is populated, the 200 ms poll simply missed a short spawn - record INCONCLUSIVE on the count half and re-run that half only.
 
 > [!NOTE]
 > This is the one test that must be the first card open of its app run: a successful catalog is cached for the whole run, so a second attempt without a restart will show zero spawns and prove nothing about the first half.
@@ -87,7 +89,7 @@ If the Model select is empty AND the log carries one of `No ACP adapter is insta
 **Before you start**
 
 - Free lane, app running. MODELEFFORT-01 has been run in this app run (or the card has been opened at least once, so the model list is cached).
-- WINDOW B running.
+- `T-B` running.
 
 **Steps**
 
@@ -95,9 +97,9 @@ If the Model select is empty AND the log carries one of `No ACP adapter is insta
 2. Prepare a table with four columns: model label, model id, effort options offered, effort hint text.
 3. In the **Model** select, choose the first real model (the first entry below `Use the agent's default`). Wait until the Effort hint stops reading `Reading the effort levels this model offers…`.
 4. Write down, for that model: every option in the **Effort** select in order, and the exact hint text under the Effort select.
-5. Note whether WINDOW B rose to 1 and back to 0 during that model change.
+5. Note whether `T-B` rose to 1 and back to 0 during that model change.
 6. Repeat steps 3-5 for every remaining entry in the **Model** select, one at a time, waiting for each to settle before moving on.
-7. Now re-select a model you have already walked. Watch WINDOW B for 10 seconds.
+7. Now re-select a model you have already walked. Watch `T-B` for 10 seconds.
 8. Mark in your table which model you will call HAIKU (the option whose label contains `Haiku`) and which SONNET (the option whose label contains `Sonnet`).
 9. Mark one model as LADDER-MODEL: a model whose Effort select offers real levels including both `Low` and `Medium`. Mark one as NO-LADDER-MODEL: a model whose Effort hint reads `This model offers no effort choice, so it will think as it normally does.` If no model offers a ladder, or none lacks one, say so explicitly in your notes.
 10. Click **Cancel**.
@@ -105,8 +107,8 @@ If the Model select is empty AND the log carries one of `No ACP adapter is insta
 **Pass if — all of these**
 
 - Every model in the list yields either a set of real effort levels or the hint `This model offers no effort choice, so it will think as it normally does.` - no model leaves the hint stuck on `Reading the effort levels this model offers…`.
-- WINDOW B rises to exactly 1 and returns to 0 once per model id you had not selected before in this app run.
-- WINDOW B stays at 0 when you re-select a model already walked (step 7).
+- `T-B` rises to exactly 1 and returns to 0 once per model id you had not selected before in this app run.
+- `T-B` stays at 0 when you re-select a model already walked (step 7).
 - Where an Effort select is populated, its first option reads `Use the agent's default` and the remaining options are real levels (`Low`, `Medium`, and possibly `High`, `Xhigh`, `Max`).
 - No Effort select anywhere contains an option labelled `Default`.
 - The table is complete: HAIKU, SONNET, LADDER-MODEL and NO-LADDER-MODEL are each named, or explicitly recorded as absent.
@@ -115,7 +117,7 @@ If the Model select is empty AND the log carries one of `No ACP adapter is insta
 
 - An Effort select contains an option labelled `Default` -> the adapter's own `default` sentinel is no longer filtered out; two options now carry one meaning, and the literal string `default` can reach `persona_efforts`, where it is sent on the wire as a real named selection that CLEARS the adapter's flag layer - a different behaviour wearing the same label.
 - Re-selecting an already-walked model spawns an adapter again (step 7 shows a rise) -> the per-model effort cache is not being written, so every model switch costs a process forever.
-- Two different models produce byte-identical effort option lists AND WINDOW B never rose between them -> the effort catalog is not actually per-model; the first model's ladder is being reused.
+- Two different models produce byte-identical effort option lists AND `T-B` never rose between them -> the effort catalog is not actually per-model; the first model's ladder is being reused.
 - An Effort hint stays on `Reading the effort levels this model offers…` for more than 25 seconds -> a probe is hanging past its own 20-second timeout.
 
 **Inconclusive if**
@@ -138,7 +140,7 @@ If every model in the list advertises an effort ladder, NO-LADDER-MODEL does not
 
 **Steps**
 
-1. In WINDOW C run `Get-TeamDb "SELECT * FROM persona_models"` and `Get-TeamDb "SELECT * FROM persona_efforts"` and note what is already there.
+1. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models"` and `Get-TeamDb "SELECT * FROM persona_efforts"` and note what is already there.
 2. On `/teammates`, click **New teammate**.
 3. In **Name** type `Probe One`.
 4. In **Title** type `Tester`.
@@ -149,8 +151,8 @@ If every model in the list advertises an effort ladder, NO-LADDER-MODEL does not
 9. In the **Effort** select choose `Low`. If HAIKU offers no ladder, first switch the Model to LADDER-MODEL, wait, then choose `Low`.
 10. Click **Add teammate**.
 11. Read the card that is now showing: its heading, its **Model** section and its **Effort** section.
-12. In WINDOW C run `Get-TeamDb "SELECT persona_name, model FROM persona_models"` and `Get-TeamDb "SELECT persona_name, effort FROM persona_efforts"`.
-13. In WINDOW C run `Get-Content -Raw 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Probe One.md'` and then `[bool]((Get-Content -Raw 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Probe One.md') -match "\r\n")`.
+12. In `T-C` run `Get-TeamDb "SELECT persona_name, model FROM persona_models"` and `Get-TeamDb "SELECT persona_name, effort FROM persona_efforts"`.
+13. In `T-C` run `Get-Content -Raw 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Probe One.md'` and then `[bool]((Get-Content -Raw 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Probe One.md') -match "\r\n")`.
 
 **Pass if — all of these**
 
@@ -196,12 +198,12 @@ If **Add teammate** shows a red error line above the fields (for example a name 
 5. Type **Name** `Probe Default`, **Title** `Tester`, **Alias** `pd`, leave **Teams** empty, and in **Persona body** type `You are a tester.`
 6. Leave the **Effort** select on `Use the agent's default`.
 7. Click **Add teammate**.
-8. In WINDOW C run `Get-TeamDb "SELECT persona_name, model FROM persona_models WHERE persona_name='Probe Default'"`.
-9. In WINDOW C run `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Default'"`.
+8. In `T-C` run `Get-TeamDb "SELECT persona_name, model FROM persona_models WHERE persona_name='Probe Default'"`.
+9. In `T-C` run `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Default'"`.
 10. Close the card (the × button, whose tooltip reads `Close`). Click **New teammate** again.
 11. Type **Name** `Probe Blank`, **Title** `Tester`, **Alias** `pb`, **Persona body** `You are a tester.` and leave BOTH selects on `Use the agent's default`.
 12. Click **Add teammate**.
-13. In WINDOW C run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe Blank'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Blank'"`.
+13. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe Blank'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Blank'"`.
 14. Read the **Model** and **Effort** sections of the card now showing for `Probe Blank`.
 15. Clean up: open each of `Probe Default` and `Probe Blank` from its tile, click **Remove**, then click **Confirm**.
 
@@ -274,32 +276,32 @@ If the card will not open at all, this test cannot run - report the card-open fa
 
 - Free lane.
 - At least one teammate exists (`Probe One`).
-- WINDOW B running and resting at 0.
+- `T-B` running and resting at 0.
 
 **Steps**
 
-1. Restart the app (Ctrl+C in WINDOW A, then the free-lane `dotnet run` line).
-2. In WINDOW C run `Remove-Item -Recurse -Force 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' -ErrorAction SilentlyContinue`, then `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'` - it must print False.
+1. Restart the app (Ctrl+C in `T-A`, then the free-lane `dotnet run` line).
+2. In `T-C` run `Remove-Item -Recurse -Force 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' -ErrorAction SilentlyContinue`, then `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'` - it must print False.
 3. In the browser, navigate to `http://localhost:5100/teammates` and let the page finish rendering (heading, the teammate tiles, and the **Team** filter select if more than one team exists).
-4. Do not click anything. Watch WINDOW B for 20 seconds.
-5. In WINDOW C run `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'`.
+4. Do not click anything. Watch `T-B` for 20 seconds.
+5. In `T-C` run `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'`.
 6. Now click the tile for `Probe One` (the whole tile is the button). The card opens in View mode.
-7. Watch WINDOW B for another 20 seconds.
-8. In WINDOW C run `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'` again.
-9. If more than one team exists, change the **Team** filter select to a specific team and watch WINDOW B for 10 seconds.
-10. Click **Edit** on the open card and watch WINDOW B.
+7. Watch `T-B` for another 20 seconds.
+8. In `T-C` run `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'` again.
+9. If more than one team exists, change the **Team** filter select to a specific team and watch `T-B` for 10 seconds.
+10. Click **Edit** on the open card and watch `T-B`.
 
 **Pass if — all of these**
 
-- WINDOW B stays at 0 for the whole page load (step 4) and `App_Data\work` still does not exist (step 5 prints False).
-- WINDOW B stays at 0 for the whole tile-click card open (step 7) and `App_Data\work` still does not exist (step 8 prints False).
+- `T-B` stays at 0 for the whole page load (step 4) and `App_Data\work` still does not exist (step 5 prints False).
+- `T-B` stays at 0 for the whole tile-click card open (step 7) and `App_Data\work` still does not exist (step 8 prints False).
 - Changing the **Team** filter spawns nothing (step 9 stays at 0).
-- Clicking **Edit** DOES spawn: WINDOW B rises to 1 and `App_Data\work` is created.
+- Clicking **Edit** DOES spawn: `T-B` rises to 1 and `App_Data\work` is created.
 
 **Fail if — any of these**
 
-- WINDOW B rises, or `App_Data\work` appears, on the plain page load -> browsing to /teammates now launches a real process every time; silent, the page looks identical, it is just slower and dirtier.
-- WINDOW B rises, or `App_Data\work` appears, on the tile click -> the tile-open path stopped being synchronous and now probes; same silent cost on every teammate you merely look at.
+- `T-B` rises, or `App_Data\work` appears, on the plain page load -> browsing to /teammates now launches a real process every time; silent, the page looks identical, it is just slower and dirtier.
+- `T-B` rises, or `App_Data\work` appears, on the tile click -> the tile-open path stopped being synchronous and now probes; same silent cost on every teammate you merely look at.
 - Changing the **Team** filter spawns a process -> display narrowing is reaching the probe.
 - Clicking **Edit** spawns nothing AND the Model select is empty -> the probe is no longer reachable at all from the Edit path.
 
@@ -320,7 +322,7 @@ If the app was not restarted first, the catalogs may already be cached and the E
 
 - Free lane, app running.
 - MODELEFFORT-02 has been run and recorded HAIKU and SONNET, and recorded each one's effort ladder.
-- WINDOW B running.
+- `T-B` running.
 
 **Steps**
 
@@ -331,9 +333,9 @@ If the app was not restarted first, the catalogs may already be cached and the E
 5. Now change the **Model** select to SONNET.
 6. IMMEDIATELY - within the first second - read three things and write them down: what the **Effort** select shows as selected, what the Effort hint reads, and whether the Effort select is still showing HAIKU's option list.
 7. Wait until the Effort hint settles. Write down every option in the **Effort** select now, in order, and the hint text.
-8. Check WINDOW B: note how many times it rose to 1 and fell back to 0 across steps 2 and 5.
+8. Check `T-B`: note how many times it rose to 1 and fell back to 0 across steps 2 and 5.
 9. Change the **Model** select back to HAIKU, wait for it to settle, and compare the Effort list with what you wrote in step 3.
-10. Check WINDOW B again for the switch in step 9.
+10. Check `T-B` again for the switch in step 9.
 11. Click **Cancel**.
 
 **Pass if — all of these**
@@ -341,13 +343,13 @@ If the app was not restarted first, the catalogs may already be cached and the E
 - Immediately after the model change, the **Effort** select shows `Use the agent's default` as selected - the `Low` chosen for HAIKU is cleared, not carried over.
 - During the re-probe the Effort hint reads exactly `Reading the effort levels this model offers…`.
 - When the new list arrives it is SONNET's ladder and it DIFFERS from HAIKU's - a different set of entries, or one model showing `This model offers no effort choice, so it will think as it normally does.` where the other showed levels.
-- WINDOW B shows exactly one spawn per model id not yet probed in this app run, and zero spawns when switching back to a model already probed (step 9).
+- `T-B` shows exactly one spawn per model id not yet probed in this app run, and zero spawns when switching back to a model already probed (step 9).
 - Switching back to HAIKU restores exactly the list recorded in step 3.
 
 **Fail if — any of these**
 
 - The **Effort** select still shows `Low` after the model change -> a level chosen for HAIKU will be sent for SONNET; the adapter will silently clamp it back to default with no error, and the user's visible choice becomes a lie.
-- The Effort list is byte-identical for HAIKU and SONNET and WINDOW B showed no second spawn -> the per-model probe is not re-running; the first model's ladder is being shown for every model.
+- The Effort list is byte-identical for HAIKU and SONNET and `T-B` showed no second spawn -> the per-model probe is not re-running; the first model's ladder is being shown for every model.
 - The Effort hint never shows `Reading the effort levels this model offers…` during the switch -> the loading state is not being rendered, which means the select is showing a stale list as if it were current.
 - Switching back to an already-probed model spawns another adapter -> the per-model cache is broken (cost only, but it also means this test's 'zero spawns' oracle is gone).
 
@@ -457,15 +459,15 @@ If the probe completes before you can click Cancel (the hint never lingers), the
 
 **Steps**
 
-1. In WINDOW A, note the last log line so you can separate new lines from old.
+1. In `T-A`, note the last log line so you can separate new lines from old.
 2. On `/teammates`, click **New teammate**.
 3. In the **Model** select choose NO-LADDER-MODEL. Wait until the Effort hint stops reading `Reading the effort levels this model offers…`.
 4. Open the **Effort** select and write down every option it contains.
 5. Write down the exact Effort hint text.
-6. In WINDOW A, read every new log line since step 1.
+6. In `T-A`, read every new log line since step 1.
 7. Type **Name** `Probe NoEffort`, **Title** `Tester`, **Alias** `pne`, **Persona body** `You are a tester.`
 8. Click **Add teammate**.
-9. In WINDOW C run `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe NoEffort'"`.
+9. In `T-C` run `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe NoEffort'"`.
 10. Read the **Effort** section of the card now showing.
 11. Clean up: click **Remove** on that card, then **Confirm**.
 
@@ -504,7 +506,7 @@ If MODELEFFORT-02 found no NO-LADDER-MODEL in this adapter's catalog, this test 
 
 **Steps**
 
-1. In WINDOW C record the current values: `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe One'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe One'"`.
+1. In `T-C` record the current values: `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe One'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe One'"`.
 2. Restart the app.
 3. Open `http://localhost:5100/teammates` and click the `Probe One` tile.
 4. Click **Edit**, and watch the **Model** select from the instant the card paints.
@@ -513,7 +515,7 @@ If MODELEFFORT-02 found no NO-LADDER-MODEL in this adapter's catalog, this test 
 7. Wait until both hints have settled and the real option lists have arrived.
 8. Write down what each select shows as selected NOW.
 9. Without touching any field, click **Save**.
-10. In WINDOW C re-run both queries from step 1 and compare.
+10. In `T-C` re-run both queries from step 1 and compare.
 
 **Pass if — all of these**
 
@@ -549,16 +551,16 @@ If the catalogs answer so fast that the loading hints never appear, the 'late ca
 
 **Steps**
 
-1. Stop the app (Ctrl+C in WINDOW A) and wait for the prompt to return.
-2. In WINDOW C run `Set-TeamDb "UPDATE persona_models SET model='claude-nonexistent-9' WHERE persona_name='Probe One';"`.
-3. In WINDOW C run `Set-TeamDb "INSERT INTO persona_efforts(persona_name, effort) VALUES('Probe One','vintage') ON CONFLICT(persona_name) DO UPDATE SET effort='vintage';"`.
-4. In WINDOW C verify with `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe One'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe One'"`.
+1. Stop the app (Ctrl+C in `T-A`) and wait for the prompt to return.
+2. In `T-C` run `Set-TeamDb "UPDATE persona_models SET model='claude-nonexistent-9' WHERE persona_name='Probe One';"`.
+3. In `T-C` run `Set-TeamDb "INSERT INTO persona_efforts(persona_name, effort) VALUES('Probe One','vintage') ON CONFLICT(persona_name) DO UPDATE SET effort='vintage';"`.
+4. In `T-C` verify with `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe One'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe One'"`.
 5. Start the app in the free lane and open `http://localhost:5100/teammates`.
 6. Click the `Probe One` tile, then click **Edit**. Wait for both selects to settle.
 7. Open the **Model** select and write down every option, noting which is selected.
 8. Open the **Effort** select and write down every option, noting which is selected.
 9. Click **Save** without changing anything.
-10. In WINDOW C re-run both queries from step 4.
+10. In `T-C` re-run both queries from step 4.
 
 **Pass if — all of these**
 
@@ -596,16 +598,16 @@ If `Set-TeamDb` errors with 'database is locked', the app was not fully stopped 
 1. On `/teammates`, click **New teammate**. Type **Name** `Probe Two`, **Title** `Tester`, **Alias** `p2`, **Persona body** `You are a tester.`
 2. Set **Model** to LADDER-MODEL and, once the Effort select settles, set **Effort** to `Low`.
 3. Click **Add teammate**.
-4. In WINDOW C run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe Two'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Two'"`. Both must return one row. Write the values down.
+4. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe Two'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Two'"`. Both must return one row. Write the values down.
 5. On the card now showing, click **Remove**. Two buttons replace it: **Confirm** and **Cancel**.
 6. Click **Confirm**. The card closes and the `Probe Two` tile disappears from the list.
-7. In WINDOW C run both queries from step 4 again.
+7. In `T-C` run both queries from step 4 again.
 8. Click **New teammate**. Type **Name** `Probe Two`, **Title** `Tester`, **Alias** `p2`, **Persona body** `You are a tester.` and leave BOTH selects on `Use the agent's default`.
 9. Click **Add teammate**.
 10. Read the **Model** and **Effort** sections of the card now showing.
-11. In WINDOW C run both queries from step 4 once more.
+11. In `T-C` run both queries from step 4 once more.
 12. Now test the case-insensitive key: click **Remove** then **Confirm** on `Probe Two`. Click **New teammate** and create `probe two` (all lowercase) with **Title** `Tester`, **Alias** `p2`, **Persona body** `You are a tester.`, both selects left on `Use the agent's default`.
-13. In WINDOW C run `Get-TeamDb "SELECT * FROM persona_models"` and `Get-TeamDb "SELECT * FROM persona_efforts"` and look for any row keyed `Probe Two` or `probe two`.
+13. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models"` and `Get-TeamDb "SELECT * FROM persona_efforts"` and look for any row keyed `Probe Two` or `probe two`.
 14. Clean up: remove `probe two` (**Remove**, then **Confirm**).
 
 **Pass if — all of these**
@@ -643,14 +645,14 @@ If **Confirm** produces a red error line on the card, the removal never happened
 
 1. On `/teammates`, click **New teammate**. Type **Name** `Probe Three`, **Title** `Tester`, **Alias** `p3`, **Persona body** `You are a tester.`
 2. Set **Model** to LADDER-MODEL, wait for the Effort select to settle, set **Effort** to `Low`, then click **Add teammate**.
-3. In WINDOW C run `Get-TeamDb "SELECT * FROM persona_models"` and `Get-TeamDb "SELECT * FROM persona_efforts"`. Record the exact values of the `Probe Three` rows.
+3. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models"` and `Get-TeamDb "SELECT * FROM persona_efforts"`. Record the exact values of the `Probe Three` rows.
 4. On the card now showing, click **Edit**. The **Persona text** textarea now contains the WHOLE file including front matter - the hint under it reads `Markdown. This is the whole Persona file, front matter included, and becomes the teammate's system prompt. Saving restarts it, which clears what it remembers.`
 5. In the textarea, change the line `name: 'Probe Three'` to `name: 'Probe Four'`. Change nothing else - leave the Model and Effort selects alone.
 6. Click **Save**.
 7. Look at the teammate list behind the card: it must now show a tile named `Probe Four`.
 8. Read the **Model** and **Effort** sections of the card now showing.
-9. In WINDOW C run both queries from step 3 again and look for rows keyed `Probe Three` and `Probe Four`.
-10. In WINDOW C run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams'` and note the filename.
+9. In `T-C` run both queries from step 3 again and look for rows keyed `Probe Three` and `Probe Four`.
+10. In `T-C` run `Get-ChildItem 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams'` and note the filename.
 11. Clean up: open `Probe Four`, click **Remove**, then **Confirm**.
 
 **Pass if — all of these**
@@ -692,7 +694,7 @@ If **Save** shows a red error line (a malformed edit, or a Name/Alias collision 
 4. Close the card with the × button (tooltip `Close`).
 5. Click the `Probe One` tile again.
 6. Read the **Model** and **Effort** sections again and write both down.
-7. In WINDOW C run `Get-TeamDb "SELECT persona_name, model FROM persona_models"` and `Get-TeamDb "SELECT persona_name, effort FROM persona_efforts"`.
+7. In `T-C` run `Get-TeamDb "SELECT persona_name, model FROM persona_models"` and `Get-TeamDb "SELECT persona_name, effort FROM persona_efforts"`.
 8. Compare each of the four values you wrote down against the stored values.
 
 **Pass if — all of these**
@@ -722,19 +724,19 @@ If both views show the same thing (labels in both, or ids in both), that is not 
 **Before you start**
 
 - Free lane.
-- WINDOW B running.
+- `T-B` running.
 
 **Steps**
 
 1. Restart the app.
-2. In WINDOW C run `Remove-Item -Recurse -Force 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' -ErrorAction SilentlyContinue`.
-3. In WINDOW C run `git -C E:\Repos\Huddle status --porcelain` and save the output.
-4. In WINDOW C run `Get-ChildItem -Force 'E:\Repos\Huddle' | Select-Object -ExpandProperty Name` and save the list.
+2. In `T-C` run `Remove-Item -Recurse -Force 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' -ErrorAction SilentlyContinue`.
+3. In `T-C` run `git -C E:\Repos\Huddle status --porcelain` and save the output.
+4. In `T-C` run `Get-ChildItem -Force 'E:\Repos\Huddle' | Select-Object -ExpandProperty Name` and save the list.
 5. Open `http://localhost:5100/teammates` and click **New teammate**. Wait for both selects to settle.
-6. In WINDOW C run `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'`.
-7. In WINDOW C re-run `git -C E:\Repos\Huddle status --porcelain` and compare with step 3.
-8. In WINDOW C re-run the root listing from step 4 and compare.
-9. In WINDOW A, read any lines beginning `[agent stderr]` emitted during the probe.
+6. In `T-C` run `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'`.
+7. In `T-C` re-run `git -C E:\Repos\Huddle status --porcelain` and compare with step 3.
+8. In `T-C` re-run the root listing from step 4 and compare.
+9. In `T-A`, read any lines beginning `[agent stderr]` emitted during the probe.
 
 **Pass if — all of these**
 
@@ -765,23 +767,23 @@ If `git status` was already dirty before the test, the comparison is unreliable 
 
 - Free lane.
 - The app has just been restarted, so both catalogs are cold and no card has been opened in this run.
-- WINDOW B running and resting at 0.
+- `T-B` running and resting at 0.
 
 **Steps**
 
 1. Restart the app.
 2. Open `http://localhost:5100/teammates` in TWO separate browser windows, side by side. Do not click anything in either yet.
-3. Position WINDOW B where you can see it while clicking.
+3. Position `T-B` where you can see it while clicking.
 4. Click **New teammate** in the first browser window, then within about half a second click **New teammate** in the second.
-5. Watch WINDOW B continuously for 45 seconds and write down the highest number it ever reaches.
+5. Watch `T-B` continuously for 45 seconds and write down the highest number it ever reaches.
 6. In both browser windows, check that the **Model** select is populated and that the Model hint has settled.
 7. In both browser windows, check that the **Effort** select is populated and its hint has settled.
-8. In WINDOW A, read the log for any unhandled exception or stack trace.
+8. In `T-A`, read the log for any unhandled exception or stack trace.
 9. In both browser windows, look at the bottom of the page for a Blazor error bar (a strip reading that an unhandled error has occurred).
 
 **Pass if — all of these**
 
-- WINDOW B's peak is exactly 1 across the whole 45 seconds.
+- `T-B`'s peak is exactly 1 across the whole 45 seconds.
 - Both browser windows end with a populated **Model** select showing the same entries.
 - Both browser windows end with a settled **Effort** hint (either the normal hint or the no-effort sentence).
 - No unhandled exception or stack trace appears in the app log.
@@ -789,14 +791,14 @@ If `git status` was already dirty before the test, the comparison is unreliable 
 
 **Fail if — any of these**
 
-- WINDOW B peaks at 2 -> the gate is no longer shared across circuits and two tabs cost two adapter processes.
+- `T-B` peaks at 2 -> the gate is no longer shared across circuits and two tabs cost two adapter processes.
 - Either tab hangs with the loading hint for more than 25 seconds -> a deadlock or a lost gate release, which the single-tab tests cannot see.
 - An unhandled exception appears in the log, or a Blazor error bar appears -> the concurrent path is corrupting shared state; the effort cache's concurrency is the documented suspect and it reproduces only under two circuits at once.
 - One tab's Effort list appears in the other tab (they differ though both selects show `Use the agent's default`) -> cross-circuit state bleed.
 
 **Inconclusive if**
 
-If you cannot click both within roughly a second, the overlap may not have happened - repeat after restarting the app (a warm cache makes the second open a pure cache hit and proves nothing). If WINDOW B never leaves 0 but both lists populate, the poll missed a short spawn: record the count half INCONCLUSIVE and judge only the no-error, both-populated half.
+If you cannot click both within roughly a second, the overlap may not have happened - repeat after restarting the app (a warm cache makes the second open a pure cache hit and proves nothing). If `T-B` never leaves 0 but both lists populate, the poll missed a short spawn: record the count half INCONCLUSIVE and judge only the no-error, both-populated half.
 
 > [!NOTE]
 > Two ordinary windows are enough; they do not need to be different browsers or different users.
@@ -817,19 +819,19 @@ If you cannot click both within roughly a second, the overlap may not have happe
 
 1. Restart the app, open `http://localhost:5100/teammates`, click **New teammate** and write down every entry in the **Model** select.
 2. Click **Cancel**.
-3. In WINDOW C run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules' 'node_modules.off'`.
+3. In `T-C` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules' 'node_modules.off'`.
 4. Without restarting the app, click **New teammate** again and write down every entry in the **Model** select.
-5. Watch WINDOW B during step 4.
-6. In WINDOW A, check whether any new log line appeared during step 4.
+5. Watch `T-B` during step 4.
+6. In `T-A`, check whether any new log line appeared during step 4.
 7. Click **Cancel**. Restart the app.
 8. Open `/teammates` and click **New teammate**. Write down the **Model** select's contents and the Model hint text.
-9. In WINDOW C run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules.off' 'node_modules'` to restore the adapter.
+9. In `T-C` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules.off' 'node_modules'` to restore the adapter.
 10. Restart the app and confirm with one more **New teammate** that the real list is back.
 
 **Pass if — all of these**
 
 - Step 4's list is identical to step 1's, even though the adapter has been moved aside - the catalog is cached for the app run.
-- WINDOW B stays at 0 during step 4 and no new probe log line appears - the cached answer is returned without spawning anything.
+- `T-B` stays at 0 during step 4 and no new probe log line appears - the cached answer is returned without spawning anything.
 - After the restart in step 7, the **Model** select contains only `Use the agent's default` and the Model hint reads exactly `This agent advertises no models, so it will use its own default.`
 - After restoring the adapter and restarting, the real model list is back.
 
@@ -856,22 +858,22 @@ If step 3's rename fails with 'file in use', a runner or a probe still holds the
 
 - Free lane.
 - The app must be STOPPED before the adapter is moved, and the first card open after starting it must be the one this test observes.
-- WINDOW B running.
+- `T-B` running.
 
 **Steps**
 
-1. Stop the app (Ctrl+C in WINDOW A).
-2. In WINDOW C run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules' 'node_modules.off'`.
-3. Start the app in the free lane and note the last log line in WINDOW A.
+1. Stop the app (Ctrl+C in `T-A`).
+2. In `T-C` run `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules' 'node_modules.off'`.
+3. Start the app in the free lane and note the last log line in `T-A`.
 4. Open `http://localhost:5100/teammates`. Confirm the page renders normally - heading, intro paragraph, tiles for existing teammates.
 5. Click **New teammate** - this must be the FIRST card open of this app run.
 6. Read the hint under the **Model** select and the hint under the **Effort** select, and write both down exactly.
 7. Open both selects and write down every option each contains.
-8. In WINDOW A, read the new log lines.
-9. Watch WINDOW B for 15 seconds.
+8. In `T-A`, read the new log lines.
+9. Watch `T-B` for 15 seconds.
 10. Type **Name** `Probe NoAdapter`, **Title** `Tester`, **Alias** `pna`, **Persona body** `You are a tester.` and click **Add teammate**.
-11. In WINDOW C run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe NoAdapter'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe NoAdapter'"`.
-12. WITHOUT restarting the app, run in WINDOW C: `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules.off' 'node_modules'`.
+11. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe NoAdapter'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe NoAdapter'"`.
+12. WITHOUT restarting the app, run in `T-C`: `Rename-Item 'E:\Repos\Huddle\tools\acp\node_modules.off' 'node_modules'`.
 13. In the browser, close the card (× button) and click **New teammate** again. Wait for the hints to settle.
 14. Read the **Model** select's contents.
 15. Clean up: click **Cancel**, open `Probe NoAdapter`, click **Remove**, then **Confirm**.
@@ -883,7 +885,7 @@ If step 3's rename fails with 'file in use', a runner or a probe still holds the
 - The Effort hint reads exactly `This model offers no effort choice, so it will think as it normally does.`
 - Both selects contain ONLY the option `Use the agent's default`.
 - The log contains `No ACP adapter is installed; the model catalog is empty.` at Information from category `Agency.Huddle.App.Acp.ModelCatalogProbe`.
-- WINDOW B stays at 0 throughout - nothing is spawned when there is nothing to spawn.
+- `T-B` stays at 0 throughout - nothing is spawned when there is nothing to spawn.
 - The teammate saves successfully, with zero rows in both `persona_models` and `persona_efforts`.
 - After the adapter is restored and the card is re-opened WITHOUT an app restart, the real model list appears.
 
@@ -915,14 +917,14 @@ FALSE PASS TRAP: if any card was opened earlier in the SAME app run, the cached 
 
 **Steps**
 
-1. PART A - launch failure. Stop the app. In WINDOW A run `$env:Team__Acp__Command='node-does-not-exist'` and then the free-lane `dotnet run` line.
+1. PART A - launch failure. Stop the app. In `T-A` run `$env:Team__Acp__Command='node-does-not-exist'` and then the free-lane `dotnet run` line.
 2. Open `http://localhost:5100/teammates` and confirm the page renders normally.
 3. Click **New teammate** and start a stopwatch.
 4. Note how long it takes for the Model hint to stop reading `Reading the models this agent offers…`.
 5. Write down the Model hint, the Effort hint, and the contents of both selects.
-6. In WINDOW A, read the new log lines.
+6. In `T-A`, read the new log lines.
 7. Confirm the card can be closed with **Cancel** and the page is still usable (click a tile, open and close it).
-8. Stop the app and run `Remove-Item Env:Team__Acp__Command` in WINDOW A.
+8. Stop the app and run `Remove-Item Env:Team__Acp__Command` in `T-A`.
 9. PART B - authentication. If you have a way to put the Claude CLI into an unauthenticated state for this machine, do so now; otherwise skip to step 12 and record Part B as inconclusive.
 10. Start the app in the free lane, open `/teammates`, and click **New teammate** as the first card open.
 11. Write down both hints, both select contents, and the new log lines. Then restore authentication.
@@ -947,7 +949,7 @@ FALSE PASS TRAP: if any card was opened earlier in the SAME app run, the cached 
 The identical on-screen text across all four causes is DOCUMENTED and must not be reported as a bug - only a page that throws, a card that never opens, or a hang past about 20 seconds is a defect. If you have no safe way to deauthenticate the Claude CLI, record Part B INCONCLUSIVE rather than improvising with credentials. Part C is expected to be inconclusive unless a hang happened naturally.
 
 > [!NOTE]
-> Always run `Remove-Item Env:Team__Acp__Command` in WINDOW A before any later test, or every subsequent probe will fail for a reason you introduced.
+> Always run `Remove-Item Env:Team__Acp__Command` in `T-A` before any later test, or every subsequent probe will fail for a reason you introduced.
 
 ### MODELEFFORT-21 — An existing App_Data opens with the two tables added in place, no wipe
 
@@ -964,16 +966,16 @@ The identical on-screen text across all four causes is DOCUMENTED and must not b
 **Steps**
 
 1. Stop the app.
-2. In WINDOW C run `Copy-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db.backup'` so you can restore if anything goes wrong.
-3. In WINDOW C run `Get-TeamDb "SELECT COUNT(*) AS users FROM users"` and `Get-TeamDb "SELECT COUNT(*) AS rooms FROM rooms"` and write both counts down.
-4. In WINDOW C run `Set-TeamDb "DROP TABLE IF EXISTS persona_models; DROP TABLE IF EXISTS persona_efforts;"`.
-5. In WINDOW C run `Get-TeamDb "SELECT name FROM sqlite_master WHERE type='table'"` and confirm neither table is listed.
-6. Start the app in the free lane. Watch WINDOW A for a startup exception.
+2. In `T-C` run `Copy-Item 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db.backup'` so you can restore if anything goes wrong.
+3. In `T-C` run `Get-TeamDb "SELECT COUNT(*) AS users FROM users"` and `Get-TeamDb "SELECT COUNT(*) AS rooms FROM rooms"` and write both counts down.
+4. In `T-C` run `Set-TeamDb "DROP TABLE IF EXISTS persona_models; DROP TABLE IF EXISTS persona_efforts;"`.
+5. In `T-C` run `Get-TeamDb "SELECT name FROM sqlite_master WHERE type='table'"` and confirm neither table is listed.
+6. Start the app in the free lane. Watch `T-A` for a startup exception.
 7. Open `http://localhost:5100/teammates` and confirm the page renders, with the same teammate tiles as before.
-8. In WINDOW C run `Get-TeamDb "SELECT name FROM sqlite_master WHERE type='table'"` again.
-9. In WINDOW C re-run the two count queries from step 3.
+8. In `T-C` run `Get-TeamDb "SELECT name FROM sqlite_master WHERE type='table'"` again.
+9. In `T-C` re-run the two count queries from step 3.
 10. Click **New teammate**, create `Probe Migrate` with **Title** `Tester`, **Alias** `pm`, **Persona body** `You are a tester.`, **Model** = LADDER-MODEL and **Effort** = `Low`, then click **Add teammate**.
-11. In WINDOW C run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe Migrate'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Migrate'"`.
+11. In `T-C` run `Get-TeamDb "SELECT * FROM persona_models WHERE persona_name='Probe Migrate'"` and `Get-TeamDb "SELECT * FROM persona_efforts WHERE persona_name='Probe Migrate'"`.
 12. Clean up: remove `Probe Migrate` through the card (**Remove**, then **Confirm**), and delete the backup file if everything passed.
 
 **Pass if — all of these**
@@ -1005,7 +1007,7 @@ If `Set-TeamDb` errors with 'database is locked', the app is still running - sto
 
 **Before you start**
 
-- Restart lane: WINDOW A started with `Remove-Item Env:Team__Acp__Enabled` then the `dotnet run` line, so teammate runners start.
+- Restart lane: `T-A` started with `Remove-Item Env:Team__Acp__Enabled` then the `dotnet run` line, so teammate runners start.
 - The adapter is installed and authenticated enough to start a session.
 - `Probe One` exists with Model = HAIKU and Effort = `Low` (re-create through the UI per MODELEFFORT-03 if needed).
 - You will type NOTHING into any Room during this test, so no tokens are spent.
@@ -1014,16 +1016,16 @@ If `Set-TeamDb` errors with 'database is locked', the app is still running - sto
 
 1. Start the app in the restart lane. Open `http://localhost:5100/teammates`.
 2. Wait until the `Probe One` tile shows a green dot and the label `Online`. This may take several seconds.
-3. In WINDOW B note the resting adapter count now that runners are up, and in WINDOW C run `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId` and write down the PIDs.
-4. In WINDOW A, note the last log line.
+3. In `T-B` note the resting adapter count now that runners are up, and in `T-C` run `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId` and write down the PIDs.
+4. In `T-A`, note the last log line.
 5. Click the `Probe One` tile, then click **Edit**. Wait for both selects to settle.
 6. Change the **Model** select from HAIKU to SONNET. Leave the Persona text and everything else untouched.
 7. Click **Save**.
 8. Watch the card's status line and the tile's dot continuously for the next 30 seconds. Write down every status word you see, in order (`Online`, `Offline`, `Starting`, `Degraded`).
 9. Count how many times the status leaves `Online` and returns to it.
-10. In WINDOW A, read every new log line since step 4.
-11. In WINDOW C re-run the PID query from step 3 and compare the PIDs.
-12. In WINDOW C run `Get-TeamDb "SELECT model FROM persona_models WHERE persona_name='Probe One'"`.
+10. In `T-A`, read every new log line since step 4.
+11. In `T-C` re-run the PID query from step 3 and compare the PIDs.
+12. In `T-C` run `Get-TeamDb "SELECT model FROM persona_models WHERE persona_name='Probe One'"`.
 
 **Pass if — all of these**
 
@@ -1062,15 +1064,15 @@ If `Probe One` never reaches `Online` at all in this lane, this test cannot run 
 **Steps**
 
 1. On `/teammates`, confirm the teammate's tile shows `Online`.
-2. In WINDOW C record its adapter PIDs: `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId`.
-3. In WINDOW A, note the last log line.
+2. In `T-C` record its adapter PIDs: `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId`.
+3. In `T-A`, note the last log line.
 4. Click the teammate's tile, then click **Edit**. Wait for both selects to settle and confirm **Effort** shows `Low`.
 5. Change the **Effort** select from `Low` to `Medium`. Do NOT touch the Model select or the Persona text.
 6. Click **Save**.
 7. Watch the card status and the tile dot for 30 seconds and write down every status word in order.
-8. In WINDOW A, read every new log line since step 3, and specifically search for the words `advertised effort catalog`.
-9. In WINDOW C re-run the PID query and compare.
-10. In WINDOW C run `Get-TeamDb "SELECT effort FROM persona_efforts WHERE persona_name='<the teammate name>'"`.
+8. In `T-A`, read every new log line since step 3, and specifically search for the words `advertised effort catalog`.
+9. In `T-C` re-run the PID query and compare.
+10. In `T-C` run `Get-TeamDb "SELECT effort FROM persona_efforts WHERE persona_name='<the teammate name>'"`.
 
 **Pass if — all of these**
 
@@ -1108,15 +1110,15 @@ If MODELEFFORT-02 found no model advertising both `Low` and `Medium`, this test 
 
 **Steps**
 
-1. In WINDOW C confirm the Persona file is LF-only: `[bool]((Get-Content -Raw 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Probe One.md') -match "\r\n")` must print **False**. If it prints True, see INCONCLUSIVE.
-2. In WINDOW C record the adapter PIDs: `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId`.
-3. In WINDOW A, note the last log line.
+1. In `T-C` confirm the Persona file is LF-only: `[bool]((Get-Content -Raw 'E:\Repos\Huddle\src\Huddle.App\App_Data\Teams\Probe One.md') -match "\r\n")` must print **False**. If it prints True, see INCONCLUSIVE.
+2. In `T-C` record the adapter PIDs: `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId`.
+3. In `T-A`, note the last log line.
 4. On `/teammates`, confirm `Probe One` shows `Online`. Click its tile, then click **Edit**.
 5. Wait for both selects to settle. Touch NOTHING - do not click into the textarea, do not open either select.
 6. Click **Save**.
 7. Watch the card status line and the tile dot continuously for at least 15 seconds - the file write also fires a 500 ms-debounced watcher event, and that second event must also decide 'no change'.
-8. In WINDOW A, read every new log line since step 3.
-9. In WINDOW C re-run the PID query and compare with step 2.
+8. In `T-A`, read every new log line since step 3.
+9. In `T-C` re-run the PID query and compare with step 2.
 10. Repeat steps 4-9 once more (a second consecutive no-op save) and record the same observations.
 
 **Pass if — all of these**
@@ -1154,12 +1156,12 @@ FALSE DEFECT TRAP: if step 1 prints True, the Persona file has CRLF line endings
 **Steps**
 
 1. Stop the app.
-2. In WINDOW C run `Set-TeamDb "UPDATE persona_models SET model='claude-nonexistent-9' WHERE persona_name='Probe One';"`.
-3. In WINDOW C run `Set-TeamDb "INSERT INTO persona_efforts(persona_name, effort) VALUES('Probe One','vintage') ON CONFLICT(persona_name) DO UPDATE SET effort='vintage';"`.
-4. Start the app in the restart lane and watch WINDOW A from the first line.
+2. In `T-C` run `Set-TeamDb "UPDATE persona_models SET model='claude-nonexistent-9' WHERE persona_name='Probe One';"`.
+3. In `T-C` run `Set-TeamDb "INSERT INTO persona_efforts(persona_name, effort) VALUES('Probe One','vintage') ON CONFLICT(persona_name) DO UPDATE SET effort='vintage';"`.
+4. Start the app in the restart lane and watch `T-A` from the first line.
 5. Open `http://localhost:5100/teammates` and watch the `Probe One` tile for up to 60 seconds.
 6. Write down the final status word on the tile and, if it is not `Online`, hover it to read the status tooltip.
-7. In WINDOW A, search the log for `advertised model catalog` and for `advertised effort catalog`.
+7. In `T-A`, search the log for `advertised model catalog` and for `advertised effort catalog`.
 8. Click the `Probe One` tile and read the card: the status line, any reason line beneath it, and the **Model** and **Effort** sections.
 9. Restore the fixture: click **Edit**, set **Model** back to HAIKU, wait for the Effort list, set **Effort** to `Low`, click **Save**.
 
@@ -1201,14 +1203,14 @@ If the app cannot start a session at all in this lane for unrelated reasons (ada
 2. Write down every button in the card's action row.
 3. Confirm whether a hint line appears below the action row.
 4. Close the card.
-5. Now make a teammate unhealthy. Easiest: in WINDOW C run `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId, CommandLine` to find the adapter process, then `Stop-Process -Id <pid> -Force` for one of them.
+5. Now make a teammate unhealthy. Easiest: in `T-C` run `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*claude-agent-acp*' } | Select-Object ProcessId, CommandLine` to find the adapter process, then `Stop-Process -Id <pid> -Force` for one of them.
 6. Watch `/teammates` until that teammate's tile shows `Offline` or `Degraded`.
 7. Click that tile to open its card. Write down every button in the action row and the hint line below it.
 8. Click **Restart** and immediately read the button's label.
 9. Immediately click the same button a second time.
 10. Watch the status line for up to 60 seconds and write down every status word in order.
-11. In WINDOW A, read the new log lines.
-12. In WINDOW C confirm an adapter process exists again for that teammate.
+11. In `T-A`, read the new log lines.
+12. In `T-C` confirm an adapter process exists again for that teammate.
 
 **Pass if — all of these**
 
@@ -1241,7 +1243,7 @@ If you cannot produce an `Offline` or `Degraded` teammate (the process restarts 
 **Before you start**
 
 - Restart lane, with a real, authenticated Claude subscription.
-- Before starting, set a low message budget in WINDOW A: `$env:Team__AgentMessageBudget='6'` then start the app, so a loop cannot run away.
+- Before starting, set a low message budget in `T-A`: `$env:Team__AgentMessageBudget='6'` then start the app, so a loop cannot run away.
 - A teammate exists with Model = HAIKU and Effort = `Low`. Use LADDER-MODEL if Haiku offers no ladder.
 - COST: three short prompt turns of a few hundred tokens each - single-digit cents. Do not send any other message while this test runs.
 
@@ -1251,15 +1253,15 @@ If you cannot produce an `Offline` or `Degraded` teammate (the process restarts 
 2. Click its tile and click the **Message** action on the card. This opens its Room.
 3. In the message box type exactly `@Probe One which model are you running as, and what thinking effort?` (substituting the teammate's real Name after the @) and press Enter.
 4. Wait for the reply and write it down verbatim.
-5. In WINDOW A, search the log for `advertised model catalog` and `advertised effort catalog`, and note the last log line.
+5. In `T-A`, search the log for `advertised model catalog` and `advertised effort catalog`, and note the last log line.
 6. Go back to `/teammates`, click the teammate's tile, click **Edit**, change the **Model** select from HAIKU to SONNET, and click **Save**.
 7. Wait until the tile shows `Online` again, then confirm the log shows `The agent process disconnected.` and a fresh `[agent stderr] …` burst.
 8. Return to the same Room and send the identical message again. Write down the reply.
 9. Go back to the card, click **Edit**, change the **Effort** select from `Low` to `Medium` (leaving the Model on SONNET), and click **Save**.
 10. Wait for `Online`, return to the Room, send the identical message a third time, and write down the reply.
-11. In WINDOW A, search the whole log from step 5 onward for `advertised model catalog` and `advertised effort catalog`.
-12. In WINDOW C run `Get-TeamDb "SELECT persona_name, model FROM persona_models"` and `Get-TeamDb "SELECT persona_name, effort FROM persona_efforts"`.
-13. Clean up: `Remove-Item Env:Team__AgentMessageBudget` in WINDOW A after stopping the app.
+11. In `T-A`, search the whole log from step 5 onward for `advertised model catalog` and `advertised effort catalog`.
+12. In `T-C` run `Get-TeamDb "SELECT persona_name, model FROM persona_models"` and `Get-TeamDb "SELECT persona_name, effort FROM persona_efforts"`.
+13. Clean up: `Remove-Item Env:Team__AgentMessageBudget` in `T-A` after stopping the app.
 
 **Pass if — all of these**
 

@@ -4,25 +4,23 @@ Prove the Agency.Huddle two-column shell holds together: that the five routes (`
 
 **29 tests** · 29 free, none paid · about 2.9 hours.
 
-Read [the manual test script](../manual-tests.md) first — it carries the cost guard, the Model
-and Effort convention, and the rules for concluding a result. This page assumes all three.
+Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
+convention, and the rules for concluding a result — then [Common procedures](common.md), which
+defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
 ## Setup
 
-1. Open a PowerShell 7 (`pwsh`) terminal at the repository root `E:\Repos\Huddle`. Call this TERMINAL A.
-2. Run `dotnet build Huddle.slnx` and confirm it ends with `Build succeeded` and zero warnings. If it fails, STOP - every test below is inconclusive until the solution builds.
-3. COST GUARD, do this before launching: in TERMINAL A run `$env:Team__Acp__Enabled = 'false'`. `launchSettings.json` sets `ASPNETCORE_ENVIRONMENT=Development` and `appsettings.Development.json` sets `Team:Acp:Enabled: true`, which starts one real `node claude-agent-acp` process per Persona at startup and bills the subscription before you type anything. `Team__Acp__Enabled` is the correct spelling - `Team:` is deliberately still the config root even though the product is Agency.Huddle. This env var lives only in TERMINAL A's session, so if you close or reopen the terminal you MUST set it again before the next `dotnet run`.
-4. In TERMINAL A run `Get-Process node -ErrorAction SilentlyContinue` and note how many `node` processes exist BEFORE launch (usually zero). Write the number down - several tests compare against it.
-5. In TERMINAL A run `dotnet run --project src/Huddle.App --urls http://localhost:5100`. Leave this terminal running for the whole session; its scrolling output is the app console that several oracles read.
-6. Wait for the line `Now listening on: http://localhost:5100` in TERMINAL A.
-7. Run `Get-Process node -ErrorAction SilentlyContinue` again in a second terminal. The count must still match step 4. If `node` processes appeared, the cost guard did not take - press Ctrl+C in TERMINAL A, re-run step 3, and relaunch.
-8. Open a second PowerShell 7 terminal at `E:\Repos\Huddle`. Call this TERMINAL B. All `curl.exe` oracles run here, so they never disturb the app.
-9. Open Google Chrome or Microsoft Edge and browse to `http://localhost:5100`. Open DevTools with F12 and keep the Console, Network and Elements tabs available.
-10. In DevTools Network, tick **Disable cache** and leave the Network tab recording for the whole session.
-11. Confirm the baseline demo state: the left sidebar lists exactly two rooms, `echo` and `alpha`. These are the app's own demo agents (`Team:DemoAgent:Enabled` defaults to true in `appsettings.json`), not leftover test data. If you see a different set of rooms, a previous session left state behind - that is fine for most tests, but note it, because tests that name `echo` and `alpha` assume the default pair.
-12. Note the runtime state directory for later tests: `E:\Repos\Huddle\src\Huddle.App\App_Data`. It holds `team.db` (SQLite), `rooms/{roomId}.jsonl` transcripts, and - only after the first save on the Appearance tab - `appearance.json`. `appearance.json` and `hooks.json` being absent on a fresh install is normal and is not a defect.
-13. MODEL AND EFFORT: no test in this area needs a Model or an Effort. The standing Haiku / low convention never comes up here, and Haiku -> Sonnet or low -> medium switching belongs to the Teammates area, not this one. If a step below appears to ask you to pick a model, that step is in the wrong area - stop and report it rather than picking one.
-14. Do NOT click the **New teammate** button on `/teammates` during this area. Opening that card probes the model catalog, which is another area's business and the one place on these pages that can reach an adapter.
+Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-free) from
+[Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
+oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB`, the four resets, and the
+standing conventions. This area adds:
+
+1. Browse to `http://localhost:5100` in Chrome or Edge. Open DevTools (F12) and keep the Console, Network and Elements tabs available.
+2. In DevTools Network, tick **Disable cache** and leave the tab recording for the whole session. Several tests read its Status column.
+3. Every `curl.exe` oracle in this area runs in `T-B`, so it never disturbs the app.
+4. Confirm the baseline demo state: the sidebar lists exactly two Rooms, `echo` and `alpha`. A different set means an earlier session left state behind — that is fine for most tests here, but note it, because tests that name `echo` and `alpha` assume the default pair.
+5. No test in this area needs a Model or an Effort. If a step below appears to ask you to pick one, that step is in the wrong area — stop and report it rather than picking.
+6. Do NOT click **New teammate** on `/teammates` during this area. Opening that card probes the model catalog, which is another area's business and the one place on these pages that can reach an Adapter.
 
 ## Tests
 
@@ -35,11 +33,11 @@ and Effort convention, and the rules for concluding a result. This page assumes 
 **Before you start**
 
 - App running on http://localhost:5100.
-- TERMINAL B open at the repository root.
+- `T-B` open at the repository root.
 
 **Steps**
 
-1. In TERMINAL B run: `$html = curl.exe -s http://localhost:5100/ | Out-String`
+1. In `T-B` run: `$html = curl.exe -s http://localhost:5100/ | Out-String`
 2. Run: `[regex]::Matches($html, '<link rel="stylesheet" href="([^"]+)"') | ForEach-Object { $_.Groups[1].Value }`
 3. Write down every href it printed.
 4. For each href printed, run: `curl.exe -s -o NUL -w "%{http_code}" "http://localhost:5100/<paste the href here>"` and record the three-digit status it prints.
@@ -82,7 +80,7 @@ If `curl.exe` is not found, use the browser instead: View Source (Ctrl+U) on htt
 
 **Steps**
 
-1. In TERMINAL B run: `$html = curl.exe -s http://localhost:5100/ | Out-String`
+1. In `T-B` run: `$html = curl.exe -s http://localhost:5100/ | Out-String`
 2. Run: `[regex]::Matches($html, '<script[^>]*src="([^"]+)"') | ForEach-Object { $_.Groups[1].Value }`
 3. Write down every src printed.
 4. For each src, run: `curl.exe -s -o NUL -w "%{http_code}" "http://localhost:5100/<paste the src here>"` and record the status.
@@ -147,7 +145,7 @@ If the Console shows a Content-Security-Policy or extension error rather than a 
 - The yellow banner text is visible as ordinary page text -> `Huddle.App.styles.css` is not loading; its `display: none` never arrived. Go straight back to SHELLNAV-01 - this is the same defect seen from the other side, and it went unnoticed for a month precisely because the `position: fixed` that would have floated it into view lives in the same unloaded file, leaving it one viewport below the fold.
 - Step 5 printed anything but `"none"` -> the scoped rule is not applying even though the file may be served; check that the `b-` attribute in step 7 matches the one the stylesheet selects on.
 - Step 7 shows no `b-` attribute -> scoped CSS was not compiled into MainLayout at all.
-- The banner is visible AND the app console in TERMINAL A shows a real unhandled exception at the same moment -> that is not this defect; that is SHELLNAV-26, a genuine circuit fault. Check TERMINAL A before filing.
+- The banner is visible AND the app console in `T-A` shows a real unhandled exception at the same moment -> that is not this defect; that is SHELLNAV-26, a genuine circuit fault. Check `T-A` before filing.
 
 **Inconclusive if**
 
@@ -168,7 +166,7 @@ If `document.getElementById('blazor-error-ui')` returns `null`, the markup itsel
 
 **Steps**
 
-1. In TERMINAL B run: `curl.exe -s -D - -o NUL http://localhost:5100/`
+1. In `T-B` run: `curl.exe -s -D - -o NUL http://localhost:5100/`
 2. Read the first line of the response and the `Location:` header.
 3. In the browser, click into the address bar, type `http://localhost:5100/` exactly, and press Enter.
 4. Read the URL the address bar settles on.
@@ -185,10 +183,10 @@ If `document.getElementById('blazor-error-ui')` returns `null`, the markup itsel
 
 **Fail if — any of these**
 
-- Status 200 with the address bar resting on `/` and an empty main column -> the redirect in `Chat.razor`'s `OnParametersSetAsync` did not run. Note that `BlazorDisableThrowNavigationException=true` is set for this project, so a broken redirect presents as a silently swallowed navigation rather than an exception - absence of an error in TERMINAL A does not mean absence of a bug.
+- Status 200 with the address bar resting on `/` and an empty main column -> the redirect in `Chat.razor`'s `OnParametersSetAsync` did not run. Note that `BlazorDisableThrowNavigationException=true` is set for this project, so a broken redirect presents as a silently swallowed navigation rather than an exception - absence of an error in `T-A` does not mean absence of a bug.
 - The `Location:` names a room that is NOT the first entry in the sidebar -> the `ORDER BY created, id` ordering behind the room list and the redirect have diverged.
 - The browser bounces between URLs and never settles -> a redirect loop.
-- Status 500 -> an unhandled exception; capture the stack from TERMINAL A.
+- Status 500 -> an unhandled exception; capture the stack from `T-A`.
 
 **Inconclusive if**
 
@@ -209,7 +207,7 @@ If `sqlite3` is available you can confirm the target exactly with `sqlite3 src/H
 
 **Steps**
 
-1. In TERMINAL B run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/rooms/does-not-exist`
+1. In `T-B` run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/rooms/does-not-exist`
 2. In the browser, navigate to `http://localhost:5100/rooms/does-not-exist`.
 3. Read the sidebar room list.
 4. Read the main column.
@@ -251,12 +249,12 @@ If the sidebar is empty because no rooms exist, the contradiction cannot be obse
 
 **Steps**
 
-1. In TERMINAL B run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/nope`
+1. In `T-B` run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/nope`
 2. Run: `curl.exe -s -o NUL -w "%{size_download}" http://localhost:5100/nope`
 3. Run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/rooms`
 4. In the browser, navigate to `http://localhost:5100/nope`.
 5. Describe what the browser shows.
-6. Check TERMINAL A for any exception logged at the moment of the request.
+6. Check `T-A` for any exception logged at the moment of the request.
 
 **Pass if — all of these**
 
@@ -264,14 +262,14 @@ If the sidebar is empty because no rooms exist, the contradiction cannot be obse
 - Step 2 printed `0`.
 - Step 3 printed `404`.
 - The browser shows its OWN error page - in Chrome, `This page isn't working` / `HTTP ERROR 404` - with no sidebar, no **Teammates** or **Settings** links, and no styling.
-- TERMINAL A logged no exception.
+- `T-A` logged no exception.
 
 **Fail if — any of these**
 
 - A 500 -> routing threw instead of falling through. Defect.
 - The request hangs or times out -> defect.
 - An unmatched path renders some OTHER page's content (a room, Settings) -> a route template is over-matching. Defect.
-- TERMINAL A logs an unhandled exception -> defect, capture the stack.
+- `T-A` logs an unhandled exception -> defect, capture the stack.
 
 **Inconclusive if**
 
@@ -292,7 +290,7 @@ If a browser extension or a corporate proxy substitutes its own 404 page, the br
 
 **Steps**
 
-1. In TERMINAL B run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/Settings`
+1. In `T-B` run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/Settings`
 2. Run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/TEAMMATES`
 3. In the browser, navigate to `http://localhost:5100/Settings`.
 4. Read the `<h1>`.
@@ -409,18 +407,18 @@ If only one room exists, the 'other room is plain' half cannot be judged - note 
 **Before you start**
 
 - App running with the cost guard set (`Team__Acp__Enabled = 'false'`).
-- The baseline `node` process count from setup step 4 written down.
+- `O-ADAPTERS` reads `0` (the `E-FREE` resting value).
 
 **Steps**
 
-1. In TERMINAL B run: `Get-Process node -ErrorAction SilentlyContinue | Measure-Object | Select-Object -ExpandProperty Count`. Record the number.
+1. In `T-B` run `O-ADAPTERS`. Record the number.
 2. In the browser, click **Teammates** in the sidebar.
 3. Read the `<h1>`.
 4. Read the text of the button at the top right of the main column.
 5. Read the first sentence of the intro paragraph below the heading.
 6. Confirm the sidebar is still present with the room list intact.
-7. In TERMINAL B, re-run the command from step 1 and compare the number.
-8. Scroll TERMINAL A and look for any new line mentioning probing an adapter or starting a model catalog.
+7. In `T-B`, re-run the command from step 1 and compare the number.
+8. Scroll `T-A` and look for any new line mentioning probing an adapter or starting a model catalog.
 9. Press F5 to reload `/teammates`, then re-run step 1 one more time.
 
 **Pass if — all of these**
@@ -430,7 +428,7 @@ If only one room exists, the 'other room is plain' half cannot be judged - note 
 - The intro paragraph begins `A Persona is a Markdown file describing how one teammate should behave, plus the model it thinks with.`
 - The sidebar is unchanged and still lists the rooms.
 - The `node` process count in steps 7 and 9 is identical to step 1.
-- TERMINAL A logged nothing about probing an adapter.
+- `T-A` logged nothing about probing an adapter.
 
 **Fail if — any of these**
 
@@ -454,7 +452,7 @@ If a `node` process was already running before the app started (another tool on 
 **Before you start**
 
 - App running.
-- The `node` baseline count from setup step 4.
+- `O-ADAPTERS` reads `0`.
 
 **Steps**
 
@@ -464,7 +462,7 @@ If a `node` process was already running before the app started (another tool on 
 4. Read the labels of the buttons in the left tab rail, top to bottom.
 5. In the DevTools Console, type `[...document.querySelectorAll('.settings-tab')].map(b => b.textContent.trim() + ' | active=' + b.classList.contains('settings-tab-active'))` and press Enter.
 6. Read the pane on the right and confirm it describes hooks - it should contain the sentence beginning `A hook is one piece of wording this application sends to a model`.
-7. In TERMINAL B run: `Get-Process node -ErrorAction SilentlyContinue | Measure-Object | Select-Object -ExpandProperty Count` and compare with the baseline.
+7. In `T-B` run `O-ADAPTERS` and compare with the baseline.
 
 **Pass if — all of these**
 
@@ -514,7 +512,7 @@ If the Hooks pane shows an error line above the tab rail, read it and note it, b
 9. Press Back a third time and read the address bar.
 10. Open a brand-new browser tab and paste `http://localhost:5100/settings/appearance`, then press Enter.
 11. Read which tab is active in that new tab.
-12. In TERMINAL B run: `$s = curl.exe -s http://localhost:5100/settings/appearance | Out-String; [regex]::Match($s, 'settings-tab-active">([A-Za-z]+)').Groups[1].Value`
+12. In `T-B` run: `$s = curl.exe -s http://localhost:5100/settings/appearance | Out-String; [regex]::Match($s, 'settings-tab-active">([A-Za-z]+)').Groups[1].Value`
 
 **Pass if — all of these**
 
@@ -549,7 +547,7 @@ If the browser was already deep in history from earlier tests, the Back sequence
 
 **Steps**
 
-1. In TERMINAL B run each of these and record the status and the active tab it reports:
+1. In `T-B` run each of these and record the status and the active tab it reports:
 2. `$u='http://localhost:5100/settings/bogus'; curl.exe -s -o NUL -w "%{http_code} " $u; $s = curl.exe -s $u | Out-String; [regex]::Match($s,'settings-tab-active">([A-Za-z]+)').Groups[1].Value`
 3. Repeat the previous command with `$u='http://localhost:5100/settings/HOOKS'`.
 4. Repeat with `$u='http://localhost:5100/settings/Appearance'`.
@@ -573,7 +571,7 @@ If the browser was already deep in history from earlier tests, the Back sequence
 - Any URL returns 404 -> the fallback was lost; because there is no in-app Not Found page, the user lands on the bare browser error page from a typo in a tab name. Defect.
 - `/settings/APPEARANCE` or `/settings/Appearance` falls back to Hooks -> the parse lost `ignoreCase: true`. Defect.
 - An unknown tab renders a blank content pane rather than the Hooks pane -> the switch lost its default branch. Defect.
-- An unhandled exception page -> defect, capture the stack from TERMINAL A.
+- An unhandled exception page -> defect, capture the stack from `T-A`.
 
 **Inconclusive if**
 
@@ -596,7 +594,7 @@ If the regex oracle prints nothing at all, the markup shape changed - fall back 
 
 1. In the browser, visit each of these in turn and after each one read the browser TAB label and run `document.querySelector('title')` in the DevTools Console: `http://localhost:5100/`, then a room via the sidebar, then `http://localhost:5100/teammates`, then `http://localhost:5100/settings`, then `http://localhost:5100/settings/appearance`.
 2. Record the tab label and the console result for all five.
-3. In TERMINAL B run: `foreach ($p in '/','/teammates','/settings','/settings/appearance') { $h = curl.exe -s "http://localhost:5100$p" | Out-String; "$p -> " + ([regex]::Matches($h,'<title')).Count }`
+3. In `T-B` run: `foreach ($p in '/','/teammates','/settings','/settings/appearance') { $h = curl.exe -s "http://localhost:5100$p" | Out-String; "$p -> " + ([regex]::Matches($h,'<title')).Count }`
 
 **Pass if — all of these**
 
@@ -751,7 +749,7 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 The panel markup is ALWAYS present in the DOM and merely carries the `hidden` attribute - so do not judge open/closed from View Source or a `curl.exe` fetch, only from `.hidden` or the eye. If no agents are listed at all, this test cannot run; that is SHELLNAV-26's territory - confirm `Team:DemoAgent:Enabled` is true in `appsettings.json` and restart.
 
 > [!NOTE]
-> Cross-check the dot colours against the health and presence lines in TERMINAL A for the same agent name; they must agree.
+> Cross-check the dot colours against the health and presence lines in `T-A` for the same agent name; they must agree.
 
 ### SHELLNAV-18 — Starting a chat creates a room named after its agents and navigates straight to it
 
@@ -776,7 +774,7 @@ The panel markup is ALWAYS present in the DOM and merely carries the `hidden` at
 8. Read the member line directly below the `<h1>`.
 9. Read the sidebar room list.
 10. Click **New chat** again and look at the checkboxes.
-11. In TERMINAL B run: `Get-ChildItem src/Huddle.App/App_Data` and confirm `team.db` is present.
+11. In `T-B` run: `Get-ChildItem src/Huddle.App/App_Data` and confirm `team.db` is present.
 
 **Pass if — all of these**
 
@@ -871,8 +869,8 @@ If the message sends but `echo` never replies, the composer half still PASSED - 
 9. In TAB 1, click **New chat** and read the agent checkbox list.
 10. Now provoke the leak case: in TAB 1, click **Teammates**, then **Settings**, then a room, then **Teammates** again - six navigations in all.
 11. Read TAB 1's sidebar carefully for duplicate or stale entries.
-12. Scroll TERMINAL A and look for repeated handler errors or exception stacks.
-13. Close TAB 2 entirely, wait ten seconds, and scroll TERMINAL A again.
+12. Scroll `T-A` and look for repeated handler errors or exception stacks.
+13. Close TAB 2 entirely, wait ten seconds, and scroll `T-A` again.
 
 **Pass if — all of these**
 
@@ -880,17 +878,17 @@ If the message sends but `echo` never replies, the composer half still PASSED - 
 - The same entry appears in TAB 2 without a refresh.
 - The **New chat** checkbox list gained `mybot` as well.
 - After the six navigations the sidebar shows each room exactly once - no duplicates, no rooms that no longer exist.
-- TERMINAL A shows the pipe connection for `mybot` and no repeated handler errors, before or after closing TAB 2.
+- `T-A` shows the pipe connection for `mybot` and no repeated handler errors, before or after closing TAB 2.
 
 **Fail if — any of these**
 
 - `mybot` only appears after pressing F5 -> the rooms-changed subscription is broken; the sidebar is no longer live. Defect.
 - Duplicate sidebar entries accumulate as you navigate -> a component is leaking its subscription because it did not unsubscribe on disposal. Defect.
-- TERMINAL A fills with repeated handler errors after closing TAB 2 -> the same leak, seen from the server; a component that never dies is still being notified. Defect, and it grows worse the longer the app runs.
+- `T-A` fills with repeated handler errors after closing TAB 2 -> the same leak, seen from the server; a component that never dies is still being notified. Defect, and it grows worse the longer the app runs.
 
 **Inconclusive if**
 
-If TERMINAL C cannot connect to the pipe (`\\.\pipe\team`), the bot never registered and this test produced no result - check that the app in TERMINAL A is still running and that `Team:PipeName` is `team`. If `pwsh` is not installed, skip this test and say so explicitly rather than substituting a weaker check; there is no browser-only way to make a room appear from outside the app.
+If TERMINAL C cannot connect to the pipe (`\\.\pipe\team`), the bot never registered and this test produced no result - check that the app in `T-A` is still running and that `Team:PipeName` is `team`. If `pwsh` is not installed, skip this test and say so explicitly rather than substituting a weaker check; there is no browser-only way to make a room appear from outside the app.
 
 > [!NOTE]
 > Leave TERMINAL C's bot running or press Ctrl+C in it when done - either is fine. The `mybot` room persists in `team.db` and will appear in later tests; that is expected.
@@ -908,7 +906,7 @@ If TERMINAL C cannot connect to the pipe (`\\.\pipe\team`), the bot never regist
 
 **Steps**
 
-1. In TERMINAL B run: `Test-Path src/Huddle.App/App_Data/appearance.json`. Record the answer.
+1. In `T-B` run: `Test-Path src/Huddle.App/App_Data/appearance.json`. Record the answer.
 2. In the browser, navigate to `http://localhost:5100/settings/appearance`.
 3. In the DevTools Console, type `[...document.querySelectorAll('link[rel=stylesheet]')].map(l => l.getAttribute('href'))` and press Enter. Record the array.
 4. In the Console, type `document.querySelectorAll('head style').length` and press Enter.
@@ -917,7 +915,7 @@ If TERMINAL C cannot connect to the pipe (`\\.\pipe\team`), the bot never regist
 7. Select **Dark**.
 8. Observe the page as it changes.
 9. Re-run the Console command from step 3 and record the new array.
-10. In TERMINAL B run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/themes/huddle-dark.css`
+10. In `T-B` run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/themes/huddle-dark.css`
 11. Run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/themes/huddle-light.css`
 12. Run: `Get-Content src/Huddle.App/App_Data/appearance.json`
 13. Set the **Theme** dropdown back to **System** and re-run the Console command from step 3.
@@ -942,7 +940,7 @@ If TERMINAL C cannot connect to the pipe (`\\.\pipe\team`), the bot never regist
 
 **Inconclusive if**
 
-If step 1 said `False` and the file still does not exist after choosing a theme, the app could not write to `App_Data` - check permissions and the TERMINAL A log, and report that as the finding rather than a layering failure. If the page did not reload on selecting Dark but the theme changed anyway, note it: the reload is the designed mechanism and its absence means something else is writing `<head>`.
+If step 1 said `False` and the file still does not exist after choosing a theme, the app could not write to `App_Data` - check permissions and the `T-A` log, and report that as the finding rather than a layering failure. If the page did not reload on selecting Dark but the theme changed anyway, note it: the reload is the designed mechanism and its absence means something else is writing `<head>`.
 
 > [!NOTE]
 > KNOWN LIMITS, NOT BUGS: (a) the full reload on theme change is deliberate - `<head>` belongs to the server and Blazor's render tree cannot reach it; swapping the href over JavaScript was considered and rejected. (b) A selected theme has no per-mode pair: Dark stays dark even on a light OS; following the device means choosing System, which layers no theme at all. (c) `appearance.json` not existing on a fresh install is normal.
@@ -961,7 +959,7 @@ If step 1 said `False` and the file still does not exist after choosing a theme,
 **Steps**
 
 1. In the browser, navigate to `http://localhost:5100/settings/appearance` and select **Dark** from the **Theme** dropdown so a theme link is present.
-2. In TERMINAL B run: `Get-Content src/Huddle.App/App_Data/appearance.json`. Record the exact current contents.
+2. In `T-B` run: `Get-Content src/Huddle.App/App_Data/appearance.json`. Record the exact current contents.
 3. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` in a text editor.
 4. Replace its entire contents with exactly: `{"theme": "huddle-dark", "overrides": {"--font-chat": "Georgia, serif"}}`
 5. Save the file and wait five seconds for the file watcher to pick it up.
@@ -982,7 +980,7 @@ If step 1 said `False` and the file still does not exist after choosing a theme,
 **Fail if — any of these**
 
 - The `<style>` element appears BEFORE the `themes/` link -> the theme would win over the human's own override, which is backwards. Defect.
-- No `<style>` element appears at all -> the override was silently dropped; check the Appearance tab for a rejection line and TERMINAL A for a warning, and report whichever you find.
+- No `<style>` element appears at all -> the override was silently dropped; check the Appearance tab for a rejection line and `T-A` for a warning, and report whichever you find.
 - The computed font is unchanged while the `<style>` IS present -> the token is not the one the rule uses; note the token name and the rule rather than filing a layering bug.
 - The app REWROTE or reformatted your `appearance.json` -> the file must be left exactly as the human typed it. Defect.
 
@@ -1009,14 +1007,14 @@ If the transcript has no messages, step 8 and 9 cannot be judged - run SHELLNAV-
 1. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` in a text editor (create it if it does not exist).
 2. Replace its entire contents with exactly: `{"theme": "not-a-theme", "overrides": {"--not-a-token": "red"}}`
 3. Save the file and wait five seconds.
-4. In TERMINAL B run: `Get-Content src/Huddle.App/App_Data/appearance.json`. Confirm it is byte-for-byte what you typed.
+4. In `T-B` run: `Get-Content src/Huddle.App/App_Data/appearance.json`. Confirm it is byte-for-byte what you typed.
 5. In the browser, press F5 on any page.
 6. Observe whether the page renders normally, following your operating system's light/dark setting.
 7. In the DevTools Console, type `[...document.querySelectorAll('link[rel=stylesheet]')].map(l => l.getAttribute('href')).filter(h => h.includes('themes/'))` and press Enter.
 8. Navigate to `http://localhost:5100/settings/appearance`.
 9. Read the value showing in the **Theme** dropdown.
 10. Look for a section headed `Overrides that didn't load` and read every line in it.
-11. Scroll TERMINAL A and find the warning line logged when the file was read.
+11. Scroll `T-A` and find the warning line logged when the file was read.
 12. Re-run the command from step 4 and confirm the file is STILL unchanged.
 
 **Pass if — all of these**
@@ -1025,19 +1023,19 @@ If the transcript has no messages, step 8 and 9 cannot be judged - run SHELLNAV-
 - Step 7 returned an empty array - no `themes/` link is emitted at all.
 - The **Theme** dropdown reads `System`.
 - An `Overrides that didn't load` section is present and contains, as separate lines: `Theme 'not-a-theme' is not a known theme; the built-in theme is used instead.` and `'--not-a-token' is not a theme token; it was left in the file and ignored.`
-- TERMINAL A logged a warning naming the file path and the theme, reading: `Appearance file '...' selects theme 'not-a-theme', which is not a known theme; the built-in theme is used instead and the file is left unchanged.`
+- `T-A` logged a warning naming the file path and the theme, reading: `Appearance file '...' selects theme 'not-a-theme', which is not a known theme; the built-in theme is used instead and the file is left unchanged.`
 - The on-disk `appearance.json` is byte-identical to what you typed, both before and after.
 
 **Fail if — any of these**
 
 - A blank or unstyled page -> the shell linked `themes/not-a-theme.css`, which 404s. The bad value must never reach `<head>`. Defect.
 - The app rewrote, reformatted or deleted your file -> it must leave a rejected entry exactly as it found it. Defect.
-- No message anywhere - not on the Appearance tab, not in TERMINAL A -> the human has no way to learn why their theme did nothing. Defect, and the worst kind: a silent one.
+- No message anywhere - not on the Appearance tab, not in `T-A` -> the human has no way to learn why their theme did nothing. Defect, and the worst kind: a silent one.
 - The `Overrides that didn't load` section shows only one of the two lines -> one of the two validators is not reporting.
 
 **Inconclusive if**
 
-If the file watcher does not react within ten seconds, restart the app in TERMINAL A (remembering `$env:Team__Acp__Enabled = 'false'` first) and re-check - a watcher that needs a restart is itself worth noting, but judge the messages after the restart. If the JSON you pasted is malformed (a stray quote), the app may report a parse problem instead; retype it exactly and re-run.
+If the file watcher does not react within ten seconds, restart the app in `T-A` (remembering `$env:Team__Acp__Enabled = 'false'` first) and re-check - a watcher that needs a restart is itself worth noting, but judge the messages after the restart. If the JSON you pasted is malformed (a stray quote), the app may report a parse problem instead; retype it exactly and re-run.
 
 > [!NOTE]
 > CLEANUP: delete `src/Huddle.App/App_Data/appearance.json` when finished, so the shell returns to its three-stylesheet default. Absent is the correct fresh-install state.
@@ -1056,7 +1054,7 @@ If the file watcher does not react within ten seconds, restart the app in TERMIN
 **Steps**
 
 1. In the browser, open the `echo` room and copy its full URL from the address bar.
-2. In TERMINAL B run: `$r = curl.exe -s "<paste the room URL>" | Out-String`
+2. In `T-B` run: `$r = curl.exe -s "<paste the room URL>" | Out-String`
 3. Run: `([regex]::Matches($r, '<h1>')).Count`
 4. Run: `[regex]::Match($r, '<h1>([^<]*)</h1>').Groups[1].Value`
 5. Run: `$r.Contains('hi @echo')` - this checks the prerendered HTML already carries the transcript.
@@ -1150,15 +1148,15 @@ If TAB B was on a route with no visible theme difference, you cannot judge the t
 **Steps**
 
 1. In the browser, open a room page and wait for the `_blazor` websocket to appear in DevTools Network (filter WS).
-2. In TERMINAL B run: `$h = curl.exe -s http://localhost:5100/ | Out-String; [regex]::Matches($h, 'ReconnectModal\.razor\.[^"]*\.js') | ForEach-Object { $_.Value }`. Record the fingerprinted path from the import map.
+2. In `T-B` run: `$h = curl.exe -s http://localhost:5100/ | Out-String; [regex]::Matches($h, 'ReconnectModal\.razor\.[^"]*\.js') | ForEach-Object { $_.Value }`. Record the fingerprinted path from the import map.
 3. Run: `curl.exe -s -o NUL -w "%{http_code}" "http://localhost:5100/<paste that path>"`
-4. Switch to TERMINAL A and press Ctrl+C to stop the app.
+4. Switch to `T-A` and press Ctrl+C to stop the app.
 5. Watch the browser for up to ten seconds.
 6. Read the modal that appears and write down every sentence you can see AT ONCE.
 7. In the DevTools Console, type `[...document.querySelectorAll('#components-reconnect-modal p')].filter(p => getComputedStyle(p).display !== 'none').map(p => p.textContent.trim())` and press Enter. Record the array.
 8. Wait about thirty seconds while the modal cycles through its states, re-running the step 7 command each time the wording changes.
 9. When the wording settles on the final state, read the button label.
-10. Restore the app: in TERMINAL A run `$env:Team__Acp__Enabled = 'false'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+10. Restore the app: in `T-A` run `$env:Team__Acp__Enabled = 'false'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 11. Once it is listening, click the button in the modal or reload the browser.
 
 **Pass if — all of these**
@@ -1196,13 +1194,13 @@ If the browser simply shows a connection-refused error page instead of the modal
 
 **Steps**
 
-1. In TERMINAL A press Ctrl+C to stop the app.
-2. In TERMINAL B run: `Rename-Item src/Huddle.App/App_Data App_Data_backup` so the existing state is preserved rather than destroyed.
-3. In TERMINAL A run: `$env:Team__Acp__Enabled = 'false'`
-4. In TERMINAL A run: `$env:Team__DemoAgent__Enabled = 'false'`
-5. In TERMINAL A run: `dotnet run --project src/Huddle.App --urls http://localhost:5100` and wait for `Now listening on: http://localhost:5100`.
-6. In TERMINAL B run: `curl.exe -s -D - -o NUL http://localhost:5100/` and read the status line.
-7. In TERMINAL B run: `$h = curl.exe -s http://localhost:5100/ | Out-String; ([regex]::Matches($h, 'No rooms yet')).Count`
+1. In `T-A` press Ctrl+C to stop the app.
+2. In `T-B` run: `Rename-Item src/Huddle.App/App_Data App_Data_backup` so the existing state is preserved rather than destroyed.
+3. In `T-A` run: `$env:Team__Acp__Enabled = 'false'`
+4. In `T-A` run: `$env:Team__DemoAgent__Enabled = 'false'`
+5. In `T-A` run: `dotnet run --project src/Huddle.App --urls http://localhost:5100` and wait for `Now listening on: http://localhost:5100`.
+6. In `T-B` run: `curl.exe -s -D - -o NUL http://localhost:5100/` and read the status line.
+7. In `T-B` run: `$h = curl.exe -s http://localhost:5100/ | Out-String; ([regex]::Matches($h, 'No rooms yet')).Count`
 8. Run: `([regex]::Matches($h, '<h1>')).Count`
 9. In the browser, navigate to `http://localhost:5100/` and read the sidebar.
 10. Read the main column.
@@ -1221,7 +1219,7 @@ If the browser simply shows a connection-refused error page instead of the modal
 
 - Only one of the two sentences appears -> one of the two components lost its empty state; the user is left with a blank half-page. Defect.
 - A 302 to `/rooms/` with an empty id -> the redirect ran even with no rooms to redirect to. Defect.
-- A 500 or an exception page -> the page tried to load a null room. Defect, capture the stack from TERMINAL A.
+- A 500 or an exception page -> the page tried to load a null room. Defect, capture the stack from `T-A`.
 - A completely blank main column with no message -> defect.
 
 **Inconclusive if**
@@ -1250,9 +1248,9 @@ If step 6 still returns a redirect, `team.db` was not actually removed - confirm
 4. In the DevTools Console, type `document.querySelector('.new-chat-start')` and press Enter.
 5. In the Console, type `document.querySelector('.new-chat-panel ul')` and press Enter.
 6. In the Console, type `[...document.querySelectorAll('.new-chat-panel code')].map(c => c.textContent)` and press Enter.
-7. CLEANUP: in TERMINAL A press Ctrl+C.
-8. In TERMINAL B run: `Remove-Item -Recurse -Force src/Huddle.App/App_Data` then `Rename-Item src/Huddle.App/App_Data_backup App_Data`.
-9. In TERMINAL A run: `$env:Team__Acp__Enabled = 'false'` then `Remove-Item Env:\Team__DemoAgent__Enabled` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+7. CLEANUP: in `T-A` press Ctrl+C.
+8. In `T-B` run: `Remove-Item -Recurse -Force src/Huddle.App/App_Data` then `Rename-Item src/Huddle.App/App_Data_backup App_Data`.
+9. In `T-A` run: `$env:Team__Acp__Enabled = 'false'` then `Remove-Item Env:\Team__DemoAgent__Enabled` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 10. In the browser, reload and confirm the sidebar shows the original rooms again.
 
 **Pass if — all of these**
@@ -1290,19 +1288,19 @@ If any agent is still listed, something is connected - stop any `echo-bot.ps1` i
 **Steps**
 
 1. Review your notes from every test above and identify any moment when a yellow band appeared fixed to the BOTTOM of the viewport reading `An unhandled error has occurred.` with a `Reload` link and a 🗙.
-2. For each such moment, check whether TERMINAL A logged an unhandled exception at the same time. Write down the exception.
+2. For each such moment, check whether `T-A` logged an unhandled exception at the same time. Write down the exception.
 3. If the band appeared at least once: click `Reload` and note where it takes you.
 4. If the band appeared at least once: reproduce the moment if you can, click the 🗙 instead, and note whether the band dismisses.
 5. If the band appeared while the Dark theme was selected, note whether it was still readable - pale yellow ground with dark text.
 
 **Pass if — all of these**
 
-- If the band appeared: it was fixed to the bottom of the viewport on a pale yellow ground, readable in both themes; `Reload` returned to the app root; 🗙 dismissed it; and TERMINAL A carried a matching unhandled exception at that moment.
+- If the band appeared: it was fixed to the bottom of the viewport on a pale yellow ground, readable in both themes; `Reload` returned to the app root; 🗙 dismissed it; and `T-A` carried a matching unhandled exception at that moment.
 - If the band never appeared during any test: that is the expected outcome and the result is INCONCLUSIVE, not a pass - record it as such.
 
 **Fail if — any of these**
 
-- The band appeared on a page where TERMINAL A logged NO exception -> that is not a circuit fault, that is the scoped-CSS 404 from SHELLNAV-03. File it there, not here.
+- The band appeared on a page where `T-A` logged NO exception -> that is not a circuit fault, that is the scoped-CSS 404 from SHELLNAV-03. File it there, not here.
 - `Reload` does nothing, or 🗙 leaves the band in place -> the controls are dead when the user most needs them. Defect.
 - The band rendered dark-on-dark or otherwise unreadable -> defect, and note the theme that was active.
 

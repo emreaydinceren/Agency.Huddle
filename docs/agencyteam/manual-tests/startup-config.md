@@ -4,23 +4,22 @@ Prove that Agency.Huddle launches on http://localhost:5100 with the state a firs
 
 **34 tests** · 32 free, 2 paid 💰 · about 3.9 hours.
 
-Read [the manual test script](../manual-tests.md) first — it carries the cost guard, the Model
-and Effort convention, and the rules for concluding a result. This page assumes all three.
+Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
+convention, and the rules for concluding a result — then [Common procedures](common.md), which
+defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
 ## Setup
 
-1. Open PowerShell 7 (`pwsh`) and change to the repository root: `cd E:\Repos\Huddle`. Every command and every relative path in this document is written from that directory.
-2. Build the solution once: `dotnet build Huddle.slnx`. It must report 0 warnings and 0 errors. If it does not, STOP — every test below is INCONCLUSIVE until the build is clean, because you cannot tell a product defect from a broken build.
-3. Confirm nothing else is holding port 5100: `Get-NetTCPConnection -LocalPort 5100 -ErrorAction SilentlyContinue`. It must print nothing. Also run `Get-Process dotnet -ErrorAction SilentlyContinue` and stop any leftover run of this app. A stale instance on 5100 is the single most common way to 'test' a change that was never deployed — the browser cheerfully shows the OLD process.
-4. Learn the launch command. The documented one is: `dotnet run --project src/Huddle.App --urls http://localhost:5100`. It picks up the only launch profile (`http`), which sets ASPNETCORE_ENVIRONMENT=Development, applicationUrl http://localhost:5100 and launchBrowser true. `--urls` is therefore redundant but harmless. Stop a run with Ctrl+C in that same window.
-5. Learn where the live data lives. `Team:DataDir` defaults to the RELATIVE path `App_Data`, resolved with `Path.GetFullPath` against the process working directory, and `dotnet run --project src/Huddle.App` runs with the working directory set to the PROJECT folder. So the live data directory is `E:\Repos\Huddle\src\Huddle.App\App_Data`, never the repo root. Before filing any 'my data vanished' result, confirm which App_Data you are looking at.
-6. Learn the environment-variable form. The separator is a DOUBLE underscore and the variable must be set in the SAME PowerShell window that then runs `dotnet run`. Example: `$env:Team__DemoAgent__Enabled = 'false'`. Clear one with `Remove-Item Env:Team__DemoAgent__Enabled`. Precedence: environment variable beats `appsettings.Development.json` beats `appsettings.json`.
-7. AFTER EVERY ENVIRONMENT-VARIABLE TEST, clear the variable you set before moving on, or the next test inherits it and reports a false result. `Get-ChildItem Env:Team__*` lists everything currently set.
-8. Learn the clean-slate recipe. Stop the app FIRST (Ctrl+C) — SQLite connection pooling keeps a handle on `team.db`, so a delete while it runs fails. Then: `Remove-Item -Recurse -Force src\Huddle.App\App_Data`. The next launch recreates `App_Data`, `App_Data\Teams\`, `team.db` (+ `-wal`/`-shm`) and reseeds the Human. `App_Data` is gitignored, so nothing you delete there is tracked.
-9. Standing convention for any Persona (teammate) you create while testing: Model = Haiku, Effort = low. Where a test exists to exercise model switching, switch Haiku -> Sonnet. Where a test exercises effort switching, switch low -> medium. Never select Opus, high, xhigh or max.
-10. Do NOT set `TEAM_E2E`. It has nothing to do with the app and gates eight money-spending tests in `tests/Huddle.Acp.Tests`.
-11. For the ACP tests at the end only: `node` must be on PATH (`node --version`), the adapter must be installed under `tools\acp` (check `Test-Path tools\acp\node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js`; if false, run `pwsh tools\acp\install.ps1`), and the Claude login requirement in [§0.1 of the script](../manual-tests.md#01-what-you-need) must be met. Tests that need this say so in their preconditions.
-12. Optional oracle tooling: some tests suggest reading `team.db` with `sqlite3`. If `sqlite3` is not installed, skip that step and use the UI/console oracle given alongside it — never treat a missing tool as a failing result.
+Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-free) from
+[Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
+oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB`, the four resets, and the
+standing conventions. This area adds:
+
+1. Before launching, confirm nothing else holds port 5100: `Get-NetTCPConnection -LocalPort 5100 -ErrorAction SilentlyContinue` must print nothing, and `Get-Process dotnet -ErrorAction SilentlyContinue` must show no leftover run of this app. A stale instance on 5100 is the commonest way to 'test' a change that was never deployed — the browser cheerfully shows the OLD process.
+2. Know the launch profile this area keeps probing. `dotnet run --project src/Huddle.App` picks up the only profile (`http`), which sets `ASPNETCORE_ENVIRONMENT=Development`, `applicationUrl http://localhost:5100` and `launchBrowser true`. The `--urls` argument is therefore redundant but harmless.
+3. Know the environment-variable form, because this area is mostly about it: the separator is a DOUBLE underscore, and the variable must be set in the same window that then runs `dotnet run`. Precedence is environment variable, then `appsettings.Development.json`, then `appsettings.json`.
+4. AFTER EVERY ENVIRONMENT-VARIABLE TEST, clear what you set before moving on, or the next test inherits it and reports a false result.
+5. For the ACP tests at the end only: `node --version` must print a version, `Test-Path tools\acp\node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js` must be True (if not, run `pwsh tools\acp\install.ps1`), and the Claude login requirement in [§0.1](../manual-tests.md#01-what-you-need) must be met. Tests that need this say so in their preconditions.
 
 ## Tests
 
@@ -142,7 +141,7 @@ If DevTools shows CSS rows served `(from disk cache)` with no status code, you d
 
 **Inconclusive if**
 
-The Rooms may take a second or two to appear — the demo agents dial the pipe as ordinary clients and retry up to 30 times at 200 ms apart. Only judge after 10 seconds. If `App_Data` already existed from an earlier session with different demo names, delete it (see setup) and relaunch before judging the Room count.
+The Rooms may take a second or two to appear — the demo agents dial the pipe as ordinary clients and retry up to 30 times at 200 ms apart. Only judge after 10 seconds. If `App_Data` already existed from an earlier session with different demo names, run `P-RESET-ALL` and relaunch before judging the Room count.
 
 > [!NOTE]
 > Optional disk oracle: `Get-ChildItem -Recurse src\Huddle.App\App_Data` — and, if `sqlite3` is available, `sqlite3 src\Huddle.App\App_Data\team.db "SELECT name,kind FROM users; SELECT name FROM rooms;"` should show one `human` row, two `agent` rows, and two Rooms.
@@ -360,7 +359,7 @@ Expecting `echo` and `alpha` here is a category error, not a defect — do not f
 
 **Before you start**
 
-- No `hooks.json` exists: `Test-Path src\Huddle.App\App_Data\hooks.json` returns False. If it returns True, do a clean slate first (see setup) and relaunch.
+- No `hooks.json` exists: `Test-Path src\Huddle.App\App_Data\hooks.json` returns False. If it returns True, run `P-RESET-ALL` and relaunch.
 
 **Steps**
 

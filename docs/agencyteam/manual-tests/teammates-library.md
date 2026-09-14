@@ -4,25 +4,23 @@ Prove that the /teammates page is an honest, live mirror of the Persona files on
 
 **40 tests** · 39 free, 1 paid 💰 · about 4.2 hours.
 
-Read [the manual test script](../manual-tests.md) first — it carries the cost guard, the Model
-and Effort convention, and the rules for concluding a result. This page assumes all three.
+Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
+convention, and the rules for concluding a result — then [Common procedures](common.md), which
+defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
 ## Setup
 
-1. Open PowerShell at the repository root `E:\Repos\Huddle`. Every path below is relative to it, and every command is written for PowerShell on Windows.
-2. Run `dotnet build Huddle.slnx` and confirm it ends with `Build succeeded`. If the build fails, stop: every test below is inconclusive until it passes.
-3. **Cost guard — run this in the launch terminal BEFORE `dotnet run`:** `$env:Team__Acp__Enabled = 'false'`. This is not the shipped default. `launchSettings.json` pins `ASPNETCORE_ENVIRONMENT=Development` and `appsettings.Development.json` sets `Team:Acp:Enabled: true`, so an unguarded `dotnet run` starts one real `node` adapter per Persona and bills your subscription before you type anything. See section 0.2.
-4. Confirm the Persona library is empty: run `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams`. It should list nothing. If it lists files, move them to a scratch folder now and put them back when you are finished — TEAMMATESLIBRARY-01 and -02 require an empty library.
-5. Start the app: `dotnet run --project src/Huddle.App`. Leave this terminal visible for the whole session — its console output is the oracle for several tests. The app has one launch profile and it pins http://localhost:5100.
-6. Open a browser at http://localhost:5100 and a File Explorer window (or a text editor) at `src\Huddle.App\App_Data\Teams\`, side by side. Many tests change a file on disk and then watch the browser WITHOUT touching it — do not press F5 unless a step says to.
-7. Open a SECOND PowerShell window at the repo root for oracle commands and leave it open. The ones you will use most: `Get-Process node`, and `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams -Filter *.md | Measure-Object`.
-8. Learn the CORE FIXTURE SET but do NOT create it yet — TEAMMATESLIBRARY-03 creates it. Four files under `src\Huddle.App\App_Data\Teams\`: (1) `Nova.md` = frontmatter name 'Nova', title 'Research Lead', alias 'nov', teams ['Business']; (2) `Vale.md` = name 'Vale', title 'Ops Lead', alias 'val', teams ['Business', 'Household']; (3) `Household\Rune.md` = name 'Rune', title 'Home Steward', alias 'run', teams ['Household']; (4) `Quill.md` = name 'Quill', title 'Scribe', alias 'qui', and NO teams line at all. Exact text is given in TEAMMATESLIBRARY-03.
-9. Do NOT copy the repo-root `personas\*.md` files into the Teams folder. None of them has a `title:` or `alias:` field, so all twelve would land in the rejected block and drown every other observation. If you want a realistic library later, `tools/migrate-personas-to-teams.ps1` reshapes them.
-10. The Development profile sets `Team:Acp:Enabled: true`, so the global cost guard in section 0.2 is the only thing holding ACP off. Set it before you launch.
-11. To turn ACP on for the handful of tests that need it: stop the app with Ctrl+C and restart it as `dotnet run --project src/Huddle.App -- --Team:Acp:Enabled=true`. To turn it off again, drop that argument. Never edit `appsettings.json` to do this — leave the shipped defaults alone.
-12. All sorting on this page is ORDINAL, not case-insensitive: an upper-case letter sorts before a lower-case one, so a Team named `Zulu` legitimately appears above one named `admin`, and a Persona named `Zoe` above one named `ada`. This is deliberate and pinned by tests. Do not file it.
-13. Optional but useful: a `sqlite3` client. The database oracle is `sqlite3 src/Huddle.App/App_Data/team.db "select * from persona_models; select * from persona_efforts; select id,name,kind from users;"`. If you have no sqlite3, the Teammate card's own Model and Effort lines are an acceptable substitute oracle — say so in your result.
-14. The standing Model/Effort convention for this whole session: whenever a test has you choose a Model, choose **Haiku**; whenever it has you choose an Effort, choose **low**. Only a test that explicitly says so departs from that.
+Run [`P-BUILD`](common.md#p-build) then the lane named below from
+[Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
+oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four resets,
+`P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
+
+1. Lane is `P-LAUNCH-FREE`. A handful of tests need ACP on: stop the app and restart it as `dotnet run --project src/Huddle.App -- --Team:Acp:Enabled=true`, then drop the argument to turn it off again. Never edit `appsettings.json` to do this — leave the shipped defaults alone.
+2. Confirm the Persona library is empty before you start: `Get-ChildItem -Recurse src\Huddle.App\App_Data\Teams` should list nothing. If it lists files, move them to a scratch folder now and put them back when you are finished — TEAMMATESLIBRARY-01 and -02 require an empty library.
+3. Open a browser at `http://localhost:5100` and a File Explorer window (or a text editor) on `src\Huddle.App\App_Data\Teams\`, side by side. Many tests change a file on disk and then watch the browser WITHOUT touching it — do not press F5 unless a step says to.
+4. Learn the CORE FIXTURE SET but do NOT create it yet — TEAMMATESLIBRARY-03 creates it. Four files under `src\Huddle.App\App_Data\Teams\`: (1) `Nova.md` = frontmatter name 'Nova', title 'Research Lead', alias 'nov', teams ['Business']; (2) `Vale.md` = name 'Vale', title 'Ops Lead', alias 'val', teams ['Business', 'Household']; (3) `Household\Rune.md` = name 'Rune', title 'Home Steward', alias 'run', teams ['Household']; (4) `Quill.md` = name 'Quill', title 'Scribe', alias 'qui', and NO teams line at all. Exact text is given in TEAMMATESLIBRARY-03.
+5. Do NOT copy the repo-root `personas\*.md` files into the Teams folder. None has a `title:` or `alias:` field, so all twelve would land in the rejected block and drown every other observation. `tools/migrate-personas-to-teams.ps1` reshapes them if you want a realistic library later.
+6. All sorting on this page is ORDINAL, not case-insensitive: an upper-case letter sorts before a lower-case one, so a Team named `Zulu` legitimately appears above one named `admin`, and a Persona named `Zoe` above one named `ada`. This is deliberate and pinned by tests. Do not file it.
 
 ## Tests
 

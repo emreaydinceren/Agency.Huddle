@@ -4,23 +4,24 @@ The Development profile sets `Team:Acp:Enabled: true`, so the global cost guard 
 
 **25 tests** · 25 free, none paid · about 3.2 hours.
 
-Read [the manual test script](../manual-tests.md) first — it carries the cost guard, the Model
-and Effort convention, and the rules for concluding a result. This page assumes all three.
+Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
+convention, and the rules for concluding a result — then [Common procedures](common.md), which
+defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
 ## Setup
 
-1. Open a PowerShell terminal. Run `cd E:\Repos\Huddle`.
-2. Run `dotnet build Huddle.slnx`. It must report 0 Warning(s) and 0 Error(s). If it does not, stop: every test below assumes a clean build, and a red build makes every result inconclusive.
-3. Check whether the override file already exists: run `dir E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json`. If it exists, run `del E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` so you start from the virgin first-run state. An absent file is normal and is not a broken install.
-4. **Cost guard — run this in the launch terminal BEFORE `dotnet run`:** `$env:Team__Acp__Enabled = 'false'`. This is not the shipped default. `launchSettings.json` pins `ASPNETCORE_ENVIRONMENT=Development` and `appsettings.Development.json` sets `Team:Acp:Enabled: true`, so an unguarded `dotnet run` starts one real `node` adapter per Persona and bills your subscription before you type anything. See section 0.2.
-5. Set the operating system to LIGHT mode: Windows Settings -> Personalisation -> Colours -> 'Choose your default app mode' -> Light. Every dark-mode test below is deliberately run against a light OS so that a Theme failing to apply is maximally visible.
-6. Run `dotnet run --project src/Huddle.App --urls http://localhost:5100`. Leave this console window visible on screen for the whole session - IT IS THE LOG. Wait for the line `Now listening on: http://localhost:5100`.
-7. Open Google Chrome (or Microsoft Edge) and go to http://localhost:5100. The application should render.
-8. Open DevTools with F12 and leave it open. Confirm DevTools -> (three-dot menu) -> More tools -> Rendering -> 'Emulate prefers-color-scheme' is set to 'No emulation'. A left-over emulation setting silently invalidates every OS-following test in this area.
-9. Confirm the file path you will be editing: go to http://localhost:5100/settings/appearance and read the path inside the `<code>` element in the second paragraph. It should read `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json`. THE ON-SCREEN PATH IS THE AUTHORITY - if it differs, edit the file the page names, not the one in these steps.
-10. Open a plain text editor (Notepad, VS Code) ready to create and save that file. Saving it is picked up by a filesystem watcher about 0.5 seconds later.
-11. Throughout: 'full page load' means pressing F5 or Ctrl+Shift+R in the browser. Clicking a sidebar link is IN-APP navigation and does NOT count as a full page load - it cannot change <head>.
-12. TESTER CONVENTION: if any test leads you to configure a Persona (teammate), set Model = Haiku and Effort = low. No test in this area requires a model at all, and none of them spends money.
+Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-free) from
+[Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
+oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB`, the four resets, and the
+standing conventions. This area adds:
+
+1. Start from the virgin first-run state: if `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` exists, delete it (`P-RESET-SETTINGS`). An absent file is normal and is not a broken install.
+2. Set the operating system to LIGHT mode — Windows Settings → Personalisation → Colours → 'Choose your default app mode' → Light. Every dark-mode test below is deliberately run against a light OS so that a Theme failing to apply is maximally visible.
+3. Open Chrome or Edge at `http://localhost:5100`, then DevTools (F12). Confirm DevTools → three-dot menu → More tools → Rendering → 'Emulate prefers-color-scheme' reads **No emulation**. A left-over emulation setting silently invalidates every OS-following test in this area.
+4. Go to `http://localhost:5100/settings/appearance` and read the path inside the `<code>` element in the second paragraph. It should read `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json`. THE ON-SCREEN PATH IS THE AUTHORITY — if it differs, edit the file the page names, not the one in these steps.
+5. Have a plain text editor (Notepad, VS Code) ready to create and save that file. A save is picked up by a filesystem watcher about 0.5 seconds later.
+6. Throughout this area, 'full page load' means F5 or Ctrl+Shift+R. Clicking a sidebar link is IN-APP navigation, does NOT count, and cannot change `<head>`.
+7. No test in this area needs a Model, and none spends money.
 
 ## Tests
 

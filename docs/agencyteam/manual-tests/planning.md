@@ -174,6 +174,8 @@ listed because each one is a mistake a reader might otherwise reintroduce.
 | A Trace-logging step used `$env:Logging__LogLevel__Agency__Huddle` and a quoted variant. | Neither works. The form that parses is `${env:Logging__LogLevel__Agency.Huddle}`. |
 | Steps wrote rejected Persona fixtures to `App_Data\personas\`. | The library is `{DataDir}/{Acp:TeamsDir}`, which is `App_Data\Teams\`. |
 | `ANTHROPIC_API_KEY` was ordered unset without ever being set. | It reads as a dangling step and invites a reader to drop it. The variable is ambient — inherited from a shell profile — and the Adapter authenticates through the `claude` CLI login instead. [Section 0.1](../manual-tests.md#01-what-you-need) now carries that as a requirement. |
+| "RESET" meant three different things across areas. | Delete all of `App_Data`, delete only `rooms` + `team.db`, or delete only `hooks.json` — same word, incompatible effects. A test that said "run RESET" was ambiguous outside its own file, and the wrong one leaves stale Rooms that read as a defect. Now four named resets in [Common procedures](common.md): `P-RESET-ALL`, `P-RESET-ROOMS`, `P-RESET-TEAMS`, `P-RESET-SETTINGS`. |
+| Two areas counted Adapters with a bare `Get-Process node`. | A developer machine normally has a dozen unrelated `node` processes, so that count is not evidence. `O-ADAPTERS` filters on the `claude-agent-acp` command line and is the only valid count. |
 
 ## Appendix C. Known gaps in this script
 

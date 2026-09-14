@@ -4,24 +4,26 @@ Prove that the five in-process App Tools (`mcp__team__get_help`, `mcp__team__lis
 
 **22 tests** · 6 free, 16 paid 💰 · about 3.5 hours.
 
-Read [the manual test script](../manual-tests.md) first — it carries the cost guard, the Model
-and Effort convention, and the rules for concluding a result. This page assumes all three.
+Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
+convention, and the rules for concluding a result — then [Common procedures](common.md), which
+defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
 ## Setup
 
-1. ONE-TIME (adapter): from the repo root `E:\Repos\Huddle`, run `pwsh tools/acp/install.ps1`. It must leave a `tools/acp/node_modules` folder behind. Without it, every paid test is INCONCLUSIVE, not failed.
-2. ONE-TIME (auth): meet the Claude login requirement in [§0.1 of the script](../manual-tests.md#01-what-you-need), and clear `ANTHROPIC_API_KEY` as §0.2 requires. Without both, every paid test in this area is INCONCLUSIVE, not failed.
-3. ONE-TIME (safety): work from a throwaway checkout. `App_Data/work/<Persona>/` becomes the agent's working directory and is NOT a sandbox — agent-side `Bash`, `Read` and `Write` run against the real disk, and the adapter auto-loads `CLAUDE.md` and `.claude/settings.json` from that folder.
-4. MONEY GUARD — read before the first `dotnet run`: `src/Huddle.App/appsettings.Development.json` sets `Team:Acp:Enabled` to `true`, and `launchSettings.json` pins `ASPNETCORE_ENVIRONMENT=Development`. A plain `dotnet run` therefore starts real `node` adapter processes and spends money. Before every FREE test (APPTOOLS-01, 02, 03 and every test whose `costsMoney` is false) open a fresh PowerShell window and run `$env:Team__Acp__Enabled = "false"` first, in the same window you will start the app from.
-5. NEVER set `Team__Acp__TraceWire=true`. Wire traces print the tool server's bearer token into the console log.
-6. START THE APP: in that same PowerShell window, from `E:\Repos\Huddle`, run `dotnet run --project src/Huddle.App --urls http://localhost:5100`. Leave the console window visible and on screen for the whole session — the console IS the log oracle for most of these tests. Open http://localhost:5100 in a browser.
-7. LOG LEVEL: the Development default already gives `Agency.Huddle` at `Debug`, which prints the `App tool server listening…` and `App tool server received {Method}.` lines. For any test whose oracle needs the tool's actual JSON output, set `${env:Logging__LogLevel__Agency.Huddle} = "Trace"` before starting (double underscore replaces the colon, and the dot in the category stays a dot: the key is `Logging:LogLevel:Agency.Huddle`, so in PowerShell write `${env:Logging__LogLevel__Agency.Huddle} = "Trace"`). The category must be spelled `Agency.Huddle` exactly — a key spelled `Team` matches nothing and silently disables the filter with no error.
-8. CREATE PERSONAS THROUGH THE UI, never by hand: click **Teammates** in the left sidebar, then **New teammate**. Fill **Name**, **Title**, **Alias**, leave **Teams** blank, put one sentence in **Persona body**, choose **Model** and **Effort**, then click **Add teammate**. Creating the `.md` file by hand skips the `team.db` rows that store Model and Effort.
-9. MODEL AND EFFORT (standing instruction, applies to every test in this area): set every Persona to **Model = Haiku** and **Effort = low**. Never Opus. Never high, xhigh or max. Leaving Model on **Use the agent's default** is NOT equivalent — it runs the account's default model, which may be far more expensive. No test in this area exercises model or effort switching, so Haiku/low applies throughout with no exceptions.
-10. PERSONAS YOU WILL NEED for the paid tests: create two, both Haiku/low — `Nova` (Title `Coordinator`, Alias `nova`) and `Jarvis` (Title `Researcher`, Alias `jar`). The alias `jar` on `Jarvis` is load-bearing for APPTOOLS-10.
-11. DEMO AGENTS: `echo` and `alpha` are on by default (`Team:DemoAgent:Enabled` is `true` in `appsettings.json`). They are plain pipe clients: they never call an App Tool, but they are free room members and free budget-spenders. To make `list_agents` output contain Personas only, start with `$env:Team__DemoAgent__Enabled = "false"`.
-12. RESET BETWEEN SCENARIOS: stop the app (Ctrl+C in its console) and delete the whole `src/Huddle.App/App_Data/` folder. `team.db` is created with `CREATE TABLE IF NOT EXISTS`, so nothing ever migrates — a half-deleted App_Data produces confusing results.
-13. TEST ORDER: run APPTOOLS-01 through APPTOOLS-04 first. They are free and they tell you whether the wiring is sound. Do not spend a single token until APPTOOLS-04 passes: agent-guide.md §3.6 records two sessions lost to debugging 'the model cannot find the tool' when the tool server had never received a single request.
+Run [`P-BUILD`](common.md#p-build) then the lane named below from
+[Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
+oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four resets,
+`P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
+
+1. ONE-TIME (adapter): from the repo root, run `pwsh tools/acp/install.ps1`. It must leave a `tools/acp/node_modules` folder behind. Without it, every paid test here is INCONCLUSIVE, not failed.
+2. ONE-TIME (auth): meet the Claude login requirement in [§0.1](../manual-tests.md#01-what-you-need), and clear `ANTHROPIC_API_KEY` as [§0.2](../manual-tests.md#02-the-cost-guard) requires. Without both, every paid test here is INCONCLUSIVE, not failed.
+3. ONE-TIME (safety): work from a throwaway checkout. `App_Data/work/<Persona>/` becomes the agent's working directory and is NOT a sandbox — agent-side `Bash`, `Read` and `Write` run against the real disk, and the Adapter auto-loads `CLAUDE.md` and `.claude/settings.json` from that folder.
+4. Free tests (APPTOOLS-01 to -04) use `P-LAUNCH-FREE`; everything from APPTOOLS-05 uses `P-LAUNCH-PAID`.
+5. LOG LEVEL: Development already gives `Agency.Huddle` at `Debug`, which prints `App tool server listening…` and `App tool server received {Method}.`. For any test whose oracle needs the tool's actual JSON output, set `${env:Logging__LogLevel__Agency.Huddle} = "Trace"` before starting — the double underscore replaces the colon and the dot in the category stays a dot, so the key is `Logging:LogLevel:Agency.Huddle`. The category must be spelled `Agency.Huddle` exactly; a key spelled `Team` matches nothing and silently disables the filter with no error.
+6. PERSONAS YOU WILL NEED for the paid tests: `P-NEW-PERSONA` twice, both Haiku/low — `Nova` (Title `Coordinator`, Alias `nova`) and `Jarvis` (Title `Researcher`, Alias `jar`). The alias `jar` on `Jarvis` is load-bearing for APPTOOLS-10.
+7. To make `list_agents` output contain Personas only, start with `$env:Team__DemoAgent__Enabled = "false"`.
+8. Reset between scenarios with `P-RESET-ALL`. `team.db` is created with `CREATE TABLE IF NOT EXISTS`, so nothing ever migrates — a half-deleted `App_Data` produces confusing results.
+9. TEST ORDER: run APPTOOLS-01 through -04 first. They are free and they tell you whether the wiring is sound. Do not spend a single token until APPTOOLS-04 passes: `agent-guide.md` §3.6 records two sessions lost to debugging 'the model cannot find the tool' when the tool server had never received a single request.
 
 ## Tests
 

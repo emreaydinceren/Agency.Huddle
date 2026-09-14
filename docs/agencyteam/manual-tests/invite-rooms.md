@@ -4,24 +4,24 @@ Prove that every path by which a Room is born or changes membership behaves as s
 
 **31 tests** · 27 free, 4 paid 💰 · about 3.5 hours.
 
-Read [the manual test script](../manual-tests.md) first — it carries the cost guard, the Model
-and Effort convention, and the rules for concluding a result. This page assumes all three.
+Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
+convention, and the rules for concluding a result — then [Common procedures](common.md), which
+defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
 ## Setup
 
-1. Open a PowerShell 7 terminal at E:\Repos\Huddle. Call it **Terminal A**. It runs the app and is your log oracle in almost every test below — keep it visible at all times.
-2. In Terminal A run `dotnet build Huddle.slnx` and confirm it succeeds. If the build is red, STOP: every test below is INCONCLUSIVE until it is green.
-3. In Terminal A run `$env:Team__Acp__Enabled = 'false'`. This is what makes the run free. `src\Huddle.App\appsettings.Development.json` sets `Team:Acp:Enabled` to `true`, and a plain `dotnet run` would therefore spawn one `node` adapter per Persona. Tests INVITEROOMS-26 and later say explicitly when to turn this back on.
-4. In Terminal A start the app: `dotnet run --project src/Huddle.App --urls http://localhost:5100`. Leave it running.
-5. Open `http://localhost:5100` in Chrome or Edge. Keep DevTools available (F12) — several tests need the Elements pane to read a CSS class such as `invite-panel` or `agent-dot`.
-6. Learn the three Terminal A log lines you will read all day. They are logged at Information by ChatService: `Created direct room '<id>' for agent '<name>'.`  /  `Created room '<id>' (<name>) with <n> members.`  /  `Invited agent '<name>' (<id>) into room '<roomId>'.` The ABSENCE of one of these is the oracle in several tests, so do not filter the console.
-7. Learn where runtime state lives: `E:\Repos\Huddle\src\Huddle.App\App_Data`. Inside it, `team.db` is the SQLite directory of users, rooms and room_members; `rooms\<roomId>.jsonl` is one Room's Transcript, created only on that Room's first Message; `Teams\` is the Persona library (EMPTY on this machine today, so the "Team" dropdown starts with only "All teams").
-8. To reset to a virgin install at any point: press Ctrl+C in Terminal A, delete the whole `E:\Repos\Huddle\src\Huddle.App\App_Data` folder, then repeat the two previous setup steps. Several tests tell you to do exactly this.
-9. OPTIONAL ORACLE — `sqlite3` is NOT on PATH on this machine. Every `team.db` query below is a SECONDARY confirmation only. If you do not have `sqlite3`, skip that sub-check and judge on the browser and the Terminal A log alone. Never mark a test FAILED because `sqlite3` is missing — mark only that sub-check inconclusive. `team.db` is WAL mode, so `sqlite3` can read it while the app is running.
-10. NAMING COLLISION — read before clicking anything. The exact text "Add teammate" appears TWICE in this app: (a) the invite toggle at the top right of a Room header, which is `button.invite-toggle`, and (b) the SUBMIT button of the Create form on the `/teammates` page. Always disambiguate by page, or by the `invite-toggle` class in DevTools. Never select by text alone.
-11. MODEL / EFFORT CONVENTION — every Persona (teammate) you create anywhere in this area is **Model = Haiku** and **Effort = low**. No test in this area is a model-switching or effort-switching test, so never change them.
-12. TERMINAL DISCIPLINE — each extra Agent is a separate PowerShell terminal running `pwsh tools/echo-bot.ps1 -Name <name>` from `E:\Repos\Huddle`. Ctrl+C in that terminal disconnects that Agent; re-running the same command re-registers it. The tests below use: Terminal B = `mybot`, Terminal C = short-lived scratch bots, Terminal D = `Emily Lee`, Terminal E = `gamma`, Terminal F = `delta`.
-13. RUN THE TESTS IN ID ORDER. Several tests deliberately set up the next one (INVITEROOMS-12 converts mybot's Direct Room, which is exactly what INVITEROOMS-21 needs to observe). Each test still states its own precondition and how to recover if the state is wrong.
+Run [`P-BUILD`](common.md#p-build) then the lane named below from
+[Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
+oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four resets,
+`P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
+
+1. Lane is `P-LAUNCH-FREE`. INVITEROOMS-26 and later say explicitly when to turn ACP back on.
+2. Open `http://localhost:5100` in Chrome or Edge with DevTools (F12) available — several tests need the Elements pane to read a CSS class such as `invite-panel` or `agent-dot`.
+3. Learn the three `O-LOG` lines you will read all day, logged at Information by `ChatService`: `Created direct room '<id>' for agent '<name>'.` / `Created room '<id>' (<name>) with <n> members.` / `Invited agent '<name>' (<id>) into room '<roomId>'.` The ABSENCE of one of these is the oracle in several tests, so do not filter the console.
+4. `Teams\` is EMPTY on this machine today, so the **Team** dropdown starts with only `All teams`.
+5. Reset to a virgin install with `P-RESET-ALL`, then relaunch. Several tests tell you to do exactly this.
+6. Each extra Agent is its own `P-ECHO-BOT` terminal. This area uses: `T-C` = `mybot`, `T-D` = short-lived scratch bots, `T-E` = `Emily Lee`, `T-F` = `gamma`, `T-G` = `delta`.
+7. RUN THE TESTS IN ID ORDER. Several deliberately set up the next one — INVITEROOMS-12 converts mybot's Direct Room, which is exactly what INVITEROOMS-21 needs to observe. Each test still states its own precondition and how to recover if the state is wrong.
 
 ## Tests
 
@@ -38,12 +38,12 @@ and Effort convention, and the rules for concluding a result. This page assumes 
 
 **Steps**
 
-1. Press Ctrl+C in Terminal A to stop the app.
+1. Press Ctrl+C in `T-A` to stop the app.
 2. Delete the folder `E:\Repos\Huddle\src\Huddle.App\App_Data` entirely.
-3. In Terminal A run `$env:Team__Acp__Enabled = 'false'`.
-4. In Terminal A run `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-5. Wait until Terminal A stops emitting startup lines (about 5-15 seconds).
-6. Read Terminal A and find the two lines `Created direct room '<id>' for agent 'echo'.` and `Created direct room '<id>' for agent 'alpha'.` Write both room ids down — you will reuse them.
+3. In `T-A` run `$env:Team__Acp__Enabled = 'false'`.
+4. In `T-A` run `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+5. Wait until `T-A` stops emitting startup lines (about 5-15 seconds).
+6. Read `T-A` and find the two lines `Created direct room '<id>' for agent 'echo'.` and `Created direct room '<id>' for agent 'alpha'.` Write both room ids down — you will reuse them.
 7. In the browser, navigate to `http://localhost:5100/` (type the bare address, do not use a bookmark with a path).
 8. Read the browser address bar.
 9. Read the sidebar (the left column) from top to bottom.
@@ -51,7 +51,7 @@ and Effort convention, and the rules for concluding a result. This page assumes 
 
 **Pass if — all of these**
 
-- Terminal A contains exactly two `Created direct room` lines, one naming `echo` and one naming `alpha`.
+- `T-A` contains exactly two `Created direct room` lines, one naming `echo` and one naming `alpha`.
 - The address bar has changed from `http://localhost:5100/` to `http://localhost:5100/rooms/<id>`, where `<id>` is the room id logged for `echo`.
 - The sidebar reads, top to bottom: a **New chat** button, a link **echo**, a link **alpha**, a link **Teammates**, a link **Settings**.
 - The main column `<h1>` reads exactly `echo`.
@@ -60,7 +60,7 @@ and Effort convention, and the rules for concluding a result. This page assumes 
 
 **Fail if — any of these**
 
-- The sidebar shows `No rooms yet. Start an agent to create one.` -> the demo Agents never reached the named pipe; look in Terminal A for `Demo agent <name> failed to connect to pipe team after <n> attempts.` and treat that as the defect.
+- The sidebar shows `No rooms yet. Start an agent to create one.` -> the demo Agents never reached the named pipe; look in `T-A` for `Demo agent <name> failed to connect to pipe team after <n> attempts.` and treat that as the defect.
 - Only ONE of `echo` / `alpha` appears -> the pipe server is reusing an instance instead of creating the next one before doing I/O on the accepted one (the exact regression `docs/agencyteam/rules.md` warns about under 'Create the next pipe server instance before any I/O on the accepted one'). This is a server bug, not a demo-agent bug.
 - A Room is named anything other than the Agent's Name (e.g. a guid, or `You, echo`) -> `EnsureRoomForAsync` is no longer naming the Room after the Agent, and every downstream rename test will also be wrong.
 - The members line reads `echo` without `You` -> the Human is not being seeded into the Direct Room, which would make the Room unpostable and breaks ADR-0005's structural-auditability guarantee.
@@ -69,7 +69,7 @@ and Effort convention, and the rules for concluding a result. This page assumes 
 
 **Inconclusive if**
 
-If Terminal A shows no `Created direct room` lines AND no `failed to connect` line, the demo agent host may not be running at all — check `Team:DemoAgent:Enabled` in `src\Huddle.App\appsettings.json` is still `true`. If a stale app instance is holding the pipe (you see a port-in-use or pipe-in-use error), find and kill any other `Huddle.App` process, then start over from step 1. Do NOT judge the test until exactly one app instance is running.
+If `T-A` shows no `Created direct room` lines AND no `failed to connect` line, the demo agent host may not be running at all — check `Team:DemoAgent:Enabled` in `src\Huddle.App\appsettings.json` is still `true`. If a stale app instance is holding the pipe (you see a port-in-use or pipe-in-use error), find and kill any other `Huddle.App` process, then start over from step 1. Do NOT judge the test until exactly one app instance is running.
 
 > [!NOTE]
 > This test is first because it establishes the deterministic baseline that INVITEROOMS-02 through INVITEROOMS-25 assume. If you ever lose track of the state during the free tests, come back and re-run this one.
@@ -107,7 +107,7 @@ If Terminal A shows no `Created direct room` lines AND no `failed to connect` li
 
 **Inconclusive if**
 
-If the page is blank white rather than showing the empty-state sentence, the circuit may have failed to connect rather than the route having failed. Press F5 once. If it is still blank, check Terminal A for an exception and report the test as inconclusive pending that stack trace.
+If the page is blank white rather than showing the empty-state sentence, the circuit may have failed to connect rather than the route having failed. Press F5 once. If it is still blank, check `T-A` for an exception and report the test as inconclusive pending that stack trace.
 
 > [!NOTE]
 > The copy `No rooms yet. Start an agent to create one.` is MISLEADING for a bad id when Rooms plainly exist in the sidebar. That is current, documented behaviour — note it in your report, do NOT file it as a defect.
@@ -149,12 +149,12 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 - **Start chat** is clickable with nothing ticked -> the `disabled` binding regressed and the server will be asked to create a Room with zero Agents.
 - `You` appears as a tickable row -> the list is no longer filtering on `UserKind.Agent`; creating a chat with the Human would produce a nonsense Room name.
 - Only one Agent listed, or the order is reversed -> the panel is not reading `users ORDER BY rowid`, so the list will not be stable between visits.
-- Every dot is grey/`offline` while both bots are demonstrably connected (Terminal A logged them in INVITEROOMS-01) -> the presence lookup is broken and the tester can no longer tell a live Agent from a dead one anywhere in the app.
+- Every dot is grey/`offline` while both bots are demonstrably connected (`T-A` logged them in INVITEROOMS-01) -> the presence lookup is broken and the tester can no longer tell a live Agent from a dead one anywhere in the app.
 - The panel is already open on first page load -> the `hidden` binding on `.new-chat-panel` regressed.
 
 **Inconclusive if**
 
-If the dots are grey and you are NOT sure the demo agents are connected, re-read Terminal A for the two `Created direct room` lines and check no `failed to connect` line followed them. If you cannot establish whether the agents are live, the dot colours are inconclusive — judge only the list contents and the disabled button, and say so.
+If the dots are grey and you are NOT sure the demo agents are connected, re-read `T-A` for the two `Created direct room` lines and check no `failed to connect` line followed them. If you cannot establish whether the agents are live, the dot colours are inconclusive — judge only the list contents and the disabled button, and say so.
 
 > [!NOTE]
 > The status dots in this panel repaint only on RoomsChanged, not on presence changes. Do NOT test 'disconnect an agent with the panel open and watch the dot go grey' — that is a documented known limit, not a defect.
@@ -172,20 +172,20 @@ If the dots are grey and you are NOT sure the demo agents are connected, re-read
 **Steps**
 
 1. Position the browser so the sidebar is visible, and leave it alone — do not click in it.
-2. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **Terminal B**.
-3. In Terminal B run exactly: `pwsh tools/echo-bot.ps1 -Name mybot`
-4. Read Terminal B's output.
+2. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **`T-C`**.
+3. In `T-C` run exactly: `pwsh tools/echo-bot.ps1 -Name mybot`
+4. Read `T-C`'s output.
 5. Watch the browser sidebar for up to 5 seconds WITHOUT touching the keyboard or mouse.
-6. Read Terminal A.
+6. Read `T-A`.
 7. Click the new sidebar link.
 8. Read the `<h1>` and the grey line beneath it.
 9. Read the main column between the header and the composer.
 
 **Pass if — all of these**
 
-- Terminal B prints `Connecting to pipe '\\.\pipe\team' as agent 'mybot'...` then `Sent hello. Listening for messages (Ctrl+C to exit)...` and then a JSON envelope line.
+- `T-C` prints `Connecting to pipe '\\.\pipe\team' as agent 'mybot'...` then `Sent hello. Listening for messages (Ctrl+C to exit)...` and then a JSON envelope line.
 - A new sidebar link reading exactly `mybot` appears within about a second, with NO page reload and no interaction of any kind.
-- Terminal A prints `Created direct room '<id>' for agent 'mybot'.`
+- `T-A` prints `Created direct room '<id>' for agent 'mybot'.`
 - Clicking the link navigates to a `/rooms/<id>` whose `<h1>` reads `mybot` and whose grey line reads `You, mybot`.
 - The Transcript area is empty — no messages.
 - Optional DB check: `sqlite3 src\Huddle.App\App_Data\team.db "SELECT name, kind FROM users WHERE name='mybot';"` returns `mybot|agent`.
@@ -193,16 +193,16 @@ If the dots are grey and you are NOT sure the demo agents are connected, re-read
 **Fail if — any of these**
 
 - The link only appears after you press F5 -> `RoomsChanged` is not reaching `RoomList`; either `PublishRoomsChanged` is not being called from `EnsureRoomForAsync`, or a component leaked its subscription. This is a silent failure in production — the user simply never sees new teammates arrive.
-- Terminal B prints a `protocolError` envelope instead of a welcome -> the handshake rejected a legal Name; check the code in that envelope against `NameRules` before blaming the UI.
+- `T-C` prints a `protocolError` envelope instead of a welcome -> the handshake rejected a legal Name; check the code in that envelope against `NameRules` before blaming the UI.
 - TWO `mybot` links appear -> the Direct-Room lookup ran twice or the Room was minted twice.
-- Terminal B hangs after `Sent hello` with no envelope at all and no sidebar change -> the server accepted the connection but never answered; look in Terminal A for an exception in the pipe accept loop.
+- `T-C` hangs after `Sent hello` with no envelope at all and no sidebar change -> the server accepted the connection but never answered; look in `T-A` for an exception in the pipe accept loop.
 
 **Inconclusive if**
 
-If `pwsh` is not recognised, PowerShell 7 is not installed — this whole area's free tests need it. Install it, or run the script with `powershell.exe -File tools\echo-bot.ps1 -Name mybot` and note the substitution in your report. If Terminal B reports `Connect timed out`, the app is not running or another process holds the pipe — restart from the area setup rather than judging this test.
+If `pwsh` is not recognised, PowerShell 7 is not installed — this whole area's free tests need it. Install it, or run the script with `powershell.exe -File tools\echo-bot.ps1 -Name mybot` and note the substitution in your report. If `T-C` reports `Connect timed out`, the app is not running or another process holds the pipe — restart from the area setup rather than judging this test.
 
 > [!NOTE]
-> Leave Terminal B running. INVITEROOMS-05, 11, 12, 13 and 21 all use `mybot`.
+> Leave `T-C` running. INVITEROOMS-05, 11, 12, 13 and 21 all use `mybot`.
 
 ### INVITEROOMS-05 — Reconnecting under the same Name re-attaches to the existing Room — it never mints a second one
 
@@ -212,36 +212,36 @@ If `pwsh` is not recognised, PowerShell 7 is not installed — this whole area's
 
 **Before you start**
 
-- INVITEROOMS-04 passed and Terminal B is still running `mybot`.
+- INVITEROOMS-04 passed and `T-C` is still running `mybot`.
 - Nobody has been invited into mybot's Room, so it still has exactly two Members.
 
 **Steps**
 
 1. In the browser, click the sidebar link `mybot` and write down the full `/rooms/<id>` from the address bar.
 2. Count the sidebar links and write the count down.
-3. Note the current last line in Terminal A.
-4. In Terminal B press Ctrl+C to stop the bot.
-5. In Terminal B run exactly the same command again: `pwsh tools/echo-bot.ps1 -Name mybot`
+3. Note the current last line in `T-A`.
+4. In `T-C` press Ctrl+C to stop the bot.
+5. In `T-C` run exactly the same command again: `pwsh tools/echo-bot.ps1 -Name mybot`
 6. Wait 3 seconds, then read the browser sidebar.
-7. Read every line Terminal A has printed since the note you took.
+7. Read every line `T-A` has printed since the note you took.
 8. Click the `mybot` link and compare the address bar to what you wrote down.
 
 **Pass if — all of these**
 
 - The sidebar shows exactly ONE link reading `mybot`, and the total sidebar link count is unchanged.
-- Terminal A printed NO new `Created direct room` line during the reconnect.
+- `T-A` printed NO new `Created direct room` line during the reconnect.
 - Clicking `mybot` lands on the identical `/rooms/<id>` you recorded before the restart.
 - Optional DB check: `sqlite3 src\Huddle.App\App_Data\team.db "SELECT count(*) FROM rooms;"` returns the same number before and after the reconnect.
 
 **Fail if — any of these**
 
 - A second `mybot` link appears -> `FindRoomWithExactMembersAsync` regressed and every reconnect now mints a Room; over a week of restarts the sidebar becomes unusable. This is the failure this test exists for.
-- Terminal A prints `Created direct room` on the reconnect while the sidebar still shows one link -> a Room was created and orphaned; the DB count check will catch it even though the UI looks fine. Treat it as the same defect.
+- `T-A` prints `Created direct room` on the reconnect while the sidebar still shows one link -> a Room was created and orphaned; the DB count check will catch it even though the UI looks fine. Treat it as the same defect.
 - The `mybot` link now points at a DIFFERENT room id -> the old Room was abandoned and its Transcript is now unreachable from the UI.
 
 **Inconclusive if**
 
-If Terminal B fails to reconnect (`Connect timed out`), the server may not have released the previous connection yet. Wait 5 seconds and run the command once more. If it still fails, the test is inconclusive on a connection problem, not a Room problem — say so rather than recording a fail.
+If `T-C` fails to reconnect (`Connect timed out`), the server may not have released the previous connection yet. Wait 5 seconds and run the command once more. If it still fails, the test is inconclusive on a connection problem, not a Room problem — say so rather than recording a fail.
 
 ### INVITEROOMS-06 — A Name differing only in case re-attaches to the existing Agent instead of creating a second one
 
@@ -251,36 +251,36 @@ If Terminal B fails to reconnect (`Connect timed out`), the server may not have 
 
 **Before you start**
 
-- INVITEROOMS-04 passed; an Agent named `mybot` has registered. Terminal B may be running or stopped — either is fine.
+- INVITEROOMS-04 passed; an Agent named `mybot` has registered. `T-C` may be running or stopped — either is fine.
 
 **Steps**
 
 1. Count the sidebar links and write down every Room name you can see.
-2. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **Terminal C**.
-3. In Terminal C run exactly: `pwsh tools/echo-bot.ps1 -Name MYBOT` (upper case).
-4. Read Terminal C's output.
-5. Read Terminal B's output if it was running.
+2. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **`T-D`**.
+3. In `T-D` run exactly: `pwsh tools/echo-bot.ps1 -Name MYBOT` (upper case).
+4. Read `T-D`'s output.
+5. Read `T-C`'s output if it was running.
 6. Wait 3 seconds, then read the browser sidebar.
-7. Press Ctrl+C in Terminal C to stop the upper-case bot.
-8. In Terminal B, re-run `pwsh tools/echo-bot.ps1 -Name mybot` so `mybot` is connected again for later tests.
+7. Press Ctrl+C in `T-D` to stop the upper-case bot.
+8. In `T-C`, re-run `pwsh tools/echo-bot.ps1 -Name mybot` so `mybot` is connected again for later tests.
 
 **Pass if — all of these**
 
-- Terminal C connects successfully and prints `Sent hello. Listening for messages (Ctrl+C to exit)...` — it is NOT rejected.
+- `T-D` connects successfully and prints `Sent hello. Listening for messages (Ctrl+C to exit)...` — it is NOT rejected.
 - No new sidebar link appears. The sidebar still shows the same Room names you wrote down, and the `mybot` entry is still spelled in lower case.
-- Terminal A prints no new `Created direct room` line.
-- If Terminal B was running, it prints `Server closed the connection.` — the server closed the stale connection when the same identity re-registered.
+- `T-A` prints no new `Created direct room` line.
+- If `T-C` was running, it prints `Server closed the connection.` — the server closed the stale connection when the same identity re-registered.
 - Optional DB check: `sqlite3 src\Huddle.App\App_Data\team.db "SELECT name FROM users WHERE name LIKE 'mybot';"` returns exactly ONE row, still spelled `mybot`.
 
 **Fail if — any of these**
 
 - A second sidebar link reading `MYBOT` appears -> the `COLLATE NOCASE UNIQUE` constraint on `users.name` or the upsert regressed. Two Members whose Names differ only in case would then coexist, and Mention resolution between them becomes ambiguous everywhere in the app.
 - The stored name flips to upper case (`MYBOT` in the sidebar and in `team.db`) -> the upsert is writing the Name as well as the description; every existing Mention of `mybot` in past Transcripts now reads against a renamed identity.
-- Terminal C is rejected with a `protocolError` -> the server is treating a case variant as an invalid Name rather than as the same identity; that is a regression, since case-insensitive re-attachment is the documented behaviour.
+- `T-D` is rejected with a `protocolError` -> the server is treating a case variant as an invalid Name rather than as the same identity; that is a regression, since case-insensitive re-attachment is the documented behaviour.
 
 **Inconclusive if**
 
-If Terminal C prints `Connect timed out`, the app is not reachable — fix that and retry rather than judging. If Terminal B was already stopped before you started, you cannot observe the `Server closed the connection.` half; judge only the sidebar and DB halves and note the omission.
+If `T-D` prints `Connect timed out`, the app is not reachable — fix that and retry rather than judging. If `T-C` was already stopped before you started, you cannot observe the `Server closed the connection.` half; judge only the sidebar and DB halves and note the omission.
 
 > [!NOTE]
 > Two Members whose Names differ only in case cannot both exist — this is a documented known limit, and re-attachment is the designed outcome, not a bug.
@@ -298,21 +298,21 @@ If Terminal C prints `Connect timed out`, the app is not reachable — fix that 
 **Steps**
 
 1. Write down every sidebar link name you can currently see.
-2. In Terminal C run exactly: `pwsh tools/echo-bot.ps1 -Name "bad name!"`
-3. Read Terminal C's output in full, including the JSON envelope.
+2. In `T-D` run exactly: `pwsh tools/echo-bot.ps1 -Name "bad name!"`
+3. Read `T-D`'s output in full, including the JSON envelope.
 4. Wait 3 seconds and read the browser sidebar.
-5. In Terminal C run exactly: `pwsh tools/echo-bot.ps1 -Name "Emily  Lee"` (TWO spaces between the words).
-6. Read Terminal C's output.
-7. In Terminal C run exactly: `pwsh tools/echo-bot.ps1 -Name "bot.exe"`
-8. Read Terminal C's output.
+5. In `T-D` run exactly: `pwsh tools/echo-bot.ps1 -Name "Emily  Lee"` (TWO spaces between the words).
+6. Read `T-D`'s output.
+7. In `T-D` run exactly: `pwsh tools/echo-bot.ps1 -Name "bot.exe"`
+8. Read `T-D`'s output.
 9. Wait 3 seconds and read the browser sidebar one more time.
 
 **Pass if — all of these**
 
-- For each of the three runs, Terminal C prints a JSON line containing `"type":"protocolError"` and `"code":"invalidName"`, with a message of the form `'<the name you typed>' is not a valid agent name.`
+- For each of the three runs, `T-D` prints a JSON line containing `"type":"protocolError"` and `"code":"invalidName"`, with a message of the form `'<the name you typed>' is not a valid agent name.`
 - After each run the connection ends — the script does not sit waiting for messages.
 - The browser sidebar is IDENTICAL to the list you wrote down. No new link appeared for any of the three names, and none appeared with a mangled or truncated spelling.
-- Terminal A printed no `Created direct room` line for any of the three.
+- `T-A` printed no `Created direct room` line for any of the three.
 - Optional DB check: `sqlite3 src\Huddle.App\App_Data\team.db "SELECT name FROM users WHERE kind='agent';"` contains none of `bad name!`, `Emily  Lee` or `bot.exe`.
 
 **Fail if — any of these**
@@ -348,7 +348,7 @@ If PowerShell's own quoting mangles the argument (you see the script report a di
 5. Press Enter.
 6. Wait 3 seconds and confirm two messages are now in the Transcript: yours, and a reply beginning `**echo:**`.
 7. Write down the exact text of both messages.
-8. Note the current last line in Terminal A.
+8. Note the current last line in `T-A`.
 9. Count the sidebar links and write the count down.
 10. Click **New chat** in the sidebar.
 11. Tick the checkbox next to `echo`, and ONLY that one. Confirm `alpha` is unticked.
@@ -356,14 +356,14 @@ If PowerShell's own quoting mangles the argument (you see the script report a di
 13. Read the address bar.
 14. Read the Transcript.
 15. Count the sidebar links again.
-16. Read every line Terminal A printed since your note.
+16. Read every line `T-A` printed since your note.
 
 **Pass if — all of these**
 
 - The address bar reads exactly ROOM-ECHO — the same room id you recorded before clicking Start chat.
 - Both messages are still in the Transcript, with the same text.
 - The sidebar link count is UNCHANGED, and there is still exactly one link reading `echo`.
-- Terminal A printed NO `Created room` line and NO `Created direct room` line.
+- `T-A` printed NO `Created room` line and NO `Created direct room` line.
 - The New chat panel closed itself and its checkbox is no longer ticked when you reopen it.
 - Optional DB check: `sqlite3 src\Huddle.App\App_Data\team.db "SELECT count(*) FROM rooms;"` returns the same number as before step 10.
 
@@ -371,12 +371,12 @@ If PowerShell's own quoting mangles the argument (you see the script report a di
 
 - A SECOND sidebar link reading `echo` appears and the Transcript looks empty -> the `if (agents.Count == 1) return await EnsureRoomForAsync(...)` short-circuit regressed and every 'message this teammate' click now mints a fresh Room. To the user this reads as lost conversation history, with no error anywhere. This is THE regression this test exists to catch.
 - The address bar changes to a different room id even though the sidebar count stayed the same -> a Room was created and the old one orphaned; the DB count check will confirm it.
-- Terminal A prints `Created room '<id>' (echo) with 2 members.` -> the same defect, visible in the log before you even look at the sidebar.
+- `T-A` prints `Created room '<id>' (echo) with 2 members.` -> the same defect, visible in the log before you even look at the sidebar.
 - `Start chat` does nothing at all -> the selection is not reaching the server; check the checkbox actually shows as ticked before blaming the button.
 
 **Inconclusive if**
 
-If `echo` did not reply to `hi @echo` within 3 seconds, the demo agent may have disconnected — check Terminal A. Without a Transcript you can still judge this test on the room id and the sidebar count alone, but say in your report that the history half was not observed. Do NOT retry with a plain `hi` (no @) — the demo bots reply only when mentioned, so that proves nothing.
+If `echo` did not reply to `hi @echo` within 3 seconds, the demo agent may have disconnected — check `T-A`. Without a Transcript you can still judge this test on the room id and the sidebar count alone, but say in your report that the history half was not observed. Do NOT retry with a plain `hi` (no @) — the demo bots reply only when mentioned, so that proves nothing.
 
 > [!NOTE]
 > Do not invite anyone into `echo`'s Room for the rest of the free tests — INVITEROOMS-24 and the restart test read best with it intact.
@@ -393,7 +393,7 @@ If `echo` did not reply to `hi @echo` within 3 seconds, the demo agent may have 
 
 **Steps**
 
-1. Note the current last line in Terminal A.
+1. Note the current last line in `T-A`.
 2. Count the sidebar links.
 3. Click **New chat**.
 4. Tick `echo` FIRST, then tick `alpha`. The order matters.
@@ -403,7 +403,7 @@ If `echo` did not reply to `hi @echo` within 3 seconds, the demo agent may have 
 8. Read the sidebar without pressing F5.
 9. In DevTools Elements, select the new sidebar link and read its class list.
 10. Click **New chat** again and read the checkbox states.
-11. Read every line Terminal A printed since your note.
+11. Read every line `T-A` printed since your note.
 
 **Pass if — all of these**
 
@@ -413,7 +413,7 @@ If `echo` did not reply to `hi @echo` within 3 seconds, the demo agent may have 
 - A new sidebar link reading `echo, alpha` is present WITHOUT a page reload.
 - That sidebar link carries the `active` class (it is the highlighted one).
 - The New chat panel closed itself, and reopening it shows both checkboxes cleared.
-- Terminal A printed `Created room '<id>' (echo, alpha) with 3 members.`
+- `T-A` printed `Created room '<id>' (echo, alpha) with 3 members.`
 - Optional DB check: `sqlite3 src\Huddle.App\App_Data\team.db "SELECT u.name FROM room_members m JOIN users u ON u.id=m.user_id WHERE m.room_id='<the new id>' ORDER BY m.rowid;"` returns `You` (or the human row) first, then `echo`, then `alpha`.
 
 **Fail if — any of these**
@@ -422,7 +422,7 @@ If `echo` did not reply to `hi @echo` within 3 seconds, the demo agent may have 
 - The name reads `alpha, echo` when you ticked `echo` first -> the name follows the stored list order rather than the tick order; the user's intent is being silently reordered.
 - The new link only appears after F5 -> `RoomsChanged` is not reaching `RoomList` after a create; same class of failure as INVITEROOMS-04 but on a different call path.
 - The panel stays open, or the checkboxes stay ticked -> a second click would create a duplicate Room the user did not ask for.
-- Terminal A reports `with 2 members` -> the Human was not seeded; that Room is unpostable and violates ADR-0005's 'the Human is a Member of every Room'.
+- `T-A` reports `with 2 members` -> the Human was not seeded; that Room is unpostable and violates ADR-0005's 'the Human is a Member of every Room'.
 
 **Inconclusive if**
 
@@ -441,25 +441,25 @@ If the `active` class is not on the link but everything else passed, the highlig
 **Steps**
 
 1. Write down the `/rooms/<id>` of the existing `echo, alpha` Room. Call it ROOM-EA1.
-2. Note the current last line in Terminal A.
+2. Note the current last line in `T-A`.
 3. Click **New chat**.
 4. Tick `echo`, then `alpha` — the identical pair, in the identical order.
 5. Click **Start chat**.
 6. Read the address bar.
 7. Read the sidebar.
-8. Read every line Terminal A printed since your note.
+8. Read every line `T-A` printed since your note.
 
 **Pass if — all of these**
 
 - The address bar shows a room id that is NOT ROOM-EA1.
 - The sidebar now shows TWO links both reading `echo, alpha`, pointing at two different room ids.
-- Terminal A printed exactly one new `Created room '<id>' (echo, alpha) with 3 members.` line, naming the new id.
+- `T-A` printed exactly one new `Created room '<id>' (echo, alpha) with 3 members.` line, naming the new id.
 - Both Rooms open and both are empty and independent.
 
 **Fail if — any of these**
 
-- Clicking **Start chat** does nothing visible — no navigation, no new link -> the create path is throwing silently; check Terminal A for an exception. A user clicking a button that does nothing has no way to know whether it worked.
-- The browser navigates to ROOM-EA1 while Terminal A also logs `Created room` -> a Room was created and then abandoned; the user sees the old Transcript and believes it is the new Room.
+- Clicking **Start chat** does nothing visible — no navigation, no new link -> the create path is throwing silently; check `T-A` for an exception. A user clicking a button that does nothing has no way to know whether it worked.
+- The browser navigates to ROOM-EA1 while `T-A` also logs `Created room` -> a Room was created and then abandoned; the user sees the old Transcript and believes it is the new Room.
 - Only ONE `echo, alpha` link is visible afterwards but the address bar shows a new id -> the sidebar did not repaint; press F5 once to distinguish a repaint failure from a create failure and say which you saw.
 
 **Inconclusive if**
@@ -477,7 +477,7 @@ If you cannot tell the two `echo, alpha` links apart in the sidebar, hover each 
 
 **Before you start**
 
-- Terminal B is running `mybot` and the sidebar has a link reading exactly `mybot` (no comma in it). If it has a comma, mybot's Room has already been converted — restart from INVITEROOMS-01.
+- `T-C` is running `mybot` and the sidebar has a link reading exactly `mybot` (no comma in it). If it has a comma, mybot's Room has already been converted — restart from INVITEROOMS-01.
 - At least `echo` and `alpha` also registered.
 
 **Steps**
@@ -525,7 +525,7 @@ If you clicked a button labelled 'Add teammate' and a Name/Title/Alias FORM open
 2. Click into the composer and type exactly: `hi @mybot`
 3. Press Enter. Wait 3 seconds and confirm the Transcript now holds your message and a reply beginning `**mybot:**`.
 4. In File Explorer or a terminal, open `E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\` and find the `<roomId>.jsonl` file matching this Room's id. Count its lines: `(Get-Content 'E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<roomId>.jsonl' | Measure-Object -Line).Lines`. Write the number down.
-5. Note the current last line in Terminal A.
+5. Note the current last line in `T-A`.
 6. Click **Add teammate** (the `invite-toggle` in the Room header).
 7. Click the entry `alpha` in the candidate list.
 8. IMMEDIATELY read the coloured line that appears inside the panel, and copy its text exactly.
@@ -534,7 +534,7 @@ If you clicked a button labelled 'Add teammate' and a Name/Title/Alias FORM open
 11. Read the grey line beneath the `<h1>`.
 12. Read the sidebar.
 13. Confirm the browser has NOT reloaded (the address bar is unchanged and no page flash occurred).
-14. Read every line Terminal A printed since your note.
+14. Read every line `T-A` printed since your note.
 15. Count the lines in the same `.jsonl` file again.
 
 **Pass if — all of these**
@@ -545,7 +545,7 @@ If you clicked a button labelled 'Add teammate' and a Name/Title/Alias FORM open
 - The grey members line has changed to `You, mybot, alpha`.
 - The sidebar link has renamed in place from `mybot` to `mybot, alpha` — no new link was added.
 - The address bar is unchanged and no page reload occurred.
-- Terminal A printed `Invited agent 'alpha' (<id>) into room '<roomId>'.`
+- `T-A` printed `Invited agent 'alpha' (<id>) into room '<roomId>'.`
 - The `.jsonl` line count is IDENTICAL to what you wrote down — an Invitation persists no Message.
 
 **Fail if — any of these**
@@ -589,7 +589,7 @@ If the Room has no `.jsonl` file at all, `mybot` never replied and no Message wa
 - After the last candidate is invited, the list is replaced by the sentence `Every agent is already in this room.`
 - The **Team** `<select>` is NOT rendered at all in this state.
 - The `<h1>` now names every registered Agent, comma-separated, and the members line begins with `You`.
-- Terminal A printed one `Invited agent ...` line per click, and no more.
+- `T-A` printed one `Invited agent ...` line per click, and no more.
 - Optional DB check: for this room id, `SELECT count(*) FROM room_members WHERE room_id='<id>'` equals `SELECT count(*) FROM users`.
 
 **Fail if — any of these**
@@ -597,7 +597,7 @@ If the Room has no `.jsonl` file at all, `mybot` never replied and no Message wa
 - The panel goes blank with no sentence -> an empty list reads as a broken panel; the user cannot tell 'nothing to do' from 'failed to load'.
 - The **Team** filter is still rendered over an empty list -> a control that can only ever produce the same empty result is offered, which tells the user the filter is at fault when it is not.
 - A candidate you already invited reappears in the list -> the reload after an invite is reading stale membership.
-- Two clicks produce only one `Invited agent` line in Terminal A -> one of the invites silently did nothing.
+- Two clicks produce only one `Invited agent` line in `T-A` -> one of the invites silently did nothing.
 
 **Inconclusive if**
 
@@ -640,7 +640,7 @@ If a new Agent connects mid-test (a terminal you forgot about), the list will ne
 
 **Inconclusive if**
 
-If every Agent happens to be a Member of both Rooms, both panels will show `Every agent is already in this room.` and you cannot tell a carried-over list from a correct one. Start one extra bot (`pwsh tools/echo-bot.ps1 -Name scratch` in Terminal C), invite it into Room B only, then re-run — or note the test as inconclusive for want of a distinguishing Agent.
+If every Agent happens to be a Member of both Rooms, both panels will show `Every agent is already in this room.` and you cannot tell a carried-over list from a correct one. Start one extra bot (`pwsh tools/echo-bot.ps1 -Name scratch` in `T-D`), invite it into Room B only, then re-run — or note the test as inconclusive for want of a distinguishing Agent.
 
 ### INVITEROOMS-15 — /invite @name in the composer does the same thing as the header control
 
@@ -654,19 +654,19 @@ If every Agent happens to be a Member of both Rooms, both panels will show `Ever
 
 **Steps**
 
-1. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **Terminal E**.
-2. In Terminal E run exactly: `pwsh tools/echo-bot.ps1 -Name gamma`
+1. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **`T-F`**.
+2. In `T-F` run exactly: `pwsh tools/echo-bot.ps1 -Name gamma`
 3. Wait until a `gamma` link appears in the sidebar.
 4. Click one of the sidebar links reading `echo, alpha`. Write its room id down.
 5. Confirm the composer placeholder reads `Message… (/invite @agent)`.
-6. Note the current last line in Terminal A.
+6. Note the current last line in `T-A`.
 7. If the Room already has a `.jsonl` file under `App_Data\rooms\`, count its lines and write the number down. If it has none, write down 'no file'.
 8. Click into the composer and type exactly: `/invite @gamma`
 9. Press Enter.
 10. Read the coloured line that appears directly ABOVE the composer.
 11. Read the Transcript.
 12. Read the header `<h1>`, the members line, and the sidebar.
-13. Read every line Terminal A printed since your note.
+13. Read every line `T-A` printed since your note.
 14. Count the `.jsonl` lines again (or confirm the file still does not exist).
 
 **Pass if — all of these**
@@ -674,7 +674,7 @@ If every Agent happens to be a Member of both Rooms, both panels will show `Ever
 - A blue/info line appears above the composer reading EXACTLY `Invited gamma. Room is now "echo, alpha, gamma".`
 - NOTHING was added to the Transcript — no message bubble for `/invite @gamma`.
 - The header `<h1>` now reads `echo, alpha, gamma`, the members line reads `You, echo, alpha, gamma`, and the sidebar link renamed in place — all with no page reload.
-- Terminal A printed `Invited agent 'gamma' (<id>) into room '<roomId>'.`
+- `T-A` printed `Invited agent 'gamma' (<id>) into room '<roomId>'.`
 - The `.jsonl` line count is unchanged (or the file still does not exist).
 
 **Fail if — any of these**
@@ -686,10 +686,10 @@ If every Agent happens to be a Member of both Rooms, both panels will show `Ever
 
 **Inconclusive if**
 
-If no `gamma` link appeared in the sidebar within 5 seconds, the bot did not register — read Terminal E for a `protocolError` and fix that before judging. If the composer swallows your Enter and inserts a newline instead, you pressed Shift+Enter; Enter alone sends.
+If no `gamma` link appeared in the sidebar within 5 seconds, the bot did not register — read `T-F` for a `protocolError` and fix that before judging. If the composer swallows your Enter and inserts a newline instead, you pressed Shift+Enter; Enter alone sends.
 
 > [!NOTE]
-> Leave Terminal E running — INVITEROOMS-20 needs `gamma`.
+> Leave `T-F` running — INVITEROOMS-20 needs `gamma`.
 
 ### INVITEROOMS-16 — /invite accepts a multi-word Name, with and without the @, and never truncates at the space
 
@@ -703,11 +703,11 @@ If no `gamma` link appeared in the sidebar within 5 seconds, the bot did not reg
 
 **Steps**
 
-1. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **Terminal D**.
-2. In Terminal D run exactly: `pwsh tools/echo-bot.ps1 -Name "Emily Lee"` (with the quotes, one space between the words).
+1. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **`T-E`**.
+2. In `T-E` run exactly: `pwsh tools/echo-bot.ps1 -Name "Emily Lee"` (with the quotes, one space between the words).
 3. Wait until a sidebar link reading exactly `Emily Lee` appears.
 4. Click a Room that does NOT contain `Emily Lee` — use an `echo, alpha` Room. Write its room id down.
-5. Note the current last line in Terminal A.
+5. Note the current last line in `T-A`.
 6. Click into the composer and type exactly: `/invite @Emily Lee`
 7. Press Enter.
 8. Read the coloured line above the composer, and copy its exact text.
@@ -717,14 +717,14 @@ If no `gamma` link appeared in the sidebar within 5 seconds, the bot did not reg
 12. Press Enter.
 13. Read the coloured line above the composer.
 14. Read that Room's header `<h1>`.
-15. Read every line Terminal A printed since your note.
+15. Read every line `T-A` printed since your note.
 
 **Pass if — all of these**
 
 - The first command produces a BLUE/info line reading `Invited Emily Lee. Room is now "echo, alpha, Emily Lee".` — the full two-word Name, not truncated.
 - The first Room's `<h1>` and sidebar link both end in `Emily Lee`, spelled in full.
 - The second command (no `@`) also produces a blue/info line naming `Emily Lee` in full, and that Room renames to include `Emily Lee`.
-- Terminal A printed one `Invited agent 'Emily Lee' (<id>) into room '<roomId>'.` line for each of the two invites.
+- `T-A` printed one `Invited agent 'Emily Lee' (<id>) into room '<roomId>'.` line for each of the two invites.
 - Optional DB check: `sqlite3 src\Huddle.App\App_Data\team.db "SELECT name FROM rooms;"` shows the full string `Emily Lee` in both renamed Rooms, never `Emily` alone.
 
 **Fail if — any of these**
@@ -736,7 +736,7 @@ If no `gamma` link appeared in the sidebar within 5 seconds, the bot did not reg
 
 **Inconclusive if**
 
-If no `Emily Lee` link appears in the sidebar, check Terminal D for a `protocolError` with code `invalidName`. If the Name was rejected at the handshake, this test cannot run — that is an INVITEROOMS-07 concern, not this one, and you should say so rather than recording a fail here. Also confirm you typed exactly ONE space between the words; two spaces is a different, deliberately-invalid Name.
+If no `Emily Lee` link appears in the sidebar, check `T-E` for a `protocolError` with code `invalidName`. If the Name was rejected at the handshake, this test cannot run — that is an INVITEROOMS-07 concern, not this one, and you should say so rather than recording a fail here. Also confirm you typed exactly ONE space between the words; two spaces is a different, deliberately-invalid Name.
 
 > [!NOTE]
 > This and INVITEROOMS-08 are the two highest-value tests in the area. Run them even if you are short on time.
@@ -754,13 +754,13 @@ If no `Emily Lee` link appears in the sidebar, check Terminal D for a `protocolE
 **Steps**
 
 1. Click the sidebar link `echo` and write down its `<h1>` text and its members line text.
-2. Note the current last line in Terminal A.
+2. Note the current last line in `T-A`.
 3. Click into the composer and type exactly: `/invite @echo`
 4. Press Enter.
 5. Read the coloured line above the composer.
 6. Read the `<h1>` and the members line again.
 7. Read the sidebar.
-8. Read every line Terminal A printed since your note.
+8. Read every line `T-A` printed since your note.
 
 **Pass if — all of these**
 
@@ -797,7 +797,7 @@ If `echo`'s Room has been renamed by an earlier test (its `<h1>` contains a comm
 **Steps**
 
 1. Click any sidebar Room link and write down its `<h1>`, its members line and the sidebar link text.
-2. Note the current last line in Terminal A.
+2. Note the current last line in `T-A`.
 3. Click into the composer and type exactly: `/invite @nobody`
 4. Press Enter.
 5. Read the coloured line above the composer and note its colour.
@@ -806,7 +806,7 @@ If `echo`'s Room has been renamed by an earlier test (its `<h1>` contains a comm
 8. Press Enter.
 9. Read the coloured line above the composer.
 10. Read the `<h1>` and the members line again.
-11. Read every line Terminal A printed since your note.
+11. Read every line `T-A` printed since your note.
 12. Check the bottom of the page for the `An unhandled error has occurred.` bar.
 
 **Pass if — all of these**
@@ -814,7 +814,7 @@ If `echo`'s Room has been renamed by an earlier test (its `<h1>` contains a comm
 - `/invite @nobody` produces a RED error line reading exactly `Unknown agent @nobody`.
 - `/invite @You` produces a RED error line reading exactly `Unknown agent @You`.
 - After both, the `<h1>`, the members line and the sidebar link are all unchanged.
-- Terminal A printed NO `Invited agent` line for either attempt.
+- `T-A` printed NO `Invited agent` line for either attempt.
 - No `An unhandled error has occurred.` bar appeared.
 
 **Fail if — any of these**
@@ -881,7 +881,7 @@ If the textarea does NOT clear, check whether you pressed Shift+Enter (which ins
 
 **Before you start**
 
-- `echo`, `alpha` and `gamma` are all registered. Terminal E must still be running `gamma` (from INVITEROOMS-15).
+- `echo`, `alpha` and `gamma` are all registered. `T-F` must still be running `gamma` (from INVITEROOMS-15).
 
 **Steps**
 
@@ -889,12 +889,12 @@ If the textarea does NOT clear, check whether you pressed Shift+Enter (which ins
 2. Tick `alpha` FIRST, then tick `echo`. This order is deliberate and is the reverse of INVITEROOMS-09.
 3. Click **Start chat**.
 4. Read the `<h1>` and the members line, and write both down exactly.
-5. Note the current last line in Terminal A.
+5. Note the current last line in `T-A`.
 6. Click into the composer and type exactly: `/invite @gamma`
 7. Press Enter.
 8. Read the `<h1>` and the members line again.
 9. Read the sidebar link for this Room.
-10. Read every line Terminal A printed since your note.
+10. Read every line `T-A` printed since your note.
 
 **Pass if — all of these**
 
@@ -914,7 +914,7 @@ If the textarea does NOT clear, check whether you pressed Shift+Enter (which ins
 
 **Inconclusive if**
 
-If `gamma` is not in the candidate set (the `/invite` returns `Unknown agent @gamma`), Terminal E has stopped. Restart it with `pwsh tools/echo-bot.ps1 -Name gamma`, wait for the sidebar entry, and retry. Do not record a fail for an absent bot.
+If `gamma` is not in the candidate set (the `/invite` returns `Unknown agent @gamma`), `T-F` has stopped. Restart it with `pwsh tools/echo-bot.ps1 -Name gamma`, wait for the sidebar entry, and retry. Do not record a fail for an absent bot.
 
 > [!NOTE]
 > A Room can never be deleted, left, or renamed by hand — there is no such control anywhere in the UI, and a Room name is always derived. Do not look for one and do not file its absence.
@@ -928,31 +928,31 @@ If `gamma` is not in the candidate set (the `/invite` returns `Unknown agent @ga
 **Before you start**
 
 - INVITEROOMS-12 and 13 ran, so `mybot`'s original Direct Room has been converted into a group Room (its sidebar entry contains commas and at least three Members).
-- Terminal B is running `mybot`.
+- `T-C` is running `mybot`.
 
 **Steps**
 
 1. Find the sidebar link whose name STARTS with `mybot,` — the converted group Room. Click it, write its room id down (call it OLD-ROOM), and confirm its Transcript still holds the `hi @mybot` exchange from INVITEROOMS-12.
 2. Count the sidebar links and write the count down.
-3. Note the current last line in Terminal A.
-4. In Terminal B press Ctrl+C.
-5. In Terminal B run exactly: `pwsh tools/echo-bot.ps1 -Name mybot`
+3. Note the current last line in `T-A`.
+4. In `T-C` press Ctrl+C.
+5. In `T-C` run exactly: `pwsh tools/echo-bot.ps1 -Name mybot`
 6. Watch the browser sidebar for up to 5 seconds WITHOUT reloading the page.
-7. Read every line Terminal A printed since your note.
+7. Read every line `T-A` printed since your note.
 8. Click the new sidebar link and read its room id, its `<h1>`, its members line, and its Transcript.
 9. Click OLD-ROOM again and read its `<h1>` and its Transcript.
 
 **Pass if — all of these**
 
 - A SECOND sidebar link appears, reading exactly `mybot`, WITHOUT a page reload. The sidebar count went up by one.
-- Terminal A printed a new `Created direct room '<newId>' for agent 'mybot'.` line, naming a room id you have not seen before.
+- `T-A` printed a new `Created direct room '<newId>' for agent 'mybot'.` line, naming a room id you have not seen before.
 - The new Room's `<h1>` reads `mybot`, its members line reads `You, mybot`, and its Transcript is EMPTY.
 - OLD-ROOM is still present, still named `mybot, alpha, ...` (whatever INVITEROOMS-13 left it as), and still holds the original `hi @mybot` exchange.
 - Optional DB check: two rooms include `mybot` as a member; only the NEW one has exactly 2 member rows.
 
 **Fail if — any of these**
 
-- No second Room appears and Terminal A logs nothing -> the Agent has been left with NO Direct Room at all; there is now no way to message it one-to-one and the Teammate card's Message action will be permanently absent.
+- No second Room appears and `T-A` logs nothing -> the Agent has been left with NO Direct Room at all; there is now no way to message it one-to-one and the Teammate card's Message action will be permanently absent.
 - OLD-ROOM gets RENAMED back to `mybot` -> the exact-membership lookup is matching a 3+-member Room; the group Room's identity is being stolen and its name no longer describes its Members.
 - Both Rooms exist but only one shows until you press F5 -> `RoomsChanged` is not reaching `RoomList` on this call path specifically.
 - OLD-ROOM's Transcript is now empty or has moved into the new Room -> the Transcript is being re-keyed on rename, and history has been destroyed.
@@ -981,26 +981,26 @@ If the sidebar entry for `mybot` still has NO comma, INVITEROOMS-12 did not actu
 3. In tab B, navigate to the SAME `/rooms/<id>`.
 4. In tab B, click **Add teammate** in the Room header and leave the panel OPEN. Confirm `gamma` is listed as a candidate.
 5. Arrange the two tabs (or two windows) so you can see tab B while acting in tab A. If you cannot, take a screenshot of tab B first and compare after.
-6. Note the current last line in Terminal A.
+6. Note the current last line in `T-A`.
 7. In TAB A, click into the composer, type exactly `/invite @gamma`, and press Enter.
 8. Switch to TAB B WITHOUT reloading it (do not press F5, do not re-navigate).
 9. Read tab B's sidebar link for this Room.
 10. Read tab B's header `<h1>` and its members line.
 11. Read tab B's still-open candidate list.
-12. Read every line Terminal A printed since your note, looking in particular for any line containing `RoomsChanged handler threw`.
+12. Read every line `T-A` printed since your note, looking in particular for any line containing `RoomsChanged handler threw`.
 
 **Pass if — all of these**
 
 - Tab B's sidebar link renamed to include `gamma`, with no reload.
 - Tab B's `<h1>` and members line both updated to include `gamma`, with no reload.
 - `gamma` has VANISHED from tab B's still-open candidate list.
-- Terminal A printed exactly ONE `Invited agent 'gamma' ...` line for the one invite.
-- Terminal A printed NO line containing `A RoomsChanged handler threw and was skipped.`
+- `T-A` printed exactly ONE `Invited agent 'gamma' ...` line for the one invite.
+- `T-A` printed NO line containing `A RoomsChanged handler threw and was skipped.`
 
 **Fail if — any of these**
 
 - Tab B is stale until F5 -> the fan-out is not reaching a second circuit; in practice one user's actions are invisible to another's open window.
-- Terminal A shows repeated `A RoomsChanged handler threw and was skipped.` errors -> a component did not unsubscribe from the singleton `RoomEvents` hub in `Dispose`; `docs/agencyteam/rules.md` calls this out as 'a leaked component throws on disconnect and never dies'. The error count grows forever and every publish gets slower.
+- `T-A` shows repeated `A RoomsChanged handler threw and was skipped.` errors -> a component did not unsubscribe from the singleton `RoomEvents` hub in `Dispose`; `docs/agencyteam/rules.md` calls this out as 'a leaked component throws on disconnect and never dies'. The error count grows forever and every publish gets slower.
 - Tab B throws an `An unhandled error has occurred.` bar after tab A navigates away -> the same leak, surfacing on the client.
 - Tab B's `<h1>` updates but its candidate list still offers `gamma` -> `InviteTeammate` is subscribed for repaint but not reloading candidates; the next click in tab B is a silent no-op.
 
@@ -1020,8 +1020,8 @@ If tab B's SignalR circuit had already dropped (you will see a 'Attempting to re
 
 **Steps**
 
-1. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **Terminal F**.
-2. In Terminal F run exactly: `pwsh tools/echo-bot.ps1 -Name delta`
+1. Open a NEW PowerShell terminal at `E:\Repos\Huddle`. Call it **`T-G`**.
+2. In `T-G` run exactly: `pwsh tools/echo-bot.ps1 -Name delta`
 3. Wait until a sidebar link reading `delta` appears, then click it. Write its room id down.
 4. Confirm the members line reads `You, delta`.
 5. Type exactly `hi @delta` and press Enter. Wait 3 seconds.
@@ -1045,13 +1045,13 @@ If tab B's SignalR circuit had already dropped (you will see a 'Attempting to re
 **Fail if — any of these**
 
 - BOTH Agents reply to `hi @alpha` -> the per-Agent `mentioned` flag is not being carried in the fan-out; every Mention now wakes the whole Room and cost scales with membership.
-- The Transcript keeps growing on its own after you stop typing -> an echo loop; an Agent is replying to its own or another Agent's Message. A failing version of this once recorded 4299 messages in two seconds. STOP the app immediately (Ctrl+C in Terminal A) and report it as the highest-severity finding in the area.
+- The Transcript keeps growing on its own after you stop typing -> an echo loop; an Agent is replying to its own or another Agent's Message. A failing version of this once recorded 4299 messages in two seconds. STOP the app immediately (Ctrl+C in `T-A`) and report it as the highest-severity finding in the area.
 - A reply's `senderName` names an Agent that was not Mentioned -> the gate is passing the wrong flag to the wrong Agent.
-- `hi @delta` in the two-Member Room draws NO reply -> the bot is not receiving the Mention at all; check the `mentioned` field in the envelope printed in Terminal F before blaming the gate.
+- `hi @delta` in the two-Member Room draws NO reply -> the bot is not receiving the Mention at all; check the `mentioned` field in the envelope printed in `T-G` before blaming the gate.
 
 **Inconclusive if**
 
-If plain `hi` in the TWO-member Room draws no reply, that is EXPECTED and not part of this test — see notes. If neither `hi @delta` nor `hi @alpha` draws a reply, the bots may be disconnected: check Terminal F and the demo-agent terminal for `Server closed the connection.` before recording anything.
+If plain `hi` in the TWO-member Room draws no reply, that is EXPECTED and not part of this test — see notes. If neither `hi @delta` nor `hi @alpha` draws a reply, the bots may be disconnected: check `T-G` and the demo-agent terminal for `Server closed the connection.` before recording anything.
 
 > [!NOTE]
 > IMPORTANT: the demo agents and `tools/echo-bot.ps1` reply ONLY when `mentioned` is true, even in a two-Member Room. So a plain `hi` in a two-Member Room also gets no reply — that is a property of the sample bot, not of the Reply Gate. The server-side 'answer everything when memberCount <= 2' rule is ONLY exercised by a real Persona with `Team:Acp:Enabled=true`, and this free test deliberately does not attempt it.
@@ -1071,9 +1071,9 @@ If plain `hi` in the TWO-member Room draws no reply, that is EXPECTED and not pa
 1. Write down, in order, EVERY sidebar link name you can see, top to bottom.
 2. Click three different Rooms and for each write down the room id, the `<h1>`, the members line, and the first and last message in its Transcript (or 'empty').
 3. If any Room shows a line reading `Paused — N of M agent replies since you last spoke.` or a box reading `Agents have sent N replies since you last spoke, and are paused.`, write down which Room and the numbers.
-4. Press Ctrl+C in Terminal A and wait for the process to exit.
+4. Press Ctrl+C in `T-A` and wait for the process to exit.
 5. Press Ctrl+C in each of Terminals B, D, E and F to stop the bots.
-6. In Terminal A run `$env:Team__Acp__Enabled = 'false'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+6. In `T-A` run `$env:Team__Acp__Enabled = 'false'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 7. Wait for startup to settle, then reload the browser at `http://localhost:5100`.
 8. Read the sidebar top to bottom and compare it to your list.
 9. Open each of the three Rooms you recorded and compare the `<h1>`, the members line and the Transcript.
@@ -1086,7 +1086,7 @@ If plain `hi` in the TWO-member Room draws no reply, that is EXPECTED and not pa
 - Each Room's members line is identical to what you recorded.
 - Each Transcript is intact — same first and last message.
 - Any Room that was paused on its Budget is no longer paused: the `Paused —` line and the `Agents have sent … and are paused.` box are both gone.
-- Two demo-agent Rooms reappear as before — `echo` and `alpha` re-register on startup and re-attach to their existing Rooms rather than minting new ones (Terminal A prints no `Created direct room` for them if their Direct Rooms are still two-Member).
+- Two demo-agent Rooms reappear as before — `echo` and `alpha` re-register on startup and re-attach to their existing Rooms rather than minting new ones (`T-A` prints no `Created direct room` for them if their Direct Rooms are still two-Member).
 
 **Fail if — any of these**
 
@@ -1097,7 +1097,7 @@ If plain `hi` in the TWO-member Room draws no reply, that is EXPECTED and not pa
 
 **Inconclusive if**
 
-If a demo agent fails to reconnect after restart (`Demo agent <name> failed to connect...` in Terminal A), its Rooms will still be listed but its dots will be grey — that does not affect this test's pass conditions, but note it. If the app will not start because the port is in use, find and kill the orphaned process before judging.
+If a demo agent fails to reconnect after restart (`Demo agent <name> failed to connect...` in `T-A`), its Rooms will still be listed but its dots will be grey — that does not affect this test's pass conditions, but note it. If the app will not start because the port is in use, find and kill the orphaned process before judging.
 
 > [!NOTE]
 > The Budget NOT surviving is EXPECTED: the counter is in memory and per Room by design, so a restart un-pauses every Room and shows a fresh allowance over a Transcript that already spent one. Do NOT file it. Restart the bots you need (`mybot`, `gamma`, `Emily Lee`, `delta`) before continuing to later tests.
@@ -1162,8 +1162,8 @@ If `Business` does not appear, first confirm the file is at exactly `App_Data\Te
 
 **Steps**
 
-1. Press Ctrl+C in Terminal A.
-2. In Terminal A run `$env:Team__Acp__Enabled = 'true'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+1. Press Ctrl+C in `T-A`.
+2. In `T-A` run `$env:Team__Acp__Enabled = 'true'` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 3. Reload the browser and click **Teammates** in the sidebar.
 4. Click **New teammate**.
 5. In the card, fill **Name** with exactly `Jarvis`.
@@ -1176,21 +1176,21 @@ If `Business` does not appear, first confirm the file is at exactly `App_Data\Te
 12. Click the **Add teammate** submit button AT THE BOTTOM OF THIS CARD (this is the Create form's submit, NOT the Room header's `invite-toggle`).
 13. Wait until the `Jarvis` tile shows a status of Online or Starting, and until a sidebar link reading `Jarvis` appears. This may take 10-30 seconds.
 14. Click a Room that does NOT contain `Jarvis` — use one of the `echo, alpha` Rooms.
-15. Note the current last line in Terminal A.
+15. Note the current last line in `T-A`.
 16. Type exactly `/invite @jar` and press Enter.
 17. Read the coloured line above the composer and copy its exact text.
 18. Read the header `<h1>` and the sidebar link.
 19. Click a DIFFERENT Room that does not contain `Jarvis`.
 20. Type exactly `/invite @JAR` (upper case) and press Enter.
 21. Read the coloured line and the `<h1>`.
-22. Read every line Terminal A printed since your note.
+22. Read every line `T-A` printed since your note.
 
 **Pass if — all of these**
 
 - Both commands produce a BLUE/info line, not a red one.
 - The Room name in BOTH cases resolves to the owning Name: the `<h1>` and the sidebar link end in `Jarvis`, never `jar` and never `JAR`.
 - The info line's first half echoes the handle you typed (`Invited jar. …` and `Invited JAR. …`) while its second half quotes the real Room name containing `Jarvis`. BOTH halves must be as described — the echo of your typed handle is correct and is not a defect.
-- Terminal A printed `Invited agent 'Jarvis' (<id>) into room '<roomId>'.` — naming `Jarvis`, not the alias — for each of the two invites.
+- `T-A` printed `Invited agent 'Jarvis' (<id>) into room '<roomId>'.` — naming `Jarvis`, not the alias — for each of the two invites.
 - Optional DB check: `sqlite3 src\Huddle.App\App_Data\team.db "SELECT name FROM rooms;"` shows `Jarvis` in both renamed Rooms and never `jar`.
 
 **Fail if — any of these**
@@ -1265,24 +1265,24 @@ If `Jarvis`'s sidebar entry already contained a comma before you started, its Di
 
 **Steps**
 
-1. Press Ctrl+C in Terminal A. Run `$env:Team__Acp__Enabled = 'true'` and `$env:Team__AgentMessageBudget = '6'`, then `dotnet run --project src/Huddle.App --urls http://localhost:5100`. The budget cap is what bounds the spend of this test.
+1. Press Ctrl+C in `T-A`. Run `$env:Team__Acp__Enabled = 'true'` and `$env:Team__AgentMessageBudget = '6'`, then `dotnet run --project src/Huddle.App --urls http://localhost:5100`. The budget cap is what bounds the spend of this test.
 2. Reload the browser and click **Teammates**.
 3. Click **New teammate**. Fill **Name** = `Friday`, **Title** = `Analyst`, **Alias** = `fri`, **Teams** empty, body = `You are Friday. Answer in one short sentence.`, **Model** = `Haiku`, **Effort** = `low`. Click the card's **Add teammate** submit button.
 4. Wait until both `Jarvis` and `Friday` tiles read Online and both appear in the sidebar.
 5. Click **New chat**, tick `Jarvis`, `Friday` and `echo`, and click **Start chat**. You need three or more Members so Mentions actually gate.
-6. Note the current last line in Terminal A.
+6. Note the current last line in `T-A`.
 7. Count the sidebar links and write the count down.
 8. In the composer type exactly: `@Jarvis start a separate room with Friday and give it the context`
 9. Press Enter.
 10. Watch the Transcript: you should see a streaming Draft from `Jarvis`, then a Message.
 11. Watch the sidebar for up to 60 seconds WITHOUT reloading the page.
-12. Read every line Terminal A printed since your note.
+12. Read every line `T-A` printed since your note.
 13. Click the new sidebar link and read its `<h1>`, its members line, and its Transcript.
 
 **Pass if — all of these**
 
 - A NEW sidebar link appears with no page reload, named after its Agent Members (e.g. `Jarvis, Friday`).
-- Terminal A printed `Created room '<id>' (<name>) with <n> members.`
+- `T-A` printed `Created room '<id>' (<name>) with <n> members.`
 - The new Room opens, and its members line BEGINS with `You` — the Human is a Member of it.
 - You can read the whole exchange in it as it happens: Drafts stream, then Messages land.
 - `Jarvis` did not report that it could not find the tool — it took a Turn and the Room appeared.
@@ -1292,8 +1292,8 @@ If `Jarvis`'s sidebar entry already contained a comma before you started, its Di
 
 - `Jarvis` replies that no such tool exists -> the system prompt is no longer spelling `mcp__team__create_room` in full; a bare tool name produces exactly this, and the Agent is then permanently unable to create Rooms.
 - A Room is created whose members line omits `You` -> the Human is not being seeded by `CreateRoomForAsync`; that Room is unpostable by the user (the composer will report NotMember) and the ADR-0005 structural-auditability property is broken. This is the most serious possible failure here.
-- Terminal A logs `Created room` but no sidebar link appears until F5 -> `RoomsChanged` is not published from the tool path, even though it is from the UI path.
-- The Transcript keeps growing after `Jarvis` finishes -> an agent loop; the budget cap of 6 should stop it, but if it does not, press Ctrl+C in Terminal A immediately and report it as the highest-severity finding.
+- `T-A` logs `Created room` but no sidebar link appears until F5 -> `RoomsChanged` is not published from the tool path, even though it is from the UI path.
+- The Transcript keeps growing after `Jarvis` finishes -> an agent loop; the budget cap of 6 should stop it, but if it does not, press Ctrl+C in `T-A` immediately and report it as the highest-severity finding.
 - `Jarvis` names an Agent that does not exist and the tool answers `Unknown agent(s): X. Agents that do exist: …` but `Jarvis` does NOT self-correct within the same Turn -> report the transcript; the error text is correct, the model's handling of it is the finding.
 
 **Inconclusive if**
@@ -1318,12 +1318,12 @@ If `Jarvis` simply answers in prose without calling any tool, that is a model-be
 **Steps**
 
 1. Click the Room with three or more Members that excludes `Friday`. Write down its room id, its `<h1>` and its members line.
-2. Note the current last line in Terminal A.
+2. Note the current last line in `T-A`.
 3. In the composer type exactly: `@Jarvis bring Friday into this room`
 4. Press Enter.
 5. Watch the Transcript for a Draft from `Jarvis`, then a Message.
 6. Watch the header `<h1>`, the members line and the sidebar for up to 60 seconds WITHOUT reloading.
-7. Read every line Terminal A printed since your note, looking specifically for a line beginning `Invited agent`.
+7. Read every line `T-A` printed since your note, looking specifically for a line beginning `Invited agent`.
 8. Once the rename has happened, type exactly `@Friday say hello` and press Enter.
 9. Wait for a reply.
 
@@ -1331,13 +1331,13 @@ If `Jarvis` simply answers in prose without calling any tool, that is a model-be
 
 - The Room's `<h1>` and sidebar link both rename to include `Friday`, with no page reload.
 - The members line gains `Friday` and still begins with `You`.
-- Terminal A printed `Invited agent 'Friday' (<id>) into room '<roomId>'.` naming the room id you wrote down.
+- `T-A` printed `Invited agent 'Friday' (<id>) into room '<roomId>'.` naming the room id you wrote down.
 - `@Friday say hello` draws a reply from `Friday` — it is genuinely a Member and receives Messages.
 - `Jarvis` reported success back into the Transcript in words consistent with the tool's own result text (`Invited Friday into room '<name>' (id <id>). It now has N members.`).
 
 **Fail if — any of these**
 
-- NOTHING renames, NOTHING errors on screen, and Terminal A has NO `Invited agent` line -> THE documented silent failure: the model passed the WRONG room id. The tool result is text the model reads; it never surfaces to the user. The absence of the log line is the only signal, which is exactly why this test reads the log rather than the screen. Report the model's own reply text alongside it.
+- NOTHING renames, NOTHING errors on screen, and `T-A` has NO `Invited agent` line -> THE documented silent failure: the model passed the WRONG room id. The tool result is text the model reads; it never surfaces to the user. The absence of the log line is the only signal, which is exactly why this test reads the log rather than the screen. Report the model's own reply text alongside it.
 - `Jarvis` says it does not know the room id, or asks you for one -> the Room label hook has lost its `{{roomId}}` placeholder. `docs/agencyteam/rules.md` states the Room label is the ONLY place an Agent can learn a room id; without it this fails silently and permanently. Check Settings -> Hooks for the Room-label hook text and confirm it still contains `{{roomId}}`.
 - The WRONG Room renames -> the tool acted on a room id belonging to a different Room; check which Room changed and report both ids.
 - The Room renames but `@Friday say hello` draws no reply -> the member row was added without the Agent being wired into the fan-out.
@@ -1365,11 +1365,11 @@ If `Jarvis` answers in prose without calling the tool, retry ONCE with `@Jarvis 
 
 1. Create the target Room if you do not have one: click **New chat**, tick `echo` and `alpha` only, click **Start chat**. Write down its `/rooms/<id>` and its `<h1>` — call it TARGET.
 2. Navigate to a DIFFERENT Room that `Jarvis` IS a Member of.
-3. Note the current last line in Terminal A.
+3. Note the current last line in `T-A`.
 4. In the composer type exactly, substituting the real id: `@Jarvis invite Friday into the room whose id is <TARGET id>`
 5. Press Enter and wait for `Jarvis` to take its Turn.
 6. Watch the sidebar for up to 60 seconds WITHOUT reloading.
-7. Read every line Terminal A printed since your note.
+7. Read every line `T-A` printed since your note.
 8. Click TARGET and read its `<h1>` and its members line.
 9. Read the members line of the Room you were typing in.
 
@@ -1379,12 +1379,12 @@ If `Jarvis` answers in prose without calling the tool, retry ONCE with `@Jarvis 
 - TARGET's members line gains `Friday` and still begins with `You`.
 - `Jarvis` is NOT in TARGET's members line — the caller did not add itself.
 - The Room you were typing in is unchanged.
-- Terminal A printed `Invited agent 'Friday' (<id>) into room '<TARGET id>'.`
+- `T-A` printed `Invited agent 'Friday' (<id>) into room '<TARGET id>'.`
 - Optional DB check: TARGET's `room_members` gained `Friday` and did NOT gain `Jarvis`.
 
 **Fail if — any of these**
 
-- An `An unhandled error has occurred.` bar appears, or Terminal A shows an unhandled exception -> the cross-Room invite path is throwing rather than being permitted.
+- An `An unhandled error has occurred.` bar appears, or `T-A` shows an unhandled exception -> the cross-Room invite path is throwing rather than being permitted.
 - A DIFFERENT Room renames -> the tool acted on the wrong room id; report which Room changed.
 - `Jarvis` is added to TARGET as a side effect -> the tool is adding the caller as well as the invitee; membership is no longer what the Human asked for.
 - TARGET renames but the sidebar does not follow until F5 -> RoomsChanged is not published for a Room the current view is not showing.
@@ -1409,7 +1409,7 @@ If `Jarvis` refuses on the grounds that it is not in that Room, that is model ju
 
 **Steps**
 
-1. Identify every Room in the sidebar that was created by an Agent tool during INVITEROOMS-28 or 30 (Terminal A's `Created room '<id>' ...` lines list their ids).
+1. Identify every Room in the sidebar that was created by an Agent tool during INVITEROOMS-28 or 30 (`T-A`'s `Created room '<id>' ...` lines list their ids).
 2. Open each of them in turn.
 3. For each, read the grey members line beneath the `<h1>`.
 4. For each, confirm the Transcript is readable — you can see the Messages the Agents exchanged.
@@ -1426,7 +1426,7 @@ If `Jarvis` refuses on the grounds that it is not in that Room, that is model ju
 **Fail if — any of these**
 
 - A Room's members line omits `You` -> `CreateRoomForAsync` is no longer seeding `KnownIds.Human`. The Room still appears in the sidebar (it is seeded from all Rooms, not from the Human's membership), so the symptom is a Room you can SEE but cannot POST into — the composer will report NotMember. This is the exact failure ADR-0005's 'the Human is a Member of every Room' exists to prevent.
-- Terminal A logged `Created room` for an id that has NO sidebar link at all -> a Room exists in the data that the Human cannot reach through the UI; Agents would then be able to converse entirely out of sight. Report immediately.
+- `T-A` logged `Created room` for an id that has NO sidebar link at all -> a Room exists in the data that the Human cannot reach through the UI; Agents would then be able to converse entirely out of sight. Report immediately.
 - Typing `hello` produces a red error above the composer -> confirm the members line; a NotMember error with `You` missing from the line is the same defect seen from the other side.
 
 **Inconclusive if**
@@ -1434,7 +1434,7 @@ If `Jarvis` refuses on the grounds that it is not in that Room, that is model ju
 If no Agent-created Room exists (INVITEROOMS-28 was inconclusive), this test has nothing to judge — mark it inconclusive and say it is blocked on INVITEROOMS-28. Do NOT substitute a New-chat Room; that path is already covered by INVITEROOMS-09 and proves something different.
 
 > [!NOTE]
-> After finishing this area, return the environment to free mode: Ctrl+C in Terminal A, then `$env:Team__Acp__Enabled = 'false'` and `Remove-Item Env:\Team__AgentMessageBudget` before starting the app again, so no later session spawns node adapters by accident.
+> After finishing this area, return the environment to free mode: Ctrl+C in `T-A`, then `$env:Team__Acp__Enabled = 'false'` and `Remove-Item Env:\Team__AgentMessageBudget` before starting the app again, so no later session spawns node adapters by accident.
 
 ---
 

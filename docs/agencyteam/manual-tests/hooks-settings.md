@@ -4,21 +4,23 @@ Prove that the /settings Hooks editor renders all 22 model-facing hooks correctl
 
 **40 tests** · 37 free, 3 paid 💰 · about 4.7 hours.
 
-Read [the manual test script](../manual-tests.md) first — it carries the cost guard, the Model
-and Effort convention, and the rules for concluding a result. This page assumes all three.
+Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
+convention, and the rules for concluding a result — then [Common procedures](common.md), which
+defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
 ## Setup
 
-1. Confirm the paid path is off. `Team:Acp:Enabled` is `true` in `appsettings.Development.json`, so it is NOT off by default — you must set `$env:Team__Acp__Enabled = 'false'` in the launch terminal. Tests HOOKSSETTINGS-01 to -36 assume ACP is off and cost nothing.
-2. Confirm the paid path is off. Search `src\Huddle.App\appsettings.json` and `src\Huddle.App\appsettings.Development.json` for `Acp`. `Team:Acp:Enabled` must be absent or `false`. Tests HOOKSSETTINGS-01 to -36 assume it is off and cost nothing. Only -37 to -40 turn it on.
-3. Confirm the clean starting state. In File Explorer open `E:\Repos\Huddle\src\Huddle.App\App_Data`. It should contain `Teams`, `personas`, `work` and `team.db` (plus `team.db-shm` / `team.db-wal`). It must contain NO `hooks.json` and NO `appearance.json`. That absence is correct, not a fault.
-4. Start the app: run `dotnet run --project src/Huddle.App` from the repo root. Wait for the console to print that it is listening on `http://localhost:5100`.
-5. Browse to `http://localhost:5100/settings`.
-6. Keep the File Explorer window on `App_Data` open alongside the browser, with the view set to Details so the Date modified column is visible. Several tests turn on 'the file did not change'.
-7. Keep a plain-text editor that does not reformat files (VS Code, Notepad++ or Notepad) ready — many tests hand-edit `App_Data\hooks.json` while the app is running.
-8. Open `E:\Repos\Huddle\src\Huddle.App\hooks.default.json` in that editor and leave it open. It is the 22 shipped defaults, pretty-printed, and is the diff source for every 'did Reset restore the exact shipped wording?' check. Nothing in the running app ever reads it.
-9. Learn the reset-between-tests recipe now: stop the app with Ctrl+C in the terminal, delete `App_Data\hooks.json` (and `App_Data\appearance.json` if a test created one), then `dotnet run --project src/Huddle.App` again. Unless a test says otherwise, start each test from that clean state.
-10. Standing model/effort instruction for every test that involves a teammate: configure the Persona on /teammates with Model = Haiku and Effort = low. Do not use any other model or effort level anywhere in this suite.
+Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-free) from
+[Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
+oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB`, the four resets, and the
+standing conventions. This area adds:
+
+1. Confirm the clean starting state before the first test: `App_Data` should hold `Teams`, `personas`, `work` and `team.db` (plus `team.db-shm` / `team.db-wal`) and NO `hooks.json` and NO `appearance.json`. That absence is correct, not a fault.
+2. Browse to `http://localhost:5100/settings`.
+3. Keep a File Explorer window on `App_Data` beside the browser with the view set to Details, so the Date modified column is visible. Several tests turn on 'the file did not change'.
+4. Keep a plain-text editor that does not reformat files (VS Code, Notepad++, Notepad) ready — many tests hand-edit `App_Data\hooks.json` while the app is running.
+5. Open `E:\Repos\Huddle\src\Huddle.App\hooks.default.json` in that editor and leave it open. It is the 22 shipped defaults, pretty-printed, and is the diff source for every 'did Reset restore the exact shipped wording?' check. Nothing in the running app ever reads it.
+6. Reset between tests with `P-RESET-SETTINGS` unless a test says otherwise. Tests HOOKSSETTINGS-01 to -36 run on `P-LAUNCH-FREE` and cost nothing; only -37 to -40 use `P-LAUNCH-PAID`.
 
 ## Tests
 
@@ -60,7 +62,7 @@ and Effort convention, and the rules for concluding a result. This page assumes 
 
 **Inconclusive if**
 
-If the browser shows a connection error, the app is not running — go back to setup step 4 and check the terminal for a startup exception, then re-run. If the page renders but the styling is obviously absent (no colours at all, unstyled text), CSS failed to load: hard-refresh with Ctrl+F5 and re-judge; if it is still unstyled, stop and report a CSS-loading problem rather than judging the tab rail.
+If the browser shows a connection error, the app is not running — redo `P-LAUNCH-FREE` and check `T-A` for a startup exception, then re-run. If the page renders but the styling is obviously absent (no colours at all, unstyled text), CSS failed to load: hard-refresh with Ctrl+F5 and re-judge; if it is still unstyled, stop and report a CSS-loading problem rather than judging the tab rail.
 
 > [!NOTE]
 > To confirm the selected-tab styling objectively rather than by eye, open devtools (F12), inspect the Hooks button, and check its class list contains `settings-tab-active`.

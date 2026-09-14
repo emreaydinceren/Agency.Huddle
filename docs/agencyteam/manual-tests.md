@@ -14,8 +14,9 @@ vocabulary every step uses, see [Language](language.md).
 appear; [Planning](manual-tests/planning.md) lists them together.
 
 This page is the contract every run is held to: the cost guard, the Model and Effort convention,
-and the rules for concluding a result. It is short on purpose — keep it and one area file open,
-and nothing else.
+and the rules for concluding a result. It is short on purpose. Read it with
+[Common procedures](manual-tests/common.md), which defines the terminals, states, procedures and
+oracles every area names instead of restating; those two plus one area file are all you need open.
 
 ---
 
@@ -183,7 +184,9 @@ Copy this table per area and fill one row per test.
 ## 1. Choosing what to run
 
 The 464 tests live one file per area under [`manual-tests/`](manual-tests/) — a
-single file holding all of them would be too large for a git web UI to render.
+single file holding all of them would be too large for a git web UI to render. Each
+area file carries only what is true of that area alone and names
+[Common procedures](manual-tests/common.md) for the rest.
 
 [**Planning**](manual-tests/planning.md) carries everything about *choosing* a
 run and nothing you need while executing one: the 14 areas with their counts and

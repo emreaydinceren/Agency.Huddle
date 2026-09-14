@@ -4,24 +4,24 @@ Prove that the one Teammate card (`TeammateCard.razor`, rendered over `/teammate
 
 **50 tests** · 49 free, 1 paid 💰 · about 6.3 hours.
 
-Read [the manual test script](../manual-tests.md) first — it carries the cost guard, the Model
-and Effort convention, and the rules for concluding a result. This page assumes all three.
+Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
+convention, and the rules for concluding a result — then [Common procedures](common.md), which
+defines the terminals, states, procedures and oracles this page names. Both are assumed below.
 
 ## Setup
 
-1. Stop any running Agency.Huddle instance (Ctrl+C in its console) and confirm nothing answers at http://localhost:5100.
-2. BACK UP `E:\Repos\Huddle\src\Huddle.App\App_Data` to a safe folder before anything else. Tests in this area delete Persona files and rows from `team.db`; this copy is the only undo.
-3. Delete every `.md` file under `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams`, including any sub-folders, so the area starts from the shipped empty state. Do NOT delete `team.db`.
-4. From `E:\Repos\Huddle`, run `dotnet build Huddle.slnx`. It must succeed before any test runs. If it fails, stop and report the build failure — every result below would be inconclusive.
-5. Install a SQLite command-line client: `sqlite3` is NOT on PATH on this machine. Run `winget install --id SQLite.SQLite`, open a NEW terminal, and confirm `sqlite3 -version` prints a version. (DB Browser for SQLite is an acceptable substitute.) Tests TEAMMATECARD-35 onward need it.
-6. Confirm `node --version` prints a version. Tests TEAMMATECARD-37 onward need a node process spawn to be observable.
-7. Start the app with ACP explicitly OFF. This is NOT the default — `launchSettings.json` sets `ASPNETCORE_ENVIRONMENT=Development` and `appsettings.Development.json` sets `Team:Acp:Enabled=true`, so a plain `dotnet run` turns on the money-spending path. Run exactly: `dotnet run --project E:\Repos\Huddle\src\Huddle.App -- --Team:Acp:Enabled=false`
-8. Keep that console window visible for the whole session. Its stdout is a stated oracle in many tests below.
-9. Open http://localhost:5100/teammates in a browser. Keep a second window open on `E:\Repos\Huddle\src\Huddle.App\App_Data\Teams` in File Explorer, and a text editor able to show line endings (VS Code, Notepad++).
-10. STANDING MODEL/EFFORT CONVENTION: whenever a test says to choose a Model, choose Haiku. Whenever it says to choose an Effort, choose low. The only model switch any test asks for is Haiku -> Sonnet; the only effort switch is low -> medium. Never select Opus, high, xhigh or max.
-11. Two identifiers in this app deliberately keep an old code name: configuration keys begin `Team:` and tool names begin `mcp__team__`. That is correct — do not report it as a typo or a branding bug.
-12. The demo agents `echo` and `alpha` are pipe clients, not Personas. They appear in the Rooms sidebar and must NEVER appear on /teammates. Do not report their absence from the Teammates page as a defect.
-13. After each test, delete any Persona file it created from `App_Data\Teams` (and its sub-folders) unless the next test says to keep it, so tests do not leak state into one another.
+Run [`P-BUILD`](common.md#p-build) then the lane named below from
+[Common procedures](common.md), which also defines the terminals `T-A` and `T-B`, the
+oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four resets,
+`P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
+
+1. Start from `E-STOPPED`, and take the [§0.4](../manual-tests.md#04-rollback) backup before anything else — tests in this area delete Persona files and rows from `team.db`, and that copy is the only undo.
+2. Run `P-RESET-TEAMS` so the area starts from the shipped empty library. Do NOT delete `team.db`.
+3. Lane is `P-LAUNCH-FREE`, or equivalently `dotnet run --project E:\Repos\Huddle\src\Huddle.App -- --Team:Acp:Enabled=false`.
+4. `O-DB` is REQUIRED from TEAMMATECARD-35 onward, not optional: install `sqlite3` and confirm `sqlite3 -version` in a fresh `T-B`. (DB Browser for SQLite is an acceptable substitute.)
+5. Confirm `node --version` prints a version. TEAMMATECARD-37 onward need a node process spawn to be observable.
+6. Open `http://localhost:5100/teammates`. Keep a File Explorer window on `App_Data\Teams` and a text editor able to show line endings (VS Code, Notepad++).
+7. After each test, delete any Persona file it created from `App_Data\Teams` and its sub-folders, unless the next test says to keep it, so tests do not leak state into one another.
 
 ## Tests
 
