@@ -21,7 +21,8 @@ namespace Agency.Huddle.App.Hooks;
 /// <param name="Default">
 /// The hook's built-in text, verbatim from the source this hook was lifted from, as a non-interpolated
 /// raw string literal so that <c>{{placeholder}}</c> tokens survive unescaped. Used whenever no
-/// override is configured.
+/// override is configured. Normalised to <c>\n</c> on construction; see the member declaration below
+/// for why.
 /// </param>
 /// <param name="Placeholders">
 /// Every <c>{{name}}</c> token this hook's text is allowed to contain, in the order a reader would
@@ -40,4 +41,19 @@ internal sealed record HookDefinition(
     string Default,
     IReadOnlyList<string> Placeholders,
     IReadOnlyList<string> RequiredPlaceholders,
-    HookTiming Timing);
+    HookTiming Timing)
+{
+    /// <summary>
+    /// The hook's built-in text, normalised to <c>\n</c> line endings regardless of how the repository
+    /// was checked out. A C# raw string literal preserves its source file's own line endings rather
+    /// than normalising them, and <c>HookCatalog.cs</c> is CRLF in this repo's working tree on Windows
+    /// (there is no <c>.gitattributes</c>, so <c>core.autocrlf</c> decides) but LF in the Linux
+    /// container CI checks it out in — <c>git cat-file blob main:src/Huddle.App/Hooks/HookCatalog.cs</c>
+    /// shows 0 CRLF pairs and 395 bare LF, the bytes git actually stores. Left un-normalised, every
+    /// hook's default — and therefore every prompt sent to a model — would silently depend on which
+    /// machine built the assembly. Normalising once here, at construction, means every reader of
+    /// <see cref="Default"/> gets the same text regardless of checkout platform, instead of each call
+    /// site having to remember to do it.
+    /// </summary>
+    public string Default { get; init; } = Default.ReplaceLineEndings("\n");
+}
