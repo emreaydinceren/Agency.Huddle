@@ -86,35 +86,35 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [SHELLNAV-01](shell-nav.md#shellnav-01-every-stylesheet-the-shell-links-is-fingerprinted-and-actually-serves) |  | Pass | |  |
-| [SHELLNAV-02](shell-nav.md#shellnav-02-both-shell-scripts-are-fingerprinted-and-serve---the-gap-the-automated-guard-does-not-cover) |  | Pass | |  |
-| [SHELLNAV-03](shell-nav.md#shellnav-03-the-scoped-css-bundle-is-applied-the-error-banner-stays-hidden-below-the-fold) |  | Pass | |  |
-| [SHELLNAV-04](shell-nav.md#shellnav-04-get-redirects-to-the-oldest-room) |  | Active | | |
-| [SHELLNAV-05](shell-nav.md#shellnav-05-roomsunknown-id-returns-200-and-shows-the-shared-empty-state-while-the-sidebar-still-lists-rooms) |  | Active | | |
-| [SHELLNAV-06](shell-nav.md#shellnav-06-an-unmatched-route-returns-a-bare-http-404-with-a-zero-byte-body) |  | Active | | |
-| [SHELLNAV-07](shell-nav.md#shellnav-07-routes-are-case-insensitive) |  | Active | | |
-| [SHELLNAV-08](shell-nav.md#shellnav-08-the-sidebar-is-present-identical-and-fixed-width-on-every-route) |  | Active | | |
-| [SHELLNAV-09](shell-nav.md#shellnav-09-the-sidebar-marks-exactly-one-room-active-with-aria-current) |  | Active | | |
-| [SHELLNAV-10](shell-nav.md#shellnav-10-teammates-renders-and-a-bare-page-load-spawns-no-node-process) |  | Active | | |
-| [SHELLNAV-11](shell-nav.md#shellnav-11-settings-renders-the-two-button-tab-rail-and-defaults-to-hooks) |  | Active | | |
-| [SHELLNAV-12](shell-nav.md#shellnav-12-clicking-a-settings-tab-changes-the-url-and-the-url-round-trips-as-a-bookmark) |  | Active | | |
-| [SHELLNAV-13](shell-nav.md#shellnav-13-an-unrecognised-or-miscased-tab-segment-silently-falls-back-to-hooks) |  | Active | | |
-| [SHELLNAV-14](shell-nav.md#shellnav-14-no-route-sets-a-browser-tab-title) |  | Active | | |
-| [SHELLNAV-15](shell-nav.md#shellnav-15-focus-moves-to-the-pages-h1-after-every-navigation) |  | Active | | |
-| [SHELLNAV-16](shell-nav.md#shellnav-16-sidebar-links-use-enhanced-navigation-not-a-full-page-reload) |  | Active | | |
-| [SHELLNAV-17](shell-nav.md#shellnav-17-the-new-chat-panel-toggles-lists-agents-with-status-dots-and-gates-start-chat) |  | Active | | |
-| [SHELLNAV-18](shell-nav.md#shellnav-18-starting-a-chat-creates-a-room-named-after-its-agents-and-navigates-straight-to-it) |  | Active | | |
-| [SHELLNAV-19](shell-nav.md#shellnav-19-appjs-is-proven-functionally-enter-sends-and-clears-and-the-transcript-scrolls) |  | Active | | |
-| [SHELLNAV-20](shell-nav.md#shellnav-20-the-room-list-updates-live-with-no-refresh-when-a-room-appears-from-outside-the-app) |  | Active | | |
-| [SHELLNAV-21](shell-nav.md#shellnav-21-choosing-a-theme-layers-a-fourth-stylesheet-after-the-base-one-and-reloads-the-page) |  | Active | | |
-| [SHELLNAV-22](shell-nav.md#shellnav-22-a-hand-edited-token-override-is-injected-as-an-inline-style-after-both-stylesheet-links) |  | Active | | |
-| [SHELLNAV-23](shell-nav.md#shellnav-23-a-bad-appearancejson-is-reported-on-screen-and-in-the-log-not-swallowed-and-the-file-is-left-alone) |  | Active | | |
-| [SHELLNAV-24](shell-nav.md#shellnav-24-a-deep-link-renders-complete-content-on-a-cold-first-request-before-any-circuit-attaches) |  | Active | | |
-| [SHELLNAV-25](shell-nav.md#shellnav-25-two-browser-tabs-on-the-same-install-stay-in-step-through-the-shell) |  | Active | | |
-| [SHELLNAV-26](shell-nav.md#shellnav-26-the-reconnect-modal-shows-exactly-one-state-paragraph-at-a-time-when-the-server-goes-away) |  | Active | | |
-| [SHELLNAV-27](shell-nav.md#shellnav-27-with-no-rooms-the-empty-state-renders-twice-and-there-is-no-heading-at-all) |  | Active | | |
-| [SHELLNAV-28](shell-nav.md#shellnav-28-the-new-chat-panel-with-no-agents-shows-its-own-guidance-instead-of-an-empty-list) |  | Active | | |
-| [SHELLNAV-29](shell-nav.md#shellnav-29-record-whether-the-yellow-error-band-ever-appears-during-a-genuine-circuit-fault) |  | Active | | |
+| [SHELLNAV-01](shell-nav.md#shellnav-01-every-stylesheet-the-shell-links-is-fingerprinted-except-the-one-that-is-deliberately-static-and-actually-serves) |  | Active | |  |
+| [SHELLNAV-02](shell-nav.md#shellnav-02-every-shell-script-is-fingerprinted-except-mudblazors-own-and-serves---the-gap-the-automated-guard-does-not-cover) |  | Active | |  |
+| [SHELLNAV-03](shell-nav.md#shellnav-03-the-scoped-css-bundle-is-applied-the-error-banner-stays-hidden-below-the-fold) |  | Active | |  |
+| [SHELLNAV-04](shell-nav.md#shellnav-04-get-redirects-to-the-oldest-room) |  | Active | |  |
+| [SHELLNAV-05](shell-nav.md#shellnav-05-roomsunknown-id-returns-200-and-shows-the-shared-empty-state-while-the-sidebar-still-lists-rooms) |  | Active | |  |
+| [SHELLNAV-06](shell-nav.md#shellnav-06-an-unmatched-route-returns-a-bare-http-404-with-a-zero-byte-body) |  | Active | |  |
+| [SHELLNAV-07](shell-nav.md#shellnav-07-routes-are-case-insensitive) |  | Active | |  |
+| [SHELLNAV-08](shell-nav.md#shellnav-08-the-drawer-is-present-identical-and-fixed-width-on-every-route) |  | Active | |  |
+| [SHELLNAV-09](shell-nav.md#shellnav-09-the-sidebar-marks-exactly-one-room-active-with-aria-current) |  | Active | |  |
+| [SHELLNAV-10](shell-nav.md#shellnav-10-teammates-renders-and-a-bare-page-load-spawns-no-node-process) |  | Active | |  |
+| [SHELLNAV-11](shell-nav.md#shellnav-11-settings-renders-the-two-button-tab-rail-and-defaults-to-hooks) |  | Active | |  |
+| [SHELLNAV-12](shell-nav.md#shellnav-12-clicking-a-settings-tab-changes-the-url-and-the-url-round-trips-as-a-bookmark) |  | Active | |  |
+| [SHELLNAV-13](shell-nav.md#shellnav-13-an-unrecognised-or-miscased-tab-segment-silently-falls-back-to-hooks) |  | Active | |  |
+| [SHELLNAV-14](shell-nav.md#shellnav-14-no-route-sets-a-browser-tab-title) |  | Active | |  |
+| [SHELLNAV-15](shell-nav.md#shellnav-15-focus-moves-to-the-pages-h1-after-every-navigation) |  | Active | |  |
+| [SHELLNAV-16](shell-nav.md#shellnav-16-sidebar-links-use-enhanced-navigation-not-a-full-page-reload) |  | Active | |  |
+| [SHELLNAV-17](shell-nav.md#shellnav-17-the-new-chat-panel-toggles-lists-agents-with-status-dots-and-gates-start-chat) |  | Active | |  |
+| [SHELLNAV-18](shell-nav.md#shellnav-18-starting-a-chat-creates-a-room-named-after-its-agents-and-navigates-straight-to-it) |  | Active | |  |
+| [SHELLNAV-19](shell-nav.md#shellnav-19-appjs-is-proven-functionally-enter-sends-and-clears-and-the-transcript-scrolls) |  | Active | |  |
+| [SHELLNAV-20](shell-nav.md#shellnav-20-the-room-list-updates-live-with-no-refresh-when-a-room-appears-from-outside-the-app) |  | Active | |  |
+| [SHELLNAV-21](shell-nav.md#shellnav-21-retired-choosing-a-theme-layering-a-fourth-stylesheet-after-the-base-one-and-reloading-the-page) |  | Active | | Retired 2026-09-14 (MudBlazor migration) - theme CSS cascade/reload test, no successor. See area file. |
+| [SHELLNAV-22](shell-nav.md#shellnav-22-retired-a-hand-edited-token-override-injected-as-an-inline-style-after-both-stylesheet-links) |  | Active | | Retired 2026-09-14 (MudBlazor migration) - per-token override injection test, no successor. See area file. |
+| [SHELLNAV-23](shell-nav.md#shellnav-23-a-bad-appearancejson-does-not-break-the-shell-no-theme-link-no-blank-page-only-a-log-warning) |  | Active | |  |
+| [SHELLNAV-24](shell-nav.md#shellnav-24-a-deep-link-renders-complete-content-on-a-cold-first-request-before-any-circuit-attaches) |  | Active | |  |
+| [SHELLNAV-25](shell-nav.md#shellnav-25-two-browser-tabs-on-the-same-install-stay-in-step-through-the-shell) |  | Active | |  |
+| [SHELLNAV-26](shell-nav.md#shellnav-26-the-reconnect-modal-shows-exactly-one-state-paragraph-at-a-time-when-the-server-goes-away) |  | Active | |  |
+| [SHELLNAV-27](shell-nav.md#shellnav-27-with-no-rooms-the-empty-state-renders-twice-and-there-is-no-heading-at-all) |  | Active | |  |
+| [SHELLNAV-28](shell-nav.md#shellnav-28-the-new-chat-panel-with-no-agents-shows-its-own-guidance-instead-of-an-empty-list) |  | Active | |  |
+| [SHELLNAV-29](shell-nav.md#shellnav-29-record-whether-the-yellow-error-band-ever-appears-during-a-genuine-circuit-fault) |  | Active | |  |
 
 ## startup-config
 
@@ -329,56 +329,56 @@ Teammate card: view, edit, create, delete — [area file](teammate-card.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [TEAMMATECARD-01](teammate-card.md#teammatecard-01-empty-teammates-page-and-the-new-teammate-entry-point) |  | Active | | |
-| [TEAMMATECARD-02](teammate-card.md#teammatecard-02-clicking-new-teammate-opens-a-card-at-all-blank-name-crash-probe) |  | Pass |  | Re-run 2026-09-14: card opens on both attempts and survives an empty Name and a single-space Name; no exception in the console. Fix confirmed. Unblocks the Create tests 05-11, 18-21, 27, 28, 33. |
-| [TEAMMATECARD-03](teammate-card.md#teammatecard-03-create-card-every-label-placeholder-and-hint) |  | Active | | |
-| [TEAMMATECARD-04](teammate-card.md#teammatecard-04-monogram-tracks-the-name-as-you-type) |  | Active | | |
-| [TEAMMATECARD-05](teammate-card.md#teammatecard-05-create-the-exact-name-acceptreject-set) |  | Active | | |
-| [TEAMMATECARD-06](teammate-card.md#teammatecard-06-create-alias-validation-uses-the-same-rules-and-its-own-wording) |  | Active | | |
-| [TEAMMATECARD-07](teammate-card.md#teammatecard-07-create-validation-precedence-which-error-wins) |  | Active | | |
-| [TEAMMATECARD-08](teammate-card.md#teammatecard-08-create-the-title-is-prose-blank-rejected-commas-preserved) |  | Active | | |
-| [TEAMMATECARD-09](teammate-card.md#teammatecard-09-create-a-failed-save-never-throws-away-what-you-typed) |  | Active | | |
-| [TEAMMATECARD-10](teammate-card.md#teammatecard-10-enter-in-an-identity-field-does-not-submit-and-saving-never-reloads-the-page) |  | Active | | |
-| [TEAMMATECARD-11](teammate-card.md#teammatecard-11-a-successful-create-lands-on-the-new-teammates-view-card) |  | Active | | |
-| [TEAMMATECARD-12](teammate-card.md#teammatecard-12-view-card-every-section-and-action-in-order) |  | Active | | |
-| [TEAMMATECARD-13](teammate-card.md#teammatecard-13-view-card-agent-default-and-model-default-when-nothing-is-stored) |  | Active | | |
-| [TEAMMATECARD-14](teammate-card.md#teammatecard-14-closing-the-card-backdrop-cancel-and-what-is-deliberately-absent) |  | Active | | |
-| [TEAMMATECARD-15](teammate-card.md#teammatecard-15-closing-a-card-clears-every-bit-of-its-state) |  | Active | | |
-| [TEAMMATECARD-16](teammate-card.md#teammatecard-16-remove-is-a-two-step-confirm-and-cancel-backs-out-cleanly) |  | Active | | |
-| [TEAMMATECARD-17](teammate-card.md#teammatecard-17-team-headings-and-the-team-filter-come-from-the-teams-field-not-the-folder) |  | Active | | |
-| [TEAMMATECARD-18](teammate-card.md#teammatecard-18-create-exactly-what-lands-on-disk) |  | Active | | |
-| [TEAMMATECARD-19](teammate-card.md#teammatecard-19-create-an-apostrophe-in-the-title-round-trips-through-yaml-quoting) |  | Active | | |
-| [TEAMMATECARD-20](teammate-card.md#teammatecard-20-create-the-teams-field-trims-drops-blanks-and-collapses-duplicates-on-read-back) |  | Active | | |
-| [TEAMMATECARD-21](teammate-card.md#teammatecard-21-create-a-duplicate-filename-is-caught-before-anything-is-written) |  | Active | | |
-| [TEAMMATECARD-22](teammate-card.md#teammatecard-22-edit-card-what-is-editable-and-what-deliberately-is-not) |  | Active | | |
-| [TEAMMATECARD-23](teammate-card.md#teammatecard-23-edit-save-writes-back-to-the-same-file-path-never-a-rename-never-a-move) |  | Active | | |
-| [TEAMMATECARD-24](teammate-card.md#teammatecard-24-edit-breaking-the-frontmatter-is-refused-with-the-file-untouched) |  | Active | | |
-| [TEAMMATECARD-25](teammate-card.md#teammatecard-25-edit-renaming-into-a-collision-is-refused-with-the-file-untouched) |  | Active | | |
-| [TEAMMATECARD-26](teammate-card.md#teammatecard-26-edit-renaming-via-the-name-field-leaves-a-ghost-card) |  | Active | | |
-| [TEAMMATECARD-27](teammate-card.md#teammatecard-27-create-a-name-colliding-with-a-persona-in-a-sub-folder) |  | Active | | |
-| [TEAMMATECARD-28](teammate-card.md#teammatecard-28-create-alias-collisions-and-the-one-that-is-legal) |  | Active | | |
-| [TEAMMATECARD-29](teammate-card.md#teammatecard-29-files-that-didnt-load-names-the-path-and-the-reason-above-the-list) |  | Active | | |
-| [TEAMMATECARD-30](teammate-card.md#teammatecard-30-an-external-file-edit-repaints-the-page-including-inside-sub-folders) |  | Active | | |
-| [TEAMMATECARD-31](teammate-card.md#teammatecard-31-a-card-whose-file-vanished-underneath-it-reports-it-instead-of-crashing) |  | Active | | |
-| [TEAMMATECARD-32](teammate-card.md#teammatecard-32-open-launches-the-os-editor-on-the-server) |  | Active | | |
-| [TEAMMATECARD-33](teammate-card.md#teammatecard-33-a-windows-reserved-device-name-as-a-name-documented-limit-record-the-outcome) |  | Active | | |
-| [TEAMMATECARD-34](teammate-card.md#teammatecard-34-two-browser-tabs-on-teammates-stay-in-step) |  | Active | | |
-| [TEAMMATECARD-35](teammate-card.md#teammatecard-35-remove-deletes-the-file-and-both-stored-settings) |  | Active | | |
-| [TEAMMATECARD-36](teammate-card.md#teammatecard-36-a-stored-model-or-effort-the-catalog-does-not-advertise-survives-an-edit) |  | Active | | |
-| [TEAMMATECARD-37](teammate-card.md#teammatecard-37-the-model-probe-never-runs-on-a-plain-page-load) |  | Active | | |
-| [TEAMMATECARD-38](teammate-card.md#teammatecard-38-model-and-effort-pickers-labels-loading-text-and-the-empty-catalog-text) |  | Active | | |
-| [TEAMMATECARD-39](teammate-card.md#teammatecard-39-changing-the-model-clears-the-effort-and-re-probes-the-ladder-haiku---sonnet) |  | Active | | |
-| [TEAMMATECARD-40](teammate-card.md#teammatecard-40-model-is-stored-as-an-id-in-teamdb-only) |  | Active | | |
-| [TEAMMATECARD-41](teammate-card.md#teammatecard-41-effort-low---medium-is-stored-as-an-id-and-the-blank-option-deletes-the-row) |  | Active | | |
-| [TEAMMATECARD-42](teammate-card.md#teammatecard-42-restart-starts-an-adapter-even-with-teamacpenabledfalse) |  | Active | | |
-| [TEAMMATECARD-43](teammate-card.md#teammatecard-43-a-newly-created-teammate-comes-online-by-itself-when-acp-is-on) |  | Active | | |
-| [TEAMMATECARD-44](teammate-card.md#teammatecard-44-the-message-action-appears-only-once-a-room-exists) |  | Active | | |
-| [TEAMMATECARD-45](teammate-card.md#teammatecard-45-restart-is-hidden-for-a-healthy-or-starting-teammate) |  | Active | | |
-| [TEAMMATECARD-46](teammate-card.md#teammatecard-46-a-save-that-changes-nothing-does-not-restart-the-teammate) |  | Active | | |
-| [TEAMMATECARD-47](teammate-card.md#teammatecard-47-changing-only-the-model-or-only-the-effort-restarts-the-session) |  | Active | | |
-| [TEAMMATECARD-48](teammate-card.md#teammatecard-48-remove-does-not-cascade-the-agent-and-its-room-survive) |  | Active | | |
-| [TEAMMATECARD-49](teammate-card.md#teammatecard-49-delete-then-recreate-under-the-same-name-fresh-settings-old-room) |  | Active | | |
-| [TEAMMATECARD-50](teammate-card.md#teammatecard-50-editing-a-teammate-really-does-lose-its-conversation-memory-costs-money) | 💰 | Active | | |
+| [TEAMMATECARD-01](teammate-card.md#teammatecard-01-empty-teammates-page-and-the-new-teammate-entry-point) |  | Active | |  |
+| [TEAMMATECARD-02](teammate-card.md#teammatecard-02-clicking-new-teammate-opens-a-card-at-all-blank-name-crash-probe) |  | Active | |  |
+| [TEAMMATECARD-03](teammate-card.md#teammatecard-03-create-card-every-label-placeholder-and-hint) |  | Active | |  |
+| [TEAMMATECARD-04](teammate-card.md#teammatecard-04-monogram-tracks-the-name-as-you-type) |  | Active | |  |
+| [TEAMMATECARD-05](teammate-card.md#teammatecard-05-create-the-exact-name-acceptreject-set) |  | Active | |  |
+| [TEAMMATECARD-06](teammate-card.md#teammatecard-06-create-alias-validation-uses-the-same-rules-and-its-own-wording) |  | Active | |  |
+| [TEAMMATECARD-07](teammate-card.md#teammatecard-07-create-validation-precedence-which-error-wins) |  | Active | |  |
+| [TEAMMATECARD-08](teammate-card.md#teammatecard-08-create-the-title-is-prose-blank-rejected-commas-preserved) |  | Active | |  |
+| [TEAMMATECARD-09](teammate-card.md#teammatecard-09-create-a-failed-save-never-throws-away-what-you-typed) |  | Active | |  |
+| [TEAMMATECARD-10](teammate-card.md#teammatecard-10-enter-in-an-identity-field-does-not-submit-and-saving-never-reloads-the-page) |  | Active | |  |
+| [TEAMMATECARD-11](teammate-card.md#teammatecard-11-a-successful-create-lands-on-the-new-teammates-view-card) |  | Active | |  |
+| [TEAMMATECARD-12](teammate-card.md#teammatecard-12-view-card-every-section-and-action-in-order) |  | Active | |  |
+| [TEAMMATECARD-13](teammate-card.md#teammatecard-13-view-card-agent-default-and-model-default-when-nothing-is-stored) |  | Active | |  |
+| [TEAMMATECARD-14](teammate-card.md#teammatecard-14-closing-the-dialog-focus-trap-on-open-escape-the-close-icon-cancel-scroll-locking-and-focus-return) |  | Active | |  |
+| [TEAMMATECARD-15](teammate-card.md#teammatecard-15-closing-a-card-clears-every-bit-of-its-state) |  | Active | |  |
+| [TEAMMATECARD-16](teammate-card.md#teammatecard-16-remove-is-a-two-step-confirm-and-cancel-backs-out-cleanly) |  | Active | |  |
+| [TEAMMATECARD-17](teammate-card.md#teammatecard-17-team-headings-and-the-team-filter-come-from-the-teams-field-not-the-folder) |  | Active | |  |
+| [TEAMMATECARD-18](teammate-card.md#teammatecard-18-create-exactly-what-lands-on-disk) |  | Active | |  |
+| [TEAMMATECARD-19](teammate-card.md#teammatecard-19-create-an-apostrophe-in-the-title-round-trips-through-yaml-quoting) |  | Active | |  |
+| [TEAMMATECARD-20](teammate-card.md#teammatecard-20-create-the-teams-field-trims-drops-blanks-and-collapses-duplicates-on-read-back) |  | Active | |  |
+| [TEAMMATECARD-21](teammate-card.md#teammatecard-21-create-a-duplicate-filename-is-caught-before-anything-is-written) |  | Active | |  |
+| [TEAMMATECARD-22](teammate-card.md#teammatecard-22-edit-card-what-is-editable-and-what-deliberately-is-not) |  | Active | |  |
+| [TEAMMATECARD-23](teammate-card.md#teammatecard-23-edit-save-writes-back-to-the-same-file-path-never-a-rename-never-a-move) |  | Active | |  |
+| [TEAMMATECARD-24](teammate-card.md#teammatecard-24-edit-breaking-the-frontmatter-is-refused-with-the-file-untouched) |  | Active | |  |
+| [TEAMMATECARD-25](teammate-card.md#teammatecard-25-edit-renaming-into-a-collision-is-refused-with-the-file-untouched) |  | Active | |  |
+| [TEAMMATECARD-26](teammate-card.md#teammatecard-26-edit-renaming-via-the-name-field-leaves-a-ghost-card) |  | Active | |  |
+| [TEAMMATECARD-27](teammate-card.md#teammatecard-27-create-a-name-colliding-with-a-persona-in-a-sub-folder) |  | Active | |  |
+| [TEAMMATECARD-28](teammate-card.md#teammatecard-28-create-alias-collisions-and-the-one-that-is-legal) |  | Active | |  |
+| [TEAMMATECARD-29](teammate-card.md#teammatecard-29-files-that-didnt-load-names-the-path-and-the-reason-above-the-list) |  | Active | |  |
+| [TEAMMATECARD-30](teammate-card.md#teammatecard-30-an-external-file-edit-repaints-the-page-including-inside-sub-folders) |  | Active | |  |
+| [TEAMMATECARD-31](teammate-card.md#teammatecard-31-a-card-whose-file-vanished-underneath-it-reports-it-instead-of-crashing) |  | Active | |  |
+| [TEAMMATECARD-32](teammate-card.md#teammatecard-32-open-launches-the-os-editor-on-the-server) |  | Active | |  |
+| [TEAMMATECARD-33](teammate-card.md#teammatecard-33-a-windows-reserved-device-name-as-a-name-documented-limit-record-the-outcome) |  | Active | |  |
+| [TEAMMATECARD-34](teammate-card.md#teammatecard-34-two-browser-tabs-on-teammates-stay-in-step) |  | Active | |  |
+| [TEAMMATECARD-35](teammate-card.md#teammatecard-35-remove-deletes-the-file-and-both-stored-settings) |  | Active | |  |
+| [TEAMMATECARD-36](teammate-card.md#teammatecard-36-a-stored-model-or-effort-the-catalog-does-not-advertise-survives-an-edit) |  | Active | |  |
+| [TEAMMATECARD-37](teammate-card.md#teammatecard-37-the-model-probe-never-runs-on-a-plain-page-load) |  | Active | |  |
+| [TEAMMATECARD-38](teammate-card.md#teammatecard-38-model-and-effort-pickers-labels-loading-text-and-the-empty-catalog-text) |  | Active | |  |
+| [TEAMMATECARD-39](teammate-card.md#teammatecard-39-changing-the-model-clears-the-effort-and-re-probes-the-ladder-haiku---sonnet) |  | Active | |  |
+| [TEAMMATECARD-40](teammate-card.md#teammatecard-40-model-is-stored-as-an-id-in-teamdb-only) |  | Active | |  |
+| [TEAMMATECARD-41](teammate-card.md#teammatecard-41-effort-low---medium-is-stored-as-an-id-and-the-blank-option-deletes-the-row) |  | Active | |  |
+| [TEAMMATECARD-42](teammate-card.md#teammatecard-42-restart-starts-an-adapter-even-with-teamacpenabledfalse) |  | Active | |  |
+| [TEAMMATECARD-43](teammate-card.md#teammatecard-43-a-newly-created-teammate-comes-online-by-itself-when-acp-is-on) |  | Active | |  |
+| [TEAMMATECARD-44](teammate-card.md#teammatecard-44-the-message-action-appears-only-once-a-room-exists) |  | Active | |  |
+| [TEAMMATECARD-45](teammate-card.md#teammatecard-45-restart-is-hidden-for-a-healthy-or-starting-teammate) |  | Active | |  |
+| [TEAMMATECARD-46](teammate-card.md#teammatecard-46-a-save-that-changes-nothing-does-not-restart-the-teammate) |  | Active | |  |
+| [TEAMMATECARD-47](teammate-card.md#teammatecard-47-changing-only-the-model-or-only-the-effort-restarts-the-session) |  | Active | |  |
+| [TEAMMATECARD-48](teammate-card.md#teammatecard-48-remove-does-not-cascade-the-agent-and-its-room-survive) |  | Active | |  |
+| [TEAMMATECARD-49](teammate-card.md#teammatecard-49-delete-then-recreate-under-the-same-name-fresh-settings-old-room) |  | Active | |  |
+| [TEAMMATECARD-50](teammate-card.md#teammatecard-50-editing-a-teammate-really-does-lose-its-conversation-memory-costs-money) | 💰 | Active | |  |
 
 ## model-effort
 
@@ -458,46 +458,46 @@ Settings: the 22 Hooks, editing, per-field reset and Save — [area file](hooks-
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [HOOKSSETTINGS-01](hooks-settings.md#hookssettings-01-settings-opens-on-the-hooks-tab-with-a-two-button-tab-rail) |  | Pass | |  |
-| [HOOKSSETTINGS-02](hooks-settings.md#hookssettings-02-tab-clicks-change-the-url-and-an-unknown-tab-segment-falls-back-to-hooks-instead-of-404ing) |  | Active | | |
-| [HOOKSSETTINGS-03](hooks-settings.md#hookssettings-03-the-hooks-tab-prints-the-real-absolute-path-of-hooksjson-and-says-the-files-absence-is-expected) |  | Active | | |
-| [HOOKSSETTINGS-04](hooks-settings.md#hookssettings-04-exactly-22-hook-fields-in-four-named-groups-in-a-fixed-order) |  | Pass | |  |
-| [HOOKSSETTINGS-05](hooks-settings.md#hookssettings-05-the-next-session-badge-appears-on-exactly-the-9-hooks-whose-edits-cannot-reach-a-running-teammate) |  | Active | | |
-| [HOOKSSETTINGS-06](hooks-settings.md#hookssettings-06-placeholder-chips-are-listed-on-exactly-the-8-hooks-that-take-placeholders-with-full-braces) |  | Active | | |
-| [HOOKSSETTINGS-07](hooks-settings.md#hookssettings-07-no-hooks-default-text-contains-the-literal-string-mcp__team__) |  | Active | | |
-| [HOOKSSETTINGS-08](hooks-settings.md#hookssettings-08-textarea-height-tracks-the-line-count-and-clamps-at-14-rows) |  | Active | | |
-| [HOOKSSETTINGS-09](hooks-settings.md#hookssettings-09-typing-raises-modified-and-unsaved-together-and-enables-save-reset-and-reset-all-while-writing-nothing) |  | Active | | |
-| [HOOKSSETTINGS-10](hooks-settings.md#hookssettings-10-modified-and-unsaved-are-independent-flags-walk-all-three-combinations) |  | Active | | |
-| [HOOKSSETTINGS-11](hooks-settings.md#hookssettings-11-per-field-reset-stages-the-shipped-default-without-writing-anything-to-disk) |  | Active | | |
-| [HOOKSSETTINGS-12](hooks-settings.md#hookssettings-12-hooksjson-does-not-exist-until-the-first-save-and-then-holds-only-the-keys-you-changed) |  | Active | | |
-| [HOOKSSETTINGS-13](hooks-settings.md#hookssettings-13-the-saved-file-is-human-readable-indented-with-literal-em-dashes-and-angle-brackets-not-uxxxx-escapes) |  | Active | | |
-| [HOOKSSETTINGS-14](hooks-settings.md#hookssettings-14-saving-a-field-back-to-its-default-removes-the-key-rather-than-storing-a-redundant-copy) |  | Active | | |
-| [HOOKSSETTINGS-15](hooks-settings.md#hookssettings-15-save-is-the-only-writer-and-a-successful-save-gives-no-confirmation) |  | Active | | |
-| [HOOKSSETTINGS-16](hooks-settings.md#hookssettings-16-reset-all-to-defaults-is-disabled-until-something-is-modified-and-guards-itself-with-an-inline-confirm) |  | Active | | |
-| [HOOKSSETTINGS-17](hooks-settings.md#hookssettings-17-yes-reset-everything-stages-all-22-defaults-but-writes-nothing-and-the-reset-is-silently-lost-if-you-navigate-away) |  | Active | | |
-| [HOOKSSETTINGS-18](hooks-settings.md#hookssettings-18-reset-all-followed-by-save-leaves-hooksjson-present-and-empty-never-deleted) |  | Active | | |
-| [HOOKSSETTINGS-19](hooks-settings.md#hookssettings-19-a-failed-save-shows-a-red-could-not-save-line-under-the-heading-and-keeps-every-pending-edit) |  | Active | | |
-| [HOOKSSETTINGS-20](hooks-settings.md#hookssettings-20-validation-reports-and-never-refuses-an-empty-field-raises-an-error-and-still-saves) |  | Active | | |
-| [HOOKSSETTINGS-21](hooks-settings.md#hookssettings-21-removing-a-required-placeholder-raises-an-error-naming-that-placeholder-and-an-optional-one-does-not) |  | Active | | |
-| [HOOKSSETTINGS-22](hooks-settings.md#hookssettings-22-an-unrecognised-token-raises-a-warning-a-malformed-one-raises-nothing-at-all) |  | Active | | |
-| [HOOKSSETTINGS-23](hooks-settings.md#hookssettings-23-validation-runs-live-against-the-pending-value-and-clears-without-saving) |  | Active | | |
-| [HOOKSSETTINGS-24](hooks-settings.md#hookssettings-24-hook-text-is-rendered-as-text-never-as-markup) |  | Active | | |
-| [HOOKSSETTINGS-25](hooks-settings.md#hookssettings-25-typing-in-a-long-hook-field-stays-responsive-and-loses-no-characters) |  | Active | | |
-| [HOOKSSETTINGS-26](hooks-settings.md#hookssettings-26-uncommitted-edits-survive-a-tab-switch-but-are-silently-discarded-by-reload-navigation-or-a-theme-change) |  | Active | | |
-| [HOOKSSETTINGS-27](hooks-settings.md#hookssettings-27-reset-all-to-defaults-is-also-rendered-on-the-appearance-tab-where-it-acts-on-hooks) |  | Active | | |
-| [HOOKSSETTINGS-28](hooks-settings.md#hookssettings-28-a-save-in-one-browser-tab-repaints-settings-open-in-another-without-eating-that-tabs-typing) |  | Active | | |
-| [HOOKSSETTINGS-29](hooks-settings.md#hookssettings-29-a-hand-edit-to-hooksjson-reaches-the-open-page-within-about-a-second-with-no-restart-and-no-refresh) |  | Active | | |
-| [HOOKSSETTINGS-30](hooks-settings.md#hookssettings-30-deleting-hooksjson-while-the-app-runs-reverts-every-field-to-its-shipped-default-live) |  | Active | | |
-| [HOOKSSETTINGS-31](hooks-settings.md#hookssettings-31-silent-a-malformed-hooksjson-edited-while-running-changes-nothing-on-screen-and-says-nothing-check-the-log) |  | Active | | |
-| [HOOKSSETTINGS-32](hooks-settings.md#hookssettings-32-silent-a-malformed-hooksjson-at-startup-falls-back-to-defaults-wholesale-with-no-ui-clue-and-the-file-left-intact) |  | Active | | |
-| [HOOKSSETTINGS-33](hooks-settings.md#hookssettings-33-an-unknown-key-in-hooksjson-is-kept-forever-ignored-for-resolution-and-logged-once) |  | Active | | |
-| [HOOKSSETTINGS-34](hooks-settings.md#hookssettings-34-a-pending-browser-edit-beats-a-concurrent-hand-edit-to-the-same-key-and-save-merges-rather-than-overwrites) |  | Active | | |
-| [HOOKSSETTINGS-35](hooks-settings.md#hookssettings-35-a-crlf-hand-edit-makes-a-field-show-modified-while-looking-identical-and-reset-fixes-it) |  | Active | | |
-| [HOOKSSETTINGS-36](hooks-settings.md#hookssettings-36-loading-settings-never-starts-an-adapter-node-process) |  | Active | | |
-| [HOOKSSETTINGS-37](hooks-settings.md#hookssettings-37-saving-a-hook-must-not-restart-any-teammates-session) |  | Active | | |
-| [HOOKSSETTINGS-38](hooks-settings.md#hookssettings-38-costs-money-a-live-hook-edit-reaches-the-very-next-turn-with-no-restart) | 💰 | Active | | |
-| [HOOKSSETTINGS-39](hooks-settings.md#hookssettings-39-costs-money-a-next-session-hook-edit-is-silently-inert-on-a-running-teammate-until-it-restarts) | 💰 | Active | | |
-| [HOOKSSETTINGS-40](hooks-settings.md#hookssettings-40-costs-money-get_help-re-renders-on-every-call-so-its-nine-hooks-land-on-the-next-call-while-a-tool-description-does-not) | 💰 | Active | | |
+| [HOOKSSETTINGS-01](hooks-settings.md#hookssettings-01-settings-opens-on-the-hooks-tab-with-a-two-button-tab-rail) |  | Active | |  |
+| [HOOKSSETTINGS-02](hooks-settings.md#hookssettings-02-tab-clicks-change-the-url-and-an-unknown-tab-segment-falls-back-to-hooks-instead-of-404ing) |  | Active | |  |
+| [HOOKSSETTINGS-03](hooks-settings.md#hookssettings-03-the-hooks-tab-prints-the-real-absolute-path-of-hooksjson-and-says-the-files-absence-is-expected) |  | Active | |  |
+| [HOOKSSETTINGS-04](hooks-settings.md#hookssettings-04-exactly-22-hook-fields-in-four-named-groups-in-a-fixed-order) |  | Active | |  |
+| [HOOKSSETTINGS-05](hooks-settings.md#hookssettings-05-the-next-session-badge-appears-on-exactly-the-9-hooks-whose-edits-cannot-reach-a-running-teammate) |  | Active | |  |
+| [HOOKSSETTINGS-06](hooks-settings.md#hookssettings-06-placeholder-chips-are-listed-on-exactly-the-8-hooks-that-take-placeholders-with-full-braces) |  | Active | |  |
+| [HOOKSSETTINGS-07](hooks-settings.md#hookssettings-07-no-hooks-default-text-contains-the-literal-string-mcp__team__) |  | Active | |  |
+| [HOOKSSETTINGS-08](hooks-settings.md#hookssettings-08-textarea-height-tracks-the-line-count-and-clamps-at-14-rows) |  | Active | |  |
+| [HOOKSSETTINGS-09](hooks-settings.md#hookssettings-09-typing-raises-modified-and-unsaved-together-and-enables-save-reset-and-reset-all-while-writing-nothing) |  | Active | |  |
+| [HOOKSSETTINGS-10](hooks-settings.md#hookssettings-10-modified-and-unsaved-are-independent-flags-walk-all-three-combinations) |  | Active | |  |
+| [HOOKSSETTINGS-11](hooks-settings.md#hookssettings-11-per-field-reset-stages-the-shipped-default-without-writing-anything-to-disk) |  | Active | |  |
+| [HOOKSSETTINGS-12](hooks-settings.md#hookssettings-12-hooksjson-does-not-exist-until-the-first-save-and-then-holds-only-the-keys-you-changed) |  | Active | |  |
+| [HOOKSSETTINGS-13](hooks-settings.md#hookssettings-13-the-saved-file-is-human-readable-indented-with-literal-em-dashes-and-angle-brackets-not-uxxxx-escapes) |  | Active | |  |
+| [HOOKSSETTINGS-14](hooks-settings.md#hookssettings-14-saving-a-field-back-to-its-default-removes-the-key-rather-than-storing-a-redundant-copy) |  | Active | |  |
+| [HOOKSSETTINGS-15](hooks-settings.md#hookssettings-15-save-is-the-only-writer-and-a-successful-save-gives-no-confirmation) |  | Active | |  |
+| [HOOKSSETTINGS-16](hooks-settings.md#hookssettings-16-reset-all-to-defaults-is-disabled-until-something-is-modified-and-guards-itself-with-an-inline-confirm) |  | Active | |  |
+| [HOOKSSETTINGS-17](hooks-settings.md#hookssettings-17-yes-reset-everything-stages-all-22-defaults-but-writes-nothing-and-the-reset-is-silently-lost-if-you-navigate-away) |  | Active | |  |
+| [HOOKSSETTINGS-18](hooks-settings.md#hookssettings-18-reset-all-followed-by-save-leaves-hooksjson-present-and-empty-never-deleted) |  | Active | |  |
+| [HOOKSSETTINGS-19](hooks-settings.md#hookssettings-19-a-failed-save-shows-a-red-could-not-save-line-under-the-heading-and-keeps-every-pending-edit) |  | Active | |  |
+| [HOOKSSETTINGS-20](hooks-settings.md#hookssettings-20-validation-reports-and-never-refuses-an-empty-field-raises-an-error-and-still-saves) |  | Active | |  |
+| [HOOKSSETTINGS-21](hooks-settings.md#hookssettings-21-removing-a-required-placeholder-raises-an-error-naming-that-placeholder-and-an-optional-one-does-not) |  | Active | |  |
+| [HOOKSSETTINGS-22](hooks-settings.md#hookssettings-22-an-unrecognised-token-raises-a-warning-a-malformed-one-raises-nothing-at-all) |  | Active | |  |
+| [HOOKSSETTINGS-23](hooks-settings.md#hookssettings-23-validation-runs-live-against-the-pending-value-and-clears-without-saving) |  | Active | |  |
+| [HOOKSSETTINGS-24](hooks-settings.md#hookssettings-24-hook-text-is-rendered-as-text-never-as-markup) |  | Active | |  |
+| [HOOKSSETTINGS-25](hooks-settings.md#hookssettings-25-typing-in-a-long-hook-field-stays-responsive-and-loses-no-characters) |  | Active | |  |
+| [HOOKSSETTINGS-26](hooks-settings.md#hookssettings-26-uncommitted-edits-survive-a-tab-switch-and-a-theme-change-but-are-silently-discarded-by-reload-or-leaving-the-page) |  | Active | |  |
+| [HOOKSSETTINGS-27](hooks-settings.md#hookssettings-27-reset-all-to-defaults-is-also-rendered-on-the-appearance-tab-where-it-acts-on-hooks) |  | Active | |  |
+| [HOOKSSETTINGS-28](hooks-settings.md#hookssettings-28-a-save-in-one-browser-tab-repaints-settings-open-in-another-without-eating-that-tabs-typing) |  | Active | |  |
+| [HOOKSSETTINGS-29](hooks-settings.md#hookssettings-29-a-hand-edit-to-hooksjson-reaches-the-open-page-within-about-a-second-with-no-restart-and-no-refresh) |  | Active | |  |
+| [HOOKSSETTINGS-30](hooks-settings.md#hookssettings-30-deleting-hooksjson-while-the-app-runs-reverts-every-field-to-its-shipped-default-live) |  | Active | |  |
+| [HOOKSSETTINGS-31](hooks-settings.md#hookssettings-31-silent-a-malformed-hooksjson-edited-while-running-changes-nothing-on-screen-and-says-nothing-check-the-log) |  | Active | |  |
+| [HOOKSSETTINGS-32](hooks-settings.md#hookssettings-32-silent-a-malformed-hooksjson-at-startup-falls-back-to-defaults-wholesale-with-no-ui-clue-and-the-file-left-intact) |  | Active | |  |
+| [HOOKSSETTINGS-33](hooks-settings.md#hookssettings-33-an-unknown-key-in-hooksjson-is-kept-forever-ignored-for-resolution-and-logged-once) |  | Active | |  |
+| [HOOKSSETTINGS-34](hooks-settings.md#hookssettings-34-a-pending-browser-edit-beats-a-concurrent-hand-edit-to-the-same-key-and-save-merges-rather-than-overwrites) |  | Active | |  |
+| [HOOKSSETTINGS-35](hooks-settings.md#hookssettings-35-a-crlf-hand-edit-makes-a-field-show-modified-while-looking-identical-and-reset-fixes-it) |  | Active | |  |
+| [HOOKSSETTINGS-36](hooks-settings.md#hookssettings-36-loading-settings-never-starts-an-adapter-node-process) |  | Active | |  |
+| [HOOKSSETTINGS-37](hooks-settings.md#hookssettings-37-saving-a-hook-must-not-restart-any-teammates-session) |  | Active | |  |
+| [HOOKSSETTINGS-38](hooks-settings.md#hookssettings-38-costs-money-a-live-hook-edit-reaches-the-very-next-turn-with-no-restart) | 💰 | Active | |  |
+| [HOOKSSETTINGS-39](hooks-settings.md#hookssettings-39-costs-money-a-next-session-hook-edit-is-silently-inert-on-a-running-teammate-until-it-restarts) | 💰 | Active | |  |
+| [HOOKSSETTINGS-40](hooks-settings.md#hookssettings-40-costs-money-get_help-re-renders-on-every-call-so-its-nine-hooks-land-on-the-next-call-while-a-tool-description-does-not) | 💰 | Active | |  |
 
 ## appearance-theme
 
@@ -505,31 +505,31 @@ Appearance tab, Themes, Tokens and overrides — [area file](appearance-theme.md
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [APPEARANCETHEME-01](appearance-theme.md#appearancetheme-01-the-appearance-tab-is-on-the-settings-rail-and-is-reachable-by-its-own-route) |  | Active | | |
-| [APPEARANCETHEME-02](appearance-theme.md#appearancetheme-02-the-appearance-tab-shows-its-own-prose-and-the-real-absolute-override-path-and-none-of-the-hooks-tabs-prose) |  | Active | | |
-| [APPEARANCETHEME-03](appearance-theme.md#appearancetheme-03-the-theme-dropdown-offers-exactly-system-light-and-dark-in-that-order) |  | Pass | |  |
-| [APPEARANCETHEME-04](appearance-theme.md#appearancetheme-04-choosing-a-theme-stores-its-id-and-forces-a-full-document-load-not-an-in-place-repaint) |  | Pass | |  |
-| [APPEARANCETHEME-05](appearance-theme.md#appearancetheme-05-the-three-cascade-layers-appear-in-head-in-exactly-the-right-order-and-every-stylesheet-is-actually-served) |  | Active | | |
-| [APPEARANCETHEME-06](appearance-theme.md#appearancetheme-06-the-saved-theme-is-shown-as-selected-in-the-dropdown-after-a-full-load) |  | Active | | |
-| [APPEARANCETHEME-07](appearance-theme.md#appearancetheme-07-no-flash-of-light-on-a-hard-reload-with-dark-chosen) |  | Active | | |
-| [APPEARANCETHEME-08](appearance-theme.md#appearancetheme-08-system-follows-the-operating-system-live-with-no-reload-an-explicit-theme-ignores-the-os-entirely) |  | Active | | |
-| [APPEARANCETHEME-09](appearance-theme.md#appearancetheme-09-the-theme-choice-is-per-installation-not-per-browser) |  | Active | | |
-| [APPEARANCETHEME-10](appearance-theme.md#appearancetheme-10-token-name-overrides-change-exactly-what-they-name-and-nothing-else) |  | Active | | |
-| [APPEARANCETHEME-11](appearance-theme.md#appearancetheme-11-exotic-but-allowed-override-values-survive-including-a-quoted-font-name) |  | Active | | |
-| [APPEARANCETHEME-12](appearance-theme.md#appearancetheme-12-a-hostile-or-malformed-override-value-is-rejected-reported-on-the-tab-logged-once-and-the-file-is-left-byte-for-byte-unchanged) |  | Active | | |
-| [APPEARANCETHEME-13](appearance-theme.md#appearancetheme-13-an-override-key-that-is-not-a-token-name-is-rejected-per-entry-reported-and-left-in-the-file) |  | Active | | |
-| [APPEARANCETHEME-14](appearance-theme.md#appearancetheme-14-an-unknown-theme-id-is-a-warning-never-a-failure-and-the-file-keeps-saying-it) |  | Active | | |
-| [APPEARANCETHEME-15](appearance-theme.md#appearancetheme-15-malformed-json-falls-back-wholesale---and-reports-nothing-on-the-appearance-tab) |  | Active | | |
-| [APPEARANCETHEME-16](appearance-theme.md#appearancetheme-16-saving-a-theme-while-the-file-is-malformed-replaces-its-contents) |  | Active | | |
-| [APPEARANCETHEME-17](appearance-theme.md#appearancetheme-17-selecting-system-removes-the-theme-key-but-preserves-overrides-and-unknown-keys) |  | Active | | |
-| [APPEARANCETHEME-18](appearance-theme.md#appearancetheme-18-a-hand-edit-updates-the-open-tab-live-but-the-pages-colours-only-change-on-a-full-load) |  | Active | | |
-| [APPEARANCETHEME-19](appearance-theme.md#appearancetheme-19-deleting-appearancejson-while-the-app-runs-returns-it-to-system-and-the-app-never-recreates-it) |  | Active | | |
-| [APPEARANCETHEME-20](appearance-theme.md#appearancetheme-20-two-browser-windows-stay-in-step-on-the-tab-and-the-change-propagates-through-the-file) |  | Active | | |
-| [APPEARANCETHEME-21](appearance-theme.md#appearancetheme-21-re-selecting-the-theme-that-is-already-selected-is-harmless) |  | Active | | |
-| [APPEARANCETHEME-22](appearance-theme.md#appearancetheme-22-dark-mode-walked-across-every-page-and-every-state---the-acceptance-test-for-the-whole-item) |  | Active | | |
-| [APPEARANCETHEME-23](appearance-theme.md#appearancetheme-23-hover-selection-and-focus-surfaces-all-switch-and-the-four-old-hover-colours-are-now-one) |  | Active | | |
-| [APPEARANCETHEME-24](appearance-theme.md#appearancetheme-24-the-reconnect-modal-shows-one-themed-state-paragraph-over-a-dimmed-backdrop-in-both-themes) |  | Active | | |
-| [APPEARANCETHEME-25](appearance-theme.md#appearancetheme-25-the-layering-probe-a-theme-that-sets-one-token-inherits-the-whole-built-in-dark-palette-for-the-rest) |  | Active | | |
+| [APPEARANCETHEME-01](appearance-theme.md#appearancetheme-01-the-appearance-tab-is-on-the-settings-rail-and-is-reachable-by-its-own-route) |  | Active | |  |
+| [APPEARANCETHEME-02](appearance-theme.md#appearancetheme-02-the-appearance-tab-shows-its-own-prose-and-the-real-absolute-selection-file-path-and-none-of-the-hooks-tabs-prose) |  | Active | |  |
+| [APPEARANCETHEME-03](appearance-theme.md#appearancetheme-03-the-theme-select-offers-the-built-in-catalog-and-the-appearance-select-offers-exactly-system-light-and-dark-in-that-order) |  | Active | |  |
+| [APPEARANCETHEME-04](appearance-theme.md#appearancetheme-04-choosing-a-value-in-either-select-stores-its-id-and-applies-immediately-with-no-page-reload) |  | Active | |  |
+| [APPEARANCETHEME-05](appearance-theme.md#appearancetheme-05-retired-the-three-stylesheet-cascade-layering-test) |  | Active | | Retired 2026-09-14 (MudBlazor migration) - CSS cascade layering test, no successor. See area file. |
+| [APPEARANCETHEME-06](appearance-theme.md#appearancetheme-06-the-saved-theme-and-dark-mode-preference-are-shown-as-selected-in-both-selects-after-a-full-load) |  | Active | |  |
+| [APPEARANCETHEME-07](appearance-theme.md#appearancetheme-07-an-explicit-dark-or-light-choice-shows-no-flash-of-the-other-palette-on-a-hard-reload) |  | Active | |  |
+| [APPEARANCETHEME-08](appearance-theme.md#appearancetheme-08-system-follows-the-operating-system-live-with-no-reload-an-explicit-choice-ignores-the-os-entirely-and-a-first-paint-flash-under-system-is-expected) |  | Active | |  |
+| [APPEARANCETHEME-09](appearance-theme.md#appearancetheme-09-the-choice-is-per-installation-not-per-browser) |  | Active | |  |
+| [APPEARANCETHEME-10](appearance-theme.md#appearancetheme-10-retired-token-name-overrides-changing-exactly-what-they-name) |  | Active | | Retired 2026-09-14 (MudBlazor migration) - per-token overrides removed, no successor. See area file. |
+| [APPEARANCETHEME-11](appearance-theme.md#appearancetheme-11-retired-exotic-but-allowed-override-values-quoted-fonts-percentages-color-mix-token-references) |  | Active | | Retired 2026-09-14 (MudBlazor migration) - per-token overrides removed, no successor. See area file. |
+| [APPEARANCETHEME-12](appearance-theme.md#appearancetheme-12-retired-a-hostile-override-value-being-rejected-rather-than-reaching-the-document-as-raw-css) |  | Active | | Retired 2026-09-14 (MudBlazor migration) - per-token overrides removed, no successor. See area file. |
+| [APPEARANCETHEME-13](appearance-theme.md#appearancetheme-13-retired-an-override-key-that-is-not-a-token-name-being-rejected-per-entry) |  | Active | | Retired 2026-09-14 (MudBlazor migration) - per-token overrides removed, no successor. See area file. |
+| [APPEARANCETHEME-14](appearance-theme.md#appearancetheme-14-an-unknown-theme-id-or-dark-mode-value-is-a-warning-logged-once-never-shown-on-the-tab-and-the-file-keeps-saying-it) |  | Active | |  |
+| [APPEARANCETHEME-15](appearance-theme.md#appearancetheme-15-malformed-json-falls-back-wholesale-is-logged-once-and-the-file-is-left-untouched) |  | Active | |  |
+| [APPEARANCETHEME-16](appearance-theme.md#appearancetheme-16-saving-a-choice-while-the-file-is-malformed-replaces-its-contents-with-valid-json) |  | Active | |  |
+| [APPEARANCETHEME-17](appearance-theme.md#appearancetheme-17-save-re-reads-the-file-under-its-write-lock-so-an-unrelated-hand-added-key-survives-and-a-concurrent-edit-to-the-other-field-is-not-clobbered) |  | Active | |  |
+| [APPEARANCETHEME-18](appearance-theme.md#appearancetheme-18-a-hand-edit-updates-the-open-tab-live-and-now-the-pages-colours-change-too-no-full-load-required) |  | Active | |  |
+| [APPEARANCETHEME-19](appearance-theme.md#appearancetheme-19-deleting-appearancejson-while-the-app-runs-returns-it-to-the-default-live-and-the-app-never-recreates-it) |  | Active | |  |
+| [APPEARANCETHEME-20](appearance-theme.md#appearancetheme-20-two-browser-windows-stay-in-step-colours-included-the-change-propagates-through-the-file-to-every-open-circuit) |  | Active | |  |
+| [APPEARANCETHEME-21](appearance-theme.md#appearancetheme-21-re-selecting-the-value-that-is-already-selected-is-harmless-and-produces-no-reload) |  | Active | |  |
+| [APPEARANCETHEME-22](appearance-theme.md#appearancetheme-22-dark-mode-walked-across-every-page-and-every-state---the-acceptance-test-for-the-whole-item) |  | Active | |  |
+| [APPEARANCETHEME-23](appearance-theme.md#appearancetheme-23-hover-selection-and-focus-surfaces-all-switch-and-the-four-old-hover-colours-are-still-one) |  | Active | |  |
+| [APPEARANCETHEME-24](appearance-theme.md#appearancetheme-24-the-reconnect-modal-shows-one-themed-state-paragraph-over-a-dimmed-backdrop-in-both-light-and-dark) |  | Active | |  |
+| [APPEARANCETHEME-25](appearance-theme.md#appearancetheme-25-retired-the-layering-probe-a-theme-that-sets-one-token-inherits-the-rest-from-the-built-in-palette) |  | Active | | Retired 2026-09-14 (MudBlazor migration) - CSS cascade layering probe, no successor. See area file. |
 
 ## pipe-external
 

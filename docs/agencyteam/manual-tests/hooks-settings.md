@@ -21,6 +21,7 @@ standing conventions. This area adds:
 4. Keep a plain-text editor that does not reformat files (VS Code, Notepad++, Notepad) ready — many tests hand-edit `App_Data\hooks.json` while the app is running.
 5. Open `E:\Repos\Huddle\src\Huddle.App\hooks.default.json` in that editor and leave it open. It is the 22 shipped defaults, pretty-printed, and is the diff source for every 'did Reset restore the exact shipped wording?' check. Nothing in the running app ever reads it.
 6. Reset between tests with `P-RESET-SETTINGS` unless a test says otherwise. Tests HOOKSSETTINGS-01 to -36 run on `P-LAUNCH-FREE` and cost nothing; only -37 to -40 use `P-LAUNCH-PAID`.
+7. MudBlazor renders every button and tab-panel LABEL in upper case via CSS (`text-transform: uppercase`) — this is a rendering style, not a change to the underlying text. A step below that says to look for `Reset` or `Hooks` means the control whose text (and `textContent` in DevTools) is `Reset` or `Hooks`; what you will actually SEE on screen is `RESET` / `HOOKS`. Steps keep the title-case spelling throughout this document because that is what a DOM/`textContent` check reads and what this document's own prose uses — read every button and tab label below as its upper-case rendering, not as a mismatch to report.
 
 ## Tests
 
@@ -40,16 +41,16 @@ standing conventions. This area adds:
 1. Browse to `http://localhost:5100/`.
 2. Click **Settings** in the left sidebar.
 3. Read the page heading.
-4. Look at the left edge of the content area for the tab rail.
+4. Look at the top of the content area, ABOVE the form, for the tab rail — `MudTabs` renders horizontally across the top by default; it is no longer a vertical rail down the left.
 5. Count the buttons in the tab rail.
-6. Note which button looks selected (bold text, a coloured left border, a shaded background).
+6. Note which button looks selected (a coloured underline/indicator beneath it, and heavier text).
 7. Look at the browser address bar.
 
 **Pass if — all of these**
 
 - An `<h1>` reading exactly `Settings` is at the top of the page.
-- The tab rail contains exactly two buttons, labelled `Hooks` and `Appearance`, stacked vertically to the LEFT of the content, not above it.
-- `Hooks` is the visually selected tab and `Appearance` is not.
+- The tab rail contains exactly two buttons, reading `HOOKS` and `APPEARANCE` (MudBlazor renders tab labels in upper case; the underlying text is `Hooks` and `Appearance`), laid out horizontally ABOVE the content, not down its left edge.
+- `HOOKS` is the visually selected tab and `APPEARANCE` is not.
 - The content pane below shows hook fields (bold field labels with textareas), not a theme picker.
 - The address bar still reads `http://localhost:5100/settings` with no tab segment appended.
 
@@ -57,15 +58,15 @@ standing conventions. This area adds:
 
 - A 404 page or a yellow/ASP.NET exception page -> the route `/settings` with no `{Tab}` segment no longer resolves.
 - A blank content pane -> the `default:` fallback arm of the tab switch has broken; landing with no tab must still render Hooks.
-- Neither tab looks active, or both do -> the `settings-tab-active` class is being applied from a stale or duplicated comparison.
-- The rail rendering above the content at normal desktop width -> the settings-layout CSS has regressed.
+- Neither tab looks active, or both do -> `MudTabs`' `ActivePanelIndex` is being computed from a stale or duplicated comparison.
+- The rail renders as a vertical column down the left, or anywhere other than horizontally above the content -> `MudTabs.Position` was set away from its default (`Position.Top`), which nothing in this area asked for.
 
 **Inconclusive if**
 
 If the browser shows a connection error, the app is not running — redo `P-LAUNCH-FREE` and check `T-A` for a startup exception, then re-run. If the page renders but the styling is obviously absent (no colours at all, unstyled text), CSS failed to load: hard-refresh with Ctrl+F5 and re-judge; if it is still unstyled, stop and report a CSS-loading problem rather than judging the tab rail.
 
 > [!NOTE]
-> To confirm the selected-tab styling objectively rather than by eye, open devtools (F12), inspect the Hooks button, and check its class list contains `settings-tab-active`.
+> The tab rail is `MudTabs` (Stage 3 of the MudBlazor migration), rendered at its default `Position.Top` — horizontally, above the content — which is a layout change from the old hand-rolled vertical left rail. That change is expected; do not file it. To confirm the selected-tab styling objectively rather than by eye, open devtools (F12), inspect the `HOOKS` button, and check its class list contains `mud-tab-active`. The old hand-rolled `settings-tab-active` class no longer exists.
 
 ### HOOKSSETTINGS-02 — Tab clicks change the URL, and an unknown tab segment falls back to Hooks instead of 404ing
 
@@ -93,7 +94,7 @@ If the browser shows a connection error, the app is not running — redo `P-LAUN
 
 **Pass if — all of these**
 
-- After step 1 the URL is `http://localhost:5100/settings/appearance` and the pane shows the sentence `Pick a theme, or leave it on System to follow your device's own light or dark setting.` and a `Theme` dropdown.
+- After step 1 the URL is `http://localhost:5100/settings/appearance` and the pane shows the sentence `Pick a theme, and choose whether it always uses its light or dark palette, or follows your device's own setting.` and a `Theme` select plus a second, `Appearance`-labelled select.
 - After step 3 the URL is `http://localhost:5100/settings/hooks` and the 22 hook textareas are back.
 - Step 5 renders the Hooks pane.
 - Step 6 (`/settings/HOOKS`) renders the Hooks pane — the parse is case-insensitive.
@@ -189,7 +190,7 @@ If Explorer says the FILE does not exist but opens the right FOLDER, that is a P
 
 **Inconclusive if**
 
-If you cannot tell where one group ends and the next begins because headings are unstyled, open devtools and count `<section class="hooks-group">` elements and the `hooks-field` divs inside each. If that count matches, pass the test and separately report the styling problem.
+If you cannot tell where one group ends and the next begins because headings are unstyled, open devtools and count the `MudPaper` elements wrapping each group (each renders as a `.mud-paper` carrying the `pa-4 mb-4` classes and one `h2.hooks-group-heading`) and the `hooks-field` divs inside each. If that count matches, pass the test and separately report the styling problem. (The old hand-rolled `<section class="hooks-group">` wrapper no longer exists — Stage 3 of the MudBlazor migration replaced it with `MudPaper`, but `hooks-group-heading` and `hooks-field` are unchanged.)
 
 > [!NOTE]
 > Cross-check against `E:\Repos\Huddle\src\Huddle.App\hooks.default.json`, which holds exactly 22 keys. Every label on screen must correspond to one of them. Count, do not skim — this test's entire value is the count.
@@ -332,8 +333,8 @@ Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' r
 3. Click at the end of its text and press Enter once. Observe the box height.
 4. Press Enter twelve more times (thirteen newlines in total), watching the height after each press.
 5. Press Enter five more times, watching the height.
-6. Open devtools (F12), inspect the `Room label` textarea, and read its `rows` attribute.
-7. Drag the resize grip at the bottom-right corner of the box up and down.
+6. Open devtools (F12), inspect the `Room label` field's `<textarea>` element, and read its `rows` attribute.
+7. Look at the bottom-right corner of the box for a manual resize grip, and try to drag it.
 8. Press Ctrl+Z repeatedly, or reload the page with F5, to discard these edits without saving.
 
 **Pass if — all of these**
@@ -342,12 +343,13 @@ Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' r
 - Each of the first thirteen Enter presses makes the box one row taller, immediately, without leaving the field.
 - After the thirteenth newline the box stops growing; the five further Enter presses add no height and the box scrolls internally instead.
 - At that point the inspected `rows` attribute reads `14`.
-- The resize grip drags the box taller/shorter vertically.
+- There is NO manual resize grip, and dragging the bottom-right corner does nothing — `MudTextField` sets `resize: none` on its `<textarea>` and grows it itself by recomputing `Lines`, so a manual drag handle would only fight that.
 
 **Fail if — any of these**
 
 - The box not growing at all as newlines are added -> the height is recomputed on every keystroke, so a frozen height means the per-input re-render has stopped, which would also break the live badges and live validation in the tests below.
 - The box growing past 14 rows and dominating the page -> the clamp is gone; the longest hooks would push Save far off screen.
+- A manual resize grip appears and can drag the box independently of `Lines` -> `MudTextField`'s `resize: none` was overridden; a manual resize would drift out of sync with the automatic row count on the very next keystroke.
 
 **Inconclusive if**
 
@@ -869,7 +871,7 @@ If the read-only attribute does not cause a failure on your machine (some enviro
 
 **Inconclusive if**
 
-If you cannot judge red from amber, inspect the `<li>` in devtools: `hooks-field-issue-error` is the error class and `hooks-field-issue-warning` is the warning class. Judge from the class.
+If you cannot judge red from amber, inspect the element in devtools: each issue is now a `MudAlert` (Stage 3 of the MudBlazor migration replaced the old `<li class="hooks-field-issue-error">` list), so look for `mud-alert-text-error` versus `mud-alert-text-warning` in its class list. Judge from the class.
 
 > [!NOTE]
 > Run `P-RESET-SETTINGS` and relaunch afterwards.
@@ -1063,7 +1065,7 @@ If your browser blocks alert() dialogs by policy, do not conclude the payload wa
 5. Repeat the same in the `Tools` field, placing the caret mid-text.
 6. Now select all of `Help: Rooms`, and paste in a block of a few thousand characters (for example, paste the same paragraph twenty times).
 7. Immediately after the paste, keep typing a short sentence and watch for lag or dropped characters.
-8. Add several newlines and watch whether the box's automatic row growth fights any manual resize you have applied.
+8. Add several newlines and confirm the box's automatic row growth continues smoothly with no caret jump. (There is no manual resize to fight — see HOOKSSETTINGS-08's note on `MudTextField`'s `resize: none`.)
 
 **Pass if — all of these**
 
@@ -1086,11 +1088,11 @@ If you are testing over a slow or remote connection, latency is expected and is 
 > [!NOTE]
 > Discard with F5; do not save.
 
-### HOOKSSETTINGS-26 — Uncommitted edits survive a tab switch but are silently discarded by reload, navigation or a theme change
+### HOOKSSETTINGS-26 — Uncommitted edits survive a tab switch and a theme change, but are silently discarded by reload or leaving the page
 
 **Free** · about 9 min
 
-*Pins which gestures preserve pending work and which destroy it — the theme-change case is the one most likely to surprise a real user, because it does not look like navigation.*
+*Pins which gestures preserve pending work and which destroy it. Before the MudBlazor migration a theme change forced a full page reload and was the gesture most likely to surprise a user by silently discarding work; now that Appearance applies in place with no reload (see `appearance-theme.md`), a theme change is expected to behave exactly like a tab switch — this test now proves that inversion instead of the old reload.*
 
 **Before you start**
 
@@ -1106,8 +1108,8 @@ If you are testing over a slow or remote connection, latency is expected and is 
 5. Press the browser Back button, then Forward. Read both fields again.
 6. Now press F5. Read both fields and their badges.
 7. Type ` LOSEME` into `Room label` (no save). Click `Teammates` in the sidebar, then click `Settings`. Read the field.
-8. Type ` LOSEME2` into `Room label` (no save). Click the `Appearance` tab. In the `Theme` dropdown, select `Dark`.
-9. Watch what the browser does.
+8. Type ` LOSEME2` into `Room label` (no save). Click the `Appearance` tab. In the `Appearance` select, choose `Dark`.
+9. Watch what the browser does — in particular, whether it performs a full page load.
 10. Click the `Hooks` tab and read `Room label`.
 11. Look for any 'you have unsaved changes' prompt at any point in steps 6, 7 or 8.
 
@@ -1116,19 +1118,20 @@ If you are testing over a slow or remote connection, latency is expected and is 
 - After steps 2-4 both edits and both `Unsaved` badges are still present — a tab switch preserves pending work.
 - Back/Forward between the two tabs behaves the same way.
 - After F5 (step 6) both edits are GONE and the fields show their defaults, with no badges.
-- After step 7 the edit is GONE.
-- After step 8 the browser performs a FULL page reload (the whole page flashes/reloads, not just the pane) and the theme changes.
-- After step 10 the `LOSEME2` edit is GONE.
+- After step 7 the edit is GONE — leaving the Settings page for Teammates and back destroys pending work, because it is a genuinely different route with no Hooks component instance to return to.
+- After step 8 the page repaints dark IMMEDIATELY with NO page load (see `appearance-theme.md`'s APPEARANCETHEME-04) — the whole point of this step is that the theme change behaves like the harmless tab switch in steps 2-4, not like F5.
+- After step 10 the `LOSEME2` edit is STILL PRESENT with its `Unsaved` badge — the theme change did not destroy it.
 - No unsaved-changes prompt appears at any point — this is current designed behaviour.
 
 **Fail if — any of these**
 
 - Edits lost on a plain tab switch (steps 2-4) -> a regression: the Settings component instance is being torn down on a route change that only swaps panes, and a user loses work simply by looking at the theme picker.
-- The theme change NOT forcing a full page reload -> the theme's <link> tags in <head> cannot be swapped from Blazor's render tree, so a partial update would leave the document and the saved theme disagreeing.
+- The theme change forces a full page reload -> the old reload mechanism is back; per `appearance-theme.md` it is no longer needed and no longer correct.
+- The `LOSEME2` edit is gone after step 10 -> the theme change is destroying the Settings component (or its pending-edit state) even though it no longer navigates or reloads; report this alongside whatever caused it, since nothing about the current design should discard state here.
 
 **Inconclusive if**
 
-The absence of an unsaved-changes prompt is documented designed behaviour, not a defect. If you believe there should be one, file it as a UX suggestion, not a bug. If the `Theme` dropdown is missing or empty, the Appearance tab has its own problem — report that against the Appearance area and mark step 8 inconclusive here.
+The absence of an unsaved-changes prompt is documented designed behaviour, not a defect. If you believe there should be one, file it as a UX suggestion, not a bug. If the `Appearance` select is missing or empty, the Appearance tab has its own problem — report that against the Appearance area and mark step 8 inconclusive here.
 
 > [!NOTE]
 > Clean up afterwards with `P-RESET-SETTINGS`, which removes both the `appearance.json` this test created and any `hooks.json`, then relaunch.
