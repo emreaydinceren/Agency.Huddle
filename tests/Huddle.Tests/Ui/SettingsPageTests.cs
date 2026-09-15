@@ -186,13 +186,8 @@ public sealed class SettingsPageTests
     /// <summary>
     /// The Appearance tab shows a Theme select and an Appearance (dark-mode) select, each already
     /// showing its resolved current value - the catalog's default theme's label and "System" - and
-    /// renders none of the Hooks tab's own content. <c>MudSelect</c> only renders its list of items
-    /// into a popover once opened by a real click, which a plain GET can never trigger - the same
-    /// "anything behind a click is absent from that HTML" limitation <c>testing.md</c> documents for
-    /// <c>TeammateCard</c>'s own controls - so this cannot also assert that every catalog theme
-    /// label or every <see cref="DarkModePreference"/> option appears; only the two selects'
-    /// pre-rendered current values can be checked here. Unaffected by this stage's conversion
-    /// (<c>Appearance.razor</c> is out of scope), so it stays on HTTP.
+    /// renders none of the Hooks tab's own content. Stays on HTTP for that half: it is a fact about
+    /// the prerender, unaffected by this stage's conversion (<c>Appearance.razor</c> is out of scope).
     /// </summary>
     [Fact]
     public async Task SettingsAppearancePage_RendersTheSelectedThemeAndDarkModeLabels()
@@ -209,6 +204,47 @@ public sealed class SettingsPageTests
         Assert.Contains("aria-label=\"Appearance\"", html, StringComparison.Ordinal);
         Assert.Contains($">{ThemeCatalog.BuiltIn[0].Label}<", html, StringComparison.Ordinal);
         Assert.Contains(">System<", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The other half of <see cref="SettingsAppearancePage_RendersTheSelectedThemeAndDarkModeLabels"/>,
+    /// restored now that <see cref="MudBunitContext.RenderWithPopovers"/> exists: a <c>MudSelect</c>
+    /// only paints its options into a popover once opened by a real click, which a plain GET can never
+    /// trigger, so the HTTP version of this test could only ever see the two selects' pre-rendered
+    /// current values. Opening both here proves every <see cref="ThemeCatalog.BuiltIn"/> label and
+    /// every <see cref="DarkModePreference"/> member is actually offered, not just the one each select
+    /// happens to start on.
+    /// </summary>
+    [Fact]
+    public async Task SettingsAppearancePage_OffersEveryThemeAndDarkModeOption()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<Settings>(0);
+            builder.AddComponentParameter(1, nameof(Settings.Tab), "appearance");
+            builder.CloseComponent();
+        });
+
+        var selects = cut.FindAll("div.mud-input-control");
+        Assert.Equal(2, selects.Count);
+
+        foreach (var select in selects)
+        {
+            await select.MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+        }
+
+        foreach (var theme in ThemeCatalog.BuiltIn)
+        {
+            Assert.Contains(theme.Label, cut.Markup, StringComparison.Ordinal);
+        }
+
+        foreach (var preference in Enum.GetValues<DarkModePreference>())
+        {
+            Assert.Contains(preference.ToString(), cut.Markup, StringComparison.Ordinal);
+        }
     }
 
     /// <summary>

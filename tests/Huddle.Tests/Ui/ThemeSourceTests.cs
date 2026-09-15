@@ -1,10 +1,11 @@
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Reads <c>app.css</c> and every scoped <c>.razor.css</c> as source text - the same technique
-/// <see cref="TeammatesRazorSourceTests"/> uses and for the same reason - because nothing in this
-/// suite renders a browser, and CSS custom properties resolve entirely inside the browser's
-/// cascade. MudBlazor's <c>MudTheme</c> is the single source of theming now, so what this suite can
+/// Reads <c>app.css</c> and every scoped <c>.razor.css</c> as source text - a source assertion,
+/// for the same reason <c>TeammateDialogParametersTests</c> reflects over real types rather than
+/// rendering one - because nothing in this suite renders a browser, and CSS custom properties resolve
+/// entirely inside the browser's cascade. MudBlazor's <c>MudTheme</c> is the single source of theming
+/// now, so what this suite can
 /// still decide is narrower than before <c>theme.css</c> retired: no colour literal outside the one
 /// documented exemption, no font-family literal, and every <c>var()</c> in <c>app.css</c> naming
 /// either a variable MudBlazor's own theme generates or <c>--font-mono</c>, the one token MudBlazor

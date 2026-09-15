@@ -1,6 +1,5 @@
 @page "/teammates"
 @implements IDisposable
-@using System.Diagnostics
 @using Agency.Huddle.Acp.Abstractions
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Pipes
@@ -11,31 +10,27 @@
 @inject PersonaSupervisor Supervisor
 @inject RoomEvents Events
 @inject IModelCatalog ModelCatalog
+@inject IDialogService DialogService
 
 <div class="teammates-page">
     <header class="teammates-header">
         <h1>Teammates</h1>
-        <button type="button" class="teammate-card-primary teammates-new" @onclick="this.BeginCreate">New teammate</button>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="teammates-new" OnClick="this.BeginCreate">New teammate</MudButton>
     </header>
 
-    <p class="teammates-intro">
+    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
         A Persona is a Markdown file describing how one teammate should behave, plus the model it
         thinks with. Add one and that teammate comes online with a chat of its own. Editing the file,
         or changing its model, restarts it, which clears what it remembers. Removing the file only
         takes it offline — its chats and their history stay.
-    </p>
-
-    @if (this.error is not null)
-    {
-        <p class="composer-error">@this.error</p>
-    }
+    </MudText>
 
     @* Above the list on purpose: a required-field decision only pays off if the file that fails to
        load is impossible to miss, rather than just silently absent from the directory below. *@
     @if (this.rejectedFiles.Count > 0)
     {
-        <section class="teammates-rejected">
-            <h2>Files that didn't load</h2>
+        <MudAlert Severity="Severity.Warning" Class="mb-4">
+            <MudText Typo="Typo.subtitle2">Files that didn't load</MudText>
             <ul class="teammates-rejected-list">
                 @foreach (var rejected in this.rejectedFiles)
                 {
@@ -45,33 +40,32 @@
                     </li>
                 }
             </ul>
-        </section>
+        </MudAlert>
     }
 
     @if (this.entries.Count == 0)
     {
-        <p class="empty-state">No Personas yet. Choose <strong>New teammate</strong> to add one.</p>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">No Personas yet. Choose <strong>New teammate</strong> to add one.</MudText>
     }
     else
     {
-        <label class="teammates-field teammates-filter">
-            Team
-            @* @onchange, not @oninput: a <select> does not raise "input" reliably, and Blazor's
-               own select binding uses "change" (see the same comment on TeammateCard.razor). *@
-            <select value="@this.selectedTeam" @onchange="this.OnTeamFilterChanged">
-                <option value="">All teams</option>
-                @foreach (var team in this.teams)
-                {
-                    <option value="@team">@team</option>
-                }
-            </select>
-        </label>
+        @* @bind-Value, not @oninput: MudSelect raises ValueChanged on selection, the same "change"
+           semantics the old <select>'s @onchange comment called out. Never touches ModelCatalog or
+           PersonaStore's write path - selecting a team is pure display narrowing over state already
+           loaded, the same "never probes" guarantee a plain page load has. *@
+        <MudSelect T="string" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="teammates-filter mb-4">
+            <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
+            @foreach (var team in this.teams)
+            {
+                <MudSelectItem T="string" Value="@team">@team</MudSelectItem>
+            }
+        </MudSelect>
 
         var groups = TeammateGrouping.Group(this.entries, this.teams, this.selectedTeam);
 
         if (groups.Count == 0)
         {
-            <p class="empty-state">No teammates in this team.</p>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">No teammates in this team.</MudText>
         }
         else
         {
@@ -84,12 +78,16 @@
                         {
                             var status = this.ResolveStatus(entry.Name);
                             <li class="teammates-item">
-                                @* The whole tile opens the card, the way a person in Slack's directory does. *@
+                                @* The whole tile opens the card, the way a person in Slack's directory does.
+                                   Kept as a real <button>, not a MudCard, so it stays keyboard-focusable and
+                                   correctly announced - MudBlazor has no card-sized clickable-area component,
+                                   and nesting a button inside (or around) a MudCard would be two interactive
+                                   elements fighting over the same click. *@
                                 <button type="button" class="teammate-tile" @onclick="() => this.OpenCard(entry.Name)">
-                                    <span class="teammate-avatar" aria-hidden="true">@Monogram(entry.Name)</span>
+                                    <MudAvatar Color="Color.Primary" Class="teammate-avatar">@TeammateCard.Monogram(entry.Name)</MudAvatar>
                                     <span class="teammate-tile-text">
                                         <span class="teammates-item-name">@entry.Name</span>
-                                        <span class="teammate-tile-role">@entry.Title &middot; @(FormattedAlias(entry.Alias))</span>
+                                        <span class="teammate-tile-role">@entry.Title &middot; @(Teammates.FormattedAlias(entry.Alias))</span>
                                         @* The reason (when one is known) is a tooltip here rather than a second line - the
                                            tile is already the densest surface on the page. TeammateCard.razor shows the
                                            same reason as a full line, where there is room for it. *@
@@ -108,50 +106,6 @@
     }
 </div>
 
-@if (this.cardMode is not null)
-{
-    @* Every attribute here binding a string/string? parameter (Name, Title, Alias, Teams, Text,
-       Model, Effort, RoomId, FilePath, Error) MUST keep its leading @. Drop it and Razor treats the
-       value as a plain string literal rather than a field reference — the card would show
-       "this.cardName" as its Name instead of the Persona's actual name. The compiler cannot catch
-       this: a literal is legal wherever a string is expected, so it compiles clean and only
-       misbehaves at runtime. Parameters of any other type (enum, bool, list, EventCallback) are
-       unambiguous either way, which is why only the ten string ones below need the @. *@
-    <TeammateCard Mode="this.cardMode.Value"
-                  Name="@this.cardName"
-                  NameChanged="this.OnCardNameChanged"
-                  Title="@this.cardTitle"
-                  TitleChanged="this.OnCardTitleChanged"
-                  Alias="@this.cardAlias"
-                  AliasChanged="this.OnCardAliasChanged"
-                  Teams="@this.cardTeams"
-                  TeamsChanged="this.OnCardTeamsChanged"
-                  Text="@this.cardText"
-                  TextChanged="this.OnCardTextChanged"
-                  Model="@this.cardModel"
-                  ModelChanged="this.OnCardModelChanged"
-                  AvailableModels="this.availableModels"
-                  ModelsLoading="this.modelsLoading"
-                  Effort="@this.cardEffort"
-                  EffortChanged="this.OnCardEffortChanged"
-                  AvailableEfforts="this.availableEfforts"
-                  EffortsLoading="this.effortsLoading"
-                  Status="this.ResolveStatus(this.cardName)"
-                  Restarting="this.restartingCard"
-                  RoomId="@this.cardRoomId"
-                  FilePath="@this.cardFilePath"
-                  Error="@this.cardError"
-                  ConfirmingRemove="this.confirmingRemove"
-                  OnClose="this.CloseCard"
-                  OnSave="this.SaveCardAsync"
-                  OnEdit="this.BeginEdit"
-                  OnOpen="this.OpenInEditor"
-                  OnRestart="this.RestartCardAsync"
-                  OnRemove="this.BeginRemove"
-                  OnConfirmRemove="this.ConfirmRemoveAsync"
-                  OnCancelRemove="this.CancelRemove" />
-}
-
 @code {
     // The whole discovered state of the Teams directory, refreshed together in LoadAsync so a
     // group heading, the filter's own options and a tile's Title/Alias never read from three
@@ -163,38 +117,6 @@
 
     private readonly Dictionary<string, string?> agentIdByPersona = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string?> roomIdByPersona = new(StringComparer.Ordinal);
-    private string? error;
-
-    // The open card, entirely. Null means no card is open; every other field below is only
-    // meaningful while it is not, and CloseCard() clears the lot so no state survives a close.
-    private TeammateCardMode? cardMode;
-    private string cardName = string.Empty;
-    private string cardTitle = string.Empty;
-    private string cardAlias = string.Empty;
-    private string cardTeams = string.Empty;
-    private string cardText = string.Empty;
-    private string? cardModel;
-    private string? cardEffort;
-    private string? cardRoomId;
-    private string? cardFilePath;
-    private string? cardError;
-    private bool confirmingRemove;
-    private bool restartingCard;
-
-    // Only populated while a Create/Edit card is open — see LoadModelsAsync for why the probe never
-    // runs before then.
-    private IReadOnlyList<AgentModelOption> availableModels = [];
-    private bool modelsLoading;
-
-    // Only populated while a Create/Edit card is open — see LoadEffortsAsync for why the probe
-    // never runs before then.
-    private IReadOnlyList<AgentEffortOption> availableEfforts = [];
-    private bool effortsLoading;
-
-    // Guards a superseded probe. Unlike the model catalog, the effort catalog is re-read whenever
-    // the model <select> changes, so the user can start a second probe while the first is still in
-    // flight; without this, a slow answer for the abandoned model lands on the new choice.
-    private int effortProbeGeneration;
 
     protected override async Task OnInitializedAsync()
     {
@@ -202,8 +124,8 @@
         this.Events.RoomsChanged += this.OnRoomsChanged;
 
         // Health and pipe liveness are the two facts PersonaStatusResolver combines, so either one
-        // changing must repaint every tile and the open card - the same reasoning rules.md gives for
-        // RoomEvents applies to any singleton event: unsubscribed in Dispose, below.
+        // changing must repaint every tile - the same reasoning rules.md gives for RoomEvents applies
+        // to any singleton event: unsubscribed in Dispose, below.
         this.Health.Changed += this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged += this.OnHealthOrPresenceChanged;
         await this.LoadAsync();
@@ -215,20 +137,6 @@
         this.Events.RoomsChanged -= this.OnRoomsChanged;
         this.Health.Changed -= this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged -= this.OnHealthOrPresenceChanged;
-    }
-
-    // Initials from the first and last word: "Emily Lee" reads as EL and "Chief of Staff" as CS.
-    // First-and-last rather than the first two words, so a middle word like "of" does not get a
-    // letter it does not deserve. A one-word Name such as "echo" reads as E.
-    private static string Monogram(string name)
-    {
-        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return words.Length switch
-        {
-            0 => "?",
-            1 => char.ToUpperInvariant(words[0][0]).ToString(),
-            _ => string.Concat(char.ToUpperInvariant(words[0][0]), char.ToUpperInvariant(words[^1][0])),
-        };
     }
 
     // A leading "@" reads as a working handle rather than a second Name, matching how the rest of
@@ -244,14 +152,10 @@
     /// <param name="personaName">The Persona to resolve a status for.</param>
     private PersonaStatus ResolveStatus(string personaName)
     {
-        // The Create card has no Persona yet - cardName starts out empty, and neither
-        // agentIdByPersona nor PersonaHealth has ever heard of a name that does not exist yet.
-        // PersonaHealth.Get rightly guards against a blank name with
-        // ArgumentException.ThrowIfNullOrWhiteSpace (it is a public method on a public type - see
-        // CSharpPrinciples.md), so asking it about "no Persona" would throw during render instead of
-        // reporting a status. Nothing has ever been reported for this Persona, so the honest answer
-        // is exactly what PersonaStatusResolver.Resolve(connected: false, health: null) already
-        // returns: Offline, with no reason.
+        // A blank name (never reached from the tile grid, but defensive: PersonaHealth.Get guards
+        // against one with ArgumentException.ThrowIfNullOrWhiteSpace) resolves to the same honest
+        // "nothing has ever been reported" answer PersonaStatusResolver.Resolve(connected: false,
+        // health: null) already gives.
         if (string.IsNullOrWhiteSpace(personaName))
         {
             return PersonaStatusResolver.Resolve(connected: false, health: null);
@@ -282,301 +186,78 @@
         _ => "offline",
     };
 
-    // Stays synchronous, and deliberately does not probe: this is the tile-click path, which must
-    // stay instant. It reuses the Persona this call already fetched rather than calling Get again.
-    private void OpenCard(string personaName)
+    /// <summary>
+    /// Builds the <see cref="DialogParameters"/> <see cref="OpenCard"/> shows <see cref="TeammateCard"/>
+    /// with in <see cref="TeammateCardMode.View"/>. A pure function of its inputs, with no dependency
+    /// on this page's own fields or services, for the same reason <see cref="TeammateGrouping.Group"/>
+    /// is pulled out the same way: it can be proven correct by a plain unit test with no rendering or
+    /// DI harness at all. <c>TeammateDialogParametersTests</c> is that test, and the reason it exists at
+    /// all: every key here MUST name a real public <c>[Parameter]</c> on <see cref="TeammateCard"/>, or
+    /// it is silently dropped exactly the way a component attribute bound without a leading <c>@</c>
+    /// used to be (see the retired <c>TeammatesRazorSourceTests</c>, which guarded that older shape of
+    /// this same risk).
+    /// </summary>
+    /// <param name="personaName">The Persona to show.</param>
+    /// <param name="entry">Its directory entry, for Title/Alias/Teams - <see langword="null"/> if it somehow is not (yet) in <see cref="PersonaStore.Entries"/>.</param>
+    /// <param name="persona">Its file-plus-database record, for Text/Model/Effort - <see langword="null"/> the same way.</param>
+    /// <param name="status">The status <see cref="ResolveStatus"/> already computed for it.</param>
+    /// <param name="roomId">The Room it shares with the Human, if one exists yet.</param>
+    /// <param name="filePath">Its file's absolute path, if it resolves to one.</param>
+    internal static DialogParameters BuildViewParameters(
+        string personaName,
+        PersonaEntry? entry,
+        Persona? persona,
+        PersonaStatus status,
+        string? roomId,
+        string? filePath) => new()
     {
-        var persona = this.Personas.Get(personaName);
-        var entry = this.entries.FirstOrDefault(candidate => string.Equals(candidate.Name, personaName, StringComparison.Ordinal));
+        [nameof(TeammateCard.Mode)] = TeammateCardMode.View,
+        [nameof(TeammateCard.Name)] = personaName,
+        [nameof(TeammateCard.Title)] = entry?.Title ?? string.Empty,
+        [nameof(TeammateCard.Alias)] = entry?.Alias ?? string.Empty,
+        [nameof(TeammateCard.Teams)] = entry is null ? string.Empty : string.Join(", ", entry.Teams),
+        [nameof(TeammateCard.Text)] = persona?.Text ?? string.Empty,
+        [nameof(TeammateCard.Model)] = persona?.Model,
+        [nameof(TeammateCard.Effort)] = persona?.Effort,
+        [nameof(TeammateCard.Status)] = status,
+        [nameof(TeammateCard.RoomId)] = roomId,
+        [nameof(TeammateCard.FilePath)] = filePath,
+    };
 
-        this.cardMode = TeammateCardMode.View;
-        this.cardName = personaName;
-        this.cardTitle = entry?.Title ?? string.Empty;
-        this.cardAlias = entry?.Alias ?? string.Empty;
-        this.cardTeams = entry is null ? string.Empty : string.Join(", ", entry.Teams);
-        this.cardText = persona?.Text ?? string.Empty;
-        this.cardModel = persona?.Model;
-        this.cardEffort = persona?.Effort;
-        this.cardRoomId = this.roomIdByPersona.GetValueOrDefault(personaName);
-        this.cardFilePath = this.TryPathFor(personaName);
-        this.cardError = null;
-        this.confirmingRemove = false;
-        this.restartingCard = false;
-        this.error = null;
+    /// <summary>The <see cref="DialogParameters"/> <see cref="BeginCreate"/> shows <see cref="TeammateCard"/> with - see <see cref="BuildViewParameters"/>'s remarks for why every key here matters.</summary>
+    internal static DialogParameters BuildCreateParameters() => new()
+    {
+        [nameof(TeammateCard.Mode)] = TeammateCardMode.Create,
+    };
+
+    // Stays synchronous up to the ShowAsync call, and deliberately does not probe anything itself:
+    // TeammateCard's own OnInitializedAsync is what reads the model/effort catalogs, once the dialog
+    // is actually open.
+    private async Task OpenCard(string personaName)
+    {
+        var entry = this.entries.FirstOrDefault(candidate => string.Equals(candidate.Name, personaName, StringComparison.Ordinal));
+        var persona = this.Personas.Get(personaName);
+        var parameters = Teammates.BuildViewParameters(
+            personaName,
+            entry,
+            persona,
+            this.ResolveStatus(personaName),
+            this.roomIdByPersona.GetValueOrDefault(personaName),
+            this.TryPathFor(personaName));
+
+        await this.DialogService.ShowAsync<TeammateCard>(personaName, parameters, TeammateCard.Options);
     }
 
     private async Task BeginCreate()
     {
-        this.cardMode = TeammateCardMode.Create;
-        this.cardName = string.Empty;
-        this.cardTitle = string.Empty;
-        this.cardAlias = string.Empty;
-        this.cardTeams = string.Empty;
-        this.cardText = string.Empty;
-        this.cardModel = null;
-        this.cardEffort = null;
-        this.cardRoomId = null;
-        this.cardFilePath = null;
-        this.cardError = null;
-        this.confirmingRemove = false;
-        this.restartingCard = false;
-        this.error = null;
-
-        // Sequential, not parallel: the probe's single SemaphoreSlim serialises them anyway, and on
-        // Create the second call is a pure cache hit (no model chosen yet means the default-model
-        // effort ladder, which the model probe's own session already populated).
-        await this.LoadModelsAsync();
-        await this.LoadEffortsAsync();
+        await this.DialogService.ShowAsync<TeammateCard>("New teammate", Teammates.BuildCreateParameters(), TeammateCard.Options);
     }
 
-    private async Task BeginEdit()
-    {
-        this.cardMode = TeammateCardMode.Edit;
-        var persona = this.Personas.Get(this.cardName);
-        this.cardText = persona?.Text ?? this.cardText;
-        this.cardModel = persona?.Model ?? this.cardModel;
-        this.cardEffort = persona?.Effort ?? this.cardEffort;
-        this.cardError = null;
-        this.confirmingRemove = false;
-
-        await this.LoadModelsAsync();
-        await this.LoadEffortsAsync();
-    }
-
-    private void CloseCard()
-    {
-        this.cardMode = null;
-        this.cardName = string.Empty;
-        this.cardTitle = string.Empty;
-        this.cardAlias = string.Empty;
-        this.cardTeams = string.Empty;
-        this.cardText = string.Empty;
-        this.cardModel = null;
-        this.cardEffort = null;
-        this.cardRoomId = null;
-        this.cardFilePath = null;
-        this.cardError = null;
-        this.confirmingRemove = false;
-        this.restartingCard = false;
-        this.availableModels = [];
-        this.availableEfforts = [];
-
-        // Bumps past whatever generation an in-flight probe is holding, so a slow answer that lands
-        // after the card is closed cannot repaint state nobody is looking at any more.
-        this.effortProbeGeneration++;
-    }
-
-    private void OnCardNameChanged(string value)
-    {
-        this.cardName = value;
-    }
-
-    private void OnCardTitleChanged(string value)
-    {
-        this.cardTitle = value;
-    }
-
-    private void OnCardAliasChanged(string value)
-    {
-        this.cardAlias = value;
-    }
-
-    private void OnCardTeamsChanged(string value)
-    {
-        this.cardTeams = value;
-    }
-
-    private void OnCardTextChanged(string value)
-    {
-        this.cardText = value;
-    }
-
-    private async Task OnCardModelChanged(string? value)
-    {
-        this.cardModel = value;
-
-        // The effort ladder belongs to the model. The adapter rebuilds thought_level on every
-        // model switch and silently clamps a level the new model does not support, so a level
-        // chosen against the old model is not a level for this one: clear it rather than carry a
-        // choice across that the user never made for this model.
-        this.cardEffort = null;
-
-        await this.LoadEffortsAsync();
-    }
-
-    private void OnCardEffortChanged(string? value)
-    {
-        this.cardEffort = value;
-    }
-
-    // Never touches ModelCatalog or PersonaStore's write path — selecting a team is pure display
+    // Never touches ModelCatalog or PersonaStore's write path - selecting a team is pure display
     // narrowing over state already loaded, the same "never probes" guarantee a plain page load has.
-    private void OnTeamFilterChanged(ChangeEventArgs e)
+    private void OnTeamFilterChanged(string value)
     {
-        this.selectedTeam = e.Value?.ToString() ?? string.Empty;
-    }
-
-    // Runs on form-open, never on page-load: spawning the throwaway adapter this probes with costs
-    // a real process, so it must never happen just from browsing to /teammates. Awaiting it here
-    // yields at least once, so Blazor renders the card (with ModelsLoading true) before the probe
-    // answers — no manual StateHasChanged() needed.
-    private async Task LoadModelsAsync()
-    {
-        this.modelsLoading = true;
-        try
-        {
-            this.availableModels = await this.ModelCatalog.GetAsync(CancellationToken.None);
-        }
-        finally
-        {
-            this.modelsLoading = false;
-        }
-    }
-
-    // Runs on card-open AND on every model change - the effort catalog is per model, so unlike the
-    // model catalog it cannot be read once and reused. Awaiting yields at least once, so Blazor
-    // renders with EffortsLoading true before the probe answers; no manual StateHasChanged needed.
-    private async Task LoadEffortsAsync()
-    {
-        var generation = ++this.effortProbeGeneration;
-        this.effortsLoading = true;
-        try
-        {
-            var efforts = await this.ModelCatalog.GetEffortLevelsAsync(this.cardModel, CancellationToken.None);
-            if (generation == this.effortProbeGeneration)
-            {
-                this.availableEfforts = efforts;
-            }
-        }
-        finally
-        {
-            if (generation == this.effortProbeGeneration)
-            {
-                this.effortsLoading = false;
-            }
-        }
-    }
-
-    // One handler for both writing modes: Create adds a file, Edit overwrites one. A failure keeps
-    // the card open and shows why, so the text the user typed is never thrown away by an error.
-    private async Task SaveCardAsync()
-    {
-        var creating = this.cardMode == TeammateCardMode.Create;
-
-        try
-        {
-            if (creating)
-            {
-                var identity = new PersonaIdentity(this.cardName, this.cardTitle, this.cardAlias, ParseTeams(this.cardTeams));
-                this.Personas.Add(identity, this.cardText, this.cardModel, this.cardEffort);
-            }
-            else
-            {
-                this.Personas.Update(this.cardName, this.cardText, this.cardModel, this.cardEffort);
-            }
-        }
-        catch (ChatException ex)
-        {
-            this.cardError = ex.Message;
-            return;
-        }
-
-        var saved = this.cardName;
-        await this.LoadAsync();
-
-        // Land on the saved Teammate's details rather than closing outright, so a new teammate can
-        // be read back immediately and an edit visibly took.
-        this.OpenCard(saved);
-    }
-
-    // The Create card's Teams input is one comma-separated text field (see TeammateCard.razor's
-    // hint), mirroring the comma form PersonaFrontmatter.TryReadIdentity itself accepts, so what a
-    // user types here round-trips through Add -> ValidateCandidate -> TryReadIdentity unchanged.
-    private static IReadOnlyList<string> ParseTeams(string raw) =>
-        raw.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-
-    /// <summary>
-    /// Restarts the open card's Persona on demand - the Human-triggered counterpart to the automatic
-    /// restart a file edit causes, and the whole reason T7.2 exists: a failure the Human can see but
-    /// not act on is only half of roadmap item 3. Busy-flagged like <c>Chat.razor</c>'s Continue
-    /// button, and any exception is surfaced through <see cref="cardError"/> rather than left to
-    /// crash the circuit - <see cref="PersonaSupervisor.RestartAsync"/> already reports an
-    /// ordinary start failure through <see cref="Health"/> instead of throwing, so this catch exists
-    /// only for whatever it does not anticipate.
-    /// </summary>
-    private async Task RestartCardAsync()
-    {
-        if (this.restartingCard)
-        {
-            return;
-        }
-
-        this.restartingCard = true;
-        try
-        {
-            await this.Supervisor.RestartAsync(this.cardName, CancellationToken.None);
-            this.cardError = null;
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            this.cardError = ex.Message;
-        }
-        finally
-        {
-            this.restartingCard = false;
-        }
-    }
-
-    private void BeginRemove()
-    {
-        this.confirmingRemove = true;
-        this.cardError = null;
-    }
-
-    private void CancelRemove()
-    {
-        this.confirmingRemove = false;
-    }
-
-    private async Task ConfirmRemoveAsync()
-    {
-        try
-        {
-            this.Personas.Remove(this.cardName);
-        }
-        catch (ChatException ex)
-        {
-            this.cardError = ex.Message;
-            this.confirmingRemove = false;
-            return;
-        }
-
-        this.CloseCard();
-        this.error = null;
-        await this.LoadAsync();
-    }
-
-    // Opens a Persona's file in whatever the OS has registered for .md. This launches a process on
-    // the SERVER, not the browser (a browser cannot open a local file from an http:// page). It is
-    // deliberately ungated: this app is expected to run on the user's own machine, where "open the
-    // file I'm looking at" on the same machine is unsurprising. If this app were ever hosted for
-    // remote users, this action would need to be removed rather than gated.
-    private void OpenInEditor()
-    {
-        try
-        {
-            var path = this.Personas.PathFor(this.cardName);
-            using var process = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
-            this.cardError = null;
-        }
-        catch (ChatException ex)
-        {
-            this.cardError = ex.Message;
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
-        {
-            this.cardError = $"Could not open '{this.cardName}': {ex.Message}";
-        }
+        this.selectedTeam = value;
     }
 
     private string? TryPathFor(string personaName)
@@ -610,13 +291,6 @@
                 ? null
                 : (await this.TeamDirectory.FindRoomWithExactMembersAsync(KnownIds.Human, agent.Id))?.Id;
         }
-
-        // An open card is showing a snapshot taken when it opened, so refresh the one field that a
-        // background event can change under it: the Teammate may have just come online.
-        if (this.cardMode == TeammateCardMode.View && this.cardName.Length > 0)
-        {
-            this.cardRoomId = this.roomIdByPersona.GetValueOrDefault(this.cardName);
-        }
     }
 
     private void OnPersonasChanged()
@@ -638,11 +312,13 @@
     }
 
     /// <summary>
-    /// Repaints every tile and the open card when either half of <see cref="PersonaStatusResolver.Resolve"/>'s
-    /// input changes - a health report or a pipe connect/disconnect - so the badge never lags behind
-    /// either fact. No data needs reloading here, unlike <see cref="OnPersonasChanged"/> and
+    /// Repaints every tile when either half of <see cref="PersonaStatusResolver.Resolve"/>'s input
+    /// changes - a health report or a pipe connect/disconnect - so the badge never lags behind either
+    /// fact. No data needs reloading here, unlike <see cref="OnPersonasChanged"/> and
     /// <see cref="OnRoomsChanged"/>: <see cref="ResolveStatus"/> reads <see cref="Health"/> and
-    /// <see cref="Gateway"/> live on every render.
+    /// <see cref="Gateway"/> live on every render. An already-open <see cref="TeammateCard"/> is a
+    /// snapshot taken when it opened and does not repaint from this - see that file's own header
+    /// comment for why.
     /// </summary>
     private void OnHealthOrPresenceChanged()
     {
