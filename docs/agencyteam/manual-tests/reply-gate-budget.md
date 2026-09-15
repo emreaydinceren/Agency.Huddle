@@ -113,7 +113,7 @@ If there is no Room named `echo` in the sidebar at all, the demo agents never co
 
 **Inconclusive if**
 
-If `alpha` does not appear in the **Add teammate** list, it is either already a Member or never connected — check the sidebar for a Room named `alpha` and `T-A` for `Demo agent alpha connected.`, then restart from RESET. If the dot beside `alpha` in the panel is grey rather than green, `alpha` is offline and its silence proves nothing about the gate: fix the agent first. If the strip is red instead of green, read its text and treat the test as inconclusive.
+If `alpha` does not appear in the **Add teammate** list, it is either already a Member or never connected — check the sidebar for a Room named `alpha` and `T-A` for `Demo agent alpha connected.`, then restart from RESET. If the dot beside `alpha` in the panel is red rather than green, `alpha` is offline and its silence proves nothing about the gate: fix the agent first. If the strip is red instead of green, read its text and treat the test as inconclusive.
 
 > [!NOTE]
 > A Room has no stored kind anywhere: the member count is the whole of this rule. That is why this test changes nothing but membership.
@@ -200,7 +200,7 @@ If `echo` is already a Member of the `alpha` Room from an earlier test, step 2 w
 
 **Inconclusive if**
 
-If `echo` is offline (grey dot in the **Add teammate** panel, or the Teammate tile reads Offline), every line of this test is inconclusive — no Mention can be observed through an Agent that receives nothing. If the Room has only two Members, a reply proves nothing about Mention resolution because a two-Member Room would be answered anyway by a client that implemented the gate: add a second Agent first.
+If `echo` is offline (red dot in the **Add teammate** panel, or the Teammate tile reads Offline), every line of this test is inconclusive — no Mention can be observed through an Agent that receives nothing. If the Room has only two Members, a reply proves nothing about Mention resolution because a two-Member Room would be answered anyway by a client that implemented the gate: add a second Agent first.
 
 > [!NOTE]
 > A space is deliberately NOT a boundary character, which is what makes multi-word Names possible; that is covered in REPLYGATEBUDGET-19 and -21.
@@ -1303,7 +1303,7 @@ If the bot fails to reconnect (the terminal shows a connection error), nothing i
 
 - Step 1's Message posts normally and produces absolutely nothing else: no composer error, no note, no highlight, no indication the `@` matched nobody.
 - Both terminals show that envelope with `"mentioned":false`.
-- At step 5 the dot beside `echo` is grey.
+- At step 5 the dot beside `echo` is red — `agent-dot offline`, which `theme.css` paints with `--status-offline` (computed `rgb(224, 90, 90)` on the dark theme). There is no grey dot in the design.
 - At step 6, with `echo` offline, TERMINAL C still receives the envelope (with `"mentioned":false`) while `T-B` receives nothing at all — the Agent is a Member but not connected, so no Envelope is queued for it.
 - After restarting at step 8, the same Message produces a reply.
 
