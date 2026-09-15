@@ -1057,10 +1057,10 @@ If tab B's SignalR circuit had already dropped (you will see a 'Attempting to re
 
 **Inconclusive if**
 
-If plain `hi` in the TWO-member Room draws no reply, that is EXPECTED and not part of this test — see notes. If neither `hi @delta` nor `hi @alpha` draws a reply, the bots may be disconnected: check `T-G` and the demo-agent terminal for `Server closed the connection.` before recording anything.
+If neither `hi @delta` nor `hi @alpha` draws a reply, the bots may be disconnected: check `T-G` and the demo-agent terminal for `Server closed the connection.` before recording anything.
 
 > [!NOTE]
-> IMPORTANT: the demo agents and `tools/echo-bot.ps1` reply ONLY when `mentioned` is true, even in a two-Member Room. So a plain `hi` in a two-Member Room also gets no reply — that is a property of the sample bot, not of the Reply Gate. The server-side 'answer everything when memberCount <= 2' rule is ONLY exercised by a real Persona with `Team:Acp:Enabled=true`, and this free test deliberately does not attempt it.
+> IMPORTANT: the demo agents and `tools/echo-bot.ps1` now implement ADR-0004 directly — each mirrors `ReplyGate.Decide`, so in a two-Member Room they reply to every Message, Mentioned or not, and only become Mention-gated once a third Member joins. That is exactly the boundary this test exercises: `hi @delta` works in the two-Member Room (step 5) because `delta` is Mentioned, and it would answer a plain `hi` there too, for the same reason `hi` draws nothing once `alpha` makes it a three-Member Room in step 9. This free test can therefore observe the 'answer everything when memberCount <= 2' rule directly, without needing a real Persona.
 
 ### INVITEROOMS-24 — Rooms, names and membership survive a restart; the Room Budget does not
 

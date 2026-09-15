@@ -880,12 +880,12 @@ If no reply arrives, this proves nothing — settle ROOMMESSAGING-18 first and r
 
 **Free** · about 8 min
 
-*Pins the Mention-matching boundary rules and pre-empts the most likely false bug report: silence in a two-member Room after a message with no at-sign.*
+*Pins the Mention-matching boundary rules, in a three-Member Room where Mention-gating still applies. A two-Member Room now answers every Message per ADR-0004, so it can no longer isolate mention parsing — this test deliberately invites a bystander Agent first so a plain `hello` is still a valid negative baseline.*
 
 **Before you start**
 
-- The `echo` Room is open (members: You, echo); `$room` is set.
-- Demo agents are connected.
+- The `echo` Room is open; `$room` is set.
+- Both demo agents are connected. Type `/invite @alpha` and confirm the green strip and member line show three Members before starting the numbered steps — with only two Members every Message below would draw a reply regardless of Mention, and none of the boundary assertions would be meaningful.
 
 **Steps**
 
@@ -901,16 +901,18 @@ If no reply arrives, this proves nothing — settle ROOMMESSAGING-18 first and r
 
 **Pass if — all of these**
 
-- `hello` produces no reply, no Draft, no error, and no new agent line in the file.
-- `hi @echo` produces exactly one reply.
+- `hello` produces no reply from either Agent, no Draft, no error, and no new agent line in the file — three Members keeps the Room Mention-gated, so a Message naming nobody wakes nobody.
+- `hi @echo` produces exactly one reply, from `echo`.
 - `hi @ECHO` produces exactly one reply — the match is case-insensitive.
 - `hi @echoes` produces NO reply — a Mention ends at a word boundary.
 - `mail me@example.com` produces NO reply — a letter immediately before the at-sign blocks it.
 - `see-@echo` DOES produce a reply — a hyphen before the at-sign does not block it.
+- `alpha` never replies to anything in this test — it is never Mentioned.
 - The printed conversation shows agent lines only for the three positive cases.
 
 **Fail if — any of these**
 
+- `hello` produces a reply from either Agent -> either membership never actually reached three (recheck before filing) or the Room is answering unconditionally at three Members, which would be a Reply Gate regression.
 - `hi @echoes` produces a reply -> the word-boundary check after a mention is gone; every longer word starting with an agent's Name now wakes it.
 - `mail me@example.com` produces a reply -> email addresses are being read as Mentions; ordinary prose will start waking agents.
 - `hi @ECHO` produces no reply -> Mention matching became case-sensitive.
@@ -918,10 +920,10 @@ If no reply arrives, this proves nothing — settle ROOMMESSAGING-18 first and r
 
 **Inconclusive if**
 
-If `hi @echo` itself produces no reply, nothing in this test can be judged — the agent is not responding at all. Confirm `Demo agent echo connected.` in `T-A`, restart the app once, and record INCONCLUSIVE if it still does not reply.
+If `hi @echo` itself produces no reply, nothing in this test can be judged — the agent is not responding at all. Confirm `Demo agent echo connected.` in `T-A`, restart the app once, and record INCONCLUSIVE if it still does not reply. If the member line does not read three Members after `/invite @alpha`, stop and fix the invite before running the numbered steps.
 
 > [!NOTE]
-> CRITICAL — DO NOT FILE THIS: silence after plain `hello` in the two-member `echo` Room is CORRECT. The documented "a Room of two Members answers without a Mention" rule belongs to the reply gate that governs real Personas over the agent protocol; the built-in demo agent has its own, narrower condition and is mention-gated everywhere. Only the boundary cases above are real findings.
+> This test deliberately keeps a third Member (`alpha`) in the Room for its whole duration. In the `echo` Room's ordinary two-Member form, ADR-0004 means `echo` answers every Message regardless of Mention, so a plain `hello` producing a reply there is CORRECT and must never be filed as a bug — see STARTUPCONFIG-04 and REPLYGATEBUDGET-01. That two-Member rule is exactly what this test's extra Member exists to neutralise, so the boundary cases above stay meaningful.
 
 ### ROOMMESSAGING-21 — /invite @name from the composer: green info line, Room rename, live sidebar update
 

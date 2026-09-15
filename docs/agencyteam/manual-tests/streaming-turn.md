@@ -924,7 +924,7 @@ If the app fails to restart (port in use), wait for the old process to exit full
 
 **Inconclusive if**
 
-The demo agents only reply when Mentioned, so you MUST type `@echo` each time - a plain `hello` produces nothing and is not evidence. If no reply ever arrives, check `T-A` for `Demo agent echo connected.`; if it is missing, the demo agents are off and this test cannot run.
+This `echo` Room has exactly two Members, so per ADR-0004 `echo` answers every Message it receives, with or without `@echo` — an accidental unmentioned Message would still consume Budget exactly like a mentioned one, so watch the count if you deviate from the steps. If no reply ever arrives, check `T-A` for `Demo agent echo connected.`; if it is missing, the demo agents are off and this test cannot run.
 
 > [!NOTE]
 > `Team__AgentMessageBudget` maps to the `Team:AgentMessageBudget` setting and only takes effect on restart.
