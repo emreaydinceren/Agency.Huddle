@@ -20,8 +20,24 @@
 
     private ElementReference textarea;
     private DotNetObjectReference<Composer>? selfReference;
+    private string? loadedRoomId;
     private string? errorText;
     private string? infoText;
+
+    protected override Task OnParametersSetAsync()
+    {
+        if (this.RoomId == this.loadedRoomId)
+        {
+            return Task.CompletedTask;
+        }
+
+        // Switching Rooms must not carry the previous Room's status line across, the same reason
+        // InviteTeammate.razor clears its panel state on a Room change.
+        this.loadedRoomId = this.RoomId;
+        this.errorText = null;
+        this.infoText = null;
+        return Task.CompletedTask;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

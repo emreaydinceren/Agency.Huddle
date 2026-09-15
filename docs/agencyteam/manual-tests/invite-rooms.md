@@ -2,7 +2,7 @@
 
 Prove that every path by which a Room is born or changes membership behaves as specified, and that the four live surfaces (sidebar, Room header h1, members line, invite candidate list) repaint over SignalR without a page reload. Covers: the automatic Direct Room an Agent gets on registration, the sidebar "New chat" panel, the "Add teammate" control on the Room header, the `/invite @name` composer command, and the two Agent-facing tools `mcp__team__create_room` and `mcp__team__invite_agent`. The suite exists because a page GET only returns the Blazor prerender, so automated tests literally cannot see these panels, and because the load-bearing rule "an Agent belongs to at most one two-Member Room" only becomes visible as a second sidebar entry after a real re-registration. Tests INVITEROOMS-08 and INVITEROOMS-16 target this repo's two documented SILENT failures and are the highest-value tests in the set.
 
-**31 tests** · 27 free, 4 paid 💰 · about 3.5 hours.
+**32 tests** · 28 free, 4 paid 💰 · about 3.5 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -644,6 +644,9 @@ If a new Agent connects mid-test (a terminal you forgot about), the list will ne
 **Inconclusive if**
 
 If every Agent happens to be a Member of both Rooms, both panels will show `Every agent is already in this room.` and you cannot tell a carried-over list from a correct one. Start one extra bot (`pwsh tools/echo-bot.ps1 -Name scratch` in `T-D`), invite it into Room B only, then re-run — or note the test as inconclusive for want of a distinguishing Agent.
+
+> [!NOTE]
+> This test's composer-side counterpart is `INVITEROOMS-32`, at the end of this file — the coloured line above the message box has its own separate reset guard, and its own separate bug.
 
 ### INVITEROOMS-15 — /invite @name in the composer does the same thing as the header control
 
@@ -1438,6 +1441,53 @@ If no Agent-created Room exists (INVITEROOMS-28 was inconclusive), this test has
 
 > [!NOTE]
 > After finishing this area, return the environment to free mode: Ctrl+C in `T-A`, then `$env:Team__Acp__Enabled = 'false'` and `Remove-Item Env:\Team__AgentMessageBudget` before starting the app again, so no later session spawns node adapters by accident.
+
+### INVITEROOMS-32 — The composer's own status line does not survive a Room switch
+
+**Free** · about 5 min
+
+*A FREE test appended here rather than beside `INVITEROOMS-14` — test ids are append-only and never renumbered once assigned, since the Tracker and filed issues cite them by number. It belongs conceptually right next to `INVITEROOMS-14` (see that test's own forward-pointer note), and proves the counterpart INVITEROOMS-14 does not cover: that test proves the invite PANEL's own state resets on a Room switch; this one proves the COMPOSER's status line — the coloured confirmation or error line directly above the message box — does too. Before the fix, `Composer.razor` cleared `errorText`/`infoText` only at the top of `SendAsync`, with no `OnParametersSetAsync` guard, so a confirmation or an error typed in one Room stayed on screen in every Room visited afterward.*
+
+**Before you start**
+
+- At least two Rooms exist: the `mybot, alpha` Room from INVITEROOMS-12/13 (Room A) and one of the `echo, alpha` Rooms from INVITEROOMS-09/10 (Room B).
+
+**Steps**
+
+1. In `T-D` run exactly: `pwsh tools/echo-bot.ps1 -Name scratch15`
+2. Wait until a sidebar link reading `scratch15` appears.
+3. Click the sidebar link `mybot, alpha` (Room A).
+4. Click into the composer and type exactly: `/invite @scratch15`
+5. Press Enter.
+6. Read the coloured line directly above the composer, and copy its exact text.
+7. Click a DIFFERENT sidebar link — one of the `echo, alpha` Rooms (Room B).
+8. Without typing anything, look directly above Room B's composer.
+9. In DevTools Elements confirm no element with class `composer-info` or `composer-error` is present above Room B's composer.
+10. Click into Room B's composer and type exactly: `/invite @nobody`
+11. Press Enter.
+12. Read the coloured line above Room B's composer.
+13. Click back to Room A and look directly above its composer, without typing anything.
+14. In `T-D` press Ctrl+C to stop `scratch15`.
+
+**Pass if — all of these**
+
+- Step 6 shows a GREEN/info line reading exactly `Invited scratch15. Room is now "mybot, alpha, scratch15".`
+- On arriving in Room B (steps 7-9), NOTHING is shown above the composer — no leftover green line from Room A, and no `composer-info`/`composer-error` element anywhere in the DOM.
+- Step 12 shows a RED line reading exactly `Unknown agent @nobody` — Room B's own error, not Room A's leftover confirmation.
+- Returning to Room A (step 13) shows nothing above its composer — Room A's own confirmation is gone, cleared by the Room switch that carried it away from Room B, not merely by the next Send.
+
+**Fail if — any of these**
+
+- Room B's composer shows Room A's `Invited scratch15. Room is now "..."` line -> the same stale-parameter bug `OnParametersSetAsync`'s guard exists to prevent on `InviteTeammate.razor` (INVITEROOMS-14), now reproduced on `Composer.razor`; the user is told an action happened in a Room where it did not.
+- Room B's red `Unknown agent @nobody` line follows you back to Room A -> the same defect in the other direction — an error that belongs to Room B reads as Room A's own failure.
+- The status line only clears once Room B's composer is used, not the moment Room B is opened -> the guard is reacting to a Send rather than to `RoomId` changing; the fix belongs in `OnParametersSetAsync`, not `SendAsync`.
+
+**Inconclusive if**
+
+If `scratch15` fails to register within 5 seconds, read `T-D` for a `protocolError` and fix that before judging — do not substitute an Agent already offered in Room A, since a failed invite (already-a-Member) produces the SAME wording either way and would not prove the state actually reset. If `pwsh` is not recognised, use `powershell.exe -File tools\echo-bot.ps1 -Name scratch15` and note the substitution in your report.
+
+> [!NOTE]
+> This test and INVITEROOMS-14 are two halves of one bug report: the same stale Room-switch failure, on two different components that both render around the composer.
 
 ---
 

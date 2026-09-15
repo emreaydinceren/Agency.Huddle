@@ -1,6 +1,6 @@
 # Manual test tracker
 
-Where every one of the 464 tests stands. One row per test, updated as you run it.
+Where every one of the 465 tests stands. One row per test, updated as you run it.
 
 This is a **recording** page, like [Planning](planning.md) — you need it when you start a
 run and when you finish one, not while executing. Keep [the script](../manual-tests.md),
@@ -71,7 +71,7 @@ the per-area tables below.
 | [Teammates page: tiles, Teams grouping, filter and rejected files](teammates-library.md) | 40 | 1 | [below](#teammates-library) |
 | [Teammate card: view, edit, create, delete](teammate-card.md) | 50 | 1 | [below](#teammate-card) |
 | [Model and Effort pickers, catalog probe and runner restart](model-effort.md) | 27 | 1 | [below](#model-effort) |
-| [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 31 | 4 | [below](#invite-rooms) |
+| [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 32 | 4 | [below](#invite-rooms) |
 | [Settings: the 22 Hooks, editing, per-field reset and Save](hooks-settings.md) | 40 | 3 | [below](#hooks-settings) |
 | [Appearance tab, Themes, Tokens and overrides](appearance-theme.md) | 25 | — | [below](#appearance-theme) |
 | [The named pipe: external agents and the wire](pipe-external.md) | 36 | — | [below](#pipe-external) |
@@ -451,6 +451,7 @@ Creating Rooms, inviting Agents, Room naming — [area file](invite-rooms.md)
 | [INVITEROOMS-29](invite-rooms.md#inviterooms-29-an-agent-invites-another-with-mcp__team__invite_agent-using-the-room-id-from-its-own-room-label) | 💰 | Active | | |
 | [INVITEROOMS-30](invite-rooms.md#inviterooms-30-an-agent-can-invite-into-a-room-it-is-not-a-member-of) | 💰 | Active | | |
 | [INVITEROOMS-31](invite-rooms.md#inviterooms-31-every-agent-created-room-contains-the-human-so-none-is-hidden) | 💰 | Active | | |
+| [INVITEROOMS-32](invite-rooms.md#inviterooms-32-the-composers-own-status-line-does-not-survive-a-room-switch) |  | Active | | |
 
 ## hooks-settings
 
