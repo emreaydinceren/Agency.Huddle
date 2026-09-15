@@ -92,3 +92,53 @@ agent process logs `The agent process disconnected.`).
 Either add the control the test expects, or amend the test to say that editing
 and saving the Persona is the restart mechanism. Worth deciding rather than
 leaving the test describing a button that is not there.
+
+---
+
+## 3. Unexplained ACP session churn: a session is created, then immediately disconnects
+
+**Found by** PERSONALIFECYCLE-26, -28, HOOKSSETTINGS-39 · **Severity** low–medium · **Area** `src/Huddle.App/Acp/` (`DotAcpAgentHost`, `DotAcpClientAdapter`)
+
+### What happens
+
+Several times per run, the log shows this triple with nothing in the UI to match
+it:
+
+```
+[agent stderr] [session/create] sessionId=<new> phase=register …
+Dropping update for unknown session <that same id>
+The agent process disconnected.
+```
+
+The teammate's tile stays **Online** throughout. No adapter process is replaced
+— a genuine restart always replaces the Persona's `claude-agent-acp` node
+process, so these are new ACP sessions inside the existing process.
+
+### Why it matters
+
+It is harmless to watch but it corrupts the obvious oracle. Counting
+`phase=register` lines is the natural way to ask "did this restart the
+teammate?", and the churn inflates that count: a save that restarts once can
+show two or three new sessions. Three separate tests had to fall back on
+counting adapter *processes* instead, and a reader of the log alone would
+reasonably conclude that a no-op save restarts a teammate twice. It may also be
+paying for session setup nobody asked for.
+
+### What is known
+
+- It follows activity, not time: 75 seconds idle produced none.
+- It is not caused by saving the Edit card with nothing changed — a controlled
+  repeat of that save produced zero new sessions.
+- At least one instance directly followed a turn whose
+  `post_turn_summary` carried `"status_category":"blocked"`.
+- `Dropping update for unknown session` names the session that was *just*
+  registered, which suggests a registration/teardown race rather than a stale
+  message.
+
+### Suggested next step
+
+Log the reason a host is torn down, and correlate `The agent process
+disconnected.` with the session id it belonged to. Right now that warning names
+neither the Persona nor the session, so the log cannot say which teammate lost
+its process or why — which is the same gap already filed as the disconnect
+logging issue.
