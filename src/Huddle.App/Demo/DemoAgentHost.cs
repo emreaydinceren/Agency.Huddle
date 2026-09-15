@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using System.IO.Pipes;
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Demo;
@@ -67,7 +68,9 @@ public sealed class DemoAgentHost : BackgroundService
                     return;
                 }
 
-                if (message is MessagePosted { Mentioned: true } posted)
+                if (message is MessagePosted posted
+                    && ReplyGate.Decide(posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget)
+                        == ReplyDecision.Reply)
                 {
                     // Strip '@' before quoting so the reply cannot reproduce mentions and re-trigger
                     // another agent (Team-Specifications.md §6.8, "Loop safety").
