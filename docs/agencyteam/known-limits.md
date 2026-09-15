@@ -154,11 +154,16 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
 - **Known flake, pre-existing:** `PersonaSupervisorTests.Shutdown_DisposesEveryHost`
   fails roughly one run in four, always on a slow run — its 10-second token races
   `WaitUntilAsync`. It is a timing bug in the test, not in `PersonaSupervisor`.
-- **Second known flake, pre-existing:** a test in `Huddle.Acp.Tests` fails roughly
-  one run in five and passes on rerun —
-  `PromptAsync_StreamsChunksInOrder_ThenTurnCompleted` is the one seen by name, a
-  timing race in event ordering over the fake transport. Seen from two separate
-  sessions; not diagnosed.
+- **Second known flake, pre-existing:** a timing race in event ordering over the
+  fake transport in `Huddle.Acp.Tests`, roughly one run in five, passing on rerun.
+  **Three tests are now known to show it**, which is the argument that the race is in
+  the transport rather than in any one test:
+  `PromptAsync_StreamsChunksInOrder_ThenTurnCompleted` and
+  `PromptAsync_ThoughtAndToolCallEvents_ArePublished` (both quarantined by name in CI),
+  and `DotAcpConcurrentHostTests.TwoHosts_ConcurrentPrompts_EachSessionOnlySeesItsOwnAgentsUpdates`,
+  seen on 2026-09-15 in CI run 607 and **not quarantined**. All three fail the same way:
+  a `TurnCompleted` arrives where a `MessageChunk` or a tool-call notification was
+  expected. Not diagnosed.
 - **Known bug, pre-existing:** `Data/SqliteTeamDirectory.cs` is not
   `IDisposable`, and SQLite connection pooling keeps a handle on `team.db`, so
   tests leave about 83 temp directories behind per run. `TempDataDir.Dispose`

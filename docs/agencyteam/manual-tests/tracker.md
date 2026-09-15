@@ -54,6 +54,23 @@ broken is a documented decision, and those are a Pass.
 Title an issue with the test id first, so the tracker and the issue list line up:
 `SHELLNAV-01: app.css href has no fingerprint and 404s`.
 
+### A test id is permanent — ids are append-only
+
+Never renumber a test that exists, and never reuse an id a retired test held. Issues cite ids
+in their titles and bodies, commit messages cite them, and this table is keyed on them, so a
+renumber silently re-points every one of those references at a different test. Nothing catches
+it: the table still parses, the anchors still resolve, and the results are simply wrong.
+
+This is easy to get wrong in good faith. Every row in an area can read **Active** on the branch
+in front of you while a long-running test branch elsewhere holds a full set of recorded verdicts
+for the same ids. Checking the file you are editing is not enough.
+
+So a new test is **appended** with the next free number, even when it belongs beside an existing
+one. If that puts a free test after the paid ones and breaks an area's free-tests-first ordering,
+say so in the new test's own header and add a forward pointer from the test it belongs with —
+`INVITEROOMS-14` and `INVITEROOMS-32` are the worked example. Ordering is a convention; an id is
+an identifier.
+
 ---
 
 ## Where the areas stand
