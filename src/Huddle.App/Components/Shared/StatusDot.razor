@@ -1,0 +1,27 @@
+@* <summary>
+     The small coloured dot every Teammate surface uses to show a Persona's <see cref="PersonaState"/>
+     at a glance - the tile in <c>Teammates.razor</c>, the header of <c>TeammateCard.razor</c>, and
+     the candidate rows in <c>NewChat.razor</c> and <c>InviteTeammate.razor</c>. The mapping from
+     state to CSS class used to be copy-pasted four times; this component is now the single place it
+     lives, per rules.md's argument that one pure function should own the status ordering and one
+     component should own its rendering.
+   </summary> *@
+@using Agency.Huddle.App.Acp
+
+<span class="agent-dot @StatusDot.StatusClass(this.State)" title="@StatusDot.StatusClass(this.State)"></span>
+
+@code {
+    /// <summary>The Persona state this dot renders.</summary>
+    [Parameter]
+    public PersonaState State { get; set; }
+
+    /// <summary>The CSS class - and this dot's own tooltip text - for <paramref name="state"/>'s <c>agent-dot</c>.</summary>
+    /// <param name="state">The state to classify.</param>
+    internal static string StatusClass(PersonaState state) => state switch
+    {
+        PersonaState.Starting => "starting",
+        PersonaState.Online => "online",
+        PersonaState.Degraded => "degraded",
+        _ => "offline",
+    };
+}

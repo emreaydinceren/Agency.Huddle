@@ -297,7 +297,7 @@ If the chunks arrive too fast to reload in time, re-run with `-DelaySeconds 10`.
 
 **Free** · about 6 min
 
-*Proves the Draft store is a server-side singleton broadcast to every viewer, not per-circuit state.*
+*Proves the Draft store is a server-side singleton broadcast to every viewer, not per-circuit state. The Stop button in step 5 is a small outlined `MudButton` (Stage 6 of the MudBlazor migration converted the chat page chrome); its click semantics are unchanged.*
 
 **Before you start**
 
@@ -933,7 +933,7 @@ The demo agents only reply when Mentioned, so you MUST type `@echo` each time - 
 
 **Free** · about 15 min
 
-*Closes the original defect this whole feature exists for: an Agent that has crashed and an Agent that is thinking used to look identical - both showed nothing.*
+*Closes the original defect this whole feature exists for: an Agent that has crashed and an Agent that is thinking used to look identical - both showed nothing. The strip is a `MudAlert` (Stage 6 of the MudBlazor migration) with `role="alert"` added explicitly, since `MudAlert` does not emit one on its own — verified against the rendered markup, per `docs/agencyteam/rules.md`. The New teammate card used in steps 2-7 is a real `MudDialog` and its Model/Effort dropdowns are `MudSelect`.*
 
 **Before you start**
 

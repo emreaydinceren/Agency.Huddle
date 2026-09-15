@@ -1,47 +1,64 @@
+using Bunit;
+using Microsoft.Extensions.DependencyInjection;
+using Agency.Huddle.App.Appearance;
+using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Hooks;
 using Agency.Huddle.App.Themes;
 
 namespace Agency.Huddle.Tests.Ui;
 
-/// <summary>Tests for the Settings page's tab rail and its read-only Hooks panel.</summary>
+/// <summary>
+/// Tests for the Settings page's tab rail and its Hooks panel. Split two ways, per
+/// <c>docs/agencyteam/testing.md</c>: routing, HTTP status, the hooks/appearance file paths and
+/// <c>FakeModelCatalog.ProbeCount</c> are facts about the server, so they stay on a plain HTTP GET
+/// against <see cref="TeamWebApplicationFactory"/>; everything that asserts on the tab rail, the Save
+/// button or the Reset-all button now renders <see cref="Settings"/> directly through
+/// <see cref="MudBunitContext"/>, because the MudBlazor migration turned all three into components
+/// whose actual disabled-state markup a raw-HTML tag slice can no longer be trusted to parse.
+/// </summary>
 public sealed class SettingsPageTests
 {
-    /// <summary>A plain GET renders the tab rail and every group heading the Hooks tab shows.</summary>
+    /// <summary>Renders the real <see cref="Settings"/> page against a <see cref="TeamWebApplicationFactory"/>'s live <see cref="HookStore"/> and <see cref="AppearanceStore"/>, the same pattern <c>TeammatesPageTests</c> uses for <c>Teammates</c>.</summary>
+    private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
+    {
+        MudBunitContext ctx = new();
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<HookStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AppearanceStore>());
+        return ctx;
+    }
+
+    /// <summary>MudTabs renders both tab labels and, on the default (Hooks) panel, every group heading the Hooks tab shows.</summary>
     [Fact]
     public async Task SettingsPage_Renders_TabRailAndGroupHeadings()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var ct = cts.Token;
-
         await using var factory = new TeamWebApplicationFactory();
-        using var client = factory.CreateClient();
+        await using var ctx = NewContext(factory);
 
-        var html = await client.GetStringAsync("/settings", ct);
+        var cut = ctx.Render<Settings>();
 
-        Assert.Contains("settings-tab-rail", html, StringComparison.Ordinal);
-        Assert.Contains(">Hooks<", html, StringComparison.Ordinal);
-        Assert.Contains(">System prompt<", html, StringComparison.Ordinal);
-        Assert.Contains(">Turn<", html, StringComparison.Ordinal);
-        Assert.Contains(">Get help<", html, StringComparison.Ordinal);
-        Assert.Contains(">Tool descriptions<", html, StringComparison.Ordinal);
+        Assert.Contains("mud-tabs", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(">Hooks<", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(">Appearance<", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(">System prompt<", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(">Turn<", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(">Get help<", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(">Tool descriptions<", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>The explicit "/settings/hooks" route renders the Hooks panel.</summary>
+    /// <summary>The default (Hooks) panel renders the Hooks panel's MudPaper-wrapped groups.</summary>
     [Fact]
     public async Task SettingsHooksPage_Renders_HooksPanel()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var ct = cts.Token;
-
         await using var factory = new TeamWebApplicationFactory();
-        using var client = factory.CreateClient();
+        await using var ctx = NewContext(factory);
 
-        var html = await client.GetStringAsync("/settings/hooks", ct);
+        var cut = ctx.Render<Settings>();
 
-        Assert.Contains("hooks-group", html, StringComparison.Ordinal);
+        Assert.NotEmpty(cut.FindAll(".mud-paper"));
+        Assert.Contains(">System prompt<", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>An unrecognised {Tab} value falls back to the Hooks panel rather than 404ing or throwing.</summary>
+    /// <summary>An unrecognised {Tab} value falls back to the Hooks panel rather than 404ing or throwing - a fact about routing, so it stays on HTTP.</summary>
     [Fact]
     public async Task SettingsPage_UnknownTab_FallsBackToHooksPanel()
     {
@@ -55,10 +72,10 @@ public sealed class SettingsPageTests
         var html = await response.Content.ReadAsStringAsync(ct);
 
         response.EnsureSuccessStatusCode();
-        Assert.Contains("hooks-group", html, StringComparison.Ordinal);
+        Assert.Contains(">System prompt<", html, StringComparison.Ordinal);
     }
 
-    /// <summary>Every one of the catalog's 22 hook labels reaches the rendered page.</summary>
+    /// <summary>Every one of the catalog's hook labels reaches the rendered page - unaffected by the MudBlazor conversion, so it stays on HTTP.</summary>
     [Fact]
     public async Task SettingsHooksPage_ListsEveryHookLabel()
     {
@@ -76,7 +93,7 @@ public sealed class SettingsPageTests
         }
     }
 
-    /// <summary>Loading the Settings page must never spawn an adapter process, the same guard <c>TeammatesPageTests</c> gives its own page.</summary>
+    /// <summary>Loading the Settings page must never spawn an adapter process - a fact about the server, so it stays on HTTP.</summary>
     [Fact]
     public async Task SettingsPage_DoesNotProbeForModelsOnAPlainLoad()
     {
@@ -96,27 +113,20 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SettingsHooksPage_WithNothingPending_SaveButtonIsDisabled()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var ct = cts.Token;
-
         await using var factory = new TeamWebApplicationFactory();
-        using var client = factory.CreateClient();
+        await using var ctx = NewContext(factory);
 
-        var html = await client.GetStringAsync("/settings/hooks", ct);
+        var cut = ctx.Render<Settings>();
 
-        var buttonStart = html.IndexOf("type=\"submit\"", StringComparison.Ordinal);
-        Assert.True(buttonStart >= 0, "Could not find the submit button in the rendered page.");
-        var tagStart = html.LastIndexOf('<', buttonStart);
-        var tagEnd = html.IndexOf('>', buttonStart);
-        var tag = html[tagStart..(tagEnd + 1)];
-
-        Assert.Contains("disabled", tag, StringComparison.Ordinal);
+        var save = cut.Find("button[type='submit']");
+        Assert.True(save.HasAttribute("disabled"));
     }
 
     /// <summary>
     /// The page tells a user exactly where <c>hooks.json</c> lives - matched against the factory's
     /// own configured path (see <see cref="TeamWebApplicationFactory.HooksJsonPath"/>) rather than a
     /// hardcoded guess, since <c>Team:DataDir</c> is redirected to a fresh temp directory per factory.
+    /// This is a fact about the server's configuration, so it stays on HTTP.
     /// </summary>
     [Fact]
     public async Task SettingsHooksPage_ShowsTheOverrideFilePath()
@@ -136,21 +146,14 @@ public sealed class SettingsPageTests
     [Fact]
     public async Task SettingsHooksPage_WithNothingModified_ResetAllButtonIsDisabled()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var ct = cts.Token;
-
         await using var factory = new TeamWebApplicationFactory();
-        using var client = factory.CreateClient();
+        await using var ctx = NewContext(factory);
 
-        var html = await client.GetStringAsync("/settings/hooks", ct);
+        var cut = ctx.Render<Settings>();
 
-        var buttonStart = html.IndexOf("Reset all to defaults", StringComparison.Ordinal);
-        Assert.True(buttonStart >= 0, "Could not find the Reset all button in the rendered page.");
-        var tagStart = html.LastIndexOf("<button", buttonStart, StringComparison.Ordinal);
-        var tagEnd = html.IndexOf('>', tagStart);
-        var tag = html[tagStart..(tagEnd + 1)];
-
-        Assert.Contains("disabled", tag, StringComparison.Ordinal);
+        var buttons = cut.FindAll("button");
+        var resetAll = Assert.Single(buttons, button => button.TextContent.Contains("Reset all to defaults", StringComparison.Ordinal));
+        Assert.True(resetAll.HasAttribute("disabled"));
     }
 
     /// <summary>The sidebar link to Settings appears on every page, alongside the Teammates link.</summary>
@@ -168,27 +171,26 @@ public sealed class SettingsPageTests
         Assert.Contains("href=\"/settings\"", html, StringComparison.Ordinal);
     }
 
-    /// <summary>The tab rail includes an Appearance button alongside Hooks.</summary>
+    /// <summary>The tab rail includes an Appearance tab alongside Hooks.</summary>
     [Fact]
     public async Task SettingsPage_Renders_AppearanceTabInTheRail()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var ct = cts.Token;
-
         await using var factory = new TeamWebApplicationFactory();
-        using var client = factory.CreateClient();
+        await using var ctx = NewContext(factory);
 
-        var html = await client.GetStringAsync("/settings", ct);
+        var cut = ctx.Render<Settings>();
 
-        Assert.Contains(">Appearance<", html, StringComparison.Ordinal);
+        Assert.Contains(">Appearance<", cut.Markup, StringComparison.Ordinal);
     }
 
     /// <summary>
-    /// The Appearance tab lists System plus every <see cref="ThemeCatalog.BuiltIn"/> label, and renders
-    /// none of the Hooks tab's own content.
+    /// The Appearance tab shows a Theme select and an Appearance (dark-mode) select, each already
+    /// showing its resolved current value - the catalog's default theme's label and "System" - and
+    /// renders none of the Hooks tab's own content. Stays on HTTP for that half: it is a fact about
+    /// the prerender, unaffected by this stage's conversion (<c>Appearance.razor</c> is out of scope).
     /// </summary>
     [Fact]
-    public async Task SettingsAppearancePage_RendersEveryCatalogThemeAndSystem()
+    public async Task SettingsAppearancePage_RendersTheSelectedThemeAndDarkModeLabels()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
@@ -198,13 +200,51 @@ public sealed class SettingsPageTests
 
         var html = await client.GetStringAsync("/settings/appearance", ct);
 
+        Assert.Contains("aria-label=\"Theme\"", html, StringComparison.Ordinal);
+        Assert.Contains("aria-label=\"Appearance\"", html, StringComparison.Ordinal);
+        Assert.Contains($">{ThemeCatalog.BuiltIn[0].Label}<", html, StringComparison.Ordinal);
         Assert.Contains(">System<", html, StringComparison.Ordinal);
-        foreach (var theme in ThemeCatalog.BuiltIn)
+    }
+
+    /// <summary>
+    /// The other half of <see cref="SettingsAppearancePage_RendersTheSelectedThemeAndDarkModeLabels"/>,
+    /// restored now that <see cref="MudBunitContext.RenderWithPopovers"/> exists: a <c>MudSelect</c>
+    /// only paints its options into a popover once opened by a real click, which a plain GET can never
+    /// trigger, so the HTTP version of this test could only ever see the two selects' pre-rendered
+    /// current values. Opening both here proves every <see cref="ThemeCatalog.BuiltIn"/> label and
+    /// every <see cref="DarkModePreference"/> member is actually offered, not just the one each select
+    /// happens to start on.
+    /// </summary>
+    [Fact]
+    public async Task SettingsAppearancePage_OffersEveryThemeAndDarkModeOption()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = ctx.RenderWithPopovers(builder =>
         {
-            Assert.Contains($">{theme.Label}<", html, StringComparison.Ordinal);
+            builder.OpenComponent<Settings>(0);
+            builder.AddComponentParameter(1, nameof(Settings.Tab), "appearance");
+            builder.CloseComponent();
+        });
+
+        var selects = cut.FindAll("div.mud-input-control");
+        Assert.Equal(2, selects.Count);
+
+        foreach (var select in selects)
+        {
+            await select.MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
         }
 
-        Assert.DoesNotContain("hooks-group", html, StringComparison.Ordinal);
+        foreach (var theme in ThemeCatalog.BuiltIn)
+        {
+            Assert.Contains(theme.Label, cut.Markup, StringComparison.Ordinal);
+        }
+
+        foreach (var preference in Enum.GetValues<DarkModePreference>())
+        {
+            Assert.Contains(preference.ToString(), cut.Markup, StringComparison.Ordinal);
+        }
     }
 
     /// <summary>
@@ -241,46 +281,5 @@ public sealed class SettingsPageTests
         var html = await client.GetStringAsync("/settings/appearance", ct);
 
         Assert.Contains(factory.AppearanceJsonPath, html, StringComparison.Ordinal);
-    }
-
-    /// <summary>A rejected override is reported on the page rather than swallowed - the "reported, never swallowed" rule applied to appearance.json.</summary>
-    [Fact]
-    public async Task SettingsAppearancePage_ListsARejectedOverride()
-    {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var ct = cts.Token;
-
-        await using var factory = new TeamWebApplicationFactory();
-        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"not-a-real-theme\"}");
-        using var client = factory.CreateClient();
-
-        var html = await client.GetStringAsync("/settings/appearance", ct);
-
-        Assert.Contains("not-a-real-theme", html, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// The override-key example must render as the literal key a Human types into
-    /// <c>appearance.json</c> - <c>--font-chat</c>, exactly as declared in <c>theme.css</c> and
-    /// <see cref="ThemeTokens.All"/> - with no leading <c>@</c>. Razor's <c>@@</c> escape sequence
-    /// renders one literal <c>@</c>, and <c>--font-chat</c> contains no <c>@</c> to escape in the
-    /// first place, so a stray <c>@@</c> in the markup would teach the Human to type a key
-    /// <see cref="Agency.Huddle.App.Appearance.ThemeOverrides.Build"/> then rejects because it is
-    /// not in the token list - the page would look broken when the code is fine.
-    /// </summary>
-    [Fact]
-    public async Task SettingsAppearancePage_ShowsTheOverrideKeyWithoutAStrayEscapeCharacter()
-    {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var ct = cts.Token;
-
-        await using var factory = new TeamWebApplicationFactory();
-        using var client = factory.CreateClient();
-
-        var html = await client.GetStringAsync("/settings/appearance", ct);
-
-        Assert.Contains("--font-chat", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("@--font-chat", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("@--surface-base", html, StringComparison.Ordinal);
     }
 }

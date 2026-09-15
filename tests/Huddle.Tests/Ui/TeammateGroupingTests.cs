@@ -7,10 +7,10 @@ using Agency.Huddle.App.Components.Pages;
 /// Exercises <see cref="TeammateGrouping.Group"/> directly against hand-built
 /// <see cref="PersonaEntry"/> values - no <see cref="Agency.Huddle.App.Acp.PersonaStore"/>, no
 /// rendering. The team filter's narrowing behaviour is proven here rather than through a rendered
-/// page: <c>HtmlRenderer</c> (this suite's only rendering test double, see
-/// <see cref="TeammatesRazorSourceTests"/>) has no supported way to simulate choosing an option in
-/// a live <c>&lt;select&gt;</c>, so this pure function is what makes "the filter narrows the list"
-/// testable at all.
+/// page: a plain unit test over the pure function is simpler and faster than driving a real
+/// <c>MudSelect</c> through bUnit for every narrowing case this covers, so this stays the primary
+/// coverage for "the filter narrows the list" even though <c>TeammatesPageTests</c> can now also
+/// dispatch a real click on the rendered select.
 /// </summary>
 public sealed class TeammateGroupingTests
 {

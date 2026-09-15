@@ -1420,7 +1420,7 @@ If the model's answer to "Which model are you?" is vague or identical both times
 
 **💰 Spends money** · about 15 min
 
-*Proves an Effort change is applied only by restart (there is no live mid-session switching), and that the effort ladder is re-read per model rather than carried across.*
+*Proves an Effort change is applied only by restart (there is no live mid-session switching), and that the effort ladder is re-read per model rather than carried across. The Edit card is a real `MudDialog` and its Model/Effort dropdowns are `MudSelect` (Stages 3-4 of the MudBlazor migration); neither changes what this test is checking.*
 
 **Before you start**
 

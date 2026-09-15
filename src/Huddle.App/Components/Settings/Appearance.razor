@@ -1,11 +1,11 @@
 @*
-    The Settings page's Appearance tab: pick a theme from ThemeCatalog.BuiltIn (or System, to follow
-    the device), and see where to hand-edit token overrides plus any that were rejected.
+    The Settings page's Appearance tab: pick a theme from ThemeCatalog.BuiltIn, and pick a light,
+    dark or System dark-mode preference.
 
-    No JavaScript, no data-theme, and no way for this component to change what is already in <head> -
-    App.razor owns that, and Blazor's render tree does not reach it. Choosing a theme calls
-    AppearanceStore.Save and then forces a full page reload, exactly as OnThemeChanged below explains,
-    so the server re-renders <head> with the new links and stays the single writer of it.
+    MudBlazor's MudThemeProvider now lives in the render tree (MainLayout.razor), so choosing a
+    theme or a dark-mode preference here applies immediately through that component's own
+    parameters - no page reload, no <head> to rewrite, no JavaScript interop of this component's
+    own.
 
     Subscribes to AppearanceStore.AppearanceChanged the same way Settings.razor subscribes to
     HookStore.HooksChanged: the store is a singleton, so a hand-edit to appearance.json (or a save
@@ -18,46 +18,35 @@
 @using Agency.Huddle.App.Themes
 @implements IDisposable
 @inject AppearanceStore AppearanceStore
-@inject NavigationManager Navigation
 
 <p class="teammates-intro">
-    Pick a theme, or leave it on System to follow your device's own light or dark setting.
+    Pick a theme, and choose whether it always uses its light or dark palette, or follows your
+    device's own setting.
 </p>
 
-<label class="teammates-field">
-    Theme
-    <select value="@(this.AppearanceStore.Current.ThemeId ?? string.Empty)" @onchange="this.OnThemeChanged">
-        <option value="">System</option>
-        @foreach (var theme in ThemeCatalog.BuiltIn)
-        {
-            <option value="@theme.Id">@theme.Label</option>
-        }
-    </select>
-</label>
+<MudSelect T="string" Label="Theme" Value="@this.SelectedThemeId" ValueChanged="this.OnThemeChangedAsync">
+    @foreach (var theme in ThemeCatalog.BuiltIn)
+    {
+        <MudSelectItem T="string" Value="@theme.Id">@theme.Label</MudSelectItem>
+    }
+</MudSelect>
+
+<MudSelect T="DarkModePreference" Label="Appearance" Value="@this.AppearanceStore.Current.Dark" ValueChanged="this.OnDarkChangedAsync">
+    <MudSelectItem T="DarkModePreference" Value="DarkModePreference.System">System</MudSelectItem>
+    <MudSelectItem T="DarkModePreference" Value="DarkModePreference.Light">Light</MudSelectItem>
+    <MudSelectItem T="DarkModePreference" Value="DarkModePreference.Dark">Dark</MudSelectItem>
+</MudSelect>
 
 <p class="settings-hooks-file-path">
-    Overrides are stored at <code>@this.AppearanceStore.FilePath</code>, keyed by token name (for example
-    <code>--font-chat</code> or <code>--surface-base</code>) rather than a friendly name - hand-edit
-    it for fast prototyping if you like. The file does not exist until you save a theme choice here, so
-    it being absent is expected, not a bug.
+    The selection is stored at <code>@this.AppearanceStore.FilePath</code>. The file does not exist
+    until you save a choice here, so it being absent is expected, not a bug.
 </p>
 
-@if (this.AppearanceStore.Current.Problems.Count > 0)
-{
-    <section class="teammates-rejected">
-        <h2>Overrides that didn't load</h2>
-        <ul class="teammates-rejected-list">
-            @foreach (var problem in this.AppearanceStore.Current.Problems)
-            {
-                <li class="teammates-rejected-item">
-                    <span class="teammates-rejected-reason">@problem</span>
-                </li>
-            }
-        </ul>
-    </section>
-}
-
 @code {
+    /// <summary>The theme id shown selected: the store's current selection, or the catalog's first (and, today, only) entry when nothing is selected yet.</summary>
+    private string SelectedThemeId => this.AppearanceStore.Current.ThemeId ?? ThemeCatalog.BuiltIn[0].Id;
+
+    /// <summary>Subscribes to <see cref="AppearanceStore.AppearanceChanged"/> - see the file-level comment for why this matters.</summary>
     protected override void OnInitialized()
     {
         this.AppearanceStore.AppearanceChanged += this.OnAppearanceChanged;
@@ -69,20 +58,20 @@
         this.AppearanceStore.AppearanceChanged -= this.OnAppearanceChanged;
     }
 
-    // Saves the selection (or clears it for System) and forces a full reload rather than trying to
-    // repaint in place. The <link> and <style> for a theme live in <head>, which App.razor renders and
-    // Blazor's render tree does not own, so this component cannot change them directly - a full reload
-    // makes the server re-render <head> with the new theme instead. That keeps this feature free of
-    // JavaScript and leaves the server the single writer of <head>, so the document and the file can
-    // never disagree. It is instantaneous on localhost; do not "optimise" this into a JS interop call
-    // that swaps the href - that was considered and rejected because it reintroduces a second writer
-    // and an IJSRuntime dependency this design does not have.
-    private void OnThemeChanged(ChangeEventArgs e)
+    /// <summary>Saves the newly picked theme id, keeping the current dark-mode preference.</summary>
+    /// <param name="themeId">The theme id the Human just picked.</param>
+    private Task OnThemeChangedAsync(string themeId)
     {
-        var raw = e.Value?.ToString();
-        var themeId = string.IsNullOrEmpty(raw) ? null : raw;
-        this.AppearanceStore.Save(themeId);
-        this.Navigation.NavigateTo(this.Navigation.Uri, forceLoad: true);
+        this.AppearanceStore.Save(themeId, this.AppearanceStore.Current.Dark);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Saves the newly picked dark-mode preference, keeping the current theme selection.</summary>
+    /// <param name="dark">The dark-mode preference the Human just picked.</param>
+    private Task OnDarkChangedAsync(DarkModePreference dark)
+    {
+        this.AppearanceStore.Save(this.AppearanceStore.Current.ThemeId, dark);
+        return Task.CompletedTask;
     }
 
     private void OnAppearanceChanged()

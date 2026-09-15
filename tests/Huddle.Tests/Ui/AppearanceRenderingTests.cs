@@ -1,20 +1,34 @@
-using Agency.Huddle.App.Themes;
-
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Exercises the three-layer <c>&lt;head&gt;</c> <c>App.razor</c> builds on top of
-/// <see cref="Agency.Huddle.App.Appearance.AppearanceStore"/>: base stylesheets, then the selected
-/// theme's stylesheet, then the inline override <c>&lt;style&gt;</c> - in that source order, because
-/// all three target plain <c>:root</c> and later wins per token. Writes
-/// <see cref="TeamWebApplicationFactory.AppearanceJsonPath"/> before <c>CreateClient()</c> so the
-/// store's constructor reads it on first resolve.
+/// Exercises how <c>MainLayout.razor</c> applies <see cref="Agency.Huddle.App.Appearance.AppearanceStore"/>'s
+/// resolved state to MudBlazor's <c>MudThemeProvider</c>, now that a <c>MudTheme</c> is the single
+/// source of theming: there is no <c>themes/{id}.css</c> link and no inline override
+/// <c>&lt;style&gt;</c> for <c>App.razor</c> to emit any more - the provider renders its own
+/// <c>&lt;style class='mud-theme-provider'&gt;</c> block directly from the C# <see cref="MudBlazor.MudTheme"/>,
+/// prerendered into the initial HTML response the same way the rest of the interactive circuit is.
+/// Writes <see cref="TeamWebApplicationFactory.AppearanceJsonPath"/> before <c>CreateClient()</c> so
+/// the store's constructor reads it on first resolve.
 /// </summary>
 public sealed class AppearanceRenderingTests
 {
-    /// <summary>With no <c>appearance.json</c>, the shell links no theme stylesheet and emits no override <c>&lt;style&gt;</c> - the built-in pair applies through the OS's preference alone.</summary>
+    // The exact CSS custom property MudThemeProvider.GenerateTheme emits for Palette.Primary, in
+    // MudColor's default (rgba) string form - see ThemeCatalogTests for the same value read back
+    // through the C# API instead. Present in the response only when the "Huddle" theme's light
+    // palette actually rendered.
+    private const string LightPrimaryVariable = "--mud-palette-primary: rgba(74,21,75,1);";
+
+    // The dark-palette counterpart of LightPrimaryVariable, present only when IsDarkMode resolved
+    // to true before the response was written.
+    private const string DarkPrimaryVariable = "--mud-palette-primary: rgba(94,43,96,1);";
+
+    /// <summary>
+    /// With no <c>appearance.json</c>, the shell links no <c>themes/</c> stylesheet (that mechanism
+    /// is gone entirely) and still renders the "Huddle" theme's light palette through MudBlazor's own
+    /// generated <c>&lt;style&gt;</c> block.
+    /// </summary>
     [Fact]
-    public async Task AppShell_WithNoAppearanceFile_LinksNoThemeAndEmitsNoOverrideStyle()
+    public async Task AppShell_WithNoAppearanceFile_RendersTheDefaultThemeInLightMode()
     {
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
@@ -25,112 +39,40 @@ public sealed class AppearanceRenderingTests
         var html = await client.GetStringAsync("/", ct);
 
         Assert.DoesNotContain("themes/", html, StringComparison.Ordinal);
-
-        // MudBlazor's MudThemeProvider (installed in Stage 1) always emits its own
-        // <style class='mud-theme-provider'> block, so a bare "<style" check no longer proves
-        // anything about the appearance override. ThemeOverrides.Build always opens its own block
-        // with the literal text ":root {" (a space before the brace); MudBlazor's generated blocks
-        // use ":root{" with no space. Checking for that exact marker still proves the override
-        // <style> block was never emitted.
-        Assert.DoesNotContain(":root {", html, StringComparison.Ordinal);
+        Assert.Contains(LightPrimaryVariable, html, StringComparison.Ordinal);
+        Assert.DoesNotContain(DarkPrimaryVariable, html, StringComparison.Ordinal);
     }
 
-    /// <summary>
-    /// A selected theme is linked after the base <c>theme.css</c> stylesheet. Nothing else can see
-    /// this ordering, and getting it wrong silently disables the theme.
-    /// </summary>
+    /// <summary>A stored <c>"dark"</c> preference is read back and rendered as the dark palette, with no page reload involved - the provider lives in the render tree.</summary>
     [Fact]
-    public async Task AppShell_WithAThemeSelected_LinksItAfterTheBaseStylesheet()
+    public async Task AppShell_WithDarkPreferenceStored_RendersTheDarkPalette()
     {
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
 
         await using TeamWebApplicationFactory factory = new();
-        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"huddle-dark\"}");
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"huddle\",\"dark\":\"dark\"}");
         using HttpClient client = factory.CreateClient();
 
         var html = await client.GetStringAsync("/", ct);
 
-        // The base link is @Assets["theme.css"], which .NET's static-asset fingerprinting rewrites to
-        // something like "theme.ce2n94aiaf.css" - "theme." matches only that href, never
-        // "themes/huddle-dark.css" (the "s" right after "theme" rules that one out).
-        var baseThemeIndex = html.IndexOf("theme.", StringComparison.Ordinal);
-        var selectedThemeIndex = html.IndexOf("themes/huddle-dark.css", StringComparison.Ordinal);
-
-        Assert.True(baseThemeIndex >= 0, "Expected the base theme.css stylesheet link to be present.");
-        Assert.True(selectedThemeIndex >= 0, "Expected a themes/huddle-dark.css stylesheet link to be present.");
-        Assert.True(baseThemeIndex < selectedThemeIndex, "Expected the base stylesheet to be linked before the selected theme.");
+        Assert.Contains(DarkPrimaryVariable, html, StringComparison.Ordinal);
+        Assert.DoesNotContain(LightPrimaryVariable, html, StringComparison.Ordinal);
     }
 
-    /// <summary>Valid overrides are emitted in a <c>&lt;style&gt;</c> block after both stylesheet links.</summary>
+    /// <summary>An unknown theme id is a warning, never a failure: the page still renders, with the catalog's default theme applied instead of a 500 or a blank palette.</summary>
     [Fact]
-    public async Task AppShell_WithOverrides_EmitsThemInAStyleBlockAfterBothLinks()
+    public async Task AppShell_WithAnUnknownThemeId_StillRendersTheDefaultTheme()
     {
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
 
         await using TeamWebApplicationFactory factory = new();
-        File.WriteAllText(
-            factory.AppearanceJsonPath,
-            "{\"theme\":\"huddle-dark\",\"overrides\":{\"--font-chat\":\"Georgia, serif\"}}");
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"nonsense\"}");
         using HttpClient client = factory.CreateClient();
 
         var html = await client.GetStringAsync("/", ct);
 
-        var baseThemeIndex = html.IndexOf("theme.", StringComparison.Ordinal);
-        var selectedThemeIndex = html.IndexOf("themes/huddle-dark.css", StringComparison.Ordinal);
-        var styleIndex = html.IndexOf("<style", StringComparison.Ordinal);
-
-        Assert.True(baseThemeIndex >= 0 && baseThemeIndex < selectedThemeIndex, "Base stylesheet must come before the theme link.");
-        Assert.True(selectedThemeIndex < styleIndex, "The theme link must come before the override <style> block.");
-        Assert.Contains("--font-chat: Georgia, serif;", html, StringComparison.Ordinal);
-    }
-
-    /// <summary>A rejected override value never reaches the document: the page renders normally, with no trace of the hostile text and no second <c>&lt;style&gt;</c> element.</summary>
-    [Fact]
-    public async Task AppShell_ARejectedOverrideValueNeverReachesTheDocument()
-    {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
-        CancellationToken ct = cts.Token;
-
-        await using TeamWebApplicationFactory factory = new();
-        File.WriteAllText(
-            factory.AppearanceJsonPath,
-            "{\"overrides\":{\"--surface-base\":\"red; } :root{\"}}");
-        using HttpClient client = factory.CreateClient();
-
-        var html = await client.GetStringAsync("/", ct);
-
-        Assert.DoesNotContain("} :root{", html, StringComparison.Ordinal);
-
-        // See AppShell_WithNoAppearanceFile_LinksNoThemeAndEmitsNoOverrideStyle: MudThemeProvider's
-        // own <style> blocks make a bare "<style" check meaningless post-MudBlazor. ":root {" (with
-        // the space ThemeOverrides.Build always writes) remains a precise fingerprint for the
-        // override block, so its absence still proves the rejected value produced no override
-        // <style> element at all.
-        Assert.DoesNotContain(":root {", html, StringComparison.Ordinal);
-    }
-
-    /// <summary>
-    /// Every built-in theme's stylesheet is actually served at its plain, unfingerprinted route -
-    /// the route <c>App.razor</c>'s hand-built <c>href="themes/{id}.css"</c> depends on, since it
-    /// bypasses <c>@Assets</c> entirely (D12a).
-    /// </summary>
-    [Fact]
-    public async Task AppShell_ServesEveryBuiltInThemeStylesheet()
-    {
-        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
-        CancellationToken ct = cts.Token;
-
-        await using TeamWebApplicationFactory factory = new();
-        using HttpClient client = factory.CreateClient();
-
-        foreach (var theme in ThemeCatalog.BuiltIn)
-        {
-            using var response = await client.GetAsync($"/themes/{theme.Id}.css", ct);
-            Assert.True(
-                response.IsSuccessStatusCode,
-                $"GET /themes/{theme.Id}.css returned {(int)response.StatusCode}.");
-        }
+        Assert.Contains(LightPrimaryVariable, html, StringComparison.Ordinal);
     }
 }

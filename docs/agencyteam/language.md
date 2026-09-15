@@ -277,28 +277,32 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 ## Appearance
 
 **Theme**
-: One stylesheet that overrides some or all of the 39 Tokens, layered over
-  `wwwroot/theme.css` rather than replacing it. Two ship built in — `huddle-light`
-  and `huddle-dark` — and each declares nothing but its `color-scheme`, leaving
-  every Token to fall through to the base layer. A Theme is identified by its
-  **id**, which is its filename, what `appearance.json` stores and what the URL
-  carries; never by its display label, for the reason [Rules](rules.md) gives for a
-  Model. Roadmap item 7 adds imported Themes, generated into `{DataDir}/themes/`.
-: *Avoid*: skin, palette (that is the set of values, not the named thing), colour
-  scheme (`color-scheme` is a CSS property here and means something narrower).
+: One `MudTheme` object in `ThemeCatalog`, carrying a `PaletteLight` **and** a
+  `PaletteDark` — so a Theme spans both modes rather than being one of them. One ships
+  built in, `huddle`. A Theme is identified by its **id**, which is what
+  `appearance.json` stores; never by its display label, for the reason
+  [Rules](rules.md) gives for a Model. Roadmap item 7 adds imported Themes, mapped from
+  JSON into a `MudTheme` rather than generated as CSS.
+: *Avoid*: stylesheet (a Theme stopped being one on 2026-09-14 — see
+  [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md)), skin, palette (that is one
+  half of a Theme, and a MudBlazor type name), colour scheme (`color-scheme` is a CSS
+  property here and no longer carries anything).
 
-**Token**
-: One named value a Theme can set — 35 colours and 4 typography values, declared
-  once in `theme.css` and listed in `ThemeTokens.All`. A Token's name is also the
-  key an override uses in `appearance.json`; there is deliberately no second,
-  friendlier vocabulary. Every Token has a consumer, because one that does not is a
-  mapping entry item 7 could never observe to be wrong.
-: *Avoid*: variable, custom property (that is the CSS mechanism), setting.
+**Palette property**
+: One named colour a Theme sets — a property on MudBlazor's `Palette`, surfaced to CSS
+  as a `--mud-palette-*` custom property. **This replaces the word Token**, which named
+  the 35 colours and 4 typography values of the retired `wwwroot/theme.css` and should
+  not be reused for this: the old Token list was ours and complete, a palette property
+  is MudBlazor's and is not.
+: *Avoid*: token (retired 2026-09-14), variable, custom property (that is the CSS
+  mechanism), setting.
 
 **Appearance**
 : The Appearance tab of `/settings`, and `{DataDir}/appearance.json` behind it: the
-  selected Theme id and the Human's per-Token overrides. Per installation,
-  hand-editable and watched, exactly like `hooks.json`. Nothing selected means no
-  Theme is layered on and the built-in values follow the operating system.
-  Appearance is the choice; a **Theme** is what it selects.
-: *Avoid*: dark mode (that is one Theme), preference, display settings.
+  selected Theme id and a light/dark preference of `system`, `light` or `dark`. Per
+  installation, hand-editable and watched, exactly like `hooks.json`. There are no
+  per-property overrides — that layer was removed with the Tokens. Appearance is the
+  choice; a **Theme** is what it selects, and the preference decides which of its two
+  palettes is showing.
+: *Avoid*: dark mode (that is one value of the preference, not a Theme), preference on
+  its own (say *light/dark preference*), display settings.

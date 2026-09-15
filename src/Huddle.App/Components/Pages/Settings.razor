@@ -6,6 +6,17 @@
 @inject HookStore Hooks
 @inject NavigationManager Navigation
 
+@*
+    Stage 3 of the MudBlazor migration converts the tab rail to MudTabs, the Save button to a
+    MudButton and the composer-error paragraph to a MudAlert, per the migration brief's Part A
+    mapping. The tab rail's routing behaviour is unchanged: ActivePanelIndex is always derived from
+    CurrentTab (itself parsed from the {Tab} route parameter), and MudTabs' ActivePanelIndexChanged
+    is wired to SelectTab, which still navigates rather than flipping local state - MudTabs never
+    owns which tab is showing, the route does. This keeps /settings/hooks and /settings/appearance
+    bookmarkable and keeps the fallback in CurrentTab (Routes.razor has no NotFound branch) working
+    exactly as before.
+*@
+
 <div class="settings-page">
     <header class="settings-header">
         <h1>Settings</h1>
@@ -18,52 +29,40 @@
 
     @if (this.error is not null)
     {
-        <p class="composer-error">@this.error</p>
+        <MudAlert Severity="Severity.Error" Dense="true">@this.error</MudAlert>
     }
 
-    <div class="settings-layout">
-        <nav class="settings-tab-rail">
-            <button type="button"
-                    class="settings-tab @(this.CurrentTab == SettingsTab.Hooks ? "settings-tab-active" : string.Empty)"
-                    @onclick="() => this.SelectTab(SettingsTab.Hooks)">Hooks</button>
-            <button type="button"
-                    class="settings-tab @(this.CurrentTab == SettingsTab.Appearance ? "settings-tab-active" : string.Empty)"
-                    @onclick="() => this.SelectTab(SettingsTab.Appearance)">Appearance</button>
-        </nav>
+    <MudTabs ActivePanelIndex="this.ActivePanelIndex" ActivePanelIndexChanged="this.OnActivePanelIndexChanged">
+        <MudTabPanel Text="Hooks">
+            <p class="teammates-intro">
+                A hook is one piece of wording this application sends to a model — part of a system prompt,
+                a turn, <code>get_help</code>'s output, or a tool's own description. Editing one changes what every
+                teammate is told, not how the application itself behaves, and a hook you have changed can
+                always be restored to the wording it shipped with.
+            </p>
 
-        <div class="settings-content">
-            @switch (this.CurrentTab)
-            {
-                case SettingsTab.Appearance:
-                    <Appearance />
-                    break;
-                case SettingsTab.Hooks:
-                default:
-                    <p class="teammates-intro">
-                        A hook is one piece of wording this application sends to a model — part of a system prompt,
-                        a turn, <code>get_help</code>'s output, or a tool's own description. Editing one changes what every
-                        teammate is told, not how the application itself behaves, and a hook you have changed can
-                        always be restored to the wording it shipped with.
-                    </p>
+            <p class="settings-hooks-file-path">
+                Overrides are stored at <code>@this.Hooks.FilePath</code>, which holds only the hooks you have
+                changed — hand-edit it for fast prototyping if you like. The file does not exist until the
+                first time you save here, so it being absent is expected, not a bug.
+            </p>
 
-                    <p class="settings-hooks-file-path">
-                        Overrides are stored at <code>@this.Hooks.FilePath</code>, which holds only the hooks you have
-                        changed — hand-edit it for fast prototyping if you like. The file does not exist until the
-                        first time you save here, so it being absent is expected, not a bug.
-                    </p>
-
-                    <form @onsubmit="this.Save">
-                        <HooksPanel Groups="this.groups"
-                                    ValueChanged="this.OnFieldValueChanged"
-                                    ResetRequested="this.OnResetRequested" />
-                        <div class="teammate-card-actions">
-                            <button type="submit" class="teammate-card-action teammate-card-primary" disabled="@(!this.HasUnsavedChanges)">Save</button>
-                        </div>
-                    </form>
-                    break;
-            }
-        </div>
-    </div>
+            <form @onsubmit="this.Save">
+                <HooksPanel Groups="this.groups"
+                            ValueChanged="this.OnFieldValueChanged"
+                            ResetRequested="this.OnResetRequested" />
+                <MudStack Row="true" Spacing="2">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               ButtonType="ButtonType.Submit"
+                               Disabled="@(!this.HasUnsavedChanges)">Save</MudButton>
+                </MudStack>
+            </form>
+        </MudTabPanel>
+        <MudTabPanel Text="Appearance">
+            <Appearance />
+        </MudTabPanel>
+    </MudTabs>
 </div>
 
 @code {
@@ -94,6 +93,11 @@
     private SettingsTab CurrentTab =>
         Enum.TryParse<SettingsTab>(this.Tab, ignoreCase: true, out var parsed) ? parsed : SettingsTab.Hooks;
 
+    // MudTabs is driven, never authoritative: its ActivePanelIndex is computed from CurrentTab (the
+    // route) on every render, and a change is reported back to SelectTab rather than accepted as
+    // MudTabs' own state - see the file-level comment for why.
+    private int ActivePanelIndex => this.CurrentTab == SettingsTab.Appearance ? 1 : 0;
+
     // Drives the Save button: nothing to commit means nothing to submit. Recomputed from groups
     // rather than tracked separately, so it can never drift from what HooksPanel is actually showing.
     private bool HasUnsavedChanges => this.groups.SelectMany(group => group.Fields).Any(row => row.HasUnsavedChange);
@@ -118,6 +122,11 @@
     private void SelectTab(SettingsTab tab)
     {
         this.Navigation.NavigateTo($"/settings/{tab.ToString().ToLowerInvariant()}");
+    }
+
+    private void OnActivePanelIndexChanged(int index)
+    {
+        this.SelectTab(index == 1 ? SettingsTab.Appearance : SettingsTab.Hooks);
     }
 
     private void OnFieldValueChanged(HookEdit edit)

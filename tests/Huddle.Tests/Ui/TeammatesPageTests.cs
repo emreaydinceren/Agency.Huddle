@@ -1,8 +1,5 @@
 using Bunit;
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Pages;
@@ -13,6 +10,14 @@ using Agency.Huddle.Tests.Acp.Fakes;
 
 namespace Agency.Huddle.Tests.Ui;
 
+/// <summary>
+/// Split two ways, per <c>docs/agencyteam/testing.md</c>: routing, HTTP status and
+/// <c>ProbeCount</c>/<c>EffortProbeCount</c> are facts about the server, so they stay on a plain HTTP
+/// GET against <see cref="TeamWebApplicationFactory"/>. Everything that depends on the exact markup a
+/// MudBlazor control renders - the Create card's own content, or a <c>MudSelect</c>'s options, which
+/// only exist once opened - now renders <see cref="Teammates"/> through <see cref="MudBunitContext"/>
+/// instead, the same split <c>SettingsPageTests</c> uses.
+/// </summary>
 public sealed class TeammatesPageTests
 {
     [Fact]
@@ -43,9 +48,9 @@ public sealed class TeammatesPageTests
 
         var html = await client.GetStringAsync("/teammates", ct);
 
-        // The form itself lives in the card, which opens on click and so is absent from a plain
-        // GET. What the page owes a first-time visitor is the way in. TeammateCardTests covers
-        // what the card then shows.
+        // The card itself lives behind IDialogService, which opens on click and so is absent from a
+        // plain GET. What the page owes a first-time visitor is the way in - a real <button>'s own
+        // prerendered label. TeammateCardTests covers what the card then shows.
         Assert.Contains("New teammate", html, StringComparison.Ordinal);
     }
 
@@ -105,15 +110,11 @@ public sealed class TeammatesPageTests
 
     /// <summary>
     /// Reproduces Gitea issue #10 (which also closes #11): opening the Create card must not crash
-    /// the page. Before the fix, a fresh Create card has no Persona yet - <c>cardName</c> starts
-    /// empty - and <c>Teammates.ResolveStatus</c> asked <see cref="PersonaHealth.Get"/> about that
-    /// blank name anyway. <see cref="PersonaHealth.Get"/>'s own
-    /// <c>ArgumentException.ThrowIfNullOrWhiteSpace</c> guard is correct - it is a public method on
-    /// a public type - so it threw during <c>BuildRenderTree</c>, which is exactly what took the
-    /// circuit down. bUnit dispatches a real click on the rendered "New teammate" button (see
-    /// <see cref="NewTeammateSelector"/>), not by calling the private handler directly, so this
-    /// test fails the same way the reported crash did: with the same
-    /// <see cref="ArgumentException"/>, thrown from the same render pass.
+    /// the page. Before the fix, a fresh Create card has no Persona yet, and
+    /// <c>Teammates.ResolveStatus</c> asked <see cref="PersonaHealth.Get"/> about that blank name
+    /// anyway. bUnit dispatches a real click on the rendered "New teammate" button (see
+    /// <see cref="NewTeammateSelector"/>), not by calling the private handler directly, so this test
+    /// fails the same way the reported crash did if the guard ever regresses.
     /// </summary>
     [Fact]
     public async Task TeammatesPage_OpeningTheCreateCard_RendersWithoutThrowing()
@@ -121,27 +122,8 @@ public sealed class TeammatesPageTests
         await using var factory = new TeamWebApplicationFactory();
         Directory.CreateDirectory(factory.TeamsDirPath);
 
-        // bUnit's own TestContext wires the component's services - the same real, fully-composed
-        // instances TeamWebApplicationFactory built, so the render exercises the app's actual wiring
-        // rather than a hand-assembled substitute. bUnit registers its own fake NavigationManager by
-        // default, so unlike the HtmlRenderer version of this test, nothing extra is needed for
-        // Create mode's <form> to resolve one while writing its action attribute.
-        using BunitContext ctx = new();
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ITeamDirectory>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IAgentGateway>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaHealth>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSupervisor>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
-
-        // No-argument Render<Teammates>() rather than Render<Teammates>(_ => { }): an empty lambda
-        // satisfies both the Action<ComponentParameterCollectionBuilder<T>> overload and the
-        // RenderFragment overload (delegate void RenderFragment(RenderTreeBuilder)), and bUnit marks
-        // the RenderFragment overload higher-priority, so a lambda binds to *that* one - producing an
-        // empty fragment that never opens a Teammates component at all, rather than the "no
-        // parameters" render this test means to do.
-        var cut = ctx.Render<Teammates>();
+        await using var ctx = NewContext(factory);
+        var cut = RenderPage(ctx);
 
         cut.Find(NewTeammateSelector).Click();
 
@@ -155,11 +137,9 @@ public sealed class TeammatesPageTests
     /// Pins the other half of rules.md's model-catalog rule (the first half is
     /// <see cref="TeammatesPage_DoesNotProbeForModelsOnAPlainLoad"/>): "The model catalog is read by
     /// spawning an adapter, even when Acp:Enabled is false... What keeps it honest is when it runs -
-    /// only when a New/Edit form opens, never on a page load." The probe spends nothing - it never
-    /// starts a Turn - so gating it on <c>Team:Acp:Enabled</c> (which exists because ACP spends
-    /// money) would leave the picker empty in the default configuration and defeat the feature.
-    /// <see cref="TeamWebApplicationFactory"/> pins <c>Team:Acp:Enabled=false</c> for every test in
-    /// this file, so this proves the probe fires here regardless.
+    /// only when a New/Edit form opens, never on a page load." <see cref="TeamWebApplicationFactory"/>
+    /// pins <c>Team:Acp:Enabled=false</c> for every test in this file, so this proves the probe fires
+    /// here regardless.
     /// </summary>
     [Fact]
     public async Task TeammatesPage_OpeningTheCreateCard_ProbesForModelsEvenWithAcpDisabled()
@@ -167,18 +147,8 @@ public sealed class TeammatesPageTests
         await using var factory = new TeamWebApplicationFactory();
         Directory.CreateDirectory(factory.TeamsDirPath);
 
-        // The same IModelCatalog instance the factory tracks, so the probe count assertion below
-        // reflects the click rather than a disconnected fake.
-        using BunitContext ctx = new();
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ITeamDirectory>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IAgentGateway>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaHealth>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSupervisor>());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
-        ctx.Services.AddSingleton<IModelCatalog>(factory.FakeModelCatalog);
-
-        var cut = ctx.Render<Teammates>();
+        await using var ctx = NewContext(factory);
+        var cut = RenderPage(ctx);
 
         Assert.Equal(0, factory.FakeModelCatalog.ProbeCount);
 
@@ -201,8 +171,10 @@ public sealed class TeammatesPageTests
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/teammates", ct);
 
-        // Edit, Open and Remove moved into the card, which a GET cannot open. The tile is the
-        // affordance that reaches them, so the tile is what this page-level test can assert.
+        // Edit, Open and Remove live in the card, which a GET cannot open. The tile is the
+        // affordance that reaches them, so the tile is what this page-level test can assert - it is
+        // still a real <button class="teammate-tile">, unconverted (see the migration brief's
+        // accessibility correction for why).
         Assert.Contains("teammate-tile", html, StringComparison.Ordinal);
         Assert.Contains("coo", html, StringComparison.Ordinal);
     }
@@ -221,38 +193,37 @@ public sealed class TeammatesPageTests
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/teammates", ct);
 
+        // agent-dot is left exactly as it is by this migration - Stage 5's job.
         Assert.Contains("agent-dot", html, StringComparison.Ordinal);
         Assert.Contains("Offline", html, StringComparison.Ordinal);
     }
 
     /// <summary>
     /// The stronger claim this phase makes: the front-matter Name beats the FILENAME all the way to
-    /// the rendered page, not just through <see cref="Agency.Huddle.App.Acp.PersonaStore.ListNames"/>.
-    /// The file is deliberately named "zzz.md" - nothing in it resembling "Chief of Staff" except
-    /// the quoted <c>Name</c> field itself.
+    /// the rendered page. The file is deliberately named "zzz.md" - nothing in it resembling "Chief
+    /// of Staff" except the quoted <c>Name</c> field itself. Renders through bUnit rather than HTTP:
+    /// the monogram now lives inside a <c>MudAvatar</c>, whose markup shape a raw substring match on
+    /// ">CS&lt;" can no longer be trusted to find.
     /// </summary>
     [Fact]
     public async Task TeammatesPage_ShowsANameThatContainsSpaces()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var ct = cts.Token;
-
         await using var factory = new TeamWebApplicationFactory();
-
         Directory.CreateDirectory(factory.TeamsDirPath);
         await File.WriteAllTextAsync(
             Path.Combine(factory.TeamsDirPath, "zzz.md"),
             "---\nName: 'Chief of Staff'\nTitle: Chief of Staff\nAlias: coo\n---\nYou keep the team honest.",
-            ct);
+            Xunit.TestContext.Current.CancellationToken);
 
-        using var client = factory.CreateClient();
-        var html = await client.GetStringAsync("/teammates", ct);
+        await using var ctx = NewContext(factory);
+        var cut = RenderPage(ctx);
 
-        Assert.Contains("Chief of Staff", html, StringComparison.Ordinal);
+        Assert.Contains("Chief of Staff", cut.Markup, StringComparison.Ordinal);
 
         // The monogram is built from the words of the Name, so it is also the page's own evidence
         // that the spaces survived the trip from disk.
-        Assert.Contains(">CS<", html, StringComparison.Ordinal);
+        var avatar = cut.Find(".mud-avatar");
+        Assert.Equal("CS", avatar.TextContent.Trim());
     }
 
     /// <summary>The test that proves Team sub-folders are cosmetic: a file nested under "Household" whose Teams field says "Business" must be headed "Business", never "Household".</summary>
@@ -276,7 +247,7 @@ public sealed class TeammatesPageTests
 
         Assert.Contains("Business", html, StringComparison.Ordinal);
 
-        // The folder name itself must never leak into a heading.
+        // The folder name itself must never leak into a heading - the plain <h2> Part A leaves alone.
         Assert.DoesNotContain(">Household<", html, StringComparison.Ordinal);
     }
 
@@ -344,35 +315,39 @@ public sealed class TeammatesPageTests
         Assert.DoesNotContain("teammate-tile", html, StringComparison.Ordinal);
     }
 
-    /// <summary>The filter's own options come off <see cref="Agency.Huddle.App.Acp.PersonaStore.Teams"/>: "All teams" plus every distinct Team name, regardless of how many Personas load.</summary>
+    /// <summary>
+    /// The filter's own options come off <see cref="PersonaStore.Teams"/>: "All teams" plus every
+    /// distinct Team name. Renders through bUnit: a <c>MudSelect</c> only paints its options into a
+    /// popover once opened by a real click, which a plain GET can never trigger.
+    /// </summary>
     [Fact]
     public async Task TeammatesPage_OffersATeamFilter_ListingAllTeams()
     {
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        var ct = cts.Token;
-
         await using var factory = new TeamWebApplicationFactory();
-
         Directory.CreateDirectory(factory.TeamsDirPath);
         await File.WriteAllTextAsync(
             Path.Combine(factory.TeamsDirPath, "coo.md"),
             "---\nName: coo\nTitle: Chief of Staff\nAlias: coo\nTeams: Business, Household\n---\nbody",
-            ct);
+            Xunit.TestContext.Current.CancellationToken);
 
-        using var client = factory.CreateClient();
-        var html = await client.GetStringAsync("/teammates", ct);
+        await using var ctx = NewContext(factory);
+        var cut = RenderPage(ctx);
 
-        Assert.Contains("All teams", html, StringComparison.Ordinal);
-        Assert.Contains("Business", html, StringComparison.Ordinal);
-        Assert.Contains("Household", html, StringComparison.Ordinal);
+        var filter = cut.FindAll("div.mud-input-control")
+            .First(control => control.QuerySelectorAll("label").Any(label => label.TextContent.Contains("Team", StringComparison.Ordinal)));
+        await filter.MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+        Assert.Contains("All teams", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Business", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Household", cut.Markup, StringComparison.Ordinal);
     }
 
     /// <summary>
-    /// Proves the T7.1 subscription actually repaints, rather than the page merely reading live
-    /// state on every fresh request. An HTTP GET is a brand-new prerender every time and could never
-    /// tell those two apart, so this is the one test in this file that renders <see cref="Teammates"/>
-    /// directly with <c>HtmlRenderer</c> and re-reads its HTML after an event, the same technique
-    /// <c>TeammateCardTests</c> uses to render a component in isolation.
+    /// Proves the subscription to <see cref="PersonaStore.PersonasChanged"/>/health events actually
+    /// repaints, rather than the page merely reading live state on every fresh request - an HTTP GET
+    /// is a brand-new prerender every time and could never tell those two apart. Renders through
+    /// <see cref="MudBunitContext"/> rather than a bare <c>HtmlRenderer</c>: the page's MudButton,
+    /// MudSelect and MudAvatar all need MudBlazor's DI services to construct at all.
     /// </summary>
     [Fact]
     public async Task TeammatesPage_RepaintsWhenAnAgentGoesOffline()
@@ -393,53 +368,63 @@ public sealed class TeammatesPageTests
 
         var health = new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
 
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddSingleton<ITeamDirectory>(directory);
-        services.AddSingleton<IAgentGateway>(gateway);
-        services.AddSingleton(health);
-        services.AddSingleton(new RoomEvents(NullLogger<RoomEvents>.Instance));
-        services.AddSingleton<IModelCatalog>(new FakeModelCatalog());
-
         using var personas = new PersonaStore(
             dataDir.Options(), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
-        services.AddSingleton(personas);
 
-        // Never started - Teammates.razor only needs a PersonaSupervisor it can inject, for the T7.2
+        // Never started - Teammates.razor only needs a PersonaSupervisor it can inject, for the
         // Restart button this test does not exercise.
         using var supervisor = new PersonaSupervisor(
             dataDir.Options(), personas, new FakeAgentHostFactory(), health, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
-        services.AddSingleton(supervisor);
 
-        await using var provider = services.BuildServiceProvider();
-        await using var renderer = new HtmlRenderer(provider, provider.GetRequiredService<ILoggerFactory>());
+        await using MudBunitContext ctx = new();
+        ctx.Services.AddSingleton<ITeamDirectory>(directory);
+        ctx.Services.AddSingleton<IAgentGateway>(gateway);
+        ctx.Services.AddSingleton(health);
+        ctx.Services.AddSingleton(new RoomEvents(NullLogger<RoomEvents>.Instance));
+        ctx.Services.AddSingleton<IModelCatalog>(new FakeModelCatalog());
+        ctx.Services.AddSingleton(personas);
+        ctx.Services.AddSingleton(supervisor);
 
-        var output = await renderer.Dispatcher.InvokeAsync(() => renderer.RenderComponentAsync<Teammates>(ParameterView.Empty));
-        var before = await renderer.Dispatcher.InvokeAsync(() => Task.FromResult(output.ToHtmlString()));
-        Assert.Contains("Online", before, StringComparison.Ordinal);
-        Assert.DoesNotContain("Offline", before, StringComparison.Ordinal);
+        var cut = ctx.Render<Teammates>();
+        Assert.Contains("Online", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Offline", cut.Markup, StringComparison.Ordinal);
 
         gateway.SetOffline(agent.Id);
 
         // The repaint happens off OnHealthOrPresenceChanged's fire-and-forget dispatch, not
-        // synchronously with the call above, so this polls rather than reading the HTML once more.
-        string after;
-        while (true)
+        // synchronously with the call above, so this polls rather than reading the markup once more.
+        while (!cut.Markup.Contains("Offline", StringComparison.Ordinal))
         {
-            after = await renderer.Dispatcher.InvokeAsync(() => Task.FromResult(output.ToHtmlString()));
-            if (after.Contains("Offline", StringComparison.Ordinal))
-            {
-                break;
-            }
-
             await Task.Delay(20, ct);
         }
 
-        Assert.Contains("Offline", after, StringComparison.Ordinal);
+        Assert.Contains("Offline", cut.Markup, StringComparison.Ordinal);
     }
 
+    /// <summary>Registers this factory's real services (<see cref="PersonaStore"/> and friends) into a fresh <see cref="MudBunitContext"/>, the same pattern <see cref="SettingsPageTests"/> uses.</summary>
+    private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
+    {
+        MudBunitContext ctx = new();
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ITeamDirectory>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IAgentGateway>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaHealth>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSupervisor>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
+        return ctx;
+    }
+
+    /// <summary>Renders the real <see cref="Teammates"/> page, with the popover and dialog providers <see cref="MudBunitContext.RenderWithPopovers"/> supplies so an opened card, and any <c>MudSelect</c> inside it, actually render.</summary>
+    private static IRenderedComponent<Bunit.Rendering.ContainerFragment> RenderPage(MudBunitContext ctx) =>
+        ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<Teammates>(0);
+            builder.CloseComponent();
+        });
+
     /// <summary>
-    /// The CSS selector for the "New teammate" button that <c>@onclick="this.BeginCreate"</c>
+    /// The CSS selector for the "New teammate" button that <c>OnClick="this.BeginCreate"</c>
     /// compiles to, shared by the two bUnit tests that click it through the real render pipeline
     /// rather than invoking <c>Teammates.BeginCreate</c> directly.
     /// </summary>

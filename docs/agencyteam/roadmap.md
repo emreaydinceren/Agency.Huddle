@@ -1,7 +1,7 @@
 # Roadmap
 
 Read this before starting work that touches `PersonaRunner`'s event loop,
-`ReplyGate`, `IAgentHostFactory`, `wwwroot/app.css` or `wwwroot/theme.css`. Back to the hub:
+`ReplyGate`, `IAgentHostFactory`, `wwwroot/app.css` or `Themes/ThemeCatalog.cs`. Back to the hub:
 [AgencyTeam.md](../AgencyTeam.md).
 
 Thirteen items. **Items 2 and 10 shipped on 2026-09-12, and items 3, 4, 5, 6 and 13 on 2026-09-13**, and each keeps its entry below - the delivered note first, then the reasoning that produced it. Item 13 was never on this list before it was built, and is recorded after the fact because it changed files the other items name and leaves a decision open that item 9 has to close. The other six are decided but not built. They sit here rather than in [Known
@@ -30,7 +30,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~4~~ | ~~Stopping a turn~~ — **delivered 2026-09-13** | `PersonaRunner`, `Chat.razor` | shipped; Stop means this Agent now, and a stopped Turn is not a failure |
 | ~~5~~ | ~~Tool-call visibility~~ — **delivered 2026-09-13** | `PersonaRunner`'s event loop | shipped as one `ToolActivity` Envelope, not two; the bump it forced was spent on 3 as well |
 | ~~6~~ | ~~CSS tokenisation and dark mode~~ — **delivered 2026-09-13** | `wwwroot/app.css`, then `theme.css` and `themes/` beside it | shipped; the file was twice the size this list claimed, and a stylesheet that had never loaded had to be fixed first |
-| 7 | Theme import | a new generator that writes CSS | the 39 tokens, `ThemeTokens.All`, `ThemeCatalog`, and a per-token fallback that already works |
+| 7 | Theme import | a JSON-to-`MudTheme` mapper | `ThemeCatalog`, and MudBlazor's `Palette` as the key set — **no CSS generator and no file provider needed any more**, see [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md) |
 | 8 | Following a Room without being Mentioned | `ReplyGate.cs`, a new App Tool pair | `create_room` returns the Room id |
 | 9 | Per-Persona tool grants | `DotAcpAgentHostFactory`, `PersonaFrontmatter` | tools already built per `agentId`; `_` fields reserved |
 | ~~10~~ | ~~Persona frontmatter becomes the Member's identity~~ — **delivered 2026-09-12** | `PersonaIndex`, `PersonaStore`, `MentionParser` | shipped; `Persona.cs` was not touched |
@@ -293,6 +293,23 @@ something else is supplying the values.
 
 ## 7. Theme import
 
+> **Amended 2026-09-14 by [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md).**
+> Theming moved to MudBlazor's `MudTheme`, and this item got *simpler*. It is no longer
+> a generator that writes CSS: an imported Theme is a **JSON-to-object mapping** onto
+> MudBlazor's `Palette` properties, deserialised from `{DataDir}/themes/*.json` and
+> appended to `ThemeCatalog.BuiltIn`. That removes the awkward consequence ADR-0009
+> closed on — `MapStaticAssets` is manifest-driven and cannot serve a file written at
+> run time, so the old design needed its own `PhysicalFileProvider` and URL space. None
+> of that is required now.
+>
+> Two things below are therefore **wrong** and kept only as the reasoning that produced
+> the item: `ThemeTokens.All` no longer exists (MudBlazor's `Palette` is the key set),
+> and the per-token cascade fallback is gone (a `MudTheme` is a complete object, so
+> there is nothing to fall through to — an importer must fill every property it cares
+> about). `tokenColors` work is unaffected and still hangs off `--font-mono`, which
+> survives in `app-vars.css` as the one app-owned custom property.
+
+
 Generating a stylesheet from an imported theme, rather than reading theme JSON at
 runtime, is the right call: the output is inspectable, diffable and cacheable,
 and the app keeps one loading path for CSS whether a theme was imported or
@@ -345,6 +362,11 @@ self-contained**: a self-contained stylesheet resolves an unmapped token to *emp
 which is exactly the surface-blanking failure this entry names as the trap. For the
 same reason it must never rewrite `theme.css`'s own `:root` block — that block is where
 the fallback lives.
+
+**Superseded by ADR-0010 — see the amendment at the top of this item.** The paragraph
+below described `ThemeTokens.All` as the mapping's key set; that type no longer exists,
+and MudBlazor's `Palette` properties took its place. `ThemeCatalog` is still the
+dropdown's single source. Kept as written because the *argument* still holds:
 
 **`ThemeTokens.All` is the mapping's key set, and `ThemeCatalog` is the dropdown's
 single source.** Item 7 adds a directory enumeration that appends descriptors to the

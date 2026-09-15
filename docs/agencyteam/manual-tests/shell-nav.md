@@ -1,12 +1,24 @@
 # Application shell, navigation and layout
 
-Prove the Agency.Huddle two-column shell holds together: that the five routes (`/`, `/rooms/{RoomId}`, `/teammates`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px sidebar with **New chat**, the live room list, **Teammates** and **Settings** is identical on every one of them, and above all that the shell's own assets actually load. The last part is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
+Prove the Agency.Huddle shell holds together: that the five routes (`/`, `/rooms/{RoomId}`, `/teammates`, `/settings`, `/settings/{Tab}`) resolve, that the fixed 240px `MudDrawer` with **New chat**, the live room list, **Teammates** and **Settings** is identical on every one of them, and above all that the shell's own assets actually load. The last part is the reason this area is tested by hand: `@Assets["..."]` hands back an unresolved key verbatim instead of throwing, so a stale stylesheet or script name renders as an ordinary-looking href that 404s with no build warning, no startup error, no log line and no visual error. That exact failure shipped live for a month after the 2026-09-12 namespace rename. Nothing in this area needs a Claude turn, so every test below is free.
 
-**29 tests** · 29 free, none paid · about 2.9 hours.
+**27 active, 2 retired** · 27 free, none paid · about 2.7 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
 defines the terminals, states, procedures and oracles this page names. Both are assumed below.
+
+> [!NOTE]
+> This area was updated on 2026-09-14 for the MudBlazor migration. The shell is now
+> `MudLayout`/`MudDrawer`/`MudMainContent` with `MudNavMenu` (Stage 5), and the theming system the
+> shell used to link as CSS files (`theme.css`, `themes/huddle-dark.css`, an inline per-token
+> `<style>` override) is gone — see [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md) and
+> `appearance-theme.md`, which now owns every theme-application test. SHELLNAV-21 and SHELLNAV-22
+> tested that retired CSS cascade and are **retired in place**, not renumbered. The
+> `@Assets[...]` asset-loading checks this file leads with (SHELLNAV-01, -02) are unaffected in
+> kind, but the asset LIST changed: two MudBlazor static assets, `_content/MudBlazor/MudBlazor.min.css`
+> and `.min.js`, were added, unfingerprinted, and a new fingerprinted stylesheet, `app-vars.css`,
+> was added alongside `app.css`.
 
 ## Setup
 
@@ -24,11 +36,11 @@ standing conventions. This area adds:
 
 ## Tests
 
-### SHELLNAV-01 — Every stylesheet the shell links is fingerprinted and actually serves
+### SHELLNAV-01 — Every stylesheet the shell links is fingerprinted (except the one that is deliberately static) and actually serves
 
 **Free** · about 5 min
 
-*Proves the three `@Assets[...]` stylesheet lookups resolved, catching the silent 404 that shipped for a month after the namespace rename.*
+*Proves the three `@Assets[...]` stylesheet lookups resolved, catching the silent 404 that shipped for a month after the namespace rename — and confirms the one stylesheet that is NOT supposed to be fingerprinted, MudBlazor's own, is linked first and still serves.*
 
 **Before you start**
 
@@ -39,7 +51,7 @@ standing conventions. This area adds:
 
 1. In `T-B` run: `$html = curl.exe -s http://localhost:5100/ | Out-String`
 2. Run: `[regex]::Matches($html, '<link rel="stylesheet" href="([^"]+)"') | ForEach-Object { $_.Groups[1].Value }`
-3. Write down every href it printed.
+3. Write down every href it printed, in order.
 4. For each href printed, run: `curl.exe -s -o NUL -w "%{http_code}" "http://localhost:5100/<paste the href here>"` and record the three-digit status it prints.
 5. Run: `([regex]::Matches($html, 'Team\.App')).Count`
 6. In the browser, press Ctrl+Shift+R to hard-reload. In DevTools Network, set the filter to **CSS**.
@@ -47,31 +59,40 @@ standing conventions. This area adds:
 
 **Pass if — all of these**
 
-- Step 2 printed exactly three hrefs.
-- Each of the three hrefs contains a fingerprint - a dot-separated random-looking segment before `.css`, e.g. `theme.ce2n94aiaf.css`, `app.okpt0txbqy.css`, `Huddle.App.z3g6d1kai5.styles.css`.
+- Step 2 printed exactly FOUR hrefs, in this order: `_content/MudBlazor/MudBlazor.min.css` (no fingerprint — see notes), then three fingerprinted ones for `app.css`, `app-vars.css` and `Huddle.App.styles.css`.
+- Each of the LAST three hrefs contains a fingerprint - a dot-separated random-looking segment before `.css`, e.g. `app.okpt0txbqy.css`, `app-vars.a1b2c3d4e5.css`, `Huddle.App.z3g6d1kai5.styles.css`.
 - Every status printed in step 4 is `200`.
 - Step 5 printed `0`.
 - Every row in the DevTools CSS list shows status 200; no row shows 404.
 
 **Fail if — any of these**
 
-- An href is the plain key with no hash in it - `theme.css`, `app.css` or `Huddle.App.styles.css` -> the `@Assets[...]` lookup for that key failed and returned the key verbatim; the browser will 404 on it with no error anywhere. This is the documented silent failure and is a defect.
-- Any status in step 4 is 404 -> that stylesheet is not being served at all; expect the error-banner and reconnect-modal symptoms in SHELLNAV-03 and SHELLNAV-25 as well.
+- Any of the three `@Assets[...]` hrefs is the plain key with no hash in it - `app.css`, `app-vars.css` or `Huddle.App.styles.css` -> the `@Assets[...]` lookup for that key failed and returned the key verbatim; the browser will 404 on it with no error anywhere. This is the documented silent failure and is a defect.
+- The FIRST href (`_content/MudBlazor/MudBlazor.min.css`) carries a fingerprint, or is missing entirely -> either someone routed it through the fingerprinting pipeline by mistake (it should not need to, and does not go through `@Assets[...]`), or the reference was dropped from `App.razor`.
+- Any status in step 4 is 404 -> that stylesheet is not being served at all; expect the error-banner symptom in SHELLNAV-03 as well.
 - Step 5 printed anything other than 0 -> the pre-rename bundle name `Team.App.styles.css` is back in App.razor. The scoped-CSS bundle is correctly named `Huddle.App.styles.css` because projects and assemblies are `Huddle.*` while namespaces are `Agency.Huddle.*`; a `Team.App` reference is the real bug.
-- Fewer than three hrefs -> a `<link>` was removed from App.razor; the layering in SHELLNAV-21 will also be wrong.
+- Fewer than four hrefs, or a different order -> a `<link>` was removed from, or reordered in, `App.razor`. Order matters here: `App.razor`'s own comment explains that MudBlazor's reset must load FIRST so the app's own bare-element CSS rules win source-order ties.
 
 **Inconclusive if**
 
-If `curl.exe` is not found, use the browser instead: View Source (Ctrl+U) on http://localhost:5100/, read the three `<link rel="stylesheet">` hrefs, and click each one - a 404 page rather than CSS text is a fail. If the app is not listening (connection refused), that is not a result for this test - fix the launch and re-run.
+If `curl.exe` is not found, use the browser instead: View Source (Ctrl+U) on http://localhost:5100/, read the four `<link rel="stylesheet">` hrefs, and click each one - a 404 page rather than CSS text is a fail. If the app is not listening (connection refused), that is not a result for this test - fix the launch and re-run.
+
+> [!NOTE]
+> `theme.css` is gone — the hand-built theming system it belonged to was replaced by `MudTheme`
+> (see `appearance-theme.md`). `app-vars.css` is new: it declares `--font-mono`, the one token
+> MudBlazor's own theme has no equivalent for. `_content/MudBlazor/MudBlazor.min.css` is a static
+> asset served straight from the NuGet package's `staticwebassets`, not through `@Assets[...]`, so
+> it is correctly and deliberately unfingerprinted — do not report its bare filename as the same
+> defect class as the other three.
 
 > [!NOTE]
 > This is the single highest-value check in the area. Run it first and re-run it after any change to App.razor. The automated guard `tests/Huddle.Tests/Ui/AppStylesheetTests.cs` covers exactly this for stylesheets, so a failure here means that test also broke.
 
-### SHELLNAV-02 — Both shell scripts are fingerprinted and serve - the gap the automated guard does not cover
+### SHELLNAV-02 — Every shell script is fingerprinted (except MudBlazor's own) and serves - the gap the automated guard does not cover
 
 **Free** · about 5 min
 
-*Proves `blazor.web.js` and `app.js` resolved, which no test in the repo checks because the automated regex matches only `<link rel="stylesheet">`.*
+*Proves `blazor.web.js` and `app.js` resolved, which no test in the repo checks because the automated regex matches only `<link rel="stylesheet">` — and that MudBlazor's own script, linked BEFORE both, is present and correctly unfingerprinted.*
 
 **Before you start**
 
@@ -82,27 +103,30 @@ If `curl.exe` is not found, use the browser instead: View Source (Ctrl+U) on htt
 
 1. In `T-B` run: `$html = curl.exe -s http://localhost:5100/ | Out-String`
 2. Run: `[regex]::Matches($html, '<script[^>]*src="([^"]+)"') | ForEach-Object { $_.Groups[1].Value }`
-3. Write down every src printed.
+3. Write down every src printed, in order.
 4. For each src, run: `curl.exe -s -o NUL -w "%{http_code}" "http://localhost:5100/<paste the src here>"` and record the status.
 5. In the browser, press Ctrl+Shift+R. In DevTools Network, set the filter to **JS**.
 6. Read the Status column for every row in the filtered JS list.
 7. In the DevTools Console, type `typeof window.teamComposer` and press Enter.
 8. Type `typeof window.teamScroll` and press Enter.
+9. Type `typeof window.Mud` (or `typeof MudBlazor`, whichever the console autocompletes) and press Enter, to confirm MudBlazor's own script executed.
 
 **Pass if — all of these**
 
-- Step 2 printed at least three srcs: one ending `_framework/blazor.web.<hash>.js`, one ending `app.<hash>.js`, and one ending `Components/Layout/ReconnectModal.razor.<hash>.js`.
-- Every src carries a fingerprint segment; none is the bare key `app.js` or `_framework/blazor.web.js`.
+- Step 2 printed, in this order: `_content/MudBlazor/MudBlazor.min.js` (no fingerprint — deliberate, see notes), then one ending `_framework/blazor.web.<hash>.js`, then one ending `app.<hash>.js`, and one ending `Components/Layout/ReconnectModal.razor.<hash>.js`.
+- The LAST two of those carry a fingerprint segment; neither is the bare key `app.js` or `_framework/blazor.web.js`.
 - Every status in step 4 is `200`.
 - No row in the DevTools JS list shows 404.
-- Step 7 printed `"object"`.
-- Step 8 printed `"object"`.
+- Step 7 and step 8 both printed `"object"`.
+- Step 9 confirms MudBlazor's own script object exists (does not print `"undefined"`).
 
 **Fail if — any of these**
 
 - `app.js`'s src has no hash, or 404s, or step 7 printed `"undefined"` -> the `@Assets["app.js"]` key did not resolve. Nothing on screen says so; the symptom is that pressing Enter in the composer inserts a newline instead of sending, and the transcript never auto-scrolls. Confirm with SHELLNAV-19 and report as a defect plus a test-coverage gap.
 - `blazor.web.js` 404s -> nothing on the page will be interactive and no `_blazor` websocket will open. Loud, but the same root cause.
-- `ReconnectModal.razor.js` 404s -> the reconnect modal in SHELLNAV-25 will never appear at all.
+- `MudBlazor.min.js` 404s, or step 9 shows nothing loaded -> every MudBlazor interactive feature (dialogs, popovers, ripples) will silently fail to initialise.
+- `ReconnectModal.razor.js` never appears anywhere in the document -> the reconnect modal in SHELLNAV-26 will never appear at all.
+- `MudBlazor.min.js`'s src carries a fingerprint -> it was routed through the fingerprinting pipeline by mistake; it is a static asset and should not need to be.
 
 **Inconclusive if**
 
@@ -314,11 +338,11 @@ None expected. If the app is not listening, fix the launch first.
 > [!NOTE]
 > Confirmed working today; treat any failure here as a routing-configuration regression in `Program.cs`.
 
-### SHELLNAV-08 — The sidebar is present, identical and fixed-width on every route
+### SHELLNAV-08 — The drawer is present, identical and fixed-width on every route
 
 **Free** · about 8 min
 
-*Proves no page declares its own layout and the shell's chrome never varies.*
+*Proves no page declares its own layout and the shell's chrome never varies. The shell is now `MudLayout`/`MudDrawer`/`MudMainContent` (Stage 5 of the MudBlazor migration) — the old hand-rolled `.app-grid` CSS grid and its `.sidebar` / `.sidebar-link` classes are gone, but the drawer is still pinned to exactly the same 240px the old grid column was.*
 
 **Before you start**
 
@@ -327,36 +351,36 @@ None expected. If the app is not listening, fix the launch first.
 **Steps**
 
 1. In the browser, navigate to `http://localhost:5100/` and let it redirect to a room.
-2. In the DevTools Console, type `getComputedStyle(document.querySelector('.app-grid')).gridTemplateColumns` and press Enter. Record the value.
-3. Type `[...document.querySelectorAll('.sidebar > *')].map(e => e.className || e.tagName)` and press Enter. Record the order.
-4. Type `[...document.querySelectorAll('.sidebar-link')].map(a => a.textContent.trim() + ' -> ' + a.getAttribute('href'))` and press Enter. Record the result.
+2. In the DevTools Console, type `getComputedStyle(document.querySelector('.mud-drawer')).width` and press Enter. Record the value.
+3. Type `[...document.querySelectorAll('.mud-drawer > *')].map(e => e.className || e.tagName)` and press Enter. Record the order (the drawer's own direct children — `NewChat`, `RoomList` and `MudNavMenu`, each rendering as a `<div>`).
+4. Type `[...document.querySelectorAll('.mud-drawer .mud-nav-link')].filter(a => a.getAttribute('href') === '/teammates' || a.getAttribute('href') === '/settings').map(a => a.textContent.trim() + ' -> ' + a.getAttribute('href'))` and press Enter. Record the result.
 5. Type `getComputedStyle(document.querySelector('.main-column')).overflow` and press Enter.
 6. Click **Teammates** in the sidebar and repeat steps 2 to 5.
 7. Click **Settings** in the sidebar and repeat steps 2 to 5.
 8. Navigate to `http://localhost:5100/settings/appearance` and repeat steps 2 to 5.
-9. On the Settings route, scroll the sidebar with the mouse wheel while hovering over it, then scroll while hovering over the main column.
+9. On the Settings route, scroll the drawer with the mouse wheel while hovering over it, then scroll while hovering over the main column.
 
 **Pass if — all of these**
 
-- Step 2 printed `240px` followed by a second pixel value, on all four routes.
-- Step 3 shows, in order: the `new-chat` block, the `room-list` block, then two `sidebar-link` anchors - on all four routes.
-- Step 4 printed exactly `Teammates -> /teammates` and `Settings -> /settings`, in that order, on all four routes - those two exact words, nothing else.
-- Step 5 printed `"hidden"` on all four routes.
-- The sidebar scrolls independently; the browser window itself never grows a page-level horizontal or vertical scrollbar.
+- Step 2 printed `240px` on all four routes.
+- Step 3 shows exactly three direct children, in order, on all four routes.
+- Step 4 printed exactly `Teammates -> /teammates` and `Settings -> /settings`, in that order, on all four routes — MudBlazor renders the link text as typed (title case), not upper case, since `MudNavLink` is not a button or tab label.
+- Step 5 printed `"hidden"` on all four routes — `.main-column` is still the literal `Class` MudMainContent carries and its CSS rule is unchanged.
+- The drawer scrolls independently; the browser window itself never grows a page-level horizontal or vertical scrollbar.
 
 **Fail if — any of these**
 
-- The sidebar is missing on one route -> that page declared its own layout instead of inheriting MainLayout. Defect, and the route is unreachable from anywhere else.
+- The drawer is missing on one route -> that page declared its own layout instead of inheriting MainLayout. Defect, and the route is unreachable from anywhere else.
 - A link label reads anything other than `Teammates` or `Settings` -> the shell's navigation wording drifted.
-- `gridTemplateColumns` does not start `240px` -> the fixed-width grid changed; check whether a responsive rule was added, which this shell deliberately does not have.
-- The whole page scrolls instead of only the sidebar and the transcript -> `.main-column`'s `height: 100vh; overflow: hidden` was lost.
+- `.mud-drawer`'s computed width is not `240px` -> the `Width="240px"` parameter on `MudDrawer` was changed or removed.
+- The whole page scrolls instead of only the drawer and the transcript -> `.main-column`'s `height: 100vh; overflow: hidden` was lost.
 
 **Inconclusive if**
 
 If the console commands return `null`, the page had not finished rendering - wait for the Network tab to go quiet and re-run. If you resized the window very narrow, the main column will simply squeeze; that is expected, see notes.
 
 > [!NOTE]
-> KNOWN LIMIT, NOT A BUG: there is no responsive or collapsible sidebar. `.app-grid` is a fixed `240px 1fr`, so a narrow window squeezes the main column. This is a single-user proof of concept with no mobile layout to regress - do not file it.
+> KNOWN LIMIT, NOT A BUG: there is no responsive or collapsible drawer here — `MudDrawer`'s `Variant="DrawerVariant.Persistent"` and fixed `Width="240px"` mean a narrow window squeezes the main column exactly as the old `.app-grid` did. This is a single-user proof of concept with no mobile layout to regress - do not file it.
 
 ### SHELLNAV-09 — The sidebar marks exactly one room active, with aria-current
 
@@ -396,7 +420,7 @@ If the console commands return `null`, the page had not finished rendering - wai
 If only one room exists, the 'other room is plain' half cannot be judged - note it as partially inconclusive and run SHELLNAV-18 first to create a second room.
 
 > [!NOTE]
-> The highlight is `--surface-selected` plus `font-weight: 600`. If the tint is invisible but `aria-current` is correct, suspect the stylesheet rather than the routing - check SHELLNAV-01. An assertion on `aria-current` was removed: Blazor's built-in NavLink has never emitted that attribute, so the assertion would fail against correct code. Judge the active-link state by the applied CSS class alone.
+> The highlight is no longer a hand-written `.room-list a.active` rule in `app.css` — the room list is now `MudNavMenu`/`MudNavLink` (Stage 5 of the MudBlazor migration), which carries its OWN active styling out of `MudBlazor.min.css`, keyed off the same literal `active` class `NavLink` has always applied. `.room-list a.active` as a selector still matches (`.room-list` still wraps the list, and `MudNavLink` still renders `<a class="mud-nav-link ... active">`), so the query in step 2 is unchanged. If the tint is invisible but the class is present, suspect a missing MudBlazor stylesheet - check SHELLNAV-01, not `app.css`. An assertion on `aria-current` was removed: Blazor's built-in NavLink has never emitted that attribute, so the assertion would fail against correct code. Judge the active-link state by the applied CSS class alone.
 
 ### SHELLNAV-10 — /teammates renders, and a bare page load spawns no node process
 
@@ -459,18 +483,18 @@ If a `node` process was already running before the app started (another tool on 
 1. In the browser, click **Settings** in the sidebar.
 2. Read the address bar.
 3. Read the `<h1>`.
-4. Read the labels of the buttons in the left tab rail, top to bottom.
-5. In the DevTools Console, type `[...document.querySelectorAll('.settings-tab')].map(b => b.textContent.trim() + ' | active=' + b.classList.contains('settings-tab-active'))` and press Enter.
-6. Read the pane on the right and confirm it describes hooks - it should contain the sentence beginning `A hook is one piece of wording this application sends to a model`.
+4. Read the labels of the buttons in the tab rail ABOVE the content — `MudTabs` renders horizontally at the top by default; it is no longer a column down the left. Read left to right.
+5. In the DevTools Console, type `[...document.querySelectorAll('.mud-tabs .mud-tab')].map(b => b.textContent.trim() + ' | active=' + b.classList.contains('mud-tab-active'))` and press Enter.
+6. Read the pane below and confirm it describes hooks - it should contain the sentence beginning `A hook is one piece of wording this application sends to a model`.
 7. In `T-B` run `O-ADAPTERS` and compare with the baseline.
 
 **Pass if — all of these**
 
 - The address bar reads exactly `http://localhost:5100/settings` with no segment appended on load.
 - The `<h1>` reads exactly `Settings`.
-- The tab rail holds exactly two buttons, reading `Hooks` then `Appearance`, in that order.
+- The tab rail holds exactly two buttons, reading `HOOKS` then `APPEARANCE` (MudBlazor renders tab labels upper case; step 5's `textContent` still reads `Hooks` / `Appearance`), left to right, above the pane.
 - Step 5 printed `Hooks | active=true` and `Appearance | active=false`.
-- The right-hand pane is the Hooks pane.
+- The pane below is the Hooks pane.
 - A reset control is present in the page header beside the heading.
 - The `node` count is unchanged from the baseline.
 
@@ -480,6 +504,7 @@ If a `node` process was already running before the app started (another tool on 
 - The Appearance pane shows on a bare `/settings` -> the fallback picked the wrong tab.
 - The address bar gains `/hooks` on load -> the page is redirecting where it should not, which would put a spurious entry in the browser history on every visit.
 - The `node` count rises -> Settings is spawning an adapter, which it must never do.
+- The tab rail renders as a vertical column down the left rather than horizontally above the content -> `MudTabs.Position` was set away from its default; nothing in this area asks for that.
 
 **Inconclusive if**
 
@@ -504,7 +529,7 @@ If the Hooks pane shows an error line above the tab rail, read it and note it, b
 1. In the browser, navigate to `http://localhost:5100/settings`.
 2. Click the **Appearance** tab button.
 3. Read the address bar.
-4. Confirm the right-hand pane now shows a `Theme` dropdown and a paragraph naming the overrides file path.
+4. Confirm the pane below now shows a `Theme` select, a second `Appearance`-labelled select, and a paragraph naming the selection-file path.
 5. Click the **Hooks** tab button.
 6. Read the address bar.
 7. Press the browser Back button once and read the address bar.
@@ -512,14 +537,14 @@ If the Hooks pane shows an error line above the tab rail, read it and note it, b
 9. Press Back a third time and read the address bar.
 10. Open a brand-new browser tab and paste `http://localhost:5100/settings/appearance`, then press Enter.
 11. Read which tab is active in that new tab.
-12. In `T-B` run: `$s = curl.exe -s http://localhost:5100/settings/appearance | Out-String; [regex]::Match($s, 'settings-tab-active">([A-Za-z]+)').Groups[1].Value`
+12. In `T-B` run: `$s = curl.exe -s http://localhost:5100/settings/appearance | Out-String; [regex]::Match($s, 'mud-tab-active"[^>]*>([A-Za-z]+)').Groups[1].Value`
 
 **Pass if — all of these**
 
 - After step 2 the address bar reads `http://localhost:5100/settings/appearance`.
 - After step 5 the address bar reads `http://localhost:5100/settings/hooks`.
 - Back walks `…/settings/hooks` -> `…/settings/appearance` -> `…/settings`, one step at a time.
-- The fresh tab from step 10 opens directly with **Appearance** active and the Theme dropdown showing.
+- The fresh tab from step 10 opens directly with **Appearance** active and the `Theme` select showing.
 - Step 12 printed `Appearance`.
 
 **Fail if — any of these**
@@ -548,7 +573,7 @@ If the browser was already deep in history from earlier tests, the Back sequence
 **Steps**
 
 1. In `T-B` run each of these and record the status and the active tab it reports:
-2. `$u='http://localhost:5100/settings/bogus'; curl.exe -s -o NUL -w "%{http_code} " $u; $s = curl.exe -s $u | Out-String; [regex]::Match($s,'settings-tab-active">([A-Za-z]+)').Groups[1].Value`
+2. `$u='http://localhost:5100/settings/bogus'; curl.exe -s -o NUL -w "%{http_code} " $u; $s = curl.exe -s $u | Out-String; [regex]::Match($s,'mud-tab-active"[^>]*>([A-Za-z]+)').Groups[1].Value`
 3. Repeat the previous command with `$u='http://localhost:5100/settings/HOOKS'`.
 4. Repeat with `$u='http://localhost:5100/settings/Appearance'`.
 5. Repeat with `$u='http://localhost:5100/settings/APPEARANCE'`.
@@ -704,7 +729,7 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 
 **Free** · about 7 min
 
-*Proves the sidebar's one interactive control opens, reflects real agent status, and refuses to start an empty chat.*
+*Proves the sidebar's one interactive control opens, reflects real agent status, and refuses to start an empty chat. The disclosure is now `MudCollapse` (Stage 5 of the MudBlazor migration) rather than an always-in-the-DOM panel toggled by the `hidden` attribute, and its checkboxes are `MudCheckBox`, but the status dots are unchanged — `StatusDot.razor` still renders a plain `<span class="agent-dot ...">` with a `title` attribute.*
 
 **Before you start**
 
@@ -715,11 +740,11 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 1. In the browser, open any room page.
 2. Click **New chat** at the top of the sidebar.
 3. Confirm a panel opens below the button.
-4. In the DevTools Console, type `document.querySelector('.new-chat-panel').hidden` and press Enter.
+4. In the DevTools Console, type `document.querySelector('.new-chat .mud-collapse-container').getBoundingClientRect().height > 0` and press Enter.
 5. Read the panel: confirm one checkbox per agent, each with a small coloured dot before the name.
 6. Hover the mouse over one dot and wait for the tooltip. Read it.
 7. In the Console, type `[...document.querySelectorAll('.agent-dot')].map(d => d.title)` and press Enter. Record the array.
-8. In the Console, type `document.querySelector('.new-chat-start').disabled` and press Enter.
+8. In the Console, type `[...document.querySelectorAll('.new-chat button')].find(b => b.textContent.trim() === 'Start chat').disabled` and press Enter.
 9. Tick the checkbox beside `echo`.
 10. Re-run the Console command from step 8.
 11. Untick `echo`.
@@ -729,11 +754,11 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 
 **Pass if — all of these**
 
-- Step 4 printed `false` while the panel is open, and `true` after step 13 collapses it.
+- Step 4 printed `true` while the panel is open, and `false` after step 13 collapses it.
 - Every agent has a checkbox and a coloured dot.
 - The tooltip text is exactly one of `online`, `offline`, `starting` or `degraded` - lowercase, single word.
 - Step 7's array contains only those four words.
-- Step 8 printed `true` - the button reads **Start chat** and is disabled while nothing is ticked.
+- Step 8 printed `true` - the button reads **Start chat** (MudBlazor renders it upper case, `START CHAT`; `textContent` still reads `Start chat`) and is disabled while nothing is ticked.
 - Step 10 printed `false` - ticking one agent enables it.
 - Step 12 printed `true` again after unticking.
 
@@ -746,7 +771,7 @@ If the Console was cleared by a DevTools setting rather than by a reload, `windo
 
 **Inconclusive if**
 
-The panel markup is ALWAYS present in the DOM and merely carries the `hidden` attribute - so do not judge open/closed from View Source or a `curl.exe` fetch, only from `.hidden` or the eye. If no agents are listed at all, this test cannot run; that is SHELLNAV-26's territory - confirm `Team:DemoAgent:Enabled` is true in `appsettings.json` and restart.
+`MudCollapse` keeps its content in the DOM at all times and animates height, so do not judge open/closed from View Source or a `curl.exe` fetch — use the `.mud-collapse-container` height (or the eye) as in step 4. If no agents are listed at all, this test cannot run; that is SHELLNAV-28's territory - confirm `Team:DemoAgent:Enabled` is true in `appsettings.json` and restart.
 
 > [!NOTE]
 > Cross-check the dot colours against the health and presence lines in `T-A` for the same agent name; they must agree.
@@ -893,109 +918,19 @@ If TERMINAL C cannot connect to the pipe (`\\.\pipe\team`), the bot never regist
 > [!NOTE]
 > Leave TERMINAL C's bot running or press Ctrl+C in it when done - either is fine. The `mybot` room persists in `team.db` and will appear in later tests; that is expected.
 
-### SHELLNAV-21 — Choosing a theme layers a fourth stylesheet AFTER the base one, and reloads the page
+### SHELLNAV-21 — RETIRED: choosing a theme layering a fourth stylesheet after the base one, and reloading the page
 
-**Free** · about 8 min
+**Retired 2026-09-14.** This test proved the `<head>` layering order of a hand-built `themes/huddle-dark.css` stylesheet against the base `theme.css`, and that selecting a theme forced a full page reload. Neither exists any more: there is no `themes/` folder, and `appearance-theme.md`'s APPEARANCETHEME-04 now proves the opposite of the reload assertion — a Theme or dark-mode change applies immediately with NO page load, through `MudThemeProvider`. See [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md). No successor test lives here; `appearance-theme.md` owns every theme-application test now.
 
-*Proves the <head> layering order, which nothing else in the app can observe, and that the theme stylesheet is actually served.*
+### SHELLNAV-22 — RETIRED: a hand-edited token override injected as an inline `<style>` after both stylesheet links
 
-**Before you start**
+**Retired 2026-09-14.** Per-token overrides (`--font-chat` and the other 37 custom properties `wwwroot/theme.css` used to declare) no longer exist, and nothing in this application emits a Human-supplied value into a `<style>` element any more. See `appearance-theme.md`'s APPEARANCETHEME-10 through -13 (also retired) and [known-limits.md](../known-limits.md). No successor test lives here.
 
-- App running.
-- `src/Huddle.App/App_Data/appearance.json` may or may not exist - both are fine.
+### SHELLNAV-23 — A bad appearance.json does not break the shell: no theme link, no blank page, only a log warning
 
-**Steps**
+**Free** · about 5 min
 
-1. In `T-B` run: `Test-Path src/Huddle.App/App_Data/appearance.json`. Record the answer.
-2. In the browser, navigate to `http://localhost:5100/settings/appearance`.
-3. In the DevTools Console, type `[...document.querySelectorAll('link[rel=stylesheet]')].map(l => l.getAttribute('href'))` and press Enter. Record the array.
-4. In the Console, type `document.querySelectorAll('head style').length` and press Enter.
-5. Read the intro sentence above the Theme control.
-6. Open the **Theme** dropdown and read every option.
-7. Select **Dark**.
-8. Observe the page as it changes.
-9. Re-run the Console command from step 3 and record the new array.
-10. In `T-B` run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/themes/huddle-dark.css`
-11. Run: `curl.exe -s -o NUL -w "%{http_code}" http://localhost:5100/themes/huddle-light.css`
-12. Run: `Get-Content src/Huddle.App/App_Data/appearance.json`
-13. Set the **Theme** dropdown back to **System** and re-run the Console command from step 3.
-
-**Pass if — all of these**
-
-- Before choosing a theme, step 3 returned exactly three hrefs and step 4 printed `0` - no `themes/` link and no `<style>` element at all.
-- The intro reads `Pick a theme, or leave it on System to follow your device's own light or dark setting.`
-- The dropdown offers exactly three options: `System`, `Light`, `Dark`.
-- Selecting **Dark** does a FULL page reload - the page blanks briefly and comes back dark. That is expected, see notes.
-- After choosing Dark, step 9 returns FOUR hrefs, and the fourth is `themes/huddle-dark.css` - unfingerprinted, and positioned AFTER the fingerprinted `theme.<hash>.css`, `app.<hash>.css` and `Huddle.App.<hash>.styles.css`.
-- Steps 10 and 11 both printed `200`.
-- `appearance.json` contains `"theme": "huddle-dark"`.
-- Setting the dropdown back to **System** returns the list to three hrefs.
-
-**Fail if — any of these**
-
-- The `themes/…` link appears BEFORE `theme.<hash>.css` -> the base theme would override the selected one and the theme silently does nothing. Nothing else in the app can see this ordering; this test is the only guard. Defect.
-- `curl.exe` on `themes/huddle-dark.css` returns 404 -> the page renders light with no error anywhere. Defect.
-- The `themes/` href carries a fingerprint hash -> it is being routed through the fingerprinting pipeline, which is deliberately NOT how these are built; check that the file still resolves.
-- Selecting Dark does not visibly change the page but the link IS present -> the stylesheet loaded but its tokens are not taking; check whether `theme.css` also loaded (SHELLNAV-01).
-
-**Inconclusive if**
-
-If step 1 said `False` and the file still does not exist after choosing a theme, the app could not write to `App_Data` - check permissions and the `T-A` log, and report that as the finding rather than a layering failure. If the page did not reload on selecting Dark but the theme changed anyway, note it: the reload is the designed mechanism and its absence means something else is writing `<head>`.
-
-> [!NOTE]
-> KNOWN LIMITS, NOT BUGS: (a) the full reload on theme change is deliberate - `<head>` belongs to the server and Blazor's render tree cannot reach it; swapping the href over JavaScript was considered and rejected. (b) A selected theme has no per-mode pair: Dark stays dark even on a light OS; following the device means choosing System, which layers no theme at all. (c) `appearance.json` not existing on a fresh install is normal.
-
-### SHELLNAV-22 — A hand-edited token override is injected as an inline <style> after both stylesheet links
-
-**Free** · about 8 min
-
-*Proves the override layer lands last in <head>, so the human's own value wins over the theme.*
-
-**Before you start**
-
-- SHELLNAV-21 has run, so `src/Huddle.App/App_Data/appearance.json` exists.
-- SHELLNAV-19 has run, so the `echo` room has at least one message body on screen to see the font change.
-
-**Steps**
-
-1. In the browser, navigate to `http://localhost:5100/settings/appearance` and select **Dark** from the **Theme** dropdown so a theme link is present.
-2. In `T-B` run: `Get-Content src/Huddle.App/App_Data/appearance.json`. Record the exact current contents.
-3. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` in a text editor.
-4. Replace its entire contents with exactly: `{"theme": "huddle-dark", "overrides": {"--font-chat": "Georgia, serif"}}`
-5. Save the file and wait five seconds for the file watcher to pick it up.
-6. In the browser, press F5 to reload.
-7. In the DevTools Console, type `[...document.querySelectorAll('head link[rel=stylesheet], head style')].map(e => e.tagName + ':' + (e.getAttribute('href') || e.textContent.trim().replace(/\s+/g,' ')))` and press Enter. Record the ordered array.
-8. Click `echo` in the sidebar and look at the message text in the transcript.
-9. In the Console, type `getComputedStyle(document.querySelector('.message-body')).fontFamily` and press Enter.
-10. Navigate back to `http://localhost:5100/settings/appearance` and look for a section headed `Overrides that didn't load`.
-
-**Pass if — all of these**
-
-- Step 7's array ends with a `STYLE:` entry, and that entry is LAST - after all three fingerprinted `LINK:` entries and after the `LINK:themes/huddle-dark.css` entry.
-- The `STYLE:` entry's text contains `--font-chat: Georgia, serif;` inside a `:root {` block.
-- Step 9's computed font family names `Georgia` first.
-- The message text in the transcript visibly renders in a serif face, unlike the rest of the UI.
-- No `Overrides that didn't load` section appears on the Appearance tab - the override was accepted.
-
-**Fail if — any of these**
-
-- The `<style>` element appears BEFORE the `themes/` link -> the theme would win over the human's own override, which is backwards. Defect.
-- No `<style>` element appears at all -> the override was silently dropped; check the Appearance tab for a rejection line and `T-A` for a warning, and report whichever you find.
-- The computed font is unchanged while the `<style>` IS present -> the token is not the one the rule uses; note the token name and the rule rather than filing a layering bug.
-- The app REWROTE or reformatted your `appearance.json` -> the file must be left exactly as the human typed it. Defect.
-
-**Inconclusive if**
-
-If the transcript has no messages, step 8 and 9 cannot be judged - run SHELLNAV-19 first. If the file watcher does not pick up the edit (wait up to ten seconds, the debounce is about half a second), a full F5 should still show the new `<head>`; if even that does not, check that you edited the file under `src/Huddle.App/App_Data` and not a copy elsewhere.
-
-> [!NOTE]
-> CLEANUP: when finished, set the file back to what step 2 recorded, or set the Theme dropdown to **System** and delete `appearance.json`. Leaving the serif override in place will confuse later visual observations.
-
-### SHELLNAV-23 — A bad appearance.json is reported on screen and in the log, not swallowed, and the file is left alone
-
-**Free** · about 8 min
-
-*Proves an unknown theme and an unknown token both surface to the human instead of failing silently, and that the app never edits the human's file.*
+*The detailed validation behaviour for a bad theme id or dark-mode value — what is logged, what is (and, per known-limits.md, is no longer) shown on the Appearance tab — belongs to `appearance-theme.md`'s APPEARANCETHEME-14 now. This test keeps only the shell-level question: does a malformed selection file ever break the CHROME itself (a blank page, a missing stylesheet link, a crash)?*
 
 **Before you start**
 
@@ -1005,40 +940,32 @@ If the transcript has no messages, step 8 and 9 cannot be judged - run SHELLNAV-
 **Steps**
 
 1. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` in a text editor (create it if it does not exist).
-2. Replace its entire contents with exactly: `{"theme": "not-a-theme", "overrides": {"--not-a-token": "red"}}`
+2. Replace its entire contents with exactly: `{"theme": "not-a-theme", "dark": "not-a-mode"}`
 3. Save the file and wait five seconds.
 4. In `T-B` run: `Get-Content src/Huddle.App/App_Data/appearance.json`. Confirm it is byte-for-byte what you typed.
 5. In the browser, press F5 on any page.
-6. Observe whether the page renders normally, following your operating system's light/dark setting.
-7. In the DevTools Console, type `[...document.querySelectorAll('link[rel=stylesheet]')].map(l => l.getAttribute('href')).filter(h => h.includes('themes/'))` and press Enter.
-8. Navigate to `http://localhost:5100/settings/appearance`.
-9. Read the value showing in the **Theme** dropdown.
-10. Look for a section headed `Overrides that didn't load` and read every line in it.
-11. Scroll `T-A` and find the warning line logged when the file was read.
-12. Re-run the command from step 4 and confirm the file is STILL unchanged.
+6. Observe whether the page renders normally, following your operating system's light/dark setting, with the sidebar and all four stylesheets from SHELLNAV-01 still present.
+7. Scroll `T-A` and find the warning lines logged when the file was read.
+8. Re-run the command from step 4 and confirm the file is STILL unchanged.
 
 **Pass if — all of these**
 
-- The page renders normally with no blank or unstyled screen.
-- Step 7 returned an empty array - no `themes/` link is emitted at all.
-- The **Theme** dropdown reads `System`.
-- An `Overrides that didn't load` section is present and contains, as separate lines: `Theme 'not-a-theme' is not a known theme; the built-in theme is used instead.` and `'--not-a-token' is not a theme token; it was left in the file and ignored.`
-- `T-A` logged a warning naming the file path and the theme, reading: `Appearance file '...' selects theme 'not-a-theme', which is not a known theme; the built-in theme is used instead and the file is left unchanged.`
+- The page renders normally with no blank or unstyled screen, and the shell (drawer, room list, nav links) is intact.
+- `T-A` logged two warnings naming the file path and the bad values (see APPEARANCETHEME-14 for the exact wording).
 - The on-disk `appearance.json` is byte-identical to what you typed, both before and after.
 
 **Fail if — any of these**
 
-- A blank or unstyled page -> the shell linked `themes/not-a-theme.css`, which 404s. The bad value must never reach `<head>`. Defect.
+- A blank or unstyled page, or the shell fails to render -> a bad value must never be able to break the chrome itself, only fail to apply.
 - The app rewrote, reformatted or deleted your file -> it must leave a rejected entry exactly as it found it. Defect.
-- No message anywhere - not on the Appearance tab, not in `T-A` -> the human has no way to learn why their theme did nothing. Defect, and the worst kind: a silent one.
-- The `Overrides that didn't load` section shows only one of the two lines -> one of the two validators is not reporting.
+- No message anywhere, not even in `T-A` -> the human has no way to learn why their theme did nothing. Defect, and the worst kind: a silent one.
 
 **Inconclusive if**
 
 If the file watcher does not react within ten seconds, restart the app in `T-A` (remembering `$env:Team__Acp__Enabled = 'false'` first) and re-check - a watcher that needs a restart is itself worth noting, but judge the messages after the restart. If the JSON you pasted is malformed (a stray quote), the app may report a parse problem instead; retype it exactly and re-run.
 
 > [!NOTE]
-> CLEANUP: delete `src/Huddle.App/App_Data/appearance.json` when finished, so the shell returns to its three-stylesheet default. Absent is the correct fresh-install state.
+> CLEANUP: delete `src/Huddle.App/App_Data/appearance.json` when finished. Absent is the correct fresh-install state. For the on-tab reporting question (there is none any more — see known-limits.md) and the exact log wording, run APPEARANCETHEME-14 in `appearance-theme.md` instead of trying to reconstruct it here.
 
 ### SHELLNAV-24 — A deep link renders complete content on a cold first request, before any circuit attaches
 
@@ -1094,7 +1021,7 @@ If your machine is fast enough that you cannot judge the first paint by eye, tru
 
 **Free** · about 8 min
 
-*Proves the shared server-side state reaches every circuit, and records the deliberate per-installation theme behaviour.*
+*Proves the shared server-side state reaches every circuit. Before the MudBlazor migration a theme change needed a reload to reach a second tab's colours; now `AppearanceStore.AppearanceChanged` reaches every circuit and MudThemeProvider repaints immediately, so this test proves BOTH tabs update live — the detailed version of that proof lives in `appearance-theme.md`'s APPEARANCETHEME-20, and this test keeps only the shell-level room-list-plus-appearance combination.*
 
 **Before you start**
 
@@ -1107,32 +1034,29 @@ If your machine is fast enough that you cannot judge the first paint by eye, tru
 2. In TAB A, click **New chat**, tick `echo` and `alpha`, and click **Start chat**.
 3. Without touching TAB B, switch to it and read its sidebar.
 4. Switch back to TAB A and navigate to `http://localhost:5100/settings/appearance`.
-5. Select **Dark** from the **Theme** dropdown and let TAB A reload.
-6. Confirm TAB A is now dark.
-7. Switch to TAB B WITHOUT reloading it and note whether it is still light.
-8. In TAB B, click **Settings** in the sidebar (a normal navigation, not a refresh).
-9. Note whether TAB B is now dark.
-10. In TAB A, set the **Theme** dropdown back to **System**.
+5. Select `Dark` in the `Appearance` select.
+6. Confirm TAB A repaints dark IMMEDIATELY, with no page load.
+7. Switch to TAB B WITHOUT reloading or navigating it and note whether it is ALSO now dark.
+8. In TAB A, set the `Appearance` select back to `System`.
 
 **Pass if — all of these**
 
 - TAB B's sidebar gained the `echo, alpha` room with no refresh and no navigation.
-- TAB A reloads into the Dark theme.
-- TAB B keeps the old appearance until its next load or navigation.
-- After navigating in TAB B (step 8), TAB B is dark too.
+- TAB A repaints dark immediately, with no page load.
+- TAB B ALSO repaints dark within about half a second, with no refresh and no navigation — this is the behaviour change from before the migration; a second tab is no longer stuck on the old appearance until its next load.
 
 **Fail if — any of these**
 
 - TAB B never picks up the new room, even after a navigation -> that circuit's rooms-changed subscription is broken. Defect.
-- TAB B keeps the OLD theme even after a hard reload (Ctrl+Shift+R) -> the theme is being cached per browser rather than read from the server file. Defect.
-- TAB A does not change theme at all -> see SHELLNAV-21 first; this is the same defect.
+- TAB B does NOT update live and needs a reload or navigation to go dark -> `MainLayout`'s subscription to `AppearanceStore.AppearanceChanged` is not reaching every circuit; see `appearance-theme.md`'s APPEARANCETHEME-20 for the isolated version of this check.
+- TAB A does not change appearance at all -> see `appearance-theme.md`'s APPEARANCETHEME-04 first; this is the same defect.
 
 **Inconclusive if**
 
-If TAB B was on a route with no visible theme difference, you cannot judge the theme half - put TAB B on a room page with messages, where the surfaces are large, and repeat steps 4 to 9.
+If TAB B was on a route with no visible theme difference, you cannot judge the theme half - put TAB B on a room page with messages, where the surfaces are large, and repeat steps 4 to 7.
 
 > [!NOTE]
-> KNOWN LIMIT, NOT A BUG: the theme choice is per INSTALLATION, not per browser - it lives in `{DataDir}/appearance.json`. A second browser, a private window and a phone on the same install all see the same theme, and a second open tab keeps the old one until its next load. That is the deliberate consequence of this feature having no JavaScript and no localStorage. TAB B keeping the old theme until you navigate is correct.
+> KNOWN LIMIT, NOT A BUG: the theme choice is per INSTALLATION, not per browser - it lives in `{DataDir}/appearance.json`. A second browser, a private window and a phone on the same install all see the same theme. What changed in this migration is that a second OPEN TAB on the same install no longer needs its own reload to see it — see `appearance-theme.md` for the full story.
 
 ### SHELLNAV-26 — The reconnect modal shows exactly one state paragraph at a time when the server goes away
 
@@ -1245,9 +1169,9 @@ If step 6 still returns a redirect, `team.db` was not actually removed - confirm
 1. In the browser, navigate to `http://localhost:5100/`.
 2. Click **New chat** in the sidebar.
 3. Read the panel contents.
-4. In the DevTools Console, type `document.querySelector('.new-chat-start')` and press Enter.
-5. In the Console, type `document.querySelector('.new-chat-panel ul')` and press Enter.
-6. In the Console, type `[...document.querySelectorAll('.new-chat-panel code')].map(c => c.textContent)` and press Enter.
+4. In the DevTools Console, type `[...document.querySelectorAll('.new-chat button')].find(b => b.textContent.trim() === 'Start chat')` and press Enter.
+5. In the Console, type `document.querySelector('.new-chat .new-chat-agents')` and press Enter.
+6. In the Console, type `[...document.querySelectorAll('.new-chat .empty-state code')].map(c => c.textContent)` and press Enter.
 7. CLEANUP: in `T-A` press Ctrl+C.
 8. In `T-B` run: `Remove-Item -Recurse -Force src/Huddle.App/App_Data` then `Rename-Item src/Huddle.App/App_Data_backup App_Data`.
 9. In `T-A` run: `$env:Team__Acp__Enabled = 'false'` then `Remove-Item Env:\Team__DemoAgent__Enabled` then `dotnet run --project src/Huddle.App --urls http://localhost:5100`.

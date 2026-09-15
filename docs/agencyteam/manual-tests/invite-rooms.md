@@ -116,7 +116,7 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 
 **Free** · about 5 min
 
-*Proves the panel's open/close, its population from the Agent user list, and the guard that stops an empty selection reaching the server.*
+*Proves the panel's open/close, its population from the Agent user list, and the guard that stops an empty selection reaching the server. The panel is now `MudCollapse` (Stage 5 of the MudBlazor migration) rather than an always-in-the-DOM panel toggled by the `hidden` attribute, and its checkboxes are `MudCheckBox`, but the status dots are unchanged — `StatusDot.razor` still renders a plain `<span class="agent-dot ...">` with a `title` attribute.*
 
 **Before you start**
 
@@ -125,36 +125,39 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 **Steps**
 
 1. Click **New chat** at the top of the sidebar.
-2. Count the checkbox rows in the panel that opens and read each row's text.
-3. For each row, hover the small round dot immediately left of the name and read its tooltip.
-4. Find the **Start chat** button at the bottom of the panel and try to click it without ticking anything.
-5. In DevTools Elements, select the **Start chat** button and confirm it carries the `disabled` attribute.
-6. Tick the checkbox next to `echo`.
-7. Look at the **Start chat** button again.
-8. Untick `echo`.
-9. Click **New chat** again.
+2. In the DevTools Console, type `document.querySelector('.new-chat .mud-collapse-container').getBoundingClientRect().height > 0` and press Enter — confirms the panel is genuinely open, not merely present in the DOM.
+3. Count the checkbox rows in the panel that opens and read each row's text.
+4. For each row, hover the small round dot immediately left of the name and read its tooltip.
+5. In the Console, type `[...document.querySelectorAll('.agent-dot')].map(d => d.title)` and press Enter. Record the array.
+6. Find the **Start chat** button at the bottom of the panel and try to click it without ticking anything.
+7. In DevTools Elements, select the **Start chat** button and confirm it carries the `disabled` attribute.
+8. Tick the checkbox next to `echo`.
+9. Look at the **Start chat** button again.
+10. Untick `echo`.
+11. Click **New chat** again and repeat the Console command from step 2.
 
 **Pass if — all of these**
 
+- Step 2 printed `true` while the panel is open, and `false` after step 11 collapses it.
 - The panel lists exactly two rows, `echo` then `alpha`, in that order.
 - Each row has a coloured dot whose tooltip is one of `online`, `offline`, `degraded` or `starting`. With both demo agents connected, both tooltips read `online`.
+- Step 5's array contains only those four words.
 - `You` does NOT appear anywhere in the list.
 - Before anything is ticked, **Start chat** is visibly greyed out, does nothing when clicked, and carries the `disabled` attribute in the DOM.
 - After ticking `echo`, **Start chat** loses the `disabled` attribute and becomes clickable.
-- Clicking **New chat** a second time closes the panel.
 - Optional DB check: `sqlite3 src\Huddle.App\App_Data\team.db "SELECT name FROM users WHERE kind='agent' ORDER BY rowid;"` returns exactly `echo` then `alpha`, matching the panel's order.
 
 **Fail if — any of these**
 
-- **Start chat** is clickable with nothing ticked -> the `disabled` binding regressed and the server will be asked to create a Room with zero Agents.
+- **Start chat** is clickable with nothing ticked -> the `Disabled="@(this.selectedAgentIds.Count == 0)"` binding regressed and the server will be asked to create a Room with zero Agents.
 - `You` appears as a tickable row -> the list is no longer filtering on `UserKind.Agent`; creating a chat with the Human would produce a nonsense Room name.
 - Only one Agent listed, or the order is reversed -> the panel is not reading `users ORDER BY rowid`, so the list will not be stable between visits.
 - Every dot is grey/`offline` while both bots are demonstrably connected (`T-A` logged them in INVITEROOMS-01) -> the presence lookup is broken and the tester can no longer tell a live Agent from a dead one anywhere in the app.
-- The panel is already open on first page load -> the `hidden` binding on `.new-chat-panel` regressed.
+- Step 2 prints `true` on a fresh page load, before ever clicking **New chat** -> `MudCollapse`'s `Expanded` parameter is defaulting open instead of closed.
 
 **Inconclusive if**
 
-If the dots are grey and you are NOT sure the demo agents are connected, re-read `T-A` for the two `Created direct room` lines and check no `failed to connect` line followed them. If you cannot establish whether the agents are live, the dot colours are inconclusive — judge only the list contents and the disabled button, and say so.
+If the dots are grey and you are NOT sure the demo agents are connected, re-read `T-A` for the two `Created direct room` lines and check no `failed to connect` line followed them. If you cannot establish whether the agents are live, the dot colours are inconclusive — judge only the list contents and the disabled button, and say so. `MudCollapse` keeps its content in the DOM at all times and animates height, so do not judge open/closed from View Source or a `curl.exe` fetch — use the Console height check above.
 
 > [!NOTE]
 > The status dots in this panel repaint only on RoomsChanged, not on presence changes. Do NOT test 'disconnect an agent with the panel open and watch the dot go grey' — that is a documented known limit, not a defect.
@@ -333,7 +336,7 @@ If PowerShell's own quoting mangles the argument (you see the script report a di
 
 **Free** · about 7 min
 
-*Proves the single-Agent short-circuit in CreateRoomForAsync. This is the one branch in the whole area that REUSES instead of creating, which makes it the most likely silent regression here — and the symptom is an empty-looking Room, which a user reads as lost history.*
+*Proves the single-Agent short-circuit in CreateRoomForAsync. This is the one branch in the whole area that REUSES instead of creating, which makes it the most likely silent regression here — and the symptom is an empty-looking Room, which a user reads as lost history. The New chat panel this test drives is `MudCollapse` with `MudCheckBox` rows (Stage 5 of the MudBlazor migration) — see INVITEROOMS-03 — but nothing about that change touches the reuse-versus-create logic this test is actually about.*
 
 **Before you start**
 
@@ -473,7 +476,7 @@ If you cannot tell the two `echo, alpha` links apart in the sidebar, hover each 
 
 **Free** · about 5 min
 
-*Proves the invite candidate list is the set difference (all Agents minus this Room's Members), that the Human is never offered, and that the panel is hidden on first render.*
+*Proves the invite candidate list is the set difference (all Agents minus this Room's Members), that the Human is never offered, and that the panel is collapsed on first render. The panel is now `MudCollapse` (Stage 5 of the MudBlazor migration) rather than an always-in-the-DOM panel toggled by the `hidden` attribute, and the Room header's **Add teammate** button no longer carries an `invite-toggle` class — disambiguate it from the `/teammates` page's identically-labelled submit button by WHERE it is, not by a CSS class: this one lives inside the Room header's `.invite-teammate` wrapper.*
 
 **Before you start**
 
@@ -484,15 +487,15 @@ If you cannot tell the two `echo, alpha` links apart in the sidebar, hover each 
 
 1. Click the sidebar link `mybot`.
 2. Before clicking anything else, look at the top right of the Room header and confirm the panel below **Add teammate** is NOT showing.
-3. In DevTools Elements, find `div.invite-panel` and confirm it carries the `hidden` attribute.
-4. Click the **Add teammate** button at the top right of the Room header. In DevTools confirm the button you clicked has the class `invite-toggle` — this is NOT the `/teammates` page's submit button of the same name.
+3. In the DevTools Console, type `document.querySelector('.invite-teammate .mud-collapse-container').getBoundingClientRect().height > 0` and press Enter. It must print `false`.
+4. Click the **Add teammate** button at the top right of the Room header — the one inside `.invite-teammate`, not the `/teammates` page's submit button of the same name. Repeat the Console command from step 3; it must now print `true`.
 5. Read every entry in the list that opens.
 6. Read the label above the list.
 
 **Pass if — all of these**
 
-- Before the click, `div.invite-panel` carries `hidden` and no candidate list is visible.
-- After the click, the panel shows a `<select>` labelled **Team** whose first option reads `All teams`.
+- Before the click, the Console command in step 3 prints `false` and no candidate list is visible.
+- After the click, it prints `true`, and the panel shows a `<select>` labelled **Team** whose first option reads `All teams`.
 - The list beneath contains one button per Agent that is NOT already in this Room — with the setup so far that is `echo` and `alpha`.
 - `mybot` itself is ABSENT from the list.
 - `You` is absent from the list.
@@ -502,7 +505,7 @@ If you cannot tell the two `echo, alpha` links apart in the sidebar, hover each 
 
 - `mybot` is offered in its own Room -> the member-exclusion filter regressed; clicking it would be a no-op dressed up as a success message, which is exactly the confusion `LoadCandidatesAsync` exists to prevent.
 - `You` is offered -> the list is no longer filtering on `UserKind.Agent`; inviting the Human would duplicate a Member row that already exists in every Room.
-- The panel is already open when the Room loads -> the `hidden` binding regressed and the invite UI now competes with the Transcript for attention on every Room open.
+- The panel is already open when the Room loads (step 3's FIRST check prints `true`) -> `MudCollapse`'s `Expanded` parameter is defaulting open instead of closed, and the invite UI now competes with the Transcript for attention on every Room open.
 - An Agent you know has registered is missing from the list -> either the Team filter is stuck on a real Team (check the `<select>` reads `All teams`) or the candidate query is wrong.
 
 **Inconclusive if**
@@ -526,7 +529,7 @@ If you clicked a button labelled 'Add teammate' and a Name/Title/Alias FORM open
 3. Press Enter. Wait 3 seconds and confirm the Transcript now holds your message and a reply beginning `**mybot:**`.
 4. In File Explorer or a terminal, open `E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\` and find the `<roomId>.jsonl` file matching this Room's id. Count its lines: `(Get-Content 'E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<roomId>.jsonl' | Measure-Object -Line).Lines`. Write the number down.
 5. Note the current last line in `T-A`.
-6. Click **Add teammate** (the `invite-toggle` in the Room header).
+6. Click **Add teammate** in the Room header (inside `.invite-teammate` — see INVITEROOMS-11's note on why this is no longer identified by an `invite-toggle` class).
 7. Click the entry `alpha` in the candidate list.
 8. IMMEDIATELY read the coloured line that appears inside the panel, and copy its text exactly.
 9. Read the candidate list again.
@@ -568,7 +571,7 @@ If the Room has no `.jsonl` file at all, `mybot` never replied and no Message wa
 
 **Free** · about 5 min
 
-*Proves the empty candidate state is explained rather than rendered as a blank panel, and that the Team filter does not hang over an empty list.*
+*Proves the empty candidate state is explained rather than rendered as a blank panel, and that the Team filter does not hang over an empty list. This is the same `MudCollapse` panel INVITEROOMS-11 opens — its `<select>` Team filter is unaffected by the migration, still a plain HTML `<select>`, not a `MudSelect`.*
 
 **Before you start**
 
@@ -968,7 +971,7 @@ If the sidebar entry for `mybot` still has NO comma, INVITEROOMS-12 did not actu
 
 **Free** · about 7 min
 
-*Proves the singleton RoomEvents hub fans out to every circuit, and that a second tab's OPEN invite panel reloads its candidates — the case where a leaked or unsubscribed component shows itself.*
+*Proves the singleton RoomEvents hub fans out to every circuit, and that a second tab's OPEN invite panel reloads its candidates — the case where a leaked or unsubscribed component shows itself. The invite panel is `MudCollapse` (Stage 5 of the MudBlazor migration); it keeps its content in the DOM even while collapsed, so "leave the panel OPEN" in step 4 means expanded, not merely rendered.*
 
 **Before you start**
 
@@ -1106,7 +1109,7 @@ If a demo agent fails to reconnect after restart (`Demo agent <name> failed to c
 
 **Free** · about 9 min
 
-*Proves the Team dropdown is populated from the Persona library, that filtering is pure display narrowing over already-loaded candidates, and that it never triggers a model probe or a node spawn.*
+*Proves the Team dropdown is populated from the Persona library, that filtering is pure display narrowing over already-loaded candidates, and that it never triggers a model probe or a node spawn. This dropdown (inside the Room header's Add teammate panel) is unaffected by the MudBlazor migration — it is still a plain HTML `<select>`, not a `MudSelect`, so no popover needs opening to read its options.*
 
 **Before you start**
 
@@ -1153,7 +1156,7 @@ If `Business` does not appear, first confirm the file is at exactly `App_Data\Te
 
 **Free** · about 12 min
 
-*Proves the alias fallback in InviteAsync, which is only reached AFTER the direct Name lookup misses — a branch that is easy to regress without any other symptom.*
+*Proves the alias fallback in InviteAsync, which is only reached AFTER the direct Name lookup misses — a branch that is easy to regress without any other symptom. The New teammate card used to create `Jarvis` is a real `MudDialog` (Stage 4 of the MudBlazor migration), and its Model and Effort controls are `MudSelect` — "set" a select by opening it and clicking the option, as with any other MudSelect on this card.*
 
 **Before you start**
 
@@ -1173,7 +1176,7 @@ If `Business` does not appear, first confirm the file is at exactly `App_Data\Te
 9. In the persona body textarea type exactly: `You are Jarvis. Answer in one short sentence.`
 10. Set the **Model** select to `Haiku`.
 11. Set the **Effort** select to `low`.
-12. Click the **Add teammate** submit button AT THE BOTTOM OF THIS CARD (this is the Create form's submit, NOT the Room header's `invite-toggle`).
+12. Click the **Add teammate** submit button AT THE BOTTOM OF THIS CARD (this is the New teammate dialog's submit action, NOT the Room header's Add teammate control — see INVITEROOMS-11's note on telling the two apart).
 13. Wait until the `Jarvis` tile shows a status of Online or Starting, and until a sidebar link reading `Jarvis` appears. This may take 10-30 seconds.
 14. Click a Room that does NOT contain `Jarvis` — use one of the `echo, alpha` Rooms.
 15. Note the current last line in `T-A`.

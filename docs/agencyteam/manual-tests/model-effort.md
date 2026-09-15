@@ -30,7 +30,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Free** · about 10 min
 
-*Proves the Model select is populated by a real probe of the installed adapter rather than a hardcoded list, and that one card open costs exactly one adapter process - never two, and never one per select.*
+*Proves the Model select is populated by a real probe of the installed adapter rather than a hardcoded list, and that one card open costs exactly one adapter process - never two, and never one per select. The card is a real `MudDialog` (Stage 4 of the MudBlazor migration), so this first-open test is also a reasonable place to confirm its focus trap actually engages.*
 
 **Before you start**
 
@@ -43,7 +43,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 1. In `T-C` run `Remove-Item -Recurse -Force 'E:\Repos\Huddle\src\Huddle.App\App_Data\work' -ErrorAction SilentlyContinue` and then `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\work'` - it must print False.
 2. In `T-A`, note the last line currently in the app log so you can tell new lines from old.
 3. Open a browser at `http://localhost:5100/teammates`. Confirm the page heading reads **Teammates** and the sidebar link reads **Teammates**.
-4. Click the **New teammate** button in the page header (top right of the heading row).
+4. Click the **New teammate** button in the page header (top right of the heading row). Immediately read `document.activeElement` in the DevTools Console — confirm focus moved into the dialog, not left on the button you clicked.
 5. Immediately look at `T-B` and keep watching for 30 seconds. Write down the highest number it ever shows and how many separate times it rises from 0 and falls back to 0.
 6. In the card titled **New teammate**, read the hint directly under the **Model** select. Immediately after the click it should read `Reading the models this agent offers…`; wait until it stops.
 7. Open the **Model** select and write down, in order, every option's visible text. Also note the first option's text exactly.
@@ -56,6 +56,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Pass if — all of these**
 
+- Focus moved into the dialog the instant it opened (step 4) — never left sitting on the **New teammate** button.
 - The first option of the **Model** select reads exactly `Use the agent's default`.
 - Below it the select lists at least one real model entry, and the entries read as human labels (for example `Sonnet 4.5`, `Haiku 4.5`) rather than raw ids of the shape `claude-sonnet-4-5`.
 - During the first card open `T-B` rises to exactly 1 and returns to 0 - one spawn, not two, and not two spawns in sequence.
@@ -66,6 +67,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Fail if — any of these**
 
+- Focus stays on the **New teammate** button after the card opens -> the dialog's focus trap is not engaging, which for a keyboard or screen-reader user means the dialog might as well not be modal.
 - Both selects populate but `T-B` shows a peak of 2 -> the model probe and the effort probe are no longer sharing the single semaphore, and every card open costs two adapter processes.
 - `T-B` rises to 1, falls to 0, then rises to 1 again during ONE card open -> the model probe stopped seeding the default-model effort list from its own session; functionally invisible, exactly twice the cost.
 - `T-B` rises above 0 on the SECOND card open -> the successful catalog is no longer cached for the app run, so browsing the card now costs a process every time.
@@ -358,7 +360,7 @@ If the app was not restarted first, the catalogs may already be cached and the E
 If MODELEFFORT-02 recorded that HAIKU and SONNET advertise the SAME ladder, the 'must differ' condition cannot be judged: record it INCONCLUSIVE and judge only the reset-to-default half and the spawn counts. If neither model advertises a ladder, the whole test is INCONCLUSIVE - say so with the adapter version rather than passing it vacuously.
 
 > [!NOTE]
-> This is manual checklist step 15 and the suite structurally cannot reach it: the change handler only runs off a real `<select>` change event in a live circuit.
+> This is manual checklist step 15 and the suite structurally cannot reach it: the Model and Effort controls are `MudSelect` (Stage 4 of the MudBlazor migration), and `OnModelChangedAsync`/`LoadEffortsAsync` only run off a real `ValueChanged` callback fired by clicking an option in a live circuit — bUnit's popover items live in a `MudPopoverProvider` that only populates on that same real click, so this re-probe cannot be driven from an automated test either.
 
 ### MODELEFFORT-08 — A superseded effort probe never lands on the model the user ended up with
 
@@ -405,7 +407,7 @@ If the probes complete faster than you can click (the hint never shows `Reading 
 
 **Free** · about 5 min
 
-*Proves an in-flight probe whose card has closed cannot paint state nobody is looking at, and cannot leave the next card stuck on a loading hint or showing the previous card's list.*
+*Proves an in-flight probe whose card has closed cannot paint state nobody is looking at, and cannot leave the next card stuck on a loading hint or showing the previous card's list. The card is a real `MudDialog` (Stage 4 of the MudBlazor migration), which is why a fourth close gesture — Escape — is worth exercising here alongside Cancel, the × icon and the backdrop: all four are genuine ways to abandon a probe mid-flight now.*
 
 **Before you start**
 
@@ -422,11 +424,11 @@ If the probes complete faster than you can click (the hint never shows `Reading 
 6. Wait 30 seconds, watching the page for any flicker or repaint.
 7. Click **New teammate** again.
 8. Read: the **Model** select's populated state and selected option, the **Effort** select's selected option, and the Effort hint text.
-9. Repeat steps 2-8 twice more, once closing with the × button (tooltip `Close`) and once by clicking the dark backdrop outside the card.
+9. Repeat steps 2-8 three more times: once closing with the × button (tooltip `Close`), once by clicking the dark backdrop outside the card, and once by pressing the Escape key while the Effort hint is still loading.
 
 **Pass if — all of these**
 
-- The card closes immediately on each of the three close gestures.
+- The card closes immediately on each of the four close gestures, Escape included.
 - Nothing repaints or flickers on the page during the 30-second wait after the close.
 - On re-open, the **Model** select is populated instantly from cache and shows `Use the agent's default` selected.
 - On re-open, the **Effort** select shows `Use the agent's default` selected.
@@ -496,7 +498,7 @@ If MODELEFFORT-02 found no NO-LADDER-MODEL in this adapter's catalog, this test 
 
 **Free** · about 7 min
 
-*Catches the highest-cost silent failure on the card: if the select falls back to its first option when the real catalog replaces the option list, the next Save writes null and wipes the user's stored choice without a word.*
+*Catches the highest-cost silent failure on the card: if the select falls back to its first option when the real catalog replaces the option list, the next Save writes null and wipes the user's stored choice without a word. The Model and Effort controls are `MudSelect` (Stage 4 of the MudBlazor migration); a closed `MudSelect` always shows its current selection without needing to be opened, so steps 5, 6 and 8 below read that displayed value directly, exactly as written.*
 
 **Before you start**
 

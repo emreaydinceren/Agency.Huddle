@@ -72,7 +72,9 @@ public sealed class InviteTeammateTests
 
         var html = await RenderAsync(dir, directory, chat, room.Id);
 
-        Assert.Contains("class=\"invite-panel\" hidden", html, StringComparison.Ordinal);
+        // The panel's markup is now a MudCollapse: closed means its container carries MudBlazor's
+        // own "invisible" class rather than the hand-rolled hidden attribute this test used to pin.
+        Assert.Contains("mud-collapse-container invisible", html, StringComparison.Ordinal);
     }
 
     /// <summary>

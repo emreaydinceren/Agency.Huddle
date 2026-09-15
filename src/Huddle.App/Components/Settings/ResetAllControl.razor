@@ -6,20 +6,28 @@
 
     The parent (Settings.razor) owns all state, the same split HooksPanel uses: Confirming and
     AnyModified are both parameters rather than fields here, so the confirm step can be rendered
-    directly from a test via ParameterView.FromDictionary, exactly how TeammateCardTests renders
-    TeammateCard's ConfirmingRemove state - HtmlRenderer cannot dispatch a click, so there is no other
-    way to see this component's confirm step from a test. Every parameter is deliberately non-string
-    (two bools, three plain EventCallbacks with no payload) for the same reason HooksPanel's are.
+    directly from a test via ParameterView.FromDictionary (or bUnit's ComponentParameterCollectionBuilder),
+    exactly how TeammateCardTests renders TeammateCard's ConfirmingRemove state - HtmlRenderer cannot
+    dispatch a click, so this was the only way to see this component's confirm step from a test before
+    bUnit. Every parameter is deliberately non-string (two bools, three plain EventCallbacks with no
+    payload) for the same reason HooksPanel's are.
+
+    Stage 3 (the MudBlazor migration) keeps this inline-confirm pattern exactly as designed - no
+    IDialogService, no JS confirm() - and only restyles the three buttons per the migration brief's
+    Part A mapping: the danger button (teammates-danger) becomes an outlined MudButton with
+    Color.Error, and the plain Cancel button becomes a plain outlined MudButton.
 *@
 
 @if (this.Confirming)
 {
-    <button type="button" class="teammate-card-action teammates-danger" @onclick="this.OnConfirm">Yes, reset everything</button>
-    <button type="button" class="teammate-card-action" @onclick="this.OnCancel">Cancel</button>
+    <MudStack Row="true" Spacing="2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="this.OnConfirm">Yes, reset everything</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="this.OnCancel">Cancel</MudButton>
+    </MudStack>
 }
 else
 {
-    <button type="button" class="teammate-card-action teammates-danger" disabled="@(!this.AnyModified)" @onclick="this.OnBeginReset">Reset all to defaults</button>
+    <MudButton Variant="Variant.Outlined" Color="Color.Error" Disabled="@(!this.AnyModified)" OnClick="this.OnBeginReset">Reset all to defaults</MudButton>
 }
 
 @code {

@@ -31,7 +31,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Free** · about 8 min
 
-*Proves the 22 hook defaults are all rendered and editable, and that the tool-name prefix is substituted from code at render time rather than typed into any default — the design that stops a human misspelling a tool into nonexistence.*
+*Proves the 22 hook defaults are all rendered and editable, and that the tool-name prefix is substituted from code at render time rather than typed into any default — the design that stops a human misspelling a tool into nonexistence. Each field's textarea is now a `MudTextField` (Stage 3 of the MudBlazor migration), which renders as a real `<textarea>` inside the unchanged `.hooks-field` wrapper — there is no `hooks-field-value` class on it any more.*
 
 **Before you start**
 
@@ -55,16 +55,16 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 13. Read the **Help: tool entry** field. Confirm it contains both `{{toolName}}` and `{{toolDescription}}`.
 14. Read the **Room label** field. Confirm its whole text is exactly `[Room: {{roomName}} (id: {{roomId}})]`.
 15. Count the grey **Next session** badges next to field labels. Confirm there are exactly nine, and that they sit on: Orientation, Identity, Chat rules, Tools, and all five `… description` fields under Tool descriptions. Confirm no field under **Turn** or **Get help** carries one.
-16. Open the browser developer tools (F12), go to the Console tab, and paste exactly: `document.querySelectorAll('textarea.hooks-field-value').length` then press Enter.
+16. Open the browser developer tools (F12), go to the Console tab, and paste exactly: `document.querySelectorAll('.hooks-field textarea').length` then press Enter.
 17. Confirm the console prints `22`.
-18. In the same console paste exactly: `[...document.querySelectorAll('textarea.hooks-field-value')].filter(t => t.value.includes('mcp__team__')).map(t => t.closest('.hooks-field').querySelector('.hooks-field-label').textContent)` then press Enter.
+18. In the same console paste exactly: `[...document.querySelectorAll('.hooks-field textarea')].filter(t => t.value.includes('mcp__team__')).map(t => t.closest('.hooks-field').querySelector('.hooks-field-label').textContent)` then press Enter.
 19. Confirm the console prints an empty array `[]`.
 20. In File Explorer, open `E:\Repos\Huddle\src\Huddle.App\App_Data\` and confirm there is NO file named `hooks.json`.
 
 **Pass if — all of these**
 
 - Four group headings appear in the order System prompt, Turn, Get help, Tool descriptions.
-- The console reports exactly 22 textareas with class `hooks-field-value`.
+- The console reports exactly 22 textareas under `.hooks-field`.
 - The console reports an empty array for the `mcp__team__` search — no hook default anywhere contains that literal string.
 - **Tools** contains `{{toolNames}}`; **Orientation** contains `{{helpTool}}`; **Help: tool entry** contains both `{{toolName}}` and `{{toolDescription}}`; **Room label** is exactly `[Room: {{roomName}} (id: {{roomId}})]`.
 - Exactly nine **Next session** badges, on the four System prompt fields and the five Tool descriptions fields.
@@ -80,7 +80,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Inconclusive if**
 
-If the Settings page shows the red `composer-error` paragraph, or the tab rail is missing, the app did not start cleanly — read the console window for an unhandled startup exception and fix that before judging this test. If `App_Data/hooks.json` already existed before you started, the defaults you are reading may be overrides; that is INCONCLUSIVE, not a fail: run `P-RESET-SETTINGS`, relaunch and rerun. Do NOT file the absence of `hooks.json` as a bug — its absence is the documented normal state.
+If the Settings page shows a red `MudAlert` error banner (the old `composer-error` paragraph, converted in Stage 3 of the MudBlazor migration), or the tab rail is missing, the app did not start cleanly — read the console window for an unhandled startup exception and fix that before judging this test. If `App_Data/hooks.json` already existed before you started, the defaults you are reading may be overrides; that is INCONCLUSIVE, not a fail: run `P-RESET-SETTINGS`, relaunch and rerun. Do NOT file the absence of `hooks.json` as a bug — its absence is the documented normal state.
 
 > [!NOTE]
 > This is the cheapest test in the area and the one most likely to catch a regression introduced by a well-meaning edit to prompt text. Run it first, every time.

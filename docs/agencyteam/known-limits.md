@@ -128,31 +128,28 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
 - **A Degraded Agent is never restarted automatically.** The Human clicks Restart
   on the Teammate card. Automatic recovery would need a policy nobody has asked
   for, and a restart clears what that Teammate remembers.
-- **What a Theme cannot do.** Roadmap item 6 shipped on 2026-09-13 and four things
-  are absent on purpose:
-  - **A Theme has no per-mode pair.** One selection means one `color-scheme`, so
-    choosing **Dark** is dark on a light OS too. Following the device means choosing
-    **System**, which layers no Theme at all and leaves the built-in pair to resolve
-    each Token's `light-dark()` against the OS. A Theme that carried both halves
-    would need two palettes in one file, which is the drift
-    [ADR-0009](../adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md)
-    rejected outright.
-  - **Changing the Theme costs a full page load.** `<head>` belongs to the server and
-    Blazor's render tree cannot reach it. Swapping the `href` over `IJSRuntime` would
-    put back the JavaScript this design has none of, and add a second writer of
-    `<head>` that can disagree with the file.
-  - **An override value is allowlisted, so an exotic but perfectly valid CSS value
-    may be refused.** `color-mix(...)` survives; anything needing `;`, `{`, `<`, `>`,
-    `&`, `@`, `:` or a backslash does not, and `url(` is refused outright. The CSS
-    reaches the document as a `MarkupString`, so the allowlist is the only thing
-    between a hand-edited file and a blanked page — see [Rules](rules.md). A refusal
-    is reported on the Appearance tab and the Theme's own value stands.
-  - **The choice is per installation, not per browser.** It lives in
-    `{DataDir}/appearance.json`, so a second browser, a private window and a phone on
-    the same install all see the same Theme. That is the deliberate consequence of
-    having no JavaScript: `localStorage` would be per browser and would need a
-    pre-paint script to avoid a flash. One Human per installation is the assumption
-    it rests on; it is the one to revisit if that ever changes.
+- **What a Theme cannot do.** Roadmap item 6's four limits were retired on 2026-09-14
+  when theming moved to MudBlazor — see
+  [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md). A Theme now carries **both**
+  palettes, so light/dark is a separate preference rather than a second Theme, and
+  changing it no longer reloads the page. Four different things are absent now:
+  - **There is no per-Token customisation at all.** `appearance.json` holds a Theme id
+    and a light/dark preference, and nothing else. The override map, its allowlist and
+    the inline `<style>` are gone. Changing one colour means editing `ThemeCatalog` in
+    C# and rebuilding, or waiting for item 7's Theme import.
+  - **A bad Theme id is logged, not shown.** `AppearanceStore` warns, names the unknown
+    id, leaves the file untouched and falls back to the built-in Theme — but the
+    Appearance tab no longer reports it, because the section that did belonged to the
+    override layer. This is the one place the repo's "reported, never swallowed" habit
+    is now weaker than it was; the log is the only surface.
+  - **Under System, a flash of the wrong Theme is possible on first paint.** The server
+    cannot know the device's preference at render time, so
+    `MudThemeProvider.GetSystemDarkModeAsync()` reads it over JavaScript after the first
+    render. This is the cost ADR-0009 avoided and ADR-0010 accepted.
+  - **The choice is per installation, not per browser.** Unchanged, and still
+    deliberate: it lives in `{DataDir}/appearance.json`, so a second browser, a private
+    window and a phone on the same install all see the same Theme. One Human per
+    installation is the assumption it rests on.
 - **Threads, reactions, edits, deletes, attachments, search, notifications.**
 - **Known flake, pre-existing:** `PersonaSupervisorTests.Shutdown_DisposesEveryHost`
   fails roughly one run in four, always on a slow run — its 10-second token races

@@ -1,0 +1,9 @@
+/* ---- The one token MudBlazor's MudTheme has no equivalent for -------------------------------
+   MudBlazor's theme generates --mud-typography-* variables for prose fonts, but ships nothing for
+   a monospace stack, so --font-mono has no --mud-* counterpart to fall through to. This file is
+   the sole declaration of it, kept out of app.css so that file's "every var() must name a
+   MudBlazor variable" rule (AppCss_UsesOnlyMudBlazorVariables) stays true without an exemption for
+   one hard-coded name. Linked in App.razor after app.css. */
+:root {
+    --font-mono: ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace;
+}
