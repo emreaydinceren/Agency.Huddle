@@ -549,7 +549,10 @@ If nothing at all changes after the click — no label change, no log line — t
 1. Type a single full stop `.` and press Enter.
 2. Read the transcript and the area between it and the composer.
 3. Type `@echo hi` and press Enter and wait 5 seconds.
-4. Read the grey line above the composer.
+4. Read the area above the composer. Under a configured budget of `1` that one reply spends the
+   whole allowance, so what you see is the pause block again, which does not print the Granted
+   figure. Click **Leave paused** to read it: that only hides the question (REPLYGATEBUDGET-09) and
+   grants nothing.
 5. Run `Get-Content E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<RoomId>.jsonl | Select-Object -Last 3`.
 6. Read `T-A` for any warning produced by your own two Messages.
 
@@ -557,7 +560,7 @@ If nothing at all changes after the click — no label change, no log line — t
 
 - The `.` posts normally, appears in the transcript with sender `You`, and is never refused.
 - Immediately after step 1 the pause block and the grey budget line are both gone.
-- After `echo` replies at step 3, the grey line reads `1 of 1 agent replies since you last spoke.` — the allowance is back to the configured default, NOT `1 of 2`.
+- After `echo` replies at step 3, the line read at step 4 reads `Paused — 1 of 1 agent replies since you last spoke.` — the allowance is back to the configured default, NOT `1 of 2`.
 - The tail of the `.jsonl` shows your `.` line with `"senderId":"human"`.
 - `T-A` shows no refusal warning naming the Human.
 
