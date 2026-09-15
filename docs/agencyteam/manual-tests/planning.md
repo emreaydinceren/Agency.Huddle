@@ -49,11 +49,11 @@ change, and before committing to a full area. A failure here means stop and fix,
 | [SHELLNAV-03](shell-nav.md#shellnav-03--the-scoped-css-bundle-is-applied-the-error-banner-stays-hidden-below-the-fold) | The scoped-CSS bundle is applied: the error banner stays hidden below the fold |
 | [STARTUPCONFIG-01](startup-config.md#startupconfig-01-the-documented-launch-command-serves-the-styled-app-shell-on-httplocalhost5100) | The documented launch command serves the styled app shell on http://localhost:5100 |
 | [STARTUPCONFIG-03](startup-config.md#startupconfig-03-two-demo-rooms-echo-and-alpha-exist-at-startup-with-no-user-action) | Two demo Rooms, echo and alpha, exist at startup with no user action |
-| [STARTUPCONFIG-04](startup-config.md#startupconfig-04-a-demo-agent-answers-only-when--mentioned-and-answers-in-bold) | A demo agent answers only when @-mentioned, and answers in bold |
+| [STARTUPCONFIG-04](startup-config.md#startupconfig-04-a-demo-agent-answers-a-two-member-room-with-or-without-a-mention-and-answers-in-bold) | A demo agent answers a two-Member Room with or without a Mention, and answers in bold |
 | [ROOMMESSAGING-02](room-messaging.md#roommessaging-02-enter-sends-the-message-clears-the-textarea-and-appends-exactly-one-jsonl-line) | Enter sends the Message, clears the textarea, and appends exactly one JSONL line |
 | [ROOMMESSAGING-03](room-messaging.md#roommessaging-03-shiftenter-inserts-a-newline-and-does-not-send) | Shift+Enter inserts a newline and does not send |
 | [STREAMINGTURN-02](streaming-turn.md#streamingturn-02-a-draft-appears-as-a-distinct-live-row-while-a-turn-is-being-written) | A Draft appears as a distinct live row while a Turn is being written |
-| [REPLYGATEBUDGET-01](reply-gate-budget.md#replygatebudget-01-a-demo-two-member-room-no-mention-is-silent-a-mention-streams-a-reply) | A demo two-Member Room: no Mention is silent, a Mention streams a reply |
+| [REPLYGATEBUDGET-01](reply-gate-budget.md#replygatebudget-01-a-demo-two-member-room-answers-with-or-without-a-mention) | A demo two-Member Room answers with or without a Mention |
 | [REPLYGATEBUDGET-02](reply-gate-budget.md#replygatebudget-02-three-or-more-members-makes-the-same-room-mention-gated) | Three or more Members makes the same Room Mention-gated |
 | [TEAMMATESLIBRARY-01](teammates-library.md#teammateslibrary-01-the-page-loads-is-styled-and-spawns-nothing) | The page loads, is styled, and spawns nothing |
 | [TEAMMATECARD-02](teammate-card.md#teammatecard-02--clicking-new-teammate-opens-a-card-at-all-blank-name-crash-probe) | Clicking New teammate opens a card at all (blank-name crash probe) |

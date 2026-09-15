@@ -77,7 +77,7 @@ Send one envelope with `$w.WriteLine('<json>')`, read one line back with `$r.Rea
 If the sidebar has no `echo`/`alpha` but `T-A` shows no demo-agent lines at all, the demo agents are switched off rather than broken: run `Get-ChildItem Env:Team__DemoAgent__*` and check `src/Huddle.App/appsettings.json` for `Team:DemoAgent:Enabled`. If either is `false`, the result is INCONCLUSIVE — clear the variable, restart the app and re-run. If a reply does not arrive within 3 seconds but `T-A` is still printing startup output, wait until startup is quiet and send the mention again before judging.
 
 > [!NOTE]
-> Typing a bare `hi` with no `@echo` and getting no reply is CORRECT here and is not a fail: the demo clients and `echo-bot.ps1` reply only when mentioned, even in a two-Member Room. The relaxed two-Member rule lives in the real Persona runner, not in these clients.
+> Typing a bare `hi` with no `@echo` now DOES draw a reply here, and that is correct, not a fail: the `echo` Room has exactly two Members, and both the demo clients and `tools/echo-bot.ps1` implement ADR-0004's rule directly — a Room with at most two Members answers every Message without a Mention. Mention-gating only applies once a Room has three or more Members.
 
 ### PIPEEXTERNAL-02 — A demo agent streams a Draft, then replaces it with the finished Message
 
@@ -164,7 +164,7 @@ If the stream is simply too fast to see and you have no recording tool, the visu
 If a Room named `echo, alpha` already exists from an earlier run, a NEW second Room with the same name is created — that is expected for a multi-agent New chat and is not a fail. If neither `echo` nor `alpha` appears in the panel, this test is INCONCLUSIVE: PIPEEXTERNAL-01's precondition has not held, so fix that first.
 
 > [!NOTE]
-> The bare `hi` producing no reply is correct here twice over: a three-Member Room is mention-gated by design, AND these demo clients only ever reply when mentioned.
+> The bare `hi` producing no reply is correct here: this is a three-Member Room, so per ADR-0004 it stays Mention-gated by design. That is different from a two-Member Room, which now answers every Message without a Mention — see PIPEEXTERNAL-01's note.
 
 ### PIPEEXTERNAL-04 — A Room appears in the sidebar the moment an external agent says hello, with no refresh
 

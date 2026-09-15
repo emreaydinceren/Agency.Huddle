@@ -155,6 +155,19 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   Reuse `ProtocolJson.Options` verbatim for anything on the wire, and derive from it
   for anything a person opens.
 
+- **Two documents in this repo can assert contradictory facts, and nothing detects it.**
+  It happened twice on 2026-09-15, and in both cases the wrong document was confidently worded
+  and claimed to be verified. `traps.md` said raw string literals normalise line endings, "verified
+  by serialising the catalog"; `agents/CIPipeline.md` said the opposite, correctly, and the
+  contradiction sat there until a test finally depended on it. Separately, the manual tests
+  recorded the demo agents' Mention-gating as deliberate design while
+  [product observations](product-observations.md) called it the most expensive problem of a
+  test run. Prose has no compiler, so a claim here is only as good as the last time somebody
+  checked it against the code. When a documented claim is about to decide what you build,
+  **verify it against the source or the built artifact first** — `git cat-file blob`, a grep of
+  the compiled assembly, or a run — and correct the entry in the same change rather than working
+  around it.
+
 - **Raw string literals preserve the source file's line endings — they do not
   normalise to `\n`. And which line endings that is depends on how the repo was
   checked out, not on the repo itself.** There is no `.gitattributes` here, so

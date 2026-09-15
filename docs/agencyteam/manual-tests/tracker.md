@@ -142,7 +142,7 @@ Startup, configuration and first-run state — [area file](startup-config.md)
 | [STARTUPCONFIG-01](startup-config.md#startupconfig-01-the-documented-launch-command-serves-the-styled-app-shell-on-httplocalhost5100) |  | Pass | |  |
 | [STARTUPCONFIG-02](startup-config.md#startupconfig-02-every-stylesheet-in-the-document-head-returns-200-the-silent-assets-regression) |  | Active | | |
 | [STARTUPCONFIG-03](startup-config.md#startupconfig-03-two-demo-rooms-echo-and-alpha-exist-at-startup-with-no-user-action) |  | Pass | |  |
-| [STARTUPCONFIG-04](startup-config.md#startupconfig-04-a-demo-agent-answers-only-when--mentioned-and-answers-in-bold) |  | Pass | |  |
+| [STARTUPCONFIG-04](startup-config.md#startupconfig-04-a-demo-agent-answers-a-two-member-room-with-or-without-a-mention-and-answers-in-bold) |  | Pass | |  |
 | [STARTUPCONFIG-05](startup-config.md#startupconfig-05-the-demo-agent-streams-a-draft-before-posting-the-real-streaming-path-free) |  | Active | | |
 | [STARTUPCONFIG-06](startup-config.md#startupconfig-06-every-navigation-surface-is-reachable-from-a-cold-start) |  | Active | | |
 | [STARTUPCONFIG-07](startup-config.md#startupconfig-07-start-chat-on-one-known-agent-reuses-its-room-two-agents-create-one-new-named-room) |  | Active | | |
@@ -256,7 +256,7 @@ Reply Gate, Mentions and Room Budget — [area file](reply-gate-budget.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [REPLYGATEBUDGET-01](reply-gate-budget.md#replygatebudget-01-a-demo-two-member-room-no-mention-is-silent-a-mention-streams-a-reply) |  | Pass |  | Re-run 2026-09-14 on the corrected step-8 expectation: body read `echo: hello echo`, `echo:` bold, no `@`. Silence held 15s on the bare `hello`; transcript held exactly three lines. |
+| [REPLYGATEBUDGET-01](reply-gate-budget.md#replygatebudget-01-a-demo-two-member-room-answers-with-or-without-a-mention) |  | Pass |  | Re-run 2026-09-14 on the corrected step-8 expectation: body read `echo: hello echo`, `echo:` bold, no `@`. Silence held 15s on the bare `hello`; transcript held exactly three lines. |
 | [REPLYGATEBUDGET-02](reply-gate-budget.md#replygatebudget-02-three-or-more-members-makes-the-same-room-mention-gated) |  | Pass | |  |
 | [REPLYGATEBUDGET-03](reply-gate-budget.md#replygatebudget-03-invite-from-the-composer-and-its-two-error-strips-never-touch-the-transcript) |  | Active | | |
 | [REPLYGATEBUDGET-04](reply-gate-budget.md#replygatebudget-04-a-mention-is-case-insensitive-and-ends-at-trailing-punctuation) |  | Active | | |

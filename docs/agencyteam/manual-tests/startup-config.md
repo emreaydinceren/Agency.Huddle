@@ -148,7 +148,7 @@ The Rooms may take a second or two to appear — the demo agents dial the pipe a
 > [!NOTE]
 > Optional disk oracle: `Get-ChildItem -Recurse src\Huddle.App\App_Data` — and, if `sqlite3` is available, `sqlite3 src\Huddle.App\App_Data\team.db "SELECT name,kind FROM users; SELECT name FROM rooms;"` should show one `human` row, two `agent` rows, and two Rooms.
 
-### STARTUPCONFIG-04 — A demo agent answers only when @-mentioned, and answers in bold
+### STARTUPCONFIG-04 — A demo agent answers a two-Member Room with or without a Mention, and answers in bold
 
 **Free** · about 5 min
 
@@ -175,7 +175,7 @@ The Rooms may take a second or two to appear — the demo agents dial the pipe a
 - After step 3, a message appears immediately with sender `You` and body `hi @echo`.
 - Within a few seconds a second message appears with sender `echo`, whose body renders `echo:` in BOLD followed by `hi echo` — rendered bold text, not literal `**` asterisks.
 - The `echo` reply contains NO `@` character.
-- After step 5, the `hi` message appears with sender `You` and NOTHING answers it, for the full 10 seconds.
+- After step 5, the `hi` message appears with sender `You`, and within a few seconds a second reply appears with sender `echo` whose body reads `echo: hi` — the `echo` Room has exactly two Members (the Human and `echo`), and per ADR-0004 a Direct Room answers every Message without a Mention.
 - A `rooms` folder now exists under `App_Data` containing a `.jsonl` file.
 
 **Fail if — any of these**
@@ -183,11 +183,11 @@ The Rooms may take a second or two to appear — the demo agents dial the pipe a
 - Nothing answers `hi @echo` -> the mention was not parsed, or the demo agent's read loop is dead. Check the console for `Demo agent echo stopped unexpectedly.`
 - The reply renders as literal `**echo:** hi echo` with visible asterisks -> the Markdown render path for a posted Message is broken.
 - The reply still contains an `@` -> the demo agent's `@`-stripping loop-safety step was lost; a reply that carries a mention can re-trigger another agent.
-- Something DOES answer the plain `hi` -> only a real Persona replies without a mention in a two-Member Room; a demo agent answering unmentioned means the mention gate was bypassed.
+- Nothing answers the plain `hi` -> the `echo` Room has only two Members, so ADR-0004 requires a reply without a Mention; silence here means the demo agent is still gating on `mentioned` alone instead of calling `ReplyGate.Decide` (or, for `tools/echo-bot.ps1`, its mirror of that logic).
 
 **Inconclusive if**
 
-Silence after plain `hi` is CORRECT and must never be filed as a bug — `DemoAgentHost` answers only `MessagePosted { Mentioned: true }`. Note that `docs/why-agency-huddle.md` line 209 wrongly tells you to type plain `hi`; `docs/AgencyTeam.md` line 262 is the correct instruction. If you typed `hi @echo` and got no reply, first re-check the console for a `connected.` line before filing — an agent that never connected produces exactly this symptom.
+If you typed `hi @echo` and got no reply, first re-check the console for a `connected.` line before filing — an agent that never connected produces exactly this symptom.
 
 > [!NOTE]
 > Shift+Enter inserts a newline instead of sending; Enter alone sends.
@@ -617,7 +617,7 @@ If no prompt appears, FIRST verify the variable took: `Get-ChildItem Env:Team__A
 
 **Inconclusive if**
 
-'No new reply' is CORRECT and must not be filed. Continue re-delivers only the Room's most recent Message, and delivery always skips that Message's own sender — so when the last Message is the agent's own reply, there is nobody left to wake, and a demo agent only answers a mention anyway. The rising allowance figure is the proof the grant worked. To see Continue actually wake something you would need the last Message to be a Human Message that mentioned the agent, which only happens if the agent was paused mid-run.
+'No new reply' is CORRECT and must not be filed. Continue re-delivers only the Room's most recent Message, and delivery always skips that Message's own sender — so when the last Message is the agent's own reply, there is nobody left to wake, regardless of Mention or Member count. The rising allowance figure is the proof the grant worked. To see Continue actually wake something you would need the last Message to be a Human Message instead of the agent's own reply, which only happens if the agent was paused mid-run — and per ADR-0004, this two-Member `echo` Room would wake `echo` for that re-delivered Human Message even without a Mention.
 
 > [!NOTE]
 > Also documented: a Message declined for Budget is held for re-delivery, not kept as Catch-up. If you type something instead of clicking Continue, the agent's next prompt will not carry the Message it was paused on, even though that Message is still visible in the transcript.
