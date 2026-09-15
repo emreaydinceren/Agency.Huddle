@@ -1066,7 +1066,10 @@ You are Bram. Answer in one short sentence.
 - PART A: the card's `Persona file` path now shows the NEW folder (`...\Teams\HouseholdOps\Rune.md`), not the old one.
 - PART A: **Open** launches the correct, existing file.
 - PART A: **Edit** -> **Save** succeeds with no error line on the card, and the change is on disk at the new path.
-- PART B: within about a second of moving the folder away, BOTH tiles disappear on their own, and the `Household` heading disappears with them.
+- PART B: within about a second of moving the folder away, BOTH tiles disappear on their own.
+  The `Household` heading REMAINS, now holding only Vale: the core fixture set gives `Vale.md`
+  `teams: ['Business', 'Household']`, so Household still has a member and an empty group is not
+  what should be produced. The heading only goes if you also remove Vale from that Team.
 - PART B: no exception appears in the `dotnet run` console.
 
 **Fail if — any of these**
