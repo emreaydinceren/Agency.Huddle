@@ -717,7 +717,14 @@
         {
             var path = this.Personas.PathFor(this.name);
             using var process = Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
-            this.error = null;
+
+            // Process.Start returns null - rather than throwing - whenever no new process was
+            // started, which is exactly what happens with UseShellExecute when no application is
+            // registered for the extension. Without this check, that failure is invisible: no
+            // exception, no dialog, no log line, and the line below would even clear a prior error.
+            this.error = process is null
+                ? $"Could not open '{this.name}': no application is registered for .md on this machine."
+                : null;
         }
         catch (ChatException ex)
         {
