@@ -26,6 +26,25 @@ code, kbd, samp, pre {
     font-family: var(--font-mono);
 }
 
+/* ---- Keyboard focus ring --------------------------------------------------------------------
+   MudBlazor.min.css resets outline to none for real keyboard focus on anchors and buttons
+   (a:focus-visible, button:focus, .mud-button-root all reset it - see the .nuget MudBlazor.min.css
+   payload), leaving no visible focus indicator anywhere: not outline, not box-shadow, not
+   background. a:focus-visible and button:focus are both specificity (0,1,1), exactly what the two
+   selectors below carry, so this relies on the same tie-break App.razor's link-order comment
+   already documents - MudBlazor.min.css loads first, app.css loads after, and a specificity tie
+   is won by whichever rule the cascade reads last. .mud-button-root's outline reset is only
+   (0,1,0), so it loses outright. Colour comes from --mud-palette-text-primary, not
+   --mud-palette-primary: the dark palette darkens Primary rather than lightening it, so
+   #5e2b60-on-#1b1b1f measures 1.63:1 - well under the 3:1 WCAG 1.4.11 non-text contrast minimum
+   for a focus indicator - while text-primary measures 13.79:1 in dark and 15.91:1 in light,
+   comfortable in both. Do not "improve" this back to an accent colour. */
+a:focus-visible,
+button:focus-visible {
+    outline: 2px solid var(--mud-palette-text-primary);
+    outline-offset: 2px;
+}
+
 .new-chat {
     border-bottom: 1px solid var(--mud-palette-divider);
     padding: 0.6rem 1rem;
@@ -84,12 +103,6 @@ code, kbd, samp, pre {
 .teammates-item-name {
     flex: 1 1 auto;
 }
-
-
-.teammates-danger {
-    color: var(--mud-palette-error);
-}
-
 
 .teammates-field {
     display: flex;

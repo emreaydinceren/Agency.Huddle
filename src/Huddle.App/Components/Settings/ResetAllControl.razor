@@ -14,8 +14,9 @@
 
     Stage 3 (the MudBlazor migration) keeps this inline-confirm pattern exactly as designed - no
     IDialogService, no JS confirm() - and only restyles the three buttons per the migration brief's
-    Part A mapping: the danger button (teammates-danger) becomes an outlined MudButton with
-    Color.Error, and the plain Cancel button becomes a plain outlined MudButton.
+    Part A mapping: the danger button (formerly styled with the now-deleted .teammates-danger class)
+    becomes an outlined MudButton with Color.Error, and the plain Cancel button becomes a plain
+    outlined MudButton.
 *@
 
 @if (this.Confirming)
