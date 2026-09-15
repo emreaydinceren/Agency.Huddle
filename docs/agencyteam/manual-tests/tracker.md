@@ -1,6 +1,6 @@
 # Manual test tracker
 
-Where every one of the 464 tests stands. One row per test, updated as you run it.
+Where every one of the 465 tests stands. One row per test, updated as you run it.
 
 This is a **recording** page, like [Planning](planning.md) — you need it when you start a
 run and when you finish one, not while executing. Keep [the script](../manual-tests.md),
@@ -71,7 +71,7 @@ the per-area tables below.
 | [Teammates page: tiles, Teams grouping, filter and rejected files](teammates-library.md) | 40 | 1 | [below](#teammates-library) |
 | [Teammate card: view, edit, create, delete](teammate-card.md) | 50 | 1 | [below](#teammate-card) |
 | [Model and Effort pickers, catalog probe and runner restart](model-effort.md) | 27 | 1 | [below](#model-effort) |
-| [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 31 | 4 | [below](#invite-rooms) |
+| [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 32 | 4 | [below](#invite-rooms) |
 | [Settings: the 22 Hooks, editing, per-field reset and Save](hooks-settings.md) | 40 | 3 | [below](#hooks-settings) |
 | [Appearance tab, Themes, Tokens and overrides](appearance-theme.md) | 25 | — | [below](#appearance-theme) |
 | [The named pipe: external agents and the wire](pipe-external.md) | 36 | — | [below](#pipe-external) |
@@ -422,7 +422,7 @@ Creating Rooms, inviting Agents, Room naming — [area file](invite-rooms.md)
 | --- | --- | --- | --- | --- |
 | [INVITEROOMS-01](invite-rooms.md#inviterooms-01-a-virgin-install-seeds-one-room-per-demo-agent-named-after-it-and-lands-you-in-the-first) |  | Active | | |
 | [INVITEROOMS-02](invite-rooms.md#inviterooms-02-routing-redirects-to-the-first-room-and-an-unknown-room-id-shows-the-empty-state-instead-of-crashing) |  | Active | | |
-| [INVITEROOMS-03](invite-rooms.md#inviterooms-03-the-new-chat-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-start-chat-disabled-until-something-is-ticked) |  | Active | |  |
+| [INVITEROOMS-03](invite-rooms.md#inviterooms-03-the-new-chat-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-start-chat-disabled-until-something-is-ticked) |  | Active | | |
 | [INVITEROOMS-04](invite-rooms.md#inviterooms-04-a-pipe-client-connecting-creates-its-room-and-it-appears-in-the-sidebar-with-no-page-refresh) |  | Active | | |
 | [INVITEROOMS-05](invite-rooms.md#inviterooms-05-reconnecting-under-the-same-name-re-attaches-to-the-existing-room-it-never-mints-a-second-one) |  | Active | | |
 | [INVITEROOMS-06](invite-rooms.md#inviterooms-06-a-name-differing-only-in-case-re-attaches-to-the-existing-agent-instead-of-creating-a-second-one) |  | Active | | |
@@ -434,23 +434,24 @@ Creating Rooms, inviting Agents, Room naming — [area file](invite-rooms.md)
 | [INVITEROOMS-12](invite-rooms.md#inviterooms-12-clicking-a-candidate-invites-it-renames-the-room-and-repaints-all-four-surfaces-with-no-reload) |  | Active | | |
 | [INVITEROOMS-13](invite-rooms.md#inviterooms-13-add-teammate-says-so-when-every-agent-is-already-a-member-and-hides-the-team-filter-in-that-state) |  | Active | | |
 | [INVITEROOMS-14](invite-rooms.md#inviterooms-14-the-invite-panels-open-state-and-its-message-do-not-survive-a-room-switch) |  | Active | | |
-| [INVITEROOMS-15](invite-rooms.md#inviterooms-15-invite-name-in-the-composer-does-the-same-thing-as-the-header-control) |  | Active | | |
-| [INVITEROOMS-16](invite-rooms.md#inviterooms-16-invite-accepts-a-multi-word-name-with-and-without-the-and-never-truncates-at-the-space) |  | Active | | |
-| [INVITEROOMS-17](invite-rooms.md#inviterooms-17-invite-of-an-agent-already-in-the-room-reports-success-and-changes-nothing) |  | Active | | |
-| [INVITEROOMS-18](invite-rooms.md#inviterooms-18-invite-rejects-an-unknown-name-and-rejects-the-human) |  | Active | | |
-| [INVITEROOMS-19](invite-rooms.md#inviterooms-19-any-other-leading-slash-text-is-refused-as-unknown-command-and-the-typed-text-is-lost) |  | Active | | |
-| [INVITEROOMS-20](invite-rooms.md#inviterooms-20-a-rooms-name-is-always-its-agent-members-joined-by-in-membership-order-with-the-human-excluded) |  | Active | | |
-| [INVITEROOMS-21](invite-rooms.md#inviterooms-21-an-agent-belongs-to-at-most-one-two-member-room-after-an-invite-the-next-registration-mints-a-fresh-direct-room) |  | Active | | |
-| [INVITEROOMS-22](invite-rooms.md#inviterooms-22-two-browser-tabs-stay-in-step-on-a-membership-change-including-an-open-candidate-list) |  | Active | | |
-| [INVITEROOMS-23](invite-rooms.md#inviterooms-23-adding-a-third-member-flips-a-room-from-answer-everything-to-mention-gated) |  | Active | | |
-| [INVITEROOMS-24](invite-rooms.md#inviterooms-24-rooms-names-and-membership-survive-a-restart-the-room-budget-does-not) |  | Active | | |
-| [INVITEROOMS-25](invite-rooms.md#inviterooms-25-the-team-filter-narrows-candidates-and-an-agent-with-no-persona-only-ever-shows-under-all-teams) |  | Active | | |
-| [INVITEROOMS-26](invite-rooms.md#inviterooms-26-invite-accepts-a-personas-alias-wherever-it-accepts-its-name) |  | Active | | |
-| [INVITEROOMS-27](invite-rooms.md#inviterooms-27-the-teammate-cards-message-action-disappears-once-that-personas-direct-room-has-been-invited-into) |  | Active | | |
-| [INVITEROOMS-28](invite-rooms.md#inviterooms-28-an-agent-creates-a-room-with-mcp__team__create_room-and-it-appears-live-in-the-sidebar) | 💰 | Active | | |
-| [INVITEROOMS-29](invite-rooms.md#inviterooms-29-an-agent-invites-another-with-mcp__team__invite_agent-using-the-room-id-from-its-own-room-label) | 💰 | Active | | |
-| [INVITEROOMS-30](invite-rooms.md#inviterooms-30-an-agent-can-invite-into-a-room-it-is-not-a-member-of) | 💰 | Active | | |
-| [INVITEROOMS-31](invite-rooms.md#inviterooms-31-every-agent-created-room-contains-the-human-so-none-is-hidden) | 💰 | Active | | |
+| [INVITEROOMS-15](invite-rooms.md#inviterooms-15-the-composers-own-status-line-does-not-survive-a-room-switch) |  | Active | | |
+| [INVITEROOMS-16](invite-rooms.md#inviterooms-16-invite-name-in-the-composer-does-the-same-thing-as-the-header-control) |  | Active | | |
+| [INVITEROOMS-17](invite-rooms.md#inviterooms-17-invite-accepts-a-multi-word-name-with-and-without-the-and-never-truncates-at-the-space) |  | Active | | |
+| [INVITEROOMS-18](invite-rooms.md#inviterooms-18-invite-of-an-agent-already-in-the-room-reports-success-and-changes-nothing) |  | Active | | |
+| [INVITEROOMS-19](invite-rooms.md#inviterooms-19-invite-rejects-an-unknown-name-and-rejects-the-human) |  | Active | | |
+| [INVITEROOMS-20](invite-rooms.md#inviterooms-20-any-other-leading-slash-text-is-refused-as-unknown-command-and-the-typed-text-is-lost) |  | Active | | |
+| [INVITEROOMS-21](invite-rooms.md#inviterooms-21-a-rooms-name-is-always-its-agent-members-joined-by-in-membership-order-with-the-human-excluded) |  | Active | | |
+| [INVITEROOMS-22](invite-rooms.md#inviterooms-22-an-agent-belongs-to-at-most-one-two-member-room-after-an-invite-the-next-registration-mints-a-fresh-direct-room) |  | Active | | |
+| [INVITEROOMS-23](invite-rooms.md#inviterooms-23-two-browser-tabs-stay-in-step-on-a-membership-change-including-an-open-candidate-list) |  | Active | | |
+| [INVITEROOMS-24](invite-rooms.md#inviterooms-24-adding-a-third-member-flips-a-room-from-answer-everything-to-mention-gated) |  | Active | | |
+| [INVITEROOMS-25](invite-rooms.md#inviterooms-25-rooms-names-and-membership-survive-a-restart-the-room-budget-does-not) |  | Active | | |
+| [INVITEROOMS-26](invite-rooms.md#inviterooms-26-the-team-filter-narrows-candidates-and-an-agent-with-no-persona-only-ever-shows-under-all-teams) |  | Active | | |
+| [INVITEROOMS-27](invite-rooms.md#inviterooms-27-invite-accepts-a-personas-alias-wherever-it-accepts-its-name) |  | Active | | |
+| [INVITEROOMS-28](invite-rooms.md#inviterooms-28-the-teammate-cards-message-action-disappears-once-that-personas-direct-room-has-been-invited-into) |  | Active | | |
+| [INVITEROOMS-29](invite-rooms.md#inviterooms-29-an-agent-creates-a-room-with-mcp__team__create_room-and-it-appears-live-in-the-sidebar) | 💰 | Active | | |
+| [INVITEROOMS-30](invite-rooms.md#inviterooms-30-an-agent-invites-another-with-mcp__team__invite_agent-using-the-room-id-from-its-own-room-label) | 💰 | Active | | |
+| [INVITEROOMS-31](invite-rooms.md#inviterooms-31-an-agent-can-invite-into-a-room-it-is-not-a-member-of) | 💰 | Active | | |
+| [INVITEROOMS-32](invite-rooms.md#inviterooms-32-every-agent-created-room-contains-the-human-so-none-is-hidden) | 💰 | Active | | |
 
 ## hooks-settings
 

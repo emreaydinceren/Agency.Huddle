@@ -1,5 +1,7 @@
+using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -269,6 +271,56 @@ public sealed class ChatPageTests
         // specific check; a bare role="alert" would also match an unrelated MudAlert elsewhere on
         // the page and prove nothing about this strip.
         Assert.DoesNotContain("member-health-alert", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Reproduces the bug in the task brief: the Composer's own status line is Component state that
+    /// Chat.razor renders with no <c>@@key</c>, so navigating between Rooms reuses the same instance.
+    /// Before the fix, <c>Composer.razor</c> only ever cleared <c>infoText</c>/<c>errorText</c> at the
+    /// top of <c>SendAsync</c> - never on a Room change - so a confirmation from one Room stayed on
+    /// screen in the next. Renders <see cref="Composer"/> directly through <see cref="MudBunitContext"/>
+    /// (the same split <see cref="TeammatesPageTests"/> uses) and drives the Room switch the same way
+    /// <see cref="InviteTeammateTests"/> drives its own state reset: a bUnit
+    /// <c>SetParametersAndRender</c> with a new <c>RoomId</c>, exactly what Chat.razor does when the
+    /// user navigates from one Room's page to another's.
+    /// </summary>
+    [Fact]
+    public async Task Composer_StatusLine_DoesNotFollowARoomSwitch()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+
+        var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        var gamma = await directory.UpsertAgentUserAsync("gamma", null, ct);
+        Assert.NotNull(alpha);
+        Assert.NotNull(echo);
+        Assert.NotNull(gamma);
+
+        var roomAlphaEcho = await chat.CreateRoomForAsync([alpha.Id, echo.Id], ct);
+        var roomGamma = await chat.EnsureRoomForAsync(gamma, ct);
+
+        await using MudBunitContext ctx = new();
+        ctx.Services.AddSingleton(chat);
+
+        var cut = ctx.Render<Composer>(parameters => parameters.Add(p => p.RoomId, roomAlphaEcho.Id));
+
+        // Same command the manual repro uses: inviting a real, uninvited agent into the current Room
+        // produces the green confirmation line.
+        await cut.InvokeAsync(() => cut.Instance.SendAsync("/invite @gamma"));
+
+        Assert.Contains("composer-info", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("Invited gamma.", cut.Markup, StringComparison.Ordinal);
+
+        // The switch itself: Chat.razor changes the same Composer instance's RoomId parameter, with
+        // no @key forcing a fresh one.
+        cut.Render(parameters => parameters.Add(p => p.RoomId, roomGamma.Id));
+
+        Assert.DoesNotContain("composer-info", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Invited gamma.", cut.Markup, StringComparison.Ordinal);
     }
 
     private static (ITeamDirectory Directory, ChatService Chat, Drafts Drafts) Services(TeamWebApplicationFactory factory)
