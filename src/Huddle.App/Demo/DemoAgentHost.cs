@@ -68,6 +68,12 @@ public sealed class DemoAgentHost : BackgroundService
                     return;
                 }
 
+                // Delegate to ReplyGate rather than testing Mentioned here, so the demo agents obey
+                // ADR-0004 - in a Direct Room a Bot answers every Message, without a Mention - the
+                // same way a Persona does. Do not inline this as "Members.Count <= 2 || Mentioned":
+                // Decide checks the Budget FIRST, and that ordering is what stops two quoting demo
+                // agents alone in a Room from looping (ADR-0004 records 4299 messages in two
+                // seconds before it existed).
                 if (message is MessagePosted posted
                     && ReplyGate.Decide(posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget)
                         == ReplyDecision.Reply)
