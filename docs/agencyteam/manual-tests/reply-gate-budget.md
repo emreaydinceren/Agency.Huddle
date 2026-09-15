@@ -1032,7 +1032,7 @@ If neither bot replies, nothing is being exercised — get a reply working (REPL
 5. Open `http://localhost:5100`, click the Room named `echo`, type `/invite @alpha` and press Enter.
 6. Type `@echo @alpha go` and press Enter.
 7. Wait 10 seconds.
-8. Read both terminals and find the line whose `"type"` is `protocolError`.
+8. Read both terminals and find the line whose `"type"` is `error` — that is the wire discriminator a `ProtocolError` serialises to (`Messages.cs`: `[JsonDerivedType(typeof(ProtocolError), "error")]`), so grepping for `protocolError` finds nothing.
 9. Copy that line's `"message"` value out in full and compare it character for character with the sentence in the pass conditions.
 10. Read `T-A`.
 

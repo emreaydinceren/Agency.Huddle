@@ -309,7 +309,7 @@ If `T-D` prints `Connect timed out`, the app is not reachable — fix that and r
 
 **Pass if — all of these**
 
-- For each of the three runs, `T-D` prints a JSON line containing `"type":"protocolError"` and `"code":"invalidName"`, with a message of the form `'<the name you typed>' is not a valid agent name.`
+- For each of the three runs, `T-D` prints a JSON line containing `"type":"error"` (the wire discriminator a `ProtocolError` serialises to) and `"code":"invalidName"`, with a message of the form `'<the name you typed>' is not a valid agent name.`
 - After each run the connection ends — the script does not sit waiting for messages.
 - The browser sidebar is IDENTICAL to the list you wrote down. No new link appeared for any of the three names, and none appeared with a mangled or truncated spelling.
 - `T-A` printed no `Created direct room` line for any of the three.
