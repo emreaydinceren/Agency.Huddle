@@ -1384,14 +1384,18 @@ If the `Ada` tile reads **Offline** or **Degraded**, read the reason line on its
 3. Type `the deadline moved to Friday` and press Enter. Wait 20 seconds.
 4. Type `the budget was cut 10 percent` and press Enter. Wait 20 seconds.
 5. Confirm `Ada` has said nothing at all and `T-A` shows no Turn for her.
-6. Type `@Ada list every fact you were told before this message, verbatim.` and press Enter.
+6. Type `@Ada what day did the deadline move to, and by what percent was the budget cut?` and
+   press Enter. Ask for the facts back, not for an account of what she "was told": the Catch-up
+   Messages arrive as a bracketed context block rather than as turns addressed to her, and a small
+   model reliably answers "I wasn't told any facts" to the second phrasing even when the block is
+   demonstrably in its prompt.
 7. Wait up to 90 seconds and read the reply.
 8. Read `T-A`.
 
 **Pass if — all of these**
 
 - Neither of the two un-mentioned Messages produces a reply, a streaming row, or any model activity in `T-A`.
-- The reply to step 6 explicitly names BOTH earlier facts — the Friday deadline and the 10 percent cut.
+- The reply to step 6 names BOTH earlier facts — the Friday deadline and the 10 percent cut.
 - The grey budget line afterwards reads `1 of 4 agent replies since you last spoke.` — only one Turn was taken for three Messages.
 
 **Fail if — any of these**
