@@ -1,6 +1,6 @@
 # Creating Rooms, inviting Agents, Room naming
 
-Prove that every path by which a Room is born or changes membership behaves as specified, and that the four live surfaces (sidebar, Room header h1, members line, invite candidate list) repaint over SignalR without a page reload. Covers: the automatic Direct Room an Agent gets on registration, the sidebar "New chat" panel, the "Add teammate" control on the Room header, the `/invite @name` composer command, and the two Agent-facing tools `mcp__team__create_room` and `mcp__team__invite_agent`. The suite exists because a page GET only returns the Blazor prerender, so automated tests literally cannot see these panels, and because the load-bearing rule "an Agent belongs to at most one two-Member Room" only becomes visible as a second sidebar entry after a real re-registration. Tests INVITEROOMS-08 and INVITEROOMS-17 target this repo's two documented SILENT failures and are the highest-value tests in the set.
+Prove that every path by which a Room is born or changes membership behaves as specified, and that the four live surfaces (sidebar, Room header h1, members line, invite candidate list) repaint over SignalR without a page reload. Covers: the automatic Direct Room an Agent gets on registration, the sidebar "New chat" panel, the "Add teammate" control on the Room header, the `/invite @name` composer command, and the two Agent-facing tools `mcp__team__create_room` and `mcp__team__invite_agent`. The suite exists because a page GET only returns the Blazor prerender, so automated tests literally cannot see these panels, and because the load-bearing rule "an Agent belongs to at most one two-Member Room" only becomes visible as a second sidebar entry after a real re-registration. Tests INVITEROOMS-08 and INVITEROOMS-16 target this repo's two documented SILENT failures and are the highest-value tests in the set.
 
 **32 tests** · 28 free, 4 paid 💰 · about 3.5 hours.
 
@@ -15,13 +15,13 @@ Run [`P-BUILD`](common.md#p-build) then the lane named below from
 oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four resets,
 `P-NEW-PERSONA`, `P-ECHO-BOT` and the standing conventions. This area adds:
 
-1. Lane is `P-LAUNCH-FREE`. INVITEROOMS-27 and later say explicitly when to turn ACP back on.
+1. Lane is `P-LAUNCH-FREE`. INVITEROOMS-26 and later say explicitly when to turn ACP back on.
 2. Open `http://localhost:5100` in Chrome or Edge with DevTools (F12) available — several tests need the Elements pane to read a CSS class such as `invite-panel` or `agent-dot`.
 3. Learn the three `O-LOG` lines you will read all day, logged at Information by `ChatService`: `Created direct room '<id>' for agent '<name>'.` / `Created room '<id>' (<name>) with <n> members.` / `Invited agent '<name>' (<id>) into room '<roomId>'.` The ABSENCE of one of these is the oracle in several tests, so do not filter the console.
 4. `Teams\` is EMPTY on this machine today, so the **Team** dropdown starts with only `All teams`.
 5. Reset to a virgin install with `P-RESET-ALL`, then relaunch. Several tests tell you to do exactly this.
 6. Each extra Agent is its own `P-ECHO-BOT` terminal. This area uses: `T-C` = `mybot`, `T-D` = short-lived scratch bots, `T-E` = `Emily Lee`, `T-F` = `gamma`, `T-G` = `delta`.
-7. RUN THE TESTS IN ID ORDER. Several deliberately set up the next one — INVITEROOMS-12 converts mybot's Direct Room, which is exactly what INVITEROOMS-22 needs to observe. Each test still states its own precondition and how to recover if the state is wrong.
+7. RUN THE TESTS IN ID ORDER. Several deliberately set up the next one — INVITEROOMS-12 converts mybot's Direct Room, which is exactly what INVITEROOMS-21 needs to observe. Each test still states its own precondition and how to recover if the state is wrong.
 
 ## Tests
 
@@ -72,7 +72,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 If `T-A` shows no `Created direct room` lines AND no `failed to connect` line, the demo agent host may not be running at all — check `Team:DemoAgent:Enabled` in `src\Huddle.App\appsettings.json` is still `true`. If a stale app instance is holding the pipe (you see a port-in-use or pipe-in-use error), find and kill any other `Huddle.App` process, then start over from step 1. Do NOT judge the test until exactly one app instance is running.
 
 > [!NOTE]
-> This test is first because it establishes the deterministic baseline that INVITEROOMS-02 through INVITEROOMS-26 assume. If you ever lose track of the state during the free tests, come back and re-run this one.
+> This test is first because it establishes the deterministic baseline that INVITEROOMS-02 through INVITEROOMS-25 assume. If you ever lose track of the state during the free tests, come back and re-run this one.
 
 ### INVITEROOMS-02 — Routing: / redirects to the first Room, and an unknown room id shows the empty state instead of crashing
 
@@ -205,7 +205,7 @@ If the dots are grey and you are NOT sure the demo agents are connected, re-read
 If `pwsh` is not recognised, PowerShell 7 is not installed — this whole area's free tests need it. Install it, or run the script with `powershell.exe -File tools\echo-bot.ps1 -Name mybot` and note the substitution in your report. If `T-C` reports `Connect timed out`, the app is not running or another process holds the pipe — restart from the area setup rather than judging this test.
 
 > [!NOTE]
-> Leave `T-C` running. INVITEROOMS-05, 11, 12, 13 and 22 all use `mybot`.
+> Leave `T-C` running. INVITEROOMS-05, 11, 12, 13 and 21 all use `mybot`.
 
 ### INVITEROOMS-05 — Reconnecting under the same Name re-attaches to the existing Room — it never mints a second one
 
@@ -382,7 +382,7 @@ If PowerShell's own quoting mangles the argument (you see the script report a di
 If `echo` did not reply to `hi @echo` within 3 seconds, the demo agent may have disconnected — check `T-A`. Without a Transcript you can still judge this test on the room id and the sidebar count alone, but say in your report that the history half was not observed. Do NOT retry with a plain `hi` (no @) — the demo bots reply only when mentioned, so that proves nothing.
 
 > [!NOTE]
-> Do not invite anyone into `echo`'s Room for the rest of the free tests — INVITEROOMS-25 and the restart test read best with it intact.
+> Do not invite anyone into `echo`'s Room for the rest of the free tests — INVITEROOMS-24 and the restart test read best with it intact.
 
 ### INVITEROOMS-09 — New chat with two Agents creates a Room named after them and navigates to it, live
 
@@ -565,7 +565,7 @@ If you clicked a button labelled 'Add teammate' and a Name/Title/Alias FORM open
 If the Room has no `.jsonl` file at all, `mybot` never replied and no Message was ever persisted — redo steps 2-3 until the Transcript is non-empty, because the 'invite writes nothing' half cannot be judged against a file that does not exist. If you cannot match a room id to a `.jsonl` filename, read the id from the address bar; the filename is exactly that id.
 
 > [!NOTE]
-> This test deliberately converts mybot's Direct Room into a group Room. INVITEROOMS-22 depends on that having happened.
+> This test deliberately converts mybot's Direct Room into a group Room. INVITEROOMS-21 depends on that having happened.
 
 ### INVITEROOMS-13 — Add teammate says so when every Agent is already a Member, and hides the Team filter in that state
 
@@ -645,54 +645,10 @@ If a new Agent connects mid-test (a terminal you forgot about), the list will ne
 
 If every Agent happens to be a Member of both Rooms, both panels will show `Every agent is already in this room.` and you cannot tell a carried-over list from a correct one. Start one extra bot (`pwsh tools/echo-bot.ps1 -Name scratch` in `T-D`), invite it into Room B only, then re-run — or note the test as inconclusive for want of a distinguishing Agent.
 
-### INVITEROOMS-15 — The composer's own status line does not survive a Room switch
-
-**Free** · about 5 min
-
-*Proves the counterpart INVITEROOMS-14 does not cover: that test proves the invite PANEL's own state resets on a Room switch; this one proves the COMPOSER's status line — the coloured confirmation or error line directly above the message box — does too. Before the fix, `Composer.razor` cleared `errorText`/`infoText` only at the top of `SendAsync`, with no `OnParametersSetAsync` guard, so a confirmation or an error typed in one Room stayed on screen in every Room visited afterward.*
-
-**Before you start**
-
-- At least two Rooms exist: the `mybot, alpha` Room from INVITEROOMS-12/13 (Room A) and one of the `echo, alpha` Rooms from INVITEROOMS-09/10 (Room B).
-
-**Steps**
-
-1. In `T-D` run exactly: `pwsh tools/echo-bot.ps1 -Name scratch15`
-2. Wait until a sidebar link reading `scratch15` appears.
-3. Click the sidebar link `mybot, alpha` (Room A).
-4. Click into the composer and type exactly: `/invite @scratch15`
-5. Press Enter.
-6. Read the coloured line directly above the composer, and copy its exact text.
-7. Click a DIFFERENT sidebar link — one of the `echo, alpha` Rooms (Room B).
-8. Without typing anything, look directly above Room B's composer.
-9. In DevTools Elements confirm no element with class `composer-info` or `composer-error` is present above Room B's composer.
-10. Click into Room B's composer and type exactly: `/invite @nobody`
-11. Press Enter.
-12. Read the coloured line above Room B's composer.
-13. Click back to Room A and look directly above its composer, without typing anything.
-14. In `T-D` press Ctrl+C to stop `scratch15`.
-
-**Pass if — all of these**
-
-- Step 6 shows a GREEN/info line reading exactly `Invited scratch15. Room is now "mybot, alpha, scratch15".`
-- On arriving in Room B (steps 7-9), NOTHING is shown above the composer — no leftover green line from Room A, and no `composer-info`/`composer-error` element anywhere in the DOM.
-- Step 12 shows a RED line reading exactly `Unknown agent @nobody` — Room B's own error, not Room A's leftover confirmation.
-- Returning to Room A (step 13) shows nothing above its composer — Room A's own confirmation is gone, cleared by the Room switch that carried it away from Room B, not merely by the next Send.
-
-**Fail if — any of these**
-
-- Room B's composer shows Room A's `Invited scratch15. Room is now "..."` line -> the same stale-parameter bug `OnParametersSetAsync`'s guard exists to prevent on `InviteTeammate.razor` (INVITEROOMS-14), now reproduced on `Composer.razor`; the user is told an action happened in a Room where it did not.
-- Room B's red `Unknown agent @nobody` line follows you back to Room A -> the same defect in the other direction — an error that belongs to Room B reads as Room A's own failure.
-- The status line only clears once Room B's composer is used, not the moment Room B is opened -> the guard is reacting to a Send rather than to `RoomId` changing; the fix belongs in `OnParametersSetAsync`, not `SendAsync`.
-
-**Inconclusive if**
-
-If `scratch15` fails to register within 5 seconds, read `T-D` for a `protocolError` and fix that before judging — do not substitute an Agent already offered in Room A, since a failed invite (already-a-Member) produces the SAME wording either way and would not prove the state actually reset. If `pwsh` is not recognised, use `powershell.exe -File tools\echo-bot.ps1 -Name scratch15` and note the substitution in your report.
-
 > [!NOTE]
-> This test and INVITEROOMS-14 are two halves of one bug report: the same stale Room-switch failure, on two different components that both render around the composer.
+> This test's composer-side counterpart is `INVITEROOMS-32`, at the end of this file — the coloured line above the message box has its own separate reset guard, and its own separate bug.
 
-### INVITEROOMS-16 — /invite @name in the composer does the same thing as the header control
+### INVITEROOMS-15 — /invite @name in the composer does the same thing as the header control
 
 **Free** · about 6 min
 
@@ -739,9 +695,9 @@ If `scratch15` fails to register within 5 seconds, read `T-D` for a `protocolErr
 If no `gamma` link appeared in the sidebar within 5 seconds, the bot did not register — read `T-F` for a `protocolError` and fix that before judging. If the composer swallows your Enter and inserts a newline instead, you pressed Shift+Enter; Enter alone sends.
 
 > [!NOTE]
-> Leave `T-F` running — INVITEROOMS-21 needs `gamma`.
+> Leave `T-F` running — INVITEROOMS-20 needs `gamma`.
 
-### INVITEROOMS-17 — /invite accepts a multi-word Name, with and without the @, and never truncates at the space
+### INVITEROOMS-16 — /invite accepts a multi-word Name, with and without the @, and never truncates at the space
 
 **Free** · about 8 min
 
@@ -791,7 +747,7 @@ If no `Emily Lee` link appears in the sidebar, check `T-E` for a `protocolError`
 > [!NOTE]
 > This and INVITEROOMS-08 are the two highest-value tests in the area. Run them even if you are short on time.
 
-### INVITEROOMS-18 — /invite of an Agent already in the Room reports success and changes nothing
+### INVITEROOMS-17 — /invite of an Agent already in the Room reports success and changes nothing
 
 **Free** · about 4 min
 
@@ -834,7 +790,7 @@ If `echo`'s Room has been renamed by an earlier test (its `<h1>` contains a comm
 > [!NOTE]
 > The wording 'Invited echo' over a no-op is a KNOWN rough edge. Do NOT file it as a defect. The Agent-facing tool words the same case differently (`echo is already a member of room '<id>'. Nothing to do.`) and that difference is intentional.
 
-### INVITEROOMS-19 — /invite rejects an unknown Name, and rejects the Human
+### INVITEROOMS-18 — /invite rejects an unknown Name, and rejects the Human
 
 **Free** · about 4 min
 
@@ -878,7 +834,7 @@ If `echo`'s Room has been renamed by an earlier test (its `<h1>` contains a comm
 
 If the line that appears is neither clearly red nor clearly blue, read its CSS class in DevTools: `composer-error` is the failure class and `composer-info` is the success class. Judge on the class, not the colour, and say which you saw.
 
-### INVITEROOMS-20 — Any other leading-slash text is refused as Unknown command, and the typed text is lost
+### INVITEROOMS-19 — Any other leading-slash text is refused as Unknown command, and the typed text is lost
 
 **Free** · about 5 min
 
@@ -923,7 +879,7 @@ If the textarea does NOT clear, check whether you pressed Shift+Enter (which ins
 > [!NOTE]
 > BOTH of these are CURRENT, DOCUMENTED behaviour and must NOT be filed as defects: (a) an ordinary message that legitimately begins with a slash (e.g. `/opt/bin is the path`) cannot be posted at all, because every leading-slash text goes through the parser; (b) the client-side Enter handler clears the textarea BEFORE the server answers, so a rejected command loses what you typed. Note both in your report as known limits.
 
-### INVITEROOMS-21 — A Room's name is always its Agent Members joined by ", " in membership order, with the Human excluded
+### INVITEROOMS-20 — A Room's name is always its Agent Members joined by ", " in membership order, with the Human excluded
 
 **Free** · about 6 min
 
@@ -931,7 +887,7 @@ If the textarea does NOT clear, check whether you pressed Shift+Enter (which ins
 
 **Before you start**
 
-- `echo`, `alpha` and `gamma` are all registered. `T-F` must still be running `gamma` (from INVITEROOMS-16).
+- `echo`, `alpha` and `gamma` are all registered. `T-F` must still be running `gamma` (from INVITEROOMS-15).
 
 **Steps**
 
@@ -969,7 +925,7 @@ If `gamma` is not in the candidate set (the `/invite` returns `Unknown agent @ga
 > [!NOTE]
 > A Room can never be deleted, left, or renamed by hand — there is no such control anywhere in the UI, and a Room name is always derived. Do not look for one and do not file its absence.
 
-### INVITEROOMS-22 — An Agent belongs to at most one two-Member Room: after an invite, the next registration mints a fresh Direct Room
+### INVITEROOMS-21 — An Agent belongs to at most one two-Member Room: after an invite, the next registration mints a fresh Direct Room
 
 **Free** · about 7 min
 
@@ -1014,7 +970,7 @@ If the sidebar entry for `mybot` still has NO comma, INVITEROOMS-12 did not actu
 > [!NOTE]
 > TWO sidebar entries reading `mybot`-and-something is the DESIGNED outcome, recorded in `docs/adr/0003-...md` under Consequences. Do NOT file the second entry as a duplicate-Room bug. The failure is the absence of it.
 
-### INVITEROOMS-23 — Two browser tabs stay in step on a membership change, including an open candidate list
+### INVITEROOMS-22 — Two browser tabs stay in step on a membership change, including an open candidate list
 
 **Free** · about 7 min
 
@@ -1058,7 +1014,7 @@ If the sidebar entry for `mybot` still has NO comma, INVITEROOMS-12 did not actu
 
 If tab B's SignalR circuit had already dropped (you will see a 'Attempting to reconnect' overlay or a frozen page), nothing it shows is evidence. Reload tab B, re-open the panel, and start the test again. If you cannot find a Room without `gamma`, create one with New chat (tick `echo` and `alpha`) and use that.
 
-### INVITEROOMS-24 — Adding a third Member flips a Room from answer-everything to mention-gated
+### INVITEROOMS-23 — Adding a third Member flips a Room from answer-everything to mention-gated
 
 **Free** · about 8 min
 
@@ -1106,7 +1062,7 @@ If plain `hi` in the TWO-member Room draws no reply, that is EXPECTED and not pa
 > [!NOTE]
 > IMPORTANT: the demo agents and `tools/echo-bot.ps1` reply ONLY when `mentioned` is true, even in a two-Member Room. So a plain `hi` in a two-Member Room also gets no reply — that is a property of the sample bot, not of the Reply Gate. The server-side 'answer everything when memberCount <= 2' rule is ONLY exercised by a real Persona with `Team:Acp:Enabled=true`, and this free test deliberately does not attempt it.
 
-### INVITEROOMS-25 — Rooms, names and membership survive a restart; the Room Budget does not
+### INVITEROOMS-24 — Rooms, names and membership survive a restart; the Room Budget does not
 
 **Free** · about 8 min
 
@@ -1114,7 +1070,7 @@ If plain `hi` in the TWO-member Room draws no reply, that is EXPECTED and not pa
 
 **Before you start**
 
-- Several Rooms exist, at least one created via New chat and at least one renamed by an invite. After INVITEROOMS-09 through 24 this is satisfied.
+- Several Rooms exist, at least one created via New chat and at least one renamed by an invite. After INVITEROOMS-09 through 23 this is satisfied.
 
 **Steps**
 
@@ -1152,7 +1108,7 @@ If a demo agent fails to reconnect after restart (`Demo agent <name> failed to c
 > [!NOTE]
 > The Budget NOT surviving is EXPECTED: the counter is in memory and per Room by design, so a restart un-pauses every Room and shows a fresh allowance over a Transcript that already spent one. Do NOT file it. Restart the bots you need (`mybot`, `gamma`, `Emily Lee`, `delta`) before continuing to later tests.
 
-### INVITEROOMS-26 — The Team filter narrows candidates, and an Agent with no Persona only ever shows under All teams
+### INVITEROOMS-25 — The Team filter narrows candidates, and an Agent with no Persona only ever shows under All teams
 
 **Free** · about 9 min
 
@@ -1194,12 +1150,12 @@ If a demo agent fails to reconnect after restart (`Demo agent <name> failed to c
 
 **Inconclusive if**
 
-If `Business` does not appear, first confirm the file is at exactly `App_Data\Teams\coo.md` with the `---` fences on their own lines and no BOM, and that you reloaded the page. If it still does not appear, the test is inconclusive on file discovery — say so and do not judge the filter. To see a real Persona actually MATCH a Team you would need `Team:Acp:Enabled=true` so `coo` registers as an Agent; that path is covered by INVITEROOMS-27 and 28.
+If `Business` does not appear, first confirm the file is at exactly `App_Data\Teams\coo.md` with the `---` fences on their own lines and no BOM, and that you reloaded the page. If it still does not appear, the test is inconclusive on file discovery — say so and do not judge the filter. To see a real Persona actually MATCH a Team you would need `Team:Acp:Enabled=true` so `coo` registers as an Agent; that path is covered by INVITEROOMS-26 and 27.
 
 > [!NOTE]
 > An Agent with no Persona behind it has no Teams and therefore vanishes under any real Team filter, reachable only under `All teams`. That is DOCUMENTED behaviour, not a defect. Delete `App_Data\Teams\coo.md` afterwards if you want to return to the baseline.
 
-### INVITEROOMS-27 — /invite accepts a Persona's Alias wherever it accepts its Name
+### INVITEROOMS-26 — /invite accepts a Persona's Alias wherever it accepts its Name
 
 **Free** · about 12 min
 
@@ -1255,9 +1211,9 @@ If `Business` does not appear, first confirm the file is at exactly `App_Data\Te
 If `node --version` fails, or the `Jarvis` tile stays Offline with a reason in the Room's member-health strip, the Persona never registered and this test cannot be judged — report it inconclusive with the reason text from the tile. A HAND-WRITTEN Persona file is NOT enough for this test: an Alias resolves against the Team Directory, which only has a row once the Persona has actually registered.
 
 > [!NOTE]
-> No model turn is taken here — creating and starting a Persona opens a session and never prompts — so this test spends no tokens despite needing Acp enabled. Keep `Jarvis` running: INVITEROOMS-28 through 32 all use it.
+> No model turn is taken here — creating and starting a Persona opens a session and never prompts — so this test spends no tokens despite needing Acp enabled. Keep `Jarvis` running: INVITEROOMS-27 through 31 all use it.
 
-### INVITEROOMS-28 — The Teammate card's Message action disappears once that Persona's Direct Room has been invited into
+### INVITEROOMS-27 — The Teammate card's Message action disappears once that Persona's Direct Room has been invited into
 
 **Free** · about 10 min
 
@@ -1265,7 +1221,7 @@ If `node --version` fails, or the `Jarvis` tile stays Offline with a reason in t
 
 **Before you start**
 
-- INVITEROOMS-27 passed. `Team:Acp:Enabled=true`, and the Persona `Jarvis` is online with its own Direct Room named `Jarvis` in the sidebar.
+- INVITEROOMS-26 passed. `Team:Acp:Enabled=true`, and the Persona `Jarvis` is online with its own Direct Room named `Jarvis` in the sidebar.
 - `Jarvis`'s Direct Room must still be a two-Member Room — its sidebar entry must read exactly `Jarvis` with no comma.
 
 **Steps**
@@ -1301,7 +1257,7 @@ If `Jarvis`'s sidebar entry already contained a comma before you started, its Di
 > [!NOTE]
 > The disappearance is the DESIGNED consequence of membership-defined Direct Rooms and the source comment says the action is 'absent rather than broken'. A tester is quite likely to file this as a bug. Do NOT. Restarting the Persona brings the link back, pointing at a newly minted Direct Room — optionally confirm that as a bonus observation.
 
-### INVITEROOMS-29 — An Agent creates a Room with mcp__team__create_room and it appears live in the sidebar
+### INVITEROOMS-28 — An Agent creates a Room with mcp__team__create_room and it appears live in the sidebar
 
 **💰 Spends money** · about 15 min
 
@@ -1310,7 +1266,7 @@ If `Jarvis`'s sidebar entry already contained a comma before you started, its Di
 **Before you start**
 
 - `Team:Acp:Enabled=true` and node on PATH.
-- TWO Personas online, both Model = Haiku and Effort = low. `Jarvis` from INVITEROOMS-27, plus a second one you create the same way.
+- TWO Personas online, both Model = Haiku and Effort = low. `Jarvis` from INVITEROOMS-26, plus a second one you create the same way.
 - COST: roughly two to four short Haiku Turns. Set a low Room Budget first (step 1) so a misbehaving model cannot run away.
 
 **Steps**
@@ -1353,7 +1309,7 @@ If `Jarvis` simply answers in prose without calling any tool, that is a model-be
 > [!NOTE]
 > A new Room arriving with NO opening Message is a DOCUMENTED gap (ADR-0005: whoever creates a Room is responsible for seeding it; the `seed` parameter is not built). Do not file it as a create_room defect. An Agent naming ONLY itself gets its own existing Direct Room id back and no new Room appears — also correct.
 
-### INVITEROOMS-30 — An Agent invites another with mcp__team__invite_agent, using the room id from its own [Room: …] label
+### INVITEROOMS-29 — An Agent invites another with mcp__team__invite_agent, using the room id from its own [Room: …] label
 
 **💰 Spends money** · about 15 min
 
@@ -1361,7 +1317,7 @@ If `Jarvis` simply answers in prose without calling any tool, that is a model-be
 
 **Before you start**
 
-- INVITEROOMS-29 passed: `Team:Acp:Enabled=true`, `Team:AgentMessageBudget=6`, and `Jarvis` and `Friday` are both online (Haiku / low).
+- INVITEROOMS-28 passed: `Team:Acp:Enabled=true`, `Team:AgentMessageBudget=6`, and `Jarvis` and `Friday` are both online (Haiku / low).
 - A Room with three or more Members that `Friday` is NOT in. Create one via New chat ticking `Jarvis`, `echo` and `alpha` if you do not have one.
 - COST: roughly two to four short Haiku Turns.
 
@@ -1397,9 +1353,9 @@ If `Jarvis` simply answers in prose without calling any tool, that is a model-be
 If `Jarvis` answers in prose without calling the tool, retry ONCE with `@Jarvis use your invite_agent tool to add Friday to this room`. If it still does not, report INCONCLUSIVE with the Turn count. Do not exceed four Turns. If a budget pause appears, that is the cap working.
 
 > [!NOTE]
-> If `Friday` is ALREADY a Member, the tool answers `Friday is already a member of room '<id>'. Nothing to do.` and does NOT rename and does NOT publish RoomsChanged. That is DIFFERENT from the Human's `/invite` path (INVITEROOMS-18, which renames unconditionally) and is CORRECT — do not file the difference.
+> If `Friday` is ALREADY a Member, the tool answers `Friday is already a member of room '<id>'. Nothing to do.` and does NOT rename and does NOT publish RoomsChanged. That is DIFFERENT from the Human's `/invite` path (INVITEROOMS-17, which renames unconditionally) and is CORRECT — do not file the difference.
 
-### INVITEROOMS-31 — An Agent can invite into a Room it is not a Member of
+### INVITEROOMS-30 — An Agent can invite into a Room it is not a Member of
 
 **💰 Spends money** · about 10 min
 
@@ -1446,7 +1402,7 @@ If `Jarvis` refuses on the grounds that it is not in that Room, that is model ju
 > [!NOTE]
 > This is a DOCUMENTED known limit, recorded in `docs/agencyteam/known-limits.md` as 'An Agent can invite into any Room whose id it holds'. InviteAsync checks that the Room and the Agent exist, never who is asking. It is accepted while every Room contains the one Human. DO NOT FILE IT. The genuine failures are the crash and the wrong-Room cases above.
 
-### INVITEROOMS-32 — Every Agent-created Room contains the Human, so none is hidden
+### INVITEROOMS-31 — Every Agent-created Room contains the Human, so none is hidden
 
 **💰 Spends money** · about 6 min
 
@@ -1454,12 +1410,12 @@ If `Jarvis` refuses on the grounds that it is not in that Room, that is model ju
 
 **Before you start**
 
-- INVITEROOMS-29 passed and at least one Agent-created Room exists in the sidebar.
-- COST: rides along with INVITEROOMS-29 and 31 — no extra model Turns are needed unless you choose to post in the new Room.
+- INVITEROOMS-28 passed and at least one Agent-created Room exists in the sidebar.
+- COST: rides along with INVITEROOMS-28 and 30 — no extra model Turns are needed unless you choose to post in the new Room.
 
 **Steps**
 
-1. Identify every Room in the sidebar that was created by an Agent tool during INVITEROOMS-29 or 31 (`T-A`'s `Created room '<id>' ...` lines list their ids).
+1. Identify every Room in the sidebar that was created by an Agent tool during INVITEROOMS-28 or 30 (`T-A`'s `Created room '<id>' ...` lines list their ids).
 2. Open each of them in turn.
 3. For each, read the grey members line beneath the `<h1>`.
 4. For each, confirm the Transcript is readable — you can see the Messages the Agents exchanged.
@@ -1481,10 +1437,57 @@ If `Jarvis` refuses on the grounds that it is not in that Room, that is model ju
 
 **Inconclusive if**
 
-If no Agent-created Room exists (INVITEROOMS-29 was inconclusive), this test has nothing to judge — mark it inconclusive and say it is blocked on INVITEROOMS-29. Do NOT substitute a New-chat Room; that path is already covered by INVITEROOMS-09 and proves something different.
+If no Agent-created Room exists (INVITEROOMS-28 was inconclusive), this test has nothing to judge — mark it inconclusive and say it is blocked on INVITEROOMS-28. Do NOT substitute a New-chat Room; that path is already covered by INVITEROOMS-09 and proves something different.
 
 > [!NOTE]
 > After finishing this area, return the environment to free mode: Ctrl+C in `T-A`, then `$env:Team__Acp__Enabled = 'false'` and `Remove-Item Env:\Team__AgentMessageBudget` before starting the app again, so no later session spawns node adapters by accident.
+
+### INVITEROOMS-32 — The composer's own status line does not survive a Room switch
+
+**Free** · about 5 min
+
+*A FREE test appended here rather than beside `INVITEROOMS-14` — test ids are append-only and never renumbered once assigned, since the Tracker and filed issues cite them by number. It belongs conceptually right next to `INVITEROOMS-14` (see that test's own forward-pointer note), and proves the counterpart INVITEROOMS-14 does not cover: that test proves the invite PANEL's own state resets on a Room switch; this one proves the COMPOSER's status line — the coloured confirmation or error line directly above the message box — does too. Before the fix, `Composer.razor` cleared `errorText`/`infoText` only at the top of `SendAsync`, with no `OnParametersSetAsync` guard, so a confirmation or an error typed in one Room stayed on screen in every Room visited afterward.*
+
+**Before you start**
+
+- At least two Rooms exist: the `mybot, alpha` Room from INVITEROOMS-12/13 (Room A) and one of the `echo, alpha` Rooms from INVITEROOMS-09/10 (Room B).
+
+**Steps**
+
+1. In `T-D` run exactly: `pwsh tools/echo-bot.ps1 -Name scratch15`
+2. Wait until a sidebar link reading `scratch15` appears.
+3. Click the sidebar link `mybot, alpha` (Room A).
+4. Click into the composer and type exactly: `/invite @scratch15`
+5. Press Enter.
+6. Read the coloured line directly above the composer, and copy its exact text.
+7. Click a DIFFERENT sidebar link — one of the `echo, alpha` Rooms (Room B).
+8. Without typing anything, look directly above Room B's composer.
+9. In DevTools Elements confirm no element with class `composer-info` or `composer-error` is present above Room B's composer.
+10. Click into Room B's composer and type exactly: `/invite @nobody`
+11. Press Enter.
+12. Read the coloured line above Room B's composer.
+13. Click back to Room A and look directly above its composer, without typing anything.
+14. In `T-D` press Ctrl+C to stop `scratch15`.
+
+**Pass if — all of these**
+
+- Step 6 shows a GREEN/info line reading exactly `Invited scratch15. Room is now "mybot, alpha, scratch15".`
+- On arriving in Room B (steps 7-9), NOTHING is shown above the composer — no leftover green line from Room A, and no `composer-info`/`composer-error` element anywhere in the DOM.
+- Step 12 shows a RED line reading exactly `Unknown agent @nobody` — Room B's own error, not Room A's leftover confirmation.
+- Returning to Room A (step 13) shows nothing above its composer — Room A's own confirmation is gone, cleared by the Room switch that carried it away from Room B, not merely by the next Send.
+
+**Fail if — any of these**
+
+- Room B's composer shows Room A's `Invited scratch15. Room is now "..."` line -> the same stale-parameter bug `OnParametersSetAsync`'s guard exists to prevent on `InviteTeammate.razor` (INVITEROOMS-14), now reproduced on `Composer.razor`; the user is told an action happened in a Room where it did not.
+- Room B's red `Unknown agent @nobody` line follows you back to Room A -> the same defect in the other direction — an error that belongs to Room B reads as Room A's own failure.
+- The status line only clears once Room B's composer is used, not the moment Room B is opened -> the guard is reacting to a Send rather than to `RoomId` changing; the fix belongs in `OnParametersSetAsync`, not `SendAsync`.
+
+**Inconclusive if**
+
+If `scratch15` fails to register within 5 seconds, read `T-D` for a `protocolError` and fix that before judging — do not substitute an Agent already offered in Room A, since a failed invite (already-a-Member) produces the SAME wording either way and would not prove the state actually reset. If `pwsh` is not recognised, use `powershell.exe -File tools\echo-bot.ps1 -Name scratch15` and note the substitution in your report.
+
+> [!NOTE]
+> This test and INVITEROOMS-14 are two halves of one bug report: the same stale Room-switch failure, on two different components that both render around the composer.
 
 ---
 
