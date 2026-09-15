@@ -1568,21 +1568,37 @@ A model may simply choose not to attempt a second post, in which case nothing is
 
 **Before you start**
 
-- One Persona exists and is Online.
+- TWO Personas exist and are Online — `Ana` and `Ben` from REPLYGATEBUDGET-33 are exactly right.
+  One is not enough: `ChatService.CreateRoomForAsync` short-circuits a single-agent request to
+  `EnsureRoomForAsync`, which returns that Agent's EXISTING direct Room, so a lone Persona asked to
+  create a Room can only ever be handed the one it already has and no Budget is ever minted.
 - You are willing to spend a handful of short billed Turns.
 - You will stay at the keyboard.
+
+> [!IMPORTANT]
+> The per-Persona token Budget can only be reached by an **Agent-to-Agent** exchange, never by
+> typing at the Persona. `PersonaRunner`'s read loop does `Interlocked.Exchange(ref
+> this.tokensConsumed, 0)` the moment it sees a Human Message, *before* queueing the work item,
+> and `ProcessWorkItemAsync` checks the Budget at the start of that item — so a Turn you prompted
+> is always measured against a freshly-zeroed counter. Same rule as `STREAMINGTURN-28`,
+> `STARTUPCONFIG-33` and `ROOMMESSAGING-30`.
 
 **Steps**
 
 1. Run `P-RESET-ROOMS`.
-2. Start the app with PROFILE C plus `$env:Team__AgentMessageBudget = '2'` and `$env:Team__Acp__TokenBudget = '2000'`, both set BEFORE `dotnet run`.
+2. Start the app with PROFILE C plus `$env:Team__AgentMessageBudget = '6'` and
+   `$env:Team__Acp__TokenBudget = '2000'`, both set BEFORE `dotnet run`. The Room Budget has to be
+   comfortably larger than 2: the token Budget is only ever reached on an Agent-to-Agent Turn (see
+   the box above), and a Room that hits its own cap first declines in the read loop, before
+   `ProcessWorkItemAsync` ever runs the token check.
 3. Wait for the Persona tile to read **Online** and confirm Haiku and low on its card.
 4. Click the Room named after the Persona and note the Room id.
-5. Type `@<Persona> create a new room called scratch and then post a short message in it.` and press Enter.
+5. Type `@<Persona> create a new room containing yourself and <the other Persona>, then post a short message in it.` and press Enter.
 6. Wait up to 120 seconds, then read the sidebar.
 7. Click the newly created Room and read the area between its transcript and its composer.
-8. Return to the first Room and drive it to its cap by typing `@<Persona> reply twice in this room.` and waiting.
-9. Keep sending short Messages to the Persona until `T-A` prints the token-budget line, or until roughly six Messages have been sent — whichever comes first.
+8. Go to the Room the Persona created, which has both Personas in it.
+9. Type `@<Persona> start a short back-and-forth with <the other Persona>.` and let them bounce.
+   Watch `T-A` for the token-budget line; stop as soon as it appears, or when the Room reaches its cap.
 10. Click **Teammates** and read the Persona's tile, then open its card and read the line under the status.
 11. Type one more short Message to the Persona and observe whether it takes a Turn.
 12. Send a final Message and then check whether the tile returns to **Online**.
@@ -1599,7 +1615,7 @@ A model may simply choose not to attempt a second post, in which case nothing is
 
 - The token budget is spent but the tile still reads **Online** and only the log says anything -> the guard is silent in the UI, so a Teammate that has stopped working looks identical to one that is idle.
 - The tile goes Degraded and never recovers after a Human Message -> the token budget is not resetting, so a Teammate is permanently disabled by one busy afternoon.
-- No new Room is created at step 5 -> unrelated to this area's cap; note it, but do not judge the budget behaviour from it.
+- No new Room is created at step 5, and the Persona was asked for a room with a SECOND agent in it -> unrelated to this area's cap; note it, but do not judge the budget behaviour from it. (If you asked for a room containing only the Persona itself, you have hit the short-circuit described above, not a defect.)
 
 **Inconclusive if**
 
