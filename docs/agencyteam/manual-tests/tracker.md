@@ -86,7 +86,7 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [SHELLNAV-01](shell-nav.md#shellnav-01-every-stylesheet-the-shell-links-is-fingerprinted-except-the-one-that-is-deliberately-static-and-actually-serves) |  | Active | |  |
+| [SHELLNAV-01](shell-nav.md#shellnav-01-every-stylesheet-the-shell-links-is-fingerprinted-except-the-one-that-is-deliberately-static-and-actually-serves) |  | Pass | |  |
 | [SHELLNAV-02](shell-nav.md#shellnav-02-every-shell-script-is-fingerprinted-except-mudblazors-own-and-serves---the-gap-the-automated-guard-does-not-cover) |  | Active | |  |
 | [SHELLNAV-03](shell-nav.md#shellnav-03-the-scoped-css-bundle-is-applied-the-error-banner-stays-hidden-below-the-fold) |  | Active | |  |
 | [SHELLNAV-04](shell-nav.md#shellnav-04-get-redirects-to-the-oldest-room) |  | Active | |  |

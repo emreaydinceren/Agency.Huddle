@@ -187,12 +187,19 @@ If either select will not open, or shows options but the page is visibly still l
 
 - No `Doc` request appears in the Network panel — there is no page load at all.
 - The whole application repaints dark within a fraction of a second, still on /settings/appearance with `Appearance` active in the rail and `Dark` selected in the `Appearance` select.
-- The file now exists and reads, indented:
+- The file now exists. If you changed ONLY the `Appearance` select and never explicitly
+  picked a Theme, it reads exactly:
+```
 {
-  "theme": "huddle",
   "dark": "dark"
 }
-- The stored `dark` value is the lowercase id `dark`, NOT the label `Dark`. The stored `theme` value is the id `huddle`, NOT the label `Huddle`.
+```
+  **There is no `theme` key, and that is correct** — `appearance.json` is an
+  overrides-only file (see `known-limits.md`), so a Theme that was never explicitly
+  chosen is simply absent and the catalog default applies. A `theme` key appears only
+  once you pick one in the `Theme` select, and then it reads `"theme": "huddle"`.
+- The stored `dark` value is the lowercase id `dark`, NOT the label `Dark`. If a
+  `theme` key is present it is likewise the id `huddle`, NOT the label `Huddle`.
 
 **Fail if — any of these**
 
