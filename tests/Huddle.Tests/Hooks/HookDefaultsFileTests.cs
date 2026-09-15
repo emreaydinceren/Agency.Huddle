@@ -59,15 +59,16 @@ public sealed class HookDefaultsFileTests
 
     /// <summary>
     /// Every value in the checked-in file matches that hook's <see cref="HookDefinition.Default"/>
-    /// byte-for-byte, with NO line-ending normalisation. Raw string literals preserve the source
-    /// file's own line endings rather than normalising them (see
-    /// <c>docs/agencyteam/traps.md</c>), and <c>HookCatalog.cs</c> is CRLF, so
-    /// <see cref="HookDefinition.Default"/> carries <c>\r\n</c> for every embedded line break. This
-    /// is the check <see cref="DefaultsFile_ValuesMatchCatalogDefaults"/> cannot do — its
-    /// <see cref="Normalize"/> step exists to keep that test stable across a CRLF working-tree
-    /// checkout, but it also erases any drift between the file's own line endings and the catalog's,
-    /// which is exactly the drift that let <c>hooks.default.json</c> ship as LF-only against a
-    /// CRLF <see cref="HookCatalog"/> without either test failing.
+    /// byte-for-byte, with NO line-ending normalisation on either side. This is the check
+    /// <see cref="DefaultsFile_ValuesMatchCatalogDefaults"/> cannot do — its <see cref="Normalize"/>
+    /// step keeps that test stable, but it also erases any drift between the file's own line endings
+    /// and the catalog's, which is exactly the drift that once let <c>hooks.default.json</c> ship
+    /// LF-only against a <see cref="HookDefinition.Default"/> that, before it normalised itself on
+    /// construction, could compile as CRLF depending on how <c>HookCatalog.cs</c> was checked out.
+    /// <see cref="HookDefinition.Default"/> now normalises to <c>\n</c> unconditionally, so this test
+    /// no longer depends on checkout platform either — it exists to guard that normalisation itself:
+    /// if someone changes <see cref="HookDefinition"/> to stop normalising, or hand-edits the file
+    /// with different line endings than <see cref="HookCatalog"/> produces, this is what fails.
     /// </summary>
     [Fact]
     public void DefaultsFile_ValuesMatchCatalogDefaults_WithLineEndingsPreserved()
@@ -82,11 +83,11 @@ public sealed class HookDefaultsFileTests
 
             Assert.True(
                 string.Equals(hook.Default, fileValue, StringComparison.Ordinal),
-                $"'{DefaultsFilePath()}' key '{hook.Key}' matches HookCatalog's Default only after line-ending " +
-                "normalisation, not byte-for-byte. HookCatalog.cs is CRLF, so its raw string literals compile " +
-                "with '\\r\\n' for every embedded line break; regenerate hooks.default.json from HookCatalog.All " +
-                "(key -> Default) rather than hand-editing it so the shipped file's line endings match the " +
-                "compiled defaults, not just their normalised form.");
+                $"'{DefaultsFilePath()}' key '{hook.Key}' does not match HookCatalog's Default byte-for-byte. " +
+                "HookDefinition normalises every Default to '\\n' line endings on construction, precisely so " +
+                "model-facing text does not depend on which platform checked HookCatalog.cs out; this file is " +
+                "expected to carry that same normalised '\\n' form. Regenerate hooks.default.json from " +
+                "HookCatalog.All (key -> Default) rather than hand-editing it.");
         }
     }
 

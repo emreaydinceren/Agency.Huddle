@@ -156,24 +156,41 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   for anything a person opens.
 
 - **Raw string literals preserve the source file's line endings — they do not
-  normalise to `\n`.** `.cs` files here are CRLF in the working tree
-  (`core.autocrlf` is `true`, `.editorconfig` sets `end_of_line = crlf`), and a
-  `"""` literal in one of them compiles with that same CRLF baked in. So
-  `HookCatalog`'s defaults, and therefore every prompt sent to a model, carry
-  `\r\n` wherever the source did — checked directly against the compiled
-  assembly: `Huddle.App.dll` contains the CRLF byte sequence for
-  `systemPrompt.orientation`, `getHelp.intro` and `systemPrompt.chatRules`, not
-  the LF one. Prompt bytes therefore follow whoever checked the repo out, not a
-  fixed platform. Two comparisons downstream assumed the opposite and paid for
-  it: `HookFieldFactory.ToFieldState` and `HookStore.ApplyEdit` both compared a
-  value against `HookDefinition.Default` with `StringComparison.Ordinal`, so a
-  browser `<textarea>` — which normalises to `\n` — never equalled a CRLF
-  default; the "Modified" badge stuck on permanently for every multi-line hook.
-  Both sides must go through `ReplaceLineEndings("\n")` first. The golden tests
-  and `HookDefaultsFileTests` normalise both sides before comparing, which is
-  right for a byte-content check but means neither one can catch this class of
-  drift — `HookDefaultsFileTests` also pins the shipped file's line endings
-  explicitly for that reason.
+  normalise to `\n`. And which line endings that is depends on how the repo was
+  checked out, not on the repo itself.** There is no `.gitattributes` here, so
+  nothing pins `.cs` files to a fixed line ending in the repository. What git
+  actually stores is settled with one command:
+  `git cat-file blob main:src/Huddle.App/Hooks/HookCatalog.cs` — on this
+  repo it comes back 0 CRLF pairs, 395 bare LF. A Windows dev box with
+  `core.autocrlf=true` (a *local* setting, not a repo one) converts that to
+  CRLF on checkout, so the working tree shows 395 CRLF pairs and 0 bare LF; the
+  Linux container CI checks the repo out in
+  (`mcr.microsoft.com/dotnet/sdk:10.0.401`, `.gitea/workflows/ci-pr.yaml:21`)
+  gets the LF git actually stored, with nothing to convert it. A `"""` literal
+  in that file compiles with whichever line ending its checkout produced — so
+  `HookCatalog`'s defaults, and therefore every prompt sent to a model, used to
+  carry CRLF on a Windows dev machine and LF in CI from the exact same source
+  line, a platform-dependent compiled artifact masquerading as a constant.
+  Checked directly against the compiled assembly on Windows: `Huddle.App.dll`
+  contained the CRLF byte sequence for `systemPrompt.orientation`,
+  `getHelp.intro` and `systemPrompt.chatRules`, not the LF one — and would not
+  have, built from the same commit in CI. `HookDefinition.Default` now
+  normalises to `\n` once, on construction (`ReplaceLineEndings("\n")` on the
+  record's own property initialiser), specifically so model-facing text cannot
+  vary by checkout; nothing downstream needs to know this trap exists anymore.
+  Two comparisons still normalise defensively on top of that, belt-and-braces,
+  because a hand-edited `hooks.json` can still arrive with CRLF from a text
+  editor: `HookFieldFactory.ToFieldState` and `HookStore.ApplyEdit` both diff a
+  value against `HookDefinition.Default` with `StringComparison.Ordinal`, and
+  without normalising both sides first a browser `<textarea>` — which always
+  normalises to `\n` — would never equal a CRLF-carrying value, leaving the
+  "Modified" badge stuck on permanently for a multi-line hook. The golden tests
+  and `HookDefaultsFileTests` normalise both sides before comparing too, which
+  is right for a byte-content check but means neither one can catch a
+  regression in `HookDefinition`'s own normalisation —
+  `HookDefaultsFileTests.DefaultsFile_ValuesMatchCatalogDefaults_WithLineEndingsPreserved`
+  compares byte-for-byte, with no normalisation on either side, precisely to
+  guard that.
 
 - **Two types can be named for the same ACP concept, and one file has both in
   scope.** `Agency.Huddle.Acp.Abstractions` already owns `ToolCallStarted` and
