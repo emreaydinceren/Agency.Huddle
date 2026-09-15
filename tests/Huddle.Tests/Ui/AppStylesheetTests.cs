@@ -72,6 +72,23 @@ public sealed partial class AppStylesheetTests
     }
 
     /// <summary>
+    /// The focus ring's colour must be <c>--mud-palette-text-primary</c>, not
+    /// <c>--mud-palette-primary</c>: MudBlazor's dark palette darkens Primary rather than
+    /// lightening it, so Primary-on-Background measures 1.63:1 in dark mode - under WCAG 1.4.11's
+    /// 3:1 non-text contrast minimum for a focus indicator - while text-primary measures 13.79:1
+    /// dark and 15.91:1 light. <see cref="AppCss_DeclaresFocusVisibleRule"/> would pass just as
+    /// happily with the invisible primary-coloured version, so this asserts the property that
+    /// actually matters: issue #25 was exactly this ring being present in the DOM but unseen.
+    /// </summary>
+    [Fact]
+    public void AppCss_FocusRingUsesTextPrimaryForContrast()
+    {
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+
+        Assert.Contains("outline: 2px solid var(--mud-palette-text-primary);", text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// <c>.teammates-danger</c> was a dead rule: every destructive button is now a
     /// <c>MudButton Color="Color.Error"</c> (<c>ResetAllControl.razor</c>, <c>TeammateCard.razor</c>),
     /// so nothing in the app referenced the class any more. Asserts it stays deleted rather than
