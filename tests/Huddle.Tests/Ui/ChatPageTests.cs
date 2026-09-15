@@ -156,7 +156,10 @@ public sealed class ChatPageTests
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync($"/rooms/{room.Id}", ct);
 
-        Assert.DoesNotContain("role=\"alert\"", html, StringComparison.Ordinal);
+        // Both the health strip and the budget prompt render through MudAlert now, so a bare
+        // role="alert" check would no longer prove either is absent - it would also match one that
+        // fired for an unrelated reason. Asserting on each strip's own class is the specific check.
+        Assert.DoesNotContain("member-health-alert", html, StringComparison.Ordinal);
         Assert.DoesNotContain("composer-error", html, StringComparison.Ordinal);
         Assert.DoesNotContain("budget-prompt", html, StringComparison.Ordinal);
     }
@@ -261,8 +264,11 @@ public sealed class ChatPageTests
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync($"/rooms/{room.Id}", ct);
 
+        // The health strip is the only alert this scenario could wrongly produce (the Budget is
+        // untouched, so budget-prompt cannot fire either) - asserting on its own class is the
+        // specific check; a bare role="alert" would also match an unrelated MudAlert elsewhere on
+        // the page and prove nothing about this strip.
         Assert.DoesNotContain("member-health-alert", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("role=\"alert\"", html, StringComparison.Ordinal);
     }
 
     private static (ITeamDirectory Directory, ChatService Chat, Drafts Drafts) Services(TeamWebApplicationFactory factory)

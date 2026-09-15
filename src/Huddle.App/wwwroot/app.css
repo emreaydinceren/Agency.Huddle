@@ -352,22 +352,6 @@ code, kbd, samp, pre {
     gap: 0.5rem;
 }
 
-.budget-continue,
-.budget-dismiss {
-    font: inherit;
-    font-size: 0.85rem;
-    padding: 0.3rem 0.75rem;
-    border: 1px solid var(--mud-palette-divider);
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.budget-continue:disabled,
-.budget-dismiss:disabled {
-    cursor: default;
-    opacity: 0.6;
-}
-
 .budget-note {
     margin: 0;
     padding: 0.5rem 1rem 0;
