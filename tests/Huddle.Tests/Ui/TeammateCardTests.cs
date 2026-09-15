@@ -285,6 +285,36 @@ public sealed class TeammateCardTests
         Assert.Empty(cut.FindAll(".mud-dialog-container"));
     }
 
+    /// <summary>
+    /// <c>OpenInEditor</c>'s null-return branch is deliberately not covered here, and this note
+    /// records why so nobody reads the gap as an oversight. <c>Process.Start</c> is not injectable in
+    /// this codebase, so the case the null-check exists for - <c>Process.Start</c> returning
+    /// <see langword="null"/> under <c>UseShellExecute</c> when no application is registered for
+    /// <c>.md</c> - cannot be driven from a test without a seam that exists only for the test. It
+    /// cannot be reached indirectly either: clicking "Open" on a Persona whose file still exists
+    /// invokes the real <c>Process.Start</c> and launches a real OS process, which is an
+    /// environment-dependent side effect rather than a deterministic assertion.
+    ///
+    /// What this test does pin is the sibling guard the fix must not regress: a Persona removed out
+    /// from under an already-open card still makes <c>PersonaStore.PathFor</c> throw
+    /// <see cref="ChatException"/> before <c>Process.Start</c> is ever reached, and the existing catch
+    /// block still reports it via <c>error</c> - "Could not open" is not the only message this method
+    /// can show.
+    /// </summary>
+    [Fact]
+    public async Task OpenInEditor_PersonaRemovedFirst_ReportsWithoutLaunchingAProcess()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "x");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        factory.Services.GetRequiredService<PersonaStore>().Remove("coo");
+        FindButton(cut, "Open").Click();
+
+        Assert.Contains("Persona 'coo' does not exist.", cut.Markup, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task CreateMode_OffersAModelChoice()
     {
