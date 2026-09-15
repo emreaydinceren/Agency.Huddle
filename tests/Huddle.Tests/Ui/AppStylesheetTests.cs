@@ -56,6 +56,35 @@ public sealed partial class AppStylesheetTests
         }
     }
 
+    /// <summary>
+    /// A real keyboard Tab used to leave nothing to see: MudBlazor.min.css resets <c>outline</c>
+    /// to <c>none</c> for anchors and buttons, and <c>app.css</c> carried no <c>:focus-visible</c>
+    /// rule at all to contest it. This is a source-text assertion, the same kind
+    /// <see cref="CssSource"/> and <c>ThemeSourceTests</c> use for the same reason - nothing in
+    /// this suite renders a browser, and a real Tab press is a manual check outside this suite.
+    /// </summary>
+    [Fact]
+    public void AppCss_DeclaresFocusVisibleRule()
+    {
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+
+        Assert.Contains(":focus-visible", text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// <c>.teammates-danger</c> was a dead rule: every destructive button is now a
+    /// <c>MudButton Color="Color.Error"</c> (<c>ResetAllControl.razor</c>, <c>TeammateCard.razor</c>),
+    /// so nothing in the app referenced the class any more. Asserts it stays deleted rather than
+    /// creeping back in.
+    /// </summary>
+    [Fact]
+    public void AppCss_DoesNotDeclareTeammatesDangerClass()
+    {
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+
+        Assert.DoesNotContain(".teammates-danger", text, StringComparison.Ordinal);
+    }
+
     [GeneratedRegex("<link\\s+rel=\"stylesheet\"\\s+href=\"(?<href>[^\"]+)\"", RegexOptions.CultureInvariant)]
     private static partial Regex StylesheetLinkHref();
 }
