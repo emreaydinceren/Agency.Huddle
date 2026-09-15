@@ -271,14 +271,19 @@ internal sealed class HookStore : IHookSource, IDisposable
     /// Stores or removes one key's override in an in-memory copy of the file's contents, following
     /// <see cref="Save"/>'s rule: text equal to <paramref name="definition"/>'s catalog default
     /// removes any existing override rather than storing a redundant copy. Shared by <see cref="Save"/>
-    /// and <see cref="SaveMany"/> so the rule is written once.
+    /// and <see cref="SaveMany"/> so the rule is written once. The equality check normalises line
+    /// endings first — <see cref="HookDefinition.Default"/> carries whatever line endings
+    /// <c>HookCatalog.cs</c> had at compile time, while a saved edit from the browser is always
+    /// <c>\n</c> — otherwise a value equal to the default in every way but its line endings would be
+    /// stored as a redundant override instead of removed, asymmetrically with
+    /// <see cref="Agency.Huddle.App.Components.Settings.HookFieldFactory"/>'s own comparison.
     /// </summary>
     /// <param name="overrides">The mutable overrides dictionary being built up before it is written to disk.</param>
     /// <param name="definition">The hook definition <paramref name="text"/> is being applied against.</param>
     /// <param name="text">The override text to store.</param>
     private static void ApplyEdit(Dictionary<string, string> overrides, HookDefinition definition, string text)
     {
-        if (string.Equals(text, definition.Default, StringComparison.Ordinal))
+        if (string.Equals(text.ReplaceLineEndings("\n"), definition.Default.ReplaceLineEndings("\n"), StringComparison.Ordinal))
         {
             overrides.Remove(definition.Key);
         }

@@ -116,7 +116,14 @@ internal static class HookFieldFactory
         return Math.Clamp(lineCount + 1, MinRows, MaxRows);
     }
 
-    /// <summary>Resolves one <see cref="HookDefinition"/> into the row its Settings field renders.</summary>
+    /// <summary>
+    /// Resolves one <see cref="HookDefinition"/> into the row its Settings field renders. Both
+    /// modified/unsaved comparisons normalise line endings first: <see cref="HookDefinition.Default"/>
+    /// carries whatever <c>HookCatalog.cs</c>'s own line endings were at compile time (raw string
+    /// literals preserve them, they do not normalise), while a browser <c>&lt;textarea&gt;</c> always
+    /// hands back <c>\n</c>. Comparing the two verbatim leaves a multi-line hook's "Modified" badge
+    /// stuck on even when nothing but the line ending differs.
+    /// </summary>
     /// <param name="definition">The catalog entry to resolve.</param>
     /// <param name="hooks">The current hook source, giving this field's stored value.</param>
     /// <param name="pendingEdits">The user's uncommitted edits; see <see cref="Build"/>.</param>
@@ -133,8 +140,10 @@ internal static class HookFieldFactory
             DefaultValue: definition.Default,
             Placeholders: definition.Placeholders,
             Timing: definition.Timing,
-            IsModified: !string.Equals(value, definition.Default, StringComparison.Ordinal),
-            HasUnsavedChange: !string.Equals(value, stored, StringComparison.Ordinal),
+            IsModified: !string.Equals(
+                value.ReplaceLineEndings("\n"), definition.Default.ReplaceLineEndings("\n"), StringComparison.Ordinal),
+            HasUnsavedChange: !string.Equals(
+                value.ReplaceLineEndings("\n"), stored.ReplaceLineEndings("\n"), StringComparison.Ordinal),
             Issues: HookValidator.Validate(definition, value));
     }
 }
