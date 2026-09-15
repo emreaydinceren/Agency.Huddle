@@ -85,7 +85,7 @@
                         <MudText Typo="Typo.body2" Color="Color.Secondary">@this.title</MudText>
                     }
                     <MudText Typo="Typo.body2" Class="d-flex align-center gap-2">
-                        <span class="agent-dot @TeammateCard.StatusClass(this.status.State)"></span>
+                        <StatusDot State="this.status.State" />
                         @TeammateCard.StatusLabel(this.status.State)
                     </MudText>
                     @* The reason (when one is known) is a full line here - there is room for it on the
@@ -330,16 +330,6 @@
         PersonaState.Online => "Online",
         PersonaState.Degraded => "Degraded",
         _ => "Offline",
-    };
-
-    /// <summary>The CSS class for <paramref name="state"/>'s <c>agent-dot</c>, matching <see cref="StatusLabel"/> one-for-one.</summary>
-    /// <param name="state">The state to classify.</param>
-    private static string StatusClass(PersonaState state) => state switch
-    {
-        PersonaState.Starting => "starting",
-        PersonaState.Online => "online",
-        PersonaState.Degraded => "degraded",
-        _ => "offline",
     };
 
     protected override async Task OnInitializedAsync()

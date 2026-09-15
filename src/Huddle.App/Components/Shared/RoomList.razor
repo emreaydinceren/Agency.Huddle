@@ -5,18 +5,16 @@
 <div class="room-list">
     @if (this.rooms.Count == 0)
     {
-        <p class="empty-state">No rooms yet. Start an agent to create one.</p>
+        <MudText Typo="Typo.body2" Class="empty-state">No rooms yet. Start an agent to create one.</MudText>
     }
     else
     {
-        <ul>
+        <MudNavMenu>
             @foreach (var room in this.rooms)
             {
-                <li>
-                    <NavLink href="@($"/rooms/{room.Id}")">@room.Name</NavLink>
-                </li>
+                <MudNavLink Href="@($"/rooms/{room.Id}")">@room.Name</MudNavLink>
             }
-        </ul>
+        </MudNavMenu>
     }
 </div>
 

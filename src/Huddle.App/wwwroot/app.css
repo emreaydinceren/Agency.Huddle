@@ -26,56 +26,13 @@ code, kbd, samp, pre {
     font-family: var(--font-mono);
 }
 
-.app-grid {
-    display: grid;
-    grid-template-columns: 240px 1fr;
-    height: 100vh;
-}
-
-.sidebar {
-    border-right: 1px solid var(--mud-palette-divider);
-    background: var(--mud-palette-drawer-background);
-    overflow-y: auto;
-}
-
 .new-chat {
     border-bottom: 1px solid var(--mud-palette-divider);
     padding: 0.6rem 1rem;
 }
 
-.new-chat-toggle {
-    width: 100%;
-    padding: 0.4rem 0.6rem;
-    font: inherit;
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-lines-inputs);
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.new-chat-toggle:hover {
-    background: var(--mud-palette-table-hover);
-}
-
-.new-chat-panel {
-    margin-top: 0.6rem;
-}
-
 .new-chat-agents {
-    list-style: none;
     margin: 0 0 0.6rem 0;
-    padding: 0;
-}
-
-.new-chat-agents li {
-    padding: 0.2rem 0;
-}
-
-.new-chat-agents label {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    cursor: pointer;
 }
 
 .agent-dot {
@@ -102,61 +59,9 @@ code, kbd, samp, pre {
     background: var(--mud-palette-warning-lighten);
 }
 
-.new-chat-start {
-    width: 100%;
-    padding: 0.4rem 0.6rem;
-    font: inherit;
-    background: var(--mud-palette-primary-hover);
-    border: 1px solid var(--mud-palette-lines-default);
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.new-chat-start:disabled {
-    background: var(--mud-palette-background-gray);
-    border-color: var(--mud-palette-divider-light);
-    color: var(--mud-palette-text-disabled);
-    cursor: not-allowed;
-}
-
-.room-list ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.room-list li a {
-    display: block;
-    padding: 0.6rem 1rem;
-    color: var(--mud-palette-text-primary);
-    text-decoration: none;
-}
-
-.room-list li a:hover {
-    background: var(--mud-palette-table-hover);
-}
-
-.room-list li a.active {
-    background: var(--mud-palette-primary-hover);
-    font-weight: 600;
-}
-
 .empty-state {
     padding: 1rem;
     color: var(--mud-palette-text-secondary);
-}
-
-.sidebar-link {
-    display: block;
-    padding: 0.6rem 1rem;
-    color: var(--mud-palette-text-secondary);
-    text-decoration: none;
-    border-top: 1px solid var(--mud-palette-divider);
-    font-size: 0.9rem;
-}
-
-.sidebar-link:hover {
-    background: var(--mud-palette-table-hover);
 }
 
 .teammates-page {
@@ -249,20 +154,6 @@ code, kbd, samp, pre {
 .invite-teammate {
     position: relative;
     flex: 0 0 auto;
-}
-
-.invite-toggle {
-    padding: 0.3rem 0.6rem;
-    font: inherit;
-    font-size: 0.85rem;
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-lines-inputs);
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.invite-toggle:hover {
-    background: var(--mud-palette-table-hover);
 }
 
 .invite-panel {

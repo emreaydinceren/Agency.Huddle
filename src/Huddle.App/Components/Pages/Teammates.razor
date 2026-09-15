@@ -92,7 +92,7 @@
                                            tile is already the densest surface on the page. TeammateCard.razor shows the
                                            same reason as a full line, where there is room for it. *@
                                         <span class="teammate-tile-status" title="@status.Reason">
-                                            <span class="agent-dot @Teammates.StatusClass(status.State)"></span>
+                                            <StatusDot State="status.State" />
                                             @Teammates.StatusLabel(status.State)
                                         </span>
                                     </span>
@@ -174,16 +174,6 @@
         PersonaState.Online => "Online",
         PersonaState.Degraded => "Degraded",
         _ => "Offline",
-    };
-
-    /// <summary>The CSS class for <paramref name="state"/>'s <c>agent-dot</c>, matching <see cref="StatusLabel"/> one-for-one.</summary>
-    /// <param name="state">The state to classify.</param>
-    private static string StatusClass(PersonaState state) => state switch
-    {
-        PersonaState.Starting => "starting",
-        PersonaState.Online => "online",
-        PersonaState.Degraded => "degraded",
-        _ => "offline",
     };
 
     /// <summary>

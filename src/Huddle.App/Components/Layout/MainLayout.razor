@@ -9,17 +9,19 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 
-<div class="app-grid">
-    <nav class="sidebar">
+<MudLayout>
+    <MudDrawer Open="true" Variant="DrawerVariant.Persistent" Width="240px" Elevation="0">
         <NewChat />
         <RoomList />
-        <a class="sidebar-link" href="/teammates">Teammates</a>
-        <a class="sidebar-link" href="/settings">Settings</a>
-    </nav>
-    <main class="main-column">
+        <MudNavMenu>
+            <MudNavLink Href="/teammates">Teammates</MudNavLink>
+            <MudNavLink Href="/settings">Settings</MudNavLink>
+        </MudNavMenu>
+    </MudDrawer>
+    <MudMainContent Class="main-column">
         @Body
-    </main>
-</div>
+    </MudMainContent>
+</MudLayout>
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
