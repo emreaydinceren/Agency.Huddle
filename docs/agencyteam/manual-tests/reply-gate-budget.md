@@ -1321,7 +1321,7 @@ This test is itself the disambiguation procedure, so it cannot be inconclusive i
 
 **💰 Spends money** · about 15 min
 
-*The only way to observe the Reply Gate's answer-everything branch, because no demo client implements it. Proves a private conversation does not require the Human to @-name their Teammate in every sentence.*
+*The only way to observe the Reply Gate's answer-everything branch, because no demo client implements it. Proves a private conversation does not require the Human to @-name their Teammate in every sentence. The New teammate and Edit cards used here are real `MudDialog`s and their Model/Effort dropdowns are `MudSelect` (Stages 3-4 of the MudBlazor migration); neither changes what this test is checking.*
 
 **Before you start**
 

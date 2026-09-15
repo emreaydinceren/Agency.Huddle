@@ -189,7 +189,7 @@ Room view, posting Messages and Transcript rendering — [area file](room-messag
 | [ROOMMESSAGING-24](room-messaging.md#roommessaging-24-the-jsonl-transcript-shape-append-only-and-one-file-per-room) |  | Active | | |
 | [ROOMMESSAGING-25](room-messaging.md#roommessaging-25-an-external-pipe-clients-room-and-messages-appear-live-with-no-refresh) |  | Active | | |
 | [ROOMMESSAGING-26](room-messaging.md#roommessaging-26-a-mention-of-a-name-containing-spaces-resolves-against-the-rooms-members) |  | Active | | |
-| [ROOMMESSAGING-27](room-messaging.md#roommessaging-27-the---font-chat-token-is-consumed-by-the-message-body-and-by-nothing-else) |  | Active | | |
+| [ROOMMESSAGING-27](room-messaging.md#roommessaging-27-appearancejson-no-longer-customises-the-message-font-the-body-just-follows-the-theme-and-a-legacy-override-key-is-silently-inert) |  | Active | | |
 | [ROOMMESSAGING-28](room-messaging.md#roommessaging-28-a-torn-or-corrupt-line-in-the-transcript-is-skipped-with-a-warning-not-fatal) |  | Active | | |
 | [ROOMMESSAGING-29](room-messaging.md#roommessaging-29-the-transcript-survives-an-application-restart-drafts-and-the-budget-do-not) |  | Active | | |
 | [ROOMMESSAGING-30](room-messaging.md#roommessaging-30-the-budget-pause-panel-sits-between-transcript-and-composer-and-a-human-message-resumes-it) |  | Active | | |
@@ -422,7 +422,7 @@ Creating Rooms, inviting Agents, Room naming — [area file](invite-rooms.md)
 | --- | --- | --- | --- | --- |
 | [INVITEROOMS-01](invite-rooms.md#inviterooms-01-a-virgin-install-seeds-one-room-per-demo-agent-named-after-it-and-lands-you-in-the-first) |  | Active | | |
 | [INVITEROOMS-02](invite-rooms.md#inviterooms-02-routing-redirects-to-the-first-room-and-an-unknown-room-id-shows-the-empty-state-instead-of-crashing) |  | Active | | |
-| [INVITEROOMS-03](invite-rooms.md#inviterooms-03-the-new-chat-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-start-chat-disabled-until-something-is-ticked) |  | Pass | |  |
+| [INVITEROOMS-03](invite-rooms.md#inviterooms-03-the-new-chat-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-start-chat-disabled-until-something-is-ticked) |  | Active | |  |
 | [INVITEROOMS-04](invite-rooms.md#inviterooms-04-a-pipe-client-connecting-creates-its-room-and-it-appears-in-the-sidebar-with-no-page-refresh) |  | Active | | |
 | [INVITEROOMS-05](invite-rooms.md#inviterooms-05-reconnecting-under-the-same-name-re-attaches-to-the-existing-room-it-never-mints-a-second-one) |  | Active | | |
 | [INVITEROOMS-06](invite-rooms.md#inviterooms-06-a-name-differing-only-in-case-re-attaches-to-the-existing-agent-instead-of-creating-a-second-one) |  | Active | | |
