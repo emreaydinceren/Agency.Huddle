@@ -1,5 +1,14 @@
 #blazor-error-ui {
     color-scheme: light only;
+    /* Literal on purpose, like the "lightyellow" background below: MudBlazor.min.css declares a
+       bare "a{color:var(--mud-palette-text-primary)}" rule, and that token is not a light-dark()
+       value the way this app's own --text-primary is - it is a flat colour MudBlazor's C# swaps
+       under IsDarkMode, which "color-scheme: light only" has no power over. Under a dark theme it
+       resolves to a near-white colour, so without this literal the "Reload" link below would be
+       unreadable against this banner's background - the one moment a theme cannot be trusted, since
+       a bad override is among the things that could have failed. ThemeSourceTests.ScopedCss_DeclaresNoColourLiteral
+       exempts this file by name for exactly this reason. */
+    color: black;
     background: lightyellow;
     bottom: 0;
     box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
@@ -11,6 +20,10 @@
     width: 100%;
     z-index: 1000;
 }
+
+    #blazor-error-ui a {
+        color: black;
+    }
 
     #blazor-error-ui .dismiss {
         cursor: pointer;
