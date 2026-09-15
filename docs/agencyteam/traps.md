@@ -155,14 +155,25 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   Reuse `ProtocolJson.Options` verbatim for anything on the wire, and derive from it
   for anything a person opens.
 
-- **Raw string literals normalise line endings to `\n`, whatever the file has.**
-  Worth knowing before "fixing" a golden test: `.cs` files here are CRLF in the
-  working tree (`core.autocrlf` is `true`, `.editorconfig` sets `end_of_line = crlf`),
-  yet a `"""` literal in one of them yields `\n` only. So `HookCatalog`'s defaults,
-  and therefore every prompt sent to a model, carry no `\r` on any platform. The
-  golden tests still normalise both sides before comparing, which is right for the
-  files on disk — but the normalisation is not hiding a platform difference in the
-  prompts themselves. Verified by serialising the catalog and finding zero `\r`.
+- **Raw string literals preserve the source file's line endings — they do not
+  normalise to `\n`.** `.cs` files here are CRLF in the working tree
+  (`core.autocrlf` is `true`, `.editorconfig` sets `end_of_line = crlf`), and a
+  `"""` literal in one of them compiles with that same CRLF baked in. So
+  `HookCatalog`'s defaults, and therefore every prompt sent to a model, carry
+  `\r\n` wherever the source did — checked directly against the compiled
+  assembly: `Huddle.App.dll` contains the CRLF byte sequence for
+  `systemPrompt.orientation`, `getHelp.intro` and `systemPrompt.chatRules`, not
+  the LF one. Prompt bytes therefore follow whoever checked the repo out, not a
+  fixed platform. Two comparisons downstream assumed the opposite and paid for
+  it: `HookFieldFactory.ToFieldState` and `HookStore.ApplyEdit` both compared a
+  value against `HookDefinition.Default` with `StringComparison.Ordinal`, so a
+  browser `<textarea>` — which normalises to `\n` — never equalled a CRLF
+  default; the "Modified" badge stuck on permanently for every multi-line hook.
+  Both sides must go through `ReplaceLineEndings("\n")` first. The golden tests
+  and `HookDefaultsFileTests` normalise both sides before comparing, which is
+  right for a byte-content check but means neither one can catch this class of
+  drift — `HookDefaultsFileTests` also pins the shipped file's line endings
+  explicitly for that reason.
 
 - **Two types can be named for the same ACP concept, and one file has both in
   scope.** `Agency.Huddle.Acp.Abstractions` already owns `ToolCallStarted` and

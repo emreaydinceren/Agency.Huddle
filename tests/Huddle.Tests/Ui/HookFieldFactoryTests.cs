@@ -154,6 +154,50 @@ public sealed class HookFieldFactoryTests
         Assert.True(field.HasUnsavedChange);
     }
 
+    /// <summary>
+    /// A multi-line hook's default carries whatever line endings <c>HookCatalog.cs</c> had at compile
+    /// time (raw string literals preserve them, they do not normalise — see
+    /// <c>docs/agencyteam/traps.md</c>), while a browser <c>&lt;textarea&gt;</c> always hands back
+    /// <c>\n</c>. A pending edit that is the default with every line ending collapsed to <c>\n</c>
+    /// must still read as unmodified, not as a change the badge should flag.
+    /// </summary>
+    [Fact]
+    public void Build_PendingEditIsLfNormalisedDefault_IsModifiedFalse()
+    {
+        var hooks = new FakeHookSource();
+        var definition = HookCatalog.Get("getHelp.intro");
+        var pendingEdits = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [definition.Key] = definition.Default.ReplaceLineEndings("\n"),
+        };
+
+        var groups = HookFieldFactory.Build(hooks, pendingEdits);
+
+        var field = groups.SelectMany(group => group.Fields).Single(f => f.Key == definition.Key);
+        Assert.False(field.IsModified);
+    }
+
+    /// <summary>
+    /// The reverse of <see cref="Build_PendingEditIsLfNormalisedDefault_IsModifiedFalse"/>: a pending
+    /// edit that is the default with every line ending forced to <c>\r\n</c> must also read as
+    /// unmodified, whichever line ending the default itself happens to carry on this checkout.
+    /// </summary>
+    [Fact]
+    public void Build_PendingEditIsCrlfNormalisedDefault_IsModifiedFalse()
+    {
+        var hooks = new FakeHookSource();
+        var definition = HookCatalog.Get("getHelp.intro");
+        var pendingEdits = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            [definition.Key] = definition.Default.ReplaceLineEndings("\r\n"),
+        };
+
+        var groups = HookFieldFactory.Build(hooks, pendingEdits);
+
+        var field = groups.SelectMany(group => group.Fields).Single(f => f.Key == definition.Key);
+        Assert.False(field.IsModified);
+    }
+
     /// <summary>An invalid pending value (missing a required placeholder) surfaces as an issue on that field.</summary>
     [Fact]
     public void Build_PendingEditMissingRequiredPlaceholder_ProducesAnIssue()

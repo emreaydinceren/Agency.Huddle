@@ -57,6 +57,39 @@ public sealed class HookDefaultsFileTests
         }
     }
 
+    /// <summary>
+    /// Every value in the checked-in file matches that hook's <see cref="HookDefinition.Default"/>
+    /// byte-for-byte, with NO line-ending normalisation. Raw string literals preserve the source
+    /// file's own line endings rather than normalising them (see
+    /// <c>docs/agencyteam/traps.md</c>), and <c>HookCatalog.cs</c> is CRLF, so
+    /// <see cref="HookDefinition.Default"/> carries <c>\r\n</c> for every embedded line break. This
+    /// is the check <see cref="DefaultsFile_ValuesMatchCatalogDefaults"/> cannot do — its
+    /// <see cref="Normalize"/> step exists to keep that test stable across a CRLF working-tree
+    /// checkout, but it also erases any drift between the file's own line endings and the catalog's,
+    /// which is exactly the drift that let <c>hooks.default.json</c> ship as LF-only against a
+    /// CRLF <see cref="HookCatalog"/> without either test failing.
+    /// </summary>
+    [Fact]
+    public void DefaultsFile_ValuesMatchCatalogDefaults_WithLineEndingsPreserved()
+    {
+        var fromFile = ReadDefaultsFile();
+
+        foreach (var hook in HookCatalog.All)
+        {
+            Assert.True(
+                fromFile.TryGetValue(hook.Key, out var fileValue),
+                $"'{DefaultsFilePath()}' is missing key '{hook.Key}', which exists in HookCatalog.");
+
+            Assert.True(
+                string.Equals(hook.Default, fileValue, StringComparison.Ordinal),
+                $"'{DefaultsFilePath()}' key '{hook.Key}' matches HookCatalog's Default only after line-ending " +
+                "normalisation, not byte-for-byte. HookCatalog.cs is CRLF, so its raw string literals compile " +
+                "with '\\r\\n' for every embedded line break; regenerate hooks.default.json from HookCatalog.All " +
+                "(key -> Default) rather than hand-editing it so the shipped file's line endings match the " +
+                "compiled defaults, not just their normalised form.");
+        }
+    }
+
     /// <summary>Normalises line endings so the comparison is stable between a CRLF working-tree checkout and the <c>\n</c> raw string literals in <see cref="HookCatalog"/>.</summary>
     /// <param name="text">The text to normalise.</param>
     /// <returns><paramref name="text"/> with every <c>\r\n</c> replaced by <c>\n</c>.</returns>
