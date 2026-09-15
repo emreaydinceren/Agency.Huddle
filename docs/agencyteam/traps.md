@@ -10,6 +10,28 @@ What these share: none of them produce an error. A wrong `configId`, a missing
 clean and fail at runtime, or worse, degrade into something that looks like a
 legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
 
+- **`MapStaticAssets` serves no *generated* asset in Production from a dev build.**
+  Run the app with `--no-launch-profile` and you land in Production, where every
+  `_content/**` package asset and the scoped-CSS bundle return **500** while plain
+  `wwwroot` files serve 200. It reads exactly like a broken asset reference and is
+  not one — the manifest it wants is produced by publish, not by build. Run with
+  `ASPNETCORE_ENVIRONMENT=Development` (still setting `Team__Acp__Enabled=false`)
+  and everything resolves. Found while verifying the MudBlazor install; the tell is
+  that a *pre-existing* asset fails the same way, so if `Huddle.App.styles.css`
+  500s too, suspect the environment and not your change.
+- **`MudAlert` does not emit `role="alert"`.** Its parameters are `Severity`,
+  `Variant`, `Dense`, `Elevation`, `Icon`, `NoIcon`, `Square`, `ShowCloseIcon`,
+  `CloseIcon`, `CloseIconClicked`, `OnClick`, `ContentAlignment`, `RightToLeft` and
+  `ChildContent` — no role, no aria. Converting a `role="alert"` strip to `MudAlert`
+  therefore stops it announcing, silently and with nothing on screen to show for it.
+  Both alerts in `Chat.razor` add the attribute explicitly.
+- **A MudBlazor component's stylesheet is not covered by "do not touch the
+  component".** `ReconnectModal.razor` is framework-bound and untouchable; its
+  `.razor.css` is an ordinary tokenised file and must migrate with everything else.
+  Missing that left nine `var()` references pointing at deleted Tokens, and an
+  unresolved custom property resolves to **nothing**, not to a fallback — the modal
+  would have rendered invisible at exactly the moment the circuit drops.
+  `ScopedCss_UsesOnlyMudBlazorVariables` now catches it.
 - **Registering a tool is not the same as the model finding it.** The system
   prompt must spell tool names `mcp__team__list_agents` and so on, in full. A
   bare name produces "no such tool exists".
