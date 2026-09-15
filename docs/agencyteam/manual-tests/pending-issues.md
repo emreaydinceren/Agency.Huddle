@@ -49,10 +49,16 @@ not called `get_help` said it could not see the description at all.
 4. Ask: `Without calling anything, what does the description of
    mcp__team__list_agents say at the end?`
 
-**Expected** — the running session still has the old description.
-**Actual** — it reports the new sentence. The Trace log shows why: the
-`get_help` reply payload contains the edited `list_agents` description, while
-every `tools/list` payload from session start still carries the original.
+**Expected** — a teammate that is already running cannot be served the new
+description until it restarts.
+**Actual** — the Trace log's `App tool server replied to tools/call:` line for
+`get_help` contains, inside its TOOLS catalog, the edited `list_agents`
+description, served minutes after the save with no restart in between. Every
+`tools/list` payload from session start still carries the original text.
+
+Judge this on the wire payload, not on what the model then says. The payload is
+what the tool server actually served; a model's answer can also come from an
+earlier turn, or from a session that was replaced underneath it.
 
 Use a *different* sentinel word in the **Next session** field from the one in
 any **live** field. With the same word in both, the model can be repeating the
