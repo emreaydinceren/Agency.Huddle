@@ -12,7 +12,7 @@ namespace Agency.Huddle.Tests.Pipes;
 /// <summary>One line captured from the fixture's host, in emission order.</summary>
 /// <param name="Level">The severity the site logged at.</param>
 /// <param name="Category">The logger's category name, typically the logging type's full name.</param>
-/// <param name="Message">The rendered message, after the <see cref="Microsoft.Extensions.Logging.LogValuesFormatter"/> substitutes its arguments.</param>
+/// <param name="Message">The rendered message, with its <c>{Placeholder}</c> arguments already substituted.</param>
 public sealed record CapturedLogEntry(LogLevel Level, string Category, string Message);
 
 /// <summary>
