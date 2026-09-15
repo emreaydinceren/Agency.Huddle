@@ -286,15 +286,14 @@ public sealed class TeammateCardTests
     }
 
     /// <summary>
-    /// T10 coverage note: <c>Process.Start</c> is not injectable in this codebase, so the branch this
-    /// task actually targets - <c>Process.Start</c> returning <see langword="null"/>, which is what
-    /// happens with <c>UseShellExecute</c> when no application is registered for <c>.md</c> - cannot
-    /// be driven from a test without adding a test-only seam, which the task explicitly forbids. It
-    /// also cannot be exercised indirectly here: clicking "Open" for a Persona whose file still exists
-    /// launches a real OS process via the genuine <c>Process.Start</c> call, which would be an
-    /// environment-dependent side effect in CI rather than a deterministic assertion. That branch is
-    /// therefore not covered by an automated test; the fix was verified by reading
-    /// <c>OpenInEditor</c>'s new null-check.
+    /// <c>OpenInEditor</c>'s null-return branch is deliberately not covered here, and this note
+    /// records why so nobody reads the gap as an oversight. <c>Process.Start</c> is not injectable in
+    /// this codebase, so the case the null-check exists for - <c>Process.Start</c> returning
+    /// <see langword="null"/> under <c>UseShellExecute</c> when no application is registered for
+    /// <c>.md</c> - cannot be driven from a test without a seam that exists only for the test. It
+    /// cannot be reached indirectly either: clicking "Open" on a Persona whose file still exists
+    /// invokes the real <c>Process.Start</c> and launches a real OS process, which is an
+    /// environment-dependent side effect rather than a deterministic assertion.
     ///
     /// What this test does pin is the sibling guard the fix must not regress: a Persona removed out
     /// from under an already-open card still makes <c>PersonaStore.PathFor</c> throw
