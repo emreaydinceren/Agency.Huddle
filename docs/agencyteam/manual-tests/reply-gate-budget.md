@@ -1474,7 +1474,10 @@ If the models simply stop talking to each other before six (they may not obey th
 **Steps**
 
 1. Run `P-RESET-ROOMS`, then start the app with PROFILE C and `$env:Team__AgentMessageBudget = '2'` set BEFORE `dotnet run`.
-2. On **Teammates**, wait for both tiles to read **Online** and confirm each shows Haiku and low on its card.
+2. On **Teammates**, wait for both tiles to read **Online**, then set each one's **Model** to the
+   Haiku entry and **Effort** to `low` again. `P-RESET-ROOMS` deletes `team.db`, which is where the
+   stored Model and Effort live, so both cards come back reading `Agent default` / `Model default`
+   however they were left in REPLYGATEBUDGET-33.
 3. Click **New chat**, tick `Ana` and `Ben`, and click **Start chat**.
 4. Type `@Ana start a short conversation with @Ben about picking a meeting time.` and press Enter.
 5. Wait until the Room halts and the red pause block appears.
@@ -1482,7 +1485,13 @@ If the models simply stop talking to each other before six (they may not obey th
 7. Note the exact text of the last Message in the Room.
 8. PATH ONE. Do NOT click Continue. Instead type `@<the declined Persona> summarise everything you have been told in this room so far, listing each message.` and press Enter.
 9. Read the reply carefully and check whether it accounts for the Message it was paused on (the one you noted at step 7).
-10. PATH TWO. Drive the Room back to its cap by typing `@Ana carry on with @Ben.` and waiting for the pause block to return.
+10. PATH TWO. Drive the Room back to its cap by typing `@Ana carry on with @Ben.` and waiting for
+    the pause block to return. Before clicking Continue, check that the LAST Message actually
+    `@`-mentions the Persona that declined: Continue re-delivers that Message, and in a Room of
+    three the Reply Gate answers it only if it names them. These models often end a turn without
+    writing the Mention their Persona body asks for, and a held Message that names nobody
+    correctly produces Catch-up and no reply — which is not what this path is testing. If it
+    names nobody, prompt again until one does.
 11. Click **Continue** and wait up to 90 seconds.
 12. Read the reply that arrives, if any, and count how many times it addresses the Message it was paused on.
 
