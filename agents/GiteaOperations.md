@@ -91,6 +91,25 @@ curl "$API/branches" -H "Authorization: token ${GITEA_ACCESS_TOKEN}"
 curl -X DELETE "$API/branches/<branch-name>" -H "Authorization: token ${GITEA_ACCESS_TOKEN}"
 ```
 
+A successful delete returns **204** with an empty body, so check the status code rather than the
+output — `curl -s -o /dev/null -w "%{http_code}"` is enough.
+
+**Deleting a branch is recoverable, but only if you wrote the sha down first.** The commits
+survive until git garbage-collects them, and nothing in the Gitea UI will tell you what the tip
+was afterwards. Record it before deleting, and recreate with an ordinary push:
+
+```bash
+git rev-parse "origin/<branch-name>"                    # BEFORE deleting
+git push origin <sha>:refs/heads/<branch-name>          # to put it back
+```
+
+**Confirm a branch is really merged before deleting it, and do not trust a three-dot diff for
+it.** `git diff main...branch` shows what the *branch* changed since the merge base, so it still
+prints a full diff for a branch whose work has already landed — including one whose commit was
+cherry-picked rather than merged, which is a different sha and therefore not an ancestor. The
+reliable checks are `git merge-base --is-ancestor origin/<branch> origin/main`, or, for a
+cherry-pick, confirming the actual content is present on `main`.
+
 ## Pull Requests
 
 ```powershell
@@ -235,11 +254,16 @@ Three **write** shapes, each returning `201`: commenting on an issue
 Listing Actions runs (`GET /actions/runs`) also works as described, and the `.git` suffix strip
 plus `cut -d/ -f1-3` in the [Branches](#branches) snippet derives the right base URL unchanged.
 
+**Branch delete moved from documented to observed on 2026-09-15.** It was exercised thirteen
+times in one session, clearing every merged branch off the remote, and returned **204** with an
+empty body each time — including for branch names containing a `/`, which need no escaping. The
+endpoint and the shape above are exactly as written.
+
 **Still documented from Gitea's published REST API conventions rather than observed:** issue
-**create**, branch **delete**, and Actions **rerun**. Each is visible and non-trivial to undo, so
-none was run just to validate this page. Treat those three request bodies as a strong starting
-point, not a guarantee; if one 4xxs, check the response body for the actual Gitea version's field
-names before assuming the whole approach is wrong.
+**create** and Actions **rerun**. Both are visible and non-trivial to undo, so neither was run
+just to validate this page. Treat those two request bodies as a strong starting point, not a
+guarantee; if one 4xxs, check the response body for the actual Gitea version's field names before
+assuming the whole approach is wrong.
 
 ## Related
 
