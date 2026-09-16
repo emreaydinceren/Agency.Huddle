@@ -9,12 +9,20 @@ Each entry says what happened and why it matters. Several describe behaviour tha
 working exactly as designed; the observation is about what it feels like to use, not about
 whether it is correct.
 
+> [!IMPORTANT]
+> This page was written against `docs/manual-test-run-2026-09-14`, which forked from `main`
+> before the MudBlazor migration. Every entry was re-checked against `main` at `774a472` on
+> 2026-09-15 and now carries its status and, where one was opened, its issue. Two are fixed.
+> Read the status line before acting on an entry.
+
 ## From the manual test run of 2026-09-15
 
 The run drove the app for several hours across every area of the chat surface: rooms,
 teammates, budgets, hooks, personas and the app tools.
 
 ### 1. Silence is the product's main failure mode, and it is never explained
+
+**Still true on `main` (`774a472`). Filed as #40**, with observation 5 folded in.
 
 This is the biggest thing I would fix. Four different mechanisms cause a teammate to
 correctly say nothing, and **none of them shows anything on screen**:
@@ -40,6 +48,8 @@ The fix does not need to be heavy. A single quiet line in the transcript would d
 
 ### 2. The built-in demo agent contradicts the product's own headline rule
 
+**FIXED on `main`.** `echo` now answers a plain, unmentioned message in a two-member room - re-tested on `774a472`. The account below is kept as the record of what it cost while it was true; no issue was opened.
+
 The room rule the product states everywhere — in `get_help`, in the system prompt, in the
 docs — is that a two-member room has nobody else the message could be for, so the agent
 answers **every** message.
@@ -56,6 +66,8 @@ following a different rule.
 
 ### 3. A room can change its own interaction rules without the human doing anything
 
+**Still true on `main` (`774a472`). Filed as #41.** Re-reproduced directly: the same plain message drew a reply at two members and silence at three, with the invite announcing only the rename.
+
 My two-member room with Nova silently became a three-member room, because Zellandine used
 `invite_agent` to add itself so it could post there. That is legitimate — the tool exists
 and membership was enforced properly.
@@ -70,6 +82,8 @@ room crosses that line, say so in the transcript — *"Zellandine joined. Messag
 need an `@mention`."*
 
 ### 4. Teammates routinely reply twice to one message
+
+**Filed as #42.** Not re-verified since - it needs paid turns - but nothing merged since touches it.
 
 Nova frequently produced two message rows for a single turn — its answer, plus a
 `post_message` of roughly the same thing:
@@ -91,6 +105,8 @@ teammate not to post what it is already about to say.
 
 ### 5. Continue behaves like a coin flip
 
+**Still true on `main` (`774a472`). Folded into #40**, because it is the same defect reached through a different control.
+
 Of three **Continue** presses across the run, two granted the budget correctly and then
 produced no visible effect whatsoever. The reason is reasonable — the message being
 re-delivered mentioned nobody, so no teammate was woken — but the button gives no hint of
@@ -102,6 +118,8 @@ that the re-delivered message woke nobody.
 
 ### 6. Rooms are hard to tell apart in the sidebar
 
+**Still true on `main` (`774a472`), and understated. Filed as #43** - a later count found 14 rooms with `Nova, Jarvis` appearing five times.
+
 At one point the sidebar held two rooms named `Nova, echo, Jarvis` and two named
 `Nova, Jarvis`. Rooms are named after their members, so any two rooms with the same
 members are indistinguishable — no timestamp, no last-message preview, no distinguishing
@@ -110,6 +128,8 @@ mark of any kind. I navigated by URL id for the rest of the run.
 A last-message snippet or a created date under the name would settle it.
 
 ### 7. What a teammate remembers is invisible and unmanageable
+
+**Partly addressed. Filed as #44.** PR #38 closed the specific vector - a tool call naming a path inside `~/.claude` is now refused (#22) - but the general complaint stands: a `Bash` redirect is not caught, and the human still has no view of what a teammate holds.
 
 Asked what word it had been asked to remember, a freshly restarted Nova answered with a
 word from a **different room, two tests earlier** — because it had written that word to
@@ -126,22 +146,31 @@ quite true once a teammate can write itself notes.
 - **A refused reply vanishes without trace.** When a teammate's reply is refused for
   budget, you watch a draft row type out a full answer and then disappear, leaving
   nothing. Documented as correct, and it is — but it looks like the app lost the message.
+  *Still true; part of #40.*
 - **The Model picker is incomplete just after startup.** Opening **Edit** early showed
   only Haiku; the full list (Sonnet, Fable, Opus) appeared once the adapter had been
   probed. Silent and timing-dependent, so whether you see the real choice depends on how
-  fast you clicked.
+  fast you clicked. *Still true, re-measured on `774a472`: two entries at 265 ms, six at
+  8.5 s, and the control shows the raw id `sonnet` until the catalog lands. Filed as #39.*
 - **A model change silently drops your Effort setting.** Correct — the new model may not
   offer the same levels — but the selection disappears with no notice that it happened or
-  why.
-- **Restarting a teammate means editing it.** There is no Restart control on an Online
-  teammate's card (issue #32), so the only route is to change the Persona text and save —
-  making an edit you do not want in order to get an effect you do, and losing the
-  teammate's memory on the way.
+  why. *Still true; filed as #45, which warns a triager not to "fix" the reset itself.*
+- **Restarting a teammate means editing it.** There was no Restart control on an Online
+  teammate's card, so the only route was to change the Persona text and save — making an
+  edit you do not want in order to get an effect you do, and losing the teammate's memory
+  on the way. ***FIXED** on `main` by PR #38 (#32): Restart is now offered in every settled
+  state. `Starting` stays excluded, because a restart there races the start it would
+  cancel.*
 
 ## Notes
 
-Observations 1, 2 and 3 compound. Each is individually small; together they mean a user's
-first encounter with a quiet teammate has at least four plausible explanations, no
-on-screen evidence for any of them, and a built-in demo agent that behaves inconsistently
-with the documented rule. If only one thing here gets attention, make it observation 1 —
-it is the cheapest to fix and it removes most of the confusion the other two cause.
+Observations 1, 2 and 3 compounded, and fixing 2 has already removed a third of it: a new
+user's first encounter with a quiet teammate no longer includes a built-in demo agent
+quietly following a different rule from the one the product just explained.
+
+What remains is 1 and 3, and they are still worth taking together. A user's first
+encounter with a quiet teammate has several plausible explanations and no on-screen
+evidence for any of them. If only one thing here gets attention, make it observation 1
+(#40) — it is the cheapest to fix and it removes most of the confusion 3 causes. Entry 3
+(#41) is the one case where the human can be told *before* the confusing silence rather
+than after it, which is why the issue argues for building them together.
