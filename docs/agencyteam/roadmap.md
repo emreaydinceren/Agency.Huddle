@@ -24,7 +24,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 
 | # | Item | Single place to change | Already in the code |
 | --- | --- | --- | --- |
-| 1 | Renaming a Teammate | `PersonaStore`, and every per-Persona store | the card now *offers* the rename (Name/Title/Alias boxes over the frontmatter) and warns about the ghost; the no-cascade half is still open |
+| ~~1~~ | ~~Renaming a Teammate~~ — **delivered 2026-09-15** | `PersonaStore`, and every per-Persona store | shipped; the ghost was an **id**, not a cascade rule — see [ADR-0011](../adr/0011-a-rename-moves-the-teammate-not-its-history.md) |
 | ~~2~~ | ~~A cap on agent-to-agent conversation~~ — **delivered 2026-09-12** | `ChatService`, then `ReplyGate.cs` and `PersonaRunner` | shipped; the two counts moved onto the Envelope, which the plan did not foresee |
 | ~~3~~ | ~~Streaming and failure surfacing~~ — **delivered 2026-09-13** | `PersonaRunner`, `Chat.razor` | shipped with 4 and 5; the roadmap named three failures and the code had twenty-one |
 | ~~4~~ | ~~Stopping a turn~~ — **delivered 2026-09-13** | `PersonaRunner`, `Chat.razor` | shipped; Stop means this Agent now, and a stopped Turn is not a failure |
@@ -40,20 +40,32 @@ reminder that the remaining three on that line are cheap for the same reason.
 
 ## 1. Renaming a Teammate
 
-> **Partly delivered.** The Teammate card now *offers* the rename: Edit carries
-> discrete Name, Title and Alias boxes that rewrite those frontmatter lines in the
-> Persona text as the Human types, through a new `PersonaFrontmatter.WriteScalarField`
-> rather than through `Compose` — `Compose` emits only the four identity keys, so
-> recomposing a real Persona through it would drop exactly the fields
-> `ComposeJobDescription` sends to the model. Changing Name raises a warning on the
-> card naming the consequence, and does not block.
+> **Delivered 2026-09-15**, with
+> [ADR-0011](../adr/0011-a-rename-moves-the-teammate-not-its-history.md) as the
+> decision in full. Two halves shipped hours apart: the card gained discrete Name,
+> Title and Alias boxes over the frontmatter (through a new
+> `PersonaFrontmatter.WriteScalarField`, because `Compose` emits only the four
+> identity keys and would drop every other field), and then the cascade itself.
 >
-> **The decision this item opens with is still unmade.** Nothing cascades: the old
-> Agent, its Rooms and its Transcripts stay behind under the old Name, and only the
-> Model and Effort rows follow. So the item is now *visible* rather than *solved* —
-> which is arguably worse than before, because a rename that used to require
-> deliberately editing raw YAML is now one keystroke away. Whoever picks this up
-> should read that as raising the priority, not lowering it.
+> **This entry's framing was wrong, and usefully so.** It opens by asking what a
+> rename should *mean* to the chat surface, and treats the answer as a policy
+> choice about cascading. It is not. **The ghost was an id.** `AgentConnection`
+> upserts by Name, so a restarted runner saying `hello` under a new Name minted a
+> brand-new user id — and every association (`room_members`,
+> `GetRoomsForUserAsync`, `ChatMessage.SenderId`, `FindRoomWithExactMembersAsync`)
+> is by id. Rename the existing row **in place** and all of it follows with no
+> policy, no migration and no schema change. There was never a cascade to design;
+> there was an identity being discarded.
+>
+> **What the entry got right:** every per-Persona store added is one more place a
+> rename has to touch. The count at delivery was the Team Directory row, the Model
+> row, the Effort row, the Room names and the Work Dir — and the Work Dir was the
+> one nothing had ever written down.
+>
+> **Still true after this**, and recorded in [Known limits](known-limits.md):
+> history is not rewritten, the session still restarts and loses its memory, a
+> collision with an existing Agent's Name does nothing but log, and the Work Dir
+> move can lose its race and give up.
 >
 > The text below is kept as the reasoning that produced it.
 
@@ -848,7 +860,13 @@ Six dependencies here are real:
   serve what item 7 writes, so imported Themes land in `{DataDir}/themes/` behind a file
   provider of their own. The mapping key for every colour token is already written into
   `theme.css` as a trailing comment.
-- **1 before the next per-Persona store.** Each store added is one more place a
+- ~~**1 before the next per-Persona store.**~~ **Settled — 1 shipped 2026-09-15**,
+  and the warning held: the rename had to touch the Team Directory row, the Model
+  row, the Effort row, the Room names **and** the Work Dir, and the Work Dir was
+  the one no document had ever mentioned. `PersonaRenameCascade` is now the single
+  place a new per-Persona store has to be added to, which is a cheaper shape than
+  this bullet feared — but the cost still never goes down, so the warning stands
+  for item 9. Each store added is one more place a
   rename has to touch, and that cost never goes down. Item 9 is such a store, and
   `PersonaEffortStore` has already overtaken this warning once. Item 10 added no
   new store and re-keyed the two that exist: `persona_models` and

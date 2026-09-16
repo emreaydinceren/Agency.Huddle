@@ -136,12 +136,25 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   ran".** The documented `dotnet test Huddle.slnx --` is exact. Adding
   `--nologo` or `-v minimal` ahead of the `--` exits 5 having run nothing, which
   scrolls past looking like a pass. Run the command verbatim.
-- **Editing a Persona's `name:` renames the Teammate, and only the Model and
-  Effort follow it.** `PersonaStore.Update` moves those two rows by hand
-  precisely because nothing else would. The old Agent row, its Rooms and its
-  Transcripts stay behind under the old Name — the same non-cascading semantics
-  removing a Persona has, and deliberate, but it means a rename leaves a ghost
-  in the Team Directory.
+- **Editing a Persona's `name:` renames the Teammate, and since 2026-09-15 the
+  whole Teammate follows it.** `PersonaStore.Update` still moves the Model and
+  Effort rows by hand, and `PersonaRenameCascade` now renames the Agent's
+  Team Directory row **in place, keeping its id** — so the Rooms, the
+  `room_members` rows and every `ChatMessage.SenderId` follow with no work,
+  because all of them reference the id and never the Name. See
+  [ADR-0011](../adr/0011-a-rename-moves-the-teammate-not-its-history.md).
+  Two things about it are load-bearing and easy to undo by accident:
+  - **`PersonaRenamed` is raised synchronously, before `PersonasChanged`, and
+    `ITeamDirectory.RenameUser` is synchronous for that reason alone.**
+    `PersonaSupervisor` reacts to `PersonasChanged` by starting a runner under
+    the new Name, and that runner's `hello` mints a **brand-new user id** if no
+    row carries the Name yet. Reordering those two events, or "tidying"
+    `RenameUser` into the async shape the rest of `ITeamDirectory` uses, silently
+    restores the ghost — with a warning in the log and nothing on screen.
+  - **A rename does not rewrite history, deliberately.** `ChatMessage` carries a
+    denormalised `SenderName` as well as `SenderId`, so Messages already posted
+    keep the Name they were posted under. That is a record, not a bug; the
+    `SenderId` still proves it was one Teammate throughout.
 
 - **`ProtocolJson.Options` escapes anything unsafe for HTML, which ruins a file
   a human edits.** It sets no `Encoder`, so it inherits `JavaScriptEncoder.Default`:

@@ -88,6 +88,157 @@ public sealed class SqliteTeamDirectoryTests
         Assert.Equal(agent.Id, found.Id);
     }
 
+    /// <summary>Renaming an Agent keeps its id, and the new Name resolves where the old one did.</summary>
+    [Fact]
+    public async Task RenameUser_Agent_KeepsId_AndUpdatesNameLookup()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", "an echo agent", ct);
+        Assert.NotNull(echo);
+
+        var renamed = directory.RenameUser(echo.Id, "echoprime");
+
+        Assert.True(renamed);
+        var byNewName = await directory.FindUserByNameAsync("echoprime", ct);
+        Assert.NotNull(byNewName);
+        Assert.Equal(echo.Id, byNewName.Id);
+        var byOldName = await directory.FindUserByNameAsync("echo", ct);
+        Assert.Null(byOldName);
+    }
+
+    /// <summary>A rename that changes only casing succeeds and persists the new casing.</summary>
+    [Fact]
+    public async Task RenameUser_CaseOnlyChange_PersistsNewCasing()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var coo = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(coo);
+
+        var renamed = directory.RenameUser(coo.Id, "Coo");
+
+        Assert.True(renamed);
+        var stored = await directory.GetUserAsync(coo.Id, ct);
+        Assert.NotNull(stored);
+        Assert.Equal("Coo", stored.Name);
+    }
+
+    /// <summary>Renaming a Teammate to the Name it already has is a no-op that reports success.</summary>
+    [Fact]
+    public async Task RenameUser_SameName_IsNoOpAndReturnsTrue()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+
+        var renamed = directory.RenameUser(echo.Id, "echo");
+
+        Assert.True(renamed);
+        var stored = await directory.GetUserAsync(echo.Id, ct);
+        Assert.NotNull(stored);
+        Assert.Equal("echo", stored.Name);
+    }
+
+    /// <summary>There is no row for an unknown id, so the rename reports failure without throwing.</summary>
+    [Fact]
+    public async Task RenameUser_UnknownId_ReturnsFalse()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+
+        var renamed = directory.RenameUser("no-such-id", "newname");
+
+        Assert.False(renamed);
+    }
+
+    /// <summary>The Human's row is never a rename target, matching the guard on UpsertAgentUserAsync.</summary>
+    [Fact]
+    public async Task RenameUser_HumanId_ReturnsFalse()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+
+        var renamed = directory.RenameUser(KnownIds.Human, "SomeoneElse");
+
+        Assert.False(renamed);
+        var human = await directory.GetHumanAsync(ct);
+        Assert.Equal("You", human.Name);
+    }
+
+    /// <summary>A new Name already held by a different Teammate is rejected rather than colliding.</summary>
+    [Fact]
+    public async Task RenameUser_NameTakenByDifferentUser_ReturnsFalse()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
+        Assert.NotNull(echo);
+        Assert.NotNull(alpha);
+
+        var renamed = directory.RenameUser(echo.Id, "alpha");
+
+        Assert.False(renamed);
+        var stillEcho = await directory.GetUserAsync(echo.Id, ct);
+        Assert.NotNull(stillEcho);
+        Assert.Equal("echo", stillEcho.Name);
+    }
+
+    /// <summary>A new Name that fails NameRules.IsValidAgentName is rejected without touching the row.</summary>
+    [Fact]
+    public async Task RenameUser_InvalidNewName_ReturnsFalse()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+
+        var renamed = directory.RenameUser(echo.Id, " bad name ");
+
+        Assert.False(renamed);
+        var stillEcho = await directory.GetUserAsync(echo.Id, ct);
+        Assert.NotNull(stillEcho);
+        Assert.Equal("echo", stillEcho.Name);
+    }
+
+    /// <summary>Renaming a Teammate leaves its Room memberships intact under the same id.</summary>
+    [Fact]
+    public async Task RenameUser_Agent_PreservesRoomMembershipAndRoomsForUser()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
+
+        var renamed = directory.RenameUser(echo.Id, "echoprime");
+
+        Assert.True(renamed);
+        var members = await directory.GetRoomMembersAsync(room.Id, ct);
+        Assert.Contains(members, member => member.Id == echo.Id && member.Name == "echoprime");
+        var rooms = await directory.GetRoomsForUserAsync(echo.Id, ct);
+        Assert.Single(rooms);
+        Assert.Equal(room.Id, rooms[0].Id);
+    }
+
     [Fact]
     public async Task CreateRoom_AddMember_GetMembers_InInsertionOrder()
     {

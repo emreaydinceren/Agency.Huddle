@@ -198,12 +198,18 @@
                                   ReadOnly="@this.aliasLocked" HelperText="@this.AliasHelperText" />
                 </MudStack>
 
+                @* This said the opposite until ADR-0011: a rename used to leave the Agent, its Rooms and
+                   their Transcripts behind under the old Name. It now carries all of them, so the note
+                   is Info rather than Warning, and what it reports is the one thing a rename still does
+                   NOT do - rewrite what was already said. See docs/adr/0011-a-rename-moves-the-teammate-
+                   not-its-history.md for why history is deliberately left alone. *@
                 @if (!string.Equals(this.name, this.Name, StringComparison.Ordinal))
                 {
                     @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
-                       so role="alert" is added explicitly to keep the warning announced, per rules.md/traps.md. *@
-                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3" role="alert">
-                        Renaming moves this teammate's Model and Effort, but its Agent, its Rooms and their Transcripts stay behind under the old name.
+                       so role="status" is added explicitly to keep the note announced, per rules.md/traps.md.
+                       "status" rather than "alert": this is no longer an interruption, it is a consequence. *@
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3" role="status">
+                        Renaming brings this teammate's chats, its history and its work folder with it. Messages already posted keep the old name — the transcript records what was said at the time.
                     </MudAlert>
                 }
             }

@@ -101,6 +101,20 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PersonaSupervisor>();
         services.AddHostedService(sp => sp.GetRequiredService<PersonaSupervisor>());
 
+        // Unconditional, unlike PersonaSupervisor's hosted service above: the Agent row a rename
+        // cascades from may exist from an earlier session or a raw pipe client, so a Persona rename
+        // must cascade into the Team Directory even when Team:Acp:Enabled is false and no runner is
+        // ever started. A singleton nobody resolves never subscribes to PersonaStore.PersonaRenamed,
+        // so this must be constructed - hence AddHostedService rather than a plain AddSingleton.
+        //
+        // Registered by type, not by the sp => sp.GetRequiredService<PersonaSupervisor>() factory
+        // shape used just above: nothing else in the app needs to resolve this same instance the way
+        // a Restart button resolves the running PersonaSupervisor, so there is no second registration
+        // to keep in sync here. It also keeps this registration out of
+        // PipeHostFixture.RemovePersonaSupervisorHostedService's factory-based search, which already
+        // fails loudly - by design - the day a second factory-registered IHostedService shows up.
+        services.AddHostedService<PersonaRenameCascade>();
+
         return services;
     }
 }

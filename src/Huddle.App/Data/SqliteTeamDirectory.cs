@@ -99,6 +99,63 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         return ReadUser(reader);
     }
 
+    /// <summary>
+    /// Renames the <c>users</c> row with id <paramref name="userId"/> to <paramref name="newName"/>,
+    /// keeping its id unchanged.
+    /// </summary>
+    /// <param name="userId">The id of the row to rename.</param>
+    /// <param name="newName">
+    /// The new Name. Must satisfy <see cref="NameRules.IsValidAgentName(string?)"/>, and must not
+    /// already belong to a different Teammate.
+    /// </param>
+    /// <returns><see langword="true"/> if the row was renamed; otherwise <see langword="false"/>.</returns>
+    /// <remarks>
+    /// Deliberately synchronous, unlike every other member of this class: its only caller is
+    /// <see cref="Agency.Huddle.App.Acp.PersonaRenameCascade"/>, reacting to
+    /// <see cref="Agency.Huddle.App.Acp.PersonaStore.PersonaRenamed"/> — a plain
+    /// <c>Action&lt;T&gt;</c> event that cannot be awaited. This is the one Team Directory write that
+    /// MUST complete before <see cref="Agency.Huddle.App.Acp.PersonaStore.PersonasChanged"/> fires and
+    /// <c>PersonaSupervisor</c> starts a runner under the new Name; an async handler could not
+    /// guarantee that ordering, and without it the restarted runner's <c>hello</c> mints a brand-new
+    /// user id instead of renaming this one (see ADR-0011). <see cref="PersonaModelStore"/> and
+    /// <see cref="PersonaEffortStore"/> are the existing precedent for synchronous access to this same
+    /// database.
+    /// <para>
+    /// Returns <see langword="false"/> rather than throwing because the caller is a
+    /// file-watcher-driven Persona rename: an exception raised from inside that callback would
+    /// either be swallowed silently or kill the debounce timer that invoked it, with nothing
+    /// surfaced to a person. The <c>WHERE kind = 'agent'</c> clause reproduces the same guard
+    /// <see cref="UpsertAgentUserAsync"/> uses, so the Human's row is never a rename target — a
+    /// Persona renamed to the Human's Name must not be able to take over the Human's row and its
+    /// Rooms. The uniqueness check excludes the row being renamed by id, not just by name, so a
+    /// case-only rename (<c>coo</c> to <c>Coo</c>) is not mistaken for a collision with itself under
+    /// the table's <c>COLLATE NOCASE</c> comparison.
+    /// </para>
+    /// </remarks>
+    public bool RenameUser(string userId, string newName)
+    {
+        if (!NameRules.IsValidAgentName(newName))
+        {
+            return false;
+        }
+
+        using var connection = this.OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE users SET name = $name
+            WHERE id = $id
+              AND kind = 'agent'
+              AND NOT EXISTS (
+                  SELECT 1 FROM users WHERE name = $name COLLATE NOCASE AND id <> $id
+              );
+            """;
+        command.Parameters.AddWithValue("$name", newName);
+        command.Parameters.AddWithValue("$id", userId);
+
+        var rowsAffected = command.ExecuteNonQuery();
+        return rowsAffected == 1;
+    }
+
     public async Task<User?> GetUserAsync(string id, CancellationToken ct = default)
     {
         await using var connection = await this.OpenConnectionAsync(ct);
@@ -119,6 +176,30 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
 
         await using var reader = await command.ExecuteReaderAsync(ct);
         return await reader.ReadAsync(ct) ? ReadUser(reader) : null;
+    }
+
+    /// <summary>
+    /// Finds the <c>users</c> row with the given Name, case-insensitively — the synchronous twin of
+    /// <see cref="FindUserByNameAsync"/>.
+    /// </summary>
+    /// <param name="name">The Name to look up.</param>
+    /// <returns>The matching <see cref="User"/>, or <see langword="null"/> if none exists.</returns>
+    /// <remarks>
+    /// Synchronous for the same reason <see cref="RenameUser"/> is: <see cref="Agency.Huddle.App.Acp.PersonaRenameCascade"/>
+    /// must find the Agent to rename from inside a plain <c>Action&lt;T&gt;</c> event handler, which
+    /// cannot await, rather than blocking on the async version. <see cref="PersonaModelStore"/> and
+    /// <see cref="PersonaEffortStore"/> are the existing precedent for synchronous access to this same
+    /// database.
+    /// </remarks>
+    public User? FindUserByName(string name)
+    {
+        using var connection = this.OpenConnection();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT id, name, kind, description FROM users WHERE name = $name COLLATE NOCASE;";
+        command.Parameters.AddWithValue("$name", name);
+
+        using var reader = command.ExecuteReader();
+        return reader.Read() ? ReadUser(reader) : null;
     }
 
     public async Task<IReadOnlyList<User>> GetUsersAsync(CancellationToken ct = default)
@@ -320,6 +401,24 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         var connection = new SqliteConnection(this.connectionString);
         await connection.OpenAsync(ct);
         await ExecuteNonQueryAsync(connection, "PRAGMA foreign_keys=ON;", ct);
+        return connection;
+    }
+
+    /// <summary>
+    /// The synchronous twin of <see cref="OpenConnectionAsync"/>, used only by <see cref="RenameUser"/>
+    /// and <see cref="FindUserByName"/> — see their remarks for why those two members are synchronous
+    /// at all.
+    /// </summary>
+    private SqliteConnection OpenConnection()
+    {
+        var connection = new SqliteConnection(this.connectionString);
+        connection.Open();
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "PRAGMA foreign_keys=ON;";
+            command.ExecuteNonQuery();
+        }
+
         return connection;
     }
 }
