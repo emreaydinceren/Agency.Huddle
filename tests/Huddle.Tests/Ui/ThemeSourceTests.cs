@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
@@ -11,7 +13,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// either a variable MudBlazor's own theme generates or <c>--font-mono</c>, the one token MudBlazor
 /// has no equivalent for (declared in <c>app-vars.css</c>).
 /// </summary>
-public sealed class ThemeSourceTests
+public sealed partial class ThemeSourceTests
 {
     /// <summary>
     /// Every CSS custom property name <c>MudThemeProvider.GenerateTheme</c> emits for a default
@@ -223,6 +225,56 @@ public sealed class ThemeSourceTests
 
         Assert.Empty(undeclared);
     }
+
+    /// <summary>
+    /// No <c>MudText</c> in any <c>.razor</c> file under <c>Components</c> carries
+    /// <c>Color="Color.Secondary"</c>. In MudBlazor that is the secondary <em>brand</em> colour - a
+    /// blue in this application's palette, per <c>ThemeCatalog</c> - not "muted body text", which is
+    /// the utility class <c>mud-text-secondary</c> (resolving to
+    /// <c>--mud-palette-text-secondary</c>). The two spellings are one word apart and read as
+    /// interchangeable, which is exactly how seven <c>MudText</c> elements across
+    /// <c>Teammates.razor</c> and <c>TeammateCard.razor</c> once rendered as brand-blue links instead
+    /// of the muted grey text every other element on the same page already got right through
+    /// <c>app.css</c>'s <c>var(--mud-palette-text-secondary)</c>. Enumerating the directory, rather
+    /// than naming each file, is the same argument <see cref="ScopedCss_DeclaresNoColourLiteral"/>
+    /// makes: a component added later is covered the day it appears, with no test change required.
+    /// </summary>
+    [Fact]
+    public void RazorComponents_NoMudTextUsesColorSecondary()
+    {
+        var componentsDirectory = CssSource.RepoPath("src", "Huddle.App", "Components");
+        var razorFiles = Directory
+            .EnumerateFiles(componentsDirectory, "*.razor", SearchOption.AllDirectories)
+            .ToList();
+
+        Assert.NotEmpty(razorFiles);
+
+        var hits = razorFiles.SelectMany(FindMudTextColorSecondary).ToList();
+
+        Assert.Empty(hits);
+    }
+
+    /// <summary>
+    /// Every <c>&lt;MudText ... Color="Color.Secondary" ...&gt;</c> opening tag found in
+    /// <paramref name="razorPath"/>, formatted as <c>"path line N"</c> so a hit is readable without
+    /// opening the file.
+    /// </summary>
+    /// <param name="razorPath">Path to the <c>.razor</c> file to scan.</param>
+    private static IReadOnlyList<string> FindMudTextColorSecondary(string razorPath)
+    {
+        var text = File.ReadAllText(razorPath);
+        List<string> hits = [];
+        foreach (Match match in MudTextColorSecondaryPattern().Matches(text))
+        {
+            var line = text[..match.Index].Count(character => character == '\n') + 1;
+            hits.Add($"{razorPath} line {line}");
+        }
+
+        return hits;
+    }
+
+    [GeneratedRegex(@"<MudText\b[^>]*\bColor\s*=\s*""Color\.Secondary""[^>]*>", RegexOptions.CultureInvariant)]
+    private static partial Regex MudTextColorSecondaryPattern();
 
     // The one scoped stylesheet the colour-literal sweep does not tokenise, and why: see the summary
     // on ScopedCss_DeclaresNoColourLiteral. It carries no exemption in ScopedCss_UsesOnlyMudBlazorVariables

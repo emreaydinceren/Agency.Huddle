@@ -89,9 +89,22 @@ internal static class ThemeCatalog
                 TextPrimary = "#e6e6ea",
                 TextSecondary = "#c3c3cc",
                 TextDisabled = "#6a6a74",
-                Primary = "#5e2b60",
+                // Lightened from the original #5e2b60, which measured only 1.63:1 against this
+                // palette's Background (#1b1b1f) - see app.css's focus-ring comment for that
+                // measurement - and 1.35:1 against Surface (#2a2a31), both well under the 4.5:1
+                // MudBlazor needs for --mud-palette-primary to read on the active MudNavLink.
+                // #c07bc3 keeps the same brand hue (~297.5 degrees, against the light palette's
+                // ~298.9 and this palette's own prior ~297.7) and a close saturation, only lighter,
+                // and was verified with the WCAG 2.1 relative-luminance formula:
+                //   - vs Surface (#2a2a31):    4.656:1
+                //   - vs Background (#1b1b1f): 5.610:1
+                // Both clear the 4.5:1 text minimum.
+                Primary = "#c07bc3",
                 PrimaryDarken = "#7a3a7e",
-                PrimaryContrastText = "#ffffff",
+                // White PrimaryContrastText only reaches 3.06:1 against the new, lighter Primary -
+                // enough for large text but short of the 4.5:1 minimum the avatar monogram needs.
+                // Black reaches 6.86:1, comfortably clearing it.
+                PrimaryContrastText = "#000000",
                 Secondary = "#7aa2f7",
                 Success = "#3fbf5a",
                 Error = "#e05a5a",

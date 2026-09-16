@@ -20,7 +20,11 @@ public sealed class AppearanceRenderingTests
 
     // The dark-palette counterpart of LightPrimaryVariable, present only when IsDarkMode resolved
     // to true before the response was written.
-    private const string DarkPrimaryVariable = "--mud-palette-primary: rgba(94,43,96,1);";
+    // #c07bc3. The dark palette used to DARKEN the brand purple to #5e2b60, which measured 1.63:1
+    // against the dark ground - so MudBlazor's Primary-tinted active nav link was effectively
+    // unreadable. ThemeCatalogTests now pins the contrast ratio itself; this constant only has to
+    // follow the value. Kept as the literal rendered rgba because that is what reaches the browser.
+    private const string DarkPrimaryVariable = "--mud-palette-primary: rgba(192,123,195,1);";
 
     /// <summary>
     /// With no <c>appearance.json</c>, the shell links no <c>themes/</c> stylesheet (that mechanism
