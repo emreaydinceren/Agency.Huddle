@@ -20,7 +20,7 @@
         </MudTooltip>
     </header>
 
-    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
         A Persona is a Markdown file describing how one teammate should behave, plus the model it
         thinks with. Add one and that teammate comes online with a chat of its own. Editing the file,
         or changing its model, restarts it, which clears what it remembers. Removing the file only
@@ -47,7 +47,7 @@
 
     @if (this.entries.Count == 0)
     {
-        <MudText Typo="Typo.body2" Color="Color.Secondary">No Personas yet. Choose <strong>New teammate</strong> to add one.</MudText>
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">No Personas yet. Choose <strong>New teammate</strong> to add one.</MudText>
     }
     else
     {
@@ -67,7 +67,7 @@
 
         if (groups.Count == 0)
         {
-            <MudText Typo="Typo.body2" Color="Color.Secondary">No teammates in this team.</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">No teammates in this team.</MudText>
         }
         else
         {

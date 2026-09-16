@@ -83,7 +83,7 @@
                     <MudText Typo="Typo.h5" Class="teammate-card-name">@this.name</MudText>
                     @if (this.mode == TeammateCardMode.View)
                     {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@this.title</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">@this.title</MudText>
                     }
                     <MudText Typo="Typo.body2" Class="d-flex align-center gap-2">
                         <StatusDot State="this.status.State" />
@@ -98,10 +98,10 @@
                     }
                     @if (this.mode == TeammateCardMode.View)
                     {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">Alias: @this.alias</MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary">Alias: @this.alias</MudText>
                         @if (this.teams.Length > 0)
                         {
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">Teams: @this.teams</MudText>
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary">Teams: @this.teams</MudText>
                         }
                     }
                 </div>
@@ -159,7 +159,7 @@
 
             @if (this.status.State is not PersonaState.Starting)
             {
-                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-3">Like saving an edit, this restarts the teammate, which clears what it remembers.</MudText>
+                <MudText Typo="Typo.caption" Class="d-block mb-3 mud-text-secondary">Like saving an edit, this restarts the teammate, which clears what it remembers.</MudText>
             }
 
             <MudPaper Outlined="true" Class="pa-3 mb-3">
