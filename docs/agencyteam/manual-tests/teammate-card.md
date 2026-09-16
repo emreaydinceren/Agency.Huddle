@@ -2062,4 +2062,71 @@ If the teammate never reaches `Online`, or the adapter reports an authentication
 
 ---
 
+### TEAMMATECARD-51 — The Edit card's Name, Title and Alias boxes write into the frontmatter and preserve every other field
+
+**Free** · about 10 min
+
+*The boxes are helpers over the raw text, not a second source of truth. The field they must not damage is any OTHER frontmatter key: `PersonaFrontmatter.Compose` emits only the four identity keys, so a rewrite built on it would silently delete the `role:` and `consult_when:` lines that `mcp__team__list_agents` sends to the model. Only a file with extra keys can catch that.*
+
+**Before you start**
+
+- `P-LAUNCH-FREE`.
+- Create a Persona file by hand at `src\Huddle.App\App_Data\Teams\Probe.md` with extra frontmatter keys, so there is something to destroy:
+
+```markdown
+---
+name: 'Probe'
+title: 'Test Subject'
+alias: 'prb'
+role: 'Router, triage, and cross-workstation continuity'
+consult_when: 'Never - this is a test fixture'
+---
+You are Probe. Answer in one short sentence.
+```
+
+**Steps**
+
+1. Open `/teammates`, click the `Probe` tile, then **Edit**. Note whether Name, Title and Alias appear as separate boxes above the Persona text.
+2. Change **Title** to `Changed Title`. WITHOUT saving, read the Persona text field below. Note the `title:` line and note whether `role:` and `consult_when:` are still there.
+3. Change **Alias** to `prb2`. Note the `alias:` line in the text below.
+4. In the Persona text field, hand-edit `title:` to `'Edited By Hand'` and click outside the field. Note what the Title box now shows.
+5. Change **Name** to `Probe2`. Note whether a warning appears, and write down its wording.
+6. Change **Name** back to `Probe`. Note whether the warning disappears.
+7. Change **Name** to `Probe2` again and click **Save**. Note the name the card now shows, the Persona file path it reports, and whether the card is on the details view.
+8. Open `src\Huddle.App\App_Data\Teams\Probe.md` in an editor. Note every frontmatter key present and the body.
+9. Type an apostrophe into **Title**: `Emre's Probe`. Save, then re-open the file and note the `title:` line.
+
+**Pass if — all of these**
+
+- Step 1: three separate boxes, above the Persona text field.
+- Step 2: the `title:` line in the text below changed to match, and `role:` AND `consult_when:` are both still present and unchanged. This is the assertion that matters most in this test.
+- Step 3: the `alias:` line changed to match.
+- Step 4: the Title box re-seeded itself to `Edited By Hand` — the sync runs both ways.
+- Step 5: a warning appears saying the Agent, the Rooms and the Transcripts stay behind under the old name. It does NOT block editing or saving.
+- Step 6: the warning disappears when the Name matches again.
+- Step 7: the card lands on the details view for `Probe2`, not on an error and not on a blank card.
+- Step 8: the file still holds `role:` and `consult_when:` with their original values, and the body is unchanged.
+- Step 9: the apostrophe round-trips — the file reads `title: 'Emre''s Probe'` and the card shows `Emre's Probe` when reopened.
+
+**Fail if — any of these**
+
+- Step 2 or step 8 shows `role:` or `consult_when:` MISSING -> the rewrite is recomposing the frontmatter instead of editing one line. This is the exact failure the design exists to prevent. Defect, and a serious one: it silently removes what the model is told about a Teammate.
+- Step 7 shows an error like `Persona 'Probe2' does not exist.` -> the save is passing the newly typed Name as the lookup key instead of the Name the Persona is currently filed under. Defect.
+- Step 7 leaves the card on the OLD name or on a blank card -> the post-save re-read is using the stale name. Defect.
+- Step 5 shows no warning -> the rename consequence is now invisible at exactly the moment it is one keystroke away. Defect.
+- Step 9 corrupts the file or the Persona vanishes from `/teammates` into the rejected-file list -> the value is not being YAML-escaped. Defect.
+
+**Inconclusive if**
+
+`Probe` does not appear on `/teammates` at all after you create the file — check the rejected-files block first; a typo in the frontmatter makes it a rejected file rather than a Persona, and that is a fixture problem, not a result.
+
+**Afterwards**
+
+Delete `src\Huddle.App\App_Data\Teams\Probe.md` and `Probe2.md` if either remains.
+
+> [!NOTE]
+> Nothing in this test writes to disk until **Save**. That is deliberate and worth not "fixing": `PersonaStore.Update` raises `PersonasChanged`, which restarts that Teammate's session and loses its conversation memory, so a save-as-you-type box would be a session restart per keystroke.
+
+---
+
 Back to [the manual test script](../manual-tests.md).

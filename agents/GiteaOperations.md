@@ -27,15 +27,28 @@ Actions there. Everything below talks to the Gitea instance directly via its RES
   branches, pull requests, issues, and the couple of Actions calls that touch a run rather than
   debug one.
 
-## Known issue: this repo's `origin` points at a stale host
+## Resolved 2026-09-15: `origin` was moved off the stale mDNS host
 
-As of 2026-09-13, `git remote -v` in this repo resolves to a `*.local` mDNS name that no
-longer resolves on this network — the sibling Agency repo's remote was already moved to the
-`.home` static DNS entry that replaced it (see `E:\Repos\Agency\Agents\GiteaOperations.md` for
-that history). Symptom here would match the one below: `git push`/`git fetch` hangs or fails
-DNS resolution outright. If you hit that, confirm with `git remote get-url origin` and ask
-before running `git remote set-url origin ...` — it's a one-line fix, but it's shared repo
-config, not something to silently rewrite.
+Until 2026-09-15 this repo's `origin` pointed at a `*.local` mDNS name that no longer resolved
+on this network, while the sibling Agency repo had already been moved to the `.home` static DNS
+entry that replaced it (see `E:\Repos\Agency\Agents\GiteaOperations.md` for that history). It
+was moved at the repo owner's explicit request, keeping the same scheme, port and path and
+changing only the host, and verified with `git ls-remote --heads origin` before anything was
+pushed. Both repos now agree.
+
+Two things about that change are worth keeping:
+
+- **It is shared repo config.** Ask before running `git remote set-url origin ...`; it is a
+  one-line fix, but it is not something to silently rewrite. That bar was met here.
+- **The real host stayed out of every tracked file**, this page included — which is why the
+  paragraph above says `.home` and not the name itself. Read the real one from
+  `git remote get-url origin`, the way the snippets below do.
+
+Linked worktrees under `.claude/worktrees/` share the main repo's `.git`, so they inherited the
+new URL with no separate change. If `git push`/`git fetch` ever hangs or fails DNS resolution
+again, the symptom and the fix are in [Connectivity / auth troubleshooting](#connectivity--auth-troubleshooting)
+directly below — and note that git credentials are cached **per hostname**, so the first push
+after a host change may need the `http.extraHeader` bypass even though the old name worked fine.
 
 ## Connectivity / auth troubleshooting
 

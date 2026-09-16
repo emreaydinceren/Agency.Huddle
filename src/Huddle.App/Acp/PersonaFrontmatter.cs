@@ -1,6 +1,7 @@
 namespace Agency.Huddle.App.Acp;
 
 using System.Diagnostics.CodeAnalysis;
+using System.Text;
 using Agency.Huddle.Contracts;
 
 /// <summary>
@@ -160,6 +161,183 @@ internal static class PersonaFrontmatter
         lines.Add(body);
 
         return string.Join('\n', lines);
+    }
+
+    /// <summary>
+    /// Rewrites one top-level scalar field's value inside <paramref name="personaText"/>'s
+    /// leading YAML frontmatter block, leaving every other frontmatter line - and the whole body
+    /// after the closing delimiter - byte-identical, including the original line-ending style.
+    /// </summary>
+    /// <param name="personaText">The Persona's raw file text.</param>
+    /// <param name="key">
+    /// The field's key. Matched against each top-level line case-insensitively, the same way
+    /// <see cref="TryGetField"/> compares a parsed field's key, so <c>name:</c> and <c>Name:</c>
+    /// both hit. When absent from an otherwise valid frontmatter block, a new
+    /// <c>key: value</c> line is inserted immediately before the closing delimiter.
+    /// </param>
+    /// <param name="value">The field's new value, written through <see cref="QuoteScalar"/>.</param>
+    /// <returns>
+    /// <paramref name="personaText"/> with the one line rewritten, or with the new line inserted;
+    /// or <paramref name="personaText"/> itself, unchanged, when there is no frontmatter block, or
+    /// when the matched key's existing value is a block scalar (<c>&gt;</c>/<c>|</c>) or a block
+    /// list (a following <c>- item</c> line).
+    /// </returns>
+    /// <remarks>
+    /// Not built on <see cref="Compose"/> or <see cref="Parse"/>. <see cref="Compose"/> emits only
+    /// the four identity keys, so recomposing a real Persona file through it would drop every
+    /// other frontmatter field - exactly the fields <see cref="ComposeJobDescription"/> reads for
+    /// a Teammate's job description. <see cref="Parse"/> is not round-trip safe either, since it
+    /// collapses a block scalar's line breaks to spaces and joins a list's items with <c>"; "</c>.
+    /// A multi-line value cannot be replaced by a one-line edit, so this method leaves a block
+    /// scalar or block list untouched and returns the input unchanged instead of flattening it -
+    /// the caller is expected to detect that and degrade its control to read-only.
+    /// </remarks>
+    internal static string WriteScalarField(string personaText, string key, string value)
+    {
+        ArgumentNullException.ThrowIfNull(personaText);
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentNullException.ThrowIfNull(value);
+
+        var lines = SplitKeepingLineEndings(personaText);
+
+        if (lines.Count < 2 || lines[0].Text.Trim() != FrontmatterDelimiter)
+        {
+            return personaText;
+        }
+
+        var closeIndex = -1;
+        for (var i = 1; i < lines.Count; i++)
+        {
+            if (lines[i].Text.Trim() == FrontmatterDelimiter)
+            {
+                closeIndex = i;
+                break;
+            }
+        }
+
+        if (closeIndex < 0)
+        {
+            return personaText;
+        }
+
+        for (var i = 1; i < closeIndex; i++)
+        {
+            var rawLine = lines[i].Text;
+
+            // A top-level key is always at column 0; an indented line is block-scalar or
+            // block-list content belonging to whichever key preceded it, never a new key.
+            if (rawLine.Length == 0 || rawLine[0] is ' ' or '\t')
+            {
+                continue;
+            }
+
+            var colonIndex = rawLine.IndexOf(':', StringComparison.Ordinal);
+            if (colonIndex < 0)
+            {
+                continue;
+            }
+
+            var lineKey = rawLine[..colonIndex].Trim();
+            if (!string.Equals(lineKey, key, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var existingValue = rawLine[(colonIndex + 1)..].Trim();
+
+            if (IsBlockScalarIndicator(existingValue, out _))
+            {
+                return personaText;
+            }
+
+            if (existingValue.Length == 0 && IsFollowedByBlockListItems(lines, i + 1, closeIndex))
+            {
+                return personaText;
+            }
+
+            lines[i] = ($"{rawLine[..colonIndex]}: {QuoteScalar(value)}", lines[i].Terminator);
+            return Join(lines);
+        }
+
+        // The key is absent from an otherwise valid block: insert it before the closing delimiter,
+        // reusing the terminator already in use inside the block (or the opening line's, when the
+        // block is empty) so the file's line-ending style carries over to the new line too.
+        var insertedTerminator = closeIndex > 1 ? lines[closeIndex - 1].Terminator : lines[0].Terminator;
+        lines.Insert(closeIndex, ($"{key}: {QuoteScalar(value)}", insertedTerminator));
+        return Join(lines);
+    }
+
+    /// <summary>
+    /// Scans forward from <paramref name="startIndex"/>, skipping blank lines, and reports whether
+    /// the first non-blank line found before <paramref name="closeIndex"/> is a YAML block-list
+    /// item (<c>- item</c>). Used by <see cref="WriteScalarField"/> to tell a genuinely blank
+    /// scalar value apart from a block list's header line, which also has nothing after its colon.
+    /// </summary>
+    private static bool IsFollowedByBlockListItems(
+        List<(string Text, string Terminator)> lines,
+        int startIndex,
+        int closeIndex)
+    {
+        for (var i = startIndex; i < closeIndex; i++)
+        {
+            var trimmed = lines[i].Text.Trim();
+            if (trimmed.Length == 0)
+            {
+                continue;
+            }
+
+            return trimmed.StartsWith("- ", StringComparison.Ordinal);
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Splits <paramref name="text"/> into lines, pairing each one with the exact line-ending
+    /// sequence that followed it (<c>"\r\n"</c>, <c>"\n"</c>, or <see cref="string.Empty"/> for a
+    /// final line with no trailing newline) so <see cref="Join"/> can reassemble the original text
+    /// byte-for-byte apart from the one edited or inserted line.
+    /// Unlike <see cref="Parse"/>, this never normalizes <c>"\r\n"</c> to <c>"\n"</c> - a Persona
+    /// file is edited by a Human in a text editor, not sent to a model, so its line endings are
+    /// the Human's to keep.
+    /// </summary>
+    private static List<(string Text, string Terminator)> SplitKeepingLineEndings(string text)
+    {
+        var lines = new List<(string Text, string Terminator)>();
+        var start = 0;
+
+        for (var i = 0; i < text.Length; i++)
+        {
+            if (text[i] != '\n')
+            {
+                continue;
+            }
+
+            var hasCarriageReturn = i > start && text[i - 1] == '\r';
+            var textEnd = hasCarriageReturn ? i - 1 : i;
+            lines.Add((text[start..textEnd], hasCarriageReturn ? "\r\n" : "\n"));
+            start = i + 1;
+        }
+
+        if (start < text.Length)
+        {
+            lines.Add((text[start..], string.Empty));
+        }
+
+        return lines;
+    }
+
+    /// <summary>Rejoins lines produced by <see cref="SplitKeepingLineEndings"/> back into one string, each with its own terminator.</summary>
+    private static string Join(List<(string Text, string Terminator)> lines)
+    {
+        StringBuilder builder = new();
+
+        foreach (var (text, terminator) in lines)
+        {
+            builder.Append(text).Append(terminator);
+        }
+
+        return builder.ToString();
     }
 
     /// <summary>Single-quotes a scalar, doubling any interior <c>'</c> per YAML's own escape for it - the inverse of <see cref="StripYamlQuotes"/>'s single-quote branch.</summary>

@@ -278,7 +278,7 @@ public sealed partial class ChatService
             return existing;
         }
 
-        var room = await this.teamDirectory.CreateRoomAsync(agent.Name, [KnownIds.Human, agent.Id], ct);
+        var room = await this.teamDirectory.CreateRoomAsync(RoomNaming.Derive([agent]), [KnownIds.Human, agent.Id], ct);
         ChatService.LogCreatedDirectRoom(this.logger, room.Id, agent.Name);
         this.events.PublishRoomsChanged();
         return room;
@@ -314,7 +314,7 @@ public sealed partial class ChatService
             return await this.EnsureRoomForAsync(agents[0], ct);
         }
 
-        var name = string.Join(", ", agents.Select(a => a.Name));
+        var name = RoomNaming.Derive(agents);
         var memberIds = new List<string>(agents.Count + 1) { KnownIds.Human };
         memberIds.AddRange(agents.Select(a => a.Id));
         var room = await this.teamDirectory.CreateRoomAsync(name, memberIds, ct);
@@ -323,9 +323,29 @@ public sealed partial class ChatService
         return room;
     }
 
+    /// <summary>
+    /// Adds an Agent to a Room that already exists. All three doors into an Invitation - <c>/invite</c>
+    /// in the composer, the <b>Add teammate</b> control on the Room header, and an Agent's own
+    /// <c>mcp__team__invite_agent</c> call - end here, so all three inherit this method's behaviour,
+    /// including the naming rule below.
+    /// </summary>
+    /// <remarks>
+    /// A Room the Human renamed through <see cref="RenameRoomAsync"/> is the fix for the duplicate-name
+    /// problem recorded in <c>docs/agencyteam/product-observations.md</c> §6 - a manual test run found
+    /// 14 Rooms in the sidebar, five of them showing the indistinguishable auto-derived name
+    /// "Nova, Jarvis". Re-deriving the name on every Invitation regardless would throw that chosen name
+    /// away on the very next <c>mcp__team__invite_agent</c> call, so this method compares the Room's
+    /// name, before adding the new Member, against what <see cref="RoomNaming.Derive"/> would have
+    /// produced for its Members at that point. Only when the two agree - meaning nobody has renamed the
+    /// Room away from its auto-name - does the Invitation re-derive and apply a new one.
+    /// </remarks>
+    /// <param name="roomId">The Room to invite the Agent into.</param>
+    /// <param name="agentName">The Agent's Name or Alias.</param>
+    /// <param name="ct">Cancels the lookups and the write.</param>
+    /// <returns>The Room after the Invitation.</returns>
     public async Task<Room> InviteAsync(string roomId, string agentName, CancellationToken ct = default)
     {
-        _ = await this.teamDirectory.GetRoomAsync(roomId, ct)
+        var room = await this.teamDirectory.GetRoomAsync(roomId, ct)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
 
         var user = await this.teamDirectory.FindUserByNameAsync(agentName, ct);
@@ -349,12 +369,51 @@ public sealed partial class ChatService
             throw new ChatException(ErrorCodes.BadMessage, $"Unknown agent @{agentName}");
         }
 
+        var before = await this.teamDirectory.GetRoomMembersAsync(roomId, ct);
+        var wasAutoNamed = string.Equals(room.Name, RoomNaming.Derive(before), StringComparison.Ordinal);
+
         await this.teamDirectory.AddMemberAsync(roomId, user.Id, ct);
 
-        var members = await this.teamDirectory.GetRoomMembersAsync(roomId, ct);
-        var name = string.Join(", ", members.Where(m => m.Kind == UserKind.Agent).Select(m => m.Name));
-        await this.teamDirectory.RenameRoomAsync(roomId, name, ct);
+        if (wasAutoNamed)
+        {
+            var members = await this.teamDirectory.GetRoomMembersAsync(roomId, ct);
+            await this.teamDirectory.RenameRoomAsync(roomId, RoomNaming.Derive(members), ct);
+        }
+
         ChatService.LogInvitedAgent(this.logger, user.Name, user.Id, roomId);
+        this.events.PublishRoomsChanged();
+
+        return await this.teamDirectory.GetRoomAsync(roomId, ct)
+            ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
+    }
+
+    /// <summary>
+    /// Gives a Room a Human-chosen name, which stays in place across later Invitations - see the
+    /// remarks on <see cref="InviteAsync"/> for why that matters. A Room name is free display text: it
+    /// is never resolved against, so unlike a Teammate Name it is not run through <see cref="NameRules"/>.
+    /// </summary>
+    /// <param name="roomId">The Room to rename.</param>
+    /// <param name="name">
+    /// The new name. Blank or whitespace-only is rejected, and surrounding whitespace is trimmed
+    /// before it is stored: a Room named <c>" Pricing "</c> is indistinguishable in the sidebar from
+    /// one named <c>"Pricing"</c>, which is the very confusion a Human-chosen name exists to remove.
+    /// </param>
+    /// <param name="ct">Cancels the lookup and the write.</param>
+    /// <returns>The Room after the rename.</returns>
+    public async Task<Room> RenameRoomAsync(string roomId, string name, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+
+        var trimmed = name.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed))
+        {
+            throw new ChatException(ErrorCodes.BadMessage, "A room name cannot be blank.");
+        }
+
+        _ = await this.teamDirectory.GetRoomAsync(roomId, ct)
+            ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
+
+        await this.teamDirectory.RenameRoomAsync(roomId, trimmed, ct);
         this.events.PublishRoomsChanged();
 
         return await this.teamDirectory.GetRoomAsync(roomId, ct)

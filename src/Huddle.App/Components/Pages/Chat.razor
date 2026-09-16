@@ -22,12 +22,33 @@ else
         <header class="chat-header">
             <div class="chat-header-row">
                 <div>
-                    <h1>@this.room.Name</h1>
+                    <div class="d-flex align-center gap-2">
+                        @if (this.isRenaming)
+                        {
+                            <MudTextField T="string" @bind-Value="this.editingName" Immediate="true" AutoFocus="true"
+                                          Label="Room name" aria-label="Room name"
+                                          OnKeyDown="this.OnRenameKeyDown" OnBlur="this.CommitRenameAsync" />
+                        }
+                        else
+                        {
+                            <h1>@this.room.Name</h1>
+                            <MudTooltip Text="Rename">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                               aria-label="Rename room" OnClick="this.BeginRename" />
+                            </MudTooltip>
+                        }
+                    </div>
                     <MudText Typo="Typo.body2" Class="chat-members">@string.Join(", ", this.members.Select(m => m.Name))</MudText>
                 </div>
                 @* The leading @ is load-bearing: RoomId="this.room.Id" would pass that literal text. *@
                 <InviteTeammate RoomId="@this.room.Id" />
             </div>
+            @if (this.renameError is not null)
+            {
+                @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
+                   so role="alert" is added explicitly to keep the message announced, per rules.md. *@
+                <MudAlert Severity="Severity.Error" Class="rename-error" role="alert">@this.renameError</MudAlert>
+            }
         </header>
         <MessageList
             Messages="this.messages"
@@ -106,6 +127,9 @@ else
     private RoomBudget budget = new(0, 0);
     private bool budgetPromptDismissed;
     private bool extending;
+    private bool isRenaming;
+    private string editingName = string.Empty;
+    private string? renameError;
 
     // A model can emit a MessageDelta/ToolActivity envelope far faster than a SignalR circuit
     // should re-render - often once per token. Rather than adding a TimeProvider/PeriodicTimer to
@@ -157,6 +181,16 @@ else
         }
 
         this.loadedRoomId = this.RoomId;
+
+        // Rename state belongs to the Room being shown, so it is dropped when the Human navigates to
+        // a different one - otherwise a failed rename's error would follow them into the next Room.
+        // This is deliberately NOT in LoadRoomAsync: that also runs on every RoomsChanged, so a Room
+        // appearing elsewhere (an Agent connecting, say) would eject the Human from rename mode
+        // mid-word.
+        this.isRenaming = false;
+        this.editingName = string.Empty;
+        this.renameError = null;
+
         await this.LoadRoomAsync(this.RoomId);
     }
 
@@ -235,6 +269,65 @@ else
         // Hides the question, not the pause: the Room stays paused, and saying anything still
         // resumes it. Per-view, so it clears on navigation and on the next Message.
         this.budgetPromptDismissed = true;
+    }
+
+    /// <summary>Puts the Room header's title into edit mode, seeded from the Room's current name.</summary>
+    private void BeginRename()
+    {
+        if (this.room is null)
+        {
+            return;
+        }
+
+        this.editingName = this.room.Name;
+        this.renameError = null;
+        this.isRenaming = true;
+    }
+
+    /// <summary>Leaves rename mode with the Room's name untouched.</summary>
+    private void CancelRename()
+    {
+        this.isRenaming = false;
+        this.renameError = null;
+    }
+
+    /// <summary>Enter commits the typed name; Escape leaves rename mode untouched.</summary>
+    /// <param name="e">The key that was pressed in the rename field.</param>
+    private async Task OnRenameKeyDown(KeyboardEventArgs e)
+    {
+        switch (e.Key)
+        {
+            case "Enter":
+                await this.CommitRenameAsync();
+                break;
+            case "Escape":
+                this.CancelRename();
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Commits the typed name through <see cref="ChatService.RenameRoomAsync"/>. Does not re-read
+    /// <see cref="room"/> itself on success: the rename publishes <see cref="RoomEvents.RoomsChanged"/>,
+    /// which <see cref="OnRoomsChanged"/> already handles by reloading the Room.
+    /// </summary>
+    private async Task CommitRenameAsync()
+    {
+        if (!this.isRenaming || this.loadedRoomId is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _ = await this.ChatService.RenameRoomAsync(this.loadedRoomId, this.editingName);
+            this.isRenaming = false;
+            this.renameError = null;
+        }
+        catch (ChatException ex)
+        {
+            this.renameError = ex.Message;
+        }
     }
 
     private void OnRoomsChanged()

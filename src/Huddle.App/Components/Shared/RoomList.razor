@@ -12,7 +12,7 @@
         <MudNavMenu>
             @foreach (var room in this.rooms)
             {
-                <MudNavLink Href="@($"/rooms/{room.Id}")">@room.Name</MudNavLink>
+                <MudNavLink Href="@($"/rooms/{room.Id}")" Icon="@Icons.Material.Filled.Chat">@room.Name</MudNavLink>
             }
         </MudNavMenu>
     }

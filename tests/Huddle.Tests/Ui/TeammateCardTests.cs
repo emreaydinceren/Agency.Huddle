@@ -50,13 +50,17 @@ public sealed class TeammateCardTests
         Assert.Contains("Offline", cut.Markup, StringComparison.Ordinal);
         Assert.True(HasButton(cut, "Edit"));
         Assert.True(HasButton(cut, "Open"));
+
+        // Remove is an icon-only MudIconButton (a destructive action gets an icon; its Confirm/Cancel
+        // step below stays text, per the file's own comment), so this is matched by aria-label rather
+        // than text content - see HasButton's remarks.
         Assert.True(HasButton(cut, "Remove"));
 
         // Viewing is not editing: the Persona text is shown, not offered for typing into.
         Assert.Empty(cut.FindAll("textarea"));
     }
 
-    /// <summary>View mode is the one place Title, Alias and Teams are shown alongside the Name - Edit's identity area stays exactly as before (see <see cref="EditMode_DoesNotShowTitleAliasOrTeams"/>).</summary>
+    /// <summary>View mode is the one place Title, Alias and Teams are shown alongside the Name - Edit's top identity area stays as before (see <see cref="EditMode_TopIdentityAreaStillOmitsTitleAliasAndTeamsAsReadOnlyText"/>).</summary>
     [Fact]
     public async Task ViewMode_ShowsTitleAliasAndTeams()
     {
@@ -118,8 +122,16 @@ public sealed class TeammateCardTests
         Assert.DoesNotContain("Message", cut.Markup, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Edit now offers Name/Title/Alias boxes above the whole-file textarea, seeded from the Persona's
+    /// frontmatter - unlike the retired behaviour this test used to pin, a rename is now possible from
+    /// here (see traps.md's "Editing a Persona's name: renames the Teammate" and the rename warning
+    /// this task adds). Two inputs share the "Chief of Staff" placeholder (Name and Title use the same
+    /// wording as Create's own boxes), because this seeded Persona's Name, Title and Alias are all the
+    /// same string.
+    /// </summary>
     [Fact]
-    public async Task EditMode_OffersTheTextButNotTheName()
+    public async Task EditMode_OffersNameTitleAliasAndText()
     {
         await using var factory = new TeamWebApplicationFactory();
         await SeedPersonaAsync(factory, "Chief of Staff", "You keep the team honest.");
@@ -131,11 +143,8 @@ public sealed class TeammateCardTests
         Assert.NotEmpty(cut.FindAll("textarea"));
         Assert.Contains("You keep the team honest.", cut.Markup, StringComparison.Ordinal);
         Assert.True(HasButton(cut, "Save"));
-
-        // Renaming a Persona would mean renaming its file and re-registering its Agent under a new
-        // identity, so the Name is deliberately not editable here: no Name text box exists in Edit
-        // mode, only the Persona textarea and the Model/Effort selects.
-        Assert.Empty(cut.FindAll("input[placeholder='Chief of Staff']"));
+        Assert.Equal(2, cut.FindAll("input[placeholder='Chief of Staff']").Count);
+        Assert.NotEmpty(cut.FindAll("input[placeholder='coo']"));
     }
 
     [Fact]
@@ -151,9 +160,15 @@ public sealed class TeammateCardTests
         Assert.Contains("clears what it remembers", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>Edit's identity area is unchanged by this phase: only the Name and status show, never Title/Alias/Teams - the textarea is still a raw-file editor over the whole file, front matter included, so those fields would be redundant with it.</summary>
+    /// <summary>
+    /// Edit's ORIGINAL top identity area (the avatar, Name and status, beside the avatar) still shows
+    /// no Title/Alias/Teams as read-only text - View mode is the only place those appear that way. This
+    /// task's Title and Alias boxes live somewhere else entirely (above the raw text field, as editable
+    /// inputs, not a duplicate of View's read-only lines), and Teams still has no box or line anywhere
+    /// in Edit mode.
+    /// </summary>
     [Fact]
-    public async Task EditMode_DoesNotShowTitleAliasOrTeams()
+    public async Task EditMode_TopIdentityAreaStillOmitsTitleAliasAndTeamsAsReadOnlyText()
     {
         await using var factory = new TeamWebApplicationFactory();
         await File.WriteAllTextAsync(
@@ -165,20 +180,136 @@ public sealed class TeammateCardTests
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
         FindButton(cut, "Edit").Click();
 
-        // Scoped to the dialog itself: the page's own tile behind it legitimately shows "Legendary
-        // Assistant" as the tile's role text, which a whole-page search would trip over. Edit mode's
-        // textarea is a raw-file editor over the WHOLE file, front matter included, so
-        // "Title: Legendary Assistant" is expected to appear there verbatim too - what must not happen
-        // is Title/Alias/Teams showing again as SEPARATE identity fields outside it, the way View mode
-        // shows them. Excise the textarea's own content before searching, so the raw file text itself
-        // does not produce a false failure.
-        var dialogMarkup = cut.Find(".mud-dialog-container").InnerHtml;
-        var rawFileText = cut.Find("textarea").TextContent;
-        var dialogMarkupOutsideTextarea = dialogMarkup.Replace(rawFileText, string.Empty, StringComparison.Ordinal);
+        // Scoped to the open dialog's own avatar-and-identity stack, not the whole dialog: the dialog
+        // now legitimately contains "Legendary Assistant" both inside the raw textarea and inside the
+        // new Title box's value attribute, neither of which is the read-only duplication this test
+        // guards against.
+        var dialogContainer = cut.Find(".mud-dialog-container");
+        var avatar = dialogContainer.QuerySelector(".mud-avatar") ?? throw new InvalidOperationException("No avatar in the open dialog.");
+        var identityMarkup = avatar.ParentElement?.OuterHtml ?? string.Empty;
 
-        Assert.DoesNotContain("Legendary Assistant", dialogMarkupOutsideTextarea, StringComparison.Ordinal);
-        Assert.DoesNotContain("Alias:", dialogMarkupOutsideTextarea, StringComparison.Ordinal);
-        Assert.DoesNotContain("Teams:", dialogMarkupOutsideTextarea, StringComparison.Ordinal);
+        Assert.DoesNotContain("Alias:", identityMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Teams:", identityMarkup, StringComparison.Ordinal);
+
+        // The new Title/Alias boxes ARE present elsewhere in Edit mode, but Teams still has no box.
+        Assert.NotEmpty(dialogContainer.QuerySelectorAll("input[placeholder='coo']"));
+        Assert.Empty(dialogContainer.QuerySelectorAll("input[placeholder='Business, Household']"));
+    }
+
+    /// <summary>Typing a new Title rewrites the frontmatter inside the raw text field beneath it - nothing is written to disk, since only Save does that.</summary>
+    [Fact]
+    public async Task EditMode_TypingATitle_UpdatesTheFrontmatterInTheRawText()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "You are the Chief of Staff.");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        SetTextValue(cut, "Title", "Head of Everything");
+
+        Assert.Contains("Head of Everything", cut.Find("textarea").TextContent, StringComparison.Ordinal);
+
+        var stored = factory.Services.GetRequiredService<PersonaStore>().Get("coo");
+        Assert.NotNull(stored);
+        Assert.Contains("Title: coo", stored.Text, StringComparison.Ordinal);
+    }
+
+    /// <summary>Editing the raw Persona text re-seeds the Name/Title/Alias boxes from whatever <see cref="PersonaFrontmatter.TryReadIdentity"/> now parses - the reverse direction of typing into a box.</summary>
+    [Fact]
+    public async Task EditMode_EditingTheRawText_ReseedsTheBoxes()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "You are the Chief of Staff.");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        SetTextValue(cut, "Persona text", "---\nName: coo\nTitle: Reseeded Title\nAlias: newalias\n---\nYou are the Chief of Staff.");
+
+        var titleInput = FindInputControl(cut, "Title").QuerySelector("input") ?? throw new InvalidOperationException("No Title input.");
+        var aliasInput = FindInputControl(cut, "Alias").QuerySelector("input") ?? throw new InvalidOperationException("No Alias input.");
+
+        Assert.Equal("Reseeded Title", titleInput.GetAttribute("value"));
+        Assert.Equal("newalias", aliasInput.GetAttribute("value"));
+    }
+
+    /// <summary>
+    /// A Title written as a YAML block scalar cannot be rewritten by <see cref="PersonaFrontmatter.WriteScalarField"/>'s
+    /// one-line rewrite, so typing into the Title box does not change the raw text - the box locks
+    /// read-only instead, with a helper line pointing at the Persona text below.
+    /// </summary>
+    [Fact]
+    public async Task EditMode_TitleWrittenAsABlockScalar_LocksTheTitleBoxReadOnly()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await File.WriteAllTextAsync(
+            EnsureTeamsDir(factory),
+            "---\nname: coo\ntitle: >\n  Legendary Assistant\n  and Chief of Staff\nalias: coo\n---\nx",
+            Xunit.TestContext.Current.CancellationToken);
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        SetTextValue(cut, "Title", "New Title");
+
+        var titleInput = FindInputControl(cut, "Title").QuerySelector("input") ?? throw new InvalidOperationException("No Title input.");
+        Assert.True(titleInput.HasAttribute("readonly"));
+        Assert.Contains("can only be edited there", cut.Markup, StringComparison.Ordinal);
+
+        // The refused edit never reached the raw text - the block scalar is still there, untouched.
+        Assert.Contains("title: >", cut.Find("textarea").TextContent, StringComparison.Ordinal);
+    }
+
+    /// <summary>The rename warning appears only once the Name box's value differs from the frozen Name parameter the card opened with, and not before.</summary>
+    [Fact]
+    public async Task EditMode_RenameWarning_AppearsOnlyAfterTheNameChanges()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "You are the Chief of Staff.");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        Assert.DoesNotContain("stay behind under the old name", cut.Markup, StringComparison.Ordinal);
+
+        SetTextValue(cut, "Name", "newcoo");
+
+        Assert.Contains("stay behind under the old name", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Step 4's fix: after renaming through the Name box and Saving, the card lands on the NEW
+    /// Persona - the displayed Name and file path both follow the rename - rather than looking up the
+    /// stale OLD name <see cref="PersonaStore.Update"/> was originally called with, which no longer
+    /// exists once the rename has taken effect.
+    /// </summary>
+    [Fact]
+    public async Task SaveAsync_AfterARename_LandsOnTheNewPersona()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "You are the Chief of Staff.");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        SetTextValue(cut, "Name", "newcoo");
+        FindButton(cut, "Save").Click();
+
+        Assert.Contains("newcoo", cut.Markup, StringComparison.Ordinal);
+        Assert.Null(factory.Services.GetRequiredService<PersonaStore>().Get("coo"));
+        Assert.NotNull(factory.Services.GetRequiredService<PersonaStore>().Get("newcoo"));
+
+        // PersonaStore.Update rewrites the SAME file in place - identity is frontmatter, never the
+        // filename (rules.md) - so the file path a rename lands on is still the original "coo.md".
+        var expectedPath = Path.Combine(factory.TeamsDirPath, "coo.md");
+        Assert.True(File.Exists(expectedPath));
+        Assert.Contains(expectedPath, cut.Markup, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -240,7 +371,7 @@ public sealed class TeammateCardTests
         Assert.Contains("a draft worth keeping", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>The inline confirm on Remove: clicking Remove swaps it for Confirm/Cancel in place, never a nested dialog.</summary>
+    /// <summary>The inline confirm on Remove: clicking the icon-only Remove button (found by its aria-label - see <see cref="HasButton"/>) swaps it for text Confirm/Cancel buttons in place, never a nested dialog.</summary>
     [Fact]
     public async Task ConfirmingRemove_ReplacesRemoveWithAConfirmStep()
     {
@@ -255,7 +386,7 @@ public sealed class TeammateCardTests
         Assert.False(HasButton(cut, "Remove"));
     }
 
-    /// <summary>Confirming Remove actually removes the Persona and closes the dialog.</summary>
+    /// <summary>Confirming Remove actually removes the Persona and closes the dialog. Remove itself is found by aria-label, since it is now an icon-only button - see <see cref="HasButton"/>.</summary>
     [Fact]
     public async Task ConfirmRemove_RemovesThePersonaAndClosesTheDialog()
     {
@@ -777,11 +908,23 @@ public sealed class TeammateCardTests
         factory.FakeAgentGateway.SetOnline(agent.Id);
     }
 
+    /// <summary>
+    /// Whether any rendered button's trimmed text, OR its <c>aria-label</c>, equals <paramref name="text"/>.
+    /// The Remove button became an icon-only <c>MudIconButton</c> (see <see cref="ViewMode_ShowsDetailsAndActions"/>
+    /// and its neighbours) and carries no text content at all - <c>aria-label</c> is the reliable, accessible
+    /// handle for it, and this helper is deliberately not scoped to just that one button so every other
+    /// text-button caller keeps working unchanged.
+    /// </summary>
     private static bool HasButton(IRenderedComponent<ContainerFragment> cut, string text) =>
-        cut.FindAll("button").Any(button => button.TextContent.Trim() == text);
+        cut.FindAll("button").Any(button => MatchesButtonLabel(button, text));
 
+    /// <summary>The first rendered button whose trimmed text, OR its <c>aria-label</c>, equals <paramref name="text"/> - see <see cref="HasButton"/>.</summary>
     private static IElement FindButton(IRenderedComponent<ContainerFragment> cut, string text) =>
-        cut.FindAll("button").First(button => button.TextContent.Trim() == text);
+        cut.FindAll("button").First(button => MatchesButtonLabel(button, text));
+
+    private static bool MatchesButtonLabel(IElement button, string text) =>
+        string.Equals(button.TextContent.Trim(), text, StringComparison.Ordinal)
+        || string.Equals(button.GetAttribute("aria-label"), text, StringComparison.Ordinal);
 
     private static IElement FindInputControl(IRenderedComponent<ContainerFragment> cut, string label) =>
         cut.FindAll("div.mud-input-control")

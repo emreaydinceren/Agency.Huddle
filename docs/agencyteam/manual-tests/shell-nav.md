@@ -1238,4 +1238,48 @@ The expected result. A circuit-level exception cannot be provoked deterministica
 
 ---
 
+### SHELLNAV-30 — The drawer's icons, and Settings pinned to the bottom
+
+**Free** · about 4 min
+
+*The pinning is CSS that no automated test can see. `ThemeSourceTests` reads stylesheets as source text and nothing in the suite renders a browser, so whether `margin-top: auto` actually pushes Settings down is decidable here and nowhere else.*
+
+**Before you start**
+
+- `P-LAUNCH-FREE`. Have at least two Rooms in the sidebar.
+
+**Steps**
+
+1. Look at the drawer. Note where **Settings** sits relative to **Teammates** and relative to the bottom of the viewport.
+2. Note whether **Settings** shows any text, and hover it. Note what the tooltip says.
+3. In DevTools, run `document.querySelector('[aria-label="Settings"]').getAttribute('href')`. Note the value.
+4. Note whether **Teammates** still shows its text, and whether an icon sits to its left.
+5. Note whether each Room in the list carries an icon to the left of its name.
+6. Make the browser window SHORT (about 400px tall) so the drawer's content overflows, and scroll the drawer. Note where Settings is now.
+7. Repeat steps 1 and 5 with the Dark theme selected (`Settings -> Appearance -> Dark`).
+
+**Pass if — all of these**
+
+- **Settings** sits at the BOTTOM of the drawer, separated from **Teammates** by empty space rather than immediately below it.
+- **Settings** shows no text, hovering it reveals a tooltip reading `Settings`, and step 3 returns `/settings`.
+- **Teammates** still reads "Teammates", with an icon to its left.
+- Every Room in the list carries an icon to the left of its name, subtle enough that the Room's name still reads as the primary content.
+- Both icons and the Room icons are legible under Dark as well as light.
+
+**Fail if — any of these**
+
+- **Settings** sits immediately under **Teammates** with no gap -> `margin-top: auto` is not applying. The likely cause is that the rule is in a SCOPED stylesheet: Blazor stamps its `[b-xxxxx]` scope only onto HTML elements written in the component's own markup, and `MainLayout.razor` has exactly one, `<div id="blazor-error-ui">`, which is not an ancestor of the drawer. The rules belong in `app.css`. Defect.
+- Step 3 returns `null` or anything other than `/settings` -> the link lost its href or its accessible name. Defect, and note that `SettingsPageTests` asserts the href.
+- Hovering **Settings** reveals no tooltip -> the `MudTooltip` is not wired. Defect.
+- In the short window, Settings overlaps the room list or is unreachable by scrolling -> the flex column is fighting the drawer's own scrolling. Defect.
+
+**Inconclusive if**
+
+The drawer content is shorter than the viewport in step 6 no matter how small you make the window - some browsers clamp minimum height. Record what you could see for steps 1-5 and mark step 6 INCONCLUSIVE.
+
+> [!NOTE]
+> Settings is deliberately the only drawer entry without text. Do not file that as an inconsistency with **Teammates**, which keeps its label on purpose.
+
+---
+
 Back to [the manual test script](../manual-tests.md).

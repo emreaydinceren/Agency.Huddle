@@ -38,6 +38,7 @@
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Pipes
 @using System.Diagnostics
+@using System.Diagnostics.CodeAnalysis
 @implements IDisposable
 
 @inject PersonaStore Personas
@@ -149,7 +150,10 @@
                 }
                 else
                 {
-                    <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="this.BeginRemove">Remove</MudButton>
+                    <MudTooltip Text="Remove">
+                        <MudIconButton Icon="@Icons.Material.Filled.PersonRemove" Color="Color.Error"
+                                       aria-label="Remove" OnClick="this.BeginRemove" />
+                    </MudTooltip>
                 }
             </MudStack>
 
@@ -183,7 +187,28 @@
         }
         else
         {
-            <MudTextField T="string" @bind-Value="this.text"
+            @if (this.mode == TeammateCardMode.Edit)
+            {
+                <MudStack Spacing="2" Class="mb-3">
+                    <MudTextField T="string" Label="Name" Placeholder="Chief of Staff" Value="@this.name" ValueChanged="this.OnNameChanged"
+                                  ReadOnly="@this.nameLocked" HelperText="@this.NameHelperText" />
+                    <MudTextField T="string" Label="Title" Placeholder="Chief of Staff" Value="@this.title" ValueChanged="this.OnTitleChanged"
+                                  ReadOnly="@this.titleLocked" HelperText="@this.TitleHelperText" />
+                    <MudTextField T="string" Label="Alias" Placeholder="coo" Value="@this.alias" ValueChanged="this.OnAliasChanged"
+                                  ReadOnly="@this.aliasLocked" HelperText="@this.AliasHelperText" />
+                </MudStack>
+
+                @if (!string.Equals(this.name, this.Name, StringComparison.Ordinal))
+                {
+                    @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
+                       so role="alert" is added explicitly to keep the warning announced, per rules.md/traps.md. *@
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3" role="alert">
+                        Renaming moves this teammate's Model and Effort, but its Agent, its Rooms and their Transcripts stay behind under the old name.
+                    </MudAlert>
+                }
+            }
+
+            <MudTextField T="string" Value="@this.text" ValueChanged="this.OnTextChanged"
                           Label="@(this.mode == TeammateCardMode.Create ? "Persona body" : "Persona text")"
                           Placeholder="You are the Chief of Staff. You keep the team honest."
                           Lines="6"
@@ -299,6 +324,23 @@
     private bool confirmingRemove;
     private bool restarting;
 
+    // Set when PersonaFrontmatter.WriteScalarField silently refused the matching identity box's last
+    // edit - the field is a block scalar (">"/"|") or a block list, which cannot be replaced by a
+    // one-line rewrite. See TryRejectIdentityFieldEdit for the detection and the file-level comment
+    // for why nothing here writes to disk regardless.
+    private bool nameLocked;
+    private bool titleLocked;
+    private bool aliasLocked;
+
+    // The Name PersonaStore currently has this Persona filed under - distinct from "name" above, which
+    // the Name box freely rewrites as the human types a new one. PersonaStore.Update's own "name"
+    // parameter is a LOOKUP key ("whichever Name this Persona is presently indexed under"), so passing
+    // the just-edited "name" there would ask the index for a Name it has never seen written to disk and
+    // throw. Seeded from the frozen Name parameter and refreshed to the saved Persona's own Name after
+    // every successful Save, so a second Edit/Save cycle in the same open dialog keeps looking the
+    // Persona up correctly even after an earlier rename in this same session.
+    private string persistedName = string.Empty;
+
     // Resolved once, in OnInitializedAsync, for whichever Persona this card names - null for
     // Create (no Agent exists yet) and for a Persona that has never connected. Re-read on every
     // RefreshStatus call rather than cached status alone, because IAgentGateway.IsOnline needs it.
@@ -346,6 +388,7 @@
     {
         this.mode = this.Mode;
         this.name = this.Name;
+        this.persistedName = this.Name;
         this.title = this.Title;
         this.alias = this.Alias;
         this.teams = this.Teams;
@@ -532,6 +575,21 @@
         ? "Markdown. Becomes the teammate's system prompt, placed after the Name, Title, Alias and Teams above — no front matter needed here."
         : "Markdown. This is the whole Persona file, front matter included, and becomes the teammate's system prompt. Saving restarts it, which clears what it remembers.";
 
+    /// <summary>The Name box's helper text - the same wording Create uses, or a note that the field can only be edited in the Persona text below while <see cref="nameLocked"/> is set.</summary>
+    private string NameHelperText => this.nameLocked
+        ? "This is written as a multi-line value in the Persona text below and can only be edited there."
+        : "Letters, digits, spaces, - and _. Spaces are fine.";
+
+    /// <summary>The Title box's helper text - the same wording Create uses, or a note that the field can only be edited in the Persona text below while <see cref="titleLocked"/> is set.</summary>
+    private string TitleHelperText => this.titleLocked
+        ? "This is written as a multi-line value in the Persona text below and can only be edited there."
+        : "A short role description, shown alongside the Name.";
+
+    /// <summary>The Alias box's helper text - the same wording Create uses, or a note that the field can only be edited in the Persona text below while <see cref="aliasLocked"/> is set.</summary>
+    private string AliasHelperText => this.aliasLocked
+        ? "This is written as a multi-line value in the Persona text below and can only be edited there."
+        : "A short working handle, for mentions and quick reference.";
+
     private async Task BeginEditAsync()
     {
         this.mode = TeammateCardMode.Edit;
@@ -541,9 +599,139 @@
         this.effort = persona?.Effort ?? this.effort;
         this.error = null;
         this.confirmingRemove = false;
+        this.nameLocked = false;
+        this.titleLocked = false;
+        this.aliasLocked = false;
 
         await this.LoadModelsAsync();
         await this.LoadEffortsAsync();
+    }
+
+    /// <summary>
+    /// Writes the Name box's edited <paramref name="value"/> into <see cref="text"/>'s frontmatter,
+    /// through <see cref="TryRejectIdentityFieldEdit"/>. Never touches disk - only <see cref="SaveAsync"/>
+    /// does that, per the file-level comment's "nothing here writes to disk" rule.
+    /// </summary>
+    /// <param name="value">The Name box's newly typed value.</param>
+    private void OnNameChanged(string value)
+    {
+        if (this.TryRejectIdentityFieldEdit("name", value, out var currentValue))
+        {
+            this.nameLocked = true;
+            this.name = currentValue;
+            return;
+        }
+
+        this.nameLocked = false;
+        this.name = value;
+    }
+
+    /// <summary>
+    /// Writes the Title box's edited <paramref name="value"/> into <see cref="text"/>'s frontmatter,
+    /// through <see cref="TryRejectIdentityFieldEdit"/>. Never touches disk - see <see cref="OnNameChanged"/>.
+    /// </summary>
+    /// <param name="value">The Title box's newly typed value.</param>
+    private void OnTitleChanged(string value)
+    {
+        if (this.TryRejectIdentityFieldEdit("title", value, out var currentValue))
+        {
+            this.titleLocked = true;
+            this.title = currentValue;
+            return;
+        }
+
+        this.titleLocked = false;
+        this.title = value;
+    }
+
+    /// <summary>
+    /// Writes the Alias box's edited <paramref name="value"/> into <see cref="text"/>'s frontmatter,
+    /// through <see cref="TryRejectIdentityFieldEdit"/>. Never touches disk - see <see cref="OnNameChanged"/>.
+    /// </summary>
+    /// <param name="value">The Alias box's newly typed value.</param>
+    private void OnAliasChanged(string value)
+    {
+        if (this.TryRejectIdentityFieldEdit("alias", value, out var currentValue))
+        {
+            this.aliasLocked = true;
+            this.alias = currentValue;
+            return;
+        }
+
+        this.aliasLocked = false;
+        this.alias = value;
+    }
+
+    /// <summary>
+    /// Re-seeds the Name/Title/Alias boxes from the raw Persona text whenever it changes, the reverse
+    /// direction of <see cref="OnNameChanged"/>/<see cref="OnTitleChanged"/>/<see cref="OnAliasChanged"/>.
+    /// <see cref="MudBlazor.MudTextField{T}"/> raises its <c>ValueChanged</c> on blur rather than per
+    /// keystroke, the same as the box-to-text direction, so the two can never fight each other for the
+    /// same field on the same input. A parse failure (malformed frontmatter typed by hand) leaves the
+    /// boxes exactly as they were rather than blanking them.
+    /// </summary>
+    /// <param name="value">The raw Persona text box's newly typed value.</param>
+    private void OnTextChanged(string value)
+    {
+        this.text = value;
+
+        if (PersonaFrontmatter.TryReadIdentity(this.text, out var identity, out _))
+        {
+            this.name = identity.Name;
+            this.title = identity.Title;
+            this.alias = identity.Alias;
+            this.nameLocked = false;
+            this.titleLocked = false;
+            this.aliasLocked = false;
+        }
+    }
+
+    /// <summary>
+    /// Writes <paramref name="value"/> into <paramref name="key"/>'s line inside <see cref="text"/>'s
+    /// frontmatter through <see cref="PersonaFrontmatter.WriteScalarField"/>, and reports whether that
+    /// write silently refused. <see cref="PersonaFrontmatter.WriteScalarField"/> returns its input
+    /// unchanged both when the write took no effect because the value already matched, and when the
+    /// field is a block scalar (<c>&gt;</c>/<c>|</c>) or a block list it deliberately will not flatten -
+    /// this method tells the two apart by re-reading the field's current value with
+    /// <see cref="PersonaFrontmatter.TryReadIdentity"/> and comparing it against <paramref name="value"/>.
+    /// </summary>
+    /// <param name="key">The frontmatter key being edited - <c>name</c>, <c>title</c> or <c>alias</c>.</param>
+    /// <param name="value">The box's newly typed value.</param>
+    /// <param name="currentValue">
+    /// The value still on file, to revert the box to, when this returns <see langword="true"/>;
+    /// otherwise <see langword="null"/> - a successful or a no-op write both leave <see cref="text"/>
+    /// already correct, so the caller only needs to mirror <paramref name="value"/> into its own field.
+    /// </param>
+    /// <returns><see langword="true"/> if the write refused because the field is a block scalar or a block list.</returns>
+    private bool TryRejectIdentityFieldEdit(string key, string value, [NotNullWhen(true)] out string? currentValue)
+    {
+        var updated = PersonaFrontmatter.WriteScalarField(this.text, key, value);
+        if (!string.Equals(updated, this.text, StringComparison.Ordinal))
+        {
+            this.text = updated;
+            currentValue = null;
+            return false;
+        }
+
+        if (PersonaFrontmatter.TryReadIdentity(this.text, out var identity, out _))
+        {
+            var parsedValue = key switch
+            {
+                "name" => identity.Name,
+                "title" => identity.Title,
+                "alias" => identity.Alias,
+                _ => value,
+            };
+
+            if (!string.Equals(parsedValue, value, StringComparison.Ordinal))
+            {
+                currentValue = parsedValue;
+                return true;
+            }
+        }
+
+        currentValue = null;
+        return false;
     }
 
     private void Close()
@@ -615,17 +803,18 @@
     private async Task SaveAsync()
     {
         var creating = this.mode == TeammateCardMode.Create;
+        Persona persona;
 
         try
         {
             if (creating)
             {
                 var identity = new PersonaIdentity(this.name, this.title, this.alias, TeammateCard.ParseTeams(this.teams));
-                this.Personas.Add(identity, this.text, this.model, this.effort);
+                persona = this.Personas.Add(identity, this.text, this.model, this.effort);
             }
             else
             {
-                this.Personas.Update(this.name, this.text, this.model, this.effort);
+                persona = this.Personas.Update(this.persistedName, this.text, this.model, this.effort);
             }
         }
         catch (ChatException ex)
@@ -636,19 +825,30 @@
 
         this.error = null;
 
+        // PersonaStore.Update reads the NEW name out of text and returns it on the Persona it hands
+        // back - this.name must follow it before the lookups below, or a rename leaves every one of
+        // them searching for a Persona that no longer exists under the OLD (stale) name. persistedName
+        // follows it too, so a second Edit/Save cycle in this same open dialog still passes Update the
+        // Name it is actually indexed under - see persistedName's own remarks.
+        this.name = persona.Name;
+        this.persistedName = persona.Name;
+
         // Land on the saved Teammate's details rather than closing outright, so a new teammate can be
         // read back immediately and an edit visibly took.
-        var persona = this.Personas.Get(this.name);
+        var savedPersona = this.Personas.Get(this.name);
         var entry = this.Personas.Entries.FirstOrDefault(candidate => string.Equals(candidate.Name, this.name, StringComparison.Ordinal));
         this.title = entry?.Title ?? this.title;
         this.alias = entry?.Alias ?? this.alias;
         this.teams = entry is null ? this.teams : string.Join(", ", entry.Teams);
-        this.text = persona?.Text ?? this.text;
-        this.model = persona?.Model;
-        this.effort = persona?.Effort;
+        this.text = savedPersona?.Text ?? this.text;
+        this.model = savedPersona?.Model;
+        this.effort = savedPersona?.Effort;
         this.filePath = TeammateCard.TryPathFor(this.Personas, this.name);
         this.mode = TeammateCardMode.View;
         this.confirmingRemove = false;
+        this.nameLocked = false;
+        this.titleLocked = false;
+        this.aliasLocked = false;
     }
 
     // The Create card's Teams input is one comma-separated text field, mirroring the comma form

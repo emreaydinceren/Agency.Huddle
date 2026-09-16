@@ -325,6 +325,103 @@ public sealed class ChatServiceTests
         Assert.Equal(1, roomsChangedCount);
     }
 
+    /// <summary>
+    /// The whole feature: a Room the Human hand-renamed away from its auto-derived name must keep that
+    /// name across a later Invitation, or the rename the Human just made is thrown away on the very
+    /// next <c>/invite</c>, <b>Add teammate</b>, or <c>mcp__team__invite_agent</c> call.
+    /// </summary>
+    [Fact]
+    public async Task Invite_IntoAHandRenamedRoom_LeavesTheNameAlone()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+        var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
+        Assert.NotNull(alpha);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
+        var (service, _) = CreateService(dir, directory);
+        await service.RenameRoomAsync(room.Id, "Support Squad", ct);
+
+        var updated = await service.InviteAsync(room.Id, "alpha", ct);
+
+        Assert.Equal("Support Squad", updated.Name);
+    }
+
+    /// <summary>An invite into a Room still carrying its auto-derived name re-derives that name.</summary>
+    [Fact]
+    public async Task Invite_IntoAnAutoNamedRoom_StillRenamesIt()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+        var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
+        Assert.NotNull(alpha);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
+        var (service, _) = CreateService(dir, directory);
+
+        var updated = await service.InviteAsync(room.Id, "alpha", ct);
+
+        Assert.Equal("echo, alpha", updated.Name);
+    }
+
+    /// <summary>Renaming a Room publishes <see cref="RoomEvents.RoomsChanged"/> so the sidebar repaints.</summary>
+    [Fact]
+    public async Task RenameRoom_PublishesRoomsChanged()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        var (service, events) = CreateService(dir, directory);
+        var roomsChangedCount = 0;
+        events.RoomsChanged += () => roomsChangedCount++;
+
+        var updated = await service.RenameRoomAsync(room.Id, "New Name", ct);
+
+        Assert.Equal("New Name", updated.Name);
+        Assert.Equal(1, roomsChangedCount);
+    }
+
+    /// <summary>A blank name is rejected without reaching the Team Directory.</summary>
+    [Fact]
+    public async Task RenameRoom_BlankName_ThrowsBadMessage()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        var (service, _) = CreateService(dir, directory);
+
+        var exception = await Assert.ThrowsAsync<ChatException>(
+            () => service.RenameRoomAsync(room.Id, "   ", ct));
+
+        Assert.Equal(ErrorCodes.BadMessage, exception.Code);
+    }
+
+    /// <summary>Renaming a Room that does not exist throws <see cref="ErrorCodes.UnknownRoom"/>.</summary>
+    [Fact]
+    public async Task RenameRoom_UnknownRoom_ThrowsUnknownRoom()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var (service, _) = CreateService(dir, directory);
+
+        var exception = await Assert.ThrowsAsync<ChatException>(
+            () => service.RenameRoomAsync("no-such-room", "New Name", ct));
+
+        Assert.Equal(ErrorCodes.UnknownRoom, exception.Code);
+    }
+
     [Fact]
     public async Task Submit_Invite_UnknownAgent_ThrowsBadMessage()
     {

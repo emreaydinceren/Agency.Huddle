@@ -64,8 +64,26 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   moves the Model and Effort rows to the new Name. What remains is the
   no-cascade half, unchanged and deliberate: the old Agent, its Rooms and its
   Transcripts stay behind under the old Name, so a rename leaves a ghost in the
-  Team Directory. That is [Roadmap](roadmap.md) item 1's to solve. The card also
-  still exposes a rename only by editing the raw file, not as its own action.
+  Team Directory. That is [Roadmap](roadmap.md) item 1's to solve. The card now
+  exposes the rename as its own action — Edit offers Name, Title and Alias as
+  discrete boxes that rewrite those frontmatter lines in the Persona text as you
+  type — and warns, on the card, that the Agent, the Rooms and the Transcripts
+  stay behind. It reports and does not block: the raw text always permitted this
+  edit, so refusing it in the box would only make the card lie about the file.
+- **A Room keeps auto-naming itself until somebody renames it, and that is
+  detected by comparison rather than by a flag.** `ChatService.InviteAsync`
+  re-derives a Room's name from its Agent Members only while the current name
+  still equals what `RoomNaming.Derive` would have produced; a Human-chosen name
+  therefore survives every later Invitation. There is no `name_is_custom` column
+  and deliberately so — the schema is created with `CREATE TABLE IF NOT EXISTS`,
+  so an existing `team.db` would never gain one (see [Traps](traps.md)). The
+  accepted cost is one invisible edge: rename a Room to precisely the name
+  auto-naming would have chosen and it stays auto-named, so the next Invitation
+  re-derives over it. Nothing observable distinguishes the two states.
+- **Renaming a Room does not make two Rooms distinguishable on its own.** Rooms
+  nobody has renamed are still named after their Members and still carry no
+  timestamp, no last-message preview and no other mark, which is the other half
+  of [product observation 6](product-observations.md) and is not built.
 - **Windows reserved device names are accepted as Names.** `CON`, `NUL`, `COM1`
   pass `NameRules` and become `CON.md`, which Windows will not create. Pre-dates
   the space change and is not guarded against.

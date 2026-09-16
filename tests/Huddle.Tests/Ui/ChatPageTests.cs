@@ -1,8 +1,13 @@
+using AngleSharp.Dom;
 using Bunit;
+using Bunit.Rendering;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
@@ -95,7 +100,147 @@ public sealed class ChatPageTests
 
         var withDraft = await client.GetStringAsync($"/rooms/{room.Id}", ct);
         Assert.Contains("draft-stop", withDraft, StringComparison.Ordinal);
-        Assert.Contains("Stop", withDraft, StringComparison.Ordinal);
+
+        // Not the literal text "Stop": the button is an icon now, and a MudTooltip's own text only
+        // materialises against MudPopoverProvider, so it is not reliably present in prerendered HTML.
+        // aria-label is the reliable, accessible handle - see docs/agencyteam/testing.md.
+        Assert.Contains("aria-label=\"Stop\"", withDraft, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The Room header offers a Rename control seeded from the Room's current name. Rendered through
+    /// <see cref="MudBunitContext"/> rather than a plain HTTP GET: the control sits behind a click
+    /// (the Edit icon button), which is absent from a prerender - see <c>docs/agencyteam/testing.md</c>.
+    /// </summary>
+    [Fact]
+    public async Task ChatPage_RoomHeader_OffersARenameControlSeededFromTheRoomName()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        Assert.Contains("aria-label=\"Rename room\"", cut.Markup, StringComparison.Ordinal);
+
+        cut.Find("button[aria-label=\"Rename room\"]").Click();
+
+        var input = ChatPageTests.FindRoomNameInput(cut);
+        Assert.Equal(room.Name, input.GetAttribute("value"));
+    }
+
+    /// <summary>Pressing Enter in the Rename control commits the typed name through <see cref="ChatService.RenameRoomAsync"/>.</summary>
+    [Fact]
+    public async Task ChatPage_Rename_EnterCommitsTheTypedNameThroughChatService()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        cut.Find("button[aria-label=\"Rename room\"]").Click();
+        var input = ChatPageTests.FindRoomNameInput(cut);
+        await input.InputAsync("Pricing follow-up");
+        await input.KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+
+        // The fact that matters is what ChatService actually wrote, not merely what the control shows -
+        // a rename that only updated local component state would pass a markup-only assertion here.
+        var renamed = await directory.GetRoomAsync(room.Id, ct);
+        Assert.NotNull(renamed);
+        Assert.Equal("Pricing follow-up", renamed.Name);
+
+        // RenameRoomAsync publishes RoomsChanged, and Chat.razor's own subscriber reloads the Room off
+        // that event rather than the commit handler re-fetching it itself - proving that path actually
+        // repaints rather than merely trusting it does.
+        while (!cut.Markup.Contains("Pricing follow-up", StringComparison.Ordinal))
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains("Pricing follow-up", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>Escape leaves the Room's name untouched, both on screen and in the store.</summary>
+    [Fact]
+    public async Task ChatPage_Rename_EscapeLeavesTheNameUntouched()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        cut.Find("button[aria-label=\"Rename room\"]").Click();
+        var input = ChatPageTests.FindRoomNameInput(cut);
+        await input.InputAsync("Something else entirely");
+        await input.KeyDownAsync(new KeyboardEventArgs { Key = "Escape" });
+
+        var untouched = await directory.GetRoomAsync(room.Id, ct);
+        Assert.NotNull(untouched);
+        Assert.Equal(room.Name, untouched.Name);
+
+        Assert.Contains($">{room.Name}<", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Something else entirely", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>A <see cref="ChatException"/> from the rename call surfaces as a visible, announced alert - never silently.</summary>
+    [Fact]
+    public async Task ChatPage_Rename_AChatExceptionSurfacesAsAVisibleAlert()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        cut.Find("button[aria-label=\"Rename room\"]").Click();
+        var input = ChatPageTests.FindRoomNameInput(cut);
+
+        // ChatService.RenameRoomAsync rejects a blank name with ErrorCodes.BadMessage - the same
+        // ChatException every other door into this page already surfaces via ex.Message.
+        await input.InputAsync("   ");
+        await input.KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+
+        while (!cut.Markup.Contains("role=\"alert\"", StringComparison.Ordinal))
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains("role=\"alert\"", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("A room name cannot be blank.", cut.Markup, StringComparison.Ordinal);
+
+        var unchanged = await directory.GetRoomAsync(room.Id, ct);
+        Assert.NotNull(unchanged);
+        Assert.Equal(room.Name, unchanged.Name);
     }
 
     /// <summary>
@@ -343,4 +488,41 @@ public sealed class ChatPageTests
 
         return count;
     }
+
+    /// <summary>Registers this factory's real Room services into a fresh <see cref="MudBunitContext"/>, the same pattern <c>TeammatesPageTests</c> uses for <c>Teammates</c>.</summary>
+    private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
+    {
+        MudBunitContext ctx = new();
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ITeamDirectory>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IChatStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ChatService>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<Drafts>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IAgentGateway>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaHealth>());
+
+        // Chat.razor renders InviteTeammate as a child, which injects PersonaStore for its Team
+        // filter - needed even though these tests never open that panel.
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
+        return ctx;
+    }
+
+    /// <summary>
+    /// Renders the real <see cref="Chat"/> page for <paramref name="roomId"/>, with the popover
+    /// provider <see cref="MudBunitContext.RenderWithPopovers"/> supplies so the Rename button's
+    /// <c>MudTooltip</c> has somewhere to paint its content.
+    /// </summary>
+    private static IRenderedComponent<ContainerFragment> RenderChatPage(MudBunitContext ctx, string roomId) =>
+        ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<Chat>(0);
+            builder.AddAttribute(1, nameof(Chat.RoomId), roomId);
+            builder.CloseComponent();
+        });
+
+    /// <summary>The <c>&lt;input&gt;</c> under the Rename control's <c>MudTextField</c>, found by its Label the same way <c>TeammateCardTests</c> locates a field.</summary>
+    private static IElement FindRoomNameInput(IRenderedComponent<ContainerFragment> cut) =>
+        cut.FindAll("div.mud-input-control")
+            .First(control => control.QuerySelectorAll("label").Any(l => l.TextContent.Contains("Room name", StringComparison.Ordinal)))
+            .QuerySelector("input") ?? throw new InvalidOperationException("No input under the Room name field.");
 }

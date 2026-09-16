@@ -162,6 +162,31 @@ button:focus-visible {
     gap: 1rem;
 }
 
+/* ---- The drawer, and pinning Settings to the bottom of it ------------------------------------
+   The drawer's children - NewChat, RoomList and the two MudNavMenus - are a plain vertical flow
+   with no flex container of their own, so pushing Settings to the bottom means making the drawer's
+   own scrolling content element a column flex box. MudBlazor already renders one at
+   .mud-drawer-content (confirmed against the installed 9.10.0 package's MudBlazor.min.css).
+
+   These two rules live HERE and not in MainLayout.razor.css, which is where MainLayout's other
+   styles are, and the reason is the one traps.md records for ReconnectModal.razor.css: a scoped
+   stylesheet that never matches fails silently. Blazor's CSS isolation stamps its [b-xxxxx]
+   attribute only onto HTML elements written in the component's own markup, and MainLayout.razor
+   contains exactly one - <div id="blazor-error-ui">, which is not an ancestor of the drawer.
+   Everything between them (MudLayout, MudDrawer) is a child COMPONENT, so "::deep
+   .mud-drawer-content" would compile to "[b-xxxxx] .mud-drawer-content" with no scoped ancestor to
+   match, and the pinning would simply never apply. Nothing in the test suite renders a browser, so
+   no test could have caught that. app.css is global and has no such trap. */
+.mud-drawer-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.nav-settings {
+    margin-top: auto;
+}
+
 /* ---- Inviting a teammate into the open room ----------------------------- */
 
 .invite-teammate {
@@ -237,6 +262,7 @@ button:focus-visible {
 .message-body {
     line-height: 1.4;
     font-family: var(--mud-typography-body1-family);
+    padding-left: 2ch;
 }
 
 .message-body p {
@@ -265,31 +291,22 @@ button:focus-visible {
 
 .tool-activity {
     margin-top: 0.2rem;
+    padding-left: 2ch;
     color: var(--mud-palette-text-disabled);
     font-size: 0.8rem;
     font-style: italic;
 }
 
 /* Deliberately styled like an ordinary secondary action, never like .composer-error or
-   .budget-prompt: a Stop is one of three normal ways a Turn ends, not a fault. */
+   .budget-prompt: a Stop is one of three normal ways a Turn ends, not a fault. Now a
+   MudIconButton, so sizing, padding and disabled opacity are MudBlazor's own - only the
+   muted colour and hover background are still ours to set. */
 .draft-stop {
-    padding: 0.15rem 0.5rem;
-    font: inherit;
-    font-size: 0.75rem;
     color: var(--mud-palette-text-secondary);
-    background: var(--mud-palette-surface);
-    border: 1px solid var(--mud-palette-lines-inputs);
-    border-radius: 4px;
-    cursor: pointer;
 }
 
 .draft-stop:hover {
     background: var(--mud-palette-table-hover);
-}
-
-.draft-stop:disabled {
-    cursor: default;
-    opacity: 0.6;
 }
 
 .composer {
@@ -404,7 +421,7 @@ button:focus-visible {
 
 .teammate-tile {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 0.6rem;
     width: 100%;
     padding: 0.6rem;
