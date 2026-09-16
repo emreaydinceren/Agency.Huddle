@@ -12,6 +12,14 @@ namespace Agency.Huddle.App.Pipes;
 /// </summary>
 internal sealed class PipeServer : BackgroundService
 {
+    /// <summary>
+    /// In and out buffer size for every accepted pipe instance, in bytes. Sized to hold many whole
+    /// protocol envelopes rather than to any measured figure - the requirement is only that a normal
+    /// write never has to wait for the peer to read, and an envelope is a JSON line. Matches the 64 KB
+    /// the <c>FileSystemWatcher</c> in <c>PersonaStore</c> uses, for the same class of reason.
+    /// </summary>
+    private const int PipeBufferBytes = 64 * 1024;
+
     private readonly TeamOptions options;
     private readonly ITeamDirectory teamDirectory;
     private readonly ChatService chat;
@@ -52,12 +60,26 @@ internal sealed class PipeServer : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            // The buffer sizes are load-bearing, and their absence deadlocked an Agent permanently.
+            // Left unspecified they default to 0, which on Windows means every write blocks until the
+            // peer reads it - a lock-step handshake. AgentConnection answers a refused post (a spent
+            // Room Budget, most often) by writing a ProtocolError from INSIDE its read loop, so a
+            // client that had sent its post and gone straight on to its next envelope - which is
+            // well-behaved, and what DemoAgentHost and PersonaRunner both do - met a server blocked
+            // writing while it was blocked writing. Neither side read again.
+            //
+            // Worse than a stalled turn: JsonLineStream serialises writes behind one semaphore, so
+            // the stuck read-loop write also held the lock that SendAsync needs, and that Agent stopped
+            // receiving messages in every Room while its pipe stayed open and its tile stayed green.
+            // A buffer lets an envelope-sized write complete into the OS and release the lock.
             var server = new NamedPipeServerStream(
                 this.options.PipeName,
                 PipeDirection.InOut,
                 NamedPipeServerStream.MaxAllowedServerInstances,
                 PipeTransmissionMode.Byte,
-                PipeOptions.Asynchronous);
+                PipeOptions.Asynchronous,
+                inBufferSize: PipeBufferBytes,
+                outBufferSize: PipeBufferBytes);
 
             using var registration = stoppingToken.Register(server.Dispose);
 

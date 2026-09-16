@@ -68,19 +68,29 @@ try {
 
         $envelope = $line | ConvertFrom-Json
 
-        if ($envelope.type -eq 'messagePosted' -and $envelope.mentioned -eq $true) {
-            # Strip '@' before quoting so the reply cannot reproduce mentions and re-trigger
-            # another agent (Team-Specifications.md §6.8, "Loop safety").
-            $quotedText = $envelope.message.text -replace '@', ''
-            $replyText = "**{0}:** {1}" -f $Name, $quotedText
-            $reply = @{
-                type      = 'postMessage'
-                version   = 3
-                roomId    = $envelope.roomId
-                messageId = [guid]::NewGuid().ToString('N')
-                text      = $replyText
+        if ($envelope.type -eq 'messagePosted') {
+            # Mirrors ReplyGate.Decide (src/Huddle.App/Acp/ReplyGate.cs) and implements ADR-0004:
+            # a Direct Room (<= 2 Members) answers every Message without a Mention; a Room with 3+
+            # Members still requires one. The Budget check is ordered first, deliberately, and must
+            # stay that way -- checking membership/Mention first would let a Mention buy a Turn past
+            # the cap, the same bug ReplyGate's own doc comment warns against.
+            $budgetExhausted = $envelope.budget -gt 0 -and $envelope.agentMessagesSinceHuman -ge $envelope.budget
+            $shouldReply = -not $budgetExhausted -and ($envelope.members.Count -le 2 -or $envelope.mentioned -eq $true)
+
+            if ($shouldReply) {
+                # Strip '@' before quoting so the reply cannot reproduce mentions and re-trigger
+                # another agent (Team-Specifications.md §6.8, "Loop safety").
+                $quotedText = $envelope.message.text -replace '@', ''
+                $replyText = "**{0}:** {1}" -f $Name, $quotedText
+                $reply = @{
+                    type      = 'postMessage'
+                    version   = 3
+                    roomId    = $envelope.roomId
+                    messageId = [guid]::NewGuid().ToString('N')
+                    text      = $replyText
+                }
+                Send-Envelope $reply
             }
-            Send-Envelope $reply
         }
     }
 }

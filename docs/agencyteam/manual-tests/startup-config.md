@@ -69,7 +69,7 @@ If the browser shows the page but the console window you started shows no `Now l
 
 **Free** · about 5 min
 
-*Catches this repo's most expensive documented silent failure: an unresolved `@Assets` key renders as an ordinary href that 404s, with no build warning, no startup error and no log line, so the only witness is an HTTP round-trip.*
+*Catches this repo's most expensive documented silent failure: an unresolved `@Assets` key renders as an ordinary href that 404s, with no build warning, no startup error and no log line, so the only witness is an HTTP round-trip. The stylesheet list changed with the MudBlazor migration: `theme.css` and the hand-built theming system it belonged to are gone (Stage 2 — see [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md)), and two new stylesheets were added — MudBlazor's own, and a new `app-vars.css` carrying the one token (`--font-mono`) that has no MudBlazor equivalent.*
 
 **Before you start**
 
@@ -80,30 +80,32 @@ If the browser shows the page but the console window you started shows no `Now l
 1. Press F12 to open DevTools and select the **Network** tab.
 2. Tick **Disable cache**, then press Ctrl+F5 to hard-reload the page.
 3. Set the Network filter to **CSS**.
-4. Read the Status column for every row.
+4. Read the Status column for every row, and note the ORDER they appear in.
 5. Click each CSS row and read its full Request URL.
 6. Close DevTools. Scroll the page all the way to the very bottom of the viewport and look for a strip reading `An unhandled error has occurred.` with a `Reload` link and a `🗙` character.
 
 **Pass if — all of these**
 
-- Exactly three application stylesheets are requested and all three return status 200: one whose name starts `theme`, one whose name starts `app`, and one whose name starts `Huddle.App.styles`.
-- Each of those three request URLs is FINGERPRINTED — the filename carries a hash segment (for example `theme.ce2n94aiaf.css`), and is therefore not byte-identical to the key written in the markup (`theme.css`).
+- Exactly FOUR stylesheets are requested, all returning status 200, in this order: `_content/MudBlazor/MudBlazor.min.css` first, then `app`, `app-vars`, and `Huddle.App.styles`.
+- The FIRST one (`MudBlazor.min.css`) is NOT fingerprinted — it is a static asset served straight from the NuGet package, not through `@Assets[...]`, so this is correct and deliberate.
+- Each of the LAST three request URLs IS fingerprinted — the filename carries a hash segment (for example `app.ce2n94aiaf.css`), and is therefore not byte-identical to the key written in the markup (`app.css`).
 - No `An unhandled error has occurred.` strip is visible anywhere on the page, top or bottom.
-- The layout is genuinely styled: two columns, a sidebar with a visible background, message rows each showing a sender name and a time on a meta line.
+- The layout is genuinely styled: a `MudDrawer` sidebar with a visible background, message rows each showing a sender name and a time on a meta line.
 
 **Fail if — any of these**
 
 - Any CSS request returns 404 -> an `@Assets["…"]` key in `Components/App.razor` no longer matches a real asset; it was emitted verbatim as a plain href instead of throwing. This is the documented month-long regression; file it with the exact 404 URL.
-- A CSS request URL is NOT fingerprinted and exactly equals the key in the markup (e.g. `/theme.css`) -> the same unresolved-key failure, even if the server happens to answer 200 for it.
+- Any of the LAST three request URLs is NOT fingerprinted and exactly equals the key in the markup (e.g. `/app.css`) -> the same unresolved-key failure, even if the server happens to answer 200 for it.
+- The FIRST URL (`MudBlazor.min.css`) carries a fingerprint, or is missing entirely -> either it was routed through the fingerprinting pipeline by mistake, or the reference was dropped from `App.razor`.
 - The error strip is visible at the bottom of the page on a fresh load with no interaction -> the page is running without `app.css`, whose `position: fixed` is what would normally float that strip; a stylesheet is missing.
-- Fewer than three stylesheets are requested -> a `<link>` was dropped from the head.
+- Fewer than four stylesheets are requested, or a different order -> a `<link>` was dropped from, or reordered in, the head. Order matters: MudBlazor's reset must load FIRST so the app's own bare-element CSS rules win source-order ties.
 
 **Inconclusive if**
 
-If DevTools shows CSS rows served `(from disk cache)` with no status code, you did not disable the cache. Re-tick **Disable cache** and hard-reload before judging. If your browser hides third-party/extension CSS rows, count only the three named above and ignore the rest.
+If DevTools shows CSS rows served `(from disk cache)` with no status code, you did not disable the cache. Re-tick **Disable cache** and hard-reload before judging. If your browser hides third-party/extension CSS rows, count only the four named above and ignore the rest.
 
 > [!NOTE]
-> This behaviour genuinely cannot be judged without a browser network panel — 'the page looks fine' is not evidence, because a partially-loaded shell still renders text.
+> This behaviour genuinely cannot be judged without a browser network panel — 'the page looks fine' is not evidence, because a partially-loaded shell still renders text. See SHELLNAV-01 for the same check driven from `curl.exe` instead of DevTools — the automated guard `tests/Huddle.Tests/Ui/AppStylesheetTests.cs` covers exactly this for stylesheets, so a failure here means that test also broke.
 
 ### STARTUPCONFIG-03 — Two demo Rooms, echo and alpha, exist at startup with no user action
 
@@ -146,7 +148,7 @@ The Rooms may take a second or two to appear — the demo agents dial the pipe a
 > [!NOTE]
 > Optional disk oracle: `Get-ChildItem -Recurse src\Huddle.App\App_Data` — and, if `sqlite3` is available, `sqlite3 src\Huddle.App\App_Data\team.db "SELECT name,kind FROM users; SELECT name FROM rooms;"` should show one `human` row, two `agent` rows, and two Rooms.
 
-### STARTUPCONFIG-04 — A demo agent answers only when @-mentioned, and answers in bold
+### STARTUPCONFIG-04 — A demo agent answers a two-Member Room with or without a Mention, and answers in bold
 
 **Free** · about 5 min
 
@@ -173,7 +175,7 @@ The Rooms may take a second or two to appear — the demo agents dial the pipe a
 - After step 3, a message appears immediately with sender `You` and body `hi @echo`.
 - Within a few seconds a second message appears with sender `echo`, whose body renders `echo:` in BOLD followed by `hi echo` — rendered bold text, not literal `**` asterisks.
 - The `echo` reply contains NO `@` character.
-- After step 5, the `hi` message appears with sender `You` and NOTHING answers it, for the full 10 seconds.
+- After step 5, the `hi` message appears with sender `You`, and within a few seconds a second reply appears with sender `echo` whose body reads `echo: hi` — the `echo` Room has exactly two Members (the Human and `echo`), and per ADR-0004 a Direct Room answers every Message without a Mention.
 - A `rooms` folder now exists under `App_Data` containing a `.jsonl` file.
 
 **Fail if — any of these**
@@ -181,11 +183,11 @@ The Rooms may take a second or two to appear — the demo agents dial the pipe a
 - Nothing answers `hi @echo` -> the mention was not parsed, or the demo agent's read loop is dead. Check the console for `Demo agent echo stopped unexpectedly.`
 - The reply renders as literal `**echo:** hi echo` with visible asterisks -> the Markdown render path for a posted Message is broken.
 - The reply still contains an `@` -> the demo agent's `@`-stripping loop-safety step was lost; a reply that carries a mention can re-trigger another agent.
-- Something DOES answer the plain `hi` -> only a real Persona replies without a mention in a two-Member Room; a demo agent answering unmentioned means the mention gate was bypassed.
+- Nothing answers the plain `hi` -> the `echo` Room has only two Members, so ADR-0004 requires a reply without a Mention; silence here means the demo agent is still gating on `mentioned` alone instead of calling `ReplyGate.Decide` (or, for `tools/echo-bot.ps1`, its mirror of that logic).
 
 **Inconclusive if**
 
-Silence after plain `hi` is CORRECT and must never be filed as a bug — `DemoAgentHost` answers only `MessagePosted { Mentioned: true }`. Note that `docs/why-agency-huddle.md` line 209 wrongly tells you to type plain `hi`; `docs/AgencyTeam.md` line 262 is the correct instruction. If you typed `hi @echo` and got no reply, first re-check the console for a `connected.` line before filing — an agent that never connected produces exactly this symptom.
+If you typed `hi @echo` and got no reply, first re-check the console for a `connected.` line before filing — an agent that never connected produces exactly this symptom.
 
 > [!NOTE]
 > Shift+Enter inserts a newline instead of sending; Enter alone sends.
@@ -400,11 +402,11 @@ Do not confuse `hooks.json` (the override file, under App_Data, absent until sav
 > [!NOTE]
 > This test deliberately leaves a `hooks.json` behind. Delete it (`Remove-Item src\Huddle.App\App_Data\hooks.json`) if a later test needs a first-run state.
 
-### STARTUPCONFIG-10 — Appearance tab on a first run reads System; picking Dark writes appearance.json and reloads the page
+### STARTUPCONFIG-10 — Appearance tab on a first run reads System; picking Dark writes appearance.json and applies immediately, with no reload
 
 **Free** · about 8 min
 
-*Proves the theme choice persists to disk, that the deliberate full page reload happens, and that the app never creates appearance.json unbidden.*
+*Proves the dark-mode preference persists to disk, that it applies live, and that the app never creates appearance.json unbidden. Stage 2 of the MudBlazor migration split what used to be one combined `Theme` choice (`System` / `Light` / `Dark`, stored as a single theme id) into two independent controls — a `Theme` select (which MudBlazor palette to use; today the catalog ships exactly one, `Huddle`) and a separate `Appearance` select for the light/dark/system preference — and, per [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md), deleted the full-page reload along with it: `MudThemeProvider` lives in the render tree now, so a change is an ordinary re-render, not a navigation.*
 
 **Before you start**
 
@@ -415,36 +417,40 @@ Do not confuse `hooks.json` (the override file, under App_Data, absent until sav
 1. In `T-B` run `Test-Path src\Huddle.App\App_Data\appearance.json` and note the result.
 2. In the browser go to `/settings` and click the `Appearance` tab.
 3. Read the intro paragraph.
-4. Open the `Theme` dropdown and read every option it offers, and which one is currently selected.
-5. Read the paragraph naming where overrides are stored.
-6. Select `Dark` in the `Theme` dropdown.
-7. Watch the browser: note whether the whole page reloads (the tab spinner turns, the page repaints from the server) rather than updating in place.
-8. Read the page's colours after it comes back.
-9. In the second pwsh window run `Test-Path src\Huddle.App\App_Data\appearance.json` and then `Get-Content src\Huddle.App\App_Data\appearance.json`.
-10. Set the `Theme` dropdown back to `System`.
+4. Open the `Theme` select and read every option it offers, and which one is currently selected.
+5. Open the `Appearance` select and read every option it offers, and which one is currently selected.
+6. Read the paragraph naming where the selection is stored.
+7. Select `Dark` in the `Appearance` select (leave `Theme` untouched).
+8. Watch the browser closely: note whether the whole page reloads (tab spinner, a full repaint from the server) or whether just the colours change in place with no navigation.
+9. Read the page's colours after the change settles.
+10. In the second pwsh window run `Test-Path src\Huddle.App\App_Data\appearance.json` and then `Get-Content src\Huddle.App\App_Data\appearance.json`.
+11. Set the `Appearance` select back to `System`.
 
 **Pass if — all of these**
 
 - Step 1 returns False.
-- The intro reads exactly `Pick a theme, or leave it on System to follow your device's own light or dark setting.`
-- The `Theme` dropdown offers exactly three options — `System`, `Light`, `Dark` — with `System` selected.
-- The overrides paragraph contains `The file does not exist until you save a theme choice here, so it being absent is expected, not a bug.`
-- Choosing `Dark` causes a FULL page navigation, and the page comes back rendered dark.
-- Step 9 returns True, and the file's content is overrides-only JSON containing a theme id such as `huddle-dark` — an id, never the label `Dark`.
+- The intro reads exactly `Pick a theme, and choose whether it always uses its light or dark palette, or follows your device's own setting.`
+- The `Theme` select offers exactly one option, `Huddle`, already selected.
+- The `Appearance` select offers exactly three options — `System`, `Light`, `Dark` — with `System` selected.
+- The file-path paragraph names `this.AppearanceStore.FilePath` and states the file does not exist until a choice is saved here, so its absence is expected, not a bug.
+- Choosing `Dark` applies IMMEDIATELY — the page repaints dark with no navigation, no tab spinner, no address-bar or history change.
+- Step 10 returns True, and the file's content is `{"dark":"dark"}` (lowercase, and with NO `theme` key, since `Theme` was never touched) — never the display label `Dark`.
 
 **Fail if — any of these**
 
 - Step 1 returns True on a clean App_Data -> the app created `appearance.json` on its own; it must never do that.
-- The file stores the display label (`Dark`) rather than the id (`huddle-dark`) -> a display name was persisted where an id belongs; renaming a theme's label would then break the stored choice.
-- The dropdown offers more or fewer than three options -> the theme catalog or the System option changed.
-- Choosing `Dark` on a light-mode OS leaves the page light -> the theme stylesheet was not layered into the document head.
+- The whole page reloads (spinner, full repaint, or the address bar flickers) -> the deleted full-page-reload path was reintroduced; ADR-0010 explicitly removed it because `MudThemeProvider` renders in the tree now.
+- The file stores the display label (`Dark`) rather than the lowercase `dark` -> a display name was persisted where the stored value belongs.
+- The `Theme` select offers anything other than exactly `Huddle` -> the theme catalog changed; re-check `ThemeCatalog.BuiltIn` before filing, since a second built-in theme is a real feature addition, not necessarily a defect.
+- The `Appearance` select offers more or fewer than three options -> the `DarkModePreference` enum or its select changed.
+- Choosing `Dark` on a light-mode OS leaves the page light -> the theme is not being applied through `MudThemeProvider`'s `IsDarkMode`.
 
 **Inconclusive if**
 
-The full page reload is DELIBERATE (the document head belongs to the server and Blazor's render tree cannot reach it) — 'the theme flashes / reloads' is a documented limit, not a bug. Likewise, `Dark` staying dark on a light OS is correct: a Theme has no per-mode pair, and following the device means choosing `System`. The choice is per installation, so a second browser or a private window showing the same theme is also correct, not a session bug.
+`Dark` staying dark on a light OS is correct: choosing `System` is what follows the device, and `Dark`/`Light` are absolute choices. The choice is per installation, so a second browser or a private window showing the same theme is also correct, not a session bug.
 
 > [!NOTE]
-> If the Appearance tab shows a section headed `Overrides that didn't load`, that is the allowlist refusing a hand-edited token value — record the listed reason, but it is a separate concern from this test.
+> There is no `Overrides that didn't load` section any more — per-token customisation and its allowlist are gone with `theme.css` (see `docs/agencyteam/known-limits.md`). A bad `theme` id in the file is now logged only, never shown on the Appearance tab; do not look for an on-screen refusal message.
 
 ### STARTUPCONFIG-11 — Rooms and Transcripts survive a restart; Drafts and the Budget do not
 
@@ -611,7 +617,7 @@ If no prompt appears, FIRST verify the variable took: `Get-ChildItem Env:Team__A
 
 **Inconclusive if**
 
-'No new reply' is CORRECT and must not be filed. Continue re-delivers only the Room's most recent Message, and delivery always skips that Message's own sender — so when the last Message is the agent's own reply, there is nobody left to wake, and a demo agent only answers a mention anyway. The rising allowance figure is the proof the grant worked. To see Continue actually wake something you would need the last Message to be a Human Message that mentioned the agent, which only happens if the agent was paused mid-run.
+'No new reply' is CORRECT and must not be filed. Continue re-delivers only the Room's most recent Message, and delivery always skips that Message's own sender — so when the last Message is the agent's own reply, there is nobody left to wake, regardless of Mention or Member count. The rising allowance figure is the proof the grant worked. To see Continue actually wake something you would need the last Message to be a Human Message instead of the agent's own reply, which only happens if the agent was paused mid-run — and per ADR-0004, this two-Member `echo` Room would wake `echo` for that re-delivered Human Message even without a Mention.
 
 > [!NOTE]
 > Also documented: a Message declined for Budget is held for re-delivery, not kept as Catch-up. If you type something instead of clicking Continue, the agent's next prompt will not carry the Message it was paused on, even though that Message is still visible in the transcript.
@@ -1295,7 +1301,7 @@ If `git status` is not clean at step 1, do NOT run this test — you risk revert
 
 **Free** · about 10 min
 
-*Proves the supervisor really launches a Persona at startup and that all three start-failure causes reach the browser as readable tile text — the surface actually under test.*
+*Proves the supervisor really launches a Persona at startup and that all three start-failure causes reach the browser as readable tile text — the surface actually under test. The Edit card in step 7 is a real `MudDialog` and its Model/Effort dropdowns are `MudSelect` (Stages 3-4 of the MudBlazor migration); neither changes what this test is checking.*
 
 **Before you start**
 

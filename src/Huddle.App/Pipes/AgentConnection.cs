@@ -120,6 +120,19 @@ internal sealed class AgentConnection
         finally
         {
             this.gateway.Unregister(this);
+
+            if (this.logger.IsEnabled(LogLevel.Information))
+            {
+                if (this.Agent is { } agent)
+                {
+                    this.logger.LogInformation("Agent connection {ConnectionId} for agent {AgentName} disconnected.", this.ConnectionId, agent.Name);
+                }
+                else
+                {
+                    this.logger.LogInformation("Agent connection {ConnectionId} disconnected before registration.", this.ConnectionId);
+                }
+            }
+
             this.pipe.Dispose();
         }
     }

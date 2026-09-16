@@ -1,19 +1,21 @@
 /* ---- Every colour and every font here is a token -------------------------------------------
-   Every colour and every font-family in this file comes from theme.css's base layer, from the
-   Human's selected theme layered over it, or from the Human's own overrides. A literal here
-   fails AppCss_DeclaresNoColourLiteral or AppCss_DeclaresNoFontFamilyLiteral. */
+   Every colour and every font-family in this file comes from MudBlazor's MudTheme - the single
+   source of theming - through its generated --mud-palette-* and --mud-typography-* CSS custom
+   properties, with one deliberate exception: --font-mono, declared in app-vars.css, since
+   MudBlazor's theme has no monospace equivalent. A literal here fails AppCss_DeclaresNoColourLiteral
+   or AppCss_DeclaresNoFontFamilyLiteral. */
 
 html, body {
     height: 100%;
     margin: 0;
-    background: var(--surface-base);
-    color: var(--text-primary);
-    font-family: var(--font-ui);
+    background: var(--mud-palette-background);
+    color: var(--mud-palette-text-primary);
+    font-family: var(--mud-typography-default-family);
 }
 
 /* 100% honours the browser's own font-size setting; every existing rem scales from this one token. */
 html {
-    font-size: var(--font-size-base);
+    font-size: var(--mud-typography-default-size);
 }
 
 * {
@@ -24,56 +26,32 @@ code, kbd, samp, pre {
     font-family: var(--font-mono);
 }
 
-.app-grid {
-    display: grid;
-    grid-template-columns: 240px 1fr;
-    height: 100vh;
-}
-
-.sidebar {
-    border-right: 1px solid var(--border-default);
-    background: var(--surface-sidebar);
-    overflow-y: auto;
+/* ---- Keyboard focus ring --------------------------------------------------------------------
+   MudBlazor.min.css resets outline to none for real keyboard focus on anchors and buttons
+   (a:focus-visible, button:focus, .mud-button-root all reset it - see the .nuget MudBlazor.min.css
+   payload), leaving no visible focus indicator anywhere: not outline, not box-shadow, not
+   background. a:focus-visible and button:focus are both specificity (0,1,1), exactly what the two
+   selectors below carry, so this relies on the same tie-break App.razor's link-order comment
+   already documents - MudBlazor.min.css loads first, app.css loads after, and a specificity tie
+   is won by whichever rule the cascade reads last. .mud-button-root's outline reset is only
+   (0,1,0), so it loses outright. Colour comes from --mud-palette-text-primary, not
+   --mud-palette-primary: the dark palette darkens Primary rather than lightening it, so
+   #5e2b60-on-#1b1b1f measures 1.63:1 - well under the 3:1 WCAG 1.4.11 non-text contrast minimum
+   for a focus indicator - while text-primary measures 13.79:1 in dark and 15.91:1 in light,
+   comfortable in both. Do not "improve" this back to an accent colour. */
+a:focus-visible,
+button:focus-visible {
+    outline: 2px solid var(--mud-palette-text-primary);
+    outline-offset: 2px;
 }
 
 .new-chat {
-    border-bottom: 1px solid var(--border-default);
+    border-bottom: 1px solid var(--mud-palette-divider);
     padding: 0.6rem 1rem;
 }
 
-.new-chat-toggle {
-    width: 100%;
-    padding: 0.4rem 0.6rem;
-    font: inherit;
-    background: var(--surface-raised);
-    border: 1px solid var(--border-control);
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.new-chat-toggle:hover {
-    background: var(--surface-hover);
-}
-
-.new-chat-panel {
-    margin-top: 0.6rem;
-}
-
 .new-chat-agents {
-    list-style: none;
     margin: 0 0 0.6rem 0;
-    padding: 0;
-}
-
-.new-chat-agents li {
-    padding: 0.2rem 0;
-}
-
-.new-chat-agents label {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    cursor: pointer;
 }
 
 .agent-dot {
@@ -81,80 +59,28 @@ code, kbd, samp, pre {
     width: 0.6rem;
     height: 0.6rem;
     border-radius: 50%;
-    background: var(--status-offline);
+    background: var(--mud-palette-error);
 }
 
 .agent-dot.online {
-    background: var(--status-online);
+    background: var(--mud-palette-success);
 }
 
 .agent-dot.offline {
-    background: var(--status-offline);
+    background: var(--mud-palette-error);
 }
 
 .agent-dot.degraded {
-    background: var(--status-degraded);
+    background: var(--mud-palette-warning);
 }
 
 .agent-dot.starting {
-    background: var(--status-starting);
-}
-
-.new-chat-start {
-    width: 100%;
-    padding: 0.4rem 0.6rem;
-    font: inherit;
-    background: var(--surface-selected);
-    border: 1px solid var(--border-emphasis);
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.new-chat-start:disabled {
-    background: var(--surface-muted);
-    border-color: var(--border-subtle);
-    color: var(--text-disabled);
-    cursor: not-allowed;
-}
-
-.room-list ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.room-list li a {
-    display: block;
-    padding: 0.6rem 1rem;
-    color: var(--text-primary);
-    text-decoration: none;
-}
-
-.room-list li a:hover {
-    background: var(--surface-hover);
-}
-
-.room-list li a.active {
-    background: var(--surface-selected);
-    font-weight: 600;
+    background: var(--mud-palette-warning-lighten);
 }
 
 .empty-state {
     padding: 1rem;
-    color: var(--text-muted);
-}
-
-.sidebar-link {
-    display: block;
-    padding: 0.6rem 1rem;
-    color: var(--text-secondary);
-    text-decoration: none;
-    border-top: 1px solid var(--border-default);
-    font-size: 0.9rem;
-}
-
-.sidebar-link:hover {
-    background: var(--surface-hover);
+    color: var(--mud-palette-text-secondary);
 }
 
 .teammates-page {
@@ -163,7 +89,7 @@ code, kbd, samp, pre {
 }
 
 .teammates-intro {
-    color: var(--text-muted);
+    color: var(--mud-palette-text-secondary);
 }
 
 .teammates-list {
@@ -178,18 +104,12 @@ code, kbd, samp, pre {
     flex: 1 1 auto;
 }
 
-
-.teammates-danger {
-    color: var(--danger-fg);
-}
-
-
 .teammates-field {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
     font-size: 0.85rem;
-    color: var(--text-secondary);
+    color: var(--mud-palette-text-secondary);
 }
 
 .teammates-field input,
@@ -197,7 +117,7 @@ code, kbd, samp, pre {
 .teammates-field textarea {
     font: inherit;
     padding: 0.4rem;
-    border: 1px solid var(--border-control);
+    border: 1px solid var(--mud-palette-lines-inputs);
     border-radius: 4px;
 }
 
@@ -221,7 +141,7 @@ code, kbd, samp, pre {
 
 .chat-header {
     padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border-default);
+    border-bottom: 1px solid var(--mud-palette-divider);
 }
 
 .chat-header h1 {
@@ -231,7 +151,7 @@ code, kbd, samp, pre {
 
 .chat-members {
     margin: 0;
-    color: var(--text-muted);
+    color: var(--mud-palette-text-secondary);
     font-size: 0.85rem;
 }
 
@@ -249,20 +169,6 @@ code, kbd, samp, pre {
     flex: 0 0 auto;
 }
 
-.invite-toggle {
-    padding: 0.3rem 0.6rem;
-    font: inherit;
-    font-size: 0.85rem;
-    background: var(--surface-raised);
-    border: 1px solid var(--border-control);
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.invite-toggle:hover {
-    background: var(--surface-hover);
-}
-
 .invite-panel {
     position: absolute;
     right: 0;
@@ -270,10 +176,10 @@ code, kbd, samp, pre {
     z-index: 10;
     min-width: 14rem;
     padding: 0.6rem;
-    background: var(--surface-raised);
-    border: 1px solid var(--border-default);
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
     border-radius: 4px;
-    box-shadow: 0 2px 8px var(--shadow-soft);
+    box-shadow: var(--mud-elevation-2);
 }
 
 .invite-agents {
@@ -301,7 +207,7 @@ code, kbd, samp, pre {
 }
 
 .invite-agent:hover {
-    background: var(--surface-hover);
+    background: var(--mud-palette-table-hover);
 }
 
 .message-list {
@@ -319,18 +225,18 @@ code, kbd, samp, pre {
     gap: 0.5rem;
     align-items: baseline;
     font-size: 0.8rem;
-    color: var(--text-muted);
+    color: var(--mud-palette-text-secondary);
     margin-bottom: 0.15rem;
 }
 
 .message-sender {
     font-weight: 600;
-    color: var(--text-primary);
+    color: var(--mud-palette-text-primary);
 }
 
 .message-body {
     line-height: 1.4;
-    font-family: var(--font-chat);
+    font-family: var(--mud-typography-body1-family);
 }
 
 .message-body p {
@@ -347,7 +253,7 @@ code, kbd, samp, pre {
     display: inline-block;
     width: 0.5em;
     margin-left: 0.1em;
-    border-right: 2px solid var(--text-faint);
+    border-right: 2px solid var(--mud-palette-text-disabled);
     animation: draft-caret-blink 1s step-end infinite;
 }
 
@@ -359,7 +265,7 @@ code, kbd, samp, pre {
 
 .tool-activity {
     margin-top: 0.2rem;
-    color: var(--text-faint);
+    color: var(--mud-palette-text-disabled);
     font-size: 0.8rem;
     font-style: italic;
 }
@@ -370,15 +276,15 @@ code, kbd, samp, pre {
     padding: 0.15rem 0.5rem;
     font: inherit;
     font-size: 0.75rem;
-    color: var(--text-secondary);
-    background: var(--surface-raised);
-    border: 1px solid var(--border-control);
+    color: var(--mud-palette-text-secondary);
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-inputs);
     border-radius: 4px;
     cursor: pointer;
 }
 
 .draft-stop:hover {
-    background: var(--surface-hover);
+    background: var(--mud-palette-table-hover);
 }
 
 .draft-stop:disabled {
@@ -387,7 +293,7 @@ code, kbd, samp, pre {
 }
 
 .composer {
-    border-top: 1px solid var(--border-default);
+    border-top: 1px solid var(--mud-palette-divider);
     padding: 0.75rem 1rem;
 }
 
@@ -398,18 +304,18 @@ code, kbd, samp, pre {
     resize: vertical;
     font: inherit;
     padding: 0.5rem;
-    border: 1px solid var(--border-control);
+    border: 1px solid var(--mud-palette-lines-inputs);
     border-radius: 4px;
 }
 
 .composer-error {
-    color: var(--danger-fg);
+    color: var(--mud-palette-error);
     margin-bottom: 0.4rem;
     font-size: 0.85rem;
 }
 
 .composer-info {
-    color: var(--success-fg);
+    color: var(--mud-palette-success);
     margin-bottom: 0.4rem;
     font-size: 0.85rem;
 }
@@ -417,7 +323,7 @@ code, kbd, samp, pre {
 /* ---- Room member health: an Agent that is Offline or Degraded, surfaced where it matters most --- */
 
 .member-health-alert {
-    border-top: 1px solid var(--border-default);
+    border-top: 1px solid var(--mud-palette-divider);
     padding: 0.75rem 1rem;
 }
 
@@ -432,14 +338,14 @@ code, kbd, samp, pre {
 
 .member-health-alert-item {
     margin: 0;
-    color: var(--danger-fg);
+    color: var(--mud-palette-error);
     font-size: 0.85rem;
 }
 
 /* ---- Room budget: the pause, and the question that offers to lift it ----- */
 
 .budget-prompt {
-    border-top: 1px solid var(--border-default);
+    border-top: 1px solid var(--mud-palette-divider);
     padding: 0.75rem 1rem 0;
     display: flex;
     flex-wrap: wrap;
@@ -449,7 +355,7 @@ code, kbd, samp, pre {
 
 .budget-prompt-text {
     margin: 0;
-    color: var(--danger-fg);
+    color: var(--mud-palette-error);
     font-size: 0.85rem;
     flex: 1 1 16rem;
 }
@@ -459,26 +365,10 @@ code, kbd, samp, pre {
     gap: 0.5rem;
 }
 
-.budget-continue,
-.budget-dismiss {
-    font: inherit;
-    font-size: 0.85rem;
-    padding: 0.3rem 0.75rem;
-    border: 1px solid var(--border-default);
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.budget-continue:disabled,
-.budget-dismiss:disabled {
-    cursor: default;
-    opacity: 0.6;
-}
-
 .budget-note {
     margin: 0;
     padding: 0.5rem 1rem 0;
-    color: var(--text-muted);
+    color: var(--mud-palette-text-secondary);
     font-size: 0.8rem;
 }
 
@@ -521,15 +411,15 @@ code, kbd, samp, pre {
     font: inherit;
     text-align: left;
     color: inherit;
-    background: var(--surface-raised);
-    border: 1px solid var(--border-default);
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-divider);
     border-radius: 8px;
     cursor: pointer;
 }
 
 .teammate-tile:hover {
-    background: var(--surface-hover);
-    border-color: var(--border-emphasis);
+    background: var(--mud-palette-table-hover);
+    border-color: var(--mud-palette-lines-default);
 }
 
 .teammate-tile-text {
@@ -544,7 +434,7 @@ code, kbd, samp, pre {
     align-items: center;
     gap: 0.35rem;
     font-size: 0.8rem;
-    color: var(--text-muted);
+    color: var(--mud-palette-text-secondary);
 }
 
 /* The monogram stands in for Slack's avatar photo. */
@@ -556,85 +446,11 @@ code, kbd, samp, pre {
     width: 2.4rem;
     height: 2.4rem;
     border-radius: 8px;
-    background: var(--accent);
-    color: var(--text-on-accent);
+    background: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
     font-size: 0.95rem;
     font-weight: 600;
     letter-spacing: 0.02em;
-}
-
-.teammate-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding: 3rem 1rem;
-    overflow-y: auto;
-    background: var(--scrim);
-}
-
-.teammate-card-panel {
-    width: 100%;
-    max-width: 26rem;
-    background: var(--surface-raised);
-    border-radius: 10px;
-    box-shadow: 0 8px 28px var(--shadow-strong);
-}
-
-.teammate-card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.8rem 1rem;
-    border-bottom: 1px solid var(--border-subtle);
-}
-
-.teammate-card-header h2 {
-    margin: 0;
-    font-size: 1.05rem;
-}
-
-.teammate-card-close {
-    flex: 0 0 auto;
-    padding: 0 0.4rem;
-    font-size: 1.3rem;
-    line-height: 1;
-    color: var(--text-secondary);
-    background: none;
-    border: 0;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.teammate-card-close:hover {
-    background: var(--surface-muted);
-}
-
-.teammate-card-body {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 1rem;
-}
-
-.teammate-card-identity {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-}
-
-.teammate-card-identity .teammate-avatar {
-    width: 4rem;
-    height: 4rem;
-    border-radius: 10px;
-    font-size: 1.5rem;
-}
-
-.teammate-card-identity-text {
-    min-width: 0;
 }
 
 .teammate-card-name {
@@ -644,71 +460,6 @@ code, kbd, samp, pre {
     /* A Name may now contain spaces, so a long one wraps inside the card rather
        than pushing the avatar or the close button out of it. */
     overflow-wrap: anywhere;
-}
-
-.teammate-card-status {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    margin: 0.25rem 0 0 0;
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
-
-/* The reason under the status line - same idea as .teammates-rejected-reason: a diagnostic surfaced
-   as domain state, not just logged. */
-.teammate-card-reason {
-    margin: 0.15rem 0 0 0;
-    font-size: 0.85rem;
-    color: var(--danger-fg);
-}
-
-.teammate-card-name-field {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.teammate-card-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-}
-
-.teammate-card-action {
-    padding: 0.4rem 0.8rem;
-    font: inherit;
-    color: var(--text-primary);
-    text-decoration: none;
-    background: var(--surface-raised);
-    border: 1px solid var(--border-control);
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.teammate-card-action:hover {
-    background: var(--surface-hover);
-}
-
-.teammate-card-primary {
-    padding: 0.4rem 0.8rem;
-    font: inherit;
-    color: var(--text-on-accent);
-    background: var(--accent);
-    border: 1px solid var(--accent);
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.teammate-card-primary:hover {
-    background: var(--accent-hover);
-}
-
-.teammate-card-section h4 {
-    margin: 0 0 0.3rem 0;
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
 }
 
 /* The Persona is Markdown the user wrote, so it is shown as written. It is NOT
@@ -722,44 +473,19 @@ code, kbd, samp, pre {
     font: inherit;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    background: var(--surface-sunken);
-    border: 1px solid var(--border-subtle);
+    background: var(--mud-palette-background-gray);
+    border: 1px solid var(--mud-palette-divider-light);
     border-radius: 6px;
 }
 
 .teammate-card-path {
     margin: 0;
     font-size: 0.8rem;
-    color: var(--text-secondary);
+    color: var(--mud-palette-text-secondary);
     overflow-wrap: anywhere;
 }
 
-.teammate-card-form {
-    display: flex;
-    flex-direction: column;
-    gap: 0.8rem;
-}
-
-.teammate-card-hint {
-    font-size: 0.78rem;
-    color: var(--text-faint);
-}
-
 /* ---- Rejected Persona files: shown so a bad file is visible, not silently missing --------- */
-
-.teammates-rejected {
-    margin-bottom: 1rem;
-    padding: 0.6rem 0.8rem;
-    background: var(--danger-bg);
-    border: 1px solid var(--danger-border);
-    border-radius: 6px;
-}
-
-.teammates-rejected h2 {
-    margin: 0 0 0.4rem 0;
-    font-size: 0.9rem;
-    color: var(--danger-fg);
-}
 
 .teammates-rejected-list {
     margin: 0;
@@ -775,13 +501,13 @@ code, kbd, samp, pre {
 .teammates-rejected-path {
     display: block;
     font-weight: 600;
-    color: var(--danger-fg);
+    color: var(--mud-palette-error);
     overflow-wrap: anywhere;
 }
 
 .teammates-rejected-reason {
     display: block;
-    color: var(--danger-fg);
+    color: var(--mud-palette-error);
 }
 
 /* ---- The team filter above the grouped tiles, and its InviteTeammate sibling --------------- */
@@ -804,18 +530,18 @@ code, kbd, samp, pre {
 .teammates-group-heading {
     margin: 0 0 0.5rem 0;
     font-size: 1rem;
-    color: var(--text-secondary);
+    color: var(--mud-palette-text-secondary);
     padding-bottom: 0.25rem;
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--mud-palette-divider-light);
 }
 
 .teammate-tile-role {
     font-size: 0.8rem;
-    color: var(--text-muted);
+    color: var(--mud-palette-text-secondary);
     overflow-wrap: anywhere;
 }
 
-/* ---- Settings: tab rail and the read-only Hooks panel -------------------------------------- */
+/* ---- Settings: page shell and the Hooks panel's field layout (tab rail and status badges are MudBlazor) -- */
 
 .settings-page {
     padding: 1rem;
@@ -836,60 +562,16 @@ code, kbd, samp, pre {
 
 .settings-hooks-file-path {
     font-size: 0.8rem;
-    color: var(--text-muted);
+    color: var(--mud-palette-text-secondary);
     margin: 0.4rem 0 0.6rem 0;
-}
-
-.settings-layout {
-    display: flex;
-    gap: 1.5rem;
-    margin-top: 1rem;
-}
-
-.settings-tab-rail {
-    display: flex;
-    flex-direction: column;
-    flex: 0 0 auto;
-    min-width: 9rem;
-}
-
-.settings-tab {
-    padding: 0.5rem 0.8rem;
-    font: inherit;
-    text-align: left;
-    color: var(--text-secondary);
-    background: none;
-    border: none;
-    border-left: 3px solid transparent;
-    cursor: pointer;
-}
-
-.settings-tab:hover {
-    background: var(--surface-hover);
-}
-
-.settings-tab-active {
-    color: var(--text-primary);
-    font-weight: 600;
-    border-left-color: var(--accent-indicator);
-    background: var(--surface-selected);
-}
-
-.settings-content {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.hooks-group {
-    margin-bottom: 1.4rem;
 }
 
 .hooks-group-heading {
     margin: 0 0 0.5rem 0;
     font-size: 1rem;
-    color: var(--text-secondary);
+    color: var(--mud-palette-text-secondary);
     padding-bottom: 0.25rem;
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--mud-palette-divider-light);
 }
 
 .hooks-field {
@@ -897,7 +579,7 @@ code, kbd, samp, pre {
     flex-direction: column;
     gap: 0.25rem;
     padding: 0.7rem 0;
-    border-bottom: 1px solid var(--border-subtle);
+    border-bottom: 1px solid var(--mud-palette-divider-light);
 }
 
 .hooks-field-header {
@@ -908,37 +590,7 @@ code, kbd, samp, pre {
 
 .hooks-field-label {
     font-weight: 600;
-    color: var(--text-primary);
-}
-
-.hooks-field-badge {
-    font-size: 0.72rem;
-    padding: 0.1rem 0.4rem;
-    color: var(--text-secondary);
-    background: var(--surface-muted);
-    border-radius: 999px;
-}
-
-.hooks-field-badge-modified {
-    color: var(--warning-fg);
-    background: var(--warning-bg);
-}
-
-.hooks-field-badge-unsaved {
-    color: var(--info-fg);
-    background: var(--info-bg);
-}
-
-.hooks-field-value {
-    font: inherit;
-    font-size: 0.85rem;
-    min-height: 0;
-    padding: 0.5rem;
-    color: var(--text-primary);
-    background: var(--surface-sunken);
-    border: 1px solid var(--border-control);
-    border-radius: 4px;
-    resize: vertical;
+    color: var(--mud-palette-text-primary);
 }
 
 .hooks-field-placeholders {
@@ -948,38 +600,13 @@ code, kbd, samp, pre {
     align-items: center;
     margin: 0;
     font-size: 0.78rem;
-    color: var(--text-faint);
+    color: var(--mud-palette-text-disabled);
 }
 
 .hooks-field-placeholder {
     padding: 0.05rem 0.35rem;
-    background: var(--surface-muted);
+    background: var(--mud-palette-background-gray);
     border-radius: 3px;
-}
-
-.hooks-field-issues {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-}
-
-.hooks-field-issue {
-    font-size: 0.78rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 3px;
-}
-
-.hooks-field-issue-warning {
-    color: var(--warning-fg);
-    background: var(--warning-bg);
-}
-
-.hooks-field-issue-error {
-    color: var(--danger-fg);
-    background: var(--danger-bg);
 }
 
 .hooks-field-actions {
@@ -987,25 +614,3 @@ code, kbd, samp, pre {
     justify-content: flex-end;
 }
 
-/* ---- Title/Alias/Teams shown in the card's View mode --------------------------------------- */
-
-.teammate-card-title {
-    margin: 0.1rem 0 0 0;
-    color: var(--text-secondary);
-}
-
-.teammate-card-meta {
-    margin: 0.15rem 0 0 0;
-    font-size: 0.85rem;
-    color: var(--text-muted);
-}
-
-/* ---- The Create card's stacked identity inputs (Name, Title, Alias, Teams) ----------------- */
-
-.teammate-card-identity-fields {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    flex: 1 1 auto;
-    min-width: 0;
-}

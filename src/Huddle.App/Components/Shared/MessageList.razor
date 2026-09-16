@@ -16,13 +16,14 @@
         <div class="message-row streaming">
             <div class="message-meta">
                 <span class="message-sender">@draft.SenderName</span>
-                <button
-                    type="button"
-                    class="draft-stop"
-                    disabled="@this.StoppingAgentIds.Contains(draft.AgentId)"
-                    @onclick="() => this.OnStop.InvokeAsync(draft)">
+                <MudButton
+                    Size="Size.Small"
+                    Variant="Variant.Outlined"
+                    Class="draft-stop"
+                    Disabled="@this.StoppingAgentIds.Contains(draft.AgentId)"
+                    OnClick="() => this.OnStop.InvokeAsync(draft)">
                     Stop
-                </button>
+                </MudButton>
             </div>
             @* A Draft is rendered as plain text, through Razor's own default @ escaping, never through
                MarkdownRenderer - white-space: pre-wrap in app.css does the rest. Two reasons, both in

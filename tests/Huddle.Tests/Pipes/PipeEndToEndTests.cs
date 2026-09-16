@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.IO.Pipes;
 using System.Text;
 using Agency.Huddle.App.Data;
@@ -520,6 +521,48 @@ public sealed class PipeEndToEndTests
         Assert.Contains("Do not retry", error.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A refused post must not deadlock the connection. The server answers a refusal by writing from
+    /// inside its read loop, so a client that posts and goes straight on to its next envelope - which
+    /// is well-behaved, and exactly what <c>DemoAgentHost</c> and <c>PersonaRunner</c> do when they
+    /// send a post followed by its terminator - once met a server blocked writing while it was blocked
+    /// writing, with the pipe's buffers left at their default of 0. Neither side read again: the Draft
+    /// never completed and that Agent went deaf in every Room with its pipe still open and its tile
+    /// still green. Every assertion here would hang rather than fail if it returned, which is what the
+    /// fixture's timeout is for.
+    /// </summary>
+    [Fact]
+    public async Task AgentKeepsWritingAfterARefusedPost_ConnectionStaysAlive()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
+
+        await using var client = await fixture.ConnectClientAsync(ct);
+        await client.WriteAsync(new Hello("echo", null), ct);
+        var welcome = Assert.IsType<Welcome>(await client.ReadAsync(ct));
+        var roomId = Assert.Single(welcome.Rooms).Id;
+
+        await client.WriteAsync(new PostMessage(roomId, "m1", "spends the budget"), ct);
+
+        // The refused post, then its terminator, written back to back without reading in between -
+        // the exact window the deadlock lived in.
+        await client.WriteAsync(new PostMessage(roomId, "m2", "one too many"), ct);
+        await client.WriteAsync(new MessageDelta(roomId, "m2", string.Empty, IsFinal: true), ct);
+
+        var error = Assert.IsType<ProtocolError>(await client.ReadAsync(ct));
+        Assert.Equal(ErrorCodes.BudgetExhausted, error.Code);
+
+        // Still being read from: the read loop consumed the terminator above and answered this too.
+        // Without that, the Agent is deaf rather than merely capped.
+        await client.WriteAsync(new PostMessage(roomId, "m3", "still refused, still answered"), ct);
+        var second = Assert.IsType<ProtocolError>(await client.ReadAsync(ct));
+        Assert.Equal(ErrorCodes.BudgetExhausted, second.Code);
+        Assert.Equal("m3", second.RelatedMessageId);
+    }
+
     [Fact]
     public async Task TwoClients_ConnectConcurrently()
     {
@@ -648,5 +691,87 @@ public sealed class PipeEndToEndTests
 
         var draft = Assert.Single(drafts.ForRoom(roomId));
         Assert.Equal("Searching", draft.ToolTitle);
+    }
+
+    /// <summary>
+    /// A client that closes its end cleanly - what Ctrl+C or killing the client process both do - still reaches
+    /// end of stream on <see cref="AgentConnection.RunAsync"/>'s read loop rather than an <see cref="IOException"/>,
+    /// so the only trace of the disconnect is the Information line in the <c>finally</c> block. That line is the
+    /// entire fix for T2: before it existed, a clean goodbye left no log line at all.
+    /// </summary>
+    [Fact]
+    public async Task Disconnect_CleanClose_LogsExactlyOneInformationLine()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var gateway = fixture.Services.GetRequiredService<IAgentGateway>();
+
+        var client = await fixture.ConnectClientAsync(ct);
+        await client.WriteAsync(new Hello("echo", null), ct);
+        var welcome = Assert.IsType<Welcome>(await client.ReadAsync(ct));
+
+        await client.DisposeAsync();
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (gateway.IsOnline(welcome.AgentId) && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(50, ct);
+        }
+
+        Assert.False(gateway.IsOnline(welcome.AgentId));
+
+        var connectionEntries = fixture.LogEntries
+            .Where(e => string.Equals(e.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal))
+            .ToList();
+
+        var informationEntry = Assert.Single(connectionEntries, e => e.Level == LogLevel.Information);
+        Assert.Contains("echo", informationEntry.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain(connectionEntries, e => e.Level == LogLevel.Warning);
+    }
+
+    /// <summary>
+    /// A pipe that breaks - the reading end going away while the server still has bytes to write, rather than a
+    /// graceful shutdown - still reaches <see cref="AgentConnection.RunAsync"/>'s <see cref="IOException"/> catch
+    /// and logs the pre-existing faulted-connection Warning. Dropping the raw <see cref="NamedPipeClientStream"/>
+    /// right after sending <c>hello</c>, before reading the reply, leaves no reader on the pipe by the time the
+    /// server tries to write the <see cref="Welcome"/> back, so that write fails with "the pipe is broken" instead
+    /// of the clean end-of-stream a graceful close produces.
+    /// </summary>
+    [Fact]
+    public async Task Disconnect_AbruptClose_StillLogsTheFaultedConnectionWarning()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+
+        var pipe = new NamedPipeClientStream(".", fixture.PipeName, PipeDirection.InOut, PipeOptions.Asynchronous);
+        await pipe.ConnectAsync(ct);
+        await using (var client = new JsonLineStream(pipe, leaveOpen: true))
+        {
+            await client.WriteAsync(new Hello("echo", null), ct);
+        }
+
+        pipe.Dispose();
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        List<CapturedLogEntry> warnings = [];
+        while (warnings.Count == 0 && DateTimeOffset.UtcNow < deadline)
+        {
+            warnings = fixture.LogEntries
+                .Where(e => string.Equals(e.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal) && e.Level == LogLevel.Warning)
+                .ToList();
+
+            if (warnings.Count == 0)
+            {
+                await Task.Delay(50, ct);
+            }
+        }
+
+        var warning = Assert.Single(warnings);
+        Assert.Contains("ended", warning.Message, StringComparison.Ordinal);
+        Assert.DoesNotContain("disconnected", warning.Message, StringComparison.Ordinal);
     }
 }

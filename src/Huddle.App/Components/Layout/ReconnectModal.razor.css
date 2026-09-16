@@ -7,42 +7,38 @@
     display: none;
 }
 
-#components-reconnect-modal.components-reconnect-show .components-reconnect-first-attempt-visible,
+#components-reconnect-modal.components-reconnect-show:not(.components-reconnect-retrying) .components-reconnect-first-attempt-visible,
 #components-reconnect-modal.components-reconnect-show .components-rejoining-animation,
 #components-reconnect-modal.components-reconnect-paused .components-pause-visible,
 #components-reconnect-modal.components-reconnect-resume-failed .components-resume-failed-visible,
-#components-reconnect-modal.components-reconnect-retrying,
 #components-reconnect-modal.components-reconnect-retrying .components-reconnect-repeated-attempt-visible,
 #components-reconnect-modal.components-reconnect-retrying .components-rejoining-animation,
-#components-reconnect-modal.components-reconnect-failed,
 #components-reconnect-modal.components-reconnect-failed .components-reconnect-failed-visible {
     display: block;
 }
 
 
 #components-reconnect-modal {
-    background-color: var(--surface-raised);
-    color: var(--text-primary);
+    background-color: var(--mud-palette-surface) !important;
+    color: var(--mud-palette-text-primary);
     width: 20rem;
     margin: 20vh auto;
     padding: 2rem;
     border: 0;
     border-radius: 0.5rem;
-    box-shadow: 0 3px 6px 2px var(--shadow-strong);
+    box-shadow: var(--mud-elevation-8);
     opacity: 0;
     transition: display 0.5s allow-discrete, overlay 0.5s allow-discrete;
     animation: components-reconnect-modal-fadeOutOpacity 0.5s both;
-    &[open]
 
-{
-    animation: components-reconnect-modal-slideUp 1.5s cubic-bezier(.05, .89, .25, 1.02) 0.3s, components-reconnect-modal-fadeInOpacity 0.5s ease-in-out 0.3s;
-    animation-fill-mode: both;
-}
-
+    &[open] {
+        animation: components-reconnect-modal-slideUp 1.5s cubic-bezier(.05, .89, .25, 1.02) 0.3s, components-reconnect-modal-fadeInOpacity 0.5s ease-in-out 0.3s;
+        animation-fill-mode: both;
+    }
 }
 
 #components-reconnect-modal::backdrop {
-    background-color: var(--scrim);
+    background-color: var(--mud-palette-overlay-dark);
     animation: components-reconnect-modal-fadeInOpacity 0.5s ease-in-out;
     opacity: 1;
 }
@@ -91,18 +87,18 @@
 
 #components-reconnect-modal button {
     border: 0;
-    background-color: var(--accent);
-    color: var(--text-on-accent);
+    background-color: var(--mud-palette-primary);
+    color: var(--mud-palette-primary-text);
     padding: 4px 24px;
     border-radius: 4px;
 }
 
     #components-reconnect-modal button:hover {
-        background-color: var(--accent-hover);
+        background-color: var(--mud-palette-primary-darken);
     }
 
     #components-reconnect-modal button:active {
-        background-color: var(--accent);
+        background-color: var(--mud-palette-primary);
     }
 
 .components-rejoining-animation {
@@ -113,7 +109,7 @@
 
     .components-rejoining-animation div {
         position: absolute;
-        border: 3px solid var(--accent-indicator);
+        border: 3px solid var(--mud-palette-secondary);
         opacity: 1;
         border-radius: 50%;
         animation: components-rejoining-animation 1.5s cubic-bezier(0, 0.2, 0.8, 1) infinite;

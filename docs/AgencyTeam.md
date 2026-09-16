@@ -213,7 +213,7 @@ Persona library under `{DataDir}/{Acp:TeamsDir}`, `{DataDir}/hooks.json`, and
 | File | Holds |
 | --- | --- |
 | `{DataDir}/hooks.json` | **Overrides only**, one key per changed Hook. Absent is normal and means nothing is overridden; the app does not create it, and it appears on the first save from `/settings`. Hand-editing it is supported and watched — a save in an editor reaches the next Turn without a restart. |
-| `{DataDir}/appearance.json` | The selected Theme and the Human's per-Token overrides. **Overrides only**; absent is normal and means the built-in values follow the operating system, and the app does not create it. Hand-editable and watched, exactly like `hooks.json`. Override keys are Token names — `"--font-chat"`, not `chat_font` — and values are allowlisted before they reach the page. Not a setting under `Team:`: it is state this application writes. |
+| `{DataDir}/appearance.json` | The selected Theme id and a light/dark preference of `system`, `light` or `dark`. **Those two keys only** — the per-Token override map was removed with the Tokens on 2026-09-14 ([ADR-0010](adr/0010-a-theme-is-a-mudblazor-theme.md)). Absent is normal and means the built-in Theme following the device; the app does not create it. Hand-editable and watched, exactly like `hooks.json`. Not a setting under `Team:`: it is state this application writes. |
 | `hooks.default.json` (beside the binary) | Every Hook's shipped wording, **generated** from `HookCatalog` and copied to the output folder. The restore source, and readable as a reference. It is not the authority: delete both files and the app still runs on exactly the text it shipped with. |
 
 A Hook is one piece of text sent to a model. See [Language](agencyteam/language.md)
@@ -221,12 +221,18 @@ for the word, [ADR-0007](adr/0007-model-facing-text-is-configuration.md) for why
 defaults live in code, and [Rules](agencyteam/rules.md) for the two things an edit
 must never do.
 
-A Theme is one stylesheet layered over the 39 Tokens in `wwwroot/theme.css`, chosen
-on the Appearance tab of `/settings`. See [Language](agencyteam/language.md) for
-**Theme**, **Token** and **Appearance**,
-[ADR-0009](adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md) for why it
-is a file rather than `localStorage` and why this feature has no JavaScript, and
-[Rules](agencyteam/rules.md) for the four things a change here must not undo.
+A Theme is a MudBlazor `MudTheme` in `ThemeCatalog`, carrying a light **and** a dark
+palette, chosen on the Appearance tab of `/settings` alongside a separate
+`system`/`light`/`dark` preference. See [Language](agencyteam/language.md) for
+**Theme**, **Palette property** and **Appearance** — note that *Token*, the word for
+the retired 39-value CSS system, is no longer a defined term.
+[ADR-0010](adr/0010-a-theme-is-a-mudblazor-theme.md) is the current decision and
+supersedes [ADR-0009](adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md),
+which is kept as the reasoning for the system this replaced. Two things 0009 asserted
+are no longer true: the feature now uses JavaScript (`GetSystemDarkModeAsync` reads the
+device preference after first render, so under **System** a flash of the wrong theme on
+first paint is possible), and changing a Theme no longer forces a page reload.
+[Rules](agencyteam/rules.md) carries the three things a change here must not undo.
 
 `Logging:LogLevel` is the one place that looks like it belongs to this section
 and does not. Its keys are log-category prefixes, and a category comes from

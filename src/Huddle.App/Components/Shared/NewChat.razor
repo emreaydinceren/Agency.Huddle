@@ -9,30 +9,30 @@
 @inject NavigationManager Navigation
 
 <div class="new-chat">
-    <button type="button" class="new-chat-toggle" @onclick="this.TogglePanel">New chat</button>
-    <div class="new-chat-panel" hidden="@(!this.isOpen)">
+    <MudButton Variant="Variant.Text" FullWidth="true" OnClick="this.TogglePanel">New chat</MudButton>
+    <MudCollapse Expanded="@this.isOpen">
         @if (this.agents.Count == 0)
         {
-            <p class="empty-state">No agents have connected yet. Start one with <code>tools/echo-bot.ps1</code>, or enable the demo agent in <code>appsettings.json</code>.</p>
+            <MudText Typo="Typo.body2" Class="empty-state">No agents have connected yet. Start one with <code>tools/echo-bot.ps1</code>, or enable the demo agent in <code>appsettings.json</code>.</MudText>
         }
         else
         {
-            <ul class="new-chat-agents">
+            <div class="new-chat-agents">
                 @foreach (var agent in this.agents)
                 {
                     var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(agent.Id), this.Health.Get(agent.Name));
-                    <li>
-                        <label>
-                            <input type="checkbox" checked="@this.selectedAgentIds.Contains(agent.Id)" @onchange="@(e => this.ToggleAgent(agent.Id, e.Value))" />
-                            <span class="agent-dot @NewChat.StatusClass(status.State)" title="@NewChat.StatusClass(status.State)"></span>
+                    var agentId = agent.Id;
+                    <div>
+                        <MudCheckBox T="bool" Value="@this.selectedAgentIds.Contains(agentId)" ValueChanged="@((bool isChecked) => this.ToggleAgent(agentId, isChecked))">
+                            <StatusDot State="status.State" />
                             @agent.Name
-                        </label>
-                    </li>
+                        </MudCheckBox>
+                    </div>
                 }
-            </ul>
-            <button type="button" class="new-chat-start" disabled="@(this.selectedAgentIds.Count == 0)" @onclick="this.StartChatAsync">Start chat</button>
+            </div>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Disabled="@(this.selectedAgentIds.Count == 0)" OnClick="this.StartChatAsync">Start chat</MudButton>
         }
-    </div>
+    </MudCollapse>
 </div>
 
 @code {
@@ -56,19 +56,9 @@
         this.isOpen = !this.isOpen;
     }
 
-    /// <summary>The CSS class (and this panel's own tooltip text) for <paramref name="state"/>'s <c>agent-dot</c>.</summary>
-    /// <param name="state">The state to classify.</param>
-    private static string StatusClass(PersonaState state) => state switch
+    private void ToggleAgent(string agentId, bool isChecked)
     {
-        PersonaState.Starting => "starting",
-        PersonaState.Online => "online",
-        PersonaState.Degraded => "degraded",
-        _ => "offline",
-    };
-
-    private void ToggleAgent(string agentId, object? isChecked)
-    {
-        if (isChecked is true)
+        if (isChecked)
         {
             this.selectedAgentIds.Add(agentId);
         }

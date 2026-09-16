@@ -249,8 +249,11 @@ finds where `Team:DataDir` actually resolved.
 - **Clear every variable a test set** before the next one, or it inherits and
   reports a false result. `Get-ChildItem Env:Team__*` lists what is set.
 - **"Add teammate" is two different buttons.** The invite toggle in a Room header
-  (`button.invite-toggle`) and the submit button of the Create card on
-  `/teammates`. Disambiguate by page or by class, never by text alone.
+  and the submit button of the Create card on `/teammates`. Both are `MudButton`s
+  now, so neither carries a distinguishing class of its own — disambiguate by
+  **page**, or by container (`.invite-teammate` wraps the Room-header one), never by
+  text alone. Note MudBlazor renders button labels upper-case, so both read
+  "ADD TEAMMATE".
 - **There is no send button.** The composer is a bare textarea with placeholder
   `Message… (/invite @agent)`; Enter posts, Shift+Enter adds a newline. Its absence
   is not a defect.

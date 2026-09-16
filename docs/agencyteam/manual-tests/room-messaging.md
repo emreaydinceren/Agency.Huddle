@@ -335,7 +335,7 @@ If a fenced block cannot be typed because the keyboard layout makes backticks aw
 
 **Free** · about 8 min
 
-*Proves exactly the four opted-in extensions work — dropping any one of them is a silent regression with no build or log signal.*
+*Proves exactly the four opted-in extensions work — dropping any one of them is a silent regression with no build or log signal. Message rendering itself was untouched by the MudBlazor migration ("Convert the chat page chrome, and nothing else" left `MarkdownRenderer` and the `message-body` markup exactly as they were), so this test's mechanics stand unchanged.*
 
 **Before you start**
 
@@ -439,7 +439,7 @@ If the browser blocks `alert()` dialogs by configuration, the click and hover st
 
 **Free** · about 5 min
 
-*Proves the second half of the safety story: HTML typed into a Message (or produced by a model) becomes visible text, not live DOM.*
+*Proves the second half of the safety story: HTML typed into a Message (or produced by a model) becomes visible text, not live DOM. Message rendering itself was untouched by the MudBlazor migration, so this test's mechanics stand unchanged — the "red overlay" and "layout breaks" language below describes what the INJECTED payload would do if it executed, not any part of the app's own UI.*
 
 **Before you start**
 
@@ -744,7 +744,7 @@ If no agent reply exists yet, judge only the Human half and record the agent-att
 
 **Free** · about 6 min
 
-*Proves the scroll interop fires for both kinds of growth — a new Message and a still-streaming Draft — since only the second one can catch the case where counting Messages alone would leave a streaming reply off screen.*
+*Proves the scroll interop fires for both kinds of growth — a new Message and a still-streaming Draft — since only the second one can catch the case where counting Messages alone would leave a streaming reply off screen. `MessageList.razor`'s autoscroll arithmetic, the `.message-list` container and the `teamScroll` interop are all untouched by the MudBlazor migration ("Convert the chat page chrome, and nothing else" changed only the Stop button), so this test's mechanics stand unchanged.*
 
 **Before you start**
 
@@ -879,12 +879,12 @@ If no reply arrives, this proves nothing — settle ROOMMESSAGING-18 first and r
 
 **Free** · about 8 min
 
-*Pins the Mention-matching boundary rules and pre-empts the most likely false bug report: silence in a two-member Room after a message with no at-sign.*
+*Pins the Mention-matching boundary rules, in a three-Member Room where Mention-gating still applies. A two-Member Room now answers every Message per ADR-0004, so it can no longer isolate mention parsing — this test deliberately invites a bystander Agent first so a plain `hello` is still a valid negative baseline.*
 
 **Before you start**
 
-- The `echo` Room is open (members: You, echo); `$room` is set.
-- Demo agents are connected.
+- The `echo` Room is open; `$room` is set.
+- Both demo agents are connected. Type `/invite @alpha` and confirm the green strip and member line show three Members before starting the numbered steps — with only two Members every Message below would draw a reply regardless of Mention, and none of the boundary assertions would be meaningful.
 
 **Steps**
 
@@ -900,16 +900,18 @@ If no reply arrives, this proves nothing — settle ROOMMESSAGING-18 first and r
 
 **Pass if — all of these**
 
-- `hello` produces no reply, no Draft, no error, and no new agent line in the file.
-- `hi @echo` produces exactly one reply.
+- `hello` produces no reply from either Agent, no Draft, no error, and no new agent line in the file — three Members keeps the Room Mention-gated, so a Message naming nobody wakes nobody.
+- `hi @echo` produces exactly one reply, from `echo`.
 - `hi @ECHO` produces exactly one reply — the match is case-insensitive.
 - `hi @echoes` produces NO reply — a Mention ends at a word boundary.
 - `mail me@example.com` produces NO reply — a letter immediately before the at-sign blocks it.
 - `see-@echo` DOES produce a reply — a hyphen before the at-sign does not block it.
+- `alpha` never replies to anything in this test — it is never Mentioned.
 - The printed conversation shows agent lines only for the three positive cases.
 
 **Fail if — any of these**
 
+- `hello` produces a reply from either Agent -> either membership never actually reached three (recheck before filing) or the Room is answering unconditionally at three Members, which would be a Reply Gate regression.
 - `hi @echoes` produces a reply -> the word-boundary check after a mention is gone; every longer word starting with an agent's Name now wakes it.
 - `mail me@example.com` produces a reply -> email addresses are being read as Mentions; ordinary prose will start waking agents.
 - `hi @ECHO` produces no reply -> Mention matching became case-sensitive.
@@ -917,10 +919,10 @@ If no reply arrives, this proves nothing — settle ROOMMESSAGING-18 first and r
 
 **Inconclusive if**
 
-If `hi @echo` itself produces no reply, nothing in this test can be judged — the agent is not responding at all. Confirm `Demo agent echo connected.` in `T-A`, restart the app once, and record INCONCLUSIVE if it still does not reply.
+If `hi @echo` itself produces no reply, nothing in this test can be judged — the agent is not responding at all. Confirm `Demo agent echo connected.` in `T-A`, restart the app once, and record INCONCLUSIVE if it still does not reply. If the member line does not read three Members after `/invite @alpha`, stop and fix the invite before running the numbered steps.
 
 > [!NOTE]
-> CRITICAL — DO NOT FILE THIS: silence after plain `hello` in the two-member `echo` Room is CORRECT. The documented "a Room of two Members answers without a Mention" rule belongs to the reply gate that governs real Personas over the agent protocol; the built-in demo agent has its own, narrower condition and is mention-gated everywhere. Only the boundary cases above are real findings.
+> This test deliberately keeps a third Member (`alpha`) in the Room for its whole duration. In the `echo` Room's ordinary two-Member form, ADR-0004 means `echo` answers every Message regardless of Mention, so a plain `hello` producing a reply there is CORRECT and must never be filed as a bug — see STARTUPCONFIG-04 and REPLYGATEBUDGET-01. That two-Member rule is exactly what this test's extra Member exists to neutralise, so the boundary cases above stay meaningful.
 
 ### ROOMMESSAGING-21 — /invite @name from the composer: green info line, Room rename, live sidebar update
 
@@ -1210,11 +1212,11 @@ If the bot does not connect or no Room appears, record INCONCLUSIVE — the Ment
 > [!NOTE]
 > Optional cross-check with sqlite3: `sqlite3 "$data\team.db" "select name from users;"` must show `Chief of Staff` with its interior spaces intact. Mentions themselves are never persisted — they are a property of delivery, not of the Message — so do not look for them in the JSONL.
 
-### ROOMMESSAGING-27 — The --font-chat token is consumed by the Message body and by nothing else
+### ROOMMESSAGING-27 — appearance.json no longer customises the Message font: the body just follows the Theme, and a legacy override key is silently inert
 
 **Free** · about 7 min
 
-*Proves the chat-font token is scoped to message bodies (Drafts included) and does not leak into the surrounding UI, and that the hand-edited appearance file is never rewritten by the app.*
+*This test used to prove a `--font-chat` override was scoped to message bodies only. Stage 2 of the MudBlazor migration deleted the whole per-token override system — [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md): "the safest thing that could happen to a sole defence is for the feature it defends to stop existing" — so there is no longer any way to give the chat transcript its own font short of editing `ThemeCatalog` in C# and rebuilding (`docs/agencyteam/known-limits.md`). What is left to prove: the Message body's font comes from the same Theme typography as the rest of the app (there is no separate "chat font" any more), and a hand-edited file still carrying the old `overrides` key is read, its unknown key preserved, and never rewritten.*
 
 **Before you start**
 
@@ -1223,36 +1225,36 @@ If the bot does not connect or no Room appears, record INCONCLUSIVE — the Ment
 
 **Steps**
 
-1. In `T-B` write the override file: `'{"theme":"huddle-dark","overrides":{"--font-chat":"Georgia, serif"}}' | Set-Content -Path "$data\appearance.json" -Encoding utf8`.
-2. In `T-B` record a checksum: `(Get-FileHash "$data\appearance.json").Hash` and write it down.
-3. Reload the browser page (F5).
-4. Look at the Message bodies in the transcript and note the typeface.
-5. Look at the sender names, the timestamps, the composer text, the sidebar entries and the Room header and note their typefaces.
-6. In devtools, select an element with class `message-body`, open the Computed panel and read its `font-family`.
-7. Select an element with class `message-meta` and read its computed `font-family`.
-8. Send `hi @echo` and, while the Draft is streaming, note the Draft text's typeface.
-9. In `T-B` run `(Get-FileHash "$data\appearance.json").Hash` again and compare with what you wrote down.
+1. In DevTools, select an element with class `message-body`, open the Computed panel, and read its `font-family`. Select an element with class `message-sender` (or the `<h1>` room heading) and read its computed `font-family` too. Write both down.
+2. In `T-B` write a file carrying the old, now-meaningless override shape: `'{"theme":"huddle","overrides":{"--font-chat":"Georgia, serif"}}' | Set-Content -Path "$data\appearance.json" -Encoding utf8`.
+3. In `T-B` record a checksum: `(Get-FileHash "$data\appearance.json").Hash` and write it down.
+4. Reload the browser page (F5).
+5. Look at the Message bodies in the transcript. Compare against what you wrote down in step 1 — is anything serif?
+6. Re-read the computed `font-family` on a `message-body` element and on a `message-sender` element; compare both against step 1.
+7. Send `hi @echo` and, while the Draft is streaming, note the Draft text's typeface against the rest of the transcript.
+8. In `T-B` run `(Get-FileHash "$data\appearance.json").Hash` again and compare with what you wrote down in step 3.
+9. In `T-B` run `Get-Content "$data\appearance.json"` and confirm the `overrides` key you wrote in step 2 is still there, untouched.
 10. In `T-B` run `Remove-Item "$data\appearance.json"` and reload the browser to restore the default.
 
 **Pass if — all of these**
 
-- Only the Message bodies change to a serif face.
-- The sender names, timestamps, composer, sidebar and Room header all keep the non-serif UI font.
-- The computed `font-family` on `.message-body` names Georgia; the computed `font-family` on `.message-meta` does not.
-- The streaming Draft text is also serif (it shares the message-body styling — this is correct).
+- Nothing anywhere turns serif — the `overrides.--font-chat` key has no visible effect at all.
+- The computed `font-family` on `.message-body` is unchanged from step 1, and is IDENTICAL to the computed `font-family` on `.message-sender` — the message body draws its font from the same Theme typography as the rest of the app, not a scoped token of its own.
+- The streaming Draft's typeface matches the rest of the transcript (it shares the message-body styling — this is correct).
 - The file's checksum is unchanged after the reload — the app read it and did not rewrite it.
-- Deleting the file and reloading restores the original typeface everywhere.
+- Step 9 shows the `overrides` key is still present, byte for byte — an unknown top-level key is kept, never silently deleted (`AppearanceStore`'s own documented tolerance).
+- Deleting the file and reloading changes nothing observable, since the file was already inert.
 
 **Fail if — any of these**
 
-- Nothing changes at all -> the override was rejected, or the token is not being applied; check the `Appearance` tab at `/settings` (it lists refused values) and `T-A` for a warning before deciding.
-- The WHOLE page changes to serif -> something other than the message body is reading the chat font token; the token has leaked out of its intended scope.
-- The file's checksum changed -> the app rewrote a file a human hand-edited, which will destroy hand-typed content on the next save.
-- The theme does not switch to dark at the same time -> the `theme` key in the same file was ignored, which narrows the failure to theme selection rather than the token.
+- Any text anywhere turns serif -> a per-token override path was reintroduced without the allowlist and validation ADR-0010 deliberately removed; treat this as a regression of a closed decision, not a missing feature.
+- `.message-body` and `.message-sender` resolve to DIFFERENT computed font families in the default (no-override) state -> there is a distinct chat-font mechanism after all and this test's premise needs re-checking against `ThemeCatalog.cs` before filing anything.
+- The file's checksum changed, or the `overrides` key vanished from the file -> the app rewrote a file a human hand-edited, destroying hand-typed content — `AppearanceStore.Save` is documented to leave every key it does not itself manage exactly as found.
+- The `Appearance` tab at `/settings` shows any UI for customising the message font -> the removed feature was partially reintroduced.
 
 **Inconclusive if**
 
-If the `Appearance` tab at `/settings` lists `--font-chat` among refused values, the override never applied and the scoping question was never tested — record INCONCLUSIVE and report the refusal reason verbatim. If you do not have Georgia installed, substitute a font you do have and judge on the computed `font-family` string rather than on appearance.
+If `.message-body` and `.message-sender` already read different font families on a stock install, `ThemeCatalog.BuildHuddleTheme` has started setting `Typography.Body1` distinctly from `Typography.Default` — re-read that file before judging this test, since the "no scoped chat font" premise no longer holds and the test needs rewriting again, not a guess.
 
 > [!NOTE]
 > Only the transcript half of the appearance check belongs here. The avatar-monogram half of the wider appearance checklist lives on the `/teammates` page, which is a different area — do not test it from the Room view.
@@ -1419,7 +1421,7 @@ If the agents never reply at all, no Budget can be spent and nothing here is tes
 
 **Free** · about 8 min
 
-*Catches the repo's worst silent failure — a missing scoped-CSS bundle, which produces no build warning, no startup error and no log line, and is visible only as every reconnect state paragraph showing at once.*
+*Catches the repo's worst silent failure — a missing scoped-CSS bundle, which produces no build warning, no startup error and no log line, and is visible only as every reconnect state paragraph showing at once. This is not hypothetical: Stage 2 of the MudBlazor migration tokenised `ReconnectModal.razor.css` and the first cut left its `var()` references pointing at deleted tokens — invisible because the modal renders only at the one moment it exists for, a dropped circuit. The modal itself is a native `<dialog>`, not a `MudDialog`, so its backdrop is the browser's own `::backdrop`, now painted with `--mud-palette-overlay-dark`.*
 
 **Before you start**
 

@@ -13,6 +13,15 @@ public sealed class FakeModelCatalog : IModelCatalog
 {
     public IReadOnlyList<AgentModelOption> Models { get; set; } = [];
 
+    /// <summary>
+    /// When <see langword="true"/>, <see cref="GetAsync"/> still counts the probe but never resolves
+    /// its returned <see cref="ValueTask{TResult}"/> - the only way a bUnit-rendered component's
+    /// "still loading" state can be observed at all, since a normally-completed
+    /// <see cref="ValueTask{TResult}"/> is awaited synchronously and never gives the render pipeline a
+    /// chance to paint the in-between state.
+    /// </summary>
+    public bool NeverCompletes { get; set; }
+
     public int ProbeCount { get; private set; }
 
     /// <summary>The effort ladder to hand back for a specific model id, set per test as needed.</summary>
@@ -24,6 +33,9 @@ public sealed class FakeModelCatalog : IModelCatalog
     /// <c>null</c>.
     /// </summary>
     public IReadOnlyList<AgentEffortOption> DefaultEffortLevels { get; set; } = [];
+
+    /// <summary>The Effort-catalog counterpart of <see cref="NeverCompletes"/> - see its remarks.</summary>
+    public bool EffortsNeverComplete { get; set; }
 
     public int EffortProbeCount { get; private set; }
 
@@ -37,6 +49,12 @@ public sealed class FakeModelCatalog : IModelCatalog
     public ValueTask<IReadOnlyList<AgentModelOption>> GetAsync(CancellationToken cancellationToken)
     {
         this.ProbeCount++;
+
+        if (this.NeverCompletes)
+        {
+            return new ValueTask<IReadOnlyList<AgentModelOption>>(new TaskCompletionSource<IReadOnlyList<AgentModelOption>>().Task);
+        }
+
         return ValueTask.FromResult(this.Models);
     }
 
@@ -44,6 +62,11 @@ public sealed class FakeModelCatalog : IModelCatalog
     {
         this.EffortProbeCount++;
         this.EffortProbedModels.Add(model);
+
+        if (this.EffortsNeverComplete)
+        {
+            return new ValueTask<IReadOnlyList<AgentEffortOption>>(new TaskCompletionSource<IReadOnlyList<AgentEffortOption>>().Task);
+        }
 
         var levels = model is not null && this.EffortLevelsByModel.TryGetValue(model, out var forModel)
             ? forModel

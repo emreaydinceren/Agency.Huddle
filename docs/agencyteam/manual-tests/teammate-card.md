@@ -2,6 +2,16 @@
 
 Prove that the one Teammate card (`TeammateCard.razor`, rendered over `/teammates` in View, Edit and Create modes) is the only safe way to create, edit and delete a Persona file on disk — and that it fails loudly, not silently. Almost nothing here is provable by the compiler or the test suite: the create-card open path is untested and calls a helper that throws on a blank name; validation messages arrive from three layers in a fixed precedence; a save rewrites YAML frontmatter in a file whose NAME never changes; and delete-then-recreate is only provable by reading `App_Data\Teams\*.md` and `App_Data\team.db` alongside the screen. Every test below is free unless it says otherwise; exactly one test spends money.
 
+> [!NOTE]
+> Stage 4 of the MudBlazor migration (2026-09-14) replaced the card's hand-rolled overlay `<div>`
+> with a real `MudDialog`, opened through `IDialogService`. This brought genuine dialog behaviour
+> the old overlay never had — a focus trap, Escape-to-close, page-scroll locking while it is open,
+> and focus returning to the control that opened it — verified in a browser, not assumed.
+> TEAMMATECARD-14 is rewritten below to test that real behaviour instead of the old overlay's. Every
+> other test in this area still applies unchanged: the identity fields, validation, save/collision
+> logic and file I/O this area exists to prove are exactly as they were; only the "card" wording is
+> now sometimes "dialog" to match what it actually is.
+
 **50 tests** · 49 free, 1 paid 💰 · about 6.3 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
@@ -81,7 +91,7 @@ If the page shows tiles, a Persona file still exists somewhere under `Teams` (ch
 
 1. Go to http://localhost:5100/teammates .
 2. Click `New teammate`.
-3. Observe immediately whether an overlay card headed `New teammate` appears, or whether a pale-yellow bar appears at the bottom of the page reading `An unhandled error has occurred.` with a `Reload` link.
+3. Observe immediately whether a dialog headed `New teammate` appears, or whether a pale-yellow bar appears at the bottom of the page reading `An unhandled error has occurred.` with a `Reload` link.
 4. Read the app console and copy any exception text printed in the last few seconds.
 5. Reload the browser page and click `New teammate` a second time to confirm the outcome reproduces.
 6. If the card DID open: type `Nova` into the **Name** field, then select all of it and delete it so the field is empty again. Observe the card and the console.
@@ -89,7 +99,7 @@ If the page shows tiles, a Persona file still exists somewhere under `Teams` (ch
 
 **Pass if — all of these**
 
-- An overlay card headed `New teammate` appears on both attempts.
+- A dialog headed `New teammate` appears on both attempts.
 - Clearing the **Name** field back to empty leaves the card on screen and working.
 - Typing a single space as the whole **Name** leaves the card on screen and working.
 - The console prints no exception during any of the above.
@@ -129,7 +139,7 @@ If the yellow bar appears but the console shows an unrelated exception (a databa
 
 **Pass if — all of these**
 
-- The header reads `New teammate`; the button on its right shows `×` and has the tooltip/aria-label `Close`.
+- The header reads `New teammate`; the button on its right is a close icon (an ×-shaped Material icon, not a text glyph) and has the tooltip/aria-label `Close`.
 - A circular avatar showing a monogram is present at the top left of the card body.
 - The four inputs are, in order: **Name** (placeholder `Chief of Staff`, hint `Letters, digits, spaces, - and _. Spaces are fine.`), **Title** (placeholder `Chief of Staff`, hint `A short role description, shown alongside the Name.`), **Alias** (placeholder `coo`, hint `A short working handle, for mentions and quick reference.`), **Teams** (placeholder `Business, Household`, hint `Comma-separated. Leave blank for no team.`).
 - The multi-line box is labelled `Persona body`, has placeholder `You are the Chief of Staff. You keep the team honest.`, and its hint reads `Markdown. Becomes the teammate's system prompt, placed after the Name, Title, Alias and Teams above — no front matter needed here.`
@@ -429,7 +439,7 @@ If the browser reload indicator is too fast to see, open DevTools > Network, che
 1. Click `New teammate`. Set **Name** `Nova`, **Title** `Ops Lead`, **Alias** `nov`, **Teams** `Business`, **Persona body** `You are Nova.`
 2. Click `Add teammate`.
 3. Read the card header, the identity block and every section heading in the card body.
-4. Look behind the overlay at the list on the page.
+4. Look behind the dialog at the list on the page.
 5. Confirm `App_Data\Teams\Nova.md` exists in File Explorer.
 6. Leave the card and the file in place — TEAMMATECARD-12 continues from here.
 
@@ -437,7 +447,7 @@ If the browser reload indicator is too fast to see, open DevTools > Network, che
 
 - The card stays open and its header now reads `Teammate`.
 - The card body shows `Nova` as a heading, `Ops Lead` beneath it, a status dot with a status word, `Alias: nov`, `Teams: Business`, and the sections `Persona`, `Model`, `Effort`, `Persona file`.
-- Behind the overlay a new tile for `Nova` has appeared under a `Business` heading.
+- Behind the dialog a new tile for `Nova` has appeared under a `Business` heading.
 - `App_Data\Teams\Nova.md` exists.
 
 **Fail if — any of these**
@@ -527,46 +537,53 @@ If `Nova` was created with a Model chosen, delete it and re-create it leaving bo
 > [!NOTE]
 > The Effort SELECT's blank option is labelled `Use the agent's default` while this View section says `Model default`. That inconsistency is real and worth recording once, but it is a known wording gap, not a failure of this test.
 
-### TEAMMATECARD-14 — Closing the card: backdrop, ×, Cancel — and what is deliberately absent
+### TEAMMATECARD-14 — Closing the dialog: focus trap on open, Escape, the close icon, Cancel, scroll locking, and focus return
 
-**Free** · about 6 min
+**Free** · about 10 min
 
-*Proves the backdrop closes the card while a click inside it does not, and records the deliberate absence of Escape and focus trapping.*
+*The card is now a real `MudDialog` opened through `IDialogService` (Stage 4 of the MudBlazor migration), which brought genuine dialog behaviour the old hand-rolled overlay `<div>` never had. Proves all four: focus moves into the dialog on open, Escape closes it, the page behind does not scroll while it is open, and focus returns to the control that opened it — plus that the close icon and Cancel both still work and a click inside the dialog does not close it.*
 
 **Before you start**
 
 - `Nova` exists.
+- The page has enough rooms/teammates listed that the page behind the dialog CAN scroll (or narrow the browser window/zoom in until it can).
 
 **Steps**
 
-1. Click the `Nova` tile to open the View card.
-2. Click the dimmed area well outside the white panel. Observe.
-3. Reopen the card. Click on the card header text, then on the avatar, then on a hint line — each a click INSIDE the panel. Observe after each.
-4. Click the `×` button at the top right. Observe.
-5. Reopen the card, click `Edit`, then click `Cancel`. Observe.
-6. Reopen the card and press the Escape key. Observe.
-7. Reopen the card and press Tab repeatedly, watching where the focus ring goes.
-8. Open the browser's element inspector on the white panel and read its `role`, `aria-modal` and `aria-label` attributes.
+1. Click the `Nova` tile to open the View dialog. Immediately read `document.activeElement` in DevTools -> Console (or just note which element visibly shows a focus ring).
+2. Press Tab repeatedly and watch where the focus ring goes: does it ever land on something BEHIND the dialog (a sidebar link, another tile)?
+3. Press Shift+Tab from the first focusable element in the dialog and confirm focus wraps to the LAST focusable element in the dialog, not out of it.
+4. With the dialog open, try to scroll the page behind it with the mouse wheel over the dimmed area. Observe whether the page behind moves.
+5. Click on the dialog's header text, then on the avatar, then on a hint line — each a click INSIDE the panel. Observe after each: the dialog must stay open.
+6. Click the close icon button (the small `×`-style icon at the top right of the header) and observe. Read where keyboard focus lands afterwards — is it back on the `Nova` tile you clicked to open the dialog?
+7. Reopen the dialog by clicking the `Nova` tile again, click `Edit`, then click `Cancel`. Observe: does the dialog close and discard, and does focus return to the tile?
+8. Reopen the dialog and press the Escape key. Observe whether it closes, and whether focus returns to the `Nova` tile.
+9. Reopen the dialog and click the dimmed backdrop area well outside the panel. Observe whether that also closes it.
 
 **Pass if — all of these**
 
-- Clicking the dimmed backdrop closes the card.
-- Clicking anywhere inside the white panel does NOT close it.
-- `×` closes the card; `Cancel` in Edit closes it and discards.
-- The panel carries `role="dialog"`, `aria-modal="true"` and an `aria-label` equal to the header text (`Teammate`, `Edit Nova` or `New teammate`).
+- On open, focus moves INTO the dialog (onto the header, the close icon, or the first field) — never left sitting on the page behind it.
+- Tab never lets focus escape the dialog to the page behind while it is open; Shift+Tab from the first item wraps to the last.
+- The page behind the dialog does NOT scroll while the dialog is open.
+- A click anywhere INSIDE the panel does not close it.
+- The close icon closes the dialog; `Escape` closes it; the dimmed backdrop closes it; `Cancel` in Edit closes it and discards.
+- After EVERY way of closing the dialog, keyboard focus returns to the `Nova` tile — the control that opened it.
 
 **Fail if — any of these**
 
-- A click inside the panel closes the card -> the click-swallowing on the panel regressed; in Edit or Create this destroys everything typed with one misplaced click.
+- Focus is not moved into the dialog on open, or Tab lets it leak onto the page behind -> the focus trap is not working, which for a screen-reader or keyboard user means the dialog might as well not be modal.
+- The page behind visibly scrolls while the dialog is open -> the scroll lock regressed.
+- A click inside the panel closes the dialog -> in Edit or Create this destroys everything typed with one misplaced click.
+- Escape does not close the dialog -> a MudBlazor default (`CloseOnEscapeKey`) has been turned off or overridden.
+- Closing the dialog by any route does not return focus to the tile -> a keyboard user is dropped at the top of the page and has to re-navigate to where they were.
 - `Cancel` in Edit saves instead of discarding -> a user backing out writes to disk.
-- The panel is missing `aria-label` -> a screen reader announces an unnamed dialog.
 
 **Inconclusive if**
 
-If the Escape key appears to close the card, check you did not also click the backdrop — then record it as a CHANGE (new behaviour), not a failure.
+If your browser or OS has a screen-magnifier or accessibility tool intercepting Tab, verify the trap using DevTools -> Console's `document.activeElement` instead of eyeballing the ring. If focus return is inconsistent only for the backdrop-click close (as opposed to the icon, Escape, and Cancel), record that distinction rather than averaging it into one result.
 
 > [!NOTE]
-> Escape not closing the card and focus not being trapped are BOTH deliberate: the card is a plain overlay `<div>`, not a `<dialog>`, because a real dialog needs `showModal()` from JavaScript and nothing else on this page needs interop. Record what you observe but do NOT file either as a defect.
+> All four dialog behaviours above (focus trap, Escape, scroll lock, focus return) were verified working in a browser for this migration — see the "Make the Teammate card a real dialog" commit. If any regresses, it is a real defect, not a documented limit; the old area's "Escape not closing and focus not being trapped are BOTH deliberate" note no longer applies and must not be cited.
 
 ### TEAMMATECARD-15 — Closing a card clears every bit of its state
 
@@ -1040,14 +1057,14 @@ If the red line names a path you do not recognise, a third Persona file exists s
 3. Open `Nova`'s card, click `Edit`, change the `name:` line to `name: 'Aria'`, and click `Save`.
 4. WITHOUT closing the card, write down exactly what the card now shows: its header, whether the `Persona` block has content, the Title, whether an `Alias:` line is present, what `Model` and `Effort` read, and whether a `Persona file` section exists.
 5. Note whether a `Message` action is present on this card.
-6. Look behind the overlay at the list.
+6. Look behind the dialog at the list.
 7. Close the card and click the `Aria` tile. Read every section.
 8. Check the file on disk: its filename, and its `name:` line.
 9. Re-run the sqlite query from step 1.
 
 **Pass if — all of these**
 
-- The list behind the overlay shows a tile named `Aria` (and no `Nova`).
+- The list behind the dialog shows a tile named `Aria` (and no `Nova`).
 - The file keeps its ORIGINAL filename but now contains `name: 'Aria'`.
 - Opening the `Aria` tile shows a complete, correct card.
 - The `persona_models` and `persona_efforts` rows have MOVED from `Nova` to `Aria` — same values, new key, and no row left under `Nova`.
@@ -1199,7 +1216,7 @@ If nothing appears after about two seconds, press F5 once. If the section only a
 4. Rename it back to `Business`. Watch the page.
 5. Move a Persona file from the Teams root into `App_Data\Teams\Business\`. Watch the page: which heading does its tile sit under now?
 6. Delete the sub-folder Persona's file outright. Watch the page.
-7. Now open a teammate's View card and LEAVE IT OPEN. In the editor, change that same teammate's `title:` and save. Watch both the tile behind the overlay and the card itself.
+7. Now open a teammate's View card and LEAVE IT OPEN. In the editor, change that same teammate's `title:` and save. Watch both the tile behind the dialog and the card itself.
 8. Read the app console for any line mentioning `FileSystemWatcher`.
 
 **Pass if — all of these**
@@ -1730,7 +1747,7 @@ If no node process spawns and the console says the adapter is missing or needs a
 1. Run `O-ADAPTERS` and record the count.
 2. Create a teammate from the card: Name `Live`, Title `T`, Alias `lvo`, body `You are Live.`, Model Haiku, Effort low.
 3. Leave the resulting View card OPEN and watch its status line, without reloading, for up to 60 seconds. Record every state it shows.
-4. Watch the tile behind the overlay at the same time.
+4. Watch the tile behind the dialog at the same time.
 5. Run `O-ADAPTERS` again and count how many NEW processes appeared for this one teammate.
 6. Read the app console for any line naming `Live`.
 7. Close the card, click `Remove` then `Confirm`, and run `O-ADAPTERS` once more after 10 seconds.

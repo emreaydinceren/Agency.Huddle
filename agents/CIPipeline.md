@@ -4,9 +4,13 @@ How Gitea Actions validates this repo, and how to reproduce a failing run on you
 machine in about two minutes. Read this before debugging a red run — the failure modes
 recorded here are environmental, and none of them are code regressions.
 
-Verified end to end on 2026-09-12 against SDK 10.0.401 in the CI container: **656 tests,
-648 passed, 8 skipped, 0 failed** (run 586, the PR that merged as #3). That is the whole
-suite minus the three quarantined tests below; an unfiltered run of the same tree is 659.
+Verified end to end on 2026-09-15 against SDK 10.0.401 in the CI container: **970 tests,
+962 passed, 8 skipped, 0 failed** (run 610, the push that merged PR #34). That is the whole
+suite minus the three quarantined tests below; an unfiltered run of the same tree is 973.
+
+The figures in this file were **656/648/659 until 2026-09-15**, by which point they were stale
+by over three hundred. Refresh them when you next read a green run's summary rather than
+trusting them — a count nobody updates stops being a check and becomes noise.
 
 These totals move whenever real work lands — they were 565/568 when this page was written,
 before the Teams change added 91 tests. Treat a changed total as something to *confirm*,
@@ -24,6 +28,11 @@ when one arrives it belongs in a new job in `ci-main.yaml`, not inside `validate
 
 Both workflows run on a self-hosted runner labelled `dotnet-10`, inside the
 `mcr.microsoft.com/dotnet/sdk:10.0.401` container (Ubuntu 24.04), with `shell: bash`.
+
+**The runner is `arm64`.** Test output reads `net10.0|arm64`, where a Windows development box
+here is `x64`. That is a second axis, alongside line endings and the SDK patch below, on which a
+green local run does not imply a green CI run — and it is the axis timing races are most
+sensitive to, since core count and memory ordering both differ.
 
 The image is pinned to an **exact SDK patch**, not the floating `:10.0` tag, and that pin is
 half of a pair: `global.json` requires `10.0.400` with `rollForward: latestPatch`, so only a
@@ -75,8 +84,8 @@ Two of those steps exist for reasons specific to this repo:
 - **No retry loop.** The sibling Agency repo wraps its test steps in three attempts because
   its functional suite talks to a live model. Nothing here talks to anything, so every test
   gets exactly one attempt and a failure is a failure. The two known races that would
-  otherwise justify retries are quarantined by name instead (below), which keeps the other
-  656 strict — a blanket retry would also have masked a genuine regression.
+  otherwise justify retries are quarantined by name instead (below), which keeps the rest of
+  the suite strict — a blanket retry would also have masked a genuine regression.
 - **No `actions/checkout`, and no other JavaScript action.** Actions of that kind need Node
   in the container, and Node only arrives partway through `validate`. Both jobs clone by hand
   with a token-injected URL and then check out `$GITHUB_SHA`, so every run starts from a
@@ -86,7 +95,17 @@ Two of those steps exist for reasons specific to this repo:
 
 Three tests are excluded by name in the test step. They are **quarantined, not fixed**, and
 both underlying races are recorded in
-[known-limits.md](../docs/agencyteam/known-limits.md) as pre-existing and undiagnosed:
+[known-limits.md](../docs/agencyteam/known-limits.md) as pre-existing and undiagnosed.
+
+> [!IMPORTANT]
+> **A fourth test shows the same race and is not quarantined.** On 2026-09-15, run 607 failed on
+> `DotAcpConcurrentHostTests.TwoHosts_ConcurrentPrompts_EachSessionOnlySeesItsOwnAgentsUpdates`
+> with `Expected: MessageChunk … Actual: TurnCompleted` — event ordering over the fake transport,
+> the same shape as the two `DotAcpAgentSessionTests` entries below. It passed on a re-run of the
+> single job. The change under test touched no file under `src/Huddle.Acp` or
+> `tests/Huddle.Acp.Tests`, and that test file is unchanged since the initial commit, so it is not
+> attributable to the work it failed against. It is left unquarantined on purpose: the race is the
+> ACP effort's to diagnose, and a third filter line would make it easier to forget than to fix.
 
 | Test | Rate | Race |
 | --- | --- | --- |
@@ -133,9 +152,9 @@ tests — worth doing when you are trying to reproduce one of the races on purpo
 
 ```text
 Test run summary: Passed!
-  total: 656
+  total: 970
   failed: 0
-  succeeded: 648
+  succeeded: 962
   skipped: 8
 ```
 
@@ -165,17 +184,29 @@ Check these before reading the code.
 | `Zero tests ran`, job exits 5, and the step reads as a no-op rather than a failure | The trailing `--` was dropped from `dotnet test` | Put it back. This SDK's Microsoft Testing Platform CLI requires it; it is not a typo |
 | `The following test projects are using VSTest test runner` | Restore assets are stale or missing, so the `xunit.v3` props never imported and the test projects evaluated as `Library` instead of `Exe`. The message names the wrong cause. | Delete `bin/` and `obj/`, then restore again in the same container as the build |
 | `secret-scan` fails on `internal-mdns-host` | A real `*.local` hostname reached a tracked file — most often a doc or a workflow comment | Replace it with a `*.example` placeholder, or allowlist the path in `.gitleaks.toml` |
-| The test total is not 656 | A test was added or removed, or a `--filter-not-method` line no longer matches anything | Expected after real work; confirm the delta is yours. A quarantine line that matches nothing fails silently — it does not error |
+| The test total is not the figure at the top of this file | A test was added or removed, or a `--filter-not-method` line no longer matches anything | Expected after real work; confirm the delta is yours. A quarantine line that matches nothing fails silently — it does not error. Update the figure when you confirm it |
+| A diagnostic appears only in CI, with an identical clean local build | The container's SDK is **ahead** of the local one. `global.json` pins `10.0.400` with `rollForward: latestPatch`, so the `10.0.401` image satisfies it and compiles with a newer Roslyn. `TreatWarningsAsErrors` turns any diagnostic that version added into a failed build | Do not chase it by loosening `global.json`. Reproduce it with the Docker command below, which uses the same image, or install the image's SDK locally. Seen 2026-09-15: `CS1574` on a `cref` to an internal framework type, which 10.0.400 accepted |
 | A docs-only PR shows a check that never completes | Both workflows set `paths-ignore: docs/**`, so no run is queued at all | Push a non-docs change, or drop the required check for such PRs |
 
 ### Line endings
 
 The index stores LF and a Windows worktree checks out CRLF (`core.autocrlf=true`), so the
-Linux runner compiles bytes you never compile locally. As of 2026-09-12 nothing in the suite
-depends on that — the full run is green at LF — but two tests read source files as text
-(`TeammatesRazorSourceTests` over `Teammates.razor`, and `AcpReferenceTests`), and those are
-the shape that would notice. If a test passes on Windows and fails in CI on a string
-comparison, flip the line endings locally and rebuild before theorizing:
+Linux runner compiles bytes you never compile locally. **Something does depend on that**, as of
+2026-09-15, and it was live for longer than anyone noticed: C# raw string literals *preserve*
+their source file's line endings rather than normalising them, so `HookCatalog`'s defaults —
+and therefore every prompt sent to a model — carried `\r\n` on a Windows build and `\n` in this
+container. Two tests read source files as text (`TeammatesRazorSourceTests` over
+`Teammates.razor`, and `AcpReferenceTests`) and are the shape that would notice, but neither
+covers prompts; `PromptGoldenTests` and `HookDefaultsFileTests` both normalise line endings on
+*both* sides before comparing, so neither could see it either.
+
+`HookDefinition.Default` now normalises to `\n` once at construction, which makes model-facing
+text independent of the checkout. `docs/agencyteam/traps.md` asserted the opposite mechanism
+until 2026-09-15 and has been corrected; this section was right and that one was wrong, which is
+worth knowing if the two ever disagree again.
+
+If a test passes on Windows and fails in CI on a string comparison, flip the line endings
+locally and rebuild before theorizing:
 
 ```bash
 git ls-files --eol -- 'src/**/*.razor'
@@ -186,7 +217,12 @@ i/lf    w/crlf  attr/                  src/Huddle.App/Components/Pages/Teammates
 ```
 
 The sibling Agency repo added a root `.gitattributes` forcing `*.cs text eol=crlf` after
-exactly this class of bug cost it a debugging session. This repo has not needed one.
+exactly this class of bug cost it a debugging session. This repo considered one on 2026-09-15
+and **declined it deliberately**: normalising at the boundary, in `HookDefinition`, makes the
+property true however the repo is checked out, whereas a `.gitattributes` only makes every
+checkout agree and would rewrite line endings in everyone's working tree on the next pull.
+Revisit it if a second consumer of source-file bytes appears — the code-level fix does not
+generalise, and two of them would be a pattern rather than a fix.
 
 ## Reflection — 2026-09-12: the first run died on a cached image
 

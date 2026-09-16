@@ -9,9 +9,12 @@ using Agency.Huddle.Contracts;
 namespace Agency.Huddle.App.Appearance;
 
 /// <summary>
-/// Joins the built-in theme pair and <see cref="ThemeCatalog"/> with a Human-editable override file
-/// at <c>{DataDir}/appearance.json</c>, resolving the currently selected theme id and the validated
-/// override CSS body every render reads through <see cref="Current"/>.
+/// Joins <see cref="ThemeCatalog"/> with a Human-editable selection file at
+/// <c>{DataDir}/appearance.json</c>, resolving the currently selected theme id and light/dark
+/// preference every render reads through <see cref="Current"/>. MudBlazor's <see cref="MudBlazor.MudTheme"/>
+/// is the single source of theming now, so this store carries no override CSS and no per-token
+/// validation — it only remembers which catalog entry and which of <see cref="DarkModePreference"/>
+/// the Human picked.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -28,15 +31,14 @@ namespace Agency.Huddle.App.Appearance;
 /// </para>
 /// <para>
 /// <b>Tolerance.</b> A missing file is the normal first-run case, not an error — every field
-/// resolves to "nothing selected, nothing overridden" and no file is created just to read from. A
+/// resolves to <see cref="AppearanceSettings.Empty"/> and no file is created just to read from. A
 /// malformed file logs a warning naming the path and falls back to <see cref="AppearanceSettings.Empty"/>
 /// wholesale, the same tolerance <see cref="Hooks.HookStore"/> gives a bad <c>hooks.json</c>. A
-/// <c>theme</c> value that names no <see cref="ThemeCatalog"/> entry is a warning, never a failure —
+/// <c>theme</c> value that names no <see cref="ThemeCatalog"/> entry, or a <c>dark</c> value that is
+/// not one of <c>"system"</c>, <c>"light"</c> or <c>"dark"</c>, is a warning, never a failure —
 /// <c>rules.md</c>: "A Model the agent does not advertise is a warning, never a failure." — and the
-/// file is left exactly as it was, so re-adding the theme (or importing it, per roadmap item 7)
-/// restores the choice with no further edit. An unknown top-level key, or an override key that names
-/// no theme token, is kept in the file and never silently deleted; <see cref="ThemeOverrides.Build"/>
-/// carries the override side of that rule.
+/// file is left exactly as it was, so fixing the value restores the choice with no further edit. An
+/// unknown top-level key is kept in the file and never silently deleted.
 /// </para>
 /// </remarks>
 internal sealed partial class AppearanceStore : IDisposable
@@ -54,17 +56,17 @@ internal sealed partial class AppearanceStore : IDisposable
 
     // Same reasoning as HookStore.WatcherReadRetryAttempts/Delay: a watcher event can fire while a
     // human's editor is still mid-write, so a rebuild retries a few times with a short pause before
-    // giving up and keeping the previous snapshot, rather than flickering every token back to its
-    // theme default for the width of a save.
+    // giving up and keeping the previous snapshot, rather than flickering back to the default for
+    // the width of a save.
     private const int WatcherReadRetryAttempts = 3;
     private const int WatcherReadRetryDelayMilliseconds = 20;
 
     // See HookStore.IndentedJsonOptions's remarks for why this derives from ProtocolJson.Options
     // rather than using it directly: that instance has no Encoder set, so it inherits
     // JavaScriptEncoder.Default, which escapes every quote and em-dash as a \uXXXX sequence - exactly
-    // wrong for a file a Human hand-edits and is likely to fill with "Segoe UI" and similar
-    // (traps.md: "ProtocolJson.Options escapes anything unsafe for HTML, which ruins a file a human
-    // edits."). WriteIndented makes the file readable in the first place.
+    // wrong for a file a Human hand-edits (traps.md: "ProtocolJson.Options escapes anything unsafe
+    // for HTML, which ruins a file a human edits."). WriteIndented makes the file readable in the
+    // first place.
     private static readonly JsonSerializerOptions IndentedJsonOptions = new(ProtocolJson.Options)
     {
         WriteIndented = true,
@@ -82,9 +84,9 @@ internal sealed partial class AppearanceStore : IDisposable
     // see the class remarks' state-model paragraph.
     private volatile AppearanceSettings current;
 
-    /// <summary>Loads (or defaults) the override file at <c>{DataDir}/appearance.json</c>.</summary>
+    /// <summary>Loads (or defaults) the selection file at <c>{DataDir}/appearance.json</c>.</summary>
     /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>, already absolutised by <c>ServiceCollectionExtensions</c>'s <c>PostConfigure</c>.</param>
-    /// <param name="logger">Used to warn when the override file exists but fails to parse, or names an unknown theme.</param>
+    /// <param name="logger">Used to warn when the selection file exists but fails to parse, or names an unknown theme or dark-mode value.</param>
     public AppearanceStore(IOptions<TeamOptions> options, ILogger<AppearanceStore> logger)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -130,24 +132,25 @@ internal sealed partial class AppearanceStore : IDisposable
     public event Action? AppearanceChanged;
 
     /// <summary>
-    /// The absolute path to the override file, <c>appearance.json</c> under
+    /// The absolute path to the selection file, <c>appearance.json</c> under
     /// <see cref="TeamOptions.DataDir"/>, whether or not it currently exists — see the class remarks
-    /// on why a missing file is the normal case. Exposed so the Appearance tab (T4.1) can tell a user
-    /// exactly where to hand-edit it.
+    /// on why a missing file is the normal case. Exposed so the Appearance tab can tell a user
+    /// exactly where the file lives.
     /// </summary>
     public string FilePath => this.path;
 
-    /// <summary>The current resolved theme id and override CSS. No lock: reads the published <see langword="volatile"/> snapshot.</summary>
+    /// <summary>The current resolved theme id and dark-mode preference. No lock: reads the published <see langword="volatile"/> snapshot.</summary>
     public AppearanceSettings Current => this.current;
 
     /// <summary>
-    /// Selects (or clears) the theme id, under the write lock: re-reads the file so a concurrent
-    /// hand-edit to <c>overrides</c> is not lost, sets or removes the <c>theme</c> key while leaving
-    /// every other key — including <c>overrides</c> — exactly as found, writes, rebuilds the resolved
-    /// snapshot, releases the lock, and only then raises <see cref="AppearanceChanged"/>.
+    /// Selects (or clears) the theme id and stores the dark-mode preference, under the write lock:
+    /// re-reads the file so a concurrent hand-edit is not lost, sets <c>theme</c> and <c>dark</c>
+    /// while leaving every other key exactly as found, writes, rebuilds the resolved snapshot,
+    /// releases the lock, and only then raises <see cref="AppearanceChanged"/>.
     /// </summary>
     /// <param name="themeId">The theme id to store, or <see langword="null"/> to clear the selection and remove the <c>theme</c> key entirely.</param>
-    public void Save(string? themeId)
+    /// <param name="dark">The dark-mode preference to store.</param>
+    public void Save(string? themeId, DarkModePreference dark)
     {
         lock (this.writeGate)
         {
@@ -161,6 +164,8 @@ internal sealed partial class AppearanceStore : IDisposable
             {
                 document["theme"] = themeId;
             }
+
+            document["dark"] = DarkModePreferenceToText(dark);
 
             this.WriteDocumentToDisk(document);
             this.current = this.BuildSettings(document);
@@ -193,15 +198,32 @@ internal sealed partial class AppearanceStore : IDisposable
         return false;
     }
 
+    /// <summary>Renders <paramref name="dark"/> as the lowercase text <c>appearance.json</c> stores under the <c>dark</c> key.</summary>
+    private static string DarkModePreferenceToText(DarkModePreference dark) => dark switch
+    {
+        DarkModePreference.Light => "light",
+        DarkModePreference.Dark => "dark",
+        _ => "system",
+    };
+
+    /// <summary>Parses a raw <c>dark</c> value from the file, or <see langword="null"/> if it names none of <c>"system"</c>, <c>"light"</c> or <c>"dark"</c>.</summary>
+    /// <param name="candidate">The raw <c>dark</c> value read from the file.</param>
+    private static DarkModePreference? ParseDarkModePreference(string candidate) => candidate switch
+    {
+        "system" => DarkModePreference.System,
+        "light" => DarkModePreference.Light,
+        "dark" => DarkModePreference.Dark,
+        _ => null,
+    };
+
     /// <summary>
     /// Builds the resolved <see cref="AppearanceSettings"/> for <paramref name="document"/>,
-    /// validating <c>theme</c> against <see cref="ThemeCatalog"/> and <c>overrides</c> through
-    /// <see cref="ThemeOverrides.Build"/>, logging one warning per rejection.
+    /// validating <c>theme</c> against <see cref="ThemeCatalog"/> and <c>dark</c> against
+    /// <see cref="DarkModePreference"/>, logging one warning per rejection.
     /// </summary>
     /// <param name="document">The parsed <c>appearance.json</c> object, just read from (or about to be written to) disk.</param>
     private AppearanceSettings BuildSettings(JsonObject document)
     {
-        List<string> problems = [];
         string? themeId = null;
 
         if (document.TryGetPropertyValue("theme", out var themeNode) && themeNode is not null)
@@ -217,7 +239,6 @@ internal sealed partial class AppearanceStore : IDisposable
             else
             {
                 var shown = candidate ?? themeNode.ToJsonString();
-                problems.Add($"Theme '{shown}' is not a known theme; the built-in theme is used instead.");
                 this.logger.LogWarning(
                     "Appearance file '{Path}' selects theme '{ThemeId}', which is not a known theme; the built-in theme is used instead and the file is left unchanged.",
                     this.path,
@@ -225,34 +246,34 @@ internal sealed partial class AppearanceStore : IDisposable
             }
         }
 
-        Dictionary<string, string> overrides = new(StringComparer.Ordinal);
-        if (document.TryGetPropertyValue("overrides", out var overridesNode) && overridesNode is JsonObject overridesObject)
+        var dark = DarkModePreference.System;
+        if (document.TryGetPropertyValue("dark", out var darkNode) && darkNode is not null)
         {
-            foreach (var property in overridesObject)
+            var candidate = darkNode is JsonValue darkValue && darkValue.TryGetValue<string>(out var darkText)
+                ? darkText
+                : null;
+
+            var parsed = candidate is not null ? ParseDarkModePreference(candidate) : null;
+
+            if (parsed is { } parsedDark)
             {
-                if (property.Value is JsonValue value && value.TryGetValue<string>(out var text))
-                {
-                    overrides[property.Key] = text;
-                }
+                dark = parsedDark;
+            }
+            else
+            {
+                var shown = candidate ?? darkNode.ToJsonString();
+                this.logger.LogWarning(
+                    "Appearance file '{Path}' sets dark mode to '{Dark}', which is not 'system', 'light' or 'dark'; System is used instead and the file is left unchanged.",
+                    this.path,
+                    shown);
             }
         }
 
-        var overrideCss = ThemeOverrides.Build(overrides, out var overrideProblems);
-        foreach (var problem in overrideProblems)
-        {
-            this.logger.LogWarning(
-                "Appearance file '{Path}' rejected an override: {Problem}",
-                this.path,
-                problem);
-        }
-
-        problems.AddRange(overrideProblems);
-
-        return new AppearanceSettings(themeId, overrideCss, problems);
+        return new AppearanceSettings(themeId, dark);
     }
 
     /// <summary>
-    /// Reads the raw override file from disk into a mutable <see cref="JsonObject"/>, tolerating
+    /// Reads the raw selection file from disk into a mutable <see cref="JsonObject"/>, tolerating
     /// everything short of a locked file: a missing file yields an empty object (the normal
     /// first-run case, so this never creates the file just to read it), and malformed JSON — or a
     /// top-level value that is not a JSON object — logs a warning naming <see cref="path"/> and also
@@ -272,7 +293,7 @@ internal sealed partial class AppearanceStore : IDisposable
         }
         catch (JsonException ex)
         {
-            this.logger.LogWarning(ex, "Could not parse appearance file '{Path}'; falling back to no theme and no overrides.", this.path);
+            this.logger.LogWarning(ex, "Could not parse appearance file '{Path}'; falling back to the default appearance.", this.path);
             return new JsonObject();
         }
     }
@@ -291,7 +312,7 @@ internal sealed partial class AppearanceStore : IDisposable
     /// differently, so the parsing itself carries no fallback policy of its own. Mirrors
     /// <c>HookStore.ParseOverridesFile</c>.
     /// </summary>
-    /// <param name="path">The override file's path. Always exists; callers check <see cref="File.Exists(string)"/> first.</param>
+    /// <param name="path">The selection file's path. Always exists; callers check <see cref="File.Exists(string)"/> first.</param>
     private static JsonObject ParseDocumentFile(string path)
     {
         var json = File.ReadAllText(path);
@@ -302,8 +323,8 @@ internal sealed partial class AppearanceStore : IDisposable
     /// <summary>
     /// Rebuilds the resolved snapshot for an external edit to <see cref="path"/>, once the watcher's
     /// debounce settles. Retries a few times first (see <see cref="WatcherReadRetryAttempts"/>) so an
-    /// in-place write caught mid-save does not flicker every override back to the theme default; if
-    /// every attempt still fails to parse, returns <see langword="null"/> so the caller
+    /// in-place write caught mid-save does not flicker back to the default for the width of a save;
+    /// if every attempt still fails to parse, returns <see langword="null"/> so the caller
     /// (<see cref="OnDebounceElapsed"/>) keeps the previous resolved snapshot untouched. Mirrors
     /// <c>HookStore.ReadOverridesForWatcherRebuild</c>'s reasoning exactly.
     /// </summary>
@@ -334,7 +355,7 @@ internal sealed partial class AppearanceStore : IDisposable
             {
                 this.logger.LogWarning(
                     ex,
-                    "Could not parse appearance file '{Path}' after a filesystem change, even after retrying; keeping the previously resolved appearance rather than reverting to no theme and no overrides over what may be a mid-write race.",
+                    "Could not parse appearance file '{Path}' after a filesystem change, even after retrying; keeping the previously resolved appearance rather than reverting to the default over what may be a mid-write race.",
                     this.path);
                 return null;
             }

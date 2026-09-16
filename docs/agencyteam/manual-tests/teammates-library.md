@@ -442,7 +442,7 @@ Nothing repaints even after 10 seconds -> this may be the watcher rather than th
 
 **Free** · about 5 min
 
-*Proves two Personas whose Team names differ only in case land under one heading and produce one dropdown option.*
+*Proves two Personas whose Team names differ only in case land under one heading and produce one dropdown option. The Team filter is a `MudSelect` (its options live in a popover that only populates once you actually click it open) — "open the dropdown" in step 5 means that click, not a page-source read.*
 
 **Before you start**
 
@@ -850,7 +850,7 @@ Nova's reason is missing but shadow.md's is present -> re-read the block careful
 
 **Free** · about 6 min
 
-*Proves a broken file stays visible in a filtered view and when the library has no valid Persona left at all — the moments the block matters most.*
+*Proves a broken file stays visible in a filtered view and when the library has no valid Persona left at all — the moments the block matters most. The block itself is now a `MudAlert` wrapping a `teammates-rejected-list` (its old bare `teammates-rejected` wrapper class is gone), and the Team filter is a `MudSelect` — neither change affects what this test checks.*
 
 **Before you start**
 
@@ -1170,9 +1170,9 @@ No overflow warning ever appears (likely — the watcher buffer is raised to 64 
 
 ### TEAMMATESLIBRARY-24 — A tile click opens the card, and the card shows the real file path
 
-**Free** · about 6 min
+**Free** · about 7 min
 
-*Proves the whole tile is the click target, the card shows every View-mode field including the discovered path, and it closes the way an overlay should.*
+*Proves the whole tile is the click target, the card shows every View-mode field including the discovered path, and it closes the way a real dialog should. The card is now a `MudDialog` opened through `IDialogService` (Stage 4 of the MudBlazor migration), not a hand-rolled overlay `<div>` — this test is a good place to also confirm the dialog behaviour that migration bought: a focus trap on open, Escape-to-close, and focus returning to the tile that opened it.*
 
 **Before you start**
 
@@ -1181,30 +1181,36 @@ No overflow warning ever appears (likely — the watcher buffer is raised to 64 
 **Steps**
 
 1. Go to /teammates and press F5.
-2. Click the Nova tile on its coloured monogram square. Note whether the card opens.
-3. Close it by clicking the × at the top right.
-4. Click the Nova tile on its status line. Note whether the card opens.
-5. Read the card from top to bottom and write down: the header text, the Name, the Title, the status line, the `Alias:` line, whether a `Teams:` line is present and what it says, the section headings, and the text under `Persona file`.
-6. Click INSIDE the card body (on the Persona text). Note whether it closes.
-7. Click the dimmed area outside the card. Note whether it closes.
-8. Click the Quill tile (the Persona with no Teams) and check whether a `Teams:` line appears.
-9. Close the card, then click the nested Rune tile and read its `Persona file` path.
-10. In the second PowerShell window, run `Test-Path '<paste the exact path the card printed>'`.
+2. Click the Nova tile on its coloured monogram square. Immediately read `document.activeElement` in the DevTools Console. Note whether the card opens and whether focus moved into it.
+3. Press Tab a few times and confirm focus never lands on something BEHIND the dialog (the sidebar, another tile).
+4. Close it by clicking the × at the top right. Read `document.activeElement` again — is it back on the Nova tile?
+5. Click the Nova tile on its status line. Note whether the card opens.
+6. Read the card from top to bottom and write down: the header text, the Name, the Title, the status line, the `Alias:` line, whether a `Teams:` line is present and what it says, the section headings, and the text under `Persona file`.
+7. Click INSIDE the card body (on the Persona text). Note whether it closes.
+8. Click the dimmed backdrop outside the card. Note whether it closes, and read `document.activeElement`.
+9. Reopen the Nova card and press the Escape key. Note whether it closes, and where focus lands afterwards.
+10. Click the Quill tile (the Persona with no Teams) and check whether a `Teams:` line appears.
+11. Close the card, then click the nested Rune tile and read its `Persona file` path.
+12. In the second PowerShell window, run `Test-Path '<paste the exact path the card printed>'`.
 
 **Pass if — all of these**
 
-- Clicking anywhere on the tile — monogram, name, or status line — opens the card.
+- Clicking anywhere on the tile — monogram, name, or status line — opens the card, and focus moves INTO the dialog on open (never left sitting on the tile).
+- Tab never lets focus escape to the page behind while the dialog is open.
 - The card header reads exactly `Teammate` in View mode.
 - The card shows: Name `Nova`; Title `Research Lead`; a status line with a dot and `Offline`; `Alias: nov`; `Teams: Business`.
 - Section headings, in order, read `Persona`, `Model`, `Effort`, `Persona file`.
 - Under `Persona` is the whole raw file text including the `---` frontmatter; `Model` reads `Agent default`; `Effort` reads `Model default`.
-- Clicking inside the card does NOT close it; clicking the dimmed backdrop DOES.
+- Clicking inside the card does NOT close it; clicking the dimmed backdrop DOES; Escape DOES.
+- After EVERY way of closing the dialog (× icon, backdrop, Escape), focus returns to the Nova tile.
 - Quill's card has NO `Teams:` line at all (not an empty one).
 - Rune's card prints a path ending `...\App_Data\Teams\Household\Rune.md`, and `Test-Path` on it returns `True`.
 
 **Fail if — any of these**
 
 - Only the name is clickable -> the tile stops behaving like a directory entry.
+- Focus is not moved into the dialog on open, or Tab lets it leak onto the page behind -> the focus trap is not working, which for a keyboard or screen-reader user means the dialog might as well not be modal.
+- Escape does not close the dialog, or closing it by any route does not return focus to the tile -> a MudBlazor default (`CloseOnEscapeKey`, focus restore) has been turned off or broken, and a keyboard user is dropped at the top of the page.
 - Rune's card prints a root path (`...\Teams\Rune.md`) -> the path is being reconstructed as `{Name}.md` at the root instead of reporting where the file was actually discovered; **Open** and **Edit** will then work on the wrong file.
 - `Test-Path` returns `False` -> the card is printing a path that does not exist.
 - Quill shows an empty `Teams:` line -> a teammate with no Teams reads as having a blank Team rather than none.
@@ -1213,7 +1219,10 @@ No overflow warning ever appears (likely — the watcher buffer is raised to 64 
 
 **Inconclusive if**
 
-The card does not open at all and other clicks on the page are also dead -> the Blazor circuit has dropped; reload and rerun.
+The card does not open at all and other clicks on the page are also dead -> the Blazor circuit has dropped; reload and rerun. If a screen-magnifier or accessibility tool is intercepting Tab, verify the focus trap using `document.activeElement` in the Console instead of eyeballing the ring.
+
+> [!NOTE]
+> The focus trap, Escape-to-close and focus-return were all verified working in a browser for this migration — see the "Make the Teammate card a real dialog" commit. Any regression here is a real defect, not a documented limit.
 
 ### TEAMMATESLIBRARY-25 — Offline is the honest default, with no invented reason
 
@@ -1365,7 +1374,7 @@ The echo bot cannot connect (`Connecting to pipe...` then an error) -> the pipe 
 
 **Free** · about 10 min
 
-*The highest-value identity test in the area: proves a file's location is storage only, so moving it cannot change its Name, its Team, its Model or its Effort.*
+*The highest-value identity test in the area: proves a file's location is storage only, so moving it cannot change its Name, its Team, its Model or its Effort. The card is a `MudDialog` and its Model/Effort dropdowns are `MudSelect` (Stages 3-4 of the MudBlazor migration) — neither changes what this test is checking.*
 
 **Before you start**
 
@@ -1418,7 +1427,7 @@ No adapter is installed, so the Model dropdown offers only `Use the agent's defa
 
 **Free** · about 6 min
 
-*Proves the create path composes a file that round-trips through the parser, at the root, never guessing a sub-folder.*
+*Proves the create path composes a file that round-trips through the parser, at the root, never guessing a sub-folder. The New teammate card is a real `MudDialog` (Stage 4 of the MudBlazor migration); its fields are unaffected.*
 
 **Before you start**
 
@@ -1860,32 +1869,32 @@ Only one of the two console lines appears -> the setup is not in the state this 
 
 1. Break one file so the red block is on screen: open `src\Huddle.App\App_Data\Teams\Quill.md` and delete its `title: 'Scribe'` line. Save.
 2. Click **Settings** in the left sidebar, then the **Appearance** tab.
-3. In the **Theme** dropdown choose `Dark`. The page will reload fully — that is expected and documented.
+3. Leave the **Theme** dropdown alone (it offers only `Huddle` today) and, in the separate **Appearance** dropdown, choose `Dark`. Since Stage 2 of the MudBlazor migration this applies immediately through `MudThemeProvider`'s own parameters — no page reload, no `<head>` to rewrite — so do not wait for one; watch the page repaint in place instead.
 4. Click **Teammates** in the sidebar.
 5. Inspect, one at a time, and note any element that is still light: the page background; the `Files that didn't load` block's background, border and text; the `Team` filter's label and dropdown; each group heading and its underline; each tile's background; a tile's hover state (move the mouse over it); the monogram square; the status dot.
-6. Click a tile to open the card over the page and inspect: the card panel's background, the dimmed backdrop, the header, the `<pre>` block holding the Persona text, and the `Persona file` path line.
+6. Click a tile to open the card (a `MudDialog`, Stage 4 of the MudBlazor migration) over the page and inspect: the dialog's background, the dimmed backdrop, the header, the `<pre>` block holding the Persona text, and the `Persona file` path line.
 7. Click **Edit** on the card and inspect the textarea, the **Model** dropdown and the **Effort** dropdown.
-8. Close the card. Return to Settings -> Appearance and set the Theme back to `Light` (or `System`), then restore Quill's `title:` line.
+8. Close the card. Return to Settings -> Appearance and set the **Appearance** dropdown back to `Light` (or `System`), then restore Quill's `title:` line.
 
 **Pass if — all of these**
 
 - Every surface listed is dark: no element keeps a white or near-white background, and no text becomes unreadable (dark-on-dark or light-on-light).
 - The `Files that didn't load` block keeps a clearly distinct danger treatment (a red-family border/accent) that reads correctly against the dark background — it is still obviously a warning.
-- The card panel, its backdrop, the `<pre>` Persona block and both dropdowns are all dark.
+- The dialog, its backdrop, the `<pre>` Persona block and both dropdowns are all dark.
 - Tile hover produces a visible, dark-appropriate change, not a white flash.
 
 **Fail if — any of these**
 
-- Any element stays light -> a colour literal survived tokenisation in that rule. The rejected block (its own danger palette) and the card overlay are the likeliest stragglers precisely because no automated test in this repo renders a browser.
+- Any element stays light -> a colour literal survived tokenisation in that rule. The rejected block (its own danger palette) and the card dialog are the likeliest stragglers precisely because no automated test in this repo renders a browser.
 - Text becomes unreadable anywhere -> a foreground token was changed without its background, or vice versa.
-- The dark theme does not apply at all after the reload -> the theme choice is not reaching the document head.
+- The dark preference does not apply at all -> `MudThemeProvider`'s `IsDarkMode` parameter is not tracking `AppearanceStore.Current.Dark`.
 
 **Inconclusive if**
 
 The theme does not change and the page looks identical -> confirm `src\Huddle.App\App_Data\appearance.json` was written with your choice; if it was not, the failure is in Settings -> Appearance, not on this page, and belongs to that area. Note that the Theme is per installation (a file), not per browser — a second browser or a private window will show the same theme, which is expected.
 
 > [!NOTE]
-> `src\Huddle.App\wwwroot\theme.css` is the only file allowed to hold a colour literal; anything else holding one is the defect.
+> `theme.css` and the rest of the hand-built token system are gone (Stage 2 of the MudBlazor migration — see [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md)). Colour now lives in `ThemeCatalog.BuiltIn`'s `MudTheme` objects, applied through `MudThemeProvider` — there is no stylesheet to grep for a literal any more. The one remaining exception is `app-vars.css`, which declares `--font-mono`, the single token MudBlazor's own theme has no equivalent for; a colour literal found anywhere else is the defect.
 
 ### TEAMMATESLIBRARY-40 — Degraded, with the persistence reason — and the two things that must NOT badge
 

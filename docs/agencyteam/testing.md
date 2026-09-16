@@ -12,41 +12,65 @@ in the hub: [AgencyTeam.md](../AgencyTeam.md).
 This repo is test-first. Real stores over temp directories, and **no mocking
 framework** — hand-written fakes under `tests/Huddle.Tests/Acp/Fakes/`.
 
-Components are tested two ways, and the difference matters. A page test fetches
-`/teammates` over HTTP and sees only the **prerender** — `Routes` is
-`InteractiveServer`, so anything behind a click is absent from that HTML. To see
-the card itself, `TeammateCardTests` renders the component directly with
-`HtmlRenderer`, which ships with the framework and so adds no package. Reach for
-it rather than asserting on a page's HTML for anything a user has to click to
-reveal.
+Components are tested **three** ways now, and the difference still matters. A
+page test fetches `/teammates` over HTTP and sees only the **prerender** —
+`Routes` is `InteractiveServer`, so anything behind a click is absent from that
+HTML. `HtmlRenderer` renders a component directly, adds no package, and is still
+right for any component that is plain HTML. And since 2026-09-14, **bUnit** —
+already a referenced package — is the way to test anything containing a MudBlazor
+component.
 
-**Those two ways leave a hole, and it is not closeable here.** Neither can see
-how a *page* passes parameters to a *component*: the page test never opens the
-card, and the component test supplies its own parameter dictionary, bypassing the
-markup. `HtmlRenderer` cannot help — simulating the click needs an
-`eventHandlerId` from Blazor's internal render-tree walk, and `HtmlRootComponent`
-exposes no route to it, so reaching it would mean reflecting into renderer
-internals: reimplementing bUnit, the dependency this repo declines. A bug of
-exactly that shape shipped once (see the `@`-binding rule in [Rules](rules.md)), so
-`TeammatesRazorSourceTests` asserts against the `.razor` **source text** instead.
-A source assertion is an unusual test; it is here because it is the only layer
-that can see the defect at all.
+**Use bUnit whenever a MudBlazor component is in the tree.** `MudBunitContext`
+(`tests/Huddle.Tests/Ui/MudBunitContext.cs`) is the shared setup: `AddMudServices`,
+loose JSInterop, and `RenderWithPopovers`, which wraps content together with
+`MudPopoverProvider` and `MudDialogProvider` in one synthetic root — the providers
+are *siblings* of the component that opens a popover or dialog, not descendants,
+which is why a plain render will not do. Three things to know before writing one:
 
-**The stylesheet suites assert on source text for the same reason, and it is the
-clearest case of it.** `ThemeSourceTests`, `ThemeFileTests` and the shared `CssSource`
-parser read `theme.css`, `app.css` and the `.razor.css` files as *text* and count what
-is declared. They do that because **nothing in this suite renders a browser**, and a
-CSS custom property resolves entirely inside the browser's cascade: *"did this element
-switch to the dark value?"* is unreachable here, while *"is there a colour literal left
-in this file?"* is exact and total. So the suite asserts the thing it can decide — no
-literals outside `theme.css`, every `var()` naming a declared Token, every Token having
-a consumer, every Theme file declaring `color-scheme` and exactly one `:root` block,
-`ThemeTokens.All` equal to the stylesheet in both directions. `TeammatesRazorSourceTests`
-is the precedent, and the argument is identical: a source assertion is an unusual test,
-and it is here because it is the only layer that can see the defect at all. What it
-cannot see is covered by manual checklist steps 28–35, and by one HTTP round-trip —
-`AppShell_EveryLinkedStylesheetIsServed`, because whether a `<link>` actually resolves
-is a fact about the server, not about the text.
+- **Dispose with `await using`, never `using`.** MudBlazor's `KeyInterceptorService`
+  and `PointerEventsNoneService` implement only `IAsyncDisposable`, and a synchronous
+  `Dispose` throws once any component touching them has rendered.
+- **`MudSelect` renders its items into a popover that only populates on a real
+  click.** A prerender can never see a non-selected option's label. This is the same
+  *"anything behind a click is absent"* limit as above, now applying to every
+  converted `<select>`.
+- **`TeammateCard` cannot be tested in isolation at all.** `MudDialog` renders its
+  content only once registered with a real dialog instance, and that registration
+  goes through `IMudDialogInstanceInternal`, a type internal to MudBlazor's assembly.
+  A hand-written fake satisfies the public cascading parameter and the dialog still
+  renders nothing. Its tests drive the real `IDialogService`.
+
+**What bUnit bought.** The old `HtmlRenderer` tests could not dispatch a click, so
+several asserted on shapes rather than behaviour — one checked
+`DoesNotContain("disabled")` across the whole document. Those are now real
+interactions. The hole this section used to describe — that neither way could see how
+a page passes parameters to a component — is closed differently than expected: the
+card now takes `DialogParameters`, and `TeammateDialogParametersTests` reflects over
+its real `[Parameter]` properties and asserts every key names one. The `@`-binding bug
+that shipped once (see [Rules](rules.md)) is still caught, in its new shape.
+
+**The stylesheet suites assert on source text, and it is the clearest case of it.**
+`ThemeSourceTests` and the shared `CssSource` parser read `app.css` and the
+`.razor.css` files as *text* and count what is declared, because **nothing in this
+suite renders a browser** and a CSS custom property resolves entirely inside the
+browser's cascade: *"did this element switch to the dark value?"* is unreachable
+here, while *"is there a colour literal left in this file?"* is exact and total. So
+the suite asserts what it can decide — no literals outside `MainLayout.razor.css`,
+and every `var()` naming a MudBlazor variable or `--font-mono`, in `app.css`
+(`AppCss_UsesOnlyMudBlazorVariables`) **and** in every scoped stylesheet
+(`ScopedCss_UsesOnlyMudBlazorVariables`).
+
+That second test exists because its absence nearly shipped a defect:
+`ReconnectModal.razor.css` was left referencing nine deleted Tokens, and an
+unresolved custom property resolves to **nothing**, not to a fallback — so the
+reconnect modal would have rendered invisible at exactly the moment the circuit
+drops. The colour-literal test could not see it, and the `app.css` variable test did
+not scan that file. Both tests enumerate directories rather than naming files, so a
+stylesheet added later is covered the day it appears.
+
+What source text cannot see is covered by the manual checklist, and by one HTTP
+round-trip — `AppShell_EveryLinkedStylesheetIsServed`, because whether a `<link>`
+actually resolves is a fact about the server, not about the text.
 
 **The re-probe on model change is the second behaviour this suite structurally
 cannot reach, for the same reason.** `Teammates.razor`'s `OnCardModelChanged`

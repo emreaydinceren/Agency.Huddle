@@ -1,17 +1,18 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Bunit;
 using Agency.Huddle.App.Components.Settings;
 
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Renders <see cref="ResetAllControl"/> on its own from its parameters, the same
-/// <c>HtmlRenderer</c> + <c>ParameterView.FromDictionary</c> approach <see cref="TeammateCardTests"/>
-/// uses for <c>TeammateCard</c>'s <c>ConfirmingRemove</c> state: <c>HtmlRenderer</c> cannot dispatch a
-/// click, so the plain-button and confirm-step renderings are exercised directly through the
-/// <c>Confirming</c> and <c>AnyModified</c> parameters rather than through an actual click.
+/// Renders <see cref="ResetAllControl"/> on its own from its parameters, using
+/// <see cref="MudBunitContext"/> rather than the <c>HtmlRenderer</c> this suite used before the
+/// MudBlazor migration: <c>HtmlRenderer</c> could not dispatch a click, so the plain-button and
+/// confirm-step renderings were exercised only through the <see cref="ResetAllControl.Confirming"/>
+/// and <see cref="ResetAllControl.AnyModified"/> parameters. bUnit can additionally click, so this
+/// suite now exercises the actual inline-confirm flow one click at a time rather than only its two
+/// snapshot states. Every test disposes the context with <c>await using</c> rather than <c>using</c> -
+/// see the note on <see cref="HooksPanelTests"/> for why a synchronous <c>Dispose</c> is unsafe once a
+/// MudBlazor component has rendered.
 /// </summary>
 public sealed class ResetAllControlTests
 {
@@ -19,52 +20,89 @@ public sealed class ResetAllControlTests
     [Fact]
     public async Task NothingModified_NotConfirming_ButtonIsDisabled()
     {
-        var html = await RenderAsync(anyModified: false, confirming: false);
+        await using MudBunitContext ctx = new();
 
-        Assert.Contains("Reset all to defaults", html, StringComparison.Ordinal);
-        Assert.Contains("disabled", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("Yes, reset everything", html, StringComparison.Ordinal);
+        var cut = ctx.Render<ResetAllControl>(parameters => parameters
+            .Add(p => p.AnyModified, false)
+            .Add(p => p.Confirming, false));
+
+        Assert.Contains("Reset all to defaults", cut.Markup, StringComparison.Ordinal);
+        Assert.True(cut.Find("button").HasAttribute("disabled"));
+        Assert.DoesNotContain("Yes, reset everything", cut.Markup, StringComparison.Ordinal);
     }
 
     /// <summary>With something modified and not confirming, the plain button renders enabled.</summary>
     [Fact]
     public async Task SomethingModified_NotConfirming_ButtonIsEnabled()
     {
-        var html = await RenderAsync(anyModified: true, confirming: false);
+        await using MudBunitContext ctx = new();
 
-        Assert.Contains("Reset all to defaults", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("disabled", html, StringComparison.Ordinal);
+        var cut = ctx.Render<ResetAllControl>(parameters => parameters
+            .Add(p => p.AnyModified, true)
+            .Add(p => p.Confirming, false));
+
+        Assert.Contains("Reset all to defaults", cut.Markup, StringComparison.Ordinal);
+        Assert.False(cut.Find("button").HasAttribute("disabled"));
+    }
+
+    /// <summary>
+    /// Clicking the enabled plain button raises <see cref="ResetAllControl.OnBeginReset"/> - the
+    /// step that used to be untestable under <c>HtmlRenderer</c>, which could only render the
+    /// <see cref="ResetAllControl.Confirming"/> state directly rather than reach it by clicking.
+    /// </summary>
+    [Fact]
+    public async Task SomethingModified_ClickingThePlainButton_RaisesOnBeginReset()
+    {
+        await using MudBunitContext ctx = new();
+        var beginResetRaised = false;
+
+        var cut = ctx.Render<ResetAllControl>(parameters => parameters
+            .Add(p => p.AnyModified, true)
+            .Add(p => p.Confirming, false)
+            .Add(p => p.OnBeginReset, () => beginResetRaised = true));
+
+        cut.Find("button").Click();
+
+        Assert.True(beginResetRaised);
     }
 
     /// <summary>While confirming, the plain button is replaced by Confirm/Cancel, never shown alongside it.</summary>
     [Fact]
     public async Task Confirming_ShowsConfirmAndCancelInsteadOfThePlainButton()
     {
-        var html = await RenderAsync(anyModified: true, confirming: true);
+        await using MudBunitContext ctx = new();
 
-        Assert.Contains("Yes, reset everything", html, StringComparison.Ordinal);
-        Assert.Contains(">Cancel<", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("Reset all to defaults", html, StringComparison.Ordinal);
+        var cut = ctx.Render<ResetAllControl>(parameters => parameters
+            .Add(p => p.AnyModified, true)
+            .Add(p => p.Confirming, true));
+
+        Assert.Contains("Yes, reset everything", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(">Cancel<", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Reset all to defaults", cut.Markup, StringComparison.Ordinal);
     }
 
-    private static async Task<string> RenderAsync(bool anyModified, bool confirming)
+    /// <summary>Clicking "Yes, reset everything" while confirming raises <see cref="ResetAllControl.OnConfirm"/>, and clicking Cancel raises <see cref="ResetAllControl.OnCancel"/> instead.</summary>
+    [Fact]
+    public async Task Confirming_ClickingYesRaisesOnConfirm_AndClickingCancelRaisesOnCancel()
     {
-        var services = new ServiceCollection();
-        services.AddLogging();
-        await using var provider = services.BuildServiceProvider();
+        await using MudBunitContext ctx = new();
+        var confirmRaised = false;
+        var cancelRaised = false;
 
-        await using var renderer = new HtmlRenderer(provider, provider.GetRequiredService<ILoggerFactory>());
+        var cut = ctx.Render<ResetAllControl>(parameters => parameters
+            .Add(p => p.AnyModified, true)
+            .Add(p => p.Confirming, true)
+            .Add(p => p.OnConfirm, () => confirmRaised = true)
+            .Add(p => p.OnCancel, () => cancelRaised = true));
 
-        return await renderer.Dispatcher.InvokeAsync(async () =>
-        {
-            var output = await renderer.RenderComponentAsync<ResetAllControl>(
-                ParameterView.FromDictionary(new Dictionary<string, object?>
-                {
-                    ["AnyModified"] = anyModified,
-                    ["Confirming"] = confirming,
-                }));
+        var buttons = cut.FindAll("button");
+        Assert.Equal(2, buttons.Count);
 
-            return output.ToHtmlString();
-        });
+        buttons[0].Click();
+        Assert.True(confirmRaised);
+        Assert.False(cancelRaised);
+
+        buttons[1].Click();
+        Assert.True(cancelRaised);
     }
 }

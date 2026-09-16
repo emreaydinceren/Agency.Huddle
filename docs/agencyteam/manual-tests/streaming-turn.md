@@ -297,7 +297,7 @@ If the chunks arrive too fast to reload in time, re-run with `-DelaySeconds 10`.
 
 **Free** · about 6 min
 
-*Proves the Draft store is a server-side singleton broadcast to every viewer, not per-circuit state.*
+*Proves the Draft store is a server-side singleton broadcast to every viewer, not per-circuit state. The Stop button in step 5 is a small outlined `MudButton` (Stage 6 of the MudBlazor migration converted the chat page chrome); its click semantics are unchanged.*
 
 **Before you start**
 
@@ -937,7 +937,7 @@ If the app fails to restart (port in use), wait for the old process to exit full
 
 **Inconclusive if**
 
-The demo agents only reply when Mentioned, so you MUST type `@echo` each time - a plain `hello` produces nothing and is not evidence. If no reply ever arrives, check `T-A` for `Demo agent echo connected.`; if it is missing, the demo agents are off and this test cannot run.
+This `echo` Room has exactly two Members, so per ADR-0004 `echo` answers every Message it receives, with or without `@echo` — an accidental unmentioned Message would still consume Budget exactly like a mentioned one, so watch the count if you deviate from the steps. If no reply ever arrives, check `T-A` for `Demo agent echo connected.`; if it is missing, the demo agents are off and this test cannot run.
 
 > [!NOTE]
 > `Team__AgentMessageBudget` maps to the `Team:AgentMessageBudget` setting and only takes effect on restart.
@@ -946,7 +946,7 @@ The demo agents only reply when Mentioned, so you MUST type `@echo` each time - 
 
 **Free** · about 15 min
 
-*Closes the original defect this whole feature exists for: an Agent that has crashed and an Agent that is thinking used to look identical - both showed nothing.*
+*Closes the original defect this whole feature exists for: an Agent that has crashed and an Agent that is thinking used to look identical - both showed nothing. The strip is a `MudAlert` (Stage 6 of the MudBlazor migration) with `role="alert"` added explicitly, since `MudAlert` does not emit one on its own — verified against the rendered markup, per `docs/agencyteam/rules.md`. The New teammate card used in steps 2-7 is a real `MudDialog` and its Model/Effort dropdowns are `MudSelect`.*
 
 **Before you start**
 

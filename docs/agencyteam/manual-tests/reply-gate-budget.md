@@ -21,11 +21,11 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 4. **PROFILE C — paid, real Personas.** `P-LAUNCH-PAID` with `$env:Team__AgentMessageBudget` set to the small number the test names. Every Persona must already be Haiku / low.
 5. Learn the `O-LOG` lines you will read all day, verbatim: `Room '{RoomId}' refused a message from '{AgentName}': its budget of {N} agent messages since a human last spoke is spent.` (warning) / `Room '{RoomId}' was extended to {N} agent messages.` / `Persona '{PersonaName}' declined a turn in room {RoomId}: the room has spent its budget of {N} agent messages.` (warning) / `Persona '{PersonaName}' has spent its token budget of {N} and is taking no more turns until a human speaks to it.` / `Invited agent '{AgentName}' ({AgentId}) into room '{RoomId}'.` / `Created direct room '{RoomId}' for agent '{AgentName}'.`
 6. In `O-DB`, `SELECT COUNT(*) FROM room_members WHERE room_id='…'` is what makes a Room two-Member or group — that count and nothing else. The Room's grey member line in the browser is an acceptable substitute.
-7. READ THIS BEFORE FILING ANYTHING. Neither demo agent implements the Reply Gate: `DemoAgentHost` and `tools/echo-bot.ps1` both reply only when `mentioned` is true and ignore `members`, `agentMessagesSinceHuman` and `budget` entirely. That is legal client behaviour by design — the server labels, the client decides — so a two-Member Room staying silent for an un-mentioned Message under Profile A or B is NOT a defect. The free tests below therefore observe MENTION RESOLUTION and the SERVER-SIDE Budget; the Reply Gate's own decisions (answer-without-mention, Catch-up, decline-before-Turn) are only observable with a real Persona, in the paid tests.
+7. READ THIS BEFORE FILING ANYTHING. Both demo agents now implement the Reply Gate: `DemoAgentHost` calls `ReplyGate.Decide(mentioned, memberCount, agentMessagesSinceHuman, budget)` directly, and `tools/echo-bot.ps1` mirrors that same decision (budget check first, then member-count-or-mention) from the fields already on the `messagePosted` envelope. So a two-Member Room now answers an un-mentioned Message under Profile A or B — that is the correct behaviour per ADR-0004, not silence to expect. The free tests below can therefore observe the Reply Gate's own decisions directly — answer-without-mention in a two-Member Room, Mention-gating once a third Member joins, and decline-before-Turn once the Budget is spent — without needing a real Persona. (Catch-up buffering is still server state a demo agent client does not surface, so that piece remains a paid-tests concern.)
 
 ## Tests
 
-### REPLYGATEBUDGET-01 — A demo two-Member Room: no Mention is silent, a Mention streams a reply
+### REPLYGATEBUDGET-01 — A demo two-Member Room answers with or without a Mention
 
 **Free** · about 6 min
 
@@ -44,7 +44,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 4. In the sidebar, click the Room named `echo`.
 5. Read the grey member line directly under the Room heading.
 6. Click into the composer, type `hello` and press Enter.
-7. Wait 15 seconds without touching anything.
+7. Wait 5 seconds and watch for a reply.
 8. Type `hello @echo` and press Enter.
 9. Wait 5 seconds.
 10. In `T-A`, note the Room id from the browser URL's last segment, and run `Get-Content E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<RoomId>.jsonl` in a second PowerShell window.
@@ -52,25 +52,25 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 **Pass if — all of these**
 
 - The heading reads `echo` and the member line reads exactly `You, echo`.
-- After step 6 your Message `hello` appears in the transcript with the sender name `You`.
-- Through the whole of step 7 nothing else appears: no second Message, no streaming row, no red block, no grey line above the composer.
-- After step 8 a streaming row appears with sender `echo` and a **Stop** button beside the name, then settles into an ordinary Message whose body reads `echo: hello echo`, with `echo:` in bold and no `@` anywhere in it. The demo agent strips only the `@` character from what it quotes, so the mention word survives even though the at-sign does not.
+- After step 6 your Message `hello` appears in the transcript with the sender name `You`, and within a few seconds a streaming row appears with sender `echo`, settling into an ordinary Message whose body reads `echo: hello`, with `echo:` in bold and no `@` in it. The `echo` Room has exactly two Members, so per ADR-0004 it answers without needing a Mention.
 - A grey line reading exactly `1 of 40 agent replies since you last spoke.` appears between the transcript and the composer.
-- The `.jsonl` file holds exactly three lines: `hello` from `human`, `hello @echo` from `human`, and the reply from the agent.
+- After step 8 a second streaming row appears with sender `echo` and a **Stop** button beside the name, then settles into an ordinary Message whose body reads `echo: hello echo`, with `echo:` in bold and no `@` anywhere in it. The demo agent strips only the `@` character from what it quotes, so the mention word survives even though the at-sign does not.
+- The grey line now reads exactly `2 of 40 agent replies since you last spoke.`
+- The `.jsonl` file holds exactly four lines: `hello` from `human`, the first reply from the agent, `hello @echo` from `human`, and the second reply from the agent.
 
 **Fail if — any of these**
 
-- `echo` replies to the bare `hello` at step 6 -> the server is labelling `mentioned` true for a Message that names nobody; in any group Room every Teammate would then be woken by every Message, which is the reply storm the whole design exists to prevent.
+- `echo` does not reply to the bare `hello` at step 6 and the agent is confirmed connected (see INCONCLUSIVE) -> the `echo` Room has only two Members, so ADR-0004 requires a reply without a Mention; silence here means the demo agent is still gating on `mentioned` alone instead of calling `ReplyGate.Decide`.
 - `echo` does not reply to `hello @echo` and the agent is confirmed connected (see INCONCLUSIVE) -> the Mention did not resolve, i.e. mention parsing is broken at its simplest case.
-- The reply lands but no `1 of 40 agent replies since you last spoke.` line appears -> the Room view is not reading the Budget carried on the posted-Message event, so the pause block tested later will also never appear and a capped Room will look identical to a crashed one.
-- The reply body still contains an `@` -> the demo agent's loop guard is gone and two agents quoting each other can re-trigger each other indefinitely.
+- Either reply lands but no matching `N of 40 agent replies since you last spoke.` line appears -> the Room view is not reading the Budget carried on the posted-Message event, so the pause block tested later will also never appear and a capped Room will look identical to a crashed one.
+- Either reply body still contains an `@` -> the demo agent's loop guard is gone and two agents quoting each other can re-trigger each other indefinitely.
 
 **Inconclusive if**
 
-If there is no Room named `echo` in the sidebar at all, the demo agents never connected: search `T-A` for `Demo agent echo connected.`; if it is missing, stop, re-run RESET, confirm `$env:Team__DemoAgent__Enabled` is `'true'`, and start again. If `T-A` mentions Personas starting or a `node` process, `Team__Acp__Enabled` was not set to `false` — press Ctrl+C at once, money is being spent, and re-run the test from step 1. Never record the silence at step 7 as a pass until you have seen a reply at step 8 in the same session; without it you cannot tell a working gate from a dead agent.
+If there is no Room named `echo` in the sidebar at all, the demo agents never connected: search `T-A` for `Demo agent echo connected.`; if it is missing, stop, re-run RESET, confirm `$env:Team__DemoAgent__Enabled` is `'true'`, and start again. If `T-A` mentions Personas starting or a `node` process, `Team__Acp__Enabled` was not set to `false` — press Ctrl+C at once, money is being spent, and re-run the test from step 1.
 
 > [!NOTE]
-> The silence at step 6 is correct and documented. The built-in demo agents deliberately do not implement the Reply Gate, so they answer only what names them. The real defect to watch for in this test is the OPPOSITE of silence.
+> A reply to the bare `hello` at step 6 is correct and documented: the `echo` Room has exactly two Members, and per ADR-0004 a Direct Room answers every Message without a Mention. The real defect to watch for in this test is silence, in either half.
 
 ### REPLYGATEBUDGET-02 — Three or more Members makes the same Room Mention-gated
 
@@ -1324,7 +1324,7 @@ This test is itself the disambiguation procedure, so it cannot be inconclusive i
 
 **💰 Spends money** · about 15 min
 
-*The only way to observe the Reply Gate's answer-everything branch, because no demo client implements it. Proves a private conversation does not require the Human to @-name their Teammate in every sentence.*
+*The only way to observe the Reply Gate's answer-everything branch, because no demo client implements it. Proves a private conversation does not require the Human to @-name their Teammate in every sentence. The New teammate and Edit cards used here are real `MudDialog`s and their Model/Effort dropdowns are `MudSelect` (Stages 3-4 of the MudBlazor migration); neither changes what this test is checking.*
 
 **Before you start**
 

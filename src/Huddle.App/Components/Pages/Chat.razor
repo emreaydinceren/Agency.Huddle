@@ -14,7 +14,7 @@
 
 @if (this.room is null)
 {
-    <p class="empty-state">No rooms yet. Start an agent to create one.</p>
+    <MudText Typo="Typo.body2" Class="empty-state">No rooms yet. Start an agent to create one.</MudText>
 }
 else
 {
@@ -23,7 +23,7 @@ else
             <div class="chat-header-row">
                 <div>
                     <h1>@this.room.Name</h1>
-                    <p class="chat-members">@string.Join(", ", this.members.Select(m => m.Name))</p>
+                    <MudText Typo="Typo.body2" Class="chat-members">@string.Join(", ", this.members.Select(m => m.Name))</MudText>
                 </div>
                 @* The leading @ is load-bearing: RoomId="this.room.Id" would pass that literal text. *@
                 <InviteTeammate RoomId="@this.room.Id" />
@@ -46,7 +46,9 @@ else
         }
         @if (unhealthyMembers.Count > 0)
         {
-            <div class="member-health-alert" role="alert">
+            @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
+               so role="alert" is added explicitly to keep the strip announced, per rules.md. *@
+            <MudAlert Severity="Severity.Warning" Class="member-health-alert" role="alert">
                 <ul class="member-health-alert-list">
                     @foreach (var (member, status) in unhealthyMembers)
                     {
@@ -55,7 +57,7 @@ else
                         </li>
                     }
                 </ul>
-            </div>
+            </MudAlert>
         }
         @* Between the transcript and the composer on purpose: the exchange that spent the Budget is
            the thing you need to read before deciding whether to grant another one. Rendered inline
@@ -63,27 +65,29 @@ else
            literal text, compiles clean and fails only on screen - see docs/agencyteam/rules.md. *@
         @if (this.budget.Exhausted && !this.budgetPromptDismissed)
         {
-            <div class="budget-prompt" role="alert">
+            @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
+               so role="alert" is added explicitly to keep the prompt announced, per rules.md. *@
+            <MudAlert Severity="Severity.Warning" Class="budget-prompt" role="alert">
                 <p class="budget-prompt-text">
                     Agents have sent @this.budget.Used replies since you last spoke, and are paused.
                 </p>
-                <div class="budget-prompt-actions">
-                    <button type="button" class="budget-continue" disabled="@this.extending" @onclick="this.ContinueAsync">
+                <MudStack Row="true" Spacing="2" Class="budget-prompt-actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@this.extending" OnClick="this.ContinueAsync">
                         @(this.extending ? "Continuing…" : "Continue")
-                    </button>
-                    <button type="button" class="budget-dismiss" disabled="@this.extending" @onclick="this.DismissBudgetPrompt">
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Disabled="@this.extending" OnClick="this.DismissBudgetPrompt">
                         Leave paused
-                    </button>
-                </div>
-            </div>
+                    </MudButton>
+                </MudStack>
+            </MudAlert>
         }
         else if (this.budget.Exhausted)
         {
-            <p class="budget-note">Paused — @this.budget.Used of @this.budget.Granted agent replies since you last spoke.</p>
+            <MudText Typo="Typo.caption" Class="budget-note">Paused — @this.budget.Used of @this.budget.Granted agent replies since you last spoke.</MudText>
         }
         else if (this.budget.Used > 0 && this.budget.Granted > 0)
         {
-            <p class="budget-note">@this.budget.Used of @this.budget.Granted agent replies since you last spoke.</p>
+            <MudText Typo="Typo.caption" Class="budget-note">@this.budget.Used of @this.budget.Granted agent replies since you last spoke.</MudText>
         }
         <Composer RoomId="@this.room.Id" />
     </div>

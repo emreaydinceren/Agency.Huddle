@@ -63,6 +63,30 @@ public sealed class GetHelpToolTests
         Assert.Contains("Custom budget wording for this test.", help, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A <c>tool.*.description</c> hook is badged <b>Next session</b>, so an edit made after a
+    /// session's tool list was built must not reach that session's help output — while the help
+    /// prose around it, which carries no badge, must. Both halves are asserted together on purpose:
+    /// caching the whole help text would satisfy the first and silently break the second.
+    /// </summary>
+    [Fact]
+    public async Task GetHelp_ToolDescriptionEditedAfterConstruction_DoesNotReachThisSession()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var hooks = new FakeHookSource();
+        var tool = new GetHelpTool([], hooks, "mcp__team__");
+
+        // Both overrides land after construction, which is what "after the session started" means:
+        // GetHelpTool is built once per session, beside the tool server and the system prompt.
+        hooks.SetOverride("tool.getHelp.description", "Explains how Team works. MANGO.");
+        hooks.SetOverride("getHelp.budget", "BUDGET\nPINEAPPLE is the safe word.");
+
+        var help = await tool.InvokeAsync(new JsonObject(), ct);
+
+        Assert.DoesNotContain("MANGO", help, StringComparison.Ordinal);
+        Assert.Contains("PINEAPPLE is the safe word.", help, StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task GetHelp_ExplainsTheReplyRuleAndHowARoomIdArrives()
     {

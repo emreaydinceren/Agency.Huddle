@@ -1,12 +1,80 @@
 # Decision record
 
-Eleven dated entries from 2026-09-11 onward, newest first, each recording what
+Twelve dated entries from 2026-09-11 onward, newest first, each recording what
 changed and — more usefully — what was considered and rejected. Read it when you are
 about to revisit a decision, or when an older Markdown file in this repo
 disagrees with current vocabulary and you need the old-to-new mapping.
 
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
+
+**2026-09-15 — the sample clients implement the Reply Gate, reversing a documented decision.**
+
+`DemoAgentHost` and `tools/echo-bot.ps1` now call the same decision `ReplyGate.Decide` makes —
+Budget first, then answer-everything at two Members or fewer, Mention-gated above that. Until now
+both replied only when `mentioned` was true, and the manual tests recorded that as deliberate:
+*"Neither demo agent implements the Reply Gate … That is legal client behaviour by design — the
+server labels, the client decides."* That reading was defensible. [ADR-0004](../adr/0004-direct-rooms-reply-without-mention.md)
+says the flag rides on the Envelope *"so a Bot **can** apply this rule itself"* — permission, not
+obligation.
+
+It was reversed because the cost landed on the person the sample clients exist to serve.
+[Product observations](product-observations.md) records a tester spending roughly fifteen minutes
+diagnosing a healthy delivery pipeline, because the free agent that should have demonstrated the
+Room rule was quietly following a different one. `echo` and `alpha` are what a new install shows
+first, and the rule they contradicted is stated in `get_help`, in the system prompt and in the
+docs.
+
+The tell was in the test suite rather than the code: **three separate `CRITICAL — DO NOT FILE
+THIS` notes** existed to stop testers reporting the silence. A behaviour needing three warnings to
+prevent good-faith bug reports is confusing, whatever its provenance.
+
+**Rejected: reverting the change and filing it as a design question instead.** Cheaper by a day,
+and it would have restored coherence immediately. But it preserves the fifteen-minute trap and
+leaves the demo agents as a worked example that teaches the wrong rule to whoever copies
+`tools/echo-bot.ps1`.
+
+**Rejected: changing `DemoAgentHost` only, leaving `tools/echo-bot.ps1` mention-gated.** Smaller,
+and defensible on the grounds that a sample external client is a different audience. Rejected
+because several manual tests describe the two as a pair, so the split would have to be explained
+everywhere they are mentioned, and because the sample bot is the more copied of the two.
+
+What it cost: nine files of manual-test corrections, two tests renamed (ids kept — ids are
+append-only), and `ROOMMESSAGING-20` restructured, because it used a plain `hello` in a two-Member
+Room as the negative baseline for Mention word-boundary matching. That baseline stopped being
+negative, which would have made every boundary assertion in the test pass vacuously. It now
+invites a third Member to restore gating as the control.
+
+What it bought, beyond the first impression: the Reply Gate's own decisions became observable in
+the **free** tests. `reply-gate-budget.md` previously stated that answer-without-mention *"is ONLY
+exercised by a real Persona, in the paid tests"*. In an area of 36 tests where 6 spend money, a
+capability moved out of the paid lane. Catch-up buffering stays server-side and remains a paid
+concern.
+
+**2026-09-14 — a Theme is a MudBlazor `MudTheme`, and the hand-built Tokens are gone.**
+
+MudBlazor was adopted as the component library, and keeping a second theming system
+beside it was rejected as the worst of both: every colour decided twice, in two
+vocabularies, kept in step by discipline. `theme.css`, `wwwroot/themes/`,
+`ThemeOverrides` and `ThemeTokens` are deleted; every stylesheet reads `--mud-*`.
+[ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md) is the decision in full.
+
+**Rejected: keeping the Tokens as the authority and bridging MudBlazor onto them.** It
+works — a higher-specificity block can repoint all 77 `--mud-palette-*` variables at the
+39 Tokens — but eight of those variables have `-rgb` companions that CSS cannot derive
+from a hex, so the colours would have had to be written twice, in two forms. That is the
+drift ADR-0009's one-declaration-per-Token rule existed to prevent.
+
+**Rejected: parking collapsed Tokens in unused palette slots.** Seven Tokens collapse
+because 39 do not fit MudBlazor's palette one-to-one. `Skeleton` and `TableStriped` were
+free and would have preserved the colours, at the cost of palette entries whose names
+mean nothing like what they hold.
+
+What it cost: JavaScript is back for the System preference, a flash of the wrong Theme is
+possible on first paint, per-Token customisation is gone, and the selected-row colour
+changed because MudBlazor computes `primary-hover` rather than exposing it. What it
+bought: one vocabulary, no page reload on a Theme change, and roadmap item 7 reduced from
+a CSS generator plus a file provider to a JSON-to-object mapping.
 
 **2026-09-13 — a Theme is a stylesheet layered over the tokens, and the choice lives
 in a file.**

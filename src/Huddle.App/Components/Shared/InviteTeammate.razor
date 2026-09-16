@@ -9,61 +9,61 @@
 @inject PersonaStore Personas
 
 <div class="invite-teammate">
-    <button type="button" class="invite-toggle" @onclick="this.TogglePanel">Add teammate</button>
-    <div class="invite-panel" hidden="@(!this.isOpen)">
-        @if (this.errorText is not null)
-        {
-            <div class="composer-error">@this.errorText</div>
-        }
-        else if (this.infoText is not null)
-        {
-            <div class="composer-info">@this.infoText</div>
-        }
-
-        @if (this.candidates.Count == 0)
-        {
-            <p class="empty-state">Every agent is already in this room.</p>
-        }
-        else
-        {
-            @* An Agent with no Persona behind it (a raw pipe client, or the echo/alpha demo agents)
-               has no Teams at all, so it only ever shows up under "All teams" - narrowing this
-               filter to a real Team simply never matches it, with no special case needed. *@
-            <label class="teammates-field invite-filter">
-                Team
-                <select value="@this.selectedTeam" @onchange="this.OnTeamFilterChanged">
-                    <option value="">All teams</option>
-                    @foreach (var team in this.Personas.Teams)
-                    {
-                        <option value="@team">@team</option>
-                    }
-                </select>
-            </label>
-
-            var filtered = this.FilteredCandidates();
-
-            if (filtered.Count == 0)
+    <MudButton Variant="Variant.Text" OnClick="this.TogglePanel">Add teammate</MudButton>
+    <MudCollapse Expanded="@this.isOpen">
+        <div class="invite-panel">
+            @if (this.errorText is not null)
             {
-                <p class="empty-state">No agents in this team.</p>
+                <MudAlert Severity="Severity.Error" Dense="true">@this.errorText</MudAlert>
+            }
+            else if (this.infoText is not null)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true">@this.infoText</MudAlert>
+            }
+
+            @if (this.candidates.Count == 0)
+            {
+                <MudText Typo="Typo.body2" Class="empty-state">Every agent is already in this room.</MudText>
             }
             else
             {
-                <ul class="invite-agents">
-                    @foreach (var agent in filtered)
-                    {
-                        var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(agent.Id), this.Health.Get(agent.Name));
-                        var name = agent.Name;
-                        <li>
-                            <button type="button" class="invite-agent" @onclick="@(() => this.InviteAsync(name))">
-                                <span class="agent-dot @InviteTeammate.StatusClass(status.State)" title="@InviteTeammate.StatusClass(status.State)"></span>
+                @* An Agent with no Persona behind it (a raw pipe client, or the echo/alpha demo agents)
+                   has no Teams at all, so it only ever shows up under "All teams" - narrowing this
+                   filter to a real Team simply never matches it, with no special case needed. *@
+                <label class="teammates-field invite-filter">
+                    Team
+                    <select value="@this.selectedTeam" @onchange="this.OnTeamFilterChanged">
+                        <option value="">All teams</option>
+                        @foreach (var team in this.Personas.Teams)
+                        {
+                            <option value="@team">@team</option>
+                        }
+                    </select>
+                </label>
+
+                var filtered = this.FilteredCandidates();
+
+                if (filtered.Count == 0)
+                {
+                    <MudText Typo="Typo.body2" Class="empty-state">No agents in this team.</MudText>
+                }
+                else
+                {
+                    <div class="invite-agents">
+                        @foreach (var agent in filtered)
+                        {
+                            var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(agent.Id), this.Health.Get(agent.Name));
+                            var name = agent.Name;
+                            <MudButton Variant="Variant.Text" FullWidth="true" Class="invite-agent" OnClick="@(() => this.InviteAsync(name))">
+                                <StatusDot State="status.State" />
                                 @name
-                            </button>
-                        </li>
-                    }
-                </ul>
+                            </MudButton>
+                        }
+                    </div>
+                }
             }
-        }
-    </div>
+        </div>
+    </MudCollapse>
 </div>
 
 @code {
@@ -150,16 +150,6 @@
 
         this.candidates = [.. users.Where(u => u.Kind == UserKind.Agent && !memberIds.Contains(u.Id))];
     }
-
-    /// <summary>The CSS class (and this panel's own tooltip text) for <paramref name="state"/>'s <c>agent-dot</c>.</summary>
-    /// <param name="state">The state to classify.</param>
-    private static string StatusClass(PersonaState state) => state switch
-    {
-        PersonaState.Starting => "starting",
-        PersonaState.Online => "online",
-        PersonaState.Degraded => "degraded",
-        _ => "offline",
-    };
 
     // Never touches PersonaStore's write path or ModelCatalog - selecting a team is pure display
     // narrowing over candidates already loaded.
