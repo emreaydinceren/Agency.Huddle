@@ -116,7 +116,7 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
         var sends = new List<Task>();
         foreach (var member in e.Members)
         {
-            if (member.Kind != UserKind.Agent || member.Id == e.Message.SenderId)
+            if (!MessagePostedEvent.IsRecipient(member, e.Message.SenderId))
             {
                 continue;
             }

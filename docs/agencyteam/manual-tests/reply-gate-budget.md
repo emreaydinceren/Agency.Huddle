@@ -99,7 +99,10 @@ If there is no Room named `echo` in the sidebar at all, the demo agents never co
 
 - The green strip reads exactly `Invited alpha. Room is now "echo, alpha".`
 - With no page refresh, the sidebar entry and the Room heading both change to `echo, alpha` and the member line becomes `You, echo, alpha`.
-- Step 6 produces no reply at all from either Agent.
+- Step 6 produces no reply at all from either Agent, AND a quiet blue note appears above the
+  composer reading `No teammate was @-mentioned - name one to ask for a reply.` That note is the
+  point of the silence being legible at all; before #40 step 6 looked identical to a broken app.
+- The note disappears the moment step 8's Message posts, because that one names somebody.
 - Step 8 produces exactly one reply, from `echo`.
 - Step 9 produces exactly two replies, one starting `echo:` and one starting `alpha:`.
 - `SELECT COUNT(*) FROM room_members WHERE room_id='<RoomId>'` returns 3 (or, without SQLite, the member line names three people).
@@ -228,13 +231,19 @@ If `echo` is offline (red dot in the **Add teammate** panel, or the Teammate til
 
 - Step 1 produces exactly ONE reply, from `echo`.
 - Step 3's Message posts normally and appears in the transcript with sender `You`.
-- Nothing at all follows step 3: no reply, no red strip, no error banner, no entry in `T-A` at Warning level.
+- Nothing at all follows step 3 by way of a reply, a red strip, an error banner, or an entry in
+  `T-A` at Warning level. What DOES appear is the quiet blue note above the composer reading
+  `No teammate was @-mentioned - name one to ask for a reply.` Read its wording closely: it says
+  *no teammate*, not *nobody*, precisely because `@You` IS a Mention - of the Human, who is not a
+  Teammate and is never delivered to. A note here reading "nobody was mentioned" would be false,
+  and this test is the case that proves it.
 - The tail of the `.jsonl` shows one agent line after `@echo @echo @echo hi`, and the `@You are needed` line with no agent line after it.
 
 **Fail if — any of these**
 
 - Three replies arrive at step 2 -> duplicate Mentions are not collapsing; with a real Persona this is three billed Turns for one Mention, and a Message naming an Agent five times would cost five.
-- Step 3 shows a red strip or an error -> Mentioning the Human is being treated as an error rather than as a Mention that simply reaches no Agent, which will make `@You` unusable in ordinary conversation.
+- Step 3 shows a red strip or an error -> Mentioning the Human is being treated as an error rather than as a Mention that simply reaches no Agent, which will make `@You` unusable in ordinary conversation. The blue `role="status"` note is NOT this: it is an Info consequence, not a failure.
+- The note at step 3 says "nobody" rather than "no teammate" -> the copy has drifted into a claim that is false in this exact case.
 - An Agent replies to `@You are needed` -> the Human is being delivered to, or the Mention resolved to the wrong Member.
 
 **Inconclusive if**
@@ -310,7 +319,13 @@ If one of the two Agents is offline at step 3 only one reply arrives and the lin
 **Pass if — all of these**
 
 - `echo`'s reply lands, and then a `budget-prompt` block appears between the transcript and the composer, separated from the transcript by a plain rule, whose `budget-prompt-text` paragraph is in the danger colour and reads exactly `Agents have sent 1 replies since you last spoke, and are paused.`
-- That block carries exactly two buttons, labelled **Continue** and **Leave paused**.
+- That block carries exactly two buttons, labelled **Continue** and **Leave paused**, and above
+  them a second, grey `budget-prompt-warning` paragraph reading
+  `Continue will deliver the last message again, and it is a teammate's own - a teammate is
+  never delivered its own message, so this will wake nobody. Say something instead.` It is there because the
+  Room's last Message is `echo`'s own reply, and an Agent is never delivered its own Message.
+- No context-only note appears. This is a two-Member Room, so a Message is answered without a
+  Mention and there is nothing to explain — the note is for Rooms of three or more.
 - No other strip appears above the composer — in particular no alert listing `echo is Degraded` or `echo is Offline`.
 - Every Message in the transcript is from `You` or from `echo`; there is no Message from a `system` or similar sender announcing the pause.
 - `T-A` shows NO `refused a message from` warning yet (nothing has tried to post a second time).
@@ -322,6 +337,8 @@ If one of the two Agents is offline at step 3 only one reply arrives and the lin
 - A Message announcing the pause appears in the transcript -> the notice is being posted as conversation; posted as the Human it would reset the very Budget it reports, and posted as a third kind of sender it breaks the two-kind directory.
 - `echo` is shown Degraded, or a red member-health alert lists it -> a spent Room Budget is marking an Agent that is working exactly as designed, which trains the Human to ignore health warnings.
 - The block appears but with only one button, or with different wording -> record the exact text seen; the wording is what tells the Human this is a question and not a crash.
+- A context-only note appears in this two-Member Room -> the note is firing where the Reply Gate
+  answers everything, which makes it an always-on strip nobody will read.
 
 **Inconclusive if**
 
@@ -1125,7 +1142,13 @@ Whether the woken Agent actually replies depends on the re-parsed Mentions in th
 
 **Pass if — all of these**
 
+- BEFORE clicking at step 7, the red pause block carries an extra grey line reading `Continue will
+  deliver the last message again, and it is a teammate's own - a teammate is never delivered its
+  own message, so this will wake nobody. Say something instead.` The Human is told the button
+  cannot work BEFORE pressing it, which is the whole of product observation 5.
 - `T-A` shows exactly one `Room '…' was extended to 2 agent messages.` line — the grant definitely happened.
+- AFTER the click, a quiet blue note reads `Budget granted, but there was nobody to wake. Say
+  something to start the room again.`
 - The red block is replaced by a grey line reading `1 of 2 agent replies since you last spoke.`
 - `T-B` prints NO new envelope: the last Message in the Room was `echo`'s own, and an Agent is never delivered its own Message.
 - No new Message appears in the Room and the transcript count is unchanged.
@@ -1141,7 +1164,10 @@ Whether the woken Agent actually replies depends on the re-parsed Mentions in th
 If the grey line does not update to `1 of 2` but the log line is present, the view is not re-reading the Budget after the grant — note it and re-check with REPLYGATEBUDGET-11's reload path before filing, since a reload will show the true figure.
 
 > [!NOTE]
-> DO NOT FILE 'Continue does nothing' from this test. It did something — the log line proves it — there was simply nobody left to wake. Always distinguish by the log line, never by the absence of a new Message.
+> DO NOT FILE 'Continue does nothing' from this test. It did something — there was simply nobody
+> left to wake. As of #40 the Room says so itself, before the click and after it, so the log line
+> is no longer the only oracle — but it is still the authoritative one, and a missing
+> `was extended to` line is a real defect even if the notes render correctly.
 
 ### REPLYGATEBUDGET-27 — An Alias resolves a Mention to the Persona that owns it
 
@@ -1301,7 +1327,15 @@ If the bot fails to reconnect (the terminal shows a connection error), nothing i
 
 **Pass if — all of these**
 
-- Step 1's Message posts normally and produces absolutely nothing else: no composer error, no note, no highlight, no indication the `@` matched nobody.
+- Step 1's Message posts normally and produces no composer error, no highlight, and no indication
+  that the `@` in particular matched nobody. It DOES produce the quiet blue note above the
+  composer reading `No teammate was @-mentioned - name one to ask for a reply.` — which is
+  correct and is not about the unresolvable handle: the same note appears for a plain
+  `hello` in this Room. The product still never reports an unresolvable Mention as a failure.
+- At step 6, with `echo` offline and `alpha` online, there is NO note at all. A Teammate WAS
+  named, so "no teammate was @-mentioned" would be false; the Room stays silent rather than say
+  something untrue. Explaining that `echo` is offline is deliberately not built - see
+  `docs/agencyteam/known-limits.md`.
 - Both terminals show that envelope with `"mentioned":false`.
 - At step 5 the dot beside `echo` is red — `agent-dot offline`, which `theme.css` paints with `--status-offline` (computed `rgb(224, 90, 90)` on the dark theme). There is no grey dot in the design.
 - At step 6, with `echo` offline, TERMINAL C still receives the envelope (with `"mentioned":false`) while `T-B` receives nothing at all — the Agent is a Member but not connected, so no Envelope is queued for it.
@@ -1309,7 +1343,11 @@ If the bot fails to reconnect (the terminal shows a connection error), nothing i
 
 **Fail if — any of these**
 
-- An error or warning appears for `@nobodyhere hello` -> the product is reporting an unresolvable Mention as a failure, which will fire on ordinary prose containing an `@`.
+- An error or warning appears for `@nobodyhere hello`, or any note that singles out the
+  unresolvable handle -> the product is reporting an unresolvable Mention as a failure, which
+  will fire on ordinary prose containing an `@`. The generic context-only note is not this.
+- A note appears at step 6, while `echo` is offline and named -> the Room is claiming no Teammate
+  was mentioned when one was.
 - `@echo are you there?` produces a reply while `echo` is stopped -> something other than the live connection is answering.
 - After restarting `echo`, the Messages it missed while offline are delivered to it -> there is no queue in this version by design; a queue appearing would change the whole delivery model.
 
@@ -1395,6 +1433,10 @@ If the `Ada` tile reads **Offline** or **Degraded**, read the reason line on its
 **Pass if — all of these**
 
 - Neither of the two un-mentioned Messages produces a reply, a streaming row, or any model activity in `T-A`.
+- Each of them DOES produce the quiet blue note above the composer reading
+  `No teammate was @-mentioned - name one to ask for a reply.` It is replaced by nothing once step 6's
+  Mention lands. This is the cheapest confirmation that the Catch-up path was taken deliberately
+  rather than the delivery having failed.
 - The reply to step 6 names BOTH earlier facts — the Friday deadline and the 10 percent cut.
 - The grey budget line afterwards reads `1 of 4 agent replies since you last spoke.` — only one Turn was taken for three Messages.
 

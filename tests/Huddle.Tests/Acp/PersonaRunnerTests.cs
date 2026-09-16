@@ -1116,7 +1116,7 @@ public sealed class PersonaRunnerTests
 
         var extended = await chat.ExtendBudgetAsync(room.Id, ct);
 
-        Assert.True(extended);
+        Assert.Equal(ExtendResult.Granted, extended.Result);
         var history = await WaitForHistoryCountAsync(store, room.Id, 2, ct);
         Assert.Equal("resumed", history[^1].Text);
         Assert.Equal(novaId, history[^1].SenderId);

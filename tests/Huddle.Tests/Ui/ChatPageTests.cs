@@ -305,10 +305,16 @@ public sealed class ChatPageTests
 
         // Both the health strip and the budget prompt render through MudAlert now, so a bare
         // role="alert" check would no longer prove either is absent - it would also match one that
-        // fired for an unrelated reason. Asserting on each strip's own class is the specific check.
+        // fired for an unrelated reason. Asserting on each strip's own class is the specific check. A
+        // Stop is one of three normal ways a Turn ends - alongside an ordinary reply and a spent
+        // Budget - and none of the three may earn a strip a Stop then wrongly acquires too: reply-note
+        // and continue-note are the other two strips this Room could otherwise show, and a Stop must
+        // produce neither.
         Assert.DoesNotContain("member-health-alert", html, StringComparison.Ordinal);
         Assert.DoesNotContain("composer-error", html, StringComparison.Ordinal);
         Assert.DoesNotContain("budget-prompt", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("reply-note", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("continue-note", html, StringComparison.Ordinal);
     }
 
     /// <summary>The tool the Agent is currently using renders as one muted line inside its Draft.</summary>
@@ -419,6 +425,387 @@ public sealed class ChatPageTests
     }
 
     /// <summary>
+    /// A plain Message from the Human in a group Room, addressing no teammate by name, renders the
+    /// context-only note - and announces it as role="status" rather than role="alert", proving the
+    /// explicit attribute in Chat.razor survived: MudAlert itself emits no role at all.
+    /// </summary>
+    [Fact]
+    public async Task ChatPage_WhenNoTeammateIsMentionedInAGroupRoom_SaysTheMessageWasContextOnly()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        var (room, first, second) = await ChatPageTests.CreateGroupRoomAsync(directory, chat, ct);
+
+        factory.FakeAgentGateway.SetOnline(first.Id);
+        factory.FakeAgentGateway.SetOnline(second.Id);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        await chat.PostAsync(room.Id, KnownIds.Human, "hello team, just checking in", ct: ct);
+        await ChatPageTests.WaitForMarkupAsync(cut, "reply-note", ct);
+
+        Assert.Contains("reply-note", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("role=\"status\"", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>A Message that @-mentions a teammate says nothing: a reply is expected, so there is nothing to explain.</summary>
+    [Fact]
+    public async Task ChatPage_WhenAMentionAddressesATeammate_SaysNothing()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        var (room, first, _) = await ChatPageTests.CreateGroupRoomAsync(directory, chat, ct);
+
+        factory.FakeAgentGateway.SetOnline(first.Id);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        await chat.PostAsync(room.Id, KnownIds.Human, $"@{first.Name} can you take this one", ct: ct);
+        await ChatPageTests.WaitForMarkupAsync(cut, "can you take this one", ct);
+
+        Assert.DoesNotContain("reply-note", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// An Agent's own plain reply in a group Room never triggers the note, even though it too addresses
+    /// no teammate: a reply that ends a thread without an @-mention is the ordinary end of almost every
+    /// thread, and putting the note under nearly every final reply would make it the always-on strip
+    /// ADR-0008 already rejected. The note answers "why did MY message get no reply", so it belongs only
+    /// to the Human's own Message - Chat.razor's OnMessagePosted only resolves it for a Human sender.
+    /// </summary>
+    [Fact]
+    public async Task ChatPage_AfterAnAgentReplyInAGroupRoom_SaysNothing()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        var (room, first, second) = await ChatPageTests.CreateGroupRoomAsync(directory, chat, ct);
+
+        factory.FakeAgentGateway.SetOnline(first.Id);
+        factory.FakeAgentGateway.SetOnline(second.Id);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        await chat.PostAsync(room.Id, first.Id, "here is what I found", ct: ct);
+        await ChatPageTests.WaitForMarkupAsync(cut, "here is what I found", ct);
+
+        Assert.DoesNotContain("reply-note", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>An Agent's own plain reply in a direct Room never triggers the note either - the sender-is-Human check is what gates it, not the Room's size.</summary>
+    [Fact]
+    public async Task ChatPage_AfterAnAgentReplyInADirectRoom_SaysNothing()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+        factory.FakeAgentGateway.SetOnline(agent.Id);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        await chat.PostAsync(room.Id, agent.Id, "all done here", ct: ct);
+        await ChatPageTests.WaitForMarkupAsync(cut, "all done here", ct);
+
+        Assert.DoesNotContain("reply-note", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A live Draft suppresses the note even when the Human's Message would otherwise resolve to
+    /// ContextOnly: a teammate is visibly typing from an earlier Mention, and stacking "name one to ask
+    /// for a reply" beside a streaming row would be a worse lie than saying nothing.
+    /// </summary>
+    [Fact]
+    public async Task ChatPage_WhileADraftIsOpen_SaysNothing()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, drafts) = ChatPageTests.Services(factory);
+        var (room, first, second) = await ChatPageTests.CreateGroupRoomAsync(directory, chat, ct);
+
+        factory.FakeAgentGateway.SetOnline(first.Id);
+        factory.FakeAgentGateway.SetOnline(second.Id);
+
+        // Written before the render, matching testing.md's note about a Draft already in flight when a
+        // tab opens: LoadRoomAsync reads Drafts.ForRoom directly at load time, and Drafts.Append raises
+        // no event a component already on screen could react to.
+        drafts.Append(Guid.CreateVersion7().ToString("N"), room.Id, first.Id, first.Name, "Still drafting a reply");
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        Assert.Contains("Still drafting a reply", cut.Markup, StringComparison.Ordinal);
+
+        await chat.PostAsync(room.Id, KnownIds.Human, "another plain message", ct: ct);
+        await ChatPageTests.WaitForMarkupAsync(cut, "another plain message", ct);
+
+        Assert.DoesNotContain("reply-note", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>Every teammate Offline resolves to NoRecipients rather than ContextOnly, so the note - which only ever fires for ContextOnly - stays silent.</summary>
+    [Fact]
+    public async Task ChatPage_WhenEveryTeammateIsOffline_SaysNothing()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        var (room, _, _) = await ChatPageTests.CreateGroupRoomAsync(directory, chat, ct);
+
+        // Deliberately no SetOnline call: both teammates stay at FakeAgentGateway's default, offline.
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        await chat.PostAsync(room.Id, KnownIds.Human, "anybody around", ct: ct);
+        await ChatPageTests.WaitForMarkupAsync(cut, "anybody around", ct);
+
+        Assert.DoesNotContain("reply-note", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Mentioning an offline teammate resolves to MentionedUnreachable, which - like every outcome
+    /// besides ContextOnly - renders nothing here: the Room must not claim no teammate was mentioned
+    /// when one plainly was, so it says nothing rather than something false. Explaining this outcome to
+    /// the Human is the deferred half of ADR-0012.
+    /// </summary>
+    [Fact]
+    public async Task ChatPage_WhenAMentionedTeammateIsOffline_SaysNothing()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        var (room, first, second) = await ChatPageTests.CreateGroupRoomAsync(directory, chat, ct);
+
+        // Only "first" comes online - "second" is the Mentioned teammate below, and stays offline.
+        factory.FakeAgentGateway.SetOnline(first.Id);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        await chat.PostAsync(room.Id, KnownIds.Human, $"@{second.Name} are you there", ct: ct);
+        await ChatPageTests.WaitForMarkupAsync(cut, "are you there", ct);
+
+        Assert.DoesNotContain("reply-note", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>A paused Room shows ADR-0006's budget prompt and never the context-only note, which would otherwise repeat the same fact under a different name.</summary>
+    [Fact]
+    public async Task ChatPage_WhenTheRoomIsPaused_ShowsTheBudgetPromptAndNotTheContextOnlyNote()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory { AgentMessageBudget = 2 };
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        var (room, first, second) = await ChatPageTests.CreateGroupRoomAsync(directory, chat, ct);
+
+        factory.FakeAgentGateway.SetOnline(first.Id);
+        factory.FakeAgentGateway.SetOnline(second.Id);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        await chat.PostAsync(room.Id, first.Id, "reply one", ct: ct);
+        await chat.PostAsync(room.Id, first.Id, "reply two", ct: ct);
+        await ChatPageTests.WaitForMarkupAsync(cut, "budget-prompt", ct);
+
+        Assert.Contains("budget-prompt", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("reply-note", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>The next Message supersedes the note: a Message means the Room moved, and an earlier answer describes a delivery that is no longer the last one.</summary>
+    [Fact]
+    public async Task ChatPage_ContextOnlyNote_ClearsOnTheNextMessage()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        var (room, first, second) = await ChatPageTests.CreateGroupRoomAsync(directory, chat, ct);
+
+        factory.FakeAgentGateway.SetOnline(first.Id);
+        factory.FakeAgentGateway.SetOnline(second.Id);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        await chat.PostAsync(room.Id, KnownIds.Human, "first plain message", ct: ct);
+        await ChatPageTests.WaitForMarkupAsync(cut, "reply-note", ct);
+        Assert.Contains("reply-note", cut.Markup, StringComparison.Ordinal);
+
+        await chat.PostAsync(room.Id, KnownIds.Human, $"@{first.Name} now I need you specifically", ct: ct);
+        await ChatPageTests.WaitForMarkupAsync(cut, "now I need you specifically", ct);
+
+        Assert.DoesNotContain("reply-note", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>The note is never re-derived from scrollback: a Room loaded fresh shows nothing even when its history's last Message named no teammate.</summary>
+    [Fact]
+    public async Task ChatPage_ContextOnlyNote_IsAbsentFromAPlainLoad()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        var (room, first, second) = await ChatPageTests.CreateGroupRoomAsync(directory, chat, ct);
+
+        factory.FakeAgentGateway.SetOnline(first.Id);
+        factory.FakeAgentGateway.SetOnline(second.Id);
+
+        await chat.PostAsync(room.Id, KnownIds.Human, "message from before this tab ever opened", ct: ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        // FileChatStore does real (if fast) file I/O, so LoadRoomAsync's read of history posted before
+        // this render ever happened genuinely completes after the first render rather than inside it -
+        // polling here is waiting out that read, not any live event.
+        await ChatPageTests.WaitForMarkupAsync(cut, "message from before this tab ever opened", ct);
+
+        Assert.Contains("message from before this tab ever opened", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("reply-note", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Said before the click, not after: with the Room's last Message the Agent's own reply, Continue
+    /// could never wake anybody, and ContinueWouldWakeNobody is computed from the Room's current state
+    /// on every render - so the warning is already there on first load, with nothing clicked yet.
+    /// </summary>
+    [Fact]
+    public async Task ChatPage_BudgetPrompt_WarnsBeforeTheClickWhenTheLastMessageIsTheAgentsOwn()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory { AgentMessageBudget = 1 };
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+        factory.FakeAgentGateway.SetOnline(agent.Id);
+
+        await chat.PostAsync(room.Id, KnownIds.Human, "a question", ct: ct);
+        await chat.PostAsync(room.Id, agent.Id, "the agent's own reply", ct: ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        // FileChatStore does real (if fast) file I/O, so LoadRoomAsync's read of the Room's history -
+        // both Messages posted before this render ever happened - genuinely completes after the first
+        // render rather than inside it, unlike the in-memory Team Directory lookups the rename tests
+        // above rely on. Polling here is waiting out that same read, not the button click.
+        await ChatPageTests.WaitForMarkupAsync(cut, "budget-prompt", ct);
+
+        Assert.Contains("budget-prompt", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("budget-prompt-warning", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>Clicking Continue when the last Message is the Agent's own delivers it again to nobody, and the Room says so through the continue-note.</summary>
+    [Fact]
+    public async Task ChatPage_Continue_WhenTheLastMessageIsTheAgentsOwn_SaysNobodyWasWoken()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory { AgentMessageBudget = 1 };
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+        factory.FakeAgentGateway.SetOnline(agent.Id);
+
+        await chat.PostAsync(room.Id, KnownIds.Human, "a question", ct: ct);
+        await chat.PostAsync(room.Id, agent.Id, "the agent's own reply", ct: ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        // See the note on ChatPage_BudgetPrompt_WarnsBeforeTheClickWhenTheLastMessageIsTheAgentsOwn:
+        // FileChatStore's history read completes after this first render, so the Continue button is
+        // not there to click until it does.
+        await ChatPageTests.WaitForMarkupAsync(cut, "budget-prompt", ct);
+
+        ChatPageTests.FindButtonByText(cut, "Continue").Click();
+
+        // ExtendBudgetAsync itself re-reads the Room's history through FileChatStore before it
+        // re-delivers anything, so - like the initial load above - the click's own effect lands after
+        // this method returns rather than inside it.
+        await ChatPageTests.WaitForMarkupAsync(cut, "continue-note", ct);
+
+        Assert.Contains("continue-note", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Continue re-delivers the last Message on RoomEvents.MessageRedelivered, which RoomEvents' own doc
+    /// says no Blazor component may subscribe to - a component that handled it would render the Message
+    /// a second time. This proves Chat.razor obeys that rule: the reply's text still appears exactly once
+    /// after Continue, not twice.
+    /// </summary>
+    [Fact]
+    public async Task ChatPage_Continue_DoesNotRenderTheRedeliveredMessageTwice()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory { AgentMessageBudget = 1 };
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+        factory.FakeAgentGateway.SetOnline(agent.Id);
+
+        const string replyText = "the agent's own reply, once only";
+        await chat.PostAsync(room.Id, KnownIds.Human, "a question", ct: ct);
+        await chat.PostAsync(room.Id, agent.Id, replyText, ct: ct);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+
+        // See the note on ChatPage_BudgetPrompt_WarnsBeforeTheClickWhenTheLastMessageIsTheAgentsOwn:
+        // FileChatStore's history read completes after this first render, so the Continue button is
+        // not there to click until it does.
+        await ChatPageTests.WaitForMarkupAsync(cut, "budget-prompt", ct);
+
+        Assert.Equal(1, ChatPageTests.CountOccurrences(cut.Markup, replyText));
+
+        ChatPageTests.FindButtonByText(cut, "Continue").Click();
+
+        // ExtendBudgetAsync itself re-reads the Room's history through FileChatStore before it
+        // re-delivers anything, so - like the initial load above - the click's own effect lands after
+        // this method returns rather than inside it.
+        await ChatPageTests.WaitForMarkupAsync(cut, "continue-note", ct);
+
+        Assert.Equal(1, ChatPageTests.CountOccurrences(cut.Markup, replyText));
+    }
+
+    /// <summary>
     /// Reproduces the bug in the task brief: the Composer's own status line is Component state that
     /// Chat.razor renders with no <c>@@key</c>, so navigating between Rooms reuses the same instance.
     /// Before the fix, <c>Composer.razor</c> only ever cleared <c>infoText</c>/<c>errorText</c> at the
@@ -467,6 +854,34 @@ public sealed class ChatPageTests
         Assert.DoesNotContain("composer-info", cut.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Invited gamma.", cut.Markup, StringComparison.Ordinal);
     }
+
+    /// <summary>Creates a Room of the Human plus two named Agents ("alpha" and "beta") - the shape most of the context-only note tests need.</summary>
+    private static async Task<(Room Room, User First, User Second)> CreateGroupRoomAsync(
+        ITeamDirectory directory, ChatService chat, CancellationToken ct)
+    {
+        var first = await directory.UpsertAgentUserAsync("alpha", null, ct);
+        var second = await directory.UpsertAgentUserAsync("beta", null, ct);
+        Assert.NotNull(first);
+        Assert.NotNull(second);
+        var room = await chat.CreateRoomForAsync([first.Id, second.Id], ct);
+        return (room, first, second);
+    }
+
+    /// <summary>
+    /// Polls <paramref name="cut"/>'s markup until it contains <paramref name="text"/>, the same idiom
+    /// the rename tests already use to wait for an event-driven update to land.
+    /// </summary>
+    private static async Task WaitForMarkupAsync(IRenderedComponent<ContainerFragment> cut, string text, CancellationToken ct)
+    {
+        while (!cut.Markup.Contains(text, StringComparison.Ordinal))
+        {
+            await Task.Delay(20, ct);
+        }
+    }
+
+    /// <summary>The first rendered button whose trimmed text equals <paramref name="text"/> - the same pattern <c>TeammateCardTests</c> uses to find a MudButton by its visible label.</summary>
+    private static IElement FindButtonByText(IRenderedComponent<ContainerFragment> cut, string text) =>
+        cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), text, StringComparison.Ordinal));
 
     private static (ITeamDirectory Directory, ChatService Chat, Drafts Drafts) Services(TeamWebApplicationFactory factory)
     {

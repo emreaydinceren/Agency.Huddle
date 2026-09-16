@@ -1012,7 +1012,7 @@ Testers commonly expect the paused agent to 'say it is paused'. It cannot, and m
 
 **Inconclusive if**
 
-If clicking **Continue** produces no reply at all, check the console for a `declined a turn` line: if the paused Message was cleared by something else (a human message typed into the room, or an app restart), there is nothing to re-deliver and the test is INCONCLUSIVE. Recreate the pause via APPTOOLS-19 and rerun. Note that a Message declined for Budget is NOT kept as catch-up: if you typed something into the paused room instead of clicking Continue, the agent's prompt will not carry the Message it was paused on — that is documented behaviour, not a defect, and it makes this test INCONCLUSIVE rather than failed.
+If clicking **Continue** produces no reply at all, read the Room first: as of #40 a quiet blue note below the transcript names the reason whenever there was nobody to wake or the re-delivered Message named no Teammate, which resolves most instances of this paragraph without leaving the browser. Failing that, check the console for a `declined a turn` line: if the paused Message was cleared by something else (a human message typed into the room, or an app restart), there is nothing to re-deliver and the test is INCONCLUSIVE. Recreate the pause via APPTOOLS-19 and rerun. Note that a Message declined for Budget is NOT kept as catch-up: if you typed something into the paused room instead of clicking Continue, the agent's prompt will not carry the Message it was paused on — that is documented behaviour, not a defect, and it makes this test INCONCLUSIVE rather than failed.
 
 > [!NOTE]
 > The F5 must come BEFORE the first click. Clicking Continue and then reloading tests nothing.

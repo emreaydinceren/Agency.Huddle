@@ -22,7 +22,12 @@ teammates, budgets, hooks, personas and the app tools.
 
 ### 1. Silence is the product's main failure mode, and it is never explained
 
-**Still true on `main` (`774a472`). Filed as #40**, with observation 5 folded in.
+**Fixed 2026-09-16 (#40)**, with observation 5 folded in. The Room now says when a Message
+named no Teammate, and what to do about it. See
+[ADR-0012](../adr/0012-a-room-says-why-it-stayed-quiet.md) for why it is a Room-level note
+rather than the per-Message line suggested below, and [Known limits](known-limits.md) for the
+three gaps left deliberately - chief among them that a Room whose Teammates are all Offline
+still explains nothing.
 
 This is the biggest thing I would fix. Four different mechanisms cause a teammate to
 correctly say nothing, and **none of them shows anything on screen**:
@@ -105,7 +110,9 @@ teammate not to post what it is already about to say.
 
 ### 5. Continue behaves like a coin flip
 
-**Still true on `main` (`774a472`). Folded into #40**, because it is the same defect reached through a different control.
+**Fixed 2026-09-16 (#40)**, because it is the same defect reached through a different control.
+Both halves this entry asked for shipped: Continue now names what it will do *before* the
+click when the last Message is a Teammate's own, and reports what it did afterwards.
 
 Of three **Continue** presses across the run, two granted the budget correctly and then
 produced no visible effect whatsoever. The reason is reasonable — the message being
@@ -154,7 +161,9 @@ quite true once a teammate can write itself notes.
 - **A refused reply vanishes without trace.** When a teammate's reply is refused for
   budget, you watch a draft row type out a full answer and then disappear, leaving
   nothing. Documented as correct, and it is — but it looks like the app lost the message.
-  *Still true; part of #40.*
+  *Still true. Deliberately left out of #40 and recorded in [Known limits](known-limits.md):
+  there is no Message to attach it to, and retaining the Draft would mean splitting
+  `Drafts.Complete`, whose contract is that both the terminator and a successful post call it.*
 - **The Model picker is incomplete just after startup.** Opening **Edit** early showed
   only Haiku; the full list (Sonnet, Fable, Opus) appeared once the adapter had been
   probed. Silent and timing-dependent, so whether you see the real choice depends on how

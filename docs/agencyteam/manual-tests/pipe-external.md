@@ -1168,7 +1168,7 @@ Which of the two bots wins the race is not deterministic — either one landing 
 
 **Inconclusive if**
 
-With `tools/echo-bot.ps1`, NO new reply follows the Continue, and that is correct: the re-delivered Message is the first bot's reply, which mentions nobody (the `@` was stripped), so a mention-gated client rightly stays silent. The evidence for this test is the re-delivered line plus the unchanged transcript — do not record a fail for the missing reply. If the previously refused bot's terminal prints nothing at all after Continue, THAT is a fail. Afterwards, reset: Ctrl+C in `T-A`, 2 and 3; run `Remove-Item Env:Team__AgentMessageBudget`; restart the app with `P-LAUNCH-FREE`.
+With `tools/echo-bot.ps1`, NO new reply follows the Continue, and that is correct: the re-delivered Message is the first bot's reply, which mentions nobody (the `@` was stripped), so a mention-gated client rightly stays silent. As of #40 the Room states this itself — a quiet blue note reads `Budget granted and the last message was delivered again, but it names no teammate. Mention one by name to get an answer.` — so the missing reply is explained on screen rather than only here. The evidence for this test is the re-delivered line plus the unchanged transcript — do not record a fail for the missing reply. If the previously refused bot's terminal prints nothing at all after Continue, THAT is a fail. Afterwards, reset: Ctrl+C in `T-A`, 2 and 3; run `Remove-Item Env:Team__AgentMessageBudget`; restart the app with `P-LAUNCH-FREE`.
 
 ### PIPEEXTERNAL-28 — A wrong protocol version in hello is refused, and the browser never learns
 

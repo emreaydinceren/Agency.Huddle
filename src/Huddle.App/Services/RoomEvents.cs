@@ -8,7 +8,18 @@ public sealed record MessagePostedEvent(
     ChatMessage Message,
     IReadOnlyList<User> Members,
     IReadOnlyList<User> Mentions,
-    RoomBudget Budget);
+    RoomBudget Budget)
+{
+    /// <summary>
+    /// Whether <paramref name="member"/> is an Agent this Message is delivered to. An Agent never
+    /// receives its own Message - structural, and what stops naive clients echo-looping.
+    /// </summary>
+    /// <param name="member">The candidate recipient.</param>
+    /// <param name="senderId">The id of the User who sent the Message.</param>
+    /// <returns><see langword="true"/> when this Message is delivered to <paramref name="member"/>.</returns>
+    internal static bool IsRecipient(User member, string senderId) =>
+        member.Kind == UserKind.Agent && !string.Equals(member.Id, senderId, StringComparison.Ordinal);
+}
 
 public sealed class RoomEvents
 {

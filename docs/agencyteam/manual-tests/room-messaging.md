@@ -901,6 +901,10 @@ If no reply arrives, this proves nothing — settle ROOMMESSAGING-18 first and r
 **Pass if — all of these**
 
 - `hello` produces no reply from either Agent, no Draft, no error, and no new agent line in the file — three Members keeps the Room Mention-gated, so a Message naming nobody wakes nobody.
+- `hello` DOES produce a quiet blue note above the composer reading `No teammate was @-mentioned -
+  name one to ask for a reply.`, and so does every other negative case below (`hi @echoes`,
+  `mail me@example.com`). That note is the Room explaining the silence rather than leaving the
+  tester to guess, and its presence is as much a pass condition as the absent reply.
 - `hi @echo` produces exactly one reply, from `echo`.
 - `hi @ECHO` produces exactly one reply — the match is case-insensitive.
 - `hi @echoes` produces NO reply — a Mention ends at a word boundary.
