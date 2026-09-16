@@ -112,7 +112,14 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             session = await innerHost.StartSessionAsync(
                 new AgentSessionOptions(
                     workDir,
-                    new AutoApprovePermissionHandler(),
+                    // Approves the way AutoApprovePermissionHandler does, except inside the human's
+                    // own agent configuration directory - see WorkDirPermissionHandler for why that
+                    // one exception is drawn there and not around the Work Dir. Falls back to the
+                    // plain auto-approve only if the profile directory cannot be resolved at all,
+                    // rather than inventing a path to protect.
+                    WorkDirPermissionHandler.DefaultProtectedDirectory() is { } protectedDirectory
+                        ? new WorkDirPermissionHandler(protectedDirectory, this.loggerFactory.CreateLogger<WorkDirPermissionHandler>())
+                        : new AutoApprovePermissionHandler(),
                     new SystemPromptOptions(
                         SystemPromptComposer.Compose(persona, hooks, toolNamePrefix + getHelpTool.Name, toolNames),
                         SystemPromptMode.Append),
