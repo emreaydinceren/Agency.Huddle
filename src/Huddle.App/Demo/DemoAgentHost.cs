@@ -74,8 +74,10 @@ public sealed class DemoAgentHost : BackgroundService
                 // Decide checks the Budget FIRST, and that ordering is what stops two quoting demo
                 // agents alone in a Room from looping (ADR-0004 records 4299 messages in two
                 // seconds before it existed).
+                // following is always false: the demo echo agents hold no App Tools, so they have no
+                // mcp__team__follow_room to call and can never be following a Room.
                 if (message is MessagePosted posted
-                    && ReplyGate.Decide(posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget)
+                    && ReplyGate.Decide(posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget, following: false)
                         == ReplyDecision.Reply)
                 {
                     // Strip '@' before quoting so the reply cannot reproduce mentions and re-trigger

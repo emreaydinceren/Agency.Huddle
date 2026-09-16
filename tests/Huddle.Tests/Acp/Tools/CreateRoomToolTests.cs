@@ -108,6 +108,68 @@ public sealed class CreateRoomToolTests
         Assert.Empty(rooms);
     }
 
+    /// <summary>
+    /// ADR-0005: a <c>seed</c> passed to <c>create_room</c> is posted into the new Room, as the calling
+    /// Agent, in the same call that creates it, so the named agents learn why they are there without a
+    /// second tool call.
+    /// </summary>
+    [Fact]
+    public async Task CreateRoom_WithSeed_PostsItAsTheOpeningMessage()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var caller = await directory.UpsertAgentUserAsync("caller", null, ct);
+        var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
+        Assert.NotNull(caller);
+        Assert.NotNull(alpha);
+        var aliasSource = new FakeMentionAliasSource();
+        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakeHookSource());
+        var arguments = new JsonObject { ["agents"] = new JsonArray { "alpha" }, ["seed"] = "Let's figure out the release notes." };
+
+        var result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Contains("Created room", result, StringComparison.Ordinal);
+        Assert.Contains("seed message", result, StringComparison.Ordinal);
+        var room = Assert.Single(await directory.GetRoomsAsync(ct));
+        var transcript = await store.ReadAllAsync(room.Id, ct);
+        var message = Assert.Single(transcript);
+        Assert.Equal("Let's figure out the release notes.", message.Text);
+        Assert.Equal(caller.Id, message.SenderId);
+    }
+
+    /// <summary>Omitting <c>seed</c> leaves the newly created Room with no transcript at all.</summary>
+    [Fact]
+    public async Task CreateRoom_WithoutSeed_LeavesTheRoomEmpty()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var caller = await directory.UpsertAgentUserAsync("caller", null, ct);
+        var alpha = await directory.UpsertAgentUserAsync("alpha", null, ct);
+        Assert.NotNull(caller);
+        Assert.NotNull(alpha);
+        var aliasSource = new FakeMentionAliasSource();
+        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakeHookSource());
+        var arguments = new JsonObject { ["agents"] = new JsonArray { "alpha" } };
+
+        var result = await tool.InvokeAsync(arguments, ct);
+
+        Assert.Contains("Created room", result, StringComparison.Ordinal);
+        Assert.DoesNotContain("seed message", result, StringComparison.Ordinal);
+        var room = Assert.Single(await directory.GetRoomsAsync(ct));
+        var transcript = await store.ReadAllAsync(room.Id, ct);
+        Assert.Empty(transcript);
+    }
+
     private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory, IMentionAliasSource aliasSource)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);

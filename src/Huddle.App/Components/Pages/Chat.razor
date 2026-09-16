@@ -10,6 +10,7 @@
 @inject Drafts Drafts
 @inject IAgentGateway Gateway
 @inject PersonaHealth Health
+@inject RoomFollows Follows
 @inject NavigationManager Navigation
 
 @if (this.room is null)
@@ -320,7 +321,7 @@ else
             // belongs only to the Message that asked.
             var sender = e.Members.FirstOrDefault(m => string.Equals(m.Id, e.Message.SenderId, StringComparison.Ordinal));
             this.outlook = sender is { Kind: UserKind.Human }
-                ? RoomReplyResolver.Resolve(e.Members, e.Mentions, e.Message.SenderId, this.ReachableAgentIds(), e.Budget)
+                ? RoomReplyResolver.Resolve(e.Members, e.Mentions, e.Message.SenderId, this.ReachableAgentIds(), this.Follows.FollowersOf(e.Room.Id), e.Budget)
                 : RoomReply.Expected;
 
             // A Message means the Room is moving again, so a dismissal from the last pause must not
@@ -350,7 +351,7 @@ else
             this.budget = extension.Budget;
             this.continueResult = extension.Result;
             this.continueOutlook = extension.Redelivered is { } facts
-                ? RoomReplyResolver.Resolve(facts.Members, facts.Mentions, facts.SenderId, this.ReachableAgentIds(), extension.Budget)
+                ? RoomReplyResolver.Resolve(facts.Members, facts.Mentions, facts.SenderId, this.ReachableAgentIds(), this.Follows.FollowersOf(this.loadedRoomId), extension.Budget)
                 : null;
 
             // The Continue answer supersedes the context-only note: both would otherwise describe

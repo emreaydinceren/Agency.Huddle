@@ -1,12 +1,38 @@
 # Decision record
 
-Twelve dated entries from 2026-09-11 onward, newest first, each recording what
+Thirteen dated entries from 2026-09-11 onward, newest first, each recording what
 changed and — more usefully — what was considered and rejected. Read it when you are
 about to revisit a decision, or when an older Markdown file in this repo
 disagrees with current vocabulary and you need the old-to-new mapping.
 
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
+
+**2026-09-16 — following a Room is a Singleton, not a field on the runner, and that changed what
+the Room view can know.**
+
+[ADR-0005](../adr/0005-agent-topologies-are-emergent.md) and [Roadmap](roadmap.md) item 8 both
+specified the follow set as a per-Persona `HashSet` shared between `PersonaRunner` and its App
+Tools, "built through one `factory.CreateAsync` call". Building item 8 found that they are not
+shared through that call: it returns only `(IAgentHost, IAgentSession)`, so the tools it constructs
+never reach the runner. The choice was to widen `IAgentHostFactory` — whose own doc calls it
+*"purely a test seam"*, and which a fake implements for the whole suite — or to put the state in a
+Singleton the tool resolves from DI like any other dependency. The Singleton won: no seam moved,
+and there is one source of truth rather than two.
+
+Two things follow, and the second is the interesting one. Self-heal stopped being free — a field
+on the runner died with the runner, so `PersonaRunner` now calls `ClearAgent` explicitly after its
+handshake. And because a Singleton is in-process, **the Room view can read who is following**,
+which falsified the headline argument of [ADR-0012](../adr/0012-a-room-says-why-it-stayed-quiet.md)
+four days after it was accepted: that ADR rejected a per-message annotation chiefly because the
+view would be *"structurally unable"* to hold `following`. It is not. The rejection survived on its
+second argument — a per-message claim is a claim about what a runner *did*, which needs a
+`ProtocolVersion` bump — and the ADR now carries an amendment saying so rather than a quiet edit.
+
+The lesson worth keeping is narrower than "check your assumptions": **"never crosses the wire" and
+"never knowable" are different claims, and the first does not imply the second in a single-process
+application.** ADR-0012 conflated them, and [Rules](rules.md) has been narrowed to state the
+wording rule on its own terms instead of resting it on that inference.
 
 **2026-09-15 — the sample clients implement the Reply Gate, reversing a documented decision.**
 

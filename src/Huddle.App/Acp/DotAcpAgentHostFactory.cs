@@ -71,6 +71,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             ActivatorUtilities.CreateInstance<CreateRoomTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<InviteAgentTool>(this.serviceProvider),
             ActivatorUtilities.CreateInstance<PostMessageTool>(this.serviceProvider, agentId),
+            ActivatorUtilities.CreateInstance<FollowRoomTool>(this.serviceProvider, agentId),
+            ActivatorUtilities.CreateInstance<UnfollowRoomTool>(this.serviceProvider, agentId),
         ];
 
         var hooks = this.serviceProvider.GetRequiredService<IHookSource>();

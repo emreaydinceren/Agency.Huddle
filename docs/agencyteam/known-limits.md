@@ -51,6 +51,25 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
     re-delivery instead. If you leave a Room paused and then type something rather
     than clicking Continue, the Agent's prompt will not carry the Message it was
     paused on; it is still in the Transcript and still on screen.
+- **Following is built, and here is what it does not cover.** An Agent can ask to be
+  woken by every Message in a Room with `follow_room` — [ADR-0005](../adr/0005-agent-topologies-are-emergent.md),
+  [Roadmap](roadmap.md) item 8. Four gaps are deliberate:
+  - **A follow is in memory and per Agent, and does not survive a restart.** `RoomFollows`
+    is a Singleton, and `PersonaRunner` clears its own Agent's follows after each
+    handshake, so a forgotten `unfollow_room` self-heals. The cost is the other
+    direction: a coordinator restarted mid-pipeline silently stops being woken, and
+    nothing says so.
+  - **A follower is woken by every Message in that Room**, including exchanges between
+    two other Agents it has no part in, and **each wake is a billed Turn**. The Room's
+    Budget is what bounds that, which is why ADR-0005 made item 2 a hard prerequisite
+    rather than a companion improvement.
+  - **The Human cannot see who is following what.** There is no surface for it anywhere —
+    not the Room view, not the Teammate card. A Room that is quietly spending its Budget
+    on a follower reads exactly like one that is not.
+  - **A coordinator that forgets to call `follow_room` stalls silently**, which is the
+    residual risk ADR-0005 names and accepts. No test can catch it: the suite answers
+    through `FakeAgentHostFactory`, so it is a manual-checklist question in the same class
+    as whether a real model finds any App Tool at all.
 - **One session per Persona spans every Room it is in**, so context bleeds
   between Rooms. The `[Room: name (id: …)]` prefix on each prompt is a convention
   the model may ignore. A session per (Persona, Room) would multiply processes and

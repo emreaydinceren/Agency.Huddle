@@ -26,6 +26,7 @@ internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirect
                 ["type"] = "array",
                 ["items"] = new JsonObject { ["type"] = "string" },
             },
+            ["seed"] = new JsonObject { ["type"] = "string" },
         },
         ["required"] = new JsonArray { "agents" },
     };
@@ -86,14 +87,35 @@ internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirect
             return $"Unknown agent(s): {string.Join(", ", unknown)}. Agents that do exist: {existingText}.";
         }
 
+        Room room;
         try
         {
-            var room = await chat.CreateRoomForAsync(agentIds, cancellationToken);
-            return $"Created room '{room.Name}' (id {room.Id}).";
+            room = await chat.CreateRoomForAsync(agentIds, cancellationToken);
         }
         catch (ChatException ex)
         {
             return $"Could not create the room: {ex.Message}";
+        }
+
+        // ADR-0005: "an optional 'seed' parameter on create_room that posts the first Message as part
+        // of creation. Without it the sequence can half-happen, leaving a contextless Room with two
+        // Agents in it and no way for them to learn why." A failed seed post must not un-create the
+        // Room - the Room already exists and is worth keeping even if the very next step fails - so
+        // this is its own try/catch rather than folding into the one above.
+        var seed = (string?)arguments["seed"];
+        if (string.IsNullOrWhiteSpace(seed))
+        {
+            return $"Created room '{room.Name}' (id {room.Id}).";
+        }
+
+        try
+        {
+            await chat.PostAsync(room.Id, callerAgentId, seed, ct: cancellationToken);
+            return $"Created room '{room.Name}' (id {room.Id}) and posted the seed message into it.";
+        }
+        catch (ChatException ex)
+        {
+            return $"Created room '{room.Name}' (id {room.Id}), but could not post the seed message: {ex.Message}";
         }
     }
 }

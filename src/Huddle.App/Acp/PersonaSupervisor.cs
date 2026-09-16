@@ -16,6 +16,7 @@ internal sealed class PersonaSupervisor : BackgroundService
     private readonly IAgentHostFactory factory;
     private readonly PersonaHealth health;
     private readonly IHookSource hooks;
+    private readonly RoomFollows roomFollows;
     private readonly ILoggerFactory loggerFactory;
     private readonly ILogger<PersonaSupervisor> logger;
 
@@ -49,6 +50,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         IAgentHostFactory factory,
         PersonaHealth health,
         IHookSource hooks,
+        RoomFollows roomFollows,
         ILoggerFactory loggerFactory,
         ILogger<PersonaSupervisor> logger)
     {
@@ -57,6 +59,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentNullException.ThrowIfNull(health);
         ArgumentNullException.ThrowIfNull(hooks);
+        ArgumentNullException.ThrowIfNull(roomFollows);
         ArgumentNullException.ThrowIfNull(loggerFactory);
         ArgumentNullException.ThrowIfNull(logger);
 
@@ -65,6 +68,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         this.factory = factory;
         this.health = health;
         this.hooks = hooks;
+        this.roomFollows = roomFollows;
         this.loggerFactory = loggerFactory;
         this.logger = logger;
     }
@@ -399,7 +403,8 @@ internal sealed class PersonaSupervisor : BackgroundService
                 return;
             }
 
-            var host = new PersonaRunner(persona, Options.Create(this.options), this.factory, this.hooks, this.loggerFactory.CreateLogger<PersonaRunner>());
+            var host = new PersonaRunner(
+                persona, Options.Create(this.options), this.factory, this.hooks, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>());
 
             // Forwards every health signal the runner itself observes (T4.3) - a session/Turn
             // fact, arriving over the wire - into the one table every UI surface reads.

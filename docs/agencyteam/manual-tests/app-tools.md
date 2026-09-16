@@ -1,8 +1,8 @@
 # App Tools a real model calls (progressive discovery)
 
-Prove that the five in-process App Tools (`mcp__team__get_help`, `mcp__team__list_agents`, `mcp__team__create_room`, `mcp__team__invite_agent`, `mcp__team__post_message`) are registered, discoverable and obeyed by a REAL model, and that the progressive-discovery design holds: the system prompt names only the help tool, and the help tool names the rest. The automated suite answers every one of these questions with a fake agent, so none of it is evidence here. The failures this area exists to catch are silent: a tool server that never receives traffic while the tile says Online; a model that recites the five names from the system prompt and never calls a tool; a mis-resolved room id that comes back as ordinary prose and changes nothing on screen; a budget refusal that the model retries or routes around. Tests APPTOOLS-01 to APPTOOLS-04 are free and cost no tokens. Everything from APPTOOLS-05 onward starts a real Claude session and bills the user's Claude subscription; each says how much.
+Prove that the seven in-process App Tools (`mcp__team__get_help`, `mcp__team__list_agents`, `mcp__team__create_room`, `mcp__team__invite_agent`, `mcp__team__post_message`, `mcp__team__follow_room`, `mcp__team__unfollow_room`) are registered, discoverable and obeyed by a REAL model, and that the progressive-discovery design holds: the system prompt names only the help tool, and the help tool names the rest. The automated suite answers every one of these questions with a fake agent, so none of it is evidence here. The failures this area exists to catch are silent: a tool server that never receives traffic while the tile says Online; a model that recites the tool names from the system prompt and never calls a tool; a mis-resolved room id that comes back as ordinary prose and changes nothing on screen; a budget refusal that the model retries or routes around; a follow that outlives the reason it was set, or that quietly buys a Turn past the Budget. Tests APPTOOLS-01 to APPTOOLS-04 are free and cost no tokens. Everything from APPTOOLS-05 onward starts a real Claude session and bills the user's Claude subscription; each says how much.
 
-**22 tests** · 6 free, 16 paid 💰 · about 3.5 hours.
+**26 tests** · 6 free, 20 paid 💰 · about 4.2 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -31,7 +31,7 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 **Free** · about 8 min
 
-*Proves the 22 hook defaults are all rendered and editable, and that the tool-name prefix is substituted from code at render time rather than typed into any default — the design that stops a human misspelling a tool into nonexistence. Each field's textarea is now a `MudTextField` (Stage 3 of the MudBlazor migration), which renders as a real `<textarea>` inside the unchanged `.hooks-field` wrapper — there is no `hooks-field-value` class on it any more.*
+*Proves the 24 hook defaults are all rendered and editable, and that the tool-name prefix is substituted from code at render time rather than typed into any default — the design that stops a human misspelling a tool into nonexistence. Each field's textarea is now a `MudTextField` (Stage 3 of the MudBlazor migration), which renders as a real `<textarea>` inside the unchanged `.hooks-field` wrapper — there is no `hooks-field-value` class on it any more.*
 
 **Before you start**
 
@@ -49,14 +49,14 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 7. Confirm the fields under **System prompt** are, in order: **Orientation**, **Identity**, **Chat rules**, **Tools**.
 8. Confirm the fields under **Turn** are, in order: **Room label**, **Message**, **Catch-up header**, **Catch-up line**.
 9. Confirm the fields under **Get help** are, in order: **Help: introduction**, **Help: Rooms**, **Help: messages**, **Help: mentions**, **Help: replying**, **Help: budget**, **Help: tools heading**, **Help: tool entry**, **Help: footer**.
-10. Confirm the fields under **Tool descriptions** are, in order: **get_help description**, **list_agents description**, **create_room description**, **invite_agent description**, **post_message description**.
+10. Confirm the fields under **Tool descriptions** are, in order: **get_help description**, **list_agents description**, **create_room description**, **invite_agent description**, **post_message description**, **follow_room description**, **unfollow_room description**.
 11. Read the **Tools** field (under System prompt). Confirm its text contains the token `{{toolNames}}` on a line of its own and contains NO literal tool name.
 12. Read the **Orientation** field. Confirm it contains the token `{{helpTool}}`.
 13. Read the **Help: tool entry** field. Confirm it contains both `{{toolName}}` and `{{toolDescription}}`.
 14. Read the **Room label** field. Confirm its whole text is exactly `[Room: {{roomName}} (id: {{roomId}})]`.
-15. Count the grey **Next session** badges next to field labels. Confirm there are exactly nine, and that they sit on: Orientation, Identity, Chat rules, Tools, and all five `… description` fields under Tool descriptions. Confirm no field under **Turn** or **Get help** carries one.
+15. Count the grey **Next session** badges next to field labels. Confirm there are exactly eleven, and that they sit on: Orientation, Identity, Chat rules, Tools, and all seven `… description` fields under Tool descriptions. Confirm no field under **Turn** or **Get help** carries one.
 16. Open the browser developer tools (F12), go to the Console tab, and paste exactly: `document.querySelectorAll('.hooks-field textarea').length` then press Enter.
-17. Confirm the console prints `22`.
+17. Confirm the console prints `24`.
 18. In the same console paste exactly: `[...document.querySelectorAll('.hooks-field textarea')].filter(t => t.value.includes('mcp__team__')).map(t => t.closest('.hooks-field').querySelector('.hooks-field-label').textContent)` then press Enter.
 19. Confirm the console prints an empty array `[]`.
 20. In File Explorer, open `E:\Repos\Huddle\src\Huddle.App\App_Data\` and confirm there is NO file named `hooks.json`.
@@ -64,18 +64,18 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 **Pass if — all of these**
 
 - Four group headings appear in the order System prompt, Turn, Get help, Tool descriptions.
-- The console reports exactly 22 textareas under `.hooks-field`.
+- The console reports exactly 24 textareas under `.hooks-field`.
 - The console reports an empty array for the `mcp__team__` search — no hook default anywhere contains that literal string.
 - **Tools** contains `{{toolNames}}`; **Orientation** contains `{{helpTool}}`; **Help: tool entry** contains both `{{toolName}}` and `{{toolDescription}}`; **Room label** is exactly `[Room: {{roomName}} (id: {{roomId}})]`.
-- Exactly nine **Next session** badges, on the four System prompt fields and the five Tool descriptions fields.
+- Exactly eleven **Next session** badges, on the four System prompt fields and the seven Tool descriptions fields.
 - `App_Data/hooks.json` does not exist.
 
 **Fail if — any of these**
 
 - The console array is NOT empty — a hook default has been hand-edited to hard-code a tool name such as `mcp__team__list_agents`. This reintroduces exactly the silent failure the design removed: the prefix is derived in code from the single constant `ToolServerName = "team"` in `src/Huddle.App/Acp/DotAcpAgentHostFactory.cs`, and a hard-coded copy can drift from it with no build error and no runtime error — the model simply reports the tool does not exist. Report the field names the console printed.
-- **Tools** shows five literal tool names instead of `{{toolNames}}` -> the substitution token was replaced by its rendered output, so the tool list is now frozen text that will not follow a change to the tool roster.
+- **Tools** shows seven literal tool names instead of `{{toolNames}}` -> the substitution token was replaced by its rendered output, so the tool list is now frozen text that will not follow a change to the tool roster.
 - **Room label** has lost `(id: {{roomId}})` -> every `invite_agent` and `post_message` call is silently reduced to rooms the agent created itself; the model can never learn a room id any other way.
-- The console prints a number other than 22 -> a hook has been added to or removed from the catalog without the Settings page following, or a group prefix no longer matches.
+- The console prints a number other than 24 -> a hook has been added to or removed from the catalog without the Settings page following, or a group prefix no longer matches.
 - A **Next session** badge appears on a Get help or Turn field, or is missing from a Tool descriptions field -> the timing metadata is wrong, and testers will later be told a live edit needs a restart (or worse, that a restart-only edit is live).
 
 **Inconclusive if**
@@ -346,22 +346,22 @@ If the console shows the model calling a semantically adjacent tool from a diffe
 4. Press Enter.
 5. While the turn runs, confirm a streaming message row appears showing `Nova`, a **Stop** button, and (at least briefly) a tool-activity line beneath the draft text.
 6. Wait for the reply to finish.
-7. Confirm the reply names all five tools with the full prefix: `mcp__team__get_help`, `mcp__team__list_agents`, `mcp__team__create_room`, `mcp__team__invite_agent`, `mcp__team__post_message`.
+7. Confirm the reply names all seven tools with the full prefix: `mcp__team__get_help`, `mcp__team__list_agents`, `mcp__team__create_room`, `mcp__team__invite_agent`, `mcp__team__post_message`, `mcp__team__follow_room`, `mcp__team__unfollow_room`.
 8. Now check the DESCRIPTIONS, which is the part that matters. For `mcp__team__post_message`, confirm the reply reproduces or closely paraphrases the phrase `because your reply in the current turn is only ever delivered to that Room, never to another one`.
 9. For `mcp__team__invite_agent`, confirm the reply mentions that you give the Room's id, the id shown in the `[Room: ...]` line at the start of every message.
 10. For `mcp__team__list_agents`, confirm the reply mentions that entries include a job description drawn from the Persona's frontmatter.
-11. Switch to the console and, at Trace, find `App tool server replied to tools/call:` with a payload containing `TOOLS` and all five tool names.
+11. Switch to the console and, at Trace, find `App tool server replied to tools/call:` with a payload containing `TOOLS` and all seven tool names.
 
 **Pass if — all of these**
 
-- All five tool names appear with the `mcp__team__` prefix and are spelled exactly.
-- At least three of the five carry a real description, not just a name — specifically including the post_message phrase about the reply only ever reaching the current Room.
+- All seven tool names appear with the `mcp__team__` prefix and are spelled exactly.
+- At least three of the seven carry a real description, not just a name — specifically including the post_message phrase about the reply only ever reaching the current Room.
 - At Trace: a `tools/call` reply payload matching `tests/Huddle.Tests/Acp/Golden/getHelp.txt`.
 - A streaming row with a **Stop** button and a tool-activity line was visible during the turn.
 
 **Fail if — any of these**
 
-- Five correct names but NO per-tool descriptions, or one-line descriptions the tester invented plausible wording for -> failure mode (a): the model recited the system prompt's Tools block, which carries the names only. Progressive discovery did NOT happen. The names alone cannot distinguish this case, which is exactly why the description check is the pass condition.
+- Seven correct names but NO per-tool descriptions, or one-line descriptions the tester invented plausible wording for -> failure mode (a): the model recited the system prompt's Tools block, which carries the names only. Progressive discovery did NOT happen. The names alone cannot distinguish this case, which is exactly why the description check is the pass condition.
 - The reply says no such tools exist, or that it has no tools in this application -> failure mode (b): a name-lookup miss in deferred-tool mode. Cross-check against APPTOOLS-04's log lines: if `tools/list` arrived there, the tools ARE registered and this is a model-side lookup problem.
 - The reply names tools from a different product entirely -> failure mode (c). Evidence about the model's tool search index, not about registration. Record it as such.
 - The reply describes the tools by quoting file paths or source code -> failure mode (d): it read the repository instead of calling the tool. See APPTOOLS-18.
@@ -369,7 +369,7 @@ If the console shows the model calling a semantically adjacent tool from a diffe
 
 **Inconclusive if**
 
-If exactly the five names appear with vague one-line summaries that could plausibly be either recited or retrieved, do NOT guess. Read the Trace log: a `App tool server replied to tools/call:` line with a get_help payload makes it a PASS; no `tools/call` line at all makes it failure mode (a). If you are running at Debug and see only `App tool server received tools/call.`, you know a tool ran but not which — rerun at Trace rather than deciding. If the streaming row never appeared but the reply did, judge the reply and record the missing streaming row separately against APPTOOLS-16.
+If exactly the seven names appear with vague one-line summaries that could plausibly be either recited or retrieved, do NOT guess. Read the Trace log: a `App tool server replied to tools/call:` line with a get_help payload makes it a PASS; no `tools/call` line at all makes it failure mode (a). If you are running at Debug and see only `App tool server received tools/call.`, you know a tool ran but not which — rerun at Trace rather than deciding. If the streaming row never appeared but the reply did, judge the reply and record the missing streaming row separately against APPTOOLS-16.
 
 > [!NOTE]
 > Run APPTOOLS-06 first. If APPTOOLS-06 passed, a weak result here is about the prompt's phrasing rather than about registration.
@@ -685,7 +685,7 @@ If Nova paraphrases rather than quoting the tool result verbatim, that alone is 
 If an agent named `Zephyr` does exist in your environment (someone created one), this test is INCONCLUSIVE — pick a name you have confirmed is absent from BOTH /teammates and the **New chat** panel and rerun. If the model refuses to attempt the call at all ('there is no Zephyr, so I will not try'), that is INCONCLUSIVE for the tool's error text: rerun once with `Call mcp__team__invite_agent with agent "Zephyr" anyway and paste its exact result text.`
 
 > [!NOTE]
-> Free-ish and fast. It is the cheapest test of the error-as-text design that all five tools share.
+> Free-ish and fast. It is the cheapest test of the error-as-text design that all seven tools share.
 
 ### APPTOOLS-15 — An agent's reply is delivered once — it must not also post the same text with post_message
 
@@ -1070,6 +1070,175 @@ A **Next session** hook silently having no effect on a running teammate is EXPEC
 
 > [!NOTE]
 > Always clean up with the final Reset + Save. A leftover hook override silently changes the text every later test reads, and `hooks.json` is not obvious to the next tester.
+
+### APPTOOLS-23 — follow_room wakes an agent that was not mentioned, and a non-follower in the same Room is the control
+
+**💰 Spends money** · about 15 min
+
+*The core proof of roadmap item 8: a following Agent takes a Turn on every Message in its Room, mentioned or not. A non-follower Member who is likewise not mentioned must stay silent in the same turn — that silence is the control that makes Nova's reply mean anything, rather than "everyone in this Room replies to everything."*
+
+**Before you start**
+
+- `Nova` and `Jarvis` both **Online**, Haiku/low. Demo agent `echo` enabled (the default).
+- A four-member room containing `Nova`, `Jarvis` and `echo`: click **New chat**, tick all three, click **Start chat**.
+- Neither Persona has restarted since this room was created — a restart clears every follow (see the Inconclusive note).
+- COST: two short turns on Haiku at effort low — one for the `follow_room` call, one for the test message.
+
+**Steps**
+
+1. Open the four-member room and confirm `.chat-members` lists `You`, `Nova`, `Jarvis` and `echo`.
+2. Write down the room id from the `/rooms/<id>` URL.
+3. Click into the composer and type exactly: `@Nova use mcp__team__follow_room to follow this room, using the room id from your own [Room: ...] label. Tell me exactly what it said back.` then press Enter.
+4. Wait for Nova's reply. Confirm it quotes `Now following room` and the id you wrote down.
+5. Note how many message rows the room currently holds.
+6. Click into the composer and type exactly: `@Jarvis, without calling any tool, reply with the single word "present".` then press Enter.
+7. Wait for every streaming row to finish, then wait an extra ten seconds.
+8. Confirm a message row from `Jarvis` appears containing `present`.
+9. Confirm a SEPARATE message row from `Nova` ALSO appears, even though step 6's message did not name Nova.
+10. Confirm NO message row from `echo` appears anywhere in this room since step 6 — the control: `echo` was not mentioned and holds no `follow_room` tool, so it must stay exactly as silent as it would have before roadmap item 8 shipped.
+11. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<roomId>.jsonl` and confirm it gained exactly two new lines for step 6's turn — one sender `Jarvis`, one sender `Nova` — and no line from `echo`.
+
+**Pass if — all of these**
+
+- Nova's `follow_room` call succeeds and quotes the room id back.
+- `Jarvis` replies to being mentioned (expected, and not what this test is about).
+- `Nova` ALSO replies to the same message, despite never being named in it.
+- `echo` — the control — stays silent throughout.
+- The room's `.jsonl` file gained exactly the two agent lines above, none from `echo`.
+
+**Fail if — any of these**
+
+- `Nova` stays silent on the un-mentioning message -> `follow_room` is not reaching `ReplyGate.Decide`'s `following` argument, or `RoomFollows` never recorded the follow. Roadmap item 8 is not wired end to end, and this is the one finding this test exists to catch.
+- `echo` also replies -> the control itself is broken, or step 6's text accidentally mentioned it — re-read exactly what you sent. A failing control means this run proves nothing either way; do not record the Nova half as a pass.
+- Nova's reply is a duplicate of an earlier answer, or otherwise reads as though it silently reused a cached reply rather than actually taking a fresh Turn -> report the reply text verbatim.
+- The `.jsonl` file gains a THIRD line from `echo` -> the same failure as the on-screen one, confirmed at the storage layer; report both facts together.
+
+**Inconclusive if**
+
+If Nova's `follow_room` call fails or Nova answers in prose without calling the tool, retry once naming the tool explicitly, the same escalation APPTOOLS-06 uses. If either Persona restarted for any reason between step 3 and step 6 — including an unrelated crash or an app restart — the follow was silently cleared (`RoomFollows.ClearAgent` runs on every runner's handshake, by design) and the result is meaningless; redo the `follow_room` call and rerun step 6 without restarting anything in between. If Nova's reply happens to answer as though it had been directly asked something, that is not this failure — judge only on whether Nova posted at all.
+
+> [!NOTE]
+> Keep this room and Nova's follow open for APPTOOLS-24, which is the direct continuation of this test. Do not restart the app or either Persona in between.
+
+### APPTOOLS-24 — unfollow_room restores the ordinary mention-only rule, and the Room confirms the decline was not a silent drop
+
+**💰 Spends money** · about 10 min
+
+*The counterpart proof: after `unfollow_room`, an unaddressed Message produces silence from the Agent that used to be woken by it. As of issue #40 the Room also shows a quiet context-only note on the Human's own unaddressed Message, confirming delivery happened and every reachable Agent's Reply Gate declined — rather than the Message having gone nowhere.*
+
+**Before you start**
+
+- APPTOOLS-23 has just passed, in the same four-member room, with `Nova` still following and neither Persona restarted since.
+- COST: two short turns on Haiku at effort low.
+
+**Steps**
+
+1. In the same room, type exactly: `@Nova use mcp__team__unfollow_room to stop following this room, using the room id from your own label. Tell me exactly what it said back.` then press Enter.
+2. Wait for Nova's reply. Confirm it quotes `No longer following room` and the room id.
+3. Note how many message rows the room currently holds.
+4. Click into the composer and type exactly: `Just checking in here — no action needed from anyone in particular.` (a message that names nobody at all) and press Enter.
+5. Immediately look at the area between the transcript and the composer, without waiting for any reply.
+6. Wait thirty seconds, watching the transcript continuously.
+7. Confirm NO new message row appears from `Nova`, `Jarvis` or `echo`.
+8. In the console (`T-A`), find the Information line `Persona 'Nova' read a message in room <roomId> as context only: it was not mentioned and the room has <n> members.`
+9. Open `App_Data/rooms/<roomId>.jsonl` and confirm no new line was appended for step 4's message.
+
+**Pass if — all of these**
+
+- `unfollow_room` succeeds and Nova's reply confirms it.
+- Step 4's unaddressed message produces no reply from anybody, including `Nova`.
+- The area below the transcript shows the quiet note `No teammate was @-mentioned — name one to ask for a reply.` immediately after step 4, with no reload — the issue #40 confirmation that the Message was delivered and every reachable Agent's Reply Gate declined, rather than nothing having happened at all.
+- `T-A` carries the context-only Information line for `Nova`.
+- No new `.jsonl` line appears for step 4.
+
+**Fail if — any of these**
+
+- `Nova` still replies to the unaddressed message -> `unfollow_room` did not clear the follow, or `ReplyGate.Decide` is not re-checking `following` on the very next Message; the ordinary mention-only rule has not been restored. This is the direct counterpart of APPTOOLS-23's core failure.
+- The quiet note is absent after step 4 -> either the note regressed (report against `Chat.razor`'s `outlook` handling) or something DID reply and you missed it — re-check the transcript before concluding the note itself is broken.
+- No context-only Information line for `Nova` appears in `T-A` -> the Message was never delivered to Nova's read loop at all, which is a worse and different failure than a following bug: a Member is not receiving the Room's ordinary traffic. Report it as a delivery defect, not a following defect.
+
+**Inconclusive if**
+
+If you cannot locate the quiet note, judge the reply-gate result (silence from every agent, plus `T-A`'s context-only line for Nova) on its own merits and record the UI-note half separately as inconclusive, rather than failing the whole test over a UI element you could not find. A Persona restart between APPTOOLS-23 and this test clears the follow and invalidates both; rerun APPTOOLS-23 first without restarting.
+
+### APPTOOLS-25 — Following does not buy a Turn past the Budget
+
+**💰 Spends money** · about 10 min
+
+*The ordering test, and the one that matters most: `ReplyGate.Decide` checks the Budget before it checks `following`, so a follower is capped exactly like a Mentioned Agent. Deterministic by construction — `ChatService` increments the count before it publishes, so the reply that spends the Budget is delivered to everyone else already carrying `Used == Granted`, and the gate has no choice left to make.*
+
+**Before you start**
+
+- APPTOOLS-23 has passed in this session. It is the control: it proves `Nova` DOES reply unmentioned while following, so the silence below can only be the cap.
+- Stop the app. Restart it with `$env:Team__AgentMessageBudget = "1"` set in the same window. A Budget of 1 makes this test two billed Turns instead of forty.
+- `Nova` and `Jarvis` both **Online**, Haiku/low, in a three-member Room together (`You`, `Nova`, `Jarvis`).
+- COST: two short billed Turns — one for `Nova` to call the tool, one for `Jarvis` to say a single word. `Nova`'s decline costs nothing, which is the point.
+
+**Steps**
+
+1. Wait for both tiles to read **Online** under the new Budget.
+2. Type exactly: `@Nova use mcp__team__follow_room to follow this room, using the room id from your own label.` and wait for the confirmation reply.
+3. The Room will pause immediately — `Nova`'s own confirmation is one agent Message and the Budget is 1. That is expected. Do NOT click **Continue**.
+4. Type exactly: `@Jarvis, without calling any tool, reply with the single word "go".` and press Enter. This Human Message resets the Budget to 0 of 1, which is what makes step 5 reachable.
+5. Wait for `Jarvis` to reply `go`. The Budget is now spent again, at 1 of 1.
+6. Watch the Room for sixty seconds. Type nothing — a Human Message would reset the counter and destroy the condition.
+7. In `T-A`, search for `declined a turn`.
+8. Click **Teammates** and read both tiles, then come back.
+
+**Pass if — all of these**
+
+- `Nova` does not reply to `Jarvis`'s `go`, and no third agent Message appears in the Room.
+- `T-A` contains `Persona 'Nova' declined a turn in room <roomId>: the room has spent its budget of 1 agent messages.` naming **Nova specifically**. This is the oracle. `Nova` was following, was delivered the Message, and was stopped by the Budget rather than by the Mention rule — APPTOOLS-23 is what rules the Mention rule out.
+- The red pause panel reads `Agents have sent 1 replies since you last spoke, and are paused.`
+- Neither tile has gone **Degraded**. A spent Budget is not a fault.
+
+**Fail if — any of these**
+
+- `Nova` replies to `Jarvis`'s `go` -> **following is buying Turns past the cap.** This is the most serious failure available in this area: two mutual followers could then run unattended with nothing to stop them, which is the exact hazard the Budget exists to prevent and the reason `rules.md` makes the Budget-before-everything ordering binding. Report it against `ReplyGate.Decide`'s parameter ordering.
+- `T-A` shows the `declined a turn` line for `Jarvis` but never for `Nova` -> `Nova` was not following after all; re-check step 2's confirmation before filing anything, since the rest of the test proves nothing without it.
+- Either tile flips to **Degraded** -> a spent Budget is being reported as a fault, which it is not.
+
+**Inconclusive if**
+
+If `Nova`'s tile shows **Starting** or the Persona restarted at any point between steps 2 and 5, the follow was cleared — it is held in memory and dropped whenever that Agent's runner restarts — and `Nova`'s silence proves nothing. Check `T-A` for Persona start lines, then repeat from step 2. If `Jarvis` calls a tool instead of answering in one word, the Budget may be spent by something other than the reply under test; repeat with a plainer instruction. Unset `Team__AgentMessageBudget` before any later test.
+
+### APPTOOLS-26 — create_room with seed posts the opening Message as part of creation
+
+**💰 Spends money** · about 10 min
+
+*`seed` closes the gap `invite-rooms.md` used to document as permanent: the new Room is never contextless, because the agents named in it learn why they are there in the same turn they are added.*
+
+**Before you start**
+
+- `Nova` and `Jarvis` both **Online**, Haiku/low.
+- COST: one turn on Haiku at effort low.
+
+**Steps**
+
+1. Open the room named `Nova` (Nova's own direct room) and write down the sidebar room list.
+2. Click into the composer and type exactly: `Use mcp__team__create_room to start a room with Jarvis, passing seed "Let's plan the launch." as the opening message. Then tell me the id it returned.` and press Enter.
+3. Wait for the turn to finish.
+4. Confirm exactly one new entry appears in the sidebar, named `Nova, Jarvis`.
+5. Confirm Nova's reply quotes a result of the form `Created room '<name>' (id <id>) and posted the seed message into it.`
+6. Click the new sidebar entry and confirm its `/rooms/<id>` URL matches the id Nova reported.
+7. Confirm the new Room's Transcript already contains a message row whose sender is `Nova` and whose body is exactly `Let's plan the launch.` — present the moment the Room first opens, with no further messages needed to produce it.
+8. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<newRoomId>.jsonl` and confirm its FIRST line is that seed message, sender `Nova`.
+
+**Pass if — all of these**
+
+- The new Room's Transcript shows the seed text as its first message, sender `Nova` — present as part of creation, not requiring a follow-up post.
+- Nova's reply confirms the seed was posted, using the `...and posted the seed message into it.` wording.
+- `.jsonl`'s first line is the seed message.
+
+**Fail if — any of these**
+
+- The new Room opens with NO messages despite `seed` having been passed -> unlike a Room created WITHOUT `seed` (which still legitimately arrives empty by design, see `invite-rooms.md`), this now IS a `create_room` defect: the seed post silently failed. Check Nova's exact reply text — `Created room '<name>' (id <id>), but could not post the seed message: <reason>` names the failure if the tool itself reported it; if Nova instead claims plain success with no such caveat while the Room is empty, the failure is happening below the tool's own error handling.
+- The seed message's sender is anyone other than `Nova` -> the post is being attributed to the wrong Agent.
+- The seed text is paraphrased or altered from what you asked Nova to pass -> the model did not pass your literal text as `seed`; note the exact string it used instead.
+
+**Inconclusive if**
+
+If Nova's reply reports `Created room '<name>' (id <id>), but could not post the seed message: <reason>`, that is the documented failure above, not a gap in this test — record it as a real `create_room` defect. If Nova omits `seed` entirely and creates the Room without an opening Message, that is not this test's failure mode either — that Room legitimately arrives empty by design; rerun with a prompt that names the `seed` argument more explicitly.
 
 ---
 

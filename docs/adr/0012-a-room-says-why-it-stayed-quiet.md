@@ -5,6 +5,17 @@ date: 2026-09-16
 
 # A Room says why it stayed quiet
 
+> **Amended 2026-09-16 when roadmap item 8 shipped.** The decision stands; its *headline reason*
+> was demoted, and that is worth recording rather than quietly editing. This ADR argued against a
+> per-message annotation chiefly because item 8's `following` parameter would be unknowable to the
+> Room view. The wire half of that was right — `following` still never appears on an Envelope — but
+> the conclusion was not: `RoomFollows` shipped as an in-process singleton, so `Chat.razor` reads it
+> and hands it to `RoomReplyResolver` like any other input. What survives, and is now doing the load
+> bearing, is the second argument below: a per-message claim is a claim about what a runner *did*,
+> the Reply Gate is permission rather than obligation, and reporting a runner's actual decision needs
+> a `ProtocolVersion` bump this repo has twice refused to pay for a UI nicety. The copy still
+> instructs rather than predicts, for that reason rather than the original one.
+
 Silence is this product's main failure mode. Several mechanisms make a Teammate correctly say
 nothing — a Message that Mentions nobody in a Room of three or more, a Room whose Budget is
 spent, a **Continue** that re-delivers a Message naming nobody — and until now the Room view
@@ -37,17 +48,21 @@ The observation that produced this issue suggested the natural thing: a quiet li
 Message — *"Nova read this but was not addressed"*. Both existing precedents are Room-level, so
 this ADR owed that alternative a real answer rather than an appeal to consistency.
 
-**Item 8 is the answer.** It gives `ReplyGate.Decide` a further `following` parameter, and
-records that the follow set is *"a per-Persona `HashSet` shared between `PersonaRunner` and its
-App Tools"* with **no wire change**. That parameter is deliberately client-side and never
-crosses the wire. So once item 8 ships, the Room view will hold four of `ReplyGate`'s five
-inputs and be structurally unable to hold the fifth: a following coordinator replies to a
-Message that Mentioned nobody.
+**Item 8 was the answer, and half of it did not hold.** ~~It gives `ReplyGate.Decide` a further
+`following` parameter, and records that the follow set is *"a per-Persona `HashSet` shared between
+`PersonaRunner` and its App Tools"* with **no wire change** — so once item 8 ships, the Room view
+will hold four of `ReplyGate`'s five inputs and be structurally unable to hold the fifth.~~ Item 8
+shipped on 2026-09-16 with the follow set in a singleton rather than a runner field, precisely
+because `IAgentHostFactory.CreateAsync` returns only `(IAgentHost, IAgentSession)` and widening a
+declared test seam was the worse trade. A singleton is in-process, so the view reads it. **The view
+is not structurally unable to know who is following.**
 
-A per-row annotation is *forced* to name Agents — naming them is what putting it on a row means
-— so it is forced into exactly the claim item 8 falsifies, and falsifies for coordinators
-specifically, the Agent type item 8 exists to serve. Room-level copy can stay a statement about
-the Message and an instruction to the Human, and both survive.
+What the paragraph got right is narrower and still decisive. A per-row annotation is *forced* to
+name Agents — naming them is what putting it on a row means — so it is forced into a claim about
+what a named Agent *did with* a delivery. That is the one thing no in-process table can supply,
+because the Reply Gate is permission and not obligation: a raw pipe client holds no App Tools,
+cannot follow, and may still answer anything. Room-level copy can stay a statement about the
+Message and an instruction to the Human, and both survive.
 
 Two further costs, either of which would have been sufficient on its own:
 

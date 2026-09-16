@@ -11,6 +11,9 @@ public sealed class RoomReplyResolverTests
     // Well clear of any Budget, so tests that are not about the Budget can ignore it.
     private static readonly RoomBudget Uncapped = new(0, 0);
 
+    // Most of these tests are not about Following, so they pass an empty set.
+    private static readonly HashSet<string> NoFollowers = new(StringComparer.Ordinal);
+
     private static User NewHuman(string id = KnownIds.Human) => new(id, "You", UserKind.Human, null);
 
     private static User NewAgent(string id) => new(id, id, UserKind.Agent, null);
@@ -24,7 +27,7 @@ public sealed class RoomReplyResolverTests
         User human = NewHuman();
         User agent = NewAgent("agent-1");
 
-        RoomReply result = RoomReplyResolver.Resolve([human, agent], [], human.Id, ReachableIds(agent.Id), Uncapped);
+        RoomReply result = RoomReplyResolver.Resolve([human, agent], [], human.Id, ReachableIds(agent.Id), NoFollowers, Uncapped);
 
         Assert.Equal(RoomReply.Expected, result);
     }
@@ -37,7 +40,7 @@ public sealed class RoomReplyResolverTests
         User first = NewAgent("agent-1");
         User second = NewAgent("agent-2");
 
-        RoomReply result = RoomReplyResolver.Resolve([human, first, second], [], human.Id, ReachableIds(first.Id, second.Id), Uncapped);
+        RoomReply result = RoomReplyResolver.Resolve([human, first, second], [], human.Id, ReachableIds(first.Id, second.Id), NoFollowers, Uncapped);
 
         Assert.Equal(RoomReply.ContextOnly, result);
     }
@@ -50,7 +53,7 @@ public sealed class RoomReplyResolverTests
         User mentioned = NewAgent("agent-1");
         User other = NewAgent("agent-2");
 
-        RoomReply result = RoomReplyResolver.Resolve([human, mentioned, other], [mentioned], human.Id, ReachableIds(mentioned.Id, other.Id), Uncapped);
+        RoomReply result = RoomReplyResolver.Resolve([human, mentioned, other], [mentioned], human.Id, ReachableIds(mentioned.Id, other.Id), NoFollowers, Uncapped);
 
         Assert.Equal(RoomReply.Expected, result);
     }
@@ -63,7 +66,7 @@ public sealed class RoomReplyResolverTests
         User mentioned = NewAgent("agent-1");
         User bystander = NewHuman("human-2");
 
-        RoomReply result = RoomReplyResolver.Resolve([human, mentioned, bystander], [mentioned], human.Id, ReachableIds(mentioned.Id), new RoomBudget(Used: 2, Granted: 2));
+        RoomReply result = RoomReplyResolver.Resolve([human, mentioned, bystander], [mentioned], human.Id, ReachableIds(mentioned.Id), NoFollowers, new RoomBudget(Used: 2, Granted: 2));
 
         Assert.Equal(RoomReply.Paused, result);
     }
@@ -75,7 +78,7 @@ public sealed class RoomReplyResolverTests
         User human = NewHuman();
         User agent = NewAgent("agent-1");
 
-        RoomReply result = RoomReplyResolver.Resolve([human, agent], [], agent.Id, ReachableIds(agent.Id), Uncapped);
+        RoomReply result = RoomReplyResolver.Resolve([human, agent], [], agent.Id, ReachableIds(agent.Id), NoFollowers, Uncapped);
 
         Assert.Equal(RoomReply.NoRecipients, result);
     }
@@ -88,7 +91,7 @@ public sealed class RoomReplyResolverTests
         User first = NewAgent("agent-1");
         User second = NewAgent("agent-2");
 
-        RoomReply result = RoomReplyResolver.Resolve([human, first, second], [human], human.Id, ReachableIds(first.Id, second.Id), Uncapped);
+        RoomReply result = RoomReplyResolver.Resolve([human, first, second], [human], human.Id, ReachableIds(first.Id, second.Id), NoFollowers, Uncapped);
 
         Assert.Equal(RoomReply.ContextOnly, result);
     }
@@ -101,7 +104,7 @@ public sealed class RoomReplyResolverTests
         User mentioned = NewAgent("agent-1");
         User notMentioned = NewAgent("agent-2");
 
-        RoomReply result = RoomReplyResolver.Resolve([human, mentioned, notMentioned], [mentioned], human.Id, ReachableIds(mentioned.Id, notMentioned.Id), Uncapped);
+        RoomReply result = RoomReplyResolver.Resolve([human, mentioned, notMentioned], [mentioned], human.Id, ReachableIds(mentioned.Id, notMentioned.Id), NoFollowers, Uncapped);
 
         Assert.Equal(RoomReply.Expected, result);
     }
@@ -116,7 +119,7 @@ public sealed class RoomReplyResolverTests
         User first = NewAgent("agent-1");
         User second = NewAgent("agent-2");
 
-        RoomReply result = RoomReplyResolver.Resolve([human, first, second], [], human.Id, ReachableIds(first.Id, second.Id), new RoomBudget(Used: 9999, Granted: granted));
+        RoomReply result = RoomReplyResolver.Resolve([human, first, second], [], human.Id, ReachableIds(first.Id, second.Id), NoFollowers, new RoomBudget(Used: 9999, Granted: granted));
 
         Assert.Equal(RoomReply.ContextOnly, result);
     }
@@ -128,7 +131,7 @@ public sealed class RoomReplyResolverTests
         User human = NewHuman();
         User other = NewHuman("human-2");
 
-        RoomReply result = RoomReplyResolver.Resolve([human, other], [], human.Id, ReachableIds(), Uncapped);
+        RoomReply result = RoomReplyResolver.Resolve([human, other], [], human.Id, ReachableIds(), NoFollowers, Uncapped);
 
         Assert.Equal(RoomReply.NoRecipients, result);
     }
@@ -141,7 +144,7 @@ public sealed class RoomReplyResolverTests
         User first = NewAgent("agent-1");
         User second = NewAgent("agent-2");
 
-        RoomReply result = RoomReplyResolver.Resolve([human, first, second], [], human.Id, ReachableIds(), Uncapped);
+        RoomReply result = RoomReplyResolver.Resolve([human, first, second], [], human.Id, ReachableIds(), NoFollowers, Uncapped);
 
         Assert.Equal(RoomReply.NoRecipients, result);
     }
@@ -158,7 +161,7 @@ public sealed class RoomReplyResolverTests
         User human = NewHuman();
         User offline = NewAgent("agent-1");
 
-        RoomReply result = RoomReplyResolver.Resolve([human, offline], [offline], human.Id, ReachableIds(), Uncapped);
+        RoomReply result = RoomReplyResolver.Resolve([human, offline], [offline], human.Id, ReachableIds(), NoFollowers, Uncapped);
 
         Assert.Equal(RoomReply.MentionedUnreachable, result);
     }
@@ -175,7 +178,7 @@ public sealed class RoomReplyResolverTests
         User echo = NewAgent("echo");
         User alpha = NewAgent("alpha");
 
-        RoomReply result = RoomReplyResolver.Resolve([human, echo, alpha], [echo], human.Id, ReachableIds(alpha.Id), Uncapped);
+        RoomReply result = RoomReplyResolver.Resolve([human, echo, alpha], [echo], human.Id, ReachableIds(alpha.Id), NoFollowers, Uncapped);
 
         Assert.Equal(RoomReply.MentionedUnreachable, result);
     }
@@ -194,7 +197,7 @@ public sealed class RoomReplyResolverTests
         User alpha = NewAgent("alpha");
 
         RoomReply result = RoomReplyResolver.Resolve(
-            [human, echo, alpha], [echo], human.Id, ReachableIds(alpha.Id), new RoomBudget(Used: 2, Granted: 2));
+            [human, echo, alpha], [echo], human.Id, ReachableIds(alpha.Id), NoFollowers, new RoomBudget(Used: 2, Granted: 2));
 
         Assert.Equal(RoomReply.MentionedUnreachable, result);
     }
@@ -212,7 +215,25 @@ public sealed class RoomReplyResolverTests
         User other = NewAgent("alpha");
 
         RoomReply result = RoomReplyResolver.Resolve(
-            [human, sender, other], [sender, other], sender.Id, ReachableIds(other.Id), Uncapped);
+            [human, sender, other], [sender, other], sender.Id, ReachableIds(other.Id), NoFollowers, Uncapped);
+
+        Assert.Equal(RoomReply.Expected, result);
+    }
+
+    /// <summary>
+    /// A following recipient makes an otherwise context-only delivery resolve to Expected: nobody was
+    /// Mentioned, but a follower's Reply Gate decision is Reply regardless, and one Reply is enough for
+    /// the whole Room to resolve to Expected.
+    /// </summary>
+    [Fact]
+    public void Resolve_AFollowingRecipient_TurnsAContextOnlyDeliveryIntoExpected()
+    {
+        User human = NewHuman();
+        User follower = NewAgent("agent-1");
+        User other = NewAgent("agent-2");
+        HashSet<string> following = new([follower.Id], StringComparer.Ordinal);
+
+        RoomReply result = RoomReplyResolver.Resolve([human, follower, other], [], human.Id, ReachableIds(follower.Id, other.Id), following, Uncapped);
 
         Assert.Equal(RoomReply.Expected, result);
     }

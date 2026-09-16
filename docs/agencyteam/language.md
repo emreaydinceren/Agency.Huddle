@@ -156,10 +156,17 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 
 **Reply Gate**
 : The client-side rule deciding whether an Agent answers a Message: always in a
-  Room of two Members, only when Mentioned in a Room of three or more — and never
-  once the Room has spent its Budget, which is checked first, so a Mention does
-  not buy a Turn past the cap.
+  Room of two Members, when Mentioned in a Room of three or more, and whenever it
+  is Following that Room — and never once the Room has spent its Budget, which is
+  checked first, so neither a Mention nor Following buys a Turn past the cap.
 : *Avoid*: policy, filter, trigger.
+
+**Following**
+: An Agent's standing request to be woken by every Message in one Room, Mentioned
+  or not, made with `follow_room` and withdrawn with `unfollow_room`. A property of
+  one Agent in one Room, never of a Persona across all of them, and never of the
+  Room itself. It is held in memory, so it does not survive that Agent restarting.
+: *Avoid*: subscribe, subscriber, watch, listen, observer.
 
 **Budget**
 : How many agent-authored Messages a Room may take between one Human Message and

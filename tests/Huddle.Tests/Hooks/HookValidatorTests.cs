@@ -10,14 +10,16 @@ using Agency.Huddle.App.Hooks;
 /// </summary>
 public sealed class HookValidatorTests
 {
-    /// <summary>The five tool names a running agent roster actually has, already prefixed.</summary>
-    private static readonly IReadOnlyList<string> FiveToolNames =
+    /// <summary>The seven tool names a running agent roster actually has, already prefixed.</summary>
+    private static readonly IReadOnlyList<string> AllToolNames =
     [
         "mcp__team__get_help",
         "mcp__team__list_agents",
         "mcp__team__create_room",
         "mcp__team__invite_agent",
         "mcp__team__post_message",
+        "mcp__team__follow_room",
+        "mcp__team__unfollow_room",
     ];
 
     /// <summary>
@@ -199,9 +201,9 @@ public sealed class HookValidatorTests
     {
         var renderedPrompt = string.Join(
             " ",
-            FiveToolNames.Where(name => !string.Equals(name, "mcp__team__invite_agent", StringComparison.Ordinal)));
+            AllToolNames.Where(name => !string.Equals(name, "mcp__team__invite_agent", StringComparison.Ordinal)));
 
-        var issues = HookValidator.ValidateSystemPrompt(renderedPrompt, FiveToolNames);
+        var issues = HookValidator.ValidateSystemPrompt(renderedPrompt, AllToolNames);
 
         var error = Assert.Single(issues);
         Assert.Equal(HookIssueSeverity.Error, error.Severity);
@@ -212,9 +214,9 @@ public sealed class HookValidatorTests
     [Fact]
     public void ValidateSystemPrompt_AllToolNamesPresent_ProducesNoIssues()
     {
-        var renderedPrompt = "Here are your tools: " + string.Join(", ", FiveToolNames) + ".";
+        var renderedPrompt = "Here are your tools: " + string.Join(", ", AllToolNames) + ".";
 
-        var issues = HookValidator.ValidateSystemPrompt(renderedPrompt, FiveToolNames);
+        var issues = HookValidator.ValidateSystemPrompt(renderedPrompt, AllToolNames);
 
         Assert.Empty(issues);
     }
@@ -223,9 +225,9 @@ public sealed class HookValidatorTests
     [Fact]
     public void ValidateSystemPrompt_NullRenderedPrompt_DoesNotThrow()
     {
-        var issues = HookValidator.ValidateSystemPrompt(null, FiveToolNames);
+        var issues = HookValidator.ValidateSystemPrompt(null, AllToolNames);
 
-        Assert.Equal(FiveToolNames.Count, issues.Count);
+        Assert.Equal(AllToolNames.Count, issues.Count);
         Assert.All(issues, issue => Assert.Equal(HookIssueSeverity.Error, issue.Severity));
     }
 

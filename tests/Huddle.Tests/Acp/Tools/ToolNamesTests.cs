@@ -24,12 +24,15 @@ public sealed class ToolNamesTests
         var aliasSource = new FakeMentionAliasSource();
         var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
 
+        var follows = new RoomFollows();
         var tools = new IAppTool[]
         {
             new ListAgentsTool(directory, gateway, personaStore, new FakeHookSource()),
             new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakeHookSource()),
             new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource()),
             new PostMessageTool(chat, "caller-id", new FakeHookSource()),
+            new FollowRoomTool(follows, directory, "caller-id", new FakeHookSource()),
+            new UnfollowRoomTool(follows, directory, "caller-id", new FakeHookSource()),
             new GetHelpTool([], new FakeHookSource(), "mcp__team__"),
         };
 
@@ -37,6 +40,8 @@ public sealed class ToolNamesTests
         Assert.Equal("create_room", tools[1].Name);
         Assert.Equal("invite_agent", tools[2].Name);
         Assert.Equal("post_message", tools[3].Name);
-        Assert.Equal("get_help", tools[4].Name);
+        Assert.Equal("follow_room", tools[4].Name);
+        Assert.Equal("unfollow_room", tools[5].Name);
+        Assert.Equal("get_help", tools[6].Name);
     }
 }

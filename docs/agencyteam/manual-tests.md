@@ -10,7 +10,7 @@ browser at `http://localhost:5100`. It does **not** cover the automated suite �
 isolation. For why a check is here rather than in code, see [Testing](testing.md); for the
 vocabulary every step uses, see [Language](language.md).
 
-**468 tests in 14 areas.** 418 are free. 50 spend real money and are marked 💰 everywhere they
+**472 tests in 14 areas.** 418 are free. 54 spend real money and are marked 💰 everywhere they
 appear; [Planning](manual-tests/planning.md) lists them together.
 
 This page is the contract every run is held to: the cost guard, the Model and Effort convention,
@@ -183,7 +183,7 @@ These are documented decisions in [Known limits](known-limits.md). Observing one
 
 ### 0.7 Recording results
 
-Results go in the [Tracker](manual-tests/tracker.md) — one row per test, all 468 of them,
+Results go in the [Tracker](manual-tests/tracker.md) — one row per test, all 472 of them,
 carrying a status and the issue number of anything that failed.
 
 Set a row to **Testing** when you pick a test up, so a second tester does not start the same
@@ -195,7 +195,7 @@ own header carries the full status vocabulary and how it maps onto the four outc
 
 ## 1. Choosing what to run
 
-The 468 tests live one file per area under [`manual-tests/`](manual-tests/) — a
+The 472 tests live one file per area under [`manual-tests/`](manual-tests/) — a
 single file holding all of them would be too large for a git web UI to render. Each
 area file carries only what is true of that area alone and names
 [Common procedures](manual-tests/common.md) for the rest.

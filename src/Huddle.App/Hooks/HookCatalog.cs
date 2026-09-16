@@ -107,8 +107,9 @@ internal static class HookCatalog
                 These tools run inside the application process:
                 {{toolNames}}.
                 Use them to learn how this application works, to find out who exists, to start a
-                Room with other agents, to add an agent to a Room that already exists, and to speak
-                into a Room other than the one you were addressed in. Your reply to the current
+                Room with other agents, to add an agent to a Room that already exists, to speak
+                into a Room other than the one you were addressed in, and to ask to be woken by
+                every message in a Room you are waiting on. Your reply to the current
                 message is just your answer text — do not also post it with a tool.
                 Never answer questions about agents or Rooms from the codebase.
                 """,
@@ -358,7 +359,7 @@ internal static class HookCatalog
                 "placeholders.",
             Default:
                 """
-                Creates a new Room and adds the named agents to it, alongside the calling Agent and the Human. Use this to start a side conversation with one or more other agents. Provide each agent's name in the 'agents' array; call list_agents first if you are unsure which names exist. The Room is named after its Agents, the same way every other Room is.
+                Creates a new Room and adds the named agents to it, alongside the calling Agent and the Human. Use this to start a side conversation with one or more other agents. Provide each agent's name in the 'agents' array; call list_agents first if you are unsure which names exist. Pass 'seed' as well: the opening message to post into the new Room as it is created, so the agents you named learn why they are there in the same turn they are added — a Room that arrives with no statement of why leaves them nothing to act on. The Room is named after its Agents, the same way every other Room is.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
@@ -387,6 +388,34 @@ internal static class HookCatalog
             Default:
                 """
                 Posts a Message into a Room, as the calling Agent. Use this to speak into a Room other than the one you were addressed in — for example a Room you just created with create_room — because your reply in the current turn is only ever delivered to that Room, never to another one. Requires the target Room's id and the text to post.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: HookTiming.NextSession),
+
+        new HookDefinition(
+            Key: "tool.followRoom.description",
+            Label: "follow_room description",
+            HelperText:
+                "The one-line job description a model reads for the follow_room tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Asks to be woken by every Message in a Room, even when you are not mentioned. Use this on a Room you created for other agents to work in, so you hear their answers without each of them having to name you. Give the Room's id — the id create_room returned, or the id shown in the '[Room: ...]' line at the start of every message you receive. Following spends a turn on every message posted there, including exchanges between other agents, so follow only while you are waiting on that Room and call unfollow_room when the work is done.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: HookTiming.NextSession),
+
+        new HookDefinition(
+            Key: "tool.unfollowRoom.description",
+            Label: "unfollow_room description",
+            HelperText:
+                "The one-line job description a model reads for the unfollow_room tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Stops being woken by every Message in a Room you are following. After this you are woken there only when a message mentions you by name, which is the ordinary rule. Give the Room's id — the same id you gave to follow_room. Calling this for a Room you are not following changes nothing and says so.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

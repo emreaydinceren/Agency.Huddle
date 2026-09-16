@@ -28,7 +28,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 public sealed class HookDefaultsTests
 {
     /// <summary>
-    /// The five real chat tools' names, each carrying its full <c>mcp__team__</c> prefix, in the same
+    /// The seven real chat tools' names, each carrying its full <c>mcp__team__</c> prefix, in the same
     /// order <see cref="DotAcpAgentHostFactory"/> builds them in.
     /// </summary>
     private static readonly IReadOnlyList<string> ToolNames =
@@ -38,6 +38,8 @@ public sealed class HookDefaultsTests
         "mcp__team__create_room",
         "mcp__team__invite_agent",
         "mcp__team__post_message",
+        "mcp__team__follow_room",
+        "mcp__team__unfollow_room",
     ];
 
     /// <summary>
@@ -60,6 +62,8 @@ public sealed class HookDefaultsTests
         Assert.Contains("mcp__team__create_room", prompt, StringComparison.Ordinal);
         Assert.Contains("mcp__team__invite_agent", prompt, StringComparison.Ordinal);
         Assert.Contains("mcp__team__post_message", prompt, StringComparison.Ordinal);
+        Assert.Contains("mcp__team__follow_room", prompt, StringComparison.Ordinal);
+        Assert.Contains("mcp__team__unfollow_room", prompt, StringComparison.Ordinal);
     }
 
     /// <summary>

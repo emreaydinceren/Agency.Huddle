@@ -14,7 +14,7 @@ using Agency.Huddle.Tests.Acp.Tools;
 
 /// <summary>
 /// Golden-output safety net for task T1.1. Every model-facing string produced by
-/// <see cref="SystemPromptComposer"/>, <see cref="GetHelpTool"/>, the four real chat tools, and
+/// <see cref="SystemPromptComposer"/>, <see cref="GetHelpTool"/>, the six real chat tools, and
 /// <see cref="PersonaRunner.BuildPrompt(PersonaRunner.WorkItem, Agency.Huddle.App.Hooks.IHookSource)"/> is captured here as committed text
 /// under <c>Acp/Golden</c>, so the later move of these strings into a JSON config file can prove it
 /// changed no behaviour, byte-for-byte.
@@ -48,7 +48,7 @@ using Agency.Huddle.Tests.Acp.Tools;
 public sealed class PromptGoldenTests
 {
     /// <summary>
-    /// The five real chat tools' names, each carrying its full <c>mcp__team__</c> prefix, in the same
+    /// The seven real chat tools' names, each carrying its full <c>mcp__team__</c> prefix, in the same
     /// order <see cref="DotAcpAgentHostFactory"/> builds them in.
     /// </summary>
     private static readonly IReadOnlyList<string> ToolNames =
@@ -58,6 +58,8 @@ public sealed class PromptGoldenTests
         "mcp__team__create_room",
         "mcp__team__invite_agent",
         "mcp__team__post_message",
+        "mcp__team__follow_room",
+        "mcp__team__unfollow_room",
     ];
 
     /// <summary>Pins <see cref="SystemPromptComposer.Compose"/>'s output for a plain Persona.</summary>
@@ -72,7 +74,7 @@ public sealed class PromptGoldenTests
     }
 
     /// <summary>
-    /// Pins <see cref="GetHelpTool"/>'s rendered body when constructed with the four real chat tools,
+    /// Pins <see cref="GetHelpTool"/>'s rendered body when constructed with the six real chat tools,
     /// exactly as <c>GetHelpToolTests</c> constructs them.
     /// </summary>
     [Fact]
@@ -86,7 +88,7 @@ public sealed class PromptGoldenTests
         AssertMatchesGolden("getHelp.txt", actual);
     }
 
-    /// <summary>Pins every <see cref="IAppTool.Description"/> across get_help and the four chat tools.</summary>
+    /// <summary>Pins every <see cref="IAppTool.Description"/> across get_help and the six chat tools.</summary>
     [Fact]
     public async Task ToolDescriptions_MatchGolden()
     {
@@ -128,13 +130,13 @@ public sealed class PromptGoldenTests
     }
 
     /// <summary>
-    /// Builds <see cref="GetHelpTool"/> together with the four real chat tools it reports, using the
+    /// Builds <see cref="GetHelpTool"/> together with the six real chat tools it reports, using the
     /// same narrow construction <c>GetHelpToolTests</c> uses: each tool's <see cref="IAppTool.Description"/>
     /// is a plain property, so nothing here needs to actually invoke a tool, only resolve its
     /// constructor dependencies.
     /// </summary>
     /// <param name="ct">Cancels directory initialisation.</param>
-    /// <returns>The get_help tool, and the four tools it was built from, in the order it reports them.</returns>
+    /// <returns>The get_help tool, and the six tools it was built from, in the order it reports them.</returns>
     private static async Task<(GetHelpTool GetHelp, IReadOnlyList<IAppTool> Others)> BuildToolsAsync(CancellationToken ct)
     {
         using var dir = new TempDataDir();
@@ -146,12 +148,15 @@ public sealed class PromptGoldenTests
         var aliasSource = new FakeMentionAliasSource();
         var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
 
+        var follows = new RoomFollows();
         IAppTool[] others =
         [
             new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakeHookSource()),
             new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakeHookSource()),
             new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource()),
             new PostMessageTool(chat, "caller-id", new FakeHookSource()),
+            new FollowRoomTool(follows, directory, "caller-id", new FakeHookSource()),
+            new UnfollowRoomTool(follows, directory, "caller-id", new FakeHookSource()),
         ];
         var getHelp = new GetHelpTool(others, new FakeHookSource(), "mcp__team__");
 

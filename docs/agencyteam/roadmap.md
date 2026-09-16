@@ -31,7 +31,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~5~~ | ~~Tool-call visibility~~ — **delivered 2026-09-13** | `PersonaRunner`'s event loop | shipped as one `ToolActivity` Envelope, not two; the bump it forced was spent on 3 as well |
 | ~~6~~ | ~~CSS tokenisation and dark mode~~ — **delivered 2026-09-13** | `wwwroot/app.css`, then `theme.css` and `themes/` beside it | shipped; the file was twice the size this list claimed, and a stylesheet that had never loaded had to be fixed first |
 | 7 | Theme import | a JSON-to-`MudTheme` mapper | `ThemeCatalog`, and MudBlazor's `Palette` as the key set — **no CSS generator and no file provider needed any more**, see [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md) |
-| 8 | Following a Room without being Mentioned | `ReplyGate.cs`, a new App Tool pair | `create_room` returns the Room id |
+| ~~8~~ | ~~Following a Room without being Mentioned~~ — **delivered 2026-09-16** | `ReplyGate.cs`, a new App Tool pair | shipped; the follow set became a Singleton rather than a per-runner field, which retro-amended [ADR-0012](../adr/0012-a-room-says-why-it-stayed-quiet.md) |
 | 9 | Per-Persona tool grants | `DotAcpAgentHostFactory`, `PersonaFrontmatter` | tools already built per `agentId`; `_` fields reserved |
 | ~~10~~ | ~~Persona frontmatter becomes the Member's identity~~ — **delivered 2026-09-12** | `PersonaIndex`, `PersonaStore`, `MentionParser` | shipped; `Persona.cs` was not touched |
 | 11 | Notifying an Agent when a watched file changes | a new watcher beside `PersonaStore`, then `ChatService` | `PersonaStore`'s debounced `FileSystemWatcher`; frontmatter lists parse already |
@@ -423,7 +423,38 @@ sits beside `AppCss_UsesOnlyTokensDeclaredInThemeCss` in `ThemeSourceTests`, reu
 `CssSource` — the same source-text technique, for the same reason: nothing in this suite
 renders a browser.
 
-## 8. Following a Room without being Mentioned
+## 8. Following a Room without being Mentioned — DELIVERED 2026-09-16
+
+> **Delivered**, with [ADR-0005](../adr/0005-agent-topologies-are-emergent.md)'s two named gaps
+> both closed: `mcp__team__follow_room` / `mcp__team__unfollow_room`, and the optional `seed` on
+> `create_room`. `ReplyGate.Decide` gained `following` as its fifth input, after the Budget, so
+> neither a Mention nor a Follow buys a Turn past the cap. No wire change, exactly as predicted.
+>
+> **One thing below is wrong, and it cost an ADR an amendment.** This entry and ADR-0005 both
+> specify the state as "a per-Persona `HashSet` shared between `PersonaRunner` and its App Tools,
+> which are built through one `factory.CreateAsync` call". They are not built through one call in
+> any shared sense: `CreateAsync` returns only `(IAgentHost, IAgentSession)`, so the tools it
+> constructs are invisible to the runner. Sharing a field would have meant widening
+> `IAgentHostFactory`, whose own doc calls it *"purely a test seam"*. It shipped as a
+> `RoomFollows` Singleton instead — the tool takes it from DI the way `PostMessageTool` takes
+> `ChatService`, and no seam moved.
+>
+> That has two consequences the plan did not foresee. **Self-heal stopped being free**: a
+> per-runner field died with its runner, and a Singleton does not, so `PersonaRunner` now calls
+> `ClearAgent` explicitly after its handshake. And **the Room view can read the follow set**,
+> because a Singleton is in-process — which falsified the headline argument of
+> [ADR-0012](../adr/0012-a-room-says-why-it-stayed-quiet.md), written four days earlier, that the
+> view would be *"structurally unable"* to know who is following. That ADR carries the amendment;
+> the decision it reached survived on its second argument rather than its first.
+>
+> **`follow_room` refuses a Room the caller is not a Member of**, which nothing planned. Delivery
+> only ever reaches Members, so following one would have returned success and then delivered
+> nothing — precisely the silent no-op issue #40 shipped to remove.
+>
+> **The verb vocabulary is not here.** ADR-0005 sequences it with per-Persona tool grants, and it
+> touches the same `get_help` body as ADR-0007's unresolved collision. It stays with item 9.
+>
+> The text below is kept as the reasoning that produced it.
 
 A coordinator that starts a Room and hands work to specialists is not woken when
 they answer, unless they Mention it. The Message is not lost — `AppendCatchUp`

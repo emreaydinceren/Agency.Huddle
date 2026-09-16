@@ -915,6 +915,7 @@ public sealed class ChatPageTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<Drafts>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IAgentGateway>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaHealth>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomFollows>());
 
         // Chat.razor renders InviteTeammate as a child, which injects PersonaStore for its Team
         // filter - needed even though these tests never open that panel.

@@ -38,10 +38,12 @@ internal static class ReplyGate
     /// </para>
     /// <para>
     /// The Budget is checked <em>first</em>, and that ordering is the rule rather than an
-    /// implementation detail: a Mention does not buy a Turn past the cap. It lives inside this
-    /// function precisely so it cannot be reordered at a call site, where swapping two
-    /// <c>if</c> statements would silently exempt every Mentioned Agent from the cap while
-    /// still compiling and still passing every test that predates the cap.
+    /// implementation detail: a Mention does not buy a Turn past the cap, and neither does Following
+    /// - roadmap item 8's <paramref name="following"/> is the second thing that must not buy a Turn
+    /// past the cap. It lives inside this function precisely so it cannot be reordered at a call
+    /// site, where swapping two <c>if</c> statements would silently exempt every Mentioned or
+    /// following Agent from the cap while still compiling and still passing every test that predates
+    /// the cap.
     /// </para>
     /// <para>
     /// Both Budget figures arrive on the Envelope as labels computed by the server, the same way a
@@ -60,8 +62,15 @@ internal static class ReplyGate
     /// How many the Room currently allows. Zero or less means uncapped, which is the only way back to
     /// the behaviour ADR-0004 recorded as "deliberately no runaway-loop guard".
     /// </param>
+    /// <param name="following">
+    /// Whether the Agent asked to be woken by every Message in this Room, via
+    /// <c>mcp__team__follow_room</c> (a later phase's tool), so it replies without being Mentioned.
+    /// This is per (Agent, Room), never a property of a Persona: ADR-0005 rejects an
+    /// <c>isCoordinator</c> frontmatter flag for exactly that reason, because the same Persona can
+    /// follow one Room and not another.
+    /// </param>
     /// <returns>What to do with this delivery.</returns>
-    internal static ReplyDecision Decide(bool mentioned, int memberCount, int agentMessagesSinceHuman, int budget)
+    internal static ReplyDecision Decide(bool mentioned, int memberCount, int agentMessagesSinceHuman, int budget, bool following)
     {
         // >= rather than >: the count includes the Message just received, so a reply to it would be
         // the Budget-plus-first. ChatService compares the same way, so the two agree by construction.
@@ -70,6 +79,6 @@ internal static class ReplyGate
             return ReplyDecision.BudgetExhausted;
         }
 
-        return memberCount <= 2 || mentioned ? ReplyDecision.Reply : ReplyDecision.CatchUp;
+        return memberCount <= 2 || mentioned || following ? ReplyDecision.Reply : ReplyDecision.CatchUp;
     }
 }
