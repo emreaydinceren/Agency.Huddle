@@ -30,19 +30,30 @@ using Agency.Huddle.App.Hooks;
 /// line, then a tools block: <c>getHelp.toolsHeader</c>, one <c>getHelp.toolEntry</c> per tool (each
 /// of which already carries its own trailing blank line), then <c>getHelp.footer</c>.
 /// </para>
+/// <para>
+/// One exception to that, and it is the point of <see cref="catalog"/>: the tool <em>descriptions</em>
+/// quoted in the TOOLS block are captured once, here, rather than re-read per call. Every
+/// <c>tool.*.description</c> hook is badged <b>Next session</b> on the settings page, and this type
+/// is built once per session — so reading them live let an edit reach a Teammate that was already
+/// running, which the badge promises it cannot. MCP's own <c>tools/list</c> honours that badge by
+/// construction, because it is sent once at session start; this is the surface that did not, and it
+/// is the one that decides what a model knows, since progressive discovery means the system prompt
+/// names tools without describing them.
+/// </para>
 /// </remarks>
 internal sealed class GetHelpTool : IAppTool
 {
     private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
 
-    private readonly IReadOnlyList<IAppTool> otherTools;
+    private readonly IReadOnlyList<CatalogEntry> catalog;
     private readonly IHookSource hooks;
     private readonly string toolNamePrefix;
 
     /// <summary>Initialises a new instance of the <see cref="GetHelpTool"/> class.</summary>
     /// <param name="otherTools">
-    /// Every other tool offered to the same session. Copied on the way in, so the caller's array
-    /// cannot change what this tool reports. This tool is not in the list and adds itself.
+    /// Every other tool offered to the same session. Its names and descriptions are copied on the
+    /// way in, so neither the caller's array nor a later hook edit can change what this tool
+    /// reports. This tool is not in the list and adds itself.
     /// </param>
     /// <param name="hooks">Resolves each hook's current text — a configured override, or the <see cref="HookCatalog"/> default.</param>
     /// <param name="toolNamePrefix">
@@ -55,9 +66,16 @@ internal sealed class GetHelpTool : IAppTool
         ArgumentNullException.ThrowIfNull(hooks);
         ArgumentException.ThrowIfNullOrWhiteSpace(toolNamePrefix);
 
-        this.otherTools = [.. otherTools];
         this.hooks = hooks;
         this.toolNamePrefix = toolNamePrefix;
+
+        // this.Description reads a hook, so hooks must already be assigned. This tool goes first for
+        // the same reason AllTools once yielded it first: it is offered first.
+        this.catalog =
+        [
+            new CatalogEntry(this.Name, this.Description),
+            .. otherTools.Select(static tool => new CatalogEntry(tool.Name, tool.Description)),
+        ];
     }
 
     /// <inheritdoc />
@@ -111,12 +129,12 @@ internal sealed class GetHelpTool : IAppTool
 
         builder.Append(this.hooks.Render("getHelp.toolsHeader", NoValues)).Append('\n');
 
-        foreach (var tool in this.AllTools())
+        foreach (var entry in this.catalog)
         {
             var values = new Dictionary<string, string>
             {
-                ["{{toolName}}"] = this.toolNamePrefix + tool.Name,
-                ["{{toolDescription}}"] = tool.Description,
+                ["{{toolName}}"] = this.toolNamePrefix + entry.Name,
+                ["{{toolDescription}}"] = entry.Description,
             };
 
             builder.Append(this.hooks.Render("getHelp.toolEntry", values));
@@ -127,15 +145,12 @@ internal sealed class GetHelpTool : IAppTool
         return builder.ToString();
     }
 
-    /// <summary>Returns this tool followed by every other tool, in the order they are reported.</summary>
-    /// <returns>The full tool catalog, this tool first.</returns>
-    private IEnumerable<IAppTool> AllTools()
-    {
-        yield return this;
-
-        foreach (var tool in this.otherTools)
-        {
-            yield return tool;
-        }
-    }
+    /// <summary>
+    /// One tool as this session will report it: the name and the description read when the session's
+    /// tool list was built, not as they read now. See the <see cref="GetHelpTool"/> remarks for why
+    /// the description is frozen while the surrounding help prose is not.
+    /// </summary>
+    /// <param name="Name">The tool's bare name, without the <c>mcp__&lt;server&gt;__</c> prefix.</param>
+    /// <param name="Description">The tool's job description as of this session's start.</param>
+    private sealed record CatalogEntry(string Name, string Description);
 }

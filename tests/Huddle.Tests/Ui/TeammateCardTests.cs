@@ -602,9 +602,14 @@ public sealed class TeammateCardTests
         Assert.True(HasButton(cut, "Restart"));
     }
 
-    /// <summary>An Online, healthy teammate offers no Restart - there is nothing for it to fix.</summary>
+    /// <summary>
+    /// An Online, healthy teammate offers Restart too. It once did not, on the grounds that there was
+    /// nothing for it to fix - but a NextSession Hook edit can only reach a Teammate through a new
+    /// session, and rules.md forbids a Hook edit restarting one by itself, so hiding Restart here left
+    /// editing the Persona text as the only way to apply one.
+    /// </summary>
     [Fact]
-    public async Task TeammateCard_Online_OffersNoRestart()
+    public async Task TeammateCard_Online_OffersRestart()
     {
         await using var factory = new TeamWebApplicationFactory();
         await SeedPersonaAsync(factory, "coo", "x");
@@ -614,15 +619,14 @@ public sealed class TeammateCardTests
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
 
         Assert.Contains("Online", cut.Markup, StringComparison.Ordinal);
-        Assert.False(HasButton(cut, "Restart"));
+        Assert.True(HasButton(cut, "Restart"));
     }
 
     /// <summary>
     /// The open card follows live health/presence, exactly like the tile behind it: rules.md's
-    /// "Health outranks pipe liveness" applies to every surface rendering this badge, and Restart is
-    /// offered only while Status reads Offline or Degraded - the one moment a Human needs it. A card
-    /// that kept showing its opening snapshot would hide Restart from someone looking straight at an
-    /// Agent that just went offline. Drives the same transition
+    /// "Health outranks pipe liveness" applies to every surface rendering this badge. A card that kept
+    /// showing its opening snapshot would still be claiming Online for an Agent that just went
+    /// offline, and the reason line under the badge would never appear. Drives the same transition
     /// <see cref="TeammatesPageTests.TeammatesPage_RepaintsWhenAnAgentGoesOffline"/> does for the
     /// tile, but on an already-open card.
     /// </summary>
@@ -636,7 +640,6 @@ public sealed class TeammateCardTests
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
         Assert.Contains("Online", cut.Markup, StringComparison.Ordinal);
-        Assert.False(HasButton(cut, "Restart"));
 
         var agent = await factory.Services.GetRequiredService<ITeamDirectory>().FindUserByNameAsync("coo", Xunit.TestContext.Current.CancellationToken);
         Assert.NotNull(agent);

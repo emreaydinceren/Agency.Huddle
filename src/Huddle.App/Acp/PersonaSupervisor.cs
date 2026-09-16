@@ -363,6 +363,22 @@ internal sealed class PersonaSupervisor : BackgroundService
 
     private async Task StartHostIfMissingAsync(string name, CancellationToken cancellationToken)
     {
+        // The cost guard lives here, not only in ExecuteAsync, because this is the one place a host
+        // is ever created - every route in (startup, a Persona file changing, the Restart button)
+        // arrives through it. ExecuteAsync's own early return covers startup and stops the
+        // PersonasChanged subscription ever being made; Restart is a direct call and reached this
+        // method with the guard off, bringing a Persona fully Online and leaving every later Message
+        // to it billable, with nothing on screen having said so.
+        //
+        // Reported rather than returned silently: a button that does nothing at all is the failure
+        // this area keeps producing, and an Offline badge with a reason is the surface that already
+        // exists for "it is not running, and here is why".
+        if (!this.options.Acp.Enabled)
+        {
+            this.health.Report(name, PersonaState.Offline, "Teammates are switched off in this configuration, so nothing was started.");
+            return;
+        }
+
         lock (this.gate)
         {
             // `stopping` closes the exact window that produced the duplicate-start flake: an
@@ -409,7 +425,19 @@ internal sealed class PersonaSupervisor : BackgroundService
                 return;
             }
 
-            this.health.Report(name, PersonaState.Online, null);
+            // Online here means "the start returned and said nothing about itself", never "this
+            // Agent is healthy" - a fact this method does not have. PersonaRunner.StartAsync can
+            // report during the await above (a stored Model the Adapter does not advertise is the
+            // case today), and PersonaHealth.Report is last-write-wins with no notion of a state
+            // that outranks another - so reporting Online unconditionally destroyed that report
+            // microseconds after it was made, before any surface could read it. Reading the table
+            // back rather than tracking a flag keeps the rule in one expression: whatever was said
+            // during the start wins, because it knows something this line does not.
+            var afterStart = this.health.Get(name);
+            if (afterStart is null || afterStart.State == PersonaState.Starting)
+            {
+                this.health.Report(name, PersonaState.Online, null);
+            }
 
             lock (this.gate)
             {
