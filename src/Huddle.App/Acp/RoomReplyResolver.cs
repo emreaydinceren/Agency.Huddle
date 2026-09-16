@@ -50,11 +50,17 @@ internal static class RoomReplyResolver
     /// </para>
     /// <para>
     /// Roadmap item 8 gives <see cref="ReplyGate.Decide"/> a further <c>following</c> parameter that is
-    /// deliberately client-side and never crosses the wire. This function will never see it, and so it
-    /// answers only <em>what the delivery was labelled</em> - never what a runner actually did with it.
-    /// A Room banner built from this result must be worded to instruct ("mention a teammate to get a
-    /// reply"), never to predict ("a teammate will reply") - this function has no way to know whether a
-    /// following Persona is even listening.
+    /// deliberately client-side and never crosses the wire. That made it sound, once, as though this
+    /// function could never see it and a Room banner could only ever describe what a delivery was
+    /// <em>labelled</em>. That was true of the wire and false of the process: <see cref="RoomFollows"/>
+    /// is an in-process singleton, so a caller <em>can</em> supply the following set it holds, and
+    /// <paramref name="followingAgentIds"/> below is exactly that. What the wire boundary still rules
+    /// out is a guarantee: this function reports what the gate would permit, not what a runner will
+    /// actually do with the delivery - a raw pipe client can reply to anything regardless of what this
+    /// resolves to, and a following Persona still has to be online and listening. So the copy built
+    /// from this result must still be worded to instruct ("mention a teammate to get a reply"), never
+    /// to predict ("a teammate will reply") - following is now a known input rather than an assumed
+    /// <see langword="false"/>, but the gate remains permission, not obligation.
     /// </para>
     /// <para>
     /// <paramref name="reachableAgentIds"/> is a recipient filter, not an outcome, because
@@ -75,6 +81,11 @@ internal static class RoomReplyResolver
     /// liveness, and that ordering is the rule - any of a runner's loops can die and leave its pipe
     /// open, so an Agent can be deaf and still report online.
     /// </param>
+    /// <param name="followingAgentIds">
+    /// The Agent ids currently following this Room via <see cref="RoomFollows.FollowersOf"/> - each
+    /// one's <see cref="ReplyGate.Decide"/> call passes <see langword="true"/> for <c>following</c>
+    /// regardless of Mention.
+    /// </param>
     /// <param name="budget">The Room's current Budget.</param>
     /// <returns>The one <see cref="RoomReply"/> that summarises this delivery.</returns>
     internal static RoomReply Resolve(
@@ -82,6 +93,7 @@ internal static class RoomReplyResolver
         IReadOnlyList<User> mentions,
         string senderId,
         IReadOnlySet<string> reachableAgentIds,
+        IReadOnlySet<string> followingAgentIds,
         RoomBudget budget)
     {
         // Checked before anything else, and the ordering is deliberate. A Teammate the Human named
@@ -106,7 +118,8 @@ internal static class RoomReplyResolver
         foreach (User recipient in recipients)
         {
             bool mentioned = mentions.Any(m => string.Equals(m.Id, recipient.Id, StringComparison.Ordinal));
-            decisions.Add(ReplyGate.Decide(mentioned, members.Count, budget.Used, budget.Granted));
+            bool following = followingAgentIds.Contains(recipient.Id);
+            decisions.Add(ReplyGate.Decide(mentioned, members.Count, budget.Used, budget.Granted, following));
         }
 
         if (decisions.Any(d => d == ReplyDecision.Reply))

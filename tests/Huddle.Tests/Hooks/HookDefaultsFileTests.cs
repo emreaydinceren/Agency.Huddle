@@ -14,7 +14,7 @@ using Agency.Huddle.App.Hooks;
 /// </remarks>
 public sealed class HookDefaultsFileTests
 {
-    /// <summary>The checked-in file carries exactly the 22 keys in <see cref="HookCatalog"/>, no more and no fewer.</summary>
+    /// <summary>The checked-in file carries exactly the 24 keys in <see cref="HookCatalog"/>, no more and no fewer.</summary>
     [Fact]
     public void DefaultsFile_HasExactlyTheCatalogKeys()
     {

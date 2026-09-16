@@ -376,7 +376,7 @@ public sealed class TeammatesPageTests
         // Never started - Teammates.razor only needs a PersonaSupervisor it can inject, for the
         // Restart button this test does not exercise.
         using var supervisor = new PersonaSupervisor(
-            dataDir.Options(), personas, new FakeAgentHostFactory(), health, new FakeHookSource(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+            dataDir.Options(), personas, new FakeAgentHostFactory(), health, new FakeHookSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         await using MudBunitContext ctx = new();
         ctx.Services.AddSingleton<ITeamDirectory>(directory);

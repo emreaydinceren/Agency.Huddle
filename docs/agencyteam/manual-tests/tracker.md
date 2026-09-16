@@ -1,6 +1,6 @@
 # Manual test tracker
 
-Where every one of the 468 tests stands. One row per test, updated as you run it.
+Where every one of the 472 tests stands. One row per test, updated as you run it.
 
 > [!NOTE]
 > **An earlier full run exists, against the previous UI, and its results are deliberately not
@@ -103,10 +103,10 @@ the per-area tables below.
 | [Teammate card: view, edit, create, delete](teammate-card.md) | 50 | 1 | [below](#teammate-card) |
 | [Model and Effort pickers, catalog probe and runner restart](model-effort.md) | 27 | 1 | [below](#model-effort) |
 | [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 32 | 4 | [below](#invite-rooms) |
-| [Settings: the 22 Hooks, editing, per-field reset and Save](hooks-settings.md) | 40 | 3 | [below](#hooks-settings) |
+| [Settings: the 24 Hooks, editing, per-field reset and Save](hooks-settings.md) | 40 | 3 | [below](#hooks-settings) |
 | [Appearance tab, Themes, Tokens and overrides](appearance-theme.md) | 25 | — | [below](#appearance-theme) |
 | [The named pipe: external agents and the wire](pipe-external.md) | 36 | — | [below](#pipe-external) |
-| [App Tools a real model calls (progressive discovery)](app-tools.md) | 22 | 16 | [below](#app-tools) |
+| [App Tools a real model calls (progressive discovery)](app-tools.md) | 26 | 20 | [below](#app-tools) |
 | [Persona lifecycle: supervisor, work dirs, health and restarts](persona-lifecycle.md) | 32 | 7 | [below](#persona-lifecycle) |
 
 ---
@@ -490,15 +490,15 @@ Creating Rooms, inviting Agents, Room naming — [area file](invite-rooms.md)
 
 ## hooks-settings
 
-Settings: the 22 Hooks, editing, per-field reset and Save — [area file](hooks-settings.md)
+Settings: the 24 Hooks, editing, per-field reset and Save — [area file](hooks-settings.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | [HOOKSSETTINGS-01](hooks-settings.md#hookssettings-01-settings-opens-on-the-hooks-tab-with-a-two-button-tab-rail) |  | Active | |  |
 | [HOOKSSETTINGS-02](hooks-settings.md#hookssettings-02-tab-clicks-change-the-url-and-an-unknown-tab-segment-falls-back-to-hooks-instead-of-404ing) |  | Active | |  |
 | [HOOKSSETTINGS-03](hooks-settings.md#hookssettings-03-the-hooks-tab-prints-the-real-absolute-path-of-hooksjson-and-says-the-files-absence-is-expected) |  | Active | |  |
-| [HOOKSSETTINGS-04](hooks-settings.md#hookssettings-04-exactly-22-hook-fields-in-four-named-groups-in-a-fixed-order) |  | Active | |  |
-| [HOOKSSETTINGS-05](hooks-settings.md#hookssettings-05-the-next-session-badge-appears-on-exactly-the-9-hooks-whose-edits-cannot-reach-a-running-teammate) |  | Active | |  |
+| [HOOKSSETTINGS-04](hooks-settings.md#hookssettings-04-exactly-24-hook-fields-in-four-named-groups-in-a-fixed-order) |  | Active | |  |
+| [HOOKSSETTINGS-05](hooks-settings.md#hookssettings-05-the-next-session-badge-appears-on-exactly-the-11-hooks-whose-edits-cannot-reach-a-running-teammate) |  | Active | |  |
 | [HOOKSSETTINGS-06](hooks-settings.md#hookssettings-06-placeholder-chips-are-listed-on-exactly-the-8-hooks-that-take-placeholders-with-full-braces) |  | Active | |  |
 | [HOOKSSETTINGS-07](hooks-settings.md#hookssettings-07-no-hooks-default-text-contains-the-literal-string-mcp__team__) |  | Active | |  |
 | [HOOKSSETTINGS-08](hooks-settings.md#hookssettings-08-textarea-height-tracks-the-line-count-and-clamps-at-14-rows) |  | Active | |  |
@@ -510,7 +510,7 @@ Settings: the 22 Hooks, editing, per-field reset and Save — [area file](hooks-
 | [HOOKSSETTINGS-14](hooks-settings.md#hookssettings-14-saving-a-field-back-to-its-default-removes-the-key-rather-than-storing-a-redundant-copy) |  | Active | |  |
 | [HOOKSSETTINGS-15](hooks-settings.md#hookssettings-15-save-is-the-only-writer-and-a-successful-save-gives-no-confirmation) |  | Active | |  |
 | [HOOKSSETTINGS-16](hooks-settings.md#hookssettings-16-reset-all-to-defaults-is-disabled-until-something-is-modified-and-guards-itself-with-an-inline-confirm) |  | Active | |  |
-| [HOOKSSETTINGS-17](hooks-settings.md#hookssettings-17-yes-reset-everything-stages-all-22-defaults-but-writes-nothing-and-the-reset-is-silently-lost-if-you-navigate-away) |  | Active | |  |
+| [HOOKSSETTINGS-17](hooks-settings.md#hookssettings-17-yes-reset-everything-stages-all-24-defaults-but-writes-nothing-and-the-reset-is-silently-lost-if-you-navigate-away) |  | Active | |  |
 | [HOOKSSETTINGS-18](hooks-settings.md#hookssettings-18-reset-all-followed-by-save-leaves-hooksjson-present-and-empty-never-deleted) |  | Active | |  |
 | [HOOKSSETTINGS-19](hooks-settings.md#hookssettings-19-a-failed-save-shows-a-red-could-not-save-line-under-the-heading-and-keeps-every-pending-edit) |  | Active | |  |
 | [HOOKSSETTINGS-20](hooks-settings.md#hookssettings-20-validation-reports-and-never-refuses-an-empty-field-raises-an-error-and-still-saves) |  | Active | |  |
@@ -638,6 +638,10 @@ App Tools a real model calls (progressive discovery) — [area file](app-tools.m
 | [APPTOOLS-20](app-tools.md#apptools-20-a-turn-declined-for-budget-never-reaches-the-model-at-all-the-decline-path-is-not-the-refusal-path) |  | Active | | |
 | [APPTOOLS-21](app-tools.md#apptools-21-continue-re-delivers-the-paused-message-and-the-prompt-survives-a-page-reload) | 💰 | Active | | |
 | [APPTOOLS-22](app-tools.md#apptools-22-editing-a-hook-changes-model-facing-text-without-restarting-the-session-and-next-session-hooks-wait-for-a-restart) | 💰 | Active | | |
+| [APPTOOLS-23](app-tools.md#apptools-23-follow_room-wakes-an-agent-that-was-not-mentioned-and-a-non-follower-in-the-same-room-is-the-control) | 💰 | Active | | |
+| [APPTOOLS-24](app-tools.md#apptools-24-unfollow_room-restores-the-ordinary-mention-only-rule-and-the-room-confirms-the-decline-was-not-a-silent-drop) | 💰 | Active | | |
+| [APPTOOLS-25](app-tools.md#apptools-25-following-does-not-buy-a-turn-past-the-budget-even-when-two-followers-would-otherwise-keep-each-other-going) | 💰 | Active | | |
+| [APPTOOLS-26](app-tools.md#apptools-26-create_room-with-seed-posts-the-opening-message-as-part-of-creation) | 💰 | Active | | |
 
 ## persona-lifecycle
 

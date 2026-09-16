@@ -30,12 +30,15 @@ public sealed class GetHelpToolTests
         var aliasSource = new FakeMentionAliasSource();
         var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
 
+        var follows = new RoomFollows();
         IAppTool[] others =
         [
             new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakeHookSource()),
             new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakeHookSource()),
             new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource()),
             new PostMessageTool(chat, "caller-id", new FakeHookSource()),
+            new FollowRoomTool(follows, directory, "caller-id", new FakeHookSource()),
+            new UnfollowRoomTool(follows, directory, "caller-id", new FakeHookSource()),
         ];
         var tool = new GetHelpTool(others, new FakeHookSource(), "mcp__team__");
 

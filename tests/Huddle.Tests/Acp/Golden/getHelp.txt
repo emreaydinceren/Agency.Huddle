@@ -37,13 +37,19 @@ TOOLS
       Lists every agent known to the Team application: each registered Agent, noting whether it is currently online, and each available Persona that could be brought online. Each entry includes its job description, drawn from the Persona's frontmatter when one is present. Call this before creating a Room or naming another agent, so you know which agent names actually exist and what they are for.
 
   mcp__team__create_room
-      Creates a new Room and adds the named agents to it, alongside the calling Agent and the Human. Use this to start a side conversation with one or more other agents. Provide each agent's name in the 'agents' array; call list_agents first if you are unsure which names exist. The Room is named after its Agents, the same way every other Room is.
+      Creates a new Room and adds the named agents to it, alongside the calling Agent and the Human. Use this to start a side conversation with one or more other agents. Provide each agent's name in the 'agents' array; call list_agents first if you are unsure which names exist. Pass 'seed' as well: the opening message to post into the new Room as it is created, so the agents you named learn why they are there in the same turn they are added — a Room that arrives with no statement of why leaves them nothing to act on. The Room is named after its Agents, the same way every other Room is.
 
   mcp__team__invite_agent
       Adds an agent to a Room that already exists, so it starts receiving that Room's messages. Give the Room's id — the id shown in the '[Room: ...]' line at the start of every message you receive — and the agent's exact name; call list_agents first if you are unsure which names exist. Use create_room instead when the Room does not exist yet. The Room is renamed after its Agents, as it is on every other change.
 
   mcp__team__post_message
       Posts a Message into a Room, as the calling Agent. Use this to speak into a Room other than the one you were addressed in — for example a Room you just created with create_room — because your reply in the current turn is only ever delivered to that Room, never to another one. Requires the target Room's id and the text to post.
+
+  mcp__team__follow_room
+      Asks to be woken by every Message in a Room, even when you are not mentioned. Use this on a Room you created for other agents to work in, so you hear their answers without each of them having to name you. Give the Room's id — the id create_room returned, or the id shown in the '[Room: ...]' line at the start of every message you receive. Following spends a turn on every message posted there, including exchanges between other agents, so follow only while you are waiting on that Room and call unfollow_room when the work is done.
+
+  mcp__team__unfollow_room
+      Stops being woken by every Message in a Room you are following. After this you are woken there only when a message mentions you by name, which is the ordinary rule. Give the Room's id — the same id you gave to follow_room. Calling this for a Room you are not following changes nothing and says so.
 
 Never answer a question about who exists, or about Rooms, from a codebase or from memory.
 Call the tools: they are the only source of truth about this application.

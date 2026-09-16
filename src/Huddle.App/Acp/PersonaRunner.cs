@@ -32,6 +32,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
     private readonly TeamOptions options;
     private readonly IAgentHostFactory factory;
     private readonly IHookSource hooks;
+    private readonly RoomFollows roomFollows;
     private readonly ILogger<PersonaRunner> logger;
     private readonly CancellationTokenSource runCts = new();
     private readonly Channel<QueuedWork> workItems = Channel.CreateUnbounded<QueuedWork>();
@@ -72,20 +73,29 @@ internal sealed class PersonaRunner : IAsyncDisposable
     private Task? readLoopTask;
     private Task? consumerTask;
     private Task? eventReaderTask;
+    private string? agentId;
     private bool disposed;
 
-    public PersonaRunner(Persona persona, IOptions<TeamOptions> options, IAgentHostFactory factory, IHookSource hooks, ILogger<PersonaRunner> logger)
+    public PersonaRunner(
+        Persona persona,
+        IOptions<TeamOptions> options,
+        IAgentHostFactory factory,
+        IHookSource hooks,
+        RoomFollows roomFollows,
+        ILogger<PersonaRunner> logger)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentNullException.ThrowIfNull(hooks);
+        ArgumentNullException.ThrowIfNull(roomFollows);
         ArgumentNullException.ThrowIfNull(logger);
 
         this.persona = persona;
         this.options = options.Value;
         this.factory = factory;
         this.hooks = hooks;
+        this.roomFollows = roomFollows;
         this.logger = logger;
     }
 
@@ -125,6 +135,16 @@ internal sealed class PersonaRunner : IAsyncDisposable
             throw new InvalidOperationException(
                 $"Expected a Welcome envelope for Persona '{this.persona.Name}' but received {received}");
         }
+
+        this.agentId = welcome.AgentId;
+
+        // Self-heal for roadmap item 8: ADR-0005 says a forgotten mcp__team__unfollow_room self-heals
+        // on restart. With the follow set living in the RoomFollows singleton rather than a field on
+        // this instance, that no longer comes free from object lifetime - a singleton outlives any one
+        // runner - so it must be done explicitly, here, before the read loop below ever calls
+        // IsFollowing for this Agent id. Doing it up front also covers an Agent that reconnects on the
+        // same pipe without this PersonaRunner ever being recreated.
+        this.roomFollows.ClearAgent(this.agentId);
 
         // Only now, with Registration complete, does the Agent id exist, so only now can the session
         // be created with the tools bound to it by construction (docs/acp/agent-guide.md §3.6).
@@ -220,8 +240,9 @@ internal sealed class PersonaRunner : IAsyncDisposable
                         this.RaiseStatusChanged(PersonaState.Online, null);
                     }
 
+                    var following = this.agentId is not null && this.roomFollows.IsFollowing(this.agentId, posted.RoomId);
                     switch (ReplyGate.Decide(
-                        posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget))
+                        posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget, following))
                     {
                         case ReplyDecision.Reply:
                             var missed = this.TakeCatchUp(posted.RoomId);

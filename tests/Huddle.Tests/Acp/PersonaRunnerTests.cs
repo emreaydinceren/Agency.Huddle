@@ -23,7 +23,7 @@ namespace Agency.Huddle.Tests.Acp;
 public sealed class PersonaRunnerTests
 {
     /// <summary>
-    /// The five real chat tools' names, each carrying its full <c>mcp__team__</c> prefix, in the same
+    /// The seven real chat tools' names, each carrying its full <c>mcp__team__</c> prefix, in the same
     /// order <see cref="DotAcpAgentHostFactory"/> builds them in.
     /// </summary>
     private static readonly IReadOnlyList<string> ToolNames =
@@ -33,6 +33,8 @@ public sealed class PersonaRunnerTests
         "mcp__team__create_room",
         "mcp__team__invite_agent",
         "mcp__team__post_message",
+        "mcp__team__follow_room",
+        "mcp__team__unfollow_room",
     ];
 
     [Fact]
@@ -362,7 +364,7 @@ public sealed class PersonaRunnerTests
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(
@@ -402,7 +404,7 @@ public sealed class PersonaRunnerTests
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -455,7 +457,7 @@ public sealed class PersonaRunnerTests
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -499,7 +501,7 @@ public sealed class PersonaRunnerTests
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -533,7 +535,7 @@ public sealed class PersonaRunnerTests
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         for (var i = 0; i < 3; i++)
@@ -580,7 +582,7 @@ public sealed class PersonaRunnerTests
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "first"), ct);
@@ -618,7 +620,7 @@ public sealed class PersonaRunnerTests
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -658,7 +660,7 @@ public sealed class PersonaRunnerTests
         var logger = new RecordingLogger<PersonaRunner>();
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), logger);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), logger);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -1508,7 +1510,7 @@ public sealed class PersonaRunnerTests
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -1550,7 +1552,7 @@ public sealed class PersonaRunnerTests
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -1687,7 +1689,7 @@ public sealed class PersonaRunnerTests
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -1725,7 +1727,7 @@ public sealed class PersonaRunnerTests
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
         var logger = new RecordingLogger<PersonaRunner>();
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), logger);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), logger);
         runner.StatusChanged += _ => throw new InvalidOperationException("Simulated subscriber failure.");
         await server.HandshakeAsync(runner, ct);
 
@@ -1810,7 +1812,7 @@ public sealed class PersonaRunnerTests
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -1840,7 +1842,7 @@ public sealed class PersonaRunnerTests
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -1878,7 +1880,7 @@ public sealed class PersonaRunnerTests
         PipeHostFixture fixture, Persona persona, FakeAgentHostFactory factory, ILogger<PersonaRunner>? logger = null)
     {
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        return new PersonaRunner(persona, options, factory, new FakeHookSource(), logger ?? NullLogger<PersonaRunner>.Instance);
+        return new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), logger ?? NullLogger<PersonaRunner>.Instance);
     }
 
     /// <summary>

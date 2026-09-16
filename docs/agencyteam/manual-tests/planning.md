@@ -1,6 +1,6 @@
 # Manual test script — planning
 
-Which of the 468 tests to run, what each area covers, and which ones spend money.
+Which of the 472 tests to run, what each area covers, and which ones spend money.
 Read this to **choose** a run. You do not need it while executing one: the rules
 that bind a run live in [the script](../manual-tests.md), which is the page to
 have open instead.
@@ -28,10 +28,10 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 7 | [Teammate card: view, edit, create, delete](teammate-card.md) | 50 | 1 | 6.3h |
 | 8 | [Model and Effort pickers, catalog probe and runner restart](model-effort.md) | 27 | 1 | 3.6h |
 | 9 | [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 32 | 4 | 3.5h |
-| 10 | [Settings: the 22 Hooks, editing, per-field reset and Save](hooks-settings.md) | 40 | 3 | 4.7h |
+| 10 | [Settings: the 24 Hooks, editing, per-field reset and Save](hooks-settings.md) | 40 | 3 | 4.7h |
 | 11 | [Appearance tab, Themes, Tokens and overrides](appearance-theme.md) | 25 | — | 3.2h |
 | 12 | [The named pipe: external agents and the wire](pipe-external.md) | 36 | — | 3.9h |
-| 13 | [App Tools a real model calls (progressive discovery)](app-tools.md) | 22 | 16 | 3.5h |
+| 13 | [App Tools a real model calls (progressive discovery)](app-tools.md) | 26 | 20 | 4.2h |
 | 14 | [Persona lifecycle: supervisor, work dirs, health and restarts](persona-lifecycle.md) | 32 | 7 | 6.5h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
@@ -59,7 +59,7 @@ change, and before committing to a full area. A failure here means stop and fix,
 | [TEAMMATECARD-02](teammate-card.md#teammatecard-02--clicking-new-teammate-opens-a-card-at-all-blank-name-crash-probe) | Clicking New teammate opens a card at all (blank-name crash probe) |
 | [INVITEROOMS-03](invite-rooms.md#inviterooms-03-the-new-chat-panel-toggles-lists-every-agent-with-a-status-dot-and-keeps-start-chat-disabled-until-something-is-ticked) | The New chat panel toggles, lists every Agent with a status dot, and keeps Start chat disabled until something is ticked |
 | [HOOKSSETTINGS-01](hooks-settings.md#hookssettings-01--settings-opens-on-the-hooks-tab-with-a-two-button-tab-rail) | /settings opens on the Hooks tab with a two-button tab rail |
-| [HOOKSSETTINGS-04](hooks-settings.md#hookssettings-04--exactly-22-hook-fields-in-four-named-groups-in-a-fixed-order) | Exactly 22 hook fields, in four named groups, in a fixed order |
+| [HOOKSSETTINGS-04](hooks-settings.md#hookssettings-04--exactly-24-hook-fields-in-four-named-groups-in-a-fixed-order) | Exactly 24 hook fields, in four named groups, in a fixed order |
 | [APPEARANCETHEME-03](appearance-theme.md#appearancetheme-03--the-theme-select-offers-the-built-in-catalog-and-the-appearance-select-offers-exactly-system-light-and-dark-in-that-order) | The Theme dropdown offers exactly System, Light and Dark, in that order |
 | [APPEARANCETHEME-04](appearance-theme.md#appearancetheme-04--choosing-a-value-in-either-select-stores-its-id-and-applies-immediately-with-no-page-reload) | Choosing a Theme stores its id and forces a full document load, not an in-place repaint |
 | [PIPEEXTERNAL-04](pipe-external.md#pipeexternal-04-a-room-appears-in-the-sidebar-the-moment-an-external-agent-says-hello-with-no-refresh) | A Room appears in the sidebar the moment an external agent says hello, with no refresh |
@@ -75,7 +75,7 @@ change, and before committing to a full area. A failure here means stop and fix,
 
 ## Appendix A. Paid test register
 
-Every test that spends money, in one place. 50 tests, about 11.3 hours of
+Every test that spends money, in one place. 54 tests, about 12.0 hours of
 wall clock. Read [section 0.2](../manual-tests.md#02-the-cost-guard) and [section 0.3](../manual-tests.md#03-the-model-and-effort-convention) before running any of them.
 
 | Test id | Area | What it proves | Est. |
@@ -123,6 +123,10 @@ wall clock. Read [section 0.2](../manual-tests.md#02-the-cost-guard) and [sectio
 | [APPTOOLS-19](app-tools.md#apptools-19-a-budgetexhausted-refusal-from-post_message-is-terminal-the-agent-stops-does-not-retry-and-does-not-reroute) | `app-tools` | A budgetExhausted refusal from post_message is terminal: the agent stops, does not retry and does not reroute | 15 min |
 | [APPTOOLS-21](app-tools.md#apptools-21-continue-re-delivers-the-paused-message-and-the-prompt-survives-a-page-reload) | `app-tools` | Continue re-delivers the paused Message, and the prompt survives a page reload | 12 min |
 | [APPTOOLS-22](app-tools.md#apptools-22-editing-a-hook-changes-model-facing-text-without-restarting-the-session-and-next-session-hooks-wait-for-a-restart) | `app-tools` | Editing a hook changes model-facing text without restarting the session, and Next session hooks wait for a restart | 15 min |
+| [APPTOOLS-23](app-tools.md#apptools-23-follow_room-wakes-an-agent-that-was-not-mentioned-and-a-non-follower-in-the-same-room-is-the-control) | `app-tools` | follow_room wakes an agent that was not mentioned, and a non-follower in the same Room is the control | 15 min |
+| [APPTOOLS-24](app-tools.md#apptools-24-unfollow_room-restores-the-ordinary-mention-only-rule-and-the-room-confirms-the-decline-was-not-a-silent-drop) | `app-tools` | unfollow_room restores the ordinary mention-only rule, and the Room confirms the decline was not a silent drop | 10 min |
+| [APPTOOLS-25](app-tools.md#apptools-25-following-does-not-buy-a-turn-past-the-budget-even-when-two-followers-would-otherwise-keep-each-other-going) | `app-tools` | Following does not buy a Turn past the Budget, even when two followers would otherwise keep each other going | 15 min |
+| [APPTOOLS-26](app-tools.md#apptools-26-create_room-with-seed-posts-the-opening-message-as-part-of-creation) | `app-tools` | create_room with seed posts the opening Message as part of creation | 10 min |
 | [PERSONALIFECYCLE-26](persona-lifecycle.md#personalifecycle-26-money-saving-the-edit-card-with-nothing-changed-does-not-restart-the-teammate) | `persona-lifecycle` | MONEY: saving the Edit card with nothing changed does NOT restart the Teammate | 12 min |
 | [PERSONALIFECYCLE-27](persona-lifecycle.md#personalifecycle-27-money-editing-the-persona-body-restarts-the-session-and-the-new-instruction-takes-effect) | `persona-lifecycle` | MONEY: editing the Persona body restarts the session and the new instruction takes effect | 12 min |
 | [PERSONALIFECYCLE-28](persona-lifecycle.md#personalifecycle-28-money-changing-the-model-from-haiku-to-sonnet-restarts-the-session-and-clears-what-the-teammate-remembers) | `persona-lifecycle` | MONEY: changing the Model from Haiku to Sonnet restarts the session and clears what the Teammate remembers | 18 min |

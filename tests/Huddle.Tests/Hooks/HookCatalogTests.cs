@@ -4,16 +4,16 @@ using System.Text.RegularExpressions;
 using Agency.Huddle.App.Hooks;
 
 /// <summary>
-/// Self-consistency checks on <see cref="HookCatalog"/>: that its 22 entries are well-formed on their
+/// Self-consistency checks on <see cref="HookCatalog"/>: that its 24 entries are well-formed on their
 /// own terms, independent of any config file or renderer that will later consume them.
 /// </summary>
 public sealed partial class HookCatalogTests
 {
-    /// <summary>The catalog carries exactly the 22 hooks the task specifies, no more and no fewer.</summary>
+    /// <summary>The catalog carries exactly the 24 hooks the task specifies, no more and no fewer.</summary>
     [Fact]
-    public void All_HasExactlyTwentyTwoHooks()
+    public void All_HasExactlyTwentyFourHooks()
     {
-        Assert.Equal(22, HookCatalog.All.Count);
+        Assert.Equal(24, HookCatalog.All.Count);
     }
 
     /// <summary>No two hooks share a <see cref="HookDefinition.Key"/>.</summary>

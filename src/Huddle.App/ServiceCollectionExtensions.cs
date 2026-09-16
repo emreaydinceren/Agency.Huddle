@@ -51,6 +51,12 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<PersonaHealth>();
 
+        // Roadmap item 8's follow set: a DI singleton for the same reason PersonaHealth just above
+        // is one - it is taken straight into Chat.razor and, later, into a follow/unfollow App Tool -
+        // and it never crosses the wire, so it costs no ProtocolVersion bump. See RoomFollows' own
+        // doc comment for why this could not instead be a field on PersonaRunner.
+        services.AddSingleton<RoomFollows>();
+
         services.AddSingleton<AgentGateway>();
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());
 

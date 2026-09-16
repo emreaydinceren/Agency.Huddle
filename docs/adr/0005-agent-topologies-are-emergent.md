@@ -5,6 +5,22 @@ date: 2026-09-11
 
 # Agent topology is emergent; a Room is seeded by whoever creates it and followed by whoever opts in
 
+> **Partly built as of 2026-09-16, and deliberately still `proposed`.** Both gaps this ADR names
+> shipped as [Roadmap](../agencyteam/roadmap.md) item 8: `follow_room` / `unfollow_room`, and the
+> optional `seed` on `create_room`. Step 3 of the Sequencing below — per-Persona tool grants and the
+> verb vocabulary in `get_help` — is roadmap item 9 and is not built; step 5, session scoping, is
+> not either. The status stays `proposed` because this ADR decides more than item 8 did, following
+> [ADR-0003](0003-mention-gated-replies-and-membership-defined-direct-rooms.md)'s precedent of
+> annotating in prose rather than re-statusing.
+>
+> **One specified detail did not survive contact.** "The state is per-Persona and in memory …
+> `PersonaRunner` and its App Tools are both built through one `factory.CreateAsync(persona,
+> agentId, ct)` call, so a shared `HashSet<string>` … needs no schema" — they are not shared
+> through that call at all. It returns only `(IAgentHost, IAgentSession)`; the tools are invisible
+> to the runner. It shipped as a `RoomFollows` Singleton, which keeps the property this paragraph
+> was really protecting — no schema, no Envelope field, no `ProtocolVersion` bump — and costs an
+> explicit `ClearAgent` call for the self-heal the same paragraph promised.
+
 Team is a peer-to-peer mesh today, and nothing in the code says so. We also want
 hierarchical and staged-pipeline topologies, chosen case by case. The worked
 example throughout is: the Human asks the Chief of Staff for a Valentine's Day
