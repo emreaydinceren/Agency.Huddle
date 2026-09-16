@@ -434,9 +434,20 @@ public sealed class PersonaStoreTests
         using var store = CreateStore(dir);
         store.Add(Identity("coo"), "first");
         var raisedCount = 0;
-        store.PersonasChanged += () => raisedCount++;
+        void Count() => raisedCount++;
+        store.PersonasChanged += Count;
 
         store.Update("coo", PersonaText("coo", "second"), "claude-opus-4", "high");
+
+        // Stop counting the instant Update returns. This is what the test is about - the
+        // SYNCHRONOUS raise - and without it the assertion is a race the test loses on a slow
+        // machine: Update writes the file, the FileSystemWatcher sees that write like any other,
+        // and raises a SECOND PersonasChanged once its 500 ms debounce elapses. That later event
+        // is expected and harmless (PersonaSupervisor.NeedsRestart compares the Persona by value,
+        // so a re-read of an unchanged file restarts nothing), but it is not this guard's subject.
+        // Left subscribed, this passed locally and failed on CI, where the container is slow
+        // enough for the debounce to land before the assertion.
+        store.PersonasChanged -= Count;
 
         Assert.Equal(1, raisedCount);
     }
