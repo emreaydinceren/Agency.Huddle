@@ -1441,7 +1441,7 @@ If the model's answer to "Which model are you?" is vague or identical both times
 10. Return to the Room, type `What word did I ask you to remember?`, press Enter and read the reply.
 11. Now test the model-change interaction: open the card, click **Edit**, and note the current Effort value.
 12. In the **Model** select change the model (Haiku to Sonnet, or Sonnet back to Haiku — never Opus).
-13. Immediately read the **Effort** select and its hint, and watch them for 20 seconds.
+13. Immediately read the **Effort** select, its hint, and the note that appears above it, and watch all three for 20 seconds.
 14. Click **Cancel** (do not save).
 15. In `T-A` search the console for any line containing `not in the agent's advertised effort catalog`.
 16. OPTIONAL (sqlite3): run `sqlite3 'E:\Repos\Huddle\src\Huddle.App\App_Data\team.db' "select * from persona_efforts;"`.
@@ -1453,6 +1453,7 @@ If the model's answer to "Which model are you?" is vague or identical both times
 - The card's **Effort** section reads `medium`.
 - The reply to step 10 does NOT know `QUINCE`.
 - When the Model is changed in the Edit card, the Effort select resets to `Use the agent's default` and its hint shows `Reading the effort levels this model offers…` while the new ladder is read.
+- That reset is **announced**: a note appears between the Model and Effort selects saying the Effort was reset and that each model advertises its own effort levels. Added for #45 — the reset was always correct, the silence was the defect. It must NOT appear on a Model change made while the Effort is already `Use the agent's default`, because nothing was discarded.
 - `T-A`'s console contains NO `not in the agent's advertised effort catalog` warning.
 - If sqlite3 was available: `persona_efforts` holds an effort ID, not a display label.
 - The Effort select does NOT offer the adapter's own `default` entry alongside the blank `Use the agent's default` option — there is exactly one way to say "default".
@@ -1461,6 +1462,7 @@ If the model's answer to "Which model are you?" is vague or identical both times
 
 - An Effort change produces no restart (same ProcessId) -> the change silently does nothing; there is no live mid-session effort switching, so a restart is the only mechanism there is.
 - The Effort selection survives a Model change -> the user is left with a level they never chose for the new model, and the adapter will clamp it silently.
+- The Effort resets with no note saying so -> #45 is back. The reset is right; losing a deliberate choice without being told is not.
 - A `not in the agent's advertised effort catalog` warning appears after choosing from the picker -> a display label was stored where an ID belongs.
 - The effort list does not change at all when the Model changes -> the ladder is being cached per app run instead of per model.
 - A slow probe for the ABANDONED model lands on the new choice (switch models twice quickly to test) -> a superseded probe is overwriting the current selection.

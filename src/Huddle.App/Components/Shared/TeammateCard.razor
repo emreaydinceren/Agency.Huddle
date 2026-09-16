@@ -233,6 +233,18 @@
                 }
             </MudSelect>
 
+            @* The reset below is deliberate and asserted by PERSONALIFECYCLE-29 - this note exists
+               only because it used to happen invisibly (issue #45). role="status" is written out
+               because MudAlert renders no role by default (rules.md), and "status" rather than
+               "alert" for the same reason the rename note above uses it: this is a consequence of
+               what the user just did, not an interruption. *@
+            @if (this.effortResetByModelChange)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4" role="status">
+                    Changing the model reset Effort to the default. Each model advertises its own effort levels, so a level chosen for the previous model does not carry across — pick one again if you want a specific level.
+                </MudAlert>
+            }
+
             <MudSelect T="string" Label="Effort" Value="@(this.effort ?? string.Empty)" ValueChanged="this.OnEffortChanged"
                        HelperText="@this.EffortHelperText">
                 <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
@@ -366,6 +378,14 @@
     // Model select changes, so a user can start a second probe while the first is still in flight;
     // without this, a slow answer for the abandoned model lands on the new choice.
     private int effortProbeGeneration;
+
+    /// <summary>
+    /// Set when a Model change has just discarded a stored Effort, and cleared the moment the user
+    /// makes a fresh Effort choice, re-enters Edit, or saves. The discard itself is deliberate - the
+    /// effort ladder belongs to the model (see <see cref="OnModelChangedAsync"/>) - so what this flag
+    /// drives is the notice, not the behaviour: issue #45 was that the selection vanished silently.
+    /// </summary>
+    private bool effortResetByModelChange;
 
     /// <summary>Initials from the first and last word of <paramref name="name"/>: "Emily Lee" reads as EL and "Chief of Staff" as CS. First-and-last rather than the first two words, so a middle word like "of" does not get a letter it does not deserve. A one-word name such as "echo" reads as E.</summary>
     /// <param name="name">The Teammate's Name.</param>
@@ -605,6 +625,7 @@
         this.effort = persona?.Effort ?? this.effort;
         this.error = null;
         this.confirmingRemove = false;
+        this.effortResetByModelChange = false;
         this.nameLocked = false;
         this.titleLocked = false;
         this.aliasLocked = false;
@@ -753,6 +774,10 @@
         // switch and silently clamps a level the new model does not support, so a level chosen
         // against the old model is not a level for this one: clear it rather than carry a choice
         // across that the user never made for this model.
+
+        // Plain assignment, never |=: a second Model change made while no Effort is chosen must clear
+        // a notice left over from the first, not leave it standing over a reset that did not happen.
+        this.effortResetByModelChange = this.effort is not null;
         this.effort = null;
 
         await this.LoadEffortsAsync();
@@ -761,6 +786,7 @@
     private void OnEffortChanged(string value)
     {
         this.effort = string.IsNullOrWhiteSpace(value) ? null : value;
+        this.effortResetByModelChange = false;
     }
 
     // Runs on form-open, never on page-load: spawning the throwaway adapter this probes with costs a
@@ -852,6 +878,7 @@
         this.filePath = TeammateCard.TryPathFor(this.Personas, this.name);
         this.mode = TeammateCardMode.View;
         this.confirmingRemove = false;
+        this.effortResetByModelChange = false;
         this.nameLocked = false;
         this.titleLocked = false;
         this.aliasLocked = false;
