@@ -70,6 +70,10 @@ Read-Host 'ENTER = disconnect'
 **Pass if — all of these**
 
 - The DOM search finds 0 matches for `member-health-alert` in every Room, before and after the echo agent connects and disconnects.
+- The same search finds 0 matches for `reply-note` and `continue-note`. Those carry the same
+  obligation as the health strip: in a stock configuration no Teammate is reachable, so an
+  unreachable Teammate is not a recipient and the Room has nothing to explain. A note standing
+  permanently in every Room would be the same always-on failure by a different door.
 - The `Invoke-WebRequest` command prints nothing at all.
 - /teammates may show teammates as **Offline** with a grey dot - that alone is correct and is not a failure of this test.
 

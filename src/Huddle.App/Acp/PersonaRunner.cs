@@ -236,6 +236,15 @@ internal sealed class PersonaRunner : IAsyncDisposable
                             // Nothing is submitted to the agent until it is Mentioned (the repo owner's
                             // absolute rule), but the Message is not thrown away: it rides along, as
                             // context only, the next time this Agent is Mentioned in that Room.
+                            if (this.logger.IsEnabled(LogLevel.Information))
+                            {
+                                this.logger.LogInformation(
+                                    "Persona '{PersonaName}' read a message in room {RoomId} as context only: it was not mentioned and the room has {MemberCount} members.",
+                                    this.persona.Name,
+                                    posted.RoomId,
+                                    posted.Members.Count);
+                            }
+
                             this.AppendCatchUp(posted.RoomId, posted.Message.SenderName, posted.Message.Text);
                             break;
 

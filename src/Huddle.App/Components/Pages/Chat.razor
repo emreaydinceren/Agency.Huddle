@@ -80,6 +80,23 @@ else
                 </ul>
             </MudAlert>
         }
+        @* Rendered inline rather than as a component for the same reason every other strip on this
+           page is: a string Parameter missing its leading @ passes the literal text, compiles clean
+           and fails only on screen - see docs/agencyteam/rules.md. The drafts.Count == 0 guard is
+           deliberate: a teammate mid-Turn from an earlier Mention is visibly typing, and "name one to
+           ask for a reply" rendered beside a streaming row is a worse lie than silence. *@
+        @if (this.outlook == RoomReply.ContextOnly && this.drafts.Count == 0)
+        {
+            @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
+               so role="status" is added explicitly, per rules.md. status rather than alert per
+               ADR-0011's precedent: this is a consequence of the Human's own Message, not an
+               interruption. Says "No teammate" rather than "Nobody", because @@You is itself a
+               Mention, and so is any handle that resolved to the Human - the claim has to be about
+               teammates or it is false in its own test case. *@
+            <MudAlert Severity="Severity.Info" Dense="true" Class="reply-note" role="status">
+                No teammate was @@-mentioned — name one to ask for a reply.
+            </MudAlert>
+        }
         @* Between the transcript and the composer on purpose: the exchange that spent the Budget is
            the thing you need to read before deciding whether to grant another one. Rendered inline
            rather than as a component because a string Parameter missing its leading @ passes the
@@ -92,6 +109,16 @@ else
                 <p class="budget-prompt-text">
                     Agents have sent @this.budget.Used replies since you last spoke, and are paused.
                 </p>
+                @* The Room's last Message is very often the Agent's own reply, and an Agent is never
+                   delivered its own Message - so Continue there can never wake anybody. Said before
+                   the click rather than after, so the Human is not left pressing a button only to be
+                   told it could not work. *@
+                @if (this.ContinueWouldWakeNobody())
+                {
+                    <p class="budget-prompt-warning">
+                        Continue will deliver the last message again, and it is a teammate's own — a teammate is never delivered its own message, so this will wake nobody. Say something instead.
+                    </p>
+                }
                 <MudStack Row="true" Spacing="2" Class="budget-prompt-actions">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@this.extending" OnClick="this.ContinueAsync">
                         @(this.extending ? "Continuing…" : "Continue")
@@ -110,6 +137,38 @@ else
         {
             <MudText Typo="Typo.caption" Class="budget-note">@this.budget.Used of @this.budget.Granted agent replies since you last spoke.</MudText>
         }
+        @* Rendered inline rather than as a component for the same reason every other strip on this
+           page is - see docs/agencyteam/rules.md. Granted + Expected deliberately renders nothing:
+           the reply is coming, so there is nothing to explain. RoomReply.Paused also renders nothing
+           on every path here: ADR-0006's Continue prompt already owns that surface, and a second
+           strip saying the same thing is noise nobody asked for. *@
+        @if (this.continueResult is ExtendResult.Granted && this.continueOutlook is RoomReply.NoRecipients)
+        {
+            @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
+               so role="status" is added explicitly, per rules.md; status rather than alert per
+               ADR-0011's precedent, since this is a consequence of the Human's own click. *@
+            <MudAlert Severity="Severity.Info" Dense="true" Class="continue-note" role="status">
+                Budget granted, but there was nobody to wake. Say something to start the room again.
+            </MudAlert>
+        }
+        else if (this.continueResult is ExtendResult.Granted && this.continueOutlook is RoomReply.ContextOnly)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="continue-note" role="status">
+                Budget granted and the last message was delivered again, but it names no teammate. Mention one by name to get an answer.
+            </MudAlert>
+        }
+        else if (this.continueResult is ExtendResult.NotPaused)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="continue-note" role="status">
+                This room was no longer paused, so nothing was granted.
+            </MudAlert>
+        }
+        else if (this.continueResult is ExtendResult.NothingToRedeliver)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="continue-note" role="status">
+                There is nothing to re-deliver in this room yet.
+            </MudAlert>
+        }
         <Composer RoomId="@this.room.Id" />
     </div>
 }
@@ -126,6 +185,15 @@ else
     private readonly HashSet<string> stoppingAgentIds = new(StringComparer.Ordinal);
     private RoomBudget budget = new(0, 0);
     private bool budgetPromptDismissed;
+
+    // These three describe one delivery this view witnessed, never a re-derivation of the
+    // Transcript: they do not survive a Room switch (reset in LoadRoomAsync) and are never
+    // recomputed on load, because Membership is stored as it stands NOW - re-explaining an old
+    // Message under today's Members and reachability would be wrong the moment a Room gains one.
+    private RoomReply outlook = RoomReply.Expected;
+    private RoomReply? continueOutlook;
+    private ExtendResult? continueResult;
+
     private bool extending;
     private bool isRenaming;
     private string editingName = string.Empty;
@@ -214,6 +282,13 @@ else
         this.budget = this.room is null ? new RoomBudget(0, 0) : this.ChatService.GetBudget(roomId);
         this.budgetPromptDismissed = false;
 
+        // These describe one delivery this view witnessed, so they never survive a Room switch and
+        // are never re-derived on load - Membership is stored as it stands NOW, so re-explaining old
+        // Messages under current rules would be wrong the moment a Room gains a Member.
+        this.outlook = RoomReply.Expected;
+        this.continueOutlook = null;
+        this.continueResult = null;
+
         // Read straight from the store rather than starting empty, so a tab opened mid-Turn shows
         // the whole Draft so far rather than an orphaned suffix of it - the reason the Draft store
         // is server-side rather than per-component state.
@@ -231,6 +306,22 @@ else
         {
             this.messages.Add(e.Message);
             this.budget = e.Budget;
+
+            // A Message means the Room moved, so any Continue answer on screen is spent - it
+            // described the last pause, not this one.
+            this.continueOutlook = null;
+            this.continueResult = null;
+
+            // Resolved only for the Human's own Message. MessagePosted also fires for an Agent's
+            // reply, and in a Room of three or more a reply that ends a thread without an @-mention
+            // is context-only - the ordinary end of almost every thread. Resolving those too would
+            // put this note under nearly every final reply in every group Room, the always-on strip
+            // ADR-0008 says nobody reads. The note answers "why did MY message get no reply", so it
+            // belongs only to the Message that asked.
+            var sender = e.Members.FirstOrDefault(m => string.Equals(m.Id, e.Message.SenderId, StringComparison.Ordinal));
+            this.outlook = sender is { Kind: UserKind.Human }
+                ? RoomReplyResolver.Resolve(e.Members, e.Mentions, e.Message.SenderId, this.ReachableAgentIds(), e.Budget)
+                : RoomReply.Expected;
 
             // A Message means the Room is moving again, so a dismissal from the last pause must not
             // suppress the next one.
@@ -255,8 +346,16 @@ else
         this.extending = true;
         try
         {
-            await this.ChatService.ExtendBudgetAsync(this.loadedRoomId);
-            this.budget = this.ChatService.GetBudget(this.loadedRoomId);
+            BudgetExtension extension = await this.ChatService.ExtendBudgetAsync(this.loadedRoomId);
+            this.budget = extension.Budget;
+            this.continueResult = extension.Result;
+            this.continueOutlook = extension.Redelivered is { } facts
+                ? RoomReplyResolver.Resolve(facts.Members, facts.Mentions, facts.SenderId, this.ReachableAgentIds(), extension.Budget)
+                : null;
+
+            // The Continue answer supersedes the context-only note: both would otherwise describe
+            // the same re-delivered Message, and showing both would repeat one fact twice.
+            this.outlook = RoomReply.Expected;
         }
         finally
         {
@@ -394,6 +493,57 @@ else
         }
 
         return unhealthy;
+    }
+
+    /// <summary>
+    /// Every Agent Member of the loaded Room that could actually receive a Message right now.
+    /// Resolved through <see cref="PersonaStatusResolver.Resolve"/> rather than
+    /// <see cref="IAgentGateway.IsOnline"/> alone, for the same reason <see cref="UnhealthyMembers"/>
+    /// just above makes the identical call: health outranks pipe liveness, because any of a runner's
+    /// loops can die and leave its pipe open, so an Agent can be deaf and still report online.
+    /// </summary>
+    /// <returns>The ids of every Agent Member currently Online or Starting.</returns>
+    private HashSet<string> ReachableAgentIds()
+    {
+        HashSet<string> reachable = new(StringComparer.Ordinal);
+        foreach (var member in this.members)
+        {
+            if (member.Kind != UserKind.Agent)
+            {
+                continue;
+            }
+
+            var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(member.Id), this.Health.Get(member.Name));
+            if (status.State is PersonaState.Online or PersonaState.Starting)
+            {
+                reachable.Add(member.Id);
+            }
+        }
+
+        return reachable;
+    }
+
+    /// <summary>
+    /// Whether pressing Continue right now could not possibly wake anybody, computed from the Room's
+    /// current state rather than from any past delivery. This is the one place in this feature allowed
+    /// to do that: <see cref="ChatService.ExtendBudgetAsync"/> re-reads the Members and re-parses the
+    /// Mentions from the last Transcript entry at click time, so this is not re-deriving a past
+    /// delivery - it is the same computation the server is about to perform. It deliberately ignores
+    /// Mentions, because the sender-skip below makes the answer the same regardless of who is named:
+    /// the Room's last Message is very often the Agent's own reply, and an Agent is never delivered
+    /// its own Message.
+    /// </summary>
+    /// <returns><see langword="true"/> when re-delivering the last Message would reach no one.</returns>
+    private bool ContinueWouldWakeNobody()
+    {
+        if (this.messages.Count == 0)
+        {
+            return false;
+        }
+
+        var last = this.messages[^1];
+        var reachable = this.ReachableAgentIds();
+        return !this.members.Any(member => MessagePostedEvent.IsRecipient(member, last.SenderId) && reachable.Contains(member.Id));
     }
 
     private void OnDraftChanged(string roomId)

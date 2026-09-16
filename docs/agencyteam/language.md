@@ -175,6 +175,14 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   next time it is Mentioned there.
 : *Avoid*: backlog, history.
 
+**Context only**
+: What a delivery amounted to when it named no Teammate the Reply Gate would wake:
+  the Message was read as context and no Turn began. A property of the delivery, the
+  same way **Mentioned** is — never of the Message, which may be context only for one
+  Teammate and a Mention for another. It is what the Room view says, and it instructs
+  rather than predicts, because the gate is permission and not obligation.
+: *Avoid*: ignored, dropped, unread, silent.
+
 **Progressive discovery**
 : The arrangement where the system prompt names one App Tool —
   `mcp__team__get_help` — and that tool names the rest. Detail an Agent may never

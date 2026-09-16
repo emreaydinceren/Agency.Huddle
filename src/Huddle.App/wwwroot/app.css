@@ -389,6 +389,25 @@ button:focus-visible {
     font-size: 0.8rem;
 }
 
+/* Neutral, unlike .budget-prompt-text above: these two report a fact about a delivery, not an
+   alarming one - "nobody to wake" or "no teammate mentioned" ask for an ordinary next step, not a
+   warning read. */
+.reply-note,
+.continue-note {
+    border-top: 1px solid var(--mud-palette-divider);
+    padding: 0.75rem 1rem;
+}
+
+/* .budget-prompt is display: flex; flex-wrap: wrap, so flex: 1 1 100% is what puts this warning on
+   its own row above the Continue/Leave-paused buttons, the same way .budget-prompt-text claims a
+   flexible width for its own row. */
+.budget-prompt-warning {
+    margin: 0;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.85rem;
+    flex: 1 1 100%;
+}
+
 /* ---- Teammates: directory tiles and the profile card -------------------- */
 
 .teammates-header {

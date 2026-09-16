@@ -815,7 +815,7 @@ public sealed class ChatServiceTests
 
         var extended = await service.ExtendBudgetAsync(room.Id, ct);
 
-        Assert.True(extended);
+        Assert.Equal(ExtendResult.Granted, extended.Result);
         Assert.Equal(new RoomBudget(2, 4), service.GetBudget(room.Id));
     }
 
@@ -893,6 +893,30 @@ public sealed class ChatServiceTests
         Assert.Equal(mentioned.Id, only.Id);
     }
 
+    /// <summary>
+    /// The caller is handed the same delivery the Agents received: <see cref="BudgetExtension.Redelivered"/>
+    /// is built from the same Members and sender as the re-published Message, not assembled separately.
+    /// </summary>
+    [Fact]
+    public async Task Extend_ReturnsTheFactsItPublished()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, agent.Id], ct);
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 1);
+        var last = await service.PostAsync(room.Id, agent.Id, "the message that spent it", ct: ct);
+
+        var extended = await service.ExtendBudgetAsync(room.Id, ct);
+
+        Assert.NotNull(extended.Redelivered);
+        Assert.Equal(last.SenderId, extended.Redelivered.SenderId);
+        Assert.Equal(2, extended.Redelivered.Members.Count);
+    }
+
     // A second click must grant nothing, or the prompt becomes a way to spend without deciding to.
     [Fact]
     public async Task Extend_OnARoomThatIsNotPaused_DoesNothing()
@@ -909,7 +933,7 @@ public sealed class ChatServiceTests
 
         var extended = await service.ExtendBudgetAsync(room.Id, ct);
 
-        Assert.False(extended);
+        Assert.Equal(ExtendResult.NotPaused, extended.Result);
         Assert.Equal(new RoomBudget(1, 5), service.GetBudget(room.Id));
     }
 
@@ -925,7 +949,28 @@ public sealed class ChatServiceTests
 
         var extended = await service.ExtendBudgetAsync(room.Id, ct);
 
-        Assert.False(extended);
+        Assert.Equal(ExtendResult.NothingToRedeliver, extended.Result);
+    }
+
+    /// <summary>
+    /// The <see cref="ExtendResult.NothingToRedeliver"/> return still carries the Room's Budget, read
+    /// before the per-Room semaphore rather than left at a default - guards the explicit
+    /// <c>CurrentBudget</c> call on that early return, which nothing else in this file exercises.
+    /// </summary>
+    [Fact]
+    public async Task Extend_WithNothingToRedeliver_StillReportsTheBudget()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        var (service, _) = CreateService(dir, directory, agentMessageBudget: 7);
+
+        var extended = await service.ExtendBudgetAsync(room.Id, ct);
+
+        Assert.Equal(ExtendResult.NothingToRedeliver, extended.Result);
+        Assert.Equal(new RoomBudget(0, 7), extended.Budget);
     }
 
     // An extension is granted for one unattended run. Speaking ends that run, so the next one starts

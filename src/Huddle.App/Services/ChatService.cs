@@ -22,6 +22,56 @@ public sealed record RoomBudget(int Used, int Granted)
     public bool Exhausted => this.Granted > 0 && this.Used >= this.Granted;
 }
 
+/// <summary>
+/// What <see cref="ChatService.ExtendBudgetAsync"/> actually did. A caller that only reads the old
+/// <see langword="bool"/> return cannot tell "nothing to redeliver" from "not paused" from "granted" -
+/// all three rendered as the same silence in the Room view, which is issue #40. Naming the three
+/// outcomes lets a later phase explain the one the Human is looking at instead of guessing.
+/// </summary>
+public enum ExtendResult
+{
+    /// <summary>The Room was paused, is now extended, and its last Message went out again.</summary>
+    Granted,
+
+    /// <summary>The Room was not paused, so there was nothing for an extension to grant.</summary>
+    NotPaused,
+
+    /// <summary>The Room holds no Message at all, so there is nothing an extension could redeliver.</summary>
+    NothingToRedeliver,
+}
+
+/// <summary>
+/// The three facts the Reply Gate needs about a re-delivered Message, deliberately not the
+/// <see cref="MessagePostedEvent"/> itself. <see cref="RoomEvents.MessageRedelivered"/>'s own doc
+/// records that no Blazor component may subscribe to it - a component that handled the envelope could
+/// render the Message a second time. Handing the caller the envelope would put that same mistake one
+/// careless <c>messages.Add(...)</c> away; handing it only these three facts removes the temptation
+/// rather than policing it with a comment and a guard test.
+/// </summary>
+/// <param name="Members">The Room's Members at the moment of re-delivery.</param>
+/// <param name="Mentions">Who the re-delivered Message names, re-parsed fresh so it matches exactly who it woke the first time.</param>
+/// <param name="SenderId">The re-delivered Message's original sender.</param>
+public sealed record RedeliveryFacts(
+    IReadOnlyList<User> Members,
+    IReadOnlyList<User> Mentions,
+    string SenderId);
+
+/// <summary>
+/// The outcome of <see cref="ChatService.ExtendBudgetAsync"/>: what happened, the Room's Budget
+/// afterward, and - only when something was actually redelivered - the facts of that delivery.
+/// <see cref="Redelivered"/> is non-null exactly when <see cref="Result"/> is <see cref="ExtendResult.Granted"/>.
+/// The caller applies the Reply Gate itself; <see cref="ChatService"/> must never decide whether anyone
+/// will reply - ADR-0003, ADR-0004 and ADR-0005 each reject a server-computed <c>shouldReply</c>, because
+/// the server labels, it never decides.
+/// </summary>
+/// <param name="Result">Which of the three outcomes occurred.</param>
+/// <param name="Budget">The Room's Budget after the call, whichever outcome occurred.</param>
+/// <param name="Redelivered">The facts of the re-delivered Message, or <see langword="null"/> when nothing was redelivered.</param>
+public sealed record BudgetExtension(
+    ExtendResult Result,
+    RoomBudget Budget,
+    RedeliveryFacts? Redelivered);
+
 public sealed partial class ChatService
 {
     // The Name is captured as "everything after /invite", not by shape, because a Name may hold
@@ -173,10 +223,13 @@ public sealed partial class ChatService
     /// <param name="roomId">The paused Room to extend.</param>
     /// <param name="ct">Cancels the lookup of the Room, its Members and its last Message.</param>
     /// <returns>
-    /// <see langword="true"/> if the Room was extended and woken. <see langword="false"/> if it was not
-    /// paused or holds no Message to re-deliver — so a second click grants nothing.
+    /// The Room's Budget after the call, and which of three things happened:
+    /// <see cref="ExtendResult.NothingToRedeliver"/> if the Room holds no Message at all;
+    /// <see cref="ExtendResult.NotPaused"/> if it was not paused, so there was nothing to grant - a
+    /// second click grants nothing; or <see cref="ExtendResult.Granted"/> if it was extended and woken,
+    /// in which case <see cref="BudgetExtension.Redelivered"/> carries the facts of that re-delivery.
     /// </returns>
-    public async Task<bool> ExtendBudgetAsync(string roomId, CancellationToken ct = default)
+    public async Task<BudgetExtension> ExtendBudgetAsync(string roomId, CancellationToken ct = default)
     {
         var room = await this.teamDirectory.GetRoomAsync(roomId, ct)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
@@ -185,7 +238,10 @@ public sealed partial class ChatService
         var history = await this.store.ReadAllAsync(roomId, ct);
         if (history.Count == 0)
         {
-            return false;
+            // Outside the per-Room semaphore, and deliberately so - there is no Budget decision to make
+            // atomic here, only a display value to report. This matches how GetBudget already reads for
+            // display; do not "fix" this by moving it inside the lock below.
+            return new BudgetExtension(ExtendResult.NothingToRedeliver, this.CurrentBudget(roomId), null);
         }
 
         var last = history[^1];
@@ -198,7 +254,7 @@ public sealed partial class ChatService
             var budget = this.CurrentBudget(roomId);
             if (!budget.Exhausted)
             {
-                return false;
+                return new BudgetExtension(ExtendResult.NotPaused, budget, null);
             }
 
             extended = budget with { Granted = budget.Granted + this.agentMessageBudget };
@@ -216,7 +272,8 @@ public sealed partial class ChatService
         // Room's post lock across that would block every other writer to the Room.
         var mentions = MentionParser.Parse(last.Text, members, this.aliasSource.Aliases);
         this.events.PublishMessageRedelivered(new MessagePostedEvent(room, last, members, mentions, extended));
-        return true;
+        var redelivered = new RedeliveryFacts(members, mentions, last.SenderId);
+        return new BudgetExtension(ExtendResult.Granted, extended, redelivered);
     }
 
     /// <summary>The wording a refused Agent reads. One copy, so both doors into a post carry it.</summary>

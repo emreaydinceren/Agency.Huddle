@@ -23,7 +23,31 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
     only writes to the log: a Persona that has spent it reads as Degraded on the
     Teammate tile, with the reason — exactly where this entry predicted the honest
     home was. See [ADR-0008](../adr/0008-a-turn-is-visible-stoppable-and-says-when-it-fails.md).
-  - **A Message declined for Budget is not kept as Catch-up.** It is held for
+  - **A Room now says why it stayed quiet, and here is what that still does not
+  cover.** A Message naming no Teammate, and a **Continue** that wakes nobody, are
+  both explained in the Room view now — [ADR-0012](../adr/0012-a-room-says-why-it-stayed-quiet.md).
+  Three gaps are deliberate:
+  - **The note does not survive a reload.** It describes what one delivery meant, not
+    durable state, so F5 loses it. Re-deriving on load would use membership as it is
+    *now* and would re-explain old Messages under rules that were not in force when
+    they were sent. The next Message re-evaluates, and `PersonaRunner` now writes the
+    context-only line to the log, which it did not before.
+  - **A Room whose Teammates are all Offline or Degraded still explains nothing.** An
+    unreachable Agent is not a recipient, so such a Room resolves to `NoRecipients` and
+    renders no note — which keeps the note from telling the Human to name a Teammate
+    that cannot answer, but leaves that silence unexplained. Deliberate: shipping a
+    wrong instruction was not an acceptable way to avoid it.
+  - **The note reports a label, not an outcome.** The Reply Gate is client-side and is
+    permission rather than obligation, so a pipe client may reply to a Message the Room
+    called context-only. This is why the copy instructs ("name one to ask for a reply")
+    and never predicts.
+- **A reply refused for Budget still vanishes without trace.** The Draft types out a
+  full answer and then goes, because `PersonaRunner`'s terminator reaches
+  `Drafts.Complete` on every path a Turn can end. Nothing on screen says the reply was
+  refused. Left out of ADR-0012 deliberately: there is no Message to attach it to, and
+  retaining the Draft would mean splitting `Drafts.Complete`, whose whole contract is
+  that both the terminator and a successful post call it.
+- **A Message declined for Budget is not kept as Catch-up.** It is held for
     re-delivery instead. If you leave a Room paused and then type something rather
     than clicking Continue, the Agent's prompt will not carry the Message it was
     paused on; it is still in the Transcript and still on screen.

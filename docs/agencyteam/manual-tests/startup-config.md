@@ -563,7 +563,11 @@ On some runs the SQLite handle lingers briefly even after the app has exited —
 **Pass if — all of these**
 
 - After the reply lands, a block appears BETWEEN the message list and the message box reading exactly `Agents have sent 1 replies since you last spoke, and are paused.`
-- That block holds exactly two buttons labelled `Continue` and `Leave paused`.
+- That block holds exactly two buttons labelled `Continue` and `Leave paused`, with a grey line
+  above them warning that Continue will wake nobody — the Room's last Message is the agent's own
+  reply, and an Agent is never delivered its own Message. STARTUPCONFIG-14 exercises that line.
+- No context-only note appears at any point: this is a two-Member Room, where a Message is
+  answered without a Mention and there is nothing to explain.
 - Clicking `Leave paused` replaces the block with the single line `Paused — 1 of 1 agent replies since you last spoke.`
 - After sending `anything`, both the paused line and the prompt are gone, and no budget note is shown at all.
 
@@ -595,7 +599,7 @@ If no prompt appears, FIRST verify the variable took: `Get-ChildItem Env:Team__A
 **Steps**
 
 1. In the `echo` Room, type exactly `hi @echo` and press Enter, and wait for the reply so the Room is paused again with the AGENT's reply as the last Message.
-2. Confirm the `Agents have sent 1 replies since you last spoke, and are paused.` block is showing with its two buttons.
+2. Confirm the `Agents have sent 1 replies since you last spoke, and are paused.` block is showing with its two buttons, and read the grey line above them.
 3. Click `Continue`.
 4. Watch the button's own label while the request is in flight.
 5. Read what replaces the alert block.
@@ -604,9 +608,14 @@ If no prompt appears, FIRST verify the variable took: `Get-ChildItem Env:Team__A
 
 **Pass if — all of these**
 
+- BEFORE the click, the pause block carries a grey line reading
+  `Continue will deliver the last message again, and it is a teammate's own - a teammate is
+  never delivered its own message, so this will wake nobody. Say something instead.` This is the answer to the trap in
+  this test's own title: the Human is told the button cannot wake anybody BEFORE pressing it.
 - While in flight, the button's label reads `Continuing…` and is not clickable.
 - The alert block is replaced by the line `1 of 2 agent replies since you last spoke.` — the second number has RISEN from 1 to 2.
-- No new message arrives in the 15 seconds after clicking.
+- No new message arrives in the 15 seconds after clicking, and a quiet blue note reads `Budget
+  granted, but there was nobody to wake. Say something to start the room again.`
 - The console contains a line of the form `Room '<id>' was extended to 2 agent messages.`
 
 **Fail if — any of these**
@@ -617,7 +626,7 @@ If no prompt appears, FIRST verify the variable took: `Get-ChildItem Env:Team__A
 
 **Inconclusive if**
 
-'No new reply' is CORRECT and must not be filed. Continue re-delivers only the Room's most recent Message, and delivery always skips that Message's own sender — so when the last Message is the agent's own reply, there is nobody left to wake, regardless of Mention or Member count. The rising allowance figure is the proof the grant worked. To see Continue actually wake something you would need the last Message to be a Human Message instead of the agent's own reply, which only happens if the agent was paused mid-run — and per ADR-0004, this two-Member `echo` Room would wake `echo` for that re-delivered Human Message even without a Mention.
+'No new reply' is CORRECT and must not be filed — and as of #40 the Room says so itself, both before the click and after it, so this paragraph is now a cross-reference rather than the only place the fact is written down. Continue re-delivers only the Room's most recent Message, and delivery always skips that Message's own sender — so when the last Message is the agent's own reply, there is nobody left to wake, regardless of Mention or Member count. The rising allowance figure is still the authoritative proof the grant worked; a missing `was extended to` line is a real defect even if both notes render. To see Continue actually wake something you would need the last Message to be a Human Message instead of the agent's own reply, which only happens if the agent was paused mid-run — and per ADR-0004, this two-Member `echo` Room would wake `echo` for that re-delivered Human Message even without a Mention.
 
 > [!NOTE]
 > Also documented: a Message declined for Budget is held for re-delivery, not kept as Catch-up. If you type something instead of clicking Continue, the agent's next prompt will not carry the Message it was paused on, even though that Message is still visible in the transcript.

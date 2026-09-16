@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using System.Globalization;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.Tests.Acp.Fakes;
@@ -60,6 +61,15 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     /// </summary>
     internal FakeAgentGateway FakeAgentGateway { get; } = new();
 
+    /// <summary>
+    /// Overrides <see cref="Agency.Huddle.App.TeamOptions.AgentMessageBudget"/> (default 40) for this
+    /// factory's host, so a UI test can pause a Room without posting forty Messages first. Tests set
+    /// this before <see cref="WebApplicationFactory{TEntryPoint}.CreateClient()"/> — the same
+    /// constraint <see cref="AppearanceJsonPath"/>'s doc records for its file — because that is when
+    /// the host is built and <see cref="ConfigureWebHost"/> runs.
+    /// </summary>
+    public int? AgentMessageBudget { get; set; }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
@@ -75,6 +85,11 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
         builder.UseSetting("Team:HumanName", "You");
         builder.UseSetting("Team:DemoAgent:Enabled", "false");
         builder.UseSetting("Team:Acp:Enabled", "false");
+
+        if (this.AgentMessageBudget is int budget)
+        {
+            builder.UseSetting("Team:AgentMessageBudget", budget.ToString(CultureInfo.InvariantCulture));
+        }
 
         builder.ConfigureTestServices(services =>
         {
