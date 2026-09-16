@@ -1,6 +1,21 @@
 # Gitea batch B — new issues
 
-Drafted 2026-09-15 against `main` at `cc82e03`. **Nothing posted yet.**
+Drafted 2026-09-15 against `main` at `cc82e03`, verified against `774a472`, and **POSTED** on 2026-09-15 as issues **#39-#45** in the order below.
+
+| Draft | Issue |
+| --- | --- |
+| 1 | #39 |
+| 2 | #40 |
+| 3 | #41 |
+| 4 | #42 |
+| 5 | #43 |
+| 6 | #44 |
+| 7 | #45 |
+
+Two were changed before posting, per the verification table: draft 6 was re-scoped now that
+PR #38 has closed #22's specific vector, and draft 7 gained a note warning a triager not to
+"fix" the Effort reset itself, which PERSONALIFECYCLE-29 asserts as a pass condition. A comment
+on #42 records that its "sequence after #31" constraint is already satisfied.
 
 Seven new issues. Six come from `docs/agencyteam/product-observations.md`, which no manual
 test covers because every one of them describes behaviour that is working **as designed** —
