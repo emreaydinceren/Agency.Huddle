@@ -59,17 +59,32 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
 - **More than one Human.** The data model allows it; the seeding and UI do not.
   When it arrives, `/teammates` is already named correctly for it — add a filter
   toggle rather than a second page.
-- **Renaming a Teammate is now an edit to one frontmatter field**, not a file
-  rename — [Roadmap](roadmap.md) item 10 delivered that half. `PersonaStore.Update`
-  moves the Model and Effort rows to the new Name. What remains is the
-  no-cascade half, unchanged and deliberate: the old Agent, its Rooms and its
-  Transcripts stay behind under the old Name, so a rename leaves a ghost in the
-  Team Directory. That is [Roadmap](roadmap.md) item 1's to solve. The card now
-  exposes the rename as its own action — Edit offers Name, Title and Alias as
-  discrete boxes that rewrite those frontmatter lines in the Persona text as you
-  type — and warns, on the card, that the Agent, the Rooms and the Transcripts
-  stay behind. It reports and does not block: the raw text always permitted this
-  edit, so refusing it in the box would only make the card lie about the file.
+- **Renaming a Teammate now carries the whole Teammate with it**, and what
+  remains absent is narrower than it was. [Roadmap](roadmap.md) item 10 made a
+  rename an edit to one frontmatter field; item 1's cascade landed 2026-09-15
+  ([ADR-0011](../adr/0011-a-rename-moves-the-teammate-not-its-history.md)). The
+  Agent's row is renamed **in place, keeping its id**, so the Rooms, the
+  memberships and the Transcripts follow; the Model and Effort rows move; the
+  Work Dir moves; and Rooms still carrying an auto-derived name are re-derived
+  while Rooms the Human named by hand are left alone. Four things it still does
+  **not** do, each on purpose:
+  - **History is not rewritten.** Messages already posted keep the Name they were
+    posted under, because `ChatMessage` stores a denormalised `SenderName`
+    alongside `SenderId`. Rewriting would need a rewrite path on the append-only
+    `FileChatStore` and would edit a historical record in place.
+  - **The session still restarts and still loses its conversation memory.** A
+    system prompt is fixed at `session/new`; nothing here changes that.
+  - **A rename whose new Name is already held by another Agent does nothing.**
+    `RenameUser` returns false, the cascade stops before touching a Room or the
+    Work Dir, and a warning is logged. Nothing says so on screen.
+  - **The Work Dir move can lose a race and give up.** The old agent process may
+    still hold it as its `cwd`; the move retries a handful of times and then logs
+    a warning rather than failing the rename.
+- **Removing a Persona still does not cascade**, and that is unchanged and
+  deliberate — see the entry below on `PersonaStore`. A removal means the
+  Teammate is gone, so its Rooms and Transcripts are chat facts that outlive it;
+  a rename means it is still here under another Name, which is why the same
+  no-cascade rule read as correct for one and as a bug for the other.
 - **A Room keeps auto-naming itself until somebody renames it, and that is
   detected by comparison rather than by a flag.** `ChatService.InviteAsync`
   re-derives a Room's name from its Agent Members only while the current name

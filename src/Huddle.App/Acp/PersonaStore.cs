@@ -6,6 +6,15 @@ using Agency.Huddle.Contracts;
 namespace Agency.Huddle.App.Acp;
 
 /// <summary>
+/// The old and the new front-matter Name of a Persona file whose <c>name:</c> changed in place -
+/// see <see cref="PersonaStore"/>'s <c>PersonaRenamed</c> event, which carries one of these per
+/// detected rename.
+/// </summary>
+/// <param name="OldName">The Name the Persona resolved to before this change.</param>
+/// <param name="NewName">The Name the same physical file resolves to now.</param>
+public sealed record PersonaRenamed(string OldName, string NewName);
+
+/// <summary>
 /// A Persona is a markdown file whose body becomes a Claude agent's system prompt. Files live under
 /// <c>{DataDir}/{Acp.TeamsDir}/</c>, optionally nested under Team sub-folders that are purely
 /// organisational - <c>Teams/Business/coo.md</c> is exactly as much a Persona as <c>Teams/coo.md</c>,
@@ -131,6 +140,35 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// raised while the index is stale: every raise is preceded by a fresh <see cref="RebuildIndexFromDisk"/>.
     /// </summary>
     public event Action? PersonasChanged;
+
+    /// <summary>
+    /// Raised when an existing Persona file's front-matter Name changed - detected in
+    /// <see cref="RaiseRenames"/> by comparing the previous index against the freshly rebuilt one,
+    /// keyed by <see cref="PersonaEntry.Path"/> rather than Name, because the path is the one thing a
+    /// rename cannot touch: <see cref="Update"/> deliberately rewrites the SAME physical file, and a
+    /// file hand-edited outside the app reaches only the debounced watcher path
+    /// (<see cref="OnDebounceElapsed"/>), where no other record of the old Name survives anywhere.
+    /// Compared with <see cref="StringComparison.Ordinal"/> rather than
+    /// <see cref="StringComparison.OrdinalIgnoreCase"/>, so a case-only rename ("coo" to "Coo") is
+    /// still announced - the display Name genuinely changed even though SQLite's Model/Effort rows
+    /// and <see cref="PersonaIndex"/> itself treat the two as equal.
+    /// </summary>
+    /// <remarks>
+    /// Raised SYNCHRONOUSLY and to completion, strictly BEFORE <see cref="PersonasChanged"/>, in both
+    /// <see cref="RefreshIndexAndNotify"/> and <see cref="OnDebounceElapsed"/>. This ordering is
+    /// load-bearing, not incidental: <see cref="Agency.Huddle.App.Acp.PersonaSupervisor"/> reacts to
+    /// <see cref="PersonasChanged"/> by stopping the OLD Name's runner and starting the NEW Name's,
+    /// and the newly started runner registers itself over the pipe under the new Name the instant it
+    /// connects. If the Team Directory row has not already been renamed in place by the time that
+    /// registration happens, it mints a brand-new Team Directory user id instead of reusing the
+    /// renamed row's - the exact ghost (a stale Agent, its Rooms and its Transcripts left behind
+    /// under the old Name) this event exists to prevent. Firing this event first, and waiting for
+    /// every subscriber to finish handling it, is what guarantees the rename-in-place wins that race.
+    /// This class deliberately takes no dependency on
+    /// <see cref="Agency.Huddle.App.Data.ITeamDirectory"/> to do the renaming itself - see
+    /// docs/agencyteam/rules.md - it only announces that a rename happened.
+    /// </remarks>
+    internal event Action<PersonaRenamed>? PersonaRenamed;
 
     /// <summary>Every Persona that loaded cleanly, ordered by Name (ordinal). A projection over <see cref="Entries"/>.</summary>
     public IReadOnlyList<string> ListNames() => this.index.Entries.Select(entry => entry.Name).ToList();
@@ -407,6 +445,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// </summary>
     private void RefreshIndexAndNotify()
     {
+        PersonaIndex previous;
         lock (this.watchGate)
         {
             if (this.disposed)
@@ -414,13 +453,82 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
                 return;
             }
 
+            previous = this.index;
             this.index = this.RebuildIndexFromDisk();
         }
+
+        // PersonaRenamed BEFORE PersonasChanged - see that event's own remarks for why the ordering
+        // is load-bearing rather than incidental.
+        this.RaiseRenames(previous, this.index);
 
         // Exactly one PersonasChanged per operation: three writes raising three events would cause
         // three restarts (PersonaSupervisor spawning three "node" adapter processes) for what the
         // caller sees as a single save.
         this.PersonasChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Diffs <paramref name="previous"/> against <paramref name="updated"/>, keyed by
+    /// <see cref="PersonaEntry.Path"/>, and publishes <see cref="PersonaRenamed"/> once for every
+    /// path present in both whose Name differs. A path present only in <paramref name="updated"/> is
+    /// a new Persona, and a path present only in <paramref name="previous"/> is a deletion - neither
+    /// is a rename. Two files swapping Names is two renames, and falls out of this the same way as
+    /// any other pair. Naturally idempotent: a debounced watcher settling on a change already
+    /// reflected in <paramref name="previous"/> (the second, ~500&#160;ms-later PersonasChanged a
+    /// single save raises - see <see cref="Update"/>) compares two indexes that already agree on
+    /// every shared path, so nothing fires the second time.
+    /// </summary>
+    /// <param name="previous">The index in effect before this refresh.</param>
+    /// <param name="updated">The freshly rebuilt index about to become current.</param>
+    private void RaiseRenames(PersonaIndex previous, PersonaIndex updated)
+    {
+        if (this.PersonaRenamed is null || previous.Entries.Count == 0)
+        {
+            return;
+        }
+
+        var updatedByPath = updated.Entries.ToDictionary(entry => entry.Path, StringComparer.Ordinal);
+
+        foreach (var before in previous.Entries)
+        {
+            if (!updatedByPath.TryGetValue(before.Path, out var after))
+            {
+                continue;
+            }
+
+            if (string.Equals(before.Name, after.Name, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            this.PublishRenamed(new PersonaRenamed(before.Name, after.Name));
+        }
+    }
+
+    /// <summary>
+    /// Invokes every <see cref="PersonaRenamed"/> subscriber in turn, logging and skipping one that
+    /// throws rather than letting it stop the remaining subscribers or propagate - the same rule
+    /// <see cref="Agency.Huddle.App.Services.RoomEvents"/> documents for its own events.
+    /// </summary>
+    /// <param name="renamed">The old and the new Name to publish.</param>
+    private void PublishRenamed(PersonaRenamed renamed)
+    {
+        if (this.PersonaRenamed is not { } handlers)
+        {
+            return;
+        }
+
+        foreach (var handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                ((Action<PersonaRenamed>)handler).Invoke(renamed);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(ex, "A PersonaRenamed handler threw for '{OldName}' -> '{NewName}' and was skipped.", renamed.OldName, renamed.NewName);
+            }
+        }
     }
 
     private void OnWatcherEvent(object sender, FileSystemEventArgs e)
@@ -493,6 +601,8 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     private void OnDebounceElapsed(object? state)
     {
         Action? changed;
+        PersonaIndex previous;
+        PersonaIndex updated;
         lock (this.watchGate)
         {
             // Checked and captured under the same lock Dispose() takes, so a Dispose() racing
@@ -511,10 +621,16 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
             // reading this store from inside its own PersonasChanged handler (PersonaSupervisor
             // does exactly this) must see the state the filesystem change just produced, not
             // whatever was true before it.
-            this.index = this.RebuildIndexFromDisk();
+            previous = this.index;
+            updated = this.RebuildIndexFromDisk();
+            this.index = updated;
             changed = this.PersonasChanged;
         }
 
+        // This is the door a hand-edited file (bypassing Update entirely) reaches - the ONLY place
+        // a rename made outside the app is ever detected, which is why RaiseRenames has to run here
+        // too, not only from RefreshIndexAndNotify. Still strictly before PersonasChanged.
+        this.RaiseRenames(previous, updated);
         changed?.Invoke();
     }
 }

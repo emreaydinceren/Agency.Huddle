@@ -452,6 +452,175 @@ public sealed class PersonaStoreTests
         Assert.Equal(1, raisedCount);
     }
 
+    /// <summary>Editing <c>name:</c> through <see cref="PersonaStore.Update"/> announces the rename exactly once, carrying both the old and the new Name.</summary>
+    [Fact]
+    public void Update_ChangingTheName_RaisesPersonaRenamedOnceWithTheOldAndTheNewName()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("coo"), "first");
+        var renames = new List<PersonaRenamed>();
+        store.PersonaRenamed += renamed => renames.Add(renamed);
+
+        store.Update("coo", PersonaText("vp", "second"), model: null, effort: null);
+
+        var renamed = Assert.Single(renames);
+        Assert.Equal("coo", renamed.OldName);
+        Assert.Equal("vp", renamed.NewName);
+    }
+
+    /// <summary>
+    /// The ordering guarantee the cascade (a future PersonaSupervisor/Team Directory rename) depends
+    /// on: PersonaSupervisor reacts to PersonasChanged by starting the new Name's runner, which
+    /// registers over the pipe immediately - so PersonaRenamed must be raised, and fully handled, BEFORE
+    /// PersonasChanged, never after or interleaved.
+    /// </summary>
+    [Fact]
+    public void Update_ChangingTheName_RaisesPersonaRenamedBeforePersonasChanged()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("coo"), "first");
+        var order = new List<string>();
+        store.PersonaRenamed += _ => order.Add("PersonaRenamed");
+        store.PersonasChanged += () => order.Add("PersonasChanged");
+
+        store.Update("coo", PersonaText("vp", "second"), model: null, effort: null);
+
+        Assert.Equal(["PersonaRenamed", "PersonasChanged"], order);
+    }
+
+    /// <summary>Editing the body without touching <c>name:</c> is an ordinary edit, not a rename.</summary>
+    [Fact]
+    public void Update_ChangingOnlyTheText_RaisesNoPersonaRenamed()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("coo"), "first");
+        var raised = false;
+        store.PersonaRenamed += _ => raised = true;
+
+        store.Update("coo", PersonaText("coo", "second"), model: null, effort: null);
+
+        Assert.False(raised);
+    }
+
+    /// <summary>A case-only change to <c>name:</c> is still a rename: the display Name genuinely changed even though SQLite and <see cref="PersonaIndex"/> both treat "coo" and "Coo" as equal.</summary>
+    [Fact]
+    public void Update_CaseOnlyRename_RaisesPersonaRenamed()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("coo"), "first");
+        var renames = new List<PersonaRenamed>();
+        store.PersonaRenamed += renamed => renames.Add(renamed);
+
+        store.Update("coo", PersonaText("Coo", "second"), model: null, effort: null);
+
+        var renamed = Assert.Single(renames);
+        Assert.Equal("coo", renamed.OldName);
+        Assert.Equal("Coo", renamed.NewName);
+    }
+
+    /// <summary>Adding a brand new Persona file is not a rename: its path never existed in the previous index.</summary>
+    [Fact]
+    public void Add_RaisesNoPersonaRenamed()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("coo"), "first");
+        var raised = false;
+        store.PersonaRenamed += _ => raised = true;
+
+        store.Add(Identity("vp"), "second");
+
+        Assert.False(raised);
+    }
+
+    /// <summary>Deleting a Persona is not a rename: its path disappears from the new index rather than surviving under a different Name.</summary>
+    [Fact]
+    public void Remove_RaisesNoPersonaRenamed()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("coo"), "first");
+        var raised = false;
+        store.PersonaRenamed += _ => raised = true;
+
+        store.Remove("coo");
+
+        Assert.False(raised);
+    }
+
+    /// <summary>
+    /// Pins the idempotency the whole detection scheme relies on: a single save raises
+    /// PersonasChanged twice (see <see cref="Update_RaisesPersonasChangedOnce"/>'s comment) - once
+    /// synchronously from Update, once ~500&#160;ms later from the debounced FileSystemWatcher noticing
+    /// the same write. By the time the second, redundant refresh runs, both the previous and the new
+    /// index already agree on the renamed path's Name, so PersonaRenamed must not fire a second time.
+    /// </summary>
+    [Fact]
+    public async Task Update_ChangingTheName_DoesNotRaisePersonaRenamedAgainOnTheWatchersRedundantRefresh()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("coo"), "first");
+        var renames = new List<PersonaRenamed>();
+        store.PersonaRenamed += renamed => renames.Add(renamed);
+
+        var secondPersonasChanged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var changedCount = 0;
+        store.PersonasChanged += () =>
+        {
+            changedCount++;
+            if (changedCount == 2)
+            {
+                secondPersonasChanged.TrySetResult();
+            }
+        };
+
+        store.Update("coo", PersonaText("vp", "second"), model: null, effort: null);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await using var registration = cts.Token.Register(() => secondPersonasChanged.TrySetCanceled());
+        await secondPersonasChanged.Task;
+
+        var renamed = Assert.Single(renames);
+        Assert.Equal("coo", renamed.OldName);
+        Assert.Equal("vp", renamed.NewName);
+    }
+
+    /// <summary>
+    /// The other door: a file hand-edited outside the app (an editor, a script) bypasses
+    /// <see cref="PersonaStore.Update"/> entirely and reaches only the debounced FileSystemWatcher
+    /// path, where no old Name is recorded anywhere else - this drives the real watcher, rather than
+    /// calling the detection code directly, because that watcher path is exactly what is under test.
+    /// </summary>
+    [Fact]
+    public async Task ExternalFileRename_ThroughTheWatcher_RaisesPersonaRenamed()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("coo"), "You are the Chief of Staff.");
+        var path = store.PathFor("coo");
+        var renames = new List<PersonaRenamed>();
+        store.PersonaRenamed += renamed => renames.Add(renamed);
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        store.PersonasChanged += () => tcs.TrySetResult();
+
+        await File.WriteAllTextAsync(path, PersonaText("vp", "You are the VP now."), ct);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());
+        await tcs.Task;
+
+        var renamed = Assert.Single(renames);
+        Assert.Equal("coo", renamed.OldName);
+        Assert.Equal("vp", renamed.NewName);
+    }
+
     /// <summary>Changing the frontmatter Name moves the SQLite rows so the old Name's Model/Effort cannot resurrect on a later, unrelated Persona of that Name.</summary>
     [Fact]
     public async Task Update_ChangingTheName_MovesTheModelAndEffortRowsRatherThanLeavingThemBehind()

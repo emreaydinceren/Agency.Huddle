@@ -275,11 +275,16 @@ public sealed class TeammateCardTests
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
         FindButton(cut, "Edit").Click();
 
-        Assert.DoesNotContain("stay behind under the old name", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("keep the old name", cut.Markup, StringComparison.Ordinal);
 
         SetTextValue(cut, "Name", "newcoo");
 
-        Assert.Contains("stay behind under the old name", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("keep the old name", cut.Markup, StringComparison.Ordinal);
+
+        // The note must not claim the old, pre-ADR-0011 behaviour. A rename now carries the Agent,
+        // its Rooms and their Transcripts with it, so this wording would be a lie rather than a
+        // warning - and it is the kind of lie only a string assertion catches.
+        Assert.DoesNotContain("stay behind under the old name", cut.Markup, StringComparison.Ordinal);
     }
 
     /// <summary>
