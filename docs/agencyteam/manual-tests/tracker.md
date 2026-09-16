@@ -446,6 +446,7 @@ Model and Effort pickers, catalog probe and runner restart — [area file](model
 | [MODELEFFORT-25](model-effort.md#modeleffort-25-restart-lane-a-stale-stored-model-or-effort-warns-but-never-blocks-the-teammate) |  | Active | | |
 | [MODELEFFORT-26](model-effort.md#modeleffort-26-restart-lane-the-manual-restart-button-appears-only-on-an-offline-or-degraded-teammate) |  | Active | | |
 | [MODELEFFORT-27](model-effort.md#modeleffort-27-money-the-chosen-model-and-effort-actually-reach-the-model---ask-it) | 💰 | Active | | |
+| [MODELEFFORT-28](model-effort.md#modeleffort-28-both-pickers-are-inert-while-their-own-catalog-is-being-probed-and-the-model-list-lands-without-waiting-on-the-effort-one) |  | Active | | |
 
 ## invite-rooms
 

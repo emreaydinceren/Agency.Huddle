@@ -22,6 +22,16 @@ public sealed class FakeModelCatalog : IModelCatalog
     /// </summary>
     public bool NeverCompletes { get; set; }
 
+    /// <summary>
+    /// When set, <see cref="GetAsync"/> returns <see cref="Models"/> only once this gate is completed -
+    /// "answers, but asynchronously", which <see cref="NeverCompletes"/> cannot express and a plain
+    /// <see cref="ValueTask.FromResult{TResult}(TResult)"/> cannot either, being awaited without ever
+    /// yielding. That distinction is the whole point: a synchronously-answered catalog has already
+    /// landed by the time a handler first yields, so the render gap issue #39 named - the model catalog
+    /// arriving while the effort probe is still out - is unobservable without a gate to hold it open.
+    /// </summary>
+    public TaskCompletionSource? ModelsGate { get; set; }
+
     public int ProbeCount { get; private set; }
 
     /// <summary>The effort ladder to hand back for a specific model id, set per test as needed.</summary>
@@ -55,7 +65,22 @@ public sealed class FakeModelCatalog : IModelCatalog
             return new ValueTask<IReadOnlyList<AgentModelOption>>(new TaskCompletionSource<IReadOnlyList<AgentModelOption>>().Task);
         }
 
+        if (this.ModelsGate is not null)
+        {
+            return new ValueTask<IReadOnlyList<AgentModelOption>>(FakeModelCatalog.AfterAsync(this.ModelsGate, this.Models));
+        }
+
         return ValueTask.FromResult(this.Models);
+    }
+
+    /// <summary>Hands back <paramref name="models"/> once <paramref name="gate"/> completes - see <see cref="ModelsGate"/>.</summary>
+    /// <param name="gate">The gate to wait on before answering.</param>
+    /// <param name="models">The catalog to return once the gate opens.</param>
+    /// <returns>The catalog, no sooner than the gate's completion.</returns>
+    private static async Task<IReadOnlyList<AgentModelOption>> AfterAsync(TaskCompletionSource gate, IReadOnlyList<AgentModelOption> models)
+    {
+        await gate.Task;
+        return models;
     }
 
     public ValueTask<IReadOnlyList<AgentEffortOption>> GetEffortLevelsAsync(string? model, CancellationToken cancellationToken)

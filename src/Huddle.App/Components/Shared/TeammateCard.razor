@@ -223,8 +223,22 @@
 
             @* @bind-Value, not @oninput: MudSelect raises its ValueChanged on selection, the same
                "change" semantics the old <select>'s @onchange comment called out - see
-               OnModelChangedAsync below for why the Effort catalog must be re-read from here. *@
+               OnModelChangedAsync below for why the Effort catalog must be re-read from here.
+
+               Disabled while the probe is in flight (issue #39). An unread catalog is an EMPTY one, so
+               ModelChoices renders exactly two options - the blank default and the synthesised entry for
+               the stored id - and an interactive select offers that two-item list as though it were the
+               whole truth.
+
+               Disabled, NOT ReadOnly, even though ReadOnly is what the locked identity boxes above use.
+               Both refuse to open the popover, but MudBlazor 9.10.0 styles only the disabled one:
+               .mud-input.mud-disabled dims the text and dots the underline, while the read-only case has
+               no input rule at all. A read-only select would therefore look live and silently swallow
+               the click - worse than the incomplete list it replaced. Verified against the shipped
+               MudBlazor.min.css, not assumed. The cost is the tab order; ModelHelperText carries the
+               reason on screen either way, and the window is one adapter spawn long. *@
             <MudSelect T="string" Label="Model" Value="@(this.model ?? string.Empty)" ValueChanged="this.OnModelChangedAsync"
+                       Disabled="@this.modelsLoading"
                        HelperText="@this.ModelHelperText" Class="mb-4">
                 <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
                 @foreach (var choice in this.ModelChoices)
@@ -245,7 +259,12 @@
                 </MudAlert>
             }
 
+            @* Disabled while its own probe is in flight, for the reason spelled out on the Model select
+               above. Note the flag is effortsLoading, not modelsLoading: the two catalogs are probed by
+               two separate adapter spawns and land at different moments, so each select waits only on
+               the list it is actually offering. *@
             <MudSelect T="string" Label="Effort" Value="@(this.effort ?? string.Empty)" ValueChanged="this.OnEffortChanged"
+                       Disabled="@this.effortsLoading"
                        HelperText="@this.EffortHelperText">
                 <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
                 @foreach (var choice in this.EffortChoices)
@@ -445,7 +464,21 @@
             // on Create the second call is a pure cache hit (no model chosen yet means the
             // default-model effort ladder, which the model probe's own session already populated).
             await this.LoadModelsAsync();
-            await this.LoadEffortsAsync();
+
+            // Issue #39: without the StateHasChanged below, the Model select does not repaint when ITS
+            // catalog lands - it repaints when this whole method does, which is after the second adapter
+            // spawn has also answered. ComponentBase renders a handler at two points only, its first
+            // yield and its completion, and both awaits here sit between them. StateHasChanged flushes a
+            // batch synchronously, so no yield is needed to make the render happen.
+            //
+            // Started before the repaint and awaited after it, deliberately: LoadEffortsAsync sets
+            // effortsLoading on its way in, so kicking it off first is what makes the intermediate
+            // render say "Reading the effort levels…" instead of briefly asserting "This model offers no
+            // effort choice" about a ladder nobody has read yet - the same false claim this issue is
+            // about, moved one control to the right.
+            Task efforts = this.LoadEffortsAsync();
+            this.StateHasChanged();
+            await efforts;
         }
     }
 
@@ -631,7 +664,13 @@
         this.aliasLocked = false;
 
         await this.LoadModelsAsync();
-        await this.LoadEffortsAsync();
+
+        // Same three lines, and the same reasoning, as OnInitializedAsync - read the comment there. An
+        // event handler gets the two render points a lifecycle method does, so without this the Model
+        // select would wait on the effort probe before showing its own list.
+        Task efforts = this.LoadEffortsAsync();
+        this.StateHasChanged();
+        await efforts;
     }
 
     /// <summary>
@@ -791,8 +830,9 @@
 
     // Runs on form-open, never on page-load: spawning the throwaway adapter this probes with costs a
     // real process, so it must never happen just from browsing to /teammates. Awaiting it here yields
-    // at least once, so Blazor renders this card (with ModelsLoading true) before the probe answers -
-    // no manual StateHasChanged() needed.
+    // at least once, so Blazor renders this card (with modelsLoading true) before the probe answers -
+    // ENTERING the loading state needs no manual StateHasChanged(). Leaving it does, because both
+    // callers await a second probe afterwards: see the StateHasChanged in each of them (issue #39).
     private async Task LoadModelsAsync()
     {
         this.modelsLoading = true;
@@ -808,7 +848,9 @@
 
     // Runs on card-open AND on every Model change - the effort catalog is per model, so unlike the
     // model catalog it cannot be read once and reused. Awaiting yields at least once, so Blazor
-    // renders with EffortsLoading true before the probe answers; no manual StateHasChanged needed.
+    // renders with effortsLoading true before the probe answers; entering the loading state needs no
+    // manual StateHasChanged. Leaving it needs none either, unlike LoadModelsAsync above: this is the
+    // LAST await in all three of its callers, so the completion render already covers it.
     private async Task LoadEffortsAsync()
     {
         var generation = ++this.effortProbeGeneration;
