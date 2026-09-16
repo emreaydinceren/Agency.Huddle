@@ -72,12 +72,19 @@ What source text cannot see is covered by the manual checklist, and by one HTTP
 round-trip — `AppShell_EveryLinkedStylesheetIsServed`, because whether a `<link>`
 actually resolves is a fact about the server, not about the text.
 
-**The re-probe on model change is the second behaviour this suite structurally
-cannot reach, for the same reason.** `Teammates.razor`'s `OnCardModelChanged`
-only runs off a real `<select>` change event under `InteractiveServer`, and
-`TeammateCardTests` renders `TeammateCard` from a parameter dictionary that
-never sees the page's wiring at all. It is covered by manual checklist only —
-steps 14–19 below.
+**The re-probe on model change used to be the second behaviour this suite could
+not reach. It is not any more, and this paragraph is a dated record of why.** The
+old `HtmlRenderer` tests built `TeammateCard` from a parameter dictionary and
+could not dispatch a click, so a `<select>` change — the only thing that triggers
+the re-probe — was unreachable, and steps 14–19 of the checklist below were the
+whole coverage. Since the card became a real `MudDialog` driven through
+`IDialogService`, `ChangingTheModel_ReProbesTheEffortCatalog` proves it directly:
+opening Create probes the effort ladder once for the agent's default model, and
+picking a different Model probes it again for that model specifically. Its
+neighbours prove what the user sees afterwards — that the discarded Effort is now
+announced rather than dropped in silence (#45), and that the discard itself still
+happens. The manual steps are still worth running, because only a real adapter can
+show that the *advertised ladder* changed; what the suite now covers is the wiring.
 
 ## Manual checklist
 

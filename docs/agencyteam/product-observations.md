@@ -12,8 +12,8 @@ whether it is correct.
 > [!IMPORTANT]
 > This page was written against `docs/manual-test-run-2026-09-14`, which forked from `main`
 > before the MudBlazor migration. Every entry was re-checked against `main` at `774a472` on
-> 2026-09-15 and now carries its status and, where one was opened, its issue. Two are fixed.
-> Read the status line before acting on an entry.
+> 2026-09-15 and now carries its status and, where one was opened, its issue. Three are
+> fixed. Read the status line before acting on an entry.
 
 ## From the manual test run of 2026-09-15
 
@@ -161,8 +161,12 @@ quite true once a teammate can write itself notes.
   fast you clicked. *Still true, re-measured on `774a472`: two entries at 265 ms, six at
   8.5 s, and the control shows the raw id `sonnet` until the catalog lands. Filed as #39.*
 - **A model change silently drops your Effort setting.** Correct — the new model may not
-  offer the same levels — but the selection disappears with no notice that it happened or
-  why. *Still true; filed as #45, which warns a triager not to "fix" the reset itself.*
+  offer the same levels — but the selection disappeared with no notice that it happened or
+  why. ***FIXED** by #45: the Edit card now carries a `role="status"` note between the Model
+  and Effort selects saying the Effort was reset and that each model advertises its own
+  levels. The reset itself is deliberate and unchanged — PERSONALIFECYCLE-29 asserts it, and
+  a bUnit test now does too, so a future "fix" that preserved the Effort across a Model
+  change fails the build rather than reintroducing this.*
 - **Restarting a teammate means editing it.** There was no Restart control on an Online
   teammate's card, so the only route was to change the Persona text and save — making an
   edit you do not want in order to get an effect you do, and losing the teammate's memory

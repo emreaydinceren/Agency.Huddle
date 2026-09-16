@@ -839,6 +839,121 @@ public sealed class TeammateCardTests
         Assert.Contains("claude-sonnet-4", factory.FakeModelCatalog.EffortProbedModels);
     }
 
+    /// <summary>
+    /// A distinctive fragment of issue #45's notice text - one literal the four tests below assert
+    /// against, rather than four copies of the full sentence (with its em dash) scattered across them.
+    /// </summary>
+    private const string EffortResetNotice = "Changing the model reset Effort to the default.";
+
+    /// <summary>
+    /// The reset itself is deliberate and stays pinned by manual test PERSONALIFECYCLE-29 - what issue
+    /// #45 asks for is that it stop happening silently. Proves the notice text appears, that it is
+    /// carried by an element with <c>role="status"</c> rather than merely present somewhere in the
+    /// markup (MudAlert renders no role by default - rules.md), and that the Effort select's own reset
+    /// still actually happens underneath the new notice.
+    /// </summary>
+    [Fact]
+    public async Task ChangingTheModel_WithAnEffortChosen_SaysTheEffortWasReset()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        factory.FakeModelCatalog.Models = [new("claude-opus-4", "Opus", null), new("claude-sonnet-4", "Sonnet", null)];
+        factory.FakeModelCatalog.DefaultEffortLevels = [new("high", "High", null), new("low", "Low", null)];
+        SeedPersonaWithModelAndEffort(factory, "coo", "x", model: "claude-opus-4", effort: "high");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        await OpenSelectAsync(cut, "Model");
+        (await FindSelectItemAsync(cut, "Sonnet")).Click();
+
+        Assert.Contains(EffortResetNotice, cut.Markup, StringComparison.Ordinal);
+        var statusElements = cut.FindAll("[role='status']");
+        Assert.Contains(statusElements, element => element.TextContent.Contains(EffortResetNotice, StringComparison.Ordinal));
+
+        var effortInput = FindSelectInput(cut, "Effort");
+        Assert.Equal(string.Empty, effortInput.GetAttribute("value"));
+    }
+
+    /// <summary>Nothing was discarded when no Effort was chosen in the first place, so a Model change here has nothing to announce - the notice exists to report a loss, not to narrate every Model change.</summary>
+    [Fact]
+    public async Task ChangingTheModel_WithNoEffortChosen_SaysNothing()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        factory.FakeModelCatalog.Models = [new("claude-opus-4", "Opus", null), new("claude-sonnet-4", "Sonnet", null)];
+        factory.FakeModelCatalog.DefaultEffortLevels = [new("high", "High", null), new("low", "Low", null)];
+        SeedPersonaWithModelAndEffort(factory, "coo", "x", model: "claude-opus-4", effort: null);
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        await OpenSelectAsync(cut, "Model");
+        (await FindSelectItemAsync(cut, "Sonnet")).Click();
+
+        Assert.DoesNotContain(EffortResetNotice, cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>Making a fresh Effort choice is the notice's own resolution: the level just picked replaces whatever the Model change discarded, so there is nothing left for the notice to say.</summary>
+    [Fact]
+    public async Task ChoosingAnEffortAfterAModelChange_ClearsTheNotice()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        factory.FakeModelCatalog.Models = [new("claude-opus-4", "Opus", null), new("claude-sonnet-4", "Sonnet", null)];
+        factory.FakeModelCatalog.DefaultEffortLevels = [new("high", "High", null), new("low", "Low", null)];
+        factory.FakeModelCatalog.EffortLevelsByModel["claude-sonnet-4"] = [new("effort-medium", "Medium", null)];
+        SeedPersonaWithModelAndEffort(factory, "coo", "x", model: "claude-opus-4", effort: "high");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        await OpenSelectAsync(cut, "Model");
+        (await FindSelectItemAsync(cut, "Sonnet")).Click();
+        Assert.Contains(EffortResetNotice, cut.Markup, StringComparison.Ordinal);
+
+        await OpenSelectAsync(cut, "Effort");
+        (await FindSelectItemAsync(cut, "Medium")).Click();
+
+        Assert.DoesNotContain(EffortResetNotice, cut.Markup, StringComparison.Ordinal);
+        var effortInput = FindSelectInput(cut, "Effort");
+        Assert.Equal("effort-medium", effortInput.GetAttribute("value"));
+    }
+
+    /// <summary>
+    /// A second Model change made while no Effort is chosen discards nothing, so the notice left over
+    /// from the FIRST change must not go on standing over a reset that did not happen this time - the
+    /// defect this guards, distinct from the notice simply never appearing (see
+    /// <see cref="ChangingTheModel_WithNoEffortChosen_SaysNothing"/>). The first change's notice is
+    /// asserted too, so this cannot pass vacuously by the notice never having appeared at all.
+    /// </summary>
+    [Fact]
+    public async Task ChangingTheModelAgain_WithTheEffortAlreadyGone_ClearsTheNotice()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        factory.FakeModelCatalog.Models =
+        [
+            new("claude-opus-4", "Opus", null),
+            new("claude-sonnet-4", "Sonnet", null),
+            new("claude-haiku-4", "Haiku", null),
+        ];
+        factory.FakeModelCatalog.DefaultEffortLevels = [new("high", "High", null), new("low", "Low", null)];
+        SeedPersonaWithModelAndEffort(factory, "coo", "x", model: "claude-opus-4", effort: "high");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        await OpenSelectAsync(cut, "Model");
+        (await FindSelectItemAsync(cut, "Sonnet")).Click();
+        Assert.Contains(EffortResetNotice, cut.Markup, StringComparison.Ordinal);
+
+        await OpenSelectAsync(cut, "Model");
+        (await FindSelectItemAsync(cut, "Haiku")).Click();
+
+        Assert.DoesNotContain(EffortResetNotice, cut.Markup, StringComparison.Ordinal);
+    }
+
     /// <summary>Registers this factory's real services (<see cref="PersonaStore"/> and friends) into a fresh <see cref="MudBunitContext"/>, the same pattern <see cref="TeammatesPageTests"/> uses.</summary>
     private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
