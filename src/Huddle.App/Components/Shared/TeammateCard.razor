@@ -25,9 +25,9 @@
 
     Status is the one exception, and it is not a snapshot: rules.md's "Health outranks pipe
     liveness" applies to every surface that renders this badge, this card included, and the
-    Restart button is offered only while Status reads Offline or Degraded - the one screen a user
-    needs Restart on is exactly the one a stale snapshot would hide it from. So this component
-    injects PersonaHealth and IAgentGateway itself and subscribes to their Changed/PresenceChanged
+    Restart button's own busy state is derived from it - the one screen a user needs Restart on is
+    exactly the one a stale snapshot would misreport. So this component injects PersonaHealth and
+    IAgentGateway itself and subscribes to their Changed/PresenceChanged
     events directly, the same pattern Teammates.razor uses for its own tiles, rather than trusting
     the Status parameter past the moment the card opened. Disposed the same way rules.md requires
     for any singleton event subscription: unsubscribed in Dispose, so a card the Human has already
@@ -116,12 +116,22 @@
                 }
                 <MudButton Variant="Variant.Outlined" OnClick="this.BeginEditAsync">Edit</MudButton>
                 <MudButton Variant="Variant.Outlined" OnClick="this.OpenInEditor">Open</MudButton>
-                @* Offered only once there is something to fix: a healthy teammate needs no button
-                   that would just restart a session for nothing. See rules.md's "Editing a Persona
-                   or changing its Model or its Effort restarts its session and loses its conversation
-                   memory" - a manual Restart is the same trade, so the warning uses the Edit form's
-                   own words for it. *@
-                @if (this.status.State is PersonaState.Offline or PersonaState.Degraded)
+                @* Offered in every state, including Online. It was once offered only while there was
+                   "something to fix", on the grounds that a healthy teammate needs no button that
+                   would restart a session for nothing - but a session is exactly what a NextSession
+                   Hook waits for. Those fields are badged on the settings page precisely because an
+                   edit to one cannot reach a running Teammate (rules.md: "Editing a Hook must never
+                   restart a session"), so with Restart hidden on a healthy card the only way to apply
+                   one was to edit the Persona text - an unrelated change the user does not want, made
+                   solely for the restart it triggers. APPTOOLS-22 and HOOKSSETTINGS-39 both already
+                   direct a tester to click Restart on an Online teammate, so the scripts assumed this
+                   too. The trade is unchanged and is stated below the row in the Edit form's own
+                   words: a manual Restart clears what the teammate remembers.
+
+                   Starting is the one state still excluded, and for a different reason than "nothing
+                   to fix": the session is mid-creation, so a Restart there races the start it would
+                   be cancelling. Offline, Degraded and Online are all settled states. *@
+                @if (this.status.State is not PersonaState.Starting)
                 {
                     <MudButton Variant="Variant.Outlined" Disabled="this.restarting" OnClick="this.RestartAsync">@(this.restarting ? "Restarting…" : "Restart")</MudButton>
                 }
@@ -143,7 +153,7 @@
                 }
             </MudStack>
 
-            @if (this.status.State is PersonaState.Offline or PersonaState.Degraded)
+            @if (this.status.State is not PersonaState.Starting)
             {
                 <MudText Typo="Typo.caption" Color="Color.Secondary" Class="d-block mb-3">Like saving an edit, this restarts the teammate, which clears what it remembers.</MudText>
             }
@@ -390,9 +400,8 @@
 
     /// <summary>
     /// Repaints this card when either half of <see cref="PersonaStatusResolver.Resolve"/>'s input
-    /// changes - a health report or a pipe connect/disconnect - so the Restart button (offered only
-    /// while Status is Offline or Degraded) and the status line never lag behind either fact while
-    /// this card is open.
+    /// changes - a health report or a pipe connect/disconnect - so the Restart button and the status
+    /// line never lag behind either fact while this card is open.
     /// </summary>
     private void OnHealthOrPresenceChanged()
     {

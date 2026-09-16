@@ -521,6 +521,48 @@ public sealed class PipeEndToEndTests
         Assert.Contains("Do not retry", error.Message, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A refused post must not deadlock the connection. The server answers a refusal by writing from
+    /// inside its read loop, so a client that posts and goes straight on to its next envelope - which
+    /// is well-behaved, and exactly what <c>DemoAgentHost</c> and <c>PersonaRunner</c> do when they
+    /// send a post followed by its terminator - once met a server blocked writing while it was blocked
+    /// writing, with the pipe's buffers left at their default of 0. Neither side read again: the Draft
+    /// never completed and that Agent went deaf in every Room with its pipe still open and its tile
+    /// still green. Every assertion here would hang rather than fail if it returned, which is what the
+    /// fixture's timeout is for.
+    /// </summary>
+    [Fact]
+    public async Task AgentKeepsWritingAfterARefusedPost_ConnectionStaysAlive()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
+
+        await using var client = await fixture.ConnectClientAsync(ct);
+        await client.WriteAsync(new Hello("echo", null), ct);
+        var welcome = Assert.IsType<Welcome>(await client.ReadAsync(ct));
+        var roomId = Assert.Single(welcome.Rooms).Id;
+
+        await client.WriteAsync(new PostMessage(roomId, "m1", "spends the budget"), ct);
+
+        // The refused post, then its terminator, written back to back without reading in between -
+        // the exact window the deadlock lived in.
+        await client.WriteAsync(new PostMessage(roomId, "m2", "one too many"), ct);
+        await client.WriteAsync(new MessageDelta(roomId, "m2", string.Empty, IsFinal: true), ct);
+
+        var error = Assert.IsType<ProtocolError>(await client.ReadAsync(ct));
+        Assert.Equal(ErrorCodes.BudgetExhausted, error.Code);
+
+        // Still being read from: the read loop consumed the terminator above and answered this too.
+        // Without that, the Agent is deaf rather than merely capped.
+        await client.WriteAsync(new PostMessage(roomId, "m3", "still refused, still answered"), ct);
+        var second = Assert.IsType<ProtocolError>(await client.ReadAsync(ct));
+        Assert.Equal(ErrorCodes.BudgetExhausted, second.Code);
+        Assert.Equal("m3", second.RelatedMessageId);
+    }
+
     [Fact]
     public async Task TwoClients_ConnectConcurrently()
     {
