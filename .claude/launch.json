@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "huddle-app",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": [
+        "run",
+        "--project",
+        "src/Huddle.App",
+        "--",
+        "--urls",
+        "http://localhost:5100",
+        "--Team:Acp:Enabled=false"
+      ],
+      "port": 5100
+    }
+  ]
+}
