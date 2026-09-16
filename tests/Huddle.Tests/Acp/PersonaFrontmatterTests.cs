@@ -587,4 +587,194 @@ public sealed class PersonaFrontmatterTests
 
         Assert.DoesNotContain("teams:", text, StringComparison.Ordinal);
     }
+
+    /// <summary>Rewriting one field leaves every other field's value, order and single-quoted formatting untouched.</summary>
+    [Fact]
+    public void WriteScalarField_UnrelatedFields_KeepValuesOrderAndFormatting()
+    {
+        var text = "---\nname: 'Nova'\ntitle: 'Assistant'\nalias: 'nov'\n---\nYou are Nova.";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "title", "Chief of Staff");
+
+        Assert.Equal(
+            "---\nname: 'Nova'\ntitle: 'Chief of Staff'\nalias: 'nov'\n---\nYou are Nova.",
+            result);
+    }
+
+    /// <summary>The body after the closing delimiter, including its own blank lines, is untouched by a field rewrite.</summary>
+    [Fact]
+    public void WriteScalarField_MultiLineBody_IsLeftUntouched()
+    {
+        var text = "---\nname: 'Nova'\n---\n# Nova\n\nYou are Nova.";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "name", "Nova II");
+
+        Assert.Equal("---\nname: 'Nova II'\n---\n# Nova\n\nYou are Nova.", result);
+
+        var (_, body) = PersonaFrontmatter.Parse(result);
+        Assert.Equal("# Nova\n\nYou are Nova.", body);
+    }
+
+    /// <summary>A new value containing an apostrophe is written with YAML's doubled-quote escape and reads back unescaped through <see cref="PersonaFrontmatter.TryReadIdentity"/>.</summary>
+    [Fact]
+    public void WriteScalarField_ValueWithApostrophe_RoundTripsThroughTryReadIdentity()
+    {
+        var text = "---\nName: Jarvis\nTitle: 'Old Title'\nAlias: jar\n---\nbody";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "Title", "The Boss's Assistant");
+
+        Assert.Contains("Title: 'The Boss''s Assistant'", result, StringComparison.Ordinal);
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(result, out var identity, out var error);
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal("The Boss's Assistant", identity.Title);
+    }
+
+    /// <summary>A new value containing a colon and a hash survives quoting and reads back exactly, since single quotes make both YAML-safe.</summary>
+    [Fact]
+    public void WriteScalarField_ValueWithColonAndHash_RoundTripsThroughTryReadIdentity()
+    {
+        var text = "---\nName: Jarvis\nTitle: 'Old Title'\nAlias: jar\n---\nbody";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "Title", "Router, triage: cross-team #1 priority");
+
+        Assert.Contains("Title: 'Router, triage: cross-team #1 priority'", result, StringComparison.Ordinal);
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(result, out var identity, out var error);
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal("Router, triage: cross-team #1 priority", identity.Title);
+    }
+
+    /// <summary>A folded block scalar (<c>&gt;</c>) cannot be replaced by a one-line edit, so the whole input comes back unchanged.</summary>
+    [Fact]
+    public void WriteScalarField_FoldedBlockScalarValue_ReturnsInputUnchanged()
+    {
+        var text = "---\nname: 'Nova'\nsummary: >-\n  Owns the seams between workstations.\n  Triages anything unrouted.\n---\nbody";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "summary", "New summary");
+
+        Assert.Equal(text, result);
+    }
+
+    /// <summary>A literal block scalar (<c>|</c>) cannot be replaced by a one-line edit, so the whole input comes back unchanged.</summary>
+    [Fact]
+    public void WriteScalarField_LiteralBlockScalarValue_ReturnsInputUnchanged()
+    {
+        var text = "---\nname: 'Nova'\naddress: |\n  Line one\n  Line two\n---\nbody";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "address", "New address");
+
+        Assert.Equal(text, result);
+    }
+
+    /// <summary>A block list cannot be replaced by a one-line edit, so the whole input comes back unchanged.</summary>
+    [Fact]
+    public void WriteScalarField_BlockListValue_ReturnsInputUnchanged()
+    {
+        var text = "---\nname: 'Nova'\nconsult_when:\n  - 'First reason'\n  - 'Second reason'\n---\nbody";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "consult_when", "New value");
+
+        Assert.Equal(text, result);
+    }
+
+    /// <summary>An absent key is inserted as a new line immediately before the closing delimiter, leaving every existing line untouched.</summary>
+    [Fact]
+    public void WriteScalarField_AbsentKey_InsertsNewLineBeforeClosingDelimiter()
+    {
+        var text = "---\nname: 'Nova'\n---\nbody";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "title", "Chief of Staff");
+
+        Assert.Equal("---\nname: 'Nova'\ntitle: 'Chief of Staff'\n---\nbody", result);
+
+        var (fields, _) = PersonaFrontmatter.Parse(result);
+        var titleField = Assert.Single(fields, field => string.Equals(field.Key, "title", StringComparison.OrdinalIgnoreCase));
+        Assert.Equal("Chief of Staff", titleField.Value);
+    }
+
+    /// <summary>An absent key is still inserted correctly when the frontmatter block is otherwise empty.</summary>
+    [Fact]
+    public void WriteScalarField_AbsentKeyInEmptyFrontmatterBlock_InsertsNewLine()
+    {
+        var text = "---\n---\nbody";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "title", "Chief of Staff");
+
+        Assert.Equal("---\ntitle: 'Chief of Staff'\n---\nbody", result);
+    }
+
+    /// <summary>Text with no frontmatter block at all is returned unchanged.</summary>
+    [Fact]
+    public void WriteScalarField_NoFrontmatter_ReturnsInputUnchanged()
+    {
+        var text = "You are a minimal persona.";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "title", "Anything");
+
+        Assert.Equal(text, result);
+    }
+
+    /// <summary>An unclosed opening delimiter is not a frontmatter block, so the whole input is returned unchanged.</summary>
+    [Fact]
+    public void WriteScalarField_UnclosedFrontmatter_ReturnsInputUnchanged()
+    {
+        var text = "---\nname: 'Nova'\nYou are Nova.";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "name", "Nova II");
+
+        Assert.Equal(text, result);
+    }
+
+    /// <summary>CRLF input keeps every line ending as CRLF, since a Persona file's line endings belong to the Human editing it.</summary>
+    [Fact]
+    public void WriteScalarField_CrlfInput_StaysCrlf()
+    {
+        var text = "---\r\nname: 'Nova'\r\ntitle: 'Assistant'\r\nalias: 'nov'\r\n---\r\nYou are Nova.";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "title", "Chief of Staff");
+
+        Assert.Equal(
+            "---\r\nname: 'Nova'\r\ntitle: 'Chief of Staff'\r\nalias: 'nov'\r\n---\r\nYou are Nova.",
+            result);
+    }
+
+    /// <summary>LF input keeps every line ending as LF, with no CRLF introduced.</summary>
+    [Fact]
+    public void WriteScalarField_LfInput_StaysLf()
+    {
+        var text = "---\nname: 'Nova'\ntitle: 'Assistant'\nalias: 'nov'\n---\nYou are Nova.";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "title", "Chief of Staff");
+
+        Assert.Equal(
+            "---\nname: 'Nova'\ntitle: 'Chief of Staff'\nalias: 'nov'\n---\nYou are Nova.",
+            result);
+    }
+
+    /// <summary>A capitalised <c>Title:</c> line in the file matches a lowercase <c>title</c> key argument, and the file's own key casing is preserved.</summary>
+    [Fact]
+    public void WriteScalarField_CapitalizedKeyInFile_MatchesLowercaseKeyArgument()
+    {
+        var text = "---\nName: Jarvis\nTitle: 'Old Title'\nAlias: jar\n---\nbody";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "title", "New Title");
+
+        Assert.Equal("---\nName: Jarvis\nTitle: 'New Title'\nAlias: jar\n---\nbody", result);
+    }
+
+    /// <summary>A lowercase <c>title:</c> line in the file matches a capitalised <c>Title</c> key argument, and the file's own key casing is preserved.</summary>
+    [Fact]
+    public void WriteScalarField_LowercaseKeyInFile_MatchesCapitalizedKeyArgument()
+    {
+        var text = "---\nname: 'Nova'\ntitle: 'Old Title'\nalias: 'nov'\n---\nbody";
+
+        var result = PersonaFrontmatter.WriteScalarField(text, "Title", "New Title");
+
+        Assert.Equal("---\nname: 'Nova'\ntitle: 'New Title'\nalias: 'nov'\n---\nbody", result);
+    }
 }

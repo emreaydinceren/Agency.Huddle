@@ -254,6 +254,21 @@ finds where `Team:DataDir` actually resolved.
   **page**, or by container (`.invite-teammate` wraps the Room-header one), never by
   text alone. Note MudBlazor renders button labels upper-case, so both read
   "ADD TEAMMATE".
+- **Four controls are icon buttons with no visible text.** **New teammate** on
+  `/teammates` (`PersonAddAlt1`), **Remove** on the Teammate card (`PersonRemove`),
+  **Stop** on a streaming Draft (`StopCircle`) and **Settings** in the drawer
+  (`Settings`, pinned to the bottom). Each carries a `MudTooltip` and an
+  `aria-label` spelling the name this script uses, so **find them by
+  `aria-label`, never by button text** — in DevTools,
+  `document.querySelector('[aria-label="Stop"]')`. Steps written before this change
+  still name them in words; that is the same control. **Teammates** in the drawer
+  and both **Add teammate** buttons still show their text.
+- **A Room can be renamed, and a renamed Room stops auto-renaming.** The Edit icon
+  beside a Room's title puts it into edit mode; Enter or blur commits, Escape
+  cancels. Until somebody renames it, a Room is still named after its Agent Members
+  and is still re-derived on every Invitation — after a rename it is not. So a test
+  that expects an invite to change a Room's name must use a Room nobody has
+  renamed, and the reverse is a test of its own.
 - **There is no send button.** The composer is a bare textarea with placeholder
   `Message… (/invite @agent)`; Enter posts, Shift+Enter adds a newline. Its absence
   is not a defect.

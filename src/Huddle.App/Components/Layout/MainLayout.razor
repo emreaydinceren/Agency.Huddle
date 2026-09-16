@@ -14,8 +14,12 @@
         <NewChat />
         <RoomList />
         <MudNavMenu>
-            <MudNavLink Href="/teammates">Teammates</MudNavLink>
-            <MudNavLink Href="/settings">Settings</MudNavLink>
+            <MudNavLink Href="/teammates" Icon="@Icons.Material.Filled.Group">Teammates</MudNavLink>
+        </MudNavMenu>
+        <MudNavMenu Class="nav-settings">
+            <MudTooltip Text="Settings">
+                <MudNavLink Href="/settings" Icon="@Icons.Material.Filled.Settings" aria-label="Settings" />
+            </MudTooltip>
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent Class="main-column">

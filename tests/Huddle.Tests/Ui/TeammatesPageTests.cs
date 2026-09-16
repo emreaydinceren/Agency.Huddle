@@ -50,8 +50,10 @@ public sealed class TeammatesPageTests
 
         // The card itself lives behind IDialogService, which opens on click and so is absent from a
         // plain GET. What the page owes a first-time visitor is the way in - a real <button>'s own
-        // prerendered label. TeammateCardTests covers what the card then shows.
-        Assert.Contains("New teammate", html, StringComparison.Ordinal);
+        // prerendered accessible name. The button is now icon-only, so its visible text is gone; the
+        // aria-label is the reliable handle a page-level (non-rendered-popover) test can assert on.
+        // TeammateCardTests covers what the card then shows.
+        Assert.Contains("aria-label=\"New teammate\"", html, StringComparison.Ordinal);
     }
 
     [Fact]

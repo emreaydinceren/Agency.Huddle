@@ -1491,4 +1491,52 @@ If `scratch15` fails to register within 5 seconds, read `T-D` for a `protocolErr
 
 ---
 
+### INVITEROOMS-33 — A renamed Room keeps its name across an Invitation; an un-renamed one still re-derives
+
+**Free** · about 8 min
+
+*The whole point of the rename. Rooms acquire their duplicate names through the invite path, so a rename that an Invitation overwrites would not fix anything — see [product observation 6](../product-observations.md), filed as #43. Both halves must be checked: the sticking AND the still-working auto-rename.*
+
+**Before you start**
+
+- `P-LAUNCH-FREE`, with the demo agents ON so `echo` and `alpha` are present.
+- You need TWO Rooms containing `echo`: use `New chat` to make a second one if the sidebar has only one.
+
+**Steps**
+
+1. Open the Room named `echo`. Note the Edit icon beside the title (`aria-label="Rename room"`).
+2. Click it. Note whether the title becomes an input seeded with the current name, and whether focus lands in it.
+3. Type `Pricing` and press Enter. Note the header AND the sidebar entry, without refreshing.
+4. In the composer type `/invite @alpha` and press Enter. Note the Room's name in the header and the sidebar.
+5. Open the OTHER Room (the one you have not renamed). Note its name.
+6. In it, type `/invite @alpha` and press Enter. Note its name now.
+7. Return to `Pricing`. Click the Edit icon, type `Renamed again`, and press **Escape**. Note the name.
+8. Click the Edit icon, clear the field completely, and press Enter. Note what appears.
+9. Reload the page. Note the name of both Rooms.
+
+**Pass if — all of these**
+
+- Step 3: both the header and the sidebar read `Pricing` immediately, with no refresh.
+- Step 4: the Room is STILL `Pricing`. `alpha` is a Member (the members line under the title lists it).
+- Step 6: the un-renamed Room DID re-derive — its name is now its Agent Members joined by `", "`, for example `echo, alpha`.
+- Step 7: Escape left the name as `Pricing`.
+- Step 8: a visible error appears and the name is unchanged.
+- Step 9: both names survived the reload.
+
+**Fail if — any of these**
+
+- Step 4 renamed the Room -> the stickiness comparison is not working; a chosen name will not survive `mcp__team__invite_agent` either. This is the defect this test exists for.
+- Step 6 did NOT rename -> auto-naming has been switched off wholesale rather than made conditional. Every Room will now keep whatever name it was created with. Defect.
+- Step 3 updated the header but not the sidebar (or the reverse) -> the rename is not publishing `RoomsChanged`, or something is not subscribed to it. Defect.
+- Step 8 saved a blank name -> the guard is missing and the sidebar now has an unclickable empty entry. Defect.
+
+**Inconclusive if**
+
+`alpha` is already a Member of the Room you picked, so the invite is a no-op and proves nothing. Pick a Room it is not in, or connect a fresh pipe client with `P-ECHO-BOT` under a new Name and invite that instead.
+
+> [!NOTE]
+> There is one edge with no observable symptom, and it is deliberate, not a defect: rename a Room to EXACTLY the name auto-naming would have produced (`echo` for a Room whose only Agent is `echo`) and it counts as still auto-named, so the next Invitation re-derives over it. Do not file that. See [Known limits](../known-limits.md).
+
+---
+
 Back to [the manual test script](../manual-tests.md).

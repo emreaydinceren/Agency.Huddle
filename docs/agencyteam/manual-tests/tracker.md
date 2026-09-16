@@ -1,6 +1,6 @@
 # Manual test tracker
 
-Where every one of the 465 tests stands. One row per test, updated as you run it.
+Where every one of the 468 tests stands. One row per test, updated as you run it.
 
 > [!NOTE]
 > **An earlier full run exists, against the previous UI, and its results are deliberately not
@@ -146,6 +146,7 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 | [SHELLNAV-27](shell-nav.md#shellnav-27-with-no-rooms-the-empty-state-renders-twice-and-there-is-no-heading-at-all) |  | Active | |  |
 | [SHELLNAV-28](shell-nav.md#shellnav-28-the-new-chat-panel-with-no-agents-shows-its-own-guidance-instead-of-an-empty-list) |  | Active | |  |
 | [SHELLNAV-29](shell-nav.md#shellnav-29-record-whether-the-yellow-error-band-ever-appears-during-a-genuine-circuit-fault) |  | Active | |  |
+| [SHELLNAV-30](shell-nav.md#shellnav-30-the-drawers-icons-and-settings-pinned-to-the-bottom) |  | Active | |  |
 
 ## startup-config
 
@@ -410,6 +411,7 @@ Teammate card: view, edit, create, delete — [area file](teammate-card.md)
 | [TEAMMATECARD-48](teammate-card.md#teammatecard-48-remove-does-not-cascade-the-agent-and-its-room-survive) |  | Active | |  |
 | [TEAMMATECARD-49](teammate-card.md#teammatecard-49-delete-then-recreate-under-the-same-name-fresh-settings-old-room) |  | Active | |  |
 | [TEAMMATECARD-50](teammate-card.md#teammatecard-50-editing-a-teammate-really-does-lose-its-conversation-memory-costs-money) | 💰 | Active | |  |
+| [TEAMMATECARD-51](teammate-card.md#teammatecard-51-the-edit-cards-name-title-and-alias-boxes-write-into-the-frontmatter-and-preserve-every-other-field) |  | Active | |  |
 
 ## model-effort
 
@@ -483,6 +485,7 @@ Creating Rooms, inviting Agents, Room naming — [area file](invite-rooms.md)
 | [INVITEROOMS-30](invite-rooms.md#inviterooms-30-an-agent-can-invite-into-a-room-it-is-not-a-member-of) | 💰 | Active | | |
 | [INVITEROOMS-31](invite-rooms.md#inviterooms-31-every-agent-created-room-contains-the-human-so-none-is-hidden) | 💰 | Active | | |
 | [INVITEROOMS-32](invite-rooms.md#inviterooms-32-the-composers-own-status-line-does-not-survive-a-room-switch) |  | Active | | |
+| [INVITEROOMS-33](invite-rooms.md#inviterooms-33-a-renamed-room-keeps-its-name-across-an-invitation-an-un-renamed-one-still-re-derives) |  | Active | | |
 
 ## hooks-settings
 

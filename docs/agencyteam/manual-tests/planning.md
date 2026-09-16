@@ -1,6 +1,6 @@
 # Manual test script — planning
 
-Which of the 465 tests to run, what each area covers, and which ones spend money.
+Which of the 468 tests to run, what each area covers, and which ones spend money.
 Read this to **choose** a run. You do not need it while executing one: the rules
 that bind a run live in [the script](../manual-tests.md), which is the page to
 have open instead.

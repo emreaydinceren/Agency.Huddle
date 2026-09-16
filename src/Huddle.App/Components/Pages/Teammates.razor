@@ -15,7 +15,9 @@
 <div class="teammates-page">
     <header class="teammates-header">
         <h1>Teammates</h1>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="teammates-new" OnClick="this.BeginCreate">New teammate</MudButton>
+        <MudTooltip Text="New teammate">
+            <MudIconButton Icon="@Icons.Material.Filled.PersonAddAlt1" Variant="Variant.Filled" Color="Color.Primary" Class="teammates-new" aria-label="New teammate" OnClick="this.BeginCreate" />
+        </MudTooltip>
     </header>
 
     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">

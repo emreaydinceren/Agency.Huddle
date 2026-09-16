@@ -24,7 +24,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 
 | # | Item | Single place to change | Already in the code |
 | --- | --- | --- | --- |
-| 1 | Renaming a Teammate | `PersonaStore`, and every per-Persona store | — |
+| 1 | Renaming a Teammate | `PersonaStore`, and every per-Persona store | the card now *offers* the rename (Name/Title/Alias boxes over the frontmatter) and warns about the ghost; the no-cascade half is still open |
 | ~~2~~ | ~~A cap on agent-to-agent conversation~~ — **delivered 2026-09-12** | `ChatService`, then `ReplyGate.cs` and `PersonaRunner` | shipped; the two counts moved onto the Envelope, which the plan did not foresee |
 | ~~3~~ | ~~Streaming and failure surfacing~~ — **delivered 2026-09-13** | `PersonaRunner`, `Chat.razor` | shipped with 4 and 5; the roadmap named three failures and the code had twenty-one |
 | ~~4~~ | ~~Stopping a turn~~ — **delivered 2026-09-13** | `PersonaRunner`, `Chat.razor` | shipped; Stop means this Agent now, and a stopped Turn is not a failure |
@@ -39,6 +39,23 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~13~~ | ~~Model-facing text is configuration~~ — **delivered 2026-09-13** | `Hooks/`, then the five sites that held the literals | shipped; never on this list before it was built, and it collides with item 9 — see [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) |
 
 ## 1. Renaming a Teammate
+
+> **Partly delivered.** The Teammate card now *offers* the rename: Edit carries
+> discrete Name, Title and Alias boxes that rewrite those frontmatter lines in the
+> Persona text as the Human types, through a new `PersonaFrontmatter.WriteScalarField`
+> rather than through `Compose` — `Compose` emits only the four identity keys, so
+> recomposing a real Persona through it would drop exactly the fields
+> `ComposeJobDescription` sends to the model. Changing Name raises a warning on the
+> card naming the consequence, and does not block.
+>
+> **The decision this item opens with is still unmade.** Nothing cascades: the old
+> Agent, its Rooms and its Transcripts stay behind under the old Name, and only the
+> Model and Effort rows follow. So the item is now *visible* rather than *solved* —
+> which is arguably worse than before, because a rename that used to require
+> deliberately editing raw YAML is now one keystroke away. Whoever picks this up
+> should read that as raising the priority, not lowering it.
+>
+> The text below is kept as the reasoning that produced it.
 
 The shape is in [Known limits](known-limits.md): a rename is a file rename *and* a
 re-registration under a new identity on the pipe. What changed on 2026-09-11 is
@@ -801,7 +818,9 @@ Six dependencies here are real:
   `PersonaStore.Update` moves both rows by hand.
   What item 1 still owns is the harder half this bullet named: the no-cascade
   decision. A renamed Teammate leaves its Agent, Rooms and Transcripts behind
-  under the old Name, and the card exposes a rename only by editing the raw file.
+  under the old Name. The card no longer hides the rename, though — Edit offers
+  Name, Title and Alias as discrete boxes over the frontmatter and states the
+  consequence in place, so what is missing is the cascade, not the control.
 
 - ~~**2 before 8.**~~ **Settled — 2 shipped 2026-09-12.** A following Agent is
   woken by every Message in that Room, including exchanges it is not part of, and

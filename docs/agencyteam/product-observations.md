@@ -118,7 +118,15 @@ that the re-delivered message woke nobody.
 
 ### 6. Rooms are hard to tell apart in the sidebar
 
-**Still true on `main` (`774a472`), and understated. Filed as #43** - a later count found 14 rooms with `Nova, Jarvis` appearing five times.
+**Addressed. Filed as #43** - a later count found 14 rooms with `Nova, Jarvis` appearing five times.
+A Room can now be renamed from its header, and the chosen name **survives later Invitations**:
+`ChatService.InviteAsync` compares the Room's current name against what `RoomNaming.Derive` would
+have produced before re-deriving, so it only re-names a Room that is still carrying its auto-name.
+Without that comparison the fix would have been worthless here, since these Rooms acquire their
+duplicate names through exactly the invite path - the next `mcp__team__invite_agent` call would have
+thrown the chosen name away. What this does **not** add is the other half suggested below: there is
+still no timestamp and no last-message preview, so two Rooms nobody has renamed remain as
+indistinguishable as they were.
 
 At one point the sidebar held two rooms named `Nova, echo, Jarvis` and two named
 `Nova, Jarvis`. Rooms are named after their members, so any two rooms with the same
