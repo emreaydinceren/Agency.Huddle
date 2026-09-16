@@ -705,6 +705,120 @@ public sealed class TeammateCardTests
         Assert.Contains("Reading the effort levels this model offers", cut.Markup, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// Issue #39: an unread model catalog is an EMPTY one, so ModelChoices renders just the blank
+    /// default plus the synthesised entry for the stored id. An interactive select would offer that
+    /// two-item list as though it were the agent's whole answer, which is what the issue measured
+    /// ("two entries at 265 ms, six at 8.5 s"). While the probe is out the control must refuse to open.
+    /// </summary>
+    [Fact]
+    public async Task EditMode_WhileTheCatalogLoads_TheModelSelectIsInert()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        factory.FakeModelCatalog.NeverCompletes = true;
+        SeedPersonaWithModelAndEffort(factory, "coo", "x", model: "claude-sonnet-4", effort: null);
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        Assert.True(IsSelectInert(cut, "Model"));
+        Assert.Empty(await OpenSelectAndListOptionsAsync(cut, "Model"));
+    }
+
+    /// <summary>The Effort select's half of <see cref="EditMode_WhileTheCatalogLoads_TheModelSelectIsInert"/> - the same empty-catalog-looks-complete trap, on the ladder rather than the models.</summary>
+    [Fact]
+    public async Task EditMode_WhileTheEffortCatalogLoads_TheEffortSelectIsInert()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        factory.FakeModelCatalog.EffortsNeverComplete = true;
+        SeedPersonaWithModelAndEffort(factory, "coo", "x", model: null, effort: "high");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        Assert.True(IsSelectInert(cut, "Effort"));
+        Assert.Empty(await OpenSelectAndListOptionsAsync(cut, "Effort"));
+    }
+
+    /// <summary>
+    /// MODELEFFORT-11's Pass condition in automated form, and the guard that going inert did not cost
+    /// it: while the catalog is still out the closed select must already show the STORED value - as the
+    /// raw id, since no label is known yet - and not snap to "Use the agent's default". A read-only
+    /// MudSelect still displays its selection, which is the whole reason ReadOnly was chosen over
+    /// emptying or replacing the option list.
+    /// </summary>
+    [Fact]
+    public async Task EditMode_WhileTheCatalogLoads_StillShowsTheStoredModel()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        factory.FakeModelCatalog.NeverCompletes = true;
+        SeedPersonaWithModelAndEffort(factory, "coo", "x", model: "claude-sonnet-4", effort: null);
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        Assert.Equal("claude-sonnet-4", FindSelectInput(cut, "Model").GetAttribute("value"));
+    }
+
+    /// <summary>Going inert is for the probe window only: once the catalog lands the select opens and offers the real list.</summary>
+    [Fact]
+    public async Task EditMode_AfterTheCatalogLands_TheModelSelectIsInteractiveAgain()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        factory.FakeModelCatalog.Models = [new("claude-opus-4", "Opus", null), new("claude-sonnet-4", "Sonnet", null)];
+        SeedPersonaWithModelAndEffort(factory, "coo", "x", model: "claude-sonnet-4", effort: null);
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        Assert.False(IsSelectInert(cut, "Model"));
+
+        var options = await OpenSelectAndListOptionsAsync(cut, "Model");
+        Assert.Contains(options, option => string.Equals(option.TextContent.Trim(), "Opus", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// The render-gap half of issue #39. ComponentBase renders a handler at its first yield and its
+    /// completion and nowhere between, so BeginEditAsync's two back-to-back probes used to repaint only
+    /// once BOTH adapter spawns had answered - the Model select sat on its stale two-item list waiting
+    /// for the EFFORT catalog. Here the effort probe never answers at all, so the only thing that can
+    /// paint the real model list is the explicit StateHasChanged between the two awaits.
+    /// </summary>
+    [Fact]
+    public async Task EditMode_ModelCatalogLandsFirst_RepaintsWithoutWaitingOnTheEffortProbe()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        factory.FakeModelCatalog.Models = [new("claude-opus-4", "Opus", null), new("claude-sonnet-4", "Sonnet", null)];
+        factory.FakeModelCatalog.ModelsGate = gate;
+        factory.FakeModelCatalog.EffortsNeverComplete = true;
+        SeedPersonaWithModelAndEffort(factory, "coo", "x", model: "claude-sonnet-4", effort: null);
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        Assert.True(IsSelectInert(cut, "Model"));
+
+        await cut.InvokeAsync(gate.SetResult);
+
+        // A render carrying the landed catalog has happened - and the ONLY thing that can have caused it
+        // is the explicit StateHasChanged, because the handler it sits in has not returned and cannot
+        // until the effort probe answers, which it never will.
+        cut.WaitForAssertion(() => Assert.DoesNotContain("Reading the models this agent offers", cut.Markup, StringComparison.Ordinal));
+
+        Assert.False(IsSelectInert(cut, "Model"));
+        Assert.True(IsSelectInert(cut, "Effort"));
+        Assert.Contains("Reading the effort levels this model offers", cut.Markup, StringComparison.Ordinal);
+
+        var options = await OpenSelectAndListOptionsAsync(cut, "Model");
+        Assert.Contains(options, option => string.Equals(option.TextContent.Trim(), "Opus", StringComparison.Ordinal));
+    }
+
     /// <summary>An Offline status's reason renders as its own line under the status, not just the badge, and Restart is offered - the one status besides Degraded that has something for it to fix.</summary>
     [Fact]
     public async Task TeammateCard_ShowsTheReasonWhenOffline_AndOffersRestart()
@@ -1057,6 +1171,35 @@ public sealed class TeammateCardTests
     private static async Task OpenSelectAsync(IRenderedComponent<ContainerFragment> cut, string label)
     {
         await FindInputControl(cut, label).MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+    }
+
+    /// <summary>
+    /// Whether the <c>MudSelect</c> labelled <paramref name="label"/> is refusing interaction, which is
+    /// how the card says "this list is still being probed" (issue #39). Asserted off the rendered
+    /// <c>disabled</c> attribute, not the component's parameter: what matters is what the control does,
+    /// not what it was passed. Note <c>readonly</c> would be useless here - MudSelect puts it on the
+    /// input unconditionally, because a select's text box is never typeable.
+    /// </summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="label">The select's label text.</param>
+    /// <returns><see langword="true"/> when the select's input is disabled.</returns>
+    private static bool IsSelectInert(IRenderedComponent<ContainerFragment> cut, string label) =>
+        FindSelectInput(cut, label).HasAttribute("disabled");
+
+    /// <summary>
+    /// Clicks the <c>MudSelect</c> labelled <paramref name="label"/> and returns the options that
+    /// actually appeared. Empty means the popover refused to open - the behavioural half of
+    /// <see cref="IsSelectInert"/>, and the one a user would notice. <c>MudSelect</c> renders no
+    /// <c>&lt;option&gt;</c> elements, so <c>.mud-list-item</c> is the only honest oracle here.
+    /// </summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="label">The select's label text.</param>
+    /// <returns>The rendered option elements, empty when the select did not open.</returns>
+    private static async Task<IReadOnlyList<IElement>> OpenSelectAndListOptionsAsync(IRenderedComponent<ContainerFragment> cut, string label)
+    {
+        await OpenSelectAsync(cut, label);
+        await Task.Yield();
+        return cut.FindAll("div.mud-list-item");
     }
 
     private static async Task<IElement> FindSelectItemAsync(IRenderedComponent<ContainerFragment> cut, string text)

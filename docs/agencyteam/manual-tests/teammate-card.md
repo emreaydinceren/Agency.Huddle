@@ -1559,6 +1559,9 @@ An empty catalog is a LEGITIMATE result when node is missing, the adapter is not
 > [!NOTE]
 > Record once, as a wording inconsistency rather than a bug: the Effort select's blank option says `Use the agent's default` while the View card calls the same state `Model default`. Effort is genuinely resolved by the model, not the agent.
 
+> [!NOTE]
+> Steps 3 and 4 open the selects only AFTER step 2 has waited for both hints to settle, which is why this test is unaffected by issue #39's fix. What each select does DURING its loading window - refuse to open, visibly dimmed - is [MODELEFFORT-28](model-effort.md#modeleffort-28-both-pickers-are-inert-while-their-own-catalog-is-being-probed-and-the-model-list-lands-without-waiting-on-the-effort-one)'s job, not this one's.
+
 ### TEAMMATECARD-39 — Changing the Model clears the Effort and re-probes the ladder (Haiku -> Sonnet)
 
 **Free** · about 8 min

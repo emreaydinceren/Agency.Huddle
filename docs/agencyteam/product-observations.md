@@ -158,8 +158,15 @@ quite true once a teammate can write itself notes.
 - **The Model picker is incomplete just after startup.** Opening **Edit** early showed
   only Haiku; the full list (Sonnet, Fable, Opus) appeared once the adapter had been
   probed. Silent and timing-dependent, so whether you see the real choice depends on how
-  fast you clicked. *Still true, re-measured on `774a472`: two entries at 265 ms, six at
-  8.5 s, and the control shows the raw id `sonnet` until the catalog lands. Filed as #39.*
+  fast you clicked. *Re-measured on `774a472`: two entries at 265 ms, six at 8.5 s, and the
+  control shows the raw id `sonnet` until the catalog lands. ***FIXED** by #39: both pickers
+  are now disabled while their own catalog is being probed, so the card no longer offers a
+  two-item list, or a provisional label, as though either were the agent's answer. Two of the
+  seconds were not probe latency at all - the Model select used to repaint when the EFFORT
+  probe answered rather than when its own catalog landed, because a Blazor handler renders only
+  at its first yield and its completion; it now repaints between the two. The incomplete list
+  and the raw-id label were one object, not two defects: an unread catalog is an empty one, so
+  the only entry is the synthesised one for the stored id, whose display name IS that id.*
 - **A model change silently drops your Effort setting.** Correct — the new model may not
   offer the same levels — but the selection disappeared with no notice that it happened or
   why. ***FIXED** by #45: the Edit card now carries a `role="status"` note between the Model

@@ -522,6 +522,7 @@ If MODELEFFORT-02 found no NO-LADDER-MODEL in this adapter's catalog, this test 
 **Pass if — all of these**
 
 - While the Model hint reads `Reading the models this agent offers…`, the **Model** select already shows the stored value selected (rendered as the raw id, since no label is known yet) - not `Use the agent's default`.
+- That select is also INERT while it says so (issue #39, MODELEFFORT-28): it shows the stored value but refuses to open. Steps 5, 6 and 8 are unaffected - a closed `MudSelect` displays its selection without being opened, which is exactly why the fix disables the control rather than emptying its option list.
 - After the catalog arrives and the option list is replaced, the **Model** select STILL shows the stored model (now with its friendly label).
 - The same holds for the **Effort** select: the stored level is shown before and after the real ladder arrives.
 - After the no-op Save, `persona_models` and `persona_efforts` hold exactly the same values as in step 1.
@@ -1285,6 +1286,52 @@ The model's self-report about its own EFFORT level is not reliable - treat the M
 
 > [!NOTE]
 > This is manual checklist step 7. Each save destroys the Room's conversation memory, so the model will not remember the earlier question - that is expected and is why the identical message is retyped each time rather than asked as a follow-up.
+
+### MODELEFFORT-28 — Both pickers are inert while their own catalog is being probed, and the Model list lands without waiting on the Effort one
+
+**Free** · about 6 min
+
+*Issue #39. An unread catalog is an EMPTY one, so during the probe window each select offers just the blank default plus the synthesised entry for the stored id — a two-item list with no sign it is provisional. This test proves the card refuses interaction rather than asserting that short list, and that the two selects come back independently rather than both waiting for the slower spawn.*
+
+**Before you start**
+
+- Free lane.
+- `node` is on PATH.
+- `Probe One` exists with a stored Model and a stored Effort (from MODELEFFORT-03).
+- Both caches must be cold, so the app must be restarted immediately before this test.
+
+**Steps**
+
+1. Restart the app.
+2. Open `http://localhost:5100/teammates` and click the `Probe One` tile.
+3. Click **Edit**, and from the instant the card paints try to open the **Model** select, then the **Effort** select. Click each one twice.
+4. Read both hints, and note whether each control looks dimmed.
+5. Keep watching. Note whether the **Model** select becomes usable BEFORE the **Effort** hint stops reading `Reading the effort levels this model offers…`, at the same moment, or after.
+6. Once the Model select is live, open it and count the entries.
+7. Wait for the Effort hint to settle, then open the **Effort** select and count the entries.
+8. Click `Cancel` to close without saving.
+
+**Pass if — all of these**
+
+- While its hint reads `Reading the models this agent offers…`, the **Model** select does not open, and is visibly dimmed rather than looking ordinary.
+- The same holds for the **Effort** select while its own hint is still reading.
+- Neither select ever opens onto a list of two entries.
+- The **Model** select becomes usable while the **Effort** hint is STILL reading — the two do not land together.
+- Once open, the Model list holds the agent's real catalog (more than the blank default plus one), and the closed control shows the stored model's friendly label.
+
+**Fail if — any of these**
+
+- Either select opens during its own loading window -> the incomplete catalog is being offered as though it were complete; this is issue #39 reopening.
+- A select refuses to open but looks exactly like a live one -> it is `ReadOnly` rather than `Disabled`; MudBlazor styles only the disabled state, so the click is being swallowed with nothing on screen to explain it.
+- The Model select stays inert until the Effort hint clears -> the `StateHasChanged` between the two probes is gone and the Model list is again waiting on the second adapter spawn.
+- The Effort select shows `This model offers no effort choice, so it will think as it normally does.` at any point BEFORE its own probe has run -> the repaint is happening before `LoadEffortsAsync` is entered, and the card is asserting an empty ladder it never read.
+
+**Inconclusive if**
+
+If both catalogs answer so fast that neither hint is ever visible, the whole window is unobservable: record INCONCLUSIVE and note the timing. An empty catalog from a missing or unauthenticated adapter is a legitimate result for step 6 — read the console, as TEAMMATECARD-38 describes, rather than calling this a failure.
+
+> [!NOTE]
+> Step 5 is the half that is easy to skip and is the point of the test. The two catalogs come from two separate adapter spawns, serialised behind one semaphore, so the Effort one always lands later — a Model select that waits for it is waiting for nothing.
 
 ---
 
