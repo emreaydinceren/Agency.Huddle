@@ -15,6 +15,25 @@ Two observations are deliberately **not** filed separately:
   it is the same defect — the app knowing why nothing happened and not saying so — reached
   through a different control.
 
+## Verified against `main` at `774a472` (post PR #38), 2026-09-15
+
+Re-checked before posting, because these were drafted against `cc82e03` and PR #38 has
+landed since. Verdicts:
+
+| # | Verdict on `774a472` | Evidence |
+| --- | --- | --- |
+| 1 | **Confirmed**, both halves | Cold run, Edit opened, dropdown sampled every 250 ms: `t=265ms` shows 2 entries (`Use the agent's default`, `sonnet`), `t=8510ms` shows all 6 with proper labels. The control displays the raw id `sonnet` until `t=5701ms`, then `Sonnet`. The select is never disabled. |
+| 2 | **Confirmed** | Demonstrated end to end in one room - see 3. PR #38 added one new reason surface (Restart blocked by the cost guard now reports Offline with a reason) but touches none of the four cases listed. |
+| 3 | **Confirmed** | `/invite @alpha` into the two-member `echo` room printed `Invited alpha. Room is now "echo, alpha".` - the rename, and nothing about the room becoming mention-gated. The next plain message drew no reply and no explanation anywhere on screen. The same message minutes earlier, at two members, was answered. |
+| 4 | **Not re-verified** | Needs paid turns. Observed repeatedly on Haiku during the test run; nothing in PR #38 touches it. |
+| 5 | **Confirmed, and understated** | 14 rooms in the sidebar, `Nova, Jarvis` appearing **five** times and `Nova, echo, Jarvis` twice. The markup is name-only: `<div class="mud-nav-link-text">echo, alpha</div>`. |
+| 6 | **Needs re-scoping before posting** | PR #38 (#22) closed the specific vector - a tool call naming a path inside `~/.claude` is now refused. The general complaint stands: a teammate's memory is still invisible and unmanageable, a `Bash` redirect is not caught, and the Edit card still promises that a restart "clears what it remembers". Post it describing what remains, not the original incident. |
+| 7 | **Not re-measured on `774a472`**, unchanged by #38 | Mechanics verified the same day under PERSONALIFECYCLE-29. Note when posting: the reset itself is **designed** behaviour that -29 asserts as a pass condition. The issue is only that it happens silently. |
+
+One further check worth recording: **observation 2 is confirmed fixed on `main`** - `echo`
+now answers a plain, unmentioned message in a two-member room. This file was already right
+to exclude it.
+
 ---
 
 ## 1. The Edit card is misleading for the ~11 seconds a cold model catalog takes to land
