@@ -2,6 +2,20 @@
 
 Where every one of the 465 tests stands. One row per test, updated as you run it.
 
+> [!NOTE]
+> **An earlier full run exists, against the previous UI, and its results are deliberately not
+> carried into this table.** Between 2026-09-14 and 2026-09-15 the whole suite was executed on
+> branch `docs/manual-test-run-2026-09-14` — 444 Pass, 13 Fail, 7 Active — but against the
+> pre-MudBlazor UI and the *previous* wording of these scripts, which `394baa9` rewrote. Same test
+> ids, different tests: those verdicts do not validate the scripts in this repository now, so every
+> row here is Active until someone re-runs it.
+>
+> That run was not wasted and is worth reading before you start. Its detailed per-test notes are in
+> git at `553a107` (`git show 553a107:docs/agencyteam/manual-tests/tracker.md`), it closed 17
+> issues, and the behaviour it found that no test asks about is written up in
+> [product-observations.md](../product-observations.md), which carries a status line per entry
+> checked against `main`.
+
 This is a **recording** page, like [Planning](planning.md) — you need it when you start a
 run and when you finish one, not while executing. Keep [the script](../manual-tests.md),
 [Common procedures](common.md) and one area file open for that.

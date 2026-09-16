@@ -767,7 +767,7 @@ This test has no failing outcome in the usual sense; its job is to calibrate the
 
 - The sidebar still lists `echo` and `alpha`.
 - The `echo` transcript still shows every earlier message.
-- The `New chat` panel still lists both agents, each with a grey dot whose tooltip reads `offline`.
+- The `New chat` panel still lists both agents, each carrying `class="agent-dot offline"` and a tooltip reading `offline`. The dot is RED, not grey: `--status-offline` is `light-dark(#b32121, #e05a5a)` in `theme.css` by design.
 - The Human message posts and NOTHING answers it for the full 30 seconds.
 - NO alert strip, banner or error appears anywhere in the Room.
 - The console contains no `Demo agent` lines.
@@ -1087,8 +1087,8 @@ This test is diagnostic, not a pass/fail gate. The symptoms it produces — 'rep
 4. Run `dotnet run --project src/Huddle.App --no-launch-profile`.
 5. Read the console's `Hosting environment:` and `Now listening on:` lines again.
 6. Try to open http://localhost:5100 in the browser and note what happens.
-7. Open the URL the console actually named and confirm the app renders there.
-8. Compare the two runs' console verbosity — note whether `Agency.Huddle` category lines differ in level.
+7. Open the URL the console actually named. The app will answer, but it will render UNSTYLED and non-interactive - see the pass condition. Confirm the routes resolve (a 302 from `/` to a room) rather than that the page looks right.
+8. Compare the two runs' configured log level for `Agency.Huddle`: `appsettings.Development.json` sets it to `Debug`, `appsettings.json` leaves it at `Information`. Do NOT expect run (a)'s console to be visibly longer - see the pass condition.
 9. Stop the app.
 
 **Pass if — all of these**
@@ -1097,7 +1097,8 @@ This test is diagnostic, not a pass/fail gate. The symptoms it produces — 'rep
 - Run (b) reports `Hosting environment: Production` and listens on `http://localhost:5000` (not 5100).
 - In run (b), http://localhost:5100 gives connection refused.
 - In run (b), no Persona starts even if Persona files exist, because only `appsettings.json` applies and ACP is off there.
-- Run (a)'s console is noticeably more verbose for `Agency.Huddle` categories than run (b)'s.
+- In run (b) the app answers but renders UNSTYLED and non-interactive, and exactly three assets return **500**: `Huddle.App.<hash>.styles.css`, `Components/Layout/ReconnectModal.<hash>.razor.js` and `_framework/blazor.web.<hash>.js`. The console says why - `The application is not running against the published output and Static Web Assets are not enabled.` followed by a `FileNotFoundException` per asset. This is stock ASP.NET Core behaviour for an UNPUBLISHED build run in the Production environment, NOT a defect: those three assets live outside `wwwroot` until `dotnet publish` copies them there. Verified on 2026-09-14 - a published build in Production serves all six assets 200.
+- The configured `Agency.Huddle` level differs between the two: `Debug` from `appsettings.Development.json` in run (a), `Information` from `appsettings.json` in run (b). The two consoles will nonetheless look the SAME in the free lane, and that is correct - `Huddle.App` and `Huddle.Contracts` contain zero `Debug`-level log statements, so the extra level buys nothing until ACP is on. The only three live in `Huddle.Acp` (`DotAcpClientAdapter`, `AppToolServer` x2).
 
 **Fail if — any of these**
 
@@ -1263,11 +1264,15 @@ If the tile never appears even at startup, first confirm the file really is unde
 
 1. Run `git status` and confirm the working tree is clean, so you can revert cleanly.
 2. Launch normally and confirm the baseline: the console contains `Demo agent echo connected.` Then stop the app.
-3. Open `src/Huddle.App/appsettings.Development.json` and change the `Logging.LogLevel` key `"Agency.Huddle"` to the stale name `"Team"`, leaving its value `"Debug"` unchanged. Save.
+3. Make the stale rename in BOTH settings files, and drop the fallback that would otherwise rescue the category. Three edits, all of which are needed - see the note below for why one alone does nothing:
+   - `src/Huddle.App/appsettings.json`: change the `Logging.LogLevel` key `"Agency.Huddle"` to the stale name `"Team"`, value `"Information"` unchanged.
+   - `src/Huddle.App/appsettings.Development.json`: change the `Logging.LogLevel` key `"Agency.Huddle"` to the stale name `"Team"`, value unchanged.
+   - `src/Huddle.App/appsettings.Development.json`: change `"Default": "Information"` to `"Default": "Warning"`.
+   Save both.
 4. Relaunch and open http://localhost:5100.
 5. Read the sidebar room list and send `hi @echo` in the `echo` Room.
 6. Search the WHOLE console output for `Demo agent`, for `Created direct room` and for any `Agency.Huddle` category line.
-7. Stop the app and run `git checkout -- src/Huddle.App/appsettings.Development.json`.
+7. Stop the app and run `git checkout -- src/Huddle.App/appsettings.json src/Huddle.App/appsettings.Development.json`.
 8. Relaunch and confirm the `Demo agent echo connected.` line is back.
 
 **Pass if — all of these**
@@ -1281,7 +1286,7 @@ If the tile never appears even at startup, first confirm the file really is unde
 
 - The app behaves differently in the browser with the stale key -> log configuration is affecting behaviour, which it must not.
 - A warning IS emitted naming the unmatched key -> record as an observation; a loud failure would be an improvement over the documented silence.
-- The `Agency.Huddle` lines are still present with the `"Team"` key -> log categories are not derived from the namespace as documented, and the whole prefix model is different from what the docs describe.
+- The `Agency.Huddle` lines are still present after ALL THREE edits -> log categories are not derived from the namespace as documented, and the whole prefix model is different from what the docs describe. Before concluding that, run the control: put `"Agency.Huddle": "Warning"` in `appsettings.Development.json` on its own. If the `Demo agent` lines vanish for that, the prefix model is fine and one of the three edits was missed.
 
 **Inconclusive if**
 
@@ -1289,6 +1294,8 @@ If `git status` is not clean at step 1, do NOT run this test — you risk revert
 
 > [!NOTE]
 > Log categories come from the type's full namespace, which moved to `Agency.Huddle.*`, while the `Team:` CONFIG root deliberately did not move — that mismatch is what makes a stale `"Team"` log key so plausible and so silent.
+>
+> WHY ALL THREE EDITS: renaming the key in `appsettings.Development.json` alone changes nothing observable, for two independent reasons. First, that file's value is `Debug`, and there is no `Debug`-level log statement anywhere in `Huddle.App` or `Huddle.Contracts` — every line this script quotes is `info:`. Second, `appsettings.json` sets `"Agency.Huddle": "Information"` in its own right, and configuration MERGES, so that base key keeps the category alive whatever the overlay is called. The category only goes dark once no file names it AND `Default` no longer rescues it. Verified 2026-09-14: all three edits together produce a completely silent console against a working app; any one of them alone produces the full console.
 
 ### STARTUPCONFIG-31 — With ACP on and one Persona present, that Persona starts at launch and its tile goes Starting then Online
 
@@ -1362,13 +1369,14 @@ An `Offline` tile WITH a reason is a configuration result, not a product failure
 **Steps**
 
 1. Stop the app. Run `$env:Team__Acp__TraceWire = 'true'`.
-2. Launch: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
-3. Watch the console as the Persona starts.
-4. Search the console output for the category `Agency.Huddle.Acp.Wire`.
-5. Look for an `Authorization` header value in the traced JSON-RPC traffic.
-6. Open http://localhost:5100 and `/teammates`, and look for ANY visual indication anywhere in the browser that tracing is enabled.
-7. Stop the app IMMEDIATELY and run `Remove-Item Env:Team__Acp__TraceWire`.
-8. Close the console window, or clear its scrollback, so the token is not left on screen.
+2. Also raise the log level, or you will see nothing at all: `${env:Logging__LogLevel__Agency.Huddle} = 'Trace'`. `LoggerTraceListener` forwards the wire trace at **Trace**, while `appsettings.Development.json` pins `Agency.Huddle` at `Debug`, which does not include it. Note the spelling - a literal dot before `Huddle`, and `${env:...}` braces because of that dot.
+3. Launch: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
+4. Watch the console as the Persona starts.
+5. Search the console output for the category `Agency.Huddle.Acp.Wire`.
+6. Look for an `Authorization` header value in the traced JSON-RPC traffic.
+7. Open http://localhost:5100 and `/teammates`, and look for ANY visual indication anywhere in the browser that tracing is enabled.
+8. Stop the app IMMEDIATELY, then run `Remove-Item Env:Team__Acp__TraceWire` and `Remove-Item ${env:Logging__LogLevel__Agency.Huddle}`.
+9. Close the console window, or clear its scrollback, so the token is not left on screen.
 
 **Pass if — all of these**
 
@@ -1401,24 +1409,41 @@ If you see no trace lines, this test is inconclusive rather than failing until y
 - The `claude` CLI is logged in.
 - The app is stopped.
 
+> [!IMPORTANT]
+> This cap can only be reached by an **Agent-to-Agent** exchange, never by typing at it. Every
+> Human Message resets the counter to zero (`PersonaRunner` does `Interlocked.Exchange(ref
+> this.tokensConsumed, 0)` the moment it sees one), and the check runs at the START of a work item
+> — so a Turn you prompted yourself is always measured against a freshly-zeroed counter. That is
+> the point of the cap: it bounds *unattended* spend. The test therefore needs a SECOND Persona,
+> so one Agent's reply wakes the other with no Human Message in between.
+
 **Steps**
 
 1. Confirm the Persona's Model is Haiku and Effort is low: open `/teammates`, click the tile, and read the Model and Effort shown. Fix them via `Edit` if not.
-2. Stop the app. Run `$env:Team__Acp__TokenBudget = '2000'` — small enough that one Turn exceeds it.
-3. Relaunch and wait for the `Tester` tile to read `Online`.
-4. Open the `Tester` Room in the sidebar. Type exactly `Say hi in five words.` and press Enter.
-5. Wait for the reply and confirm it arrives normally.
-6. Type exactly `Say bye in five words.` and press Enter.
-7. Wait 30 seconds and record whether any reply arrives.
-8. Go to `/teammates` and read the `Tester` tile's status line. Hover the status and read the tooltip in full.
-9. Go back to the `Tester` Room and read the area between the message list and the message box.
-10. Search the console for a line containing `token budget`.
-11. Do NOT stop the app or clear the variable — STARTUPCONFIG-34 continues from this exact state.
+2. Stop the app. Rewrite `src\Huddle.App\App_Data\Teams\tester.md`'s body to `You are a test teammate. Reply with one very short sentence that ends with @tester2.` and add a second Persona at `src\Huddle.App\App_Data\Teams\tester2.md`:
+```
+---
+name: 'Tester2'
+title: 'Second test teammate'
+alias: 'tester2'
+---
+You are a second test teammate. Reply with one very short sentence that ends with @tester.
+```
+3. Run `$env:Team__Acp__TokenBudget = '2000'` — small enough that one Turn exceeds it — and `$env:Team__AgentMessageBudget = '4'`, which bounds the ping-pong and therefore the spend.
+4. Relaunch and wait for BOTH tiles to read `Online`. Set Model = Haiku and Effort = low on `Tester2` as well.
+5. Click **New chat**, tick `Tester` and `Tester2` only, and click **Start chat**. The Room heading reads `Tester, Tester2`.
+6. Type exactly `Say hi @tester` and press Enter.
+7. Watch the exchange: `Tester` answers mentioning `@tester2`, then `Tester2` answers mentioning `@tester`. That second reply is an AGENT Message, so it wakes `Tester` with no reset — and that is the Turn the cap refuses.
+8. Wait 30 seconds and record that no third Agent Message arrives.
+9. Go to `/teammates` and read the `Tester` tile's status line. Hover the status and read the tooltip in full.
+10. Go back to the Room and read the area between the message list and the message box.
+11. Search the console for a line containing `token budget`.
+12. Do NOT stop the app or clear the variable — STARTUPCONFIG-34 continues from this exact state.
 
 **Pass if — all of these**
 
-- The FIRST message gets a normal reply.
-- The SECOND message gets NO reply.
+- The Human Message gets a normal reply from `Tester`, and `Tester2` answers that.
+- `Tester` does NOT answer `Tester2` — the Agent-triggered Turn is the one refused.
 - The `/teammates` tile reads `Degraded` with an amber dot.
 - The tile's tooltip reads exactly `The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.`
 - The Room shows an alert strip between the message list and the message box reading `Tester is Degraded: The per-Persona token Budget of 2000 is spent; no more Turns until a Human speaks.`
@@ -1433,10 +1458,10 @@ If you see no trace lines, this test is inconclusive rather than failing until y
 
 **Inconclusive if**
 
-The check runs at the START of a work item, so the FIRST Turn ALWAYS completes no matter how small the Budget. A tester expecting the very first message to be refused will wrongly report the cap as broken — do not file that. If the second message DOES get a reply, the Turn simply did not exceed 2000 yet: send one more short message and re-check before judging. The Budget is also per Persona, not per Room, and has no Continue prompt: it only ever reads as Degraded.
+The check runs at the START of a work item, so the FIRST Turn ALWAYS completes no matter how small the Budget. A tester expecting the very first message to be refused will wrongly report the cap as broken — do not file that. If `Tester` DOES answer `Tester2`, do NOT reach for the keyboard: typing another Message resets the counter and moves you further from the state under test. Let the ping-pong run instead — `Team__AgentMessageBudget` stops it — or check that both Personas really are mentioning each other by alias. The Budget is per Persona, not per Room, and has no Continue prompt: it only ever reads as Degraded.
 
 > [!NOTE]
-> COST: roughly two short Haiku turns at low effort — a few cents at most. Keep every prompt to a handful of words. A local model emits no usage updates at all, so this cap is inert against one; use the Claude adapter.
+> COST: roughly three short Haiku turns at low effort — a few cents at most. Keep every prompt to a handful of words. A local model emits no usage updates at all, so this cap is inert against one; use the Claude adapter. For reference, the Claude adapter's first `usage_update` on a fresh session reported `used=49628` of `size=200000`, so a Budget of `2000` is exceeded by the opening Turn — the cap fires on the very next Agent-triggered Turn, not later.
 
 ### STARTUPCONFIG-34 — A Human Message clears a token-Budget Degraded state and lets the Persona work again
 
@@ -1455,8 +1480,8 @@ The check runs at the START of a work item, so the FIRST Turn ALWAYS completes n
 3. Wait up to 60 seconds and watch the message area.
 4. Look at the area between the message list and the message box.
 5. Go to `/teammates` and read the `Tester` tile's status line and dot colour.
-6. Stop the app. Run `Remove-Item Env:Team__Acp__TokenBudget`.
-7. Delete the test Persona: `Remove-Item src\Huddle.App\App_Data\Teams\tester.md`.
+6. Stop the app. Run `Remove-Item Env:Team__Acp__TokenBudget` and `Remove-Item Env:Team__AgentMessageBudget`.
+7. Delete both test Personas: `Remove-Item src\Huddle.App\App_Data\Teams\tester.md, src\Huddle.App\App_Data\Teams\tester2.md`.
 8. Run `Get-ChildItem Env:Team__*` and confirm nothing remains set.
 
 **Pass if — all of these**

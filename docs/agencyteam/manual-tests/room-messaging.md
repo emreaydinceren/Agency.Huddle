@@ -547,8 +547,7 @@ If the Elements panel cannot be opened, clicking alone cannot distinguish "neutr
 **Pass if — all of these**
 
 - On screen, before and after the reload, the row reads exactly `He said "go" — A&B 😀 日本語` with real characters, not escapes.
-- In the JSONL line, the double quotes around `go` appear as `"`, the ampersand as `&`, and the em dash as `—`.
-- In the JSONL line, the emoji and the CJK characters appear as `\uXXXX` escape sequences rather than as literal characters.
+- In the JSONL line, EVERY one of those characters appears as a `\uXXXX` escape, not just the non-ASCII ones: `"` for each double quote around `go`, `&` for the ampersand, `—` for the em dash, `😀` for the emoji and `日本語` for the CJK. That is `System.Text.Json`'s default `JavaScriptEncoder`, which escapes `"`, `&`, `<`, `>`, `'` and `+` along with all non-ASCII — stricter than strictly necessary, and the safe direction. Do NOT expect a raw `"`, `&` or `—` in the file.
 - The `Select-String` search for the literal CJK text finds no match.
 - The reload proves the round trip is lossless — the screen is identical before and after.
 
@@ -1290,7 +1289,7 @@ If `.message-body` and `.message-sender` already read different font families on
 - The Room opens normally — no exception page, no error banner, no blank main column.
 - Every well-formed Message still renders, in the original order.
 - The malformed lines do not appear as rows.
-- `T-A` shows exactly one warning of the form `Skipping unparsable line <n> in room <roomId>.` per malformed line — two in total for the truncated line and the garbage line.
+- `T-A` shows one warning of the form `Skipping unparsable line <n> in room <roomId>.` per malformed line PER READ of the file — two per read, for the truncated line and the garbage line. The Transcript is re-read on every render of the Room, so the pair repeats: a prerender plus a few navigations gives six pairs, twelve lines. Count distinct line NUMBERS, not warning lines.
 - The line numbers named in those warnings correspond to the actual positions of the bad lines in the file.
 - The blank line produces no warning and no row.
 
@@ -1372,11 +1371,16 @@ If the Draft finishes before you manage to press Ctrl+C, the Draft-loss half was
 4. Open the `echo` Room in the browser and set `$room` in `T-B` to its id.
 5. Send `hi @echo` and wait for the reply.
 6. Read any grey line between the transcript and the composer and write down its exact wording.
-7. Send `hi @echo` again and wait for the reply.
+7. Put a SECOND Agent in the Room - type `/invite @alpha` and press Enter - then send ONE Message mentioning both: `hi @echo and @alpha`. Wait for both replies.
+
+   > A Human Message RESETS this counter (the note says "since you last spoke"), so alternating
+   > Human/agent Messages can never reach a budget above 1: each Message you type zeroes it and
+   > draws exactly one reply. Two replies have to arrive between two Human Messages, which needs
+   > two Agents in the Room. The same rule governs `STARTUPCONFIG-33`.
 8. Look between the transcript and the composer and read the panel that appears, plus the labels of its two buttons.
 9. Confirm the panel sits BELOW the last transcript row and ABOVE the composer, not above the transcript.
 10. Press F5 and check whether the panel is still there.
-11. Send `hi @echo` a third time and watch `T-A`'s console.
+11. Provoke a REFUSAL, which needs its own configuration: stop the app, relaunch with `$env:Team__AgentMessageBudget = '1'`, and send one `hi @echo and @alpha`. The first Agent to answer spends the budget; the second is refused. (Typing a third Message instead would reset the counter and simply get a reply - see the note at step 7.) Watch `T-A`'s console.
 12. Click **Leave paused** and read what replaces the panel.
 13. Now send an ordinary Message `resuming` and check whether the pause clears.
 14. Send `hi @echo` and confirm the agent replies again.
@@ -1390,7 +1394,7 @@ If the Draft finishes before you manage to press Ctrl+C, the Draft-loss half was
 - After the second reply, a panel appears reading exactly `Agents have sent 2 replies since you last spoke, and are paused.` with buttons labelled `Continue` and `Leave paused`.
 - The panel sits between the last transcript row and the composer.
 - The panel is still present after F5.
-- The third mention produces NO reply, and `T-A` logs `Room '<roomId>' refused a message from 'echo': its budget of 2 agent messages since a human last spoke is spent.`
+- At the budget of 1, the second Agent's reply is refused: it never appears as a row, and `T-A` logs `Room '<roomId>' refused a message from '<agent>': its budget of 1 agent messages since a human last spoke is spent.` (The number in that line is the configured budget.) The refused Agent's Draft text stays on screen unrendered - literal `**echo:**` asterisks - because a Draft only clears when its Message posts; that is expected here, not a stuck Draft.
 - Clicking `Leave paused` replaces the panel with a grey line reading exactly `Paused — 2 of 2 agent replies since you last spoke.`
 - Sending `resuming` clears the pause, and a following `@echo` mention gets a reply.
 - While a `Continue` grant is in flight the button is disabled and reads `Continuing…`.

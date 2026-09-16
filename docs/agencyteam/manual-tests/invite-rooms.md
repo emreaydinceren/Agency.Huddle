@@ -152,15 +152,15 @@ If the page is blank white rather than showing the empty-state sentence, the cir
 - **Start chat** is clickable with nothing ticked -> the `Disabled="@(this.selectedAgentIds.Count == 0)"` binding regressed and the server will be asked to create a Room with zero Agents.
 - `You` appears as a tickable row -> the list is no longer filtering on `UserKind.Agent`; creating a chat with the Human would produce a nonsense Room name.
 - Only one Agent listed, or the order is reversed -> the panel is not reading `users ORDER BY rowid`, so the list will not be stable between visits.
-- Every dot is grey/`offline` while both bots are demonstrably connected (`T-A` logged them in INVITEROOMS-01) -> the presence lookup is broken and the tester can no longer tell a live Agent from a dead one anywhere in the app.
+- Every dot is grey while both bots are demonstrably connected (`T-A` logged them in INVITEROOMS-01) -> the presence lookup is broken and the tester can no longer tell a live Agent from a dead one anywhere in the app. Offline is RED (`rgb(224, 90, 90)`) and online is GREEN (`rgb(63, 191, 90)`), measured on `main`; a grey dot means neither state resolved.
 - Step 2 prints `true` on a fresh page load, before ever clicking **New chat** -> `MudCollapse`'s `Expanded` parameter is defaulting open instead of closed.
 
 **Inconclusive if**
 
-If the dots are grey and you are NOT sure the demo agents are connected, re-read `T-A` for the two `Created direct room` lines and check no `failed to connect` line followed them. If you cannot establish whether the agents are live, the dot colours are inconclusive — judge only the list contents and the disabled button, and say so. `MudCollapse` keeps its content in the DOM at all times and animates height, so do not judge open/closed from View Source or a `curl.exe` fetch — use the Console height check above.
+If the dots are not green and you are NOT sure the demo agents are connected, re-read `T-A` for the two `Created direct room` lines and check no `failed to connect` line followed them. If you cannot establish whether the agents are live, the dot colours are inconclusive — judge only the list contents and the disabled button, and say so. `MudCollapse` keeps its content in the DOM at all times and animates height, so do not judge open/closed from View Source or a `curl.exe` fetch — use the Console height check above.
 
 > [!NOTE]
-> The status dots in this panel repaint only on RoomsChanged, not on presence changes. Do NOT test 'disconnect an agent with the panel open and watch the dot go grey' — that is a documented known limit, not a defect.
+> The status dots in this panel repaint only on RoomsChanged, not on presence changes. Do NOT test 'disconnect an agent with the panel open and watch the dot go red' — that is a documented known limit, not a defect.
 
 ### INVITEROOMS-04 — A pipe client connecting creates its Room and it appears in the sidebar with no page refresh
 
@@ -312,7 +312,7 @@ If `T-D` prints `Connect timed out`, the app is not reachable — fix that and r
 
 **Pass if — all of these**
 
-- For each of the three runs, `T-D` prints a JSON line containing `"type":"protocolError"` and `"code":"invalidName"`, with a message of the form `'<the name you typed>' is not a valid agent name.`
+- For each of the three runs, `T-D` prints a JSON line containing `"type":"error"` (the wire discriminator a `ProtocolError` serialises to) and `"code":"invalidName"`, with a message of the form `'<the name you typed>' is not a valid agent name.`
 - After each run the connection ends — the script does not sit waiting for messages.
 - The browser sidebar is IDENTICAL to the list you wrote down. No new link appeared for any of the three names, and none appeared with a mangled or truncated spelling.
 - `T-A` printed no `Created direct room` line for any of the three.

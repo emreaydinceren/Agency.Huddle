@@ -465,7 +465,7 @@ If the list never becomes scrollable (a very tall window), shrink the browser wi
 3. With the Draft still visibly streaming, press Ctrl+C in `T-C` to kill the client without letting it post.
 4. Watch the browser without reloading for 10 seconds.
 5. In devtools Elements, search for `streaming` and record the match count.
-6. Check the `T-A` console for a line reading `Agent connection <id> ended.`
+6. Check the `T-A` console for a line reading `Agent connection <id> ended.` It is NOT a pass condition and is often absent: `AgentConnection` logs it only from its `catch (IOException)`, so a client that dies in a way which ends the read loop cleanly leaves no line at all. Judge on the browser and the transcript.
 7. In `T-D` run: `Get-Content "src\Huddle.App\App_Data\rooms\<DRIPROOM>.jsonl" -Tail 1` and confirm the half-reply text is not there.
 8. Reload the page and confirm the Room shows only real Messages.
 
@@ -661,8 +661,16 @@ The store returns a Room's Drafts in no particular order, so the two rows may sw
 **Steps**
 
 1. Open devtools, go to the **Network** tab and set throttling to **Slow 3G** - this widens the in-flight window enough to see.
-2. In `T-C` run: `pwsh $env:TEMP\drip.ps1 -Name drip -RoomId <GROUPROOM> -DelaySeconds 8`.
-3. In `T-D` run: `pwsh $env:TEMP\drip.ps1 -Name drop -RoomId <GROUPROOM> -DelaySeconds 8`.
+2. Use the LISTENING client from STREAMINGTURN-17 for both Agents, not `drip.ps1`. In `T-C` run: `pwsh $env:TEMP\drip-listen.ps1 -Name drip -RoomId <GROUPROOM>`.
+3. In `T-D` run: `pwsh $env:TEMP\drip-listen.ps1 -Name drop -RoomId <GROUPROOM>`.
+
+   > WHY: `drip.ps1` reads only the welcome line and never drains what the server sends it (see
+   > setup note 6). The `stopTurn` envelope is a WRITE to that client, so against a non-draining
+   > client it can block, `StopDraftAsync` never returns, its `finally` never clears the busy flag,
+   > and the button stays disabled for the rest of the run. That looks exactly like this test's
+   > "stays disabled indefinitely" Fail-if and is NOT the app's doing. Verified 2026-09-14: with
+   > `drip.ps1` the button never re-enabled; with `drip-listen.ps1` it disabled and re-enabled
+   > cleanly on every click.
 4. Open the `drip, drop` Room and confirm both streaming rows are present with a Stop button each.
 5. Click **Stop** on drip's row once, and immediately watch both buttons.
 6. Immediately double-click drip's Stop button and note whether anything visibly changes.
@@ -898,13 +906,18 @@ If the app fails to restart (port in use), wait for the old process to exit full
 
 1. Press Ctrl+C in `T-A`. In the same window run: `$env:Team__AgentMessageBudget="2"; $env:Team__Acp__Enabled="false"; dotnet run --project src/Huddle.App`.
 2. Reload the browser and open the `echo` room. If it does not exist, click **New chat**, tick `echo`, click **Start chat**.
-3. Click into the composer, type `@echo hello one` and press Enter. Wait for the reply.
-4. Type `@echo hello two` and press Enter. Wait for the reply.
-5. Type `@echo hello three` and press Enter. Wait five seconds.
+3. Click into the composer, type `@echo hello one` and press Enter. Wait for the reply, and read the grey line: `1 of 2 agent replies since you last spoke.`
+4. Put a SECOND Agent in the Room - type `/invite @alpha` and press Enter.
+5. Send ONE Message mentioning both: `hello @echo and @alpha`. Wait for both replies.
+
+   > A Human Message RESETS this counter, so sending `@echo hello two` and `@echo hello three`
+   > can never fill a budget of 2: each Message you type zeroes it and draws exactly one reply,
+   > leaving the line at `1 of 2` forever. Two replies must arrive between two Human Messages,
+   > which needs two Agents. Same rule as `ROOMMESSAGING-30` and `STARTUPCONFIG-33`.
 6. Read the area between the transcript and the composer.
 7. In devtools Elements, search for `member-health-alert` and record the count; then search for `budget-prompt`.
 8. Click **Teammates** and read the status label and dot for `echo`.
-9. Check `T-A` for a Warning line reading `Room '<id>' refused a message from 'echo': its budget of 2 agent messages since a human last spoke is spent.`
+9. The refusal needs its own configuration, because at a budget of 2 with two Agents both replies are accepted. Stop the app, relaunch with `$env:Team__AgentMessageBudget="1"`, and send one `hello again @echo and @alpha`: the first Agent to answer spends the budget and the second is refused. Check `T-A` for a Warning line reading `Room '<id>' refused a message from '<agent>': its budget of 1 agent messages since a human last spoke is spent.` - the number is the configured budget.
 10. Return to the Room and click **Continue**, then send `@echo hello four` and confirm a reply arrives.
 11. Press Ctrl+C in `T-A` and restart without the variable: `Remove-Item Env:Team__AgentMessageBudget; dotnet run --project src/Huddle.App`.
 
@@ -1255,21 +1268,40 @@ If ROOM A's prompt never queued because Nova answered it before you clicked Stop
 
 - Nova exists with Model = Haiku, Effort = low.
 
+> [!IMPORTANT]
+> This cap can only be reached by an **Agent-to-Agent** exchange, never by typing at it. Every
+> Human Message resets the counter to zero (`PersonaRunner`'s read loop does `Interlocked.Exchange(ref
+> this.tokensConsumed, 0)` the moment it sees one, *before* queueing the work item), and the check
+> runs at the START of a work item — so a Turn you prompted yourself is always measured against a
+> freshly-zeroed counter and can never be refused. That is the point of the cap: it bounds
+> *unattended* spend. The test therefore needs a SECOND Persona, so one Agent's reply wakes the
+> other with no Human Message in between. Same rule as `STARTUPCONFIG-33` and `ROOMMESSAGING-30`.
+
 **Steps**
 
-1. Press Ctrl+C in `T-A`. In the same window run: `$env:Team__Acp__Enabled="true"; $env:Team__Acp__TokenBudget="1"; dotnet run --project src/Huddle.App`.
-2. Wait for Nova to reach **Online** on /teammates.
-3. Open Nova's Room, type `@Nova say ok` and press Enter. Wait for her reply to land.
-4. Type `@Nova say ok again` and press Enter.
-5. Watch the Room for 15 seconds and note whether any Draft appears.
-6. Read the strip between the transcript and the composer, word for word, and screenshot it before typing anything else.
-7. Check `T-A` for `Persona 'Nova' has spent its token budget of 1 and is taking no more turns until a human speaks to it.` at Warning.
-8. Type `@Nova one more time` and press Enter, then watch for a Draft and a reply.
-9. Press Ctrl+C in `T-A` and restart without the variable: `Remove-Item Env:Team__Acp__TokenBudget; dotnet run --project src/Huddle.App`.
+1. Press Ctrl+C in `T-A`. Add a second Persona at `src\Huddle.App\App_Data\Teams\nova2.md`:
+```
+---
+name: 'Nova2'
+title: 'Second test persona'
+alias: 'nova2'
+---
+You are Nova2. Reply with one very short sentence that ends with @nova.
+```
+   and rewrite Nova's body in `src\Huddle.App\App_Data\Teams\Nova.md` to `You are Nova. Reply with one very short sentence that ends with @nova2.` Write both down so you can restore them in step 10.
+2. In the same window run: `$env:Team__Acp__Enabled="true"; $env:Team__Acp__TokenBudget="1"; $env:Team__AgentMessageBudget="4"; dotnet run --project src/Huddle.App`. The Room Budget bounds the ping-pong, and therefore the spend.
+3. Wait for BOTH Nova and Nova2 to reach **Online** on /teammates, and set Model = Haiku and Effort = low on Nova2.
+4. Click **New chat**, tick `Nova` and `Nova2` only, and click **Start chat**.
+5. Type exactly `Say hi @nova` and press Enter. Nova answers mentioning `@nova2`, then Nova2 answers mentioning `@nova`. That second reply is an AGENT Message, so it wakes Nova with no reset — and that is the Turn the cap refuses.
+6. Watch the Room for 15 seconds and note whether any third Draft appears.
+7. Read the strip between the transcript and the composer, word for word, and screenshot it before typing anything else.
+8. Check `T-A` for `Persona 'Nova' has spent its token budget of 1 and is taking no more turns until a human speaks to it.` at Warning.
+9. Type `@Nova one more time` and press Enter, then watch for a Draft and a reply.
+10. Press Ctrl+C in `T-A`. Restore Nova's original body, delete `src\Huddle.App\App_Data\Teams\nova2.md`, then restart without the variables: `Remove-Item Env:Team__Acp__TokenBudget, Env:Team__AgentMessageBudget; dotnet run --project src/Huddle.App`.
 
 **Pass if — all of these**
 
-- The second prompt produces NO Draft at all.
+- The Agent-to-Agent Turn produces NO Draft at all.
 - The Room shows the strip `Nova is Degraded: The per-Persona token Budget of 1 is spent; no more Turns until a Human speaks.`
 - `T-A` logs the quoted Warning line.
 - The wording avoids vocabulary this product does not use - no 'rate limit', 'quota' or 'cap'.
@@ -1284,10 +1316,10 @@ If ROOM A's prompt never queued because Nova answered it before you clicked Stop
 
 **Inconclusive if**
 
-The window in which the strip is visible is short by design - if you missed it because you typed again too quickly, repeat from step 4 and screenshot before typing. If the first prompt produces no reply at all, the Budget was already spent by an earlier run; restart the app to reset the counter.
+The window in which the strip is visible is short by design - if you missed it because you typed again too quickly, repeat from step 5 and screenshot before typing. If the first prompt produces no reply at all, the Budget was already spent by an earlier run; restart the app to reset the counter. If the exchange never reaches a second Agent reply, neither Persona is Mentioning the other - check both bodies and that both aliases resolve.
 
 > [!NOTE]
-> COSTS MONEY: one short Haiku turn at low effort plus one more to prove the reset - a few dozen tokens.
+> COSTS MONEY: two short Haiku turns at low effort to set up the Agent-to-Agent exchange, plus one more to prove the reset - a few dozen tokens.
 
 ### STREAMINGTURN-29 — A Turn that fails mid-flight reports Degraded in the Adapter's own words, and escalates on the third failure in a row
 

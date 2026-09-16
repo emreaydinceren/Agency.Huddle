@@ -113,7 +113,7 @@ If there is no Room named `echo` in the sidebar at all, the demo agents never co
 
 **Inconclusive if**
 
-If `alpha` does not appear in the **Add teammate** list, it is either already a Member or never connected — check the sidebar for a Room named `alpha` and `T-A` for `Demo agent alpha connected.`, then restart from RESET. If the dot beside `alpha` in the panel is grey rather than green, `alpha` is offline and its silence proves nothing about the gate: fix the agent first. If the strip is red instead of green, read its text and treat the test as inconclusive.
+If `alpha` does not appear in the **Add teammate** list, it is either already a Member or never connected — check the sidebar for a Room named `alpha` and `T-A` for `Demo agent alpha connected.`, then restart from RESET. If the dot beside `alpha` in the panel is red rather than green, `alpha` is offline and its silence proves nothing about the gate: fix the agent first. If the strip is red instead of green, read its text and treat the test as inconclusive.
 
 > [!NOTE]
 > A Room has no stored kind anywhere: the member count is the whole of this rule. That is why this test changes nothing but membership.
@@ -200,7 +200,7 @@ If `echo` is already a Member of the `alpha` Room from an earlier test, step 2 w
 
 **Inconclusive if**
 
-If `echo` is offline (grey dot in the **Add teammate** panel, or the Teammate tile reads Offline), every line of this test is inconclusive — no Mention can be observed through an Agent that receives nothing. If the Room has only two Members, a reply proves nothing about Mention resolution because a two-Member Room would be answered anyway by a client that implemented the gate: add a second Agent first.
+If `echo` is offline (red dot in the **Add teammate** panel, or the Teammate tile reads Offline), every line of this test is inconclusive — no Mention can be observed through an Agent that receives nothing. If the Room has only two Members, a reply proves nothing about Mention resolution because a two-Member Room would be answered anyway by a client that implemented the gate: add a second Agent first.
 
 > [!NOTE]
 > A space is deliberately NOT a boundary character, which is what makes multi-word Names possible; that is covered in REPLYGATEBUDGET-19 and -21.
@@ -309,7 +309,7 @@ If one of the two Agents is offline at step 3 only one reply arrives and the lin
 
 **Pass if — all of these**
 
-- `echo`'s reply lands, and then a red-bordered block appears between the transcript and the composer reading exactly `Agents have sent 1 replies since you last spoke, and are paused.`
+- `echo`'s reply lands, and then a `budget-prompt` block appears between the transcript and the composer, separated from the transcript by a plain rule, whose `budget-prompt-text` paragraph is in the danger colour and reads exactly `Agents have sent 1 replies since you last spoke, and are paused.`
 - That block carries exactly two buttons, labelled **Continue** and **Leave paused**.
 - No other strip appears above the composer — in particular no alert listing `echo is Degraded` or `echo is Offline`.
 - Every Message in the transcript is from `You` or from `echo`; there is no Message from a `system` or similar sender announcing the pause.
@@ -549,7 +549,10 @@ If nothing at all changes after the click — no label change, no log line — t
 1. Type a single full stop `.` and press Enter.
 2. Read the transcript and the area between it and the composer.
 3. Type `@echo hi` and press Enter and wait 5 seconds.
-4. Read the grey line above the composer.
+4. Read the area above the composer. Under a configured budget of `1` that one reply spends the
+   whole allowance, so what you see is the pause block again, which does not print the Granted
+   figure. Click **Leave paused** to read it: that only hides the question (REPLYGATEBUDGET-09) and
+   grants nothing.
 5. Run `Get-Content E:\Repos\Huddle\src\Huddle.App\App_Data\rooms\<RoomId>.jsonl | Select-Object -Last 3`.
 6. Read `T-A` for any warning produced by your own two Messages.
 
@@ -557,7 +560,7 @@ If nothing at all changes after the click — no label change, no log line — t
 
 - The `.` posts normally, appears in the transcript with sender `You`, and is never refused.
 - Immediately after step 1 the pause block and the grey budget line are both gone.
-- After `echo` replies at step 3, the grey line reads `1 of 1 agent replies since you last spoke.` — the allowance is back to the configured default, NOT `1 of 2`.
+- After `echo` replies at step 3, the line read at step 4 reads `Paused — 1 of 1 agent replies since you last spoke.` — the allowance is back to the configured default, NOT `1 of 2`.
 - The tail of the `.jsonl` shows your `.` line with `"senderId":"human"`.
 - `T-A` shows no refusal warning naming the Human.
 
@@ -1029,7 +1032,7 @@ If neither bot replies, nothing is being exercised — get a reply working (REPL
 5. Open `http://localhost:5100`, click the Room named `echo`, type `/invite @alpha` and press Enter.
 6. Type `@echo @alpha go` and press Enter.
 7. Wait 10 seconds.
-8. Read both terminals and find the line whose `"type"` is `protocolError`.
+8. Read both terminals and find the line whose `"type"` is `error` — that is the wire discriminator a `ProtocolError` serialises to (`Messages.cs`: `[JsonDerivedType(typeof(ProtocolError), "error")]`), so grepping for `protocolError` finds nothing.
 9. Copy that line's `"message"` value out in full and compare it character for character with the sentence in the pass conditions.
 10. Read `T-A`.
 
@@ -1300,7 +1303,7 @@ If the bot fails to reconnect (the terminal shows a connection error), nothing i
 
 - Step 1's Message posts normally and produces absolutely nothing else: no composer error, no note, no highlight, no indication the `@` matched nobody.
 - Both terminals show that envelope with `"mentioned":false`.
-- At step 5 the dot beside `echo` is grey.
+- At step 5 the dot beside `echo` is red — `agent-dot offline`, which `theme.css` paints with `--status-offline` (computed `rgb(224, 90, 90)` on the dark theme). There is no grey dot in the design.
 - At step 6, with `echo` offline, TERMINAL C still receives the envelope (with `"mentioned":false`) while `T-B` receives nothing at all — the Agent is a Member but not connected, so no Envelope is queued for it.
 - After restarting at step 8, the same Message produces a reply.
 
@@ -1381,14 +1384,18 @@ If the `Ada` tile reads **Offline** or **Degraded**, read the reason line on its
 3. Type `the deadline moved to Friday` and press Enter. Wait 20 seconds.
 4. Type `the budget was cut 10 percent` and press Enter. Wait 20 seconds.
 5. Confirm `Ada` has said nothing at all and `T-A` shows no Turn for her.
-6. Type `@Ada list every fact you were told before this message, verbatim.` and press Enter.
+6. Type `@Ada what day did the deadline move to, and by what percent was the budget cut?` and
+   press Enter. Ask for the facts back, not for an account of what she "was told": the Catch-up
+   Messages arrive as a bracketed context block rather than as turns addressed to her, and a small
+   model reliably answers "I wasn't told any facts" to the second phrasing even when the block is
+   demonstrably in its prompt.
 7. Wait up to 90 seconds and read the reply.
 8. Read `T-A`.
 
 **Pass if — all of these**
 
 - Neither of the two un-mentioned Messages produces a reply, a streaming row, or any model activity in `T-A`.
-- The reply to step 6 explicitly names BOTH earlier facts — the Friday deadline and the 10 percent cut.
+- The reply to step 6 names BOTH earlier facts — the Friday deadline and the 10 percent cut.
 - The grey budget line afterwards reads `1 of 4 agent replies since you last spoke.` — only one Turn was taken for three Messages.
 
 **Fail if — any of these**
@@ -1467,7 +1474,10 @@ If the models simply stop talking to each other before six (they may not obey th
 **Steps**
 
 1. Run `P-RESET-ROOMS`, then start the app with PROFILE C and `$env:Team__AgentMessageBudget = '2'` set BEFORE `dotnet run`.
-2. On **Teammates**, wait for both tiles to read **Online** and confirm each shows Haiku and low on its card.
+2. On **Teammates**, wait for both tiles to read **Online**, then set each one's **Model** to the
+   Haiku entry and **Effort** to `low` again. `P-RESET-ROOMS` deletes `team.db`, which is where the
+   stored Model and Effort live, so both cards come back reading `Agent default` / `Model default`
+   however they were left in REPLYGATEBUDGET-33.
 3. Click **New chat**, tick `Ana` and `Ben`, and click **Start chat**.
 4. Type `@Ana start a short conversation with @Ben about picking a meeting time.` and press Enter.
 5. Wait until the Room halts and the red pause block appears.
@@ -1475,7 +1485,13 @@ If the models simply stop talking to each other before six (they may not obey th
 7. Note the exact text of the last Message in the Room.
 8. PATH ONE. Do NOT click Continue. Instead type `@<the declined Persona> summarise everything you have been told in this room so far, listing each message.` and press Enter.
 9. Read the reply carefully and check whether it accounts for the Message it was paused on (the one you noted at step 7).
-10. PATH TWO. Drive the Room back to its cap by typing `@Ana carry on with @Ben.` and waiting for the pause block to return.
+10. PATH TWO. Drive the Room back to its cap by typing `@Ana carry on with @Ben.` and waiting for
+    the pause block to return. Before clicking Continue, check that the LAST Message actually
+    `@`-mentions the Persona that declined: Continue re-delivers that Message, and in a Room of
+    three the Reply Gate answers it only if it names them. These models often end a turn without
+    writing the Mention their Persona body asks for, and a held Message that names nobody
+    correctly produces Catch-up and no reply — which is not what this path is testing. If it
+    names nobody, prompt again until one does.
 11. Click **Continue** and wait up to 90 seconds.
 12. Read the reply that arrives, if any, and count how many times it addresses the Message it was paused on.
 
@@ -1552,21 +1568,37 @@ A model may simply choose not to attempt a second post, in which case nothing is
 
 **Before you start**
 
-- One Persona exists and is Online.
+- TWO Personas exist and are Online — `Ana` and `Ben` from REPLYGATEBUDGET-33 are exactly right.
+  One is not enough: `ChatService.CreateRoomForAsync` short-circuits a single-agent request to
+  `EnsureRoomForAsync`, which returns that Agent's EXISTING direct Room, so a lone Persona asked to
+  create a Room can only ever be handed the one it already has and no Budget is ever minted.
 - You are willing to spend a handful of short billed Turns.
 - You will stay at the keyboard.
+
+> [!IMPORTANT]
+> The per-Persona token Budget can only be reached by an **Agent-to-Agent** exchange, never by
+> typing at the Persona. `PersonaRunner`'s read loop does `Interlocked.Exchange(ref
+> this.tokensConsumed, 0)` the moment it sees a Human Message, *before* queueing the work item,
+> and `ProcessWorkItemAsync` checks the Budget at the start of that item — so a Turn you prompted
+> is always measured against a freshly-zeroed counter. Same rule as `STREAMINGTURN-28`,
+> `STARTUPCONFIG-33` and `ROOMMESSAGING-30`.
 
 **Steps**
 
 1. Run `P-RESET-ROOMS`.
-2. Start the app with PROFILE C plus `$env:Team__AgentMessageBudget = '2'` and `$env:Team__Acp__TokenBudget = '2000'`, both set BEFORE `dotnet run`.
+2. Start the app with PROFILE C plus `$env:Team__AgentMessageBudget = '6'` and
+   `$env:Team__Acp__TokenBudget = '2000'`, both set BEFORE `dotnet run`. The Room Budget has to be
+   comfortably larger than 2: the token Budget is only ever reached on an Agent-to-Agent Turn (see
+   the box above), and a Room that hits its own cap first declines in the read loop, before
+   `ProcessWorkItemAsync` ever runs the token check.
 3. Wait for the Persona tile to read **Online** and confirm Haiku and low on its card.
 4. Click the Room named after the Persona and note the Room id.
-5. Type `@<Persona> create a new room called scratch and then post a short message in it.` and press Enter.
+5. Type `@<Persona> create a new room containing yourself and <the other Persona>, then post a short message in it.` and press Enter.
 6. Wait up to 120 seconds, then read the sidebar.
 7. Click the newly created Room and read the area between its transcript and its composer.
-8. Return to the first Room and drive it to its cap by typing `@<Persona> reply twice in this room.` and waiting.
-9. Keep sending short Messages to the Persona until `T-A` prints the token-budget line, or until roughly six Messages have been sent — whichever comes first.
+8. Go to the Room the Persona created, which has both Personas in it.
+9. Type `@<Persona> start a short back-and-forth with <the other Persona>.` and let them bounce.
+   Watch `T-A` for the token-budget line; stop as soon as it appears, or when the Room reaches its cap.
 10. Click **Teammates** and read the Persona's tile, then open its card and read the line under the status.
 11. Type one more short Message to the Persona and observe whether it takes a Turn.
 12. Send a final Message and then check whether the tile returns to **Online**.
@@ -1583,7 +1615,7 @@ A model may simply choose not to attempt a second post, in which case nothing is
 
 - The token budget is spent but the tile still reads **Online** and only the log says anything -> the guard is silent in the UI, so a Teammate that has stopped working looks identical to one that is idle.
 - The tile goes Degraded and never recovers after a Human Message -> the token budget is not resetting, so a Teammate is permanently disabled by one busy afternoon.
-- No new Room is created at step 5 -> unrelated to this area's cap; note it, but do not judge the budget behaviour from it.
+- No new Room is created at step 5, and the Persona was asked for a room with a SECOND agent in it -> unrelated to this area's cap; note it, but do not judge the budget behaviour from it. (If you asked for a room containing only the Persona itself, you have hit the short-circuit described above, not a defect.)
 
 **Inconclusive if**
 

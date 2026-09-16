@@ -157,7 +157,7 @@ If `App_Data/hooks.json` cannot be written (a permissions error paragraph appear
 3. Run: `dotnet run --project src/Huddle.App --urls http://localhost:5100`
 4. Open Windows Task Manager, Details tab, and sort by Name. Note whether any `node.exe` process is running.
 5. In the browser open http://localhost:5100/teammates.
-6. Confirm every Persona tile is listed, and that each tile's status line reads **Offline** with a grey dot.
+6. Confirm every Persona tile is listed, and that each tile's status line reads **Offline** with a red `offline` dot (`--status-offline`, red by design - never grey).
 7. Hover each **Offline** tile's status text. Confirm no tooltip reason appears (an Agent that merely never started has no reason).
 8. Click the **Nova** tile to open its card. Confirm the card shows **Offline** and shows NO reason line beneath the status.
 9. Close the card with the × button.

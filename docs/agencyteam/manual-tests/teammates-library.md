@@ -169,7 +169,7 @@ You are the Chief of Staff. Answer in one short sentence.
 - Nova's tile shows `Nova` on its first line and `Research Lead · @nov` on its second — a real middle dot, and the alias carries a leading `@`.
 - Every tile's second line is `<Title> · @<alias>` with values matching that file's frontmatter (Vale: `Ops Lead · @val`; Rune: `Home Steward · @run`; Quill: `Scribe · @qui`).
 - Monograms read: Emily Lee -> `EL`; Chief of Staff -> `CS`; Nova -> `N`; Quill -> `Q`; Rune -> `R`; Vale -> `V`.
-- Each tile has a status line with a coloured dot and one of `Starting` / `Online` / `Degraded` / `Offline` — with ACP off, every one reads `Offline` with a grey dot.
+- Each tile has a status line with a coloured dot and one of `Starting` / `Online` / `Degraded` / `Offline` — with ACP off, every one reads `Offline` with a RED dot (`agent-dot offline`, computed `rgb(224, 90, 90)` from `--status-offline`). There is no grey dot in the design.
 - The tiles have rounded borders and a coloured monogram square — they are tiles, not bullet points.
 - The `Chief of Staff` tile exists even though its file is named `cos.md` — the heading text comes from frontmatter, not the filename.
 
@@ -1066,7 +1066,10 @@ You are Bram. Answer in one short sentence.
 - PART A: the card's `Persona file` path now shows the NEW folder (`...\Teams\HouseholdOps\Rune.md`), not the old one.
 - PART A: **Open** launches the correct, existing file.
 - PART A: **Edit** -> **Save** succeeds with no error line on the card, and the change is on disk at the new path.
-- PART B: within about a second of moving the folder away, BOTH tiles disappear on their own, and the `Household` heading disappears with them.
+- PART B: within about a second of moving the folder away, BOTH tiles disappear on their own.
+  The `Household` heading REMAINS, now holding only Vale: the core fixture set gives `Vale.md`
+  `teams: ['Business', 'Household']`, so Household still has a member and an empty group is not
+  what should be produced. The heading only goes if you also remove Vale from that Team.
 - PART B: no exception appears in the `dotnet run` console.
 
 **Fail if — any of these**
@@ -1244,7 +1247,7 @@ The card does not open at all and other clicks on the page are also dead -> the 
 
 **Pass if — all of these**
 
-- Every tile reads `Offline` with a grey dot.
+- Every tile reads `Offline` with a red dot (`agent-dot offline`).
 - Hovering a tile's status line shows NO tooltip — no reason is known, so none is invented.
 - The card shows the same `Offline` status line and NO reason paragraph under it.
 - The card's action row contains `Edit`, `Open`, `Restart` and `Remove` (a `Message` link appears only if that teammate already has a Room).
@@ -1297,7 +1300,7 @@ You are echo. Answer in one short sentence.
 **Pass if — all of these**
 
 - The `echo` tile reads `Online` with a green dot.
-- Every other tile still reads `Offline` with a grey dot.
+- Every other tile still reads `Offline` with a red dot (`agent-dot offline`).
 - The echo card shows `Online`, no reason paragraph, and NO `Restart` button in its action row (Restart is offered only for Offline or Degraded).
 - The `users` table has an `agent` row named `echo`.
 - No `node` process is running — this Online badge costs nothing.

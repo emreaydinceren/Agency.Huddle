@@ -396,16 +396,17 @@ If the console commands return `null`, the page had not finished rendering - wai
 
 1. In the browser, click `echo` in the sidebar.
 2. In the DevTools Console, type `document.querySelectorAll('.room-list a.active').length` and press Enter.
-3. Look at the sidebar: confirm `echo` has a tinted background and heavier text, and `alpha` has neither.
-4. Read the `<h1>` in the main column.
-5. Click `alpha` in the sidebar.
-6. Repeat steps 2, 3 and 4, expecting `alpha` to be the highlighted one and `echo` to be plain.
-7. Read the `<h1>` in the main column again.
+3. In the Console, type `[...document.querySelectorAll('.room-list a')].filter(a => a.getAttribute('aria-current')).map(a => a.textContent.trim() + ' | ' + a.getAttribute('aria-current'))` and press Enter.
+4. Look at the sidebar: confirm `echo` has a tinted background and heavier text, and `alpha` has neither.
+5. Read the `<h1>` in the main column.
+6. Click `alpha` in the sidebar.
+7. Repeat steps 2, 3, 4 and 5, expecting `alpha` to be the highlighted one and `echo` to be plain.
+8. Read the `<h1>` in the main column again.
 
 **Pass if — all of these**
 
 - Step 2 printed `1` both times.
-- Step 3 printed `echo | page` the first time and `alpha | page` the second time.
+- Step 3 printed `echo | page` the first time and `alpha | page` the second time - one entry, never two.
 - Exactly one room link is tinted and bold at a time; the other is plain.
 - The `<h1>` matches the highlighted room name each time.
 
@@ -420,7 +421,7 @@ If the console commands return `null`, the page had not finished rendering - wai
 If only one room exists, the 'other room is plain' half cannot be judged - note it as partially inconclusive and run SHELLNAV-18 first to create a second room.
 
 > [!NOTE]
-> The highlight is no longer a hand-written `.room-list a.active` rule in `app.css` — the room list is now `MudNavMenu`/`MudNavLink` (Stage 5 of the MudBlazor migration), which carries its OWN active styling out of `MudBlazor.min.css`, keyed off the same literal `active` class `NavLink` has always applied. `.room-list a.active` as a selector still matches (`.room-list` still wraps the list, and `MudNavLink` still renders `<a class="mud-nav-link ... active">`), so the query in step 2 is unchanged. If the tint is invisible but the class is present, suspect a missing MudBlazor stylesheet - check SHELLNAV-01, not `app.css`. An assertion on `aria-current` was removed: Blazor's built-in NavLink has never emitted that attribute, so the assertion would fail against correct code. Judge the active-link state by the applied CSS class alone.
+> The highlight is no longer a hand-written `.room-list a.active` rule in `app.css` — the room list is now `MudNavMenu`/`MudNavLink` (Stage 5 of the MudBlazor migration), which carries its OWN active styling out of `MudBlazor.min.css`, keyed off the same literal `active` class `NavLink` has always applied. `.room-list a.active` as a selector still matches (`.room-list` still wraps the list, and `MudNavLink` still renders `<a class="mud-nav-link ... active">`), so the query in step 2 is unchanged. If the tint is invisible but the class is present, suspect a missing MudBlazor stylesheet - check SHELLNAV-01, not `app.css`. `aria-current="page"` IS emitted on the active link - verified on `main`, where the active room renders `class="mud-nav-link mud-ripple active"` and carries `aria-current="page"`, exactly one link at a time. So the CSS class and the attribute are two independent oracles and both must agree.
 
 ### SHELLNAV-10 — /teammates renders, and a bare page load spawns no node process
 
@@ -1072,7 +1073,7 @@ If TAB B was on a route with no visible theme difference, you cannot judge the t
 **Steps**
 
 1. In the browser, open a room page and wait for the `_blazor` websocket to appear in DevTools Network (filter WS).
-2. In `T-B` run: `$h = curl.exe -s http://localhost:5100/ | Out-String; [regex]::Matches($h, 'ReconnectModal\.razor\.[^"]*\.js') | ForEach-Object { $_.Value }`. Record the fingerprinted path from the import map.
+2. In `T-B` run: `$h = curl.exe -s http://localhost:5100/ | Out-String; [regex]::Matches($h, '[^"]*ReconnectModal[^"]*\.js') | ForEach-Object { $_.Value } | Select-Object -Unique`. Record the fingerprinted path from the import map - the one that carries a hash, e.g. `Components/Layout/ReconnectModal.abdmv1u4y3.razor.js`. The fingerprint sits BEFORE `.razor`, not after it.
 3. Run: `curl.exe -s -o NUL -w "%{http_code}" "http://localhost:5100/<paste that path>"`
 4. Switch to `T-A` and press Ctrl+C to stop the app.
 5. Watch the browser for up to ten seconds.
