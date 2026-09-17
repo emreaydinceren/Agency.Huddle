@@ -136,8 +136,11 @@ Override the executable with `HUDDLE_AGENCY_ACP_EXE`. They deliberately stop bef
 `session/prompt` — see **D-3** for why.
 
 No live inference endpoint was reachable from this machine: the configured
-`http://model-host.example:1234` does not resolve (`Non-existent domain`). No attempt was made to
-install or start one.
+`http://inference-host.example:1234` does not resolve (`Non-existent domain`). No
+attempt was made to install or start one. The host above is a placeholder — a real
+internal `*.local` name in a tracked file fails the `secret-scan` job on
+`.gitleaks.toml`'s `internal-mdns-host` rule, which is why it is not written here;
+see `agents/CIPipeline.md`.
 
 ## Next, in priority order
 
