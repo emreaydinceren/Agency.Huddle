@@ -703,7 +703,52 @@ two-Member Room, the Reply Gate always passes there, and the Agent takes a bille
 Turn with no Human Message having caused it. Item 2's Budget is what makes that
 safe, and it is now built.
 
-## 12. Running a Persona on a local Model, via Agency.NET
+## 12. Running a Persona on a local Model, via Agency.NET — DELIVERED 2026-09-16
+
+> **Delivered**, by a route this entry did not foresee. Agency.NET shipped an **ACP agent**
+> (`agency-acp`), so the second backend is not a library bridged in-process — it is a second
+> process speaking the protocol `src/Huddle.Acp` already speaks. The Adapter became a per-Persona
+> choice written in frontmatter as `adapter:`, selected from a dropdown on the Teammate card, and
+> everything downstream — the pipe, the Reply Gate, the Budget, the Rooms, every App Tool —
+> learned nothing. See [Huddle.Adapters-Specifications.md](../Huddle.Adapters-Specifications.md).
+>
+> **Four things below are wrong**, and the reason is one mistaken premise: that the second backend
+> would be a NuGet reference rather than a process.
+>
+> - **There is no second `IAgentHostFactory`.** Reading `DotAcpAgentHostFactory.CreateAsync` step
+>   by step, exactly one of its eight steps is Adapter-specific: which process gets launched. A
+>   second factory would have duplicated the other seven and guaranteed drift. What shipped is one
+>   factory that resolves an **Adapter Profile**. The `using` alias for two colliding `AgentEvent`
+>   types, the hand-written pump from `IAsyncEnumerable` into a `ChannelReader`, and the
+>   synthesised `TurnCompleted` described below were all made unnecessary by that.
+> - **There is no second `IModelCatalog`.** This entry says to "resist reusing the class" because
+>   a local endpoint exposes `GET /v1/models` and needs no process. Under ACP that reasoning does
+>   not apply: **both** Adapters advertise their catalog at `session/new`, because that is what ACP
+>   does. `ModelCatalogProbe` needed a profile and a re-keyed cache, not a rewrite.
+> - **The vocabulary prediction was half right, and wrong about which half.** This entry says the
+>   **Adapter** and **Model** definitions both stop being true. **Adapter** widened, as predicted.
+>   **Model** survived untouched — `agency-acp` *is* a process and *does* advertise at
+>   `session/new`. What narrowed instead was **Effort**, which this entry expected to degrade with
+>   no change at all: its definition said the ladder is advertised *per Model*, and that is now the
+>   Adapter's business rather than a fact about Effort.
+> - **`_host:` became `adapter:`.** The `_` prefix is reserved for keys that never surface, and its
+>   only implementation hides them from the job description. A visible dropdown changes that
+>   argument: `adapter` is a first-class, human-edited property like `title`. It is excluded from
+>   the job description explicitly instead.
+>
+> **One ask made on a false premise was withdrawn.** In the negotiation with Agency.NET, Huddle
+> asked that tool names pass through unclassified because "our Room view renders tool activity with
+> per-kind iconography, so we would lose it entirely." That premise is false: `ToolActivity` carries
+> `RoomId`, `MessageId`, `ToolCallId`, `Title` and `Status` — **no kind, and no tool name**, and
+> `ToolKind` appears nowhere in `src/Huddle.App`. The Room renders Title and Status. Per-kind
+> iconography would have required a protocol bump on `ToolActivity`, a cost this entry claims to
+> avoid; that claim survives only because the map was not built.
+>
+> **What this entry got right**, and it is the load-bearing half: `PersonaRunner` did not change,
+> no per-Persona store was added, `PersonaRenameCascade` gained no row, and the stale-Model
+> degradation contract carried over to a stale Adapter id unchanged. The two honest limits below
+> both still stand — a small local Model may still never call `get_help`, and the token Budget is
+> still inert where no `UsageUpdated` arrives.
 
 Every Persona runs on a cloud Claude, because that is the only thing there is.
 `DotAcpAgentHostFactory` launches the `claude-agent-acp` Node Adapter and nothing

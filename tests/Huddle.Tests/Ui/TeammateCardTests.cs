@@ -2,6 +2,8 @@ using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
@@ -449,6 +451,132 @@ public sealed class TeammateCardTests
         FindButton(cut, "Open").Click();
 
         Assert.Contains("Persona 'coo' does not exist.", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Spec §6.6 / §4 (P6) / §12 (E-2): a dropdown offering a single option is a control nobody can
+    /// use, so the Adapter select must not render at all when the catalog holds exactly one profile -
+    /// the shape a stock installation (which configures no Adapters) always produces, and the exact
+    /// case this test pins so a stock install keeps looking byte-for-byte like it did before this
+    /// feature existed.
+    /// </summary>
+    [Fact]
+    public async Task CreateMode_OneAdapterConfigured_DoesNotRenderTheAdapterSelect()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+        ctx.Services.AddSingleton(BuildAdapterCatalog(("claude", "Claude")));
+
+        var cut = RenderPage(ctx, factory);
+        FindButton(cut, "New teammate").Click();
+
+        Assert.Equal(0, CountControlsLabelled(cut, "Adapter"));
+    }
+
+    /// <summary>Spec §6.6: two configured Adapters render exactly one Adapter select, above the Model select.</summary>
+    [Fact]
+    public async Task CreateMode_TwoAdaptersConfigured_RendersExactlyOneAdapterSelect()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+        ctx.Services.AddSingleton(BuildAdapterCatalog(("claude", "Claude"), ("agency", "Agency")));
+
+        var cut = RenderPage(ctx, factory);
+        FindButton(cut, "New teammate").Click();
+
+        Assert.Equal(1, CountControlsLabelled(cut, "Adapter"));
+    }
+
+    /// <summary>
+    /// A distinctive fragment of the Adapter-change reset notice - the Adapter counterpart of
+    /// <see cref="EffortResetNotice"/>, asserted the same way (Spec §6.6, §8.3).
+    /// </summary>
+    private const string AdapterResetNotice = "Changing the adapter reset Model and Effort to their defaults.";
+
+    /// <summary>
+    /// Spec §6.6 (Internal flow) and §8.3: choosing a different Adapter discards whatever Model and
+    /// Effort were chosen for the PREVIOUS adapter — a model id from one adapter's catalog means
+    /// nothing against another's — and says so through a role="status" note (never role="alert": this
+    /// is a consequence of what the human just did, not an interruption, the same precedent as
+    /// <see cref="EffortResetNotice"/>). The probe that follows must run against the NEW adapter,
+    /// proven through <see cref="Agency.Huddle.Tests.Acp.Fakes.FakeModelCatalog.AdaptersProbed"/>.
+    /// </summary>
+    [Fact]
+    public async Task EditMode_ChangingTheAdapter_ResetsModelAndEffortWithANote()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        factory.FakeModelCatalog.ModelsByAdapter["claude"] = [new("claude-opus-4", "Opus", null)];
+        factory.FakeModelCatalog.ModelsByAdapter["agency"] = [new("gemma-4b", "Gemma", null)];
+        SeedPersonaWithModelEffortAndAdapter(factory, "coo", "x", model: "claude-opus-4", effort: "high", adapter: "claude");
+        await using var ctx = NewContext(factory);
+        ctx.Services.AddSingleton(BuildAdapterCatalog(("claude", "Claude"), ("agency", "Agency")));
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        await OpenSelectAsync(cut, "Adapter");
+        (await FindSelectItemAsync(cut, "Agency")).Click();
+
+        Assert.Equal(string.Empty, FindSelectInput(cut, "Model").GetAttribute("value"));
+        Assert.Equal(string.Empty, FindSelectInput(cut, "Effort").GetAttribute("value"));
+
+        var statusElements = cut.FindAll("[role='status']");
+        Assert.Contains(statusElements, element => element.TextContent.Contains(AdapterResetNotice, StringComparison.Ordinal));
+        Assert.DoesNotContain(cut.FindAll("[role='alert']"), element => element.TextContent.Contains(AdapterResetNotice, StringComparison.Ordinal));
+
+        Assert.Contains("agency", factory.FakeModelCatalog.AdaptersProbed);
+    }
+
+    /// <summary>
+    /// Spec §12 (E-4) — a new defect class this feature introduces, and Spec §8.3's "Generation
+    /// counters" paragraph. <c>LoadEffortsAsync</c> already guards a stale probe from overwriting a
+    /// newer one with <c>effortProbeGeneration</c>; before Task 8.3, <c>LoadModelsAsync</c> has no
+    /// equivalent, because nothing could previously re-enter it. Changing the Adapter twice quickly
+    /// starts two model probes, and the slower one (here, the FIRST adapter chosen) must not land
+    /// after the faster one (the SECOND) and overwrite it.
+    /// <see cref="Agency.Huddle.Tests.Acp.Fakes.FakeModelCatalog.ModelsGate"/> captures whichever gate
+    /// is set at the moment <c>GetAsync</c> is called, so clearing it between
+    /// the two Adapter changes lets the second probe answer immediately while the first stays held
+    /// open until explicitly released at the end.
+    /// </summary>
+    [Fact]
+    public async Task EditMode_ChangingTheAdapterTwiceQuickly_TheFasterProbeWins()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        factory.FakeModelCatalog.ModelsByAdapter["agency"] = [new("gemma-4b", "Gemma", null)];
+        factory.FakeModelCatalog.ModelsByAdapter["mock"] = [new("mock-model", "Mock Model", null)];
+        SeedPersonaWithModelEffortAndAdapter(factory, "coo", "x", model: null, effort: null, adapter: null);
+        await using var ctx = NewContext(factory);
+        ctx.Services.AddSingleton(BuildAdapterCatalog(("claude", "Claude"), ("agency", "Agency"), ("mock", "Mock")));
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        TaskCompletionSource gateA = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        factory.FakeModelCatalog.ModelsGate = gateA;
+
+        await OpenSelectAsync(cut, "Adapter");
+        (await FindSelectItemAsync(cut, "Agency")).Click();
+
+        // The Agency probe is now stuck on gateA. Clearing the gate before switching again lets the
+        // SECOND probe (Mock) answer immediately - the ordering this test exists to prove wrong.
+        factory.FakeModelCatalog.ModelsGate = null;
+
+        await OpenSelectAsync(cut, "Adapter");
+        (await FindSelectItemAsync(cut, "Mock")).Click();
+
+        var optionsBeforeRelease = await OpenSelectAndListOptionsAsync(cut, "Model");
+        Assert.Contains(optionsBeforeRelease, option => string.Equals(option.TextContent.Trim(), "Mock Model", StringComparison.Ordinal));
+        Assert.DoesNotContain(optionsBeforeRelease, option => string.Equals(option.TextContent.Trim(), "Gemma", StringComparison.Ordinal));
+
+        // Release the slower, now-stale Agency probe. Its answer must not overwrite Mock's.
+        await cut.InvokeAsync(gateA.SetResult);
+
+        cut.WaitForAssertion(() =>
+        {
+            var options = cut.FindAll("div.mud-list-item");
+            Assert.DoesNotContain(options, option => string.Equals(option.TextContent.Trim(), "Gemma", StringComparison.Ordinal));
+        });
     }
 
     [Fact]
@@ -1079,6 +1207,7 @@ public sealed class TeammateCardTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSupervisor>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AdapterCatalog>());
         return ctx;
     }
 
@@ -1132,6 +1261,22 @@ public sealed class TeammateCardTests
         factory.Services.GetRequiredService<PersonaStore>().Add(new PersonaIdentity(name, name, name, []), body, model, effort);
     }
 
+    /// <summary>
+    /// The <see cref="SeedPersonaWithModelAndEffort"/> sibling that also seeds an Adapter through
+    /// <see cref="PersonaIdentity.Adapter"/> — the only way to seed one, since it travels with the
+    /// frontmatter rather than through a separate store (Spec §7.1, §7.2).
+    /// </summary>
+    /// <param name="factory">The factory whose <see cref="PersonaStore"/> to add the Persona through.</param>
+    /// <param name="name">The Persona's Name, Title and Alias alike.</param>
+    /// <param name="body">The Persona's system-prompt body.</param>
+    /// <param name="model">The Model to store, or <see langword="null"/> for the agent's default.</param>
+    /// <param name="effort">The Effort to store, or <see langword="null"/> for the model's default.</param>
+    /// <param name="adapter">The Adapter id to store, or <see langword="null"/> for the installation's default.</param>
+    private static void SeedPersonaWithModelEffortAndAdapter(TeamWebApplicationFactory factory, string name, string body, string? model, string? effort, string? adapter)
+    {
+        factory.Services.GetRequiredService<PersonaStore>().Add(new PersonaIdentity(name, name, name, [], adapter), body, model, effort);
+    }
+
     /// <summary>Registers <paramref name="name"/>'s Agent with the real <see cref="ITeamDirectory"/> and marks it connected in <see cref="TeamWebApplicationFactory.FakeAgentGateway"/>, so <see cref="PersonaStatusResolver"/> resolves it Online.</summary>
     private static async Task MakeOnlineAsync(TeamWebApplicationFactory factory, string name)
     {
@@ -1163,6 +1308,35 @@ public sealed class TeammateCardTests
     private static IElement FindInputControl(IRenderedComponent<ContainerFragment> cut, string label) =>
         cut.FindAll("div.mud-input-control")
             .First(control => control.QuerySelectorAll("label").Any(l => l.TextContent.Contains(label, StringComparison.Ordinal)));
+
+    /// <summary>
+    /// The number of rendered <c>.mud-input-control</c>s whose own label contains <paramref name="label"/> -
+    /// used to prove the Adapter select is absent (0) or renders exactly once (1), since a hidden
+    /// <c>@if</c> block leaves no element at all for <see cref="FindInputControl"/>'s single-match
+    /// lookup to find, and <c>Assert.DoesNotContain</c> on markup text would be fooled by "Adapter"
+    /// appearing in this file's own doc comments once compiled into nothing of the sort - counting
+    /// actual rendered controls is the only honest oracle for absence.
+    /// </summary>
+    private static int CountControlsLabelled(IRenderedComponent<ContainerFragment> cut, string label) =>
+        cut.FindAll("div.mud-input-control").Count(control => control.QuerySelectorAll("label").Any(l => l.TextContent.Contains(label, StringComparison.Ordinal)));
+
+    /// <summary>
+    /// Builds a real <see cref="AdapterCatalog"/> over in-memory <see cref="TeamOptions"/> - a pure
+    /// configuration object, not a fake (Spec §6.6) - holding one <see cref="AdapterProfileOptions"/>
+    /// entry per <paramref name="profiles"/> pair, in order.
+    /// </summary>
+    /// <param name="profiles">Each configured Adapter's (Id, DisplayName) pair.</param>
+    private static AdapterCatalog BuildAdapterCatalog(params (string Id, string DisplayName)[] profiles)
+    {
+        var acp = new AcpOptions
+        {
+            Adapters = profiles
+                .Select(profile => new AdapterProfileOptions { Id = profile.Id, DisplayName = profile.DisplayName, Command = "node" })
+                .ToList(),
+        };
+
+        return new AdapterCatalog(Options.Create(new TeamOptions { Acp = acp }));
+    }
 
     /// <summary>The <c>&lt;input&gt;</c> under a <c>MudSelect</c> labelled <paramref name="label"/> - its closed-state value is the currently selected item's own display text, which is how a "preselected" assertion can be made without opening the popover at all.</summary>
     private static IElement FindSelectInput(IRenderedComponent<ContainerFragment> cut, string label) =>

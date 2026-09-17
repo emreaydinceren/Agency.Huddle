@@ -14,6 +14,7 @@ internal sealed class PersonaSupervisor : BackgroundService
     private readonly TeamOptions options;
     private readonly PersonaStore personaStore;
     private readonly IAgentHostFactory factory;
+    private readonly AdapterProfileResolver resolver;
     private readonly PersonaHealth health;
     private readonly IHookSource hooks;
     private readonly RoomFollows roomFollows;
@@ -48,6 +49,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         IOptions<TeamOptions> options,
         PersonaStore personaStore,
         IAgentHostFactory factory,
+        AdapterProfileResolver resolver,
         PersonaHealth health,
         IHookSource hooks,
         RoomFollows roomFollows,
@@ -57,6 +59,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
         ArgumentNullException.ThrowIfNull(factory);
+        ArgumentNullException.ThrowIfNull(resolver);
         ArgumentNullException.ThrowIfNull(health);
         ArgumentNullException.ThrowIfNull(hooks);
         ArgumentNullException.ThrowIfNull(roomFollows);
@@ -66,6 +69,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         this.options = options.Value;
         this.personaStore = personaStore;
         this.factory = factory;
+        this.resolver = resolver;
         this.health = health;
         this.hooks = hooks;
         this.roomFollows = roomFollows;
@@ -403,6 +407,16 @@ internal sealed class PersonaSupervisor : BackgroundService
                 return;
             }
 
+            // Spec §8.2: DotAcpAgentHostFactory resolves the same Persona's Adapter again when it
+            // builds the session, so this looks like duplicated work - it is not. Widening
+            // IAgentHostFactory.CreateAsync's return tuple to also carry this diagnostic would touch
+            // FakeAgentHostFactory and every supervisor test call site for one string. The resolver
+            // is pure and touches no state, so calling it twice costs nothing and keeps that
+            // signature frozen - two calls, one truth. The Degraded report itself is issued after
+            // "Starting" below rather than here, so the "whatever was said during the start wins"
+            // rule a few lines down does not immediately overwrite it back to Starting/Online.
+            var (_, adapterWarning) = this.resolver.Resolve(persona.Adapter);
+
             var host = new PersonaRunner(
                 persona, Options.Create(this.options), this.factory, this.hooks, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>());
 
@@ -415,6 +429,12 @@ internal sealed class PersonaSupervisor : BackgroundService
             try
             {
                 this.health.Report(name, PersonaState.Starting, null);
+
+                if (adapterWarning is not null)
+                {
+                    this.health.Report(name, PersonaState.Degraded, adapterWarning);
+                }
+
                 await host.StartAsync(cancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)

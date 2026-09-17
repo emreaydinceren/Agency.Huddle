@@ -31,18 +31,23 @@ internal static class PersonaFrontmatter
     private const string TitleKey = "Title";
     private const string AliasKey = "Alias";
     private const string TeamsKey = "Teams";
+    private const string AdapterKey = "Adapter";
 
     /// <summary>
     /// Frontmatter keys excluded from <see cref="ComposeJobDescription"/> beyond the <c>_</c>-prefix
-    /// rule — today just <c>Name</c>, because <c>list_agents</c> already prints the Persona's name
+    /// rule. <c>Name</c> is excluded because <c>list_agents</c> already prints the Persona's name
     /// on the bullet line above the job description, and repeating it as "Name: Jarvis" immediately
     /// under that bullet is noise. <c>Title</c>, <c>Alias</c> and <c>Teams</c> stay: they are useful
     /// to a reading agent, and <c>Alias</c> in particular tells one that <c>@jar</c> is a working
-    /// handle.
+    /// handle. <c>Adapter</c> is excluded too (Spec §7.2, §12 E-6): <c>mcp__team__list_agents</c>
+    /// describes a Teammate to other Agents, and which Adapter runs it is not something any Agent
+    /// can act on — without this exclusion, every Teammate's job description would gain a line
+    /// reading "Adapter: agency", model-facing text about Huddle's own plumbing.
     /// </summary>
     private static readonly HashSet<string> JobDescriptionExcludedKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         NameKey,
+        AdapterKey,
     };
 
     /// <summary>
@@ -96,7 +101,8 @@ internal static class PersonaFrontmatter
         if (!TryGetField(fields, NameKey, out var rawName, out error)
             || !TryGetField(fields, TitleKey, out var rawTitle, out error)
             || !TryGetField(fields, AliasKey, out var rawAlias, out error)
-            || !TryGetField(fields, TeamsKey, out var rawTeams, out error))
+            || !TryGetField(fields, TeamsKey, out var rawTeams, out error)
+            || !TryGetField(fields, AdapterKey, out var rawAdapter, out error))
         {
             return false;
         }
@@ -120,14 +126,16 @@ internal static class PersonaFrontmatter
             return false;
         }
 
-        identity = new PersonaIdentity(name, title, alias, SplitTeams(rawTeams));
+        var adapter = string.IsNullOrWhiteSpace(rawAdapter) ? null : rawAdapter;
+
+        identity = new PersonaIdentity(name, title, alias, SplitTeams(rawTeams), adapter);
         error = string.Empty;
         return true;
     }
 
     /// <summary>
     /// Composes a brand-new Persona file's full text: a canonical frontmatter block built from
-    /// <paramref name="identity"/>'s four fields, followed by <paramref name="body"/> unchanged.
+    /// <paramref name="identity"/>'s fields, followed by <paramref name="body"/> unchanged.
     /// The write-side counterpart to <see cref="TryReadIdentity"/> - <see cref="PersonaStore.Add"/>
     /// calls this so a saved Persona's file always agrees with the identity its caller collected,
     /// rather than composing frontmatter of its own that could drift from what this parser accepts.
@@ -135,9 +143,14 @@ internal static class PersonaFrontmatter
     /// applied, and every key is lowercase - the style real Persona files already use.
     /// <see cref="PersonaIdentity.Teams"/> becomes a bracketed flow list, and the whole
     /// <c>teams:</c> line is omitted when it is empty: <see cref="PersonaIdentity.Teams"/> is
-    /// optional, and an empty field is not how a person would write "no Teams" by hand.
+    /// optional, and an empty field is not how a person would write "no Teams" by hand. Emitted
+    /// key order is stable - <c>name</c>, <c>title</c>, <c>alias</c>, <c>teams</c>, <c>adapter</c> -
+    /// because <c>PromptGoldenTests</c> and any file round-trip depend on it. The <c>adapter:</c>
+    /// line is written only when <see cref="PersonaIdentity.Adapter"/> is non-null (Spec §7.2,
+    /// §12 E-5): without this, a value written at Create time would be silently destroyed, since
+    /// this method previously emitted only the four identity keys.
     /// </summary>
-    /// <param name="identity">The Persona's Name, Title, Alias and Teams to write as frontmatter.</param>
+    /// <param name="identity">The Persona's Name, Title, Alias, Teams and Adapter to write as frontmatter.</param>
     /// <param name="body">The Persona's system-prompt body, written back unchanged after the frontmatter.</param>
     internal static string Compose(PersonaIdentity identity, string body)
     {
@@ -155,6 +168,11 @@ internal static class PersonaFrontmatter
         if (identity.Teams.Count > 0)
         {
             lines.Add($"teams: [{string.Join(", ", identity.Teams.Select(QuoteScalar))}]");
+        }
+
+        if (identity.Adapter is not null)
+        {
+            lines.Add($"adapter: {QuoteScalar(identity.Adapter)}");
         }
 
         lines.Add(FrontmatterDelimiter);

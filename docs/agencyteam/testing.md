@@ -12,6 +12,38 @@ in the hub: [AgencyTeam.md](../AgencyTeam.md).
 This repo is test-first. Real stores over temp directories, and **no mocking
 framework** — hand-written fakes under `tests/Huddle.Tests/Acp/Fakes/`.
 
+### Conformance: a real Persona against a real ACP peer
+
+Added 2026-09-16 with the Adapters work, and it closed a gap worth naming. Until then
+every test either stopped at `FakeAgentHostFactory` or needed Node installed and
+`TEAM_E2E=1` (the tests that show as **skipped** in every run). **Nothing exercised the
+real `DotAcpAgentHostFactory` path at all.**
+
+`tests/Huddle.Tests/Conformance/MockAdapterFixture.cs` closes it: the real factory, the
+real `DotAcpAgentHost`, the real session, the real `AppToolServer` and the real prompt
+composition, with **only the process launch** substituted for an in-memory duplex stream
+pair onto a `FakeAcpAgent`. No process, microseconds, deterministic.
+
+Three things to know:
+
+- **Substitute at the launcher, never higher.** The seam is `IAgentProcessLauncher`, which
+  `DotAcpAgentHostFactory` takes by injection. Substituting `IAgentHostFactory` instead
+  would make the whole tier prove nothing — that is the layer these tests exist to cover.
+- **`FakeAcpAgent.Received` is the oracle**, and it is what makes this tier worth its cost.
+  A golden test proves `SystemPromptComposer` *composes* the right string; `Received`
+  proves that string actually **arrives** in `session/new`'s `_meta`.
+- **`OnInitialize` and `OnNewSession` fire during `StartAsync`'s own handshake**, so setting
+  them after it returns is too late. `OnPrompt`, `OnSetConfigOption` and `OnSessionClose`
+  are settable any time after.
+
+`ProcessModeTests` is the **one** test in the folder that launches a real child process —
+the built `mock-acp` — because that is the only thing in-proc cannot prove. Keep it to one.
+
+This tier found two defects nothing cheaper could: a guard that rejected a designed empty
+value, and the dispatch-ordering race now recorded in [Known limits](known-limits.md). Both
+lived in **seams between** correctly-written components, which is exactly what unit tests
+isolate away by construction.
+
 Components are tested **three** ways now, and the difference still matters. A
 page test fetches `/teammates` over HTTP and sees only the **prerender** —
 `Routes` is `InteractiveServer`, so anything behind a click is absent from that

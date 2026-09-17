@@ -9,6 +9,7 @@
     <Project Path="src/Huddle.Console/Huddle.Console.csproj" />
     <Project Path="src/Huddle.Acp/Huddle.Acp.csproj" />
     <Project Path="src/Huddle.Contracts/Huddle.Contracts.csproj" />
+    <Project Path="src/Huddle.MockAdapter/Huddle.MockAdapter.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Huddle.Acp.Tests/Huddle.Acp.Tests.csproj" />

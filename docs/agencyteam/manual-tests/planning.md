@@ -1,6 +1,6 @@
 # Manual test script — planning
 
-Which of the 472 tests to run, what each area covers, and which ones spend money.
+Which of the 476 tests to run, what each area covers, and which ones spend money.
 Read this to **choose** a run. You do not need it while executing one: the rules
 that bind a run live in [the script](../manual-tests.md), which is the page to
 have open instead.
@@ -33,6 +33,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 12 | [The named pipe: external agents and the wire](pipe-external.md) | 36 | — | 3.9h |
 | 13 | [App Tools a real model calls (progressive discovery)](app-tools.md) | 26 | 20 | 4.2h |
 | 14 | [Persona lifecycle: supervisor, work dirs, health and restarts](persona-lifecycle.md) | 32 | 7 | 6.5h |
+| 15 | [Adapters: choosing one per Persona, and running two at once](adapters.md) | 4 | 2 | 1.4h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.
@@ -75,7 +76,7 @@ change, and before committing to a full area. A failure here means stop and fix,
 
 ## Appendix A. Paid test register
 
-Every test that spends money, in one place. 54 tests, about 12.0 hours of
+Every test that spends money, in one place. 56 tests, about 13.0 hours of
 wall clock. Read [section 0.2](../manual-tests.md#02-the-cost-guard) and [section 0.3](../manual-tests.md#03-the-model-and-effort-convention) before running any of them.
 
 | Test id | Area | What it proves | Est. |
@@ -134,6 +135,8 @@ wall clock. Read [section 0.2](../manual-tests.md#02-the-cost-guard) and [sectio
 | [PERSONALIFECYCLE-30](persona-lifecycle.md#personalifecycle-30-money-context-bleeds-between-rooms-confirm-the-known-limit-and-that-replies-still-land-in-the-right-room) | `persona-lifecycle` | MONEY: context bleeds between Rooms — confirm the known limit, and that replies still land in the right Room | 12 min |
 | [PERSONALIFECYCLE-31](persona-lifecycle.md#personalifecycle-31-money-the-per-persona-token-budget-shows-as-degraded-with-its-reason-and-any-human-message-clears-it) | `persona-lifecycle` | MONEY: the per-Persona token Budget shows as Degraded with its reason, and any Human Message clears it | 25 min |
 | [PERSONALIFECYCLE-32](persona-lifecycle.md#personalifecycle-32-money-a-token-budget-of-zero-disables-the-per-persona-cap-and-the-per-room-budget-still-stops-the-exchange) | `persona-lifecycle` | MONEY: a token Budget of zero disables the per-Persona cap, and the per-Room Budget still stops the exchange | 20 min |
+| [ADAPTERS-03](adapters.md#adapters-03--changing-a-teammates-adapter-resets-model-and-effort-says-so-and-restarts-the-session-) | `adapters` | MONEY: changing a Teammate's Adapter resets Model and Effort with a status note, and the restart loses the conversation memory | 15 min |
+| [ADAPTERS-04](adapters.md#adapters-04--does-a-real-local-model-call-get_help-unprompted-) | `adapters` | Whether a real local Model calls `get_help` unprompted — the question no automated test can settle | 45 min |
 
 Before the first paid test of a session:
 

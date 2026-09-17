@@ -44,6 +44,7 @@ question is yours; the cost column is roughly what it will spend.
 | [Test tracker](agencyteam/manual-tests/tracker.md) | To see where a manual test stands, or to record a result | ~19k |
 | [Known limits](agencyteam/known-limits.md) | Before "fixing" something that looks missing | ~1.9k |
 | [Roadmap](agencyteam/roadmap.md) | Before work in `PersonaRunner`, `ReplyGate`, `IAgentHostFactory`, Persona frontmatter, `app.css` or `theme.css` | ~10.7k |
+| [Adapters design](Huddle.Adapters-Specifications.md) | Before work on which ACP agent a Persona runs on — Adapter Profiles, the tool-name prefix, the Model/Effort catalogue probe, or `Huddle.MockAdapter` | ~45k |
 | [Decision record](agencyteam/decisions.md) | To revisit a decision, or to read an older doc | ~6.3k |
 | [Domain context](agencyteam/CONTEXT.md) | To see the vocabulary used in dialogue, not defined | ~0.6k |
 | [ADRs](adr/) | To read one decision in full, with what was rejected | ~1.4k each |

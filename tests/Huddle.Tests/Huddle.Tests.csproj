@@ -13,11 +13,24 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="bunit" />
+    <PackageReference Include="Nerdbank.Streams" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Huddle.App\Huddle.App.csproj" />
     <ProjectReference Include="..\..\src\Huddle.Contracts\Huddle.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Huddle.MockAdapter\Huddle.MockAdapter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Links the ACP effort's in-proc process-launcher fake rather than moving it - same idiom as
+         Huddle.MockAdapter's own <Compile Include> block (Spec §6.10, "Placement, and why the source
+         is linked rather than moved"): no file leaves tests/Huddle.Acp.Tests. FakeAcpAgent.cs itself
+         is deliberately NOT linked here a second time: Huddle.MockAdapter already links it and grants
+         this project InternalsVisibleTo, so it is reachable from Huddle.MockAdapter.dll; linking the
+         same source into this assembly too would declare a second, ambiguous FakeAcpAgent type. -->
+    <Compile Include="..\Huddle.Acp.Tests\Fakes\FakeAgentProcess.cs" Link="Fakes\FakeAgentProcess.cs" />
+    <Compile Include="..\Huddle.Acp.Tests\Fakes\FakeAgentProcessLauncher.cs" Link="Fakes\FakeAgentProcessLauncher.cs" />
   </ItemGroup>
 
 </Project>

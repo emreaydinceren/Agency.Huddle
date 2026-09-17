@@ -150,4 +150,35 @@ public sealed class GetHelpToolTests
 
         Assert.DoesNotContain("mcp__team__list_agents", help, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// An Adapter Profile whose <see cref="AdapterProfile.UsesToolNamePrefix"/> is
+    /// <see langword="false"/> passes <see cref="string.Empty"/> as the tool name prefix (Spec §6.4;
+    /// ADR-0014). Construction must succeed, and every tool name in the rendered help text — this
+    /// tool's own and every other tool's — must be bare, with no <c>mcp__</c> prefix anywhere.
+    /// </summary>
+    [Fact]
+    public async Task GetHelp_EmptyToolNamePrefix_ReportsBareNamesWithNoMcpPrefix()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        IAppTool[] others = [new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakeHookSource())];
+        var tool = new GetHelpTool(others, new FakeHookSource(), string.Empty);
+
+        var help = await tool.InvokeAsync(new JsonObject(), ct);
+
+        Assert.Contains("get_help", help, StringComparison.Ordinal);
+        Assert.Contains("list_agents", help, StringComparison.Ordinal);
+        Assert.DoesNotContain("mcp__", help, StringComparison.Ordinal);
+    }
+
+    /// <summary>A <see langword="null"/> tool name prefix is still rejected: the loosened guard must not become no guard.</summary>
+    [Fact]
+    public void Constructor_NullToolNamePrefix_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => new GetHelpTool([], new FakeHookSource(), null!));
+    }
 }

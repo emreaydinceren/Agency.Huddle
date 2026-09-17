@@ -18,6 +18,16 @@ public sealed class AcpOptions
     public IReadOnlyList<string>? Args { get; set; }
 
     /// <summary>
+    /// The Adapters this installation can launch (Spec §7.4). Nullable, no initialiser: the same
+    /// "Collection options need no initialiser" rule as <see cref="Args"/> — ConfigurationBinder
+    /// appends to an already-populated list rather than replacing it. When null or empty,
+    /// <see cref="AdapterCatalog"/> synthesises exactly one profile from <see cref="Command"/>,
+    /// <see cref="Args"/> and <see cref="AdapterPath"/> above, so an installation that configures
+    /// no Adapters keeps today's behaviour (Spec §4, P6).
+    /// </summary>
+    public IReadOnlyList<AdapterProfileOptions>? Adapters { get; set; }
+
+    /// <summary>
     /// The Team Library directory, relative to <see cref="TeamOptions.DataDir"/>, that
     /// <see cref="PersonaStore"/> scans recursively for Persona markdown files. Team sub-folders
     /// under it are purely organisational — <c>Teams/Business/coo.md</c> is exactly as much a

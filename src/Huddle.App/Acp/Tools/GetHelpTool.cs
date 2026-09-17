@@ -57,14 +57,22 @@ internal sealed class GetHelpTool : IAppTool
     /// </param>
     /// <param name="hooks">Resolves each hook's current text — a configured override, or the <see cref="HookCatalog"/> default.</param>
     /// <param name="toolNamePrefix">
-    /// The full <c>mcp__&lt;server&gt;__</c> prefix every tool name carries in this help text, e.g.
-    /// <c>"mcp__team__"</c>. Supplied by the caller — this type never hard-codes it.
+    /// The <c>mcp__&lt;server&gt;__</c> prefix every tool name carries in this help text, e.g.
+    /// <c>"mcp__team__"</c>, for an Adapter whose <see cref="AdapterProfile.UsesToolNamePrefix"/> is
+    /// <see langword="true"/>. <see cref="string.Empty"/> is a designed value, not a missing one: it
+    /// means this Adapter surfaces tool names unprefixed (Spec §6.4; ADR-0014), and every tool name is
+    /// reported bare. Supplied by the caller — this type never hard-codes either form. A
+    /// <see langword="null"/> or whitespace-only value is still rejected as nonsense.
     /// </param>
     public GetHelpTool(IReadOnlyList<IAppTool> otherTools, IHookSource hooks, string toolNamePrefix)
     {
         ArgumentNullException.ThrowIfNull(otherTools);
         ArgumentNullException.ThrowIfNull(hooks);
-        ArgumentException.ThrowIfNullOrWhiteSpace(toolNamePrefix);
+        ArgumentNullException.ThrowIfNull(toolNamePrefix);
+        if (toolNamePrefix.Length > 0 && string.IsNullOrWhiteSpace(toolNamePrefix))
+        {
+            throw new ArgumentException("Tool name prefix must be empty or non-whitespace.", nameof(toolNamePrefix));
+        }
 
         this.hooks = hooks;
         this.toolNamePrefix = toolNamePrefix;

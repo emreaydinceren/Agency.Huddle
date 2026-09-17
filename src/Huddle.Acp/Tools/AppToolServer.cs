@@ -183,6 +183,14 @@ public sealed partial class AppToolServer(
                 || !string.Equals(providedAuthorizationHeaderValue, this.expectedAuthorizationHeaderValue, StringComparison.Ordinal))
             {
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+
+                // Spec §6.9: bare challenge, deliberately with no resource_metadata. MCP's
+                // authorization spec keys OAuth discovery off a 401 carrying WWW-Authenticate
+                // *with* resource_metadata; Agency's MCP client leaves HttpClientTransportOptions.OAuth
+                // unset, so a parameterised challenge risks sending a future SDK version down a
+                // discovery path neither side has designed. A bare one is inert to the client and
+                // makes a raw wire trace self-explanatory.
+                context.Response.Headers.WWWAuthenticate = "Bearer";
                 return;
             }
         }

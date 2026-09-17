@@ -2,6 +2,7 @@ namespace Agency.Huddle.Acp.Tests.DotAcp;
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -430,6 +431,99 @@ public sealed class DotAcpAgentSessionTests
             await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
 
             Assert.False(events.TryRead(out _));
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
+    /// <summary>Spec §6.8: disposal sends exactly one <c>session/close</c> carrying the session id.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task DisposeAsync_SendsSessionCloseWithSessionId()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        string sessionId = harness.Session.SessionId;
+        try
+        {
+            await harness.Session.DisposeAsync();
+
+            JsonObject closeMessage = await harness.Launcher.Agent.WaitForAsync("session/close", TimeSpan.FromSeconds(2));
+            Assert.Equal(sessionId, (string?)closeMessage["params"]!["sessionId"]);
+
+            int closeCount = harness.Launcher.Agent.Received.Count(
+                message => string.Equals((string?)message["method"], "session/close", StringComparison.Ordinal));
+            Assert.Equal(1, closeCount);
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
+    /// <summary>Spec §6.8: a failing <c>session/close</c> is a courtesy, never a condition of our own teardown - disposal still completes.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task DisposeAsync_SessionCloseFails_DisposalStillCompletes()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        try
+        {
+            harness.Launcher.Agent.OnSessionClose = _ => throw new FakeRpcError(-32603, "close failed");
+
+            await harness.Session.DisposeAsync();
+
+            await harness.Session.Events.Completion.WaitAsync(TimeSpan.FromSeconds(2), cancellationToken);
+            Assert.True(harness.Session.Events.Completion.IsCompletedSuccessfully);
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
+    /// <summary>Spec §6.8: the <c>disposed</c> flag is the idempotency guard - a second disposal sends nothing further.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task DisposeAsync_CalledTwice_SendsSessionCloseOnlyOnce()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        try
+        {
+            await harness.Session.DisposeAsync();
+            _ = await harness.Launcher.Agent.WaitForAsync("session/close", TimeSpan.FromSeconds(2));
+
+            await harness.Session.DisposeAsync();
+
+            int closeCount = harness.Launcher.Agent.Received.Count(
+                message => string.Equals((string?)message["method"], "session/close", StringComparison.Ordinal));
+            Assert.Equal(1, closeCount);
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
+    /// <summary>Spec §6.8: disposal is bounded by a short timeout when the peer never answers <c>session/close</c>.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task DisposeAsync_SessionCloseNeverAnswered_CompletesWithinBound()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        try
+        {
+            TaskCompletionSource<JsonObject> neverCompletes = new TaskCompletionSource<JsonObject>();
+            harness.Launcher.Agent.OnSessionClose = _ => neverCompletes.Task;
+
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            await harness.Session.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(5), cancellationToken);
+            stopwatch.Stop();
+
+            Assert.True(
+                stopwatch.Elapsed < TimeSpan.FromSeconds(5),
+                $"Disposal took {stopwatch.Elapsed}, expected it bounded by the 2s session/close timeout.");
         }
         finally
         {

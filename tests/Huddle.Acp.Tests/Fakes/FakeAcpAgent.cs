@@ -45,6 +45,8 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
 
     internal Func<PromptContext, Task<string>> OnPrompt { get; set; } = FakeAcpAgent.DefaultPromptAsync;
 
+    internal Func<JsonObject, Task<JsonObject>> OnSessionClose { get; set; } = FakeAcpAgent.DefaultSessionCloseAsync;
+
     internal List<JsonObject> Received
     {
         get
@@ -239,6 +241,11 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
         return "end_turn";
     }
 
+    private static Task<JsonObject> DefaultSessionCloseAsync(JsonObject _)
+    {
+        return Task.FromResult(new JsonObject());
+    }
+
     private void Record(JsonObject message)
     {
         lock (this.gate)
@@ -333,6 +340,19 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
 
             case "session/prompt":
                 this.StartPrompt(id, parameters);
+                break;
+
+            case "session/close":
+                try
+                {
+                    JsonObject result = await this.OnSessionClose(parameters).ConfigureAwait(false);
+                    await this.WriteResultAsync(id, result).ConfigureAwait(false);
+                }
+                catch (FakeRpcError error)
+                {
+                    await this.WriteErrorAsync(id, error.Code, error.Message).ConfigureAwait(false);
+                }
+
                 break;
 
             default:

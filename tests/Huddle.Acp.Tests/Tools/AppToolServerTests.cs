@@ -294,6 +294,10 @@ public sealed class AppToolServerTests
                 cancellationToken);
 
             Assert.Equal(HttpStatusCode.Unauthorized, httpResponse.StatusCode);
+            Assert.Contains("Bearer", httpResponse.Headers.WwwAuthenticate.Select(value => value.Scheme));
+            Assert.DoesNotContain(
+                httpResponse.Headers.WwwAuthenticate,
+                value => value.Parameter?.Contains("resource_metadata", StringComparison.Ordinal) ?? false);
         }
         finally
         {
@@ -326,6 +330,10 @@ public sealed class AppToolServerTests
             using HttpResponseMessage httpResponse = await client.SendAsync(request, cancellationToken);
 
             Assert.Equal(HttpStatusCode.Unauthorized, httpResponse.StatusCode);
+            Assert.Contains("Bearer", httpResponse.Headers.WwwAuthenticate.Select(value => value.Scheme));
+            Assert.DoesNotContain(
+                httpResponse.Headers.WwwAuthenticate,
+                value => value.Parameter?.Contains("resource_metadata", StringComparison.Ordinal) ?? false);
         }
         finally
         {

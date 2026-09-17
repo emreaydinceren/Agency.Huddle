@@ -205,8 +205,15 @@ public sealed class PipeHostFixture : IAsyncDisposable
     /// being non-null is what distinguishes it from <c>DataInitializer</c>, <c>PipeServer</c> and
     /// <c>DemoAgentHost</c> above it, which are all registered by type.
     /// </para>
+    /// <para>
+    /// Internal rather than private since <c>Agency.Huddle.Tests.Conformance.MockAdapterFixture</c> (D10,
+    /// Task 10.1) builds its own <see cref="IHost"/> the same way this fixture does - in-memory config,
+    /// <see cref="ServiceCollectionExtensions.AddTeamServices"/>, then this removal - and drives its own
+    /// hand-built <see cref="Agency.Huddle.App.Acp.PersonaRunner"/> against a real <see cref="IAgentHostFactory"/>
+    /// whose process launcher it substitutes, rather than reimplementing this same removal a second time.
+    /// </para>
     /// </remarks>
-    private static void RemovePersonaSupervisorHostedService(IServiceCollection services)
+    internal static void RemovePersonaSupervisorHostedService(IServiceCollection services)
     {
         var singleton = services.FirstOrDefault(d => d.ServiceType == typeof(PersonaSupervisor))
             ?? throw new InvalidOperationException(
