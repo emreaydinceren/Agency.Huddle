@@ -602,6 +602,12 @@ button:focus-visible {
     margin: 0.5rem 0 0.75rem 0;
 }
 
+.settings-theme-credit {
+    font-size: 0.8rem;
+    color: var(--mud-palette-text-secondary);
+    margin: 0.5rem 0 0.75rem 0;
+}
+
 .hooks-group-heading {
     margin: 0 0 0.5rem 0;
     font-size: 1rem;

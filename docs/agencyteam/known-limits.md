@@ -226,6 +226,26 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
     deliberate: it lives in `{DataDir}/appearance.json`, so a second browser, a private
     window and a phone on the same install all see the same Theme. One Human per
     installation is the assumption it rests on.
+- **What an imported Theme cannot do.** The catalog gained seventeen of Visual Studio
+  Code's bundled Themes on 2026-09-16 — see
+  [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).
+  Three things about them are worth knowing before reporting a bug:
+  - **A single-mode Theme shows Huddle's palette in the other mode.** A VS Code Theme is
+    authored for light *or* dark; a Huddle Theme carries both. So an imported Theme fills
+    only its native palette and borrows the other. Select Monokai and force Light and you
+    get Huddle's light palette, not a light Monokai — there is no such thing upstream, and
+    deriving one would invent colours nobody designed. `ThemeDescriptor.Mode` names which
+    half is authored.
+  - **The High Contrast pair is not high contrast.** VS Code draws HC borders throughout
+    from `contrastBorder`, which MudBlazor's palette has no equivalent for. `Dark High
+    Contrast` and `Light High Contrast` land here as strong-contrast ordinary Themes. They
+    are also the most derived of the set: `hc_light.json` carries five colour keys, so
+    eighteen of its twenty slots come from VS Code's own registry defaults.
+  - **Three Themes miss the contrast floor, on purpose.** Themes are imported unmodified,
+    so `light-plus` and `quiet-light` (4.40:1) and `solarized-light` (3.98:1) fall just
+    under 4.5:1 for `TextSecondary` on `Surface`. `ThemeCatalogTests` records each with its
+    measured ratio and asserts it *still* falls short, so a fixed Theme forces its entry to
+    be deleted rather than leaving a stale excuse behind.
 - **Threads, reactions, edits, deletes, attachments, search, notifications.**
 - **Known flake, pre-existing:** `PersonaSupervisorTests.Shutdown_DisposesEveryHost`
   fails roughly one run in four, always on a slow run — its 10-second token races

@@ -229,34 +229,39 @@ Tools. With `Team:Acp:Enabled=true` — which spends money — check:
     Room with a Draft streaming, `/teammates` with the card open and a rejected
     file present, and `/settings` on both tabs. Any element that stays light is a
     literal that survived tokenisation.
-29. **System is pure CSS.** Choose **System** (or delete
+29. **System follows the device, over JavaScript.** Choose **System** (or delete
     `App_Data/appearance.json`) and flip the operating system's theme with the app
-    open. It must follow **with no reload and no navigation** — that path involves
-    no script and no server.
-30. **No flash.** With **Dark** chosen, hard-reload: the page must never paint
-    light first. The Theme is a `<link>` the server emits, so a flash would mean it
-    is not being emitted at all.
+    open. It must follow **with no reload and no navigation**. Note this is no
+    longer a pure-CSS path: `MudThemeProvider.GetSystemDarkModeAsync()` is a JS
+    interop call made after first render, which is the cost
+    [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md) accepted and ADR-0009
+    had avoided.
+30. **A flash under System is expected; under an explicit choice it is not.** With
+    **Dark** chosen explicitly, hard-reload: the page must never paint light first,
+    because the server knows the answer at render time. Under **System** a brief
+    flash of the wrong Theme *is* documented behaviour — the server cannot know the
+    device preference until the interop call returns. See [Known
+    limits](known-limits.md).
 31. **The choice is per installation.** Open the app in a second browser or a
     private window: **the same Theme**. Restart the app: still the same. This is
     the deliberate consequence of the choice living in a file rather than in the
     browser.
-32. **Overrides, by Token name.** Put
-    `{"theme":"huddle-dark","overrides":{"--font-chat":"Georgia, serif","--accent":"#c14bd0"}}`
-    in `App_Data/appearance.json` with the app running. The next page load shows
-    Message text in a serif face and magenta avatar monograms — **and nothing else
-    changes**, because every other Token falls through to the Theme. Keys are Token
-    names; `chat_font` is not a key and never will be.
-33. **A bad override is reported, not swallowed.** Set
-    `"--surface-base": "red; } :root{"`. The app renders normally, the Appearance
-    tab lists the rejected value, the log carries one warning, and **the file is
-    unchanged**. Then set `"--not-a-token": "x"` and confirm the same treatment.
-    Finally set `"theme": "dracula"` and confirm the built-in pair applies and the
-    file still says `dracula`.
-34. **Layering does what it claims.** Hand-write `wwwroot/themes/probe.css`
-    containing only `:root { color-scheme: dark; --accent: #ff00ff; }`, add `probe`
-    to `ThemeCatalog`, rebuild and select it. The accent must be magenta and
-    **everything else must be the built-in dark palette** — not light, and not
-    blank. Delete both afterwards.
+32. **The catalog paints, not just enumerates.** Pick `Dark Modern`, then `Monokai`,
+    then `Solarized Light`, from the eighteen the Theme select offers. Each must
+    repaint immediately with no page load, and `<body>`'s computed background under
+    `Dark Modern` must be `rgb(31, 31, 31)`. A label that selects but does not
+    repaint means a palette is being read once rather than through
+    `MudThemeProvider`.
+33. **A single-mode Theme falls back rather than breaking.** With `Solarized Light`
+    selected, set Appearance to **Dark**. You get **Huddle's** dark palette — not a
+    dark Solarized, which does not exist upstream, and not a half-painted surface.
+    That is the documented fallback, not a defect.
+34. **A bad Theme id is logged, not shown.** Set `"theme": "dracula"` in
+    `App_Data/appearance.json`. The built-in Theme applies, one warning naming the
+    unknown id reaches the log, and **the file is unchanged** so fixing the typo
+    restores the choice. The Appearance tab does not report it — that surface went
+    with the override layer, and it is the one place this repo's "reported, never
+    swallowed" habit is weaker than it was.
 35. **The reconnect modal.** Stop the server with the browser open. The dialog
     shows **one** state paragraph, on a themed panel, over a dimmed backdrop — in
     both Themes. All six at once means the scoped-CSS bundle is not loading again,

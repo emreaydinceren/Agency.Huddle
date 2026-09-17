@@ -2,7 +2,7 @@
 
 The Development profile sets `Team:Acp:Enabled: true`, so the global cost guard in section 0.2 is the only thing holding ACP off. Set it before you launch.
 
-**19 active, 6 retired** · 19 free, none paid · about 2.4 hours.
+**21 active, 6 retired** · 21 free, none paid · about 2.6 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -97,19 +97,21 @@ If the page will not load at all (connection refused, or an ASP.NET error page),
 
 1. Go to http://localhost:5100/settings/appearance.
 2. Read the paragraph above the two selects. Compare it word for word with: `Pick a theme, and choose whether it always uses its light or dark palette, or follows your device's own setting.`
-3. Read the paragraph BELOW the two selects. Compare it word for word with: `The selection is stored at <path>. The file does not exist until you save a choice here, so it being absent is expected, not a bug.`
-4. Read the path rendered in monospace in that same paragraph. Write it down. It must be an absolute path, e.g. `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json`.
-5. Scan the whole Appearance panel for the sentence `A hook is one piece of wording this application sends to a model` and for any mention of `hooks.json`, and for any mention of a token name such as `--font-chat` or an "Overrides" heading.
-6. Click the `Hooks` button in the tab rail.
-7. Confirm the Hooks panel DOES carry the sentence beginning `A hook is one piece of wording this application sends to a model` and its own `Overrides are stored at ...hooks.json` paragraph.
-8. Click `Appearance` again and confirm those two Hooks paragraphs are gone.
+3. Read the paragraph BETWEEN the two selects — the credit line, directly under `Theme`. Compare it word for word with: `Every theme except Huddle is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and Monokai is Wimer Hazenberg's.`
+4. Read the paragraph BELOW the two selects. Compare it word for word with: `The selection is stored at <path>. The file does not exist until you save a choice here, so it being absent is expected, not a bug.`
+5. Read the path rendered in monospace in that same paragraph. Write it down. It must be an absolute path, e.g. `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json`.
+6. Scan the whole Appearance panel for the sentence `A hook is one piece of wording this application sends to a model` and for any mention of `hooks.json`, and for any mention of a token name such as `--font-chat` or an "Overrides" heading.
+7. Click the `Hooks` button in the tab rail.
+8. Confirm the Hooks panel DOES carry the sentence beginning `A hook is one piece of wording this application sends to a model` and its own `Overrides are stored at ...hooks.json` paragraph.
+9. Click `Appearance` again and confirm those two Hooks paragraphs are gone.
 
 **Pass if — all of these**
 
-- The Appearance panel's two paragraphs match the quoted text word for word.
+- The Appearance panel's three paragraphs — intro, credit line, file path — match the quoted text word for word.
 - The path shown is absolute and ends in `\src\Huddle.App\App_Data\appearance.json`.
 - Neither the Hooks intro sentence nor any mention of `hooks.json` appears anywhere on the Appearance panel, and there is no token name and no "Overrides" section — that whole layer is gone, not merely hidden.
 - Both of the Hooks paragraphs DO appear on the Hooks panel.
+- The credit line sits between the two selects, names Visual Studio Code, and attributes only Solarized and Monokai. It must not attribute Abyss, Kimbie Dark, Red, Quiet Light, Monokai Dimmed or Tomorrow Night Blue to anyone — those ship in VS Code with no third-party attribution on disk, so naming an author would be inventing one.
 
 **Fail if — any of these**
 
@@ -128,7 +130,7 @@ If the path shown differs from `E:\Repos\Huddle\src\Huddle.App\App_Data\appearan
 
 **Free** · about 3 min
 
-*Proves both selects are rendered from code (`ThemeCatalog.BuiltIn` and `DarkModePreference`) rather than a hand-maintained second list, and in the declared order. Today the Theme catalog holds exactly one entry.*
+*Proves both selects are rendered from code (`ThemeCatalog.BuiltIn` and `DarkModePreference`) rather than a hand-maintained second list, and in the declared order. The Theme catalog holds eighteen entries since 2026-09-16 — see [ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).*
 
 **Before you start**
 
@@ -144,7 +146,9 @@ If the path shown differs from `E:\Repos\Huddle\src\Huddle.App\App_Data\appearan
 
 **Pass if — all of these**
 
-- The `Theme` select holds exactly one option today: `Huddle`. (A future theme added to `ThemeCatalog.BuiltIn` would appear here without any other code changing — that is the point of the catalog, not a defect in today's count of one.)
+- The `Theme` select holds exactly eighteen options, in this order: `Huddle`, `Dark 2026`, `Light 2026`, `Dark Modern`, `Light Modern`, `Dark+`, `Light+`, `Dark High Contrast`, `Light High Contrast`, `Abyss`, `Kimbie Dark`, `Monokai`, `Monokai Dimmed`, `Quiet Light`, `Red`, `Solarized Dark`, `Solarized Light`, `Tomorrow Night Blue`.
+- `Huddle` is **first**. Three call sites read `BuiltIn[0]` to mean "the default Theme", so a Theme appearing above it is a real defect, not a cosmetic one.
+- There is no `Dark (Visual Studio)` and no `Light (Visual Studio)`. Those two were deliberately not imported: their palettes resolve byte-identically to `Dark+` and `Light+`, because upstream they differ only in `tokenColors` — syntax highlighting, which this application does not render.
 - The `Appearance` select holds exactly three options, in this order: `System`, `Light`, `Dark`.
 - There is no fourth option on the `Appearance` select and no blank-looking extra row.
 
@@ -153,13 +157,15 @@ If the path shown differs from `E:\Repos\Huddle\src\Huddle.App\App_Data\appearan
 - The `Appearance` select's order is anything other than `System`, `Light`, `Dark` -> `DarkModePreference`'s declared order is not what the select is reading.
 - An option's label is a raw id such as `huddle` rather than `Huddle`, or `dark` rather than `Dark` -> an id is leaking into the display.
 - The `Theme` select shows zero options, or throws when opened -> the catalog failed to enumerate.
+- `Dark (Visual Studio)` or `Light (Visual Studio)` appears -> somebody re-added a duplicate of `Dark+` / `Light+`; see ADR-0016.
+- A Theme appears above `Huddle` -> `BuiltIn[0]` no longer means the default Theme, which silently changes the fallback for an unknown id.
 
 **Inconclusive if**
 
 If either select will not open, or shows options but the page is visibly still loading (the Blazor circuit has not connected yet), wait five seconds, reload with F5, and try again. Record INCONCLUSIVE only if it still will not open after a reload.
 
 > [!NOTE]
-> Labels are what you see; ids are what get stored (`huddle`, and `system`/`light`/`dark`). Test 04 checks the id half.
+> Labels are what you see; ids are what get stored (`huddle`, `dark-modern`, `solarized-light`, and `system`/`light`/`dark`). Test 04 checks the id half. An imported Theme's id is its label lowercased and hyphenated, with one exception worth knowing: `Dark+` stores `dark-plus`, because an id must match `[a-z0-9-]`.
 
 ### APPEARANCETHEME-04 — Choosing a value in either select stores its id and applies immediately, with no page reload
 
@@ -885,6 +891,88 @@ If the dialog never appears when you stop the server, reload the page, interact 
 ### APPEARANCETHEME-25 — RETIRED: the layering probe (a Theme that sets one Token inherits the rest from the built-in palette)
 
 **Retired 2026-09-14.** This test proved MudBlazor's — sorry, the OLD system's — cascade fall-through: a hand-written `themes/probe.css` setting only `--accent` would inherit every other token from the built-in dark palette, because the three stylesheet layers all targeted plain `:root` in a fixed order. There is no cascade left to probe: `MudTheme.PaletteDark` is a single C# object, and `ThemeCatalog.BuildHuddleTheme` either sets a given `Palette` property or leaves it to whatever default MudBlazor's own `PaletteDark` record ships with — a compiled fallback, not a layered stylesheet. Per [known-limits.md](../known-limits.md), the only way to customise one colour today is to edit `ThemeCatalog.cs` and rebuild; there is no equivalent hand-editable probe file a tester can add without touching source, so there is no in-place successor for this test.
+
+### APPEARANCETHEME-26 — The credit line names Visual Studio Code, and attributes nobody it should not
+
+**Free** · about 3 min
+
+*Proves the attribution shipped with the imported Themes is present, correctly placed, and claims only what the sources actually support — the nine community ports carry no third-party attribution on disk, so naming an author for them would be inventing one.*
+
+**Before you start**
+
+- The application is running.
+- You are on http://localhost:5100/settings/appearance.
+
+**Steps**
+
+1. Find the paragraph directly below the `Theme` select and above the `Appearance` select.
+2. Read it word for word.
+3. Set the `Appearance` select to `Dark`. Read the same paragraph again.
+4. Scan the paragraph for the names `Abyss`, `Kimbie`, `Red`, `Quiet Light`, `Monokai Dimmed` and `Tomorrow Night Blue`.
+
+**Pass if — all of these**
+
+- The paragraph sits BETWEEN the two selects, not above `Theme` and not below the file-path line.
+- It names Visual Studio Code, states the themes are Microsoft's under the MIT licence, and credits Solarized to Ethan Schoonover and Monokai to Wimer Hazenberg.
+- It attributes **no other** theme to any person or organisation.
+- It remains legible in Dark — it is muted text (`--mud-palette-text-secondary`), which must still read comfortably against the dark surface.
+
+**Fail if — any of these**
+
+- The paragraph claims this application is MIT-licensed -> the licence statement is about VS Code's themes, not about Huddle.
+- Any of the other seven ports is attributed to a named author -> that attribution is not in the source and was invented; see [ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).
+- The paragraph is invisible or near-invisible in either mode -> a colour literal crept into `.settings-theme-credit`, which `AppCss_DeclaresNoColourLiteral` should have caught.
+
+**Inconclusive if**
+
+If the Appearance panel will not render, this is INCONCLUSIVE, not a failure — re-run APPEARANCETHEME-01 first.
+
+> [!NOTE]
+> The file headers under `src/Huddle.App/Themes/VsCode/` are deliberately stricter than this line: they record only the MIT declaration in each extension's `package.json` and assert no upstream author at all. This paragraph is an acknowledgement, which is a different register from a provenance record.
+
+### APPEARANCETHEME-27 — An imported Theme applies in its native mode, and falls back to Huddle's palette in the other
+
+**Free** · about 12 min
+
+*Proves the imported catalog actually paints — not just that the labels enumerate — and that the single-mode fallback behaves as designed rather than rendering something broken. This is the acceptance walk for [ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).*
+
+**Before you start**
+
+- The application is running, with at least one Room holding a few Messages and one fenced code block.
+- The `Appearance` select is set to `Dark`.
+
+**Steps**
+
+1. Select Theme `Dark Modern`. Without reloading, look at the sidebar, the transcript, a Teammate card, and the fenced code block.
+2. Open DevTools → Elements → `<body>` → Computed, and read `background-color`. It must be `rgb(31, 31, 31)` — Dark Modern's `editor.background`, `#1f1f1f`.
+3. Hover a Room in the sidebar and confirm the row changes colour. Tab to a link or button and confirm a visible focus outline.
+4. Select Theme `Monokai`. Confirm the whole surface changes again, and that nothing is left painted in Dark Modern's colours.
+5. Select Theme `Solarized Light` and set `Appearance` to `Light`. Confirm the surface becomes the Solarized Light palette.
+6. Now set `Appearance` to `Dark`, leaving `Solarized Light` selected.
+7. Select Theme `Dark High Contrast`. Read the transcript and the sidebar.
+8. Return to Theme `Huddle`.
+
+**Pass if — all of these**
+
+- Each Theme selection repaints immediately, with no page reload and no F5.
+- `<body>`'s computed background under `Dark Modern` is `rgb(31, 31, 31)`.
+- Under every Theme tried, body text is comfortably readable against its background, the hover state is visible, and the focus outline is visible.
+- At step 6, `Solarized Light` in Dark mode shows **Huddle's dark palette**, not a broken or half-painted surface, and not Solarized Light's own colours on a dark ground. That is the documented single-mode fallback, not a defect — see [Known limits](../known-limits.md).
+- `Dark High Contrast` renders as a legible, strong-contrast dark Theme. It is **not** expected to look like VS Code's high-contrast mode, which draws borders everywhere from `contrastBorder`; MudBlazor has no equivalent.
+
+**Fail if — any of these**
+
+- Any surface stays painted in the previous Theme's colours after a switch -> something is reading a palette once rather than through `MudThemeProvider`.
+- A surface renders blank, transparent, or black-on-black under any Theme -> a palette slot resolved to nothing, which the conversion is specifically designed to make impossible.
+- Selecting a Theme forces a full page load -> the ADR-0010 render-tree behaviour regressed.
+- The fenced code block loses its monospace family -> `--font-mono` in `app-vars.css` is the one app-owned custom property and no Theme should touch it.
+
+**Inconclusive if**
+
+If the Blazor circuit drops mid-walk (the reconnect modal appears), reload and start again. Record INCONCLUSIVE rather than FAIL — a dropped circuit invalidates every colour observation after it.
+
+> [!NOTE]
+> Three Themes are known to sit just under the 4.5:1 contrast floor for secondary text and are shipped that way on purpose: `Light+`, `Quiet Light` (4.40:1) and `Solarized Light` (3.98:1). Slightly-dim secondary text on those three is **not** a defect — `ThemeCatalogTests` records each with its measured ratio.
 
 ---
 

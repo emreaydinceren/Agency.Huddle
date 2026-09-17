@@ -1,6 +1,6 @@
 # Manual test tracker
 
-Where every one of the 476 tests stands. One row per test, updated as you run it.
+Where every one of the 478 tests stands. One row per test, updated as you run it.
 
 > [!NOTE]
 > **An earlier full run exists, against the previous UI, and its results are deliberately not
@@ -566,6 +566,8 @@ Appearance tab, Themes, Tokens and overrides — [area file](appearance-theme.md
 | [APPEARANCETHEME-23](appearance-theme.md#appearancetheme-23-hover-selection-and-focus-surfaces-all-switch-and-the-four-old-hover-colours-are-still-one) |  | Active | |  |
 | [APPEARANCETHEME-24](appearance-theme.md#appearancetheme-24-the-reconnect-modal-shows-one-themed-state-paragraph-over-a-dimmed-backdrop-in-both-light-and-dark) |  | Active | |  |
 | [APPEARANCETHEME-25](appearance-theme.md#appearancetheme-25-retired-the-layering-probe-a-theme-that-sets-one-token-inherits-the-rest-from-the-built-in-palette) |  | Active | | Retired 2026-09-14 (MudBlazor migration) - CSS cascade layering probe, no successor. See area file. |
+| [APPEARANCETHEME-26](appearance-theme.md#appearancetheme-26--the-credit-line-names-visual-studio-code-and-attributes-nobody-it-should-not) |  | Active | | Added 2026-09-16 with the VS Code theme import (ADR-0016). |
+| [APPEARANCETHEME-27](appearance-theme.md#appearancetheme-27--an-imported-theme-applies-in-its-native-mode-and-falls-back-to-huddles-palette-in-the-other) |  | Active | | Added 2026-09-16 with the VS Code theme import (ADR-0016). The acceptance walk for the imported catalog. |
 
 ## pipe-external
 

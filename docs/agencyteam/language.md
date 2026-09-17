@@ -314,11 +314,19 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 
 **Theme**
 : One `MudTheme` object in `ThemeCatalog`, carrying a `PaletteLight` **and** a
-  `PaletteDark` — so a Theme spans both modes rather than being one of them. One ships
-  built in, `huddle`. A Theme is identified by its **id**, which is what
+  `PaletteDark` — so a Theme spans both modes rather than being one of them. Eighteen
+  ship built in: this application's own `huddle`, and seventeen of the colour Themes
+  bundled with Visual Studio Code, converted once at authoring time into `MudTheme`
+  objects under `Themes/VsCode/` — see
+  [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).
+  An imported one is single-mode upstream, so it fills only its **native** palette
+  (`ThemeDescriptor.Mode`) and borrows the other from `huddle`.
+  A Theme is identified by its **id**, which is what
   `appearance.json` stores; never by its display label, for the reason
-  [Rules](rules.md) gives for a Model. Roadmap item 7 adds imported Themes, mapped from
-  JSON into a `MudTheme` rather than generated as CSS.
+  [Rules](rules.md) gives for a Model. Roadmap item 7 is what remains: importing an
+  *arbitrary* Theme a Human supplies, mapped from JSON into a `MudTheme` at run time
+  rather than generated as CSS. The bundled Themes needed no importer — they were
+  converted once, by hand, and are ordinary C#.
 : *Avoid*: stylesheet (a Theme stopped being one on 2026-09-14 — see
   [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md)), skin, palette (that is one
   half of a Theme, and a MudBlazor type name), colour scheme (`color-scheme` is a CSS

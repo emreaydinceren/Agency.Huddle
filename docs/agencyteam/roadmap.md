@@ -30,7 +30,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~4~~ | ~~Stopping a turn~~ — **delivered 2026-09-13** | `PersonaRunner`, `Chat.razor` | shipped; Stop means this Agent now, and a stopped Turn is not a failure |
 | ~~5~~ | ~~Tool-call visibility~~ — **delivered 2026-09-13** | `PersonaRunner`'s event loop | shipped as one `ToolActivity` Envelope, not two; the bump it forced was spent on 3 as well |
 | ~~6~~ | ~~CSS tokenisation and dark mode~~ — **delivered 2026-09-13** | `wwwroot/app.css`, then `theme.css` and `themes/` beside it | shipped; the file was twice the size this list claimed, and a stylesheet that had never loaded had to be fixed first |
-| 7 | Theme import | a JSON-to-`MudTheme` mapper | `ThemeCatalog`, and MudBlazor's `Palette` as the key set — **no CSS generator and no file provider needed any more**, see [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md) |
+| 7 | Theme import — **half delivered 2026-09-16** | a JSON-to-`MudTheme` mapper, for an *arbitrary* supplied Theme | seventeen of VS Code's bundled Themes are already **in** `ThemeCatalog`, converted by hand, and the mapping they used is written down — see [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md) |
 | ~~8~~ | ~~Following a Room without being Mentioned~~ — **delivered 2026-09-16** | `ReplyGate.cs`, a new App Tool pair | shipped; the follow set became a Singleton rather than a per-runner field, which retro-amended [ADR-0012](../adr/0012-a-room-says-why-it-stayed-quiet.md) |
 | 9 | Per-Persona tool grants | `DotAcpAgentHostFactory`, `PersonaFrontmatter` | tools already built per `agentId`; `_` fields reserved |
 | ~~10~~ | ~~Persona frontmatter becomes the Member's identity~~ — **delivered 2026-09-12** | `PersonaIndex`, `PersonaStore`, `MentionParser` | shipped; `Persona.cs` was not touched |
@@ -321,6 +321,35 @@ generator at a stranger's JSON, because a partial token set stays invisible unti
 something else is supplying the values.
 
 ## 7. Theme import
+
+> **Amended 2026-09-16 by [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md),
+> and half of it is now shipped.** The catalog holds eighteen Themes: `huddle`, plus
+> seventeen of the colour Themes bundled with Visual Studio Code. They needed **no
+> importer** — they were converted once, by hand, into ordinary C# under
+> `Themes/VsCode/`, one file per Theme. Nothing reads theme JSON at run time.
+>
+> What remains of this item is the harder half: importing an **arbitrary** Theme a Human
+> supplies. That is unchanged in shape — JSON deserialised into a `MudTheme` and appended
+> to `ThemeCatalog.BuiltIn` — but it is now a smaller job, because the mapping it needs
+> already exists and has been exercised against nineteen real Themes, six of which are
+> nearly empty on disk.
+>
+> Three things this item can stop worrying about, and one it cannot:
+>
+> - **The mapping is written.** ADR-0016 carries the table. Twenty `Palette` slots, each
+>   with an ordered chain of VS Code keys bottoming out in something every Theme has.
+> - **The per-token fallback question is answered by authoring**, not by the cascade.
+>   No slot is ever empty, so nothing can blank a surface — the trap this item names.
+> - **Theme JSON is not self-contained, and that is the real work.** `dark_plus.json`
+>   has *no* `colors` object at all; `hc_light.json` has five keys. The palettes users
+>   recognise come from `registerColor` defaults compiled into the VS Code binary. A
+>   runtime importer handed a `.vsix` will face exactly this, and either vendors those
+>   defaults or accepts that thin Themes import badly.
+> - **Contrast is now enforced for every catalog entry**, so an imported Theme must either
+>   clear six pairs at 4.5:1 or land in a documented, measured shortfall list that is
+>   pinned in both directions. An importer that appends to `BuiltIn` inherits that test.
+
+The earlier amendment, kept because its reasoning still holds for the half that is left:
 
 > **Amended 2026-09-14 by [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md).**
 > Theming moved to MudBlazor's `MudTheme`, and this item got *simpler*. It is no longer
@@ -929,13 +958,17 @@ Six dependencies here are real:
   it. There was indeed nothing for a generator to write until the tokens existed; what
   it did not foresee is that item 7 would inherit *constraints* from this work, not just
   a list of names. Item 7 is unblocked and now owns four of them, all in the `## 7`
-  section above: a generated Theme must declare `color-scheme` and must never be
-  self-contained, because the per-token fallback it asked for is `theme.css`'s own
-  `:root` block resolved through the cascade; `ThemeTokens.All` and `ThemeCatalog` are
-  the single sources it extends rather than duplicates; and `MapStaticAssets` cannot
-  serve what item 7 writes, so imported Themes land in `{DataDir}/themes/` behind a file
-  provider of their own. The mapping key for every colour token is already written into
-  `theme.css` as a trailing comment.
+  section above. **Three of those four constraints no longer exist**, and saying so is
+  more useful than the original list: `theme.css`, `ThemeTokens.All` and the cascade
+  fall-through all went with [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md),
+  and a `MudTheme` needs no file provider because it is not served at all. Only
+  `ThemeCatalog` survives as the single source item 7 extends rather than duplicates.
+  What replaced them, on 2026-09-16, is a worked mapping: seventeen of VS Code's bundled
+  Themes are now *in* the catalog, converted by hand
+  ([ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)),
+  so item 7 inherits a table exercised against nineteen real inputs instead of a
+  constraint list. The one habit that carried across intact: every imported colour still
+  names the VS Code key it came from in a trailing comment, exactly as `theme.css` did.
 - ~~**1 before the next per-Persona store.**~~ **Settled — 1 shipped 2026-09-15**,
   and the warning held: the rename had to touch the Team Directory row, the Model
   row, the Effort row, the Room names **and** the Work Dir, and the Work Dir was

@@ -430,7 +430,7 @@ Do not confuse `hooks.json` (the override file, under App_Data, absent until sav
 
 - Step 1 returns False.
 - The intro reads exactly `Pick a theme, and choose whether it always uses its light or dark palette, or follows your device's own setting.`
-- The `Theme` select offers exactly one option, `Huddle`, already selected.
+- The `Theme` select offers eighteen options with `Huddle` first and already selected — the seventeen after it are the Visual Studio Code Themes imported on 2026-09-16 ([ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)). `APPEARANCETHEME-03` pins the full list; here only `Huddle` being first and selected matters.
 - The `Appearance` select offers exactly three options — `System`, `Light`, `Dark` — with `System` selected.
 - The file-path paragraph names `this.AppearanceStore.FilePath` and states the file does not exist until a choice is saved here, so its absence is expected, not a bug.
 - Choosing `Dark` applies IMMEDIATELY — the page repaints dark with no navigation, no tab spinner, no address-bar or history change.

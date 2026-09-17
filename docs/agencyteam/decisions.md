@@ -1,12 +1,50 @@
 # Decision record
 
-Thirteen dated entries from 2026-09-11 onward, newest first, each recording what
+Fifteen dated entries from 2026-09-11 onward, newest first, each recording what
 changed and — more usefully — what was considered and rejected. Read it when you are
 about to revisit a decision, or when an older Markdown file in this repo
 disagrees with current vocabulary and you need the old-to-new mapping.
 
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
+
+**2026-09-16 — VS Code's bundled Themes are converted once, by hand, and the mapping is
+a claim you test with contrast.**
+
+The catalog had one Theme, so nothing proved its extension point worked. It now has
+eighteen: `huddle` plus seventeen of the colour Themes Visual Studio Code bundles,
+converted at authoring time into ordinary C#, one file per Theme. **No importer ships** —
+this is not roadmap item 7, which keeps the harder half, an arbitrary Theme a Human
+supplies. See [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).
+
+**Rejected: mapping `Primary` to `button.background`.** It is the obvious choice and it
+failed sixteen of nineteen Themes against a 4.5:1 text floor — Abyss 1.33:1, Dark High
+Contrast 1.14:1. A failure rate that high indicts the mapping, not the Themes.
+`--mud-palette-primary` paints the active nav link's *text*; `button.background` is a fill
+picked to carry `button.foreground` on top of it. `textLink.foreground` is by definition
+legible as text on the same ground, and clears 4.5:1 on every Theme. Total shortfalls fell
+from 23 to 7. The lesson generalises: **a mapping is a claim about what a colour is for,
+and contrast is how you test the claim.** Every value was extracted correctly both times.
+
+**Rejected: a `LinesDefault` floor at WCAG 1.4.11's 3:1, labelled "focus ring".** It is not
+the focus ring — `app.css` paints that with `--mud-palette-text-primary`, deliberately —
+and `LinesDefault`'s one consumer is a hover border whose state the same rule also signals
+by changing the background. The wrong pair failed `huddle` itself at 2.00:1 and was one edit
+from being "resolved" by adding an eighth documented exception, which would have frozen a
+false claim about the code into a justification comment. It is now a [Rule](rules.md).
+
+**Rejected: shipping all nineteen bundled Themes.** `Dark (Visual Studio)` and `Light
+(Visual Studio)` resolve byte-identically to `Dark+` and `Light+`; upstream they differ only
+in `tokenColors`, which this application does not render. Two of them were dropped.
+
+**Rejected: deriving the missing mode for a single-mode Theme.** An imported Theme fills
+only its native palette and borrows the other from `huddle`. Inverting a palette
+algorithmically produces colours nobody designed and whose contrast nobody verified.
+
+What it cost: three Themes sit just under the contrast floor and are documented rather than
+corrected, the High Contrast pair is not truly high contrast, and a dark-only Theme in Light
+mode shows Huddle's palette. What it bought: eighteen Themes, a mapping exercised against
+nineteen real inputs, and a contrast guarantee that now covers every Theme instead of one.
 
 **2026-09-16 — following a Room is a Singleton, not a field on the runner, and that changed what
 the Room view can know.**
