@@ -230,16 +230,44 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
 - **Known flake, pre-existing:** `PersonaSupervisorTests.Shutdown_DisposesEveryHost`
   fails roughly one run in four, always on a slow run — its 10-second token races
   `WaitUntilAsync`. It is a timing bug in the test, not in `PersonaSupervisor`.
-- **Second known flake, pre-existing:** a timing race in event ordering over the
-  fake transport in `Huddle.Acp.Tests`, roughly one run in five, passing on rerun.
-  **Three tests are now known to show it**, which is the argument that the race is in
-  the transport rather than in any one test:
-  `PromptAsync_StreamsChunksInOrder_ThenTurnCompleted` and
+- **Second known flake, pre-existing — DIAGNOSED 2026-09-16, and it is not only a
+  flake.** A timing race in event ordering over the fake transport in
+  `Huddle.Acp.Tests`, roughly one run in five, passing on rerun. **Three tests were
+  known to show it**, which was the argument that the race is in the transport rather
+  than in any one test: `PromptAsync_StreamsChunksInOrder_ThenTurnCompleted` and
   `PromptAsync_ThoughtAndToolCallEvents_ArePublished` (both quarantined by name in CI),
   and `DotAcpConcurrentHostTests.TwoHosts_ConcurrentPrompts_EachSessionOnlySeesItsOwnAgentsUpdates`,
   seen on 2026-09-15 in CI run 607 and **not quarantined**. All three fail the same way:
   a `TurnCompleted` arrives where a `MessageChunk` or a tool-call notification was
-  expected. Not diagnosed.
+  expected.
+
+  **The mechanism, caught with instrumented reproduction while building the Tier 3
+  conformance suite.** The peer writes its `session/update` notifications and the final
+  `session/prompt` response to the wire **strictly in order**. The client does not
+  *dispatch* them in that order: StreamJsonRpc completes a response through a different
+  path from the one that invokes notification handlers, and nothing sequences a
+  response's continuation against notification handlers already in flight. One captured
+  failing run showed chunk 1 dispatched on thread 6, the **response** dispatched on
+  thread 7 fractions of a millisecond later, and chunks 2 and 3 only entering thread 6
+  *after* that. `PersonaRunner.RunEventReaderAsync` then reads its channel in arrival
+  order — correctly — but arrival order is no longer wire order, so `TurnCompleted`
+  clears `activeTurn` and `AppendAndPublishDeltaAsync`'s null-turn guard (right for the
+  "stream ended mid-turn" case it was written for) **silently drops the remaining
+  chunks**. Every component behaves correctly on its own; the defect is the unstated
+  assumption that wire order survives dispatch.
+
+  **It is a content-loss bug, not just a test flake.** The same `activeTurn.Text`
+  accumulator that feeds the live Draft is what gets posted, so a Turn affected by this
+  loses text from the Message that lands in the Transcript, not merely from the
+  in-flight render. It needs a warm thread pool to surface, which is why it reads as a
+  flake: cold and quiet it does not race. A real adapter's process-pipe latency widens
+  the gaps and makes it rarer than it is in-proc, but not impossible.
+
+  **Not fixed**, because the fix belongs in `DotAcpAgentSession`/`DotAcpClientAdapter`
+  (sequencing a session's notification publishes ahead of its response's
+  `TurnCompleted`) and both `PersonaRunner` and that pipeline were explicitly out of
+  scope for the work that found it. `tests/Huddle.Tests/Conformance/ChunkedReplyFirstOrderer.cs`
+  quarantines it for one Tier 3 test and carries the full evidence in its remarks.
 - **Known bug, pre-existing:** `Data/SqliteTeamDirectory.cs` is not
   `IDisposable`, and SQLite connection pooling keeps a handle on `team.db`, so
   tests leave about 83 temp directories behind per run. `TempDataDir.Dispose`

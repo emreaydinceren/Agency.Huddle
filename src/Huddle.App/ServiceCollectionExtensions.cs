@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Data;
@@ -70,7 +71,15 @@ public static class ServiceCollectionExtensions
         // PipeHostFixture.RemovePersonaSupervisorHostedService's remarks document as the cause of a
         // real, intermittent test flake once already, for the closely related PersonaSupervisor case.
         services.AddSingleton<IMentionAliasSource>(sp => sp.GetRequiredService<PersonaStore>());
+
+        // Constructor-injected rather than newed up inline inside DotAcpAgentHostFactory (see that
+        // type's own remarks): the same registration a Conformance fixture (D10, Task 10.1) replaces
+        // with an in-process fake to drive a real Persona through a real host, session and tool
+        // server against a scripted ACP peer, with no process spawned.
+        services.AddSingleton<IAgentProcessLauncher, AgentProcessLauncher>();
         services.AddSingleton<IAgentHostFactory, DotAcpAgentHostFactory>();
+        services.AddSingleton<AdapterCatalog>();
+        services.AddSingleton<AdapterProfileResolver>();
         services.AddSingleton<PersonaModelStore>();
         services.AddSingleton<PersonaEffortStore>();
 
@@ -92,6 +101,7 @@ public static class ServiceCollectionExtensions
         // calls PromptAsync), so registering it costs nothing when Team:Acp:Enabled is off. What
         // keeps it honest is WHEN it runs — the /teammates page only calls it on card-open, never on
         // page-load.
+        services.AddSingleton<IAdapterProbeRunner, AdapterProcessProbeRunner>();
         services.AddSingleton<IModelCatalog, ModelCatalogProbe>();
 
         services.AddHostedService<DataInitializer>();

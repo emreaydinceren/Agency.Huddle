@@ -180,20 +180,57 @@ internal sealed class DotAcpAgentSession : IAgentSession, ISessionSink
         this.channel.Writer.TryComplete(exception);
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         lock (this.gate)
         {
             if (this.disposed)
             {
-                return ValueTask.CompletedTask;
+                return;
             }
 
             this.disposed = true;
         }
 
         this.onDisposed(this.SessionId);
+
+        using (CancellationTokenSource closeTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(2)))
+        {
+            try
+            {
+                // The token is passed through so a future dotacp version that honours it can send
+                // the peer a cancellation courtesy sooner, but empirically (see
+                // DotAcpAgentSessionTests.DisposeAsync_SessionCloseNeverAnswered_CompletesWithinBound)
+                // dotacp.client.Connection.CloseAsync does not itself unblock locally when a
+                // CancellationToken is cancelled and the peer never responds - StreamJsonRpc's
+                // InvokeWithParameterObjectAsync only uses it to notify the peer, not to abandon the
+                // local await. The outer WaitAsync is what actually enforces the 2-second bound.
+                await this.connection.CloseAsync(
+                    new dotacp.protocol.CloseSessionRequest { SessionId = this.SessionId },
+                    closeTimeout.Token).WaitAsync(TimeSpan.FromSeconds(2), CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (
+                ex is IOException
+                or ObjectDisposedException
+                or OperationCanceledException
+                or TimeoutException
+                or RemoteInvocationException
+                or ConnectionLostException)
+            {
+                // Spec §6.8: session/close is a courtesy to the agent, never a condition of our
+                // own teardown. ACP has no capability flag for this method, so any agent that does
+                // not implement it answers "method not found", which StreamJsonRpc surfaces here as
+                // a RemoteInvocationException (confirmed empirically against FakeAcpAgent's
+                // unhandled-method branch) rather than the IOException / ObjectDisposedException /
+                // OperationCanceledException trio a process-death scenario produces. A peer that
+                // never answers at all surfaces as TimeoutException from the WaitAsync bound above
+                // (also confirmed empirically - the CancellationToken alone does not abort the local
+                // await), and an already-disconnected peer can surface as ConnectionLostException,
+                // the same exception PromptAsync above maps to AgentDisconnectedException. Disposal
+                // must complete regardless of which of these the peer produces.
+            }
+        }
+
         this.channel.Writer.TryComplete();
-        return ValueTask.CompletedTask;
     }
 }

@@ -14,6 +14,23 @@ public sealed class FakeModelCatalog : IModelCatalog
     public IReadOnlyList<AgentModelOption> Models { get; set; } = [];
 
     /// <summary>
+    /// The catalog to hand back for a specific Adapter id, set per test as needed. A
+    /// <see cref="GetAsync"/> call whose <c>adapterId</c> is present here returns this entry
+    /// instead of <see cref="Models"/> — the per-Adapter counterpart of
+    /// <see cref="EffortLevelsByModel"/>. Keyed ordinal: an Adapter id is an identifier, never text
+    /// shown to a human, so culture-aware comparison would be wrong here (agents/CSharpPrinciples.md).
+    /// </summary>
+    public Dictionary<string, IReadOnlyList<AgentModelOption>> ModelsByAdapter { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Every Adapter id <see cref="GetAsync"/> or <see cref="GetEffortLevelsAsync"/> was asked
+    /// about, in call order — including <c>null</c> for the installation's default Adapter. This is
+    /// the hook a test uses to prove which Adapter a probe actually ran against, and that changing
+    /// the Adapter in the card spawns a probe for the NEW one (docs/agencyteam/rules.md).
+    /// </summary>
+    public List<string?> AdaptersProbed { get; } = [];
+
+    /// <summary>
     /// When <see langword="true"/>, <see cref="GetAsync"/> still counts the probe but never resolves
     /// its returned <see cref="ValueTask{TResult}"/> - the only way a bUnit-rendered component's
     /// "still loading" state can be observed at all, since a normally-completed
@@ -56,9 +73,14 @@ public sealed class FakeModelCatalog : IModelCatalog
     /// </summary>
     public List<string?> EffortProbedModels { get; } = [];
 
-    public ValueTask<IReadOnlyList<AgentModelOption>> GetAsync(CancellationToken cancellationToken)
+    public ValueTask<IReadOnlyList<AgentModelOption>> GetAsync(string? adapterId, CancellationToken cancellationToken)
     {
         this.ProbeCount++;
+        this.AdaptersProbed.Add(adapterId);
+
+        var models = adapterId is not null && this.ModelsByAdapter.TryGetValue(adapterId, out var forAdapter)
+            ? forAdapter
+            : this.Models;
 
         if (this.NeverCompletes)
         {
@@ -67,10 +89,10 @@ public sealed class FakeModelCatalog : IModelCatalog
 
         if (this.ModelsGate is not null)
         {
-            return new ValueTask<IReadOnlyList<AgentModelOption>>(FakeModelCatalog.AfterAsync(this.ModelsGate, this.Models));
+            return new ValueTask<IReadOnlyList<AgentModelOption>>(FakeModelCatalog.AfterAsync(this.ModelsGate, models));
         }
 
-        return ValueTask.FromResult(this.Models);
+        return ValueTask.FromResult(models);
     }
 
     /// <summary>Hands back <paramref name="models"/> once <paramref name="gate"/> completes - see <see cref="ModelsGate"/>.</summary>
@@ -83,10 +105,11 @@ public sealed class FakeModelCatalog : IModelCatalog
         return models;
     }
 
-    public ValueTask<IReadOnlyList<AgentEffortOption>> GetEffortLevelsAsync(string? model, CancellationToken cancellationToken)
+    public ValueTask<IReadOnlyList<AgentEffortOption>> GetEffortLevelsAsync(string? adapterId, string? model, CancellationToken cancellationToken)
     {
         this.EffortProbeCount++;
         this.EffortProbedModels.Add(model);
+        this.AdaptersProbed.Add(adapterId);
 
         if (this.EffortsNeverComplete)
         {

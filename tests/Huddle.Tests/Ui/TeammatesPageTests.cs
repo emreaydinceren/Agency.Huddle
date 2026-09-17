@@ -90,6 +90,10 @@ public sealed class TeammatesPageTests
 
         response.EnsureSuccessStatusCode();
         Assert.Equal(0, factory.FakeModelCatalog.ProbeCount);
+
+        // The Adapter cascade added a third select ahead of Model, so this guards the same
+        // rule one layer earlier: a plain load must probe zero Adapters, not just zero Models.
+        Assert.Empty(factory.FakeModelCatalog.AdaptersProbed);
     }
 
     [Fact]
@@ -375,8 +379,9 @@ public sealed class TeammatesPageTests
 
         // Never started - Teammates.razor only needs a PersonaSupervisor it can inject, for the
         // Restart button this test does not exercise.
+        var resolver = new AdapterProfileResolver(new AdapterCatalog(dataDir.Options()));
         using var supervisor = new PersonaSupervisor(
-            dataDir.Options(), personas, new FakeAgentHostFactory(), health, new FakeHookSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+            dataDir.Options(), personas, new FakeAgentHostFactory(), resolver, health, new FakeHookSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
 
         await using MudBunitContext ctx = new();
         ctx.Services.AddSingleton<ITeamDirectory>(directory);
@@ -414,6 +419,7 @@ public sealed class TeammatesPageTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSupervisor>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AdapterCatalog>());
         return ctx;
     }
 

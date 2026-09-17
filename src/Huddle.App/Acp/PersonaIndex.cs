@@ -119,7 +119,7 @@ internal sealed class PersonaIndex
 
         var entries = parsed
             .Where(file => !reasons.ContainsKey(file.Path))
-            .Select(file => new PersonaEntry(file.Identity.Name, file.Identity.Title, file.Identity.Alias, file.Identity.Teams, file.Path, file.Text))
+            .Select(file => new PersonaEntry(file.Identity.Name, file.Identity.Title, file.Identity.Alias, file.Identity.Teams, file.Path, file.Text, file.Identity.Adapter))
             .OrderBy(entry => entry.Name, StringComparer.Ordinal)
             .ToList();
 

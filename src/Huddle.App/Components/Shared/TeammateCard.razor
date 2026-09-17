@@ -44,6 +44,7 @@
 @inject PersonaStore Personas
 @inject PersonaSupervisor Supervisor
 @inject IModelCatalog ModelCatalog
+@inject AdapterCatalog Adapters
 @inject PersonaHealth Health
 @inject IAgentGateway Gateway
 @inject ITeamDirectory TeamDirectory
@@ -221,6 +222,36 @@
                           HelperText="@this.TextHelperText"
                           Class="mb-4" />
 
+            @* Configuration, not a probe (Spec §6.6): AdapterCatalog is frozen at startup and read
+               synchronously, so unlike the Model and Effort selects below there is no loading state
+               to guard here. Wrapped in @if rather than shown Disabled when there is only one
+               profile: Spec §4 (P6) requires a stock installation - which configures no Adapters and
+               therefore always has exactly one synthesised profile - to look byte-for-byte like it
+               did before this feature existed, and a dropdown offering a single option is a control
+               nobody could ever use anyway (Spec §12, E-2). *@
+            @if (this.AdapterChoices.Count > 1)
+            {
+                <MudSelect T="string" Label="Adapter" Value="@(this.adapter ?? string.Empty)" ValueChanged="this.OnAdapterChangedAsync"
+                           HelperText="@this.AdapterHelperText" Class="mb-4">
+                    <MudSelectItem T="string" Value="@string.Empty">Use the default adapter</MudSelectItem>
+                    @foreach (var choice in this.AdapterChoices)
+                    {
+                        <MudSelectItem T="string" Value="@choice.Id">@choice.DisplayName</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
+            @* Spec §6.6/§8.3: the Adapter counterpart of the effortResetByModelChange note below -
+               same reasoning, one control to the left. role="status" rather than role="alert" because
+               MudAlert renders no role by default (rules.md) and this is a consequence of what the
+               human just did, not an interruption. *@
+            @if (this.adapterResetModelAndEffort)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4" role="status">
+                    Changing the adapter reset Model and Effort to their defaults. Each adapter advertises its own models, so choices made for the previous adapter do not carry across — pick them again if you want specific ones.
+                </MudAlert>
+            }
+
             @* @bind-Value, not @oninput: MudSelect raises its ValueChanged on selection, the same
                "change" semantics the old <select>'s @onchange comment called out - see
                OnModelChangedAsync below for why the Effort catalog must be re-read from here.
@@ -325,6 +356,10 @@
     [Parameter]
     public string? Effort { get; set; }
 
+    /// <summary>Which ACP agent runs this Persona's session (Spec §7.2), or <see langword="null"/> for the installation's default profile.</summary>
+    [Parameter]
+    public string? Adapter { get; set; }
+
     /// <summary>
     /// The one status every surface renders, resolved by the caller through
     /// <see cref="PersonaStatusResolver.Resolve"/> - never re-derived here from a plain online/offline
@@ -354,6 +389,7 @@
     private string text = string.Empty;
     private string? model;
     private string? effort;
+    private string? adapter;
     private string? roomId;
     private string? filePath;
     private PersonaStatus status = new(PersonaState.Offline, null, DateTimeOffset.MinValue);
@@ -398,6 +434,11 @@
     // without this, a slow answer for the abandoned model lands on the new choice.
     private int effortProbeGeneration;
 
+    // The model-catalog counterpart of effortProbeGeneration above, added by Task 8.3 (Spec §12,
+    // E-4): changing the Adapter twice quickly starts two model probes, and this stops the slower
+    // one (for the Adapter no longer selected) from overwriting the faster one.
+    private int modelProbeGeneration;
+
     /// <summary>
     /// Set when a Model change has just discarded a stored Effort, and cleared the moment the user
     /// makes a fresh Effort choice, re-enters Edit, or saves. The discard itself is deliberate - the
@@ -405,6 +446,13 @@
     /// drives is the notice, not the behaviour: issue #45 was that the selection vanished silently.
     /// </summary>
     private bool effortResetByModelChange;
+
+    /// <summary>
+    /// Set when an Adapter change has just discarded a stored Model and/or Effort, and cleared the
+    /// moment the user re-enters Edit, chooses a fresh Effort, or saves — the same lifecycle as
+    /// <see cref="effortResetByModelChange"/>, one control to the left (Spec §6.6, §8.3).
+    /// </summary>
+    private bool adapterResetModelAndEffort;
 
     /// <summary>Initials from the first and last word of <paramref name="name"/>: "Emily Lee" reads as EL and "Chief of Staff" as CS. First-and-last rather than the first two words, so a middle word like "of" does not get a letter it does not deserve. A one-word name such as "echo" reads as E.</summary>
     /// <param name="name">The Teammate's Name.</param>
@@ -440,6 +488,7 @@
         this.text = this.Text;
         this.model = this.Model;
         this.effort = this.Effort;
+        this.adapter = this.Adapter;
         this.roomId = this.RoomId;
         this.filePath = this.FilePath;
         this.status = this.Status;
@@ -535,6 +584,38 @@
         TeammateCardMode.Edit => $"Edit {this.name}",
         _ => "Teammate",
     };
+
+    // AdapterCatalog is configuration read once at startup, never a probe (Spec §6.6 - "LoadAdapters()
+    // - synchronous; configuration, not a probe"), so unlike ModelChoices/EffortChoices below there is
+    // no loading state to guard here. Still synthesises an entry for a stored-but-unconfigured id,
+    // exactly as ModelChoices does, so the card shows what the file says rather than silently
+    // resetting it - see AdapterHelperText for the note that names the mismatch.
+    private IReadOnlyList<AdapterProfile> AdapterChoices
+    {
+        get
+        {
+            var profiles = this.Adapters.Profiles;
+            if (this.adapter is null || profiles.Any(p => string.Equals(p.Id, this.adapter, StringComparison.OrdinalIgnoreCase)))
+            {
+                return profiles;
+            }
+
+            return [new AdapterProfile(this.adapter, this.adapter, null, string.Empty, null, null, UsesToolNamePrefix: false), .. profiles];
+        }
+    }
+
+    private string AdapterHelperText
+    {
+        get
+        {
+            if (this.adapter is not null && this.Adapters.Find(this.adapter) is null)
+            {
+                return $"The adapter '{this.adapter}' is not configured. This teammate will run on '{this.Adapters.Default.Id}'.";
+            }
+
+            return "Which agent runs this teammate. Changing it restarts the teammate, which clears what it remembers.";
+        }
+    }
 
     // Opening Edit must not silently reset a stored choice to default when saved: if the Persona's
     // stored Model is no longer (or never was) in AvailableModels — the probe failed, or the
@@ -656,9 +737,11 @@
         this.text = persona?.Text ?? this.text;
         this.model = persona?.Model ?? this.model;
         this.effort = persona?.Effort ?? this.effort;
+        this.adapter = persona?.Adapter ?? this.adapter;
         this.error = null;
         this.confirmingRemove = false;
         this.effortResetByModelChange = false;
+        this.adapterResetModelAndEffort = false;
         this.nameLocked = false;
         this.titleLocked = false;
         this.aliasLocked = false;
@@ -805,6 +888,34 @@
         this.MudDialog.Close();
     }
 
+    /// <summary>
+    /// Sets the selected Adapter, keeps <see cref="text"/>'s frontmatter in step through
+    /// <see cref="PersonaFrontmatter.WriteScalarField"/> - the same mechanism
+    /// <see cref="OnTitleChanged"/> and <see cref="OnAliasChanged"/> use (Spec §7.2, "The
+    /// WriteScalarField path") and a no-op in Create mode, where <see cref="text"/> is the Persona
+    /// BODY only and has no frontmatter yet to rewrite - and runs the full cascade Spec §6.6/§8.3
+    /// describes: a Model and an Effort chosen for the previous Adapter mean nothing against this
+    /// one's catalog, so both are discarded and both catalogs are re-probed against the NEW
+    /// Adapter. Mirrors <see cref="OnModelChangedAsync"/>'s two-probes-in-a-row shape exactly,
+    /// including the mandatory intermediate <c>StateHasChanged</c> call (rules.md / issue #39):
+    /// without it, the Model select would repaint only once the Effort probe also answered.
+    /// </summary>
+    /// <param name="value">The Adapter select's newly chosen id, or blank for the installation's default.</param>
+    private async Task OnAdapterChangedAsync(string value)
+    {
+        this.adapter = string.IsNullOrWhiteSpace(value) ? null : value;
+        this.text = PersonaFrontmatter.WriteScalarField(this.text, "adapter", this.adapter ?? string.Empty);
+        this.adapterResetModelAndEffort = this.model is not null || this.effort is not null;
+        this.model = null;
+        this.effort = null;
+        this.effortResetByModelChange = false;
+
+        await this.LoadModelsAsync();
+        Task efforts = this.LoadEffortsAsync();
+        this.StateHasChanged();          // MANDATORY - rules.md / issue #39
+        await efforts;
+    }
+
     private async Task OnModelChangedAsync(string value)
     {
         this.model = string.IsNullOrWhiteSpace(value) ? null : value;
@@ -826,6 +937,7 @@
     {
         this.effort = string.IsNullOrWhiteSpace(value) ? null : value;
         this.effortResetByModelChange = false;
+        this.adapterResetModelAndEffort = false;
     }
 
     // Runs on form-open, never on page-load: spawning the throwaway adapter this probes with costs a
@@ -833,16 +945,31 @@
     // at least once, so Blazor renders this card (with modelsLoading true) before the probe answers -
     // ENTERING the loading state needs no manual StateHasChanged(). Leaving it does, because both
     // callers await a second probe afterwards: see the StateHasChanged in each of them (issue #39).
+    //
+    // Guards a superseded probe, mirroring LoadEffortsAsync's own effortProbeGeneration below.
+    // Changing the Adapter twice quickly starts two model probes (Spec §8.3, "Generation counters"),
+    // and without this a slower answer for the abandoned Adapter can land after a faster one for the
+    // Adapter actually selected and overwrite it - a new defect class this feature introduces
+    // (Spec §12, E-4). Nothing could re-enter this method before an Adapter select existed, which is
+    // why it had no equivalent until now.
     private async Task LoadModelsAsync()
     {
+        var generation = ++this.modelProbeGeneration;
         this.modelsLoading = true;
         try
         {
-            this.availableModels = await this.ModelCatalog.GetAsync(CancellationToken.None);
+            var models = await this.ModelCatalog.GetAsync(this.adapter, CancellationToken.None);
+            if (generation == this.modelProbeGeneration)
+            {
+                this.availableModels = models;
+            }
         }
         finally
         {
-            this.modelsLoading = false;
+            if (generation == this.modelProbeGeneration)
+            {
+                this.modelsLoading = false;
+            }
         }
     }
 
@@ -857,7 +984,7 @@
         this.effortsLoading = true;
         try
         {
-            var efforts = await this.ModelCatalog.GetEffortLevelsAsync(this.model, CancellationToken.None);
+            var efforts = await this.ModelCatalog.GetEffortLevelsAsync(this.adapter, this.model, CancellationToken.None);
             if (generation == this.effortProbeGeneration)
             {
                 this.availableEfforts = efforts;
@@ -883,7 +1010,7 @@
         {
             if (creating)
             {
-                var identity = new PersonaIdentity(this.name, this.title, this.alias, TeammateCard.ParseTeams(this.teams));
+                var identity = new PersonaIdentity(this.name, this.title, this.alias, TeammateCard.ParseTeams(this.teams), this.adapter);
                 persona = this.Personas.Add(identity, this.text, this.model, this.effort);
             }
             else
@@ -917,10 +1044,12 @@
         this.text = savedPersona?.Text ?? this.text;
         this.model = savedPersona?.Model;
         this.effort = savedPersona?.Effort;
+        this.adapter = savedPersona?.Adapter;
         this.filePath = TeammateCard.TryPathFor(this.Personas, this.name);
         this.mode = TeammateCardMode.View;
         this.confirmingRemove = false;
         this.effortResetByModelChange = false;
+        this.adapterResetModelAndEffort = false;
         this.nameLocked = false;
         this.titleLocked = false;
         this.aliasLocked = false;

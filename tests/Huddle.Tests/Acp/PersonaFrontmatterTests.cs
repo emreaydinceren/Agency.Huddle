@@ -305,6 +305,23 @@ public sealed class PersonaFrontmatterTests
         Assert.Equal("Role: Router", description);
     }
 
+    /// <summary>
+    /// <c>adapter</c> is plumbing about which ACP agent runs a Teammate, not something any Agent
+    /// can act on (Spec §12, E-6), so it never appears in the job description — while an
+    /// unrelated custom key survives, proving only <c>adapter</c> was excluded.
+    /// </summary>
+    [Fact]
+    public void ComposeJobDescription_AdapterField_IsExcludedButUnrelatedKeysSurvive()
+    {
+        var text = "---\nadapter: agency\nrole: 'Router'\n---\nbody";
+
+        var description = PersonaFrontmatter.ComposeJobDescription(text);
+
+        Assert.DoesNotContain("adapter", description, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Adapter", description, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("role", description, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>A well-formed identity block yields all four fields, with <c>Teams</c> read from its comma form.</summary>
     [Fact]
     public void TryReadIdentity_WellFormedBlock_ReadsAllFourFields()
@@ -526,6 +543,62 @@ public sealed class PersonaFrontmatterTests
         Assert.Equal("jar", identity.Alias);
     }
 
+    /// <summary>An <c>adapter:</c> field reads as <see cref="PersonaIdentity.Adapter"/>, per Spec §7.2.</summary>
+    [Fact]
+    public void TryReadIdentity_AdapterPresent_ReadsAsAdapter()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\nadapter: agency\n---\nbody";
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var identity, out var error);
+
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal("agency", identity.Adapter);
+    }
+
+    /// <summary>An absent <c>adapter:</c> field yields <see langword="null"/>, and the file is still a valid Persona.</summary>
+    [Fact]
+    public void TryReadIdentity_AdapterAbsent_YieldsNullAndStillSucceeds()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\n---\nbody";
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var identity, out var error);
+
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Null(identity.Adapter);
+    }
+
+    /// <summary>A blank <c>adapter:</c> value yields <see langword="null"/>, not an empty string.</summary>
+    [Fact]
+    public void TryReadIdentity_AdapterBlank_YieldsNullNotEmptyString()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\nadapter: '   '\n---\nbody";
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var identity, out var error);
+
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Null(identity.Adapter);
+    }
+
+    /// <summary>The <c>adapter</c> key matches case-insensitively, same as the other structural keys.</summary>
+    [Fact]
+    public void TryReadIdentity_CapitalizedAdapterKey_ReadsIdenticallyToLowercaseKey()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\nAdapter: agency\n---\nbody";
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var identity, out var error);
+
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal("agency", identity.Adapter);
+    }
+
     /// <summary><see cref="PersonaFrontmatter.Compose"/> writes lowercase, single-quoted keys, and the result loads straight back through <see cref="PersonaFrontmatter.TryReadIdentity"/>.</summary>
     [Fact]
     public void Compose_ProducesLowercaseSingleQuotedFrontmatter_ThatRoundTripsThroughTryReadIdentity()
@@ -586,6 +659,38 @@ public sealed class PersonaFrontmatterTests
         var text = PersonaFrontmatter.Compose(identity, "body");
 
         Assert.DoesNotContain("teams:", text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A non-null <see cref="PersonaIdentity.Adapter"/> is emitted as an <c>adapter:</c> line
+    /// after the four identity keys, and round-trips back through <see cref="PersonaFrontmatter.TryReadIdentity"/> —
+    /// closing the Create-time data-loss defect at Spec §12 E-5.
+    /// </summary>
+    [Fact]
+    public void Compose_WithAdapter_EmitsAdapterLineThatRoundTripsThroughTryReadIdentity()
+    {
+        var identity = new PersonaIdentity("coo", "Chief of Staff", "coo", [], "agency");
+
+        var text = PersonaFrontmatter.Compose(identity, "body");
+
+        Assert.Contains("adapter: 'agency'", text, StringComparison.Ordinal);
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var roundTripped, out var error);
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(roundTripped);
+        Assert.Equal("agency", roundTripped.Adapter);
+    }
+
+    /// <summary>A <see langword="null"/> <see cref="PersonaIdentity.Adapter"/> emits no <c>adapter:</c> line at all.</summary>
+    [Fact]
+    public void Compose_WithNullAdapter_EmitsNoAdapterLine()
+    {
+        var identity = new PersonaIdentity("coo", "Chief of Staff", "coo", []);
+
+        var text = PersonaFrontmatter.Compose(identity, "body");
+
+        Assert.DoesNotContain("adapter:", text, StringComparison.Ordinal);
     }
 
     /// <summary>Rewriting one field leaves every other field's value, order and single-quoted formatting untouched.</summary>

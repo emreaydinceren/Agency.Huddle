@@ -30,9 +30,16 @@ subtree, and root files are shared — announce changes before making them.
 
 | | ACP effort | Chat surface |
 | --- | --- | --- |
-| Source | `src/Huddle.Acp`, `src/Huddle.Console` | `src/Huddle.App`, `src/Huddle.Contracts` |
+| Source | `src/Huddle.Acp`, `src/Huddle.Console` | `src/Huddle.App`, `src/Huddle.Contracts`, `src/Huddle.MockAdapter` |
 | Tests | `tests/Huddle.Acp.Tests` | `tests/Huddle.Tests` |
-| Docs | `docs/acp/**`, `README.md` | `docs/AgencyTeam.md`, `docs/agencyteam/**`, `docs/adr/**` |
+| Docs | `docs/acp/**`, `README.md` | `docs/AgencyTeam.md`, `docs/agencyteam/**`, `docs/adr/**`, `docs/Huddle.Adapters-*.md` |
+
+`src/Huddle.MockAdapter` (assembly `mock-acp`) is the one place the two subtrees touch by
+design: it **links** `FakeAcpAgent.cs`, `PromptContext.cs` and `FakeRpcError.cs` out of
+`tests/Huddle.Acp.Tests/Fakes/` with `<Compile Include=… Link=…>` rather than copying them, so
+there stays one implementation of what an ACP agent does and it is the ACP effort's. **Editing
+any of those three files changes two assemblies** — verify `Huddle.Acp.Tests` *and*
+`tests/Huddle.Tests/MockAdapter/` before concluding.
 
 ## C# code
 

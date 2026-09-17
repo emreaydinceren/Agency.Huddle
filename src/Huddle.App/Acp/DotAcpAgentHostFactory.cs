@@ -23,26 +23,55 @@ namespace Agency.Huddle.App.Acp;
 internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 {
     /// <summary>
-    /// The MCP tool-server name handed to <see cref="AppToolServer"/>. Every tool name in the system
-    /// prompt must carry this same value as its <c>mcp__{name}__</c> prefix, so it is held here once
-    /// and never retyped into a hook's template — see <see cref="SystemPromptComposer"/>'s remarks on
-    /// why that prefix is applied in code.
+    /// The MCP tool-server name handed to <see cref="AppToolServer"/>. It is the server name, and it
+    /// never changes — not even between Adapter profiles. What varies per profile is only whether the
+    /// *model-facing* tool names in the system prompt carry it as a <c>mcp__{name}__</c> prefix; see
+    /// <see cref="AdapterProfile.UsesToolNamePrefix"/> and <see cref="SystemPromptComposer"/>'s remarks
+    /// on why that prefix is applied in code, never in a hook's template.
     /// </summary>
     private const string ToolServerName = "team";
 
     private readonly TeamOptions options;
     private readonly IServiceProvider serviceProvider;
     private readonly ILoggerFactory loggerFactory;
+    private readonly ILogger<DotAcpAgentHostFactory> logger;
+    private readonly AdapterProfileResolver resolver;
+    private readonly IAgentProcessLauncher launcher;
 
-    public DotAcpAgentHostFactory(IOptions<TeamOptions> options, IServiceProvider serviceProvider, ILoggerFactory loggerFactory)
+    /// <summary>Initializes a new instance of the <see cref="DotAcpAgentHostFactory"/> class.</summary>
+    /// <param name="options">The bound <see cref="TeamOptions"/>.</param>
+    /// <param name="serviceProvider">The application's own container, used to build each Persona's chat tools.</param>
+    /// <param name="loggerFactory">Creates every logger this factory and the host it builds need.</param>
+    /// <param name="resolver">Turns a Persona's Adapter id into the profile to launch.</param>
+    /// <param name="launcher">
+    /// Launches the agent process. Constructor-injected rather than newed up inline (CSharpPrinciples.md:
+    /// "Constructor injection, always... no <c>new SomeService()</c> inside domain code") — the same
+    /// change that lets <c>tests/Huddle.Tests/Conformance/MockAdapterFixture.cs</c> (D10, Task 10.1)
+    /// substitute an in-process in-memory stream pair for a real child process, driving the rest of
+    /// this factory's real host, session, tool server and prompt composition against a scripted ACP
+    /// peer with no process spawned. <see cref="IAgentProcessLauncher"/> itself is not a new seam - it
+    /// already existed for <see cref="DotAcpAgentHost"/> to accept - this only stops that seam being
+    /// bypassed by a hardcoded <see cref="AgentProcessLauncher"/> here.
+    /// </param>
+    public DotAcpAgentHostFactory(
+        IOptions<TeamOptions> options,
+        IServiceProvider serviceProvider,
+        ILoggerFactory loggerFactory,
+        AdapterProfileResolver resolver,
+        IAgentProcessLauncher launcher)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(serviceProvider);
         ArgumentNullException.ThrowIfNull(loggerFactory);
+        ArgumentNullException.ThrowIfNull(resolver);
+        ArgumentNullException.ThrowIfNull(launcher);
 
         this.options = options.Value;
         this.serviceProvider = serviceProvider;
         this.loggerFactory = loggerFactory;
+        this.logger = loggerFactory.CreateLogger<DotAcpAgentHostFactory>();
+        this.resolver = resolver;
+        this.launcher = launcher;
     }
 
     public async Task<(IAgentHost Host, IAgentSession Session)> CreateAsync(Persona persona, string agentId, CancellationToken cancellationToken)
@@ -50,13 +79,20 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
 
+        var (profile, warning) = this.resolver.Resolve(persona.Adapter);
+        if (warning is not null)
+        {
+            this.logger.LogWarning(
+                "Persona '{PersonaName}' Adapter resolution warning: {Warning}", persona.Name, warning);
+        }
+
         var workDir = Path.Combine(this.options.DataDir, this.options.Acp.WorkDir, persona.Name);
         Directory.CreateDirectory(workDir);
 
-        var processOptions = AgentProcessOptionsFactory.TryCreate(this.options.Acp, workDir, AppContext.BaseDirectory)
+        var processOptions = AgentProcessOptionsFactory.TryCreate(profile, workDir, AppContext.BaseDirectory)
             ?? throw new InvalidOperationException(
-                $"No ACP adapter is installed for Persona '{persona.Name}'. Run tools/acp/install.ps1 "
-                + "(or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.");
+                $"No ACP adapter is installed for Persona '{persona.Name}' on Adapter '{profile.Id}'. Run "
+                + "tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.");
 
         // Minted fresh per session and never logged: wire traces already leak it
         // (agent-guide.md §7.5), so this is the only place its value is held outside the tool server.
@@ -79,8 +115,10 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
 
         // The mcp__{server}__ prefix is derived from the same server name above, never typed into a
         // hook's template - see the ToolServerName remarks and SystemPromptComposer's. GetHelpTool
-        // takes it explicitly rather than hard-coding its own copy, for the same reason.
-        var toolNamePrefix = $"mcp__{ToolServerName}__";
+        // takes it explicitly rather than hard-coding its own copy, for the same reason. Whether it
+        // is applied at all now follows the resolved profile (Spec §6.4): the server name itself
+        // never changes, only whether model-facing names carry it.
+        var toolNamePrefix = profile.UsesToolNamePrefix ? $"mcp__{ToolServerName}__" : string.Empty;
 
         // get_help is offered first and knows every other tool, so the system prompt can name one
         // tool instead of all of them. It is built last for the obvious reason: it takes the rest.
@@ -97,9 +135,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         DotAcpAgentHost innerHost;
         try
         {
-            var launcher = new AgentProcessLauncher(this.loggerFactory.CreateLogger<AgentProcessLauncher>());
             var hostOptions = new DotAcpHostOptions(ClientName: "Team.App", TraceWire: this.options.Acp.TraceWire);
-            innerHost = new DotAcpAgentHost(processOptions, launcher, hostOptions, this.loggerFactory);
+            innerHost = new DotAcpAgentHost(processOptions, this.launcher, hostOptions, this.loggerFactory);
             await innerHost.StartAsync(cancellationToken).ConfigureAwait(false);
         }
         catch

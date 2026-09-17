@@ -69,9 +69,24 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: group, squad, workspace, tenant.
 
 **Adapter**
-: The `claude-agent-acp` Node package under `node_modules` that actually speaks
-  ACP. Not part of this solution; located by `AdapterLocator`.
-: *Avoid*: agent, bridge, client.
+: An ACP agent one Persona's session runs on — a process this solution launches
+  and talks to over stdio. Three exist today: `claude-agent-acp` (a Node package
+  under `node_modules`, located by `AdapterLocator`, running cloud Claude),
+  `agency-acp` (a .NET executable running a local model), and `mock-acp` (test
+  infrastructure this solution builds, §6.10). Which one a Persona uses is part
+  of the Persona, written in its `adapter:` frontmatter field. No Adapter that
+  runs a real model is part of this solution.
+: *Avoid*: agent, bridge, client, provider, backend, host.
+
+**Adapter Profile**
+: One configured Adapter — its stable `Id`, the command that launches it, and
+  whether its App Tools are advertised to the model with the `mcp__team__`
+  prefix. Configured under `Team:Acp:Adapters`; an installation that configures
+  none gets exactly one, synthesised from the legacy `Command` / `AdapterPath` /
+  `Args` keys, so a stock install behaves exactly as it did before Adapters were
+  selectable. A Persona names a profile by `Id`; an unknown `Id` degrades to the
+  first profile rather than failing.
+: *Avoid*: backend, host, provider, target.
 
 ## Conversations
 
@@ -126,14 +141,20 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 : The LLM one Persona's session runs on, chosen from the catalog the Adapter
   advertises at `session/new`. Unset means the Adapter's own default, which is
   the normal case. Fixed for the life of a session, exactly like a system prompt.
+: Unchanged by a second Adapter, contrary to roadmap item 12's prediction that
+  this definition "cannot survive a second backend". It survived because
+  `agency-acp` **is** a process and **does** advertise its catalog at
+  `session/new` — the premise that failed was "a NuGet reference", not this
+  definition.
 : *Avoid*: LLM, engine, backend, variant, and "Claude" — the product name is not
   the setting.
 
 **Effort**
 : How hard one Persona's session thinks, chosen from the ladder the Adapter
-  advertises *for that Model*. Unset means the Model's own default, which is
-  the normal case. Model-dependent — some Models offer none. Fixed for the life
-  of a session, exactly like a Model and a system prompt.
+  advertises. Whether that ladder varies by Model is the Adapter's business:
+  `claude-agent-acp` advertises one per Model; `agency-acp` advertises one per
+  endpoint surface. Unset means the default, which is the normal case. Fixed for
+  the life of a session, exactly like a Model and a system prompt.
 : *Avoid*: thinking level, reasoning level, thought level. Not **Budget**
   either — that is a defined term meaning something else entirely, and Effort is
   not one: it buys no allowance and is not spent.

@@ -211,8 +211,10 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
         }
 
         // This one line is the entire file-to-database join, and it happens in exactly one place:
-        // both PersonaSupervisor and the razor page already go through Get.
-        return new Persona(entry.Name, entry.Text, this.models.Get(entry.Name), this.efforts.Get(entry.Name));
+        // both PersonaSupervisor and the razor page already go through Get. Adapter is not part of
+        // that join - unlike Model and Effort, it travels with the file itself (Spec §7.1), so it
+        // is carried straight off the entry rather than looked up in a store.
+        return new Persona(entry.Name, entry.Text, this.models.Get(entry.Name), this.efforts.Get(entry.Name), entry.Adapter);
     }
 
     /// <summary>
@@ -277,7 +279,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
 
         this.RefreshIndexAndNotify();
 
-        return new Persona(entry.Name, text, model, effort);
+        return new Persona(entry.Name, text, model, effort, entry.Adapter);
     }
 
     /// <summary>
@@ -325,7 +327,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
 
         this.RefreshIndexAndNotify();
 
-        return new Persona(entry.Name, text, model, effort);
+        return new Persona(entry.Name, text, model, effort, entry.Adapter);
     }
 
     /// <summary>

@@ -62,6 +62,21 @@ public sealed class PromptGoldenTests
         "mcp__team__unfollow_room",
     ];
 
+    /// <summary>
+    /// The same seven tool names as <see cref="ToolNames"/>, bare, for an Adapter profile whose
+    /// <see cref="AdapterProfile.UsesToolNamePrefix"/> is <see langword="false"/> (Spec §6.4).
+    /// </summary>
+    private static readonly IReadOnlyList<string> UnprefixedToolNames =
+    [
+        "get_help",
+        "list_agents",
+        "create_room",
+        "invite_agent",
+        "post_message",
+        "follow_room",
+        "unfollow_room",
+    ];
+
     /// <summary>Pins <see cref="SystemPromptComposer.Compose"/>'s output for a plain Persona.</summary>
     [Fact]
     public void SystemPrompt_MatchesGolden()
@@ -71,6 +86,23 @@ public sealed class PromptGoldenTests
         var actual = SystemPromptComposer.Compose(persona, new FakeHookSource(), "mcp__team__get_help", ToolNames);
 
         AssertMatchesGolden("systemPrompt.txt", actual);
+    }
+
+    /// <summary>
+    /// Pins <see cref="SystemPromptComposer.Compose"/>'s output for an Adapter profile whose
+    /// <see cref="AdapterProfile.UsesToolNamePrefix"/> is <see langword="false"/>: every tool name,
+    /// including the help tool, is bare. Spec §4 (P6) requires <see cref="SystemPrompt_MatchesGolden"/>'s
+    /// golden to stay byte-identical alongside this one.
+    /// </summary>
+    [Fact]
+    public void SystemPrompt_Unprefixed_MatchesGolden()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+
+        var actual = SystemPromptComposer.Compose(persona, new FakeHookSource(), "get_help", UnprefixedToolNames);
+
+        AssertMatchesGolden("systemPrompt.unprefixed.txt", actual);
+        Assert.DoesNotContain("mcp__", actual, StringComparison.Ordinal);
     }
 
     /// <summary>

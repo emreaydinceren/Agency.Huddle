@@ -25,8 +25,15 @@ namespace Agency.Huddle.App.Acp;
 /// into its first occurrence. Empty, never <see langword="null"/>, when the frontmatter has no
 /// <c>Teams</c> field.
 /// </param>
+/// <param name="Adapter">
+/// Which ACP agent runs this Persona's session (Spec §7.2), or <see langword="null"/> to run on
+/// the installation's default profile. Optional — a file without an <c>adapter:</c> field, or one
+/// whose value is blank, is still a valid Persona. The trailing default keeps every existing
+/// positional construction of this record compiling.
+/// </param>
 public sealed record PersonaIdentity(
     string Name,
     string Title,
     string Alias,
-    IReadOnlyList<string> Teams);
+    IReadOnlyList<string> Teams,
+    string? Adapter = null);

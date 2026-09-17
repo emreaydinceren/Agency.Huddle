@@ -16,10 +16,12 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="Teams">See <see cref="PersonaIdentity.Teams"/>.</param>
 /// <param name="Path">The absolute path this Persona was actually discovered at.</param>
 /// <param name="Text">The Persona's full raw file text (frontmatter and body), cached at discovery time.</param>
+/// <param name="Adapter">See <see cref="PersonaIdentity.Adapter"/>. Carried through unchanged from the parsed identity so <see cref="PersonaStore.Get(string)"/> can join it onto <see cref="Persona.Adapter"/> without re-parsing the file.</param>
 public sealed record PersonaEntry(
     string Name,
     string Title,
     string Alias,
     IReadOnlyList<string> Teams,
     string Path,
-    string Text);
+    string Text,
+    string? Adapter = null);

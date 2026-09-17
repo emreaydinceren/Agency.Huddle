@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Agency.Huddle.MockAdapter</RootNamespace>
+    <AssemblyName>mock-acp</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Huddle.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Links the ACP effort's scripted fake agent rather than moving it, per Spec §6.10
+         ("Placement, and why the source is linked rather than moved"): no file leaves
+         tests/Huddle.Acp.Tests, no internal is widened, and Huddle.Acp.Tests's own reference
+         to these files (its own <Compile> items, unaffected by this Include) stays the single
+         source of truth this project mirrors. -->
+    <Compile Include="..\..\tests\Huddle.Acp.Tests\Fakes\FakeAcpAgent.cs" Link="Fakes\FakeAcpAgent.cs" />
+    <Compile Include="..\..\tests\Huddle.Acp.Tests\Fakes\PromptContext.cs" Link="Fakes\PromptContext.cs" />
+    <Compile Include="..\..\tests\Huddle.Acp.Tests\Fakes\FakeRpcError.cs" Link="Fakes\FakeRpcError.cs" />
+  </ItemGroup>
+</Project>

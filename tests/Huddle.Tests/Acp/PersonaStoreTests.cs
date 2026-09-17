@@ -181,6 +181,59 @@ public sealed class PersonaStoreTests
         Assert.Equal("high", persona.Effort);
     }
 
+    /// <summary>A file whose frontmatter carries an <c>adapter:</c> value round-trips it through <see cref="PersonaStore.Get(string)"/> onto <see cref="Persona.Adapter"/> - the file-to-database join <see cref="PersonaStore.Get(string)"/> performs (Spec §7.3).</summary>
+    [Fact]
+    public void Get_ReturnsTheAdapterFromFrontmatter()
+    {
+        using var dir = new TempDataDir();
+        var options = dir.Options();
+        var teamsDir = Path.Combine(dir.Path, "Teams");
+        Directory.CreateDirectory(teamsDir);
+        File.WriteAllText(Path.Combine(teamsDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff.", "agency"));
+        using var store = new PersonaStore(options, new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
+
+        var persona = store.Get("coo");
+
+        Assert.NotNull(persona);
+        Assert.Equal("agency", persona.Adapter);
+    }
+
+    /// <summary>A file with no <c>adapter:</c> field is still a valid Persona (Spec §7.2), and its Adapter is <see langword="null"/> - the installation's default profile.</summary>
+    [Fact]
+    public void Get_WithNoAdapterInFrontmatter_ReturnsNullAdapter()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("coo"), "You are the Chief of Staff.");
+
+        var persona = store.Get("coo");
+
+        Assert.NotNull(persona);
+        Assert.Null(persona.Adapter);
+    }
+
+    /// <summary>
+    /// <see cref="PersonaStore.Update"/> writes raw text through unchanged - Spec §7.2's "WriteScalarField path" note - so a
+    /// hand-written <c>adapter:</c> line survives an Update that does not touch it, the same guarantee the rest of the
+    /// frontmatter already gets.
+    /// </summary>
+    [Fact]
+    public void Update_WithUnchangedText_PreservesAHandWrittenAdapterLine()
+    {
+        using var dir = new TempDataDir();
+        var options = dir.Options();
+        var teamsDir = Path.Combine(dir.Path, "Teams");
+        Directory.CreateDirectory(teamsDir);
+        var text = PersonaText("coo", "first", "agency");
+        File.WriteAllText(Path.Combine(teamsDir, "coo.md"), text);
+        using var store = new PersonaStore(options, new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
+
+        var updated = store.Update("coo", text, model: null, effort: null);
+
+        Assert.Equal("agency", updated.Adapter);
+        Assert.Equal("agency", store.Get("coo")!.Adapter);
+    }
+
     [Fact]
     public void ListNames_ReturnsNamesWithoutExtension()
     {
@@ -1134,4 +1187,7 @@ public sealed class PersonaStoreTests
 
     /// <summary>Minimal valid Persona frontmatter (Name, Title and Alias all <paramref name="name"/>) wrapped around <paramref name="body"/>, in the raw-text shape <see cref="PersonaStore.Update"/> and a hand-authored file both use.</summary>
     private static string PersonaText(string name, string body) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}";
+
+    /// <summary>Overload of <see cref="PersonaText(string, string)"/> that also hand-writes an <c>Adapter:</c> line, for tests pinning Spec §7.2/§7.3's Adapter round trip.</summary>
+    private static string PersonaText(string name, string body, string adapter) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\nAdapter: {adapter}\n---\n{body}";
 }
