@@ -31,6 +31,12 @@
     }
 </MudSelect>
 
+<p class="settings-theme-credit">
+    Every theme except Huddle is one of the colour themes bundled with Visual Studio Code, mapped
+    onto this application's palette. Visual Studio Code and its default themes are Microsoft's,
+    under the MIT licence; Solarized is Ethan Schoonover's and Monokai is Wimer Hazenberg's.
+</p>
+
 <MudSelect T="DarkModePreference" Label="Appearance" Value="@this.AppearanceStore.Current.Dark" ValueChanged="this.OnDarkChangedAsync">
     <MudSelectItem T="DarkModePreference" Value="DarkModePreference.System">System</MudSelectItem>
     <MudSelectItem T="DarkModePreference" Value="DarkModePreference.Light">Light</MudSelectItem>

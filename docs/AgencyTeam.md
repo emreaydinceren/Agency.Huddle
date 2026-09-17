@@ -43,7 +43,7 @@ question is yours; the cost column is roughly what it will spend.
 | [Test planning](agencyteam/manual-tests/planning.md) | To choose which manual tests to run, or to see what they cost | ~6.4k |
 | [Test tracker](agencyteam/manual-tests/tracker.md) | To see where a manual test stands, or to record a result | ~19k |
 | [Known limits](agencyteam/known-limits.md) | Before "fixing" something that looks missing | ~1.9k |
-| [Roadmap](agencyteam/roadmap.md) | Before work in `PersonaRunner`, `ReplyGate`, `IAgentHostFactory`, Persona frontmatter, `app.css` or `theme.css` | ~10.7k |
+| [Roadmap](agencyteam/roadmap.md) | Before work in `PersonaRunner`, `ReplyGate`, `IAgentHostFactory`, Persona frontmatter, `app.css` or `Themes/` | ~10.7k |
 | [Adapters design](Huddle.Adapters-Specifications.md) | Before work on which ACP agent a Persona runs on — Adapter Profiles, the tool-name prefix, the Model/Effort catalogue probe, or `Huddle.MockAdapter` | ~45k |
 | [Decision record](agencyteam/decisions.md) | To revisit a decision, or to read an older doc | ~6.3k |
 | [Domain context](agencyteam/CONTEXT.md) | To see the vocabulary used in dialogue, not defined | ~0.6k |
@@ -224,7 +224,11 @@ must never do.
 
 A Theme is a MudBlazor `MudTheme` in `ThemeCatalog`, carrying a light **and** a dark
 palette, chosen on the Appearance tab of `/settings` alongside a separate
-`system`/`light`/`dark` preference. See [Language](agencyteam/language.md) for
+`system`/`light`/`dark` preference. Eighteen ship: `huddle`, plus seventeen of the colour
+Themes bundled with Visual Studio Code, converted once by hand into C# under
+`Themes/VsCode/` — one file per Theme, **no importer**
+([ADR-0016](adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)).
+See [Language](agencyteam/language.md) for
 **Theme**, **Palette property** and **Appearance** — note that *Token*, the word for
 the retired 39-value CSS system, is no longer a defined term.
 [ADR-0010](adr/0010-a-theme-is-a-mudblazor-theme.md) is the current decision and

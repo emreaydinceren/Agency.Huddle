@@ -282,4 +282,22 @@ public sealed class SettingsPageTests
 
         Assert.Contains(factory.AppearanceJsonPath, html, StringComparison.Ordinal);
     }
+
+    /// <summary>
+    /// The Appearance tab credits Visual Studio Code and the ported themes' original authors under
+    /// the Theme select - an ordinary prerendered paragraph, so this stays on HTTP rather than bUnit.
+    /// </summary>
+    [Fact]
+    public async Task SettingsAppearancePage_CreditsVisualStudioCode()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/settings/appearance", ct);
+
+        Assert.Contains("bundled with Visual Studio Code", html, StringComparison.Ordinal);
+    }
 }
