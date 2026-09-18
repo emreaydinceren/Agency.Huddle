@@ -5,7 +5,8 @@ atomic, self-contained tasks. Every task is written for a sub-agent with **zero 
 context**: it names exact paths, types, signatures and acceptance criteria, and cites the spec
 section that defines it.
 
-**13 deliverables · 46 tasks.** Every implementation task (`.i`) is preceded by its test task
+**13 deliverables · 47 tasks.** *(46 as first written; Task 12.1 split into 12.1a and 12.1b on
+2026-09-18 — see D12.)* Every implementation task (`.i`) is preceded by its test task
 (`.t`). Tests are written first and must fail **for the right reason** before implementation
 begins.
 
@@ -925,14 +926,58 @@ real ACP peer**. Requires D0; each individual task also requires the deliverable
 
 **Spec §15.9.** The only Agency-dependent work.
 
-### Task 12.1 — Re-point at `agency-acp` and re-run D10 unchanged
+> **Status, 2026-09-18.** Task 12.1 as originally written was **not achievable**, and was closed by
+> its own second branch — the written report at
+> [`docs/Huddle.Adapters-LiveFindings.md`](Huddle.Adapters-LiveFindings.md). It is replaced below by
+> 12.1a and 12.1b. Task 12.2's steps are written but **have never been executed**, so its acceptance
+> is unmet. See [the handoff](Huddle.Adapters-Handoff.md) for what to pick up first.
 
-- **Goal:** **Spec §15.9 (T-31)**.
-- **Read first:** `E:\Repos\Agency\docs\specs\Agency.Acp-Specifications.md`, **Spec §15.9**.
-- **Deliverable:** Add an Adapter Profile whose `Command` is the built `agency-acp` and re-run
-  every D10 test against it. **Change no test.** Any failure is a genuine divergence between the
-  mock and the contract — record it, do not paper over it (**Spec §12, E-18**).
-- **Acceptance:** D10 green against `agency-acp`, or a written report naming each divergence.
+### ~~Task 12.1 — Re-point at `agency-acp` and re-run D10 unchanged~~ — superseded
+
+Kept for the record. It said *"Change no test"* and assumed re-pointing was a configuration change.
+It is not: every D10 test but `ProcessModeTests` is wired to `MockAdapterFixture`'s in-proc
+launcher, and — the part nobody saw until Phase 7 — five of the six conformance files assert
+through `FakeAcpAgent.Received`, which no real Adapter can provide. See **Spec §15.9's amendment**
+and the D-12 amendment in **Spec §17**.
+
+### Task 12.1a — Make the portable half of D10 actually portable
+
+- **Goal:** **Spec §15.9 (T-31a)**. Close **D-4** in
+  [Live findings](Huddle.Adapters-LiveFindings.md).
+- **Read first:** `tests/Huddle.Tests/Conformance/MockAdapterFixture.cs` (202 lines; the launcher
+  substitution is lines 150-152 and the `Agent` oracle is returned at 178), every file in
+  `tests/Huddle.Tests/Conformance/`, **Spec §15.8** (the `portable` / `mock-only` / `split`
+  column), `docs/agencyteam/testing.md`.
+- **Deliverable:** Two changes, in this order.
+  1. **Classify every existing conformance assertion** against Spec §15.8's column. Where a test is
+     marked **split** (T-26, T-28), separate it into two test methods — a portable one and a
+     mock-only one — rather than leaving one method that is half portable. Name the mock-only ones
+     so the constraint is visible at the call site, e.g. a `MockOnly_` prefix or an xUnit trait;
+     pick one and apply it to all of them.
+  2. **Parameterise `MockAdapterFixture` over its launcher.** Add a factory path that does **not**
+     `RemoveAll<IAgentProcessLauncher>()` and instead configures an Adapter Profile whose `Command`
+     is a supplied executable. The existing in-proc path must stay the default and must stay
+     byte-identical in behaviour — every currently-green conformance test passes unmodified.
+  - **Do not** try to give a real Adapter a `Received` equivalent. There is no wire call for it and
+    inventing one would make the mock a second implementation of Huddle behaviour (**Spec §4, P8**).
+- **Acceptance:** `dotnet test Huddle.slnx --` fully green with no behaviour change on the in-proc
+  path. Every conformance test is unambiguously portable or mock-only, and that is readable from
+  the test itself rather than from this document.
+
+### Task 12.1b — Run the portable half against `agency-acp`
+
+- **Goal:** **Spec §15.9 (T-31b)**.
+- **Read first:** Task 12.1a's output, [Live findings](Huddle.Adapters-LiveFindings.md),
+  **Spec §12 (E-18)**.
+- **Prerequisite:** Agency has **published**. As of 2026-09-18 the validated build is a pre-merge
+  drop; see the handoff for why the published artifact must be re-validated rather than assumed
+  identical.
+- **Deliverable:** Configure an Adapter Profile whose `Command` is the published `agency-acp` and
+  whose `EnvironmentOverrides` carry whatever its configuration needs, then run the **portable**
+  conformance tests against it. The mock-only tests stay on the mock — that is correct, not a gap.
+  Any failure is a genuine mock-vs-contract divergence: record it in Live findings, do not paper
+  over it.
+- **Acceptance:** The portable set green against `agency-acp`, or each divergence named in writing.
 
 ### Task 12.2 — Manual checklist
 
@@ -942,6 +987,16 @@ real ACP peer**. Requires D0; each individual task also requires the deliverable
   chunked text in the browser; Stop leaves both resumable; and — separately, because no test can
   settle it — whether a real local model actually calls `get_help` unprompted.
 - **Acceptance:** Steps added, executed, and their outcomes recorded in the file.
+- **Status, 2026-09-18 — half done.** The steps exist as
+  `docs/agencyteam/manual-tests/adapters.md` (area 15, four tests: ADAPTERS-01 to -04). **None has
+  been executed** — all four Tracker rows are `Active` with empty result columns, so the acceptance
+  above is **not met**.
+  - **ADAPTERS-01 and -02 are free and runnable today** — `mock-acp` plus `node`, no GPU, no money.
+    These two *are* the milestone's Huddle half. Run them first.
+  - **ADAPTERS-03** is paid (💰) and needs a Claude subscription.
+  - **ADAPTERS-04** was blocked by D-1 and is unblocked the moment Agency publishes. Its blocking
+    note in the area file and its Tracker note must both be cleared when that happens — the note
+    names a version, so it will read as stale rather than wrong if it is missed.
 
 ---
 
@@ -961,7 +1016,7 @@ real ACP peer**. Requires D0; each individual task also requires the deliverable
 | D9 `Huddle.Acp` | — | **now** |
 | D10 Conformance | D0 + the deliverable each test exercises | after D5 |
 | D11 Docs | D5 | after D5 |
-| D12 Live | all, plus `agency-acp` | last |
+| D12 Live | 12.1a: all (no Agency). 12.1b: + a **published** `agency-acp`. 12.2: ADAPTERS-01/02 need nothing | 12.1a and ADAPTERS-01/02 **now**; the rest on publication |
 
 **Critical path:** D1 → D2 → D5 → D10 → D12. **D5 is the long pole** — it changes the prompt every
 Persona receives, and its acceptance includes *the existing golden must not change*.

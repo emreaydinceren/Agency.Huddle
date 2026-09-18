@@ -1360,26 +1360,62 @@ builds is always present, which is why Tier 3 can be unconditional where E2E nev
 Each of these drives a **real Persona through a real ACP peer**. They are the only tests that
 prove the subsystems work together, and none of them needs Agency.NET.
 
-| # | Test task | Asserts, via the mock's `Received` |
-| --- | --- | --- |
-| T-21 | A Persona on a mock profile starts, takes a Turn, and posts a reply into a Room | a `Message` lands in the Transcript |
-| T-22 | **The composed prompt actually arrives.** The `session/new` the mock received carries the Persona text in `_meta` | proves §6.4 end to end, not just the golden |
-| T-23 | **The prefix plumbing is real.** Under an unprefixed profile the received prompt names `get_help`; under a prefixed one, `mcp__team__get_help` (O-5) | the strongest test in the suite — it is the defect that makes a Persona look broken rather than misconfigured |
-| T-24 | The received `session/new` carries `mcpServers[0]` with the loopback URL **and** an `Authorization: Bearer` header | proves the token path against a non-Claude peer |
-| T-25 | Chunks stream: several `MessageDelta` envelopes reach the pipe before `TurnCompleted` | proves O-1's Huddle half |
-| T-26 | `session/cancel` reaches the mock on Stop, and the Turn ends **stopped, not failed** | `rules.md`: a stopped Turn is not a fault |
-| T-27 | Disposal sends `session/close`, observed by the mock (§6.8) | Tier 3 version of T-19 |
-| T-28 | Changing the Adapter restarts, and the **new** peer receives the new prompt | proves O-2 through the whole stack |
-| T-29 | The Model catalog the card shows is the one the mock advertised at `session/new` (O-3) | proves §6.5's dispatch |
-| T-30 | Launched **as a process** under a profile, a Persona completes one Turn | the only test that exercises `AgentProcessLauncher`; one spawn, kept to a single test |
+**Two kinds of assertion live here, and only one of them travels.** Corrected 2026-09-18, after
+Phase 7 made the difference concrete — see the amendment under D-12 in §17.
+
+- **Portable** — asserts on **observable Huddle behaviour**: a Message in the Transcript, deltas on
+  the pipe, a health state, a rendered catalog. Any conformant peer satisfies these, so they run
+  against the mock *and* against a real Adapter.
+- **Mock-only** — asserts on **what the peer received**, through `FakeAcpAgent.Received`. A real
+  Adapter has no equivalent and never will: nothing in ACP lets a client ask an agent what it was
+  sent. These are not lesser tests — T-23 is still the strongest in the suite — they simply pin the
+  Huddle → Adapter direction, which is a different job from proving the round trip.
+
+| # | Test task | Kind | Asserts |
+| --- | --- | --- | --- |
+| T-21 | A Persona on a mock profile starts, takes a Turn, and posts a reply into a Room | **portable** | a `Message` lands in the Transcript |
+| T-22 | **The composed prompt actually arrives.** The `session/new` the mock received carries the Persona text in `_meta` | mock-only | proves §6.4 end to end, not just the golden |
+| T-23 | **The prefix plumbing is real.** Under an unprefixed profile the received prompt names `get_help`; under a prefixed one, `mcp__team__get_help` (O-5) | mock-only | the strongest test in the suite — it is the defect that makes a Persona look broken rather than misconfigured |
+| T-24 | The received `session/new` carries `mcpServers[0]` with the loopback URL **and** an `Authorization: Bearer` header | mock-only | proves the token path against a non-Claude peer |
+| T-25 | Chunks stream: several `MessageDelta` envelopes reach the pipe before `TurnCompleted` | **portable** | proves O-1's Huddle half |
+| T-26 | `session/cancel` reaches the mock on Stop, and the Turn ends **stopped, not failed** | **split** | the *reached the peer* half is mock-only; the *stopped, not failed* half is portable and is the one `rules.md` cares about |
+| T-27 | Disposal sends `session/close`, observed by the mock (§6.8) | mock-only | Tier 3 version of T-19 |
+| T-28 | Changing the Adapter restarts, and the **new** peer receives the new prompt | **split** | the restart is portable; *"receives the new prompt"* is mock-only |
+| T-29 | The Model catalog the card shows is the one the mock advertised at `session/new` (O-3) | **portable** | proves §6.5's dispatch |
+| T-30 | Launched **as a process** under a profile, a Persona completes one Turn | **portable** | the only test that exercises `AgentProcessLauncher`; one spawn, kept to a single test |
+
+Five portable (counting the portable halves of T-26 and T-28), five mock-only. **Write the
+portability into the test, not into a comment**: a portable assertion that quietly reaches for
+`Received` stops being portable and nothing will warn you.
 
 ### 15.9 Phase 7 — live · Tier 4 · **the only Agency-dependent work**
 
 | # | Task | Note |
 | --- | --- | --- |
-| T-31 | Re-point the mock profile at `agency-acp` and re-run **all of Phase 6 unchanged** | If Tier 3 is honest, this is a configuration change. Any failure here is a real difference between the mock and the contract, which is exactly what it should find. |
+| T-31 | ~~Re-point the mock profile at `agency-acp` and re-run **all of Phase 6 unchanged**~~ **Superseded — see T-31a and T-31b.** | ~~If Tier 3 is honest, this is a configuration change.~~ It was not honest, and this is where that surfaced. |
+| T-31a | Make the portable half of Phase 6 runnable against a real Adapter: parameterise `MockAdapterFixture` over its launcher **and** move the portable assertions off `FakeAcpAgent.Received`. | The real work. Not a configuration change — see the amendment below. |
+| T-31b | Re-point at `agency-acp` and run the **portable** half. The mock-only half stays on the mock, permanently and correctly. | Any failure here is a genuine mock-vs-contract divergence (E-18), which is still exactly what it is for. |
 | T-32 | **Manual checklist**: two Personas in one Room, one per Adapter, live chunks in the browser, Stop leaves both resumable | Needs a browser, a GPU and a human. Agency's own Task 12.1 proves the ACP half against a scripted client; **neither plan contains the whole milestone**. |
 | T-33 | **Manual**: does a real local model actually call `get_help`? | No test can settle it. Roadmap item 12 names it as an honest limit; a mock calls what it is scripted to call. |
+
+> **Amendment, 2026-09-18 — why T-31 split.** T-31 assumed re-pointing was a configuration change.
+> Two things make it not one, and the second was invisible when this was written.
+>
+> The shallow one: every Phase 6 test but T-30 is wired to `MockAdapterFixture`, which substitutes
+> `IAgentProcessLauncher` with an in-proc stream pair. No configuration turns that into a launched
+> process. That is fixable by parameterising the fixture, and is what
+> [Live findings](Huddle.Adapters-LiveFindings.md) D-4 records.
+>
+> The deep one: **five of the six conformance test files assert through `FakeAcpAgent.Received`.**
+> Parameterising the launcher would let them *run* against `agency-acp` and leave them with nothing
+> to assert against, because ACP gives a client no way to ask an agent what it was sent. §6.10 is
+> right that `Received` is what makes this tier worth its cost — and that is exactly the property
+> that cannot travel. The suite's best idea and its portability claim were in tension from the
+> start; nobody noticed because nothing exercised the second one until Phase 7.
+>
+> **The lesson, which is the reusable part:** "write once, run twice" is a claim about the
+> *assertions*, not about the fixture. Deciding which tier an assertion belongs to is a design
+> decision to make when writing it, not a property to discover later.
 
 ### 15.10 Sequencing
 
@@ -1467,7 +1503,36 @@ advertise its catalog at `session/new`. No change.
 | D-9 | **Send `session/close` anyway** | rely on process death | Correct, two lines, and required by any adapter outliving one session |
 | D-10 | **Build `Huddle.MockAdapter` first** | wait for `agency-acp`; test only against in-proc fakes | Agency's date leaves the critical path; and it adds a tier that never existed — Huddle driving a *real* ACP peer, unconditionally in CI |
 | D-11 | **Link `FakeAcpAgent`'s source; do not move it** | move it to a src project; write a second mock | No file leaves the ACP effort's subtree, no `internal` widens, and there stays one implementation of what an ACP agent does |
-| D-12 | **Conformance tests are written once, run twice** | separate mock tests and live tests | Phase 7 becomes a configuration change; any failure there is a genuine mock-vs-contract divergence, which is what it is for |
+| D-12 | ~~**Conformance tests are written once, run twice**~~ **Half wrong — amended 2026-09-18** | separate mock tests and live tests | The rejected option was closer to right than this decision was. See below. |
+
+### Amendment to D-12, 2026-09-18
+
+**D-12 was half wrong, and the half it got wrong is the half it was named after.**
+
+The decision claimed every conformance test would be written once and run twice — against
+`Huddle.MockAdapter` in CI, and against `agency-acp` by changing one Adapter Profile. Phase 7
+showed that **five of the six conformance test files assert through `FakeAcpAgent.Received`**,
+which no real Adapter can provide: ACP has no way for a client to ask an agent what it was sent.
+Those tests cannot be re-pointed at any price, and no amount of fixture parameterisation changes
+that — they would run and have nothing to assert.
+
+**What stands.** Splitting mock tests from live tests *would* have been worse. The rejected option
+assumed two suites testing two things; the truth is one suite testing two **directions**, and
+mixing them in one file with one fixture is still right. The mock-only tests are also the strongest
+ones — T-23 is the defect that makes a Persona look broken rather than misconfigured — so their
+non-portability is a property of what they prove, not a weakness.
+
+**What changes.** The claim narrows from *every test* to *the portable half*, and the split becomes
+an explicit property of each assertion rather than an emergent accident. §15.8 now marks every test
+`portable`, `mock-only` or `split`. T-31 becomes T-31a (make the portable half portable) and T-31b
+(run it).
+
+**Why it survived this long unchallenged.** Nothing exercised it. D-12 is a claim about Phase 7,
+Phase 7 was the last phase, and every phase before it passed against the mock exactly as designed.
+The claim was load-bearing for the plan's schedule and was never once tested — which is the same
+shape as the two defects this project found on the other side of the wire, where a test asserted
+the layer above the one that breaks. Three instances now, across two codebases. Worth its own ADR
+if it happens a fourth time.
 
 ### Candidate ADRs
 
