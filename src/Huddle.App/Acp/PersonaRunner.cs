@@ -28,6 +28,12 @@ internal sealed class PersonaRunner : IAsyncDisposable
     private static readonly TimeSpan ConnectRetryDelay = TimeSpan.FromMilliseconds(200);
     private const int MaxDescriptionLength = 200;
 
+    // Bounds how long the idle-timeout watchdog waits for IAgentSession.CancelAsync to reach the far
+    // side (TRAP 2) before giving up and cancelling the Turn's own token anyway. An adapter that will
+    // not even take a cancel is the same adapter that sent nothing in the first place, so this is
+    // short: there is nothing to gain from waiting longer on a session already proven unresponsive.
+    private static readonly TimeSpan AdapterCancelGrace = TimeSpan.FromSeconds(5);
+
     private readonly Persona persona;
     private readonly TeamOptions options;
     private readonly IAgentHostFactory factory;
@@ -317,6 +323,11 @@ internal sealed class PersonaRunner : IAsyncDisposable
                         turn = this.activeTurn;
                     }
 
+                    // Set BEFORE the cancellation below, so the consumer can tell this Stop apart
+                    // from the idle-timeout watchdog firing: both arrive there as the same
+                    // OperationCanceledException, and only one of them is a failure (TRAP 1).
+                    turn?.MarkStopRequested();
+
                     // Unblocks ProcessWorkItemAsync's await on this Turn immediately, without
                     // waiting on the agent process to acknowledge the cancel notification below.
                     turn?.Cancellation.Cancel();
@@ -415,6 +426,15 @@ internal sealed class PersonaRunner : IAsyncDisposable
             this.activeTurn = turn;
         }
 
+        // The idle bound this Turn is watched against, and the watchdog that enforces it. Armed here,
+        // right after the Turn is published, so it covers the whole Turn including the initial
+        // PromptAsync call below - a hang before the first event is exactly what motivates this.
+        TimeSpan idleBound = IdleTimeoutFrom(this.options.Acp.TurnIdleTimeoutSeconds);
+        CancellationTokenSource watchdogCancellation = new();
+        Task? watchdog = idleBound > TimeSpan.Zero
+            ? this.WatchForAdapterSilenceAsync(turn, item, idleBound, watchdogCancellation.Token, ct)
+            : null;
+
         try
         {
             var prompt = BuildPrompt(item, this.hooks);
@@ -451,6 +471,23 @@ internal sealed class PersonaRunner : IAsyncDisposable
                     break;
             }
         }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested && !turn.StopRequested && turn.TimedOut)
+        {
+            // The idle-timeout watchdog fired, not a Human Stop (TRAP 1): both cancel the same Turn
+            // token and land here as the identical OperationCanceledException, so the filter checks
+            // the latches each producer writes BEFORE it cancels, not the exception. A genuine Stop
+            // wins any tie - only StopTurn sets StopRequested, and this filter demands it be absent -
+            // because a Human's own Stop must never be reported as a failure.
+            this.ReportTurnFailure(
+                string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"the Adapter sent nothing for {idleBound.TotalSeconds} seconds, so the Turn was abandoned and cancelled"));
+            this.logger.LogWarning(
+                "Persona '{PersonaName}' turn in room {RoomId} was abandoned after {IdleBoundSeconds} seconds of silence.",
+                this.persona.Name,
+                item.RoomId,
+                idleBound.TotalSeconds);
+        }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             // The Human stopped this Turn; the run itself is not shutting down. A Turn ends in one
@@ -483,17 +520,19 @@ internal sealed class PersonaRunner : IAsyncDisposable
             // so this escalates on repetition alone, never on message content. Stays Degraded rather
             // than Offline: the session and the pipe may both be healthy while the model provider is
             // refusing, and Offline would be a claim this runner cannot support.
-            this.consecutiveTurnFailures++;
-            var reason = this.consecutiveTurnFailures >= 3
-                ? string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"{this.consecutiveTurnFailures} consecutive Turns have failed; this is unlikely to be transient — {ex.Message}")
-                : $"A Turn failed — {ex.Message}";
-            this.RaiseStatusChanged(PersonaState.Degraded, reason);
+            this.ReportTurnFailure(ex.Message);
             this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to process a turn in room {RoomId}.", this.persona.Name, item.RoomId);
         }
         finally
         {
+            // First, and before the Turn's own CancellationTokenSource is disposed below: a watchdog
+            // still running past that point would call Cancel() on a disposed source. Cancelling it
+            // stops WatchForAdapterSilenceAsync's Task.Delay immediately when the Turn ended on its
+            // own, without waiting out whatever of the idle bound remained.
+            await watchdogCancellation.CancelAsync();
+            await SafeAwaitAsync(watchdog);
+            watchdogCancellation.Dispose();
+
             lock (this.turnLock)
             {
                 if (ReferenceEquals(this.activeTurn, turn))
@@ -529,6 +568,106 @@ internal sealed class PersonaRunner : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Records one failed Turn against <see cref="consecutiveTurnFailures"/> and reports
+    /// <see cref="PersonaState.Degraded"/>, escalating the wording on the third consecutive failure.
+    /// Shared by every failure path a Turn can take — an exception from the Adapter, and (below) the
+    /// idle-timeout watchdog firing — so both build the same streak and the same escalating reason.
+    /// </summary>
+    /// <param name="reason">What went wrong, in words fit to follow "A Turn failed — ".</param>
+    private void ReportTurnFailure(string reason)
+    {
+        this.consecutiveTurnFailures++;
+        var message = this.consecutiveTurnFailures >= 3
+            ? string.Create(
+                CultureInfo.InvariantCulture,
+                $"{this.consecutiveTurnFailures} consecutive Turns have failed; this is unlikely to be transient — {reason}")
+            : $"A Turn failed — {reason}";
+        this.RaiseStatusChanged(PersonaState.Degraded, message);
+    }
+
+    /// <summary>
+    /// Bounds silence, not duration: <see cref="ActiveTurn.IdleFor"/> restarts on every event
+    /// <see cref="RunEventReaderAsync"/> observes, so a long streaming Turn that keeps reporting
+    /// activity never trips this however long it runs; only a Turn that goes quiet for
+    /// <paramref name="idleBound"/> does.
+    /// </summary>
+    /// <remarks>
+    /// TRAP 2 (docs/agencyteam/rules.md): the obvious implementation - cancel <paramref name="turn"/>'s
+    /// token, then call <see cref="IAgentSession.CancelAsync"/> - never reaches the far side.
+    /// <c>DotAcpAgentSession.PromptAsync</c>'s <c>finally</c> nulls its <c>promptCts</c> the instant the
+    /// prompt call throws locally, and <c>DotAcpAgentSession.CancelAsync</c> silently no-ops when
+    /// <c>promptCts</c> is null (src/Huddle.Acp/DotAcp/DotAcpAgentSession.cs:144-171). Cancelling the
+    /// Turn's token first makes the local await throw before <c>CancelAsync</c> ever runs, so the
+    /// Adapter that is actually hung is never told to stop - it keeps working, unaware anything ended.
+    /// This method therefore does the OPPOSITE of the read loop's Stop handling (line ~322) on
+    /// purpose: it tells the far side FIRST, with <see cref="IAgentSession.CancelAsync"/>, and only
+    /// cancels <paramref name="turn"/>'s own token once that call has returned or been abandoned after
+    /// <see cref="AdapterCancelGrace"/>. The Stop path gets away with the opposite order only because
+    /// it runs on the read loop while the consumer resumes elsewhere - a deliberate responsiveness
+    /// trade for a Human-initiated Stop that this watchdog, reporting a failure, does not get to make.
+    /// </remarks>
+    /// <param name="turn">The Turn being watched.</param>
+    /// <param name="item">The work item the Turn is processing, named in the warning this logs.</param>
+    /// <param name="idleBound">How long a silence is tolerated before this fires.</param>
+    /// <param name="watchdogToken">
+    /// Cancelled from <see cref="ProcessWorkItemAsync"/>'s <c>finally</c> once the Turn ends on its
+    /// own, so this loop stops without ever firing.
+    /// </param>
+    /// <param name="ct">The run token, passed through to <see cref="IAgentSession.CancelAsync"/>.</param>
+    private async Task WatchForAdapterSilenceAsync(
+        ActiveTurn turn, WorkItem item, TimeSpan idleBound, CancellationToken watchdogToken, CancellationToken ct)
+    {
+        try
+        {
+            TimeSpan remaining = idleBound;
+            while (remaining > TimeSpan.Zero)
+            {
+                await Task.Delay(remaining, watchdogToken);
+                remaining = idleBound - turn.IdleFor;
+            }
+
+            // Latched BEFORE the cancellation below, so ProcessWorkItemAsync's catch can tell this
+            // firing apart from a genuine Stop (TRAP 1) - both surface as the same
+            // OperationCanceledException there.
+            turn.MarkTimedOut();
+
+            this.logger.LogWarning(
+                "Persona '{PersonaName}' turn in room {RoomId} sent nothing for {IdleBoundSeconds} seconds; cancelling it.",
+                this.persona.Name,
+                item.RoomId,
+                idleBound.TotalSeconds);
+
+            try
+            {
+                // TRAP 2: tell the far side first, before this Turn's own token is cancelled below.
+                await this.session!.CancelAsync(ct).WaitAsync(AdapterCancelGrace, ct);
+            }
+            catch (Exception ex) when (ex is AgentException or IOException or ObjectDisposedException or TimeoutException)
+            {
+                // An adapter that will not even take a cancel is the same adapter that sent nothing
+                // in the first place: expected here, not exceptional, and does not stop the local
+                // abort below.
+                this.logger.LogWarning(
+                    ex,
+                    "Persona '{PersonaName}' failed to notify the Adapter of an idle-timeout cancel in room {RoomId}.",
+                    this.persona.Name,
+                    item.RoomId);
+            }
+
+            await turn.Cancellation.CancelAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            // The Turn ended before the bound was reached, or the run itself is shutting down.
+        }
+    }
+
+    /// <summary>Converts a configured idle-timeout bound to a <see cref="TimeSpan"/>, disabling it for zero or less.</summary>
+    /// <param name="seconds"><see cref="AcpOptions.TurnIdleTimeoutSeconds"/>'s current value.</param>
+    /// <returns>The bound as a <see cref="TimeSpan"/>, or <see cref="TimeSpan.Zero"/> when disabled.</returns>
+    private static TimeSpan IdleTimeoutFrom(int seconds) => seconds > 0 ? TimeSpan.FromSeconds(seconds) : TimeSpan.Zero;
+
     private async Task RunEventReaderAsync(CancellationToken ct)
     {
         Exception? terminatingException = null;
@@ -536,6 +675,15 @@ internal sealed class PersonaRunner : IAsyncDisposable
         {
             await foreach (var agentEvent in this.session!.Events.ReadAllAsync(ct))
             {
+                // Any sign of life restarts the idle-timeout bound, including event types this loop
+                // otherwise ignores below: what is bounded is silence, not progress. Taking turnLock
+                // is what makes this safe against ProcessWorkItemAsync's finally, which clears
+                // activeTurn under the same lock.
+                lock (this.turnLock)
+                {
+                    this.activeTurn?.MarkActivity();
+                }
+
                 if (agentEvent is MessageChunk chunk)
                 {
                     await this.AppendAndPublishDeltaAsync(chunk.Text, ct);
@@ -978,12 +1126,65 @@ internal sealed class PersonaRunner : IAsyncDisposable
         TaskCompletionSource<TurnOutcome> Completion,
         CancellationTokenSource Cancellation)
     {
+        // lastActivityTicks, stopRequested and timedOut are each written by one thread and read by
+        // another - lastActivityTicks by the event-reader loop, read by the idle-timeout watchdog;
+        // stopRequested by the read loop, timedOut by the watchdog, both read by the consumer's catch
+        // clauses - so every access goes through Interlocked or Volatile, never a plain read or write.
+        // Environment.TickCount64 (monotonic, unaffected by a wall-clock change) is used rather than an
+        // injected TimeProvider: threading one through here would churn PersonaSupervisor's
+        // construction and every test's `new PersonaRunner(...)`, and this file already reads
+        // DateTimeOffset.UtcNow directly elsewhere (RaiseStatusChanged), so this is consistent with
+        // the existing style rather than a new one.
+        private long lastActivityTicks = Environment.TickCount64;
+        private bool stopRequested;
+        private bool timedOut;
+
         /// <summary>
         /// Whether a <see cref="MessageDelta"/> write has already failed for this Turn. Set once a
         /// write throws, so a dead pipe is logged at most once per Turn rather than once per chunk.
         /// Touched only from the single-threaded event-reader loop, so it needs no lock of its own.
         /// </summary>
         public bool DeltaWriteFailed { get; set; }
+
+        /// <summary>
+        /// Whether the read loop has already latched a Stop for this Turn. Set by
+        /// <see cref="MarkStopRequested"/>, always BEFORE the cancellation it causes, so the consumer
+        /// awaiting this Turn can tell a genuine Stop apart from the idle-timeout watchdog firing
+        /// (<see cref="TimedOut"/>) - both surface as the same <see cref="OperationCanceledException"/>.
+        /// </summary>
+        public bool StopRequested => Volatile.Read(ref this.stopRequested);
+
+        /// <summary>
+        /// Whether the idle-timeout watchdog has already latched a firing for this Turn. Set by
+        /// <see cref="MarkTimedOut"/>, always BEFORE the cancellation it causes, for the same reason
+        /// <see cref="StopRequested"/> exists.
+        /// </summary>
+        public bool TimedOut => Volatile.Read(ref this.timedOut);
+
+        /// <summary>How long it has been, as of now, since the last sign of life on this Turn.</summary>
+        public TimeSpan IdleFor =>
+            TimeSpan.FromMilliseconds(Environment.TickCount64 - Interlocked.Read(ref this.lastActivityTicks));
+
+        /// <summary>
+        /// Restarts the idle clock. Called by the event-reader loop on any <see cref="AgentEvent"/> it
+        /// observes, including ones it otherwise ignores - what the idle-timeout bound measures is
+        /// silence, not progress, so any activity at all counts.
+        /// </summary>
+        public void MarkActivity() => Interlocked.Exchange(ref this.lastActivityTicks, Environment.TickCount64);
+
+        /// <summary>
+        /// Latches that this Turn is ending because a Human pressed Stop. MUST be called before
+        /// <see cref="Cancellation"/> is cancelled, so <see cref="StopRequested"/> is already true by
+        /// the time the consumer observes the resulting <see cref="OperationCanceledException"/>.
+        /// </summary>
+        public void MarkStopRequested() => Volatile.Write(ref this.stopRequested, true);
+
+        /// <summary>
+        /// Latches that this Turn is ending because the idle-timeout watchdog fired. MUST be called
+        /// before <see cref="Cancellation"/> is cancelled, for the same reason
+        /// <see cref="MarkStopRequested"/> is.
+        /// </summary>
+        public void MarkTimedOut() => Volatile.Write(ref this.timedOut, true);
     }
 
     /// <summary>How a Turn ended: the text it produced, and why it stopped.</summary>

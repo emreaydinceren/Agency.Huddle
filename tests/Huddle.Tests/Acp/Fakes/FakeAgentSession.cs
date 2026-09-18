@@ -22,6 +22,7 @@ internal sealed class FakeAgentSession : IAgentSession
 
     private bool promptInFlight;
     private int cancelCallCount;
+    private bool cancelObservedPromptInFlight;
 
     public string SessionId { get; } = Guid.NewGuid().ToString("N");
 
@@ -64,6 +65,24 @@ internal sealed class FakeAgentSession : IAgentSession
         }
     }
 
+    /// <summary>
+    /// Whether a <see cref="CancelAsync"/> call has ever landed while a prompt was genuinely in
+    /// flight. Counting calls to <see cref="CancelAsync"/> alone cannot prove an idle-timeout watchdog
+    /// tells the far side BEFORE aborting locally (the obvious-but-wrong order a real
+    /// <c>DotAcpAgentSession</c> silently no-ops on) - only observing that a prompt was still running
+    /// when the cancel arrived can.
+    /// </summary>
+    public bool CancelObservedPromptInFlight
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.cancelObservedPromptInFlight;
+            }
+        }
+    }
+
     public void EnqueueReply(params string[] chunks)
     {
         lock (this.gate)
@@ -97,6 +116,23 @@ internal sealed class FakeAgentSession : IAgentSession
         lock (this.gate)
         {
             this.plannedTurns.Enqueue(new TurnPlan(chunks, null, delay, []));
+        }
+    }
+
+    /// <summary>
+    /// Queues a turn whose reply chunks are published one at a time, waiting <paramref name="gap"/>
+    /// before each - unlike <see cref="EnqueueDelayedReply"/>, which delays once before the whole
+    /// reply arrives together. Lets a test prove a long streaming Turn survives an idle bound shorter
+    /// than the Turn's total duration, because each chunk is itself a sign of life that restarts the
+    /// bound before it can fire.
+    /// </summary>
+    /// <param name="gap">How long to wait before writing each chunk.</param>
+    /// <param name="chunks">The reply text, delivered one chunk every <paramref name="gap"/>.</param>
+    public void EnqueueDripFedReply(TimeSpan gap, params string[] chunks)
+    {
+        lock (this.gate)
+        {
+            this.plannedTurns.Enqueue(new TurnPlan(chunks, null, TimeSpan.Zero, [], DripGap: gap));
         }
     }
 
@@ -154,6 +190,10 @@ internal sealed class FakeAgentSession : IAgentSession
         lock (this.gate)
         {
             this.cancelCallCount++;
+            if (this.promptInFlight)
+            {
+                this.cancelObservedPromptInFlight = true;
+            }
         }
 
         return Task.CompletedTask;
@@ -214,9 +254,20 @@ internal sealed class FakeAgentSession : IAgentSession
                 this.events.Writer.TryWrite(new UsageUpdated(this.SessionId, ContextWindowSize, level));
             }
 
-            foreach (var chunk in plan.Chunks)
+            if (plan.DripGap is { } dripGap)
             {
-                this.events.Writer.TryWrite(new MessageChunk(this.SessionId, chunk));
+                foreach (var chunk in plan.Chunks)
+                {
+                    await Task.Delay(dripGap, ct);
+                    this.events.Writer.TryWrite(new MessageChunk(this.SessionId, chunk));
+                }
+            }
+            else
+            {
+                foreach (var chunk in plan.Chunks)
+                {
+                    this.events.Writer.TryWrite(new MessageChunk(this.SessionId, chunk));
+                }
             }
 
             this.events.Writer.TryWrite(new TurnCompleted(this.SessionId, plan.Reason));
@@ -237,5 +288,6 @@ internal sealed class FakeAgentSession : IAgentSession
         Exception? Exception,
         TimeSpan Delay,
         IReadOnlyList<long> UsageLevels,
-        StopReason Reason = StopReason.EndTurn);
+        StopReason Reason = StopReason.EndTurn,
+        TimeSpan? DripGap = null);
 }
