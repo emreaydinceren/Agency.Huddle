@@ -691,7 +691,7 @@ Persona lifecycle: supervisor, work dirs, health and restarts — [area file](pe
 | [ADAPTERS-01](adapters.md#adapters-01--two-personas-in-one-room-on-different-adapters-and-neither-room-nor-gate-can-tell) |  | Active | | Needs two Adapter Profiles configured — see the area's setup |
 | [ADAPTERS-02](adapters.md#adapters-02--a-local-adapters-reply-streams-into-the-room-incrementally-and-stop-leaves-both-teammates-resumable) |  | Active | | A persisted Message shorter than what rendered is the diagnosed race in [Known limits](../known-limits.md), not a new defect |
 | [ADAPTERS-03](adapters.md#adapters-03--changing-a-teammates-adapter-resets-model-and-effort-says-so-and-restarts-the-session-) | 💰 | Active | | |
-| [ADAPTERS-04](adapters.md#adapters-04--does-a-real-local-model-call-get_help-unprompted-) | 💰 | Active | | Needs a real local Adapter and a reachable inference endpoint. "Calls no tool at all" is INCONCLUSIVE and expected for a small model — record the model name |
+| [ADAPTERS-04](adapters.md#adapters-04--does-a-real-local-model-call-get_help-unprompted-) | 💰 | Active | | **Blocked by D-1** (2026-09-17): against `AgencyDotNet.Acp` 0.1.195 the system prompt never reaches the agent, so the Model is never told `get_help` exists and any result would measure the missing prompt rather than the Model. Do not record one. Once unblocked: needs a real local Adapter and a reachable inference endpoint. "Calls no tool at all" is INCONCLUSIVE and expected for a small model — record the model name |
 
 ---
 

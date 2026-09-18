@@ -1,7 +1,7 @@
 # Known limits
 
 What is absent on purpose. Read it before "fixing" something that looks missing
-and before filing a bug: most entries below are decisions, two are known flakes,
+and before filing a bug: most entries below are decisions, three are known flakes,
 and one is a known bug left in place deliberately. Do not treat any of them as
 oversights or quietly add them.
 
@@ -176,6 +176,21 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
 - **`session/set_model` is unavailable.** The vendored adapter advertises only
   `configOptions`, never the unstable `models`/`SessionModelState`. If a future
   adapter adds it, `ModelConfigOptions` is the single place to teach.
+- **A Persona's identity does not reach `agency-acp`, so two Personas on that
+  Adapter are indistinguishable.** Huddle sends the composed system prompt on
+  `session/new` at `_meta.systemPrompt` — the field ACP defines for it, and the one
+  `claude-agent-acp` reads. `AgencyDotNet.Acp` 0.1.195 reads only `_meta.model` and
+  drops the prompt silently: no error, no acknowledgement. Every Persona there runs
+  on the harness's own baseline text instead of its own. The two sides are exactly
+  crossed — each sends the field the other does not read, and Huddle sends no
+  `_meta.model` at all, because it selects a Model with `session/set_config_option`
+  once the session is open. **Not ours to fix**: Huddle is sending the documented
+  field, and the far side's plumbing already exists (`QueryContext.IdentityPrompt`,
+  wired into `SystemPromptBuilder`, with tests) — only its ACP adapter never
+  populates it. Recorded as D-1 in [Live findings](../Huddle.Adapters-LiveFindings.md).
+  It is also what makes manual test ADAPTERS-04 unrunnable rather than merely unrun:
+  that test asks whether a real local Model calls `get_help` unprompted, and the
+  prompt that names `get_help` is precisely the one that never arrives.
 - **A failed probe and a cancelled one look alike in the log.** Both return an
   empty catalog; the warning names the cause, but an authentication failure and a
   missing adapter both present to the user as "this agent advertises no models".
@@ -288,6 +303,20 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   `TurnCompleted`) and both `PersonaRunner` and that pipeline were explicitly out of
   scope for the work that found it. `tests/Huddle.Tests/Conformance/ChunkedReplyFirstOrderer.cs`
   quarantines it for one Tier 3 test and carries the full evidence in its remarks.
+- **Third known flake, pre-existing — DIAGNOSED 2026-09-17.** A full
+  `dotnet test Huddle.slnx --` occasionally crashes the test host *after* every
+  assertion has passed, with an `ObjectDisposedException` raised from
+  `PersonaStore.OnWatcherError`. The cause is an ordering one, not a timing one:
+  that handler calls `this.logger.LogWarning(...)` **before** it takes `watchGate`
+  and checks `this.disposed` (`PersonaStore.cs:586-600`). During host teardown the
+  logging provider can already be disposed when a `FileSystemWatcher` raises a
+  late `Error` event, and because the handler runs on a watcher callback thread the
+  throw is unhandled and takes the process with it. It reads as a flake because it
+  needs a dropped-event overflow to land inside the teardown window. **Not fixed**,
+  because the one-line fix — move the log inside the existing `disposed` guard —
+  belongs to `PersonaStore` and was out of scope for the work that found it; rerun
+  the suite if you hit it, and do not read it as a regression in whatever you were
+  changing.
 - **Known bug, pre-existing:** `Data/SqliteTeamDirectory.cs` is not
   `IDisposable`, and SQLite connection pooling keeps a handle on `team.db`, so
   tests leave about 83 temp directories behind per run. `TempDataDir.Dispose`

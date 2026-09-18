@@ -39,6 +39,17 @@ Three things to know:
 `ProcessModeTests` is the **one** test in the folder that launches a real child process —
 the built `mock-acp` — because that is the only thing in-proc cannot prove. Keep it to one.
 
+**What this tier does not yet do, stated plainly.** The Adapters design claims conformance
+tests are *"written once, run twice"* — against `mock-acp` now and against a real adapter
+later, by changing one Adapter Profile. **That is not true yet.** `MockAdapterFixture`
+substitutes `IAgentProcessLauncher` with an in-proc `FullDuplexStream` pair, and no
+configuration turns that back into a launched process, so seven of the eight tests here can
+only ever run in-proc; `ProcessModeTests` is the exception because it bypasses the fixture.
+Re-pointing the suite at a real adapter needs the fixture **parameterised over its launcher**,
+which has not been done. This is a gap in our own plan rather than anything an adapter did —
+recorded as D-4 in [Live findings](../Huddle.Adapters-LiveFindings.md), and the reason the
+first live run had to be a written report instead of a green suite.
+
 This tier found two defects nothing cheaper could: a guard that rejected a designed empty
 value, and the dispatch-ordering race now recorded in [Known limits](known-limits.md). Both
 lived in **seams between** correctly-written components, which is exactly what unit tests
