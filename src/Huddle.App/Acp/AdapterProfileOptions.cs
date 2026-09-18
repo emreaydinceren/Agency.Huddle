@@ -30,6 +30,22 @@ public sealed class AdapterProfileOptions
     /// <summary>An explicit adapter script/executable path, used when <see cref="Args"/> is empty.</summary>
     public string? AdapterPath { get; set; }
 
+    /// <summary>
+    /// Environment variables to set on the launched process, for example
+    /// <c>Agent__DefaultModel</c>. No initialiser: <c>ConfigurationBinder</c> merges bound entries
+    /// into an already-populated dictionary property instead of replacing it (docs/agencyteam/rules.md,
+    /// "Collection options need no initialiser"). <see langword="null"/> or empty means the Adapter
+    /// needs no environment overrides.
+    /// </summary>
+    /// <remarks>
+    /// Set these keys from <c>appsettings.json</c>, never through the environment-variable
+    /// configuration provider. That provider rewrites every <c>__</c> in an environment variable's
+    /// name into <c>:</c>, so <c>Team__Acp__Adapters__0__EnvironmentOverrides__Agent__DefaultModel</c>
+    /// binds as the key <c>Agent:DefaultModel</c> under this dictionary — not the intended
+    /// <c>Agent__DefaultModel</c> — and no process will ever read a value stored under that key.
+    /// </remarks>
+    public IReadOnlyDictionary<string, string>? EnvironmentOverrides { get; set; }
+
     /// <summary>Whether model-facing tool names carry the <c>mcp__team__</c> prefix.</summary>
     public bool UsesToolNamePrefix { get; set; } = true;
 }

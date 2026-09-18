@@ -12,6 +12,11 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="Args">Explicit process arguments, or <see langword="null"/> to fall through to <paramref name="AdapterPath"/> or the locator.</param>
 /// <param name="AdapterPath">An explicit adapter script/executable path, used when <paramref name="Args"/> is empty.</param>
 /// <param name="UsesToolNamePrefix">Whether model-facing tool names carry the <c>mcp__team__</c> prefix.</param>
+/// <param name="EnvironmentOverrides">
+/// Environment variables set on the launched adapter process, or <see langword="null"/> when the
+/// Adapter needs none. Defaults to <see langword="null"/> so every existing positional call site
+/// keeps compiling unchanged.
+/// </param>
 public sealed record AdapterProfile(
     string Id,
     string DisplayName,
@@ -19,4 +24,5 @@ public sealed record AdapterProfile(
     string Command,
     IReadOnlyList<string>? Args,
     string? AdapterPath,
-    bool UsesToolNamePrefix);
+    bool UsesToolNamePrefix,
+    IReadOnlyDictionary<string, string>? EnvironmentOverrides = null);

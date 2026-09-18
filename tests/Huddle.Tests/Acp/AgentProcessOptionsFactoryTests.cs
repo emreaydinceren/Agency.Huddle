@@ -137,6 +137,101 @@ public sealed class AgentProcessOptionsFactoryTests
         Assert.Null(result);
     }
 
+    /// <summary>The Args construction path carries <see cref="AdapterProfile.EnvironmentOverrides"/> onto the result.</summary>
+    [Fact]
+    public void TryCreate_ArgsPath_CarriesEnvironmentOverrides()
+    {
+        using TempDataDir dir = new();
+        var probeStart = Path.Combine(dir.Path, "src", "Huddle.App");
+        Directory.CreateDirectory(probeStart);
+        Dictionary<string, string> overrides = new(StringComparer.Ordinal) { ["Agent__DefaultModel"] = "sonnet" };
+        AdapterProfile profile = new(
+            Id: "claude",
+            DisplayName: "Claude",
+            Description: null,
+            Command: "node",
+            Args: ["explicit-arg.js"],
+            AdapterPath: null,
+            UsesToolNamePrefix: true,
+            EnvironmentOverrides: overrides);
+
+        var result = AgentProcessOptionsFactory.TryCreate(profile, dir.Path, probeStart);
+
+        Assert.NotNull(result);
+        Assert.Equal(overrides, result.EnvironmentOverrides);
+    }
+
+    /// <summary>The AdapterPath construction path carries <see cref="AdapterProfile.EnvironmentOverrides"/> onto the result.</summary>
+    [Fact]
+    public void TryCreate_AdapterPathPath_CarriesEnvironmentOverrides()
+    {
+        using TempDataDir dir = new();
+        var probeStart = Path.Combine(dir.Path, "src", "Huddle.App");
+        Directory.CreateDirectory(probeStart);
+        Dictionary<string, string> overrides = new(StringComparer.Ordinal) { ["Agent__DefaultModel"] = "sonnet" };
+        AdapterProfile profile = new(
+            Id: "claude",
+            DisplayName: "Claude",
+            Description: null,
+            Command: "node",
+            Args: null,
+            AdapterPath: @"C:\somewhere\index.js",
+            UsesToolNamePrefix: true,
+            EnvironmentOverrides: overrides);
+
+        var result = AgentProcessOptionsFactory.TryCreate(profile, dir.Path, probeStart);
+
+        Assert.NotNull(result);
+        Assert.Equal(overrides, result.EnvironmentOverrides);
+    }
+
+    /// <summary>The AdapterLocator construction path carries <see cref="AdapterProfile.EnvironmentOverrides"/> onto the result.</summary>
+    [Fact]
+    public void TryCreate_LocatorPath_CarriesEnvironmentOverrides()
+    {
+        using TempDataDir dir = new();
+        AgentProcessOptionsFactoryTests.CreateFakeAdapter(dir.Path);
+        var probeStart = Path.Combine(dir.Path, "src", "Huddle.App");
+        Directory.CreateDirectory(probeStart);
+        Dictionary<string, string> overrides = new(StringComparer.Ordinal) { ["Agent__DefaultModel"] = "sonnet" };
+        AdapterProfile profile = new(
+            Id: "claude",
+            DisplayName: "Claude",
+            Description: null,
+            Command: "node",
+            Args: null,
+            AdapterPath: null,
+            UsesToolNamePrefix: true,
+            EnvironmentOverrides: overrides);
+
+        var result = AgentProcessOptionsFactory.TryCreate(profile, dir.Path, probeStart);
+
+        Assert.NotNull(result);
+        Assert.Equal(overrides, result.EnvironmentOverrides);
+    }
+
+    /// <summary>A profile with no <see cref="AdapterProfile.EnvironmentOverrides"/> yields a null result value, not an empty dictionary.</summary>
+    [Fact]
+    public void TryCreate_NoEnvironmentOverrides_YieldsNull()
+    {
+        using TempDataDir dir = new();
+        var probeStart = Path.Combine(dir.Path, "src", "Huddle.App");
+        Directory.CreateDirectory(probeStart);
+        AdapterProfile profile = new(
+            Id: "claude",
+            DisplayName: "Claude",
+            Description: null,
+            Command: "node",
+            Args: null,
+            AdapterPath: @"C:\somewhere\index.js",
+            UsesToolNamePrefix: true);
+
+        var result = AgentProcessOptionsFactory.TryCreate(profile, dir.Path, probeStart);
+
+        Assert.NotNull(result);
+        Assert.Null(result.EnvironmentOverrides);
+    }
+
     /// <summary>The working directory passed through is the sandbox, never the probe start.</summary>
     [Fact]
     public void TryCreate_WorkingDirectory_IsTheSandbox()
