@@ -2,9 +2,9 @@
 
 **Date:** 2026-09-18 · **For:** whoever picks this up next, with no memory of how it got here
 
-The Adapters feature is **built and shipped**; what remains is a milestone that no automated test
-contains, one piece of genuinely unspecified engineering, and a documentation refresh that fires
-when Agency.NET publishes. This page is the shortest path into that.
+The Adapters feature is **built and shipped**, and as of 2026-09-18 nothing is blocked. What
+remains is a milestone that no automated test contains and one piece of genuinely unspecified
+engineering. This page is the shortest path into both.
 
 **Read in this order, and stop when you have what you need:**
 
@@ -29,7 +29,7 @@ binding, but it is 1,400 lines and you do not need most of it. Read **§15.8**, 
 | **Follow-up** | PR #60, **open and unreviewed** — `EnvironmentOverrides`, the per-Turn idle bound, and a docs catch-up |
 | **This branch** | `docs/adapters-conformance-honesty-and-handoff`, stacked on PR #60 — spec and plan corrections plus this page |
 | **Suite** | 1,294 tests green, 0 warnings |
-| **Agency.NET** | `0.1.197` validated by us against a live model. **Not yet published** — pre-merge drop |
+| **Agency.NET** | **Done.** `0.1.197-gb4f68316af` published 2026-09-18; PR #218 merged. All four items we raised are fixed |
 | **Milestone** | Not run. Nothing is blocking it any more |
 
 ### What actually works
@@ -66,7 +66,8 @@ these two tests**, and they have been runnable the whole time. All four ADAPTERS
 `manual-tests/tracker.md` are `Active` with empty result columns; Task 12.2's acceptance says
 "executed, and their outcomes recorded", so it is not met.
 
-ADAPTERS-03 is paid. **ADAPTERS-04 must not be run yet** — see §4.
+ADAPTERS-03 and ADAPTERS-04 are paid. ADAPTERS-04 was blocked until 2026-09-18 and is now
+runnable — check `agentInfo.version` first, for the reason in §4.
 
 ### (c) Task 12.1a — the only unspecified engineering left
 
@@ -106,17 +107,25 @@ trip.
 
 ## 4. Traps, each of which has already cost someone
 
-**`ADAPTERS-04` is blocked until Agency publishes, and running it early poisons the record.** It
-asks whether a real local model calls `get_help` unprompted. Until the published Adapter reads
-`_meta.systemPrompt`, the prompt naming `get_help` never arrives, so the test returns INCONCLUSIVE
-every time while looking like evidence about a model. The block note names a version, so it will
-read stale rather than wrong if you miss it.
+**`ADAPTERS-04` is only meaningful on `0.1.197` or later — check the version, do not assume it.**
+It asks whether a real local model calls `get_help` unprompted. On `0.1.195` and earlier the
+Adapter never read `_meta.systemPrompt`, so the prompt naming `get_help` never arrived and the test
+returned INCONCLUSIVE every time while looking like evidence about a model. That is fixed, but an
+older Adapter on a machine somewhere will reproduce the trap silently. `initialize` reports the
+version in `agentInfo.version`; read it before you trust a result.
 
-**A published package is not the drop we validated.** Agency's `0.1.197` was built from
-*uncommitted* work, so its `-ga1fc165f21` suffix points at the commit the fix sits *on top of*, not
-one containing it. When they commit, the version changes and the artifact is a fresh build.
-**Re-run the vanilla-config check against whatever lands on the feed** — it is ninety seconds and it
-is the difference between validating a fix and validating what users install.
+**A published package is not the drop we validated, and you cannot simply re-run against it.**
+Agency's pre-merge `0.1.197` was built from *uncommitted* work, so its `-ga1fc165f21` suffix points
+at the commit the fix sits *on top of*. What published is **`0.1.197-gb4f68316af`** — same base
+version, fresh build, different commit. **Identify a build from `agentInfo.version` in
+`initialize`, never from a file name.**
+
+The catch, found on 2026-09-18 while trying to honour this rule: **the published package is a
+library, not a runnable host.** `AgencyDotNet.Acp.nupkg` contains `lib/net10.0/` and no executable,
+so there is no vanilla-config check to run against the feed artifact. The published binary was
+verified *statically* instead — the identity parser present, the `_meta.model` reader gone. If you
+need a runtime check on a published version, build the host from that tag; a drop folder is not a
+substitute and neither is the nupkg.
 
 **`EnvironmentOverrides` keys must come from `appsettings.json`, never the environment-variable
 provider.** That provider rewrites every `__` into `:`, so
@@ -141,19 +150,22 @@ do not treat it as a regression in whatever you changed.
 
 ---
 
-## 5. When Agency publishes
+## 5. ~~When Agency publishes~~ — done 2026-09-18
 
-Four documents go stale **together**, because all four scope the blocker to version `0.1.195`
-specifically. Revise them in one pass or not at all:
+Agency published `0.1.197-gb4f68316af`. **All four documents that scoped the blocker to `0.1.195`
+have been revised**: the live findings, `known-limits.md`, and the ADAPTERS-04 notes in both the
+manual-test area file and the Tracker. Nothing here is pending.
 
-| File | What changes |
-| --- | --- |
-| `Huddle.Adapters-LiveFindings.md` | D-1 closes; re-date; record that it was verified live |
-| `agencyteam/known-limits.md` | The D-1 entry goes, or narrows to the model-capability limit |
-| `agencyteam/manual-tests/adapters.md` | ADAPTERS-04's block note comes off |
-| `agencyteam/manual-tests/tracker.md` | ADAPTERS-04's `Blocked by D-1` note comes off |
+What that unlocked: **Task 12.1b is now possible**, and **ADAPTERS-04 is now worth running** —
+check `agentInfo.version` first, because on `0.1.195` or earlier it is meaningless rather than
+merely failing.
 
-Then Task 12.1b becomes possible, and ADAPTERS-04 becomes worth running.
+What survived the fix, and is now its own entry in `known-limits.md`: **a small local Model may not
+inhabit a Persona even though the Persona now reaches it.** On `gemma-4-e2b`, two sessions with
+distinct identities both opened by asserting the base model identity; one recovered, one gave its
+Persona's codeword while still answering as Gemma. The text arrives — the codewords prove it — a
+2B-class Model just does not reliably hold a voice. That is a Model limit, not a protocol one, and
+it is what ADAPTERS-04 now measures.
 
 The correspondence lives in `E:\Repos\Agency\PRIVATE\Huddle\` as a numbered exchange, `01-` to
 `15-`. It is gitignored on their side and is the only record of how the contract was negotiated.

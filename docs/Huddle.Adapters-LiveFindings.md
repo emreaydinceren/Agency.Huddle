@@ -1,11 +1,20 @@
 # Huddle.Adapters — live findings against `agency-acp`
 
-**Date:** 2026-09-17 · **Status:** findings, not decisions · **Supersedes:** the 2026-09-16
-revision of this file, which was written against `0.1.193+bceba00e5f`
+**Date:** 2026-09-18 · **Status:** findings, not decisions · **Supersedes:** the 2026-09-17
+revision, which was written against `0.1.195`, and the 2026-09-16 one before it
+
+> **Where this ended.** Four of the five findings are closed. **D-1** and **D-5** were fixed by
+> Agency in `0.1.197`; **D-2** and **D-3** gained Huddle-side answers here and their Agency-side
+> halves were fixed too. **D-4 is ours and is still open** — see
+> [the handoff](Huddle.Adapters-Handoff.md). Nothing blocks the joint milestone; its remaining half
+> is entirely Huddle's to run.
 
 The written report [Task 12.1](Huddle.Adapters-ProjectPlan.md) asks for in place of a green run:
 *"D10 green against `agency-acp`, **or a written report naming each divergence**."* This is that
-report, re-checked against the published **`AgencyDotNet.Acp 0.1.195-ga1fc165f21`**.
+report. It is **cumulative**: each section says which version it was checked against, because three
+were involved — `0.1.193` (the first local build), `0.1.195` (the first published package) and
+`0.1.197` (where four of the five findings were fixed). Where a section still describes `0.1.195`,
+that is deliberate history, not a stale claim.
 
 [Spec §12, **E-18**](Huddle.Adapters-Specifications.md) predicted this outcome and rated it **by
 design**: *"Mock and contract diverge | Tier 3 green, Phase 7 red | T-31 is where it surfaces, and
@@ -45,7 +54,27 @@ per-host model catalogue, and `session/close` on dispose — **all landed** in P
 
 ---
 
-## D-1 — Persona identity never reaches the agent · **blocking** · *stands*
+## D-1 — Persona identity never reaches the agent · ~~**blocking**~~ · **CLOSED 2026-09-18**
+
+> **Fixed in `AgencyDotNet.Acp 0.1.197-gb4f68316af`**, published to the private feed on
+> 2026-09-18. `HandleSessionNewAsync` now parses `_meta.systemPrompt` through a new
+> `IdentityPromptParser` into `QueryContext.IdentityPrompt`, and the speculative `_meta.model`
+> reader was deleted. Both the `{"append": "…"}` object and a bare string are accepted; unknown
+> shapes fall back to the default identity rather than erroring.
+>
+> **Verified end to end against a live model, not taken on report.** Against `gemma-4-e2b`, a
+> Persona carrying a nonce codeword returned *"My name is Nova and my codeword is BANJO-4417."*
+> Two concurrent sessions with different identities showed **no bleed in either direction**, which
+> is the property that actually matters — it is what makes two Personas on one Adapter
+> distinguishable. Re-confirmed on a **vanilla install with zero environment overrides**, driving
+> Huddle's real sequence: open the session, switch the model with `session/set_config_option`, then
+> prompt. The identity survives the switch.
+>
+> The published artifact was checked separately from the pre-merge drop, because they are different
+> builds — see *Reproducing this*. What remains is a Model-capability limit, not a protocol one:
+> see [Known limits](agencyteam/known-limits.md).
+
+**The original finding is kept below, unedited, because the shape of it is the reusable part.**
 
 **Huddle sends** the composed system prompt on `session/new` at `_meta.systemPrompt` — a raw
 string for `SystemPromptMode.Replace`, or `{"append": "…"}` for `Append`
@@ -87,7 +116,14 @@ rather than merely unrun.
 
 ---
 
-## D-2 — The build ships with no configuration, so `session/new` hard-fails · *stands; answered on Huddle's side*
+## D-2 — The build ships with no configuration, so `session/new` hard-fails · **CLOSED 2026-09-18**
+
+> **Both halves fixed.** Huddle's: an Adapter Profile carries `EnvironmentOverrides`. Agency's:
+> `0.1.197` ships an `appsettings.json` and its build output is runnable. The first attempt at that
+> (`0.1.196`) shipped a config with no `ApiKey`, which failed *less* diagnosably than the error it
+> replaced — `ArgumentException: Value cannot be an empty string. (Parameter 'key')`. `0.1.197`
+> ships the key **and** names it when absent. Verified: the shipped config, untouched, with zero
+> environment overrides, opens a session.
 
 On a vanilla build, `session/new` returns:
 
@@ -123,7 +159,14 @@ probe does exactly `initialize` + `session/new`, which is where the hard throw l
 
 ---
 
-## D-3 — `session/prompt` does not fail fast on an unreachable endpoint · *explained; answered on Huddle's side*
+## D-3 — `session/prompt` does not fail fast on an unreachable endpoint · **CLOSED 2026-09-18**
+
+> **Explained, then answered from our side, which is the right side.** The far side's turn timeout
+> existed all along but is `int?` with no default and applied only `when timeout is > 0`, so an
+> adapter shipping no configuration never set it — D-3 was a consequence of D-2. Huddle now has its
+> own `Acp:TurnIdleTimeoutSeconds`, which bounds silence rather than duration. Agency agree it is
+> the better-placed of the two and asked us to keep it. It also covers **D-5**, which no
+> configuration on either side could reach.
 
 Against a deliberately dead endpoint (`http://127.0.0.1:1/v1`), `session/prompt` produced **no
 response for 30 seconds** — no error, no partial notification, no exit. The process had to be
@@ -170,7 +213,14 @@ someone would otherwise trust the claim.
 
 ---
 
-## D-5 — Narrow exception handling in the dispatcher · **confirmed by reading** *(was: flagged, unconfirmed)*
+## D-5 — Narrow exception handling in the dispatcher · **CLOSED 2026-09-18**
+
+> **Fixed in `0.1.197`.** `DispatchAsync` gained a terminal `catch (Exception)` mapping anything
+> unrecognised to `-32603` and naming the method and exception type, with the cancellation arm
+> ordered ahead of it so a clean shutdown does not emit a spurious error per in-flight handler.
+> `StdioTransport`'s misleading *"the handler is responsible"* comment is gone — it never was.
+> Observed working during validation: every failure came back as a proper JSON-RPC error where
+> `0.1.195` gave silence.
 
 `MethodDispatcher.DispatchAsync` catches only `AcpJsonRpcException` and `JsonException` around a
 handler call (`Dispatch/MethodDispatcher.cs:102-114`). The first revision flagged this from
@@ -228,21 +278,28 @@ gated on `HUDDLE_AGENCY_ACP=1`, copying the `TEAM_E2E` idiom already used by `Re
 Override the executable with `HUDDLE_AGENCY_ACP_EXE`. They deliberately stop before
 `session/prompt` — see **D-3** for why.
 
-No live inference endpoint was reachable from this machine: the configured
-`http://inference-host.example:1234` does not resolve (`Non-existent domain`). No
-attempt was made to install or start one. The host above is a placeholder — a real
-internal `*.local` name in a tracked file fails the `secret-scan` job on
-`.gitleaks.toml`'s `internal-mdns-host` rule, which is why it is not written here;
-see `agents/CIPipeline.md`.
+**Corrected 2026-09-18: an inference endpoint *is* reachable.** The 2026-09-16 revision recorded
+that none was, because the then-configured host did not resolve. The adapter's own shipped default
+points at a local OpenAI-compatible server on this machine, and it answers — nine models, with one
+resident. Every live result in this document came from it. A host name is deliberately not written
+here: a real internal `*.local` name in a tracked file fails the `secret-scan` job on
+`.gitleaks.toml`'s `internal-mdns-host` rule. Read it from the adapter's `appsettings.json`.
 
-**The local Agency build is older than the package.** It is `0.1.193+bceba00e5f`, built
-2026-09-16. Rebuild from `origin/main` before re-running anything here, or the E2E tests exercise
-a version that is no longer what ships.
+**A published package is not the artifact we validated.** The pre-merge drops were built from
+uncommitted work, so `0.1.197-ga1fc165f21` carries the sha of the commit the fix sits *on top of*.
+What published is `0.1.197-gb4f68316af`, a fresh build from the merge commit. Same base version,
+different build. Confirm what you are running from `agentInfo.version` in `initialize`, never from
+a file name.
+
+**The published package is a library, not a runnable host**, so the vanilla-config check cannot be
+re-run against the feed artifact directly — it was run against the drop, and the published binary
+was verified statically to carry the same fix. Anyone needing a runtime check on a published
+version must build the host from that tag.
 
 ## Next, in priority order
 
-1. **Resolve D-1.** Nothing else matters until a Persona's identity reaches the agent. It is the
-   only item still blocking the joint milestone, and the only one with no Huddle-side mitigation.
+1. ~~**Resolve D-1.**~~ **Done 2026-09-18** — fixed in `0.1.197`, verified live against a real
+   Model. Nothing blocks the joint milestone any more; its remaining half is entirely ours.
 2. ~~**Resolve D-2**, or agree that Huddle supplies configuration through
    `AgentProcessOptions.EnvironmentOverrides`.~~ **Answered on Huddle's side 2026-09-17** — an
    Adapter Profile carries `EnvironmentOverrides`. Agency shipping a default `appsettings.json`

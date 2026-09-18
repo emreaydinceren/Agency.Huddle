@@ -187,17 +187,14 @@ If the `claude` Teammate cannot start because the Node adapter is not installed,
 
 **Paid** · about 45 min · *needs a real local Adapter and a running inference endpoint*
 
-> [!IMPORTANT]
-> **BLOCKED as of 2026-09-17 — do not run this yet, and do not record a result for it.**
-> Against `AgencyDotNet.Acp` 0.1.195 the composed system prompt never reaches the agent:
-> Huddle sends it at `_meta.systemPrompt` and that adapter reads only `_meta.model`, so the
-> prompt is dropped silently (D-1 in [Live findings](../../Huddle.Adapters-LiveFindings.md),
-> and in [Known limits](../known-limits.md)). The prompt that names `get_help` is the only
-> thing that tells the Model `get_help` exists — so this test would return INCONCLUSIVE every
-> time, measuring the missing prompt rather than the Model. That is worse than not running it,
-> because the Tracker would then carry something that reads as evidence about a Model and is
-> not. Run it once a Persona's own text demonstrably arrives; until then the result column
-> stays empty on purpose.
+> [!NOTE]
+> **Unblocked 2026-09-18 — runnable on `AgencyDotNet.Acp` 0.1.197 or later.** This test was
+> blocked from 2026-09-17 because the composed system prompt never reached the agent: 0.1.195
+> read only `_meta.model` and dropped `_meta.systemPrompt` silently, so the Model was never told
+> `get_help` existed and the result would have measured the missing prompt rather than the Model
+> (D-1 in [Live findings](../../Huddle.Adapters-LiveFindings.md)). 0.1.197 reads it, verified
+> live. **Check the version first** — `initialize` reports it in `agentInfo.version`, and on
+> 0.1.195 or 0.1.193 this test is still meaningless rather than merely failing.
 
 *This is the test no automated test can settle, and the reason this area has a paid tier at all. Progressive discovery is a deliberate bet: the system prompt names exactly one tool — `get_help` — and that tool names the rest. The bet assumes a model strong enough to ask. `mock-acp` calls what it is scripted to call and proves nothing about this. A 7B model that never calls `get_help` is not broken in any way a test can catch; it simply never creates a Room.*
 

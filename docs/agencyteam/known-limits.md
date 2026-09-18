@@ -176,21 +176,25 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
 - **`session/set_model` is unavailable.** The vendored adapter advertises only
   `configOptions`, never the unstable `models`/`SessionModelState`. If a future
   adapter adds it, `ModelConfigOptions` is the single place to teach.
-- **A Persona's identity does not reach `agency-acp`, so two Personas on that
-  Adapter are indistinguishable.** Huddle sends the composed system prompt on
-  `session/new` at `_meta.systemPrompt` — the field ACP defines for it, and the one
-  `claude-agent-acp` reads. `AgencyDotNet.Acp` 0.1.195 reads only `_meta.model` and
-  drops the prompt silently: no error, no acknowledgement. Every Persona there runs
-  on the harness's own baseline text instead of its own. The two sides are exactly
-  crossed — each sends the field the other does not read, and Huddle sends no
-  `_meta.model` at all, because it selects a Model with `session/set_config_option`
-  once the session is open. **Not ours to fix**: Huddle is sending the documented
-  field, and the far side's plumbing already exists (`QueryContext.IdentityPrompt`,
-  wired into `SystemPromptBuilder`, with tests) — only its ACP adapter never
-  populates it. Recorded as D-1 in [Live findings](../Huddle.Adapters-LiveFindings.md).
-  It is also what makes manual test ADAPTERS-04 unrunnable rather than merely unrun:
-  that test asks whether a real local Model calls `get_help` unprompted, and the
-  prompt that names `get_help` is precisely the one that never arrives.
+- ~~**A Persona's identity does not reach `agency-acp`.**~~ **Closed 2026-09-18.**
+  `AgencyDotNet.Acp` 0.1.195 read only `_meta.model` and dropped the composed prompt
+  silently, so every Persona there ran on the harness's baseline text and two
+  Personas on that Adapter were indistinguishable. Fixed in **0.1.197**, which reads
+  `_meta.systemPrompt` into `QueryContext.IdentityPrompt`. Verified end to end
+  against a live model, not taken on report: a Persona's name and nonce codeword
+  came back in the reply, and two concurrent sessions with different identities did
+  not bleed. Recorded as D-1 in [Live findings](../Huddle.Adapters-LiveFindings.md).
+- **A small local Model may not *inhabit* a Persona, even though the Persona now
+  reaches it.** This is what is left of D-1 above, and it is a property of the Model
+  rather than a defect anywhere. Observed 2026-09-18 on `gemma-4-e2b`: given two
+  distinct identities, both replies opened *"I am Gemma 4, a Large Language Model
+  developed by Google DeepMind"*; one then adopted its Persona correctly, the other
+  volunteered its own codeword while still answering as Gemma. The identity is
+  demonstrably present — the codewords prove it is being read — a 2B-class Model
+  simply does not consistently hold a voice. Untested whether a larger local Model
+  does. Expect local Models to suit narrow Personas long before they suit ones with
+  a strong character, which is the honest limit [Roadmap](roadmap.md) item 12 named
+  before there was evidence for it.
 - **A failed probe and a cancelled one look alike in the log.** Both return an
   empty catalog; the warning names the cause, but an authentication failure and a
   missing adapter both present to the user as "this agent advertises no models".
