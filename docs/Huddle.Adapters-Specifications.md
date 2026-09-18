@@ -76,11 +76,27 @@ One step in eight. So the design is **one factory that resolves a profile**, not
 | O-1 | A Persona names its Adapter, and the Teammate card offers the choice | `adapter:` round-trips through Create and Edit; the select renders the configured profiles |
 | O-2 | Changing the Adapter restarts the session | `PersonaSupervisor.NeedsRestart` returns true on an Adapter-only change |
 | O-3 | Model and Effort catalogs come from the **selected** Adapter | a Persona on `agency` is never offered Claude's models |
-| O-4 | `PersonaRunner` is untouched | zero diff in `PersonaRunner.cs` outside the `ThoughtChunk` line |
+| O-4 | `PersonaRunner` never learns which Adapter answered | no Adapter-specific branch, name or type anywhere in `PersonaRunner.cs` — *measure amended 2026-09-18, see below* |
 | O-5 | The tool-name prefix follows the Adapter | the system prompt names `get_help` for `agency`, `mcp__team__get_help` for `claude` |
 | O-6 | No new per-Persona store | `PersonaRenameCascade` gains no row |
 | O-7 | The session graph is released on the far side | `session/close` is sent on dispose |
 | O-8 | **No Huddle work waits on Agency.NET** | every task but Phase 7 runs green against `Huddle.MockAdapter`, in CI, with no Node, no subscription and no GPU |
+
+> **O-4's measure was amended on 2026-09-18, and its principle was not.** As written, O-4 promised
+> *"zero diff in `PersonaRunner.cs`"*. That is now false: the per-Turn idle bound added ~208 lines
+> to it (`Acp:TurnIdleTimeoutSeconds`, the `ActiveTurn` latches, the watchdog). The bound exists
+> because an Adapter on an unreachable endpoint returns **nothing at all**, which reads to a Human
+> as hung rather than Degraded — see [Live findings](Huddle.Adapters-LiveFindings.md) D-3 and D-5.
+>
+> **The principle survives intact**, which is why the row was reworded rather than struck. P3 says
+> `PersonaRunner` never learns which Adapter answered, and it still does not: the bound measures
+> silence from *any* peer, branches on no Adapter, names none, and would be identical had this
+> feature never existed. What changed is that "zero diff" was a **proxy** for that principle, chosen
+> before anyone had driven a real Adapter — and a proxy that forbids unrelated work in the same file
+> is measuring the wrong thing. The new measure tests the claim directly.
+>
+> Worth recording because the temptation on finding a false objective is to quietly delete it. The
+> objective was right; only its yardstick was.
 
 ---
 
