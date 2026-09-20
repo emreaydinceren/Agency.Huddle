@@ -691,7 +691,7 @@ Persona lifecycle: supervisor, work dirs, health and restarts — [area file](pe
 | [ADAPTERS-01](adapters.md#adapters-01--two-personas-in-one-room-on-different-adapters-and-neither-room-nor-gate-can-tell) |  | Active | | Needs two Adapter Profiles configured — see the area's setup |
 | [ADAPTERS-02](adapters.md#adapters-02--a-local-adapters-reply-streams-into-the-room-incrementally-and-stop-leaves-both-teammates-resumable) |  | Active | | A persisted Message shorter than what rendered is the diagnosed race in [Known limits](../known-limits.md), not a new defect |
 | [ADAPTERS-03](adapters.md#adapters-03--changing-a-teammates-adapter-resets-model-and-effort-says-so-and-restarts-the-session-) | 💰 | Active | | |
-| [ADAPTERS-04](adapters.md#adapters-04--does-a-real-local-model-call-get_help-unprompted-) | 💰 | Active | | Unblocked 2026-09-18 — D-1 is fixed in `AgencyDotNet.Acp` 0.1.197. **Check `agentInfo.version` first**: on 0.1.195 or earlier this test is meaningless, not merely failing. Needs a real local Adapter and a reachable inference endpoint. "Calls no tool at all" is INCONCLUSIVE and expected for a small model — record the model name |
+| [ADAPTERS-04](adapters.md#adapters-04--does-a-real-local-model-call-get_help-unprompted-) | 💰 | Active | | Unblocked 2026-09-18 — D-1 is fixed in `AgencyDotNet.Acp` 0.1.197, published on nuget.org as `0.1.198-ga453511f0e`. **Check `agentInfo.version` first**: on 0.1.195 or earlier this test is meaningless, not merely failing. Needs a real local Adapter and a reachable inference endpoint. "Calls no tool at all" is INCONCLUSIVE and expected for a small model — record the model name |
 
 ---
 

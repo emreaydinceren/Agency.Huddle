@@ -41,15 +41,39 @@ mean anything. This area adds:
 
 2. For **ADAPTERS-04 only**, a third profile pointing at a real local Adapter (`agency-acp` or
    equivalent) and a running inference endpoint. That test is the one no automated test can
-   settle; everything else here runs against `mock-acp`. **ADAPTERS-04 is currently blocked** —
-   see the note on the test itself before setting any of this up.
+   settle; everything else here runs against `mock-acp`. ADAPTERS-04 was unblocked on 2026-09-18;
+   read the note on the test itself for which versions make it meaningful.
 
-   A real local Adapter usually ships **no `appsettings.json` of its own**, so
-   `session/new` hard-fails with *"Agent:DefaultModel is not configured"* unless the profile
-   supplies its configuration. That is what `EnvironmentOverrides` is for:
+   **Take the Adapter from nuget.org, never from a local build or a drop folder.**
+   `AgencyDotNet.Acp` publishes there from the official build; the current public version is
+   `0.1.198-ga453511f0e`. Materialise it with a throwaway project rather than unzipping the nupkg —
+   the host needs its transitive dependencies beside it:
+
+   ```powershell
+   dotnet new console -o C:/tools/agency-acp
+   dotnet add C:/tools/agency-acp package AgencyDotNet.Acp --version 0.1.198-ga453511f0e
+   dotnet build C:/tools/agency-acp -r win-x64 --self-contained false
+   # NuGet does not copy this out of lib/, and without it the host tries to run self-contained
+   # and reports a missing hostpolicy.dll:
+   copy "$env:USERPROFILE/.nuget/packages/agencydotnet.acp/0.1.198-ga453511f0e/lib/net10.0/Agency.Acp.runtimeconfig.json" `
+        C:/tools/agency-acp/bin/Debug/net10.0/win-x64/
+   ```
+
+   **The Windows RID is not optional.** Without it the generic host's default EventLog provider
+   resolves the non-Windows `System.Diagnostics.EventLog` stub and the process dies on
+   `PlatformNotSupportedException` before writing one byte of protocol — which reads as a broken
+   package rather than a restore that is missing Windows assets. Confirm the build first:
+   `echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{}}}' | dotnet <path>/Agency.Acp.dll`
+   answers with `agentInfo.version`, and that is the only trustworthy way to identify what you are
+   about to run.
+
+   **The nupkg carries no `appsettings.json`** — the repository build output does, the package does
+   not — so `session/new` hard-fails with *"Agent:DefaultModel is not configured"* unless the
+   profile supplies its configuration. That is what `EnvironmentOverrides` is for:
 
    ```jsonc
-   { "Id": "agency", "DisplayName": "Agency", "Command": "C:/tools/agency-acp/agency-acp.exe",
+   { "Id": "agency", "DisplayName": "Agency", "Command": "dotnet",
+     "Args": ["C:/tools/agency-acp/bin/Debug/net10.0/win-x64/Agency.Acp.dll"],
      "UsesToolNamePrefix": false,
      "EnvironmentOverrides": {
        "Agent__DefaultModel": "google/gemma-4-e2b",
@@ -188,7 +212,8 @@ If the `claude` Teammate cannot start because the Node adapter is not installed,
 **Paid** · about 45 min · *needs a real local Adapter and a running inference endpoint*
 
 > [!NOTE]
-> **Unblocked 2026-09-18 — runnable on `AgencyDotNet.Acp` 0.1.197 or later.** This test was
+> **Unblocked 2026-09-18 — runnable on `AgencyDotNet.Acp` 0.1.197 or later**, which on nuget.org
+> means `0.1.198-ga453511f0e`; `0.1.197` went to the private feed and never published there. This test was
 > blocked from 2026-09-17 because the composed system prompt never reached the agent: 0.1.195
 > read only `_meta.model` and dropped `_meta.systemPrompt` silently, so the Model was never told
 > `get_help` existed and the result would have measured the missing prompt rather than the Model

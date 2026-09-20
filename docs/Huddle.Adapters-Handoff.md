@@ -29,7 +29,7 @@ binding, but it is 1,400 lines and you do not need most of it. Read **§15.8**, 
 | **Follow-up** | PR #60, **open and unreviewed** — `EnvironmentOverrides`, the per-Turn idle bound, and a docs catch-up |
 | **This branch** | `docs/adapters-conformance-honesty-and-handoff`, stacked on PR #60 — spec and plan corrections plus this page |
 | **Suite** | 1,294 tests green, 0 warnings |
-| **Agency.NET** | **Done.** `0.1.197-gb4f68316af` published 2026-09-18; PR #218 merged. All four items we raised are fixed |
+| **Agency.NET** | **Done.** Take it from **nuget.org**: `AgencyDotNet.Acp 0.1.198-ga453511f0e`. PR #218 merged; the four items we raised were verified on the pre-merge `0.1.197`, and the public build carries the `_meta.systemPrompt` reader and answers `initialize` (checked 2026-09-20) |
 | **Milestone** | Not run. Nothing is blocking it any more |
 
 ### What actually works
@@ -108,24 +108,59 @@ trip.
 ## 4. Traps, each of which has already cost someone
 
 **`ADAPTERS-04` is only meaningful on `0.1.197` or later — check the version, do not assume it.**
+On nuget.org that means `0.1.198-ga453511f0e`; `0.1.197` never published there.
 It asks whether a real local model calls `get_help` unprompted. On `0.1.195` and earlier the
 Adapter never read `_meta.systemPrompt`, so the prompt naming `get_help` never arrived and the test
 returned INCONCLUSIVE every time while looking like evidence about a model. That is fixed, but an
 older Adapter on a machine somewhere will reproduce the trap silently. `initialize` reports the
 version in `agentInfo.version`; read it before you trust a result.
 
-**A published package is not the drop we validated, and you cannot simply re-run against it.**
-Agency's pre-merge `0.1.197` was built from *uncommitted* work, so its `-ga1fc165f21` suffix points
-at the commit the fix sits *on top of*. What published is **`0.1.197-gb4f68316af`** — same base
-version, fresh build, different commit. **Identify a build from `agentInfo.version` in
-`initialize`, never from a file name.**
+**Take the Adapter from nuget.org, never from a local build or a drop folder.** `AgencyDotNet.Acp`
+publishes there from the official build, on an **even-numbered** line — `0.1.192`, `0.1.194`,
+`0.1.196`, `0.1.198`. The `0.1.197-gb4f68316af` this page used to call "published" went to the
+private feed and **is not on nuget.org**; the current public build is **`0.1.198-ga453511f0e`**.
+Every pre-merge drop was built from *uncommitted* work, so a `-g<sha>` suffix on one names the
+commit the fix sits *on top of* rather than a commit containing it. **Identify a build from
+`agentInfo.version` in `initialize`, never from a file name or a folder.**
 
-The catch, found on 2026-09-18 while trying to honour this rule: **the published package is a
-library, not a runnable host.** `AgencyDotNet.Acp.nupkg` contains `lib/net10.0/` and no executable,
-so there is no vanilla-config check to run against the feed artifact. The published binary was
-verified *statically* instead — the identity parser present, the `_meta.model` reader gone. If you
-need a runtime check on a published version, build the host from that tag; a drop folder is not a
-substitute and neither is the nupkg.
+**Two feeds, two version lines, and a `-g<sha>` that resolves on only one of them.** Agency builds
+twice. Their internal Gitea feed carries the **odd** line — `0.1.193`, `0.1.195`, `0.1.197` — built
+from the repository every message in `PRIVATE/Huddle/` cites, whose `main` is `b4f68316af`.
+nuget.org carries the **even** line, and its `.nuspec` names a **GitHub** repository and commit —
+the mirror their `sync` job feeds. The two are the same work; they are not the same history.
+
+The consequence is a trap dressed as a checkable fact: nuget.org's `0.1.198` reports
+`agentInfo.version` as `0.1.198+a453511f0e`, and **`a453511f0e` is the tip of no ref on Agency's
+Gitea remote** — checked 2026-09-20 with `git ls-remote`, where `main` is `b4f68316af`. So "read the `-g<sha>` to know what
+shipped", which their message 18 restores for the Gitea package, silently answers a question about
+a different repository when the package came from nuget.org. Confirming a build still means reading
+`agentInfo.version`; resolving that sha means knowing which feed you took it from first. Agency's
+own instruction in message 18 is to consume `0.1.197-gb4f68316af` from the Gitea feed — take the
+nuget.org build when you want what the public installs, and say which one a recorded result came
+from.
+
+**The published package is runnable, and the note that said otherwise was wrong.** Corrected
+2026-09-20. The nupkg ships no `tools/` directory and declares `packageType Dependency`, which is
+what made it read as a library — but `lib/net10.0/Agency.Acp.dll` has an entry point
+(`Agency.Acp.Program::<Main>`) and the package carries its `Agency.Acp.runtimeconfig.json`, so the
+feed artifact can be driven directly. Two things must be right or it fails in ways that look like a
+broken package:
+
+- **Restore with a Windows RID** — `dotnet build -r win-x64 --self-contained false`. Without one the
+  generic host's default EventLog provider resolves the non-Windows `System.Diagnostics.EventLog`
+  stub and the process dies on `PlatformNotSupportedException` before writing one protocol byte.
+- **Copy `Agency.Acp.runtimeconfig.json` next to the DLL in your output.** NuGet does not copy it out
+  of `lib/`, and without it the host tries to run self-contained and reports a missing
+  `hostpolicy.dll`.
+
+With both, `dotnet Agency.Acp.dll` answers `initialize` with `"version":"0.1.198+a453511f0e"`. So the
+vanilla-config check **is** available against the feed artifact; run it rather than building the host
+from a tag.
+
+One trap inside the trap: **a byte-oriented search of the assembly proves nothing either way.**
+.NET user strings live in the `#US` heap as **UTF-16**, so `grep systemPrompt Agency.Acp.dll`
+returns no match on `0.1.198` even though the literal is there. Read `Agency.Acp.xml`, which names
+`_meta.systemPrompt` six times, or decode the heap — never read a zero-match grep as absence.
 
 **`EnvironmentOverrides` keys must come from `appsettings.json`, never the environment-variable
 provider.** That provider rewrites every `__` into `:`, so
@@ -152,7 +187,8 @@ do not treat it as a regression in whatever you changed.
 
 ## 5. ~~When Agency publishes~~ — done 2026-09-18
 
-Agency published `0.1.197-gb4f68316af`. **All four documents that scoped the blocker to `0.1.195`
+Agency published — `0.1.197-gb4f68316af` to the private feed, and `0.1.198-ga453511f0e` to
+nuget.org, which is where to take it from. **All four documents that scoped the blocker to `0.1.195`
 have been revised**: the live findings, `known-limits.md`, and the ADAPTERS-04 notes in both the
 manual-test area file and the Tracker. Nothing here is pending.
 

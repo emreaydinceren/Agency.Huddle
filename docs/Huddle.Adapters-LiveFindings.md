@@ -57,7 +57,8 @@ per-host model catalogue, and `session/close` on dispose — **all landed** in P
 ## D-1 — Persona identity never reaches the agent · ~~**blocking**~~ · **CLOSED 2026-09-18**
 
 > **Fixed in `AgencyDotNet.Acp 0.1.197-gb4f68316af`**, published to the private feed on
-> 2026-09-18. `HandleSessionNewAsync` now parses `_meta.systemPrompt` through a new
+> 2026-09-18, and public on **nuget.org** as `0.1.198-ga453511f0e` — take it from there.
+> `HandleSessionNewAsync` now parses `_meta.systemPrompt` through a new
 > `IdentityPromptParser` into `QueryContext.IdentityPrompt`, and the speculative `_meta.model`
 > reader was deleted. Both the `{"append": "…"}` object and a bare string are accepted; unknown
 > shapes fall back to the default identity rather than erroring.
@@ -285,16 +286,19 @@ resident. Every live result in this document came from it. A host name is delibe
 here: a real internal `*.local` name in a tracked file fails the `secret-scan` job on
 `.gitleaks.toml`'s `internal-mdns-host` rule. Read it from the adapter's `appsettings.json`.
 
-**A published package is not the artifact we validated.** The pre-merge drops were built from
-uncommitted work, so `0.1.197-ga1fc165f21` carries the sha of the commit the fix sits *on top of*.
-What published is `0.1.197-gb4f68316af`, a fresh build from the merge commit. Same base version,
-different build. Confirm what you are running from `agentInfo.version` in `initialize`, never from
-a file name.
+**Take the Adapter from nuget.org, not from a local build or a drop folder.** `AgencyDotNet.Acp`
+publishes there from the official build, on an even-numbered line; the current public build is
+`0.1.198-ga453511f0e`. `0.1.197-gb4f68316af` went to the private feed only. The pre-merge drops were
+built from uncommitted work, so `0.1.197-ga1fc165f21` carries the sha of the commit the fix sits *on
+top of*. Confirm what you are running from `agentInfo.version` in `initialize`, never from a file
+name.
 
-**The published package is a library, not a runnable host**, so the vanilla-config check cannot be
-re-run against the feed artifact directly — it was run against the drop, and the published binary
-was verified statically to carry the same fix. Anyone needing a runtime check on a published
-version must build the host from that tag.
+**The published package is runnable — the note that said otherwise was wrong, corrected 2026-09-20.**
+It declares `packageType Dependency` and ships no `tools/`, but `lib/net10.0/Agency.Acp.dll` has an
+entry point and the package carries its `runtimeconfig.json`. Restored with a Windows RID and that
+file copied beside the DLL, `dotnet Agency.Acp.dll` answers `initialize` with
+`"version":"0.1.198+a453511f0e"`. The two failure modes, and the reason a static grep of the
+assembly proves nothing either way, are in the handoff's traps.
 
 ## Next, in priority order
 

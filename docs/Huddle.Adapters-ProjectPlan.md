@@ -969,9 +969,9 @@ and the D-12 amendment in **Spec §17**.
 - **Goal:** **Spec §15.9 (T-31b)**.
 - **Read first:** Task 12.1a's output, [Live findings](Huddle.Adapters-LiveFindings.md),
   **Spec §12 (E-18)**.
-- **Prerequisite:** Agency has **published**. As of 2026-09-18 the validated build is a pre-merge
-  drop; see the handoff for why the published artifact must be re-validated rather than assumed
-  identical.
+- **Prerequisite:** Agency has **published**. Take the Adapter from **nuget.org** —
+  `AgencyDotNet.Acp 0.1.198-ga453511f0e` — never from a local build or a drop folder; the handoff's
+  traps cover how to run the feed artifact and why a drop must not stand in for it.
 - **Deliverable:** Configure an Adapter Profile whose `Command` is the published `agency-acp` and
   whose `EnvironmentOverrides` carry whatever its configuration needs, then run the **portable**
   conformance tests against it. The mock-only tests stay on the mock — that is correct, not a gap.

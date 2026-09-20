@@ -911,8 +911,11 @@ from the parsed identity.
         "Id": "agency",
         "DisplayName": "Agency",
         "Description": "a local model on this machine, free",
-        "Command": "C:/tools/agency-acp/agency-acp.exe",
-        "Args": [ "--Agent:UserId=00000000-0000-0000-0000-000000000000" ],
+        "Command": "dotnet",
+        "Args": [
+          "C:/tools/agency-acp/bin/Debug/net10.0/win-x64/Agency.Acp.dll",
+          "--Agent:UserId=00000000-0000-0000-0000-000000000000"
+        ],
         "UsesToolNamePrefix": false,
         "EnvironmentOverrides": {
           "Agent__DefaultModel": "google/gemma-4-e2b",
@@ -924,6 +927,13 @@ from the parsed identity.
   }
 }
 ```
+
+**Why `agency` launches through `dotnet`.** The Adapter is taken from nuget.org, and
+`AgencyDotNet.Acp` ships its host as `lib/net10.0/Agency.Acp.dll` — an assembly with an entry point
+rather than a packaged executable, so the DLL is `Args[0]`. `AgentProcessOptionsFactory` passes
+`Args` through verbatim and appends nothing, so anything else the profile needs follows it in the
+same list. `"AdapterPath": "…/Agency.Acp.dll"` with no `Args` is equivalent. A local build is not a
+substitute: see the traps in [the handoff](Huddle.Adapters-Handoff.md).
 
 **Legacy keys survive.** `Command`, `AdapterPath` and `Args` remain on `AcpOptions` and are read
 only when `Adapters` is absent. Removing them would break every existing `appsettings` and gains
@@ -1184,7 +1194,7 @@ involved. Enforcement lives on the inference port, outside both products.
       ├─ connect pipe → hello → welcome{agentId}
       └─ factory.CreateAsync(persona, agentId)
            ├─ profile = agency;  prefix = ""
-           ├─ processOptions = (C:/tools/agency-acp/agency-acp.exe, [--Agent:UserId=…], workDir)
+           ├─ processOptions = (dotnet, [Agency.Acp.dll, --Agent:UserId=…], workDir)
            ├─ token = 32 random bytes
            ├─ tools = [get_help, list_agents, create_room, invite_agent,
            │           post_message, follow_room, unfollow_room]
