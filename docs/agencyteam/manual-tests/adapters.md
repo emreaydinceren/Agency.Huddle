@@ -41,15 +41,39 @@ mean anything. This area adds:
 
 2. For **ADAPTERS-04 only**, a third profile pointing at a real local Adapter (`agency-acp` or
    equivalent) and a running inference endpoint. That test is the one no automated test can
-   settle; everything else here runs against `mock-acp`. **ADAPTERS-04 is currently blocked** —
-   see the note on the test itself before setting any of this up.
+   settle; everything else here runs against `mock-acp`. ADAPTERS-04 was unblocked on 2026-09-18;
+   read the note on the test itself for which versions make it meaningful.
 
-   A real local Adapter usually ships **no `appsettings.json` of its own**, so
-   `session/new` hard-fails with *"Agent:DefaultModel is not configured"* unless the profile
-   supplies its configuration. That is what `EnvironmentOverrides` is for:
+   **Take the Adapter from nuget.org, never from a local build or a drop folder.**
+   `AgencyDotNet.Acp` publishes there from the official build; the current public version is
+   `0.1.198-ga453511f0e`. Materialise it with a throwaway project rather than unzipping the nupkg —
+   the host needs its transitive dependencies beside it:
+
+   ```powershell
+   dotnet new console -o C:/tools/agency-acp
+   dotnet add C:/tools/agency-acp package AgencyDotNet.Acp --version 0.1.198-ga453511f0e
+   dotnet build C:/tools/agency-acp -r win-x64 --self-contained false
+   # NuGet does not copy this out of lib/, and without it the host tries to run self-contained
+   # and reports a missing hostpolicy.dll:
+   copy "$env:USERPROFILE/.nuget/packages/agencydotnet.acp/0.1.198-ga453511f0e/lib/net10.0/Agency.Acp.runtimeconfig.json" `
+        C:/tools/agency-acp/bin/Debug/net10.0/win-x64/
+   ```
+
+   **The Windows RID is not optional.** Without it the generic host's default EventLog provider
+   resolves the non-Windows `System.Diagnostics.EventLog` stub and the process dies on
+   `PlatformNotSupportedException` before writing one byte of protocol — which reads as a broken
+   package rather than a restore that is missing Windows assets. Confirm the build first:
+   `echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{}}}' | dotnet <path>/Agency.Acp.dll`
+   answers with `agentInfo.version`, and that is the only trustworthy way to identify what you are
+   about to run.
+
+   **The nupkg carries no `appsettings.json`** — the repository build output does, the package does
+   not — so `session/new` hard-fails with *"Agent:DefaultModel is not configured"* unless the
+   profile supplies its configuration. That is what `EnvironmentOverrides` is for:
 
    ```jsonc
-   { "Id": "agency", "DisplayName": "Agency", "Command": "C:/tools/agency-acp/agency-acp.exe",
+   { "Id": "agency", "DisplayName": "Agency", "Command": "dotnet",
+     "Args": ["C:/tools/agency-acp/bin/Debug/net10.0/win-x64/Agency.Acp.dll"],
      "UsesToolNamePrefix": false,
      "EnvironmentOverrides": {
        "Agent__DefaultModel": "google/gemma-4-e2b",
@@ -187,17 +211,15 @@ If the `claude` Teammate cannot start because the Node adapter is not installed,
 
 **Paid** · about 45 min · *needs a real local Adapter and a running inference endpoint*
 
-> [!IMPORTANT]
-> **BLOCKED as of 2026-09-17 — do not run this yet, and do not record a result for it.**
-> Against `AgencyDotNet.Acp` 0.1.195 the composed system prompt never reaches the agent:
-> Huddle sends it at `_meta.systemPrompt` and that adapter reads only `_meta.model`, so the
-> prompt is dropped silently (D-1 in [Live findings](../../Huddle.Adapters-LiveFindings.md),
-> and in [Known limits](../known-limits.md)). The prompt that names `get_help` is the only
-> thing that tells the Model `get_help` exists — so this test would return INCONCLUSIVE every
-> time, measuring the missing prompt rather than the Model. That is worse than not running it,
-> because the Tracker would then carry something that reads as evidence about a Model and is
-> not. Run it once a Persona's own text demonstrably arrives; until then the result column
-> stays empty on purpose.
+> [!NOTE]
+> **Unblocked 2026-09-18 — runnable on `AgencyDotNet.Acp` 0.1.197 or later**, which on nuget.org
+> means `0.1.198-ga453511f0e`; `0.1.197` went to the private feed and never published there. This test was
+> blocked from 2026-09-17 because the composed system prompt never reached the agent: 0.1.195
+> read only `_meta.model` and dropped `_meta.systemPrompt` silently, so the Model was never told
+> `get_help` existed and the result would have measured the missing prompt rather than the Model
+> (D-1 in [Live findings](../../Huddle.Adapters-LiveFindings.md)). 0.1.197 reads it, verified
+> live. **Check the version first** — `initialize` reports it in `agentInfo.version`, and on
+> 0.1.195 or 0.1.193 this test is still meaningless rather than merely failing.
 
 *This is the test no automated test can settle, and the reason this area has a paid tier at all. Progressive discovery is a deliberate bet: the system prompt names exactly one tool — `get_help` — and that tool names the rest. The bet assumes a model strong enough to ask. `mock-acp` calls what it is scripted to call and proves nothing about this. A 7B model that never calls `get_help` is not broken in any way a test can catch; it simply never creates a Room.*
 
