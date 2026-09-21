@@ -142,7 +142,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   Archiving a Room excludes it from `FindRoomWithExactMembersAsync`, so starting a
   chat with that Teammate creates a fresh Room rather than resurrecting the
   archived one — a deliberate choice, recorded in
-  [ADR-0017](../adr/0017-a-room-can-be-archived-or-deleted.md). Unarchive the first
+  [ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md). Unarchive the first
   one afterwards and two non-archived Rooms now hold exactly `{Human, Teammate}`,
   both named by `RoomNaming.Derive` and therefore identical in the sidebar.
   [ADR-0003](../adr/0003-mention-gated-replies-and-membership-defined-direct-rooms.md)'s
@@ -285,7 +285,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
     be deleted rather than leaving a stale excuse behind.
 - **Threads, reactions, message edits, message deletes, attachments, search,
   notifications.** *Room* archive and delete arrived 2026-09-21
-  ([ADR-0017](../adr/0017-a-room-can-be-archived-or-deleted.md)); nothing here
+  ([ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md)); nothing here
   edits or removes an individual Message, and a Transcript is still never
   rewritten in place.
 - **Known flake, pre-existing:** `PersonaSupervisorTests.Shutdown_DisposesEveryHost`

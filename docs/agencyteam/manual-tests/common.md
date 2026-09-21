@@ -279,7 +279,7 @@ finds where `Team:DataDir` actually resolved.
 - **Names are permanent; Rooms are not, since 2026-09-21.** Nothing in the UI
   deletes an *Agent*, so every Name you connect under still leaves a Room behind —
   but that Room can now be archived or deleted from the context menu on its sidebar
-  row ([ADR-0017](../../adr/0017-a-room-can-be-archived-or-deleted.md)). Appending a
+  row ([ADR-0018](../../adr/0018-a-room-can-be-archived-or-deleted.md)). Appending a
   digit to a reused Name is therefore a convenience rather than a necessity. Prefer
   it anyway when a test's oracle counts sidebar entries: deleting a Room is
   irreversible, and a test that deletes the wrong one cannot put it back.

@@ -37,7 +37,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | 11 | Notifying an Agent when a watched file changes | a new watcher beside `PersonaStore`, then `ChatService` | `PersonaStore`'s debounced `FileSystemWatcher`; frontmatter lists parse already |
 | ~~12~~ | ~~Running a Persona on a local Model~~ — **delivered 2026-09-16** | `AdapterProfile`, then one profile-aware `DotAcpAgentHostFactory` | shipped by a route this row did not foresee: no second `IAgentHostFactory` and no second `IModelCatalog`, because both Adapters advertise their catalog at `session/new` — see [ADR-0013](../adr/0013-an-adapter-is-a-property-of-the-persona.md) |
 | ~~13~~ | ~~Model-facing text is configuration~~ — **delivered 2026-09-13** | `Hooks/`, then the five sites that held the literals | shipped; never on this list before it was built, and it collides with item 9 — see [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) |
-| ~~14~~ | ~~Archiving and deleting a Room~~ — **delivered 2026-09-21** | `SqliteTeamDirectory`, `RoomList.razor` | shipped; never on this list before it was built, and it *reverses* a stance Known limits recorded — archived state went in a sibling table because `CREATE TABLE IF NOT EXISTS` never adds a column, and the one-1:1-Room-per-Agent invariant was knowingly given up — see [ADR-0017](../adr/0017-a-room-can-be-archived-or-deleted.md) |
+| ~~14~~ | ~~Archiving and deleting a Room~~ — **delivered 2026-09-21** | `SqliteTeamDirectory`, `RoomList.razor` | shipped; never on this list before it was built, and it *reverses* a stance Known limits recorded — archived state went in a sibling table because `CREATE TABLE IF NOT EXISTS` never adds a column, and the one-1:1-Room-per-Agent invariant was knowingly given up — see [ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md) |
 
 ## 1. Renaming a Teammate
 
@@ -1074,7 +1074,7 @@ the Settings button. Delete removes the Room and its Transcript for good, behind
 an inline confirmation that names it. Both are on a context menu on the Room's
 sidebar row, reachable by right-click and by a keyboard-focusable button.
 
-[ADR-0017](../adr/0017-a-room-can-be-archived-or-deleted.md) carries the
+[ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md) carries the
 decisions. Three are worth knowing before touching anything nearby:
 
 **Archived state is a sibling table, never a column.** All DDL is

@@ -7,7 +7,7 @@ only the links your task needs.
 
 Applies to the repo as of 2026-09-21, after roadmap item 14 (archiving and
 deleting a Room): one solution, `Huddle.slnx`, holding all six projects, builds
-with zero warnings and its 1322 tests pass, 10 of them skipped unless
+with zero warnings and its 1332 tests pass, 10 of them skipped unless
 `Team:Acp:Enabled` is on — see [Build, test, run](#build-test-run).
 
 The product is Agency.Huddle, and since 2026-09-12 so is every namespace.

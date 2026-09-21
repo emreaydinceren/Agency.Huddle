@@ -923,7 +923,7 @@ If the textarea does NOT clear, check whether you pressed Shift+Enter (which ins
 If `gamma` is not in the candidate set (the `/invite` returns `Unknown agent @gamma`), `T-F` has stopped. Restart it with `pwsh tools/echo-bot.ps1 -Name gamma`, wait for the sidebar entry, and retry. Do not record a fail for an absent bot.
 
 > [!NOTE]
-> A Room can be renamed by hand (issue #43), and since 2026-09-21 it can also be **archived or deleted** from the context menu on its sidebar row — see [ADR-0017](../../adr/0017-a-room-can-be-archived-or-deleted.md). A Room still cannot be *left*: membership changes only by Invitation, and there is no control anywhere that removes one Member from a Room. Archiving hides a Room from the sidebar and is reversible from **Archived Chats**, bottom-left; deleting removes the Room and its Transcript for good. A Room name is still always derived until somebody renames it.
+> A Room can be renamed by hand (issue #43), and since 2026-09-21 it can also be **archived or deleted** from the context menu on its sidebar row — see [ADR-0018](../../adr/0018-a-room-can-be-archived-or-deleted.md). A Room still cannot be *left*: membership changes only by Invitation, and there is no control anywhere that removes one Member from a Room. Archiving hides a Room from the sidebar and is reversible from **Archived Chats**, bottom-left; deleting removes the Room and its Transcript for good. A Room name is still always derived until somebody renames it.
 
 ### INVITEROOMS-21 — An Agent belongs to at most one two-Member Room: after an invite, the next registration mints a fresh Direct Room
 
@@ -1541,7 +1541,7 @@ If `scratch15` fails to register within 5 seconds, read `T-D` for a `protocolErr
 
 **Free** · about 5 min
 
-*Archive is the whole point of ADR-0017 and its storage is a sibling table, so the one thing worth proving by hand is that the Room leaves the sidebar without a reload and is still findable. Catches an archive that writes nothing, and an archive that needs F5.*
+*Archive is the whole point of ADR-0018 and its storage is a sibling table, so the one thing worth proving by hand is that the Room leaves the sidebar without a reload and is still findable. Catches an archive that writes nothing, and an archive that needs F5.*
 
 **Before you start**
 
@@ -1680,7 +1680,7 @@ If `Team:DataDir` has been pointed somewhere else, look there instead — do not
 
 **Free** · about 7 min
 
-*This is the accepted cost of ADR-0017, chosen knowingly over reuse-and-unarchive. It is here so the duplicate is recognised as designed rather than filed as a bug — the same reason INVITEROOMS-21 exists.*
+*This is the accepted cost of ADR-0018, chosen knowingly over reuse-and-unarchive. It is here so the duplicate is recognised as designed rather than filed as a bug — the same reason INVITEROOMS-21 exists.*
 
 **Before you start**
 
@@ -1707,7 +1707,7 @@ If `Team:DataDir` has been pointed somewhere else, look there instead — do not
 - No new Room appears at all -> the lookup matched the archived Room and returned it, and `echo` now has no reachable Direct Room.
 
 > [!NOTE]
-> TWO sidebar entries reading `echo` after step 4 is the DESIGNED outcome, recorded in [Known limits](../known-limits.md) and [ADR-0017](../../adr/0017-a-room-can-be-archived-or-deleted.md). Do NOT file it as a duplicate-Room bug. This is a *different* route to two same-named Rooms than INVITEROOMS-21's, which comes from re-registration.
+> TWO sidebar entries reading `echo` after step 4 is the DESIGNED outcome, recorded in [Known limits](../known-limits.md) and [ADR-0018](../../adr/0018-a-room-can-be-archived-or-deleted.md). Do NOT file it as a duplicate-Room bug. This is a *different* route to two same-named Rooms than INVITEROOMS-21's, which comes from re-registration.
 
 ### INVITEROOMS-39 — Archived and deleted Rooms survive a restart
 

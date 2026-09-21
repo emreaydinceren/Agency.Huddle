@@ -17,7 +17,7 @@ different claims, and only the first follows from that argument. The sidebar is 
 primary navigation and it only ever grew — `manual-tests/common.md` had to tell testers to
 append a digit to Names they had already used. Archive hides a Room reversibly; Delete
 removes it and its Transcript for good. See
-[ADR-0017](../adr/0017-a-room-can-be-archived-or-deleted.md).
+[ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md).
 
 **Rejected: an `archived` column on `rooms`.** The obvious shape, and silently wrong here —
 all DDL is `CREATE TABLE IF NOT EXISTS`, so an existing `team.db` never gains a column and

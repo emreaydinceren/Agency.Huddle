@@ -16,7 +16,7 @@ framework** — hand-written fakes under `tests/Huddle.Tests/Acp/Fakes/`.
 
 Added 2026-09-21 with archiving. All DDL is `CREATE TABLE IF NOT EXISTS`, so an existing
 `team.db` never gains a column and never says so — which is why archived state went into
-a sibling table rather than onto `rooms` ([ADR-0017](../adr/0017-a-room-can-be-archived-or-deleted.md)).
+a sibling table rather than onto `rooms` ([ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md)).
 
 That is a claim about databases this test run never creates, so asserting it needs a
 database built the old way on purpose.
