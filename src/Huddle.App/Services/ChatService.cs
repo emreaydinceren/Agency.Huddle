@@ -477,6 +477,56 @@ public sealed partial class ChatService
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
     }
 
+    /// <summary>
+    /// Archives or unarchives a Room. Archiving is a display filter only - see
+    /// <see cref="Room.Archived"/> - the Room stays live and Agents can still post into it.
+    /// </summary>
+    /// <param name="roomId">The Room to archive or unarchive.</param>
+    /// <param name="archived">
+    /// <see langword="true"/> to archive the Room; <see langword="false"/> to unarchive it.
+    /// </param>
+    /// <param name="ct">Cancels the lookup and the write.</param>
+    /// <returns>The Room after the change, so the caller sees the new <see cref="Room.Archived"/>.</returns>
+    public async Task<Room> SetRoomArchivedAsync(string roomId, bool archived, CancellationToken ct = default)
+    {
+        _ = await this.teamDirectory.GetRoomAsync(roomId, ct)
+            ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
+
+        await this.teamDirectory.SetRoomArchivedAsync(roomId, archived, ct);
+        ChatService.LogRoomArchived(this.logger, roomId, archived);
+        this.events.PublishRoomsChanged();
+
+        return await this.teamDirectory.GetRoomAsync(roomId, ct)
+            ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
+    }
+
+    /// <summary>
+    /// Permanently deletes a Room: its Team Directory row, its Membership rows and its Transcript
+    /// file. Both stores must be told - see <see cref="IChatStore.DeleteAsync"/>'s remarks - or an
+    /// orphan Transcript file survives with nothing left that can ever reach it.
+    /// </summary>
+    /// <param name="roomId">The Room to delete.</param>
+    /// <param name="ct">Cancels the lookup and the deletes.</param>
+    public async Task DeleteRoomAsync(string roomId, CancellationToken ct = default)
+    {
+        _ = await this.teamDirectory.GetRoomAsync(roomId, ct)
+            ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
+
+        await this.teamDirectory.DeleteRoomAsync(roomId, ct);
+        await this.store.DeleteAsync(roomId, ct);
+
+        // Both budgets and postLocks are keyed by roomId and now describe a Room that no longer
+        // exists, so drop them. Drafts and RoomFollows are deliberately left untouched: both are
+        // in-memory, both die on restart, and both are only ever read by room id - an id that is now
+        // unreachable, so their entries for it are inert. Reaching them would mean injecting
+        // RoomFollows (an internal Acp type) into ChatService for no observable gain.
+        this.budgets.TryRemove(roomId, out _);
+        this.postLocks.TryRemove(roomId, out _);
+
+        ChatService.LogRoomDeleted(this.logger, roomId);
+        this.events.PublishRoomsChanged();
+    }
+
     /// <summary>Logs that a direct Room was created for an Agent.</summary>
     /// <param name="logger">The logger to write to.</param>
     /// <param name="roomId">The id of the created Room.</param>
@@ -514,4 +564,17 @@ public sealed partial class ChatService
     /// <param name="granted">The Room's new allowance.</param>
     [LoggerMessage(Level = LogLevel.Information, Message = "Room '{RoomId}' was extended to {Granted} agent messages.")]
     private static partial void LogBudgetExtended(ILogger logger, string roomId, int granted);
+
+    /// <summary>Logs that a Room's archived state changed.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="roomId">The id of the Room whose archived state changed.</param>
+    /// <param name="archived">The Room's archived state after the change.</param>
+    [LoggerMessage(Level = LogLevel.Information, Message = "Room '{RoomId}' archived set to {Archived}.")]
+    private static partial void LogRoomArchived(ILogger logger, string roomId, bool archived);
+
+    /// <summary>Logs that a Room was permanently deleted.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="roomId">The id of the deleted Room.</param>
+    [LoggerMessage(Level = LogLevel.Information, Message = "Room '{RoomId}' was deleted.")]
+    private static partial void LogRoomDeleted(ILogger logger, string roomId);
 }

@@ -1,0 +1,23 @@
+@*
+    The sidebar's "Archived chats" entry - sits directly above the Settings link in
+    MainLayout.razor's nav-settings MudNavMenu, so it is pinned to the bottom of the drawer by that
+    MudNavMenu's own margin-top: auto (app.css). Icon-only, tooltipped and aria-labelled, matching the
+    Settings MudNavLink beside it rather than the icon+text links (New chat, Teammates) further up the
+    drawer. Opens ArchivedChatsDialog through IDialogService - the same door TeammateCard's own
+    MudDialog opens through - which loads its own archived Rooms, so this component carries no state
+    of its own beyond the click.
+*@
+
+@inject IDialogService DialogService
+
+<MudTooltip Text="Archived chats">
+    <MudNavLink Icon="@Icons.Material.Filled.Archive" aria-label="Archived chats" OnClick="this.OpenAsync" />
+</MudTooltip>
+
+@code {
+    /// <summary>Opens <see cref="ArchivedChatsDialog"/> - it reads its own archived Rooms on open, so no parameters are built here.</summary>
+    private async Task OpenAsync()
+    {
+        await this.DialogService.ShowAsync<ArchivedChatsDialog>("Archived chats", ArchivedChatsDialog.Options);
+    }
+}

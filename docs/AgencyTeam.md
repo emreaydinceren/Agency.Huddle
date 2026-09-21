@@ -5,9 +5,10 @@ are real Claude agents running as child processes. This page is the hub of its
 documentation: read it whole if you are picking the codebase up cold, then follow
 only the links your task needs.
 
-Applies to the repo as of 2026-09-13, after roadmap item 6 (CSS tokenisation and
-dark mode): one solution, `Huddle.slnx`, holding all six projects, builds with
-zero warnings and its 961 tests pass — see [Build, test, run](#build-test-run).
+Applies to the repo as of 2026-09-21, after roadmap item 14 (archiving and
+deleting a Room): one solution, `Huddle.slnx`, holding all six projects, builds
+with zero warnings and its 1332 tests pass, 10 of them skipped unless
+`Team:Acp:Enabled` is on — see [Build, test, run](#build-test-run).
 
 The product is Agency.Huddle, and since 2026-09-12 so is every namespace.
 Projects, assemblies, folders and the solution followed and are now `Huddle.*`
@@ -61,7 +62,7 @@ The defined terms, so you can tell whether a word you are about to use is one of
 them without opening [Language](agencyteam/language.md):
 
 > Teammate · Human · Agent · Name · Alias · Title · Team · Adapter · Room ·
-> Member · Invitation · Persona · Rejected file · Model · Effort · Turn ·
+> Member · Invitation · Archived · Persona · Rejected file · Model · Effort · Turn ·
 > App Tool · Reply Gate · Budget · Catch-up · Progressive discovery · Work Dir ·
 > Message · Draft · Mention · Envelope · Transcript · Stop · Team Directory ·
 > Hook · Placeholder · Default · Timing · Theme · Token · Appearance

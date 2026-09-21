@@ -994,6 +994,99 @@ public sealed class ChatServiceTests
         Assert.Equal(new RoomBudget(0, 1), service.GetBudget(room.Id));
     }
 
+    /// <summary>Archiving a Room publishes RoomsChanged, or the sidebar never learns the archive happened.</summary>
+    [Fact]
+    public async Task SetRoomArchived_PublishesRoomsChanged()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        var (service, events) = CreateService(dir, directory);
+        var roomsChangedCount = 0;
+        events.RoomsChanged += () => roomsChangedCount++;
+
+        var updated = await service.SetRoomArchivedAsync(room.Id, true, ct);
+
+        Assert.True(updated.Archived);
+        Assert.Equal(1, roomsChangedCount);
+    }
+
+    /// <summary>Deleting a Room publishes RoomsChanged, or the sidebar keeps showing a Room that is gone.</summary>
+    [Fact]
+    public async Task DeleteRoom_PublishesRoomsChanged()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        var (service, events) = CreateService(dir, directory);
+        var roomsChangedCount = 0;
+        events.RoomsChanged += () => roomsChangedCount++;
+
+        await service.DeleteRoomAsync(room.Id, ct);
+
+        Assert.Equal(1, roomsChangedCount);
+        var stored = await directory.GetRoomAsync(room.Id, ct);
+        Assert.Null(stored);
+    }
+
+    /// <summary>Archiving a Room that does not exist throws UnknownRoom rather than silently creating a row.</summary>
+    [Fact]
+    public async Task SetRoomArchived_UnknownRoom_ThrowsUnknownRoom()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var (service, _) = CreateService(dir, directory);
+
+        var exception = await Assert.ThrowsAsync<ChatException>(
+            () => service.SetRoomArchivedAsync("no-such-room", true, ct));
+
+        Assert.Equal(ErrorCodes.UnknownRoom, exception.Code);
+    }
+
+    /// <summary>Deleting a Room that does not exist throws UnknownRoom rather than silently no-opping.</summary>
+    [Fact]
+    public async Task DeleteRoom_UnknownRoom_ThrowsUnknownRoom()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var (service, _) = CreateService(dir, directory);
+
+        var exception = await Assert.ThrowsAsync<ChatException>(
+            () => service.DeleteRoomAsync("no-such-room", ct));
+
+        Assert.Equal(ErrorCodes.UnknownRoom, exception.Code);
+    }
+
+    /// <summary>
+    /// Deleting a Room must remove its transcript too, or an orphan .jsonl file survives with nothing
+    /// left in the Team Directory that can ever reach it. See IChatStore.DeleteAsync's remarks.
+    /// </summary>
+    [Fact]
+    public async Task DeleteRoom_AlsoDeletesTheTranscript()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        var (service, _) = CreateService(dir, directory);
+        await service.PostAsync(room.Id, KnownIds.Human, "hello", ct: ct);
+
+        await service.DeleteRoomAsync(room.Id, ct);
+
+        var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
+        var stored = await store.ReadAllAsync(room.Id, ct);
+        Assert.Empty(stored);
+    }
+
     // Defaults to the production Budget so every test written before it stays a test about something
     // else; the Budget's own tests pass a small number so they do not have to post forty Messages.
     private static (ChatService Service, RoomEvents Events) CreateService(

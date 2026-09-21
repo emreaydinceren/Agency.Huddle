@@ -1,8 +1,29 @@
+@*
+    The sidebar's list of Rooms. Archiving is a display filter only (Room.Archived) - the Room stays
+    fully live and this list is the one place that decision is enforced, by excluding it from
+    LoadAsync's result. Each row offers Archive and Delete through a MudMenu reachable two ways: a
+    keyboard-focusable "..." MudIconButton (revealed on hover/focus via app.css) and a right-click on
+    the row itself, which opens the SAME MudMenu instance programmatically through an @ref - right-click
+    alone would not be reachable by keyboard, which is why the button is not optional.
+
+    Delete's confirmation is an inline row swap, never a nested MudDialog and never a JS confirm() -
+    the same reasoning TeammateCard.razor's Remove button and ResetAllControl.razor both give: a
+    confirmation dialog stacked on top of another dialog would need its own backdrop and focus trap for
+    what is only ever a yes/no choice, and here there is no dialog to stack on at all - just a row.
+*@
+
 @implements IDisposable
 @inject ITeamDirectory TeamDirectory
+@inject ChatService ChatService
 @inject RoomEvents Events
 
 <div class="room-list">
+    @if (this.error is not null)
+    {
+        @* MudAlert renders no role by default - role="alert" is added explicitly, per rules.md. *@
+        <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.error</MudAlert>
+    }
+
     @if (this.rooms.Count == 0)
     {
         <MudText Typo="Typo.body2" Class="empty-state">No rooms yet. Start an agent to create one.</MudText>
@@ -12,7 +33,41 @@
         <MudNavMenu>
             @foreach (var room in this.rooms)
             {
-                <MudNavLink Href="@($"/rooms/{room.Id}")" Icon="@Icons.Material.Filled.Chat">@room.Name</MudNavLink>
+                <div class="room-list-row"
+                     @oncontextmenu="@(e => this.OnRowContextMenuAsync(room.Id, e))"
+                     @oncontextmenu:preventDefault="true">
+                    @if (string.Equals(this.confirmingDeleteRoomId, room.Id, StringComparison.Ordinal))
+                    {
+                        <div class="room-list-confirm">
+                            <MudText Typo="Typo.body2" Class="room-list-confirm-text">Delete "@room.Name"?</MudText>
+                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
+                                       Disabled="this.busy" OnClick="@(() => this.ConfirmDeleteAsync(room.Id))">Confirm</MudButton>
+                            <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="this.CancelDelete">Cancel</MudButton>
+                        </div>
+                    }
+                    else
+                    {
+                        <MudNavLink Href="@($"/rooms/{room.Id}")" Icon="@Icons.Material.Filled.Chat" Class="room-list-link">@room.Name</MudNavLink>
+                        <MudMenu @ref="@this.menuRefs[room.Id]" Class="room-list-menu">
+                            @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
+                               MudMenu does not wire a click listener around it automatically - the
+                               supplied MenuContext.ToggleAsync is how custom activator content opens
+                               the menu, which is why the button's OnClick calls it explicitly rather
+                               than relying on MudMenu's default ActivationEvent handling. *@
+                            <ActivatorContent Context="menuContext">
+                                <MudTooltip Text="Room actions">
+                                    <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                                   aria-label="Room actions" Class="room-list-menu-button"
+                                                   OnClick="menuContext.ToggleAsync" />
+                                </MudTooltip>
+                            </ActivatorContent>
+                            <ChildContent>
+                                <MudMenuItem Disabled="this.busy" OnClick="@(() => this.ArchiveAsync(room.Id))">Archive</MudMenuItem>
+                                <MudMenuItem Disabled="this.busy" OnClick="@(() => this.BeginDelete(room.Id))">Delete</MudMenuItem>
+                            </ChildContent>
+                        </MudMenu>
+                    }
+                </div>
             }
         </MudNavMenu>
     }
@@ -20,6 +75,10 @@
 
 @code {
     private IReadOnlyList<Room> rooms = [];
+    private readonly Dictionary<string, MudMenu> menuRefs = new(StringComparer.Ordinal);
+    private string? confirmingDeleteRoomId;
+    private string? error;
+    private bool busy;
 
     protected override async Task OnInitializedAsync()
     {
@@ -41,9 +100,82 @@
         });
     }
 
+    /// <summary>Reads every Room and filters out the archived ones - archiving is a display filter, and this is the one place that filter is applied.</summary>
     private async Task LoadAsync()
     {
-        this.rooms = await this.TeamDirectory.GetRoomsAsync();
+        var all = await this.TeamDirectory.GetRoomsAsync();
+        this.rooms = [.. all.Where(room => !room.Archived)];
+        this.menuRefs.Clear();
+    }
+
+    /// <summary>Opens the row's own MudMenu programmatically, so a right-click reaches the same Archive/Delete menu the "..." button does.</summary>
+    /// <param name="roomId">The Room whose row was right-clicked.</param>
+    /// <param name="e">The right-click's mouse event args, forwarded to <see cref="MudMenu.OpenMenuAsync"/>.</param>
+    private async Task OnRowContextMenuAsync(string roomId, MouseEventArgs e)
+    {
+        if (this.menuRefs.TryGetValue(roomId, out var menu))
+        {
+            await menu.OpenMenuAsync(e);
+        }
+    }
+
+    private async Task ArchiveAsync(string roomId)
+    {
+        if (this.busy)
+        {
+            return;
+        }
+
+        this.busy = true;
+        try
+        {
+            _ = await this.ChatService.SetRoomArchivedAsync(roomId, archived: true, CancellationToken.None);
+            this.error = null;
+        }
+        catch (ChatException ex)
+        {
+            this.error = ex.Message;
+        }
+        finally
+        {
+            this.busy = false;
+        }
+    }
+
+    private void BeginDelete(string roomId)
+    {
+        this.confirmingDeleteRoomId = roomId;
+        this.error = null;
+    }
+
+    private void CancelDelete()
+    {
+        this.confirmingDeleteRoomId = null;
+    }
+
+    private async Task ConfirmDeleteAsync(string roomId)
+    {
+        if (this.busy)
+        {
+            return;
+        }
+
+        this.busy = true;
+        try
+        {
+            await this.ChatService.DeleteRoomAsync(roomId, CancellationToken.None);
+            this.error = null;
+            this.confirmingDeleteRoomId = null;
+        }
+        catch (ChatException ex)
+        {
+            this.error = ex.Message;
+            this.confirmingDeleteRoomId = null;
+        }
+        finally
+        {
+            this.busy = false;
+        }
     }
 
     private async Task DispatchAsync(Func<Task> action)

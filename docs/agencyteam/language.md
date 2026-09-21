@@ -96,6 +96,12 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: channel, chat, conversation, thread. Also avoid *Direct Room* and
   *Group Room* — a Room is a Room, and behaviour follows from member count.
 
+**Archived**
+: A Room hidden from the sidebar and listed under **Archived Chats** instead.
+  Reversible, and a display filter only — an Archived Room is still live, and
+  Agents still post into it.
+: *Avoid*: hidden, closed, muted, inactive, soft-deleted. A Room that was
+  *deleted* is gone, not Archived — the two are not degrees of the same thing.
 **Member**
 : A Teammate that belongs to a Room and receives its Messages.
 : *Avoid*: participant, subscriber.

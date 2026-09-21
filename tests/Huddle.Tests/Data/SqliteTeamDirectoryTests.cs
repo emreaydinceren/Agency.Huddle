@@ -1,3 +1,5 @@
+using Microsoft.Data.Sqlite;
+using System.Globalization;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.Contracts;
 
@@ -339,5 +341,214 @@ public sealed class SqliteTeamDirectoryTests
         await directory.AddMemberAsync(room.Id, alpha.Id, ct);
         var afterThirdMember = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, echo.Id, ct);
         Assert.Null(afterThirdMember);
+    }
+
+    /// <summary>A newly created Room is not archived by default.</summary>
+    [Fact]
+    public async Task CreateRoom_IsNotArchived()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+
+        Assert.False(room.Archived);
+        var stored = await directory.GetRoomAsync(room.Id, ct);
+        Assert.NotNull(stored);
+        Assert.False(stored.Archived);
+    }
+
+    /// <summary>
+    /// Archiving a Room is reported by both GetRoomsAsync and GetRoomAsync - the two doors the sidebar
+    /// and the Room view each read through.
+    /// </summary>
+    [Fact]
+    public async Task SetRoomArchived_True_ReportsArchivedEverywhere()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+
+        await directory.SetRoomArchivedAsync(room.Id, true, ct);
+
+        var single = await directory.GetRoomAsync(room.Id, ct);
+        Assert.NotNull(single);
+        Assert.True(single.Archived);
+        var all = await directory.GetRoomsAsync(ct);
+        var found = Assert.Single(all, r => r.Id == room.Id);
+        Assert.True(found.Archived);
+    }
+
+    /// <summary>Unarchiving a Room reverses the archive, rather than merely toggling a fixed flag.</summary>
+    [Fact]
+    public async Task SetRoomArchived_FalseAfterTrue_ReportsUnarchived()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        await directory.SetRoomArchivedAsync(room.Id, true, ct);
+
+        await directory.SetRoomArchivedAsync(room.Id, false, ct);
+
+        var stored = await directory.GetRoomAsync(room.Id, ct);
+        Assert.NotNull(stored);
+        Assert.False(stored.Archived);
+    }
+
+    /// <summary>
+    /// DeleteRoomAsync must remove the room_members rows too, or an orphan membership row survives a
+    /// Room that no longer exists. Asserting only that GetRoomAsync returns null would still pass with
+    /// those rows left behind, so this opens the database directly to prove they are really gone.
+    /// </summary>
+    [Fact]
+    public async Task DeleteRoom_RemovesRoomAndItsMembers()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
+
+        await directory.DeleteRoomAsync(room.Id, ct);
+
+        var stored = await directory.GetRoomAsync(room.Id, ct);
+        Assert.Null(stored);
+
+        var dbPath = Path.Combine(dir.Path, "team.db");
+        await using var connection = new SqliteConnection($"Data Source={dbPath}");
+        await connection.OpenAsync(ct);
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM room_members WHERE room_id = $id;";
+        command.Parameters.AddWithValue("$id", room.Id);
+        var count = (long)(await command.ExecuteScalarAsync(ct) ?? 0L);
+        Assert.Equal(0, count);
+    }
+
+    /// <summary>Deleting a Room that does not exist is a silent no-op, matching RenameRoomAsync.</summary>
+    [Fact]
+    public async Task DeleteRoom_UnknownId_DoesNotThrow()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+
+        await directory.DeleteRoomAsync("no-such-room", ct);
+
+        var rooms = await directory.GetRoomsAsync(ct);
+        Assert.Empty(rooms);
+    }
+
+    /// <summary>
+    /// An archived 1:1 Room must not be reused: EnsureRoomForAsync's caller expects a fresh Room once
+    /// the old one is archived away, not a resurrected archived one.
+    /// </summary>
+    [Fact]
+    public async Task FindDirectRoom_ArchivedOnlyMatch_ReturnsNull()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var echo = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, echo.Id], ct);
+        await directory.SetRoomArchivedAsync(room.Id, true, ct);
+
+        var found = await directory.FindRoomWithExactMembersAsync(KnownIds.Human, echo.Id, ct);
+
+        Assert.Null(found);
+    }
+
+    /// <summary>
+    /// The whole justification for the sibling-table design: an existing team.db that predates
+    /// archived_rooms - created with only the original three tables, exactly as a database from before
+    /// this feature would look - must still open, initialize and support archiving without requiring
+    /// anyone to delete it. `CREATE TABLE IF NOT EXISTS archived_rooms` creates cleanly here precisely
+    /// because it is a new table rather than a column added to an existing one.
+    /// </summary>
+    [Fact]
+    public async Task PreExistingDatabase_WithoutArchivedRoomsTable_StillSupportsArchiving()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var dbPath = Path.Combine(dir.Path, "team.db");
+        var roomId = "legacy-room";
+
+        await using (var connection = new SqliteConnection($"Data Source={dbPath}"))
+        {
+            await connection.OpenAsync(ct);
+            await using (var users = connection.CreateCommand())
+            {
+                users.CommandText = """
+                    CREATE TABLE IF NOT EXISTS users (
+                        id          TEXT PRIMARY KEY,
+                        name        TEXT NOT NULL COLLATE NOCASE UNIQUE,
+                        kind        TEXT NOT NULL CHECK (kind IN ('human', 'agent')),
+                        description TEXT NULL
+                    );
+                    """;
+                await users.ExecuteNonQueryAsync(ct);
+            }
+
+            await using (var rooms = connection.CreateCommand())
+            {
+                rooms.CommandText = """
+                    CREATE TABLE IF NOT EXISTS rooms (
+                        id      TEXT PRIMARY KEY,
+                        name    TEXT NOT NULL,
+                        created TEXT NOT NULL
+                    );
+                    """;
+                await rooms.ExecuteNonQueryAsync(ct);
+            }
+
+            await using (var roomMembers = connection.CreateCommand())
+            {
+                roomMembers.CommandText = """
+                    CREATE TABLE IF NOT EXISTS room_members (
+                        room_id TEXT NOT NULL REFERENCES rooms(id),
+                        user_id TEXT NOT NULL REFERENCES users(id),
+                        PRIMARY KEY (room_id, user_id)
+                    );
+                    """;
+                await roomMembers.ExecuteNonQueryAsync(ct);
+            }
+
+            await using (var seedHuman = connection.CreateCommand())
+            {
+                seedHuman.CommandText = "INSERT INTO users(id, name, kind) VALUES('human', 'You', 'human');";
+                await seedHuman.ExecuteNonQueryAsync(ct);
+            }
+
+            await using (var insertRoom = connection.CreateCommand())
+            {
+                insertRoom.CommandText = "INSERT INTO rooms(id, name, created) VALUES($id, $name, $created);";
+                insertRoom.Parameters.AddWithValue("$id", roomId);
+                insertRoom.Parameters.AddWithValue("$name", "legacy");
+                insertRoom.Parameters.AddWithValue("$created", DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture));
+                await insertRoom.ExecuteNonQueryAsync(ct);
+            }
+        }
+
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+
+        await directory.SetRoomArchivedAsync(roomId, true, ct);
+
+        var stored = await directory.GetRoomAsync(roomId, ct);
+        Assert.NotNull(stored);
+        Assert.True(stored.Archived);
+        var all = await directory.GetRoomsAsync(ct);
+        var found = Assert.Single(all, r => r.Id == roomId);
+        Assert.True(found.Archived);
     }
 }

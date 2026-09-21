@@ -12,6 +12,24 @@ in the hub: [AgencyTeam.md](../AgencyTeam.md).
 This repo is test-first. Real stores over temp directories, and **no mocking
 framework** — hand-written fakes under `tests/Huddle.Tests/Acp/Fakes/`.
 
+### Proving a schema change against a database that predates it
+
+Added 2026-09-21 with archiving. All DDL is `CREATE TABLE IF NOT EXISTS`, so an existing
+`team.db` never gains a column and never says so — which is why archived state went into
+a sibling table rather than onto `rooms` ([ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md)).
+
+That is a claim about databases this test run never creates, so asserting it needs a
+database built the old way on purpose.
+`SqliteTeamDirectoryTests.PreExistingDatabase_WithoutArchivedRoomsTable_StillSupportsArchiving`
+opens a raw `SqliteConnection` over a `TempDataDir`, executes only the original three
+`CREATE TABLE` statements, inserts a room row by hand, and only then constructs the real
+`SqliteTeamDirectory` over that same `DataDir` and calls `InitializeAsync`.
+
+**Any future schema change gets the same treatment.** Without it the design's central
+claim — that an existing install keeps working — is asserted in prose and tested nowhere,
+and the failure mode it guards against is silent: no exception, no warning, just a column
+that is never there.
+
 ### Conformance: a real Persona against a real ACP peer
 
 Added 2026-09-16 with the Adapters work, and it closed a gap worth naming. Until then

@@ -1,0 +1,190 @@
+@*
+    Lists archived Rooms, most recently archived first, with an Unarchive button and the same
+    inline-confirm Delete swap RoomList.razor's own rows use - never a nested MudDialog and never a
+    JS confirm(), for the same reason TeammateCard.razor's Remove button gives: a confirmation dialog
+    stacked on top of this one would need a second backdrop and a second focus trap for what is only
+    ever a yes/no choice.
+
+    Follows TeammateCard.razor as this codebase's one real MudDialog template: an IMudDialogInstance
+    cascading parameter, a shared static Options, and its own RoomEvents.RoomsChanged subscription
+    (unsubscribed in Dispose, per rules.md) so unarchiving - from this dialog or from the sidebar's own
+    row menu - repaints the list live rather than going stale the moment it opened.
+
+    Room exposes only Archived as a bool, not the instant a Room was archived - adding one would mean
+    touching Data/**, which is out of scope here - so "most recently archived first" is approximated
+    by ordering on Created descending instead.
+*@
+
+@implements IDisposable
+@inject ITeamDirectory TeamDirectory
+@inject ChatService ChatService
+@inject RoomEvents Events
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
+            <MudText Typo="Typo.h6">Archived chats</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" title="Close" aria-label="Close" OnClick="this.Close" />
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (this.error is not null)
+        {
+            @* MudAlert renders no role by default - role="alert" is added explicitly, per rules.md. *@
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-4" role="alert">@this.error</MudAlert>
+        }
+
+        @if (this.rooms.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="empty-state">No archived chats.</MudText>
+        }
+        else
+        {
+            @foreach (var room in this.rooms)
+            {
+                <div class="archived-chats-row">
+                    @if (string.Equals(this.confirmingDeleteRoomId, room.Id, StringComparison.Ordinal))
+                    {
+                        <MudText Typo="Typo.body2" Class="archived-chats-confirm-text">Delete "@room.Name"?</MudText>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
+                                   Disabled="this.busy" OnClick="@(() => this.ConfirmDeleteAsync(room.Id))">Confirm</MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="this.CancelDelete">Cancel</MudButton>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body1" Class="archived-chats-name">@room.Name</MudText>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="this.busy" OnClick="@(() => this.UnarchiveAsync(room.Id))">Unarchive</MudButton>
+                        <MudTooltip Text="Delete">
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"
+                                           aria-label="Delete" OnClick="@(() => this.BeginDelete(room.Id))" />
+                        </MudTooltip>
+                    }
+                </div>
+            }
+        }
+    </DialogContent>
+</MudDialog>
+
+@code {
+    /// <summary>The <see cref="DialogOptions"/> this dialog opens with - mirrors <see cref="Agency.Huddle.App.Components.Shared.TeammateCard.Options"/>.</summary>
+    public static readonly DialogOptions Options = new()
+    {
+        MaxWidth = MaxWidth.Small,
+        FullWidth = true,
+        CloseOnEscapeKey = true,
+    };
+
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    private IReadOnlyList<Room> rooms = [];
+    private string? confirmingDeleteRoomId;
+    private string? error;
+    private bool busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        this.Events.RoomsChanged += this.OnRoomsChanged;
+        await this.LoadAsync();
+    }
+
+    /// <summary>Unsubscribes from <see cref="RoomEvents.RoomsChanged"/> - the hub is a singleton, and a leaked subscription never dies (rules.md).</summary>
+    public void Dispose()
+    {
+        this.Events.RoomsChanged -= this.OnRoomsChanged;
+    }
+
+    private void OnRoomsChanged()
+    {
+        _ = this.DispatchAsync(async () =>
+        {
+            await this.LoadAsync();
+            this.StateHasChanged();
+        });
+    }
+
+    /// <summary>Reads every Room, keeps only the archived ones, and orders them by Created descending - see the file-level comment for why Created stands in for an archive instant.</summary>
+    private async Task LoadAsync()
+    {
+        var all = await this.TeamDirectory.GetRoomsAsync();
+        this.rooms = [.. all.Where(room => room.Archived).OrderByDescending(room => room.Created)];
+    }
+
+    private void Close()
+    {
+        this.MudDialog.Close();
+    }
+
+    private async Task UnarchiveAsync(string roomId)
+    {
+        if (this.busy)
+        {
+            return;
+        }
+
+        this.busy = true;
+        try
+        {
+            _ = await this.ChatService.SetRoomArchivedAsync(roomId, archived: false, CancellationToken.None);
+            this.error = null;
+        }
+        catch (ChatException ex)
+        {
+            this.error = ex.Message;
+        }
+        finally
+        {
+            this.busy = false;
+        }
+    }
+
+    private void BeginDelete(string roomId)
+    {
+        this.confirmingDeleteRoomId = roomId;
+        this.error = null;
+    }
+
+    private void CancelDelete()
+    {
+        this.confirmingDeleteRoomId = null;
+    }
+
+    private async Task ConfirmDeleteAsync(string roomId)
+    {
+        if (this.busy)
+        {
+            return;
+        }
+
+        this.busy = true;
+        try
+        {
+            await this.ChatService.DeleteRoomAsync(roomId, CancellationToken.None);
+            this.error = null;
+            this.confirmingDeleteRoomId = null;
+        }
+        catch (ChatException ex)
+        {
+            this.error = ex.Message;
+            this.confirmingDeleteRoomId = null;
+        }
+        finally
+        {
+            this.busy = false;
+        }
+    }
+
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+}

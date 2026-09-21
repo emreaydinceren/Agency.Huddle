@@ -1,6 +1,6 @@
 # Manual test tracker
 
-Where every one of the 478 tests stands. One row per test, updated as you run it.
+Where every one of the 484 tests stands. One row per test, updated as you run it.
 
 > [!NOTE]
 > **An earlier full run exists, against the previous UI, and its results are deliberately not
@@ -487,6 +487,12 @@ Creating Rooms, inviting Agents, Room naming — [area file](invite-rooms.md)
 | [INVITEROOMS-31](invite-rooms.md#inviterooms-31-every-agent-created-room-contains-the-human-so-none-is-hidden) | 💰 | Active | | |
 | [INVITEROOMS-32](invite-rooms.md#inviterooms-32-the-composers-own-status-line-does-not-survive-a-room-switch) |  | Active | | |
 | [INVITEROOMS-33](invite-rooms.md#inviterooms-33-a-renamed-room-keeps-its-name-across-an-invitation-an-un-renamed-one-still-re-derives) |  | Active | | |
+| [INVITEROOMS-34](invite-rooms.md#inviterooms-34-archiving-a-room-from-its-row-menu-removes-it-from-the-sidebar-and-lists-it-under-archived-chats) |  | Active | | |
+| [INVITEROOMS-35](invite-rooms.md#inviterooms-35-unarchiving-returns-the-room-to-the-sidebar-with-its-transcript-intact) |  | Active | | |
+| [INVITEROOMS-36](invite-rooms.md#inviterooms-36-deleting-a-room-needs-a-confirmation-and-removes-its-transcript-file-from-disk) |  | Active | | |
+| [INVITEROOMS-37](invite-rooms.md#inviterooms-37-archiving-or-deleting-the-room-you-are-viewing-moves-you-somewhere-valid) |  | Active | | |
+| [INVITEROOMS-38](invite-rooms.md#inviterooms-38-an-archived-two-member-room-is-not-reused-starting-a-chat-with-that-teammate-mints-a-second-one) |  | Active | | |
+| [INVITEROOMS-39](invite-rooms.md#inviterooms-39-archived-and-deleted-rooms-survive-a-restart) |  | Active | | |
 
 ## hooks-settings
 

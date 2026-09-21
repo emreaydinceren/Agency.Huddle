@@ -1,6 +1,6 @@
 # Decision record
 
-Fifteen dated entries from 2026-09-11 onward, newest first, each recording what
+Sixteen dated entries from 2026-09-11 onward, newest first, each recording what
 changed and — more usefully — what was considered and rejected. Read it when you are
 about to revisit a decision, or when an older Markdown file in this repo
 disagrees with current vocabulary and you need the old-to-new mapping.
@@ -8,6 +8,45 @@ disagrees with current vocabulary and you need the old-to-new mapping.
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
 
+**2026-09-21 — A Room can be archived or deleted, and archived state is a sibling table.**
+
+A Room was permanent, and that was a stated position rather than an oversight: a Room and
+its Transcript are chat facts that outlive the Teammate which created them. But *"removing
+a Persona must not destroy a Room"* and *"a Human may never put a Room away"* are two
+different claims, and only the first follows from that argument. The sidebar is the app's
+primary navigation and it only ever grew — `manual-tests/common.md` had to tell testers to
+append a digit to Names they had already used. Archive hides a Room reversibly; Delete
+removes it and its Transcript for good. See
+[ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md).
+
+**Rejected: an `archived` column on `rooms`.** The obvious shape, and silently wrong here —
+all DDL is `CREATE TABLE IF NOT EXISTS`, so an existing `team.db` never gains a column and
+never says so. `archived_rooms` is its own table, presence-means-archived, following
+`PersonaModelStore` and `PersonaEffortStore`. The same trap is why Room auto-naming detects
+a custom name by comparison rather than storing a flag. A migration test builds a
+pre-feature database by hand and proves the claim, because otherwise the design's central
+argument is untested.
+
+**Rejected: freezing an archived Room.** Refusing delivery into it reads tidier, but it
+would put a sidebar preference inside the delivery path, beside `ReplyGate` and
+`AgentGateway.DeliverAsync`, which is the most load-bearing logic in the app. Archive is a
+display filter and `RoomList`/`Chat` are the only code that knows it exists. Accepted cost:
+an archived Room can accrue Messages nobody sees until it is unarchived.
+
+**Rejected: a soft delete.** It would add a second hidden state beside archived, with no UI
+to reach it, no purge story, and two meanings of "gone". Archive already *is* the reversible
+option; making delete reversible too leaves the pair with no distinction and nothing that
+reclaims disk.
+
+**Rejected (against the recommendation): reusing an archived 1:1 Room.** Starting a chat
+with a Teammate whose Room is archived now creates a fresh Room rather than unarchiving the
+old one. Reuse would have preserved
+[ADR-0003](../adr/0003-mention-gated-replies-and-membership-defined-direct-rooms.md)'s
+one-two-Member-Room-per-Agent invariant exactly, and was the recommendation. The repo
+owner's call was that archiving a conversation should mean it stays put. The cost is that
+unarchiving afterwards yields two identically-named Rooms with the same two Members;
+`FindRoomWithExactMembersAsync` gained an `ORDER BY` it never had so the winner is at least
+deterministic.
 **2026-09-16 — VS Code's bundled Themes are converted once, by hand, and the mapping is
 a claim you test with contrast.**
 

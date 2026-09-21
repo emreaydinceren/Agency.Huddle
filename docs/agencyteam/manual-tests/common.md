@@ -276,9 +276,13 @@ finds where `Team:DataDir` actually resolved.
   (`Team:DemoAgent:Enabled` is `true` in `appsettings.json`). They hold Rooms and
   spend Budget, and must never appear on `/teammates`. Turn them off with
   `$env:Team__DemoAgent__Enabled = 'false'`.
-- **Names are permanent.** Nothing in the UI deletes a Room or an Agent, so every
-  Name you connect under leaves a Room behind. When a test needs a new Name and it
-  is already in the sidebar, append a digit and use that spelling throughout.
+- **Names are permanent; Rooms are not, since 2026-09-21.** Nothing in the UI
+  deletes an *Agent*, so every Name you connect under still leaves a Room behind —
+  but that Room can now be archived or deleted from the context menu on its sidebar
+  row ([ADR-0018](../../adr/0018-a-room-can-be-archived-or-deleted.md)). Appending a
+  digit to a reused Name is therefore a convenience rather than a necessity. Prefer
+  it anyway when a test's oracle counts sidebar entries: deleting a Room is
+  irreversible, and a test that deletes the wrong one cannot put it back.
 - **`Team:` and `mcp__team__` keep the old code name on purpose.** Not a typo, not
   a branding bug.
 
