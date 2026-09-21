@@ -85,4 +85,26 @@ public interface ITeamDirectory
     /// of a stored room kind.
     /// </summary>
     Task<Room?> FindRoomWithExactMembersAsync(string humanId, string agentId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Archives or unarchives a Room. Archiving is a display filter only - see
+    /// <see cref="Room.Archived"/> - the Room stays live and Agents can still post into it.
+    /// </summary>
+    /// <param name="roomId">The Room to archive or unarchive.</param>
+    /// <param name="archived">
+    /// <see langword="true"/> to archive the Room; <see langword="false"/> to unarchive it.
+    /// </param>
+    /// <param name="ct">Cancels the write.</param>
+    Task SetRoomArchivedAsync(string roomId, bool archived, CancellationToken ct = default);
+
+    /// <summary>
+    /// Permanently deletes a Room and its Membership rows. This does not delete the Room's Transcript,
+    /// which lives outside the Team Directory in <see cref="IChatStore"/> - a caller that wants a Room
+    /// fully gone must also call <see cref="IChatStore.DeleteAsync"/>, or an orphan transcript file is
+    /// left behind.
+    /// </summary>
+    /// <param name="roomId">The Room to delete.</param>
+    /// <param name="ct">Cancels the deletion.</param>
+    /// <remarks>Deleting an unknown id is a silent no-op, matching <see cref="RenameRoomAsync"/>.</remarks>
+    Task DeleteRoomAsync(string roomId, CancellationToken ct = default);
 }

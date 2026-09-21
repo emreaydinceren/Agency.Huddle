@@ -923,7 +923,7 @@ If the textarea does NOT clear, check whether you pressed Shift+Enter (which ins
 If `gamma` is not in the candidate set (the `/invite` returns `Unknown agent @gamma`), `T-F` has stopped. Restart it with `pwsh tools/echo-bot.ps1 -Name gamma`, wait for the sidebar entry, and retry. Do not record a fail for an absent bot.
 
 > [!NOTE]
-> A Room can never be deleted, left, or renamed by hand — there is no such control anywhere in the UI, and a Room name is always derived. Do not look for one and do not file its absence.
+> A Room can be renamed by hand (issue #43), and since 2026-09-21 it can also be **archived or deleted** from the context menu on its sidebar row — see [ADR-0017](../../adr/0017-a-room-can-be-archived-or-deleted.md). A Room still cannot be *left*: membership changes only by Invitation, and there is no control anywhere that removes one Member from a Room. Archiving hides a Room from the sidebar and is reversible from **Archived Chats**, bottom-left; deleting removes the Room and its Transcript for good. A Room name is still always derived until somebody renames it.
 
 ### INVITEROOMS-21 — An Agent belongs to at most one two-Member Room: after an invite, the next registration mints a fresh Direct Room
 
@@ -1536,6 +1536,208 @@ If `scratch15` fails to register within 5 seconds, read `T-D` for a `protocolErr
 
 > [!NOTE]
 > There is one edge with no observable symptom, and it is deliberate, not a defect: rename a Room to EXACTLY the name auto-naming would have produced (`echo` for a Room whose only Agent is `echo`) and it counts as still auto-named, so the next Invitation re-derives over it. Do not file that. See [Known limits](../known-limits.md).
+
+### INVITEROOMS-34 — Archiving a Room from its row menu removes it from the sidebar and lists it under Archived chats
+
+**Free** · about 5 min
+
+*Archive is the whole point of ADR-0017 and its storage is a sibling table, so the one thing worth proving by hand is that the Room leaves the sidebar without a reload and is still findable. Catches an archive that writes nothing, and an archive that needs F5.*
+
+**Before you start**
+
+- At least two Rooms are in the sidebar. Note their names.
+
+**Steps**
+
+1. Hover the first Room's sidebar row. Note whether a `⋮` button appears at its right-hand end.
+2. Press Tab until focus reaches that `⋮` button WITHOUT using the mouse, and confirm it is visible while focused.
+3. Right-click the row.
+4. Click **Archive**.
+5. Watch the sidebar for up to 3 seconds WITHOUT reloading.
+6. Click the **Archived chats** button, directly above the Settings button at the bottom-left.
+
+**Pass if — all of these**
+
+- The `⋮` button appears on hover and is reachable by Tab, and is visible when focused.
+- Right-clicking opens a menu offering exactly **Archive** and **Delete**, and no browser context menu appears.
+- The Room disappears from the sidebar WITHOUT a page reload.
+- The Archived chats dialog lists that Room, with an **Unarchive** button beside it.
+- The other Room is untouched and still visible.
+
+**Fail if — any of these**
+
+- The Room only disappears after F5 -> `RoomsChanged` is not reaching `RoomList`.
+- The browser's own context menu appears -> `@oncontextmenu:preventDefault` is not applied.
+- The `⋮` is unreachable by keyboard -> it is being hidden with `display:none` rather than `opacity`, which takes it out of the Tab order.
+- The Room vanishes from the sidebar but the Archived chats dialog is empty -> it is being hidden without the `archived_rooms` row being written, and the Room is now unreachable.
+
+**Inconclusive if**
+
+If the app was started with a fresh `App_Data` and only one Room exists, archiving it leaves nothing to compare against; create a second Room first.
+
+### INVITEROOMS-35 — Unarchiving returns the Room to the sidebar with its Transcript intact
+
+**Free** · about 4 min
+
+*Archive is meant to be reversible and non-destructive. This is the only check that the Transcript was never touched — archive writes to SQLite and must not go near the JSONL file.*
+
+**Before you start**
+
+- INVITEROOMS-34 ran, so one Room is archived. It had at least one Message in it before archiving.
+
+**Steps**
+
+1. Open **Archived chats**.
+2. Click **Unarchive** beside the Room.
+3. Watch the sidebar WITHOUT reloading.
+4. Click the Room and read its Transcript.
+
+**Pass if — all of these**
+
+- The Room reappears in the sidebar immediately, in `created, id` order — not necessarily at the bottom.
+- It leaves the Archived chats list, which either empties or shrinks by one.
+- Its Transcript holds exactly what it held before archiving, in the same order.
+
+**Fail if — any of these**
+
+- The Transcript is empty or short -> archiving deleted or truncated the JSONL; archive must not touch `FileChatStore` at all.
+- The Room reappears only after F5 -> the dialog is not observing `RoomsChanged`.
+- The Room appears twice -> the sidebar is appending rather than re-reading.
+
+### INVITEROOMS-36 — Deleting a Room needs a confirmation and removes its Transcript file from disk
+
+**Free** · about 6 min
+
+*Delete is irreversible and spans two stores — `team.db` and `{DataDir}/rooms/{id}.jsonl`. A delete that forgets the file leaves an orphan Transcript no UI can reach. This is the only test that looks at the disk.*
+
+**Before you start**
+
+- A Room with at least two Messages in it, whose room id you have written down (call it DOOMED).
+- A file explorer or terminal open at `src/Huddle.App/App_Data/rooms/`.
+
+**Steps**
+
+1. Confirm `App_Data/rooms/DOOMED.jsonl` exists and is non-empty.
+2. Right-click the Room's sidebar row and click **Delete**.
+3. Read the row WITHOUT clicking anything else.
+4. Click **Cancel**.
+5. Right-click the row, click **Delete** again, then click **Confirm**.
+6. Look at `App_Data/rooms/` again.
+
+**Pass if — all of these**
+
+- Step 3 shows the row swapped in place to `Delete "<name>"? [Confirm] [Cancel]`, naming the Room. No dialog opens, and no browser `confirm()` box appears.
+- Cancel restores the row unchanged and the Room is still in the sidebar.
+- After Confirm the Room leaves the sidebar without a reload.
+- `DOOMED.jsonl` is GONE from `App_Data/rooms/`.
+- Optional DB check: `SELECT COUNT(*) FROM rooms WHERE id='DOOMED'` and `SELECT COUNT(*) FROM room_members WHERE room_id='DOOMED'` both return 0.
+
+**Fail if — any of these**
+
+- Delete removes the Room on the FIRST click with no confirmation step -> the confirmation is missing and there is no undo.
+- A modal dialog or a browser `confirm()` appears -> the inline row swap was not used; see `TeammateCard.razor`'s comment on why dialogs must not stack.
+- The Room is gone from the sidebar but `DOOMED.jsonl` is still on disk -> `IChatStore.DeleteAsync` was not called; an orphan Transcript is left behind.
+- `rooms` is empty for that id but `room_members` still has rows -> the transaction deleted in the wrong order or partially committed.
+
+**Inconclusive if**
+
+If `Team:DataDir` has been pointed somewhere else, look there instead — do not conclude from the default path.
+
+### INVITEROOMS-37 — Archiving or deleting the Room you are viewing moves you somewhere valid
+
+**Free** · about 6 min
+
+*The one interaction that can strand the Human on a Room that is no longer in the sidebar. The navigation deliberately lives in the RoomsChanged handler rather than in LoadRoomAsync, so it is worth proving it fires — and that it does NOT fire on an ordinary Room switch.*
+
+**Before you start**
+
+- At least three Rooms in the sidebar.
+
+**Steps**
+
+1. Open the first Room so it is the one on screen.
+2. Right-click ITS row and Archive it.
+3. Read the address bar and the `<h1>`.
+4. Click a different Room, then click back. Confirm nothing ejects you while simply switching.
+5. Archive every remaining Room one at a time.
+6. Read the address bar and the page.
+
+**Pass if — all of these**
+
+- After step 2 you land on another Room — its id is in the address bar and its `<h1>` names it. You are never left on an archived Room.
+- Step 4 does NOT move you anywhere; switching Rooms normally is unaffected.
+- After step 5 you are on `/` and the page shows the empty state, not a blank panel and not an error.
+- Archived chats lists them all.
+
+**Fail if — any of these**
+
+- You stay on the archived Room, which is no longer in the sidebar -> the RoomsChanged handler is not checking `Archived`.
+- Switching Rooms normally ejects you -> the check was put inside `LoadRoomAsync`, which runs on every RoomsChanged.
+- With every Room archived, `/` redirects you INTO an archived Room -> `OnParametersSetAsync` is picking `rooms[0]` rather than the first non-archived one.
+- The browser hangs or the address bar flickers between two Rooms -> a redirect loop.
+
+### INVITEROOMS-38 — An archived two-Member Room is not reused: starting a chat with that Teammate mints a second one
+
+**Free** · about 7 min
+
+*This is the accepted cost of ADR-0017, chosen knowingly over reuse-and-unarchive. It is here so the duplicate is recognised as designed rather than filed as a bug — the same reason INVITEROOMS-21 exists.*
+
+**Before you start**
+
+- A two-Member Room with one Agent (say `echo`), containing at least one Message.
+
+**Steps**
+
+1. Archive the `echo` Room. Write its room id down (call it OLD).
+2. Start a new chat with `echo` (New chat, tick `echo`, Start chat) — or open its Teammate card and use Message.
+3. Read the new Room's id, `<h1>` and Transcript.
+4. Open **Archived chats** and Unarchive OLD.
+5. Read the sidebar.
+
+**Pass if — all of these**
+
+- Step 2 creates a NEW Room with a new id. Its Transcript is EMPTY and its `<h1>` reads `echo`.
+- OLD is not resurrected by step 2 and stays archived until step 4.
+- After step 4 the sidebar shows TWO entries both reading `echo`, the older one holding the original Messages.
+
+**Fail if — any of these**
+
+- Step 2 unarchives and reopens OLD -> `FindRoomWithExactMembersAsync` is not excluding archived Rooms; this is the behaviour that was explicitly NOT chosen.
+- Step 2 opens OLD while leaving it archived -> you are posting into a Room that is not in the sidebar and cannot be found again.
+- No new Room appears at all -> the lookup matched the archived Room and returned it, and `echo` now has no reachable Direct Room.
+
+> [!NOTE]
+> TWO sidebar entries reading `echo` after step 4 is the DESIGNED outcome, recorded in [Known limits](../known-limits.md) and [ADR-0017](../../adr/0017-a-room-can-be-archived-or-deleted.md). Do NOT file it as a duplicate-Room bug. This is a *different* route to two same-named Rooms than INVITEROOMS-21's, which comes from re-registration.
+
+### INVITEROOMS-39 — Archived and deleted Rooms survive a restart
+
+**Free** · about 5 min
+
+*Archived state is a row in a table that did not exist before 2026-09-21, and the whole sibling-table design rests on an existing `team.db` gaining it cleanly. An automated migration test covers that; this proves the round trip on a real database that has been through the app.*
+
+**Before you start**
+
+- One Room archived and one Room deleted, from the tests above. Note both names.
+
+**Steps**
+
+1. Stop the app (Ctrl+C in `T-A`). Do NOT delete `App_Data`.
+2. Start it again and open the browser.
+3. Read the sidebar.
+4. Open **Archived chats**.
+
+**Pass if — all of these**
+
+- The archived Room is still absent from the sidebar and still listed under Archived chats.
+- The deleted Room is in neither place.
+- Every other Room is present, in the same order, with its Transcript intact.
+- `T-A` logs no schema, migration or SQLite error at startup.
+
+**Fail if — any of these**
+
+- The archived Room is back in the sidebar -> archived state was never persisted, or `archived_rooms` is being recreated empty.
+- The deleted Room reappears -> the delete was not committed.
+- Startup logs a SQLite error naming `archived_rooms` -> the DDL is not idempotent.
 
 ---
 

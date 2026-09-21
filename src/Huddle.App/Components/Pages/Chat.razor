@@ -233,9 +233,10 @@ else
         if (this.RoomId is null)
         {
             var rooms = await this.TeamDirectory.GetRoomsAsync();
-            if (rooms.Count > 0)
+            var firstActive = rooms.FirstOrDefault(room => !room.Archived);
+            if (firstActive is not null)
             {
-                this.Navigation.NavigateTo($"/rooms/{rooms[0].Id}");
+                this.Navigation.NavigateTo($"/rooms/{firstActive.Id}");
                 return;
             }
 
@@ -437,6 +438,22 @@ else
             if (this.loadedRoomId is not null)
             {
                 await this.LoadRoomAsync(this.loadedRoomId);
+
+                // A Room that vanished (deleted - GetRoomAsync now returns null) or that the Human
+                // is no longer viewing by choice (archived) must not go on being shown - navigate to
+                // the first remaining non-archived Room, or to the empty state if none remain.
+                // Deliberately here, not inside LoadRoomAsync: LoadRoomAsync also runs from
+                // OnParametersSetAsync on an ordinary Room switch, and ejecting the Human mid-switch
+                // for a Room they did not just archive or delete is exactly the mistake the comment
+                // above LoadRoomAsync's own call site warns about for rename state.
+                var currentRoom = this.room;
+                if (currentRoom is null || currentRoom.Archived)
+                {
+                    var rooms = await this.TeamDirectory.GetRoomsAsync();
+                    var firstActive = rooms.FirstOrDefault(room => !room.Archived);
+                    this.Navigation.NavigateTo(firstActive is not null ? $"/rooms/{firstActive.Id}" : "/");
+                    return;
+                }
             }
 
             this.StateHasChanged();

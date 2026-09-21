@@ -138,6 +138,51 @@ public sealed class FileChatStoreTests
         Assert.True(Directory.Exists(Path.Combine(dir.Path, "rooms")));
     }
 
+    /// <summary>Deleting a Room's transcript removes the file, and later reads report empty rather than stale.</summary>
+    [Fact]
+    public async Task Delete_RemovesTheFile_AndReadAllThenReturnsEmpty()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var store = CreateStore(dir);
+        await store.AppendAsync("room-1", new ChatMessage("m1", DateTimeOffset.UtcNow, "human", "You", "hi"), ct);
+        var path = Path.Combine(dir.Path, "rooms", "room-1.jsonl");
+        Assert.True(File.Exists(path));
+
+        await store.DeleteAsync("room-1", ct);
+
+        Assert.False(File.Exists(path));
+        var result = await store.ReadAllAsync("room-1", ct);
+        Assert.Empty(result);
+    }
+
+    /// <summary>A Room nobody has posted to yet has no transcript file, so deleting it is a silent no-op.</summary>
+    [Fact]
+    public async Task Delete_RoomWithNoFile_DoesNotThrow()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var store = CreateStore(dir);
+
+        await store.DeleteAsync("never-posted-to", ct);
+
+        var result = await store.ReadAllAsync("never-posted-to", ct);
+        Assert.Empty(result);
+    }
+
+    /// <summary>DeleteAsync goes through the same path-traversal guard as AppendAsync and ReadAllAsync.</summary>
+    [Theory]
+    [InlineData("../x")]
+    [InlineData("a b")]
+    public async Task Delete_InvalidRoomId_Throws(string roomId)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var store = CreateStore(dir);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => store.DeleteAsync(roomId, ct));
+    }
+
     private static FileChatStore CreateStore(TempDataDir dir)
     {
         return new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);

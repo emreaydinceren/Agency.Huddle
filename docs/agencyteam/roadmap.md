@@ -4,7 +4,7 @@ Read this before starting work that touches `PersonaRunner`'s event loop,
 `ReplyGate`, `IAgentHostFactory`, `wwwroot/app.css` or `Themes/ThemeCatalog.cs`. Back to the hub:
 [AgencyTeam.md](../AgencyTeam.md).
 
-Thirteen items. **Items 2 and 10 shipped on 2026-09-12; items 3, 4, 5, 6 and 13 on 2026-09-13; item 1 on 2026-09-15; and items 8 and 12 on 2026-09-16**, and each keeps its entry below - the delivered note first, then the reasoning that produced it. Item 13 was never on this list before it was built, and is recorded after the fact because it changed files the other items name and leaves a decision open that item 9 has to close. Item 7 is half delivered. The other two - items 9 and 11 - are decided but not built. They sit here rather than in [Known
+Fourteen items. **Items 2 and 10 shipped on 2026-09-12; items 3, 4, 5, 6 and 13 on 2026-09-13; item 1 on 2026-09-15; items 8 and 12 on 2026-09-16; and item 14 on 2026-09-21**, and each keeps its entry below - the delivered note first, then the reasoning that produced it. Items 13 and 14 were never on this list before they were built, and are recorded after the fact — 13 because it changed files the other items name and leaves a decision open that item 9 has to close, 14 because it reversed a position [Known limits](known-limits.md) had recorded as settled, which is exactly the kind of change this list exists to keep visible. Item 7 is half delivered. The other two - items 9 and 11 - are decided but not built. They sit here rather than in [Known
 limits](known-limits.md) because that section records what is deliberately absent;
 these have moved from *declined* to *not yet*. Three appear in both places, and
 the Known limits entry now points here rather than warning you off.
@@ -37,6 +37,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | 11 | Notifying an Agent when a watched file changes | a new watcher beside `PersonaStore`, then `ChatService` | `PersonaStore`'s debounced `FileSystemWatcher`; frontmatter lists parse already |
 | ~~12~~ | ~~Running a Persona on a local Model~~ — **delivered 2026-09-16** | `AdapterProfile`, then one profile-aware `DotAcpAgentHostFactory` | shipped by a route this row did not foresee: no second `IAgentHostFactory` and no second `IModelCatalog`, because both Adapters advertise their catalog at `session/new` — see [ADR-0013](../adr/0013-an-adapter-is-a-property-of-the-persona.md) |
 | ~~13~~ | ~~Model-facing text is configuration~~ — **delivered 2026-09-13** | `Hooks/`, then the five sites that held the literals | shipped; never on this list before it was built, and it collides with item 9 — see [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) |
+| ~~14~~ | ~~Archiving and deleting a Room~~ — **delivered 2026-09-21** | `SqliteTeamDirectory`, `RoomList.razor` | shipped; never on this list before it was built, and it *reverses* a stance Known limits recorded — archived state went in a sibling table because `CREATE TABLE IF NOT EXISTS` never adds a column, and the one-1:1-Room-per-Agent invariant was knowingly given up — see [ADR-0017](../adr/0017-a-room-can-be-archived-or-deleted.md) |
 
 ## 1. Renaming a Teammate
 
@@ -1050,3 +1051,46 @@ What it did **not** do is decide how this coexists with item 9's per-Persona
 `_tools:` frontmatter. Two config channels for one tool surface is a real
 collision, and the ADR states the options rather than guessing at a design for an
 item nobody has started.
+
+## 14. Archiving and deleting a Room — DELIVERED 2026-09-21
+
+> Added here after the fact: this was never one of the thirteen. It is recorded
+> because it **reverses** a position [Known limits](known-limits.md) and two
+> manual-test pages had recorded as settled, and a reversal that leaves no trace
+> on this list is how a document goes quietly stale.
+
+A Room was permanent. That followed from a real argument — a Room and its
+Transcript are chat facts that outlive the Teammate which created them, which is
+why removing a Persona still does not cascade. But *"removing a Persona must not
+destroy a Room"* and *"a Human may never put a Room away"* are different claims,
+and only the first follows. The sidebar is the app's primary navigation and it
+only ever grew.
+
+Archive hides a Room from the sidebar, reversibly, from **Archived chats** above
+the Settings button. Delete removes the Room and its Transcript for good, behind
+an inline confirmation that names it. Both are on a context menu on the Room's
+sidebar row, reachable by right-click and by a keyboard-focusable button.
+
+[ADR-0017](../adr/0017-a-room-can-be-archived-or-deleted.md) carries the
+decisions. Three are worth knowing before touching anything nearby:
+
+**Archived state is a sibling table, never a column.** All DDL is
+`CREATE TABLE IF NOT EXISTS`, so an existing `team.db` never gains a column and
+never says so. `archived_rooms` follows `PersonaModelStore`: its own table,
+presence-means-archived. This is the same trap that made Room auto-naming detect
+a custom name by comparison rather than by a flag, and a migration test builds a
+pre-feature database by hand to prove the design rather than assert it.
+
+**Archive never reaches the delivery path.** An archived Room is still live and
+Agents still post into it; `RoomList` and `Chat` are the only code that knows the
+feature exists. Freezing the Room instead would have put a sidebar preference
+beside `ReplyGate` and `AgentGateway.DeliverAsync`.
+
+What it deliberately gave up is
+[ADR-0003](../adr/0003-mention-gated-replies-and-membership-defined-direct-rooms.md)'s
+one-two-Member-Room-per-Agent invariant. An archived Room is excluded from
+`FindRoomWithExactMembersAsync`, so starting a chat with that Teammate creates a
+fresh Room; unarchive the old one afterwards and two identically-named Rooms hold
+the same two Members. Reuse-and-unarchive would have preserved the invariant and
+was the recommendation; this was the repo owner's call, and it is recorded in
+[Known limits](known-limits.md) rather than left to be rediscovered.

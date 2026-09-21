@@ -35,6 +35,18 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
     private const string DdlCreateRoomMembersIndex =
         "CREATE INDEX IF NOT EXISTS ix_room_members_user ON room_members(user_id);";
 
+    // A sibling table, not a column on `rooms`: every DDL statement in this class is
+    // `CREATE TABLE IF NOT EXISTS`, which silently does nothing to a table that already exists, so an
+    // existing team.db would never gain an `archived` column. A new table creates cleanly on an
+    // existing database instead. See PersonaModelStore for the same pattern and its fuller rationale.
+    // The presence of a room_id row means "archived"; its absence means "not archived".
+    private const string DdlCreateArchivedRooms = """
+        CREATE TABLE IF NOT EXISTS archived_rooms (
+            room_id  TEXT PRIMARY KEY REFERENCES rooms(id),
+            archived TEXT NOT NULL
+        );
+        """;
+
     private readonly string connectionString;
 
     public SqliteTeamDirectory(IOptions<TeamOptions> options)
@@ -61,6 +73,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await ExecuteNonQueryAsync(connection, DdlCreateRooms, ct);
         await ExecuteNonQueryAsync(connection, DdlCreateRoomMembers, ct);
         await ExecuteNonQueryAsync(connection, DdlCreateRoomMembersIndex, ct);
+        await ExecuteNonQueryAsync(connection, DdlCreateArchivedRooms, ct);
 
         await using var seed = connection.CreateCommand();
         seed.CommandText = """
@@ -222,7 +235,12 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
     {
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT id, name, created FROM rooms ORDER BY created, id;";
+        command.CommandText = """
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL
+            FROM rooms r
+            LEFT JOIN archived_rooms a ON a.room_id = r.id
+            ORDER BY r.created, r.id;
+            """;
 
         var rooms = new List<Room>();
         await using var reader = await command.ExecuteReaderAsync(ct);
@@ -239,8 +257,10 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT r.id, r.name, r.created FROM rooms r
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL
+            FROM rooms r
             JOIN room_members m ON m.room_id = r.id
+            LEFT JOIN archived_rooms a ON a.room_id = r.id
             WHERE m.user_id = $u
             ORDER BY r.created, r.id;
             """;
@@ -260,7 +280,12 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
     {
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT id, name, created FROM rooms WHERE id = $id;";
+        command.CommandText = """
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL
+            FROM rooms r
+            LEFT JOIN archived_rooms a ON a.room_id = r.id
+            WHERE r.id = $id;
+            """;
         command.Parameters.AddWithValue("$id", roomId);
 
         await using var reader = await command.ExecuteReaderAsync(ct);
@@ -352,17 +377,98 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT r.id, r.name, r.created FROM rooms r
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL
+            FROM rooms r
+            LEFT JOIN archived_rooms a ON a.room_id = r.id
             WHERE EXISTS (SELECT 1 FROM room_members WHERE room_id = r.id AND user_id = $h)
-              AND EXISTS (SELECT 1 FROM room_members WHERE room_id = r.id AND user_id = $a)
+              AND EXISTS (SELECT 1 FROM room_members WHERE room_id = r.id AND user_id = $ag)
               AND (SELECT COUNT(*) FROM room_members WHERE room_id = r.id) = 2
+              AND NOT EXISTS (SELECT 1 FROM archived_rooms WHERE room_id = r.id)
+            ORDER BY r.created, r.id
             LIMIT 1;
             """;
         command.Parameters.AddWithValue("$h", humanId);
-        command.Parameters.AddWithValue("$a", agentId);
+        command.Parameters.AddWithValue("$ag", agentId);
 
         await using var reader = await command.ExecuteReaderAsync(ct);
         return await reader.ReadAsync(ct) ? ReadRoom(reader) : null;
+    }
+
+    /// <summary>
+    /// Archives or unarchives a Room by adding or removing its row in <c>archived_rooms</c>. Archiving
+    /// is a display filter only - see <see cref="Room.Archived"/> - so this never touches
+    /// <c>rooms</c> or <c>room_members</c>.
+    /// </summary>
+    /// <param name="roomId">The Room to archive or unarchive.</param>
+    /// <param name="archived">
+    /// <see langword="true"/> to archive the Room, recording the current instant; <see langword="false"/>
+    /// to unarchive it.
+    /// </param>
+    /// <param name="ct">Cancels the write.</param>
+    public async Task SetRoomArchivedAsync(string roomId, bool archived, CancellationToken ct = default)
+    {
+        await using var connection = await this.OpenConnectionAsync(ct);
+        await using var command = connection.CreateCommand();
+        if (archived)
+        {
+            command.CommandText = "INSERT OR REPLACE INTO archived_rooms(room_id, archived) VALUES($id, $at);";
+            command.Parameters.AddWithValue("$id", roomId);
+            command.Parameters.AddWithValue("$at", DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture));
+        }
+        else
+        {
+            command.CommandText = "DELETE FROM archived_rooms WHERE room_id = $id;";
+            command.Parameters.AddWithValue("$id", roomId);
+        }
+
+        await command.ExecuteNonQueryAsync(ct);
+    }
+
+    /// <summary>
+    /// Permanently deletes a Room: its <c>room_members</c> rows, its <c>archived_rooms</c> row (if any)
+    /// and finally the <c>rooms</c> row itself, in one transaction. Deletes in that order because
+    /// <c>room_members.room_id</c> and <c>archived_rooms.room_id</c> both reference <c>rooms(id)</c>
+    /// with no <c>ON DELETE CASCADE</c>, and this connection runs with <c>PRAGMA foreign_keys=ON</c>,
+    /// so deleting the Room first would throw.
+    /// </summary>
+    /// <param name="roomId">The Room to delete.</param>
+    /// <param name="ct">Cancels the transaction.</param>
+    /// <remarks>
+    /// Deleting an unknown id is a silent no-op, matching <see cref="RenameRoomAsync"/>. This method
+    /// does not delete the Room's transcript file - that lives outside SQLite in <see cref="IChatStore"/>
+    /// and is the caller's responsibility, so an orphan transcript is never left behind only when both
+    /// are called.
+    /// </remarks>
+    public async Task DeleteRoomAsync(string roomId, CancellationToken ct = default)
+    {
+        await using var connection = await this.OpenConnectionAsync(ct);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(ct);
+
+        await using (var deleteMembers = connection.CreateCommand())
+        {
+            deleteMembers.Transaction = transaction;
+            deleteMembers.CommandText = "DELETE FROM room_members WHERE room_id = $id;";
+            deleteMembers.Parameters.AddWithValue("$id", roomId);
+            await deleteMembers.ExecuteNonQueryAsync(ct);
+        }
+
+        await using (var deleteArchived = connection.CreateCommand())
+        {
+            deleteArchived.Transaction = transaction;
+            deleteArchived.CommandText = "DELETE FROM archived_rooms WHERE room_id = $id;";
+            deleteArchived.Parameters.AddWithValue("$id", roomId);
+            await deleteArchived.ExecuteNonQueryAsync(ct);
+        }
+
+        await using (var deleteRoom = connection.CreateCommand())
+        {
+            deleteRoom.Transaction = transaction;
+            deleteRoom.CommandText = "DELETE FROM rooms WHERE id = $id;";
+            deleteRoom.Parameters.AddWithValue("$id", roomId);
+            await deleteRoom.ExecuteNonQueryAsync(ct);
+        }
+
+        await transaction.CommitAsync(ct);
     }
 
     private static User ReadUser(SqliteDataReader reader)
@@ -385,8 +491,9 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         var id = reader.GetString(0);
         var name = reader.GetString(1);
         var created = DateTimeOffset.Parse(reader.GetString(2), CultureInfo.InvariantCulture);
+        var archived = reader.GetBoolean(3);
 
-        return new Room(id, name, created);
+        return new Room(id, name, created) { Archived = archived };
     }
 
     private static async Task ExecuteNonQueryAsync(SqliteConnection connection, string sql, CancellationToken ct)

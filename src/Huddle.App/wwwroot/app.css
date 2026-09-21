@@ -187,6 +187,73 @@ button:focus-visible {
     margin-top: auto;
 }
 
+/* ---- Room list: the hover/focus-revealed row actions menu ------------------------------------
+   .room-list already existed as a markup hook with no rule behind it. Each row is a flex box so
+   the NavLink can grow and the "..." button sits fixed-width beside it; the button stays in the
+   DOM (and in the Tab order) at all times, so it is reachable by keyboard even before it is
+   visible - only its opacity is gated on :hover/:focus-within, matching .teammate-tile's own
+   interactive-surface shape below. */
+
+.room-list-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.room-list-row .room-list-link {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.room-list-row .room-list-menu-button {
+    opacity: 0;
+    border-radius: 4px;
+    transition: opacity 120ms ease;
+}
+
+.room-list-row:hover .room-list-menu-button,
+.room-list-row:focus-within .room-list-menu-button {
+    opacity: 1;
+}
+
+.room-list-confirm {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1rem;
+}
+
+.room-list-confirm-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ---- Archived chats dialog: one row per archived Room ---------------------------------------- */
+
+.archived-chats-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--mud-palette-divider);
+}
+
+.archived-chats-row:last-child {
+    border-bottom: none;
+}
+
+.archived-chats-name,
+.archived-chats-confirm-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 /* ---- Inviting a teammate into the open room ----------------------------- */
 
 .invite-teammate {

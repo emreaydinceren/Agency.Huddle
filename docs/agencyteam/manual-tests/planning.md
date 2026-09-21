@@ -1,6 +1,6 @@
 # Manual test script — planning
 
-Which of the 478 tests to run, what each area covers, and which ones spend money.
+Which of the 484 tests to run, what each area covers, and which ones spend money.
 Read this to **choose** a run. You do not need it while executing one: the rules
 that bind a run live in [the script](../manual-tests.md), which is the page to
 have open instead.
@@ -27,7 +27,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 6 | [Teammates page: tiles, Teams grouping, filter and rejected files](teammates-library.md) | 40 | 1 | 4.2h |
 | 7 | [Teammate card: view, edit, create, delete](teammate-card.md) | 50 | 1 | 6.3h |
 | 8 | [Model and Effort pickers, catalog probe and runner restart](model-effort.md) | 27 | 1 | 3.6h |
-| 9 | [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 32 | 4 | 3.5h |
+| 9 | [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 39 | 4 | 4h |
 | 10 | [Settings: the 24 Hooks, editing, per-field reset and Save](hooks-settings.md) | 40 | 3 | 4.7h |
 | 11 | [Appearance tab, Themes and light/dark preference](appearance-theme.md) | 27 | — | 2.6h |
 | 12 | [The named pipe: external agents and the wire](pipe-external.md) | 36 | — | 3.9h |

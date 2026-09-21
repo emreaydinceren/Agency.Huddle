@@ -102,6 +102,29 @@ public sealed class FileChatStore : IChatStore
         }
     }
 
+    public async Task DeleteAsync(string roomId, CancellationToken ct = default)
+    {
+        var path = this.GetRoomPath(roomId);
+        var semaphore = this.locks.GetOrAdd(roomId, static _ => new SemaphoreSlim(1, 1));
+        await semaphore.WaitAsync(ct);
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+        finally
+        {
+            semaphore.Release();
+
+            // Deliberately left in the dictionary rather than removed: another caller may already be
+            // waiting on this exact SemaphoreSlim instance, and removing it here would be a race
+            // against that waiter. The entry costs a few bytes, and room ids are Guid.CreateVersion7,
+            // never reused, so it can never mismatch a later Room's Transcript.
+        }
+    }
+
     private string GetRoomPath(string roomId)
     {
         if (!NameRules.IsValidId(roomId))

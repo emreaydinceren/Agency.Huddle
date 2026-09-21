@@ -138,6 +138,17 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   accepted cost is one invisible edge: rename a Room to precisely the name
   auto-naming would have chosen and it stays auto-named, so the next Invitation
   re-derives over it. Nothing observable distinguishes the two states.
+- **Two live 1:1 Rooms with the same Teammate are reachable, since 2026-09-21.**
+  Archiving a Room excludes it from `FindRoomWithExactMembersAsync`, so starting a
+  chat with that Teammate creates a fresh Room rather than resurrecting the
+  archived one — a deliberate choice, recorded in
+  [ADR-0017](../adr/0017-a-room-can-be-archived-or-deleted.md). Unarchive the first
+  one afterwards and two non-archived Rooms now hold exactly `{Human, Teammate}`,
+  both named by `RoomNaming.Derive` and therefore identical in the sidebar.
+  [ADR-0003](../adr/0003-mention-gated-replies-and-membership-defined-direct-rooms.md)'s
+  one-two-Member-Room-per-Agent invariant no longer holds in that case. Nothing
+  breaks; the lookup gained an `ORDER BY r.created, r.id` so which Room wins is at
+  least deterministic (the oldest) rather than whatever SQLite returns first.
 - **Renaming a Room does not make two Rooms distinguishable on its own.** Rooms
   nobody has renamed are still named after their Members and still carry no
   timestamp, no last-message preview and no other mark, which is the other half
@@ -265,7 +276,11 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
     under 4.5:1 for `TextSecondary` on `Surface`. `ThemeCatalogTests` records each with its
     measured ratio and asserts it *still* falls short, so a fixed Theme forces its entry to
     be deleted rather than leaving a stale excuse behind.
-- **Threads, reactions, edits, deletes, attachments, search, notifications.**
+- **Threads, reactions, message edits, message deletes, attachments, search,
+  notifications.** *Room* archive and delete arrived 2026-09-21
+  ([ADR-0017](../adr/0017-a-room-can-be-archived-or-deleted.md)); nothing here
+  edits or removes an individual Message, and a Transcript is still never
+  rewritten in place.
 - **Known flake, pre-existing:** `PersonaSupervisorTests.Shutdown_DisposesEveryHost`
   fails roughly one run in four, always on a slow run — its 10-second token races
   `WaitUntilAsync`. It is a timing bug in the test, not in `PersonaSupervisor`.
