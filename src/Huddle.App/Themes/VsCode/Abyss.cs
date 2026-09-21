@@ -59,13 +59,14 @@ internal static class AbyssTheme
     };
 
     /// <summary>
-    /// Abyss's descriptor. The light palette is borrowed from <see cref="HuddleTheme.Light"/>
-    /// rather than authored - Abyss is a single-mode VS Code theme, so selecting it and then
-    /// forcing Light mode shows Huddle's own light palette, not an Abyss light variant.
+    /// Abyss's descriptor. It is a single-mode VS Code theme and so carries only its
+    /// dark palette; MudBlazor's light slot keeps MudBlazor's own defaults and is never
+    /// rendered, because selecting this theme also selects its mode.
     /// </summary>
     public static ThemeDescriptor Descriptor { get; } = new(
         Id: "abyss",
         Label: "Abyss",
-        Theme: ThemeDefaults.Create(HuddleTheme.Light(), Dark()),
-        Mode: ThemeMode.Dark);
+        Theme: ThemeDefaults.CreateDark(Dark()),
+        Mode: ThemeMode.Dark,
+        Group: ThemeGroup.Dark);
 }

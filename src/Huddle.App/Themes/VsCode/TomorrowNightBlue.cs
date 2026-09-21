@@ -64,14 +64,14 @@ internal static class TomorrowNightBlueTheme
     };
 
     /// <summary>
-    /// Tomorrow Night Blue's descriptor. The light palette is borrowed from
-    /// <see cref="HuddleTheme.Light"/> rather than authored - Tomorrow Night Blue is a
-    /// single-mode VS Code theme, so selecting it and then forcing Light mode shows Huddle's
-    /// own light palette, not a Tomorrow Night Blue light variant.
+    /// Tomorrow Night Blue's descriptor. It is a single-mode VS Code theme and so carries only its
+    /// dark palette; MudBlazor's light slot keeps MudBlazor's own defaults and is never
+    /// rendered, because selecting this theme also selects its mode.
     /// </summary>
     public static ThemeDescriptor Descriptor { get; } = new(
         Id: "tomorrow-night-blue",
         Label: "Tomorrow Night Blue",
-        Theme: ThemeDefaults.Create(HuddleTheme.Light(), Dark()),
-        Mode: ThemeMode.Dark);
+        Theme: ThemeDefaults.CreateDark(Dark()),
+        Mode: ThemeMode.Dark,
+        Group: ThemeGroup.Dark);
 }

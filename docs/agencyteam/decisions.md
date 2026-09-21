@@ -38,13 +38,37 @@ false claim about the code into a justification comment. It is now a [Rule](rule
 in `tokenColors`, which this application does not render. Two of them were dropped.
 
 **Rejected: deriving the missing mode for a single-mode Theme.** An imported Theme fills
-only its native palette and borrows the other from `huddle`. Inverting a palette
+only its native palette and borrowed the other from `huddle`. Inverting a palette
 algorithmically produces colours nobody designed and whose contrast nobody verified.
 
 What it cost: three Themes sit just under the contrast floor and are documented rather than
 corrected, the High Contrast pair is not truly high contrast, and a dark-only Theme in Light
-mode shows Huddle's palette. What it bought: eighteen Themes, a mapping exercised against
+mode showed Huddle's palette. What it bought: eighteen Themes, a mapping exercised against
 nineteen real inputs, and a contrast guarantee that now covers every Theme instead of one.
+
+> **Amended 2026-09-21 by [ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md).** The
+> rejection above stands — nothing derives a missing palette. What changed is that there is no
+> longer a missing palette to fill: a Theme carries **one**, borrowing is gone, and the cost
+> recorded above as "a dark-only Theme in Light mode shows Huddle's palette" turned out to be a
+> defect rather than a cost. Selecting a Theme now selects light or dark with it.
+
+**2026-09-21 — a Theme is a palette, and the light/dark control that could contradict it is
+gone.**
+
+Two controls that can disagree will disagree. `{"theme": "solarized-dark", "dark": "light"}` was
+two clicks away and rendered Huddle Light under Solarized Dark's name, because the light half of
+Solarized Dark was Huddle's. The fix was not to validate the combination but to remove the second
+control: `ThemeMode` now decides `IsDarkMode`, `ThemeDefaults` lost its two-palette builder so a
+borrowed palette has nowhere to live, and `huddle` — the one Theme with two authored palettes —
+became two Themes. The picker became a grouped `MudList`, since MudBlazor 9 has no
+`MudSelectItemGroup` and nineteen Themes read better as a list than a dropdown.
+
+What it cost: **the application no longer follows the device's light/dark setting at all.** There
+is no System option. Doing that honestly needs a *pair* of authored Themes and a rule for
+resolving between them, which is a different feature; six Themes already have a real counterpart,
+so a later `Counterpart` field would be enough. What it bought: the defect is unrepresentable
+rather than merely fixed, and the JavaScript ADR-0010 had to accept — with it the possible
+first-paint flash — went away. See [ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md).
 
 **2026-09-16 — following a Room is a Singleton, not a field on the runner, and that changed what
 the Room view can know.**

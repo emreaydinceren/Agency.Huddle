@@ -65,14 +65,14 @@ internal static class LightHighContrastTheme
     };
 
     /// <summary>
-    /// Light High Contrast's descriptor. The dark palette is borrowed from
-    /// <see cref="HuddleTheme.Dark"/> rather than authored - this is a single-mode VS Code
-    /// theme, so selecting it and then forcing Dark mode shows Huddle's own dark palette, not
-    /// a Light High Contrast dark variant.
+    /// Light High Contrast's descriptor. It is a single-mode VS Code theme and so carries only its
+    /// light palette; MudBlazor's dark slot keeps MudBlazor's own defaults and is never
+    /// rendered, because selecting this theme also selects its mode.
     /// </summary>
     public static ThemeDescriptor Descriptor { get; } = new(
         Id: "light-high-contrast",
         Label: "Light High Contrast",
-        Theme: ThemeDefaults.Create(Light(), HuddleTheme.Dark()),
-        Mode: ThemeMode.Light);
+        Theme: ThemeDefaults.CreateLight(Light()),
+        Mode: ThemeMode.Light,
+        Group: ThemeGroup.HighContrast);
 }

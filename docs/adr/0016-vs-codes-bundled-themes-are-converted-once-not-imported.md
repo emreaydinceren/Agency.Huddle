@@ -23,10 +23,15 @@ nothing else; `ThemeDescriptor`, `ThemeMode`, `ThemeDefaults` and the `huddle` t
 moved into their own files to make room.
 
 A `ThemeDescriptor` gained a fourth member, `Mode`, naming the palette the theme was
-**authored for**. A VS Code theme is single-mode; a Huddle Theme carries both. So an
-imported Theme fills only its native palette and borrows the other from `HuddleTheme`.
-Selecting Monokai and then forcing Light shows Huddle's light palette — see
-[Known limits](../agencyteam/known-limits.md).
+**authored for**. A VS Code theme is single-mode; a Huddle Theme carried both. So an
+imported Theme filled only its native palette and borrowed the other from `HuddleTheme`.
+Selecting Monokai and then forcing Light showed Huddle's light palette.
+
+> **Amended 2026-09-21 by [ADR-0017](0017-a-theme-is-a-palette-not-a-pair.md).** The borrowing
+> described in the paragraph above is gone, and so is the light/dark control that could reach it.
+> Every Theme — imported or not — now carries exactly one palette, and `Mode` decides the mode.
+> The observation that a VS Code theme is single-mode was right; the model that had to pad it out
+> to two palettes was the part that was wrong.
 
 ## The mapping, and the one slot that was wrong twice
 

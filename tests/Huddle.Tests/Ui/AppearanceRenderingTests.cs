@@ -14,17 +14,22 @@ public sealed class AppearanceRenderingTests
 {
     // The exact CSS custom property MudThemeProvider.GenerateTheme emits for Palette.Primary, in
     // MudColor's default (rgba) string form - see ThemeCatalogTests for the same value read back
-    // through the C# API instead. Present in the response only when the "Huddle" theme's light
+    // through the C# API instead. Present in the response only when the "Huddle Light" theme's
     // palette actually rendered.
     private const string LightPrimaryVariable = "--mud-palette-primary: rgba(74,21,75,1);";
 
-    // The dark-palette counterpart of LightPrimaryVariable, present only when IsDarkMode resolved
-    // to true before the response was written.
+    // The counterpart for "Huddle Dark", present only when IsDarkMode resolved to true before the
+    // response was written.
     // #c07bc3. The dark palette used to DARKEN the brand purple to #5e2b60, which measured 1.63:1
     // against the dark ground - so MudBlazor's Primary-tinted active nav link was effectively
     // unreadable. ThemeCatalogTests now pins the contrast ratio itself; this constant only has to
     // follow the value. Kept as the literal rendered rgba because that is what reaches the browser.
     private const string DarkPrimaryVariable = "--mud-palette-primary: rgba(192,123,195,1);";
+
+    // Solarized Dark's own editor.background, #002b36. Asserted rather than its Primary because
+    // Solarized Dark takes Primary from VS Code's textLink.foreground registry default, which other
+    // imported dark themes share - a background is this theme's and no other's.
+    private const string SolarizedDarkBackgroundVariable = "--mud-palette-background: rgba(0,43,54,1);";
 
     /// <summary>
     /// With no <c>appearance.json</c>, the shell links no <c>themes/</c> stylesheet (that mechanism
@@ -47,20 +52,48 @@ public sealed class AppearanceRenderingTests
         Assert.DoesNotContain(DarkPrimaryVariable, html, StringComparison.Ordinal);
     }
 
-    /// <summary>A stored <c>"dark"</c> preference is read back and rendered as the dark palette, with no page reload involved - the provider lives in the render tree.</summary>
+    /// <summary>
+    /// Selecting a dark theme is the whole of selecting dark mode: the file names a theme and
+    /// nothing else, and the dark palette renders, with no page reload involved - the provider lives
+    /// in the render tree.
+    /// </summary>
     [Fact]
-    public async Task AppShell_WithDarkPreferenceStored_RendersTheDarkPalette()
+    public async Task AppShell_WithADarkThemeSelected_RendersTheDarkPalette()
     {
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
         CancellationToken ct = cts.Token;
 
         await using TeamWebApplicationFactory factory = new();
-        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"huddle\",\"dark\":\"dark\"}");
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"huddle-dark\"}");
         using HttpClient client = factory.CreateClient();
 
         var html = await client.GetStringAsync("/", ct);
 
         Assert.Contains(DarkPrimaryVariable, html, StringComparison.Ordinal);
+        Assert.DoesNotContain(LightPrimaryVariable, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The regression this whole change exists for. An <c>appearance.json</c> written before the
+    /// light/dark control was folded into the theme can say <c>"theme": "solarized-dark"</c> and
+    /// <c>"dark": "light"</c> at the same time. That used to render the light palette Solarized Dark
+    /// borrowed - which was Huddle's own - so the application showed Huddle Light under Solarized
+    /// Dark's name. Now the theme decides, the retired key is ignored, and Solarized Dark's real
+    /// palette renders.
+    /// </summary>
+    [Fact]
+    public async Task AppShell_WithARetiredLightPreferenceBesideADarkTheme_StillRendersThatThemesOwnPalette()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"solarized-dark\",\"dark\":\"light\"}");
+        using HttpClient client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/", ct);
+
+        Assert.Contains(SolarizedDarkBackgroundVariable, html, StringComparison.Ordinal);
         Assert.DoesNotContain(LightPrimaryVariable, html, StringComparison.Ordinal);
     }
 

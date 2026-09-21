@@ -402,11 +402,11 @@ Do not confuse `hooks.json` (the override file, under App_Data, absent until sav
 > [!NOTE]
 > This test deliberately leaves a `hooks.json` behind. Delete it (`Remove-Item src\Huddle.App\App_Data\hooks.json`) if a later test needs a first-run state.
 
-### STARTUPCONFIG-10 — Appearance tab on a first run reads System; picking Dark writes appearance.json and applies immediately, with no reload
+### STARTUPCONFIG-10 — Appearance tab on a first run reads Huddle Light; picking a dark Theme writes appearance.json and applies immediately, with no reload
 
 **Free** · about 8 min
 
-*Proves the dark-mode preference persists to disk, that it applies live, and that the app never creates appearance.json unbidden. Stage 2 of the MudBlazor migration split what used to be one combined `Theme` choice (`System` / `Light` / `Dark`, stored as a single theme id) into two independent controls — a `Theme` select (which MudBlazor palette to use; today the catalog ships exactly one, `Huddle`) and a separate `Appearance` select for the light/dark/system preference — and, per [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md), deleted the full-page reload along with it: `MudThemeProvider` lives in the render tree now, so a change is an ordinary re-render, not a navigation.*
+*Proves the Theme choice persists to disk, that it applies live, and that the app never creates appearance.json unbidden. Per [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md) the full-page reload is gone — `MudThemeProvider` lives in the render tree, so a change is an ordinary re-render, not a navigation. Per [ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md) the tab has **one** control: a Theme carries its own palette, so choosing a dark Theme is how you get dark, and the separate light/dark preference this test used to drive no longer exists.*
 
 **Before you start**
 
@@ -429,21 +429,22 @@ Do not confuse `hooks.json` (the override file, under App_Data, absent until sav
 **Pass if — all of these**
 
 - Step 1 returns False.
-- The intro reads exactly `Pick a theme, and choose whether it always uses its light or dark palette, or follows your device's own setting.`
-- The `Theme` select offers eighteen options with `Huddle` first and already selected — the seventeen after it are the Visual Studio Code Themes imported on 2026-09-16 ([ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)). `APPEARANCETHEME-03` pins the full list; here only `Huddle` being first and selected matters.
-- The `Appearance` select offers exactly three options — `System`, `Light`, `Dark` — with `System` selected.
+- The intro reads exactly `Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's light or dark colours too.`
+- The Theme picker lists nineteen Themes under `Light`, `Dark` and `High contrast` headings, with `Huddle Light` first and already selected. `APPEARANCETHEME-03` pins the full list; here only `Huddle Light` being first and selected matters.
+- **There is no second control** — no `Appearance` select, no light/dark/system choice of any kind.
 - The file-path paragraph names `this.AppearanceStore.FilePath` and states the file does not exist until a choice is saved here, so its absence is expected, not a bug.
-- Choosing `Dark` applies IMMEDIATELY — the page repaints dark with no navigation, no tab spinner, no address-bar or history change.
-- Step 10 returns True, and the file's content is `{"dark":"dark"}` (lowercase, and with NO `theme` key, since `Theme` was never touched) — never the display label `Dark`.
+- Choosing `Huddle Dark` applies IMMEDIATELY — the page repaints dark with no navigation, no tab spinner, no address-bar or history change.
+- Step 10 returns True, and the file's content is `{"theme":"huddle-dark"}` — the lowercase id, never the display label `Huddle Dark`, and with no `dark` key.
 
 **Fail if — any of these**
 
 - Step 1 returns True on a clean App_Data -> the app created `appearance.json` on its own; it must never do that.
 - The whole page reloads (spinner, full repaint, or the address bar flickers) -> the deleted full-page-reload path was reintroduced; ADR-0010 explicitly removed it because `MudThemeProvider` renders in the tree now.
-- The file stores the display label (`Dark`) rather than the lowercase `dark` -> a display name was persisted where the stored value belongs.
-- The `Theme` select offers anything other than exactly `Huddle` -> the theme catalog changed; re-check `ThemeCatalog.BuiltIn` before filing, since a second built-in theme is a real feature addition, not necessarily a defect.
-- The `Appearance` select offers more or fewer than three options -> the `DarkModePreference` enum or its select changed.
-- Choosing `Dark` on a light-mode OS leaves the page light -> the theme is not being applied through `MudThemeProvider`'s `IsDarkMode`.
+- The file stores the display label (`Huddle Dark`) rather than the id `huddle-dark` -> a display name was persisted where the stored value belongs.
+- The app writes a `dark` key of its own -> the retired preference is back; see ADR-0017.
+- A light/dark/system control is present -> same defect, on the UI side.
+- The picker offers a different count or a different first entry -> the catalog changed; re-check `ThemeCatalog.BuiltIn` before filing, since a new built-in Theme is a real feature addition, not necessarily a defect.
+- Choosing `Huddle Dark` on a light-mode OS leaves the page light -> `MainLayout` is not deriving `MudThemeProvider`'s `IsDarkMode` from `ThemeDescriptor.Mode`.
 
 **Inconclusive if**
 

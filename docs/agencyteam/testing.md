@@ -240,40 +240,43 @@ Tools. With `Team:Acp:Enabled=true` — which spends money — check:
     Room with a Draft streaming, `/teammates` with the card open and a rejected
     file present, and `/settings` on both tabs. Any element that stays light is a
     literal that survived tokenisation.
-29. **System follows the device, over JavaScript.** Choose **System** (or delete
-    `App_Data/appearance.json`) and flip the operating system's theme with the app
-    open. It must follow **with no reload and no navigation**. Note this is no
-    longer a pure-CSS path: `MudThemeProvider.GetSystemDarkModeAsync()` is a JS
-    interop call made after first render, which is the cost
-    [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md) accepted and ADR-0009
-    had avoided.
-30. **A flash under System is expected; under an explicit choice it is not.** With
-    **Dark** chosen explicitly, hard-reload: the page must never paint light first,
-    because the server knows the answer at render time. Under **System** a brief
-    flash of the wrong Theme *is* documented behaviour — the server cannot know the
-    device preference until the interop call returns. See [Known
-    limits](known-limits.md).
+29. **The device's theme is ignored, deliberately.** Pick a Theme from the **Dark**
+    group and flip the operating system to light with the app open. **Nothing may
+    change.** There is no System option and no light/dark control since 2026-09-21
+    ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)); a Theme carries one
+    palette and choosing it chooses the mode.
+30. **There is never a flash of the wrong Theme.** With any Theme selected,
+    hard-reload: the correct palette must be in the very first paint. The server knows
+    the answer at render time for every Theme now, so the one flash ADR-0010 accepted —
+    and the `GetSystemDarkModeAsync` interop call behind it — is gone. A flash here is a
+    defect, not a documented limit.
 31. **The choice is per installation.** Open the app in a second browser or a
     private window: **the same Theme**. Restart the app: still the same. This is
     the deliberate consequence of the choice living in a file rather than in the
     browser.
 32. **The catalog paints, not just enumerates.** Pick `Dark Modern`, then `Monokai`,
-    then `Solarized Light`, from the eighteen the Theme select offers. Each must
+    then `Solarized Light`, from the nineteen the Theme picker offers. Each must
     repaint immediately with no page load, and `<body>`'s computed background under
     `Dark Modern` must be `rgb(31, 31, 31)`. A label that selects but does not
     repaint means a palette is being read once rather than through
     `MudThemeProvider`.
-33. **A single-mode Theme falls back rather than breaking.** With `Solarized Light`
-    selected, set Appearance to **Dark**. You get **Huddle's** dark palette — not a
-    dark Solarized, which does not exist upstream, and not a half-painted surface.
-    That is the documented fallback, not a defect.
-34. **A bad Theme id is logged, not shown.** Set `"theme": "dracula"` in
+33. **Every Theme shows its own colours.** Pick `Solarized Dark` and check
+    `<body>`'s computed background is `rgb(0, 43, 54)` — Solarized Dark's own
+    `editor.background`, not Huddle's. Before 2026-09-21 the same selection with the
+    light preference set rendered Huddle Light instead; that combination is what
+    [ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md) exists to make
+    unreachable.
+34. **The picker is grouped, and grouping does not reorder the catalog.** The list
+    shows **Light**, **Dark** and **High contrast** headings, `Huddle Light` is first
+    under Light, and the two High Contrast Themes are under their own heading rather
+    than under Dark and Light.
+35. **A bad Theme id is logged, not shown.** Set `"theme": "dracula"` in
     `App_Data/appearance.json`. The built-in Theme applies, one warning naming the
     unknown id reaches the log, and **the file is unchanged** so fixing the typo
     restores the choice. The Appearance tab does not report it — that surface went
     with the override layer, and it is the one place this repo's "reported, never
     swallowed" habit is weaker than it was.
-35. **The reconnect modal.** Stop the server with the browser open. The dialog
+36. **The reconnect modal.** Stop the server with the browser open. The dialog
     shows **one** state paragraph, on a themed panel, over a dimmed backdrop — in
     both Themes. All six at once means the scoped-CSS bundle is not loading again,
     which is the [Traps](traps.md) entry on `@Assets[...]`.

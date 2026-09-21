@@ -4,7 +4,11 @@
 @using Agency.Huddle.App.Themes
 @inject AppearanceStore AppearanceStore
 
-<MudThemeProvider @ref="this.themeProvider" Theme="@this.theme" @bind-IsDarkMode="this.isDarkMode" ObserveSystemDarkModeChange="@this.observeSystemDarkMode" />
+@* IsDarkMode is one-way and ObserveSystemDarkModeChange is off on purpose: the selected theme
+   carries exactly one palette and its own ThemeMode, so the mode is derived from the theme and
+   nothing else may set it. Letting MudBlazor write IsDarkMode back on an OS change would select
+   the palette slot the theme does not fill. See docs/adr/0017-a-theme-is-a-palette-not-a-pair.md. *@
+<MudThemeProvider Theme="@this.theme" IsDarkMode="@this.isDarkMode" ObserveSystemDarkModeChange="false" />
 <MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
@@ -34,11 +38,8 @@
 </div>
 
 @code {
-    private MudThemeProvider? themeProvider;
     private MudTheme theme = ThemeCatalog.BuiltIn[0].Theme;
-    private DarkModePreference darkPreference = DarkModePreference.System;
-    private bool isDarkMode;
-    private bool observeSystemDarkMode = true;
+    private bool isDarkMode = ThemeCatalog.BuiltIn[0].Mode == ThemeMode.Dark;
 
     /// <summary>Subscribes to <see cref="AppearanceStore.AppearanceChanged"/> and applies the resolved appearance already on disk.</summary>
     protected override void OnInitialized()
@@ -48,36 +49,17 @@
     }
 
     /// <summary>
-    /// On first render, resolves a System dark-mode preference against the browser's own colour
-    /// scheme via <see cref="MudThemeProvider.GetSystemDarkModeAsync"/> - this is a one-shot read,
-    /// not a subscription, so it must run here rather than in <see cref="OnInitialized"/>, which has
-    /// no JavaScript runtime to call into yet. Live OS changes afterward are followed by MudBlazor
-    /// itself, through <see cref="MudThemeProvider.ObserveSystemDarkModeChange"/> bound above and the
-    /// <c>@@bind-IsDarkMode</c> two-way binding on <see cref="isDarkMode"/>.
+    /// Applies a resolved <see cref="AppearanceSettings"/> snapshot: the selected catalog theme,
+    /// falling back to the catalog's first entry, and the dark mode that theme implies. Both come
+    /// from the one descriptor, which is the whole point - a theme carries one palette, so the mode
+    /// is not a separate choice that could contradict it.
     /// </summary>
-    /// <param name="firstRender">Whether this is the component's first render.</param>
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender && this.darkPreference == DarkModePreference.System && this.themeProvider is not null)
-        {
-            this.isDarkMode = await this.themeProvider.GetSystemDarkModeAsync();
-            this.StateHasChanged();
-        }
-    }
-
-    /// <summary>Applies a resolved <see cref="AppearanceSettings"/> snapshot: the selected catalog theme (falling back to the catalog's first entry) and the dark-mode preference.</summary>
     /// <param name="settings">The snapshot to apply.</param>
     private void ApplyAppearance(AppearanceSettings settings)
     {
-        this.theme = FindDescriptor(settings.ThemeId).Theme;
-        this.darkPreference = settings.Dark;
-        this.observeSystemDarkMode = settings.Dark == DarkModePreference.System;
-        this.isDarkMode = settings.Dark switch
-        {
-            DarkModePreference.Dark => true,
-            DarkModePreference.Light => false,
-            _ => this.isDarkMode,
-        };
+        var descriptor = FindDescriptor(settings.ThemeId);
+        this.theme = descriptor.Theme;
+        this.isDarkMode = descriptor.Mode == ThemeMode.Dark;
     }
 
     /// <summary>Finds the catalog entry named by <paramref name="themeId"/>, or the catalog's first entry when it is <see langword="null"/> or names none.</summary>
@@ -101,16 +83,11 @@
     /// </summary>
     private void OnAppearanceChanged()
     {
-        _ = this.DispatchAsync(async () =>
+        _ = this.DispatchAsync(() =>
         {
             this.ApplyAppearance(this.AppearanceStore.Current);
-
-            if (this.darkPreference == DarkModePreference.System && this.themeProvider is not null)
-            {
-                this.isDarkMode = await this.themeProvider.GetSystemDarkModeAsync();
-            }
-
             this.StateHasChanged();
+            return Task.CompletedTask;
         });
     }
 
