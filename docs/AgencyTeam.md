@@ -261,6 +261,7 @@ everything in the table above stays under `Team:`. See
 ```powershell
 dotnet build Huddle.slnx                             # must be 0 warnings
 dotnet test  Huddle.slnx --                          # 8 E2E tests skipped when Acp:Enabled is off
+./test-health.ps1                                    # PASS or FAIL: does the built app boot and answer /health
 dotnet run --project src/Huddle.App --urls http://localhost:5100
 ```
 
@@ -273,6 +274,20 @@ dotnet run --project src/Huddle.App --urls http://localhost:5100
 >
 > Only the `E2E/` folder of `Huddle.Acp.Tests` spends money, and it is gated on
 > `TEAM_E2E=1`. Leave that unset and the whole suite is free.
+
+`./test-health.ps1` is the only check that runs the app as a **process**. Every
+test in `tests/Huddle.Tests` hosts it in-process through
+`TeamWebApplicationFactory`, so a bad options binding or a hosted service that
+throws at startup passes the entire suite and fails only here. The script starts
+the built output on a loopback port the kernel picks, GETs `/health`, prints PASS
+or FAIL, and exits 0 or 1.
+
+It never builds — run `dotnet build` first, or it tells you which command to run.
+Add `-Configuration Release` to check what CI checks; CI runs the same script as
+the last step of `validate`. It writes nothing outside a temp directory and
+starts no `node` process: the child is configured entirely through command-line
+arguments, which ASP.NET Core registers last and which therefore outrank
+`appsettings*.json` and anything already in your shell.
 
 Development configuration sets `Acp:Enabled: true`, so `dotnet run` starts one
 `node` process per Persona at startup, before you type anything. To open the app
