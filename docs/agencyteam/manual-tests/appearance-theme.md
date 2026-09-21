@@ -1,8 +1,8 @@
-# Appearance tab, Themes and light/dark preference
+# Appearance tab and Themes
 
 The Development profile sets `Team:Acp:Enabled: true`, so the global cost guard in section 0.2 is the only thing holding ACP off. Set it before you launch.
 
-**21 active, 6 retired** · 21 free, none paid · about 2.6 hours.
+**19 active, 8 retired** · 19 free, none paid · about 2.3 hours.
 
 Read [the manual test script](../manual-tests.md) first — the cost guard, the Model and Effort
 convention, and the rules for concluding a result — then [Common procedures](common.md), which
@@ -12,9 +12,18 @@ defines the terminals, states, procedures and oracles this page names. Both are 
 > This area was rewritten on 2026-09-14 for the MudBlazor migration
 > ([ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md)). The hand-built 39-token CSS system —
 > `wwwroot/theme.css`, the `themes/*.css` stylesheets, `ThemeOverrides` and per-token overrides in
-> `appearance.json` — is gone. `appearance.json` now holds only a theme id and a `system` / `light`
-> / `dark` preference. Six tests below that existed only to exercise the override layer are
+> `appearance.json` — is gone. Six tests below that existed only to exercise the override layer are
 > **retired in place**, not renumbered or deleted: APPEARANCETHEME-05, -10, -11, -12, -13 and -25.
+
+> [!IMPORTANT]
+> **Rewritten again on 2026-09-21** ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)).
+> There is **no light/dark control** on this tab any more, and `appearance.json` holds **one** key,
+> `theme`. A Theme carries a single palette and its own mode, so choosing a Theme chooses light or
+> dark — and the application no longer follows the device's setting at all. Two more tests are
+> **retired in place** because the behaviour they checked no longer exists: APPEARANCETHEME-08 (the
+> System path) and -27 (an imported Theme's borrowed palette). Every remaining test that named the
+> `Appearance` select or a `dark` key has been rewritten in place.
+>
 > [`docs/agencyteam/known-limits.md`](../known-limits.md) is the source of truth for what a Theme
 > can no longer do — read it before filing anything here as a defect.
 
@@ -26,12 +35,13 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB`, the four resets, and t
 standing conventions. This area adds:
 
 1. Start from the virgin first-run state: if `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` exists, delete it (`P-RESET-SETTINGS`). An absent file is normal and is not a broken install.
-2. Set the operating system to LIGHT mode — Windows Settings → Personalisation → Colours → 'Choose your default app mode' → Light. Every dark-mode test below is deliberately run against a light OS so that a Theme failing to apply is maximally visible.
-3. Open Chrome or Edge at `http://localhost:5100`, then DevTools (F12). Confirm DevTools → three-dot menu → More tools → Rendering → 'Emulate prefers-color-scheme' reads **No emulation**. A left-over emulation setting silently invalidates every OS-following test in this area.
-4. Go to `http://localhost:5100/settings/appearance` and read the path inside the `<code>` element below the two selects. It should read `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json`. THE ON-SCREEN PATH IS THE AUTHORITY — if it differs, edit the file the page names, not the one in these steps.
+2. Set the operating system to LIGHT mode — Windows Settings → Personalisation → Colours → 'Choose your default app mode' → Light. Every dark-Theme test below is deliberately run against a light OS so that a Theme failing to apply is maximally visible. The application ignores the OS setting entirely since 2026-09-21, so this is a contrast aid, not a variable under test.
+3. Open Chrome or Edge at `http://localhost:5100`, then DevTools (F12). Confirm DevTools → three-dot menu → More tools → Rendering → 'Emulate prefers-color-scheme' reads **No emulation**. Nothing in the application reads that signal any more, but a left-over emulation setting can still repaint DevTools itself and confuse a colour reading.
+4. Go to `http://localhost:5100/settings/appearance` and read the path inside the `<code>` element below the Theme picker. It should read `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json`. THE ON-SCREEN PATH IS THE AUTHORITY — if it differs, edit the file the page names, not the one in these steps.
 5. Have a plain text editor (Notepad, VS Code) ready to create and save that file. A save is picked up by a filesystem watcher about 0.5 seconds later.
-6. Selecting a Theme or a light/dark preference on this tab no longer forces a page reload — it applies immediately through MudBlazor's `MudThemeProvider`. No test below needs F5 to see a colour change; where a test does still want a full load (to prove one is no longer required, or to check first-paint) it says so explicitly.
-7. No test in this area needs a Model, and none spends money.
+6. Selecting a Theme on this tab does not force a page reload — it applies immediately through MudBlazor's `MudThemeProvider`. No test below needs F5 to see a colour change; where a test does still want a full load (to prove one is no longer required, or to check first-paint) it says so explicitly.
+7. The Theme picker is a **list**, not a dropdown: every Theme is on screen under a `Light`, `Dark` or `High contrast` heading, and "select a Theme" below means clicking its row. Nothing needs opening first.
+8. No test in this area needs a Model, and none spends money.
 
 ## Tests
 
@@ -96,9 +106,9 @@ If the page will not load at all (connection refused, or an ASP.NET error page),
 **Steps**
 
 1. Go to http://localhost:5100/settings/appearance.
-2. Read the paragraph above the two selects. Compare it word for word with: `Pick a theme, and choose whether it always uses its light or dark palette, or follows your device's own setting.`
-3. Read the paragraph BETWEEN the two selects — the credit line, directly under `Theme`. Compare it word for word with: `Every theme except Huddle is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and Monokai is Wimer Hazenberg's.`
-4. Read the paragraph BELOW the two selects. Compare it word for word with: `The selection is stored at <path>. The file does not exist until you save a choice here, so it being absent is expected, not a bug.`
+2. Read the paragraph above the Theme picker. Compare it word for word with: `Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's light or dark colours too.`
+3. Read the paragraph directly BELOW the picker — the credit line. Compare it word for word with: `Every theme except Huddle Light and Huddle Dark is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and Monokai is Wimer Hazenberg's.`
+4. Read the last paragraph on the panel. Compare it word for word with: `The selection is stored at <path>. The file does not exist until you save a choice here, so it being absent is expected, not a bug.`
 5. Read the path rendered in monospace in that same paragraph. Write it down. It must be an absolute path, e.g. `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json`.
 6. Scan the whole Appearance panel for the sentence `A hook is one piece of wording this application sends to a model` and for any mention of `hooks.json`, and for any mention of a token name such as `--font-chat` or an "Overrides" heading.
 7. Click the `Hooks` button in the tab rail.
@@ -111,7 +121,7 @@ If the page will not load at all (connection refused, or an ASP.NET error page),
 - The path shown is absolute and ends in `\src\Huddle.App\App_Data\appearance.json`.
 - Neither the Hooks intro sentence nor any mention of `hooks.json` appears anywhere on the Appearance panel, and there is no token name and no "Overrides" section — that whole layer is gone, not merely hidden.
 - Both of the Hooks paragraphs DO appear on the Hooks panel.
-- The credit line sits between the two selects, names Visual Studio Code, and attributes only Solarized and Monokai. It must not attribute Abyss, Kimbie Dark, Red, Quiet Light, Monokai Dimmed or Tomorrow Night Blue to anyone — those ship in VS Code with no third-party attribution on disk, so naming an author would be inventing one.
+- The credit line sits directly below the picker, names Visual Studio Code, excepts both `Huddle Light` and `Huddle Dark`, and attributes only Solarized and Monokai. It must not attribute Abyss, Kimbie Dark, Red, Quiet Light, Monokai Dimmed or Tomorrow Night Blue to anyone — those ship in VS Code with no third-party attribution on disk, so naming an author would be inventing one.
 
 **Fail if — any of these**
 
@@ -126,11 +136,11 @@ If the path shown differs from `E:\Repos\Huddle\src\Huddle.App\App_Data\appearan
 > [!NOTE]
 > Write the on-screen path down now. Every later test in this area edits that exact file, and 'I edited the wrong App_Data' is the single most common false bug report in this area.
 
-### APPEARANCETHEME-03 — The Theme select offers the built-in catalog, and the Appearance select offers exactly System, Light and Dark, in that order
+### APPEARANCETHEME-03 — The Theme picker offers the whole built-in catalog, grouped, and is the tab's only control
 
 **Free** · about 3 min
 
-*Proves both selects are rendered from code (`ThemeCatalog.BuiltIn` and `DarkModePreference`) rather than a hand-maintained second list, and in the declared order. The Theme catalog holds eighteen entries since 2026-09-16 — see [ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).*
+*Proves the picker is rendered from code (`ThemeCatalog.Grouped`) rather than a hand-maintained second list, in the declared order and under the declared headings — and that the light/dark control that used to sit beside it is gone ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)). The catalog holds nineteen entries: seventeen imported on 2026-09-16 ([ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)) plus this application's own two.*
 
 **Before you start**
 
@@ -139,35 +149,38 @@ If the path shown differs from `E:\Repos\Huddle\src\Huddle.App\App_Data\appearan
 
 **Steps**
 
-1. Find the control labelled `Theme` on the Appearance panel. Open it.
-2. Read every option top to bottom and write the list down. Close it without changing the selection (press Escape).
-3. Find the SECOND control, also labelled `Appearance` (yes, the same word as the tab — that is the control's own label, not a mistake in this document). Open it.
-4. Read every option top to bottom and write the list down. Close it with Escape.
+1. Find the Theme picker on the Appearance panel. It is a list, already showing its entries — nothing to open.
+2. Read every heading and every row top to bottom and write the list down. Scroll the list if it does not all fit.
+3. Look over the whole panel for any SECOND control — a select, a toggle, a radio group, anything offering light, dark or system.
 
 **Pass if — all of these**
 
-- The `Theme` select holds exactly eighteen options, in this order: `Huddle`, `Dark 2026`, `Light 2026`, `Dark Modern`, `Light Modern`, `Dark+`, `Light+`, `Dark High Contrast`, `Light High Contrast`, `Abyss`, `Kimbie Dark`, `Monokai`, `Monokai Dimmed`, `Quiet Light`, `Red`, `Solarized Dark`, `Solarized Light`, `Tomorrow Night Blue`.
-- `Huddle` is **first**. Three call sites read `BuiltIn[0]` to mean "the default Theme", so a Theme appearing above it is a real defect, not a cosmetic one.
+- The list holds exactly nineteen Themes under exactly three headings, in this order:
+  - **Light** — `Huddle Light`, `Light 2026`, `Light Modern`, `Light+`, `Quiet Light`, `Solarized Light`
+  - **Dark** — `Huddle Dark`, `Dark 2026`, `Dark Modern`, `Dark+`, `Abyss`, `Kimbie Dark`, `Monokai`, `Monokai Dimmed`, `Red`, `Solarized Dark`, `Tomorrow Night Blue`
+  - **High contrast** — `Dark High Contrast`, `Light High Contrast`
+- `Huddle Light` is **first** under `Light`, and `Light` is the first heading. Three call sites read `BuiltIn[0]` to mean "the default Theme", so a Theme appearing above it is a real defect, not a cosmetic one.
+- The two High Contrast Themes are under their **own** heading, not under `Dark` and `Light`. `ThemeGroup` is deliberately not `ThemeMode`.
 - There is no `Dark (Visual Studio)` and no `Light (Visual Studio)`. Those two were deliberately not imported: their palettes resolve byte-identically to `Dark+` and `Light+`, because upstream they differ only in `tokenColors` — syntax highlighting, which this application does not render.
-- The `Appearance` select holds exactly three options, in this order: `System`, `Light`, `Dark`.
-- There is no fourth option on the `Appearance` select and no blank-looking extra row.
+- **There is no second control.** The panel holds the intro paragraph, the picker, the Visual Studio Code credit line and the file path, and nothing else.
 
 **Fail if — any of these**
 
-- The `Appearance` select's order is anything other than `System`, `Light`, `Dark` -> `DarkModePreference`'s declared order is not what the select is reading.
-- An option's label is a raw id such as `huddle` rather than `Huddle`, or `dark` rather than `Dark` -> an id is leaking into the display.
-- The `Theme` select shows zero options, or throws when opened -> the catalog failed to enumerate.
+- A light/dark/system control of any kind is present -> ADR-0017 was reverted, or half-reverted; the conflict this whole change removed is back.
+- A row's label is a raw id such as `huddle-dark` rather than `Huddle Dark` -> an id is leaking into the display.
+- The list shows no Themes, or throws -> the catalog failed to enumerate.
+- A Theme appears under the wrong heading — a light Theme under `Dark`, or either High Contrast Theme outside `High contrast` -> `ThemeGroup` and the palette disagree.
 - `Dark (Visual Studio)` or `Light (Visual Studio)` appears -> somebody re-added a duplicate of `Dark+` / `Light+`; see ADR-0016.
-- A Theme appears above `Huddle` -> `BuiltIn[0]` no longer means the default Theme, which silently changes the fallback for an unknown id.
+- A Theme appears above `Huddle Light` -> `BuiltIn[0]` no longer means the default Theme, which silently changes the fallback for an unknown id.
 
 **Inconclusive if**
 
-If either select will not open, or shows options but the page is visibly still loading (the Blazor circuit has not connected yet), wait five seconds, reload with F5, and try again. Record INCONCLUSIVE only if it still will not open after a reload.
+If the list renders but the page is visibly still loading (the Blazor circuit has not connected yet), wait five seconds, reload with F5, and read it again. Record INCONCLUSIVE only if it still will not render after a reload.
 
 > [!NOTE]
-> Labels are what you see; ids are what get stored (`huddle`, `dark-modern`, `solarized-light`, and `system`/`light`/`dark`). Test 04 checks the id half. An imported Theme's id is its label lowercased and hyphenated, with one exception worth knowing: `Dark+` stores `dark-plus`, because an id must match `[a-z0-9-]`.
+> Labels are what you see; ids are what get stored (`huddle`, `huddle-dark`, `dark-modern`, `solarized-light`). Test 04 checks the id half. An imported Theme's id is its label lowercased and hyphenated, with two worth knowing: `Dark+` stores `dark-plus` because an id must match `[a-z0-9-]`, and `Huddle Light` stores the bare `huddle` — the id it has always had, kept so a file written before the Theme was split in two still resolves.
 
-### APPEARANCETHEME-04 — Choosing a value in either select stores its id and applies immediately, with no page reload
+### APPEARANCETHEME-04 — Choosing a Theme stores its id and applies immediately, with no page reload
 
 **Free** · about 5 min
 
@@ -182,7 +195,7 @@ If either select will not open, or shows options but the page is visibly still l
 
 1. Go to http://localhost:5100/settings/appearance.
 2. Open DevTools with F12 and click the `Network` tab. Click the 'Clear' button (circle-with-slash icon) to empty the request list. Set the filter to `Doc`.
-3. Select `Dark` in the `Appearance` select.
+3. Click `Huddle Dark` in the Theme picker, under the `Dark` heading.
 4. Watch the page: does it repaint immediately with no spinner, no blank frame and no new entry in the `Doc`-filtered Network list?
 5. Read the address bar and confirm it is unchanged and still shows `Appearance` active in the rail.
 6. Look at the page: is the application now dark?
@@ -192,35 +205,33 @@ If either select will not open, or shows options but the page is visibly still l
 **Pass if — all of these**
 
 - No `Doc` request appears in the Network panel — there is no page load at all.
-- The whole application repaints dark within a fraction of a second, still on /settings/appearance with `Appearance` active in the rail and `Dark` selected in the `Appearance` select.
-- The file now exists. If you changed ONLY the `Appearance` select and never explicitly
-  picked a Theme, it reads exactly:
+- The whole application repaints dark within a fraction of a second, still on /settings/appearance with `Appearance` active in the rail and `Huddle Dark` marked selected in the picker.
+- The file now exists and reads exactly:
 ```
 {
-  "dark": "dark"
+  "theme": "huddle-dark"
 }
 ```
-  **There is no `theme` key, and that is correct** — `appearance.json` is an
-  overrides-only file (see `known-limits.md`), so a Theme that was never explicitly
-  chosen is simply absent and the catalog default applies. A `theme` key appears only
-  once you pick one in the `Theme` select, and then it reads `"theme": "huddle"`.
-- The stored `dark` value is the lowercase id `dark`, NOT the label `Dark`. If a
-  `theme` key is present it is likewise the id `huddle`, NOT the label `Huddle`.
+  **There is no `dark` key, and that is correct** — the light/dark preference was
+  retired on 2026-09-21; the Theme carries its own palette
+  ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)).
+- The stored value is the lowercase id `huddle-dark`, NOT the label `Huddle Dark`.
 
 **Fail if — any of these**
 
 - The browser performs a full document load (a `Doc` request appears, or the tab's spinner turns) -> the old reload mechanism is back; it is no longer needed and no longer correct, because `<head>` is no longer where the theme lives.
 - No colour change at all -> `MudThemeProvider`'s bound `IsDarkMode` is not being updated from the store.
-- The file contains `"dark": "Dark"` -> the display label is being persisted instead of the id.
+- The file contains `"theme": "Huddle Dark"` -> the display label is being persisted instead of the id.
+- The file contains a `dark` key that the application just wrote -> the retired preference is being re-added. (A `dark` key you put there yourself by hand is a different matter: it is kept deliberately, as an unknown key. See test 17.)
 - The file is written on one line, or contains `\uXXXX` escapes instead of plain characters -> the writer is not using indented, relaxed-escaping options.
 - The file is not written at all -> the save path is broken.
 
 **Inconclusive if**
 
-If DevTools was opened AFTER the selection, redo it: clear the Network panel, select `Light`, then select `Dark` again, and read the result from that second change.
+If DevTools was opened AFTER the selection, redo it: clear the Network panel, select `Huddle Light`, then select `Huddle Dark` again, and read the result from that second change.
 
 > [!NOTE]
-> No page reload on a Theme or dark-mode change is BY DESIGN now — the opposite of what this same test asserted before the MudBlazor migration. Do not report the absence of a reload as a defect; report its PRESENCE as one.
+> No page reload on a Theme change is BY DESIGN now — the opposite of what this same test asserted before the MudBlazor migration. Do not report the absence of a reload as a defect; report its PRESENCE as one.
 
 ### APPEARANCETHEME-05 — RETIRED: the three-stylesheet cascade layering test
 
@@ -228,11 +239,11 @@ If DevTools was opened AFTER the selection, redo it: clear the Network panel, se
 
 This test proved that a `theme.<hash>.css` link, an `app.<hash>.css` link, a hand-built `themes/huddle-dark.css` link and an inline `<style>` override block appeared in `<head>` in exactly the right order, and that each one actually served. None of that markup exists any more: there is no `themes/` folder, no per-token `<style>` block, and no ordering question to ask, because `MudTheme` is a C# object applied through a component parameter rather than a stack of stylesheets. There is no successor test — see [known-limits.md](../known-limits.md)'s "What a Theme cannot do" for what replaced this layer. The general "are the shell's stylesheets fingerprinted and do they serve" question is covered by `shell-nav.md`'s SHELLNAV-01, which now also names `app-vars.css` and the static (unfingerprinted) `_content/MudBlazor/MudBlazor.min.css`.
 
-### APPEARANCETHEME-06 — The saved Theme and dark-mode preference are shown as selected in both selects after a full load
+### APPEARANCETHEME-06 — The saved Theme is shown as selected in the picker after a full load
 
 **Free** · about 4 min
 
-*Proves the page render and the two controls agree about the same fact, so the next change the Human makes does not start from a wrong value.*
+*Proves the page render and the picker agree about the same fact, so the next change the Human makes does not start from a wrong value.*
 
 **Before you start**
 
@@ -240,38 +251,39 @@ This test proved that a `theme.<hash>.css` link, an `app.<hash>.css` link, a han
 
 **Steps**
 
-1. Set the file to exactly `{ "theme": "huddle", "dark": "dark" }` and save it.
+1. Set the file to exactly `{ "theme": "huddle-dark" }` and save it.
 2. Go to http://localhost:5100/settings/appearance and press Ctrl+Shift+R.
-3. Watch the `Appearance` select closely from the moment the page paints until it has fully settled (about two seconds). Note whether it ever shows `System` before settling, and whether it ends on `Dark`.
+3. Watch the picker from the moment the page paints until it has fully settled (about two seconds). Note which row is marked selected.
 4. Confirm the page itself is dark.
-5. Set the file to exactly `{ "theme": "huddle", "dark": "light" }`, save, and press Ctrl+Shift+R. Read both selects.
-6. Delete the file entirely, then press Ctrl+Shift+R. Read both selects.
+5. Set the file to exactly `{ "theme": "solarized-light" }`, save, and press Ctrl+Shift+R. Read the picker.
+6. Delete the file entirely, then press Ctrl+Shift+R. Read the picker.
 
 **Pass if — all of these**
 
-- With `"dark": "dark"` in the file, the `Appearance` select settles on `Dark` and the page is dark.
-- With `"dark": "light"` in the file, it settles on `Light` and the page is light.
-- With no file, it settles on `System` and the `Theme` select still shows `Huddle` (the catalog's only, and therefore default, entry).
-- The file value and the two controls agree in every case.
+- With `"theme": "huddle-dark"` in the file, the picker marks `Huddle Dark` selected and the page is dark.
+- With `"theme": "solarized-light"` in the file, it marks `Solarized Light` and the page is light, on Solarized Light's own tan ground.
+- With no file, it marks `Huddle Light` — the catalog's default entry — and the page is light.
+- The file value, the marked row and the page's colours agree in every case, at every moment after the page has settled.
 
 **Fail if — any of these**
 
-- A select PERSISTENTLY reads a value that disagrees with the page's own colours after the page has fully settled -> the render and the control disagree about the same fact.
+- The picker PERSISTENTLY marks a row that disagrees with the page's own colours after the page has fully settled -> the render and the control disagree about the same fact. This is the exact shape of the defect ADR-0017 removed, so treat it as serious.
+- A dark Theme is selected and the page is light, or the reverse -> `MainLayout` is not deriving `IsDarkMode` from `ThemeDescriptor.Mode`.
 
 **Inconclusive if**
 
-A BRIEF flash of `System` between the prerendered HTML painting and the interactive circuit connecting is not a failure for an explicit `Light`/`Dark` choice — record which phase it happened in. See APPEARANCETHEME-07 and -08 for why `System` itself is allowed a real, documented flash.
+If the marked row is ambiguous — MudBlazor's selected-row styling is a background tint, not a tick — read `appearance.json` instead and confirm the page's colours match that Theme.
 
-### APPEARANCETHEME-07 — An explicit Dark (or Light) choice shows no flash of the other palette on a hard reload
+### APPEARANCETHEME-07 — A dark Theme shows no flash of a light palette on a hard reload, ever
 
 **Free** · about 6 min
 
-*Proves an explicit choice is resolved before the first frame paints — `MainLayout.OnInitialized` reads it synchronously from `AppearanceStore` — unlike `System`, which needs a round trip to JavaScript (see test 08).*
+*Proves the Theme is resolved before the first frame paints — `MainLayout.OnInitialized` reads it synchronously from `AppearanceStore`. Since 2026-09-21 this holds for **every** Theme with no exception: the JavaScript round trip that made a first-paint flash possible under `System` is gone along with `System` itself ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)), so any flash seen here is now a defect.*
 
 **Before you start**
 
 - The operating system is in LIGHT mode (per setup), so a flash would be maximally visible.
-- The file reads `{ "theme": "huddle", "dark": "dark" }`.
+- The file reads `{ "theme": "huddle-dark" }`.
 - The application is running.
 
 **Steps**
@@ -291,7 +303,7 @@ A BRIEF flash of `System` between the prerendered HTML painting and the interact
 
 **Fail if — any of these**
 
-- A white flash appears before the dark paint -> `AppearanceStore.Current` is not being read (or not being applied) before `MainLayout`'s first render.
+- A white flash appears before the dark paint -> `AppearanceStore.Current` is not being read (or not being applied) before `MainLayout`'s first render. There is no longer a documented exception to this: if anything reintroduced a post-render JavaScript read of the device preference, that is the defect.
 
 **Inconclusive if**
 
@@ -299,54 +311,32 @@ If you cannot tell whether what you saw was a flash or just the browser's own bl
 
 > [!NOTE]
 > Run this with the OS in LIGHT mode. With a dark OS, the browser's own blank page is dark too and the test proves nothing.
+>
+> This test used to carry a sibling, APPEARANCETHEME-08, that documented a first-paint flash under `System` as expected behaviour. That whole path is retired; a flash is a finding on every route and every Theme now.
 
-### APPEARANCETHEME-08 — System follows the operating system live with no reload; an explicit choice ignores the OS entirely — and a first-paint flash under System is expected
+### APPEARANCETHEME-08 — RETIRED: System follows the operating system live, and the first-paint flash that came with it
 
-**Free** · about 8 min
+**Retired 2026-09-21**
 
-*Proves the System path still needs no reload to follow a live OS flip (MudBlazor's `ObserveSystemDarkModeChange`), and separately proves — and explicitly does NOT fail on — the one flash this migration accepted: a brief wrong-palette frame under System while `MudThemeProvider.GetSystemDarkModeAsync()` completes its one JavaScript round trip after first render.*
+This test drove the `Appearance` select's `System` value: flipping the Windows app mode with the
+browser open and requiring the application to repaint with no reload, via MudBlazor's
+`ObserveSystemDarkModeChange`; pinning an explicit `Light`/`Dark` choice as immune to the same
+flip; and explicitly NOT failing on a brief wrong-palette frame after a hard reload, because
+`MudThemeProvider.GetSystemDarkModeAsync()` could not answer until a JavaScript round trip
+completed.
 
-**Before you start**
+None of that exists. [ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md) folded the
+light/dark preference into the Theme, so there is no `System` value to select, the application
+**ignores the device's setting entirely**, and `ObserveSystemDarkModeChange` is off with
+`IsDarkMode` bound one-way on purpose. `GetSystemDarkModeAsync` and the `OnAfterRenderAsync` that
+called it are deleted, which is why the flash this test tolerated is now a defect everywhere — see
+APPEARANCETHEME-07.
 
-- The application is running.
-- DevTools -> Rendering -> 'Emulate prefers-color-scheme' is `No emulation`.
-- The browser has no per-site appearance override for localhost.
-
-**Steps**
-
-1. Delete the file (or select `System` in the `Appearance` select) so no explicit preference is stored.
-2. Go to http://localhost:5100/settings/appearance. Arrange the window so the browser is visible while you use Windows Settings.
-3. Open Windows Settings -> Personalisation -> Colours -> `Choose your default app mode` and switch it to `Dark`. WATCH THE BROWSER as you click, and do not touch or reload the browser.
-4. Observe whether the application repaints: surfaces, text, borders, scrollbars and the two selects themselves.
-5. Switch the OS app mode back to `Light`, again watching the browser without touching it.
-6. Repeat the flip while sitting on http://localhost:5100/ and again on http://localhost:5100/teammates.
-7. In DevTools -> Elements, select the `<body>` element and read `background-color` in the Computed panel before and after one more flip.
-8. Now select `Dark` in the `Appearance` select on /settings/appearance.
-9. With the OS still in LIGHT mode, confirm the application is dark and stays dark through an OS flip.
-10. Select `Light`. With the OS in Dark, confirm the application is light and stays light.
-11. Now, with the OS in LIGHT mode and the preference set back to `System`, press Ctrl+Shift+R several times on http://localhost:5100/ and watch the very first painted frame closely each time.
-
-**Pass if — all of these**
-
-- With System selected, flipping the OS app mode repaints the application IMMEDIATELY - no reload, no navigation, no click.
-- The whole page switches together: surfaces, text, borders, scrollbars and native controls.
-- Computed `background-color` on `<body>` reads `rgb(255, 255, 255)` in light and `rgb(27, 27, 31)` in dark.
-- With `Dark` explicitly selected, the application is dark on a light OS and does NOT change when the OS is flipped. Same for `Light` on a dark OS.
-- In step 11, EITHER every reload paints correctly first try, OR an occasional reload shows one brief wrong-palette frame that self-corrects within a fraction of a second. Both are PASS — see the note.
-
-**Fail if — any of these**
-
-- With System selected, nothing changes until you reload -> `ObserveSystemDarkModeChange` regressed.
-- Only part of the page switches -> a rule is reading a literal colour instead of a `--mud-*` variable.
-- With an explicit choice selected, the application still follows the OS -> `MainLayout.ApplyAppearance` is not pinning `isDarkMode`.
-- A flash in step 11 PERSISTS past the first frame or two, or never resolves to the correct palette at all -> that is no longer the documented one-shot `GetSystemDarkModeAsync` delay; something is stuck.
-
-**Inconclusive if**
-
-If the OS flip does nothing at all in either direction, the browser may be forcing its own colour scheme. Check DevTools -> Rendering -> 'Emulate prefers-color-scheme' is `No emulation`. As a repeatable substitute, use that Rendering dropdown instead of the real OS setting; if the emulation flip works but the real OS flip does not, the defect is in the OS or the browser, not in this application.
-
-> [!NOTE]
-> KNOWN LIMIT, NOT A BUG (see [known-limits.md](../known-limits.md)): under `System`, the server cannot know the device's preference at render time, so a brief flash of the wrong palette on first paint is possible while `GetSystemDarkModeAsync()` completes. This is the cost ADR-0009 (the old CSS system) avoided and ADR-0010 (MudTheme) accepted. Do not file a step-11 flash as a defect — only a flash that never corrects, or one on an EXPLICIT Light/Dark choice (test 07), is a finding.
+There is no successor test for following the OS, because the application no longer does. That is
+recorded as a deliberate limit, not a gap, in
+[known-limits.md](../known-limits.md)'s "What a Theme cannot do", along with what bringing it back
+would take. The half of this test that still matters — an explicit choice is immune to an OS flip
+— survives as a step in APPEARANCETHEME-07.
 
 ### APPEARANCETHEME-09 — The choice is per installation, not per browser
 
@@ -357,7 +347,7 @@ If the OS flip does nothing at all in either direction, the browser may be forci
 **Before you start**
 
 - The application is running.
-- The file reads `{ "theme": "huddle", "dark": "dark" }` and Chrome shows the application as dark.
+- The file reads `{ "theme": "huddle-dark" }` and Chrome shows the application as dark.
 
 **Steps**
 
@@ -383,13 +373,13 @@ If the OS flip does nothing at all in either direction, the browser may be forci
 
 **Fail if — any of these**
 
-- The second browser or the private window shows System/light -> the choice has moved into localStorage or a cookie.
+- The second browser or the private window shows the default light Theme -> the choice has moved into localStorage or a cookie.
 - Clearing site data resets the theme -> same defect.
 - The choice does not survive an application restart -> it is not reaching the file on disk.
 
 **Inconclusive if**
 
-If the second browser shows light and the OS is in light mode, first check the file still says `"dark": "dark"` and that Chrome is genuinely reading the same install (same port, same process).
+If the second browser shows light, first check the file still says `"theme": "huddle-dark"` and that Chrome is genuinely reading the same install (same port, same process).
 
 > [!NOTE]
 > This is the positive proof of a documented limit: a second browser, a private window and a phone on the same install all see the same choice.
@@ -410,11 +400,11 @@ If the second browser shows light and the OS is in light mode, first check the f
 
 **Retired 2026-09-14.** Same reason as APPEARANCETHEME-10 — there are no override keys any more.
 
-### APPEARANCETHEME-14 — An unknown theme id or dark-mode value is a warning, logged once, never shown on the tab, and the file keeps saying it
+### APPEARANCETHEME-14 — An unknown theme id is a warning, logged once, never shown on the tab, and the file keeps saying it
 
 **Free** · about 8 min
 
-*Proves an unrecognised or ill-shaped value degrades to the built-in default with a LOG-ONLY report, never a crash, and that the Human's value is preserved. Unlike the old system, nothing is reported on the Appearance tab any more — see [known-limits.md](../known-limits.md): "A bad Theme id is logged, not shown."*
+*Proves an unrecognised or ill-shaped value degrades to the default Theme with a LOG-ONLY report, never a crash, and that the Human's value is preserved. Unlike the old system, nothing is reported on the Appearance tab any more — see [known-limits.md](../known-limits.md): "A bad Theme id is logged, not shown."*
 
 **Before you start**
 
@@ -423,22 +413,23 @@ If the second browser shows light and the OS is in light mode, first check the f
 
 **Steps**
 
-1. Set the file to exactly `{ "theme": "dracula", "dark": "dark" }` and save. Press Ctrl+Shift+R on http://localhost:5100/.
-2. Observe the application: does it render normally on the built-in Theme?
-3. Go to http://localhost:5100/settings/appearance. Read the `Theme` select's selected value. Look for ANY on-page mention of `dracula` being rejected — a problem list, an alert, anything.
+1. Set the file to exactly `{ "theme": "dracula" }` and save. Press Ctrl+Shift+R on http://localhost:5100/.
+2. Observe the application: does it render normally on the default Theme?
+3. Go to http://localhost:5100/settings/appearance. Read which row the picker marks selected. Look for ANY on-page mention of `dracula` being rejected — a problem list, an alert, anything.
 4. Read the most recent warning in the `dotnet run` console.
 5. Run `type E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` and confirm it still says `dracula`.
-6. Repeat the cycle for `{ "theme": "huddle", "dark": "midnight" }` (an unrecognised dark-mode value), checking the page, the `Appearance` select, the console and the file each time.
-7. Repeat for `{ "theme": "Huddle-Dark", "dark": "dark" }` (wrong case — the id comparison is ordinal).
-8. Repeat for `{ "theme": "", "dark": "" }` (empty strings).
-9. Repeat for `{ "theme": 42, "dark": null }` (wrong JSON types).
+6. Repeat the cycle for `{ "theme": "Huddle-Dark" }` (wrong case — the id comparison is ordinal), checking the page, the picker, the console and the file each time.
+7. Repeat for `{ "theme": "" }` (an empty string).
+8. Repeat for `{ "theme": 42 }` (the wrong JSON type).
+9. Repeat for `{ "dark": "midnight" }` — the retired key, carrying a value that was never valid even when it was read. Nothing may be logged about it at all.
 
 **Pass if — all of these**
 
-- In every case the application renders normally on the built-in Theme with no crash and no blank page.
-- The `Theme` select shows `Huddle` (its only, and therefore fallback, entry) and the `Appearance` select shows `System` in every case.
+- In every case the application renders normally on the default Theme, `Huddle Light`, with no crash and no blank page.
+- The picker marks `Huddle Light` selected in every case.
 - NOTHING is reported anywhere on the Appearance tab for any of these cases — this is the documented behaviour, not a gap in this test.
-- The console carries a warning for the theme case reading `Appearance file '<path>' selects theme 'dracula', which is not a known theme; the built-in theme is used instead and the file is left unchanged.` and, for the dark-mode case, `Appearance file '<path>' sets dark mode to 'midnight', which is not 'system', 'light' or 'dark'; System is used instead and the file is left unchanged.`
+- The console carries a warning for each bad `theme`, reading `Appearance file '<path>' selects theme 'dracula', which is not a known theme; the default theme is used instead and the file is left unchanged.`
+- **Step 9 logs nothing at all.** `dark` is an unknown top-level key now, and an unknown key is kept without comment — it is not validated, so there is nothing to warn about.
 - appearance.json still contains the bad value, unchanged, in every case — the app never rewrites it.
 
 **Fail if — any of these**
@@ -447,6 +438,7 @@ If the second browser shows light and the OS is in light mode, first check the f
 - The application REWRITES the file to remove or correct the unknown value -> leaving it untouched is what lets the choice come back intact once it is fixed or once a matching theme is added.
 - Something IS shown on the Appearance tab about the bad value -> a regression put the old per-token reporting UI back, or invented a new one; per known-limits, this surface is deliberately log-only now.
 - Nothing is logged either -> now the failure is genuinely undiagnosable.
+- Step 9 logs a warning about `dark` -> the retired key is still being validated; it should be as invisible as any other unknown key.
 
 **Inconclusive if**
 
@@ -463,7 +455,7 @@ For the numeric/null case, the log line may quote the raw JSON rather than a str
 
 **Before you start**
 
-- The application is running with a working Theme in place (e.g. `{ "theme": "huddle", "dark": "dark" }`), so you can watch it vanish.
+- The application is running with a working Theme in place (e.g. `{ "theme": "huddle-dark" }`), so you can watch it vanish.
 - You can see the `dotnet run` console.
 
 **Steps**
@@ -472,17 +464,17 @@ For the numeric/null case, the log line may quote the raw JSON rather than a str
 2. Set the file to the deliberately broken text `{"theme":"huddle",` (truncated, no closing brace) and save it.
 3. Wait about 2 seconds, then read the `dotnet run` console.
 4. Press Ctrl+Shift+R on http://localhost:5100/.
-5. Observe the application: is it on the built-in Theme following the OS, with the dark-mode preference reset to System?
+5. Observe the application: is it back on the default Theme, `Huddle Light`?
 6. Go to http://localhost:5100/settings/appearance and read both selects.
 7. Run `type E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` and confirm it is exactly the broken text you wrote.
 8. Repeat with a top-level array: set the file to `[]`, save, wait 2 seconds, reload, and check the same three things (page, selects, file).
-9. Now test the mid-write race: put a valid file back (`{ "theme": "huddle", "dark": "dark" }`), open it in your editor, and press Ctrl+S repeatedly - ten saves in about five seconds - while watching an open /settings/appearance page.
+9. Now test the mid-write race: put a valid file back (`{ "theme": "huddle-dark" }`), open it in your editor, and press Ctrl+S repeatedly - ten saves in about five seconds - while watching an open /settings/appearance page.
 10. Watch for any flicker of either select back to a default value.
 
 **Pass if — all of these**
 
-- The application renders normally on the built-in Theme, following the OS, after the malformed edit.
-- Both selects read `Huddle` / `System`.
+- The application renders normally on the default Theme, `Huddle Light`, after the malformed edit.
+- The picker marks `Huddle Light`.
 - The `dotnet run` console carries exactly one warning of the form `Could not parse appearance file '<path>'; falling back to the default appearance.` (or, for a watcher-triggered rebuild, `...after a filesystem change, even after retrying; keeping the previously resolved appearance...`).
 - appearance.json is exactly the broken text you wrote - unmodified, unrepaired.
 - Repeated rapid saves of a VALID file do not flicker either select.
@@ -511,12 +503,12 @@ If the console scrolled past and you cannot find the warning, re-save the broken
 **Steps**
 
 1. Set the file to deliberately broken JSON, exactly:
-{"theme":"huddle",,}
+{"theme":"huddle-dark",,}
 and save it.
 2. Copy that exact text into your test notes as the BEFORE state.
 3. Press Ctrl+Shift+R on http://localhost:5100/settings/appearance.
 4. Read the `dotnet run` console and confirm a `Could not parse appearance file` warning appeared.
-5. In the `Appearance` select, choose `Dark`.
+5. In the Theme picker, click `Huddle Dark`.
 6. Run `type E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` and copy the exact contents into your notes as the AFTER state.
 7. Compare BEFORE and AFTER.
 
@@ -525,8 +517,7 @@ and save it.
 - The save does not throw; no error banner appears and no unhandled exception is logged.
 - The file afterwards is VALID, indented JSON reading:
 {
-  "theme": "huddle",
-  "dark": "dark"
+  "theme": "huddle-dark"
 }
 - The application is dark afterwards.
 
@@ -540,11 +531,11 @@ and save it.
 
 This test has no 'correct' answer to assert against beyond not-throwing. Mark PASS if the save worked and the file is valid; mark INCONCLUSIVE only if you could not capture both file states.
 
-### APPEARANCETHEME-17 — Save re-reads the file under its write lock, so an unrelated hand-added key survives, and a concurrent edit to the OTHER field is not clobbered
+### APPEARANCETHEME-17 — Save re-reads the file under its write lock, so an unrelated hand-added key survives — and so does the retired `dark` key
 
 **Free** · about 6 min
 
-*Proves the save edits only `theme` and `dark`, leaving anything else in the document alone — the direct successor to the old "System removes the theme key but preserves overrides and unknown keys" test, now that there is no override object to preserve, only whatever a Human hand-adds.*
+*Proves the save edits only `theme`, leaving anything else in the document alone. This is also the whole migration story for a file written before 2026-09-21: there is no migration code, because `dark` is now just another unknown key ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)).*
 
 **Before you start**
 
@@ -554,27 +545,31 @@ This test has no 'correct' answer to assert against beyond not-throwing. Mark PA
 
 1. Set the file to exactly:
 {
-  "theme": "huddle",
-  "dark": "dark",
+  "theme": "solarized-dark",
+  "dark": "light",
   "note": "keep me"
 }
-and save it.
-2. Press Ctrl+Shift+R on http://localhost:5100/settings/appearance so the app picks it up. Confirm the `Appearance` select reads `Dark`.
-3. Select `Light` in the `Appearance` select.
-4. Run `type E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` and read the exact contents.
-5. Confirm `theme` is still `"huddle"`, `dark` is now `"light"`, and `note` with the value `keep me` is still present, untouched.
-6. Confirm the file stays indented and readable, with plain characters and no `\uXXXX` escapes.
+and save it. This is precisely the contradictory file the old two-control design could produce: a dark Theme and a light preference.
+2. Press Ctrl+Shift+R on http://localhost:5100/settings/appearance so the app picks it up.
+3. **Confirm the application is on Solarized Dark's own dark palette**, not a light one, and that the picker marks `Solarized Dark`. The `dark` key is ignored entirely.
+4. Click `Huddle Light` in the picker.
+5. Run `type E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` and read the exact contents.
+6. Confirm `theme` is now `"huddle"`, and that BOTH `dark` and `note` are still present, untouched.
+7. Confirm the file stays indented and readable, with plain characters and no `\uXXXX` escapes.
 
 **Pass if — all of these**
 
+- In step 3 the application is dark, on Solarized Dark. The `"dark": "light"` beside it changes nothing.
 - After the Save, the file contains `"theme": "huddle"`, `"dark": "light"` and `"note": "keep me"` — all three.
-- The `note` key is byte-for-byte what you wrote.
+- Both the `dark` and `note` keys are byte-for-byte what you wrote.
 - The file stays indented and human-readable.
 
 **Fail if — any of these**
 
-- The `note` key is silently deleted -> an unknown top-level key must be kept; the save is overwriting the whole document rather than re-reading and editing two keys.
-- The file is clobbered down to just the two known keys -> same defect, the save is not re-reading the file before editing.
+- Step 3 renders a LIGHT page -> the retired `dark` key is still being read, which is the exact defect ADR-0017 removed.
+- The `note` key is silently deleted -> an unknown top-level key must be kept; the save is overwriting the whole document rather than re-reading and editing one key.
+- The `dark` key is silently deleted -> it is an unknown key now and gets the same protection as any other. Removing it would also throw away the Human's old answer, which a future device-preference feature would want.
+- The file is clobbered down to just `theme` -> same defect, the save is not re-reading the file before editing.
 - Characters come back as escaped sequences -> the writer is using the protocol JSON options rather than the relaxed, human-editable ones.
 
 **Inconclusive if**
@@ -582,7 +577,7 @@ and save it.
 If your editor holds the file open with a lock while the app tries to write, close the editor and repeat before recording a result.
 
 > [!NOTE]
-> Unlike the old system, there is no UI action that ever removes the `theme` key — the `Theme` select always has a real selection once the catalog holds at least one entry, and picking one always writes its id. The `theme` key can only be absent in a file nobody has saved from this UI yet, or one hand-edited to omit it.
+> There is no UI action that ever removes the `theme` key — the picker always has a real selection, and clicking a row always writes its id. The `theme` key can only be absent in a file nobody has saved from this UI yet, or one hand-edited to omit it.
 
 ### APPEARANCETHEME-18 — A hand-edit updates the open tab live, and now the page's colours change too — no full load required
 
@@ -598,15 +593,15 @@ If your editor holds the file open with a lock while the app tries to write, clo
 
 **Steps**
 
-1. Set the file to exactly `{ "theme": "huddle", "dark": "light" }` and save. Confirm the page is light and the `Appearance` select reads `Light`.
-2. Now WITHOUT touching the browser at all, change the file in your editor to exactly `{ "theme": "huddle", "dark": "dark" }` and save it.
-3. Keep your eyes on the browser for the next 2 seconds. Note whether the `Appearance` select flips to `Dark` by itself AND whether the page's COLOURS change, with no click and no reload.
+1. Set the file to exactly `{ "theme": "huddle" }` and save. Confirm the page is light and the picker marks `Huddle Light`.
+2. Now WITHOUT touching the browser at all, change the file in your editor to exactly `{ "theme": "huddle-dark" }` and save it.
+3. Keep your eyes on the browser for the next 2 seconds. Note whether the picker's marked row moves to `Huddle Dark` by itself AND whether the page's COLOURS change, with no click and no reload.
 4. Click `Teammates` in the sidebar (an in-app navigation). Confirm the colours stay dark.
 5. Check the `dotnet run` console for any unhandled exception during the above.
 
 **Pass if — all of these**
 
-- Within about half a second of the save, BOTH the `Appearance` select and the page's actual colours update by themselves — no reload, no click, no navigation.
+- Within about half a second of the save, BOTH the picker's marked row and the page's actual colours update by themselves — no reload, no click, no navigation.
 - In-app navigation afterwards keeps the same (correct) colours.
 - No unhandled exception appears in the console.
 
@@ -630,25 +625,25 @@ If nothing updates within 2 seconds, wait another 3 seconds before judging — t
 
 **Before you start**
 
-- The application is running with `{ "theme": "huddle", "dark": "dark" }` saved and the page visibly dark.
+- The application is running with `{ "theme": "huddle-dark" }` saved and the page visibly dark.
 - http://localhost:5100/settings/appearance is open.
 
 **Steps**
 
-1. Confirm the `Appearance` select reads `Dark` and the page is dark.
+1. Confirm the picker marks `Huddle Dark` and the page is dark.
 2. In PowerShell, run `del E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` while the application is still running.
 3. Keep your eyes on the browser for 2 seconds without touching the page.
 4. Observe whether the application now follows the operating system, live, with no reload (flip the OS mode once to confirm).
 5. Run `dir E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` and confirm the file is still absent.
 6. Wait 30 seconds, navigate around the application, then run `dir` on it again.
-7. Now select `Dark` in the `Appearance` select.
+7. Now click `Huddle Dark` in the picker.
 8. Run `dir` and `type` on the file again.
 
 **Pass if — all of these**
 
-- Within about half a second of the delete, BOTH selects return to their defaults (`Huddle` / `System`) and the page's colours follow the OS live, with no reload.
+- Within about half a second of the delete, the picker returns to `Huddle Light` and the page repaints to its light palette, with no reload.
 - The file stays ABSENT - the application does not recreate it, not immediately and not after navigating around.
-- Selecting `Dark` afterwards recreates the file with `{ "theme": "huddle", "dark": "dark" }`.
+- Selecting `Huddle Dark` afterwards recreates the file with `{ "theme": "huddle-dark" }`.
 
 **Fail if — any of these**
 
@@ -674,10 +669,10 @@ If the delete fails because the file is locked by your editor, close the editor 
 
 1. Open http://localhost:5100/settings/appearance in two browser windows and arrange them side by side. Call them A and B.
 2. Confirm both selects show the same values and both pages look the same.
-3. In window A, select `Dark` in the `Appearance` select.
+3. In window A, click `Huddle Dark` in the Theme picker.
 4. Watch window A: it should repaint dark immediately, with no page load.
 5. Watch window B for 2 seconds WITHOUT touching it.
-6. Note whether window B's `Appearance` select flips to `Dark` by itself, AND whether window B's colours change too.
+6. Note whether window B's picker moves its marked row to `Huddle Dark` by itself, AND whether window B's colours change too.
 7. In window B, select `Light`. Watch window A for 2 seconds without touching it.
 8. Close window B entirely. Watch the `dotnet run` console for 10 seconds for any unhandled exception on circuit disposal.
 9. Interact with window A (select `Dark` again) and confirm it still works after B was closed.
@@ -703,17 +698,17 @@ If both windows are in the same browser process and one is backgrounded, the bro
 
 **Free** · about 3 min
 
-*Checks the no-op path does not loop, error, or destroy an unrelated hand-added key sitting alongside the two known ones.*
+*Checks the no-op path does not loop, error, or destroy the file.*
 
 **Before you start**
 
 - The application is running.
-- The file reads `{ "theme": "huddle", "dark": "dark" }` and the app is dark.
+- The file reads `{ "theme": "huddle-dark" }` and the app is dark.
 
 **Steps**
 
-1. Go to http://localhost:5100/settings/appearance and confirm the `Appearance` select reads `Dark`.
-2. Open the `Appearance` select and choose `Dark` again.
+1. Go to http://localhost:5100/settings/appearance and confirm the picker marks `Huddle Dark`.
+2. Click `Huddle Dark` again.
 3. Watch the page for 5 seconds. Confirm there is no page load (DevTools -> Network, `Doc` filter, stays empty) and no repeated repaint flicker.
 4. Run `type E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` and read the contents.
 5. Check the `dotnet run` console for errors, and scroll to the bottom of the page for the pale yellow `An unhandled error has occurred.` banner.
@@ -721,7 +716,7 @@ If both windows are in the same browser process and one is backgrounded, the bro
 **Pass if — all of these**
 
 - No page load happens, and the page does not flicker or repaint repeatedly.
-- The file still reads `{ "theme": "huddle", "dark": "dark" }`.
+- The file still reads `{ "theme": "huddle-dark" }`, OR it reads `{}` with the picker back on `Huddle Light` and the page light. Both are correct: MudBlazor's single-selection list clears the selection when the selected row is clicked again, and the store reads a cleared selection as "no Theme chosen", which resolves to the catalog default. Record which branch you saw.
 - No error banner, no console error.
 
 **Fail if — any of these**
@@ -731,7 +726,7 @@ If both windows are in the same browser process and one is backgrounded, the bro
 
 **Inconclusive if**
 
-If the select will not let you re-select the same value at all (some browsers fire no change event for a no-op selection), that is a PASS by the 'nothing happens' branch — note which branch you observed.
+If the click produced neither of the two outcomes above — no file change AND no return to `Huddle Light` — read the file before deciding; the list may simply not have registered the click.
 
 ### APPEARANCETHEME-22 — Dark mode walked across every page and every state - the acceptance test for the whole item
 
@@ -742,7 +737,7 @@ If the select will not let you re-select the same value at all (some browsers fi
 **Before you start**
 
 - The application is running.
-- The file reads exactly `{ "theme": "huddle", "dark": "dark" }`.
+- The file reads exactly `{ "theme": "huddle-dark" }`.
 - The operating system is in LIGHT mode, so anything that failed to switch is obvious.
 - For the rejected-persona part, you will hand-edit a Persona file (see steps). If you create or edit a Persona through the UI, set Model = Haiku and Effort = low - the standing convention. Nothing here needs a model and nothing here costs money.
 
@@ -765,7 +760,7 @@ A persona with no title.
 Save it, then press F5 on /teammates.
 11. (i) Find the section headed `Files that didn't load` and inspect its heading, the path and the reason text.
 12. (j) Go to http://localhost:5100/settings/hooks and inspect the whole panel, then click `Appearance` and inspect that panel.
-13. Now check native controls specifically: open every MudSelect popup you can find (the `Theme` and `Appearance` selects, the team filter, the card's Model and Effort selects) and check the popup itself is dark, not a white system menu.
+13. Now check native controls specifically: open every MudSelect popup you can find (the team filter, the card's Model and Effort selects) and check the popup itself is dark, not a white system menu. Check the Theme picker's own list and its group headings too — it is a `MudList`, not a popup, so it is always on screen.
 14. Click into the composer textarea and check it is dark.
 15. Scroll any scrollable area (the room list, the message list) and check the SCROLLBAR renders dark.
 16. For any element you suspect: select it in DevTools -> Elements, read the suspect colour property in Computed, then click through to the declaring rule. Note whether the value is a literal hex or a `var(--mud-palette-...)` reference.
@@ -804,7 +799,7 @@ If you cannot create a Room because `New chat` lists no agents, parts (c), (d) a
 
 **Before you start**
 
-- The application is running with `{ "theme": "huddle", "dark": "dark" }` and the operating system in LIGHT mode.
+- The application is running with `{ "theme": "huddle-dark" }` and the operating system in LIGHT mode.
 - At least one Room exists and at least one Teammate tile is visible (the demo agents supply the Room for free; if you add a Persona, use Model = Haiku and Effort = low).
 
 **Steps**
@@ -815,7 +810,7 @@ If you cannot create a Room because `New chat` lists no agents, parts (c), (d) a
 4. Click `Teammates` in the sidebar and hover a teammate tile. Force `:hover` and read Computed `background-color`. Write it down.
 5. Compare the three values.
 6. Go back to a Room and click it so it shows as the ACTIVE/selected room in the sidebar. Read that row's Computed `background-color` and confirm it is a dark selected-surface colour, visibly different from the hover colour but still dark.
-7. Press Tab repeatedly to move keyboard focus through the composer textarea, then through the Appearance tab's two selects, then through a teammate dialog's fields. At each stop, look at whether the focus outline is clearly visible against the dark ground.
+7. Press Tab repeatedly to move keyboard focus through the composer textarea, then through the Appearance tab's Theme picker rows, then through a teammate dialog's fields. At each stop, look at whether the focus outline is clearly visible against the dark ground.
 
 **Pass if — all of these**
 
@@ -844,7 +839,7 @@ If forcing `:hover` in DevTools has no effect, hover the element with the mouse 
 
 **Before you start**
 
-- The application is running with `{ "theme": "huddle", "dark": "dark" }`.
+- The application is running with `{ "theme": "huddle-dark" }`.
 - A browser window is open on a Room at http://localhost:5100/.
 - You will stop and restart the server during this test. It is free.
 
@@ -860,7 +855,7 @@ If forcing `:hover` in DevTools has no effect, hover the element with the mouse 
 8. In DevTools -> Elements, find `<dialog id="components-reconnect-modal">`, expand it to reveal the `::backdrop` pseudo-element, select `::backdrop`, and read Computed `background-color`.
 9. Look at the `Retry` button's colour - it must be the application's Primary MudTheme colour (a dark purple in the dark theme), not a light framework blue.
 10. Restart the server with `dotnet run --project src/Huddle.App --urls http://localhost:5100`, reload the page.
-11. Go to /settings/appearance, select `Light` in the `Appearance` select.
+11. Go to /settings/appearance and click `Huddle Light` in the Theme picker.
 12. Open a Room again, stop the server again with Ctrl+C, and repeat the same observations with the light panel.
 13. Read Computed `background-color` on `::backdrop` again.
 14. Restart the server.
@@ -905,15 +900,16 @@ If the dialog never appears when you stop the server, reload the page, interact 
 
 **Steps**
 
-1. Find the paragraph directly below the `Theme` select and above the `Appearance` select.
+1. Find the paragraph directly below the Theme picker and above the file-path line.
 2. Read it word for word.
-3. Set the `Appearance` select to `Dark`. Read the same paragraph again.
+3. Click `Huddle Dark` in the picker. Read the same paragraph again.
 4. Scan the paragraph for the names `Abyss`, `Kimbie`, `Red`, `Quiet Light`, `Monokai Dimmed` and `Tomorrow Night Blue`.
 
 **Pass if — all of these**
 
-- The paragraph sits BETWEEN the two selects, not above `Theme` and not below the file-path line.
+- The paragraph sits BETWEEN the picker and the file-path line, not above the picker.
 - It names Visual Studio Code, states the themes are Microsoft's under the MIT licence, and credits Solarized to Ethan Schoonover and Monokai to Wimer Hazenberg.
+- It excepts **both** `Huddle Light` and `Huddle Dark` from the Visual Studio Code claim — they are this application's own, and since 2026-09-21 there are two of them.
 - It attributes **no other** theme to any person or organisation.
 - It remains legible in Dark — it is muted text (`--mud-palette-text-secondary`), which must still read comfortably against the dark surface.
 
@@ -930,16 +926,15 @@ If the Appearance panel will not render, this is INCONCLUSIVE, not a failure —
 > [!NOTE]
 > The file headers under `src/Huddle.App/Themes/VsCode/` are deliberately stricter than this line: they record only the MIT declaration in each extension's `package.json` and assert no upstream author at all. This paragraph is an acknowledgement, which is a different register from a provenance record.
 
-### APPEARANCETHEME-27 — An imported Theme applies in its native mode, and falls back to Huddle's palette in the other
+### APPEARANCETHEME-27 — Every imported Theme paints its own palette, across the whole application
 
 **Free** · about 12 min
 
-*Proves the imported catalog actually paints — not just that the labels enumerate — and that the single-mode fallback behaves as designed rather than rendering something broken. This is the acceptance walk for [ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).*
+*Proves the imported catalog actually paints — not just that the labels enumerate. This is the acceptance walk for [ADR-0016](../../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md), rewritten on 2026-09-21: the half of it that exercised a single-mode Theme's **borrowed** palette is gone, because borrowing is gone ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)). What replaces it is stricter — a Theme must now show its own colours in every reachable state, with no fallback to Huddle's palette available as an excuse.*
 
 **Before you start**
 
 - The application is running, with at least one Room holding a few Messages and one fenced code block.
-- The `Appearance` select is set to `Dark`.
 
 **Steps**
 
@@ -947,22 +942,23 @@ If the Appearance panel will not render, this is INCONCLUSIVE, not a failure —
 2. Open DevTools → Elements → `<body>` → Computed, and read `background-color`. It must be `rgb(31, 31, 31)` — Dark Modern's `editor.background`, `#1f1f1f`.
 3. Hover a Room in the sidebar and confirm the row changes colour. Tab to a link or button and confirm a visible focus outline.
 4. Select Theme `Monokai`. Confirm the whole surface changes again, and that nothing is left painted in Dark Modern's colours.
-5. Select Theme `Solarized Light` and set `Appearance` to `Light`. Confirm the surface becomes the Solarized Light palette.
-6. Now set `Appearance` to `Dark`, leaving `Solarized Light` selected.
+5. Select Theme `Solarized Dark` and read `background-color` on `<body>` again. It must be `rgb(0, 43, 54)` — Solarized Dark's own `#002b36`, **not** `rgb(255, 255, 255)` and not Huddle's `rgb(27, 27, 31)`.
+6. Select Theme `Solarized Light`. Confirm the surface becomes Solarized Light's own tan palette, and that `background-color` is not plain white.
 7. Select Theme `Dark High Contrast`. Read the transcript and the sidebar.
-8. Return to Theme `Huddle`.
+8. Return to Theme `Huddle Light`.
 
 **Pass if — all of these**
 
 - Each Theme selection repaints immediately, with no page reload and no F5.
-- `<body>`'s computed background under `Dark Modern` is `rgb(31, 31, 31)`.
+- `<body>`'s computed background under `Dark Modern` is `rgb(31, 31, 31)`, and under `Solarized Dark` is `rgb(0, 43, 54)`.
+- **No Theme ever shows Huddle's palette.** Step 5 is the specific check: before 2026-09-21, `Solarized Dark` with the light preference set rendered Huddle Light under Solarized Dark's name, which is the defect ADR-0017 exists to make unreachable.
 - Under every Theme tried, body text is comfortably readable against its background, the hover state is visible, and the focus outline is visible.
-- At step 6, `Solarized Light` in Dark mode shows **Huddle's dark palette**, not a broken or half-painted surface, and not Solarized Light's own colours on a dark ground. That is the documented single-mode fallback, not a defect — see [Known limits](../known-limits.md).
 - `Dark High Contrast` renders as a legible, strong-contrast dark Theme. It is **not** expected to look like VS Code's high-contrast mode, which draws borders everywhere from `contrastBorder`; MudBlazor has no equivalent.
 
 **Fail if — any of these**
 
 - Any surface stays painted in the previous Theme's colours after a switch -> something is reading a palette once rather than through `MudThemeProvider`.
+- Any Theme renders Huddle's palette instead of its own -> a borrowed palette is reachable again.
 - A surface renders blank, transparent, or black-on-black under any Theme -> a palette slot resolved to nothing, which the conversion is specifically designed to make impossible.
 - Selecting a Theme forces a full page load -> the ADR-0010 render-tree behaviour regressed.
 - The fenced code block loses its monospace family -> `--font-mono` in `app-vars.css` is the one app-owned custom property and no Theme should touch it.

@@ -170,9 +170,9 @@ These are documented decisions in [Known limits](known-limits.md). Observing one
 | An Agent answering in one Room seems to know about another Room | One session per Persona spans every Room it is in, so context bleeds. A session per Room would multiply processes and cost. |
 | A restart un-pauses a Room that had spent its Budget | The Budget counter is in memory and per Room, by decision. |
 | A restart loses a Turn that was mid-stream | A Draft is in memory only and is never written to the Transcript. |
-| Choosing **Dark** stays dark on a light OS | A Theme carries **both** palettes; the light/dark preference is separate. Following the device means choosing **System**. |
+| The application does not follow the OS switching to dark | Deliberate since 2026-09-21: a Theme *is* a light one or a dark one, and there is no System option any more. Pick a Theme from the Dark group. See [ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md). |
 | Changing the Theme repaints with no page load | `MudThemeProvider` lives in the render tree, so a Theme change is an ordinary re-render. The full reload the CSS-based system needed is gone. |
-| Selecting a dark-only Theme, then **Light**, shows Huddle's light palette | An imported VS Code Theme is single-mode: it fills only its native palette and borrows the other. There is no light Monokai upstream to show. |
+| There is no light Monokai, and no dark Solarized Light | An imported VS Code Theme is single-mode upstream, so it ships as one Theme in one group. The Themes that do have both are listed as two — `Huddle Light` and `Huddle Dark`, `Dark+` and `Light+`, and so on. |
 | `Dark High Contrast` does not look like VS Code's high contrast | VS Code draws HC borders everywhere from `contrastBorder`, which MudBlazor's palette has no equivalent for. It lands as a strong-contrast ordinary Theme. |
 | The same Theme appears in a second browser and a private window | The choice lives in `appearance.json`, per installation, not in `localStorage`. |
 | Renaming a Teammate leaves its old Rooms and Transcripts behind | Removing or renaming a Persona does not cascade into the chat surface. Only its Model and Effort follow. |

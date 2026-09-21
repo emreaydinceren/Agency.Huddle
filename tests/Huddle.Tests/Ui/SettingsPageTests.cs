@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Appearance;
@@ -184,13 +185,14 @@ public sealed class SettingsPageTests
     }
 
     /// <summary>
-    /// The Appearance tab shows a Theme select and an Appearance (dark-mode) select, each already
-    /// showing its resolved current value - the catalog's default theme's label and "System" - and
-    /// renders none of the Hooks tab's own content. Stays on HTTP for that half: it is a fact about
-    /// the prerender, unaffected by this stage's conversion (<c>Appearance.razor</c> is out of scope).
+    /// The Appearance tab shows one labelled theme picker - not two controls - carrying the catalog's
+    /// default theme's label. The second control it used to show, a light/dark preference, is gone:
+    /// a theme now carries its own mode, so there is nothing left for a second control to contradict
+    /// (<c>docs/adr/0017-a-theme-is-a-palette-not-a-pair.md</c>). Stays on HTTP: it is a fact about
+    /// the prerender.
     /// </summary>
     [Fact]
-    public async Task SettingsAppearancePage_RendersTheSelectedThemeAndDarkModeLabels()
+    public async Task SettingsAppearancePage_RendersOneThemePickerAndNoDarkModeControl()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
@@ -201,49 +203,38 @@ public sealed class SettingsPageTests
         var html = await client.GetStringAsync("/settings/appearance", ct);
 
         Assert.Contains("aria-label=\"Theme\"", html, StringComparison.Ordinal);
-        Assert.Contains("aria-label=\"Appearance\"", html, StringComparison.Ordinal);
-        Assert.Contains($">{ThemeCatalog.BuiltIn[0].Label}<", html, StringComparison.Ordinal);
-        Assert.Contains(">System<", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("aria-label=\"Appearance\"", html, StringComparison.Ordinal);
+        Assert.Contains($">{HtmlEncoder.Default.Encode(ThemeCatalog.BuiltIn[0].Label)}<", html, StringComparison.Ordinal);
     }
 
     /// <summary>
-    /// The other half of <see cref="SettingsAppearancePage_RendersTheSelectedThemeAndDarkModeLabels"/>,
-    /// restored now that <see cref="MudBunitContext.RenderWithPopovers"/> exists: a <c>MudSelect</c>
-    /// only paints its options into a popover once opened by a real click, which a plain GET can never
-    /// trigger, so the HTTP version of this test could only ever see the two selects' pre-rendered
-    /// current values. Opening both here proves every <see cref="ThemeCatalog.BuiltIn"/> label and
-    /// every <see cref="DarkModePreference"/> member is actually offered, not just the one each select
-    /// happens to start on.
+    /// Every theme in the catalog is offered, under its group's heading. No click is simulated to get
+    /// there: the picker is a <c>MudList</c>, so every option is in the markup from the first render -
+    /// which is the practical reason to prefer it over the <c>MudSelect</c> it replaced, whose options
+    /// only reached a popover after a real <c>MouseDown</c>. Labels are compared through
+    /// <see cref="HtmlEncoder.Default"/> because that is the encoder the response was written with,
+    /// and it escapes more than the five XML entities - "Dark+" reaches the browser as
+    /// <c>Dark&amp;#x2B;</c>.
     /// </summary>
     [Fact]
-    public async Task SettingsAppearancePage_OffersEveryThemeAndDarkModeOption()
+    public async Task SettingsAppearancePage_OffersEveryThemeUnderItsGroupHeading()
     {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
         await using var factory = new TeamWebApplicationFactory();
-        await using var ctx = NewContext(factory);
+        using var client = factory.CreateClient();
 
-        var cut = ctx.RenderWithPopovers(builder =>
-        {
-            builder.OpenComponent<Settings>(0);
-            builder.AddComponentParameter(1, nameof(Settings.Tab), "appearance");
-            builder.CloseComponent();
-        });
-
-        var selects = cut.FindAll("div.mud-input-control");
-        Assert.Equal(2, selects.Count);
-
-        foreach (var select in selects)
-        {
-            await select.MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
-        }
+        var html = await client.GetStringAsync("/settings/appearance", ct);
 
         foreach (var theme in ThemeCatalog.BuiltIn)
         {
-            Assert.Contains(theme.Label, cut.Markup, StringComparison.Ordinal);
+            Assert.Contains(HtmlEncoder.Default.Encode(theme.Label), html, StringComparison.Ordinal);
         }
 
-        foreach (var preference in Enum.GetValues<DarkModePreference>())
+        foreach (var grouping in ThemeCatalog.Grouped)
         {
-            Assert.Contains(preference.ToString(), cut.Markup, StringComparison.Ordinal);
+            Assert.Contains($">{grouping.Heading}<", html, StringComparison.Ordinal);
         }
     }
 

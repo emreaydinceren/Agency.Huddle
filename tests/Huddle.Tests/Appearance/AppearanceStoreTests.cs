@@ -20,7 +20,6 @@ public sealed class AppearanceStoreTests
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
         Assert.Null(store.Current.ThemeId);
-        Assert.Equal(DarkModePreference.System, store.Current.Dark);
         Assert.False(File.Exists(Path.Combine(dataDir.Path, "appearance.json")));
     }
 
@@ -34,7 +33,6 @@ public sealed class AppearanceStoreTests
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
         Assert.Null(store.Current.ThemeId);
-        Assert.Equal(DarkModePreference.System, store.Current.Dark);
     }
 
     /// <summary>
@@ -56,34 +54,35 @@ public sealed class AppearanceStoreTests
     }
 
     /// <summary>
-    /// A <c>dark</c> value that is not <c>"system"</c>, <c>"light"</c> or <c>"dark"</c> is a
-    /// warning, never a failure: System applies and the file is left exactly as it was.
+    /// The retired <c>dark</c> key, still present in any <c>appearance.json</c> written before the
+    /// light/dark control was folded into the theme, is now just an unknown key: the theme beside it
+    /// still resolves, nothing warns, and the key itself is left on disk rather than deleted. This is
+    /// the whole of the migration story for an existing file - there is no migration code.
     /// </summary>
     [Fact]
-    public void Current_WithAnUnknownDarkValue_FallsBackToSystemAndLeavesTheFileUnchanged()
+    public void Current_WithARetiredDarkKey_ResolvesTheThemeAndKeepsTheKey()
     {
         using var dataDir = new TempDataDir();
         var path = Path.Combine(dataDir.Path, "appearance.json");
-        File.WriteAllText(path, "{\"dark\":\"nonsense\"}");
+        File.WriteAllText(path, "{\"theme\":\"solarized-dark\",\"dark\":\"light\"}");
 
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
-        Assert.Equal(DarkModePreference.System, store.Current.Dark);
-        Assert.Contains("nonsense", File.ReadAllText(path), StringComparison.Ordinal);
+        Assert.Equal("solarized-dark", store.Current.ThemeId);
+        Assert.Contains("\"dark\"", File.ReadAllText(path), StringComparison.Ordinal);
     }
 
-    /// <summary>A file naming both a known theme and a dark-mode preference resolves both at once.</summary>
+    /// <summary>A file naming a known theme resolves it - the one value this store now carries.</summary>
     [Fact]
-    public void Current_WithAThemeAndDark_ResolvesBoth()
+    public void Current_WithAKnownTheme_ResolvesIt()
     {
         using var dataDir = new TempDataDir();
         var path = Path.Combine(dataDir.Path, "appearance.json");
-        File.WriteAllText(path, "{\"theme\":\"huddle\",\"dark\":\"dark\"}");
+        File.WriteAllText(path, "{\"theme\":\"huddle-dark\"}");
 
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
-        Assert.Equal("huddle", store.Current.ThemeId);
-        Assert.Equal(DarkModePreference.Dark, store.Current.Dark);
+        Assert.Equal("huddle-dark", store.Current.ThemeId);
     }
 
     /// <summary>An edit made outside the process (a human hand-editing the file) is picked up by the filesystem watcher once its debounce settles.</summary>
@@ -106,22 +105,21 @@ public sealed class AppearanceStoreTests
     /// round-trip untouched - the tab must not be able to clobber data it does not understand.
     /// </summary>
     [Fact]
-    public void Save_WritesTheThemeAndDarkAndLeavesUnknownKeysUntouched()
+    public void Save_WritesTheThemeAndLeavesUnknownKeysUntouched()
     {
         using var dataDir = new TempDataDir();
         var path = Path.Combine(dataDir.Path, "appearance.json");
-        File.WriteAllText(path, "{\"custom-note\":\"left alone\"}");
+        File.WriteAllText(path, "{\"custom-note\":\"left alone\",\"dark\":\"light\"}");
 
         using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
 
-        store.Save("huddle", DarkModePreference.Dark);
+        store.Save("huddle-dark");
 
-        Assert.Equal("huddle", store.Current.ThemeId);
-        Assert.Equal(DarkModePreference.Dark, store.Current.Dark);
+        Assert.Equal("huddle-dark", store.Current.ThemeId);
         var json = File.ReadAllText(path);
-        Assert.Contains("huddle", json, StringComparison.Ordinal);
-        Assert.Contains("\"dark\"", json, StringComparison.Ordinal);
+        Assert.Contains("huddle-dark", json, StringComparison.Ordinal);
         Assert.Contains("left alone", json, StringComparison.Ordinal);
+        Assert.Contains("\"dark\"", json, StringComparison.Ordinal);
     }
 
     /// <summary>Saving raises <see cref="AppearanceStore.AppearanceChanged"/> after the write and the rebuild.</summary>
@@ -133,7 +131,7 @@ public sealed class AppearanceStoreTests
         var raised = false;
         store.AppearanceChanged += () => raised = true;
 
-        store.Save("huddle", DarkModePreference.Light);
+        store.Save("huddle");
 
         Assert.True(raised);
     }

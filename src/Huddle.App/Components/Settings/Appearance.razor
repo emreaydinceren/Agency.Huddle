@@ -1,11 +1,23 @@
 @*
-    The Settings page's Appearance tab: pick a theme from ThemeCatalog.BuiltIn, and pick a light,
-    dark or System dark-mode preference.
+    The Settings page's Appearance tab: pick a theme from ThemeCatalog.Grouped.
 
-    MudBlazor's MudThemeProvider now lives in the render tree (MainLayout.razor), so choosing a
-    theme or a dark-mode preference here applies immediately through that component's own
-    parameters - no page reload, no <head> to rewrite, no JavaScript interop of this component's
-    own.
+    One control, not two. A theme carries exactly one palette and its own ThemeMode, so picking a
+    theme picks light or dark with it - there is no separate light/dark control any more, and so no
+    way to ask for "Solarized Dark, in light mode" and be shown a different theme's palette instead
+    (docs/adr/0017-a-theme-is-a-palette-not-a-pair.md).
+
+    A MudList rather than a MudSelect: MudBlazor 9 has no MudSelectItemGroup, so a MudSelect cannot
+    render the Light / Dark / High contrast headings this picker is grouped by. The list also shows
+    every theme at once, which is what a theme picker wants - the same shape VS Code's own picker has,
+    and the catalog these themes came from.
+
+    The grouping is ThemeCatalog.Grouped's, computed once there rather than here, because
+    ThemeCatalog.BuiltIn's ORDER is load-bearing - three call sites read BuiltIn[0] as "the default
+    theme" - so the picker must never be tempted to reorder the catalog to group it.
+
+    MudBlazor's MudThemeProvider lives in the render tree (MainLayout.razor), so choosing a theme here
+    applies immediately through that component's own parameters - no page reload, no <head> to
+    rewrite, no JavaScript interop of this component's own.
 
     Subscribes to AppearanceStore.AppearanceChanged the same way Settings.razor subscribes to
     HookStore.HooksChanged: the store is a singleton, so a hand-edit to appearance.json (or a save
@@ -20,28 +32,32 @@
 @inject AppearanceStore AppearanceStore
 
 <p class="teammates-intro">
-    Pick a theme, and choose whether it always uses its light or dark palette, or follows your
-    device's own setting.
+    Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's
+    light or dark colours too.
 </p>
 
-<MudSelect T="string" Label="Theme" Value="@this.SelectedThemeId" ValueChanged="this.OnThemeChangedAsync">
-    @foreach (var theme in ThemeCatalog.BuiltIn)
+<MudList T="string"
+         Class="theme-picker"
+         SelectionMode="SelectionMode.SingleSelection"
+         SelectedValue="@this.SelectedThemeId"
+         SelectedValueChanged="this.OnThemeChangedAsync"
+         aria-label="Theme">
+    @foreach (var grouping in ThemeCatalog.Grouped)
     {
-        <MudSelectItem T="string" Value="@theme.Id">@theme.Label</MudSelectItem>
+        <MudListSubheader Class="theme-picker-heading">@grouping.Heading</MudListSubheader>
+        @foreach (var theme in grouping.Themes)
+        {
+            <MudListItem T="string" Value="@theme.Id" Text="@theme.Label" />
+        }
     }
-</MudSelect>
+</MudList>
 
 <p class="settings-theme-credit">
-    Every theme except Huddle is one of the colour themes bundled with Visual Studio Code, mapped
-    onto this application's palette. Visual Studio Code and its default themes are Microsoft's,
-    under the MIT licence; Solarized is Ethan Schoonover's and Monokai is Wimer Hazenberg's.
+    Every theme except Huddle Light and Huddle Dark is one of the colour themes
+    bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and
+    its default themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and
+    Monokai is Wimer Hazenberg's.
 </p>
-
-<MudSelect T="DarkModePreference" Label="Appearance" Value="@this.AppearanceStore.Current.Dark" ValueChanged="this.OnDarkChangedAsync">
-    <MudSelectItem T="DarkModePreference" Value="DarkModePreference.System">System</MudSelectItem>
-    <MudSelectItem T="DarkModePreference" Value="DarkModePreference.Light">Light</MudSelectItem>
-    <MudSelectItem T="DarkModePreference" Value="DarkModePreference.Dark">Dark</MudSelectItem>
-</MudSelect>
 
 <p class="settings-hooks-file-path">
     The selection is stored at <code>@this.AppearanceStore.FilePath</code>. The file does not exist
@@ -49,7 +65,7 @@
 </p>
 
 @code {
-    /// <summary>The theme id shown selected: the store's current selection, or the catalog's first (and, today, only) entry when nothing is selected yet.</summary>
+    /// <summary>The theme id shown selected: the store's current selection, or the catalog's default when nothing is selected yet.</summary>
     private string SelectedThemeId => this.AppearanceStore.Current.ThemeId ?? ThemeCatalog.BuiltIn[0].Id;
 
     /// <summary>Subscribes to <see cref="AppearanceStore.AppearanceChanged"/> - see the file-level comment for why this matters.</summary>
@@ -64,19 +80,15 @@
         this.AppearanceStore.AppearanceChanged -= this.OnAppearanceChanged;
     }
 
-    /// <summary>Saves the newly picked theme id, keeping the current dark-mode preference.</summary>
+    /// <summary>
+    /// Saves the newly picked theme id. A null reaches here when MudList clears its selection, which
+    /// SingleSelection does when the selected item is clicked again; the store reads that as "no
+    /// theme selected" and the catalog's default applies, which is the right answer either way.
+    /// </summary>
     /// <param name="themeId">The theme id the Human just picked.</param>
-    private Task OnThemeChangedAsync(string themeId)
+    private Task OnThemeChangedAsync(string? themeId)
     {
-        this.AppearanceStore.Save(themeId, this.AppearanceStore.Current.Dark);
-        return Task.CompletedTask;
-    }
-
-    /// <summary>Saves the newly picked dark-mode preference, keeping the current theme selection.</summary>
-    /// <param name="dark">The dark-mode preference the Human just picked.</param>
-    private Task OnDarkChangedAsync(DarkModePreference dark)
-    {
-        this.AppearanceStore.Save(this.AppearanceStore.Current.ThemeId, dark);
+        this.AppearanceStore.Save(themeId);
         return Task.CompletedTask;
     }
 

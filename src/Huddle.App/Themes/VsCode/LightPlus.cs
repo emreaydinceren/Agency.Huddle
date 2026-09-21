@@ -65,13 +65,14 @@ internal static class LightPlusTheme
     };
 
     /// <summary>
-    /// Light+'s descriptor. The dark palette is borrowed from <see cref="HuddleTheme.Dark"/>
-    /// rather than authored - Light+ is a single-mode VS Code theme, so selecting it and then
-    /// forcing Dark mode shows Huddle's own dark palette, not a Light+ dark variant.
+    /// Light+'s descriptor. It is a single-mode VS Code theme and so carries only its
+    /// light palette; MudBlazor's dark slot keeps MudBlazor's own defaults and is never
+    /// rendered, because selecting this theme also selects its mode.
     /// </summary>
     public static ThemeDescriptor Descriptor { get; } = new(
         Id: "light-plus",
         Label: "Light+",
-        Theme: ThemeDefaults.Create(Light(), HuddleTheme.Dark()),
-        Mode: ThemeMode.Light);
+        Theme: ThemeDefaults.CreateLight(Light()),
+        Mode: ThemeMode.Light,
+        Group: ThemeGroup.Light);
 }

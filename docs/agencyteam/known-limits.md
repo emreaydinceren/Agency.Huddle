@@ -225,22 +225,28 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   for, and a restart clears what that Teammate remembers.
 - **What a Theme cannot do.** Roadmap item 6's four limits were retired on 2026-09-14
   when theming moved to MudBlazor — see
-  [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md). A Theme now carries **both**
-  palettes, so light/dark is a separate preference rather than a second Theme, and
-  changing it no longer reloads the page. Four different things are absent now:
+  [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md) — and the list was rewritten
+  again on 2026-09-21 when a Theme became a single palette
+  ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)). Four different things are
+  absent now:
+  - **The application does not follow the device's light/dark setting.** There is no
+    System option and no light/dark control at all: a Theme *is* a light one or a dark
+    one, and the one you pick is the one you get, on every device, until you pick
+    another. Doing this honestly needs a **pair** of authored Themes and a rule for
+    resolving between them, the way VS Code's *Preferred Light* / *Preferred Dark* and
+    "Sync with OS" work. Six of the nineteen Themes already have a real counterpart, so
+    the door is open; it is not built. This replaced a worse limit — until 2026-09-21 the
+    preference could contradict the Theme, and selecting `Solarized Dark` with `Light`
+    showed Huddle's palette under Solarized Dark's name.
   - **There is no per-Token customisation at all.** `appearance.json` holds a Theme id
-    and a light/dark preference, and nothing else. The override map, its allowlist and
-    the inline `<style>` are gone. Changing one colour means editing `ThemeCatalog` in
-    C# and rebuilding, or waiting for item 7's Theme import.
+    and nothing else. The override map, its allowlist and the inline `<style>` are gone.
+    Changing one colour means editing `ThemeCatalog` in C# and rebuilding, or waiting for
+    item 7's Theme import.
   - **A bad Theme id is logged, not shown.** `AppearanceStore` warns, names the unknown
-    id, leaves the file untouched and falls back to the built-in Theme — but the
+    id, leaves the file untouched and falls back to the default Theme — but the
     Appearance tab no longer reports it, because the section that did belonged to the
     override layer. This is the one place the repo's "reported, never swallowed" habit
     is now weaker than it was; the log is the only surface.
-  - **Under System, a flash of the wrong Theme is possible on first paint.** The server
-    cannot know the device's preference at render time, so
-    `MudThemeProvider.GetSystemDarkModeAsync()` reads it over JavaScript after the first
-    render. This is the cost ADR-0009 avoided and ADR-0010 accepted.
   - **The choice is per installation, not per browser.** Unchanged, and still
     deliberate: it lives in `{DataDir}/appearance.json`, so a second browser, a private
     window and a phone on the same install all see the same Theme. One Human per
@@ -249,17 +255,18 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   Code's bundled Themes on 2026-09-16 — see
   [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md).
   Three things about them are worth knowing before reporting a bug:
-  - **A single-mode Theme shows Huddle's palette in the other mode.** A VS Code Theme is
-    authored for light *or* dark; a Huddle Theme carries both. So an imported Theme fills
-    only its native palette and borrows the other. Select Monokai and force Light and you
-    get Huddle's light palette, not a light Monokai — there is no such thing upstream, and
-    deriving one would invent colours nobody designed. `ThemeDescriptor.Mode` names which
-    half is authored.
+  - **A single-mode Theme has no counterpart in the picker.** A VS Code Theme is authored
+    for light *or* dark, so it appears once, under one heading. There is no light Monokai
+    to select: there is no such thing upstream, and deriving one would invent colours
+    nobody designed. Until 2026-09-21 asking for one showed Huddle's light palette instead,
+    which was worse than not offering it
+    ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)).
   - **The High Contrast pair is not high contrast.** VS Code draws HC borders throughout
     from `contrastBorder`, which MudBlazor's palette has no equivalent for. `Dark High
     Contrast` and `Light High Contrast` land here as strong-contrast ordinary Themes. They
     are also the most derived of the set: `hc_light.json` carries five colour keys, so
-    eighteen of its twenty slots come from VS Code's own registry defaults.
+    eighteen of its twenty slots come from VS Code's own registry defaults. Both sit under
+    the picker's own **High contrast** heading (`ThemeGroup`), not under Light or Dark.
   - **Three Themes miss the contrast floor, on purpose.** Themes are imported unmodified,
     so `light-plus` and `quiet-light` (4.40:1) and `solarized-light` (3.98:1) fall just
     under 4.5:1 for `TextSecondary` on `Surface`. `ThemeCatalogTests` records each with its

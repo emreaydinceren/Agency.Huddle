@@ -941,18 +941,18 @@ If TERMINAL C cannot connect to the pipe (`\\.\pipe\team`), the bot never regist
 **Steps**
 
 1. Open `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json` in a text editor (create it if it does not exist).
-2. Replace its entire contents with exactly: `{"theme": "not-a-theme", "dark": "not-a-mode"}`
+2. Replace its entire contents with exactly: `{"theme": "not-a-theme", "dark": "not-a-mode"}`. Only `theme` is validated — `dark` was retired on 2026-09-21 ([ADR-0017](../../adr/0017-a-theme-is-a-palette-not-a-pair.md)) and is now an unknown key, so it is kept without comment and warns about nothing.
 3. Save the file and wait five seconds.
 4. In `T-B` run: `Get-Content src/Huddle.App/App_Data/appearance.json`. Confirm it is byte-for-byte what you typed.
 5. In the browser, press F5 on any page.
-6. Observe whether the page renders normally, following your operating system's light/dark setting, with the sidebar and all four stylesheets from SHELLNAV-01 still present.
+6. Observe whether the page renders normally on the default Theme, `Huddle Light`, with the sidebar and all four stylesheets from SHELLNAV-01 still present. The operating system's own light/dark setting is ignored and must change nothing.
 7. Scroll `T-A` and find the warning lines logged when the file was read.
 8. Re-run the command from step 4 and confirm the file is STILL unchanged.
 
 **Pass if — all of these**
 
 - The page renders normally with no blank or unstyled screen, and the shell (drawer, room list, nav links) is intact.
-- `T-A` logged two warnings naming the file path and the bad values (see APPEARANCETHEME-14 for the exact wording).
+- `T-A` logged ONE warning, naming the file path and the bad `theme` value (see APPEARANCETHEME-14 for the exact wording). Nothing is logged about `dark`: it is an unknown key now, and unknown keys are kept silently.
 - The on-disk `appearance.json` is byte-identical to what you typed, both before and after.
 
 **Fail if — any of these**

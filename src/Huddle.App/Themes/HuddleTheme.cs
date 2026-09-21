@@ -3,17 +3,23 @@ using MudBlazor;
 namespace Agency.Huddle.App.Themes;
 
 /// <summary>
-/// The "Huddle" theme: the palette this application shipped in <c>wwwroot/theme.css</c> before the
-/// migration to MudBlazor theming, resolved into MudBlazor's light and dark <see cref="Palette"/>
-/// pair rather than CSS <c>light-dark()</c> pairs.
+/// This application's own colours: the palettes it shipped in <c>wwwroot/theme.css</c> before the
+/// migration to MudBlazor theming, resolved into a MudBlazor <see cref="Palette"/> each rather than
+/// CSS <c>light-dark()</c> pairs.
 /// </summary>
+/// <remarks>
+/// Both palettes here are authored, which makes this the one file in <c>Themes/</c> that yields two
+/// catalog entries — <see cref="LightDescriptor"/> and <see cref="DarkDescriptor"/> — rather than
+/// one. A theme in this catalog is a single palette
+/// (<c>docs/adr/0017-a-theme-is-a-palette-not-a-pair.md</c>), so two palettes are two themes; the
+/// alternative would have been to leave the dark palette unreachable, and it is the more carefully
+/// measured of the two.
+/// </remarks>
 internal static class HuddleTheme
 {
     /// <summary>
-    /// Builds a fresh instance of the Huddle theme's light palette on every call. A fresh instance
-    /// matters because other themes in this catalog borrow one of these two palettes for the mode
-    /// they were not designed for, and a shared mutable <see cref="Palette"/> instance across themes
-    /// would be a latent aliasing bug.
+    /// Builds a fresh instance of Huddle Light's palette on every call, so no <see cref="Palette"/>
+    /// instance is shared - and mutated - across the themes in this catalog.
     /// </summary>
     /// <returns>A new <see cref="PaletteLight"/> carrying today's light palette values.</returns>
     public static PaletteLight Light() => new()
@@ -44,10 +50,8 @@ internal static class HuddleTheme
     };
 
     /// <summary>
-    /// Builds a fresh instance of the Huddle theme's dark palette on every call. A fresh instance
-    /// matters because other themes in this catalog borrow one of these two palettes for the mode
-    /// they were not designed for, and a shared mutable <see cref="Palette"/> instance across themes
-    /// would be a latent aliasing bug.
+    /// Builds a fresh instance of Huddle Dark's palette on every call, so no <see cref="Palette"/>
+    /// instance is shared - and mutated - across the themes in this catalog.
     /// </summary>
     /// <returns>A new <see cref="PaletteDark"/> carrying today's dark palette values.</returns>
     public static PaletteDark Dark() => new()
@@ -90,6 +94,23 @@ internal static class HuddleTheme
         OverlayDark = "rgba(0,0,0,0.6)",
     };
 
-    /// <summary>The Huddle theme's descriptor, built from fresh <see cref="Light"/> and <see cref="Dark"/> palettes.</summary>
-    public static ThemeDescriptor Descriptor { get; } = new(Id: "huddle", Label: "Huddle", Theme: ThemeDefaults.Create(Light(), Dark()), Mode: ThemeMode.Light);
+    /// <summary>
+    /// Huddle Light's descriptor, and the catalog's default theme. Its id stays the bare
+    /// <c>"huddle"</c> the catalog has always used, so an <c>appearance.json</c> written before this
+    /// theme was split in two still resolves to exactly the palette it resolved to then.
+    /// </summary>
+    public static ThemeDescriptor LightDescriptor { get; } = new(
+        Id: "huddle",
+        Label: "Huddle Light",
+        Theme: ThemeDefaults.CreateLight(Light()),
+        Mode: ThemeMode.Light,
+        Group: ThemeGroup.Light);
+
+    /// <summary>Huddle Dark's descriptor - the same application colours, authored for a dark ground.</summary>
+    public static ThemeDescriptor DarkDescriptor { get; } = new(
+        Id: "huddle-dark",
+        Label: "Huddle Dark",
+        Theme: ThemeDefaults.CreateDark(Dark()),
+        Mode: ThemeMode.Dark,
+        Group: ThemeGroup.Dark);
 }

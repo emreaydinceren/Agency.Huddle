@@ -29,7 +29,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 8 | [Model and Effort pickers, catalog probe and runner restart](model-effort.md) | 27 | 1 | 3.6h |
 | 9 | [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 32 | 4 | 3.5h |
 | 10 | [Settings: the 24 Hooks, editing, per-field reset and Save](hooks-settings.md) | 40 | 3 | 4.7h |
-| 11 | [Appearance tab, Themes and light/dark preference](appearance-theme.md) | 27 | — | 2.6h |
+| 11 | [Appearance tab and Themes](appearance-theme.md) | 27 | — | 2.3h |
 | 12 | [The named pipe: external agents and the wire](pipe-external.md) | 36 | — | 3.9h |
 | 13 | [App Tools a real model calls (progressive discovery)](app-tools.md) | 26 | 20 | 4.2h |
 | 14 | [Persona lifecycle: supervisor, work dirs, health and restarts](persona-lifecycle.md) | 32 | 7 | 6.5h |

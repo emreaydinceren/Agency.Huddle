@@ -63,13 +63,14 @@ internal static class QuietLightTheme
     };
 
     /// <summary>
-    /// Quiet Light's descriptor. The dark palette is borrowed from <see cref="HuddleTheme.Dark"/>
-    /// rather than authored - Quiet Light is a single-mode VS Code theme, so selecting it and then
-    /// forcing Dark mode shows Huddle's own dark palette, not a Quiet Light dark variant.
+    /// Quiet Light's descriptor. It is a single-mode VS Code theme and so carries only its
+    /// light palette; MudBlazor's dark slot keeps MudBlazor's own defaults and is never
+    /// rendered, because selecting this theme also selects its mode.
     /// </summary>
     public static ThemeDescriptor Descriptor { get; } = new(
         Id: "quiet-light",
         Label: "Quiet Light",
-        Theme: ThemeDefaults.Create(Light(), HuddleTheme.Dark()),
-        Mode: ThemeMode.Light);
+        Theme: ThemeDefaults.CreateLight(Light()),
+        Mode: ThemeMode.Light,
+        Group: ThemeGroup.Light);
 }

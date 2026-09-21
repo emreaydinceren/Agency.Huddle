@@ -59,13 +59,14 @@ internal static class Light2026Theme
     };
 
     /// <summary>
-    /// Light 2026's descriptor. The dark palette is borrowed from <see cref="HuddleTheme.Dark"/>
-    /// rather than authored - Light 2026 is a single-mode VS Code theme, so selecting it and then
-    /// forcing Dark mode shows Huddle's own dark palette, not a Light 2026 dark variant.
+    /// Light 2026's descriptor. It is a single-mode VS Code theme and so carries only its
+    /// light palette; MudBlazor's dark slot keeps MudBlazor's own defaults and is never
+    /// rendered, because selecting this theme also selects its mode.
     /// </summary>
     public static ThemeDescriptor Descriptor { get; } = new(
         Id: "light-2026",
         Label: "Light 2026",
-        Theme: ThemeDefaults.Create(Light(), HuddleTheme.Dark()),
-        Mode: ThemeMode.Light);
+        Theme: ThemeDefaults.CreateLight(Light()),
+        Mode: ThemeMode.Light,
+        Group: ThemeGroup.Light);
 }
