@@ -138,3 +138,14 @@ jobs:
       - name: 🧪 Run tests
         run: |
           dotnet test Huddle.slnx --configuration Release --no-build --             --filter-not-method "*.Shutdown_DisposesEveryHost"             --filter-not-method "*.PromptAsync_StreamsChunksInOrder_ThenTurnCompleted"             --filter-not-method "*.PromptAsync_ThoughtAndToolCallEvents_ArePublished"
+
+      # Starts the Release build as a real child process, GETs /health over a real socket and
+      # prints PASS/FAIL. Deliberately not an xUnit test: every test in tests/Huddle.Tests hosts
+      # the app in-process through TeamWebApplicationFactory, so none of them can fail when the
+      # composed app does not boot as a process - which is the only thing this step asserts.
+      # It builds nothing, so it must follow the build step. 120s rather than the script's 60s
+      # default: this runner is arm64 and cold-starts slowly.
+      # pwsh is at /usr/bin/pwsh in mcr.microsoft.com/dotnet/sdk:10.0.401 - PowerShell 7.6.6,
+      # installed as a global tool by the image (PowerShell.Linux.arm64 on this runner).
+      - name: 🩺 Health endpoint smoke test
+        run: pwsh -NoProfile -NonInteractive -File ./test-health.ps1 -Configuration Release -TimeoutSeconds 120

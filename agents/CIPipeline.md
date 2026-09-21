@@ -144,6 +144,7 @@ docker run --rm -v "$PWD:/work" -v huddle-nuget:/root/.nuget/packages \
       --filter-not-method "*.Shutdown_DisposesEveryHost" \
       --filter-not-method "*.PromptAsync_StreamsChunksInOrder_ThenTurnCompleted" \
       --filter-not-method "*.PromptAsync_ThoughtAndToolCallEvents_ArePublished"
+    pwsh -NoProfile -NonInteractive -File ./test-health.ps1 -Configuration Release -TimeoutSeconds 120
   '
 ```
 
@@ -156,7 +157,16 @@ Test run summary: Passed!
   failed: 0
   succeeded: 962
   skipped: 8
+
+======================================================================
+  PASS   /health answered 200 Healthy in 3.4s
+======================================================================
 ```
+
+The last line of the container script is the same smoke test `validate` ends with. It runs the
+Release build as a real process and GETs `/health`, which is the one thing no test in
+`tests/Huddle.Tests` can check — they all host the app in-process. It builds nothing, so it has
+to follow the build step.
 
 Run it from **PowerShell**, not Git Bash. In Git Bash on Windows `$PWD` expands to an MSYS
 path (`/e/Repos/Huddle`) that Docker Desktop cannot resolve to a host directory, so it
@@ -187,6 +197,8 @@ Check these before reading the code.
 | The test total is not the figure at the top of this file | A test was added or removed, or a `--filter-not-method` line no longer matches anything | Expected after real work; confirm the delta is yours. A quarantine line that matches nothing fails silently — it does not error. Update the figure when you confirm it |
 | A diagnostic appears only in CI, with an identical clean local build | The container's SDK is **ahead** of the local one. `global.json` pins `10.0.400` with `rollForward: latestPatch`, so the `10.0.401` image satisfies it and compiles with a newer Roslyn. `TreatWarningsAsErrors` turns any diagnostic that version added into a failed build | Do not chase it by loosening `global.json`. Reproduce it with the Docker command below, which uses the same image, or install the image's SDK locally. Seen 2026-09-15: `CS1574` on a `cref` to an internal framework type, which 10.0.400 accepted |
 | A docs-only PR shows a check that never completes | Both workflows set `paths-ignore: docs/**`, so no run is queued at all | Push a non-docs change, or drop the required check for such PRs |
+| `pwsh: command not found` at the Health endpoint smoke test step | The SDK image stopped shipping PowerShell. `10.0.401` installs it as a global tool and symlinks `/usr/bin/pwsh` (`PowerShell.Linux.arm64` on this runner), but that is the image's choice, not a guarantee across bumps | Add a step before it — `dotnet tool install --global PowerShell` and put `$HOME/.dotnet/tools` on `PATH` — in **both** workflows. Confirm with `command -v pwsh && pwsh --version` |
+| The smoke test FAILs while the whole test suite is green | Read the stderr and stdout tails the script prints; that is what they are for. `AddressInUseException`, a missing `libe_sqlite3.so`, or a timeout waiting for `Now listening on:` are environmental — the app never bound. A `404 - the endpoint is not mapped` is **not** environmental | For 404, `app.MapHealthChecks("/health")` was removed from `Program.cs` and this step caught a real regression the suite cannot see. For the rest, re-run; if it persists, reproduce with the Docker command above |
 
 ### Line endings
 
