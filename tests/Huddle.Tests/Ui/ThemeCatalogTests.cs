@@ -7,16 +7,17 @@ namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
 /// Pins <see cref="ThemeCatalog"/>'s shape now that MudBlazor's <see cref="MudTheme"/> is the single
-/// source of theming: every descriptor has a unique, non-empty id, carries both a light and a dark
-/// palette, the one shipped "Huddle" theme carries the colours this application shipped in
-/// <c>wwwroot/theme.css</c> before this migration, every theme's own (native) palette clears its
-/// WCAG contrast floor except for a short, doubly-pinned list of documented exceptions, and every
+/// source of theming: every descriptor has a unique, non-empty id and fills the one palette slot its
+/// <see cref="ThemeDescriptor.Mode"/> names, the two "Huddle" themes carry the colours this
+/// application shipped in <c>wwwroot/theme.css</c> before this migration, the grouping the picker
+/// renders covers the catalog without reordering it, every theme's palette clears its WCAG contrast
+/// floor except for a short, doubly-pinned list of documented exceptions, and every
 /// <c>--mud-palette-*</c> custom property the stylesheets actually reference has a value in every
 /// theme.
 /// </summary>
 public sealed class ThemeCatalogTests
 {
-    /// <summary>Every descriptor's id is unique and non-empty - a blank or duplicate id would make the Appearance tab's dropdown either unusable or ambiguous.</summary>
+    /// <summary>Every descriptor's id is unique and non-empty - a blank or duplicate id would make the Appearance tab's picker either unusable or ambiguous.</summary>
     [Fact]
     public void BuiltIn_EveryIdIsUniqueAndNonEmpty()
     {
@@ -29,36 +30,107 @@ public sealed class ThemeCatalogTests
     }
 
     /// <summary>
-    /// Every descriptor's <see cref="MudTheme"/> has both <see cref="MudTheme.PaletteLight"/> and
-    /// <see cref="MudTheme.PaletteDark"/> populated. MudBlazor defaults both to a non-null instance,
-    /// so this is really asserting that nobody accidentally left a descriptor pointing at a bare
-    /// <c>new MudTheme()</c> with none of this application's own colours set.
+    /// Every descriptor fills the palette slot its <see cref="ThemeDescriptor.Mode"/> names and
+    /// leaves the other slot at MudBlazor's own defaults. A theme here is one palette, not a pair
+    /// (<c>docs/adr/0017-a-theme-is-a-palette-not-a-pair.md</c>), so this pins the arrangement that
+    /// makes the unfilled slot unreachable: its <c>Background</c> still matches a bare
+    /// <c>new MudTheme()</c>'s, while the filled slot's does not. A descriptor that went back to
+    /// carrying two authored palettes - the shape that let a theme and a separate light/dark control
+    /// contradict each other - fails here.
     /// </summary>
     [Fact]
-    public void BuiltIn_EveryThemeHasBothPalettes()
+    public void BuiltIn_EveryThemeFillsItsNativeSlotAndLeavesTheOther()
     {
+        MudTheme untouched = new();
+
         foreach (var descriptor in ThemeCatalog.BuiltIn)
         {
-            Assert.NotNull(descriptor.Theme.PaletteLight);
-            Assert.NotNull(descriptor.Theme.PaletteDark);
+            var filled = Hex(NativePalette(descriptor).Background);
+            var empty = Hex(descriptor.Mode == ThemeMode.Light ? descriptor.Theme.PaletteDark.Background : descriptor.Theme.PaletteLight.Background);
+            var untouchedEmpty = Hex(descriptor.Mode == ThemeMode.Light ? untouched.PaletteDark.Background : untouched.PaletteLight.Background);
+
+            Assert.NotEqual(untouchedEmpty, filled, StringComparer.OrdinalIgnoreCase);
+            Assert.Equal(untouchedEmpty, empty, StringComparer.OrdinalIgnoreCase);
         }
     }
 
     /// <summary>
-    /// A spot-check that the shipped "Huddle" theme's <c>Primary</c> and <c>Background</c> carry the
-    /// expected values in both palettes - the two colours most likely to visibly regress if a future
-    /// edit swaps light and dark, or fat-fingers a hex value.
+    /// A spot-check that the two shipped "Huddle" themes carry the expected <c>Primary</c> and
+    /// <c>Background</c> - the colours most likely to visibly regress if a future edit swaps the two
+    /// themes' palettes, or fat-fingers a hex value. Huddle is the one file in <c>Themes/</c> with
+    /// two authored palettes, which is why it is the one that became two catalog entries.
     /// </summary>
     [Fact]
     public void Huddle_PrimaryAndBackgroundCarryTheExpectedValues()
     {
-        var huddle = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "huddle", StringComparison.Ordinal));
+        var light = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "huddle", StringComparison.Ordinal));
+        var dark = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "huddle-dark", StringComparison.Ordinal));
 
-        Assert.Equal("#4A154B", huddle.Theme.PaletteLight.Primary.ToString(MudColorOutputFormats.Hex), ignoreCase: true);
-        Assert.Equal("#FFFFFF", huddle.Theme.PaletteLight.Background.ToString(MudColorOutputFormats.Hex), ignoreCase: true);
+        Assert.Equal(ThemeMode.Light, light.Mode);
+        Assert.Equal("#4A154B", Hex(light.Theme.PaletteLight.Primary), ignoreCase: true);
+        Assert.Equal("#FFFFFF", Hex(light.Theme.PaletteLight.Background), ignoreCase: true);
 
-        Assert.Equal("#C07BC3", huddle.Theme.PaletteDark.Primary.ToString(MudColorOutputFormats.Hex), ignoreCase: true);
-        Assert.Equal("#1B1B1F", huddle.Theme.PaletteDark.Background.ToString(MudColorOutputFormats.Hex), ignoreCase: true);
+        Assert.Equal(ThemeMode.Dark, dark.Mode);
+        Assert.Equal("#C07BC3", Hex(dark.Theme.PaletteDark.Primary), ignoreCase: true);
+        Assert.Equal("#1B1B1F", Hex(dark.Theme.PaletteDark.Background), ignoreCase: true);
+    }
+
+    /// <summary>
+    /// <see cref="ThemeCatalog.BuiltIn"/>'s first entry is the "Huddle Light" theme, whose id is the
+    /// bare <c>"huddle"</c>. Three call sites read <c>BuiltIn[0]</c> as "the default theme", and that
+    /// id is what an <c>appearance.json</c> written before the split already stores, so both are
+    /// pinned here rather than left to a comment.
+    /// </summary>
+    [Fact]
+    public void BuiltIn_FirstEntryIsTheHuddleLightDefault()
+    {
+        Assert.Equal("huddle", ThemeCatalog.BuiltIn[0].Id);
+        Assert.Equal(ThemeMode.Light, ThemeCatalog.BuiltIn[0].Mode);
+    }
+
+    /// <summary>
+    /// <see cref="ThemeCatalog.Grouped"/> - what the Appearance tab's picker renders - covers every
+    /// theme in <see cref="ThemeCatalog.BuiltIn"/> exactly once, lists no empty heading, and keeps
+    /// <see cref="ThemeCatalog.BuiltIn"/>'s relative order within each group. That last part is the
+    /// point of grouping in a projection instead of by sorting the catalog: the picker gets its
+    /// headings without <c>BuiltIn[0]</c> ever moving.
+    /// </summary>
+    [Fact]
+    public void Grouped_CoversEveryThemeOnceAndKeepsCatalogOrderWithinAGroup()
+    {
+        var flattened = ThemeCatalog.Grouped.SelectMany(grouping => grouping.Themes).ToList();
+
+        Assert.Equal(ThemeCatalog.BuiltIn.Count, flattened.Count);
+        Assert.Equal(
+            ThemeCatalog.BuiltIn.Select(descriptor => descriptor.Id).Order(StringComparer.Ordinal),
+            flattened.Select(descriptor => descriptor.Id).Order(StringComparer.Ordinal));
+        Assert.All(ThemeCatalog.Grouped, grouping => Assert.NotEmpty(grouping.Themes));
+
+        foreach (var grouping in ThemeCatalog.Grouped)
+        {
+            Assert.All(grouping.Themes, theme => Assert.Equal(grouping.Group, theme.Group));
+
+            var catalogOrder = ThemeCatalog.BuiltIn.Where(descriptor => descriptor.Group == grouping.Group).Select(descriptor => descriptor.Id);
+            Assert.Equal(catalogOrder, grouping.Themes.Select(descriptor => descriptor.Id));
+        }
+    }
+
+    /// <summary>
+    /// A high-contrast theme is grouped under <see cref="ThemeGroup.HighContrast"/> even though its
+    /// <see cref="ThemeDescriptor.Mode"/> is an ordinary light or dark - the exact case that keeps
+    /// <see cref="ThemeGroup"/> and <see cref="ThemeMode"/> two fields rather than one.
+    /// </summary>
+    [Fact]
+    public void BuiltIn_HighContrastThemesAreGroupedApartFromTheirMode()
+    {
+        var darkHighContrast = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "dark-high-contrast", StringComparison.Ordinal));
+        var lightHighContrast = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "light-high-contrast", StringComparison.Ordinal));
+
+        Assert.Equal(ThemeMode.Dark, darkHighContrast.Mode);
+        Assert.Equal(ThemeGroup.HighContrast, darkHighContrast.Group);
+
+        Assert.Equal(ThemeMode.Light, lightHighContrast.Mode);
+        Assert.Equal(ThemeGroup.HighContrast, lightHighContrast.Group);
     }
 
     /// <summary>
@@ -84,10 +156,9 @@ public sealed class ThemeCatalogTests
     }
 
     /// <summary>
-    /// Each built-in theme's own (native) palette - the half named by its <see cref="ThemeDescriptor.Mode"/>,
-    /// never the half it borrows from <see cref="HuddleTheme"/> - clears the WCAG floor for every pair in
-    /// <see cref="ContrastPairs"/>. The borrowed half is Huddle's own and is not retested here: it is
-    /// covered once, by Huddle's own native-palette rows.
+    /// Each built-in theme's palette - the one slot named by its <see cref="ThemeDescriptor.Mode"/>,
+    /// which since the split is also the only slot it fills - clears the WCAG floor for every pair in
+    /// <see cref="ContrastPairs"/>.
     /// </summary>
     /// <param name="themeId"><see cref="ThemeDescriptor.Id"/> of the theme under test.</param>
     /// <param name="pairName">The <see cref="ContrastPairSpec.Name"/> of the foreground/background pair under test.</param>
@@ -145,7 +216,7 @@ public sealed class ThemeCatalogTests
     /// <summary>
     /// Every <c>--mud-palette-*</c> custom property <c>app.css</c> or a <c>.razor.css</c> file actually
     /// references, mapped to its <see cref="Palette"/> property, has a value in every built-in theme's
-    /// native palette. The theme-import item on the roadmap names its own trap - "the token list and
+    /// palette. The theme-import item on the roadmap names its own trap - "the token list and
     /// the mapping must have one source of truth" - so a <c>var()</c> added to a stylesheet without a
     /// matching palette assignment would otherwise leave every theme silently carrying no value for it;
     /// this makes that a build failure instead of a silent gap.
@@ -215,10 +286,10 @@ public sealed class ThemeCatalogTests
             string.Equals(shortfall.Pair, pairName, StringComparison.Ordinal));
 
     /// <summary>
-    /// The palette a theme was actually designed for: its <see cref="MudTheme.PaletteLight"/> when
+    /// The palette a theme actually carries: its <see cref="MudTheme.PaletteLight"/> when
     /// <see cref="ThemeDescriptor.Mode"/> is <see cref="ThemeMode.Light"/>, otherwise its
-    /// <see cref="MudTheme.PaletteDark"/>. The other half is borrowed from <see cref="HuddleTheme"/>
-    /// and carries no legibility guarantee of this theme's own choosing.
+    /// <see cref="MudTheme.PaletteDark"/>. The other slot holds MudBlazor's own defaults and is never
+    /// rendered, so it carries no legibility guarantee and nothing here measures it.
     /// </summary>
     /// <param name="descriptor">The theme descriptor to resolve.</param>
     private static Palette NativePalette(ThemeDescriptor descriptor)
@@ -226,6 +297,10 @@ public sealed class ThemeCatalogTests
         Palette palette = descriptor.Mode == ThemeMode.Light ? descriptor.Theme.PaletteLight : descriptor.Theme.PaletteDark;
         return palette;
     }
+
+    /// <summary>Renders <paramref name="color"/> as the <c>#rrggbb</c> text this suite compares colours as.</summary>
+    /// <param name="color">The colour to render.</param>
+    private static string Hex(MudColor color) => color.ToString(MudColorOutputFormats.Hex);
 
     /// <summary>
     /// The WCAG 2.1 contrast ratio between two colours: <c>(L1 + 0.05) / (L2 + 0.05)</c>, where

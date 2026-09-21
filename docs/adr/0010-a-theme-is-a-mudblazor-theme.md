@@ -9,6 +9,14 @@ date: 2026-09-14
 > document's central claim — a Theme is a CSS file layered over 39 Tokens, and the feature
 > adds no JavaScript at all — is no longer true of this codebase.
 
+> **Narrowed 2026-09-21 by [ADR-0017](0017-a-theme-is-a-palette-not-a-pair.md).** The decision
+> below stands — a Theme is a `MudTheme` in `ThemeCatalog`, and there is no stylesheet. Two of its
+> details do not: a Theme now carries **one** palette, not a `PaletteLight` and a `PaletteDark`,
+> and `appearance.json` holds **one** key, `theme`, not two. The `dark` key described below is
+> retired, and the JavaScript this document had to admit to (`GetSystemDarkModeAsync`, and with it
+> the first-paint flash) went with it. Read the paragraphs about a palette *pair* and about the
+> `dark` key as history.
+
 [Roadmap](../agencyteam/roadmap.md) item 6 built a theming system out of 39 custom properties,
 `light-dark()` and three cascade layers, and it worked. This records why it was replaced a day
 later, and what was given up to do it.

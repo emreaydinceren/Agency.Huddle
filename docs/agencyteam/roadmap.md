@@ -324,10 +324,13 @@ something else is supplying the values.
 ## 7. Theme import
 
 > **Amended 2026-09-16 by [ADR-0016](../adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md),
-> and half of it is now shipped.** The catalog holds eighteen Themes: `huddle`, plus
-> seventeen of the colour Themes bundled with Visual Studio Code. They needed **no
-> importer** — they were converted once, by hand, into ordinary C# under
-> `Themes/VsCode/`, one file per Theme. Nothing reads theme JSON at run time.
+> and half of it is now shipped.** The catalog holds nineteen Themes: `huddle`
+> ("Huddle Light") and `huddle-dark`, plus seventeen of the colour Themes bundled with
+> Visual Studio Code. They needed **no importer** — they were converted once, by hand,
+> into ordinary C# under `Themes/VsCode/`, one file per Theme. Nothing reads theme JSON
+> at run time. An importer built for this item must produce a **single-palette** Theme
+> carrying its own `ThemeMode` and `ThemeGroup`, not a light/dark pair
+> ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)).
 >
 > What remains of this item is the harder half: importing an **arbitrary** Theme a Human
 > supplies. That is unchanged in shape — JSON deserialised into a `MudTheme` and appended

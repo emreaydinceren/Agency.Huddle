@@ -220,7 +220,7 @@ Persona library under `{DataDir}/{Acp:TeamsDir}`, `{DataDir}/hooks.json`, and
 | File | Holds |
 | --- | --- |
 | `{DataDir}/hooks.json` | **Overrides only**, one key per changed Hook. Absent is normal and means nothing is overridden; the app does not create it, and it appears on the first save from `/settings`. Hand-editing it is supported and watched — a save in an editor reaches the next Turn without a restart. |
-| `{DataDir}/appearance.json` | The selected Theme id and a light/dark preference of `system`, `light` or `dark`. **Those two keys only** — the per-Token override map was removed with the Tokens on 2026-09-14 ([ADR-0010](adr/0010-a-theme-is-a-mudblazor-theme.md)). Absent is normal and means the built-in Theme following the device; the app does not create it. Hand-editable and watched, exactly like `hooks.json`. Not a setting under `Team:`: it is state this application writes. |
+| `{DataDir}/appearance.json` | The selected Theme id. **That one key** — the per-Token override map went with the Tokens on 2026-09-14 ([ADR-0010](adr/0010-a-theme-is-a-mudblazor-theme.md)), and the `dark` light/dark preference went on 2026-09-21 when a Theme became a single palette ([ADR-0017](adr/0017-a-theme-is-a-palette-not-a-pair.md)). A file written before that still carries `dark`; it is an unknown key now, so it is ignored and kept, and there is no migration. Absent is normal and means the default Theme; the app does not create it. Hand-editable and watched, exactly like `hooks.json`. Not a setting under `Team:`: it is state this application writes. |
 | `hooks.default.json` (beside the binary) | Every Hook's shipped wording, **generated** from `HookCatalog` and copied to the output folder. The restore source, and readable as a reference. It is not the authority: delete both files and the app still runs on exactly the text it shipped with. |
 
 A Hook is one piece of text sent to a model. See [Language](agencyteam/language.md)
@@ -228,21 +228,26 @@ for the word, [ADR-0007](adr/0007-model-facing-text-is-configuration.md) for why
 defaults live in code, and [Rules](agencyteam/rules.md) for the two things an edit
 must never do.
 
-A Theme is a MudBlazor `MudTheme` in `ThemeCatalog`, carrying a light **and** a dark
-palette, chosen on the Appearance tab of `/settings` alongside a separate
-`system`/`light`/`dark` preference. Eighteen ship: `huddle`, plus seventeen of the colour
-Themes bundled with Visual Studio Code, converted once by hand into C# under
-`Themes/VsCode/` — one file per Theme, **no importer**
+A Theme is a MudBlazor `MudTheme` in `ThemeCatalog` carrying **one** palette and the
+`ThemeMode` naming it, picked on the Appearance tab of `/settings` from a list grouped
+Light / Dark / High contrast. **Picking a Theme picks light or dark with it** — there is
+no separate preference, and so no way for the two to disagree
+([ADR-0017](adr/0017-a-theme-is-a-palette-not-a-pair.md)). Nineteen ship: `huddle`
+(labelled "Huddle Light") and `huddle-dark`, plus seventeen of the colour Themes bundled
+with Visual Studio Code, converted once by hand into C# under `Themes/VsCode/` — one file
+per Theme, **no importer**
 ([ADR-0016](adr/0016-vs-codes-bundled-themes-are-converted-once-not-imported.md)).
 See [Language](agencyteam/language.md) for
 **Theme**, **Palette property** and **Appearance** — note that *Token*, the word for
 the retired 39-value CSS system, is no longer a defined term.
-[ADR-0010](adr/0010-a-theme-is-a-mudblazor-theme.md) is the current decision and
-supersedes [ADR-0009](adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md),
-which is kept as the reasoning for the system this replaced. Two things 0009 asserted
-are no longer true: the feature now uses JavaScript (`GetSystemDarkModeAsync` reads the
-device preference after first render, so under **System** a flash of the wrong theme on
-first paint is possible), and changing a Theme no longer forces a page reload.
+[ADR-0010](adr/0010-a-theme-is-a-mudblazor-theme.md) supersedes
+[ADR-0009](adr/0009-a-theme-is-a-stylesheet-layered-over-the-tokens.md), which is kept as
+the reasoning for the system this replaced; ADR-0017 then narrows 0010. Of the two things
+0009 asserted that 0010 had to retract, one is true again: the feature uses no JavaScript
+of its own, because nothing reads the device preference any more, so there is no
+first-paint flash. The other stands retracted — changing a Theme still does not force a
+page reload. The cost is that the application no longer follows the device's light/dark
+setting at all; ADR-0017 records what bringing that back would take.
 [Rules](agencyteam/rules.md) carries the three things a change here must not undo.
 
 `Logging:LogLevel` is the one place that looks like it belongs to this section

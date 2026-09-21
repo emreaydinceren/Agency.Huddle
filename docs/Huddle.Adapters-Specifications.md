@@ -707,8 +707,11 @@ Huddle-side path an automated test that runs in CI for free — no Node install,
 subscription, no GPU, no second repository.
 
 **This is test infrastructure, not a stand-in.** It is the reference implementation of the
-protocol contract negotiated with Agency.NET, so a conformance suite written against it runs
-unchanged against `agency-acp` when that lands.
+protocol contract negotiated with Agency.NET, so the **portable** half of a conformance suite
+written against it runs unchanged against `agency-acp`. The other half cannot travel at any
+price: an assertion that reads what the peer *received* has no equivalent on a real Adapter,
+because ACP gives a client no way to ask. §15.8 marks which is which; the amendment to D-12 in
+§17 explains why that took until Phase 7 to notice.
 
 #### What already exists
 
@@ -1320,9 +1323,16 @@ implementation → next. Do not write the whole test column first.
 | **3 — Conformance** | Huddle drives a real ACP peer correctly | `Huddle.MockAdapter` (§6.10) | **always** | **no** |
 | **4 — Live** | a real model behaves | `agency-acp` + a local endpoint | opt-in | yes — and only this |
 
-**Tier 3 is the answer to "do not be blocked".** It is written once against a contract and runs
-twice: against the mock now, in CI, unconditionally; and against `agency-acp` when it lands, by
-changing one Adapter Profile. Nothing in Tiers 1–3 waits for anything.
+**Tier 3 is the answer to "do not be blocked".** It is written against a contract rather than an
+implementation, and all of it runs against the mock now, in CI, unconditionally. Nothing in
+Tiers 1–3 waits for anything.
+
+**Corrected 2026-09-18: only half of it travels.** This paragraph used to promise the tier was
+written once and ran twice, reaching `agency-acp` by changing one Adapter Profile. Five of the
+six conformance files assert on what the peer received, and no configuration makes those
+re-pointable — they would run and have nothing to assert. §15.8 marks every test `portable`,
+`mock-only` or `split`, and the amendment to D-12 in §17 records why the claim went unchallenged
+for so long.
 
 For contrast, the existing process-spawning tests — `tests/Huddle.Acp.Tests/E2E/` — are gated
 behind `TEAM_E2E=1` and require a Node install, so **they never run in CI**. A mock this solution
@@ -1454,8 +1464,10 @@ Phase 5 ────────────────────────
 ```
 
 Phases 0, 1, 2, 4 and 5 may start **now and in parallel**. Phase 6 needs Phase 0 plus whichever
-subsystem it exercises. **Phase 7 is the only thing gated on Agency.NET**, and it is one
-configuration change plus two manual checks.
+subsystem it exercises. **Only part of Phase 7 is gated on Agency.NET**: T-31a is ordinary
+engineering that needs no Adapter at all, T-31b needs a published one, and T-32 and T-33 are
+manual. The earlier wording here — *one configuration change plus two manual checks* — assumed
+the re-point T-31 promised, and is corrected in §15.9.
 
 ## 16. Vocabulary changes
 

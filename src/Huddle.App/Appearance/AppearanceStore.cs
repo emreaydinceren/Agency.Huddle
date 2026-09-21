@@ -10,11 +10,12 @@ namespace Agency.Huddle.App.Appearance;
 
 /// <summary>
 /// Joins <see cref="ThemeCatalog"/> with a Human-editable selection file at
-/// <c>{DataDir}/appearance.json</c>, resolving the currently selected theme id and light/dark
-/// preference every render reads through <see cref="Current"/>. MudBlazor's <see cref="MudBlazor.MudTheme"/>
-/// is the single source of theming now, so this store carries no override CSS and no per-token
-/// validation — it only remembers which catalog entry and which of <see cref="DarkModePreference"/>
-/// the Human picked.
+/// <c>{DataDir}/appearance.json</c>, resolving the currently selected theme id every render reads
+/// through <see cref="Current"/>. MudBlazor's <see cref="MudBlazor.MudTheme"/> is the single source
+/// of theming now, so this store carries no override CSS and no per-token validation — it only
+/// remembers which catalog entry the Human picked, and a catalog entry now carries its own light or
+/// dark palette, so there is nothing else left to remember
+/// (<c>docs/adr/0017-a-theme-is-a-palette-not-a-pair.md</c>).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -34,11 +35,12 @@ namespace Agency.Huddle.App.Appearance;
 /// resolves to <see cref="AppearanceSettings.Empty"/> and no file is created just to read from. A
 /// malformed file logs a warning naming the path and falls back to <see cref="AppearanceSettings.Empty"/>
 /// wholesale, the same tolerance <see cref="Hooks.HookStore"/> gives a bad <c>hooks.json</c>. A
-/// <c>theme</c> value that names no <see cref="ThemeCatalog"/> entry, or a <c>dark</c> value that is
-/// not one of <c>"system"</c>, <c>"light"</c> or <c>"dark"</c>, is a warning, never a failure —
+/// <c>theme</c> value that names no <see cref="ThemeCatalog"/> entry is a warning, never a failure —
 /// <c>rules.md</c>: "A Model the agent does not advertise is a warning, never a failure." — and the
 /// file is left exactly as it was, so fixing the value restores the choice with no further edit. An
-/// unknown top-level key is kept in the file and never silently deleted.
+/// unknown top-level key is kept in the file and never silently deleted. That last rule is what
+/// handles the retired <c>dark</c> key: a file written before 2026-09-21 still carries one, and it
+/// is now simply an unknown key — ignored on read, preserved on write, and never warned about.
 /// </para>
 /// </remarks>
 internal sealed partial class AppearanceStore : IDisposable
@@ -86,7 +88,7 @@ internal sealed partial class AppearanceStore : IDisposable
 
     /// <summary>Loads (or defaults) the selection file at <c>{DataDir}/appearance.json</c>.</summary>
     /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>, already absolutised by <c>ServiceCollectionExtensions</c>'s <c>PostConfigure</c>.</param>
-    /// <param name="logger">Used to warn when the selection file exists but fails to parse, or names an unknown theme or dark-mode value.</param>
+    /// <param name="logger">Used to warn when the selection file exists but fails to parse, or names an unknown theme.</param>
     public AppearanceStore(IOptions<TeamOptions> options, ILogger<AppearanceStore> logger)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -139,18 +141,17 @@ internal sealed partial class AppearanceStore : IDisposable
     /// </summary>
     public string FilePath => this.path;
 
-    /// <summary>The current resolved theme id and dark-mode preference. No lock: reads the published <see langword="volatile"/> snapshot.</summary>
+    /// <summary>The current resolved theme id. No lock: reads the published <see langword="volatile"/> snapshot.</summary>
     public AppearanceSettings Current => this.current;
 
     /// <summary>
-    /// Selects (or clears) the theme id and stores the dark-mode preference, under the write lock:
-    /// re-reads the file so a concurrent hand-edit is not lost, sets <c>theme</c> and <c>dark</c>
-    /// while leaving every other key exactly as found, writes, rebuilds the resolved snapshot,
-    /// releases the lock, and only then raises <see cref="AppearanceChanged"/>.
+    /// Selects (or clears) the theme id, under the write lock: re-reads the file so a concurrent
+    /// hand-edit is not lost, sets <c>theme</c> while leaving every other key exactly as found,
+    /// writes, rebuilds the resolved snapshot, releases the lock, and only then raises
+    /// <see cref="AppearanceChanged"/>.
     /// </summary>
     /// <param name="themeId">The theme id to store, or <see langword="null"/> to clear the selection and remove the <c>theme</c> key entirely.</param>
-    /// <param name="dark">The dark-mode preference to store.</param>
-    public void Save(string? themeId, DarkModePreference dark)
+    public void Save(string? themeId)
     {
         lock (this.writeGate)
         {
@@ -164,8 +165,6 @@ internal sealed partial class AppearanceStore : IDisposable
             {
                 document["theme"] = themeId;
             }
-
-            document["dark"] = DarkModePreferenceToText(dark);
 
             this.WriteDocumentToDisk(document);
             this.current = this.BuildSettings(document);
@@ -198,28 +197,10 @@ internal sealed partial class AppearanceStore : IDisposable
         return false;
     }
 
-    /// <summary>Renders <paramref name="dark"/> as the lowercase text <c>appearance.json</c> stores under the <c>dark</c> key.</summary>
-    private static string DarkModePreferenceToText(DarkModePreference dark) => dark switch
-    {
-        DarkModePreference.Light => "light",
-        DarkModePreference.Dark => "dark",
-        _ => "system",
-    };
-
-    /// <summary>Parses a raw <c>dark</c> value from the file, or <see langword="null"/> if it names none of <c>"system"</c>, <c>"light"</c> or <c>"dark"</c>.</summary>
-    /// <param name="candidate">The raw <c>dark</c> value read from the file.</param>
-    private static DarkModePreference? ParseDarkModePreference(string candidate) => candidate switch
-    {
-        "system" => DarkModePreference.System,
-        "light" => DarkModePreference.Light,
-        "dark" => DarkModePreference.Dark,
-        _ => null,
-    };
-
     /// <summary>
     /// Builds the resolved <see cref="AppearanceSettings"/> for <paramref name="document"/>,
-    /// validating <c>theme</c> against <see cref="ThemeCatalog"/> and <c>dark</c> against
-    /// <see cref="DarkModePreference"/>, logging one warning per rejection.
+    /// validating <c>theme</c> against <see cref="ThemeCatalog"/> and logging one warning if it is
+    /// rejected.
     /// </summary>
     /// <param name="document">The parsed <c>appearance.json</c> object, just read from (or about to be written to) disk.</param>
     private AppearanceSettings BuildSettings(JsonObject document)
@@ -240,36 +221,13 @@ internal sealed partial class AppearanceStore : IDisposable
             {
                 var shown = candidate ?? themeNode.ToJsonString();
                 this.logger.LogWarning(
-                    "Appearance file '{Path}' selects theme '{ThemeId}', which is not a known theme; the built-in theme is used instead and the file is left unchanged.",
+                    "Appearance file '{Path}' selects theme '{ThemeId}', which is not a known theme; the default theme is used instead and the file is left unchanged.",
                     this.path,
                     shown);
             }
         }
 
-        var dark = DarkModePreference.System;
-        if (document.TryGetPropertyValue("dark", out var darkNode) && darkNode is not null)
-        {
-            var candidate = darkNode is JsonValue darkValue && darkValue.TryGetValue<string>(out var darkText)
-                ? darkText
-                : null;
-
-            var parsed = candidate is not null ? ParseDarkModePreference(candidate) : null;
-
-            if (parsed is { } parsedDark)
-            {
-                dark = parsedDark;
-            }
-            else
-            {
-                var shown = candidate ?? darkNode.ToJsonString();
-                this.logger.LogWarning(
-                    "Appearance file '{Path}' sets dark mode to '{Dark}', which is not 'system', 'light' or 'dark'; System is used instead and the file is left unchanged.",
-                    this.path,
-                    shown);
-            }
-        }
-
-        return new AppearanceSettings(themeId, dark);
+        return new AppearanceSettings(themeId);
     }
 
     /// <summary>
