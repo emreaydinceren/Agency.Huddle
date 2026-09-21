@@ -1,6 +1,6 @@
 # Huddle.Adapters — Design Specification (HLD)
 
-**Status:** proposed · **Date:** 2026-09-16 · **Supersedes:** the plan recorded in
+**Status:** delivered 2026-09-16 (PR #59) · **Date:** 2026-09-16 · **Supersedes:** the plan recorded in
 [roadmap item 12](agencyteam/roadmap.md#12-running-a-persona-on-a-local-model-via-agencynet--delivered-2026-09-16)
 
 Delivers roadmap item 12 — *running a Persona on a local Model* — by a route item 12 did not
@@ -396,10 +396,21 @@ defences, both cheap:
 **Constraints.** Must keep returning `null` rather than throwing (a developer who has not run
 `install.ps1` must still be able to `dotnet run`).
 
-**V1 / V2.** V2: `EnvironmentOverrides`, the fourth `AgentProcessOptions` slot, is set by nobody
+**V1 / V2.** ~~V2: `EnvironmentOverrides`, the fourth `AgentProcessOptions` slot, is set by nobody
 today and is the natural place for per-Adapter environment (an endpoint URL, an API key
 placeholder). Out of scope here because `Agency.Acp` takes its configuration from its own
-`appsettings.json` and command-line arguments.
+`appsettings.json` and command-line arguments.~~
+
+> **Moved to V1, 2026-09-17.** The premise above was wrong: `Agency.Acp` ships **no**
+> `appsettings.json` at all — its `.csproj` declares no content-copy items — so `session/new`
+> hard-fails on a vanilla build with *"Agent:DefaultModel is not configured"*
+> ([Live findings](Huddle.Adapters-LiveFindings.md), D-2). It does reference
+> `Microsoft.Extensions.Configuration.EnvironmentVariables`, so environment variables are a
+> first-class configuration source there rather than a workaround. `AdapterProfile` therefore
+> carries `EnvironmentOverrides`, projected by `AdapterCatalog` and passed at all three
+> `AgentProcessOptions` construction sites, so the Model-catalogue probe launches with the same
+> environment a Turn would — which matters, because the probe does exactly `initialize` +
+> `session/new` and is the first thing the hard throw stops.
 
 ---
 
@@ -447,9 +458,19 @@ var toolServer = new AppToolServer(ToolServerName, tools, this.loggerFactory, 0,
 **Why it is reused rather than replaced.** Item 12 said *"resist reusing the class: implement
 `IModelCatalog` again and keep both simple"*, reasoning that a local endpoint exposes
 `GET /v1/models` and needs no process. Under ACP that reasoning does not apply: **both Adapters
-advertise their catalog at `session/new`**, because that is what ACP does. `Agency.Acp` §6.7 maps
-its `Model[]` onto `AgentModelOption` and returns it from `session/new` exactly as the Node
-adapter does. The probe's mechanism is correct for both; only the process differs.
+advertise their catalog at `session/new`**, because that is what ACP does. The probe's mechanism
+is correct for both; only the process differs.
+
+> **Correction, 2026-09-17, against the shipped `AgencyDotNet.Acp` 0.1.195.** This section
+> originally said `Agency.Acp` maps its `Model[]` onto an `AgentModelOption` and returns it from
+> `session/new` "exactly as the Node adapter does". **There is no `AgentModelOption` in
+> `dotacp.protocol`**, and neither adapter returns one. Both return a `configOptions` array of
+> `SessionConfigSelect`s, categorised `Model` and `ThoughtLevel`. The conclusion survives intact —
+> the catalog does arrive at `session/new` and the probe is right to be reused — and Huddle needed
+> no change, because `src/Huddle.Acp/DotAcp/ModelConfigOptions.cs` already reads `configOptions`
+> and `SessionConfigSelects.cs` already handles both union branches (a flat option array and
+> grouped options). `AgentModelOption` is **Huddle's own** type, mapped from the wire at that
+> boundary; the error was attributing it to the protocol.
 
 **Signature change:**
 
@@ -876,7 +897,12 @@ from the parsed identity.
         "Description": "a local model on this machine, free",
         "Command": "C:/tools/agency-acp/agency-acp.exe",
         "Args": [ "--Agent:UserId=00000000-0000-0000-0000-000000000000" ],
-        "UsesToolNamePrefix": false
+        "UsesToolNamePrefix": false,
+        "EnvironmentOverrides": {
+          "Agent__DefaultModel": "google/gemma-4-e2b",
+          "Agent__DefaultClientName": "local",
+          "Agent__TurnTimeoutSeconds": "180"
+        }
       }
     ]
   }
@@ -890,6 +916,26 @@ nothing.
 **`Args` must have no initialiser.** `ConfigurationBinder` *appends* to a pre-populated
 collection instead of replacing it, silently doubling the value (`rules.md`). This applies to
 `AdapterProfile.Args` exactly as it applies to `AcpOptions.Args`.
+
+**`EnvironmentOverrides` must have no initialiser either, for a different reason.** The binder
+does not *double* a dictionary the way it doubles a list — it writes each bound key into the
+existing instance — but a key a pre-populated default carried and configuration does not mention
+**survives**, and the binder has no operation that can remove one. An operator who deletes a stale
+`Agent__DefaultModel` from `appsettings.json` would find it still handed to the process, with
+nothing to explain why. Same verdict, different mechanism. `AdapterCatalog` copies rather than
+aliases the bound dictionary, keyed `StringComparer.Ordinal`, and normalises empty to `null` so a
+stock installation's launch is byte-identical.
+
+> **Set these from `appsettings.json`, never through the environment-variable provider.** An
+> environment variable name contains `__`, and that provider rewrites every `__` into `:` — so
+> `Team__Acp__Adapters__0__EnvironmentOverrides__Agent__DefaultModel` binds as the key
+> `Agent:DefaultModel`, which no process will ever read. No code can prevent this; it is why the
+> trap is written down in three places.
+
+**Ordinal, and no case-folding.** `ProcessStartInfo.Environment` already applies the platform's
+own rule — case-insensitive on Windows, case-sensitive on Unix — so folding case here would make
+`Agent__DefaultModel` and `agent__defaultmodel` collide on **Linux**, where they are genuinely two
+different variables. Each layer applies its own rule.
 
 ---
 

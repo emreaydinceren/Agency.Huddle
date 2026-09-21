@@ -1673,6 +1673,312 @@ public sealed class PersonaRunnerTests
     }
 
     /// <summary>
+    /// TRAP 1 regression: a Human Stop that lands while a Turn is within the idle-timeout window must
+    /// still be reported as a Stop, never as a Degraded failure. Both a Stop and the idle-timeout
+    /// watchdog firing cancel the same Turn token and surface to the consumer as the identical
+    /// <see cref="OperationCanceledException"/> - only the latch each producer writes before it
+    /// cancels lets the consumer tell them apart, and a real Stop must win any tie.
+    /// </summary>
+    [Fact]
+    public async Task TurnIdleTimeout_AStopInsideTheWindow_IsStillReportedAsStopped()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
+        var persona = new Persona("nova", "You are Nova.");
+        var logger = new RecordingLogger<PersonaRunner>();
+        var options = Options.Create(new TeamOptions
+        {
+            PipeName = server.PipeName,
+            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 5 },
+        });
+        List<PersonaStatus> statuses = [];
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), logger);
+        runner.StatusChanged += statuses.Add;
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        var promptDeadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < promptDeadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        await server.SendAsync(new StopTurn("room-1"), ct);
+        await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+
+        var logDeadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (!logger.Entries.Any(entry => entry.Message.Contains("was stopped", StringComparison.Ordinal))
+            && DateTimeOffset.UtcNow < logDeadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Contains(
+            logger.Entries,
+            entry => entry.Level == LogLevel.Information && entry.Message.Contains("was stopped", StringComparison.Ordinal));
+        Assert.DoesNotContain(statuses, s => s.State == PersonaState.Degraded);
+    }
+
+    /// <summary>
+    /// Against an unreachable inference endpoint, session/prompt can return nothing for a long time
+    /// with no error at all - the Adapter is hung, not merely slow. The idle-timeout bound catches
+    /// this and reports Degraded, naming the bound, instead of leaving the Persona reading as healthy
+    /// forever. This is the regression that matters most: on today's code, with no such bound, this
+    /// test fails because nothing is ever reported.
+    /// </summary>
+    [Fact]
+    public async Task TurnIdleTimeout_AnAdapterThatSaysNothing_ReportsDegradedWithinTheBound()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions
+        {
+            PipeName = server.PipeName,
+            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 },
+        });
+        List<PersonaStatus> statuses = [];
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        runner.StatusChanged += statuses.Add;
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(8);
+        while (!statuses.Exists(s => s.State == PersonaState.Degraded) && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(50, ct);
+        }
+
+        Assert.Contains(
+            statuses,
+            s => s.State == PersonaState.Degraded && s.Reason!.Contains("for 1 seconds", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// TRAP 2 regression: the idle-timeout watchdog must reach the far side with an actual
+    /// <see cref="IAgentSession.CancelAsync"/> call while the prompt is still in flight - the obvious
+    /// "cancel the token, then call CancelAsync" ordering makes <c>DotAcpAgentSession.CancelAsync</c>
+    /// silently no-op (src/Huddle.Acp/DotAcp/DotAcpAgentSession.cs:144-171), so counting cancel calls
+    /// alone cannot prove this; only observing that a prompt was in flight when the cancel landed can.
+    /// </summary>
+    [Fact]
+    public async Task TurnIdleTimeout_OnFiring_ReachesTheAdapterWithASessionCancel()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions
+        {
+            PipeName = server.PipeName,
+            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 },
+        });
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(8);
+        while (!factory.Session.CancelObservedPromptInFlight && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(50, ct);
+        }
+
+        Assert.True(factory.Session.CancelObservedPromptInFlight);
+    }
+
+    /// <summary>An idle-timeout firing posts no Message - the same stance already taken for a Stop and for a Refusal.</summary>
+    [Fact]
+    public async Task TurnIdleTimeout_OnFiring_PostsNoMessage()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions
+        {
+            PipeName = server.PipeName,
+            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 },
+        });
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        var finalDelta = await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+        Assert.Equal(string.Empty, finalDelta.Text);
+
+        // Bounded grace period for a (misbehaving) timed-out turn to post anyway: the read is
+        // expected to time out, proving nothing further ever arrives.
+        using var raceCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        raceCts.CancelAfter(TimeSpan.FromMilliseconds(500));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => server.ReceiveRawAsync(raceCts.Token));
+    }
+
+    /// <summary>Three Turns that each go silent past the bound escalate the Degraded reason, proving the failure streak the watchdog reports through shares <see cref="ThreeConsecutiveFailures_EscalateTheReason"/>'s counter.</summary>
+    [Fact]
+    public async Task TurnIdleTimeout_ThreeSilentTurns_EscalateTheReason()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "one");
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "two");
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "three");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions
+        {
+            PipeName = server.PipeName,
+            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 },
+        });
+        List<PersonaStatus> statuses = [];
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        runner.StatusChanged += statuses.Add;
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "one"), ct);
+        await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "two"), ct);
+        await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "three"), ct);
+        await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
+
+        Assert.Contains(
+            statuses,
+            s => s.State == PersonaState.Degraded &&
+                s.Reason!.Contains("3 consecutive Turns have failed", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Any sign of life restarts the idle clock: a Turn that keeps streaming chunks faster than the
+    /// bound never goes idle long enough to trip it, however long the whole Turn runs. Converting the
+    /// bound into a whole-turn cap instead of an idle one would make this test fail.
+    /// </summary>
+    [Fact]
+    public async Task TurnIdleTimeout_StreamingActivity_ExtendsTheBound()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        string[] chunks = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDripFedReply(TimeSpan.FromMilliseconds(250), chunks);
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions
+        {
+            PipeName = server.PipeName,
+            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 2 },
+        });
+        List<PersonaStatus> statuses = [];
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        runner.StatusChanged += statuses.Add;
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
+
+        Assert.Equal(string.Concat(chunks), posted.Text);
+        Assert.DoesNotContain(statuses, s => s.State == PersonaState.Degraded);
+    }
+
+    /// <summary>A bound of zero or less disables the idle timeout entirely, exactly as <see cref="AcpOptions.TokenBudget"/>'s own zero-disables convention.</summary>
+    [Fact]
+    public async Task TurnIdleTimeout_ZeroDisablesTheBound()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(2), "still here");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions
+        {
+            PipeName = server.PipeName,
+            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 0 },
+        });
+        List<PersonaStatus> statuses = [];
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        runner.StatusChanged += statuses.Add;
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
+
+        Assert.Equal("still here", posted.Text);
+        Assert.DoesNotContain(statuses, s => s.State == PersonaState.Degraded);
+    }
+
+    /// <summary>
+    /// A run shutdown that lands while a Turn is inside the idle-timeout window must report nothing -
+    /// the same "shutdown reports nothing" stance as <see cref="NormalShutdown_ReportsNothing"/> -
+    /// and must itself return promptly, proving the watchdog does not outlive the run token.
+    /// </summary>
+    [Fact]
+    public async Task TurnIdleTimeout_RunShutdownInsideTheWindow_ReportsNothing()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions
+        {
+            PipeName = server.PipeName,
+            Acp = new AcpOptions { TurnIdleTimeoutSeconds = 5 },
+        });
+        List<PersonaStatus> statuses = [];
+
+        var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        runner.StatusChanged += statuses.Add;
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        var promptDeadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < promptDeadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        await runner.StopAsync();
+
+        Assert.Empty(statuses);
+    }
+
+    /// <summary>
     /// Proves T4.4 item 1: if the read loop dies for any reason other than the run being cancelled
     /// - here, the server end of the pipe dropping without the runner's own shutdown ever running -
     /// Offline is reported.

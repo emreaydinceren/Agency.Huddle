@@ -64,4 +64,23 @@ public sealed class AcpOptions
     // Roughly five full context refills. Zero or less disables it. A local Model emits no
     // UsageUpdated at all, so this is inert there (roadmap item 12).
     public long TokenBudget { get; set; } = 1_000_000;
+
+    /// <summary>
+    /// How many seconds of silence <see cref="Agency.Huddle.App.Acp.PersonaRunner"/> tolerates from
+    /// the Adapter during one Turn before treating it as hung and cancelling it. This bounds SILENCE,
+    /// not the Turn's total duration: any event on the session's event stream — a chunk, a tool call,
+    /// a usage update, even one this runner otherwise ignores — restarts the clock, so a long
+    /// tool-using Turn that keeps reporting progress never trips this however long it runs.
+    /// </summary>
+    /// <remarks>
+    /// An <see cref="int"/> of seconds, deliberately not a <see cref="TimeSpan"/>: a configured value
+    /// such as <c>"180"</c> binds through <see cref="TimeSpan.Parse(string)"/> as 180 DAYS, not 180
+    /// seconds, which would silently bind to a bound nobody ever reaches. 180 is three times the
+    /// worst cold local-model load the spec budgets at 10-60 seconds, and far below what a genuine
+    /// tool-using Claude Turn approaches, since the Adapter reports every tool call as it starts.
+    /// Zero or less disables the bound entirely. Firing it is a FAILURE, not a Stop: it reports
+    /// <see cref="PersonaState.Degraded"/>, exactly as any other Turn failure does, never the silent,
+    /// Information-only path a Human pressing Stop takes.
+    /// </remarks>
+    public int TurnIdleTimeoutSeconds { get; set; } = 180;
 }

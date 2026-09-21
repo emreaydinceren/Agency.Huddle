@@ -54,6 +54,9 @@ internal sealed class AdapterCatalog
     {
         if (acp.Adapters is not { Count: > 0 })
         {
+            // No EnvironmentOverrides here, deliberately: the legacy Command/Args/AdapterPath keys
+            // describe the Node adapter, which needs no injected configuration. An installation
+            // that needs per-process environment declares an Adapters entry instead.
             return
             [
                 new AdapterProfile(
@@ -63,7 +66,8 @@ internal sealed class AdapterCatalog
                     Command: acp.Command,
                     Args: acp.Args,
                     AdapterPath: acp.AdapterPath,
-                    UsesToolNamePrefix: true),
+                    UsesToolNamePrefix: true,
+                    EnvironmentOverrides: null),
             ];
         }
 
@@ -77,11 +81,20 @@ internal sealed class AdapterCatalog
                 Command: entry.Command,
                 Args: entry.Args,
                 AdapterPath: entry.AdapterPath,
-                UsesToolNamePrefix: entry.UsesToolNamePrefix));
+                UsesToolNamePrefix: entry.UsesToolNamePrefix,
+                EnvironmentOverrides: AdapterCatalog.CopyEnvironment(entry.EnvironmentOverrides)));
         }
 
         return profiles;
     }
+
+    // Copies rather than aliases entry.EnvironmentOverrides: the catalog is frozen at construction
+    // and AdapterProfile is handed to a Razor [Parameter], so a profile must not keep pointing at a
+    // mutable IOptions-backed dictionary the binder (or a caller) could still change out from under
+    // it. Empty normalises to null so AgentProcessLauncher's environment loop is skipped entirely,
+    // keeping a stock install's launch byte-identical to before this feature existed.
+    private static Dictionary<string, string>? CopyEnvironment(IReadOnlyDictionary<string, string>? overrides) =>
+        overrides is { Count: > 0 } ? new Dictionary<string, string>(overrides, StringComparer.Ordinal) : null;
 
     // Fail-fast at startup, the same shape as the Team:Acp:PersonaDir rename guard in
     // ServiceCollectionExtensions: a misconfigured profile is a startup error, never a first-Turn

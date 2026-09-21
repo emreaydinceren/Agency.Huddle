@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
@@ -120,5 +121,138 @@ public sealed class AdapterCatalogTests
         var exception = Assert.Throws<InvalidOperationException>(() => new AdapterCatalog(options));
 
         Assert.Contains("agency", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>A configured profile's <c>EnvironmentOverrides</c> entries all project onto <see cref="AdapterProfile.EnvironmentOverrides"/>.</summary>
+    [Fact]
+    public void Profiles_ConfiguredWithEnvironmentOverrides_ProjectsAllEntries()
+    {
+        var acp = new AcpOptions
+        {
+            Adapters =
+            [
+                new AdapterProfileOptions
+                {
+                    Id = "agency",
+                    DisplayName = "Agency",
+                    Command = "agency-acp",
+                    EnvironmentOverrides = new Dictionary<string, string>(StringComparer.Ordinal)
+                    {
+                        ["Agent__DefaultModel"] = "sonnet",
+                        ["Agent__ApiKeyEnv"] = "AGENCY_API_KEY",
+                    },
+                },
+            ],
+        };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.NotNull(profile.EnvironmentOverrides);
+        Assert.Equal(2, profile.EnvironmentOverrides.Count);
+        Assert.Equal("sonnet", profile.EnvironmentOverrides["Agent__DefaultModel"]);
+        Assert.Equal("AGENCY_API_KEY", profile.EnvironmentOverrides["Agent__ApiKeyEnv"]);
+    }
+
+    /// <summary>
+    /// The synthesised legacy profile (no <c>Team:Acp:Adapters</c> configured) carries a null
+    /// <c>EnvironmentOverrides</c> — Spec §4 P6: a stock installation must behave exactly as before.
+    /// </summary>
+    [Fact]
+    public void Profiles_AdaptersNull_SynthesisedProfileHasNullEnvironmentOverrides()
+    {
+        var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.Null(profile.EnvironmentOverrides);
+    }
+
+    /// <summary>
+    /// Binding from real configuration populates <c>EnvironmentOverrides</c> — proof the chosen
+    /// options-class property type actually binds through <c>ConfigurationBinder</c>, not just
+    /// that the projection compiles.
+    /// </summary>
+    [Fact]
+    public void Profiles_BoundFromConfiguration_PopulatesEnvironmentOverrides()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:Acp:Adapters:0:Id"] = "agency",
+                ["Team:Acp:Adapters:0:Command"] = "agency-acp",
+                ["Team:Acp:Adapters:0:EnvironmentOverrides:Agent__DefaultModel"] = "sonnet",
+            })
+            .Build();
+        var teamOptions = new TeamOptions();
+        configuration.GetSection(TeamOptions.SectionName).Bind(teamOptions);
+        var options = Options.Create(teamOptions);
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.NotNull(profile.EnvironmentOverrides);
+        Assert.Equal("sonnet", profile.EnvironmentOverrides["Agent__DefaultModel"]);
+    }
+
+    /// <summary>
+    /// The catalog is frozen at construction and <see cref="AdapterProfile"/> is handed to a Razor
+    /// <c>[Parameter]</c>, so it must copy <see cref="AdapterProfileOptions.EnvironmentOverrides"/>
+    /// rather than alias it: mutating the source dictionary after the catalog is built must not
+    /// change the profile.
+    /// </summary>
+    [Fact]
+    public void Profiles_SourceEnvironmentOverridesMutatedAfterConstruction_ProfileUnaffected()
+    {
+        var source = new Dictionary<string, string>(StringComparer.Ordinal) { ["Agent__DefaultModel"] = "sonnet" };
+        var acp = new AcpOptions
+        {
+            Adapters =
+            [
+                new AdapterProfileOptions { Id = "agency", DisplayName = "Agency", Command = "agency-acp", EnvironmentOverrides = source },
+            ],
+        };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+        source["Agent__DefaultModel"] = "opus";
+        source["Agent__New"] = "added-after-construction";
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.NotNull(profile.EnvironmentOverrides);
+        Assert.Equal("sonnet", profile.EnvironmentOverrides["Agent__DefaultModel"]);
+        Assert.False(profile.EnvironmentOverrides.ContainsKey("Agent__New"));
+    }
+
+    /// <summary>
+    /// An empty <c>EnvironmentOverrides</c> dictionary normalises to null, so
+    /// <c>AgentProcessLauncher</c> skips its environment loop entirely and a stock install launches
+    /// byte-identically.
+    /// </summary>
+    [Fact]
+    public void Profiles_ConfiguredWithEmptyEnvironmentOverrides_NormalisesToNull()
+    {
+        var acp = new AcpOptions
+        {
+            Adapters =
+            [
+                new AdapterProfileOptions
+                {
+                    Id = "agency",
+                    DisplayName = "Agency",
+                    Command = "agency-acp",
+                    EnvironmentOverrides = new Dictionary<string, string>(StringComparer.Ordinal),
+                },
+            ],
+        };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.Null(profile.EnvironmentOverrides);
     }
 }

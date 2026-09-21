@@ -25,12 +25,12 @@ internal static class AgentProcessOptionsFactory
 
         if (profile.Args is { Count: > 0 })
         {
-            return new AgentProcessOptions(profile.Command, profile.Args, workDir);
+            return new AgentProcessOptions(profile.Command, profile.Args, workDir, profile.EnvironmentOverrides);
         }
 
         if (!string.IsNullOrWhiteSpace(profile.AdapterPath))
         {
-            return new AgentProcessOptions(profile.Command, [profile.AdapterPath], workDir);
+            return new AgentProcessOptions(profile.Command, [profile.AdapterPath], workDir, profile.EnvironmentOverrides);
         }
 
         // AdapterLocator is consulted only when profile.UsesToolNamePrefix is true. The coupling
@@ -44,7 +44,7 @@ internal static class AgentProcessOptionsFactory
             var located = AdapterLocator.Locate(probeStart);
             if (located is not null)
             {
-                return new AgentProcessOptions(profile.Command, [located], workDir);
+                return new AgentProcessOptions(profile.Command, [located], workDir, profile.EnvironmentOverrides);
             }
         }
 
