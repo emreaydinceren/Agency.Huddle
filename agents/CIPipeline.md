@@ -4,13 +4,14 @@ How Gitea Actions validates this repo, and how to reproduce a failing run on you
 machine in about two minutes. Read this before debugging a red run — the failure modes
 recorded here are environmental, and none of them are code regressions.
 
-Verified end to end on 2026-09-15 against SDK 10.0.401 in the CI container: **970 tests,
-962 passed, 8 skipped, 0 failed** (run 610, the push that merged PR #34). That is the whole
-suite minus the three quarantined tests below; an unfiltered run of the same tree is 973.
+Verified end to end on 2026-09-21 against SDK 10.0.401 in the CI container: **1329 tests,
+1319 passed, 10 skipped, 0 failed** (run 658, the PR that added the health-endpoint smoke
+test). That is the whole suite minus the three quarantined tests below; an unfiltered run of
+the same tree is 1332.
 
-The figures in this file were **656/648/659 until 2026-09-15**, by which point they were stale
-by over three hundred. Refresh them when you next read a green run's summary rather than
-trusting them — a count nobody updates stops being a check and becomes noise.
+The figures in this file were **970/962/8 until 2026-09-21**, and **656/648/659 before
+2026-09-15**. Refresh them when you next read a green run's summary rather than trusting them —
+a count nobody updates stops being a check and becomes noise.
 
 These totals move whenever real work lands — they were 565/568 when this page was written,
 before the Teams change added 91 tests. Treat a changed total as something to *confirm*,
@@ -148,18 +149,18 @@ docker run --rm -v "$PWD:/work" -v huddle-nuget:/root/.nuget/packages \
   '
 ```
 
-Drop the three `--filter-not-method` lines to run the full 659 including the quarantined
+Drop the three `--filter-not-method` lines to run the full 1332 including the quarantined
 tests — worth doing when you are trying to reproduce one of the races on purpose.
 
 ```text
 Test run summary: Passed!
-  total: 970
+  total: 1329
   failed: 0
-  succeeded: 962
-  skipped: 8
+  succeeded: 1319
+  skipped: 10
 
 ======================================================================
-  PASS   /health answered 200 Healthy in 3.4s
+  PASS   /health answered 200 Healthy in 0.5s
 ======================================================================
 ```
 
