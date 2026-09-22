@@ -12,4 +12,7 @@ public enum SettingsTab
 
     /// <summary>Choosing a theme, and where to override its tokens.</summary>
     Appearance,
+
+    /// <summary>Where the Persona files and the SQLite database live on disk.</summary>
+    Personas,
 }

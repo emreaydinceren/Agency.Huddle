@@ -1,0 +1,48 @@
+@*
+    The Settings page's Personas tab: read-only paths to where this installation keeps its
+    Persona files and its SQLite database, for hand-editing a Persona file, backing up team.db,
+    or pointing run.ps1 -Clean's own comment at the same two locations. Nothing here is editable -
+    this tab shows facts, it does not change them - so, unlike Appearance, it has no local state,
+    no store subscription and no save path.
+
+    Both paths are computed the same way SqliteTeamDirectory and PersonaStore's own constructors
+    compute them (Path.Combine off TeamOptions.DataDir, which ServiceCollectionExtensions'
+    PostConfigure<TeamOptions> has already resolved to an absolute path by the time any IOptions
+    consumer - this component included - sees it), rather than exposed as a public property on
+    either class: PersonaStore.teamsDir and SqliteTeamDirectory's connection string are both
+    private, and adding a public accessor to either for one read-only settings paragraph is more
+    surface than this needs.
+*@
+
+@using Microsoft.Extensions.Options
+@inject IOptions<TeamOptions> Options
+
+<p class="teammates-intro">
+    Persona files and the room database live in plain folders and files on disk, so you can back
+    them up, hand-edit a Persona, or copy them to another installation without going through the
+    application.
+</p>
+
+<p class="settings-prompts-file-path">
+    Persona files are stored at <code>@this.TeamsDirPath</code>, one Markdown file per Persona,
+    Team sub-folders included.
+</p>
+
+<p class="settings-prompts-file-path">
+    The room database is stored at <code>@this.DbPath</code>.
+</p>
+
+@code {
+    /// <summary>
+    /// Where <see cref="Agency.Huddle.App.Acp.PersonaStore"/> scans for and watches Persona
+    /// Markdown files - the same <c>Path.Combine(DataDir, Acp.TeamsDir)</c> its own constructor
+    /// computes.
+    /// </summary>
+    private string TeamsDirPath => Path.Combine(this.Options.Value.DataDir, this.Options.Value.Acp.TeamsDir);
+
+    /// <summary>
+    /// Where <see cref="Agency.Huddle.App.Data.SqliteTeamDirectory"/> opens the room database -
+    /// the same <c>Path.Combine(DataDir, "team.db")</c> its own constructor computes.
+    /// </summary>
+    private string DbPath => Path.Combine(this.Options.Value.DataDir, "team.db");
+}
