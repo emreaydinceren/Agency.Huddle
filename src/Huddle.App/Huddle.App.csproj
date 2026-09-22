@@ -25,4 +25,8 @@
     <None Update="prompts.default.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Skills\Defaults\**\*.md" LogicalName="Skills/Defaults/%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

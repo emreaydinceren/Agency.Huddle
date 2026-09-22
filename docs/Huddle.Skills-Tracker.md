@@ -5,8 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 1 In Progress · 0 Done. No progress reported yet,
-so the first task is In Progress and every other task is Active.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 5 Done.
 
 ## How to update this tracker
 
@@ -28,11 +27,11 @@ so the first task is In Progress and every other task is Active.
 | --- | --- | --- | --- |
 | **S1 — Skills infrastructure** | | | |
 | **D1. Shipped Skill defaults** | | | |
-| 1.1.t Test: the catalog holds `team-building` with its four files (red) | | ✔ | |
-| 1.1.i Implement `SkillCatalog` and embed the defaults | ✔ | | |
-| 1.2.t Test: the Skill validator (red) | ✔ | | |
-| 1.2.i Implement `SkillValidator` and the Skill records | ✔ | | |
-| 1.3.t Test: every shipped Skill is valid (red → green in one step) | ✔ | | |
+| 1.1.t Test: the catalog holds `team-building` with its four files (red) | | | ✔ |
+| 1.1.i Implement `SkillCatalog` and embed the defaults | | | ✔ |
+| 1.2.t Test: the Skill validator (red) | | | ✔ |
+| 1.2.i Implement `SkillValidator` and the Skill records | | | ✔ |
+| 1.3.t Test: every shipped Skill is valid (red → green in one step) | | | ✔ |
 | **D2. `SkillStore`: resolution, overrides, watching** | | | |
 | 2.1.t Test: an empty data directory yields the defaults (red) | ✔ | | |
 | 2.1.i Implement `SkillStore` construction and snapshot | ✔ | | |
