@@ -170,7 +170,7 @@ public sealed class ThemeCatalogTests
         var pair = ContrastPairs.Single(candidate => string.Equals(candidate.Name, pairName, StringComparison.Ordinal));
         var palette = NativePalette(descriptor);
 
-        var ratio = ContrastRatio(pair.Foreground(palette), pair.Background(palette));
+        var ratio = ContrastColour.Ratio(pair.Foreground(palette), pair.Background(palette));
 
         Assert.True(
             ratio >= pair.Floor,
@@ -207,7 +207,7 @@ public sealed class ThemeCatalogTests
         var pair = ContrastPairs.Single(candidate => string.Equals(candidate.Name, pairName, StringComparison.Ordinal));
         var palette = NativePalette(descriptor);
 
-        var ratio = ContrastRatio(pair.Foreground(palette), pair.Background(palette));
+        var ratio = ContrastColour.Ratio(pair.Foreground(palette), pair.Background(palette));
 
         Assert.True(ratio < shortfall.Floor, $"{themeId}: {pairName} no longer falls short of {shortfall.Floor:F1}:1 - delete this documented shortfall.");
         Assert.Equal(shortfall.Ratio, ratio, precision: 2);
@@ -301,37 +301,6 @@ public sealed class ThemeCatalogTests
     /// <summary>Renders <paramref name="color"/> as the <c>#rrggbb</c> text this suite compares colours as.</summary>
     /// <param name="color">The colour to render.</param>
     private static string Hex(MudColor color) => color.ToString(MudColorOutputFormats.Hex);
-
-    /// <summary>
-    /// The WCAG 2.1 contrast ratio between two colours: <c>(L1 + 0.05) / (L2 + 0.05)</c>, where
-    /// <c>L1</c> is the lighter colour's relative luminance and <c>L2</c> the darker's.
-    /// </summary>
-    /// <param name="first">One colour.</param>
-    /// <param name="second">The other colour.</param>
-    private static double ContrastRatio(MudColor first, MudColor second)
-    {
-        var firstLuminance = RelativeLuminance(first);
-        var secondLuminance = RelativeLuminance(second);
-        var lighter = Math.Max(firstLuminance, secondLuminance);
-        var darker = Math.Min(firstLuminance, secondLuminance);
-        return (lighter + 0.05) / (darker + 0.05);
-    }
-
-    /// <summary>
-    /// A colour's WCAG 2.1 relative luminance: each sRGB channel linearised, then combined as
-    /// <c>0.2126R + 0.7152G + 0.0722B</c>.
-    /// </summary>
-    /// <param name="color">The colour to measure.</param>
-    private static double RelativeLuminance(MudColor color) =>
-        (0.2126 * LineariseChannel(color.R)) + (0.7152 * LineariseChannel(color.G)) + (0.0722 * LineariseChannel(color.B));
-
-    /// <summary>Linearises one 0-255 sRGB channel per WCAG 2.1's <c>c &lt;= 0.03928 ? c/12.92 : ((c+0.055)/1.055)^2.4</c>.</summary>
-    /// <param name="channel">The channel's 0-255 byte value.</param>
-    private static double LineariseChannel(byte channel)
-    {
-        var normalised = channel / 255.0;
-        return normalised <= 0.03928 ? normalised / 12.92 : Math.Pow((normalised + 0.055) / 1.055, 2.4);
-    }
 
     /// <summary>
     /// The six foreground/background pairs this suite holds to a WCAG floor, all at 4.5:1 - WCAG

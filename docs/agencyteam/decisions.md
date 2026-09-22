@@ -1,12 +1,47 @@
 # Decision record
 
-Sixteen dated entries from 2026-09-11 onward, newest first, each recording what
+Seventeen dated entries from 2026-09-11 onward, newest first, each recording what
 changed and — more usefully — what was considered and rejected. Read it when you are
 about to revisit a decision, or when an older Markdown file in this repo
 disagrees with current vocabulary and you need the old-to-new mapping.
 
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
+
+**2026-09-22 — A Teammate chooses its own Avatar, and it is not part of the Persona.**
+
+An avatar was the initials of a Name on the Theme's `Primary` colour, in two places, with
+nothing about it choosable — and `app.css` admitted the gap in a comment: *"The monogram
+stands in for Slack's avatar photo."* It is now three optional fields — a label of up to
+three characters, an uploaded image, and a background colour — rendered everywhere a
+Teammate appears, the transcript included. The Human has one too. See
+[ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md).
+
+**Rejected: `avatar:` in Persona frontmatter.** The obvious home, beside `adapter:`, and the
+one that would have let an avatar travel with a copied `.md`. `PersonaSupervisor.NeedsRestart`
+is whole-record value equality and `Persona.Text` is the entire file, so picking a background
+colour would have stopped a live ACP session and thrown away everything that Agent remembered
+— the exact trade [Rules](rules.md) already refuses for Hooks, in the same words. It would
+also have put an image file name in a system prompt, and left `JobDescriptionExcludedKeys` one
+forgotten line away from leaking `Avatar Color: #4a154b` into model-facing text forever.
+
+**Rejected: an `AvatarKind` enum with a payload.** It needs a discriminator that can disagree
+with what it describes, and the rule reconciling them is precedence written a second time. The
+shape chosen has no discriminator at all: Image beats Label beats initials, and *all three
+absent* is the default — so "initials" is never written down, and an installation that never
+opens the new controls has no file at all.
+
+**Rejected: base64 `data:` URIs instead of an endpoint.** Tempting, because it needs no
+middleware, no provider, no cache story and no rename cascade. 512 KB of image is ~683 KB of
+base64, and on Blazor Server that crosses the SignalR circuit — ten Teammates on `/teammates`
+is roughly 6.8 MB on a page that currently paints in one small diff, and nothing is ever
+cached.
+
+**Rejected: naming an uploaded image after its Teammate.** It reads better in the folder and
+makes a removal obvious. It also needs percent-encoding for a Name with spaces, and
+[Known limits](known-limits.md) records that `CON`, `NUL` and `COM1` pass `NameRules` — `CON.png`
+is a file Windows will not create. An opaque id means a rename touches no file at all, and
+replacing an image yields a new URL, so cache-busting costs nothing.
 
 **2026-09-21 — A Room can be archived or deleted, and archived state is a sibling table.**
 

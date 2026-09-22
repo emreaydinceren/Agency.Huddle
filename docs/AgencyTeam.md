@@ -5,9 +5,9 @@ are real Claude agents running as child processes. This page is the hub of its
 documentation: read it whole if you are picking the codebase up cold, then follow
 only the links your task needs.
 
-Applies to the repo as of 2026-09-21, after roadmap item 14 (archiving and
-deleting a Room): one solution, `Huddle.slnx`, holding all six projects, builds
-with zero warnings and its 1340 tests pass, 10 of them skipped unless
+Applies to the repo as of 2026-09-22, after roadmap item 15 (a Teammate chooses its
+own Avatar): one solution, `Huddle.slnx`, holding all six projects, builds
+with zero warnings and its 1421 tests pass, 10 of them skipped unless
 `Team:Acp:Enabled` is on — see [Build, test, run](#build-test-run).
 
 The product is Agency.Huddle, and since 2026-09-12 so is every namespace.
@@ -61,7 +61,7 @@ into two files is a rule that goes stale in one of them. Follow the link.
 The defined terms, so you can tell whether a word you are about to use is one of
 them without opening [Language](agencyteam/language.md):
 
-> Teammate · Human · Agent · Name · Alias · Title · Team · Adapter · Room ·
+> Teammate · Human · Agent · Name · Alias · Title · Avatar · Team · Adapter · Room ·
 > Member · Invitation · Archived · Persona · Rejected file · Model · Effort · Turn ·
 > App Tool · Reply Gate · Budget · Catch-up · Progressive discovery · Work Dir ·
 > Message · Draft · Mention · Envelope · Transcript · Stop · Team Directory ·
@@ -213,14 +213,17 @@ All under the `Team:` section — `TeamOptions.cs` and `Acp/AcpOptions.cs`.
 | `Acp:Adapters` | `null` | The Adapters this installation can launch, in configuration order; the **first is the default**. Absent means exactly one profile synthesised from `Acp:Command` / `Args` / `AdapterPath`, so a stock install is unchanged and the Adapter select does not render. Per entry: `Id`, `DisplayName`, `Description`, `Command`, `Args`, `AdapterPath`, `UsesToolNamePrefix`, `EnvironmentOverrides`. A blank `Command` or a duplicate `Id` throws at **startup**, not at first Turn. See [ADR-0013](adr/0013-an-adapter-is-a-property-of-the-persona.md). |
 | `Acp:Adapters:*:EnvironmentOverrides` | `null` | Environment variables set on that Adapter's process, over and above the inherited environment — how an adapter that ships no `appsettings.json` of its own gets its configuration. **Set these from `appsettings.json`, never through the environment-variable provider:** that provider rewrites every `__` into `:`, so `Team__Acp__Adapters__0__EnvironmentOverrides__Agent__DefaultModel` binds as the key `Agent:DefaultModel`, which no process will ever read. |
 
-Three runtime files sit outside that section, because none of them is a setting: the
-Persona library under `{DataDir}/{Acp:TeamsDir}`, `{DataDir}/hooks.json`, and
-`{DataDir}/appearance.json`.
+Four runtime files and one runtime directory sit outside that section, because none of
+them is a setting: the Persona library under `{DataDir}/{Acp:TeamsDir}`,
+`{DataDir}/hooks.json`, `{DataDir}/appearance.json`, `{DataDir}/avatars.json`, and the
+uploaded avatar images under `{DataDir}/avatars/`.
 
 | File | Holds |
 | --- | --- |
 | `{DataDir}/hooks.json` | **Overrides only**, one key per changed Hook. Absent is normal and means nothing is overridden; the app does not create it, and it appears on the first save from `/settings`. Hand-editing it is supported and watched — a save in an editor reaches the next Turn without a restart. |
 | `{DataDir}/appearance.json` | The selected Theme id. **That one key** — the per-Token override map went with the Tokens on 2026-09-14 ([ADR-0010](adr/0010-a-theme-is-a-mudblazor-theme.md)), and the `dark` light/dark preference went on 2026-09-21 when a Theme became a single palette ([ADR-0017](adr/0017-a-theme-is-a-palette-not-a-pair.md)). A file written before that still carries `dark`; it is an unknown key now, so it is ignored and kept, and there is no migration. Absent is normal and means the default Theme; the app does not create it. Hand-editable and watched, exactly like `hooks.json`. Not a setting under `Team:`: it is state this application writes. |
+| `{DataDir}/avatars.json` | One entry per Teammate that has chosen an **Avatar**, keyed by Name — the Human included, since the Human has a Name but no Persona file. **Overrides only**, exactly like `hooks.json`: an absent file is normal, the app does not create it, and a Teammate with no entry renders the initials it always did. Hand-editable and watched. Deliberately not part of the Persona, so changing an avatar never restarts a session ([ADR-0019](adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md)). |
+| `{DataDir}/avatars/` | The uploaded avatar images themselves, each named by a generated id rather than by a Teammate's Name. Served at `/teammate-avatars` by a `PhysicalFileProvider` — `MapStaticAssets` is manifest-driven and cannot see a file written at run time. Created at startup, unlike the JSON files, because a `PhysicalFileProvider` throws when its root is missing. |
 | `hooks.default.json` (beside the binary) | Every Hook's shipped wording, **generated** from `HookCatalog` and copied to the output folder. The restore source, and readable as a reference. It is not the authority: delete both files and the app still runs on exactly the text it shipped with. |
 
 A Hook is one piece of text sent to a model. See [Language](agencyteam/language.md)

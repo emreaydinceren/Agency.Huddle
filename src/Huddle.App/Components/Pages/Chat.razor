@@ -2,6 +2,7 @@
 @page "/rooms/{RoomId}"
 @implements IDisposable
 @using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Pipes
 @inject ITeamDirectory TeamDirectory
 @inject IChatStore Store
@@ -12,6 +13,7 @@
 @inject PersonaHealth Health
 @inject RoomFollows Follows
 @inject NavigationManager Navigation
+@inject AvatarStore Avatars
 
 @if (this.room is null)
 {
@@ -220,6 +222,13 @@ else
         // RoomEvents applies to any singleton event. Unsubscribed in Dispose, below.
         this.Health.Changed += this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged += this.OnHealthOrPresenceChanged;
+
+        // AvatarStore is the same kind of singleton, so its change event gets the same treatment: a
+        // saved avatar customisation must repaint MessageList's rows, which resolve every avatar
+        // live off this store rather than from a snapshot - unsubscribed in Dispose, below (rules.md:
+        // "Every component subscribing to RoomEvents must unsubscribe in Dispose" - the same
+        // reasoning applies to any singleton's event).
+        this.Avatars.AvatarsChanged += this.OnAvatarsChanged;
     }
 
     protected override Task OnAfterRenderAsync(bool firstRender)
@@ -271,6 +280,7 @@ else
         this.Events.DraftChanged -= this.OnDraftChanged;
         this.Health.Changed -= this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged -= this.OnHealthOrPresenceChanged;
+        this.Avatars.AvatarsChanged -= this.OnAvatarsChanged;
     }
 
     private async Task LoadRoomAsync(string roomId)
@@ -467,6 +477,20 @@ else
     /// every render.
     /// </summary>
     private void OnHealthOrPresenceChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.StateHasChanged();
+        });
+    }
+
+    /// <summary>
+    /// Repaints <see cref="MessageList"/> when <see cref="AvatarStore.AvatarsChanged"/> fires - a
+    /// saved, renamed or removed avatar customisation. No data needs reloading here, the same as
+    /// <see cref="OnHealthOrPresenceChanged"/>: <see cref="MessageList"/> resolves each row's avatar
+    /// live, off <see cref="AvatarStore.Get(string)"/>, on every render.
+    /// </summary>
+    private void OnAvatarsChanged()
     {
         _ = this.DispatchAsync(() =>
         {

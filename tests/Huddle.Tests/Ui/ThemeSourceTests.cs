@@ -276,6 +276,71 @@ public sealed partial class ThemeSourceTests
     [GeneratedRegex(@"<MudText\b[^>]*\bColor\s*=\s*""Color\.Secondary""[^>]*>", RegexOptions.CultureInvariant)]
     private static partial Regex MudTextColorSecondaryPattern();
 
+    /// <summary>
+    /// No <c>.razor</c> file under <c>Components</c> carries a colour literal inside a
+    /// <c>Style="..."</c> attribute. <c>TeammateAvatar</c> is the reason this rule exists: it renders
+    /// a per-Teammate background colour, and that colour is real user data - typed into
+    /// <c>avatars.json</c> or picked in the avatar editor - not a design choice this repository owns,
+    /// so it cannot live in a stylesheet the way every other colour in this application does. It is
+    /// built entirely from a C# string (<c>TeammateAvatar.InlineStyle</c>) and handed to
+    /// <c>MudAvatar</c>'s own <c>Style</c> parameter as <c>Style="@this.InlineStyle"</c> - never a
+    /// literal typed straight into markup. Nothing above catches that shape: every colour sweep in
+    /// this class reads <c>.css</c> files, and <see cref="RazorComponents_NoMudTextUsesColorSecondary"/>
+    /// only ever looks at a <c>Color="Color.Secondary"</c> enum comparison, so a hex value typed into a
+    /// <c>Style="..."</c> attribute would slip straight through every other test here and still build
+    /// clean with zero warnings. This test passes the day it is written - nothing under
+    /// <c>Components/</c> currently puts a colour literal in a <c>Style="..."</c> attribute - so its
+    /// value is entirely in stopping a later regression, not in catching a present one. Enumerating
+    /// the directory, rather than naming each file, is the same argument
+    /// <see cref="ScopedCss_DeclaresNoColourLiteral"/> and <see cref="RazorComponents_NoMudTextUsesColorSecondary"/>
+    /// make: a component added later is covered the day it appears, with no test change required. No
+    /// exemption list: if one is ever needed, a colour literal has crept into a component's markup and
+    /// that is the defect to fix, not a reason to carve out a hole in this test.
+    /// </summary>
+    [Fact]
+    public void RazorComponents_NoInlineColourLiteralInStyleAttribute()
+    {
+        var componentsDirectory = CssSource.RepoPath("src", "Huddle.App", "Components");
+        var razorFiles = Directory
+            .EnumerateFiles(componentsDirectory, "*.razor", SearchOption.AllDirectories)
+            .ToList();
+
+        Assert.NotEmpty(razorFiles);
+
+        var hits = razorFiles.SelectMany(FindInlineColourLiteralInStyleAttribute).ToList();
+
+        Assert.Empty(hits);
+    }
+
+    /// <summary>
+    /// Every <c>Style="..."</c> attribute in <paramref name="razorPath"/> whose value contains a
+    /// colour literal, formatted as <c>"path line N"</c> - the same format
+    /// <see cref="FindMudTextColorSecondary"/> uses, so a hit is readable without opening the file.
+    /// Reuses <see cref="CssSource.ColourLiteralPattern"/> rather than duplicating it, so a stylesheet
+    /// declaration and a component's inline style are held to exactly one colour-literal rule.
+    /// </summary>
+    /// <param name="razorPath">Path to the <c>.razor</c> file to scan.</param>
+    private static IReadOnlyList<string> FindInlineColourLiteralInStyleAttribute(string razorPath)
+    {
+        var text = File.ReadAllText(razorPath);
+        List<string> hits = [];
+        foreach (Match match in StyleAttributePattern().Matches(text))
+        {
+            if (!CssSource.ColourLiteralPattern().IsMatch(match.Groups["value"].Value))
+            {
+                continue;
+            }
+
+            var line = text[..match.Index].Count(character => character == '\n') + 1;
+            hits.Add($"{razorPath} line {line}");
+        }
+
+        return hits;
+    }
+
+    [GeneratedRegex(@"\bStyle\s*=\s*""(?<value>[^""]*)""", RegexOptions.CultureInvariant)]
+    private static partial Regex StyleAttributePattern();
+
     // The one scoped stylesheet the colour-literal sweep does not tokenise, and why: see the summary
     // on ScopedCss_DeclaresNoColourLiteral. It carries no exemption in ScopedCss_UsesOnlyMudBlazorVariables
     // above - see that test's own summary for why none is needed.

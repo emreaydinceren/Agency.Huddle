@@ -1,10 +1,27 @@
 @*
-    The Settings page's Appearance tab: pick a theme from ThemeCatalog.Grouped.
+    The Settings page's Appearance tab: pick a theme from ThemeCatalog.Grouped, and set the Human's
+    own Avatar.
 
-    One control, not two. A theme carries exactly one palette and its own ThemeMode, so picking a
-    theme picks light or dark with it - there is no separate light/dark control any more, and so no
-    way to ask for "Solarized Dark, in light mode" and be shown a different theme's palette instead
-    (docs/adr/0017-a-theme-is-a-palette-not-a-pair.md).
+    Two sections, not one control. The first is the Theme picker: a theme carries exactly one
+    palette and its own ThemeMode, so picking a theme picks light or dark with it - there is no
+    separate light/dark control any more, and so no way to ask for "Solarized Dark, in light mode"
+    and be shown a different theme's palette instead (docs/adr/0017-a-theme-is-a-palette-not-a-pair.md).
+
+    The second section edits the Human's Avatar. A Teammate's Avatar is edited on its own
+    TeammateCard, because a Teammate has a Persona file for that card to hold open; the Human has no
+    Persona file and therefore no Teammate card, so this tab - the one place a per-installation
+    display choice already lived - is where the Human's Avatar is edited instead. It reuses Phase
+    5.1's exact editor: the MudRadioGroup, the Immediate label field trimmed through
+    Avatar.TrimLabel, the MudFileUpload validated the same way (Size against AvatarImage.MaxBytes,
+    then AvatarImage.SniffExtension), and the MudColorPicker bound to Text and never Value - see that
+    control's own comment below for the trap. The one deliberate difference: this tab has no Save
+    button, so every change here writes to avatars.json immediately - the same way choosing a theme
+    above applies immediately - rather than buffering until a Save the way TeammateCard's editor does.
+    There is no Cancel to protect here, so there is no reason to hold an upload's bytes back either.
+
+    "Appearance" does not widen to cover this. appearance.json still holds only the selected Theme
+    id and nothing else; the Human's Avatar is edited on this tab but stored in avatars.json, a
+    different file with a different owner (AvatarStore, not AppearanceStore).
 
     A MudList rather than a MudSelect: MudBlazor 9 has no MudSelectItemGroup, so a MudSelect cannot
     render the Light / Dark / High contrast headings this picker is grouped by. The list also shows
@@ -20,16 +37,22 @@
     rewrite, no JavaScript interop of this component's own.
 
     Subscribes to AppearanceStore.AppearanceChanged the same way Settings.razor subscribes to
-    HookStore.HooksChanged: the store is a singleton, so a hand-edit to appearance.json (or a save
-    from another browser tab) must repaint this tab without a restart, and rules.md's "unsubscribe in
-    Dispose" reasoning for RoomEvents applies here for the same reason - a leaked subscription to a
-    singleton never dies.
+    HookStore.HooksChanged, and to AvatarStore.AvatarsChanged for the same reason: both stores are
+    singletons, so a hand-edit to appearance.json or avatars.json (or a save from another browser
+    tab) must repaint this tab without a restart, and rules.md's "unsubscribe in Dispose" reasoning
+    for RoomEvents applies here for the same reason - a leaked subscription to a singleton never
+    dies.
 *@
 
 @using Agency.Huddle.App.Appearance
+@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Themes
+@using Microsoft.Extensions.Options
+@using System.Globalization
 @implements IDisposable
 @inject AppearanceStore AppearanceStore
+@inject AvatarStore Avatars
+@inject IOptions<TeamOptions> Options
 
 <p class="teammates-intro">
     Pick a theme. Each theme is either a light or a dark one, so choosing it sets the application's
@@ -64,20 +87,287 @@
     until you save a choice here, so it being absent is expected, not a bug.
 </p>
 
+@* See the file-level comment for why this section exists: the Human has no Persona file, so this is
+   where their Avatar is edited instead of on a TeammateCard. Every control below saves on its own
+   change - there is no Save button on this tab - which is the one deliberate difference from
+   TeammateCard's identical-looking editor. *@
+<MudPaper Outlined="true" Class="pa-3 mt-4">
+    <MudText Typo="Typo.overline">Your avatar</MudText>
+
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-2">
+        <TeammateAvatar Name="@this.HumanName" Avatar="this.CurrentAvatar" Size="Size.Large" />
+    </MudStack>
+
+    <MudRadioGroup T="AvatarChoice" Value="this.avatarChoice" ValueChanged="this.OnAvatarChoiceChanged" Class="mb-2">
+        <MudRadio T="AvatarChoice" Value="AvatarChoice.Initials">Initials of the name</MudRadio>
+        <MudRadio T="AvatarChoice" Value="AvatarChoice.Label">A short label</MudRadio>
+        <MudRadio T="AvatarChoice" Value="AvatarChoice.Image">An image</MudRadio>
+    </MudRadioGroup>
+
+    @if (this.avatarChoice == AvatarChoice.Label)
+    {
+        @* Immediate="true", and trimming happens once inside CurrentAvatar's own Avatar.TrimLabel call
+           rather than here - the same reasoning TeammateCard's identical control gives, except that
+           OnAvatarLabelChanged below also saves on every keystroke, since this tab has no Save button.
+           No MaxLength: it truncates by UTF-16 index, which can cut a surrogate pair in half. Counter
+           gives the same affordance without that defect, sized from Avatar.MaxLabelTextElements so the
+           two can never drift apart. *@
+        <MudTextField T="string" Label="Label" Value="@this.avatarLabel" ValueChanged="this.OnAvatarLabelChanged"
+                      Immediate="true" Counter="@Avatar.MaxLabelTextElements"
+                      HelperText="Shown instead of initials." />
+    }
+
+    @if (this.avatarChoice == AvatarChoice.Image)
+    {
+        <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.webp" MaximumFileCount="1" FilesChanged="this.OnAvatarFileChangedAsync">
+            <CustomContent Context="fileUpload">
+                <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Upload" OnClick="@(() => fileUpload.OpenFilePickerAsync())">
+                    Choose an image
+                </MudButton>
+            </CustomContent>
+        </MudFileUpload>
+
+        @if (this.avatarImage is not null)
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="mt-2">
+                <MudText Typo="Typo.body2">@this.avatarImage</MudText>
+                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.RemoveAvatarImage">Remove image</MudButton>
+            </MudStack>
+        }
+    }
+
+    @if (this.avatarError is not null)
+    {
+        <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">@this.avatarError</MudAlert>
+    }
+
+    @* THE TRAP: MudColorPicker.Value is a non-null MudColor - binding it would materialise a
+       hard-coded hex colour the moment this tab first renders, permanently divorced from the Theme,
+       just from opening this tab with no background ever chosen. Text is a string? and is exactly the
+       value this component reads and writes to avatars.json, so binding IT instead keeps "no
+       background chosen" (null) expressible - see avatarBackground's own remarks and
+       docs/agencyteam/traps.md. *@
+    <MudColorPicker Label="Background" ColorPickerMode="ColorPickerMode.HEX" ShowAlpha="false"
+                     Text="@this.avatarBackground" TextChanged="this.OnAvatarBackgroundTextChanged" Class="mt-2" />
+    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.UseThemeColour">Use the theme colour</MudButton>
+</MudPaper>
+
+<p class="settings-hooks-file-path">
+    Your avatar is stored at <code>@this.Avatars.FilePath</code>, under your Name
+    (<code>@this.HumanName</code>) - a different file from the Theme selection above.
+</p>
+
 @code {
     /// <summary>The theme id shown selected: the store's current selection, or the catalog's default when nothing is selected yet.</summary>
     private string SelectedThemeId => this.AppearanceStore.Current.ThemeId ?? ThemeCatalog.BuiltIn[0].Id;
 
-    /// <summary>Subscribes to <see cref="AppearanceStore.AppearanceChanged"/> - see the file-level comment for why this matters.</summary>
+    // Editor-only working state for the Human's avatar editor - the same three fields
+    // TeammateCard.SeedAvatarEditorState seeds, minus the pending-upload buffer that editor needs and
+    // this one does not (see the file-level comment: no Save button here means no Cancel to protect,
+    // so an upload writes and saves immediately instead of waiting in a buffer). avatarChoice is
+    // DERIVED from "avatar" only at seed time (see SeedAvatarEditorState) rather than stored, exactly
+    // like TeammateCard's own copy of this field.
+    private AvatarChoice avatarChoice;
+    private string avatarLabel = string.Empty;
+    private string? avatarImage;
+    private string? avatarBackground;
+    private string? avatarError;
+
+    /// <summary>
+    /// The Human's configured Name (<see cref="TeamOptions.HumanName"/>) - the key this tab's Avatar
+    /// is saved under in <c>avatars.json</c>, and the same Name that later appears as
+    /// <see cref="Agency.Huddle.Contracts.ChatMessage.SenderName"/> on the Human's own messages.
+    /// </summary>
+    private string HumanName => this.Options.Value.HumanName;
+
+    /// <summary>
+    /// The single place <see cref="avatarChoice"/>, <see cref="avatarLabel"/>, <see cref="avatarImage"/>
+    /// and <see cref="avatarBackground"/> are projected back into an <see cref="Avatars.Avatar"/> - both
+    /// for the live preview <see cref="TeammateAvatar"/> renders above and for what every handler below
+    /// saves. Mirrors <c>TeammateCard.CurrentAvatar</c> exactly.
+    /// </summary>
+    private Avatar CurrentAvatar => new(
+        this.avatarChoice == AvatarChoice.Label ? Avatar.TrimLabel(this.avatarLabel) : null,
+        this.avatarChoice == AvatarChoice.Image ? this.avatarImage : null,
+        this.avatarBackground);
+
+    // Set immediately before every SaveAvatar call below and consumed by OnAvatarsChanged, on the
+    // same thread: AvatarStore.Save raises AvatarsChanged synchronously, from inside Save itself, so
+    // by the time SaveAvatar returns the echo has already been read and cleared - no race. Without
+    // this, choosing "A short label" before typing anything saves Avatar.None (nothing is set yet),
+    // AvatarsChanged fires, and OnAvatarsChanged's own SeedAvatarEditorState call would read that
+    // still-empty entry back and silently flip avatarChoice back to Initials - the very choice the
+    // Human just made, undone by its own save. This flag is what tells "my own echo" apart from a
+    // genuine external edit, which still must re-seed (see OnAvatarsChanged).
+    private bool savedLocally;
+
+    /// <summary>Subscribes to <see cref="AppearanceStore.AppearanceChanged"/> and <see cref="AvatarStore.AvatarsChanged"/> - see the file-level comment for why this matters.</summary>
     protected override void OnInitialized()
     {
         this.AppearanceStore.AppearanceChanged += this.OnAppearanceChanged;
+        this.Avatars.AvatarsChanged += this.OnAvatarsChanged;
+        this.SeedAvatarEditorState();
     }
 
-    /// <summary>Unsubscribes from <see cref="AppearanceStore.AppearanceChanged"/> - see the file-level comment for why this matters.</summary>
+    /// <summary>Unsubscribes from <see cref="AppearanceStore.AppearanceChanged"/> and <see cref="AvatarStore.AvatarsChanged"/> - see the file-level comment for why this matters.</summary>
     public void Dispose()
     {
         this.AppearanceStore.AppearanceChanged -= this.OnAppearanceChanged;
+        this.Avatars.AvatarsChanged -= this.OnAvatarsChanged;
+    }
+
+    /// <summary>
+    /// (Re-)seeds every avatar-editor local field from <see cref="AvatarStore.Get(string)"/>, called
+    /// once from <see cref="OnInitialized"/> and again from <see cref="OnAvatarsChanged"/> for a
+    /// genuine external change - never for this component's own save, which <see cref="OnAvatarsChanged"/>
+    /// filters out via <see cref="savedLocally"/> before this is reached. <see cref="avatarChoice"/> is
+    /// derived from which of <see cref="Avatars.Avatar.Image"/> and <see cref="Avatars.Avatar.Label"/>
+    /// is set - the same Image-then-Label-then-initials precedence <see cref="TeammateAvatar"/> renders
+    /// by - rather than read from any stored discriminator, because none is ever written to disk.
+    /// Mirrors <c>TeammateCard.SeedAvatarEditorState</c>.
+    /// </summary>
+    private void SeedAvatarEditorState()
+    {
+        var avatar = this.Avatars.Get(this.HumanName);
+        this.avatarChoice = avatar.Image is not null
+            ? AvatarChoice.Image
+            : avatar.Label is not null
+                ? AvatarChoice.Label
+                : AvatarChoice.Initials;
+        this.avatarLabel = avatar.Label ?? string.Empty;
+        this.avatarImage = avatar.Image;
+        this.avatarBackground = avatar.Background;
+        this.avatarError = null;
+    }
+
+    /// <summary>Saves <see cref="CurrentAvatar"/> under <see cref="HumanName"/> and arms <see cref="savedLocally"/> first - every handler below calls this instead of <see cref="AvatarStore.Save(string, Avatar)"/> directly, so none of them can forget to arm it.</summary>
+    private void SaveAvatar()
+    {
+        this.savedLocally = true;
+        this.Avatars.Save(this.HumanName, this.CurrentAvatar);
+    }
+
+    /// <summary>Switches the three-way avatar choice and saves immediately - see the file-level comment for why this tab has no buffered "unsaved change" to hold instead.</summary>
+    /// <param name="value">The radio button just selected.</param>
+    private void OnAvatarChoiceChanged(AvatarChoice value)
+    {
+        this.avatarChoice = value;
+        this.avatarError = null;
+        this.SaveAvatar();
+    }
+
+    /// <summary>Stores the Label box's newly typed text and saves immediately, once per keystroke - trimming happens once, inside <see cref="CurrentAvatar"/>'s own <see cref="Avatar.TrimLabel(string?)"/> call, not here.</summary>
+    /// <param name="value">The Label box's newly typed value.</param>
+    private void OnAvatarLabelChanged(string value)
+    {
+        this.avatarLabel = value;
+        this.avatarError = null;
+        this.SaveAvatar();
+    }
+
+    /// <summary>
+    /// Validates an uploaded avatar image and, on success, writes it through
+    /// <see cref="AvatarStore.WriteImage(ReadOnlySpan{byte}, string)"/> and saves immediately - unlike
+    /// <c>TeammateCard.OnAvatarFileChangedAsync</c>, which only buffers the bytes: see the file-level
+    /// comment for why there is nothing here to defer to a later Save.
+    /// </summary>
+    /// <param name="file">The single file <see cref="MudFileUpload{T}"/> just selected.</param>
+    private async Task OnAvatarFileChangedAsync(IBrowserFile file)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+
+        this.avatarError = null;
+
+        // Checked before opening the stream at all - fast, and gives a better message than the
+        // IOException OpenReadStream's own maxAllowedSize guard would throw for the same file.
+        if (file.Size > AvatarImage.MaxBytes)
+        {
+            this.avatarError = string.Create(CultureInfo.InvariantCulture, $"That file is larger than {AvatarImage.MaxBytes / 1000} KB.");
+            return;
+        }
+
+        byte[] bytes;
+        try
+        {
+            await using var stream = file.OpenReadStream(AvatarImage.MaxBytes, CancellationToken.None);
+            using MemoryStream buffer = new();
+            await stream.CopyToAsync(buffer, CancellationToken.None);
+            bytes = buffer.ToArray();
+        }
+        catch (IOException)
+        {
+            // A lying Size (or a stream that grew mid-read) still trips OpenReadStream's own
+            // maxAllowedSize guard - same message as the fast check above, since it is the same
+            // fact from the user's point of view.
+            this.avatarError = string.Create(CultureInfo.InvariantCulture, $"That file is larger than {AvatarImage.MaxBytes / 1000} KB.");
+            return;
+        }
+
+        var extension = AvatarImage.SniffExtension(bytes);
+        if (extension is null)
+        {
+            this.avatarError = "That file is not a PNG, JPEG or WebP image.";
+            return;
+        }
+
+        this.avatarImage = this.Avatars.WriteImage(bytes, extension);
+        this.SaveAvatar();
+    }
+
+    /// <summary>Clears the chosen image and saves immediately, so <see cref="CurrentAvatar"/> falls back to initials until a new file is chosen.</summary>
+    private void RemoveAvatarImage()
+    {
+        this.avatarImage = null;
+        this.avatarError = null;
+        this.SaveAvatar();
+    }
+
+    /// <summary>
+    /// THE TRAP: bound to <see cref="MudColorPicker.Text"/>, never <see cref="MudColorPicker.Value"/> -
+    /// see the markup comment beside the control for why. Blank input (the Clear action, or a user who
+    /// deletes the hex text) maps to <see langword="null"/>, meaning "the surface's own default", never
+    /// the empty string - <see cref="Avatar.Background"/>'s own contract. Saves immediately.
+    /// </summary>
+    /// <param name="value">The colour picker's newly typed or picked text, or <see langword="null"/>/blank.</param>
+    private void OnAvatarBackgroundTextChanged(string? value)
+    {
+        this.avatarBackground = string.IsNullOrWhiteSpace(value) ? null : value;
+        this.avatarError = null;
+        this.SaveAvatar();
+    }
+
+    /// <summary>Explicitly clears <see cref="avatarBackground"/> back to <see langword="null"/> - the Theme's own colour - and saves immediately.</summary>
+    private void UseThemeColour()
+    {
+        this.avatarBackground = null;
+        this.avatarError = null;
+        this.SaveAvatar();
+    }
+
+    /// <summary>
+    /// Repaints this tab, and re-seeds the avatar editor, whenever <see cref="AvatarStore.AvatarsChanged"/>
+    /// fires for a genuine external edit - a hand-edit to <c>avatars.json</c>, or a save from another
+    /// browser tab. Consumes and skips <see cref="savedLocally"/> first: <see cref="SaveAvatar"/> raises
+    /// this same event synchronously as part of this component's OWN save, and re-seeding from that
+    /// echo would read back whatever was just written - which, for a choice with nothing behind it yet
+    /// (picking "A short label" before typing anything saves <see cref="Avatar.None"/>), is nothing,
+    /// silently reverting the very choice the Human just made. See <see cref="savedLocally"/>'s own
+    /// remarks.
+    /// </summary>
+    private void OnAvatarsChanged()
+    {
+        if (this.savedLocally)
+        {
+            this.savedLocally = false;
+            return;
+        }
+
+        _ = this.DispatchAsync(() =>
+        {
+            this.SeedAvatarEditorState();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 
     /// <summary>

@@ -2,6 +2,7 @@
 @implements IDisposable
 @using Agency.Huddle.Acp.Abstractions
 @using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Pipes
 @inject PersonaStore Personas
 @inject ITeamDirectory TeamDirectory
@@ -11,6 +12,7 @@
 @inject RoomEvents Events
 @inject IModelCatalog ModelCatalog
 @inject IDialogService DialogService
+@inject AvatarStore Avatars
 
 <div class="teammates-page">
     <header class="teammates-header">
@@ -86,7 +88,7 @@
                                    and nesting a button inside (or around) a MudCard would be two interactive
                                    elements fighting over the same click. *@
                                 <button type="button" class="teammate-tile" @onclick="() => this.OpenCard(entry.Name)">
-                                    <MudAvatar Color="Color.Primary" Class="teammate-avatar">@TeammateCard.Monogram(entry.Name)</MudAvatar>
+                                    <TeammateAvatar Name="@entry.Name" Avatar="this.Avatars.Get(entry.Name)" Class="teammate-avatar" />
                                     <span class="teammate-tile-text">
                                         <span class="teammates-item-name">@entry.Name</span>
                                         <span class="teammate-tile-role">@entry.Title &middot; @(Teammates.FormattedAlias(entry.Alias))</span>
@@ -130,6 +132,12 @@
         // to any singleton event: unsubscribed in Dispose, below.
         this.Health.Changed += this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged += this.OnHealthOrPresenceChanged;
+
+        // AvatarStore is the same kind of singleton, so its change event gets the same treatment: a
+        // saved avatar customisation must repaint every tile that shows it, and the subscription is
+        // unsubscribed in Dispose below (rules.md: "Every component subscribing to RoomEvents must
+        // unsubscribe in Dispose... the same reasoning applies to any singleton's event.").
+        this.Avatars.AvatarsChanged += this.OnAvatarsChanged;
         await this.LoadAsync();
     }
 
@@ -139,6 +147,7 @@
         this.Events.RoomsChanged -= this.OnRoomsChanged;
         this.Health.Changed -= this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged -= this.OnHealthOrPresenceChanged;
+        this.Avatars.AvatarsChanged -= this.OnAvatarsChanged;
     }
 
     // A leading "@" reads as a working handle rather than a second Name, matching how the rest of
@@ -313,6 +322,21 @@
     /// comment for why.
     /// </summary>
     private void OnHealthOrPresenceChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>
+    /// Repaints every tile when <see cref="AvatarStore.AvatarsChanged"/> fires - a saved, renamed or
+    /// removed avatar customisation. No data needs reloading here, the same as
+    /// <see cref="OnHealthOrPresenceChanged"/>: <see cref="AvatarStore.Get(string)"/> is read live on
+    /// every render.
+    /// </summary>
+    private void OnAvatarsChanged()
     {
         _ = this.DispatchAsync(() =>
         {

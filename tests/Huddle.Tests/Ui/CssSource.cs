@@ -165,10 +165,14 @@ internal static partial class CssSource
     [GeneratedRegex(@"var\([^)]*\)", RegexOptions.CultureInvariant)]
     private static partial Regex VarCallPattern();
 
+    // Internal, not private: ThemeSourceTests.RazorComponents_NoInlineColourLiteralInStyleAttribute
+    // reuses this same pattern against a Style="..." attribute's value, rather than duplicating the
+    // literal - the one colour-literal rule both a stylesheet's declaration value and a component's
+    // inline style attribute are held to.
     [GeneratedRegex(
         @"#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(|\b(?:white|black|red|green|blue|yellow|orange|purple|grey|gray|lightyellow)\b",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
-    private static partial Regex ColourLiteralPattern();
+    internal static partial Regex ColourLiteralPattern();
 
     [GeneratedRegex(@"^(?<prop>font-family|font)\s*:\s*(?<value>[^;]+);", RegexOptions.CultureInvariant)]
     private static partial Regex FontDeclarationPattern();

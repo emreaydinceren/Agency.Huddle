@@ -1,5 +1,6 @@
 @implements IDisposable
 @using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Pipes
 @inject ITeamDirectory TeamDirectory
 @inject IAgentGateway Gateway
@@ -7,6 +8,7 @@
 @inject ChatService Chat
 @inject RoomEvents Events
 @inject NavigationManager Navigation
+@inject AvatarStore Avatars
 
 <div class="new-chat">
     <MudButton Variant="Variant.Text" FullWidth="true" OnClick="this.TogglePanel">New chat</MudButton>
@@ -25,6 +27,7 @@
                     <div>
                         <MudCheckBox T="bool" Value="@this.selectedAgentIds.Contains(agentId)" ValueChanged="@((bool isChecked) => this.ToggleAgent(agentId, isChecked))">
                             <StatusDot State="status.State" />
+                            <TeammateAvatar Name="@agent.Name" Avatar="this.Avatars.Get(agent.Name)" Size="Size.Small" />
                             @agent.Name
                         </MudCheckBox>
                     </div>

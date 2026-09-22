@@ -82,7 +82,8 @@ internal static class HuddleTheme
         PrimaryDarken = "#7a3a7e",
         // White PrimaryContrastText only reaches 3.06:1 against the new, lighter Primary -
         // enough for large text but short of the 4.5:1 minimum the avatar monogram needs.
-        // Black reaches 6.86:1, comfortably clearing it.
+        // Black reaches 6.86:1, comfortably clearing it. The general reasoning behind
+        // picking black or white now lives in ContrastColour.ReadableForeground.
         PrimaryContrastText = "#000000",
         Secondary = "#7aa2f7",
         Success = "#3fbf5a",

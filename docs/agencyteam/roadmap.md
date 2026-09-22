@@ -4,7 +4,7 @@ Read this before starting work that touches `PersonaRunner`'s event loop,
 `ReplyGate`, `IAgentHostFactory`, `wwwroot/app.css` or `Themes/ThemeCatalog.cs`. Back to the hub:
 [AgencyTeam.md](../AgencyTeam.md).
 
-Fourteen items. **Items 2 and 10 shipped on 2026-09-12; items 3, 4, 5, 6 and 13 on 2026-09-13; item 1 on 2026-09-15; items 8 and 12 on 2026-09-16; and item 14 on 2026-09-21**, and each keeps its entry below - the delivered note first, then the reasoning that produced it. Items 13 and 14 were never on this list before they were built, and are recorded after the fact — 13 because it changed files the other items name and leaves a decision open that item 9 has to close, 14 because it reversed a position [Known limits](known-limits.md) had recorded as settled, which is exactly the kind of change this list exists to keep visible. Item 7 is half delivered. The other two - items 9 and 11 - are decided but not built. They sit here rather than in [Known
+Fifteen items. **Items 2 and 10 shipped on 2026-09-12; items 3, 4, 5, 6 and 13 on 2026-09-13; item 1 on 2026-09-15; items 8 and 12 on 2026-09-16; item 14 on 2026-09-21; and item 15 on 2026-09-22**, and each keeps its entry below - the delivered note first, then the reasoning that produced it. Items 13, 14 and 15 were never on this list before they were built, and are recorded after the fact — 13 because it changed files the other items name and leaves a decision open that item 9 has to close, and 14 and 15 because each reversed a position recorded as settled (14 in [Known limits](known-limits.md), 15 in a manual test), which is exactly the kind of change this list exists to keep visible. Item 7 is half delivered. The other two - items 9 and 11 - are decided but not built. They sit here rather than in [Known
 limits](known-limits.md) because that section records what is deliberately absent;
 these have moved from *declined* to *not yet*. Three appear in both places, and
 the Known limits entry now points here rather than warning you off.
@@ -38,6 +38,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~12~~ | ~~Running a Persona on a local Model~~ — **delivered 2026-09-16** | `AdapterProfile`, then one profile-aware `DotAcpAgentHostFactory` | shipped by a route this row did not foresee: no second `IAgentHostFactory` and no second `IModelCatalog`, because both Adapters advertise their catalog at `session/new` — see [ADR-0013](../adr/0013-an-adapter-is-a-property-of-the-persona.md) |
 | ~~13~~ | ~~Model-facing text is configuration~~ — **delivered 2026-09-13** | `Hooks/`, then the five sites that held the literals | shipped; never on this list before it was built, and it collides with item 9 — see [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) |
 | ~~14~~ | ~~Archiving and deleting a Room~~ — **delivered 2026-09-21** | `SqliteTeamDirectory`, `RoomList.razor` | shipped; never on this list before it was built, and it *reverses* a stance Known limits recorded — archived state went in a sibling table because `CREATE TABLE IF NOT EXISTS` never adds a column, and the one-1:1-Room-per-Agent invariant was knowingly given up — see [ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md) |
+| ~~15~~ | ~~A Teammate chooses its own Avatar~~ — **delivered 2026-09-22** | a new `Avatars/` store, `TeammateAvatar.razor` | shipped; never on this list before it was built, and it *reverses* a manual test that asserted no avatar appears in the transcript. The interesting decision was where it must **not** go: frontmatter would have made picking a colour restart the session — see [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) |
 
 ## 1. Renaming a Teammate
 
@@ -1097,3 +1098,46 @@ fresh Room; unarchive the old one afterwards and two identically-named Rooms hol
 the same two Members. Reuse-and-unarchive would have preserved the invariant and
 was the recommendation; this was the repo owner's call, and it is recorded in
 [Known limits](known-limits.md) rather than left to be rediscovered.
+
+## 15. A Teammate chooses its own Avatar — DELIVERED 2026-09-22
+
+> **Delivered**, with
+> [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) as the
+> decision in full, [Language](language.md) defining the word, and
+> [Known limits](known-limits.md) recording the six things it deliberately does not do.
+> Never on this list before it was built, and recorded after the fact for the same
+> reason item 14 was: it **reverses a documented position**. Manual test
+> ROOMMESSAGING-16 asserted *"No avatar, circle or monogram appears anywhere in the
+> transcript"*; the transcript now shows one beside every Message and every Draft.
+>
+> **The interesting decision was where an Avatar must not go.** Frontmatter was the
+> obvious home — beside `adapter:`, through the `WriteScalarField` path that already
+> exists, and it would have let an avatar travel with a copied `.md`. It is wrong
+> because `PersonaSupervisor.NeedsRestart` is whole-record value equality and
+> `Persona.Text` is the entire file: picking a background colour would have stopped a
+> live ACP session and destroyed what that Agent remembered. That is precisely the
+> trade [Rules](rules.md) already refuses for Hooks, in the same words — so an Avatar
+> is app state in `{DataDir}/avatars.json`, and `PersonaStore.Update` can still be
+> called unconditionally on an avatar-only save, because the record compares equal.
+>
+> **Keying the store by Name rather than by Persona paid for two features it was not
+> asked for.** The Human has a Name and no Persona file, so it needed no special case;
+> and `ChatMessage.SenderName` *is* that key, so the transcript needed no path back to
+> a `PersonaEntry` and no lookup map threaded through `MessageList`. A raw pipe client
+> gets an avatar for free as well.
+>
+> Three things the work turned up that no plan foresaw. `MudColorPicker.Value` is
+> non-nullable, so binding it would have given every Teammate a colour nobody chose,
+> just from opening the card — [Traps](traps.md) carries it. `MudColor`'s constructor
+> **throws** on an unparseable string, and a render that throws on Blazor Server takes
+> the circuit with it, so `AvatarStore` validates a hand-edited `background` on read
+> the way `AppearanceStore` validates a `theme`. And `System.Text.Json` escapes astral
+> emoji whatever encoder it is given, which is cosmetic but worth knowing before
+> someone tries to "fix" the file.
+>
+> `PersonaStore` gained a `PersonaRemoved` event, raised from **both** doors
+> `PersonaRenamed` is raised from — the in-app path and the watcher — because a `.md`
+> deleted in an editor is noticed only by the second. The rename call sits **above**
+> `OnPersonaRenamed`'s no-Agent-row early return, which is the subtlest line in the
+> change: that guard fires for every Teammate in a stock installation, where
+> `Acp:Enabled` is false and nothing has ever connected.

@@ -1,5 +1,6 @@
 @implements IDisposable
 @using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Pipes
 @inject ITeamDirectory TeamDirectory
 @inject IAgentGateway Gateway
@@ -7,6 +8,7 @@
 @inject ChatService Chat
 @inject RoomEvents Events
 @inject PersonaStore Personas
+@inject AvatarStore Avatars
 
 <div class="invite-teammate">
     <MudButton Variant="Variant.Text" OnClick="this.TogglePanel">Add teammate</MudButton>
@@ -56,6 +58,7 @@
                             var name = agent.Name;
                             <MudButton Variant="Variant.Text" FullWidth="true" Class="invite-agent" OnClick="@(() => this.InviteAsync(name))">
                                 <StatusDot State="status.State" />
+                                <TeammateAvatar Name="@name" Avatar="this.Avatars.Get(name)" Size="Size.Small" />
                                 @name
                             </MudButton>
                         }

@@ -1,43 +1,55 @@
+@using Agency.Huddle.App.Avatars
 @inject IJSRuntime JS
+@inject AvatarStore Avatars
 
 <div class="message-list" @ref="this.container">
     @foreach (var message in this.Messages)
     {
         <div class="message-row">
-            <div class="message-meta">
-                <span class="message-sender">@message.SenderName</span>
-                <span class="message-time">@message.Timestamp.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.CurrentCulture)</span>
+            <TeammateAvatar Name="@message.SenderName" Avatar="this.Avatars.Get(message.SenderName)" Size="Size.Small" />
+            <div class="message-content">
+                <div class="message-meta">
+                    <span class="message-sender">@message.SenderName</span>
+                    <span class="message-time">@message.Timestamp.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.CurrentCulture)</span>
+                </div>
+                <div class="message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text))</div>
             </div>
-            <div class="message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text))</div>
         </div>
     }
     @foreach (var draft in this.Drafts)
     {
         <div class="message-row streaming">
-            <div class="message-meta">
-                <span class="message-sender">@draft.SenderName</span>
-                <MudTooltip Text="Stop">
-                    <MudIconButton Icon="@Icons.Material.Filled.StopCircle" Size="Size.Small"
-                                   Class="draft-stop" aria-label="Stop"
-                                   Disabled="@this.StoppingAgentIds.Contains(draft.AgentId)"
-                                   OnClick="() => this.OnStop.InvokeAsync(draft)" />
-                </MudTooltip>
+            @* A Draft is the same Teammate mid-sentence, so it gets an avatar too - a gutter that only
+               appeared once the Turn landed would make every streaming reply jump sideways as it
+               completed. Resolved through the same AvatarStore.Get(SenderName) lookup a settled
+               Message uses, since Draft.SenderName is keyed the same way. *@
+            <TeammateAvatar Name="@draft.SenderName" Avatar="this.Avatars.Get(draft.SenderName)" Size="Size.Small" />
+            <div class="message-content">
+                <div class="message-meta">
+                    <span class="message-sender">@draft.SenderName</span>
+                    <MudTooltip Text="Stop">
+                        <MudIconButton Icon="@Icons.Material.Filled.StopCircle" Size="Size.Small"
+                                       Class="draft-stop" aria-label="Stop"
+                                       Disabled="@this.StoppingAgentIds.Contains(draft.AgentId)"
+                                       OnClick="() => this.OnStop.InvokeAsync(draft)" />
+                    </MudTooltip>
+                </div>
+                @* A Draft is rendered as plain text, through Razor's own default @ escaping, never through
+                   MarkdownRenderer - white-space: pre-wrap in app.css does the rest. Two reasons, both in
+                   docs/agencyteam/rules.md's territory even though neither is that rule directly: first, a
+                   half-written triple-backtick fence would render as a plain paragraph and then flip to a
+                   code block the instant it completes, which reads as broken rather than as a reply still
+                   arriving. Second, rules.md's "Never use UseAdvancedExtensions() in the markdown pipeline"
+                   exists because agent text is model output; running *partial* model output through the
+                   markdown path more often than necessary is the wrong direction from that rule, not a
+                   harmless extra step. The text settles into rendered Markdown the moment the real Message
+                   arrives and this row is replaced. *@
+                <div class="message-body streaming">@draft.Text<span class="draft-caret"></span></div>
+                @if (draft.ToolTitle is not null)
+                {
+                    <div class="tool-activity">@draft.ToolTitle</div>
+                }
             </div>
-            @* A Draft is rendered as plain text, through Razor's own default @ escaping, never through
-               MarkdownRenderer - white-space: pre-wrap in app.css does the rest. Two reasons, both in
-               docs/agencyteam/rules.md's territory even though neither is that rule directly: first, a
-               half-written triple-backtick fence would render as a plain paragraph and then flip to a
-               code block the instant it completes, which reads as broken rather than as a reply still
-               arriving. Second, rules.md's "Never use UseAdvancedExtensions() in the markdown pipeline"
-               exists because agent text is model output; running *partial* model output through the
-               markdown path more often than necessary is the wrong direction from that rule, not a
-               harmless extra step. The text settles into rendered Markdown the moment the real Message
-               arrives and this row is replaced. *@
-            <div class="message-body streaming">@draft.Text<span class="draft-caret"></span></div>
-            @if (draft.ToolTitle is not null)
-            {
-                <div class="tool-activity">@draft.ToolTitle</div>
-            }
         </div>
     }
 </div>

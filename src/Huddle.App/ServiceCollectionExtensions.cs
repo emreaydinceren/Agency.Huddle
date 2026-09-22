@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Appearance;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
 using Agency.Huddle.App.Hooks;
@@ -97,6 +98,11 @@ public static class ServiceCollectionExtensions
         // than bound onto TeamOptions - see rules.md's "Collection options need no initialiser."
         services.AddSingleton<AppearanceStore>();
 
+        // No interface, for the same reason as AppearanceStore just above: nothing needs to
+        // substitute this, and a plain registration cannot produce the two-watchers-on-one-path
+        // hazard the aliased registrations elsewhere in this file exist to avoid.
+        services.AddSingleton<AvatarStore>();
+
         // Unconditional too, and for the same reason: the probe spends nothing on its own (it never
         // calls PromptAsync), so registering it costs nothing when Team:Acp:Enabled is off. What
         // keeps it honest is WHEN it runs — the /teammates page only calls it on card-open, never on
@@ -120,7 +126,9 @@ public static class ServiceCollectionExtensions
         // Unconditional, unlike PersonaSupervisor's hosted service above: the Agent row a rename
         // cascades from may exist from an earlier session or a raw pipe client, so a Persona rename
         // must cascade into the Team Directory even when Team:Acp:Enabled is false and no runner is
-        // ever started. A singleton nobody resolves never subscribes to PersonaStore.PersonaRenamed,
+        // ever started - and an Avatar exists whether or not any Agent has ever connected at all, so
+        // its rename/removal cascade needs this running unconditionally too. A singleton nobody
+        // resolves never subscribes to PersonaStore.PersonaRenamed or PersonaStore.PersonaRemoved,
         // so this must be constructed - hence AddHostedService rather than a plain AddSingleton.
         //
         // Registered by type, not by the sp => sp.GetRequiredService<PersonaSupervisor>() factory
