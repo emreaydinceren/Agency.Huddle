@@ -5,7 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 24 Done.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 30 Done.
 
 ## How to update this tracker
 
@@ -54,12 +54,12 @@ Deliverable and Acceptance.
 | 3.3.i Implement `Compose` additions and `WriteListField` | | | ✔ |
 | 3.4.t Regression guard: a Persona refresh never restarts (green on arrival) | | | ✔ |
 | **D4. Skill Index, `SkillGrants`, `read_skill`** | | | |
-| 4.1.t Test: `SkillGrants.Offer` (red) | ✔ | | |
-| 4.1.i Implement `SkillGrants` | ✔ | | |
-| 4.2.t Test: the Skill Index in the system prompt (red) | ✔ | | |
-| 4.2.i Implement `systemPrompt.skills` and the `Compose` overload | ✔ | | |
-| 4.3.t Test: `read_skill` (red) | ✔ | | |
-| 4.3.i Implement `ReadSkillTool` | ✔ | | |
+| 4.1.t Test: `SkillGrants.Offer` (red) | | | ✔ |
+| 4.1.i Implement `SkillGrants` | | | ✔ |
+| 4.2.t Test: the Skill Index in the system prompt (red) | | | ✔ |
+| 4.2.i Implement `systemPrompt.skills` and the `Compose` overload | | | ✔ |
+| 4.3.t Test: `read_skill` (red) | | | ✔ |
+| 4.3.i Implement `ReadSkillTool` | | | ✔ |
 | **D5. Wiring: factory, supervisor, health** | | | |
 | 5.1.t Test: a Persona with a Skill is offered `read_skill` end to end (red) | ✔ | | |
 | 5.1.i Wire `SkillStore` and `SkillGrants` into the factory | ✔ | | |

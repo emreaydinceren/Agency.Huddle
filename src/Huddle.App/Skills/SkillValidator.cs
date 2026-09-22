@@ -1,4 +1,3 @@
-using System.Collections.Frozen;
 using System.Text;
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Acp;
@@ -9,10 +8,6 @@ namespace Agency.Huddle.App.Skills;
 /// Validates one candidate Skill's files against Spec §8.1, reading <c>SKILL.md</c>'s frontmatter
 /// with the existing <see cref="PersonaFrontmatter.Parse"/> rather than a second YAML parser.
 /// </summary>
-/// <remarks>
-/// <see cref="Grantable"/> lives here only until Task 4.1.i moves it to <c>SkillGrants</c> (D4);
-/// nothing else in this type should assume it stays.
-/// </remarks>
 internal static partial class SkillValidator
 {
     /// <summary>The maximum size, in UTF-8 bytes, a Skill file may be before it is dropped with a Warning (Spec §8.1 rule 7).</summary>
@@ -28,10 +23,6 @@ internal static partial class SkillValidator
     private const string NameKey = "name";
     private const string DescriptionKey = "description";
     private const string ToolsKey = "tools";
-
-    /// <summary>Tools that exist only for Personas holding a Skill that lists them (Spec §6.5).</summary>
-    internal static readonly FrozenSet<string> Grantable =
-        FrozenSet.ToFrozenSet(["validate_teammate", "propose_teammates"], StringComparer.Ordinal);
 
     /// <summary>Validates one candidate Skill's files against Spec §8.1 rules 1–7.</summary>
     /// <param name="folderName">The Skill's folder name; a valid <c>name</c> field must equal this, ordinally.</param>
@@ -112,7 +103,7 @@ internal static partial class SkillValidator
         {
             foreach (var tool in rawTools.Split([',', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
-                if (Grantable.Contains(tool))
+                if (SkillGrants.Grantable.Contains(tool))
                 {
                     tools.Add(tool);
                 }

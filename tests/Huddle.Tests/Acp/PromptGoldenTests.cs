@@ -8,7 +8,9 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
 
@@ -77,7 +79,7 @@ public sealed class PromptGoldenTests
         "unfollow_room",
     ];
 
-    /// <summary>Pins <see cref="SystemPromptComposer.Compose"/>'s output for a plain Persona.</summary>
+    /// <summary>Pins <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string})"/>'s output for a plain Persona.</summary>
     [Fact]
     public void SystemPrompt_MatchesGolden()
     {
@@ -89,7 +91,7 @@ public sealed class PromptGoldenTests
     }
 
     /// <summary>
-    /// Pins <see cref="SystemPromptComposer.Compose"/>'s output for an Adapter profile whose
+    /// Pins <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string})"/>'s output for an Adapter profile whose
     /// <see cref="AdapterProfile.UsesToolNamePrefix"/> is <see langword="false"/>: every tool name,
     /// including the help tool, is bare. Spec §4 (P6) requires <see cref="SystemPrompt_MatchesGolden"/>'s
     /// golden to stay byte-identical alongside this one.
@@ -103,6 +105,41 @@ public sealed class PromptGoldenTests
 
         AssertMatchesGolden("systemPrompt.unprefixed.txt", actual);
         Assert.DoesNotContain("mcp__", actual, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Pins <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string)"/>'s Skills overload for a Persona holding one real
+    /// shipped Skill (Spec §6.4). The Skill's description is read from <see cref="SkillCatalog.All"/>
+    /// via <see cref="SkillValidator.Validate"/> rather than pasted in, so this test does not pin
+    /// <c>team-building</c>'s wording — only the seeded golden file does, and only that file needs
+    /// updating if the shipped description ever changes.
+    /// </summary>
+    [Fact]
+    public void SystemPrompt_WithSkills_MatchesGolden()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+        var skill = TeamBuildingSkill();
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [skill], "mcp__team__read_skill");
+
+        AssertMatchesGolden("systemPrompt.skills.txt", actual);
+    }
+
+    /// <summary>
+    /// Pins that <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string)"/>'s Skills overload, called with an empty
+    /// Skill list, produces exactly today's <c>systemPrompt.txt</c> golden (Spec §6.4: the skills block
+    /// is omitted entirely for a Persona with no resolved Skills).
+    /// </summary>
+    [Fact]
+    public void SystemPrompt_NoSkills_UnchangedFromExistingGolden()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], "mcp__team__read_skill");
+
+        AssertMatchesGolden("systemPrompt.txt", actual);
     }
 
     /// <summary>
@@ -193,6 +230,21 @@ public sealed class PromptGoldenTests
         var getHelp = new GetHelpTool(others, new FakePromptSource(), "mcp__team__");
 
         return (getHelp, others);
+    }
+
+    /// <summary>
+    /// Resolves the real shipped <c>team-building</c> Skill's Name, Description and Tools from
+    /// <see cref="SkillCatalog.All"/> through <see cref="SkillValidator.Validate"/> - the same path
+    /// <see cref="SkillStore"/> uses at run time - rather than pasting its description into this test,
+    /// so <c>Golden/systemPrompt.skills.txt</c> is the only place that wording is frozen.
+    /// </summary>
+    /// <returns>The resolved <c>team-building</c> Skill, with no on-disk override.</returns>
+    private static Skill TeamBuildingSkill()
+    {
+        SkillValidation validation = SkillValidator.Validate("team-building", SkillCatalog.All["team-building"]);
+        Assert.NotNull(validation.Description);
+
+        return new Skill("team-building", validation.Description, validation.Tools, validation.Files, SkillSource.Default, null);
     }
 
     /// <summary>

@@ -118,6 +118,24 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
+            Key: "systemPrompt.skills",
+            Label: "Skills block",
+            HelperText:
+                "The closing block naming a Persona's assigned Skills, appended only when it holds at " +
+                "least one. Must keep {{readSkillTool}} and {{skillIndex}}: the first is the only mention " +
+                "of the read_skill tool's name, the second is where the Skill Index itself is substituted in.",
+            Default:
+                """
+                You hold these Skills. Each is know-how for one kind of work. When the conversation
+                calls for one, read it with {{readSkillTool}} before acting, and follow it.
+
+                {{skillIndex}}
+                """,
+            Placeholders: ["{{skillIndex}}", "{{readSkillTool}}"],
+            RequiredPlaceholders: ["{{skillIndex}}", "{{readSkillTool}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
             Key: "turn.roomLabel",
             Label: "Room label",
             HelperText:
@@ -416,6 +434,20 @@ internal static class PromptCatalog
             Default:
                 """
                 Stops being woken by every Message in a Room you are following. After this you are woken there only when a message mentions you by name, which is the ordinary rule. Give the Room's id — the same id you gave to follow_room. Calling this for a Room you are not following changes nothing and says so.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.readSkill.description",
+            Label: "read_skill description",
+            HelperText:
+                "The one-line job description a model reads for the read_skill tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Reads one of your Skills: its main file, or a supporting file it names. Give the Skill's name, and optionally 'file'. Read a Skill before acting on it.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

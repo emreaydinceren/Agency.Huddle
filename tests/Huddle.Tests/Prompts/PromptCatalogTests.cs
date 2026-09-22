@@ -4,16 +4,19 @@ using System.Text.RegularExpressions;
 using Agency.Huddle.App.Prompts;
 
 /// <summary>
-/// Self-consistency checks on <see cref="PromptCatalog"/>: that its 24 entries are well-formed on their
+/// Self-consistency checks on <see cref="PromptCatalog"/>: that its 26 entries are well-formed on their
 /// own terms, independent of any config file or renderer that will later consume them.
 /// </summary>
 public sealed partial class PromptCatalogTests
 {
-    /// <summary>The catalog carries exactly the 24 prompts the task specifies, no more and no fewer.</summary>
+    /// <summary>
+    /// The catalog carries exactly the 26 prompts the task specifies, no more and no fewer: the original
+    /// 24, plus <c>systemPrompt.skills</c> and <c>tool.readSkill.description</c> added for Spec §6.4.
+    /// </summary>
     [Fact]
-    public void All_HasExactlyTwentyFourPrompts()
+    public void All_HasExactlyTwentySixPrompts()
     {
-        Assert.Equal(24, PromptCatalog.All.Count);
+        Assert.Equal(26, PromptCatalog.All.Count);
     }
 
     /// <summary>No two prompts share a <see cref="PromptDefinition.Key"/>.</summary>
