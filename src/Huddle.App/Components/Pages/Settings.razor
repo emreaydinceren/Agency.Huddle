@@ -62,6 +62,9 @@
         <MudTabPanel Text="Appearance">
             <Appearance />
         </MudTabPanel>
+        <MudTabPanel Text="Personas">
+            <Personas />
+        </MudTabPanel>
     </MudTabs>
 </div>
 
@@ -96,7 +99,12 @@
     // MudTabs is driven, never authoritative: its ActivePanelIndex is computed from CurrentTab (the
     // route) on every render, and a change is reported back to SelectTab rather than accepted as
     // MudTabs' own state - see the file-level comment for why.
-    private int ActivePanelIndex => this.CurrentTab == SettingsTab.Appearance ? 1 : 0;
+    private int ActivePanelIndex => this.CurrentTab switch
+    {
+        SettingsTab.Appearance => 1,
+        SettingsTab.Personas => 2,
+        _ => 0,
+    };
 
     // Drives the Save button: nothing to commit means nothing to submit. Recomputed from groups
     // rather than tracked separately, so it can never drift from what PromptsPanel is actually showing.
@@ -126,7 +134,12 @@
 
     private void OnActivePanelIndexChanged(int index)
     {
-        this.SelectTab(index == 1 ? SettingsTab.Appearance : SettingsTab.Prompts);
+        this.SelectTab(index switch
+        {
+            1 => SettingsTab.Appearance,
+            2 => SettingsTab.Personas,
+            _ => SettingsTab.Prompts,
+        });
     }
 
     private void OnFieldValueChanged(PromptEdit edit)

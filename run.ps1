@@ -23,6 +23,13 @@
 .PARAMETER NoBuild
     Skip the build and run whatever is already compiled.
 
+.PARAMETER Clean
+    Delete the previous run's SQLite database (Team:DataDir/team.db, plus its -wal/-shm
+    sidecar files) and every Persona file (Team:DataDir/Team:Acp:TeamsDir, i.e. App_Data/Teams)
+    before building and starting the app. Opt-in and irreversible - there is no prompt, so only
+    pass it when you mean to start from an empty team. Other App_Data content (prompts,
+    appearance, avatars, rooms, logs, per-Persona work directories) is left alone.
+
 .PARAMETER DryRun
     Print what would run, then exit without building or starting anything.
 
@@ -31,6 +38,7 @@
     ./run.ps1 -Port 5200
     ./run.ps1 -NoAcp
     ./run.ps1 -NoBuild
+    ./run.ps1 -Clean
     ./run.ps1 -DryRun
 #>
 [CmdletBinding()]
@@ -38,6 +46,7 @@ param(
     [int]$Port = 5100,
     [switch]$NoAcp,
     [switch]$NoBuild,
+    [switch]$Clean,
     [switch]$DryRun
 )
 
@@ -47,6 +56,16 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $solution = Join-Path $scriptDir 'Huddle.slnx'
 $appProject = Join-Path $scriptDir 'src/Huddle.App'
 $url = "http://localhost:$Port"
+
+# Matches TeamOptions.DataDir's default ("App_Data", resolved relative to src/Huddle.App - see
+# launchSettings.json, which sets no workingDirectory) and AcpOptions.TeamsDir's default
+# ("Teams"), and SqliteTeamDirectory's hardcoded "team.db". Not read from configuration: this
+# script has no config binder, and every appsettings*.json in the repo leaves both defaults
+# unchanged, so hardcoding the same defaults here is exactly as safe as the rest of this script's
+# assumptions about a stock dev setup.
+$dataDir = Join-Path $appProject 'App_Data'
+$teamsDir = Join-Path $dataDir 'Teams'
+$dbPath = Join-Path $dataDir 'team.db'
 
 if (-not (Test-Path $solution)) {
     Write-Host "Huddle.slnx not found at $solution." -ForegroundColor Yellow
@@ -85,6 +104,9 @@ if ($DryRun) {
     if ($NoAcp) {
         Write-Host '   Env   : Team__Acp__Enabled=false (no node process per Persona)' -ForegroundColor Gray
     }
+    if ($Clean) {
+        Write-Host "   Clean : delete $dbPath (+ -wal/-shm) and $teamsDir" -ForegroundColor Gray
+    }
     Write-Host "   Run   : $runCommand" -ForegroundColor Gray
     Write-Host "   URL   : $url" -ForegroundColor Gray
     Write-Host ''
@@ -113,6 +135,29 @@ if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) {
         Write-Host "   Stop it        : Stop-Process -Id $ownerId" -ForegroundColor Gray
         Write-Host "   Or use another : ./run.ps1 -Port $($Port + 1)" -ForegroundColor Gray
         exit 1
+    }
+}
+
+# -- Clean --------------------------------------------------------------------
+
+if ($Clean) {
+    Write-Host ''
+    Write-Host 'Cleaning previous database and Persona files...' -ForegroundColor Cyan
+
+    $dbFiles = @($dbPath, "$dbPath-wal", "$dbPath-shm") | Where-Object { Test-Path $_ }
+    foreach ($dbFile in $dbFiles) {
+        Remove-Item -LiteralPath $dbFile -Force
+        Write-Host "   Deleted $dbFile" -ForegroundColor Gray
+    }
+
+    $teamsDirExisted = Test-Path $teamsDir
+    if ($teamsDirExisted) {
+        Remove-Item -LiteralPath $teamsDir -Recurse -Force
+        Write-Host "   Deleted $teamsDir" -ForegroundColor Gray
+    }
+
+    if (-not $dbFiles -and -not $teamsDirExisted) {
+        Write-Host '   Nothing to delete.' -ForegroundColor Gray
     }
 }
 

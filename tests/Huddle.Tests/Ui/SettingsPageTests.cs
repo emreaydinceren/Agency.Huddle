@@ -291,4 +291,52 @@ public sealed class SettingsPageTests
 
         Assert.Contains("bundled with Visual Studio Code", html, StringComparison.Ordinal);
     }
+
+    /// <summary>The tab rail includes a Personas tab alongside Prompts and Appearance.</summary>
+    [Fact]
+    public async Task SettingsPage_Renders_PersonasTabInTheRail()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = ctx.Render<Settings>();
+
+        Assert.Contains(">Personas<", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The Personas tab tells a user exactly where its Persona files and its room database live -
+    /// matched against the factory's own configured paths rather than a hardcoded guess, since
+    /// <c>Team:DataDir</c> is redirected to a fresh temp directory per factory. A fact about the
+    /// server's configuration, so it stays on HTTP.
+    /// </summary>
+    [Fact]
+    public async Task SettingsPersonasPage_ShowsThePersonaFolderAndDatabasePaths()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/settings/personas", ct);
+
+        Assert.Contains(factory.TeamsDirPath, html, StringComparison.Ordinal);
+        Assert.Contains(factory.DbPath, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>The Personas tab never shows the Prompts intro's file-path paragraph, which talks about <c>prompts.json</c> and would make no sense here.</summary>
+    [Fact]
+    public async Task SettingsPersonasPage_DoesNotRenderThePromptsIntro()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/settings/personas", ct);
+
+        Assert.DoesNotContain(factory.PromptsJsonPath, html, StringComparison.Ordinal);
+    }
 }
