@@ -17,6 +17,8 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="Path">The absolute path this Persona was actually discovered at.</param>
 /// <param name="Text">The Persona's full raw file text (frontmatter and body), cached at discovery time.</param>
 /// <param name="Adapter">See <see cref="PersonaIdentity.Adapter"/>. Carried through unchanged from the parsed identity so <see cref="PersonaStore.Get(string)"/> can join it onto <see cref="Persona.Adapter"/> without re-parsing the file.</param>
+/// <param name="Skills">See <see cref="PersonaIdentity.Skills"/>. Carried through unchanged from the parsed identity, never <see langword="null"/> once populated by <see cref="PersonaIndex.Build"/>.</param>
+/// <param name="Builtin">See <see cref="PersonaIdentity.Builtin"/>. Carried through unchanged from the parsed identity.</param>
 public sealed record PersonaEntry(
     string Name,
     string Title,
@@ -24,4 +26,6 @@ public sealed record PersonaEntry(
     IReadOnlyList<string> Teams,
     string Path,
     string Text,
-    string? Adapter = null);
+    string? Adapter = null,
+    IReadOnlyList<string>? Skills = null,
+    string? Builtin = null);

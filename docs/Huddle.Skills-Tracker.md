@@ -5,7 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 17 Done.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 24 Done.
 
 ## How to update this tracker
 
@@ -46,13 +46,13 @@ Deliverable and Acceptance.
 | 2.6.t Test: `Resolve` (red) | | | ✔ |
 | 2.6.i Implement `Resolve` | | | ✔ |
 | **D3. Persona `skills` and `_builtin`** | | | |
-| 3.1.t Test: `skills` and `_builtin` parse (red) | ✔ | | |
-| 3.1.i Read the two keys | ✔ | | |
-| 3.2.t Test: `skills` never reaches the job description (red) | ✔ | | |
-| 3.2.i Exclude `skills` | ✔ | | |
-| 3.3.t Test: `Compose` writes `skills` and `_builtin`, and `WriteListField` (red) | ✔ | | |
-| 3.3.i Implement `Compose` additions and `WriteListField` | ✔ | | |
-| 3.4.t Regression guard: a Persona refresh never restarts (green on arrival) | ✔ | | |
+| 3.1.t Test: `skills` and `_builtin` parse (red) | | | ✔ |
+| 3.1.i Read the two keys | | | ✔ |
+| 3.2.t Test: `skills` never reaches the job description (red) | | | ✔ |
+| 3.2.i Exclude `skills` | | | ✔ |
+| 3.3.t Test: `Compose` writes `skills` and `_builtin`, and `WriteListField` (red) | | | ✔ |
+| 3.3.i Implement `Compose` additions and `WriteListField` | | | ✔ |
+| 3.4.t Regression guard: a Persona refresh never restarts (green on arrival) | | | ✔ |
 | **D4. Skill Index, `SkillGrants`, `read_skill`** | | | |
 | 4.1.t Test: `SkillGrants.Offer` (red) | ✔ | | |
 | 4.1.i Implement `SkillGrants` | ✔ | | |

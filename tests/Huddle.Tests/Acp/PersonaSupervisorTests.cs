@@ -457,6 +457,61 @@ public sealed class PersonaSupervisorTests
     }
 
     /// <summary>
+    /// Regression guard for Spec §14 D-15: <c>skills</c> lives on <see cref="PersonaEntry"/> and
+    /// <see cref="PersonaIdentity"/>, never on <see cref="Persona"/> itself. Every debounced watcher
+    /// event - even one about a wholly unrelated, malformed file - rebuilds the whole
+    /// <see cref="PersonaIndex"/> from scratch, so "zeta"'s <see cref="PersonaEntry.Skills"/> is a
+    /// brand-new list on every refresh. If <see cref="Persona"/> ever grew a list-typed Skills
+    /// member, <see cref="PersonaSupervisor"/>'s record-equality <c>NeedsRestart</c> check would
+    /// compare that freshly built list against the one captured at start by reference - never
+    /// equal - and restart every Teammate holding any Skill on every single refresh, related or
+    /// not. Deliberately drives the refresh through the real <see cref="FileSystemWatcher"/> and its
+    /// debounce (rather than <see cref="PersonaStore.Add"/>, as the other tests in this class use),
+    /// since that is the actual trigger path this guard is about. The touched file is malformed on
+    /// purpose - missing <c>Name</c> - so it is rejected rather than started, isolating the
+    /// assertion to "zeta" alone: nothing else ever calls into <see cref="FakeAgentHostFactory"/>.
+    /// </summary>
+    [Fact]
+    public async Task OnPersonasChanged_UnrelatedFileEvent_DoesNotRestartPersonaWithSkills()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var teamsDir = Path.Combine(options.Value.DataDir, options.Value.Acp.TeamsDir);
+        Directory.CreateDirectory(teamsDir);
+        File.WriteAllText(Path.Combine(teamsDir, "zeta.md"), SkillsPersonaText("zeta"));
+        var factory = new FakeAgentHostFactory();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+
+        var personasChanged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        personaStore.PersonasChanged += () => personasChanged.TrySetResult();
+
+        // A different Persona file - missing the required "Name" field, so it is rejected rather
+        // than started. Only the debounced watcher event matters here, not a second host.
+        await File.WriteAllTextAsync(
+            Path.Combine(teamsDir, "malformed.md"), "---\nTitle: Malformed\nAlias: mal\n---\nbody", ct);
+
+        using var waitCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await using var registration = waitCts.Token.Register(() => personasChanged.TrySetCanceled());
+        await personasChanged.Task;
+
+        // Bounded grace period past the watcher's own debounce settling, so OnPersonasChanged's
+        // per-name loop (including "zeta") has had time to run before this asserts.
+        await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+        await supervisor.StopAsync(ct);
+
+        Assert.Single(factory.Calls);
+    }
+
+    /// <summary>
     /// Pins Spec §1.3 (O-2) and Spec §7.3 ("Why this gets restart-on-change for free"): two <see cref="Persona"/>
     /// records differing only in <see cref="Persona.Adapter"/> are unequal. <see cref="PersonaSupervisor"/>'s
     /// restart check - <c>private static bool NeedsRestart(Persona persona, Persona? started) =&gt; started is
@@ -809,6 +864,9 @@ public sealed class PersonaSupervisorTests
 
     /// <summary>Minimal valid Persona frontmatter (Name, Title and Alias all <paramref name="name"/>) wrapped around <paramref name="body"/> - identity is front-matter driven from this phase on, so every seeded Persona needs one to be discoverable at all.</summary>
     private static string PersonaText(string name, string body) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}";
+
+    /// <summary><see cref="PersonaText"/>, plus a <c>skills: [team-building]</c> field - for <see cref="OnPersonasChanged_UnrelatedFileEvent_DoesNotRestartPersonaWithSkills"/> alone.</summary>
+    private static string SkillsPersonaText(string name) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\nskills: [team-building]\n---\nYou are a persona.";
 
     /// <summary>A valid <see cref="PersonaIdentity"/> for <paramref name="name"/>, with Title and Alias both <paramref name="name"/> too and no Teams - the structured input <see cref="PersonaStore.Add"/> now takes.</summary>
     private static PersonaIdentity Identity(string name) => new(name, name, name, []);

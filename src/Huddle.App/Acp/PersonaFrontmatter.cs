@@ -32,6 +32,8 @@ internal static class PersonaFrontmatter
     private const string AliasKey = "Alias";
     private const string TeamsKey = "Teams";
     private const string AdapterKey = "Adapter";
+    private const string SkillsKey = "Skills";
+    private const string BuiltinKey = "_builtin";
 
     /// <summary>
     /// Frontmatter keys excluded from <see cref="ComposeJobDescription"/> beyond the <c>_</c>-prefix
@@ -42,12 +44,18 @@ internal static class PersonaFrontmatter
     /// handle. <c>Adapter</c> is excluded too (Spec §7.2, §12 E-6): <c>mcp__team__list_agents</c>
     /// describes a Teammate to other Agents, and which Adapter runs it is not something any Agent
     /// can act on — without this exclusion, every Teammate's job description would gain a line
-    /// reading "Adapter: agency", model-facing text about Huddle's own plumbing.
+    /// reading "Adapter: agency", model-facing text about Huddle's own plumbing. <c>Skills</c> is
+    /// excluded for the same reason (Spec §6.3, §7.2): which Skill files a Teammate loads is
+    /// plumbing about how it reads its own know-how, not something another Agent reading
+    /// <c>list_agents</c> can act on. <c>_builtin</c> needs no entry here at all — it is already
+    /// caught by the generic <c>_</c>-prefix rule above, since every reserved programmatic field
+    /// starts with an underscore.
     /// </summary>
     private static readonly HashSet<string> JobDescriptionExcludedKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         NameKey,
         AdapterKey,
+        SkillsKey,
     };
 
     /// <summary>
@@ -102,7 +110,9 @@ internal static class PersonaFrontmatter
             || !TryGetField(fields, TitleKey, out var rawTitle, out error)
             || !TryGetField(fields, AliasKey, out var rawAlias, out error)
             || !TryGetField(fields, TeamsKey, out var rawTeams, out error)
-            || !TryGetField(fields, AdapterKey, out var rawAdapter, out error))
+            || !TryGetField(fields, AdapterKey, out var rawAdapter, out error)
+            || !TryGetField(fields, SkillsKey, out var rawSkills, out error)
+            || !TryGetField(fields, BuiltinKey, out var rawBuiltin, out error))
         {
             return false;
         }
@@ -127,8 +137,9 @@ internal static class PersonaFrontmatter
         }
 
         var adapter = string.IsNullOrWhiteSpace(rawAdapter) ? null : rawAdapter;
+        var builtin = string.IsNullOrWhiteSpace(rawBuiltin) ? null : rawBuiltin.Trim();
 
-        identity = new PersonaIdentity(name, title, alias, SplitTeams(rawTeams), adapter);
+        identity = new PersonaIdentity(name, title, alias, SplitList(rawTeams), adapter, SplitList(rawSkills), builtin);
         error = string.Empty;
         return true;
     }
@@ -141,16 +152,17 @@ internal static class PersonaFrontmatter
     /// rather than composing frontmatter of its own that could drift from what this parser accepts.
     /// Every scalar is single-quoted, with YAML's own escape for an embedded apostrophe (<c>''</c>)
     /// applied, and every key is lowercase - the style real Persona files already use.
-    /// <see cref="PersonaIdentity.Teams"/> becomes a bracketed flow list, and the whole
-    /// <c>teams:</c> line is omitted when it is empty: <see cref="PersonaIdentity.Teams"/> is
-    /// optional, and an empty field is not how a person would write "no Teams" by hand. Emitted
-    /// key order is stable - <c>name</c>, <c>title</c>, <c>alias</c>, <c>teams</c>, <c>adapter</c> -
+    /// <see cref="PersonaIdentity.Teams"/> and <see cref="PersonaIdentity.Skills"/> both become a
+    /// bracketed flow list, and each whole line is omitted when its field is empty: neither is
+    /// how a person would write "none" by hand. Emitted key order is stable - <c>name</c>,
+    /// <c>title</c>, <c>alias</c>, <c>teams</c>, <c>adapter</c>, <c>skills</c>, <c>_builtin</c> -
     /// because <c>PromptGoldenTests</c> and any file round-trip depend on it. The <c>adapter:</c>
     /// line is written only when <see cref="PersonaIdentity.Adapter"/> is non-null (Spec §7.2,
     /// §12 E-5): without this, a value written at Create time would be silently destroyed, since
-    /// this method previously emitted only the four identity keys.
+    /// this method previously emitted only the four identity keys. <c>_builtin:</c> is written last
+    /// and only when <see cref="PersonaIdentity.Builtin"/> is non-null (Spec §6.3).
     /// </summary>
-    /// <param name="identity">The Persona's Name, Title, Alias, Teams and Adapter to write as frontmatter.</param>
+    /// <param name="identity">The Persona's Name, Title, Alias, Teams, Adapter, Skills and Builtin to write as frontmatter.</param>
     /// <param name="body">The Persona's system-prompt body, written back unchanged after the frontmatter.</param>
     internal static string Compose(PersonaIdentity identity, string body)
     {
@@ -173,6 +185,16 @@ internal static class PersonaFrontmatter
         if (identity.Adapter is not null)
         {
             lines.Add($"adapter: {QuoteScalar(identity.Adapter)}");
+        }
+
+        if (identity.Skills is { Count: > 0 })
+        {
+            lines.Add($"skills: [{string.Join(", ", identity.Skills.Select(QuoteScalar))}]");
+        }
+
+        if (identity.Builtin is not null)
+        {
+            lines.Add($"_builtin: {QuoteScalar(identity.Builtin)}");
         }
 
         lines.Add(FrontmatterDelimiter);
@@ -282,6 +304,121 @@ internal static class PersonaFrontmatter
         // block is empty) so the file's line-ending style carries over to the new line too.
         var insertedTerminator = closeIndex > 1 ? lines[closeIndex - 1].Terminator : lines[0].Terminator;
         lines.Insert(closeIndex, ($"{key}: {QuoteScalar(value)}", insertedTerminator));
+        return Join(lines);
+    }
+
+    /// <summary>
+    /// Rewrites one top-level list field's values inside <paramref name="personaText"/>'s leading
+    /// YAML frontmatter block as a single bracketed flow-list line, leaving every other
+    /// frontmatter line - and the whole body after the closing delimiter - byte-identical,
+    /// including the original line-ending style. Modelled on <see cref="WriteScalarField"/>, but
+    /// for a list-shaped field (<c>skills</c> is the one caller, Spec §6.7): whichever syntax the
+    /// existing value used - a flow list or a block list, item lines included - is replaced
+    /// wholesale by one flow-list line, so no stray block-list item is ever left dangling below
+    /// the new value.
+    /// </summary>
+    /// <param name="personaText">The Persona's raw file text.</param>
+    /// <param name="key">
+    /// The field's key. Matched against each top-level line case-insensitively, the same way
+    /// <see cref="TryGetField"/> compares a parsed field's key, so <c>skills:</c> and <c>Skills:</c>
+    /// both hit. When absent from an otherwise valid frontmatter block, a new <c>key: [...]</c>
+    /// line is inserted immediately before the closing delimiter.
+    /// </param>
+    /// <param name="values">
+    /// The field's new values, each written through <see cref="QuoteScalar"/>. An empty list
+    /// removes the key's line (and any block-list items under it) entirely, rather than writing an
+    /// empty <c>key: []</c> - the same "no field" convention <see cref="Compose"/> uses for an
+    /// empty <see cref="PersonaIdentity.Teams"/> or <see cref="PersonaIdentity.Skills"/>.
+    /// </param>
+    /// <returns>
+    /// <paramref name="personaText"/> with the field's line(s) rewritten, inserted, or removed; or
+    /// <paramref name="personaText"/> itself, unchanged, when there is no frontmatter block, or
+    /// when the key is both absent and <paramref name="values"/> is empty.
+    /// </returns>
+    internal static string WriteListField(string personaText, string key, IReadOnlyList<string> values)
+    {
+        ArgumentNullException.ThrowIfNull(personaText);
+        ArgumentException.ThrowIfNullOrWhiteSpace(key);
+        ArgumentNullException.ThrowIfNull(values);
+
+        var lines = SplitKeepingLineEndings(personaText);
+
+        if (lines.Count < 2 || lines[0].Text.Trim() != FrontmatterDelimiter)
+        {
+            return personaText;
+        }
+
+        var closeIndex = -1;
+        for (var i = 1; i < lines.Count; i++)
+        {
+            if (lines[i].Text.Trim() == FrontmatterDelimiter)
+            {
+                closeIndex = i;
+                break;
+            }
+        }
+
+        if (closeIndex < 0)
+        {
+            return personaText;
+        }
+
+        for (var i = 1; i < closeIndex; i++)
+        {
+            var rawLine = lines[i].Text;
+
+            // A top-level key is always at column 0; an indented line belongs to whichever key
+            // preceded it (a block-list item here), never a new key.
+            if (rawLine.Length == 0 || rawLine[0] is ' ' or '\t')
+            {
+                continue;
+            }
+
+            var colonIndex = rawLine.IndexOf(':', StringComparison.Ordinal);
+            if (colonIndex < 0)
+            {
+                continue;
+            }
+
+            var lineKey = rawLine[..colonIndex].Trim();
+            if (!string.Equals(lineKey, key, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var existingValue = rawLine[(colonIndex + 1)..].Trim();
+            var terminator = lines[i].Terminator;
+
+            // A blank value after the colon may be a block-list header: consume its item lines too,
+            // so replacing or removing the field never leaves a stray "- item" line behind.
+            var removeEnd = i + 1;
+            if (existingValue.Length == 0)
+            {
+                while (removeEnd < closeIndex
+                    && lines[removeEnd].Text.TrimStart().StartsWith("- ", StringComparison.Ordinal))
+                {
+                    removeEnd++;
+                }
+            }
+
+            lines.RemoveRange(i, removeEnd - i);
+
+            if (values.Count > 0)
+            {
+                lines.Insert(i, ($"{rawLine[..colonIndex]}: [{string.Join(", ", values.Select(QuoteScalar))}]", terminator));
+            }
+
+            return Join(lines);
+        }
+
+        // The key is absent. An empty list needs no line at all - the same convention Compose uses.
+        if (values.Count == 0)
+        {
+            return personaText;
+        }
+
+        var insertedTerminator = closeIndex > 1 ? lines[closeIndex - 1].Terminator : lines[0].Terminator;
+        lines.Insert(closeIndex, ($"{key}: [{string.Join(", ", values.Select(QuoteScalar))}]", insertedTerminator));
         return Join(lines);
     }
 
@@ -422,37 +559,37 @@ internal static class PersonaFrontmatter
     }
 
     /// <summary>
-    /// Splits an already-parsed <c>Teams</c> value into individual team names. <see cref="Parse"/>
-    /// hands this exactly one line, in one of three shapes: a comma-separated plain scalar (for
-    /// example <c>Business, Household</c>), or a bracketed flow list or a block list, both of which
-    /// <see cref="Parse"/> has already joined with <c>"; "</c> — so splitting on both <c>,</c> and
-    /// <c>;</c> here covers every shape uniformly, and only for this one field: the generic
-    /// <see cref="Parse"/> above never guesses a list from comma content, on purpose. Each item is
-    /// trimmed and empty items are dropped; a name repeated later, compared case-insensitively, is
-    /// collapsed into its first occurrence, so the list carries no duplicates, but order among the
-    /// surviving items is otherwise preserved. Returns an empty list, never <see langword="null"/>,
-    /// for a missing or blank field.
+    /// Splits an already-parsed list-shaped value (<c>Teams</c> or <c>skills</c>) into individual
+    /// items. <see cref="Parse"/> hands this exactly one line, in one of three shapes: a
+    /// comma-separated plain scalar (for example <c>Business, Household</c>), or a bracketed flow
+    /// list or a block list, both of which <see cref="Parse"/> has already joined with <c>"; "</c> —
+    /// so splitting on both <c>,</c> and <c>;</c> here covers every shape uniformly, and only for
+    /// these two fields: the generic <see cref="Parse"/> above never guesses a list from comma
+    /// content, on purpose. Each item is trimmed and empty items are dropped; an item repeated
+    /// later, compared case-insensitively, is collapsed into its first occurrence, so the list
+    /// carries no duplicates, but order among the surviving items is otherwise preserved. Returns an
+    /// empty list, never <see langword="null"/>, for a missing or blank field.
     /// </summary>
-    private static List<string> SplitTeams(string? rawTeams)
+    private static List<string> SplitList(string? rawValue)
     {
-        if (string.IsNullOrWhiteSpace(rawTeams))
+        if (string.IsNullOrWhiteSpace(rawValue))
         {
             return [];
         }
 
-        var teams = new List<string>();
+        var items = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var rawTeam in rawTeams.Split([',', ';']))
+        foreach (var rawItem in rawValue.Split([',', ';']))
         {
-            var team = rawTeam.Trim();
-            if (team.Length > 0 && seen.Add(team))
+            var item = rawItem.Trim();
+            if (item.Length > 0 && seen.Add(item))
             {
-                teams.Add(team);
+                items.Add(item);
             }
         }
 
-        return teams;
+        return items;
     }
 
     /// <summary>
