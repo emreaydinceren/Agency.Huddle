@@ -72,9 +72,11 @@ Teammate already covers it.
 
 ## 3. Choose how the team works
 
-Read `team-patterns.md` and pick one pattern. Start from a **panel** unless the
-Human wants to hand work off and come back to a result. A pipeline costs more
-and fails more quietly.
+Read `team-patterns.md`. First check its "Why a team rather than one agent"
+table: if no row applies, propose a single Teammate and say why one is enough.
+Otherwise pick one pattern. Start from a **panel** unless the Human wants to
+hand work off and come back to a result. A pipeline costs more and fails more
+quietly.
 
 Prefer being asked to following. A Teammate that follows a Room takes a paid
 Turn on every Message there, including Messages between other Teammates. Only a

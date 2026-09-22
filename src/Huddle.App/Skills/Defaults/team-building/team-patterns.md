@@ -1,7 +1,39 @@
 # Team patterns
 
 Five ways a team can work together in Huddle, from cheapest and most
-predictable to most expensive and least predictable. Pick one per team.
+predictable to most expensive and least predictable. Pick one per team, but
+first check that the Human needs a team at all.
+
+## Why a team rather than one agent
+
+One capable agent can play many parts, so a team has to earn its cost. It does
+when the job needs something one agent cannot give itself:
+
+| A team gives | Because | For example |
+| --- | --- | --- |
+| **A critic who is not the author** | Each Teammate has its own instructions. A Reviewer whose whole job is finding problems does not go easy on work it wrote itself, because it did not write it. | Design review, Writing room |
+| **Views that stay apart** | Each panellist answers from its own stance, and the Human compares them side by side instead of reading one answer that has already blended them. | Decision council, Pre-mortem |
+| **Secrets** | Each Teammate knows only its own instructions. A Counterparty's walk-away point or a suspect's alibi stays hidden from the Human and from the other characters, which one agent playing every part cannot do. | Negotiation practice, Murder mystery |
+| **A second model's blind spots, not the same ones** | Each Teammate can run on a different Model, so a second opinion does not share the first one's habits. | Second opinion |
+| **Focus** | Each specialist sees only its own step, so long work does not crowd one conversation, and each step can use a Model that suits it: a cheap one for testing, a strong one for design. | Research desk, Software squad |
+| **Standing specialists** | Each companion keeps its own conversation and its own tone, so the Human's Tutor never turns into their Planner. | Personal staff, Learning cohort |
+
+If the Human asks why they should use a team, answer from this table in two or
+three sentences, with the example closest to what they want.
+
+## When one Teammate is enough
+
+Propose a single Teammate, or reuse one, when none of the rows above applies:
+
+- The Human wants one answer, not several views on it.
+- The task is short and one-off, and nobody needs to check it.
+- There is nothing to hide and nobody to play.
+
+A team costs more than one agent in two ways: every Teammate is a running
+process, and in a group every exchange between Teammates is a paid Turn. Saying
+"one Teammate will do this" is part of building a team well.
+
+## How Rooms shape a team
 
 How a Room behaves decides how the team works:
 
@@ -42,6 +74,8 @@ answers from. Nobody coordinates; the Human does.
     they disagree.
   - Pre-mortem: "It is a year from now and this failed. Why?" Each panellist
     owns one way it could fail, such as the market, the execution or the money.
+  - Board of advisors: a CFO, a customer advocate, and a competitor who argues
+    against the Human's plan.
   - Second opinion: the same role twice, such as two Reviewers, on two different
     Models. Where they disagree is where the Human should look. The Human sets
     each Model on the Teammate card after approval.
@@ -68,6 +102,8 @@ together. This is closer to a set of specialised assistants than to a team.
   - Learning cohort: Tutor, Quizmaster and Study Buddy, each in its own Room.
     Keeping the Quizmaster apart means it does not know what the Tutor hinted,
     and the Study Buddy's mistakes give the Human something to correct.
+  - Household staff: Meal Planner, Budget Keeper and Trip Planner, each adapted
+    from the Planner role.
 
 ## Simulation
 
@@ -100,6 +136,14 @@ Teammates play characters in a scenario, and the Human takes part.
     the player.
   - Customer focus group: three customers with different needs and budgets
     react to a pitch.
+  - Pitch rehearsal: a skeptical investor as the Counterparty, plus a Coach in a
+    private Room for a debrief after each run.
+  - Beta readers: three readers with different tastes react to the same
+    chapter, each adapted from the Target Reader role.
+  - Debate club: two debaters on assigned sides and a Judge who scores each
+    round. The Human argues one side, or judges.
+  - Murder mystery: a Game Master plus three suspects, each knowing only its own
+    alibi and secret. The Human questions them and names the culprit.
 
 ## Pipeline
 
@@ -130,6 +174,9 @@ sees the final result, and can watch the work Room if they want.
     Tester and Reviewer.
   - Content studio: Planner, Writer, Editor, and a Style Checker that holds the
     Human's style guide.
+  - Pull request pre-flight: a Reviewer, then a Tester on a cheaper Model, then a
+    Writer for the pull request description. The Human pastes the diff into the
+    seed.
 
 ## Self-organising
 

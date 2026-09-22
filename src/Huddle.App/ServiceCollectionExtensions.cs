@@ -8,6 +8,7 @@ using Agency.Huddle.App.Demo;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Skills;
 
 namespace Agency.Huddle.App;
 
@@ -91,6 +92,11 @@ public static class ServiceCollectionExtensions
         // already document for the closely related PersonaSupervisor case.
         services.AddSingleton<PromptStore>();
         services.AddSingleton<IPromptSource>(sp => sp.GetRequiredService<PromptStore>());
+
+        // Same reasoning as PromptStore above: a singleton, so the app never has two independently
+        // constructed stores each creating {DataDir}/Skills and (once a later task adds one) each
+        // running their own FileSystemWatcher over it.
+        services.AddSingleton<SkillStore>();
 
         // No interface: nothing needs to substitute this, and CSharpPrinciples.md says not to add
         // abstraction a feature has not asked for. This is state the app writes (a chosen theme, a

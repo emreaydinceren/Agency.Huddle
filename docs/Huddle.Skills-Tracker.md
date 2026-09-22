@@ -5,7 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 5 Done.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 17 Done.
 
 ## How to update this tracker
 
@@ -33,18 +33,18 @@ Deliverable and Acceptance.
 | 1.2.i Implement `SkillValidator` and the Skill records | | | ✔ |
 | 1.3.t Test: every shipped Skill is valid (red → green in one step) | | | ✔ |
 | **D2. `SkillStore`: resolution, overrides, watching** | | | |
-| 2.1.t Test: an empty data directory yields the defaults (red) | ✔ | | |
-| 2.1.i Implement `SkillStore` construction and snapshot | ✔ | | |
-| 2.2.t Test: per-file overrides and Source classification (red) | ✔ | | |
-| 2.2.i Implement the overlay and fallback | ✔ | | |
-| 2.3.t Test: `ReadFile` cannot escape the Skill (red) | ✔ | | |
-| 2.3.i Implement `ReadFile` by lookup only | ✔ | | |
-| 2.4.t Test: watching and `SkillsChanged` (red) | ✔ | | |
-| 2.4.i Implement the watcher | ✔ | | |
-| 2.5.t Test: Restore default (red) | ✔ | | |
-| 2.5.i Implement `RestoreDefault` | ✔ | | |
-| 2.6.t Test: `Resolve` (red) | ✔ | | |
-| 2.6.i Implement `Resolve` | ✔ | | |
+| 2.1.t Test: an empty data directory yields the defaults (red) | | | ✔ |
+| 2.1.i Implement `SkillStore` construction and snapshot | | | ✔ |
+| 2.2.t Test: per-file overrides and Source classification (red) | | | ✔ |
+| 2.2.i Implement the overlay and fallback | | | ✔ |
+| 2.3.t Test: `ReadFile` cannot escape the Skill (red) | | | ✔ |
+| 2.3.i Implement `ReadFile` by lookup only | | | ✔ |
+| 2.4.t Test: watching and `SkillsChanged` (red) | | | ✔ |
+| 2.4.i Implement the watcher | | | ✔ |
+| 2.5.t Test: Restore default (red) | | | ✔ |
+| 2.5.i Implement `RestoreDefault` | | | ✔ |
+| 2.6.t Test: `Resolve` (red) | | | ✔ |
+| 2.6.i Implement `Resolve` | | | ✔ |
 | **D3. Persona `skills` and `_builtin`** | | | |
 | 3.1.t Test: `skills` and `_builtin` parse (red) | ✔ | | |
 | 3.1.i Read the two keys | ✔ | | |

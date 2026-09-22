@@ -36,6 +36,13 @@ public sealed class AcpOptions
     /// </summary>
     public string TeamsDir { get; set; } = "Teams";
 
+    /// <summary>
+    /// The Skill Library directory, relative to <see cref="TeamOptions.DataDir"/>, that
+    /// <see cref="Agency.Huddle.App.Skills.SkillStore"/> scans for Skill folders (Spec §7.3).
+    /// Created at startup if missing.
+    /// </summary>
+    public string SkillsDir { get; set; } = "Skills";
+
     // The per-Persona working directory handed to the agent process as its cwd. Not a jail:
     // agent-side Bash and Write run against the real disk.
     public string WorkDir { get; set; } = "work";
