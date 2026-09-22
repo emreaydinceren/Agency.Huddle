@@ -103,7 +103,7 @@ the per-area tables below.
 | [Teammate card: view, edit, create, delete](teammate-card.md) | 50 | 1 | [below](#teammate-card) |
 | [Model and Effort pickers, catalog probe and runner restart](model-effort.md) | 27 | 1 | [below](#model-effort) |
 | [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 32 | 4 | [below](#invite-rooms) |
-| [Settings: the 24 Hooks, editing, per-field reset and Save](hooks-settings.md) | 40 | 3 | [below](#hooks-settings) |
+| [Settings: the 24 Prompts, editing, per-field reset and Save](prompts-settings.md) | 40 | 3 | [below](#prompts-settings) |
 | [Appearance tab, Themes, Tokens and overrides](appearance-theme.md) | 25 | — | [below](#appearance-theme) |
 | [The named pipe: external agents and the wire](pipe-external.md) | 36 | — | [below](#pipe-external) |
 | [App Tools a real model calls (progressive discovery)](app-tools.md) | 26 | 20 | [below](#app-tools) |
@@ -127,9 +127,9 @@ Application shell, navigation and layout — [area file](shell-nav.md)
 | [SHELLNAV-08](shell-nav.md#shellnav-08-the-drawer-is-present-identical-and-fixed-width-on-every-route) |  | Active | |  |
 | [SHELLNAV-09](shell-nav.md#shellnav-09-the-sidebar-marks-exactly-one-room-active-with-aria-current) |  | Active | |  |
 | [SHELLNAV-10](shell-nav.md#shellnav-10-teammates-renders-and-a-bare-page-load-spawns-no-node-process) |  | Active | |  |
-| [SHELLNAV-11](shell-nav.md#shellnav-11-settings-renders-the-two-button-tab-rail-and-defaults-to-hooks) |  | Active | |  |
+| [SHELLNAV-11](shell-nav.md#shellnav-11-settings-renders-the-two-button-tab-rail-and-defaults-to-prompts) |  | Active | |  |
 | [SHELLNAV-12](shell-nav.md#shellnav-12-clicking-a-settings-tab-changes-the-url-and-the-url-round-trips-as-a-bookmark) |  | Active | |  |
-| [SHELLNAV-13](shell-nav.md#shellnav-13-an-unrecognised-or-miscased-tab-segment-silently-falls-back-to-hooks) |  | Active | |  |
+| [SHELLNAV-13](shell-nav.md#shellnav-13-an-unrecognised-or-miscased-tab-segment-silently-falls-back-to-prompts) |  | Active | |  |
 | [SHELLNAV-14](shell-nav.md#shellnav-14-no-route-sets-a-browser-tab-title) |  | Active | |  |
 | [SHELLNAV-15](shell-nav.md#shellnav-15-focus-moves-to-the-pages-h1-after-every-navigation) |  | Active | |  |
 | [SHELLNAV-16](shell-nav.md#shellnav-16-sidebar-links-use-enhanced-navigation-not-a-full-page-reload) |  | Active | |  |
@@ -162,7 +162,7 @@ Startup, configuration and first-run state — [area file](startup-config.md)
 | [STARTUPCONFIG-06](startup-config.md#startupconfig-06-every-navigation-surface-is-reachable-from-a-cold-start) |  | Active | | |
 | [STARTUPCONFIG-07](startup-config.md#startupconfig-07-start-chat-on-one-known-agent-reuses-its-room-two-agents-create-one-new-named-room) |  | Active | | |
 | [STARTUPCONFIG-08](startup-config.md#startupconfig-08-teammates-lists-personas-only-demo-agents-and-pipe-clients-never-appear-there) |  | Active | | |
-| [STARTUPCONFIG-09](startup-config.md#startupconfig-09-settings-hooks-tab-on-a-first-run-says-hooksjson-is-absent-and-offers-nothing-to-save-or-reset) |  | Active | | |
+| [STARTUPCONFIG-09](startup-config.md#startupconfig-09-settings-prompts-tab-on-a-first-run-says-promptsjson-is-absent-and-offers-nothing-to-save-or-reset) |  | Active | | |
 | [STARTUPCONFIG-10](startup-config.md#startupconfig-10-appearance-tab-on-a-first-run-reads-system-picking-dark-writes-appearancejson-and-reloads-the-page) |  | Active | | |
 | [STARTUPCONFIG-11](startup-config.md#startupconfig-11-rooms-and-transcripts-survive-a-restart-drafts-and-the-budget-do-not) |  | Active | | |
 | [STARTUPCONFIG-12](startup-config.md#startupconfig-12-deleting-app_data-while-running-fails-stopping-first-makes-the-clean-slate-reliable) |  | Active | | |
@@ -287,7 +287,7 @@ Reply Gate, Mentions and Room Budget — [area file](reply-gate-budget.md)
 | [REPLYGATEBUDGET-14](reply-gate-budget.md#replygatebudget-14-the-budget-is-per-room-a-paused-room-does-not-starve-the-one-beside-it) |  | Active | | |
 | [REPLYGATEBUDGET-15](reply-gate-budget.md#replygatebudget-15-a-restart-un-pauses-every-room-over-a-transcript-that-already-spent-its-budget) |  | Active | | |
 | [REPLYGATEBUDGET-16](reply-gate-budget.md#replygatebudget-16-a-budget-of-zero-removes-the-cap-entirely) |  | Active | | |
-| [REPLYGATEBUDGET-17](reply-gate-budget.md#replygatebudget-17-the-model-facing-wording-of-this-area-is-readable-and-editable-at-settingshooks) |  | Active | | |
+| [REPLYGATEBUDGET-17](reply-gate-budget.md#replygatebudget-17-the-model-facing-wording-of-this-area-is-readable-and-editable-at-settingsprompts) |  | Active | | |
 | [REPLYGATEBUDGET-18](reply-gate-budget.md#replygatebudget-18-the-server-labels-a-delivery-correctly-even-when-the-client-chooses-to-stay-silent) |  | Active | | |
 | [REPLYGATEBUDGET-19](reply-gate-budget.md#replygatebudget-19-the-longest-handle-wins-emily-lee-reaches-emily-lee-never-emily) |  | Active | | |
 | [REPLYGATEBUDGET-20](reply-gate-budget.md#replygatebudget-20-a-mention-falls-back-to-the-shorter-name-when-the-longer-one-is-not-in-this-room) |  | Active | | |
@@ -494,52 +494,52 @@ Creating Rooms, inviting Agents, Room naming — [area file](invite-rooms.md)
 | [INVITEROOMS-38](invite-rooms.md#inviterooms-38-an-archived-two-member-room-is-not-reused-starting-a-chat-with-that-teammate-mints-a-second-one) |  | Active | | |
 | [INVITEROOMS-39](invite-rooms.md#inviterooms-39-archived-and-deleted-rooms-survive-a-restart) |  | Active | | |
 
-## hooks-settings
+## prompts-settings
 
-Settings: the 24 Hooks, editing, per-field reset and Save — [area file](hooks-settings.md)
+Settings: the 24 Prompts, editing, per-field reset and Save — [area file](prompts-settings.md)
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [HOOKSSETTINGS-01](hooks-settings.md#hookssettings-01-settings-opens-on-the-hooks-tab-with-a-two-button-tab-rail) |  | Active | |  |
-| [HOOKSSETTINGS-02](hooks-settings.md#hookssettings-02-tab-clicks-change-the-url-and-an-unknown-tab-segment-falls-back-to-hooks-instead-of-404ing) |  | Active | |  |
-| [HOOKSSETTINGS-03](hooks-settings.md#hookssettings-03-the-hooks-tab-prints-the-real-absolute-path-of-hooksjson-and-says-the-files-absence-is-expected) |  | Active | |  |
-| [HOOKSSETTINGS-04](hooks-settings.md#hookssettings-04-exactly-24-hook-fields-in-four-named-groups-in-a-fixed-order) |  | Active | |  |
-| [HOOKSSETTINGS-05](hooks-settings.md#hookssettings-05-the-next-session-badge-appears-on-exactly-the-11-hooks-whose-edits-cannot-reach-a-running-teammate) |  | Active | |  |
-| [HOOKSSETTINGS-06](hooks-settings.md#hookssettings-06-placeholder-chips-are-listed-on-exactly-the-8-hooks-that-take-placeholders-with-full-braces) |  | Active | |  |
-| [HOOKSSETTINGS-07](hooks-settings.md#hookssettings-07-no-hooks-default-text-contains-the-literal-string-mcp__team__) |  | Active | |  |
-| [HOOKSSETTINGS-08](hooks-settings.md#hookssettings-08-textarea-height-tracks-the-line-count-and-clamps-at-14-rows) |  | Active | |  |
-| [HOOKSSETTINGS-09](hooks-settings.md#hookssettings-09-typing-raises-modified-and-unsaved-together-and-enables-save-reset-and-reset-all-while-writing-nothing) |  | Active | |  |
-| [HOOKSSETTINGS-10](hooks-settings.md#hookssettings-10-modified-and-unsaved-are-independent-flags-walk-all-three-combinations) |  | Active | |  |
-| [HOOKSSETTINGS-11](hooks-settings.md#hookssettings-11-per-field-reset-stages-the-shipped-default-without-writing-anything-to-disk) |  | Active | |  |
-| [HOOKSSETTINGS-12](hooks-settings.md#hookssettings-12-hooksjson-does-not-exist-until-the-first-save-and-then-holds-only-the-keys-you-changed) |  | Active | |  |
-| [HOOKSSETTINGS-13](hooks-settings.md#hookssettings-13-the-saved-file-is-human-readable-indented-with-literal-em-dashes-and-angle-brackets-not-uxxxx-escapes) |  | Active | |  |
-| [HOOKSSETTINGS-14](hooks-settings.md#hookssettings-14-saving-a-field-back-to-its-default-removes-the-key-rather-than-storing-a-redundant-copy) |  | Active | |  |
-| [HOOKSSETTINGS-15](hooks-settings.md#hookssettings-15-save-is-the-only-writer-and-a-successful-save-gives-no-confirmation) |  | Active | |  |
-| [HOOKSSETTINGS-16](hooks-settings.md#hookssettings-16-reset-all-to-defaults-is-disabled-until-something-is-modified-and-guards-itself-with-an-inline-confirm) |  | Active | |  |
-| [HOOKSSETTINGS-17](hooks-settings.md#hookssettings-17-yes-reset-everything-stages-all-24-defaults-but-writes-nothing-and-the-reset-is-silently-lost-if-you-navigate-away) |  | Active | |  |
-| [HOOKSSETTINGS-18](hooks-settings.md#hookssettings-18-reset-all-followed-by-save-leaves-hooksjson-present-and-empty-never-deleted) |  | Active | |  |
-| [HOOKSSETTINGS-19](hooks-settings.md#hookssettings-19-a-failed-save-shows-a-red-could-not-save-line-under-the-heading-and-keeps-every-pending-edit) |  | Active | |  |
-| [HOOKSSETTINGS-20](hooks-settings.md#hookssettings-20-validation-reports-and-never-refuses-an-empty-field-raises-an-error-and-still-saves) |  | Active | |  |
-| [HOOKSSETTINGS-21](hooks-settings.md#hookssettings-21-removing-a-required-placeholder-raises-an-error-naming-that-placeholder-and-an-optional-one-does-not) |  | Active | |  |
-| [HOOKSSETTINGS-22](hooks-settings.md#hookssettings-22-an-unrecognised-token-raises-a-warning-a-malformed-one-raises-nothing-at-all) |  | Active | |  |
-| [HOOKSSETTINGS-23](hooks-settings.md#hookssettings-23-validation-runs-live-against-the-pending-value-and-clears-without-saving) |  | Active | |  |
-| [HOOKSSETTINGS-24](hooks-settings.md#hookssettings-24-hook-text-is-rendered-as-text-never-as-markup) |  | Active | |  |
-| [HOOKSSETTINGS-25](hooks-settings.md#hookssettings-25-typing-in-a-long-hook-field-stays-responsive-and-loses-no-characters) |  | Active | |  |
-| [HOOKSSETTINGS-26](hooks-settings.md#hookssettings-26-uncommitted-edits-survive-a-tab-switch-and-a-theme-change-but-are-silently-discarded-by-reload-or-leaving-the-page) |  | Active | |  |
-| [HOOKSSETTINGS-27](hooks-settings.md#hookssettings-27-reset-all-to-defaults-is-also-rendered-on-the-appearance-tab-where-it-acts-on-hooks) |  | Active | |  |
-| [HOOKSSETTINGS-28](hooks-settings.md#hookssettings-28-a-save-in-one-browser-tab-repaints-settings-open-in-another-without-eating-that-tabs-typing) |  | Active | |  |
-| [HOOKSSETTINGS-29](hooks-settings.md#hookssettings-29-a-hand-edit-to-hooksjson-reaches-the-open-page-within-about-a-second-with-no-restart-and-no-refresh) |  | Active | |  |
-| [HOOKSSETTINGS-30](hooks-settings.md#hookssettings-30-deleting-hooksjson-while-the-app-runs-reverts-every-field-to-its-shipped-default-live) |  | Active | |  |
-| [HOOKSSETTINGS-31](hooks-settings.md#hookssettings-31-silent-a-malformed-hooksjson-edited-while-running-changes-nothing-on-screen-and-says-nothing-check-the-log) |  | Active | |  |
-| [HOOKSSETTINGS-32](hooks-settings.md#hookssettings-32-silent-a-malformed-hooksjson-at-startup-falls-back-to-defaults-wholesale-with-no-ui-clue-and-the-file-left-intact) |  | Active | |  |
-| [HOOKSSETTINGS-33](hooks-settings.md#hookssettings-33-an-unknown-key-in-hooksjson-is-kept-forever-ignored-for-resolution-and-logged-once) |  | Active | |  |
-| [HOOKSSETTINGS-34](hooks-settings.md#hookssettings-34-a-pending-browser-edit-beats-a-concurrent-hand-edit-to-the-same-key-and-save-merges-rather-than-overwrites) |  | Active | |  |
-| [HOOKSSETTINGS-35](hooks-settings.md#hookssettings-35-a-crlf-hand-edit-makes-a-field-show-modified-while-looking-identical-and-reset-fixes-it) |  | Active | |  |
-| [HOOKSSETTINGS-36](hooks-settings.md#hookssettings-36-loading-settings-never-starts-an-adapter-node-process) |  | Active | |  |
-| [HOOKSSETTINGS-37](hooks-settings.md#hookssettings-37-saving-a-hook-must-not-restart-any-teammates-session) |  | Active | |  |
-| [HOOKSSETTINGS-38](hooks-settings.md#hookssettings-38-costs-money-a-live-hook-edit-reaches-the-very-next-turn-with-no-restart) | 💰 | Active | |  |
-| [HOOKSSETTINGS-39](hooks-settings.md#hookssettings-39-costs-money-a-next-session-hook-edit-is-silently-inert-on-a-running-teammate-until-it-restarts) | 💰 | Active | |  |
-| [HOOKSSETTINGS-40](hooks-settings.md#hookssettings-40-costs-money-get_help-re-renders-on-every-call-so-its-nine-hooks-land-on-the-next-call-while-a-tool-description-does-not) | 💰 | Active | |  |
+| [PROMPTSSETTINGS-01](prompts-settings.md#promptssettings-01-settings-opens-on-the-prompts-tab-with-a-two-button-tab-rail) |  | Active | |  |
+| [PROMPTSSETTINGS-02](prompts-settings.md#promptssettings-02-tab-clicks-change-the-url-and-an-unknown-tab-segment-falls-back-to-prompts-instead-of-404ing) |  | Active | |  |
+| [PROMPTSSETTINGS-03](prompts-settings.md#promptssettings-03-the-prompts-tab-prints-the-real-absolute-path-of-promptsjson-and-says-the-files-absence-is-expected) |  | Active | |  |
+| [PROMPTSSETTINGS-04](prompts-settings.md#promptssettings-04-exactly-24-prompt-fields-in-four-named-groups-in-a-fixed-order) |  | Active | |  |
+| [PROMPTSSETTINGS-05](prompts-settings.md#promptssettings-05-the-next-session-badge-appears-on-exactly-the-11-prompts-whose-edits-cannot-reach-a-running-teammate) |  | Active | |  |
+| [PROMPTSSETTINGS-06](prompts-settings.md#promptssettings-06-placeholder-chips-are-listed-on-exactly-the-8-prompts-that-take-placeholders-with-full-braces) |  | Active | |  |
+| [PROMPTSSETTINGS-07](prompts-settings.md#promptssettings-07-no-prompts-default-text-contains-the-literal-string-mcp__team__) |  | Active | |  |
+| [PROMPTSSETTINGS-08](prompts-settings.md#promptssettings-08-textarea-height-tracks-the-line-count-and-clamps-at-14-rows) |  | Active | |  |
+| [PROMPTSSETTINGS-09](prompts-settings.md#promptssettings-09-typing-raises-modified-and-unsaved-together-and-enables-save-reset-and-reset-all-while-writing-nothing) |  | Active | |  |
+| [PROMPTSSETTINGS-10](prompts-settings.md#promptssettings-10-modified-and-unsaved-are-independent-flags-walk-all-three-combinations) |  | Active | |  |
+| [PROMPTSSETTINGS-11](prompts-settings.md#promptssettings-11-per-field-reset-stages-the-shipped-default-without-writing-anything-to-disk) |  | Active | |  |
+| [PROMPTSSETTINGS-12](prompts-settings.md#promptssettings-12-promptsjson-does-not-exist-until-the-first-save-and-then-holds-only-the-keys-you-changed) |  | Active | |  |
+| [PROMPTSSETTINGS-13](prompts-settings.md#promptssettings-13-the-saved-file-is-human-readable-indented-with-literal-em-dashes-and-angle-brackets-not-uxxxx-escapes) |  | Active | |  |
+| [PROMPTSSETTINGS-14](prompts-settings.md#promptssettings-14-saving-a-field-back-to-its-default-removes-the-key-rather-than-storing-a-redundant-copy) |  | Active | |  |
+| [PROMPTSSETTINGS-15](prompts-settings.md#promptssettings-15-save-is-the-only-writer-and-a-successful-save-gives-no-confirmation) |  | Active | |  |
+| [PROMPTSSETTINGS-16](prompts-settings.md#promptssettings-16-reset-all-to-defaults-is-disabled-until-something-is-modified-and-guards-itself-with-an-inline-confirm) |  | Active | |  |
+| [PROMPTSSETTINGS-17](prompts-settings.md#promptssettings-17-yes-reset-everything-stages-all-24-defaults-but-writes-nothing-and-the-reset-is-silently-lost-if-you-navigate-away) |  | Active | |  |
+| [PROMPTSSETTINGS-18](prompts-settings.md#promptssettings-18-reset-all-followed-by-save-leaves-promptsjson-present-and-empty-never-deleted) |  | Active | |  |
+| [PROMPTSSETTINGS-19](prompts-settings.md#promptssettings-19-a-failed-save-shows-a-red-could-not-save-line-under-the-heading-and-keeps-every-pending-edit) |  | Active | |  |
+| [PROMPTSSETTINGS-20](prompts-settings.md#promptssettings-20-validation-reports-and-never-refuses-an-empty-field-raises-an-error-and-still-saves) |  | Active | |  |
+| [PROMPTSSETTINGS-21](prompts-settings.md#promptssettings-21-removing-a-required-placeholder-raises-an-error-naming-that-placeholder-and-an-optional-one-does-not) |  | Active | |  |
+| [PROMPTSSETTINGS-22](prompts-settings.md#promptssettings-22-an-unrecognised-token-raises-a-warning-a-malformed-one-raises-nothing-at-all) |  | Active | |  |
+| [PROMPTSSETTINGS-23](prompts-settings.md#promptssettings-23-validation-runs-live-against-the-pending-value-and-clears-without-saving) |  | Active | |  |
+| [PROMPTSSETTINGS-24](prompts-settings.md#promptssettings-24-prompt-text-is-rendered-as-text-never-as-markup) |  | Active | |  |
+| [PROMPTSSETTINGS-25](prompts-settings.md#promptssettings-25-typing-in-a-long-prompt-field-stays-responsive-and-loses-no-characters) |  | Active | |  |
+| [PROMPTSSETTINGS-26](prompts-settings.md#promptssettings-26-uncommitted-edits-survive-a-tab-switch-and-a-theme-change-but-are-silently-discarded-by-reload-or-leaving-the-page) |  | Active | |  |
+| [PROMPTSSETTINGS-27](prompts-settings.md#promptssettings-27-reset-all-to-defaults-is-also-rendered-on-the-appearance-tab-where-it-acts-on-prompts) |  | Active | |  |
+| [PROMPTSSETTINGS-28](prompts-settings.md#promptssettings-28-a-save-in-one-browser-tab-repaints-settings-open-in-another-without-eating-that-tabs-typing) |  | Active | |  |
+| [PROMPTSSETTINGS-29](prompts-settings.md#promptssettings-29-a-hand-edit-to-promptsjson-reaches-the-open-page-within-about-a-second-with-no-restart-and-no-refresh) |  | Active | |  |
+| [PROMPTSSETTINGS-30](prompts-settings.md#promptssettings-30-deleting-promptsjson-while-the-app-runs-reverts-every-field-to-its-shipped-default-live) |  | Active | |  |
+| [PROMPTSSETTINGS-31](prompts-settings.md#promptssettings-31-silent-a-malformed-promptsjson-edited-while-running-changes-nothing-on-screen-and-says-nothing-check-the-log) |  | Active | |  |
+| [PROMPTSSETTINGS-32](prompts-settings.md#promptssettings-32-silent-a-malformed-promptsjson-at-startup-falls-back-to-defaults-wholesale-with-no-ui-clue-and-the-file-left-intact) |  | Active | |  |
+| [PROMPTSSETTINGS-33](prompts-settings.md#promptssettings-33-an-unknown-key-in-promptsjson-is-kept-forever-ignored-for-resolution-and-logged-once) |  | Active | |  |
+| [PROMPTSSETTINGS-34](prompts-settings.md#promptssettings-34-a-pending-browser-edit-beats-a-concurrent-hand-edit-to-the-same-key-and-save-merges-rather-than-overwrites) |  | Active | |  |
+| [PROMPTSSETTINGS-35](prompts-settings.md#promptssettings-35-a-crlf-hand-edit-makes-a-field-show-modified-while-looking-identical-and-reset-fixes-it) |  | Active | |  |
+| [PROMPTSSETTINGS-36](prompts-settings.md#promptssettings-36-loading-settings-never-starts-an-adapter-node-process) |  | Active | |  |
+| [PROMPTSSETTINGS-37](prompts-settings.md#promptssettings-37-saving-a-prompt-must-not-restart-any-teammates-session) |  | Active | |  |
+| [PROMPTSSETTINGS-38](prompts-settings.md#promptssettings-38-costs-money-a-live-prompt-edit-reaches-the-very-next-turn-with-no-restart) | 💰 | Active | |  |
+| [PROMPTSSETTINGS-39](prompts-settings.md#promptssettings-39-costs-money-a-next-session-prompt-edit-is-silently-inert-on-a-running-teammate-until-it-restarts) | 💰 | Active | |  |
+| [PROMPTSSETTINGS-40](prompts-settings.md#promptssettings-40-costs-money-get_help-re-renders-on-every-call-so-its-nine-prompts-land-on-the-next-call-while-a-tool-description-does-not) | 💰 | Active | |  |
 
 ## appearance-theme
 
@@ -548,7 +548,7 @@ Appearance tab, Themes, Tokens and overrides — [area file](appearance-theme.md
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
 | [APPEARANCETHEME-01](appearance-theme.md#appearancetheme-01-the-appearance-tab-is-on-the-settings-rail-and-is-reachable-by-its-own-route) |  | Active | |  |
-| [APPEARANCETHEME-02](appearance-theme.md#appearancetheme-02-the-appearance-tab-shows-its-own-prose-and-the-real-absolute-selection-file-path-and-none-of-the-hooks-tabs-prose) |  | Active | |  |
+| [APPEARANCETHEME-02](appearance-theme.md#appearancetheme-02-the-appearance-tab-shows-its-own-prose-and-the-real-absolute-selection-file-path-and-none-of-the-prompts-tabs-prose) |  | Active | |  |
 | [APPEARANCETHEME-03](appearance-theme.md#appearancetheme-03-the-theme-select-offers-the-built-in-catalog-and-the-appearance-select-offers-exactly-system-light-and-dark-in-that-order) |  | Active | |  |
 | [APPEARANCETHEME-04](appearance-theme.md#appearancetheme-04-choosing-a-value-in-either-select-stores-its-id-and-applies-immediately-with-no-page-reload) |  | Active | |  |
 | [APPEARANCETHEME-05](appearance-theme.md#appearancetheme-05-retired-the-three-stylesheet-cascade-layering-test) |  | Active | | Retired 2026-09-14 (MudBlazor migration) - CSS cascade layering test, no successor. See area file. |
@@ -624,8 +624,8 @@ App Tools a real model calls (progressive discovery) — [area file](app-tools.m
 
 | Test | 💰 | Status | Issue | Notes |
 | --- | --- | --- | --- | --- |
-| [APPTOOLS-01](app-tools.md#apptools-01-every-model-facing-hook-is-readable-in-the-browser-and-no-default-contains-the-literal-mcp__team__) |  | Active | | |
-| [APPTOOLS-02](app-tools.md#apptools-02-hookvalidator-reports-a-missing-placeholder-and-a-typo-and-never-blocks-the-save) |  | Active | | |
+| [APPTOOLS-01](app-tools.md#apptools-01-every-model-facing-prompt-is-readable-in-the-browser-and-no-default-contains-the-literal-mcp__team__) |  | Active | | |
+| [APPTOOLS-02](app-tools.md#apptools-02-promptvalidator-reports-a-missing-placeholder-and-a-typo-and-never-blocks-the-save) |  | Active | | |
 | [APPTOOLS-03](app-tools.md#apptools-03-with-teamacpenabledfalse-no-app-tool-server-exists-at-all-and-the-chat-surface-still-works) |  | Active | | |
 | [APPTOOLS-04](app-tools.md#apptools-04-the-tool-server-binds-and-completes-the-mcp-handshake-before-any-model-call-the-wiring-pre-flight) |  | Active | | |
 | [APPTOOLS-05](app-tools.md#apptools-05-an-agent-reads-its-own-rooms-id-off-the-room-label) | 💰 | Active | | |
@@ -645,7 +645,7 @@ App Tools a real model calls (progressive discovery) — [area file](app-tools.m
 | [APPTOOLS-19](app-tools.md#apptools-19-a-budgetexhausted-refusal-from-post_message-is-terminal-the-agent-stops-does-not-retry-and-does-not-reroute) | 💰 | Active | | |
 | [APPTOOLS-20](app-tools.md#apptools-20-a-turn-declined-for-budget-never-reaches-the-model-at-all-the-decline-path-is-not-the-refusal-path) |  | Active | | |
 | [APPTOOLS-21](app-tools.md#apptools-21-continue-re-delivers-the-paused-message-and-the-prompt-survives-a-page-reload) | 💰 | Active | | |
-| [APPTOOLS-22](app-tools.md#apptools-22-editing-a-hook-changes-model-facing-text-without-restarting-the-session-and-next-session-hooks-wait-for-a-restart) | 💰 | Active | | |
+| [APPTOOLS-22](app-tools.md#apptools-22-editing-a-prompt-changes-model-facing-text-without-restarting-the-session-and-next-session-prompts-wait-for-a-restart) | 💰 | Active | | |
 | [APPTOOLS-23](app-tools.md#apptools-23-follow_room-wakes-an-agent-that-was-not-mentioned-and-a-non-follower-in-the-same-room-is-the-control) | 💰 | Active | | |
 | [APPTOOLS-24](app-tools.md#apptools-24-unfollow_room-restores-the-ordinary-mention-only-rule-and-the-room-confirms-the-decline-was-not-a-silent-drop) | 💰 | Active | | |
 | [APPTOOLS-25](app-tools.md#apptools-25-following-does-not-buy-a-turn-past-the-budget-even-when-two-followers-would-otherwise-keep-each-other-going) | 💰 | Active | | |
@@ -674,7 +674,7 @@ Persona lifecycle: supervisor, work dirs, health and restarts — [area file](pe
 | [PERSONALIFECYCLE-15](persona-lifecycle.md#personalifecycle-15-renaming-or-moving-a-team-sub-folder-keeps-its-teammates-reachable-or-takes-them-offline-cleanly) |  | Active | | |
 | [PERSONALIFECYCLE-16](persona-lifecycle.md#personalifecycle-16-a-persona-file-that-becomes-malformed-is-named-in-files-that-didnt-load-and-an-alias-collision-names-both-files) |  | Active | | |
 | [PERSONALIFECYCLE-17](persona-lifecycle.md#personalifecycle-17-a-stored-model-the-adapter-no-longer-advertises-is-degraded-with-a-reason-never-a-failed-start) |  | Active | | |
-| [PERSONALIFECYCLE-18](persona-lifecycle.md#personalifecycle-18-editing-a-hook-at-settings-does-not-restart-a-running-teammate) |  | Active | | |
+| [PERSONALIFECYCLE-18](persona-lifecycle.md#personalifecycle-18-editing-a-prompt-at-settings-does-not-restart-a-running-teammate) |  | Active | | |
 | [PERSONALIFECYCLE-19](persona-lifecycle.md#personalifecycle-19-removing-a-persona-takes-it-offline-but-leaves-its-agent-room-and-transcript-and-raises-no-alert) |  | Active | | |
 | [PERSONALIFECYCLE-20](persona-lifecycle.md#personalifecycle-20-re-creating-a-removed-persona-under-the-same-name-does-not-resurrect-its-old-model-or-effort) |  | Active | | |
 | [PERSONALIFECYCLE-21](persona-lifecycle.md#personalifecycle-21-editing-the-frontmatter-name-renames-the-teammate-and-moves-its-model-and-effort-leaving-a-documented-ghost) |  | Active | | |

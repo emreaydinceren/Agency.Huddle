@@ -5,7 +5,7 @@ using Agency.Huddle.Acp.DotAcp;
 using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.Acp.Tools;
 using Agency.Huddle.App.Acp.Tools;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 
 namespace Agency.Huddle.App.Acp;
 
@@ -27,7 +27,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// never changes — not even between Adapter profiles. What varies per profile is only whether the
     /// *model-facing* tool names in the system prompt carry it as a <c>mcp__{name}__</c> prefix; see
     /// <see cref="AdapterProfile.UsesToolNamePrefix"/> and <see cref="SystemPromptComposer"/>'s remarks
-    /// on why that prefix is applied in code, never in a hook's template.
+    /// on why that prefix is applied in code, never in a prompt's template.
     /// </summary>
     private const string ToolServerName = "team";
 
@@ -111,10 +111,10 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             ActivatorUtilities.CreateInstance<UnfollowRoomTool>(this.serviceProvider, agentId),
         ];
 
-        var hooks = this.serviceProvider.GetRequiredService<IHookSource>();
+        var prompts = this.serviceProvider.GetRequiredService<IPromptSource>();
 
         // The mcp__{server}__ prefix is derived from the same server name above, never typed into a
-        // hook's template - see the ToolServerName remarks and SystemPromptComposer's. GetHelpTool
+        // prompt's template - see the ToolServerName remarks and SystemPromptComposer's. GetHelpTool
         // takes it explicitly rather than hard-coding its own copy, for the same reason. Whether it
         // is applied at all now follows the resolved profile (Spec §6.4): the server name itself
         // never changes, only whether model-facing names carry it.
@@ -124,7 +124,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         // tool instead of all of them. It is built last for the obvious reason: it takes the rest.
         // Captured in its own local, rather than only in the tools array below, so the system prompt
         // can name it from its own Name below - never retyping "get_help" either.
-        var getHelpTool = new GetHelpTool(chatTools, hooks, toolNamePrefix);
+        var getHelpTool = new GetHelpTool(chatTools, prompts, toolNamePrefix);
         IReadOnlyList<IAppTool> tools = [getHelpTool, .. chatTools];
 
         var toolServer = new AppToolServer(ToolServerName, tools, this.loggerFactory, 0, authToken);
@@ -160,7 +160,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                         ? new WorkDirPermissionHandler(protectedDirectory, this.loggerFactory.CreateLogger<WorkDirPermissionHandler>())
                         : new AutoApprovePermissionHandler(),
                     new SystemPromptOptions(
-                        SystemPromptComposer.Compose(persona, hooks, toolNamePrefix + getHelpTool.Name, toolNames),
+                        SystemPromptComposer.Compose(persona, prompts, toolNamePrefix + getHelpTool.Name, toolNames),
                         SystemPromptMode.Append),
                     toolServer.Endpoint,
                     persona.Model,

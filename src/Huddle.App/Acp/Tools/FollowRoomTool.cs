@@ -3,7 +3,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 
 /// <summary>Asks to be woken by every Message in a Room, even when the calling Agent is not Mentioned — roadmap item 8.</summary>
 /// <remarks>
@@ -12,7 +12,7 @@ using Agency.Huddle.App.Hooks;
 /// <see cref="RoomFollows"/>'s own remarks and <see cref="ReplyGate.Decide"/>'s <c>following</c>
 /// parameter.
 /// </remarks>
-internal sealed class FollowRoomTool(RoomFollows roomFollows, ITeamDirectory teamDirectory, string callerAgentId, IHookSource hooks) : IAppTool
+internal sealed class FollowRoomTool(RoomFollows roomFollows, ITeamDirectory teamDirectory, string callerAgentId, IPromptSource prompts) : IAppTool
 {
     private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
 
@@ -20,7 +20,7 @@ internal sealed class FollowRoomTool(RoomFollows roomFollows, ITeamDirectory tea
     public string Name => "follow_room";
 
     /// <inheritdoc />
-    public string Description => hooks.Render("tool.followRoom.description", NoValues);
+    public string Description => prompts.Render("tool.followRoom.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject

@@ -49,7 +49,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// both. Both providers are included together, rather than as two separate methods, because a real
 /// page tends to need both at once (a dialog whose own form has a <c>MudSelect</c> is exactly Stage
 /// 4's <c>TeammateCard</c>) and there is no cost to registering a provider nothing in a given test
-/// happens to use. A plain component with no popover and no dialog (this stage's <c>HooksPanel</c>,
+/// happens to use. A plain component with no popover and no dialog (this stage's <c>PromptsPanel</c>,
 /// <c>ResetAllControl</c>, <c>Settings</c>) needs none of this and can use the ordinary generic
 /// <c>Render&lt;T&gt;</c> directly against this context.
 /// </description>

@@ -49,7 +49,7 @@ standing conventions. This area adds:
 
 **Free** · about 3 min
 
-*Proves the Appearance tab exists, navigates by URL so it can be bookmarked and linked, and that an unknown tab segment falls back to Hooks rather than throwing or rendering blank.*
+*Proves the Appearance tab exists, navigates by URL so it can be bookmarked and linked, and that an unknown tab segment falls back to Prompts rather than throwing or rendering blank.*
 
 **Before you start**
 
@@ -59,7 +59,7 @@ standing conventions. This area adds:
 
 1. Go to http://localhost:5100/settings.
 2. Read the page heading at the top left. It must read `Settings`.
-3. Count the buttons in the vertical tab rail on the left of the settings content. There must be exactly two, reading `Hooks` and `Appearance` (MudBlazor renders both in upper case — `HOOKS` and `APPEARANCE` — the underlying text is unchanged), in that order.
+3. Count the buttons in the vertical tab rail on the left of the settings content. There must be exactly two, reading `Prompts` and `Appearance` (MudBlazor renders both in upper case — `PROMPTS` and `APPEARANCE` — the underlying text is unchanged), in that order.
 4. Note which tab button looks selected (it carries the active styling). Note the URL in the address bar.
 5. Click the `Appearance` button.
 6. Read the address bar.
@@ -71,18 +71,18 @@ standing conventions. This area adds:
 
 **Pass if — all of these**
 
-- The heading reads `Settings` and the rail holds exactly the two buttons `HOOKS` and `APPEARANCE`.
-- Landing on /settings with no segment shows the Hooks panel with `Hooks` marked active.
+- The heading reads `Settings` and the rail holds exactly the two buttons `PROMPTS` and `APPEARANCE`.
+- Landing on /settings with no segment shows the Prompts panel with `Prompts` marked active.
 - Clicking `Appearance` changes the address bar to http://localhost:5100/settings/appearance and marks `Appearance` active.
 - Typing /settings/appearance directly lands on the same Appearance panel with `Appearance` active.
-- /settings/nonsense renders the Hooks panel - a normal, fully styled page, not a blank page and not an error.
+- /settings/nonsense renders the Prompts panel - a normal, fully styled page, not a blank page and not an error.
 - No exception appears in the `dotnet run` console.
 
 **Fail if — any of these**
 
 - The `Appearance` button is missing from the rail -> the tab was never wired into Settings.razor's rail.
 - Clicking `Appearance` swaps the panel but leaves the URL at /settings -> the tab is flipping local state instead of navigating, so the tab cannot be bookmarked, linked or reloaded into.
-- /settings/nonsense renders blank, 404s, or throws -> Routes.razor has no NotFound branch, so an unrecognised tab MUST resolve to Hooks; a blank page means the fallback was removed.
+- /settings/nonsense renders blank, 404s, or throws -> Routes.razor has no NotFound branch, so an unrecognised tab MUST resolve to Prompts; a blank page means the fallback was removed.
 - /settings with no segment renders blank -> the same fallback is broken for the null case.
 
 **Inconclusive if**
@@ -92,7 +92,7 @@ If the page will not load at all (connection refused, or an ASP.NET error page),
 > [!NOTE]
 > Cheapest test in the area and a prerequisite for every other test - if you cannot reach the Appearance tab, stop here.
 
-### APPEARANCETHEME-02 — The Appearance tab shows its own prose and the real absolute selection-file path, and none of the Hooks tab's prose
+### APPEARANCETHEME-02 — The Appearance tab shows its own prose and the real absolute selection-file path, and none of the Prompts tab's prose
 
 **Free** · about 4 min
 
@@ -110,22 +110,22 @@ If the page will not load at all (connection refused, or an ASP.NET error page),
 3. Read the paragraph directly BELOW the picker — the credit line. Compare it word for word with: `Every theme except Huddle Light and Huddle Dark is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and Monokai is Wimer Hazenberg's.`
 4. Read the last paragraph on the panel. Compare it word for word with: `The selection is stored at <path>. The file does not exist until you save a choice here, so it being absent is expected, not a bug.`
 5. Read the path rendered in monospace in that same paragraph. Write it down. It must be an absolute path, e.g. `E:\Repos\Huddle\src\Huddle.App\App_Data\appearance.json`.
-6. Scan the whole Appearance panel for the sentence `A hook is one piece of wording this application sends to a model` and for any mention of `hooks.json`, and for any mention of a token name such as `--font-chat` or an "Overrides" heading.
-7. Click the `Hooks` button in the tab rail.
-8. Confirm the Hooks panel DOES carry the sentence beginning `A hook is one piece of wording this application sends to a model` and its own `Overrides are stored at ...hooks.json` paragraph.
-9. Click `Appearance` again and confirm those two Hooks paragraphs are gone.
+6. Scan the whole Appearance panel for the sentence `A prompt is one piece of wording this application sends to a model` and for any mention of `prompts.json`, and for any mention of a token name such as `--font-chat` or an "Overrides" heading.
+7. Click the `Prompts` button in the tab rail.
+8. Confirm the Prompts panel DOES carry the sentence beginning `A prompt is one piece of wording this application sends to a model` and its own `Overrides are stored at ...prompts.json` paragraph.
+9. Click `Appearance` again and confirm those two Prompts paragraphs are gone.
 
 **Pass if — all of these**
 
 - The Appearance panel's three paragraphs — intro, credit line, file path — match the quoted text word for word.
 - The path shown is absolute and ends in `\src\Huddle.App\App_Data\appearance.json`.
-- Neither the Hooks intro sentence nor any mention of `hooks.json` appears anywhere on the Appearance panel, and there is no token name and no "Overrides" section — that whole layer is gone, not merely hidden.
-- Both of the Hooks paragraphs DO appear on the Hooks panel.
+- Neither the Prompts intro sentence nor any mention of `prompts.json` appears anywhere on the Appearance panel, and there is no token name and no "Overrides" section — that whole layer is gone, not merely hidden.
+- Both of the Prompts paragraphs DO appear on the Prompts panel.
 - The credit line sits directly below the picker, names Visual Studio Code, excepts both `Huddle Light` and `Huddle Dark`, and attributes only Solarized and Monokai. It must not attribute Abyss, Kimbie Dark, Red, Quiet Light, Monokai Dimmed or Tomorrow Night Blue to anyone — those ship in VS Code with no third-party attribution on disk, so naming an author would be inventing one.
 
 **Fail if — any of these**
 
-- The Hooks intro or the hooks.json path paragraph appears on the Appearance panel -> a shared paragraph is sitting above the tab rail instead of inside the Hooks case.
+- The Prompts intro or the prompts.json path paragraph appears on the Appearance panel -> a shared paragraph is sitting above the tab rail instead of inside the Prompts case.
 - Any token name or an "Overrides" heading is still shown -> stale prose from the retired per-token system was left behind.
 - The path shown is relative (e.g. `App_Data\appearance.json`) -> the Human cannot find the file, and every later test in this area would be edited against a guessed location.
 
@@ -759,7 +759,7 @@ name: broken
 A persona with no title.
 Save it, then press F5 on /teammates.
 11. (i) Find the section headed `Files that didn't load` and inspect its heading, the path and the reason text.
-12. (j) Go to http://localhost:5100/settings/hooks and inspect the whole panel, then click `Appearance` and inspect that panel.
+12. (j) Go to http://localhost:5100/settings/prompts and inspect the whole panel, then click `Appearance` and inspect that panel.
 13. Now check native controls specifically: open every MudSelect popup you can find (the team filter, the card's Model and Effort selects) and check the popup itself is dark, not a white system menu. Check the Theme picker's own list and its group headings too — it is a `MudList`, not a popup, so it is always on screen.
 14. Click into the composer textarea and check it is dark.
 15. Scroll any scrollable area (the room list, the message list) and check the SCROLLBAR renders dark.

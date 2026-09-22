@@ -4,7 +4,7 @@ using System.IO.Pipes;
 using System.Text;
 using System.Threading.Channels;
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Acp;
@@ -37,7 +37,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
     private readonly Persona persona;
     private readonly TeamOptions options;
     private readonly IAgentHostFactory factory;
-    private readonly IHookSource hooks;
+    private readonly IPromptSource prompts;
     private readonly RoomFollows roomFollows;
     private readonly ILogger<PersonaRunner> logger;
     private readonly CancellationTokenSource runCts = new();
@@ -86,21 +86,21 @@ internal sealed class PersonaRunner : IAsyncDisposable
         Persona persona,
         IOptions<TeamOptions> options,
         IAgentHostFactory factory,
-        IHookSource hooks,
+        IPromptSource prompts,
         RoomFollows roomFollows,
         ILogger<PersonaRunner> logger)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(factory);
-        ArgumentNullException.ThrowIfNull(hooks);
+        ArgumentNullException.ThrowIfNull(prompts);
         ArgumentNullException.ThrowIfNull(roomFollows);
         ArgumentNullException.ThrowIfNull(logger);
 
         this.persona = persona;
         this.options = options.Value;
         this.factory = factory;
-        this.hooks = hooks;
+        this.prompts = prompts;
         this.roomFollows = roomFollows;
         this.logger = logger;
     }
@@ -437,7 +437,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
 
         try
         {
-            var prompt = BuildPrompt(item, this.hooks);
+            var prompt = BuildPrompt(item, this.prompts);
             await this.session!.PromptAsync(prompt, turnCancellation.Token);
             var outcome = await completion.Task.WaitAsync(turnCancellation.Token);
 
@@ -966,61 +966,61 @@ internal sealed class PersonaRunner : IAsyncDisposable
 
     /// <summary>Builds the prompt text delivered to the model for one Turn.</summary>
     /// <param name="item">The Turn's Room, sender, text and any catch-up context.</param>
-    /// <param name="hooks">Resolves each <c>turn.*</c> hook's current text — a configured override, or the <see cref="HookCatalog"/> default.</param>
+    /// <param name="prompts">Resolves each <c>turn.*</c> prompt's current text — a configured override, or the <see cref="PromptCatalog"/> default.</param>
     /// <returns>
     /// The full prompt: with no catch-up context, the <c>turn.message</c> line alone; with catch-up
     /// context, a <c>turn.catchUpHeader</c> line, one <c>turn.catchUpLine</c> per missed message, a
     /// blank line, then the <c>turn.message</c> line.
     /// </returns>
-    internal static string BuildPrompt(WorkItem item, IHookSource hooks)
+    internal static string BuildPrompt(WorkItem item, IPromptSource prompts)
     {
         ArgumentNullException.ThrowIfNull(item);
-        ArgumentNullException.ThrowIfNull(hooks);
+        ArgumentNullException.ThrowIfNull(prompts);
 
         // The Room's id rides along with its name because it is the only way an Agent can learn one.
         // mcp__team__post_message and mcp__team__invite_agent both take a room id, and nothing else
         // in a turn carries it: without this they reach only Rooms the Agent created itself.
-        var room = RoomLabel(item, hooks);
+        var room = RoomLabel(item, prompts);
 
         if (item.MissedMessages.Count == 0)
         {
-            return RenderMessage(hooks, room, item.SenderName, item.Text);
+            return RenderMessage(prompts, room, item.SenderName, item.Text);
         }
 
         var builder = new StringBuilder();
-        builder.Append(hooks.Render("turn.catchUpHeader", new Dictionary<string, string> { ["{{roomLabel}}"] = room }));
+        builder.Append(prompts.Render("turn.catchUpHeader", new Dictionary<string, string> { ["{{roomLabel}}"] = room }));
         builder.Append('\n');
         foreach (var missed in item.MissedMessages)
         {
-            builder.Append(hooks.Render(
+            builder.Append(prompts.Render(
                 "turn.catchUpLine",
                 new Dictionary<string, string> { ["{{sender}}"] = missed.SenderName, ["{{text}}"] = missed.Text }));
             builder.Append('\n');
         }
 
         builder.Append('\n');
-        builder.Append(RenderMessage(hooks, room, item.SenderName, item.Text));
+        builder.Append(RenderMessage(prompts, room, item.SenderName, item.Text));
 
         return builder.ToString();
     }
 
     /// <summary>Builds the bracketed Room label that opens every line of a prompt.</summary>
     /// <param name="item">The work item whose Room is being labelled.</param>
-    /// <param name="hooks">Resolves the <c>turn.roomLabel</c> hook's current text.</param>
+    /// <param name="prompts">Resolves the <c>turn.roomLabel</c> prompt's current text.</param>
     /// <returns>The label, carrying both the Room's name and its id.</returns>
-    private static string RoomLabel(WorkItem item, IHookSource hooks) =>
-        hooks.Render(
+    private static string RoomLabel(WorkItem item, IPromptSource prompts) =>
+        prompts.Render(
             "turn.roomLabel",
             new Dictionary<string, string> { ["{{roomName}}"] = item.RoomName, ["{{roomId}}"] = item.RoomId });
 
     /// <summary>Renders one <c>turn.message</c> line: a Room label, its sender, and its text.</summary>
-    /// <param name="hooks">Resolves the <c>turn.message</c> hook's current text.</param>
+    /// <param name="prompts">Resolves the <c>turn.message</c> prompt's current text.</param>
     /// <param name="roomLabel">The already-rendered Room label to open the line with.</param>
     /// <param name="sender">The message's sender name.</param>
     /// <param name="text">The message's text.</param>
     /// <returns>The rendered <c>turn.message</c> line.</returns>
-    private static string RenderMessage(IHookSource hooks, string roomLabel, string sender, string text) =>
-        hooks.Render(
+    private static string RenderMessage(IPromptSource prompts, string roomLabel, string sender, string text) =>
+        prompts.Render(
             "turn.message",
             new Dictionary<string, string> { ["{{roomLabel}}"] = roomLabel, ["{{sender}}"] = sender, ["{{text}}"] = text });
 

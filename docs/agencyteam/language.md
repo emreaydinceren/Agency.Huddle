@@ -298,21 +298,22 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 
 ## Model-facing text
 
-**Hook**
+**Prompt**
 : One named piece of text this application sends to a model — a system-prompt
   block, a Turn's framing, a `get_help` section, a tool's own description.
-  Twenty-two exist. `HookCatalog` holds every default in code; `hooks.json` holds
-  overrides only; `IHookSource` resolves one over the other per key.
-: A Hook is a **template, not an event**: nothing executes, nothing subscribes,
-  and the order blocks compose in is fixed in code. The word is the repo owner's
-  and the settings panel is named for it, but it is spent — executable extension
-  points at these same sites will need a different name. See
+  Twenty-two exist. `PromptCatalog` holds every default in code; `prompts.json`
+  holds overrides only; `IPromptSource` resolves one over the other per key.
+  Named **Hook** until 2026-09-22 — that word read as an executable extension
+  point, which is exactly the wrong idea; see
+  [ADR-0020](../adr/0020-a-hook-is-a-prompt.md).
+: A Prompt is a **template, not an event**: nothing executes, nothing
+  subscribes, and the order blocks compose in is fixed in code. See
   [ADR-0007](../adr/0007-model-facing-text-is-configuration.md).
-: *Avoid*: template, prompt fragment, snippet, setting. Never "event" or
-  "handler" — those promise behaviour a Hook does not have.
+: *Avoid*: hook, template, prompt fragment, snippet, setting. Never "event" or
+  "handler" — those promise behaviour a Prompt does not have.
 
 **Placeholder**
-: A `{{name}}` token inside a Hook's text, substituted by code at render time.
+: A `{{name}}` token inside a Prompt's text, substituted by code at render time.
   `{{…}}` and not `<…>` because `get_help` sends the model the literal line
   `"[Room: <name> (id: <id>)]"` as documentation, which an angle-bracket syntax
   would silently eat. An unknown token is left verbatim rather than blanked, so a
@@ -320,19 +321,19 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: variable, token, parameter, slot.
 
 **Default**
-: A Hook's shipped wording, held in `HookCatalog` in code. `hooks.default.json`
+: A Prompt's shipped wording, held in `PromptCatalog` in code. `prompts.default.json`
   beside the binary is *generated* from it, never the source of it — so deleting
   every file still leaves the application running on exactly the text it shipped
-  with. Distinct from **stored** (what `hooks.json` currently resolves to) and
+  with. Distinct from **stored** (what `prompts.json` currently resolves to) and
   **pending** (typed on the settings page, not yet saved); the three are separate
   on purpose, and Reset is the case that proves it.
 : *Avoid*: original, factory setting, baseline.
 
 **Timing**
-: Whether an edit to a Hook reaches a model on the next Turn (`Live`) or only for
-  Teammates started afterwards (`NextSession`). Not a preference — a system
+: Whether an edit to a Prompt reaches a model on the next Turn (`Live`) or only
+  for Teammates started afterwards (`NextSession`). Not a preference — a system
   prompt is fixed at `session/new` and there is no later event that re-reads it.
-  Editing a Hook never restarts a session; see [Rules](rules.md).
+  Editing a Prompt never restarts a session; see [Rules](rules.md).
 : *Avoid*: scope, refresh, reload.
 
 ## Appearance

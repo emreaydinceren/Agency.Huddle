@@ -160,9 +160,9 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   a human edits.** It sets no `Encoder`, so it inherits `JavaScriptEncoder.Default`:
   every em-dash becomes `—`, every quote `"`, and `get_help`'s
   documentation line reads `"[Room: <name> (id: <id>)]"`. Correct
-  for wire JSON that might land in a page, wrong for `hooks.json`. Worse than
+  for wire JSON that might land in a page, wrong for `prompts.json`. Worse than
   unreadable — a user who hand-types `<name>` sees it rewritten as an escape on the
-  next save and reads that as corruption. `HookStore` derives its own options with
+  next save and reads that as corruption. `PromptStore` derives its own options with
   `JavaScriptEncoder.UnsafeRelaxedJsonEscaping`; "unsafe" there means HTML and
   script contexts, which a local file round-tripping through `JsonSerializer` is not.
   Reuse `ProtocolJson.Options` verbatim for anything on the wire, and derive from it
@@ -186,7 +186,7 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   checked out, not on the repo itself.** There is no `.gitattributes` here, so
   nothing pins `.cs` files to a fixed line ending in the repository. What git
   actually stores is settled with one command:
-  `git cat-file blob main:src/Huddle.App/Hooks/HookCatalog.cs` — on this
+  `git cat-file blob main:src/Huddle.App/Prompts/PromptCatalog.cs` — on this
   repo it comes back 0 CRLF pairs, 395 bare LF. A Windows dev box with
   `core.autocrlf=true` (a *local* setting, not a repo one) converts that to
   CRLF on checkout, so the working tree shows 395 CRLF pairs and 0 bare LF; the
@@ -194,27 +194,27 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   (`mcr.microsoft.com/dotnet/sdk:10.0.401`, `.gitea/workflows/ci-pr.yaml:21`)
   gets the LF git actually stored, with nothing to convert it. A `"""` literal
   in that file compiles with whichever line ending its checkout produced — so
-  `HookCatalog`'s defaults, and therefore every prompt sent to a model, used to
+  `PromptCatalog`'s defaults, and therefore every prompt sent to a model, used to
   carry CRLF on a Windows dev machine and LF in CI from the exact same source
   line, a platform-dependent compiled artifact masquerading as a constant.
   Checked directly against the compiled assembly on Windows: `Huddle.App.dll`
   contained the CRLF byte sequence for `systemPrompt.orientation`,
   `getHelp.intro` and `systemPrompt.chatRules`, not the LF one — and would not
-  have, built from the same commit in CI. `HookDefinition.Default` now
+  have, built from the same commit in CI. `PromptDefinition.Default` now
   normalises to `\n` once, on construction (`ReplaceLineEndings("\n")` on the
   record's own property initialiser), specifically so model-facing text cannot
   vary by checkout; nothing downstream needs to know this trap exists anymore.
   Two comparisons still normalise defensively on top of that, belt-and-braces,
-  because a hand-edited `hooks.json` can still arrive with CRLF from a text
-  editor: `HookFieldFactory.ToFieldState` and `HookStore.ApplyEdit` both diff a
-  value against `HookDefinition.Default` with `StringComparison.Ordinal`, and
+  because a hand-edited `prompts.json` can still arrive with CRLF from a text
+  editor: `PromptFieldFactory.ToFieldState` and `PromptStore.ApplyEdit` both diff a
+  value against `PromptDefinition.Default` with `StringComparison.Ordinal`, and
   without normalising both sides first a browser `<textarea>` — which always
   normalises to `\n` — would never equal a CRLF-carrying value, leaving the
-  "Modified" badge stuck on permanently for a multi-line hook. The golden tests
-  and `HookDefaultsFileTests` normalise both sides before comparing too, which
+  "Modified" badge stuck on permanently for a multi-line prompt. The golden tests
+  and `PromptDefaultsFileTests` normalise both sides before comparing too, which
   is right for a byte-content check but means neither one can catch a
-  regression in `HookDefinition`'s own normalisation —
-  `HookDefaultsFileTests.DefaultsFile_ValuesMatchCatalogDefaults_WithLineEndingsPreserved`
+  regression in `PromptDefinition`'s own normalisation —
+  `PromptDefaultsFileTests.DefaultsFile_ValuesMatchCatalogDefaults_WithLineEndingsPreserved`
   compares byte-for-byte, with no normalisation on either side, precisely to
   guard that.
 

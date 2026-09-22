@@ -4,13 +4,13 @@
     place, never a dialog and never a JS confirm() - discarding every customisation in one click with
     no confirmation would be the single most destructive thing this page can do.
 
-    The parent (Settings.razor) owns all state, the same split HooksPanel uses: Confirming and
+    The parent (Settings.razor) owns all state, the same split PromptsPanel uses: Confirming and
     AnyModified are both parameters rather than fields here, so the confirm step can be rendered
     directly from a test via ParameterView.FromDictionary (or bUnit's ComponentParameterCollectionBuilder),
     exactly how TeammateCardTests renders TeammateCard's ConfirmingRemove state - HtmlRenderer cannot
     dispatch a click, so this was the only way to see this component's confirm step from a test before
     bUnit. Every parameter is deliberately non-string (two bools, three plain EventCallbacks with no
-    payload) for the same reason HooksPanel's are.
+    payload) for the same reason PromptsPanel's are.
 
     Stage 3 (the MudBlazor migration) keeps this inline-confirm pattern exactly as designed - no
     IDialogService, no JS confirm() - and only restyles the three buttons per the migration brief's
@@ -32,7 +32,7 @@ else
 }
 
 @code {
-    /// <summary>Whether any hook currently differs from its catalog default - this drives whether the plain (non-confirming) button is enabled.</summary>
+    /// <summary>Whether any prompt currently differs from its catalog default - this drives whether the plain (non-confirming) button is enabled.</summary>
     [Parameter]
     public bool AnyModified { get; set; }
 

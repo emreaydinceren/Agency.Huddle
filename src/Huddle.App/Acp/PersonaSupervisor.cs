@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 
 namespace Agency.Huddle.App.Acp;
 
@@ -16,7 +16,7 @@ internal sealed class PersonaSupervisor : BackgroundService
     private readonly IAgentHostFactory factory;
     private readonly AdapterProfileResolver resolver;
     private readonly PersonaHealth health;
-    private readonly IHookSource hooks;
+    private readonly IPromptSource prompts;
     private readonly RoomFollows roomFollows;
     private readonly ILoggerFactory loggerFactory;
     private readonly ILogger<PersonaSupervisor> logger;
@@ -51,7 +51,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         IAgentHostFactory factory,
         AdapterProfileResolver resolver,
         PersonaHealth health,
-        IHookSource hooks,
+        IPromptSource prompts,
         RoomFollows roomFollows,
         ILoggerFactory loggerFactory,
         ILogger<PersonaSupervisor> logger)
@@ -61,7 +61,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         ArgumentNullException.ThrowIfNull(factory);
         ArgumentNullException.ThrowIfNull(resolver);
         ArgumentNullException.ThrowIfNull(health);
-        ArgumentNullException.ThrowIfNull(hooks);
+        ArgumentNullException.ThrowIfNull(prompts);
         ArgumentNullException.ThrowIfNull(roomFollows);
         ArgumentNullException.ThrowIfNull(loggerFactory);
         ArgumentNullException.ThrowIfNull(logger);
@@ -71,7 +71,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         this.factory = factory;
         this.resolver = resolver;
         this.health = health;
-        this.hooks = hooks;
+        this.prompts = prompts;
         this.roomFollows = roomFollows;
         this.loggerFactory = loggerFactory;
         this.logger = logger;
@@ -418,7 +418,7 @@ internal sealed class PersonaSupervisor : BackgroundService
             var (_, adapterWarning) = this.resolver.Resolve(persona.Adapter);
 
             var host = new PersonaRunner(
-                persona, Options.Create(this.options), this.factory, this.hooks, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>());
+                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>());
 
             // Forwards every health signal the runner itself observes (T4.3) - a session/Turn
             // fact, arriving over the wire - into the one table every UI surface reads.

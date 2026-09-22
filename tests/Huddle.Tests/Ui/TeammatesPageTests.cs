@@ -382,7 +382,7 @@ public sealed class TeammatesPageTests
         // Restart button this test does not exercise.
         var resolver = new AdapterProfileResolver(new AdapterCatalog(dataDir.Options()));
         using var supervisor = new PersonaSupervisor(
-            dataDir.Options(), personas, new FakeAgentHostFactory(), resolver, health, new FakeHookSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+            dataDir.Options(), personas, new FakeAgentHostFactory(), resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
         using var avatars = new AvatarStore(dataDir.Options(), NullLogger<AvatarStore>.Instance);
 
         await using MudBunitContext ctx = new();

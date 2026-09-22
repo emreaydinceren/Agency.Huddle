@@ -1,6 +1,6 @@
 namespace Agency.Huddle.App.Acp;
 
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 
 /// <summary>
 /// Builds the full system prompt for an Agent's session: a short canned orientation naming
@@ -9,11 +9,11 @@ using Agency.Huddle.App.Hooks;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Every part of the prompt except the Persona's own <see cref="Persona.Text"/> is a hook: its text
-/// comes from <see cref="IHookSource"/>, which resolves a configured override or falls back to
-/// <see cref="HookCatalog"/>'s default. The Persona's text has no hook key — it is structural, not
+/// Every part of the prompt except the Persona's own <see cref="Persona.Text"/> is a prompt: its text
+/// comes from <see cref="IPromptSource"/>, which resolves a configured override or falls back to
+/// <see cref="PromptCatalog"/>'s default. The Persona's text has no prompt key — it is structural, not
 /// model-facing configuration, so it is spliced in as-is between the orientation and the identity
-/// hook. The composition order itself, and the blank line joining the five parts, are fixed here in
+/// prompt. The composition order itself, and the blank line joining the five parts, are fixed here in
 /// code and are not configurable.
 /// </para>
 /// <para>
@@ -21,7 +21,7 @@ using Agency.Huddle.App.Hooks;
 /// prefix, or a deferred-tool-mode model reports that no such tool exists rather than finding it by a
 /// looser name. Getting this wrong cost a previous author four rounds of debugging. That prefix is
 /// applied by the caller, in code, from the same tool-server name it hands to <c>AppToolServer</c> —
-/// never typed into a hook's template — so <see cref="Compose"/> receives both <c>toolNames</c> and
+/// never typed into a prompt's template — so <see cref="Compose"/> receives both <c>toolNames</c> and
 /// <c>helpToolName</c> already prefixed, and only has to join and wrap them. This type holds no
 /// <c>"mcp__team__"</c> literal of its own, for either one.
 /// </para>
@@ -41,9 +41,9 @@ internal static class SystemPromptComposer
     /// </summary>
     private const int ToolNameWrapWidth = 80;
 
-    /// <summary>Composes a Persona's full system prompt from its hooks and its own text.</summary>
+    /// <summary>Composes a Persona's full system prompt from its prompts and its own text.</summary>
     /// <param name="persona">The Persona whose <see cref="Persona.Text"/> and <see cref="Persona.Name"/> are spliced in.</param>
-    /// <param name="hooks">Resolves each hook's current text — a configured override, or the <see cref="HookCatalog"/> default.</param>
+    /// <param name="prompts">Resolves each prompt's current text — a configured override, or the <see cref="PromptCatalog"/> default.</param>
     /// <param name="helpToolName">
     /// <see cref="Tools.GetHelpTool"/>'s own name, already carrying its full <c>mcp__team__</c> prefix
     /// (e.g. <c>"mcp__team__get_help"</c>). Named by the caller from the same tool instance it built,
@@ -54,24 +54,24 @@ internal static class SystemPromptComposer
     /// the order they should be listed.
     /// </param>
     /// <returns>The five parts — orientation, Persona text, identity, chat rules, tools — joined with a blank line.</returns>
-    internal static string Compose(Persona persona, IHookSource hooks, string helpToolName, IReadOnlyList<string> toolNames)
+    internal static string Compose(Persona persona, IPromptSource prompts, string helpToolName, IReadOnlyList<string> toolNames)
     {
         ArgumentNullException.ThrowIfNull(persona);
-        ArgumentNullException.ThrowIfNull(hooks);
+        ArgumentNullException.ThrowIfNull(prompts);
         ArgumentException.ThrowIfNullOrWhiteSpace(helpToolName);
         ArgumentNullException.ThrowIfNull(toolNames);
 
-        var orientation = hooks.Render(
+        var orientation = prompts.Render(
             "systemPrompt.orientation",
             new Dictionary<string, string> { ["{{helpTool}}"] = helpToolName });
 
-        var identity = hooks.Render(
+        var identity = prompts.Render(
             "systemPrompt.identity",
             new Dictionary<string, string> { ["{{personaName}}"] = persona.Name });
 
-        var chatRules = hooks.Render("systemPrompt.chatRules", new Dictionary<string, string>());
+        var chatRules = prompts.Render("systemPrompt.chatRules", new Dictionary<string, string>());
 
-        var tools = hooks.Render(
+        var tools = prompts.Render(
             "systemPrompt.tools",
             new Dictionary<string, string> { ["{{toolNames}}"] = WrapToolNames(toolNames) });
 

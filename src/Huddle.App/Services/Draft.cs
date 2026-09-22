@@ -8,7 +8,7 @@ namespace Agency.Huddle.App.Services;
 /// written to the Transcript. Public even though the store that produces it, <see cref="Drafts"/>, is
 /// not: a later task passes a <see cref="Draft"/> as a Blazor component <c>[Parameter]</c>, and Razor
 /// generates component classes as <see langword="public"/>, so an internal parameter type would fail
-/// to build with <c>CS0053</c> — the same reasoning that made <c>HookTiming</c> and <c>HookIssue</c>
+/// to build with <c>CS0053</c> — the same reasoning that made <c>PromptTiming</c> and <c>PromptIssue</c>
 /// public while the stores behind them stayed internal.
 /// </summary>
 /// <param name="MessageId">

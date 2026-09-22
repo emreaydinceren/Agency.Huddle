@@ -3,14 +3,14 @@ using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Components.Pages;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Themes;
 
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Tests for the Settings page's tab rail and its Hooks panel. Split two ways, per
-/// <c>docs/agencyteam/testing.md</c>: routing, HTTP status, the hooks/appearance file paths and
+/// Tests for the Settings page's tab rail and its Prompts panel. Split two ways, per
+/// <c>docs/agencyteam/testing.md</c>: routing, HTTP status, the prompts/appearance file paths and
 /// <c>FakeModelCatalog.ProbeCount</c> are facts about the server, so they stay on a plain HTTP GET
 /// against <see cref="TeamWebApplicationFactory"/>; everything that asserts on the tab rail, the Save
 /// button or the Reset-all button now renders <see cref="Settings"/> directly through
@@ -19,16 +19,16 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 public sealed class SettingsPageTests
 {
-    /// <summary>Renders the real <see cref="Settings"/> page against a <see cref="TeamWebApplicationFactory"/>'s live <see cref="HookStore"/> and <see cref="AppearanceStore"/>, the same pattern <c>TeammatesPageTests</c> uses for <c>Teammates</c>.</summary>
+    /// <summary>Renders the real <see cref="Settings"/> page against a <see cref="TeamWebApplicationFactory"/>'s live <see cref="PromptStore"/> and <see cref="AppearanceStore"/>, the same pattern <c>TeammatesPageTests</c> uses for <c>Teammates</c>.</summary>
     private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
         MudBunitContext ctx = new();
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<HookStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PromptStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AppearanceStore>());
         return ctx;
     }
 
-    /// <summary>MudTabs renders both tab labels and, on the default (Hooks) panel, every group heading the Hooks tab shows.</summary>
+    /// <summary>MudTabs renders both tab labels and, on the default (Prompts) panel, every group heading the Prompts tab shows.</summary>
     [Fact]
     public async Task SettingsPage_Renders_TabRailAndGroupHeadings()
     {
@@ -38,7 +38,7 @@ public sealed class SettingsPageTests
         var cut = ctx.Render<Settings>();
 
         Assert.Contains("mud-tabs", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains(">Hooks<", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains(">Prompts<", cut.Markup, StringComparison.Ordinal);
         Assert.Contains(">Appearance<", cut.Markup, StringComparison.Ordinal);
         Assert.Contains(">System prompt<", cut.Markup, StringComparison.Ordinal);
         Assert.Contains(">Turn<", cut.Markup, StringComparison.Ordinal);
@@ -46,9 +46,9 @@ public sealed class SettingsPageTests
         Assert.Contains(">Tool descriptions<", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>The default (Hooks) panel renders the Hooks panel's MudPaper-wrapped groups.</summary>
+    /// <summary>The default (Prompts) panel renders the Prompts panel's MudPaper-wrapped groups.</summary>
     [Fact]
-    public async Task SettingsHooksPage_Renders_HooksPanel()
+    public async Task SettingsPromptsPage_Renders_PromptsPanel()
     {
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = NewContext(factory);
@@ -59,9 +59,9 @@ public sealed class SettingsPageTests
         Assert.Contains(">System prompt<", cut.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>An unrecognised {Tab} value falls back to the Hooks panel rather than 404ing or throwing - a fact about routing, so it stays on HTTP.</summary>
+    /// <summary>An unrecognised {Tab} value falls back to the Prompts panel rather than 404ing or throwing - a fact about routing, so it stays on HTTP.</summary>
     [Fact]
-    public async Task SettingsPage_UnknownTab_FallsBackToHooksPanel()
+    public async Task SettingsPage_UnknownTab_FallsBackToPromptsPanel()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
@@ -76,9 +76,9 @@ public sealed class SettingsPageTests
         Assert.Contains(">System prompt<", html, StringComparison.Ordinal);
     }
 
-    /// <summary>Every one of the catalog's hook labels reaches the rendered page - unaffected by the MudBlazor conversion, so it stays on HTTP.</summary>
+    /// <summary>Every one of the catalog's prompt labels reaches the rendered page - unaffected by the MudBlazor conversion, so it stays on HTTP.</summary>
     [Fact]
-    public async Task SettingsHooksPage_ListsEveryHookLabel()
+    public async Task SettingsPromptsPage_ListsEveryPromptLabel()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
@@ -86,9 +86,9 @@ public sealed class SettingsPageTests
         await using var factory = new TeamWebApplicationFactory();
         using var client = factory.CreateClient();
 
-        var html = await client.GetStringAsync("/settings/hooks", ct);
+        var html = await client.GetStringAsync("/settings/prompts", ct);
 
-        foreach (var definition in HookCatalog.All)
+        foreach (var definition in PromptCatalog.All)
         {
             Assert.Contains(definition.Label, html, StringComparison.Ordinal);
         }
@@ -112,7 +112,7 @@ public sealed class SettingsPageTests
 
     /// <summary>With nothing pending, the Save button renders disabled - there is nothing yet to commit.</summary>
     [Fact]
-    public async Task SettingsHooksPage_WithNothingPending_SaveButtonIsDisabled()
+    public async Task SettingsPromptsPage_WithNothingPending_SaveButtonIsDisabled()
     {
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = NewContext(factory);
@@ -124,13 +124,13 @@ public sealed class SettingsPageTests
     }
 
     /// <summary>
-    /// The page tells a user exactly where <c>hooks.json</c> lives - matched against the factory's
-    /// own configured path (see <see cref="TeamWebApplicationFactory.HooksJsonPath"/>) rather than a
+    /// The page tells a user exactly where <c>prompts.json</c> lives - matched against the factory's
+    /// own configured path (see <see cref="TeamWebApplicationFactory.PromptsJsonPath"/>) rather than a
     /// hardcoded guess, since <c>Team:DataDir</c> is redirected to a fresh temp directory per factory.
     /// This is a fact about the server's configuration, so it stays on HTTP.
     /// </summary>
     [Fact]
-    public async Task SettingsHooksPage_ShowsTheOverrideFilePath()
+    public async Task SettingsPromptsPage_ShowsTheOverrideFilePath()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
@@ -138,14 +138,14 @@ public sealed class SettingsPageTests
         await using var factory = new TeamWebApplicationFactory();
         using var client = factory.CreateClient();
 
-        var html = await client.GetStringAsync("/settings/hooks", ct);
+        var html = await client.GetStringAsync("/settings/prompts", ct);
 
-        Assert.Contains(factory.HooksJsonPath, html, StringComparison.Ordinal);
+        Assert.Contains(factory.PromptsJsonPath, html, StringComparison.Ordinal);
     }
 
     /// <summary>With no override configured, the "Reset all to defaults" button renders disabled.</summary>
     [Fact]
-    public async Task SettingsHooksPage_WithNothingModified_ResetAllButtonIsDisabled()
+    public async Task SettingsPromptsPage_WithNothingModified_ResetAllButtonIsDisabled()
     {
         await using var factory = new TeamWebApplicationFactory();
         await using var ctx = NewContext(factory);
@@ -172,7 +172,7 @@ public sealed class SettingsPageTests
         Assert.Contains("href=\"/settings\"", html, StringComparison.Ordinal);
     }
 
-    /// <summary>The tab rail includes an Appearance tab alongside Hooks.</summary>
+    /// <summary>The tab rail includes an Appearance tab alongside Prompts.</summary>
     [Fact]
     public async Task SettingsPage_Renders_AppearanceTabInTheRail()
     {
@@ -239,11 +239,11 @@ public sealed class SettingsPageTests
     }
 
     /// <summary>
-    /// The paragraph move in T4.1 must not regress: the Appearance tab never shows the Hooks intro's
-    /// file-path paragraph, which talked about <c>hooks.json</c> and would make no sense here.
+    /// The paragraph move in T4.1 must not regress: the Appearance tab never shows the Prompts intro's
+    /// file-path paragraph, which talked about <c>prompts.json</c> and would make no sense here.
     /// </summary>
     [Fact]
-    public async Task SettingsAppearancePage_DoesNotRenderTheHooksIntro()
+    public async Task SettingsAppearancePage_DoesNotRenderThePromptsIntro()
     {
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
@@ -253,12 +253,12 @@ public sealed class SettingsPageTests
 
         var html = await client.GetStringAsync("/settings/appearance", ct);
 
-        Assert.DoesNotContain(factory.HooksJsonPath, html, StringComparison.Ordinal);
+        Assert.DoesNotContain(factory.PromptsJsonPath, html, StringComparison.Ordinal);
     }
 
     /// <summary>
     /// The Appearance tab tells a user exactly where <c>appearance.json</c> lives, the same guarantee
-    /// <see cref="SettingsHooksPage_ShowsTheOverrideFilePath"/> gives the Hooks tab.
+    /// <see cref="SettingsPromptsPage_ShowsTheOverrideFilePath"/> gives the Prompts tab.
     /// </summary>
     [Fact]
     public async Task SettingsAppearancePage_NamesTheOverrideFile()

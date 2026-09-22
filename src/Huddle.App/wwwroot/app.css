@@ -188,7 +188,7 @@ button:focus-visible {
 }
 
 /* ---- Room list: the hover/focus-revealed row actions menu ------------------------------------
-   .room-list already existed as a markup hook with no rule behind it. Each row is a flex box so
+   .room-list already existed as a markup prompt with no rule behind it. Each row is a flex box so
    the NavLink can grow and the "..." button sits fixed-width beside it; the button stays in the
    DOM (and in the Tab order) at all times, so it is reachable by keyboard even before it is
    visible - only its opacity is gated on :hover/:focus-within, matching .teammate-tile's own
@@ -653,7 +653,7 @@ button:focus-visible {
     overflow-wrap: anywhere;
 }
 
-/* ---- Settings: page shell and the Hooks panel's field layout (tab rail and status badges are MudBlazor) -- */
+/* ---- Settings: page shell and the Prompts panel's field layout (tab rail and status badges are MudBlazor) -- */
 
 .settings-page {
     padding: 1rem;
@@ -672,7 +672,7 @@ button:focus-visible {
     margin: 0 0 0.5rem 0;
 }
 
-.settings-hooks-file-path {
+.settings-prompts-file-path {
     font-size: 0.8rem;
     color: var(--mud-palette-text-secondary);
     margin: 0.5rem 0 0.75rem 0;
@@ -709,7 +709,7 @@ button:focus-visible {
     z-index: 1;
 }
 
-.hooks-group-heading {
+.prompts-group-heading {
     margin: 0 0 0.5rem 0;
     font-size: 1rem;
     color: var(--mud-palette-text-secondary);
@@ -717,7 +717,7 @@ button:focus-visible {
     border-bottom: 1px solid var(--mud-palette-divider-light);
 }
 
-.hooks-field {
+.prompts-field {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
@@ -725,18 +725,18 @@ button:focus-visible {
     border-bottom: 1px solid var(--mud-palette-divider-light);
 }
 
-.hooks-field-header {
+.prompts-field-header {
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
-.hooks-field-label {
+.prompts-field-label {
     font-weight: 600;
     color: var(--mud-palette-text-primary);
 }
 
-.hooks-field-placeholders {
+.prompts-field-placeholders {
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
@@ -746,13 +746,13 @@ button:focus-visible {
     color: var(--mud-palette-text-disabled);
 }
 
-.hooks-field-placeholder {
+.prompts-field-placeholder {
     padding: 0.25rem 0.5rem;
     background: var(--mud-palette-background-gray);
     border-radius: 3px;
 }
 
-.hooks-field-actions {
+.prompts-field-actions {
     display: flex;
     justify-content: flex-end;
 }

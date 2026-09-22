@@ -1,15 +1,15 @@
 @*
-    The Hooks tab's content: every model-facing hook, grouped and editable. The parent
+    The Prompts tab's content: every model-facing prompt, grouped and editable. The parent
     (Settings.razor) owns all state - this component holds none of its own, the same split
     Teammates.razor uses with TeammateCard: Groups already carries each field's pending value,
     computed flags and validation Issues, and every edit or reset request is handed back to the
     parent through a callback rather than written here.
 
-    Every [Parameter] below is deliberately non-string (HookEdit for the edited value, plain string
+    Every [Parameter] below is deliberately non-string (PromptEdit for the edited value, plain string
     only for ResetRequested's key - see the note there) for the same reason TeammateCard's are: a
     string parameter bound as Foo="this.bar" compiles cleanly and silently passes the literal text
     instead of a field's value (see TeammatesRazorSourceTests), and a non-string parameter cannot be
-    mis-bound that way at all. HookEdit itself carries the one string value this panel does hand
+    mis-bound that way at all. PromptEdit itself carries the one string value this panel does hand
     back (the edited text), wrapped so the Razor attribute binds a record instance rather than a bare
     string.
 
@@ -22,19 +22,19 @@
     changing them would be inventing a conversion the brief did not ask for.
 *@
 
-@using Agency.Huddle.App.Hooks
+@using Agency.Huddle.App.Prompts
 
 @foreach (var group in this.Groups)
 {
     <MudPaper Class="pa-4 mb-4">
-        <h2 class="hooks-group-heading">@group.Label</h2>
+        <h2 class="prompts-group-heading">@group.Label</h2>
 
         @foreach (var field in group.Fields)
         {
-            <div class="hooks-field">
-                <div class="hooks-field-header">
-                    <span class="hooks-field-label">@field.Label</span>
-                    @if (field.Timing == HookTiming.NextSession)
+            <div class="prompts-field">
+                <div class="prompts-field-header">
+                    <span class="prompts-field-label">@field.Label</span>
+                    @if (field.Timing == PromptTiming.NextSession)
                     {
                         <MudChip T="string" Size="Size.Small" title="Applies to teammates started after the change">Next session</MudChip>
                     }
@@ -51,18 +51,18 @@
                 <MudTextField T="string"
                               Value="@field.Value"
                               ValueChanged="@(text => this.OnFieldInput(field.Key, text))"
-                              Lines="@HookFieldFactory.RowsFor(field.Value)"
+                              Lines="@PromptFieldFactory.RowsFor(field.Value)"
                               HelperText="@field.HelperText"
                               Variant="Variant.Outlined"
                               Immediate="true" />
 
                 @if (field.Placeholders.Count > 0)
                 {
-                    <p class="hooks-field-placeholders">
+                    <p class="prompts-field-placeholders">
                         Placeholders:
                         @foreach (var placeholder in field.Placeholders)
                         {
-                            <code class="hooks-field-placeholder">@placeholder</code>
+                            <code class="prompts-field-placeholder">@placeholder</code>
                         }
                     </p>
                 }
@@ -71,11 +71,11 @@
                 {
                     @foreach (var issue in field.Issues)
                     {
-                        <MudAlert Severity="@(issue.Severity == HookIssueSeverity.Error ? Severity.Error : Severity.Warning)" Dense="true" Class="mb-1">@issue.Message</MudAlert>
+                        <MudAlert Severity="@(issue.Severity == PromptIssueSeverity.Error ? Severity.Error : Severity.Warning)" Dense="true" Class="mb-1">@issue.Message</MudAlert>
                     }
                 }
 
-                <div class="hooks-field-actions">
+                <div class="prompts-field-actions">
                     <MudButton Variant="Variant.Outlined"
                                Disabled="@(!field.IsModified)"
                                OnClick="@(() => this.OnResetClicked(field.Key))">Reset</MudButton>
@@ -86,14 +86,14 @@
 }
 
 @code {
-    /// <summary>Every hook field to render, already grouped and ordered by <see cref="HookFieldFactory"/>.</summary>
+    /// <summary>Every prompt field to render, already grouped and ordered by <see cref="PromptFieldFactory"/>.</summary>
     [Parameter]
     [EditorRequired]
-    public IReadOnlyList<HookFieldGroup> Groups { get; set; } = [];
+    public IReadOnlyList<PromptFieldGroup> Groups { get; set; } = [];
 
     /// <summary>Raised whenever a field's value changes, carrying the edited key and its new pending text.</summary>
     [Parameter]
-    public EventCallback<HookEdit> ValueChanged { get; set; }
+    public EventCallback<PromptEdit> ValueChanged { get; set; }
 
     /// <summary>Raised when a field's Reset button is clicked, carrying that field's key.</summary>
     [Parameter]
@@ -101,7 +101,7 @@
 
     private Task OnFieldInput(string key, string? text)
     {
-        return this.ValueChanged.InvokeAsync(new HookEdit(key, text ?? string.Empty));
+        return this.ValueChanged.InvokeAsync(new PromptEdit(key, text ?? string.Empty));
     }
 
     private Task OnResetClicked(string key)

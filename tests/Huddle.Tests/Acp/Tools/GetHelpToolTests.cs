@@ -33,14 +33,14 @@ public sealed class GetHelpToolTests
         var follows = new RoomFollows();
         IAppTool[] others =
         [
-            new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakeHookSource()),
-            new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakeHookSource()),
-            new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource()),
-            new PostMessageTool(chat, "caller-id", new FakeHookSource()),
-            new FollowRoomTool(follows, directory, "caller-id", new FakeHookSource()),
-            new UnfollowRoomTool(follows, directory, "caller-id", new FakeHookSource()),
+            new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakePromptSource()),
+            new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakePromptSource()),
+            new InviteAgentTool(chat, directory, aliasSource, new FakePromptSource()),
+            new PostMessageTool(chat, "caller-id", new FakePromptSource()),
+            new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
+            new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
         ];
-        var tool = new GetHelpTool(others, new FakeHookSource(), "mcp__team__");
+        var tool = new GetHelpTool(others, new FakePromptSource(), "mcp__team__");
 
         var help = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -52,14 +52,14 @@ public sealed class GetHelpToolTests
         }
     }
 
-    /// <summary>An override configured on a hook <see cref="GetHelpTool"/> renders must actually reach its output.</summary>
+    /// <summary>An override configured on a prompt <see cref="GetHelpTool"/> renders must actually reach its output.</summary>
     [Fact]
-    public async Task GetHelp_OverriddenBudgetHook_AppearsInHelp()
+    public async Task GetHelp_OverriddenBudgetPrompt_AppearsInHelp()
     {
         var ct = TestContext.Current.CancellationToken;
-        var hooks = new FakeHookSource();
-        hooks.SetOverride("getHelp.budget", "BUDGET\nCustom budget wording for this test.");
-        var tool = new GetHelpTool([], hooks, "mcp__team__");
+        var prompts = new FakePromptSource();
+        prompts.SetOverride("getHelp.budget", "BUDGET\nCustom budget wording for this test.");
+        var tool = new GetHelpTool([], prompts, "mcp__team__");
 
         var help = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -67,7 +67,7 @@ public sealed class GetHelpToolTests
     }
 
     /// <summary>
-    /// A <c>tool.*.description</c> hook is badged <b>Next session</b>, so an edit made after a
+    /// A <c>tool.*.description</c> prompt is badged <b>Next session</b>, so an edit made after a
     /// session's tool list was built must not reach that session's help output — while the help
     /// prose around it, which carries no badge, must. Both halves are asserted together on purpose:
     /// caching the whole help text would satisfy the first and silently break the second.
@@ -76,13 +76,13 @@ public sealed class GetHelpToolTests
     public async Task GetHelp_ToolDescriptionEditedAfterConstruction_DoesNotReachThisSession()
     {
         var ct = TestContext.Current.CancellationToken;
-        var hooks = new FakeHookSource();
-        var tool = new GetHelpTool([], hooks, "mcp__team__");
+        var prompts = new FakePromptSource();
+        var tool = new GetHelpTool([], prompts, "mcp__team__");
 
         // Both overrides land after construction, which is what "after the session started" means:
         // GetHelpTool is built once per session, beside the tool server and the system prompt.
-        hooks.SetOverride("tool.getHelp.description", "Explains how Team works. MANGO.");
-        hooks.SetOverride("getHelp.budget", "BUDGET\nPINEAPPLE is the safe word.");
+        prompts.SetOverride("tool.getHelp.description", "Explains how Team works. MANGO.");
+        prompts.SetOverride("getHelp.budget", "BUDGET\nPINEAPPLE is the safe word.");
 
         var help = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -94,7 +94,7 @@ public sealed class GetHelpToolTests
     public async Task GetHelp_ExplainsTheReplyRuleAndHowARoomIdArrives()
     {
         var ct = TestContext.Current.CancellationToken;
-        var tool = new GetHelpTool([], new FakeHookSource(), "mcp__team__");
+        var tool = new GetHelpTool([], new FakePromptSource(), "mcp__team__");
 
         var help = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -106,12 +106,12 @@ public sealed class GetHelpToolTests
         // The room id is only ever learned from the prompt's Room label, so help has to say so.
         // This literal is doing double duty by design (task T1.11): it pins the documented Room-label
         // format the getHelp.messages default advertises, AND it is the regression test proving
-        // HookRenderer's {{...}} substitution does not eat literal angle brackets. Do not "modernise"
+        // PromptRenderer's {{...}} substitution does not eat literal angle brackets. Do not "modernise"
         // this into "{{roomName}}" wording — that would destroy both purposes at once.
         //
         // TODO(follow-up, out of scope for T1.11): nothing yet asserts that this documented format —
         // "[Room: <name> (id: <id>)]" — actually matches what turn.roomLabel's default renders in
-        // PersonaRunner.BuildPrompt. The two hooks (getHelp.messages and turn.roomLabel) can drift
+        // PersonaRunner.BuildPrompt. The two prompts (getHelp.messages and turn.roomLabel) can drift
         // apart with no test noticing, now that each is independently overridable.
         Assert.Contains("[Room: <name> (id: <id>)]", help, StringComparison.Ordinal);
     }
@@ -123,7 +123,7 @@ public sealed class GetHelpToolTests
     public async Task GetHelp_MentionsTheRoomBudget()
     {
         var ct = TestContext.Current.CancellationToken;
-        var tool = new GetHelpTool([], new FakeHookSource(), "mcp__team__");
+        var tool = new GetHelpTool([], new FakePromptSource(), "mcp__team__");
 
         var help = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -137,14 +137,14 @@ public sealed class GetHelpToolTests
     {
         var ct = TestContext.Current.CancellationToken;
         var others = new List<IAppTool>();
-        var tool = new GetHelpTool(others, new FakeHookSource(), "mcp__team__");
+        var tool = new GetHelpTool(others, new FakePromptSource(), "mcp__team__");
 
         // The caller's list is copied on the way in, so a later mutation cannot change what an
         // Agent is told exists: the tool server was handed a fixed set at the same moment.
         using var dir = new TempDataDir();
         var directory = new SqliteTeamDirectory(dir.Options());
         using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
-        others.Add(new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakeHookSource()));
+        others.Add(new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakePromptSource()));
 
         var help = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -165,8 +165,8 @@ public sealed class GetHelpToolTests
         var directory = new SqliteTeamDirectory(dir.Options());
         await directory.InitializeAsync("You", ct);
         using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
-        IAppTool[] others = [new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakeHookSource())];
-        var tool = new GetHelpTool(others, new FakeHookSource(), string.Empty);
+        IAppTool[] others = [new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakePromptSource())];
+        var tool = new GetHelpTool(others, new FakePromptSource(), string.Empty);
 
         var help = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -179,6 +179,6 @@ public sealed class GetHelpToolTests
     [Fact]
     public void Constructor_NullToolNamePrefix_Throws()
     {
-        Assert.Throws<ArgumentNullException>(() => new GetHelpTool([], new FakeHookSource(), null!));
+        Assert.Throws<ArgumentNullException>(() => new GetHelpTool([], new FakePromptSource(), null!));
     }
 }

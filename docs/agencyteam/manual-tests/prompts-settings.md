@@ -1,6 +1,6 @@
-# Settings: the 24 Hooks, editing, per-field reset and Save
+# Settings: the 24 Prompts, editing, per-field reset and Save
 
-Prove that the /settings Hooks editor renders all 24 model-facing hooks correctly, that its three-state badge logic (Next session / Modified / Unsaved) and per-field Reset behave, that Save is the one and only thing that ever writes {DataDir}\hooks.json, that the validator reports without ever refusing, and — most importantly — that this area's documented SILENT behaviours (a malformed hand-edit that says nothing on screen, a NextSession edit that is inert on a running teammate, a "Reset all" that stages but never commits, a destructive Reset-all button shown on the Appearance tab) actually behave as documented rather than as data loss. None of this is reachable by CI: the repo's component tests cannot dispatch a click, so every interaction here is unproven until a human or agent drives a browser.
+Prove that the /settings Prompts editor renders all 24 model-facing prompts correctly, that its three-state badge logic (Next session / Modified / Unsaved) and per-field Reset behave, that Save is the one and only thing that ever writes {DataDir}\prompts.json, that the validator reports without ever refusing, and — most importantly — that this area's documented SILENT behaviours (a malformed hand-edit that says nothing on screen, a NextSession edit that is inert on a running teammate, a "Reset all" that stages but never commits, a destructive Reset-all button shown on the Appearance tab) actually behave as documented rather than as data loss. None of this is reachable by CI: the repo's component tests cannot dispatch a click, so every interaction here is unproven until a human or agent drives a browser.
 
 **40 tests** · 37 free, 3 paid 💰 · about 4.7 hours.
 
@@ -15,26 +15,26 @@ Run [`P-BUILD`](common.md#p-build) then [`P-LAUNCH-FREE`](common.md#p-launch-fre
 oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB`, the four resets, and the
 standing conventions. This area adds:
 
-1. Confirm the clean starting state before the first test: `App_Data` should hold `Teams`, `personas`, `work` and `team.db` (plus `team.db-shm` / `team.db-wal`) and NO `hooks.json` and NO `appearance.json`. That absence is correct, not a fault.
+1. Confirm the clean starting state before the first test: `App_Data` should hold `Teams`, `personas`, `work` and `team.db` (plus `team.db-shm` / `team.db-wal`) and NO `prompts.json` and NO `appearance.json`. That absence is correct, not a fault.
 2. Browse to `http://localhost:5100/settings`.
 3. Keep a File Explorer window on `App_Data` beside the browser with the view set to Details, so the Date modified column is visible. Several tests turn on 'the file did not change'.
-4. Keep a plain-text editor that does not reformat files (VS Code, Notepad++, Notepad) ready — many tests hand-edit `App_Data\hooks.json` while the app is running.
-5. Open `E:\Repos\Huddle\src\Huddle.App\hooks.default.json` in that editor and leave it open. It is the 24 shipped defaults, pretty-printed, and is the diff source for every 'did Reset restore the exact shipped wording?' check. Nothing in the running app ever reads it.
-6. Reset between tests with `P-RESET-SETTINGS` unless a test says otherwise. Tests HOOKSSETTINGS-01 to -36 run on `P-LAUNCH-FREE` and cost nothing; only -37 to -40 use `P-LAUNCH-PAID`.
-7. MudBlazor renders every button and tab-panel LABEL in upper case via CSS (`text-transform: uppercase`) — this is a rendering style, not a change to the underlying text. A step below that says to look for `Reset` or `Hooks` means the control whose text (and `textContent` in DevTools) is `Reset` or `Hooks`; what you will actually SEE on screen is `RESET` / `HOOKS`. Steps keep the title-case spelling throughout this document because that is what a DOM/`textContent` check reads and what this document's own prose uses — read every button and tab label below as its upper-case rendering, not as a mismatch to report.
+4. Keep a plain-text editor that does not reformat files (VS Code, Notepad++, Notepad) ready — many tests hand-edit `App_Data\prompts.json` while the app is running.
+5. Open `E:\Repos\Huddle\src\Huddle.App\prompts.default.json` in that editor and leave it open. It is the 24 shipped defaults, pretty-printed, and is the diff source for every 'did Reset restore the exact shipped wording?' check. Nothing in the running app ever reads it.
+6. Reset between tests with `P-RESET-SETTINGS` unless a test says otherwise. Tests PROMPTSSETTINGS-01 to -36 run on `P-LAUNCH-FREE` and cost nothing; only -37 to -40 use `P-LAUNCH-PAID`.
+7. MudBlazor renders every button and tab-panel LABEL in upper case via CSS (`text-transform: uppercase`) — this is a rendering style, not a change to the underlying text. A step below that says to look for `Reset` or `Prompts` means the control whose text (and `textContent` in DevTools) is `Reset` or `Prompts`; what you will actually SEE on screen is `RESET` / `PROMPTS`. Steps keep the title-case spelling throughout this document because that is what a DOM/`textContent` check reads and what this document's own prose uses — read every button and tab label below as its upper-case rendering, not as a mismatch to report.
 
 ## Tests
 
-### HOOKSSETTINGS-01 — /settings opens on the Hooks tab with a two-button tab rail
+### PROMPTSSETTINGS-01 — /settings opens on the Prompts tab with a two-button tab rail
 
 **Free** · about 2 min
 
-*Proves the page routes, renders, and defaults to Hooks when no tab segment is given.*
+*Proves the page routes, renders, and defaults to Prompts when no tab segment is given.*
 
 **Before you start**
 
 - The app is running.
-- No hooks.json in App_Data.
+- No prompts.json in App_Data.
 
 **Steps**
 
@@ -49,15 +49,15 @@ standing conventions. This area adds:
 **Pass if — all of these**
 
 - An `<h1>` reading exactly `Settings` is at the top of the page.
-- The tab rail contains exactly two buttons, reading `HOOKS` and `APPEARANCE` (MudBlazor renders tab labels in upper case; the underlying text is `Hooks` and `Appearance`), laid out horizontally ABOVE the content, not down its left edge.
-- `HOOKS` is the visually selected tab and `APPEARANCE` is not.
-- The content pane below shows hook fields (bold field labels with textareas), not a theme picker.
+- The tab rail contains exactly two buttons, reading `PROMPTS` and `APPEARANCE` (MudBlazor renders tab labels in upper case; the underlying text is `Prompts` and `Appearance`), laid out horizontally ABOVE the content, not down its left edge.
+- `PROMPTS` is the visually selected tab and `APPEARANCE` is not.
+- The content pane below shows prompt fields (bold field labels with textareas), not a theme picker.
 - The address bar still reads `http://localhost:5100/settings` with no tab segment appended.
 
 **Fail if — any of these**
 
 - A 404 page or a yellow/ASP.NET exception page -> the route `/settings` with no `{Tab}` segment no longer resolves.
-- A blank content pane -> the `default:` fallback arm of the tab switch has broken; landing with no tab must still render Hooks.
+- A blank content pane -> the `default:` fallback arm of the tab switch has broken; landing with no tab must still render Prompts.
 - Neither tab looks active, or both do -> `MudTabs`' `ActivePanelIndex` is being computed from a stale or duplicated comparison.
 - The rail renders as a vertical column down the left, or anywhere other than horizontally above the content -> `MudTabs.Position` was set away from its default (`Position.Top`), which nothing in this area asked for.
 
@@ -66,9 +66,9 @@ standing conventions. This area adds:
 If the browser shows a connection error, the app is not running — redo `P-LAUNCH-FREE` and check `T-A` for a startup exception, then re-run. If the page renders but the styling is obviously absent (no colours at all, unstyled text), CSS failed to load: hard-refresh with Ctrl+F5 and re-judge; if it is still unstyled, stop and report a CSS-loading problem rather than judging the tab rail.
 
 > [!NOTE]
-> The tab rail is `MudTabs` (Stage 3 of the MudBlazor migration), rendered at its default `Position.Top` — horizontally, above the content — which is a layout change from the old hand-rolled vertical left rail. That change is expected; do not file it. To confirm the selected-tab styling objectively rather than by eye, open devtools (F12), inspect the `HOOKS` button, and check its class list contains `mud-tab-active`. The old hand-rolled `settings-tab-active` class no longer exists.
+> The tab rail is `MudTabs` (Stage 3 of the MudBlazor migration), rendered at its default `Position.Top` — horizontally, above the content — which is a layout change from the old hand-rolled vertical left rail. That change is expected; do not file it. To confirm the selected-tab styling objectively rather than by eye, open devtools (F12), inspect the `PROMPTS` button, and check its class list contains `mud-tab-active`. The old hand-rolled `settings-tab-active` class no longer exists.
 
-### HOOKSSETTINGS-02 — Tab clicks change the URL, and an unknown tab segment falls back to Hooks instead of 404ing
+### PROMPTSSETTINGS-02 — Tab clicks change the URL, and an unknown tab segment falls back to Prompts instead of 404ing
 
 **Free** · about 4 min
 
@@ -83,10 +83,10 @@ If the browser shows a connection error, the app is not running — redo `P-LAUN
 
 1. Click the **Appearance** tab button.
 2. Read the address bar and the content pane.
-3. Click the **Hooks** tab button.
+3. Click the **Prompts** tab button.
 4. Read the address bar and the content pane.
-5. Type `http://localhost:5100/settings/hooks` in the address bar and press Enter.
-6. Type `http://localhost:5100/settings/HOOKS` (all capitals) in the address bar and press Enter.
+5. Type `http://localhost:5100/settings/prompts` in the address bar and press Enter.
+6. Type `http://localhost:5100/settings/PROMPTS` (all capitals) in the address bar and press Enter.
 7. Type `http://localhost:5100/settings/Appearance` in the address bar and press Enter.
 8. Type `http://localhost:5100/settings/nonsense` in the address bar and press Enter.
 9. Type `http://localhost:5100/settings/` (with the trailing slash, nothing after it) in the address bar and press Enter.
@@ -95,12 +95,12 @@ If the browser shows a connection error, the app is not running — redo `P-LAUN
 **Pass if — all of these**
 
 - After step 1 the URL is `http://localhost:5100/settings/appearance` and the pane shows the sentence `Pick a theme, and choose whether it always uses its light or dark palette, or follows your device's own setting.` and a `Theme` select plus a second, `Appearance`-labelled select.
-- After step 3 the URL is `http://localhost:5100/settings/hooks` and the 24 hook textareas are back.
-- Step 5 renders the Hooks pane.
-- Step 6 (`/settings/HOOKS`) renders the Hooks pane — the parse is case-insensitive.
+- After step 3 the URL is `http://localhost:5100/settings/prompts` and the 24 prompt textareas are back.
+- Step 5 renders the Prompts pane.
+- Step 6 (`/settings/PROMPTS`) renders the Prompts pane — the parse is case-insensitive.
 - Step 7 (`/settings/Appearance`) renders the Appearance pane.
-- Step 8 (`/settings/nonsense`) renders the HOOKS pane, with `nonsense` still visible in the address bar.
-- Step 9 renders a page (Hooks pane) rather than an error.
+- Step 8 (`/settings/nonsense`) renders the PROMPTS pane, with `nonsense` still visible in the address bar.
+- Step 9 renders a page (Prompts pane) rather than an error.
 - Back and Forward move between the tabs you visited without error.
 
 **Fail if — any of these**
@@ -113,7 +113,7 @@ If the browser shows a connection error, the app is not running — redo `P-LAUN
 
 If step 9 (`/settings/` with a trailing slash) gives a 404 while every other step passes, do NOT fail the test on that alone — trailing-slash handling is web-server routing rather than this page's fallback. Record it as a separate minor observation and mark the rest pass/fail on steps 1-8 and 10.
 
-### HOOKSSETTINGS-03 — The Hooks tab prints the real absolute path of hooks.json, and says the file's absence is expected
+### PROMPTSSETTINGS-03 — The Prompts tab prints the real absolute path of prompts.json, and says the file's absence is expected
 
 **Free** · about 3 min
 
@@ -122,7 +122,7 @@ If step 9 (`/settings/` with a trailing slash) gives a 404 while every other ste
 **Before you start**
 
 - The app is running.
-- You are on /settings (Hooks tab).
+- You are on /settings (Prompts tab).
 
 **Steps**
 
@@ -134,14 +134,14 @@ If step 9 (`/settings/` with a trailing slash) gives a 404 while every other ste
 
 **Pass if — all of these**
 
-- The first paragraph reads: `A hook is one piece of wording this application sends to a model — part of a system prompt, a turn, get_help's output, or a tool's own description. Editing one changes what every teammate is told, not how the application itself behaves, and a hook you have changed can always be restored to the wording it shipped with.`
-- The second paragraph reads: `Overrides are stored at <path>, which holds only the hooks you have changed — hand-edit it for fast prototyping if you like. The file does not exist until the first time you save here, so it being absent is expected, not a bug.`
-- The `<path>` is a full absolute Windows path ending in `\App_Data\hooks.json` — for a default checkout, `E:\Repos\Huddle\src\Huddle.App\App_Data\hooks.json`.
+- The first paragraph reads: `A prompt is one piece of wording this application sends to a model — part of a system prompt, a turn, get_help's output, or a tool's own description. Editing one changes what every teammate is told, not how the application itself behaves, and a prompt you have changed can always be restored to the wording it shipped with.`
+- The second paragraph reads: `Overrides are stored at <path>, which holds only the prompts you have changed — hand-edit it for fast prototyping if you like. The file does not exist until the first time you save here, so it being absent is expected, not a bug.`
+- The `<path>` is a full absolute Windows path ending in `\App_Data\prompts.json` — for a default checkout, `E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json`.
 - Explorer opens (or reports 'file not found' for) that exact folder, and that folder is the one containing `team.db`.
 
 **Fail if — any of these**
 
-- A relative path such as `App_Data/hooks.json`, a placeholder, or an empty `<code>` element -> the on-screen path is no longer coming from HookStore.FilePath, and the documented confusion it exists to prevent is back.
+- A relative path such as `App_Data/prompts.json`, a placeholder, or an empty `<code>` element -> the on-screen path is no longer coming from PromptStore.FilePath, and the documented confusion it exists to prevent is back.
 - A path under a different folder than the one holding `team.db` -> DataDir absolutisation has drifted, and the file the tester hand-edits in later tests will not be the file the app reads.
 - The sentence about the file not existing being missing -> the mitigation the rules file makes binding has been deleted.
 
@@ -152,17 +152,17 @@ If Explorer says the FILE does not exist but opens the right FOLDER, that is a P
 > [!NOTE]
 > Use the path the page prints in every later test in this suite. Do not use the path written in these notes if the two disagree — the page is the authority.
 
-### HOOKSSETTINGS-04 — Exactly 24 hook fields, in four named groups, in a fixed order
+### PROMPTSSETTINGS-04 — Exactly 24 prompt fields, in four named groups, in a fixed order
 
 **Free** · about 5 min
 
-*Proves the whole catalog is reachable from the UI — a hook whose key matched no group prefix would simply vanish from the page with no error anywhere.*
+*Proves the whole catalog is reachable from the UI — a prompt whose key matched no group prefix would simply vanish from the page with no error anywhere.*
 
 **Before you start**
 
 - The app is running.
-- No hooks.json (fresh state).
-- You are on /settings (Hooks tab).
+- No prompts.json (fresh state).
+- You are on /settings (Prompts tab).
 
 **Steps**
 
@@ -184,27 +184,27 @@ If Explorer says the FILE does not exist but opens the right FOLDER, that is a P
 
 **Fail if — any of these**
 
-- A total other than 24 -> a hook key exists that matches none of the four group prefixes, so it renders nowhere and can never be edited or reset from the UI; there is NO error for this, only a missing field.
+- A total other than 24 -> a prompt key exists that matches none of the four group prefixes, so it renders nowhere and can never be edited or reset from the UI; there is NO error for this, only a missing field.
 - A field under the wrong heading, or two fields swapped -> the grouping/ordering logic has changed and a user following documentation will look in the wrong place.
 - A missing group heading with its fields still present -> the group builder is dropping empty-label groups incorrectly.
 
 **Inconclusive if**
 
-If you cannot tell where one group ends and the next begins because headings are unstyled, open devtools and count the `MudPaper` elements wrapping each group (each renders as a `.mud-paper` carrying the `pa-4 mb-4` classes and one `h2.hooks-group-heading`) and the `hooks-field` divs inside each. If that count matches, pass the test and separately report the styling problem. (The old hand-rolled `<section class="hooks-group">` wrapper no longer exists — Stage 3 of the MudBlazor migration replaced it with `MudPaper`, but `hooks-group-heading` and `hooks-field` are unchanged.)
+If you cannot tell where one group ends and the next begins because headings are unstyled, open devtools and count the `MudPaper` elements wrapping each group (each renders as a `.mud-paper` carrying the `pa-4 mb-4` classes and one `h2.prompts-group-heading`) and the `prompts-field` divs inside each. If that count matches, pass the test and separately report the styling problem. (The old hand-rolled `<section class="prompts-group">` wrapper no longer exists — Stage 3 of the MudBlazor migration replaced it with `MudPaper`, but `prompts-group-heading` and `prompts-field` are unchanged.)
 
 > [!NOTE]
-> Cross-check against `E:\Repos\Huddle\src\Huddle.App\hooks.default.json`, which holds exactly 24 keys. Every label on screen must correspond to one of them. Count, do not skim — this test's entire value is the count.
+> Cross-check against `E:\Repos\Huddle\src\Huddle.App\prompts.default.json`, which holds exactly 24 keys. Every label on screen must correspond to one of them. Count, do not skim — this test's entire value is the count.
 
-### HOOKSSETTINGS-05 — The "Next session" badge appears on exactly the 11 hooks whose edits cannot reach a running teammate
+### PROMPTSSETTINGS-05 — The "Next session" badge appears on exactly the 11 prompts whose edits cannot reach a running teammate
 
 **Free** · about 5 min
 
-*Proves the one timing fact a reader cannot infer from a hook's own text is shown — without it, a user edits the system prompt, sees nothing change, and has no way to learn why.*
+*Proves the one timing fact a reader cannot infer from a prompt's own text is shown — without it, a user edits the system prompt, sees nothing change, and has no way to learn why.*
 
 **Before you start**
 
 - The app is running.
-- You are on /settings (Hooks tab).
+- You are on /settings (Prompts tab).
 
 **Steps**
 
@@ -233,18 +233,18 @@ If you cannot tell where one group ends and the next begins because headings are
 If tooltips do not appear at all in your browser (some kiosk/remote setups suppress them), inspect the pill in devtools and read its `title` attribute directly. If the attribute is present with the correct text, pass the tooltip step.
 
 > [!NOTE]
-> The authoritative count is 11 — the number of `Timing: HookTiming.NextSession` entries in `src\Huddle.App\Hooks\HookCatalog.cs`.
+> The authoritative count is 11 — the number of `Timing: PromptTiming.NextSession` entries in `src\Huddle.App\Prompts\PromptCatalog.cs`.
 
-### HOOKSSETTINGS-06 — Placeholder chips are listed on exactly the 8 hooks that take placeholders, with full braces
+### PROMPTSSETTINGS-06 — Placeholder chips are listed on exactly the 8 prompts that take placeholders, with full braces
 
 **Free** · about 5 min
 
-*Proves a user can see which {{tokens}} a hook accepts, spelled the way the renderer actually matches them.*
+*Proves a user can see which {{tokens}} a prompt accepts, spelled the way the renderer actually matches them.*
 
 **Before you start**
 
 - The app is running.
-- You are on /settings (Hooks tab).
+- You are on /settings (Prompts tab).
 
 **Steps**
 
@@ -269,30 +269,30 @@ If tooltips do not appear at all in your browser (some kiosk/remote setups suppr
 **Fail if — any of these**
 
 - A chip showing a bare name such as `helpTool` instead of `{{helpTool}}` -> the braces are part of the key everywhere in this system; a user who copies the bare name into their text produces something the renderer will never substitute, and nothing warns them.
-- A `Placeholders:` label rendered with no chips after it -> the zero-length guard around the list has been lost, which also means a no-placeholder hook now looks like it takes some.
-- A field gaining or losing a chip relative to the list above -> the catalog and the renderer may now disagree about what a hook accepts.
+- A `Placeholders:` label rendered with no chips after it -> the zero-length guard around the list has been lost, which also means a no-placeholder prompt now looks like it takes some.
+- A field gaining or losing a chip relative to the list above -> the catalog and the renderer may now disagree about what a prompt accepts.
 
 **Inconclusive if**
 
-If chips render but are visually indistinguishable from the surrounding text, read them from devtools (`<code class="hooks-field-placeholder">`). Judge content, not styling; report the styling separately.
+If chips render but are visually indistinguishable from the surrounding text, read them from devtools (`<code class="prompts-field-placeholder">`). Judge content, not styling; report the styling separately.
 
-### HOOKSSETTINGS-07 — No hook's DEFAULT text contains the literal string mcp__team__
+### PROMPTSSETTINGS-07 — No prompt's DEFAULT text contains the literal string mcp__team__
 
 **Free** · about 4 min
 
-*Proves the binding rule that a hook's text never hard-codes a tool prefix — code fills the real name in from the live tool roster. A violation is invisible on screen and only shows up later as a model insisting no such tool exists.*
+*Proves the binding rule that a prompt's text never hard-codes a tool prefix — code fills the real name in from the live tool roster. A violation is invisible on screen and only shows up later as a model insisting no such tool exists.*
 
 **Before you start**
 
-- No hooks.json (every field must show its shipped default).
-- The app is running and you are on /settings (Hooks tab).
+- No prompts.json (every field must show its shipped default).
+- The app is running and you are on /settings (Prompts tab).
 
 **Steps**
 
 1. Scroll through all 24 textareas and read their contents, scrolling inside any box that has its own scrollbar.
 2. Specifically read `Orientation`, `Tools`, and `Help: tool entry` in full.
 3. Confirm those three show the placeholders `{{helpTool}}`, `{{toolNames}}` and `{{toolName}}` respectively, rather than a literal tool name.
-4. Now run this in a terminal at the repo root and read the number it prints: `grep -c mcp__team__ src/Huddle.App/hooks.default.json`
+4. Now run this in a terminal at the repo root and read the number it prints: `grep -c mcp__team__ src/Huddle.App/prompts.default.json`
 5. Separately, click into the `Orientation` textarea, type `mcp__team__get_help` at the end of the text, and watch the field for any warning or refusal.
 
 **Pass if — all of these**
@@ -310,12 +310,12 @@ If chips render but are visually indistinguishable from the surrounding text, re
 
 **Inconclusive if**
 
-Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' result from Ctrl+F proves nothing — read the boxes, or use the grep. Also expect ONE legitimate on-page hit if you do use Ctrl+F: the grey helper sentence under `Help: tool entry` reads `{{toolName}} arrives already prefixed (e.g. mcp__team__get_help)`. That is helper text explaining the rule, not hook text, and it is NOT a failure.
+Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' result from Ctrl+F proves nothing — read the boxes, or use the grep. Also expect ONE legitimate on-page hit if you do use Ctrl+F: the grey helper sentence under `Help: tool entry` reads `{{toolName}} arrives already prefixed (e.g. mcp__team__get_help)`. That is helper text explaining the rule, not prompt text, and it is NOT a failure.
 
 > [!NOTE]
 > Undo your step-5 typing (Ctrl+Z) or reset the field before moving on, and do not save it.
 
-### HOOKSSETTINGS-08 — Textarea height tracks the line count and clamps at 14 rows
+### PROMPTSSETTINGS-08 — Textarea height tracks the line count and clamps at 14 rows
 
 **Free** · about 5 min
 
@@ -323,8 +323,8 @@ Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' r
 
 **Before you start**
 
-- The app is running, on /settings (Hooks tab).
-- No hooks.json.
+- The app is running, on /settings (Prompts tab).
+- No prompts.json.
 
 **Steps**
 
@@ -348,14 +348,14 @@ Browser Ctrl+F does NOT reliably search inside textarea values, so a 'no hits' r
 **Fail if — any of these**
 
 - The box not growing at all as newlines are added -> the height is recomputed on every keystroke, so a frozen height means the per-input re-render has stopped, which would also break the live badges and live validation in the tests below.
-- The box growing past 14 rows and dominating the page -> the clamp is gone; the longest hooks would push Save far off screen.
+- The box growing past 14 rows and dominating the page -> the clamp is gone; the longest prompts would push Save far off screen.
 - A manual resize grip appears and can drag the box independently of `Lines` -> `MudTextField`'s `resize: none` was overridden; a manual resize would drift out of sync with the automatic row count on the very next keystroke.
 
 **Inconclusive if**
 
 A very long SINGLE line with no newlines correctly stays at 2 rows and scrolls sideways — that is not a failure, so do not test the clamp by pasting one long line. NOTE: none of the 24 shipped defaults is long enough to hit the 14-row cap on its own (the tallest, `Tools`, is 7 lines), so the cap can only be reached by typing newlines as above. If you find a shipped default already rendering at 14 rows, that is a change worth reporting separately.
 
-### HOOKSSETTINGS-09 — Typing raises "Modified" and "Unsaved" together and enables Save, Reset and Reset all — while writing nothing
+### PROMPTSSETTINGS-09 — Typing raises "Modified" and "Unsaved" together and enables Save, Reset and Reset all — while writing nothing
 
 **Free** · about 4 min
 
@@ -363,13 +363,13 @@ A very long SINGLE line with no newlines correctly stays at 2 rows and scrolls s
 
 **Before you start**
 
-- No hooks.json.
-- The app is running, on /settings (Hooks tab).
+- No prompts.json.
+- The app is running, on /settings (Prompts tab).
 - File Explorer is open on App_Data.
 
 **Steps**
 
-1. Confirm in Explorer that `hooks.json` does not exist.
+1. Confirm in Explorer that `prompts.json` does not exist.
 2. Scroll to the `Save` button at the bottom of the form and confirm it is greyed out.
 3. Scroll to the header and confirm `Reset all to defaults` is greyed out.
 4. Click into the `Room label` textarea and type a single character `X` at the end of the text. Do NOT press Enter, do NOT click elsewhere.
@@ -387,7 +387,7 @@ A very long SINGLE line with no newlines correctly stays at 2 rows and scrolls s
 - The `Save` button becomes enabled.
 - `Reset all to defaults` becomes enabled.
 - `Message` and `Chat rules` gain no badges.
-- `hooks.json` still does NOT exist in App_Data.
+- `prompts.json` still does NOT exist in App_Data.
 
 **Fail if — any of these**
 
@@ -395,16 +395,16 @@ A very long SINGLE line with no newlines correctly stays at 2 rows and scrolls s
 - Save staying disabled while `Unsaved` shows -> the Save enablement and the badge have drifted apart, and a user with pending work cannot commit it.
 - `Reset` staying disabled while `Modified` shows -> the same flag drives both, so a mismatch is a real defect.
 - Badges leaking onto a neighbouring field -> the pending-edit map is keyed wrongly and a save will write the wrong key.
-- `hooks.json` appearing -> a write happened without a Save; the file must not exist until the first Save.
+- `prompts.json` appearing -> a write happened without a Save; the file must not exist until the first Save.
 
 **Inconclusive if**
 
 If you cannot distinguish the amber `Modified` pill from the blue `Unsaved` pill by colour, read their text — both pills carry their word as literal text. Judge by the words.
 
 > [!NOTE]
-> Leave the `X` in place if you go straight on to HOOKSSETTINGS-10; otherwise press F5 to discard it.
+> Leave the `X` in place if you go straight on to PROMPTSSETTINGS-10; otherwise press F5 to discard it.
 
-### HOOKSSETTINGS-10 — "Modified" and "Unsaved" are independent flags — walk all three combinations
+### PROMPTSSETTINGS-10 — "Modified" and "Unsaved" are independent flags — walk all three combinations
 
 **Free** · about 10 min
 
@@ -412,19 +412,19 @@ If you cannot distinguish the amber `Modified` pill from the blue `Unsaved` pill
 
 **Before you start**
 
-- No hooks.json at the start.
-- The app is running, on /settings (Hooks tab).
-- `src\Huddle.App\hooks.default.json` is open in a text editor.
+- No prompts.json at the start.
+- The app is running, on /settings (Prompts tab).
+- `src\Huddle.App\prompts.default.json` is open in a text editor.
 
 **Steps**
 
 1. Find the `Chat rules` field. Click at the very end of its text and type ` ZZZ`.
 2. Click `Save`.
 3. Read the `Chat rules` header badges.
-4. Open `App_Data\hooks.json` in the editor and count its top-level keys.
+4. Open `App_Data\prompts.json` in the editor and count its top-level keys.
 5. Back in the browser, type ` QQQ` at the end of `Chat rules`.
 6. Read the `Chat rules` header badges.
-7. In `hooks.default.json`, find the `systemPrompt.chatRules` value. Select the `Chat rules` textarea contents (click in it, Ctrl+A) and retype/paste the shipped wording back exactly, character for character, with no trailing space.
+7. In `prompts.default.json`, find the `systemPrompt.chatRules` value. Select the `Chat rules` textarea contents (click in it, Ctrl+A) and retype/paste the shipped wording back exactly, character for character, with no trailing space.
 8. Read the `Chat rules` header badges, and the enabled state of that field's `Reset` button and of the page `Save` button.
 9. Now edit `Chat rules` back to exactly the text you saved in step 2 (the shipped wording plus ` ZZZ`).
 10. Read the `Chat rules` header badges and the enabled state of `Save`.
@@ -432,7 +432,7 @@ If you cannot distinguish the amber `Modified` pill from the blue `Unsaved` pill
 **Pass if — all of these**
 
 - After step 2 (saved edit): `Chat rules` shows `Modified` ONLY — no `Unsaved`.
-- After step 4: `hooks.json` holds exactly one top-level key, `systemPrompt.chatRules`.
+- After step 4: `prompts.json` holds exactly one top-level key, `systemPrompt.chatRules`.
 - After step 5: `Chat rules` shows `Modified` AND `Unsaved`.
 - After step 7 (text back to the shipped default): `Modified` DISAPPEARS, `Unsaved` REMAINS, that field's `Reset` button goes DISABLED, and `Save` stays ENABLED.
 - After step 9 (text back to the stored override): `Unsaved` DISAPPEARS, `Modified` RETURNS, and `Save` goes DISABLED again (assuming nothing else is pending).
@@ -445,12 +445,12 @@ If you cannot distinguish the amber `Modified` pill from the blue `Unsaved` pill
 
 **Inconclusive if**
 
-Step 7 depends on retyping the default byte-for-byte. If `Modified` refuses to clear, suspect a trailing space, a smart-quote substitution by your editor, or CRLF vs LF line endings rather than a defect — click that field's `Reset` button instead (which stages the exact default) and re-read the badges. If `Modified` clears after Reset but not after your paste, this test is INCONCLUSIVE on step 7 and you have instead reproduced HOOKSSETTINGS-35; note it there.
+Step 7 depends on retyping the default byte-for-byte. If `Modified` refuses to clear, suspect a trailing space, a smart-quote substitution by your editor, or CRLF vs LF line endings rather than a defect — click that field's `Reset` button instead (which stages the exact default) and re-read the badges. If `Modified` clears after Reset but not after your paste, this test is INCONCLUSIVE on step 7 and you have instead reproduced PROMPTSSETTINGS-35; note it there.
 
 > [!NOTE]
 > Run `P-RESET-SETTINGS` and relaunch before the next test.
 
-### HOOKSSETTINGS-11 — Per-field "Reset" stages the shipped default without writing anything to disk
+### PROMPTSSETTINGS-11 — Per-field "Reset" stages the shipped default without writing anything to disk
 
 **Free** · about 6 min
 
@@ -458,33 +458,33 @@ Step 7 depends on retyping the default byte-for-byte. If `Modified` refuses to c
 
 **Before you start**
 
-- The app is running, on /settings (Hooks tab).
+- The app is running, on /settings (Prompts tab).
 - File Explorer open on App_Data in Details view.
 
 **Steps**
 
 1. Type ` HELLO` at the end of the `Room label` textarea and click `Save`.
-2. In Explorer, note `hooks.json`'s exact Date modified value (right-click > Properties if the column is too coarse).
+2. In Explorer, note `prompts.json`'s exact Date modified value (right-click > Properties if the column is too coarse).
 3. Back in the browser, click the `Reset` button at the bottom-right of the `Room label` field.
 4. Read the `Room label` textarea contents.
 5. Read the `Room label` header badges and the enabled state of its `Reset` button and of `Save`.
-6. Switch to Explorer, press F5, and re-read `hooks.json`'s Date modified and open the file.
+6. Switch to Explorer, press F5, and re-read `prompts.json`'s Date modified and open the file.
 7. Look at the header badges of every OTHER field you had not touched.
 8. Back in the browser, click `Save`.
-9. Reopen `hooks.json`.
+9. Reopen `prompts.json`.
 
 **Pass if — all of these**
 
-- After step 3 the textarea text snaps back to `[Room: {{roomName}} (id: {{roomId}})]` — byte-for-byte the `turn.roomLabel` value in `hooks.default.json`.
+- After step 3 the textarea text snaps back to `[Room: {{roomName}} (id: {{roomId}})]` — byte-for-byte the `turn.roomLabel` value in `prompts.default.json`.
 - After step 3 the `Modified` badge disappears, an `Unsaved` badge appears, `Save` is enabled, and that field's `Reset` button greys out.
-- At step 6 `hooks.json` is UNCHANGED: same Date modified, and it still contains the `turn.roomLabel` key with the ` HELLO` text.
+- At step 6 `prompts.json` is UNCHANGED: same Date modified, and it still contains the `turn.roomLabel` key with the ` HELLO` text.
 - No other field's badges or text changed.
-- Only after step 8 does the key disappear: at step 9 `hooks.json` no longer contains `turn.roomLabel`.
+- Only after step 8 does the key disappear: at step 9 `prompts.json` no longer contains `turn.roomLabel`.
 
 **Fail if — any of these**
 
-- `hooks.json`'s timestamp or content changing at step 6 -> Reset is writing immediately, which bypasses the single commit point and means a mis-click permanently destroys a customisation with no undo.
-- The restored text differing in any character from the `turn.roomLabel` value in `hooks.default.json` -> Reset is restoring something other than the shipped wording, so 'restore to what it shipped with' is a lie.
+- `prompts.json`'s timestamp or content changing at step 6 -> Reset is writing immediately, which bypasses the single commit point and means a mis-click permanently destroys a customisation with no undo.
+- The restored text differing in any character from the `turn.roomLabel` value in `prompts.default.json` -> Reset is restoring something other than the shipped wording, so 'restore to what it shipped with' is a lie.
 - Other fields' pending edits being cleared by the click -> Reset is resetting more than its own key.
 
 **Inconclusive if**
@@ -494,7 +494,7 @@ If the Date modified column shows only minutes and both operations happen inside
 > [!NOTE]
 > Run `P-RESET-SETTINGS` and relaunch afterwards.
 
-### HOOKSSETTINGS-12 — hooks.json does not exist until the first Save, and then holds ONLY the keys you changed
+### PROMPTSSETTINGS-12 — prompts.json does not exist until the first Save, and then holds ONLY the keys you changed
 
 **Free** · about 6 min
 
@@ -502,24 +502,24 @@ If the Date modified column shows only minutes and both operations happen inside
 
 **Before you start**
 
-- No hooks.json.
+- No prompts.json.
 - The app was restarted after the deletion.
 - File Explorer open on App_Data.
 
 **Steps**
 
-1. Confirm in Explorer that `hooks.json` is absent.
+1. Confirm in Explorer that `prompts.json` is absent.
 2. Load `http://localhost:5100/settings`, then press F5 twice. Refresh Explorer and check again.
 3. Type ` A` into `Room label`, ` B` into `Help: budget`, and ` C` into `Identity`. Refresh Explorer and check again.
 4. Click the `Reset` button on the `Identity` field. Refresh Explorer and check again.
 5. Click `Save`.
 6. Refresh Explorer.
-7. Open `hooks.json` in a text editor and list its top-level keys.
+7. Open `prompts.json` in a text editor and list its top-level keys.
 
 **Pass if — all of these**
 
-- `hooks.json` is absent at steps 1, 2, 3 and 4 — loading the page, reloading it, typing, and clicking Reset all leave it absent.
-- `hooks.json` appears only after step 5.
+- `prompts.json` is absent at steps 1, 2, 3 and 4 — loading the page, reloading it, typing, and clicking Reset all leave it absent.
+- `prompts.json` appears only after step 5.
 - Its content is pretty-printed (indented, one key per line block) JSON.
 - It contains exactly two top-level keys: `turn.roomLabel` and `getHelp.budget`.
 - It does NOT contain `systemPrompt.identity` (you reset that one before saving) and does not contain any of the other 21 keys.
@@ -528,7 +528,7 @@ If the Date modified column shows only minutes and both operations happen inside
 
 - The file existing at step 1 or appearing at step 2 -> the app is creating an overrides file at startup or on a page load; the rules file makes this binding, and a file of defaults would silently pin today's wording forever, so a future change to a shipped default would never reach that installation.
 - The file appearing at step 3 or 4 -> a write happened without a Save, so Save is no longer the single commit point.
-- The file containing all 24 keys after two edits -> the same defect in a different form: every untouched hook has just been frozen at today's text.
+- The file containing all 24 keys after two edits -> the same defect in a different form: every untouched prompt has just been frozen at today's text.
 - `systemPrompt.identity` being present -> a key whose pending value equals the default is being stored as a redundant copy.
 
 **Inconclusive if**
@@ -538,7 +538,7 @@ If the file was already present at step 1, you did not reset state — run `P-RE
 > [!NOTE]
 > This is the highest-value cheap test in the area: it pins the documented 'absent is correct' behaviour that testers most often misreport as a bug.
 
-### HOOKSSETTINGS-13 — The saved file is human-readable: indented, with literal em-dashes and angle brackets, not \uXXXX escapes
+### PROMPTSSETTINGS-13 — The saved file is human-readable: indented, with literal em-dashes and angle brackets, not \uXXXX escapes
 
 **Free** · about 6 min
 
@@ -546,15 +546,15 @@ If the file was already present at step 1, you did not reset state — run `P-RE
 
 **Before you start**
 
-- The app is running, on /settings (Hooks tab).
-- No hooks.json to start.
+- The app is running, on /settings (Prompts tab).
+- No prompts.json to start.
 
 **Steps**
 
 1. Find the `Help: messages` field. Its default contains the literal text `"[Room: <name> (id: <id>)]"`. Type ` EDITED` at the end of its text.
 2. Find the `Tools` field. Its default contains an em-dash in `Your reply to the current message is just your answer text — do not also post it with a tool.` Type ` EDITED` at the end of its text.
 3. Click `Save`.
-4. Open `App_Data\hooks.json` in a plain-text editor.
+4. Open `App_Data\prompts.json` in a plain-text editor.
 5. Search the file for `<name>`.
 6. Search the file for the em-dash character `—`.
 7. Search the file for the sequence `<`.
@@ -576,30 +576,30 @@ If the file was already present at step 1, you did not reset state — run `P-RE
 
 **Inconclusive if**
 
-Straight double quotes inside a hook's text WILL legitimately appear as `\"` in the file — that is required JSON escaping, not the defect this test looks for. Do not fail on `\"`. If your editor renders the em-dash as a box or question mark, that is an editor encoding setting: reopen the file as UTF-8 before judging.
+Straight double quotes inside a prompt's text WILL legitimately appear as `\"` in the file — that is required JSON escaping, not the defect this test looks for. Do not fail on `\"`. If your editor renders the em-dash as a box or question mark, that is an editor encoding setting: reopen the file as UTF-8 before judging.
 
 > [!NOTE]
 > Reset to a clean state afterwards.
 
-### HOOKSSETTINGS-14 — Saving a field back to its default removes the key rather than storing a redundant copy
+### PROMPTSSETTINGS-14 — Saving a field back to its default removes the key rather than storing a redundant copy
 
 **Free** · about 5 min
 
-*Proves an unmodified hook does not silently pin today's wording — otherwise a future change to a shipped default would never reach that installation.*
+*Proves an unmodified prompt does not silently pin today's wording — otherwise a future change to a shipped default would never reach that installation.*
 
 **Before you start**
 
-- No hooks.json.
-- The app is running, on /settings (Hooks tab).
+- No prompts.json.
+- The app is running, on /settings (Prompts tab).
 
 **Steps**
 
 1. Type ` ONE` at the end of `Room label` and ` TWO` at the end of `Help: footer`.
 2. Click `Save`.
-3. Open `App_Data\hooks.json` and confirm it holds exactly two keys.
+3. Open `App_Data\prompts.json` and confirm it holds exactly two keys.
 4. Back in the browser, click the `Reset` button on the `Room label` field.
 5. Click `Save`.
-6. Reopen `App_Data\hooks.json` and list its keys.
+6. Reopen `App_Data\prompts.json` and list its keys.
 
 **Pass if — all of these**
 
@@ -620,7 +620,7 @@ If you reset the wrong field, start over from a clean state rather than reasonin
 > [!NOTE]
 > Reset to a clean state afterwards.
 
-### HOOKSSETTINGS-15 — Save is the ONLY writer — and a successful Save gives no confirmation
+### PROMPTSSETTINGS-15 — Save is the ONLY writer — and a successful Save gives no confirmation
 
 **Free** · about 8 min
 
@@ -633,20 +633,20 @@ If you reset the wrong field, start over from a clean state rather than reasonin
 
 **Steps**
 
-1. Type ` SEED` at the end of `Room label` and click `Save`, so `hooks.json` exists. Note its Date modified and copy its content into a scratch file for comparison.
+1. Type ` SEED` at the end of `Room label` and click `Save`, so `prompts.json` exists. Note its Date modified and copy its content into a scratch file for comparison.
 2. Press F5 to reload /settings. Refresh Explorer and compare.
 3. Type text into three different fields. Refresh Explorer and compare.
 4. Click the `Reset` button on one of those fields. Refresh Explorer and compare.
 5. Click `Reset all to defaults` in the header, then click `Yes, reset everything`. Refresh Explorer and compare.
-6. Click the `Appearance` tab, then the `Hooks` tab. Refresh Explorer and compare.
+6. Click the `Appearance` tab, then the `Prompts` tab. Refresh Explorer and compare.
 7. Now click `Save` once. Watch the page closely for the next three seconds.
 8. Refresh Explorer and compare.
 
 **Pass if — all of these**
 
-- `hooks.json` is byte-identical and its timestamp unchanged after steps 2, 3, 4, 5 and 6.
+- `prompts.json` is byte-identical and its timestamp unchanged after steps 2, 3, 4, 5 and 6.
 - The file changes only after step 7.
-- On a successful Save the page does NOT reload and does NOT navigate — the URL stays `/settings` (or `/settings/hooks`) and the scroll position is preserved.
+- On a successful Save the page does NOT reload and does NOT navigate — the URL stays `/settings` (or `/settings/prompts`) and the scroll position is preserved.
 - The only feedback from the successful Save is that the `Unsaved` badges clear and the `Save` button goes disabled. There is NO toast, NO green banner and NO `Saved` text — this is correct.
 
 **Fail if — any of these**
@@ -662,7 +662,7 @@ If the timestamp granularity is too coarse to distinguish, use content compariso
 > [!NOTE]
 > The absence of a success confirmation is documented designed behaviour. Do not file it as a defect; if you think it should exist, file it as a UX suggestion.
 
-### HOOKSSETTINGS-16 — "Reset all to defaults" is disabled until something is modified and guards itself with an inline confirm
+### PROMPTSSETTINGS-16 — "Reset all to defaults" is disabled until something is modified and guards itself with an inline confirm
 
 **Free** · about 4 min
 
@@ -670,14 +670,14 @@ If the timestamp granularity is too coarse to distinguish, use content compariso
 
 **Before you start**
 
-- No hooks.json.
-- The app is running, on /settings (Hooks tab).
+- No prompts.json.
+- The app is running, on /settings (Prompts tab).
 
 **Steps**
 
 1. Look at the header, to the right of the `Settings` heading. Find the button reading `Reset all to defaults`.
 2. Try to click it.
-3. Type a single character into any hook field.
+3. Type a single character into any prompt field.
 4. Look at the `Reset all to defaults` button again.
 5. Click `Reset all to defaults` once.
 6. Look at where the button was.
@@ -705,7 +705,7 @@ If the timestamp granularity is too coarse to distinguish, use content compariso
 
 If you cannot tell whether the button is disabled, inspect it in devtools and check for the `disabled` attribute. Judge from the attribute, not the shade of grey.
 
-### HOOKSSETTINGS-17 — "Yes, reset everything" stages all 24 defaults but writes nothing — and the reset is silently lost if you navigate away
+### PROMPTSSETTINGS-17 — "Yes, reset everything" stages all 24 defaults but writes nothing — and the reset is silently lost if you navigate away
 
 **Free** · about 8 min
 
@@ -713,17 +713,17 @@ If you cannot tell whether the button is disabled, inspect it in devtools and ch
 
 **Before you start**
 
-- The app is running, on /settings (Hooks tab).
+- The app is running, on /settings (Prompts tab).
 - File Explorer open on App_Data.
 
 **Steps**
 
 1. Type ` ONE` into `Room label`, ` TWO` into `Help: budget`, and ` THREE` into `Identity`. Click `Save`.
-2. Confirm `hooks.json` holds exactly three keys; note its Date modified and copy its content to a scratch file.
+2. Confirm `prompts.json` holds exactly three keys; note its Date modified and copy its content to a scratch file.
 3. Click `Reset all to defaults`, then click `Yes, reset everything`.
 4. Scan all 24 field headers and note every badge you can see.
 5. Look at the `Save` button and at the header's `Reset all to defaults` button.
-6. Refresh Explorer, compare `hooks.json`'s timestamp and content with the scratch copy.
+6. Refresh Explorer, compare `prompts.json`'s timestamp and content with the scratch copy.
 7. WITHOUT clicking Save, click `Teammates` in the left sidebar.
 8. Click `Settings` in the left sidebar to come back.
 9. Read the `Room label`, `Help: budget` and `Identity` textareas and their badges.
@@ -735,23 +735,23 @@ If you cannot tell whether the button is disabled, inspect it in devtools and ch
 - The other 21 fields show NO badge at all.
 - `Save` is ENABLED and `Reset all to defaults` is now DISABLED (nothing is modified any more).
 - The confirm pair has collapsed back to the single `Reset all to defaults` button.
-- At step 6 `hooks.json` is unchanged — same timestamp, same three keys, same content.
+- At step 6 `prompts.json` is unchanged — same timestamp, same three keys, same content.
 - After step 8 all three overrides are BACK in their textareas with `Modified` badges, and the reset never happened — with no warning shown at any point.
 
 **Fail if — any of these**
 
-- `hooks.json` being rewritten at step 6 -> the confirm commits directly, so Save is no longer the single commit point and a confirm-then-think-again is unrecoverable.
+- `prompts.json` being rewritten at step 6 -> the confirm commits directly, so Save is no longer the single commit point and a confirm-then-think-again is unrecoverable.
 - All 24 fields showing `Unsaved` at step 4 -> a field whose stored value already equals the default has nothing to commit, so a badge there means the save would write 24 no-op keys.
 - The confirm pair not collapsing back to the single button -> the confirm state is not being cleared and a second reset could fire unexpectedly.
 
 **Inconclusive if**
 
-If step 9 shows the overrides gone rather than restored, check `hooks.json` first: if the file lost its keys, you have hit the 'confirm commits directly' failure above, which is a FAIL not an inconclusive. If the file still holds the keys but the page shows defaults, the store's resolution is broken — report that separately.
+If step 9 shows the overrides gone rather than restored, check `prompts.json` first: if the file lost its keys, you have hit the 'confirm commits directly' failure above, which is a FAIL not an inconclusive. If the file still holds the keys but the page shows defaults, the store's resolution is broken — report that separately.
 
 > [!NOTE]
 > The silent-loss half is designed behaviour, not a defect — but it is a real trap. Report it as a UX finding ('a confirmed destructive action is silently discarded by navigating away, with no unsaved-changes prompt'), not as a bug.
 
-### HOOKSSETTINGS-18 — "Reset all" followed by Save leaves hooks.json present and empty ({}), never deleted
+### PROMPTSSETTINGS-18 — "Reset all" followed by Save leaves prompts.json present and empty ({}), never deleted
 
 **Free** · about 4 min
 
@@ -759,21 +759,21 @@ If step 9 shows the overrides gone rather than restored, check `hooks.json` firs
 
 **Before you start**
 
-- The app is running, on /settings (Hooks tab).
+- The app is running, on /settings (Prompts tab).
 
 **Steps**
 
 1. Type ` ONE` into `Room label` and ` TWO` into `Help: footer`. Click `Save`.
-2. Confirm `hooks.json` holds two keys.
+2. Confirm `prompts.json` holds two keys.
 3. Click `Reset all to defaults`, then `Yes, reset everything`.
 4. Click `Save`.
 5. Read every field header for badges, and read the `Save` button's state.
-6. Open `App_Data\hooks.json` and read its entire contents.
+6. Open `App_Data\prompts.json` and read its entire contents.
 
 **Pass if — all of these**
 
 - After step 4 no field carries any badge and `Save` is disabled.
-- `hooks.json` still EXISTS on disk.
+- `prompts.json` still EXISTS on disk.
 - Its entire content is exactly `{}` (possibly with surrounding whitespace or a newline).
 - All 24 textareas show their shipped defaults.
 
@@ -786,7 +786,7 @@ If step 9 shows the overrides gone rather than restored, check `hooks.json` firs
 
 The file NOT being deleted is correct — the app never deletes it, it only ever writes the current override set. If you expected deletion, that expectation is wrong; do not file it. If the file is genuinely gone, check whether something else (your own cleanup, an editor) removed it before failing the test.
 
-### HOOKSSETTINGS-19 — A failed Save shows a red "Could not save:" line under the heading and keeps every pending edit
+### PROMPTSSETTINGS-19 — A failed Save shows a red "Could not save:" line under the heading and keeps every pending edit
 
 **Free** · about 7 min
 
@@ -794,30 +794,30 @@ The file NOT being deleted is correct — the app never deletes it, it only ever
 
 **Before you start**
 
-- The app is running, on /settings (Hooks tab).
+- The app is running, on /settings (Prompts tab).
 - You can change file attributes in App_Data.
 
 **Steps**
 
-1. Type ` SEED` into `Room label` and click `Save`, so `hooks.json` exists. Copy its content to a scratch file.
-2. In `T-B` run: `Set-ItemProperty -Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\hooks.json' -Name IsReadOnly -Value $true` (substitute the path the Settings page prints if it differs).
+1. Type ` SEED` into `Room label` and click `Save`, so `prompts.json` exists. Copy its content to a scratch file.
+2. In `T-B` run: `Set-ItemProperty -Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json' -Name IsReadOnly -Value $true` (substitute the path the Settings page prints if it differs).
 3. Back in the browser, type ` WILLFAIL` into `Help: budget` and into `Identity`.
 4. Click `Save`.
 5. Read the area directly under the `Settings` heading.
 6. Read the `Help: budget` and `Identity` textareas and their badges.
 7. Look at the bottom of the browser window for the yellow Blazor error strip.
-8. Compare `hooks.json`'s content with the scratch copy.
-9. Run: `Set-ItemProperty -Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\hooks.json' -Name IsReadOnly -Value $false`
+8. Compare `prompts.json`'s content with the scratch copy.
+9. Run: `Set-ItemProperty -Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json' -Name IsReadOnly -Value $false`
 10. Click `Save` again.
 11. Read the area under the `Settings` heading, and the field badges.
 
 **Pass if — all of these**
 
-- After step 4 a red paragraph appears directly beneath the `Settings` heading, beginning `Could not save: ` and followed by an operating-system message (on Windows, typically `Access to the path '...\hooks.json' is denied.`).
+- After step 4 a red paragraph appears directly beneath the `Settings` heading, beginning `Could not save: ` and followed by an operating-system message (on Windows, typically `Access to the path '...\prompts.json' is denied.`).
 - Your typed ` WILLFAIL` text is still in both textareas and both still carry `Unsaved` badges — nothing was lost.
 - No yellow `An unhandled error has occurred.` strip appears at the bottom of the page.
-- `hooks.json`'s content is unchanged from the scratch copy.
-- After step 10 the red paragraph DISAPPEARS, the `Unsaved` badges clear, and `hooks.json` now contains the new overrides.
+- `prompts.json`'s content is unchanged from the scratch copy.
+- After step 10 the red paragraph DISAPPEARS, the `Unsaved` badges clear, and `prompts.json` now contains the new overrides.
 
 **Fail if — any of these**
 
@@ -832,7 +832,7 @@ If the read-only attribute does not cause a failure on your machine (some enviro
 > [!NOTE]
 > Always clear the read-only flag and release any handle before moving on, or later tests will fail for the wrong reason.
 
-### HOOKSSETTINGS-20 — Validation reports and never refuses: an empty field raises an Error and still saves
+### PROMPTSSETTINGS-20 — Validation reports and never refuses: an empty field raises an Error and still saves
 
 **Free** · about 5 min
 
@@ -840,8 +840,8 @@ If the read-only attribute does not cause a failure on your machine (some enviro
 
 **Before you start**
 
-- No hooks.json.
-- The app is running, on /settings (Hooks tab).
+- No prompts.json.
+- The app is running, on /settings (Prompts tab).
 
 **Steps**
 
@@ -851,7 +851,7 @@ If the read-only attribute does not cause a failure on your machine (some enviro
 4. Look at the `Save` button.
 5. Click `Save`.
 6. Look for any dialog, prompt or confirmation.
-7. Open `App_Data\hooks.json` and read the value for `turn.roomLabel`.
+7. Open `App_Data\prompts.json` and read the value for `turn.roomLabel`.
 8. Press F5 to reload /settings and look at the `Room label` field again.
 
 **Pass if — all of these**
@@ -860,7 +860,7 @@ If the read-only attribute does not cause a failure on your machine (some enviro
 - That line is styled as an error (red/danger background), not as an amber warning.
 - The `Save` button stays ENABLED.
 - Clicking Save produces no dialog and no confirmation prompt — the save simply goes through.
-- `hooks.json` contains `"turn.roomLabel": ""`.
+- `prompts.json` contains `"turn.roomLabel": ""`.
 - After the reload the field is still empty and still shows the same red error.
 
 **Fail if — any of these**
@@ -871,12 +871,12 @@ If the read-only attribute does not cause a failure on your machine (some enviro
 
 **Inconclusive if**
 
-If you cannot judge red from amber, inspect the element in devtools: each issue is now a `MudAlert` (Stage 3 of the MudBlazor migration replaced the old `<li class="hooks-field-issue-error">` list), so look for `mud-alert-text-error` versus `mud-alert-text-warning` in its class list. Judge from the class.
+If you cannot judge red from amber, inspect the element in devtools: each issue is now a `MudAlert` (Stage 3 of the MudBlazor migration replaced the old `<li class="prompts-field-issue-error">` list), so look for `mud-alert-text-error` versus `mud-alert-text-warning` in its class list. Judge from the class.
 
 > [!NOTE]
 > Run `P-RESET-SETTINGS` and relaunch afterwards.
 
-### HOOKSSETTINGS-21 — Removing a required placeholder raises an Error naming that placeholder — and an optional one does not
+### PROMPTSSETTINGS-21 — Removing a required placeholder raises an Error naming that placeholder — and an optional one does not
 
 **Free** · about 8 min
 
@@ -884,8 +884,8 @@ If you cannot judge red from amber, inspect the element in devtools: each issue 
 
 **Before you start**
 
-- No hooks.json.
-- The app is running, on /settings (Hooks tab).
+- No prompts.json.
+- The app is running, on /settings (Prompts tab).
 
 **Steps**
 
@@ -915,12 +915,12 @@ If you cannot judge red from amber, inspect the element in devtools: each issue 
 
 **Inconclusive if**
 
-If the message text differs only in the trailing helper sentence (the part after the first full stop), that part is the hook's own helper text and may legitimately have been reworded. Judge on the first sentence — `'<key>' is missing the required placeholder <token>.` — and note the wording difference separately.
+If the message text differs only in the trailing helper sentence (the part after the first full stop), that part is the prompt's own helper text and may legitimately have been reworded. Judge on the first sentence — `'<key>' is missing the required placeholder <token>.` — and note the wording difference separately.
 
 > [!NOTE]
 > Discard these edits with F5 before the next test; do not save them.
 
-### HOOKSSETTINGS-22 — An unrecognised {{token}} raises a Warning; a malformed one raises nothing at all
+### PROMPTSSETTINGS-22 — An unrecognised {{token}} raises a Warning; a malformed one raises nothing at all
 
 **Free** · about 8 min
 
@@ -928,8 +928,8 @@ If the message text differs only in the trailing helper sentence (the part after
 
 **Before you start**
 
-- No hooks.json.
-- The app is running, on /settings (Hooks tab).
+- No prompts.json.
+- The app is running, on /settings (Prompts tab).
 
 **Steps**
 
@@ -939,12 +939,12 @@ If the message text differs only in the trailing helper sentence (the part after
 4. Replace that with ` {{ }}` (two braces, a space, two braces). Read under the field.
 5. Replace that with ` {{room Id}}` (a space inside the token). Read under the field.
 6. Delete all of that so `Room label` is back to its default.
-7. In `Help: introduction` (a hook that declares no placeholders), type ` {{anything}}` at the end. Read under the field.
+7. In `Help: introduction` (a prompt that declares no placeholders), type ` {{anything}}` at the end. Read under the field.
 8. Press F5 to discard everything.
 
 **Pass if — all of these**
 
-- Step 1 shows an AMBER warning reading exactly: `'turn.roomLabel' contains the token {{roomID}}, which is not one of this hook's declared placeholders ({{roomName}}, {{roomId}}) — most likely a typo.`
+- Step 1 shows an AMBER warning reading exactly: `'turn.roomLabel' contains the token {{roomID}}, which is not one of this prompt's declared placeholders ({{roomName}}, {{roomId}}) — most likely a typo.`
 - Step 1's finding is styled as a warning (amber), NOT as an error (red).
 - Steps 3, 4 and 5 produce NO finding of any kind — `{{}}`, `{{ }}` and `{{room Id}}` are not placeholders by design.
 - Step 7 produces an amber warning for `'getHelp.intro'` naming `{{anything}}`, with an EMPTY parenthesised list: `...declared placeholders () — most likely a typo.`
@@ -959,7 +959,7 @@ If the message text differs only in the trailing helper sentence (the part after
 
 The empty parenthesised list at step 7 is ugly but correct — it is what an empty list joins to. Do not fail on it; note it as a cosmetic finding if you wish. If your editor/browser auto-pairs braces and you end up with more braces than intended, clear the field and retype carefully rather than judging from an unintended string.
 
-### HOOKSSETTINGS-23 — Validation runs live against the pending value and clears without saving
+### PROMPTSSETTINGS-23 — Validation runs live against the pending value and clears without saving
 
 **Free** · about 5 min
 
@@ -967,8 +967,8 @@ The empty parenthesised list at step 7 is ugly but correct — it is what an emp
 
 **Before you start**
 
-- No hooks.json.
-- The app is running, on /settings (Hooks tab).
+- No prompts.json.
+- The app is running, on /settings (Prompts tab).
 - File Explorer open on App_Data.
 
 **Steps**
@@ -976,7 +976,7 @@ The empty parenthesised list at step 7 is ugly but correct — it is what an emp
 1. In `Room label`, delete the `{{roomId}}` token, watching the area under the field as you type.
 2. Confirm the red error appears.
 3. Press Ctrl+Z (or retype `{{roomId}}` in place) and watch the area under the field.
-4. Check Explorer: confirm `hooks.json` is still absent.
+4. Check Explorer: confirm `prompts.json` is still absent.
 5. Now break TWO fields at once: delete `{{roomId}}` from `Room label`, and select-all-and-delete the contents of `Help: footer`.
 6. Read the issue lines under each of those two fields, and under a third, untouched field such as `Chat rules`.
 7. Press F5 to discard.
@@ -985,29 +985,29 @@ The empty parenthesised list at step 7 is ugly but correct — it is what an emp
 
 - The error in step 1 appears while typing, before any blur or save.
 - The error disappears immediately in step 3, again with no save.
-- `hooks.json` never appears — nothing reached disk at any point.
+- `prompts.json` never appears — nothing reached disk at any point.
 - In step 6, `Room label` shows only its own missing-placeholder error, `Help: footer` shows only its own empty-text error, and `Chat rules` shows no findings at all.
 
 **Fail if — any of these**
 
 - Findings refreshing only on Save or on reload -> validation is running against the stored text rather than the pending value, so a user cannot see whether their fix worked until after they commit it.
 - A stale finding remaining after the text is fixed -> the same defect from the other side; users will learn to ignore the findings.
-- A finding from one field appearing under another -> findings are not keyed to their own hook, so the user is sent to fix the wrong box.
+- A finding from one field appearing under another -> findings are not keyed to their own prompt, so the user is sent to fix the wrong box.
 
 **Inconclusive if**
 
-If nothing updates live at all, first re-run HOOKSSETTINGS-08 — if the textarea row count is also frozen, the per-keystroke re-render is broken globally and THAT is the finding to report; this test is then inconclusive rather than a separate validator defect.
+If nothing updates live at all, first re-run PROMPTSSETTINGS-08 — if the textarea row count is also frozen, the per-keystroke re-render is broken globally and THAT is the finding to report; this test is then inconclusive rather than a separate validator defect.
 
-### HOOKSSETTINGS-24 — Hook text is rendered as text, never as markup
+### PROMPTSSETTINGS-24 — Prompt text is rendered as text, never as markup
 
 **Free** · about 6 min
 
-*Hook text is the closest thing on this page to untrusted input reaching the DOM; this proves it cannot execute or break the layout.*
+*Prompt text is the closest thing on this page to untrusted input reaching the DOM; this proves it cannot execute or break the layout.*
 
 **Before you start**
 
-- No hooks.json.
-- The app is running, on /settings (Hooks tab).
+- No prompts.json.
+- The app is running, on /settings (Prompts tab).
 - Browser devtools open on the Console tab.
 
 **Steps**
@@ -1020,7 +1020,7 @@ If nothing updates live at all, first re-run HOOKSSETTINGS-08 — if the textare
 6. Click `Save`.
 7. Press F5 to reload the page.
 8. Read the `Help: footer` and `Room label` textareas.
-9. Open `App_Data\hooks.json` and read the stored values.
+9. Open `App_Data\prompts.json` and read the stored values.
 
 **Pass if — all of these**
 
@@ -1030,11 +1030,11 @@ If nothing updates live at all, first re-run HOOKSSETTINGS-08 — if the textare
 - All the typed characters appear literally inside their textareas.
 - The warning produced in step 5 renders `{{<script>}}` as visible text with literal angle brackets, not as an element.
 - After the reload everything is still literal and still inert.
-- `hooks.json` holds the literal characters.
+- `prompts.json` holds the literal characters.
 
 **Fail if — any of these**
 
-- Any script executing (an alert, or a console entry from the injected code) -> stored cross-site scripting in the Settings page, reachable by anyone who can hand-edit hooks.json or use this form.
+- Any script executing (an alert, or a console entry from the injected code) -> stored cross-site scripting in the Settings page, reachable by anyone who can hand-edit prompts.json or use this form.
 - The page layout breaking because the textarea closed early -> the value is being written as raw markup rather than as an attribute/text node.
 - Angle brackets disappearing from the validation message -> the finding text is being rendered as HTML.
 
@@ -1045,7 +1045,7 @@ If your browser blocks alert() dialogs by policy, do not conclude the payload wa
 > [!NOTE]
 > Run `P-RESET-SETTINGS` and relaunch afterwards — leaving these payloads saved will confuse later tests.
 
-### HOOKSSETTINGS-25 — Typing in a long hook field stays responsive and loses no characters
+### PROMPTSSETTINGS-25 — Typing in a long prompt field stays responsive and loses no characters
 
 **Free** · about 6 min
 
@@ -1053,8 +1053,8 @@ If your browser blocks alert() dialogs by policy, do not conclude the payload wa
 
 **Before you start**
 
-- The app is running, on /settings (Hooks tab).
-- No hooks.json.
+- The app is running, on /settings (Prompts tab).
+- No prompts.json.
 
 **Steps**
 
@@ -1065,7 +1065,7 @@ If your browser blocks alert() dialogs by policy, do not conclude the payload wa
 5. Repeat the same in the `Tools` field, placing the caret mid-text.
 6. Now select all of `Help: Rooms`, and paste in a block of a few thousand characters (for example, paste the same paragraph twenty times).
 7. Immediately after the paste, keep typing a short sentence and watch for lag or dropped characters.
-8. Add several newlines and confirm the box's automatic row growth continues smoothly with no caret jump. (There is no manual resize to fight — see HOOKSSETTINGS-08's note on `MudTextField`'s `resize: none`.)
+8. Add several newlines and confirm the box's automatic row growth continues smoothly with no caret jump. (There is no manual resize to fight — see PROMPTSSETTINGS-08's note on `MudTextField`'s `resize: none`.)
 
 **Pass if — all of these**
 
@@ -1077,7 +1077,7 @@ If your browser blocks alert() dialogs by policy, do not conclude the payload wa
 
 **Fail if — any of these**
 
-- The caret jumping to the end of the textarea after each keystroke -> the value is being re-applied on every render and users cannot edit anywhere but the end of a field; on a 14-row hook this makes the editor unusable.
+- The caret jumping to the end of the textarea after each keystroke -> the value is being re-applied on every render and users cannot edit anywhere but the end of a field; on a 14-row prompt this makes the editor unusable.
 - Characters arriving out of order or being dropped -> input events are racing the re-render and a user's saved prompt would silently differ from what they typed.
 - Multi-second lag per keystroke -> the whole-form rebuild has become too expensive to type through.
 
@@ -1088,7 +1088,7 @@ If you are testing over a slow or remote connection, latency is expected and is 
 > [!NOTE]
 > Discard with F5; do not save.
 
-### HOOKSSETTINGS-26 — Uncommitted edits survive a tab switch and a theme change, but are silently discarded by reload or leaving the page
+### PROMPTSSETTINGS-26 — Uncommitted edits survive a tab switch and a theme change, but are silently discarded by reload or leaving the page
 
 **Free** · about 9 min
 
@@ -1096,21 +1096,21 @@ If you are testing over a slow or remote connection, latency is expected and is 
 
 **Before you start**
 
-- No hooks.json and no appearance.json.
-- The app is running, on /settings (Hooks tab).
+- No prompts.json and no appearance.json.
+- The app is running, on /settings (Prompts tab).
 
 **Steps**
 
 1. Type ` KEEPME` into `Room label` and ` KEEPME2` into `Help: budget`. Do NOT save.
 2. Click the `Appearance` tab.
-3. Click the `Hooks` tab.
+3. Click the `Prompts` tab.
 4. Read both fields and their badges.
 5. Press the browser Back button, then Forward. Read both fields again.
 6. Now press F5. Read both fields and their badges.
 7. Type ` LOSEME` into `Room label` (no save). Click `Teammates` in the sidebar, then click `Settings`. Read the field.
 8. Type ` LOSEME2` into `Room label` (no save). Click the `Appearance` tab. In the `Appearance` select, choose `Dark`.
 9. Watch what the browser does — in particular, whether it performs a full page load.
-10. Click the `Hooks` tab and read `Room label`.
+10. Click the `Prompts` tab and read `Room label`.
 11. Look for any 'you have unsaved changes' prompt at any point in steps 6, 7 or 8.
 
 **Pass if — all of these**
@@ -1118,7 +1118,7 @@ If you are testing over a slow or remote connection, latency is expected and is 
 - After steps 2-4 both edits and both `Unsaved` badges are still present — a tab switch preserves pending work.
 - Back/Forward between the two tabs behaves the same way.
 - After F5 (step 6) both edits are GONE and the fields show their defaults, with no badges.
-- After step 7 the edit is GONE — leaving the Settings page for Teammates and back destroys pending work, because it is a genuinely different route with no Hooks component instance to return to.
+- After step 7 the edit is GONE — leaving the Settings page for Teammates and back destroys pending work, because it is a genuinely different route with no Prompts component instance to return to.
 - After step 8 the page repaints dark IMMEDIATELY with NO page load (see `appearance-theme.md`'s APPEARANCETHEME-04) — the whole point of this step is that the theme change behaves like the harmless tab switch in steps 2-4, not like F5.
 - After step 10 the `LOSEME2` edit is STILL PRESENT with its `Unsaved` badge — the theme change did not destroy it.
 - No unsaved-changes prompt appears at any point — this is current designed behaviour.
@@ -1134,13 +1134,13 @@ If you are testing over a slow or remote connection, latency is expected and is 
 The absence of an unsaved-changes prompt is documented designed behaviour, not a defect. If you believe there should be one, file it as a UX suggestion, not a bug. If the `Appearance` select is missing or empty, the Appearance tab has its own problem — report that against the Appearance area and mark step 8 inconclusive here.
 
 > [!NOTE]
-> Clean up afterwards with `P-RESET-SETTINGS`, which removes both the `appearance.json` this test created and any `hooks.json`, then relaunch.
+> Clean up afterwards with `P-RESET-SETTINGS`, which removes both the `appearance.json` this test created and any `prompts.json`, then relaunch.
 
-### HOOKSSETTINGS-27 — "Reset all to defaults" is also rendered on the Appearance tab, where it acts on Hooks
+### PROMPTSSETTINGS-27 — "Reset all to defaults" is also rendered on the Appearance tab, where it acts on Prompts
 
 **Free** · about 6 min
 
-*Confirms an existing UX trap: a destructive control labelled only 'Reset all to defaults' appears on a tab about themes and silently targets Hooks. The test is to verify the blast radius, not to assume it is a bug in the code.*
+*Confirms an existing UX trap: a destructive control labelled only 'Reset all to defaults' appears on a tab about themes and silently targets Prompts. The test is to verify the blast radius, not to assume it is a bug in the code.*
 
 **Before you start**
 
@@ -1149,7 +1149,7 @@ The absence of an unsaved-changes prompt is documented designed behaviour, not a
 
 **Steps**
 
-1. Type ` MARKER` into `Room label` and click `Save`, so `hooks.json` holds one key.
+1. Type ` MARKER` into `Room label` and click `Save`, so `prompts.json` holds one key.
 2. If `appearance.json` exists, copy its content to a scratch file; if it does not exist, note that it is absent.
 3. Click the `Appearance` tab.
 4. Look at the page header, to the right of the `Settings` heading.
@@ -1158,21 +1158,21 @@ The absence of an unsaved-changes prompt is documented designed behaviour, not a
 7. Click `Yes, reset everything`.
 8. Look for a `Save` button anywhere on the Appearance pane.
 9. Check `App_Data\appearance.json` — its content, or its continued absence.
-10. Check `App_Data\hooks.json` — its content.
-11. Click the `Hooks` tab and read `Room label` and its badges.
+10. Check `App_Data\prompts.json` — its content.
+11. Click the `Prompts` tab and read `Room label` and its badges.
 
 **Pass if — all of these**
 
-- The `Reset all to defaults` button is present in the header on the Appearance tab and is ENABLED (because a hook is modified), even though the pane shows only theme settings.
+- The `Reset all to defaults` button is present in the header on the Appearance tab and is ENABLED (because a prompt is modified), even though the pane shows only theme settings.
 - Clicking it shows the same inline `Yes, reset everything` / `Cancel` confirm pair there.
 - Confirming does NOT change `appearance.json` (unchanged content, or still absent).
-- `hooks.json` is UNCHANGED — still holding the `turn.roomLabel` override — because there is no Save button on this tab to commit with.
-- Switching back to the Hooks tab shows `Room label` at its shipped default with an `Unsaved` badge: the reset was staged and survived the tab switch.
+- `prompts.json` is UNCHANGED — still holding the `turn.roomLabel` override — because there is no Save button on this tab to commit with.
+- Switching back to the Prompts tab shows `Room label` at its shipped default with an `Unsaved` badge: the reset was staged and survived the tab switch.
 
 **Fail if — any of these**
 
-- `appearance.json` being changed or created by the confirm -> the control's blast radius has widened beyond hooks and a user's theme settings can be destroyed by a button that is about hooks.
-- `hooks.json` being rewritten from the Appearance tab -> a destructive write is now reachable from a tab with no Save button and no visible list of what it affects.
+- `appearance.json` being changed or created by the confirm -> the control's blast radius has widened beyond prompts and a user's theme settings can be destroyed by a button that is about prompts.
+- `prompts.json` being rewritten from the Appearance tab -> a destructive write is now reachable from a tab with no Save button and no visible list of what it affects.
 
 **Inconclusive if**
 
@@ -1181,7 +1181,7 @@ If the header button is NOT rendered on the Appearance tab, that is a change fro
 > [!NOTE]
 > Whatever the outcome, report the shape of this control as a UX finding: a danger-styled button labelled only 'Reset all to defaults', shown on a tab about themes, that silently targets a different feature. That is what the current markup does — the header sits outside the tab switch.
 
-### HOOKSSETTINGS-28 — A Save in one browser tab repaints /settings open in another, without eating that tab's typing
+### PROMPTSSETTINGS-28 — A Save in one browser tab repaints /settings open in another, without eating that tab's typing
 
 **Free** · about 7 min
 
@@ -1189,7 +1189,7 @@ If the header button is NOT rendered on the Appearance tab, that is a change fro
 
 **Before you start**
 
-- No hooks.json.
+- No prompts.json.
 - The app is running.
 
 **Steps**
@@ -1215,7 +1215,7 @@ If the header button is NOT rendered on the Appearance tab, that is a change fro
 
 **Fail if — any of these**
 
-- Tab B never updating without F5 -> the store's change event is not reaching other circuits; two people editing hooks would silently overwrite each other.
+- Tab B never updating without F5 -> the store's change event is not reaching other circuits; two people editing prompts would silently overwrite each other.
 - Tab B losing its uncommitted typing when tab A saves -> a repaint is clobbering pending edits, which is the worse of the two failure directions.
 - An exception on tab close, or errors accumulating across the five cycles -> a component subscribing to the singleton store is not unsubscribing on dispose; a leaked subscription to a singleton never dies and will grow with every page visit.
 
@@ -1223,7 +1223,7 @@ If the header button is NOT rendered on the Appearance tab, that is a change fro
 
 If the repaint takes longer than about five seconds but does arrive, note the delay and treat the behaviour as pass with an observation rather than a failure. If tab B is a different browser profile or a private window, that is fine — the store is server-side, so it should still repaint.
 
-### HOOKSSETTINGS-29 — A hand-edit to hooks.json reaches the open page within about a second, with no restart and no refresh
+### PROMPTSSETTINGS-29 — A hand-edit to prompts.json reaches the open page within about a second, with no restart and no refresh
 
 **Free** · about 6 min
 
@@ -1231,13 +1231,13 @@ If the repaint takes longer than about five seconds but does arrive, note the de
 
 **Before you start**
 
-- No hooks.json.
-- The app is running and /settings (Hooks tab) is open and visible.
+- No prompts.json.
+- The app is running and /settings (Prompts tab) is open and visible.
 
 **Steps**
 
 1. Arrange the browser and a text editor side by side so you can see the `Room label` field and the editor at the same time.
-2. In the editor, create a new file at `E:\Repos\Huddle\src\Huddle.App\App_Data\hooks.json` (use the path the Settings page prints) with exactly this content: `{"turn.roomLabel": "[R {{roomId}}]"}`
+2. In the editor, create a new file at `E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json` (use the path the Settings page prints) with exactly this content: `{"turn.roomLabel": "[R {{roomId}}]"}`
 3. Save the file and DO NOT touch the browser.
 4. Watch the `Room label` textarea for the next five seconds.
 5. Read the `Room label` header badges and the header's `Reset all to defaults` button.
@@ -1256,17 +1256,17 @@ If the repaint takes longer than about five seconds but does arrive, note the de
 **Fail if — any of these**
 
 - Nothing happening until you press F5 -> the file watcher is dead and the whole documented hand-editing workflow is gone; a user's edit would appear to do nothing.
-- A visible flicker where every field blanks to defaults and then flips back -> the mid-write race is no longer being retried, so a normal editor save momentarily reverts every hook.
+- A visible flicker where every field blanks to defaults and then flips back -> the mid-write race is no longer being retried, so a normal editor save momentarily reverts every prompt.
 - One repaint per keystroke or per save with visible thrash -> the debounce is gone.
 
 **Inconclusive if**
 
-If nothing updates, before failing, check the server console for the line `HookStore's FileSystemWatcher reported an error (likely a dropped-event buffer overflow); scheduling a refresh.` If that line is present, the watcher hit a known environmental condition — note it and retry once. If your editor writes via a temp-file-and-rename (some do), the watcher is designed to handle it; if it still does not update, try saving with plain Notepad before concluding.
+If nothing updates, before failing, check the server console for the line `PromptStore's FileSystemWatcher reported an error (likely a dropped-event buffer overflow); scheduling a refresh.` If that line is present, the watcher hit a known environmental condition — note it and retry once. If your editor writes via a temp-file-and-rename (some do), the watcher is designed to handle it; if it still does not update, try saving with plain Notepad before concluding.
 
 > [!NOTE]
-> Keep hooks.json for the next test.
+> Keep prompts.json for the next test.
 
-### HOOKSSETTINGS-30 — Deleting hooks.json while the app runs reverts every field to its shipped default, live
+### PROMPTSSETTINGS-30 — Deleting prompts.json while the app runs reverts every field to its shipped default, live
 
 **Free** · about 5 min
 
@@ -1274,18 +1274,18 @@ If nothing updates, before failing, check the server console for the line `HookS
 
 **Before you start**
 
-- hooks.json exists with at least two overrides.
-- The app is running and /settings (Hooks tab) is open and visible.
+- prompts.json exists with at least two overrides.
+- The app is running and /settings (Prompts tab) is open and visible.
 
 **Steps**
 
 1. If you do not already have overrides, type ` ONE` into `Room label` and ` TWO` into `Help: budget` and click `Save`.
 2. Note which fields carry `Modified` badges.
-3. In File Explorer, delete `App_Data\hooks.json`. Do NOT touch the browser.
+3. In File Explorer, delete `App_Data\prompts.json`. Do NOT touch the browser.
 4. Watch the browser for the next five seconds.
 5. Read the two previously-overridden textareas and every field's badges.
 6. Read the header's `Reset all to defaults` button state.
-7. Refresh Explorer and check whether `hooks.json` has reappeared.
+7. Refresh Explorer and check whether `prompts.json` has reappeared.
 8. Wait thirty seconds and check Explorer again.
 9. Read the server console.
 
@@ -1294,7 +1294,7 @@ If nothing updates, before failing, check the server console for the line `HookS
 - Within about a second of the delete, both textareas revert to their shipped wording, with no reload and no restart.
 - Every `Modified` badge disappears across all 24 fields.
 - `Reset all to defaults` goes DISABLED.
-- `hooks.json` stays ABSENT — the app does not recreate it, then or thirty seconds later.
+- `prompts.json` stays ABSENT — the app does not recreate it, then or thirty seconds later.
 - No exception page or yellow Blazor error strip appears.
 - The server console shows no error for the delete.
 
@@ -1308,7 +1308,7 @@ If nothing updates, before failing, check the server console for the line `HookS
 
 If Windows refuses the delete because a text editor still holds the file open, close the editor and retry — that is not a defect in the app.
 
-### HOOKSSETTINGS-31 — SILENT: a malformed hooks.json edited while running changes nothing on screen and says nothing — check the log
+### PROMPTSSETTINGS-31 — SILENT: a malformed prompts.json edited while running changes nothing on screen and says nothing — check the log
 
 **Free** · about 7 min
 
@@ -1316,14 +1316,14 @@ If Windows refuses the delete because a text editor still holds the file open, c
 
 **Before you start**
 
-- The app is running and /settings (Hooks tab) is open and visible.
+- The app is running and /settings (Prompts tab) is open and visible.
 - The server console terminal is visible.
 
 **Steps**
 
-1. Type ` GOODVALUE` at the end of `Room label` and click `Save`, so `hooks.json` holds a valid override.
+1. Type ` GOODVALUE` at the end of `Room label` and click `Save`, so `prompts.json` holds a valid override.
 2. Confirm `Room label` shows your text with a `Modified` badge.
-3. In the text editor, open `App_Data\hooks.json` and delete the final closing brace `}` so the JSON is invalid. Save the file.
+3. In the text editor, open `App_Data\prompts.json` and delete the final closing brace `}` so the JSON is invalid. Save the file.
 4. Watch the browser for ten full seconds. Do not touch it.
 5. Read the `Room label` textarea, its badges, and the whole page for any error message.
 6. Look at the bottom of the browser for the yellow Blazor error strip.
@@ -1334,7 +1334,7 @@ If Windows refuses the delete because a text editor still holds the file open, c
 
 - Nothing changes on screen: `Room label` still shows the last-good text ending in ` GOODVALUE`, still with its `Modified` badge.
 - There is NO error message anywhere on the page — no red line, no banner, no yellow Blazor strip.
-- The server console shows a Warning containing: `Could not parse hook overrides file '<path>' after a filesystem change, even after retrying; keeping the previously resolved hook text rather than reverting every hook to its catalog default over what may be a mid-write race.`
+- The server console shows a Warning containing: `Could not parse prompt overrides file '<path>' after a filesystem change, even after retrying; keeping the previously resolved prompt text rather than reverting every prompt to its catalog default over what may be a mid-write race.`
 - After step 8 (file restored) the page continues to show the override with no further action needed.
 
 **Fail if — any of these**
@@ -1350,7 +1350,7 @@ The total absence of on-screen feedback is DOCUMENTED DESIGN, not a bug — do n
 > [!NOTE]
 > This is exactly the kind of failure CI cannot see. Prefer running it early if time is short.
 
-### HOOKSSETTINGS-32 — SILENT: a malformed hooks.json at STARTUP falls back to defaults wholesale, with no UI clue and the file left intact
+### PROMPTSSETTINGS-32 — SILENT: a malformed prompts.json at STARTUP falls back to defaults wholesale, with no UI clue and the file left intact
 
 **Free** · about 7 min
 
@@ -1358,28 +1358,28 @@ The total absence of on-screen feedback is DOCUMENTED DESIGN, not a bug — do n
 
 **Before you start**
 
-- hooks.json exists with at least one override.
+- prompts.json exists with at least one override.
 - You can stop and start the app.
 
 **Steps**
 
 1. Stop the app with Ctrl+C in the terminal.
-2. In the text editor, replace the entire contents of `App_Data\hooks.json` with: `{"turn.roomLabel": 42}` (a non-string value) and save. Copy that content to a scratch file.
+2. In the text editor, replace the entire contents of `App_Data\prompts.json` with: `{"turn.roomLabel": 42}` (a non-string value) and save. Copy that content to a scratch file.
 3. Start the app: `dotnet run --project src/Huddle.App` from the repo root.
 4. Watch the console output during startup.
 5. Browse to `http://localhost:5100/settings`.
 6. Read all 24 fields and their badges.
 7. Read the whole page for any error, banner or mention of an unreadable file.
-8. Open `App_Data\hooks.json` and compare its content to the scratch copy.
+8. Open `App_Data\prompts.json` and compare its content to the scratch copy.
 9. Repeat steps 1-8 with a second kind of corruption: replace the file contents with `{"turn.roomLabel": ` (truncated, no closing brace or value).
 
 **Pass if — all of these**
 
 - The app STARTS normally both times — no crash, no startup exception.
-- The console prints a Warning containing: `Could not parse hook overrides file '<path>'; falling back to defaults for every hook.`
+- The console prints a Warning containing: `Could not parse prompt overrides file '<path>'; falling back to defaults for every prompt.`
 - All 24 fields show their shipped defaults and NO `Modified` badge — exactly as if the file were absent.
 - The page shows no error, no banner and no mention of the file being unreadable.
-- `hooks.json` is still on disk with its corrupt content, byte-identical to the scratch copy — the app neither overwrote nor deleted it.
+- `prompts.json` is still on disk with its corrupt content, byte-identical to the scratch copy — the app neither overwrote nor deleted it.
 
 **Fail if — any of these**
 
@@ -1394,7 +1394,7 @@ No on-screen warning is DOCUMENTED DESIGN — do not file it. If the console scr
 > [!NOTE]
 > Beware a follow-on hazard worth reporting if you see it: with a corrupt file in place, a subsequent Save from the browser reads the file as empty and will write only your new edits — the corrupt content is then gone. That is a consequence of the fallback, not a separate bug, but say so in your report if a tester might lose data that way.
 
-### HOOKSSETTINGS-33 — An unknown key in hooks.json is kept forever, ignored for resolution, and logged once
+### PROMPTSSETTINGS-33 — An unknown key in prompts.json is kept forever, ignored for resolution, and logged once
 
 **Free** · about 6 min
 
@@ -1407,20 +1407,20 @@ No on-screen warning is DOCUMENTED DESIGN — do not file it. If the console scr
 
 **Steps**
 
-1. In the text editor, set `App_Data\hooks.json` to exactly: `{"turn.roomLabel": "[R {{roomId}}]", "my.experiment": "hello"}` and save.
+1. In the text editor, set `App_Data\prompts.json` to exactly: `{"turn.roomLabel": "[R {{roomId}}]", "my.experiment": "hello"}` and save.
 2. Watch the browser for five seconds.
 3. Read the `Room label` textarea and its badges.
-4. Scan the whole Hooks tab for any field, error or mention of `my.experiment`.
+4. Scan the whole Prompts tab for any field, error or mention of `my.experiment`.
 5. Read the server console.
 6. Now, in the browser, type ` FROMUI` at the end of `Help: footer` and click `Save`.
-7. Open `App_Data\hooks.json` and read its full contents.
+7. Open `App_Data\prompts.json` and read its full contents.
 
 **Pass if — all of these**
 
 - `Room label` picks up `[R {{roomId}}]` normally and shows a `Modified` badge.
 - No field appears for `my.experiment`, and no error about it appears anywhere on the page.
-- The server console shows an Information line containing: `Hook overrides file '<path>' contains key 'my.experiment', which is not a hook this application knows about; it is kept in the file but ignored when resolving hook text.`
-- After the save at step 6, `hooks.json` still contains `"my.experiment": "hello"`, untouched, alongside `turn.roomLabel` and the new `getHelp.footer` key.
+- The server console shows an Information line containing: `Prompt overrides file '<path>' contains key 'my.experiment', which is not a prompt this application knows about; it is kept in the file but ignored when resolving prompt text.`
+- After the save at step 6, `prompts.json` still contains `"my.experiment": "hello"`, untouched, alongside `turn.roomLabel` and the new `getHelp.footer` key.
 
 **Fail if — any of these**
 
@@ -1432,7 +1432,7 @@ No on-screen warning is DOCUMENTED DESIGN — do not file it. If the console scr
 
 If you do not see the Information line, check that the console log level for `Agency.Huddle` is at `Information` (the default) rather than `Warning` — raise it back before failing the test. The absence of the log line alone, with correct file and UI behaviour, is a minor finding, not a failure of the data-preservation rule.
 
-### HOOKSSETTINGS-34 — A pending browser edit beats a concurrent hand-edit to the same key, and Save merges rather than overwrites
+### PROMPTSSETTINGS-34 — A pending browser edit beats a concurrent hand-edit to the same key, and Save merges rather than overwrites
 
 **Free** · about 8 min
 
@@ -1440,26 +1440,26 @@ If you do not see the Information line, check that the console log level for `Ag
 
 **Before you start**
 
-- No hooks.json.
-- The app is running, /settings (Hooks tab) open.
-- A text editor ready on the hooks.json path.
+- No prompts.json.
+- The app is running, /settings (Prompts tab) open.
+- A text editor ready on the prompts.json path.
 
 **Steps**
 
 1. In the browser, type ` FROMBROWSER` at the end of `Room label`. Do NOT save.
-2. Leave the browser untouched. In the editor, create `App_Data\hooks.json` with exactly: `{"turn.roomLabel": "[FROM-FILE {{roomId}}]", "turn.message": "FILE {{roomLabel}} {{sender}}: {{text}}"}` and save it.
+2. Leave the browser untouched. In the editor, create `App_Data\prompts.json` with exactly: `{"turn.roomLabel": "[FROM-FILE {{roomId}}]", "turn.message": "FILE {{roomLabel}} {{sender}}: {{text}}"}` and save it.
 3. Watch the browser for five seconds.
 4. Read the `Message` textarea.
 5. Read the `Room label` textarea.
 6. Now click `Save` in the browser.
-7. Open `App_Data\hooks.json` and read both values.
+7. Open `App_Data\prompts.json` and read both values.
 
 **Pass if — all of these**
 
 - At step 4 the `Message` field HAS updated to `FILE {{roomLabel}} {{sender}}: {{text}}` — a key with no pending edit picks up the hand-edit.
 - At step 5 the `Room label` field still shows YOUR typed text ending in ` FROMBROWSER` — the uncommitted edit wins for its own key.
 - No conflict warning or error is shown (this is designed, silent behaviour).
-- After the Save, `hooks.json` holds your browser text for `turn.roomLabel` AND the hand-edited `FILE {{roomLabel}} {{sender}}: {{text}}` for `turn.message`.
+- After the Save, `prompts.json` holds your browser text for `turn.roomLabel` AND the hand-edited `FILE {{roomLabel}} {{sender}}: {{text}}` for `turn.message`.
 
 **Fail if — any of these**
 
@@ -1469,12 +1469,12 @@ If you do not see the Information line, check that the console log level for `Ag
 
 **Inconclusive if**
 
-If neither field updates at step 3, re-run HOOKSSETTINGS-29 first — if the watcher is not delivering hand-edits at all, this test cannot be judged and the watcher is the finding to report.
+If neither field updates at step 3, re-run PROMPTSSETTINGS-29 first — if the watcher is not delivering hand-edits at all, this test cannot be judged and the watcher is the finding to report.
 
 > [!NOTE]
 > The silent loss of the hand-edit to turn.roomLabel is designed behaviour. Report it as a UX observation if you like ('a concurrent hand-edit is discarded with no conflict notice'), not as a defect.
 
-### HOOKSSETTINGS-35 — A CRLF hand-edit makes a field show "Modified" while looking identical — and Reset fixes it
+### PROMPTSSETTINGS-35 — A CRLF hand-edit makes a field show "Modified" while looking identical — and Reset fixes it
 
 **Free** · about 8 min
 
@@ -1482,28 +1482,28 @@ If neither field updates at step 3, re-run HOOKSSETTINGS-29 first — if the wat
 
 **Before you start**
 
-- No hooks.json.
-- The app is running, /settings (Hooks tab) open.
+- No prompts.json.
+- The app is running, /settings (Prompts tab) open.
 - A text editor that can set line endings (VS Code shows LF/CRLF in its status bar; Notepad++ has Edit > EOL Conversion).
 
 **Steps**
 
-1. Open `src\Huddle.App\hooks.default.json` and copy the exact value of `getHelp.rooms` (a multi-line hook).
-2. In your editor, create `App_Data\hooks.json` containing just that one key and value, but set the editor's line endings to CRLF (Windows) before saving.
+1. Open `src\Huddle.App\prompts.default.json` and copy the exact value of `getHelp.rooms` (a multi-line prompt).
+2. In your editor, create `App_Data\prompts.json` containing just that one key and value, but set the editor's line endings to CRLF (Windows) before saving.
 3. Save the file and switch to the browser.
 4. Wait a second, then read the `Help: Rooms` field: its text and its badges.
-5. Compare the text on screen, line by line, with the shipped default in `hooks.default.json`.
+5. Compare the text on screen, line by line, with the shipped default in `prompts.default.json`.
 6. Click the `Reset` button on the `Help: Rooms` field.
 7. Read the badges again.
 8. Click `Save`.
-9. Open `App_Data\hooks.json` and list its keys.
+9. Open `App_Data\prompts.json` and list its keys.
 
 **Pass if — all of these**
 
 - `Help: Rooms` gains a `Modified` badge.
 - The textarea text looks character-for-character identical to the shipped wording — you cannot see any difference.
 - Clicking `Reset` clears the `Modified` badge and raises `Unsaved`.
-- After `Save`, `hooks.json` no longer contains `getHelp.rooms` — it is removed, not re-stored with the CRLF text.
+- After `Save`, `prompts.json` no longer contains `getHelp.rooms` — it is removed, not re-stored with the CRLF text.
 
 **Fail if — any of these**
 
@@ -1515,9 +1515,9 @@ If neither field updates at step 3, re-run HOOKSSETTINGS-29 first — if the wat
 A `Modified` badge with no visible difference is NOT a defect in itself — the comparison is deliberately ordinal, so a CRLF/LF difference counts. Do not file it as 'Modified badge is wrong'. If you cannot make your editor write CRLF, run this instead in PowerShell to build the file and then re-judge from step 3: read the default value, replace `\n` with `\r\n`, and write the JSON. If you cannot produce the CRLF file at all, mark this test INCONCLUSIVE.
 
 > [!NOTE]
-> Verify the line endings you actually wrote with a hex-capable editor, or in PowerShell: `(Get-Content -Raw 'E:\Repos\Huddle\src\Huddle.App\App_Data\hooks.json') -match "`r`n"`.
+> Verify the line endings you actually wrote with a hex-capable editor, or in PowerShell: `(Get-Content -Raw 'E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json') -match "`r`n"`.
 
-### HOOKSSETTINGS-36 — Loading /settings never starts an adapter (node) process
+### PROMPTSSETTINGS-36 — Loading /settings never starts an adapter (node) process
 
 **Free** · about 5 min
 
@@ -1534,7 +1534,7 @@ A `Modified` badge with no visible difference is NOT a defect in itself — the 
 2. In the browser, load `http://localhost:5100/settings`.
 3. Re-run `O-ADAPTERS-LIST`.
 4. Press F5 on the page five times, then re-run the command.
-5. Click the `Appearance` tab and the `Hooks` tab three times each, then re-run the command.
+5. Click the `Appearance` tab and the `Prompts` tab three times each, then re-run the command.
 6. Type into three fields and click `Save`, then re-run the command.
 7. Read the server console for any line mentioning starting an adapter or a process.
 
@@ -1554,11 +1554,11 @@ If you already have `node` processes running for unrelated reasons (an editor's 
 > [!NOTE]
 > Contrast with /teammates, where opening a New or Edit card legitimately probes for models and may start an adapter. That is expected there and out of scope here.
 
-### HOOKSSETTINGS-37 — Saving a Hook must NOT restart any teammate's session
+### PROMPTSSETTINGS-37 — Saving a Prompt must NOT restart any teammate's session
 
 **Free** · about 12 min
 
-*Proves the binding rule that editing a hook never throws away an agent's conversation memory. A restart here is invisible except as a teammate that suddenly forgot the conversation.*
+*Proves the binding rule that editing a prompt never throws away an agent's conversation memory. A restart here is invisible except as a teammate that suddenly forgot the conversation.*
 
 **Before you start**
 
@@ -1571,9 +1571,9 @@ If you already have `node` processes running for unrelated reasons (an editor's 
 1. Open `http://localhost:5100/teammates` in browser tab A and confirm your teammate's status badge reads Online.
 2. Open `http://localhost:5100/settings` in browser tab B.
 3. Clear or note the current end of the server console output.
-4. In tab B, type ` EDIT1` into `Room label` (a Live hook) and click `Save`.
+4. In tab B, type ` EDIT1` into `Room label` (a Live prompt) and click `Save`.
 5. Switch to tab A and watch the status badge for ten seconds.
-6. In tab B, type ` EDIT2` into `Identity` (a `Next session` hook) and click `Save`.
+6. In tab B, type ` EDIT2` into `Identity` (a `Next session` prompt) and click `Save`.
 7. Switch to tab A and watch the status badge for ten seconds.
 8. In tab B, type into `Tools`, `Chat rules` and `get_help description` and click `Save` once for all three.
 9. Switch to tab A and watch the status badge for ten seconds.
@@ -1587,8 +1587,8 @@ If you already have `node` processes running for unrelated reasons (an editor's 
 
 **Fail if — any of these**
 
-- Any status change or restart log line after a hook Save -> binding rule violated. A restart silently destroys the agent's conversation memory, and the only symptom a user ever sees is a teammate that suddenly forgot what was being discussed. Saving five edits as one save must produce at most one store event and zero restarts.
-- The `Restart` button appearing on the card after a hook save -> the teammate went Offline or Degraded as a consequence of the save.
+- Any status change or restart log line after a prompt Save -> binding rule violated. A restart silently destroys the agent's conversation memory, and the only symptom a user ever sees is a teammate that suddenly forgot what was being discussed. Saving five edits as one save must produce at most one store event and zero restarts.
+- The `Restart` button appearing on the card after a prompt save -> the teammate went Offline or Degraded as a consequence of the save.
 
 **Inconclusive if**
 
@@ -1597,11 +1597,11 @@ If the teammate is not Online before you start (Offline or Degraded), this test 
 > [!NOTE]
 > This test enables ACP but prompts no Turn, so NO tokens are billed. The only cost is starting the node adapter processes, which happens at boot anyway.
 
-### HOOKSSETTINGS-38 — COSTS MONEY: a Live hook edit reaches the very next Turn with no restart
+### PROMPTSSETTINGS-38 — COSTS MONEY: a Live prompt edit reaches the very next Turn with no restart
 
 **💰 Spends money** · about 15 min
 
-*Proves the thirteen unbadged hooks really are live — a Live hook that needed a restart would defeat the whole feature.*
+*Proves the thirteen unbadged prompts really are live — a Live prompt that needed a restart would defeat the whole feature.*
 
 **Before you start**
 
@@ -1627,8 +1627,8 @@ If the teammate is not Online before you start (Offline or Degraded), this test 
 
 **Fail if — any of these**
 
-- The reply still showing the old `[Room: ... (id: ...)]` framing -> a Live hook now needs a restart, which defeats the entire feature: every wording tweak would cost the teammate its conversation memory.
-- The teammate not replying at all after the hook edit -> the edited hook broke turn delivery; check the server console for an exception and report that as the primary finding.
+- The reply still showing the old `[Room: ... (id: ...)]` framing -> a Live prompt now needs a restart, which defeats the entire feature: every wording tweak would cost the teammate its conversation memory.
+- The teammate not replying at all after the prompt edit -> the edited prompt broke turn delivery; check the server console for an exception and report that as the primary finding.
 
 **Inconclusive if**
 
@@ -1637,11 +1637,11 @@ A model may paraphrase rather than quote verbatim, which makes the chat reply a 
 > [!NOTE]
 > COST: two short Turns on Haiku at low effort — a few seconds of model time each, cents at most. Keep both messages to a single line. WARNING: wire tracing dumps the tool-server bearer token to the console; only use it in a throwaway debugging session, and turn it off afterwards.
 
-### HOOKSSETTINGS-39 — COSTS MONEY: a "Next session" hook edit is silently inert on a running teammate until it restarts
+### PROMPTSSETTINGS-39 — COSTS MONEY: a "Next session" prompt edit is silently inert on a running teammate until it restarts
 
 **💰 Spends money** · about 20 min
 
-*Proves the badged hooks behave as the badge says, and demonstrates that the badge is the ONLY warning that exists — nothing in the app or the log reports that the edit did not land.*
+*Proves the badged prompts behave as the badge says, and demonstrates that the badge is the ONLY warning that exists — nothing in the app or the log reports that the edit did not land.*
 
 **Before you start**
 
@@ -1667,8 +1667,8 @@ A model may paraphrase rather than quote verbatim, which makes the chat reply a 
 
 **Fail if — any of these**
 
-- Turn 2 already beginning with `BANANA` -> sessions are being restarted on a hook edit, which the rules file forbids: it throws away the agent's conversation memory every time someone rewords a sentence.
-- Turn 3 still not showing the new wording -> the edit never reaches a new session at all, so the NextSession hooks are effectively uneditable.
+- Turn 2 already beginning with `BANANA` -> sessions are being restarted on a prompt edit, which the rules file forbids: it throws away the agent's conversation memory every time someone rewords a sentence.
+- Turn 3 still not showing the new wording -> the edit never reaches a new session at all, so the NextSession prompts are effectively uneditable.
 
 **Inconclusive if**
 
@@ -1677,7 +1677,7 @@ A model may decline or forget a formatting instruction, so one non-BANANA reply 
 > [!NOTE]
 > COST: about three short Turns on Haiku at low effort — cents at most. The 'no on-screen warning' half is documented design, not a defect: report it only as context. WARNING: wire tracing dumps the tool-server bearer token; throwaway sessions only.
 
-### HOOKSSETTINGS-40 — COSTS MONEY: get_help re-renders on every call, so its nine hooks land on the next call — while a tool DESCRIPTION does not
+### PROMPTSSETTINGS-40 — COSTS MONEY: get_help re-renders on every call, so its nine prompts land on the next call — while a tool DESCRIPTION does not
 
 **💰 Spends money** · about 20 min
 
@@ -1704,12 +1704,12 @@ A model may decline or forget a formatting instruction, so one non-BANANA reply 
 
 **Pass if — all of these**
 
-- The reply at step 5 contains `PINEAPPLE is the safe word.` — the get_help body is built fresh on every call, so a `Get help` hook edit lands on the very next call with no restart.
+- The reply at step 5 contains `PINEAPPLE is the safe word.` — the get_help body is built fresh on every call, so a `Get help` prompt edit lands on the very next call with no restart.
 - The reply at step 9 does NOT contain `MANGO` — the running teammate's tool listing still carries the old description, because tool descriptions are sent once per session.
 
 **Fail if — any of these**
 
-- The get_help body coming back without `PINEAPPLE` -> it is being cached rather than rebuilt per call, so every `Get help` hook edit silently does nothing until a restart, while the field carries no `Next session` badge to warn anyone.
+- The get_help body coming back without `PINEAPPLE` -> it is being cached rather than rebuilt per call, so every `Get help` prompt edit silently does nothing until a restart, while the field carries no `Next session` badge to warn anyone.
 - The tool description showing `MANGO` without a restart -> tool descriptions are being re-read somewhere they cannot be, which contradicts the `Next session` badge on those seven fields and means the badge is now misleading in the opposite direction.
 
 **Inconclusive if**
@@ -1717,7 +1717,7 @@ A model may decline or forget a formatting instruction, so one non-BANANA reply 
 Models are unreliable at quoting tool descriptions back, so step 9 is the weaker half. If the step-9 reply is evasive or the model claims it cannot see its tool descriptions, do NOT fail — mark that half INCONCLUSIVE and, if you need certainty, read the wire instead: enable `Team:Acp:TraceWire=true` with `Logging:LogLevel:Agency.Huddle=Trace` and inspect the tool list sent at `session/new` and the tool result text for the help call. If ACP cannot be enabled, mark the whole test INCONCLUSIVE.
 
 > [!NOTE]
-> COST: two to three short Turns on Haiku at low effort — cents at most. A get_help call returns a long block, so keep the request scoped to one section as written above, or the reply will be needlessly long. Remember the demo agents `echo` and `alpha` are pipe clients that never see hook-rendered text — never use them to test whether a hook took effect. WARNING: wire tracing dumps the tool-server bearer token; throwaway sessions only.
+> COST: two to three short Turns on Haiku at low effort — cents at most. A get_help call returns a long block, so keep the request scoped to one section as written above, or the reply will be needlessly long. Remember the demo agents `echo` and `alpha` are pipe clients that never see prompt-rendered text — never use them to test whether a prompt took effect. WARNING: wire tracing dumps the tool-server bearer token; throwaway sessions only.
 
 ---
 

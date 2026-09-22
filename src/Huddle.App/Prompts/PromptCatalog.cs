@@ -1,14 +1,14 @@
-namespace Agency.Huddle.App.Hooks;
+namespace Agency.Huddle.App.Prompts;
 
 /// <summary>
-/// The fixed catalog of every model-facing hook this application renders, together with the default
+/// The fixed catalog of every model-facing prompt this application renders, together with the default
 /// wording each one falls back to when no override is configured.
 /// </summary>
 /// <remarks>
 /// <para>
-/// This is the authority for what hooks exist. A later JSON configuration file only ever supplies an
-/// override for <see cref="HookDefinition.Default"/> keyed by <see cref="HookDefinition.Key"/>; it can
-/// never add, remove, or change the shape of a hook.
+/// This is the authority for what prompts exist. A later JSON configuration file only ever supplies an
+/// override for <see cref="PromptDefinition.Default"/> keyed by <see cref="PromptDefinition.Key"/>; it can
+/// never add, remove, or change the shape of a prompt.
 /// </para>
 /// <para>
 /// Every default below was lifted verbatim — character for character, including em-dashes, alignment
@@ -17,33 +17,33 @@ namespace Agency.Huddle.App.Hooks;
 /// prose. Nothing here is rendered or joined by this type; that is left to later call sites.
 /// </para>
 /// </remarks>
-internal static class HookCatalog
+internal static class PromptCatalog
 {
-    /// <summary>Every hook this application knows about, in a stable, human-meaningful order.</summary>
-    internal static IReadOnlyList<HookDefinition> All { get; } = BuildAll();
+    /// <summary>Every prompt this application knows about, in a stable, human-meaningful order.</summary>
+    internal static IReadOnlyList<PromptDefinition> All { get; } = BuildAll();
 
-    /// <summary>Looks a hook up by its <see cref="HookDefinition.Key"/>.</summary>
-    /// <param name="key">The hook's key, e.g. <c>"turn.roomLabel"</c>.</param>
-    /// <returns>The matching <see cref="HookDefinition"/>.</returns>
-    /// <exception cref="KeyNotFoundException">No hook in <see cref="All"/> has this key.</exception>
-    internal static HookDefinition Get(string key)
+    /// <summary>Looks a prompt up by its <see cref="PromptDefinition.Key"/>.</summary>
+    /// <param name="key">The prompt's key, e.g. <c>"turn.roomLabel"</c>.</param>
+    /// <returns>The matching <see cref="PromptDefinition"/>.</returns>
+    /// <exception cref="KeyNotFoundException">No prompt in <see cref="All"/> has this key.</exception>
+    internal static PromptDefinition Get(string key)
     {
-        foreach (var hook in All)
+        foreach (var prompt in All)
         {
-            if (string.Equals(hook.Key, key, StringComparison.Ordinal))
+            if (string.Equals(prompt.Key, key, StringComparison.Ordinal))
             {
-                return hook;
+                return prompt;
             }
         }
 
-        throw new KeyNotFoundException($"No hook is registered with key '{key}'.");
+        throw new KeyNotFoundException($"No prompt is registered with key '{key}'.");
     }
 
     /// <summary>Builds the catalog's fixed contents.</summary>
-    /// <returns>The full list of hook definitions.</returns>
-    private static IReadOnlyList<HookDefinition> BuildAll() =>
+    /// <returns>The full list of prompt definitions.</returns>
+    private static IReadOnlyList<PromptDefinition> BuildAll() =>
     [
-        new HookDefinition(
+        new PromptDefinition(
             Key: "systemPrompt.orientation",
             Label: "Orientation",
             HelperText:
@@ -61,9 +61,9 @@ internal static class HookCatalog
                 """,
             Placeholders: ["{{helpTool}}"],
             RequiredPlaceholders: ["{{helpTool}}"],
-            Timing: HookTiming.NextSession),
+            Timing: PromptTiming.NextSession),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "systemPrompt.identity",
             Label: "Identity",
             HelperText:
@@ -75,9 +75,9 @@ internal static class HookCatalog
                 """,
             Placeholders: ["{{personaName}}"],
             RequiredPlaceholders: ["{{personaName}}"],
-            Timing: HookTiming.NextSession),
+            Timing: PromptTiming.NextSession),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "systemPrompt.chatRules",
             Label: "Chat rules",
             HelperText:
@@ -93,9 +93,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.NextSession),
+            Timing: PromptTiming.NextSession),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "systemPrompt.tools",
             Label: "Tools",
             HelperText:
@@ -115,9 +115,9 @@ internal static class HookCatalog
                 """,
             Placeholders: ["{{toolNames}}"],
             RequiredPlaceholders: ["{{toolNames}}"],
-            Timing: HookTiming.NextSession),
+            Timing: PromptTiming.NextSession),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "turn.roomLabel",
             Label: "Room label",
             HelperText:
@@ -129,9 +129,9 @@ internal static class HookCatalog
                 """,
             Placeholders: ["{{roomName}}", "{{roomId}}"],
             RequiredPlaceholders: ["{{roomId}}"],
-            Timing: HookTiming.Live),
+            Timing: PromptTiming.Live),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "turn.message",
             Label: "Message",
             HelperText:
@@ -144,9 +144,9 @@ internal static class HookCatalog
                 """,
             Placeholders: ["{{roomLabel}}", "{{sender}}", "{{text}}"],
             RequiredPlaceholders: ["{{roomLabel}}", "{{sender}}", "{{text}}"],
-            Timing: HookTiming.Live),
+            Timing: PromptTiming.Live),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "turn.catchUpHeader",
             Label: "Catch-up header",
             HelperText:
@@ -159,9 +159,9 @@ internal static class HookCatalog
                 """,
             Placeholders: ["{{roomLabel}}"],
             RequiredPlaceholders: [],
-            Timing: HookTiming.Live),
+            Timing: PromptTiming.Live),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "turn.catchUpLine",
             Label: "Catch-up line",
             HelperText:
@@ -173,9 +173,9 @@ internal static class HookCatalog
                 """,
             Placeholders: ["{{sender}}", "{{text}}"],
             RequiredPlaceholders: ["{{sender}}", "{{text}}"],
-            Timing: HookTiming.Live),
+            Timing: PromptTiming.Live),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "getHelp.intro",
             Label: "Help: introduction",
             HelperText:
@@ -188,9 +188,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.Live),
+            Timing: PromptTiming.Live),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "getHelp.rooms",
             Label: "Help: Rooms",
             HelperText:
@@ -206,9 +206,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.Live),
+            Timing: PromptTiming.Live),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "getHelp.messages",
             Label: "Help: messages",
             HelperText:
@@ -224,9 +224,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.Live),
+            Timing: PromptTiming.Live),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "getHelp.mentions",
             Label: "Help: mentions",
             HelperText:
@@ -241,9 +241,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.Live),
+            Timing: PromptTiming.Live),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "getHelp.replying",
             Label: "Help: replying",
             HelperText:
@@ -257,9 +257,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.Live),
+            Timing: PromptTiming.Live),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "getHelp.budget",
             Label: "Help: budget",
             HelperText:
@@ -276,9 +276,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.Live),
+            Timing: PromptTiming.Live),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "getHelp.toolsHeader",
             Label: "Help: tools heading",
             HelperText: "The heading introducing the catalog of tools in get_help's output. Takes no placeholders.",
@@ -288,9 +288,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.Live),
+            Timing: PromptTiming.Live),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "getHelp.toolEntry",
             Label: "Help: tool entry",
             HelperText:
@@ -306,9 +306,9 @@ internal static class HookCatalog
                 """,
             Placeholders: ["{{toolName}}", "{{toolDescription}}"],
             RequiredPlaceholders: ["{{toolName}}", "{{toolDescription}}"],
-            Timing: HookTiming.Live),
+            Timing: PromptTiming.Live),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "getHelp.footer",
             Label: "Help: footer",
             HelperText:
@@ -321,9 +321,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.Live),
+            Timing: PromptTiming.Live),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "tool.getHelp.description",
             Label: "get_help description",
             HelperText:
@@ -335,9 +335,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.NextSession),
+            Timing: PromptTiming.NextSession),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "tool.listAgents.description",
             Label: "list_agents description",
             HelperText:
@@ -349,9 +349,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.NextSession),
+            Timing: PromptTiming.NextSession),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "tool.createRoom.description",
             Label: "create_room description",
             HelperText:
@@ -363,9 +363,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.NextSession),
+            Timing: PromptTiming.NextSession),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "tool.inviteAgent.description",
             Label: "invite_agent description",
             HelperText:
@@ -377,9 +377,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.NextSession),
+            Timing: PromptTiming.NextSession),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "tool.postMessage.description",
             Label: "post_message description",
             HelperText:
@@ -391,9 +391,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.NextSession),
+            Timing: PromptTiming.NextSession),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "tool.followRoom.description",
             Label: "follow_room description",
             HelperText:
@@ -405,9 +405,9 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.NextSession),
+            Timing: PromptTiming.NextSession),
 
-        new HookDefinition(
+        new PromptDefinition(
             Key: "tool.unfollowRoom.description",
             Label: "unfollow_room description",
             HelperText:
@@ -419,6 +419,6 @@ internal static class HookCatalog
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],
-            Timing: HookTiming.NextSession),
+            Timing: PromptTiming.NextSession),
     ];
 }

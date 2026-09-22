@@ -445,7 +445,7 @@ public sealed class PersonaRenameCascadeTests
 
     /// <summary>
     /// A hand-written fake <see cref="ILogger{T}"/> that records every call, since this repo has no
-    /// mocking framework. Modelled after <c>HookStoreTests.RecordingLogger</c>.
+    /// mocking framework. Modelled after <c>PromptStoreTests.RecordingLogger</c>.
     /// </summary>
     /// <typeparam name="T">The category type the recorded logger stands in for.</typeparam>
     private sealed class RecordingLogger<T> : ILogger<T>

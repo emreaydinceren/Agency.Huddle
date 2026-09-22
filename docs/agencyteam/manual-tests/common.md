@@ -100,7 +100,7 @@ names the one it means.
 | **P-RESET-ALL** | `P-STOP`, then `Remove-Item -Recurse -Force src\Huddle.App\App_Data` | Everything — Rooms, Transcripts, Personas, settings | Nothing |
 | **P-RESET-ROOMS** | `P-STOP`, then delete `App_Data\rooms` and `App_Data\team.db`, `team.db-wal`, `team.db-shm` | Rooms, Member lists, Transcripts | Personas, settings |
 | **P-RESET-TEAMS** | `P-STOP`, then delete every `.md` under `App_Data\Teams`, sub-folders included | The Persona library | `team.db`, Rooms, settings |
-| **P-RESET-SETTINGS** | `P-STOP`, then delete `App_Data\hooks.json` and `App_Data\appearance.json` if present | Hook and Theme overrides | Everything else |
+| **P-RESET-SETTINGS** | `P-STOP`, then delete `App_Data\prompts.json` and `App_Data\appearance.json` if present | Prompt and Theme overrides | Everything else |
 
 Relaunch with the lane the test names. `App_Data` is gitignored, so nothing you
 delete here is recoverable from the repository — take the
@@ -232,7 +232,7 @@ the project folder.
 | `work\<Persona>\` | That Persona's Work Dir |
 | `rooms\<RoomId>.jsonl` | One Room's Transcript |
 | `team.db` (+ `-wal`, `-shm`) | The directory database |
-| `hooks.json`, `appearance.json` | Settings overrides — **absent until first save**, which is correct |
+| `prompts.json`, `appearance.json` | Settings overrides — **absent until first save**, which is correct |
 
 If the folder is not there, `Get-ChildItem -Recurse -Filter team.db E:\Repos\Huddle`
 finds where `Team:DataDir` actually resolved.

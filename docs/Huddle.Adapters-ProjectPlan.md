@@ -536,7 +536,7 @@ conformance tier (Spec §15.1, Tier 3).
 - **Read first:** `tests/Huddle.Tests/Acp/PromptGoldenTests.cs` (the seven-name `ToolNames` array
   at lines 56–62 and the `Compose` call at line 71), `tests/Huddle.Tests/Acp/Golden/systemPrompt.txt`,
   `src/Huddle.App/Acp/SystemPromptComposer.cs`, `docs/agencyteam/rules.md` (the rows *"App Tool
-  names must be spelled `mcp__team__*`"* and *"A Hook's text never contains `mcp__team__`"*),
+  names must be spelled `mcp__team__*`"* and *"A Prompt's text never contains `mcp__team__`"*),
   **Spec §6.4**, **Spec §16 (`rules.md` — one row widens)**.
 - **Deliverable:** Extend `PromptGoldenTests` with a second case that composes the prompt from
   **bare** tool names (`get_help`, `list_agents`, …) and a `helpToolName` of `get_help`, pinned
@@ -901,7 +901,7 @@ real ACP peer**. Requires D0; each individual task also requires the deliverable
 - **Read first:** `docs/agencyteam/rules.md` (the row *"App Tool names must be spelled
   `mcp__team__*` in the system prompt"*), **Spec §16**, **Spec §4 (P5)**.
 - **Deliverable:** Replace that row with the wording in **Spec §16**. **Do not** weaken the
-  sibling row *"A Hook's text never contains `mcp__team__`; the prefix is filled in by code"* —
+  sibling row *"A Prompt's text never contains `mcp__team__`; the prefix is filled in by code"* —
   it still holds, and now holds per Adapter.
 - **Acceptance:** The row names the Adapter Profile as the source of the prefix and cites the
   golden test that pins both forms.

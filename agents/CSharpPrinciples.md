@@ -166,10 +166,10 @@ public async Task PostAsync_BudgetExhausted_DoesNotCallAgent()
 
 These do not fail the build, but the code is consistent about them and reviewers expect it.
 
-- **File-scoped namespaces** matching the folder path. `Agency.Huddle.App.Hooks` lives in `src/Huddle.App/Hooks/`.
+- **File-scoped namespaces** matching the folder path. `Agency.Huddle.App.Prompts` lives in `src/Huddle.App/Prompts/`.
 - **`using` directives go above the namespace** (`.editorconfig`: `outside_namespace`). About half the older files place them below; do not churn those, but write new files the configured way.
 - **Fields are plain `camelCase` and accessed as `this.field`.** There are zero `_field` names in the repo; `this.` qualification is the house way of telling a field from a local.
-- **Primary constructors** for `sealed` classes whose dependencies are only stored: `internal sealed class HookStore(IFileSystem fileSystem, TimeProvider clock)`.
+- **Primary constructors** for `sealed` classes whose dependencies are only stored: `internal sealed class PromptStore(IFileSystem fileSystem, TimeProvider clock)`.
 - **Explicit type on the left, target-typed `new()` on the right.** Write `StringBuilder stringBuilder = new();`, not `StringBuilder stringBuilder = new StringBuilder();` and not `var stringBuilder = new StringBuilder();`. The type is named once, where the reader looks for it. Use `var` only where the type is already spelled on the right (a cast, an `as`, a generic factory such as `Enumerable.Empty<T>()`) or where naming it would be pure noise, such as `foreach (var item in items)` and LINQ results.
 - **Allman braces, CRLF, four spaces.** Expression bodies for properties, accessors, indexers and lambdas; block bodies for methods, constructors and local functions.
 - **Modern syntax by default:** `is not null`, property and extended patterns, `switch` expressions, `new()` when the type is apparent, collection expressions `[]`, `^1` and ranges, raw string literals `"""` for multi-line text, `u8` for UTF-8 constants.

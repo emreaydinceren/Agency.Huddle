@@ -206,14 +206,14 @@ Check these before reading the code.
 The index stores LF and a Windows worktree checks out CRLF (`core.autocrlf=true`), so the
 Linux runner compiles bytes you never compile locally. **Something does depend on that**, as of
 2026-09-15, and it was live for longer than anyone noticed: C# raw string literals *preserve*
-their source file's line endings rather than normalising them, so `HookCatalog`'s defaults —
+their source file's line endings rather than normalising them, so `PromptCatalog`'s defaults —
 and therefore every prompt sent to a model — carried `\r\n` on a Windows build and `\n` in this
 container. Two tests read source files as text (`TeammatesRazorSourceTests` over
 `Teammates.razor`, and `AcpReferenceTests`) and are the shape that would notice, but neither
-covers prompts; `PromptGoldenTests` and `HookDefaultsFileTests` both normalise line endings on
+covers prompts; `PromptGoldenTests` and `PromptDefaultsFileTests` both normalise line endings on
 *both* sides before comparing, so neither could see it either.
 
-`HookDefinition.Default` now normalises to `\n` once at construction, which makes model-facing
+`PromptDefinition.Default` now normalises to `\n` once at construction, which makes model-facing
 text independent of the checkout. `docs/agencyteam/traps.md` asserted the opposite mechanism
 until 2026-09-15 and has been corrected; this section was right and that one was wrong, which is
 worth knowing if the two ever disagree again.
@@ -231,7 +231,7 @@ i/lf    w/crlf  attr/                  src/Huddle.App/Components/Pages/Teammates
 
 The sibling Agency repo added a root `.gitattributes` forcing `*.cs text eol=crlf` after
 exactly this class of bug cost it a debugging session. This repo considered one on 2026-09-15
-and **declined it deliberately**: normalising at the boundary, in `HookDefinition`, makes the
+and **declined it deliberately**: normalising at the boundary, in `PromptDefinition`, makes the
 property true however the repo is checked out, whereas a `.gitattributes` only makes every
 checkout agree and would rewrite line endings in everyone's working tree on the next pull.
 Revisit it if a second consumer of source-file bytes appears — the code-level fix does not

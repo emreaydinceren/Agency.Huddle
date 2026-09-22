@@ -353,7 +353,7 @@ Expecting `echo` and `alpha` here is a category error, not a defect — do not f
 > [!NOTE]
 > `App_Data\Teams\` is a legacy folder from before the Teams rename and is never read by the app.
 
-### STARTUPCONFIG-09 — Settings' Hooks tab on a first run says hooks.json is absent, and offers nothing to save or reset
+### STARTUPCONFIG-09 — Settings' Prompts tab on a first run says prompts.json is absent, and offers nothing to save or reset
 
 **Free** · about 8 min
 
@@ -361,46 +361,46 @@ Expecting `echo` and `alpha` here is a category error, not a defect — do not f
 
 **Before you start**
 
-- No `hooks.json` exists: `Test-Path src\Huddle.App\App_Data\hooks.json` returns False. If it returns True, run `P-RESET-ALL` and relaunch.
+- No `prompts.json` exists: `Test-Path src\Huddle.App\App_Data\prompts.json` returns False. If it returns True, run `P-RESET-ALL` and relaunch.
 
 **Steps**
 
-1. In `T-B` run `Test-Path src\Huddle.App\App_Data\hooks.json` and note the result.
+1. In `T-B` run `Test-Path src\Huddle.App\App_Data\prompts.json` and note the result.
 2. In the browser click `Settings` in the sidebar.
 3. Read the page heading and the two tab buttons in the tab rail.
 4. Read the paragraph that names where overrides are stored, and note the absolute path it prints.
 5. Try to click the `Save` button at the bottom of the form.
 6. Try to click the `Reset all to defaults` button in the header.
-7. Click the `Hooks` tab button and read the address bar.
+7. Click the `Prompts` tab button and read the address bar.
 8. Navigate the browser directly to http://localhost:5100/settings/nonsense and read what renders.
-9. Go back to `/settings`, edit ANY one text field on the Hooks tab (add a single character), and look at the `Save` button again.
-10. Click `Save`. Then in the second pwsh window run `Test-Path src\Huddle.App\App_Data\hooks.json` again.
+9. Go back to `/settings`, edit ANY one text field on the Prompts tab (add a single character), and look at the `Save` button again.
+10. Click `Save`. Then in the second pwsh window run `Test-Path src\Huddle.App\App_Data\prompts.json` again.
 
 **Pass if — all of these**
 
 - Step 1 returns False — the file does not exist before any save.
-- The heading reads exactly `Settings`; the tab rail holds exactly two buttons, `Hooks` and `Appearance`, with `Hooks` active by default.
+- The heading reads exactly `Settings`; the tab rail holds exactly two buttons, `Prompts` and `Appearance`, with `Prompts` active by default.
 - The overrides paragraph contains the sentence `The file does not exist until the first time you save here, so it being absent is expected, not a bug.`
-- The absolute path printed in that paragraph ends `\src\Huddle.App\App_Data\hooks.json` — matching the live DataDir.
+- The absolute path printed in that paragraph ends `\src\Huddle.App\App_Data\prompts.json` — matching the live DataDir.
 - With nothing edited, `Save` is disabled and `Reset all to defaults` is disabled.
-- Clicking the `Hooks` tab changes the address bar to `/settings/hooks`.
-- `/settings/nonsense` renders the Hooks tab rather than a 404 or an error page.
+- Clicking the `Prompts` tab changes the address bar to `/settings/prompts`.
+- `/settings/nonsense` renders the Prompts tab rather than a 404 or an error page.
 - After one edit, `Save` becomes enabled.
 - After clicking `Save`, step 10 returns True.
 
 **Fail if — any of these**
 
-- Step 1 returns True on a clean App_Data -> the app created `hooks.json` on its own; it must never do that.
+- Step 1 returns True on a clean App_Data -> the app created `prompts.json` on its own; it must never do that.
 - `Save` is enabled with nothing edited, or `Reset all to defaults` is enabled with nothing modified -> the dirty/modified state tracking is broken and the page invites a write that changes nothing.
 - The printed path does NOT point at the App_Data you believe is live -> either `Team__DataDir` is still set from an earlier test, or the working directory is not the project folder. Resolve that before trusting ANY other test's disk oracle.
 - `/settings/nonsense` 404s or throws -> the unknown-tab fallback was removed.
 
 **Inconclusive if**
 
-Do not confuse `hooks.json` (the override file, under App_Data, absent until saved) with `hooks.default.json` (generated, sits beside the binary at `src\Huddle.App\bin\Debug\net10.0\hooks.default.json`, always present). Finding `hooks.default.json` is not a result. If you cannot tell which field you edited, undo by clicking that field's own reset control and re-reading the Save button state.
+Do not confuse `prompts.json` (the override file, under App_Data, absent until saved) with `prompts.default.json` (generated, sits beside the binary at `src\Huddle.App\bin\Debug\net10.0\prompts.default.json`, always present). Finding `prompts.default.json` is not a result. If you cannot tell which field you edited, undo by clicking that field's own reset control and re-reading the Save button state.
 
 > [!NOTE]
-> This test deliberately leaves a `hooks.json` behind. Delete it (`Remove-Item src\Huddle.App\App_Data\hooks.json`) if a later test needs a first-run state.
+> This test deliberately leaves a `prompts.json` behind. Delete it (`Remove-Item src\Huddle.App\App_Data\prompts.json`) if a later test needs a first-run state.
 
 ### STARTUPCONFIG-10 — Appearance tab on a first run reads Huddle Light; picking a dark Theme writes appearance.json and applies immediately, with no reload
 
@@ -482,7 +482,7 @@ Do not confuse `hooks.json` (the override file, under App_Data, absent until sav
 
 **Fail if — any of these**
 
-- Messages are missing after the restart -> transcript durability is broken. Before filing, confirm the DataDir did not change (open `/settings` and read the path in the Hooks tab's overrides paragraph).
+- Messages are missing after the restart -> transcript durability is broken. Before filing, confirm the DataDir did not change (open `/settings` and read the path in the Prompts tab's overrides paragraph).
 - A DUPLICATE Room appears for `echo` or `alpha` after the restart -> reconnecting under the same name created a second two-Member Room instead of re-attaching to the existing one by exact membership. This is a real bug.
 - The room count grows by more than the agents that reconnected -> the same duplication bug in another shape.
 
@@ -519,7 +519,7 @@ A Draft that was mid-stream when you pressed Ctrl+C is simply gone — that is a
 - After the app is stopped, step 3 succeeds and step 4 returns False.
 - After relaunch, the sidebar again shows exactly `echo` and `alpha`.
 - The App_Data listing contains: a `Teams` directory that is EMPTY, `team.db`, `team.db-wal` and `team.db-shm`.
-- The listing does NOT contain `hooks.json`, `appearance.json`, or a `work` directory.
+- The listing does NOT contain `prompts.json`, `appearance.json`, or a `work` directory.
 - A `rooms` directory appears only AFTER you send the first message — confirm by re-listing before typing anything.
 
 **Fail if — any of these**
@@ -527,7 +527,7 @@ A Draft that was mid-stream when you pressed Ctrl+C is simply gone — that is a
 - `Teams\` is missing from the fresh App_Data -> the Persona store was never constructed; `/teammates` will be broken too.
 - App_Data is created somewhere other than `src\Huddle.App\` -> the working directory was not the project folder. Testers report this as 'my rooms disappeared' when the data simply moved. Check where you launched from.
 - Startup throws an exception naming `Directory.CreateDirectory` -> the path is not writable.
-- `hooks.json` or `appearance.json` exists on a clean run -> the app created an override file it must never create (see STARTUPCONFIG-09 and -10).
+- `prompts.json` or `appearance.json` exists on a clean run -> the app created an override file it must never create (see STARTUPCONFIG-09 and -10).
 
 **Inconclusive if**
 
@@ -852,7 +852,7 @@ If `App_Data` was not deleted between steps, old Rooms persist alongside new one
 2. Launch in the same window: `dotnet run --project src/Huddle.App --urls http://localhost:5100`.
 3. Open http://localhost:5100 and read the main column immediately, then again after 10 seconds.
 4. Open each Room and read its transcript.
-5. Click `Settings` and read the absolute path printed in the Hooks tab's overrides paragraph.
+5. Click `Settings` and read the absolute path printed in the Prompts tab's overrides paragraph.
 6. In `T-B` run `Get-ChildItem -Recurse -Force src\Huddle.App\App_Data_test`.
 7. Stop the app, run `Remove-Item Env:Team__DataDir`, and relaunch.
 8. Open each Room and read its transcript again.
@@ -860,7 +860,7 @@ If `App_Data` was not deleted between steps, old Rooms persist alongside new one
 **Pass if — all of these**
 
 - The two demo Rooms appear freshly recreated with EMPTY transcripts — none of the earlier messages are present.
-- The path printed on the Settings page ends `\src\Huddle.App\App_Data_test\hooks.json`.
+- The path printed on the Settings page ends `\src\Huddle.App\App_Data_test\prompts.json`.
 - `src\Huddle.App\App_Data_test\` exists and holds its own `team.db` and an empty `Teams\` folder.
 - After removing the variable and relaunching, the ORIGINAL Rooms and their full history are back, untouched.
 

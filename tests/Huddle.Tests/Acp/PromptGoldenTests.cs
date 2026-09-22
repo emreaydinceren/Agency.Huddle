@@ -15,19 +15,19 @@ using Agency.Huddle.Tests.Acp.Tools;
 /// <summary>
 /// Golden-output safety net for task T1.1. Every model-facing string produced by
 /// <see cref="SystemPromptComposer"/>, <see cref="GetHelpTool"/>, the six real chat tools, and
-/// <see cref="PersonaRunner.BuildPrompt(PersonaRunner.WorkItem, Agency.Huddle.App.Hooks.IHookSource)"/> is captured here as committed text
+/// <see cref="PersonaRunner.BuildPrompt(PersonaRunner.WorkItem, Agency.Huddle.App.Prompts.IPromptSource)"/> is captured here as committed text
 /// under <c>Acp/Golden</c>, so the later move of these strings into a JSON config file can prove it
 /// changed no behaviour, byte-for-byte.
 /// </summary>
 /// <remarks>
 /// <para>
 /// These tests, and the golden files beside them, are permanent: a byte-level regression net on every
-/// model-facing string this application composes, sitting above the per-hook checks in
-/// <c>Hooks/HookCatalogTests.cs</c> and <c>Hooks/HookValidatorTests.cs</c> and the shipped-default
-/// checks in <c>Hooks/HookDefaultsTests.cs</c>. Those other suites can each pass while a change to how
-/// several hooks are joined, wrapped or spaced still alters what a model actually reads; only a full
+/// model-facing string this application composes, sitting above the per-prompt checks in
+/// <c>Prompts/PromptCatalogTests.cs</c> and <c>Prompts/PromptValidatorTests.cs</c> and the shipped-default
+/// checks in <c>Prompts/PromptDefaultsTests.cs</c>. Those other suites can each pass while a change to how
+/// several prompts are joined, wrapped or spaced still alters what a model actually reads; only a full
 /// composed-output diff catches that. (Task T1.11 originally scheduled these for deletion once
-/// equivalent assertions existed elsewhere; that decision was reversed — the per-hook and
+/// equivalent assertions existed elsewhere; that decision was reversed — the per-prompt and
 /// per-default checks turned out to complement this byte-level net rather than replace it.)
 /// </para>
 /// <para>
@@ -35,7 +35,7 @@ using Agency.Huddle.Tests.Acp.Tools;
 /// first run of a freshly added golden test seeds its own file for inspection before it is committed.
 /// </para>
 /// <para>
-/// <b>Regenerating a golden file on purpose.</b> A red test here after a hook's <see cref="Agency.Huddle.App.Hooks.HookDefinition.Default"/>
+/// <b>Regenerating a golden file on purpose.</b> A red test here after a prompt's <see cref="Agency.Huddle.App.Prompts.PromptDefinition.Default"/>
 /// changes is not automatically a bug — it may simply mean the composed output was meant to change.
 /// To accept a deliberate wording change: delete the affected file(s) under
 /// <c>tests/Huddle.Tests/Acp/Golden</c>, re-run the test project so each now-missing golden file is
@@ -83,7 +83,7 @@ public sealed class PromptGoldenTests
     {
         var persona = new Persona("Nova", "You are Nova.");
 
-        var actual = SystemPromptComposer.Compose(persona, new FakeHookSource(), "mcp__team__get_help", ToolNames);
+        var actual = SystemPromptComposer.Compose(persona, new FakePromptSource(), "mcp__team__get_help", ToolNames);
 
         AssertMatchesGolden("systemPrompt.txt", actual);
     }
@@ -99,7 +99,7 @@ public sealed class PromptGoldenTests
     {
         var persona = new Persona("Nova", "You are Nova.");
 
-        var actual = SystemPromptComposer.Compose(persona, new FakeHookSource(), "get_help", UnprefixedToolNames);
+        var actual = SystemPromptComposer.Compose(persona, new FakePromptSource(), "get_help", UnprefixedToolNames);
 
         AssertMatchesGolden("systemPrompt.unprefixed.txt", actual);
         Assert.DoesNotContain("mcp__", actual, StringComparison.Ordinal);
@@ -140,7 +140,7 @@ public sealed class PromptGoldenTests
     {
         var item = new PersonaRunner.WorkItem("room-1", "Nova & You", "You", "hello there", []);
 
-        var actual = PersonaRunner.BuildPrompt(item, new FakeHookSource());
+        var actual = PersonaRunner.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptPlain.txt", actual);
     }
@@ -156,7 +156,7 @@ public sealed class PromptGoldenTests
         ];
         var item = new PersonaRunner.WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed);
 
-        var actual = PersonaRunner.BuildPrompt(item, new FakeHookSource());
+        var actual = PersonaRunner.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptCatchUp.txt", actual);
     }
@@ -183,14 +183,14 @@ public sealed class PromptGoldenTests
         var follows = new RoomFollows();
         IAppTool[] others =
         [
-            new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakeHookSource()),
-            new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakeHookSource()),
-            new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource()),
-            new PostMessageTool(chat, "caller-id", new FakeHookSource()),
-            new FollowRoomTool(follows, directory, "caller-id", new FakeHookSource()),
-            new UnfollowRoomTool(follows, directory, "caller-id", new FakeHookSource()),
+            new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakePromptSource()),
+            new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakePromptSource()),
+            new InviteAgentTool(chat, directory, aliasSource, new FakePromptSource()),
+            new PostMessageTool(chat, "caller-id", new FakePromptSource()),
+            new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
+            new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
         ];
-        var getHelp = new GetHelpTool(others, new FakeHookSource(), "mcp__team__");
+        var getHelp = new GetHelpTool(others, new FakePromptSource(), "mcp__team__");
 
         return (getHelp, others);
     }

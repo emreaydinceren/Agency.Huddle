@@ -1,11 +1,11 @@
 using Bunit;
 using Agency.Huddle.App.Components.Settings;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Renders <see cref="HooksPanel"/> on its own from a plain <see cref="HookFieldGroup"/> list, using
+/// Renders <see cref="PromptsPanel"/> on its own from a plain <see cref="PromptFieldGroup"/> list, using
 /// <see cref="MudBunitContext"/> rather than the <c>HtmlRenderer</c> this suite used before the
 /// MudBlazor migration. Unlike <c>HtmlRenderer</c>, bUnit can dispatch a real click, so the Reset
 /// button's callback is now exercised end to end rather than only its disabled state; the rest of
@@ -15,7 +15,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// <c>AddMudServices</c>) implements only <see cref="IAsyncDisposable"/>, so a synchronous
 /// <c>Dispose</c> throws once a MudBlazor component that needs it has actually been rendered.
 /// </summary>
-public sealed class HooksPanelTests
+public sealed class PromptsPanelTests
 {
     /// <summary>An unmodified field's Reset button renders disabled.</summary>
     [Fact]
@@ -23,7 +23,7 @@ public sealed class HooksPanelTests
     {
         await using MudBunitContext ctx = new();
 
-        var cut = ctx.Render<HooksPanel>(parameters => parameters
+        var cut = ctx.Render<PromptsPanel>(parameters => parameters
             .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false))));
 
         Assert.True(cut.Find("button").HasAttribute("disabled"));
@@ -32,7 +32,7 @@ public sealed class HooksPanelTests
     /// <summary>
     /// A modified field's Reset button renders enabled, and clicking it - something only bUnit, not
     /// the old <c>HtmlRenderer</c>-based version of this test, can actually do - raises
-    /// <see cref="HooksPanel.ResetRequested"/> carrying that field's key.
+    /// <see cref="PromptsPanel.ResetRequested"/> carrying that field's key.
     /// </summary>
     [Fact]
     public async Task ModifiedField_ResetButtonIsEnabled_AndClickingRaisesResetRequestedWithTheFieldKey()
@@ -40,7 +40,7 @@ public sealed class HooksPanelTests
         await using MudBunitContext ctx = new();
         string? requestedKey = null;
 
-        var cut = ctx.Render<HooksPanel>(parameters => parameters
+        var cut = ctx.Render<PromptsPanel>(parameters => parameters
             .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: true, hasUnsavedChange: false)))
             .Add(p => p.ResetRequested, key => requestedKey = key));
 
@@ -52,46 +52,46 @@ public sealed class HooksPanelTests
         Assert.Equal("turn.roomLabel", requestedKey);
     }
 
-    /// <summary>The "Modified" badge shows only when <see cref="HookFieldState.IsModified"/> is true.</summary>
+    /// <summary>The "Modified" badge shows only when <see cref="PromptFieldState.IsModified"/> is true.</summary>
     [Fact]
     public async Task IsModified_ShowsTheModifiedBadge()
     {
         await using MudBunitContext ctx = new();
 
-        var modified = ctx.Render<HooksPanel>(parameters => parameters
+        var modified = ctx.Render<PromptsPanel>(parameters => parameters
             .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: true, hasUnsavedChange: false))));
-        var unmodified = ctx.Render<HooksPanel>(parameters => parameters
+        var unmodified = ctx.Render<PromptsPanel>(parameters => parameters
             .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false))));
 
         Assert.Contains("Modified", modified.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Modified", unmodified.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>The "Unsaved" badge shows only when <see cref="HookFieldState.HasUnsavedChange"/> is true.</summary>
+    /// <summary>The "Unsaved" badge shows only when <see cref="PromptFieldState.HasUnsavedChange"/> is true.</summary>
     [Fact]
     public async Task HasUnsavedChange_ShowsTheUnsavedBadge()
     {
         await using MudBunitContext ctx = new();
 
-        var unsaved = ctx.Render<HooksPanel>(parameters => parameters
+        var unsaved = ctx.Render<PromptsPanel>(parameters => parameters
             .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: true))));
-        var saved = ctx.Render<HooksPanel>(parameters => parameters
+        var saved = ctx.Render<PromptsPanel>(parameters => parameters
             .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false))));
 
         Assert.Contains("Unsaved", unsaved.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Unsaved", saved.Markup, StringComparison.Ordinal);
     }
 
-    /// <summary>The "Next session" badge shows only for a <see cref="HookTiming.NextSession"/> field.</summary>
+    /// <summary>The "Next session" badge shows only for a <see cref="PromptTiming.NextSession"/> field.</summary>
     [Fact]
     public async Task NextSessionTiming_ShowsTheNextSessionBadge()
     {
         await using MudBunitContext ctx = new();
 
-        var next = ctx.Render<HooksPanel>(parameters => parameters
-            .Add(p => p.Groups, SingleGroup(MakeField("systemPrompt.identity", isModified: false, hasUnsavedChange: false, timing: HookTiming.NextSession))));
-        var live = ctx.Render<HooksPanel>(parameters => parameters
-            .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false, timing: HookTiming.Live))));
+        var next = ctx.Render<PromptsPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(MakeField("systemPrompt.identity", isModified: false, hasUnsavedChange: false, timing: PromptTiming.NextSession))));
+        var live = ctx.Render<PromptsPanel>(parameters => parameters
+            .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false, timing: PromptTiming.Live))));
 
         Assert.Contains("Next session", next.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Next session", live.Markup, StringComparison.Ordinal);
@@ -102,15 +102,15 @@ public sealed class HooksPanelTests
     public async Task Issues_RenderWithSeverityDistinguishedByClass()
     {
         await using MudBunitContext ctx = new();
-        var definition = HookCatalog.Get("turn.roomLabel");
-        var issues = new List<HookIssue>
+        var definition = PromptCatalog.Get("turn.roomLabel");
+        var issues = new List<PromptIssue>
         {
-            new(definition.Key, HookIssueSeverity.Error, "This is missing a required placeholder."),
-            new(definition.Key, HookIssueSeverity.Warning, "This token looks like a typo."),
+            new(definition.Key, PromptIssueSeverity.Error, "This is missing a required placeholder."),
+            new(definition.Key, PromptIssueSeverity.Warning, "This token looks like a typo."),
         };
         var field = MakeField(definition.Key, isModified: true, hasUnsavedChange: true, issues: issues);
 
-        var cut = ctx.Render<HooksPanel>(parameters => parameters
+        var cut = ctx.Render<PromptsPanel>(parameters => parameters
             .Add(p => p.Groups, SingleGroup(field)));
 
         var alerts = cut.FindAll(".mud-alert").ToList();
@@ -125,7 +125,7 @@ public sealed class HooksPanelTests
     {
         await using MudBunitContext ctx = new();
 
-        var cut = ctx.Render<HooksPanel>(parameters => parameters
+        var cut = ctx.Render<PromptsPanel>(parameters => parameters
             .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false))));
 
         Assert.Empty(cut.FindAll(".mud-alert"));
@@ -137,7 +137,7 @@ public sealed class HooksPanelTests
     {
         await using MudBunitContext ctx = new();
 
-        var cut = ctx.Render<HooksPanel>(parameters => parameters
+        var cut = ctx.Render<PromptsPanel>(parameters => parameters
             .Add(p => p.Groups, SingleGroup(MakeField("turn.roomLabel", isModified: false, hasUnsavedChange: false))));
 
         var textarea = cut.Find("textarea");
@@ -151,23 +151,23 @@ public sealed class HooksPanelTests
         await using MudBunitContext ctx = new();
         var field = MakeField("turn.roomLabel", isModified: true, hasUnsavedChange: true, value: "a pending edit not yet saved");
 
-        var cut = ctx.Render<HooksPanel>(parameters => parameters
+        var cut = ctx.Render<PromptsPanel>(parameters => parameters
             .Add(p => p.Groups, SingleGroup(field)));
 
         Assert.Contains("a pending edit not yet saved", cut.Find("textarea").TextContent, StringComparison.Ordinal);
     }
 
-    /// <summary>Builds a single <see cref="HookFieldState"/> for <see cref="HookCatalog.Get(string)"/>'s <paramref name="key"/>, overriding only the flags and value a given test cares about.</summary>
-    private static HookFieldState MakeField(
+    /// <summary>Builds a single <see cref="PromptFieldState"/> for <see cref="PromptCatalog.Get(string)"/>'s <paramref name="key"/>, overriding only the flags and value a given test cares about.</summary>
+    private static PromptFieldState MakeField(
         string key,
         bool isModified,
         bool hasUnsavedChange,
-        HookTiming timing = HookTiming.Live,
+        PromptTiming timing = PromptTiming.Live,
         string? value = null,
-        IReadOnlyList<HookIssue>? issues = null)
+        IReadOnlyList<PromptIssue>? issues = null)
     {
-        var definition = HookCatalog.Get(key);
-        return new HookFieldState(
+        var definition = PromptCatalog.Get(key);
+        return new PromptFieldState(
             Key: definition.Key,
             Label: definition.Label,
             HelperText: definition.HelperText,
@@ -181,6 +181,6 @@ public sealed class HooksPanelTests
     }
 
     /// <summary>Wraps a single field in its own one-field group, for tests that do not care about grouping.</summary>
-    private static IReadOnlyList<HookFieldGroup> SingleGroup(HookFieldState field) =>
-        [new HookFieldGroup("Test group", [field])];
+    private static IReadOnlyList<PromptFieldGroup> SingleGroup(PromptFieldState field) =>
+        [new PromptFieldGroup("Test group", [field])];
 }

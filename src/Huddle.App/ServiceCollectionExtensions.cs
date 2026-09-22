@@ -5,7 +5,7 @@ using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 
@@ -84,13 +84,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PersonaModelStore>();
         services.AddSingleton<PersonaEffortStore>();
 
-        // Same instance as HookStore below, not a second registration - mirrors the
-        // PersonaStore/IMentionAliasSource pair above. A second, independently constructed HookStore
-        // would mean a second file handle on hooks.json now and (once T4.1 adds one) a second
+        // Same instance as PromptStore below, not a second registration - mirrors the
+        // PersonaStore/IMentionAliasSource pair above. A second, independently constructed PromptStore
+        // would mean a second file handle on prompts.json now and (once T4.1 adds one) a second
         // FileSystemWatcher on it, the same class of intermittent test flake PersonaStore's remarks
         // already document for the closely related PersonaSupervisor case.
-        services.AddSingleton<HookStore>();
-        services.AddSingleton<IHookSource>(sp => sp.GetRequiredService<HookStore>());
+        services.AddSingleton<PromptStore>();
+        services.AddSingleton<IPromptSource>(sp => sp.GetRequiredService<PromptStore>());
 
         // No interface: nothing needs to substitute this, and CSharpPrinciples.md says not to add
         // abstraction a feature has not asked for. This is state the app writes (a chosen theme, a
@@ -115,7 +115,7 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<DemoAgentHost>();
 
         // Same instance as the hosted service, not a second registration - mirrors every other pair
-        // in this file (AgentGateway/IAgentGateway, PersonaStore/IMentionAliasSource, HookStore/IHookSource).
+        // in this file (AgentGateway/IAgentGateway, PersonaStore/IMentionAliasSource, PromptStore/IPromptSource).
         // A Restart button (T7.2) needs to reach the very PersonaSupervisor the host is running, not a
         // second, independently constructed one - the same class of intermittent test flake those other
         // pairs' remarks already document, this time for a component resolving it directly rather than

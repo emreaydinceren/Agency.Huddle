@@ -1,17 +1,17 @@
-namespace Agency.Huddle.App.Hooks;
+namespace Agency.Huddle.App.Prompts;
 
 using System.Text;
 using System.Text.RegularExpressions;
 
 /// <summary>
 /// Pure substitution engine for the <c>{{name}}</c> placeholder syntax used throughout
-/// <see cref="HookCatalog"/>. Scans a template exactly once, replacing every well-formed
+/// <see cref="PromptCatalog"/>. Scans a template exactly once, replacing every well-formed
 /// placeholder with its supplied value and leaving everything else — including a placeholder with
 /// no matching value — exactly as written.
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Why <c>{{...}}</c> and not <c>&lt;...&gt;</c>.</b> The <c>getHelp.messages</c> hook's default
+/// <b>Why <c>{{...}}</c> and not <c>&lt;...&gt;</c>.</b> The <c>getHelp.messages</c> prompt's default
 /// text literally sends a model the documentation line <c>"[Room: &lt;name&gt; (id: &lt;id&gt;)]"</c>.
 /// An angle-bracket placeholder syntax would treat that line as a placeholder and silently eat it;
 /// double braces do not collide with it, and a single-brace JSON example in a prompt (e.g.
@@ -20,9 +20,9 @@ using System.Text.RegularExpressions;
 /// <para>
 /// <b>Key style.</b> Dictionary keys, and the tokens <see cref="FindPlaceholders"/> returns, include
 /// the surrounding braces, e.g. <c>"{{helpTool}}"</c> rather than <c>"helpTool"</c>. This matches how
-/// <see cref="HookDefinition.Placeholders"/> and <see cref="HookDefinition.RequiredPlaceholders"/> are
+/// <see cref="PromptDefinition.Placeholders"/> and <see cref="PromptDefinition.RequiredPlaceholders"/> are
 /// themselves stored, so a caller can build a values dictionary straight from those lists, and
-/// <see cref="IHookSource.Render(string, IReadOnlyDictionary{string, string})"/> can pass its
+/// <see cref="IPromptSource.Render(string, IReadOnlyDictionary{string, string})"/> can pass its
 /// <c>values</c> argument straight through to this type, with no stripping or re-adding of delimiters
 /// anywhere in between.
 /// </para>
@@ -45,7 +45,7 @@ using System.Text.RegularExpressions;
 /// visible for someone to notice, than a name this type should try to guess at and expand.
 /// </para>
 /// </remarks>
-internal static class HookRenderer
+internal static class PromptRenderer
 {
     /// <summary>
     /// Matches one well-formed placeholder token: two literal opening braces, one or more
@@ -101,7 +101,7 @@ internal static class HookRenderer
 
     /// <summary>
     /// Finds every distinct, well-formed <c>{{name}}</c> token in <paramref name="template"/>, for the
-    /// hook validator (checking a template only uses declared placeholders) and the settings UI
+    /// prompt validator (checking a template only uses declared placeholders) and the settings UI
     /// (rendering an input for each one).
     /// </summary>
     /// <param name="template">

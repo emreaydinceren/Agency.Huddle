@@ -984,8 +984,8 @@ public sealed class TeammateCardTests
 
     /// <summary>
     /// An Online, healthy teammate offers Restart too. It once did not, on the grounds that there was
-    /// nothing for it to fix - but a NextSession Hook edit can only reach a Teammate through a new
-    /// session, and rules.md forbids a Hook edit restarting one by itself, so hiding Restart here left
+    /// nothing for it to fix - but a NextSession Prompt edit can only reach a Teammate through a new
+    /// session, and rules.md forbids a Prompt edit restarting one by itself, so hiding Restart here left
     /// editing the Persona text as the only way to apply one.
     /// </summary>
     [Fact]

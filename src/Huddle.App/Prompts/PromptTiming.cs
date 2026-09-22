@@ -1,11 +1,11 @@
-namespace Agency.Huddle.App.Hooks;
+namespace Agency.Huddle.App.Prompts;
 
 /// <summary>
-/// When an edit to a hook's text can reach a running Agent. This is a property of where the hook's
-/// value is read, not a setting a hook author chooses: it tells the settings UI whether to warn that
+/// When an edit to a prompt's text can reach a running Agent. This is a property of where the prompt's
+/// value is read, not a setting a prompt author chooses: it tells the settings UI whether to warn that
 /// a save needs a restart to take effect.
 /// </summary>
-public enum HookTiming
+public enum PromptTiming
 {
     /// <summary>
     /// Rendered fresh on every invocation, so an edit reaches the very next turn of every Persona,

@@ -2,17 +2,17 @@ namespace Agency.Huddle.App.Acp.Tools;
 
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 
 /// <summary>Posts a Message into a Room, as the calling Agent.</summary>
-internal sealed class PostMessageTool(ChatService chat, string callerAgentId, IHookSource hooks) : IAppTool
+internal sealed class PostMessageTool(ChatService chat, string callerAgentId, IPromptSource prompts) : IAppTool
 {
     private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
 
     public string Name => "post_message";
 
-    public string Description => hooks.Render("tool.postMessage.description", NoValues);
+    public string Description => prompts.Render("tool.postMessage.description", NoValues);
 
     public JsonObject InputSchema => new JsonObject
     {

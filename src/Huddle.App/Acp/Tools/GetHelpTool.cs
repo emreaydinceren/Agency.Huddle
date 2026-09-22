@@ -3,7 +3,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 
 /// <summary>
 /// Explains the chat application and lists every App Tool available to the calling Agent, so the
@@ -20,12 +20,12 @@ using Agency.Huddle.App.Hooks;
 /// <see cref="SystemPromptComposer"/> uses it: a model in deferred-tool mode looks a name up
 /// verbatim and reports that no such tool exists when it is named loosely. That prefix is supplied
 /// by the caller as <c>toolNamePrefix</c>, computed from the same tool-server name it hands to
-/// <c>AppToolServer</c> — never typed into a hook's template, and never a second, independently
+/// <c>AppToolServer</c> — never typed into a prompt's template, and never a second, independently
 /// hard-coded copy of that literal here.
 /// </para>
 /// <para>
 /// Every piece of this tool's own model-facing text — its <see cref="Description"/> and every
-/// section of <see cref="BuildHelp"/> — is a hook, resolved through <see cref="IHookSource"/>. The
+/// section of <see cref="BuildHelp"/> — is a prompt, resolved through <see cref="IPromptSource"/>. The
 /// help body is assembled by joining <c>getHelp.intro</c> through <c>getHelp.budget</c> with a blank
 /// line, then a tools block: <c>getHelp.toolsHeader</c>, one <c>getHelp.toolEntry</c> per tool (each
 /// of which already carries its own trailing blank line), then <c>getHelp.footer</c>.
@@ -33,7 +33,7 @@ using Agency.Huddle.App.Hooks;
 /// <para>
 /// One exception to that, and it is the point of <see cref="catalog"/>: the tool <em>descriptions</em>
 /// quoted in the TOOLS block are captured once, here, rather than re-read per call. Every
-/// <c>tool.*.description</c> hook is badged <b>Next session</b> on the settings page, and this type
+/// <c>tool.*.description</c> prompt is badged <b>Next session</b> on the settings page, and this type
 /// is built once per session — so reading them live let an edit reach a Teammate that was already
 /// running, which the badge promises it cannot. MCP's own <c>tools/list</c> honours that badge by
 /// construction, because it is sent once at session start; this is the surface that did not, and it
@@ -46,16 +46,16 @@ internal sealed class GetHelpTool : IAppTool
     private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
 
     private readonly IReadOnlyList<CatalogEntry> catalog;
-    private readonly IHookSource hooks;
+    private readonly IPromptSource prompts;
     private readonly string toolNamePrefix;
 
     /// <summary>Initialises a new instance of the <see cref="GetHelpTool"/> class.</summary>
     /// <param name="otherTools">
     /// Every other tool offered to the same session. Its names and descriptions are copied on the
-    /// way in, so neither the caller's array nor a later hook edit can change what this tool
+    /// way in, so neither the caller's array nor a later prompt edit can change what this tool
     /// reports. This tool is not in the list and adds itself.
     /// </param>
-    /// <param name="hooks">Resolves each hook's current text — a configured override, or the <see cref="HookCatalog"/> default.</param>
+    /// <param name="prompts">Resolves each prompt's current text — a configured override, or the <see cref="PromptCatalog"/> default.</param>
     /// <param name="toolNamePrefix">
     /// The <c>mcp__&lt;server&gt;__</c> prefix every tool name carries in this help text, e.g.
     /// <c>"mcp__team__"</c>, for an Adapter whose <see cref="AdapterProfile.UsesToolNamePrefix"/> is
@@ -64,20 +64,20 @@ internal sealed class GetHelpTool : IAppTool
     /// reported bare. Supplied by the caller — this type never hard-codes either form. A
     /// <see langword="null"/> or whitespace-only value is still rejected as nonsense.
     /// </param>
-    public GetHelpTool(IReadOnlyList<IAppTool> otherTools, IHookSource hooks, string toolNamePrefix)
+    public GetHelpTool(IReadOnlyList<IAppTool> otherTools, IPromptSource prompts, string toolNamePrefix)
     {
         ArgumentNullException.ThrowIfNull(otherTools);
-        ArgumentNullException.ThrowIfNull(hooks);
+        ArgumentNullException.ThrowIfNull(prompts);
         ArgumentNullException.ThrowIfNull(toolNamePrefix);
         if (toolNamePrefix.Length > 0 && string.IsNullOrWhiteSpace(toolNamePrefix))
         {
             throw new ArgumentException("Tool name prefix must be empty or non-whitespace.", nameof(toolNamePrefix));
         }
 
-        this.hooks = hooks;
+        this.prompts = prompts;
         this.toolNamePrefix = toolNamePrefix;
 
-        // this.Description reads a hook, so hooks must already be assigned. This tool goes first for
+        // this.Description reads a prompt, so prompts must already be assigned. This tool goes first for
         // the same reason AllTools once yielded it first: it is offered first.
         this.catalog =
         [
@@ -90,7 +90,7 @@ internal sealed class GetHelpTool : IAppTool
     public string Name => "get_help";
 
     /// <inheritdoc />
-    public string Description => this.hooks.Render("tool.getHelp.description", NoValues);
+    public string Description => this.prompts.Render("tool.getHelp.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject
@@ -114,12 +114,12 @@ internal sealed class GetHelpTool : IAppTool
     {
         string[] sections =
         [
-            this.hooks.Render("getHelp.intro", NoValues),
-            this.hooks.Render("getHelp.rooms", NoValues),
-            this.hooks.Render("getHelp.messages", NoValues),
-            this.hooks.Render("getHelp.mentions", NoValues),
-            this.hooks.Render("getHelp.replying", NoValues),
-            this.hooks.Render("getHelp.budget", NoValues),
+            this.prompts.Render("getHelp.intro", NoValues),
+            this.prompts.Render("getHelp.rooms", NoValues),
+            this.prompts.Render("getHelp.messages", NoValues),
+            this.prompts.Render("getHelp.mentions", NoValues),
+            this.prompts.Render("getHelp.replying", NoValues),
+            this.prompts.Render("getHelp.budget", NoValues),
             this.BuildToolsSection(),
         ];
 
@@ -135,7 +135,7 @@ internal sealed class GetHelpTool : IAppTool
     {
         var builder = new StringBuilder();
 
-        builder.Append(this.hooks.Render("getHelp.toolsHeader", NoValues)).Append('\n');
+        builder.Append(this.prompts.Render("getHelp.toolsHeader", NoValues)).Append('\n');
 
         foreach (var entry in this.catalog)
         {
@@ -145,10 +145,10 @@ internal sealed class GetHelpTool : IAppTool
                 ["{{toolDescription}}"] = entry.Description,
             };
 
-            builder.Append(this.hooks.Render("getHelp.toolEntry", values));
+            builder.Append(this.prompts.Render("getHelp.toolEntry", values));
         }
 
-        builder.Append(this.hooks.Render("getHelp.footer", NoValues));
+        builder.Append(this.prompts.Render("getHelp.footer", NoValues));
 
         return builder.ToString();
     }

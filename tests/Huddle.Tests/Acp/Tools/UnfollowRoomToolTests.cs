@@ -28,7 +28,7 @@ public sealed class UnfollowRoomToolTests
         var room = await chat.EnsureRoomForAsync(caller, ct);
         var follows = new RoomFollows();
         follows.Follow(caller.Id, room.Id);
-        var tool = new UnfollowRoomTool(follows, directory, caller.Id, new FakeHookSource());
+        var tool = new UnfollowRoomTool(follows, directory, caller.Id, new FakePromptSource());
         var arguments = new JsonObject { ["roomId"] = room.Id };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -51,7 +51,7 @@ public sealed class UnfollowRoomToolTests
         var chat = CreateChatService(dir, directory, aliasSource);
         var room = await chat.EnsureRoomForAsync(caller, ct);
         var follows = new RoomFollows();
-        var tool = new UnfollowRoomTool(follows, directory, caller.Id, new FakeHookSource());
+        var tool = new UnfollowRoomTool(follows, directory, caller.Id, new FakePromptSource());
         var arguments = new JsonObject { ["roomId"] = room.Id };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -71,7 +71,7 @@ public sealed class UnfollowRoomToolTests
         var caller = await directory.UpsertAgentUserAsync("caller", null, ct);
         Assert.NotNull(caller);
         var follows = new RoomFollows();
-        var tool = new UnfollowRoomTool(follows, directory, caller.Id, new FakeHookSource());
+        var tool = new UnfollowRoomTool(follows, directory, caller.Id, new FakePromptSource());
         var arguments = new JsonObject { ["roomId"] = "no-such-room" };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -88,7 +88,7 @@ public sealed class UnfollowRoomToolTests
         var directory = new SqliteTeamDirectory(dir.Options());
         await directory.InitializeAsync("You", ct);
         var follows = new RoomFollows();
-        var tool = new UnfollowRoomTool(follows, directory, "caller-id", new FakeHookSource());
+        var tool = new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource());
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);
 

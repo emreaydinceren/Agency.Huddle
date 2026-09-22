@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.Contracts;
 
@@ -13,13 +13,13 @@ using Agency.Huddle.Contracts;
 /// Agents are online and each entry's job description composed from its Persona's frontmatter
 /// (see <see cref="PersonaFrontmatter"/>), when one is present.
 /// </summary>
-internal sealed class ListAgentsTool(ITeamDirectory teamDirectory, IAgentGateway agentGateway, PersonaStore personaStore, IHookSource hooks) : IAppTool
+internal sealed class ListAgentsTool(ITeamDirectory teamDirectory, IAgentGateway agentGateway, PersonaStore personaStore, IPromptSource prompts) : IAppTool
 {
     private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
 
     public string Name => "list_agents";
 
-    public string Description => hooks.Render("tool.listAgents.description", NoValues);
+    public string Description => prompts.Render("tool.listAgents.description", NoValues);
 
     public JsonObject InputSchema => new JsonObject
     {

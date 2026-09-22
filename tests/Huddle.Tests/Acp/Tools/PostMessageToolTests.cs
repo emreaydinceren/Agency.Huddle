@@ -24,7 +24,7 @@ public sealed class PostMessageToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
-        var tool = new PostMessageTool(chat, echo.Id, new FakeHookSource());
+        var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource());
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello there" };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -49,7 +49,7 @@ public sealed class PostMessageToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
-        var tool = new PostMessageTool(chat, echo.Id, new FakeHookSource());
+        var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource());
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello" };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -72,7 +72,7 @@ public sealed class PostMessageToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
-        var tool = new PostMessageTool(chat, echo.Id, new FakeHookSource());
+        var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource());
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "from a threadpool thread" };
         var tcs = new TaskCompletionSource<MessagePostedEvent>(TaskCreationOptions.RunContinuationsAsynchronously);
         events.MessagePosted += e => tcs.TrySetResult(e);

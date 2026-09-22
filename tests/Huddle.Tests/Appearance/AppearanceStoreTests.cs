@@ -140,7 +140,7 @@ public sealed class AppearanceStoreTests
     /// Polls <paramref name="condition"/> until it is true or a generous timeout elapses, for
     /// asserting on a <see cref="FileSystemWatcher"/>-driven, timing-dependent side effect without a
     /// bare <see cref="Task.Delay(TimeSpan, CancellationToken)"/> whose length is only a guess.
-    /// Copied from <c>HookStoreTests.WaitForAsync</c>.
+    /// Copied from <c>PromptStoreTests.WaitForAsync</c>.
     /// </summary>
     /// <param name="condition">Checked repeatedly until it returns <see langword="true"/>.</param>
     /// <param name="cancellationToken">Cancels the wait.</param>
