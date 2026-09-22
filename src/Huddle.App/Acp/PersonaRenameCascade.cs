@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -6,11 +7,16 @@ using Agency.Huddle.Contracts;
 namespace Agency.Huddle.App.Acp;
 
 /// <summary>
-/// Cascades a Persona rename into the Team Directory. Subscribes to
-/// <see cref="PersonaStore.PersonaRenamed"/> and, for the Agent that Name used to identify: renames
-/// its Team Directory row in place, re-derives any Room that was still carrying its auto-name, and
-/// moves its Work Dir — see <c>docs/adr/0011-a-rename-moves-the-teammate-not-its-history.md</c> for
-/// why this is a rename in place rather than a stop-and-start under a new id.
+/// Cascades a Persona rename into the Team Directory, and a Persona removal into its Avatar.
+/// Subscribes to <see cref="PersonaStore.PersonaRenamed"/> and, for the Agent that Name used to
+/// identify: renames its Team Directory row in place, re-derives any Room that was still carrying its
+/// auto-name, and moves its Work Dir — see
+/// <c>docs/adr/0011-a-rename-moves-the-teammate-not-its-history.md</c> for why this is a rename in
+/// place rather than a stop-and-start under a new id. Also moves the renamed Persona's Avatar entry
+/// under the same subscription, and subscribes to <see cref="PersonaStore.PersonaRemoved"/> to delete
+/// a removed Persona's Avatar entry and image file - see <see cref="OnPersonaRemoved"/>'s doc comment
+/// for why a removal cascades here even though <c>docs/agencyteam/rules.md</c> row 38 says a removal
+/// does not cascade to Agents, Rooms or Transcripts.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -33,8 +39,9 @@ namespace Agency.Huddle.App.Acp;
 /// </para>
 /// </remarks>
 /// <param name="teamDirectory">Renames the Agent's row and re-derives its Rooms.</param>
-/// <param name="personaStore">The source of <see cref="PersonaStore.PersonaRenamed"/>.</param>
+/// <param name="personaStore">The source of <see cref="PersonaStore.PersonaRenamed"/> and <see cref="PersonaStore.PersonaRemoved"/>.</param>
 /// <param name="roomEvents">Published once, after any Room this cascade renamed.</param>
+/// <param name="avatars">Moves a renamed Persona's Avatar entry, and deletes a removed Persona's Avatar entry and image file.</param>
 /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/> and <see cref="AcpOptions.WorkDir"/>, which together locate the Work Dir to move.</param>
 /// <param name="timeProvider">Drives the backoff between Work Dir move attempts, so a test can control it without a real delay.</param>
 /// <param name="logger">Records a rejected rename, a Work Dir that could not be moved, and any failure in the detached half of the cascade.</param>
@@ -42,6 +49,7 @@ internal sealed partial class PersonaRenameCascade(
     ITeamDirectory teamDirectory,
     PersonaStore personaStore,
     RoomEvents roomEvents,
+    AvatarStore avatars,
     IOptions<TeamOptions> options,
     TimeProvider timeProvider,
     ILogger<PersonaRenameCascade> logger) : IHostedService, IDisposable
@@ -59,6 +67,7 @@ internal sealed partial class PersonaRenameCascade(
     public Task StartAsync(CancellationToken cancellationToken)
     {
         personaStore.PersonaRenamed += this.OnPersonaRenamed;
+        personaStore.PersonaRemoved += this.OnPersonaRemoved;
         this.subscribed = true;
         return Task.CompletedTask;
     }
@@ -70,7 +79,7 @@ internal sealed partial class PersonaRenameCascade(
         return Task.CompletedTask;
     }
 
-    /// <summary>Unsubscribes from <see cref="PersonaStore.PersonaRenamed"/> — the store outlives this instance, so a leaked subscription must not.</summary>
+    /// <summary>Unsubscribes from <see cref="PersonaStore.PersonaRenamed"/> and <see cref="PersonaStore.PersonaRemoved"/> — the store outlives this instance, so a leaked subscription must not.</summary>
     public void Dispose()
     {
         this.Unsubscribe();
@@ -84,6 +93,7 @@ internal sealed partial class PersonaRenameCascade(
         }
 
         personaStore.PersonaRenamed -= this.OnPersonaRenamed;
+        personaStore.PersonaRemoved -= this.OnPersonaRemoved;
         this.subscribed = false;
     }
 
@@ -94,6 +104,18 @@ internal sealed partial class PersonaRenameCascade(
     /// <param name="renamed">The old and the new Name of the Persona that changed.</param>
     private void OnPersonaRenamed(PersonaRenamed renamed)
     {
+        // FIRST, and deliberately ABOVE the early return below: an Avatar exists whether or not an
+        // Agent has ever connected, so gating it on the Team Directory row would silently lose the
+        // avatar of a Teammate that has never run - which, with Acp:Enabled false by default, is
+        // every Teammate in a stock installation.
+        //
+        // Synchronous, not detached: like the Team Directory row rename below, this races the
+        // repaint PersonasChanged triggers - the Teammate card and /teammates both read AvatarStore
+        // on render - and unlike a Room name, an Avatar has no later event that would correct a
+        // stale read. Detaching it would let the OLD Name's avatar render, or none at all, for
+        // however long the detached task takes to run.
+        avatars.Rename(renamed.OldName, renamed.NewName);
+
         var user = teamDirectory.FindUserByName(renamed.OldName);
         if (user is null || user.Kind != UserKind.Agent)
         {
@@ -112,6 +134,22 @@ internal sealed partial class PersonaRenameCascade(
         }
 
         _ = this.CascadeDetachedAsync(user.Id, renamed.OldName, renamed.NewName);
+    }
+
+    /// <summary>
+    /// Deletes the removed Persona's Avatar entry and image file. <c>docs/agencyteam/rules.md</c> row
+    /// 38 says a removal deliberately does NOT cascade to the Agent, its Rooms or its Transcripts -
+    /// those are chat facts that outlive the Persona that created them - but that same row cascades
+    /// the Model and the Effort, because both are part of the Persona itself: "leaving either row
+    /// behind would silently resurrect an old setting if a Persona of the same name were created
+    /// later." An Avatar is the same kind of thing, not a chat fact, so leaving it behind would
+    /// silently resurrect an old face on a new Persona that happened to reuse the Name - this handler
+    /// exists to prevent exactly that.
+    /// </summary>
+    /// <param name="removed">The Name of the Persona that no longer exists.</param>
+    private void OnPersonaRemoved(PersonaRemoved removed)
+    {
+        avatars.Remove(removed.Name);
     }
 
     /// <summary>

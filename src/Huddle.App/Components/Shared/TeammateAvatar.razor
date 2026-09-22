@@ -1,0 +1,123 @@
+@* <summary>
+     The one place a Teammate's or the Human's <see cref="Avatar"/> becomes pixels: an uploaded image,
+     a short text label, or - failing both - a monogram built from the Name, in that order, stopping at
+     the first one present. Before this component existed, the monogram alone was already being reached
+     across from <c>Teammates.razor</c> into <c>TeammateCard.razor</c>'s own static helper
+     (<c>TeammateCard.Monogram</c>) - the same "one place should own a domain-value-to-rendering
+     mapping" smell <c>StatusDot</c> was extracted to fix for <c>PersonaState</c>. This component is
+     that fix for <see cref="Avatar"/>, now that a second call site needs the same three-way choice
+     plus a background colour neither call site used to have.
+
+     The <c>MudAvatar</c> below is this component's single root element, deliberately: a Razor
+     component adds no wrapper node of its own, but only for as long as it renders exactly one root -
+     and three existing test suites locate ".mud-avatar" at a fixed position in the DOM relative to its
+     siblings. Wrapping it in a <c>&lt;div&gt;</c> or a <c>&lt;span&gt;</c> would silently break all
+     three.
+   </summary> *@
+@using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Themes
+@using MudBlazor.Utilities
+
+<MudAvatar Color="Color.Primary" Size="this.Size" Class="@this.Class" Style="@this.InlineStyle">
+    @if (this.Resolved.Image is not null)
+    {
+        <img src="@this.ImageSource" alt="" />
+    }
+    else if (this.TrimmedLabel is not null)
+    {
+        @this.TrimmedLabel
+    }
+    else
+    {
+        @TeammateAvatar.Monogram(this.Name)
+    }
+</MudAvatar>
+
+@code {
+    /// <summary>The path every uploaded avatar image is served from, joined with <see cref="Avatars.Avatar.Image"/>'s stored file name.</summary>
+    private const string ImageBasePath = "/teammate-avatars/";
+
+    /// <summary>
+    /// The Teammate's or the Human's Name - the source of the monogram fallback, and always rendered
+    /// as its own text beside this avatar at every call site, which is why <see cref="ImageSource"/>'s
+    /// <c>&lt;img&gt;</c> below carries an empty <c>alt</c> rather than repeating it.
+    /// </summary>
+    [Parameter]
+    [EditorRequired]
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The avatar to render, or <see langword="null"/> - treated exactly like
+    /// <see cref="Avatars.Avatar.None"/> - for a Teammate or the Human who has not customised one.
+    /// </summary>
+    [Parameter]
+    public Avatar? Avatar { get; set; }
+
+    /// <summary>
+    /// The rendered <c>MudAvatar</c>'s size. Defaults to <see cref="MudBlazor.Size.Medium"/>,
+    /// <c>MudAvatar</c>'s own default, so a caller that does not set this renders exactly as it did
+    /// before this component existed.
+    /// </summary>
+    [Parameter]
+    public Size Size { get; set; } = Size.Medium;
+
+    /// <summary>Extra CSS classes for the root <c>MudAvatar</c>.</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>
+    /// <see cref="Avatar"/>, or <see cref="Avatars.Avatar.None"/> when it is <see langword="null"/> -
+    /// the one place that substitution happens, so every other member below can assume a real value.
+    /// Fully qualified rather than a bare <c>Avatar.None</c>: this component's own <see cref="Avatar"/>
+    /// parameter shadows the type name <c>Avatar</c> for simple-name lookup everywhere in this class,
+    /// so only a qualified reference still reaches the type's static members.
+    /// </summary>
+    private Avatar Resolved => this.Avatar ?? Agency.Huddle.App.Avatars.Avatar.None;
+
+    /// <summary>
+    /// <see cref="Resolved"/>'s <see cref="Avatars.Avatar.Label"/>, re-trimmed through
+    /// <see cref="Avatars.Avatar.TrimLabel(string?)"/> at render time rather than assumed
+    /// already-trimmed - so a hand-edited <c>avatars.json</c> cannot put four hundred characters into
+    /// a tile laid out for three.
+    /// </summary>
+    private string? TrimmedLabel => Agency.Huddle.App.Avatars.Avatar.TrimLabel(this.Resolved.Label);
+
+    /// <summary>The uploaded image's <c>src</c>, or <see langword="null"/> when <see cref="Resolved"/> has no <see cref="Avatars.Avatar.Image"/>.</summary>
+    private string? ImageSource => this.Resolved.Image is null ? null : ImageBasePath + this.Resolved.Image;
+
+    /// <summary>
+    /// The inline <c>style</c> carrying both <see cref="Avatars.Avatar.Background"/> and its
+    /// <see cref="ContrastColour.ReadableForeground(MudColor)"/> foreground, or <see langword="null"/>
+    /// when <see cref="Resolved"/> has no <see cref="Avatars.Avatar.Background"/> - so the Theme's own
+    /// <c>Color="Color.Primary"</c> styling applies unmodified. Built entirely from this C# string,
+    /// never a literal typed into the markup above: a later task fails the build on a colour literal
+    /// found inside any <c>Style="..."</c> attribute under <c>Components/</c>.
+    /// </summary>
+    private string? InlineStyle
+    {
+        get
+        {
+            if (this.Resolved.Background is null)
+            {
+                return null;
+            }
+
+            MudColor background = this.Resolved.Background;
+            MudColor foreground = ContrastColour.ReadableForeground(background);
+            return $"background: {this.Resolved.Background}; color: {foreground.ToString(MudColorOutputFormats.Hex)};";
+        }
+    }
+
+    /// <summary>Initials from the first and last word of <paramref name="name"/>: "Emily Lee" reads as EL and "Chief of Staff" as CS. First-and-last rather than the first two words, so a middle word like "of" does not get a letter it does not deserve. A one-word name such as "echo" reads as E.</summary>
+    /// <param name="name">The Teammate's Name.</param>
+    internal static string Monogram(string name)
+    {
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return words.Length switch
+        {
+            0 => "?",
+            1 => char.ToUpperInvariant(words[0][0]).ToString(),
+            _ => string.Concat(char.ToUpperInvariant(words[0][0]), char.ToUpperInvariant(words[^1][0])),
+        };
+    }
+}

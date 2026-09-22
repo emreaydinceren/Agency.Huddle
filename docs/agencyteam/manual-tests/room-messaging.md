@@ -712,7 +712,7 @@ If `curl.exe` is unavailable, substitute the browser's View Source (Ctrl+U) and 
 3. Note the exact format of the time: count the digits, look for seconds, look for AM/PM, look for a date.
 4. Send a Message, wait a full minute, send another, and compare the two times.
 5. Press F5 and check whether either time changed.
-6. Look for any avatar, circle or monogram in the transcript rows.
+6. Look at the avatar in the gutter of each transcript row, and check that the sender name and body line up against it rather than sitting under it.
 7. In `T-B` run `Tail` and read the `timestamp` field of the last line.
 8. Convert that UTC timestamp to your machine's local time by hand and compare with the time shown on screen.
 
@@ -724,7 +724,9 @@ If `curl.exe` is unavailable, substitute the browser's View Source (Ctrl+U) and 
 - The two Messages sent a minute apart show different times.
 - Neither time changes across a reload.
 - The screen time equals the stored UTC `timestamp` converted to the machine's local time.
-- No avatar, circle or monogram appears anywhere in the transcript.
+- Every row — a Message and a live Draft alike — carries an avatar in its own gutter, with the sender name and the body aligned in the column beside it rather than beneath it. A Teammate that has chosen nothing shows the initials of its Name; `You` shows yours.
+
+> **Reversed 2026-09-22.** This step used to assert the opposite — *"No avatar, circle or monogram appears anywhere in the transcript"* — and the note at the end of this file used to send you to `/teammates` for the avatar half of the appearance check. Avatars are a Room-view concern now. See [ADR-0019](../../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md).
 
 **Fail if — any of these**
 
@@ -1261,7 +1263,7 @@ If the bot does not connect or no Room appears, record INCONCLUSIVE — the Ment
 If `.message-body` and `.message-sender` already read different font families on a stock install, `ThemeCatalog.BuildHuddleTheme` has started setting `Typography.Body1` distinctly from `Typography.Default` — re-read that file before judging this test, since the "no scoped chat font" premise no longer holds and the test needs rewriting again, not a guess.
 
 > [!NOTE]
-> Only the transcript half of the appearance check belongs here. The avatar-monogram half of the wider appearance checklist lives on the `/teammates` page, which is a different area — do not test it from the Room view.
+> Only the transcript half of the appearance check belongs here — but since 2026-09-22 that includes avatars, which the Room view now renders beside every Message and every Draft. Check here that each row has one, that it is the sender's, and that the gutter does not shift when a Draft settles into a Message. What still belongs on `/teammates` is *choosing* an avatar: the three-way selector, the upload and the colour picker are edited on a Teammate's card, and the Human's own on Settings → Appearance.
 
 ### ROOMMESSAGING-28 — A torn or corrupt line in the Transcript is skipped with a warning, not fatal
 

@@ -247,3 +247,28 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   that page and it is covered automatically. It is also why a Theme's URL is built by
   convention (`href="themes/{id}.css"`, served by `MapStaticAssets`'s plain
   unfingerprinted route) rather than through `@Assets`.
+
+- **`MudColorPicker` has no null state: bind `Text`, never `Value`.** `Value` is a
+  non-nullable `MudColor`, so the control materialises a colour on its **first
+  render** whether or not anyone has picked one. Bind it and merely *opening* the
+  Edit teammate card — or the Appearance tab — writes a hard-coded hex background
+  for a Teammate who never chose one, permanently divorced from the Theme and
+  invisible until someone switches Themes and wonders why one avatar did not follow.
+  Nothing fails: the build is clean, the control looks right, and the wrong value is
+  the one the user is shown. `Text` is a `string?` and is exactly the value that goes
+  to `avatars.json`, so binding it keeps "no background chosen" expressible; a blank
+  maps to `null`, never to `""`. Both avatar editors carry the reasoning inline, and
+  both pair the picker with an explicit **Use the theme colour** action, because a
+  picker alone gives a user no way back to *unset*.
+
+- **`System.Text.Json` escapes astral-plane characters whatever encoder you give
+  it.** `JavaScriptEncoder.UnsafeRelaxedJsonEscaping` is the usual fix for
+  `\uXXXX`-mangled output and it genuinely works for the Basic Multilingual Plane —
+  `☕` (U+2615) round-trips as raw UTF-8. It does **not** reach a surrogate pair:
+  `🦊` (U+1F98A) is written `🦊` regardless, verified at the byte level on
+  .NET 10 rather than inferred. This matters for `avatars.json`, which is
+  hand-editable and whose labels are mostly emoji — and most emoji people reach for
+  are astral. It is cosmetic only: the value round-trips exactly, and a Human may
+  type the literal character in, which parses correctly and is re-escaped on the next
+  save. Do not "fix" it by post-processing the JSON; the file is still valid and
+  still readable enough to edit.

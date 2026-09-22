@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -9,11 +10,13 @@ namespace Agency.Huddle.Tests.Acp;
 
 /// <summary>
 /// Exercises <see cref="PersonaRenameCascade"/> over real, temp-directory-backed stores - a
-/// <see cref="SqliteTeamDirectory"/> and a real <see cref="PersonaStore"/> - rather than mocks, per
-/// this repo's "no mocking framework" convention. Every test drives a rename through
-/// <see cref="PersonaStore.Update"/>, exactly as a Persona card save does, so the whole path under
-/// test is the real one: <c>PersonaStore.PersonaRenamed</c> -&gt; <see cref="PersonaRenameCascade"/>
-/// -&gt; <see cref="ITeamDirectory"/>.
+/// <see cref="SqliteTeamDirectory"/>, a real <see cref="PersonaStore"/> and a real
+/// <see cref="AvatarStore"/> - rather than mocks, per this repo's "no mocking framework" convention.
+/// Every rename test drives a rename through <see cref="PersonaStore.Update"/>, exactly as a Persona
+/// card save does, and every removal test drives a removal through <see cref="PersonaStore.Remove"/>,
+/// so the whole path under test is the real one: <c>PersonaStore.PersonaRenamed</c> /
+/// <c>PersonaStore.PersonaRemoved</c> -&gt; <see cref="PersonaRenameCascade"/> -&gt;
+/// <see cref="ITeamDirectory"/> / <see cref="AvatarStore"/>.
 /// </summary>
 public sealed class PersonaRenameCascadeTests
 {
@@ -249,7 +252,86 @@ public sealed class PersonaRenameCascadeTests
         Assert.True(Directory.Exists(Path.Combine(dir.Path, "work", "echoprime")));
     }
 
-    /// <summary>Builds a real <see cref="ITeamDirectory"/>, <see cref="PersonaStore"/> and started <see cref="PersonaRenameCascade"/> over <paramref name="dir"/>, seeding the Human.</summary>
+    /// <summary>
+    /// The single most important test in this task: a rename must move the Avatar key even when NO
+    /// Agent has ever registered under the old Name - the normal case in a stock installation, where
+    /// <c>Team:Acp:Enabled</c> defaults to <see langword="false"/>. This is the regression the avatar
+    /// move being the FIRST statement in <see cref="PersonaRenameCascade"/>'s handler, above the "no
+    /// Agent row" early return, exists to prevent: moving it below that return would still pass every
+    /// other rename test (all of which register an Agent) while silently losing the avatar of any
+    /// Teammate that has never run.
+    /// </summary>
+    [Fact]
+    public async Task Rename_PersonaWithNoRegisteredAgent_MovesTheAvatarKey()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("ghost"), "Nobody has ever started this one.");
+        harness.AvatarStore.Save("ghost", new Avatar(Label: null, Image: null, Background: "#4a154b"));
+
+        harness.PersonaStore.Update("ghost", PersonaText("ghostprime", "Nobody has ever started this one."), model: null, effort: null);
+
+        Assert.Equal("#4a154b", harness.AvatarStore.Get("ghostprime").Background);
+        Assert.Equal(Avatar.None, harness.AvatarStore.Get("ghost"));
+    }
+
+    /// <summary>A rename also moves the Avatar key for a Persona whose Agent HAS connected, alongside the Team Directory row rename.</summary>
+    [Fact]
+    public async Task Rename_PersonaWithRegisteredAgent_MovesTheAvatarKey()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        var echo = await harness.TeamDirectory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(echo);
+        harness.AvatarStore.Save("echo", new Avatar(Label: "E", Image: null, Background: "#123456"));
+
+        harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null);
+
+        Assert.Equal("#123456", harness.AvatarStore.Get("echoprime").Background);
+        Assert.Equal(Avatar.None, harness.AvatarStore.Get("echo"));
+    }
+
+    /// <summary>A rename moves only the Avatar's JSON key - the image file itself is left at exactly the same path on disk.</summary>
+    [Fact]
+    public async Task Rename_LeavesTheAvatarImageFileUntouchedOnDisk()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        var imageFile = harness.AvatarStore.WriteImage([1, 2, 3], ".png");
+        harness.AvatarStore.Save("echo", new Avatar(Label: null, Image: imageFile, Background: null));
+        var imagePath = Path.Combine(harness.AvatarStore.ImageDirectory, imageFile);
+
+        harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null);
+
+        Assert.True(File.Exists(imagePath));
+        Assert.Equal(imageFile, harness.AvatarStore.Get("echoprime").Image);
+    }
+
+    /// <summary>Removing a Persona deletes both its Avatar's JSON key and its image file from disk.</summary>
+    [Fact]
+    public async Task Remove_DeletesTheAvatarKeyAndItsImageFile()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        var imageFile = harness.AvatarStore.WriteImage([1, 2, 3], ".png");
+        harness.AvatarStore.Save("echo", new Avatar(Label: null, Image: imageFile, Background: null));
+        var imagePath = Path.Combine(harness.AvatarStore.ImageDirectory, imageFile);
+        Assert.True(File.Exists(imagePath));
+
+        harness.PersonaStore.Remove("echo");
+
+        Assert.Equal(Avatar.None, harness.AvatarStore.Get("echo"));
+        Assert.False(File.Exists(imagePath));
+    }
+
+    /// <summary>Builds a real <see cref="ITeamDirectory"/>, <see cref="PersonaStore"/>, <see cref="AvatarStore"/> and started <see cref="PersonaRenameCascade"/> over <paramref name="dir"/>, seeding the Human.</summary>
     private static async Task<Harness> CreateHarnessAsync(TempDataDir dir, CancellationToken ct, ILogger<PersonaRenameCascade>? cascadeLogger = null)
     {
         var teamDirectory = new SqliteTeamDirectory(dir.Options());
@@ -261,10 +343,12 @@ public sealed class PersonaRenameCascadeTests
             new PersonaEffortStore(dir.Options()),
             NullLogger<PersonaStore>.Instance);
         var roomEvents = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var avatarStore = new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance);
         var cascade = new PersonaRenameCascade(
             teamDirectory,
             personaStore,
             roomEvents,
+            avatarStore,
             dir.Options(),
             TimeProvider.System,
             cascadeLogger ?? NullLogger<PersonaRenameCascade>.Instance);
@@ -276,6 +360,7 @@ public sealed class PersonaRenameCascadeTests
             TeamDirectory = teamDirectory,
             PersonaStore = personaStore,
             RoomEvents = roomEvents,
+            AvatarStore = avatarStore,
             Cascade = cascade,
         };
     }
@@ -345,12 +430,15 @@ public sealed class PersonaRenameCascadeTests
 
         public required RoomEvents RoomEvents { get; init; }
 
+        public required AvatarStore AvatarStore { get; init; }
+
         public required PersonaRenameCascade Cascade { get; init; }
 
-        /// <summary>Disposes the cascade (unsubscribing it from <see cref="PersonaStore.PersonaRenamed"/>) and then the store.</summary>
+        /// <summary>Disposes the cascade (unsubscribing it from <see cref="PersonaStore.PersonaRenamed"/> and <see cref="PersonaStore.PersonaRemoved"/>), then the Avatar store, then the Persona store.</summary>
         public void Dispose()
         {
             this.Cascade.Dispose();
+            this.AvatarStore.Dispose();
             this.PersonaStore.Dispose();
         }
     }

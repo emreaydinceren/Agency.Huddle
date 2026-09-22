@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
@@ -140,6 +141,26 @@ public sealed class InviteTeammateTests
         Assert.Contains("rawagent", html, StringComparison.Ordinal);
     }
 
+    /// <summary>Each invite candidate row renders a <see cref="TeammateAvatar"/> beside its name, matching the gutter <see cref="MessageList"/>'s transcript rows already carry.</summary>
+    [Fact]
+    public async Task Panel_RendersAnAvatarBesideEachCandidate()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var inside = await directory.UpsertAgentUserAsync("inside", null, ct);
+        var outside = await directory.UpsertAgentUserAsync("outside", null, ct);
+        Assert.NotNull(inside);
+        Assert.NotNull(outside);
+        var chat = CreateChatService(dir, directory);
+        var room = await chat.EnsureRoomForAsync(inside, ct);
+
+        var html = await RenderAsync(dir, directory, chat, room.Id);
+
+        Assert.Contains("mud-avatar", html, StringComparison.Ordinal);
+    }
+
     private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
@@ -164,6 +185,12 @@ public sealed class InviteTeammateTests
         using var personas = new PersonaStore(
             dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         services.AddSingleton(personas);
+
+        // The panel now renders a TeammateAvatar beside each candidate; created and disposed within
+        // this one render, the same lifetime PersonaStore above is given, so its own FileSystemWatcher
+        // never outlives the test either.
+        using var avatars = new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance);
+        services.AddSingleton(avatars);
         await using var provider = services.BuildServiceProvider();
 
         await using var renderer = new HtmlRenderer(provider, provider.GetRequiredService<ILoggerFactory>());

@@ -15,6 +15,13 @@ namespace Agency.Huddle.App.Acp;
 public sealed record PersonaRenamed(string OldName, string NewName);
 
 /// <summary>
+/// The front-matter Name of a Persona file that no longer exists - see <see cref="PersonaStore"/>'s
+/// <c>PersonaRemoved</c> event, which carries one of these per detected removal.
+/// </summary>
+/// <param name="Name">The Name the removed Persona resolved to.</param>
+public sealed record PersonaRemoved(string Name);
+
+/// <summary>
 /// A Persona is a markdown file whose body becomes a Claude agent's system prompt. Files live under
 /// <c>{DataDir}/{Acp.TeamsDir}/</c>, optionally nested under Team sub-folders that are purely
 /// organisational - <c>Teams/Business/coo.md</c> is exactly as much a Persona as <c>Teams/coo.md</c>,
@@ -169,6 +176,26 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// docs/agencyteam/rules.md - it only announces that a rename happened.
     /// </remarks>
     internal event Action<PersonaRenamed>? PersonaRenamed;
+
+    /// <summary>
+    /// Raised when a Persona file that used to exist is gone - detected in <see cref="RaiseRemovals"/>
+    /// by the same path-keyed diff <see cref="RaiseRenames"/> uses: a path present only in
+    /// <c>previous</c> is a deletion, never a rename, because a rename keeps its path. Raised from
+    /// both doors <see cref="PersonaRenamed"/> is raised from, and for the same reason: from
+    /// <see cref="Remove"/>'s own call to <see cref="RefreshIndexAndNotify"/>, and from
+    /// <see cref="OnDebounceElapsed"/>, which is the only place a <c>.md</c> file deleted in an editor
+    /// is ever noticed. Covering just the first would leave a hand-deleted Persona's per-Persona state
+    /// behind with nothing left to collect it.
+    /// </summary>
+    /// <remarks>
+    /// Raised SYNCHRONOUSLY and to completion, strictly BEFORE <see cref="PersonasChanged"/>, for the
+    /// same reason as <see cref="PersonaRenamed"/>: a subscriber cascading a removal (see
+    /// <see cref="Agency.Huddle.App.Acp.PersonaRenameCascade"/>) needs the fact settled before
+    /// <see cref="PersonaSupervisor"/> reacts to <see cref="PersonasChanged"/>. This class deliberately
+    /// takes no dependency on anything downstream to do the cascading itself - see
+    /// docs/agencyteam/rules.md - it only announces that a removal happened.
+    /// </remarks>
+    internal event Action<PersonaRemoved>? PersonaRemoved;
 
     /// <summary>Every Persona that loaded cleanly, ordered by Name (ordinal). A projection over <see cref="Entries"/>.</summary>
     public IReadOnlyList<string> ListNames() => this.index.Entries.Select(entry => entry.Name).ToList();
@@ -463,6 +490,10 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
         // is load-bearing rather than incidental.
         this.RaiseRenames(previous, this.index);
 
+        // PersonaRemoved after PersonaRenamed and still before PersonasChanged, for the same reason:
+        // a subscriber cascading a removal needs it settled before PersonaSupervisor reacts.
+        this.RaiseRemovals(previous, this.index);
+
         // Exactly one PersonasChanged per operation: three writes raising three events would cause
         // three restarts (PersonaSupervisor spawning three "node" adapter processes) for what the
         // caller sees as a single save.
@@ -529,6 +560,62 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
             catch (Exception ex)
             {
                 this.logger.LogError(ex, "A PersonaRenamed handler threw for '{OldName}' -> '{NewName}' and was skipped.", renamed.OldName, renamed.NewName);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Diffs <paramref name="previous"/> against <paramref name="updated"/>, keyed by
+    /// <see cref="PersonaEntry.Path"/> exactly as <see cref="RaiseRenames"/> does, and publishes
+    /// <see cref="PersonaRemoved"/> once for every path present in <paramref name="previous"/> with no
+    /// matching path in <paramref name="updated"/>. Because a rename keeps its path, a renamed Persona
+    /// is never mistaken for a removed one, and there is no ordering hazard between this diff and
+    /// <see cref="RaiseRenames"/>'s.
+    /// </summary>
+    /// <param name="previous">The index in effect before this refresh.</param>
+    /// <param name="updated">The freshly rebuilt index about to become current.</param>
+    private void RaiseRemovals(PersonaIndex previous, PersonaIndex updated)
+    {
+        if (this.PersonaRemoved is null || previous.Entries.Count == 0)
+        {
+            return;
+        }
+
+        var updatedPaths = updated.Entries.Select(entry => entry.Path).ToHashSet(StringComparer.Ordinal);
+
+        foreach (var before in previous.Entries)
+        {
+            if (updatedPaths.Contains(before.Path))
+            {
+                continue;
+            }
+
+            this.PublishRemoved(new PersonaRemoved(before.Name));
+        }
+    }
+
+    /// <summary>
+    /// Invokes every <see cref="PersonaRemoved"/> subscriber in turn, logging and skipping one that
+    /// throws rather than letting it stop the remaining subscribers or propagate - the same rule
+    /// <see cref="PublishRenamed"/> follows for its own event.
+    /// </summary>
+    /// <param name="removed">The Name to publish.</param>
+    private void PublishRemoved(PersonaRemoved removed)
+    {
+        if (this.PersonaRemoved is not { } handlers)
+        {
+            return;
+        }
+
+        foreach (var handler in handlers.GetInvocationList())
+        {
+            try
+            {
+                ((Action<PersonaRemoved>)handler).Invoke(removed);
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError(ex, "A PersonaRemoved handler threw for '{Name}' and was skipped.", removed.Name);
             }
         }
     }
@@ -633,6 +720,15 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
         // a rename made outside the app is ever detected, which is why RaiseRenames has to run here
         // too, not only from RefreshIndexAndNotify. Still strictly before PersonasChanged.
         this.RaiseRenames(previous, updated);
+
+        // And for exactly the same reason, in the same order as RefreshIndexAndNotify: a .md file
+        // DELETED in an editor is detected here and nowhere else. Raising renames here but not
+        // removals would leave a hand-deleted Persona's per-Persona state behind with nothing to
+        // ever collect it - the silent resurrection rules.md's removal row exists to prevent, since
+        // a later Persona reusing that Name would inherit it. Idempotent for the same reason
+        // RaiseRenames is: the ~500 ms debounce that follows an in-app Remove compares two indexes
+        // that already agree the path is gone, so nothing fires a second time.
+        this.RaiseRemovals(previous, updated);
         changed?.Invoke();
     }
 }

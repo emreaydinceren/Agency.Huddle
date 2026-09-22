@@ -2,6 +2,7 @@ using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
@@ -382,6 +383,7 @@ public sealed class TeammatesPageTests
         var resolver = new AdapterProfileResolver(new AdapterCatalog(dataDir.Options()));
         using var supervisor = new PersonaSupervisor(
             dataDir.Options(), personas, new FakeAgentHostFactory(), resolver, health, new FakeHookSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var avatars = new AvatarStore(dataDir.Options(), NullLogger<AvatarStore>.Instance);
 
         await using MudBunitContext ctx = new();
         ctx.Services.AddSingleton<ITeamDirectory>(directory);
@@ -391,6 +393,7 @@ public sealed class TeammatesPageTests
         ctx.Services.AddSingleton<IModelCatalog>(new FakeModelCatalog());
         ctx.Services.AddSingleton(personas);
         ctx.Services.AddSingleton(supervisor);
+        ctx.Services.AddSingleton(avatars);
 
         var cut = ctx.Render<Teammates>();
         Assert.Contains("Online", cut.Markup, StringComparison.Ordinal);
@@ -420,6 +423,7 @@ public sealed class TeammatesPageTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AdapterCatalog>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
         return ctx;
     }
 

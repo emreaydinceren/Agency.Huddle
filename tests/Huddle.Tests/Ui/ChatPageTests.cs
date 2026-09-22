@@ -4,6 +4,7 @@ using Bunit.Rendering;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
@@ -920,6 +921,11 @@ public sealed class ChatPageTests
         // Chat.razor renders InviteTeammate as a child, which injects PersonaStore for its Team
         // filter - needed even though these tests never open that panel.
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaStore>());
+
+        // Chat.razor injects AvatarStore itself (to subscribe to AvatarsChanged), and its child
+        // MessageList resolves every row's avatar through the same singleton (Task 6.1) - needed
+        // even though these tests never customise one.
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
         return ctx;
     }
 

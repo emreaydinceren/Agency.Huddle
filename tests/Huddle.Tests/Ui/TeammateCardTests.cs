@@ -1,10 +1,12 @@
 using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
@@ -1196,6 +1198,174 @@ public sealed class TeammateCardTests
         Assert.DoesNotContain(EffortResetNotice, cut.Markup, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// A minimal but genuine PNG - the 8-byte signature plus a 13-byte IHDR chunk - the same bytes
+    /// <see cref="AvatarEndpointTests"/> uses, so an upload test is honest about what a real PNG
+    /// header looks like rather than an arbitrary byte string that happens to start right.
+    /// </summary>
+    private static readonly byte[] MinimalPng =
+    [
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x00, 0x00, 0x00, 0x00, 0x3A, 0x7E, 0x9B,
+        0x55,
+    ];
+
+    /// <summary>Create mode offers the three-way avatar choice - initials, a short label, or an uploaded image - alongside the rest of the Create form.</summary>
+    [Fact]
+    public async Task CreateMode_ShowsTheThreeWayAvatarChoice()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = RenderPage(ctx, factory);
+        FindButton(cut, "New teammate").Click();
+
+        Assert.Contains("Initials of the name", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("A short label", cut.Markup, StringComparison.Ordinal);
+        Assert.Contains("An image", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>View mode renders the avatar itself but none of its editing controls - the avatar counterpart of Model and Effort rendering as plain text there, never their selects.</summary>
+    [Fact]
+    public async Task ViewMode_ShowsNoAvatarEditingControls()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "x");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+
+        Assert.DoesNotContain("Initials of the name", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("A short label", cut.Markup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Choose an image", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The frozen-parameter proof, and the most valuable test in this file: MudBlazor freezes a
+    /// dialog's own <c>[Parameter]</c>s at the moment it opens (see the file-level comment on
+    /// <c>TeammateCard.razor</c>), so choosing "A short label" and typing can only reach the preview
+    /// <c>TeammateAvatar</c> renders because that preview is an ordinary CHILD render reading a LOCAL
+    /// field (<c>CurrentAvatar</c>), never a re-pushed parameter, inside this SAME already-open dialog.
+    /// </summary>
+    [Fact]
+    public async Task EditMode_ChoosingLabelAndTyping_UpdatesThePreviewAvatarInsideTheSameOpenDialog()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "x");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        SelectAvatarChoice(cut, "A short label");
+        SetImmediateTextValue(cut, "Label", "AB");
+
+        Assert.Equal("AB", cut.Find(".mud-avatar").TextContent.Trim());
+    }
+
+    /// <summary>Choosing a file but Cancelling leaves <c>{DataDir}/avatars</c> untouched - the buffer-until-save proof: nothing reaches disk before Save (Part C's own contract).</summary>
+    [Fact]
+    public async Task CreateMode_ChooseAFileThenCancel_LeavesTheAvatarsDirectoryEmpty()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = RenderPage(ctx, factory);
+        FindButton(cut, "New teammate").Click();
+        SelectAvatarChoice(cut, "An image");
+
+        var inputFile = cut.FindComponent<InputFile>();
+        inputFile.UploadFiles(InputFileContent.CreateFromBinary(MinimalPng, "avatar.png", contentType: "image/png"));
+
+        FindButton(cut, "Cancel").Click();
+
+        // Program.cs creates {DataDir}/avatars unconditionally at startup so the static-file
+        // middleware always has a directory to point at (see AvatarEndpointTests) - so its mere
+        // existence proves nothing here. Emptiness is the actual proof: nothing was ever WRITTEN
+        // into it, because Cancel never reached SaveAsync, the only place that calls WriteImage.
+        var avatarsDir = Path.Combine(DataDirOf(factory), "avatars");
+        Assert.Empty(Directory.EnumerateFileSystemEntries(avatarsDir));
+    }
+
+    /// <summary>An oversized upload sets <c>avatarError</c> and keeps the card open, rather than throwing or silently accepting it.</summary>
+    [Fact]
+    public async Task CreateMode_OversizedImage_SetsAnErrorAndKeepsTheCardOpen()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = RenderPage(ctx, factory);
+        FindButton(cut, "New teammate").Click();
+        SelectAvatarChoice(cut, "An image");
+
+        var oversized = new byte[AvatarImage.MaxBytes + 1];
+        var inputFile = cut.FindComponent<InputFile>();
+        inputFile.UploadFiles(InputFileContent.CreateFromBinary(oversized, "big.png", contentType: "image/png"));
+
+        Assert.Contains("larger than", cut.Markup, StringComparison.Ordinal);
+        Assert.NotEmpty(cut.FindAll(".mud-dialog-container"));
+    }
+
+    /// <summary>An upload whose bytes are not a PNG, JPEG or WebP signature sets <c>avatarError</c> with the exact wording <c>AvatarImage.SniffExtension</c>'s caller promises.</summary>
+    [Fact]
+    public async Task CreateMode_UploadedFileIsNotARecognisedImage_SetsAnError()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = RenderPage(ctx, factory);
+        FindButton(cut, "New teammate").Click();
+        SelectAvatarChoice(cut, "An image");
+
+        var inputFile = cut.FindComponent<InputFile>();
+        inputFile.UploadFiles(InputFileContent.CreateFromBinary([1, 2, 3, 4], "fake.png", contentType: "image/png"));
+
+        Assert.Contains("That file is not a PNG, JPEG or WebP image.", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The isolated <see cref="TeamOptions.DataDir"/> <paramref name="factory"/> composed its app with -
+    /// resolved from the running host, the same way <c>AvatarEndpointTests.DataDirOf</c> does, since
+    /// <see cref="TeamWebApplicationFactory"/> exposes its temp directory only indirectly.
+    /// </summary>
+    /// <param name="factory">The factory whose composed <see cref="TeamOptions"/> to read.</param>
+    private static string DataDirOf(TeamWebApplicationFactory factory)
+    {
+        return factory.Services.GetRequiredService<IOptions<TeamOptions>>().Value.DataDir;
+    }
+
+    /// <summary>
+    /// Clicks the <c>MudRadio</c> whose own text is <paramref name="choiceLabel"/>, inside the avatar
+    /// editor's <c>MudRadioGroup</c>. Clicks the inner <c>input.mud-radio-input</c>, not the outer
+    /// <c>label.mud-radio</c> - verified against the rendered markup rather than assumed: the outer
+    /// label carries only <c>@onkeydown</c> and <c>@onclick:stoppropagation</c>, and MudRadio binds its
+    /// actual <c>@onclick</c> to the native radio input itself.
+    /// </summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="choiceLabel">The radio's visible text - "Initials of the name", "A short label" or "An image".</param>
+    private static void SelectAvatarChoice(IRenderedComponent<ContainerFragment> cut, string choiceLabel)
+    {
+        var radio = cut.FindAll(".mud-radio").First(element => element.TextContent.Contains(choiceLabel, StringComparison.Ordinal));
+        (radio.QuerySelector("input.mud-radio-input") ?? throw new InvalidOperationException($"No radio input under '{choiceLabel}'.")).Click();
+    }
+
+    /// <summary>
+    /// The <c>Immediate="true"</c> counterpart of <see cref="SetTextValue"/>: raises <c>@oninput</c>
+    /// rather than <c>@onchange</c>, matching the Label box's own binding (see the markup comment on
+    /// why it is <c>Immediate</c>, unlike every blur-only box in this file).
+    /// </summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="label">The control's label text.</param>
+    /// <param name="value">The text to type.</param>
+    private static void SetImmediateTextValue(IRenderedComponent<ContainerFragment> cut, string label, string value)
+    {
+        var control = FindInputControl(cut, label);
+        var input = control.QuerySelector("input") ?? throw new InvalidOperationException($"No input under '{label}'.");
+        input.Input(value);
+    }
+
     /// <summary>Registers this factory's real services (<see cref="PersonaStore"/> and friends) into a fresh <see cref="MudBunitContext"/>, the same pattern <see cref="TeammatesPageTests"/> uses.</summary>
     private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
     {
@@ -1208,6 +1378,7 @@ public sealed class TeammateCardTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AdapterCatalog>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
         return ctx;
     }
 

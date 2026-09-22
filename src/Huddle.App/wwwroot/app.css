@@ -308,8 +308,21 @@ button:focus-visible {
     padding: 1.5rem;
 }
 
+/* Slack-style two-column layout: an avatar gutter in the first column, everything else - the
+   sender/timestamp line, the body, and (for a Draft) its tool-activity line - stacked in the
+   second. This is the transcript's only indent: .message-body and .tool-activity used to each
+   declare their own "padding-left: 2ch", the same gutter written twice, and both are gone now
+   that the grid column is the one place it is declared. */
 .message-row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 0.75rem;
+    align-items: start;
     margin-bottom: 1.5rem;
+}
+
+.message-content {
+    min-width: 0;
 }
 
 .message-meta {
@@ -329,7 +342,6 @@ button:focus-visible {
 .message-body {
     line-height: 1.4;
     font-family: var(--mud-typography-body1-family);
-    padding-left: 2ch;
 }
 
 .message-body p {
@@ -358,7 +370,6 @@ button:focus-visible {
 
 .tool-activity {
     margin-top: 0.25rem;
-    padding-left: 2ch;
     color: var(--mud-palette-text-disabled);
     font-size: 0.8rem;
     font-style: italic;
@@ -549,8 +560,6 @@ button:focus-visible {
     width: 2.4rem;
     height: 2.4rem;
     border-radius: 8px;
-    background: var(--mud-palette-primary);
-    color: var(--mud-palette-primary-text);
     font-size: 0.95rem;
     font-weight: 600;
     letter-spacing: 0.02em;

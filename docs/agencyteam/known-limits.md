@@ -283,6 +283,35 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
     under 4.5:1 for `TextSecondary` on `Surface`. `ThemeCatalogTests` records each with its
     measured ratio and asserts it *still* falls short, so a fixed Theme forces its entry to
     be deleted rather than leaving a stale excuse behind.
+- **A Teammate chooses its own Avatar, and here is what that does not cover.**
+  Initials, a short label or an uploaded image, over a background colour —
+  [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md). Six
+  gaps are deliberate:
+  - **An Avatar does not travel with a copied `.md` file.** It is in
+    `avatars.json`, keyed by Name, so copying a Persona to another machine brings its
+    text and not its face. Neither its Model nor its Effort travels either, for the
+    same reason, and nobody has asked for those.
+  - **Images are stored as uploaded — no resizing, no dimension cap.** Only the byte
+    count is bounded, at 512 000. Checking pixels means decoding, which means an image
+    decoder, a new package and a decompression-bomb surface; the browser scales the
+    image down with CSS instead. A 500 KB image stays 500 KB on disk.
+  - **An emoji outside the Basic Multilingual Plane is stored escaped.**
+    `System.Text.Json` escapes surrogate pairs whatever encoder it is given, so `🦊`
+    is written `🦊` — verified at the byte level, not assumed. It round-trips
+    exactly and a Human may type the literal character in; only the file's readability
+    suffers. See [Traps](traps.md).
+  - **An orphaned entry is never pruned.** Delete a Persona's `.md` while the app is
+    *not* running and nothing observes the deletion, so its entry and image stay. The
+    same tolerance `appearance.json` gives a `theme` id naming nothing: keep the file,
+    ignore what cannot be resolved. A deletion made while the app *is* running is
+    caught by the watcher and does cascade.
+  - **`RoomList` shows no avatar.** A Room is named after *all* its Agent Members and
+    `Room` carries no member list, so no single Teammate is recoverable from a sidebar
+    row without a per-row membership query. A wrong face on a Room is worse than none.
+  - **After a rename, Messages already posted keep the old Name** — history is never
+    rewritten, and `ChatMessage.SenderName` is denormalised — so their avatars fall back
+    to the old monogram while the Teammate's current Name carries the chosen one. The
+    Transcript records what was said at the time, faces included.
 - **Threads, reactions, message edits, message deletes, attachments, search,
   notifications.** *Room* archive and delete arrived 2026-09-21
   ([ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md)); nothing here

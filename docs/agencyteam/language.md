@@ -58,6 +58,25 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: role — `role:` is an ordinary, unstructured frontmatter field and a
   different thing.
 
+**Avatar**
+: What a Teammate shows for itself — the small square beside its Name on the
+  Teammates page, in the invite and new-chat lists, and against every Message it
+  posts. Three ways to fill it, and a background colour that is separate from all
+  three:
+: **Initials** — the first and last word of the Name, as `Monogram` derives them.
+  The default, and *not* a stored kind: it is what renders when neither of the other
+  two is set. **Label** — up to three characters, counted as Unicode text elements so
+  one emoji is one character however many code units it takes. **Image** — an uploaded
+  PNG, JPEG or WebP.
+: Held per Teammate in `{DataDir}/avatars.json`, keyed by **Name**, which is why the
+  Human has one too and why a Message finds one from its sender. Deliberately **not**
+  part of the Persona — an Avatar changes nothing about how a Teammate runs, and
+  putting it in frontmatter would restart the session and lose what that Agent
+  remembers ([ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md)).
+: *Avoid*: icon (`Icons.Material` entries are icons), picture, profile photo, headshot.
+  **Monogram** is the narrower word and stays: it is the initials *rendering*, not the
+  choice.
+
 **Team**
 : A label naming a group of Teammates, listed in a Persona's `teams` frontmatter
   field. A Teammate may belong to several, or to none. A Team is a **view** —
@@ -360,5 +379,9 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)). A file written before then
   still holds a `dark` key; it is an unknown key now, ignored and kept. Appearance is the
   choice; a **Theme** is what it selects.
+: **The tab is not the file.** Since 2026-09-22 the tab has a second section — the
+  Human's own **Avatar** — because the Human has no Persona file and so no Teammate
+  card to edit one on. That Avatar is stored in `avatars.json`, a different file with a
+  different owner; `appearance.json` still holds the selected Theme id and nothing else.
 : *Avoid*: dark mode and light/dark preference (there is no such setting any more — say
   *a dark Theme*), display settings.
