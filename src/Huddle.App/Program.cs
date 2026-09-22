@@ -1,8 +1,16 @@
 using Agency.Huddle.App;
 using Agency.Huddle.App.Components;
+using Agency.Huddle.App.Logging;
 using MudBlazor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// First, and ahead of builder.Build(): service registration is resolved inside Build, and a
+// constructor that throws there takes the process with it - the empty Team:Acp:Enabled that
+// SqliteTeamDirectory's options binder rejects is the worked example. A provider added after that
+// point would exist only in runs that did not need it. Does nothing unless Team:FileLog:Enabled is
+// true, which appsettings.Development.json sets and appsettings.json leaves off.
+builder.Logging.AddTeamFileLogging(builder.Configuration);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
