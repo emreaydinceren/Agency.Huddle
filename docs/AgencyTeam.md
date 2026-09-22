@@ -48,6 +48,9 @@ question is yours; the cost column is roughly what it will spend.
 | [Adapters handoff](Huddle.Adapters-Handoff.md) | **Start here for Adapters work.** State of play, what to do first, and the traps. Points at the other three | ~9k |
 | [Adapters design](Huddle.Adapters-Specifications.md) | Before work on which ACP agent a Persona runs on — Adapter Profiles, the tool-name prefix, the Model/Effort catalogue probe, or `Huddle.MockAdapter` | ~45k |
 | [Adapters live findings](Huddle.Adapters-LiveFindings.md) | What contact with the real `agency-acp` changed. The only Adapters doc about reality rather than intent | ~13k |
+| [Skills design](Huddle.Skills-Specifications.md) | Before work on Skills, `read_skill`, `propose_teammates`, Proposals, the built-in Chief of Staff or its Greeting. Three streams, with a test-first task plan. Proposed, not built | ~20k |
+| [Skills tracker](Huddle.Skills-Tracker.md) | To see or record where each of the plan's 90 tasks stands | ~4k |
+| [Skills project plan](Huddle.Skills-ProjectPlan.md) | **Start here to build Skills.** 90 atomic, test-first tasks in 17 deliverables, each written for an agent with no context | ~13k |
 | [Decision record](agencyteam/decisions.md) | To revisit a decision, or to read an older doc | ~6.3k |
 | [Domain context](agencyteam/CONTEXT.md) | To see the vocabulary used in dialogue, not defined | ~0.6k |
 | [ADRs](adr/) | To read one decision in full, with what was rejected | ~1.4k each |
@@ -63,7 +66,7 @@ them without opening [Language](agencyteam/language.md):
 
 > Teammate · Human · Agent · Name · Alias · Title · Avatar · Team · Adapter · Room ·
 > Member · Invitation · Archived · Persona · Rejected file · Model · Effort · Turn ·
-> App Tool · Reply Gate · Budget · Catch-up · Progressive discovery · Work Dir ·
+> App Tool · Reply Gate · Budget · Catch-up · Progressive discovery · Skill · Work Dir ·
 > Message · Draft · Mention · Envelope · Transcript · Stop · Team Directory ·
 > Prompt · Placeholder · Default · Timing · Theme · Token · Appearance
 

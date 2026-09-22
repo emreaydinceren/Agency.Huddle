@@ -242,6 +242,36 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   need is paid for when it asks, not on every Turn of every session.
 : *Avoid*: lazy loading, tool discovery (that is MCP's own `tools/list`).
 
+**Skill**
+: A named folder of Markdown under `{DataDir}/Skills/` that teaches an Agent one
+  kind of work. Its name and description sit in the system prompt of every
+  Persona assigned it through the `skills` frontmatter field; its body is read
+  with `read_skill` only when the conversation calls for it. Progressive
+  discovery, applied to know-how rather than tools. A Skill is text and never
+  executes; the App Tools it names do. Proposed, not built — see
+  [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md).
+: *Avoid*: ability, capability, plugin, playbook, recipe. Not Claude's own
+  `.claude/skills/`, which only one Adapter honours.
+
+**Proposal**
+: A roster of new Teammates an Agent asks the Human to create, made with
+  `propose_teammates` in one Room and shown there with Approve and Decline. An
+  Agent never creates a Teammate; the Human's Approve does, and the outcome is
+  posted as a Message from the Human, which wakes the proposer. At most one per
+  Room, held in memory, so a restart loses it. Proposed, not built.
+: Each proposed Teammate in it is a **Candidate** — never a *draft*, which is
+  already the Turn text shown before it becomes a Message.
+: *Avoid*: request, application, pending Teammate, draft.
+
+**Greeting**
+: The first Message the built-in Chief of Staff posts to a new Human, unprompted,
+  when its Room with the Human has no Messages. The one Turn that no delivered
+  Message starts; the instruction for it is a Prompt, never a Message posted as
+  the Human. Proposed, not built — see
+  [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md).
+: *Avoid*: welcome — that is the pipe handshake Envelope — and intro, onboarding
+  message, first-run message.
+
 **Work Dir**
 : The per-Persona working directory handed to the agent process as its `cwd`,
   under `{DataDir}/{Acp:WorkDir}`.
