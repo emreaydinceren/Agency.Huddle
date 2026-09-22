@@ -19,7 +19,7 @@ namespace Agency.Huddle.App.Appearance;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Deliberately <see cref="Hooks.HookStore"/>'s sibling, at about a third of the size.</b> Same
+/// <b>Deliberately <see cref="Prompts.PromptStore"/>'s sibling, at about a third of the size.</b> Same
 /// state model: the resolved snapshot is one immutable <see cref="AppearanceSettings"/> behind a
 /// single <see langword="volatile"/> field, one <see cref="Lock"/> around writes, a debounced
 /// <see cref="FileSystemWatcher"/>, and an event raised after both the write and the rebuild —
@@ -27,14 +27,14 @@ namespace Agency.Huddle.App.Appearance;
 /// state. <see cref="Save"/> is the only writer.
 /// </para>
 /// <para>
-/// <b>Deliberately synchronous</b>, for the same reason <see cref="Hooks.HookStore"/> gives: this is
+/// <b>Deliberately synchronous</b>, for the same reason <see cref="Prompts.PromptStore"/> gives: this is
 /// read from Razor renders, which cannot await, and the file involved is one small JSON document.
 /// </para>
 /// <para>
 /// <b>Tolerance.</b> A missing file is the normal first-run case, not an error — every field
 /// resolves to <see cref="AppearanceSettings.Empty"/> and no file is created just to read from. A
 /// malformed file logs a warning naming the path and falls back to <see cref="AppearanceSettings.Empty"/>
-/// wholesale, the same tolerance <see cref="Hooks.HookStore"/> gives a bad <c>hooks.json</c>. A
+/// wholesale, the same tolerance <see cref="Prompts.PromptStore"/> gives a bad <c>prompts.json</c>. A
 /// <c>theme</c> value that names no <see cref="ThemeCatalog"/> entry is a warning, never a failure —
 /// <c>rules.md</c>: "A Model the agent does not advertise is a warning, never a failure." — and the
 /// file is left exactly as it was, so fixing the value restores the choice with no further edit. An
@@ -45,25 +45,25 @@ namespace Agency.Huddle.App.Appearance;
 /// </remarks>
 internal sealed partial class AppearanceStore : IDisposable
 {
-    // Same reasoning and the same value as HookStore.WatcherDebounceMilliseconds: an editor's save
+    // Same reasoning and the same value as PromptStore.WatcherDebounceMilliseconds: an editor's save
     // commonly fires several filesystem events in a burst, so this coalesces a burst into one
     // AppearanceChanged per pause in activity rather than thrashing every observer.
     private const int WatcherDebounceMilliseconds = 500;
 
-    // Same reasoning as HookStore.WatcherInternalBufferSize: FileSystemWatcher drops events with no
+    // Same reasoning as PromptStore.WatcherInternalBufferSize: FileSystemWatcher drops events with no
     // exception and no log when its kernel buffer overflows, raising Error instead - see
     // OnWatcherError. This file is a single small document, so an overflow here is rarer still, but
     // the fix costs nothing.
     private const int WatcherInternalBufferSize = 64 * 1024;
 
-    // Same reasoning as HookStore.WatcherReadRetryAttempts/Delay: a watcher event can fire while a
+    // Same reasoning as PromptStore.WatcherReadRetryAttempts/Delay: a watcher event can fire while a
     // human's editor is still mid-write, so a rebuild retries a few times with a short pause before
     // giving up and keeping the previous snapshot, rather than flickering back to the default for
     // the width of a save.
     private const int WatcherReadRetryAttempts = 3;
     private const int WatcherReadRetryDelayMilliseconds = 20;
 
-    // See HookStore.IndentedJsonOptions's remarks for why this derives from ProtocolJson.Options
+    // See PromptStore.IndentedJsonOptions's remarks for why this derives from ProtocolJson.Options
     // rather than using it directly: that instance has no Encoder set, so it inherits
     // JavaScriptEncoder.Default, which escapes every quote and em-dash as a \uXXXX sequence - exactly
     // wrong for a file a Human hand-edits (traps.md: "ProtocolJson.Options escapes anything unsafe
@@ -100,7 +100,7 @@ internal sealed partial class AppearanceStore : IDisposable
         var directory = Path.GetDirectoryName(this.path);
         if (string.IsNullOrEmpty(directory))
         {
-            // TeamOptions.DataDir is always absolutised before this constructor runs (see HookStore's
+            // TeamOptions.DataDir is always absolutised before this constructor runs (see PromptStore's
             // identical guard), so this only exists so the watcher below always has a real directory.
             throw new InvalidOperationException($"'{this.path}' has no parent directory to watch.");
         }
@@ -128,7 +128,7 @@ internal sealed partial class AppearanceStore : IDisposable
     /// Raised after <see cref="Save"/> has written the file and rebuilt the resolved snapshot, and
     /// after an external edit to <see cref="FilePath"/> is picked up by the filesystem watcher and
     /// its debounce settles. Raised outside the write lock, for the same reason
-    /// <see cref="Hooks.HookStore.HooksChanged"/> is: a future subscriber that takes a lock of its
+    /// <see cref="Prompts.PromptStore.PromptsChanged"/> is: a future subscriber that takes a lock of its
     /// own cannot deadlock against a concurrent write or watcher rebuild.
     /// </summary>
     public event Action? AppearanceChanged;
@@ -268,7 +268,7 @@ internal sealed partial class AppearanceStore : IDisposable
     /// Reads and parses <paramref name="path"/>'s current contents, throwing <see cref="JsonException"/>
     /// on malformed JSON or a non-object top level - the two callers each react to a parse failure
     /// differently, so the parsing itself carries no fallback policy of its own. Mirrors
-    /// <c>HookStore.ParseOverridesFile</c>.
+    /// <c>PromptStore.ParseOverridesFile</c>.
     /// </summary>
     /// <param name="path">The selection file's path. Always exists; callers check <see cref="File.Exists(string)"/> first.</param>
     private static JsonObject ParseDocumentFile(string path)
@@ -284,7 +284,7 @@ internal sealed partial class AppearanceStore : IDisposable
     /// in-place write caught mid-save does not flicker back to the default for the width of a save;
     /// if every attempt still fails to parse, returns <see langword="null"/> so the caller
     /// (<see cref="OnDebounceElapsed"/>) keeps the previous resolved snapshot untouched. Mirrors
-    /// <c>HookStore.ReadOverridesForWatcherRebuild</c>'s reasoning exactly.
+    /// <c>PromptStore.ReadOverridesForWatcherRebuild</c>'s reasoning exactly.
     /// </summary>
     /// <returns>
     /// The freshly parsed document; an empty object if <see cref="path"/> no longer exists (a
@@ -335,7 +335,7 @@ internal sealed partial class AppearanceStore : IDisposable
         }
     }
 
-    // See HookStore.OnWatcherError's remarks: there is no way to know which change was dropped, so
+    // See PromptStore.OnWatcherError's remarks: there is no way to know which change was dropped, so
     // the only correct response is the same one a normal change takes.
     private void OnWatcherError(object sender, ErrorEventArgs e)
     {
@@ -371,7 +371,7 @@ internal sealed partial class AppearanceStore : IDisposable
             }
 
             // Rebuilt under the same lock, and BEFORE the delegate capture below - see
-            // HookStore.OnDebounceElapsed's remarks for why this ordering matters.
+            // PromptStore.OnDebounceElapsed's remarks for why this ordering matters.
             this.current = this.BuildSettings(document);
             changed = this.AppearanceChanged;
         }

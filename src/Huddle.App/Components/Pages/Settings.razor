@@ -1,9 +1,9 @@
 @page "/settings"
 @page "/settings/{Tab}"
 @implements IDisposable
-@using Agency.Huddle.App.Hooks
+@using Agency.Huddle.App.Prompts
 @using Agency.Huddle.App.Components.Settings
-@inject HookStore Hooks
+@inject PromptStore Prompts
 @inject NavigationManager Navigation
 
 @*
@@ -12,7 +12,7 @@
     mapping. The tab rail's routing behaviour is unchanged: ActivePanelIndex is always derived from
     CurrentTab (itself parsed from the {Tab} route parameter), and MudTabs' ActivePanelIndexChanged
     is wired to SelectTab, which still navigates rather than flipping local state - MudTabs never
-    owns which tab is showing, the route does. This keeps /settings/hooks and /settings/appearance
+    owns which tab is showing, the route does. This keeps /settings/prompts and /settings/appearance
     bookmarkable and keeps the fallback in CurrentTab (Routes.razor has no NotFound branch) working
     exactly as before.
 *@
@@ -33,22 +33,22 @@
     }
 
     <MudTabs ActivePanelIndex="this.ActivePanelIndex" ActivePanelIndexChanged="this.OnActivePanelIndexChanged">
-        <MudTabPanel Text="Hooks">
+        <MudTabPanel Text="Prompts">
             <p class="teammates-intro">
-                A hook is one piece of wording this application sends to a model — part of a system prompt,
+                A prompt is one piece of wording this application sends to a model — part of a system prompt,
                 a turn, <code>get_help</code>'s output, or a tool's own description. Editing one changes what every
-                teammate is told, not how the application itself behaves, and a hook you have changed can
+                teammate is told, not how the application itself behaves, and a prompt you have changed can
                 always be restored to the wording it shipped with.
             </p>
 
-            <p class="settings-hooks-file-path">
-                Overrides are stored at <code>@this.Hooks.FilePath</code>, which holds only the hooks you have
+            <p class="settings-prompts-file-path">
+                Overrides are stored at <code>@this.Prompts.FilePath</code>, which holds only the prompts you have
                 changed — hand-edit it for fast prototyping if you like. The file does not exist until the
                 first time you save here, so it being absent is expected, not a bug.
             </p>
 
             <form @onsubmit="this.Save">
-                <HooksPanel Groups="this.groups"
+                <PromptsPanel Groups="this.groups"
                             ValueChanged="this.OnFieldValueChanged"
                             ResetRequested="this.OnResetRequested" />
                 <MudStack Row="true" Spacing="2">
@@ -66,12 +66,12 @@
 </div>
 
 @code {
-    // The parent owns all state, the same split Teammates.razor uses with TeammateCard: HooksPanel
-    // itself holds nothing. pendingEdits is every uncommitted keystroke, keyed by hook key; groups is
+    // The parent owns all state, the same split Teammates.razor uses with TeammateCard: PromptsPanel
+    // itself holds nothing. pendingEdits is every uncommitted keystroke, keyed by prompt key; groups is
     // rebuilt from it (and from the store) whenever either changes, so a render never has to
     // reconcile two sources of truth for the same field.
     private readonly Dictionary<string, string> pendingEdits = new(StringComparer.Ordinal);
-    private IReadOnlyList<HookFieldGroup> groups = [];
+    private IReadOnlyList<PromptFieldGroup> groups = [];
     private string? error;
 
     // Guards ResetAllControl's destructive action, the same inline-confirm field Teammates.razor
@@ -79,9 +79,9 @@
     private bool confirmingResetAll;
 
     /// <summary>
-    /// The route segment naming the active tab, e.g. <c>"hooks"</c>. Optional: <c>/settings</c> with
+    /// The route segment naming the active tab, e.g. <c>"prompts"</c>. Optional: <c>/settings</c> with
     /// no segment lands here as <see langword="null"/>, which parses the same as any other unknown
-    /// value, so both fall back to <see cref="SettingsTab.Hooks"/>.
+    /// value, so both fall back to <see cref="SettingsTab.Prompts"/>.
     /// </summary>
     [Parameter]
     public string? Tab { get; set; }
@@ -91,7 +91,7 @@
     // same reasoning a case-insensitive parse with a safe fallback would need for any future second
     // tab, not just this one.
     private SettingsTab CurrentTab =>
-        Enum.TryParse<SettingsTab>(this.Tab, ignoreCase: true, out var parsed) ? parsed : SettingsTab.Hooks;
+        Enum.TryParse<SettingsTab>(this.Tab, ignoreCase: true, out var parsed) ? parsed : SettingsTab.Prompts;
 
     // MudTabs is driven, never authoritative: its ActivePanelIndex is computed from CurrentTab (the
     // route) on every render, and a change is reported back to SelectTab rather than accepted as
@@ -99,7 +99,7 @@
     private int ActivePanelIndex => this.CurrentTab == SettingsTab.Appearance ? 1 : 0;
 
     // Drives the Save button: nothing to commit means nothing to submit. Recomputed from groups
-    // rather than tracked separately, so it can never drift from what HooksPanel is actually showing.
+    // rather than tracked separately, so it can never drift from what PromptsPanel is actually showing.
     private bool HasUnsavedChanges => this.groups.SelectMany(group => group.Fields).Any(row => row.HasUnsavedChange);
 
     // Drives ResetAllControl's enabled state: nothing modified means nothing for "reset all" to do.
@@ -107,17 +107,17 @@
 
     protected override void OnInitialized()
     {
-        this.Hooks.HooksChanged += this.OnHooksChanged;
+        this.Prompts.PromptsChanged += this.OnPromptsChanged;
         this.RebuildGroups();
     }
 
     public void Dispose()
     {
-        this.Hooks.HooksChanged -= this.OnHooksChanged;
+        this.Prompts.PromptsChanged -= this.OnPromptsChanged;
     }
 
     // Navigates to the tab's own route rather than just flipping local state, so the URL always
-    // names the active tab - the same route a bookmark or a direct link to /settings/hooks resolves
+    // names the active tab - the same route a bookmark or a direct link to /settings/prompts resolves
     // to via CurrentTab above.
     private void SelectTab(SettingsTab tab)
     {
@@ -126,10 +126,10 @@
 
     private void OnActivePanelIndexChanged(int index)
     {
-        this.SelectTab(index == 1 ? SettingsTab.Appearance : SettingsTab.Hooks);
+        this.SelectTab(index == 1 ? SettingsTab.Appearance : SettingsTab.Prompts);
     }
 
-    private void OnFieldValueChanged(HookEdit edit)
+    private void OnFieldValueChanged(PromptEdit edit)
     {
         this.pendingEdits[edit.Key] = edit.Text;
         this.RebuildGroups();
@@ -138,11 +138,11 @@
     // Reset stages the default rather than writing immediately: it puts DefaultValue into
     // pendingEdits for this key, exactly like any other edit, and only Save commits it. This keeps
     // one commit point for the whole form and lets the user change their mind (or undo a mis-click)
-    // before anything actually reaches disk - an immediate HookStore.Reset call here would bypass
+    // before anything actually reaches disk - an immediate PromptStore.Reset call here would bypass
     // that and surprise-write the file the moment a button is clicked.
     private void OnResetRequested(string key)
     {
-        this.pendingEdits[key] = HookCatalog.Get(key).Default;
+        this.pendingEdits[key] = PromptCatalog.Get(key).Default;
         this.RebuildGroups();
     }
 
@@ -161,12 +161,12 @@
     // diff stays visible (and a mis-click recoverable) until then.
     private void ConfirmResetAll()
     {
-        HookFieldFactory.StageAllDefaults(this.pendingEdits);
+        PromptFieldFactory.StageAllDefaults(this.pendingEdits);
         this.confirmingResetAll = false;
         this.RebuildGroups();
     }
 
-    // Validation issues are shown but never gate this call: HookValidator's whole contract is that a
+    // Validation issues are shown but never gate this call: PromptValidator's whole contract is that a
     // finding is advisory, never a refusal, and a save that blocks on it is a save users learn to
     // route around while still typing prompt experiments no validator can fully judge in advance.
     private void Save()
@@ -178,7 +178,7 @@
 
         try
         {
-            this.Hooks.SaveMany(edits);
+            this.Prompts.SaveMany(edits);
         }
         catch (IOException ex)
         {
@@ -194,7 +194,7 @@
         this.error = null;
         this.pendingEdits.Clear();
 
-        // HooksChanged fires from inside SaveMany above and will itself rebuild groups against the
+        // PromptsChanged fires from inside SaveMany above and will itself rebuild groups against the
         // now-current store, but rebuilding here too means the just-cleared pendingEdits are
         // reflected immediately rather than waiting on the dispatched handler below.
         this.RebuildGroups();
@@ -202,10 +202,10 @@
 
     private void RebuildGroups()
     {
-        this.groups = HookFieldFactory.Build(this.Hooks, this.pendingEdits);
+        this.groups = PromptFieldFactory.Build(this.Prompts, this.pendingEdits);
     }
 
-    private void OnHooksChanged()
+    private void OnPromptsChanged()
     {
         _ = this.DispatchAsync(() =>
         {

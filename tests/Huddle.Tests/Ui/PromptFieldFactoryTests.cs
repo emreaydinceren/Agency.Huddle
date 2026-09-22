@@ -1,26 +1,26 @@
 using Agency.Huddle.App.Components.Settings;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Acp.Fakes;
 
 namespace Agency.Huddle.Tests.Ui;
 
-/// <summary>Tests for <see cref="HookFieldFactory.Build"/>, the pure grouping logic behind the Settings page's Hooks tab.</summary>
-public sealed class HookFieldFactoryTests
+/// <summary>Tests for <see cref="PromptFieldFactory.Build"/>, the pure grouping logic behind the Settings page's Prompts tab.</summary>
+public sealed class PromptFieldFactoryTests
 {
     /// <summary>An empty pending-edits dictionary, for tests that only care about the stored/default relationship.</summary>
     private static readonly Dictionary<string, string> NoPendingEdits = new(StringComparer.Ordinal);
 
-    /// <summary>Every hook in the catalog shows up somewhere in the built groups.</summary>
+    /// <summary>Every prompt in the catalog shows up somewhere in the built groups.</summary>
     [Fact]
-    public void Build_UntouchedSource_ListsEveryCatalogHook()
+    public void Build_UntouchedSource_ListsEveryCatalogPrompt()
     {
-        var hooks = new FakeHookSource();
+        var prompts = new FakePromptSource();
 
-        var groups = HookFieldFactory.Build(hooks, NoPendingEdits);
+        var groups = PromptFieldFactory.Build(prompts, NoPendingEdits);
 
         var keys = groups.SelectMany(group => group.Fields).Select(field => field.Key).ToList();
-        Assert.Equal(HookCatalog.All.Count, keys.Count);
-        foreach (var definition in HookCatalog.All)
+        Assert.Equal(PromptCatalog.All.Count, keys.Count);
+        foreach (var definition in PromptCatalog.All)
         {
             Assert.Contains(definition.Key, keys);
         }
@@ -30,9 +30,9 @@ public sealed class HookFieldFactoryTests
     [Fact]
     public void Build_GroupsInOrder_SystemPromptTurnGetHelpTool()
     {
-        var hooks = new FakeHookSource();
+        var prompts = new FakePromptSource();
 
-        var groups = HookFieldFactory.Build(hooks, NoPendingEdits);
+        var groups = PromptFieldFactory.Build(prompts, NoPendingEdits);
 
         Assert.Equal(
             ["System prompt", "Turn", "Get help", "Tool descriptions"],
@@ -41,13 +41,13 @@ public sealed class HookFieldFactoryTests
 
     /// <summary>Within a group, fields keep the catalog's own order rather than being re-sorted.</summary>
     [Fact]
-    public void Build_WithinAGroup_KeepsHookCatalogOrder()
+    public void Build_WithinAGroup_KeepsPromptCatalogOrder()
     {
-        var hooks = new FakeHookSource();
+        var prompts = new FakePromptSource();
 
-        var groups = HookFieldFactory.Build(hooks, NoPendingEdits);
+        var groups = PromptFieldFactory.Build(prompts, NoPendingEdits);
 
-        var expectedSystemPromptKeys = HookCatalog.All
+        var expectedSystemPromptKeys = PromptCatalog.All
             .Where(definition => definition.Key.StartsWith("systemPrompt.", StringComparison.Ordinal))
             .Select(definition => definition.Key)
             .ToList();
@@ -56,26 +56,26 @@ public sealed class HookFieldFactoryTests
         Assert.Equal(expectedSystemPromptKeys, systemPromptGroup.Fields.Select(field => field.Key).ToList());
     }
 
-    /// <summary>A hook with no configured override and no pending edit is neither modified nor unsaved.</summary>
+    /// <summary>A prompt with no configured override and no pending edit is neither modified nor unsaved.</summary>
     [Fact]
     public void Build_UntouchedSource_IsModifiedAndHasUnsavedChangeAreFalse()
     {
-        var hooks = new FakeHookSource();
+        var prompts = new FakePromptSource();
 
-        var groups = HookFieldFactory.Build(hooks, NoPendingEdits);
+        var groups = PromptFieldFactory.Build(prompts, NoPendingEdits);
 
         Assert.All(groups.SelectMany(group => group.Fields), field => Assert.False(field.IsModified));
         Assert.All(groups.SelectMany(group => group.Fields), field => Assert.False(field.HasUnsavedChange));
     }
 
-    /// <summary>A hook with a configured override that differs from the default is flagged modified, and - with no pending edit on top of it - not unsaved.</summary>
+    /// <summary>A prompt with a configured override that differs from the default is flagged modified, and - with no pending edit on top of it - not unsaved.</summary>
     [Fact]
     public void Build_KeyWithOverride_IsModifiedIsTrueAndHasUnsavedChangeIsFalse()
     {
-        var hooks = new FakeHookSource();
-        hooks.SetOverride("turn.roomLabel", "custom room label {{roomId}}");
+        var prompts = new FakePromptSource();
+        prompts.SetOverride("turn.roomLabel", "custom room label {{roomId}}");
 
-        var groups = HookFieldFactory.Build(hooks, NoPendingEdits);
+        var groups = PromptFieldFactory.Build(prompts, NoPendingEdits);
 
         var field = groups.SelectMany(group => group.Fields).Single(f => f.Key == "turn.roomLabel");
         Assert.True(field.IsModified);
@@ -85,21 +85,21 @@ public sealed class HookFieldFactoryTests
 
     /// <summary>
     /// The three-state distinction this factory exists to get right: a pending edit wins over the
-    /// stored value for <see cref="HookFieldState.Value"/>, and the two flags it drives are
+    /// stored value for <see cref="PromptFieldState.Value"/>, and the two flags it drives are
     /// independent. Here the pending text differs from both the default and the stored override, so
     /// both flags are true.
     /// </summary>
     [Fact]
     public void Build_PendingEditDiffersFromStoredAndDefault_BothFlagsAreTrue()
     {
-        var hooks = new FakeHookSource();
-        hooks.SetOverride("getHelp.intro", "a previously saved override");
+        var prompts = new FakePromptSource();
+        prompts.SetOverride("getHelp.intro", "a previously saved override");
         var pendingEdits = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["getHelp.intro"] = "text typed just now, not yet saved",
         };
 
-        var groups = HookFieldFactory.Build(hooks, pendingEdits);
+        var groups = PromptFieldFactory.Build(prompts, pendingEdits);
 
         var field = groups.SelectMany(group => group.Fields).Single(f => f.Key == "getHelp.intro");
         Assert.Equal("text typed just now, not yet saved", field.Value);
@@ -108,21 +108,21 @@ public sealed class HookFieldFactoryTests
     }
 
     /// <summary>
-    /// <see cref="HookFieldState.IsModified"/> and <see cref="HookFieldState.HasUnsavedChange"/> are
+    /// <see cref="PromptFieldState.IsModified"/> and <see cref="PromptFieldState.HasUnsavedChange"/> are
     /// independent: a pending edit equal to the stored override (itself already equal to the
     /// default) is neither modified nor unsaved, even though a pending edit exists in the dictionary.
     /// </summary>
     [Fact]
     public void Build_PendingEditEqualToStoredDefault_NeitherFlagIsTrue()
     {
-        var hooks = new FakeHookSource();
-        var definition = HookCatalog.Get("getHelp.intro");
+        var prompts = new FakePromptSource();
+        var definition = PromptCatalog.Get("getHelp.intro");
         var pendingEdits = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["getHelp.intro"] = definition.Default,
         };
 
-        var groups = HookFieldFactory.Build(hooks, pendingEdits);
+        var groups = PromptFieldFactory.Build(prompts, pendingEdits);
 
         var field = groups.SelectMany(group => group.Fields).Single(f => f.Key == "getHelp.intro");
         Assert.False(field.IsModified);
@@ -131,23 +131,23 @@ public sealed class HookFieldFactoryTests
 
     /// <summary>
     /// The Reset case: staging the default over an already-overridden stored value makes
-    /// <see cref="HookFieldState.HasUnsavedChange"/> true (there is something to save) while
-    /// <see cref="HookFieldState.IsModified"/> is false (the pending value matches the shipped
-    /// default) - the exact combination <see cref="HookFieldState"/>'s remarks call out as the one
+    /// <see cref="PromptFieldState.HasUnsavedChange"/> true (there is something to save) while
+    /// <see cref="PromptFieldState.IsModified"/> is false (the pending value matches the shipped
+    /// default) - the exact combination <see cref="PromptFieldState"/>'s remarks call out as the one
     /// most likely to be got backwards.
     /// </summary>
     [Fact]
     public void Build_PendingEditEqualToDefaultButStoredIsAnOverride_IsModifiedFalseHasUnsavedChangeTrue()
     {
-        var hooks = new FakeHookSource();
-        var definition = HookCatalog.Get("getHelp.intro");
-        hooks.SetOverride(definition.Key, "a previously saved override");
+        var prompts = new FakePromptSource();
+        var definition = PromptCatalog.Get("getHelp.intro");
+        prompts.SetOverride(definition.Key, "a previously saved override");
         var pendingEdits = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             [definition.Key] = definition.Default,
         };
 
-        var groups = HookFieldFactory.Build(hooks, pendingEdits);
+        var groups = PromptFieldFactory.Build(prompts, pendingEdits);
 
         var field = groups.SelectMany(group => group.Fields).Single(f => f.Key == definition.Key);
         Assert.False(field.IsModified);
@@ -155,7 +155,7 @@ public sealed class HookFieldFactoryTests
     }
 
     /// <summary>
-    /// A multi-line hook's default carries whatever line endings <c>HookCatalog.cs</c> had at compile
+    /// A multi-line prompt's default carries whatever line endings <c>PromptCatalog.cs</c> had at compile
     /// time (raw string literals preserve them, they do not normalise — see
     /// <c>docs/agencyteam/traps.md</c>), while a browser <c>&lt;textarea&gt;</c> always hands back
     /// <c>\n</c>. A pending edit that is the default with every line ending collapsed to <c>\n</c>
@@ -164,14 +164,14 @@ public sealed class HookFieldFactoryTests
     [Fact]
     public void Build_PendingEditIsLfNormalisedDefault_IsModifiedFalse()
     {
-        var hooks = new FakeHookSource();
-        var definition = HookCatalog.Get("getHelp.intro");
+        var prompts = new FakePromptSource();
+        var definition = PromptCatalog.Get("getHelp.intro");
         var pendingEdits = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             [definition.Key] = definition.Default.ReplaceLineEndings("\n"),
         };
 
-        var groups = HookFieldFactory.Build(hooks, pendingEdits);
+        var groups = PromptFieldFactory.Build(prompts, pendingEdits);
 
         var field = groups.SelectMany(group => group.Fields).Single(f => f.Key == definition.Key);
         Assert.False(field.IsModified);
@@ -185,14 +185,14 @@ public sealed class HookFieldFactoryTests
     [Fact]
     public void Build_PendingEditIsCrlfNormalisedDefault_IsModifiedFalse()
     {
-        var hooks = new FakeHookSource();
-        var definition = HookCatalog.Get("getHelp.intro");
+        var prompts = new FakePromptSource();
+        var definition = PromptCatalog.Get("getHelp.intro");
         var pendingEdits = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             [definition.Key] = definition.Default.ReplaceLineEndings("\r\n"),
         };
 
-        var groups = HookFieldFactory.Build(hooks, pendingEdits);
+        var groups = PromptFieldFactory.Build(prompts, pendingEdits);
 
         var field = groups.SelectMany(group => group.Fields).Single(f => f.Key == definition.Key);
         Assert.False(field.IsModified);
@@ -202,60 +202,60 @@ public sealed class HookFieldFactoryTests
     [Fact]
     public void Build_PendingEditMissingRequiredPlaceholder_ProducesAnIssue()
     {
-        var hooks = new FakeHookSource();
+        var prompts = new FakePromptSource();
         var pendingEdits = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["turn.roomLabel"] = "[Room: {{roomName}}]",
         };
 
-        var groups = HookFieldFactory.Build(hooks, pendingEdits);
+        var groups = PromptFieldFactory.Build(prompts, pendingEdits);
 
         var field = groups.SelectMany(group => group.Fields).Single(f => f.Key == "turn.roomLabel");
-        Assert.Contains(field.Issues, issue => issue.Severity == HookIssueSeverity.Error);
+        Assert.Contains(field.Issues, issue => issue.Severity == PromptIssueSeverity.Error);
     }
 
     /// <summary>A field with no problems has no issues.</summary>
     [Fact]
     public void Build_UntouchedSource_HasNoIssues()
     {
-        var hooks = new FakeHookSource();
+        var prompts = new FakePromptSource();
 
-        var groups = HookFieldFactory.Build(hooks, NoPendingEdits);
+        var groups = PromptFieldFactory.Build(prompts, NoPendingEdits);
 
         Assert.All(groups.SelectMany(group => group.Fields), field => Assert.Empty(field.Issues));
     }
 
     /// <summary>
-    /// <see cref="HookFieldFactory.StageAllDefaults"/> - the "Reset all to defaults" logic - stages
+    /// <see cref="PromptFieldFactory.StageAllDefaults"/> - the "Reset all to defaults" logic - stages
     /// every catalog key's default into the pending-edits map, so that once
-    /// <see cref="HookFieldFactory.Build"/> is run against it every field reports
-    /// <see cref="HookFieldState.IsModified"/> false, regardless of what override was configured
+    /// <see cref="PromptFieldFactory.Build"/> is run against it every field reports
+    /// <see cref="PromptFieldState.IsModified"/> false, regardless of what override was configured
     /// beforehand.
     /// </summary>
     [Fact]
     public void StageAllDefaults_ThenBuild_EveryFieldReportsIsModifiedFalse()
     {
-        var hooks = new FakeHookSource();
-        hooks.SetOverride("turn.roomLabel", "custom room label {{roomId}}");
-        hooks.SetOverride("getHelp.intro", "a custom introduction");
+        var prompts = new FakePromptSource();
+        prompts.SetOverride("turn.roomLabel", "custom room label {{roomId}}");
+        prompts.SetOverride("getHelp.intro", "a custom introduction");
         var pendingEdits = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        HookFieldFactory.StageAllDefaults(pendingEdits);
-        var groups = HookFieldFactory.Build(hooks, pendingEdits);
+        PromptFieldFactory.StageAllDefaults(pendingEdits);
+        var groups = PromptFieldFactory.Build(prompts, pendingEdits);
 
         Assert.All(groups.SelectMany(group => group.Fields), field => Assert.False(field.IsModified));
     }
 
-    /// <summary>Staging every default touches only the in-memory pending-edits map - it never calls into a hook source or any storage.</summary>
+    /// <summary>Staging every default touches only the in-memory pending-edits map - it never calls into a prompt source or any storage.</summary>
     [Fact]
     public void StageAllDefaults_StagesExactlyOneEntryPerCatalogKey()
     {
         var pendingEdits = new Dictionary<string, string>(StringComparer.Ordinal);
 
-        HookFieldFactory.StageAllDefaults(pendingEdits);
+        PromptFieldFactory.StageAllDefaults(pendingEdits);
 
-        Assert.Equal(HookCatalog.All.Count, pendingEdits.Count);
-        foreach (var definition in HookCatalog.All)
+        Assert.Equal(PromptCatalog.All.Count, pendingEdits.Count);
+        foreach (var definition in PromptCatalog.All)
         {
             Assert.Equal(definition.Default, pendingEdits[definition.Key]);
         }
@@ -265,7 +265,7 @@ public sealed class HookFieldFactoryTests
     [Fact]
     public void RowsFor_OneLineValue_ReturnsTwo()
     {
-        var rows = HookFieldFactory.RowsFor("{{roomLabel}} {{sender}}: {{text}}");
+        var rows = PromptFieldFactory.RowsFor("{{roomLabel}} {{sender}}: {{text}}");
 
         Assert.Equal(2, rows);
     }
@@ -274,7 +274,7 @@ public sealed class HookFieldFactoryTests
     [Fact]
     public void RowsFor_MultiLineValue_ReturnsLineCountPlusOne()
     {
-        var rows = HookFieldFactory.RowsFor("line one\nline two\nline three");
+        var rows = PromptFieldFactory.RowsFor("line one\nline two\nline three");
 
         Assert.Equal(4, rows);
     }
@@ -285,7 +285,7 @@ public sealed class HookFieldFactoryTests
     {
         var value = string.Join('\n', Enumerable.Repeat("a line", 30));
 
-        var rows = HookFieldFactory.RowsFor(value);
+        var rows = PromptFieldFactory.RowsFor(value);
 
         Assert.Equal(14, rows);
     }
@@ -294,7 +294,7 @@ public sealed class HookFieldFactoryTests
     [Fact]
     public void RowsFor_NullOrEmptyValue_ReturnsTheMinimum()
     {
-        Assert.Equal(2, HookFieldFactory.RowsFor(null));
-        Assert.Equal(2, HookFieldFactory.RowsFor(string.Empty));
+        Assert.Equal(2, PromptFieldFactory.RowsFor(null));
+        Assert.Equal(2, PromptFieldFactory.RowsFor(string.Empty));
     }
 }

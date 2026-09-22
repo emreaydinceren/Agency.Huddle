@@ -715,7 +715,7 @@ If replies stop arriving mid-run, check the Agents are still connected in **Add 
 > [!NOTE]
 > This setting exists only as configuration — there is no control for it on /settings or in any Room, and it is bound at startup, so a change needs a restart. Never leave it at 0 for a paid run: with real Personas it restores unbounded spend.
 
-### REPLYGATEBUDGET-17 — The model-facing wording of this area is readable and editable at /settings/hooks
+### REPLYGATEBUDGET-17 — The model-facing wording of this area is readable and editable at /settings/prompts
 
 **Free** · about 8 min
 
@@ -724,20 +724,20 @@ If replies stop arriving mid-run, check the Agents are still connected in **Add 
 **Before you start**
 
 - The app is running under PROFILE A.
-- No `hooks.json` exists yet: confirm with `Test-Path E:\Repos\Huddle\src\Huddle.App\App_Data\hooks.json` — it should print `False` on a fresh install.
+- No `prompts.json` exists yet: confirm with `Test-Path E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json` — it should print `False` on a fresh install.
 
 **Steps**
 
-1. Run `Test-Path E:\Repos\Huddle\src\Huddle.App\App_Data\hooks.json` and note the result.
+1. Run `Test-Path E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json` and note the result.
 2. Click **Settings** in the sidebar.
-3. Confirm the **Hooks** tab is the one already selected, then find the field labelled **Chat rules**.
+3. Confirm the **Prompts** tab is the one already selected, then find the field labelled **Chat rules**.
 4. Read its default text.
 5. Find the fields labelled **Help: Rooms**, **Help: mentions**, **Help: replying** and **Help: budget** and read the default text of **Help: budget**.
 6. Look for a small badge beside the **Chat rules** label and hover it.
 7. Look for the same badge beside **Help: budget**.
 8. Append the word ` TESTEDIT` to the end of the **Chat rules** text.
 9. Note the badge that appears beside the field once it is edited, then click **Save**.
-10. Run `Get-Content E:\Repos\Huddle\src\Huddle.App\App_Data\hooks.json`.
+10. Run `Get-Content E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json`.
 11. Remove ` TESTEDIT` again and click **Save**.
 
 **Pass if — all of these**
@@ -748,21 +748,21 @@ If replies stop arriving mid-run, check the Agents are still connected in **Add 
 - **Chat rules** carries a badge reading `Next session`, whose tooltip says it applies to teammates started after the change.
 - **Help: budget** carries no `Next session` badge.
 - After the edit and before saving, the field shows an `Unsaved` badge; the **Save** button is enabled only while there is something to save.
-- After saving, `hooks.json` exists and contains ONLY the one changed key — not the full set of defaults.
+- After saving, `prompts.json` exists and contains ONLY the one changed key — not the full set of defaults.
 
 **Fail if — any of these**
 
-- `hooks.json` exists before you have ever saved -> absent no longer means 'nothing overridden', so a future default change would never reach an installed system.
-- `hooks.json` contains every hook after saving one -> the same problem: every default is frozen at whatever shipped the day of the first save.
-- **Chat rules** has no `Next session` badge -> the Human is given no signal that their edit will not reach a running Teammate until it restarts, so an edit that silently never takes effect looks like a broken hook.
+- `prompts.json` exists before you have ever saved -> absent no longer means 'nothing overridden', so a future default change would never reach an installed system.
+- `prompts.json` contains every prompt after saving one -> the same problem: every default is frozen at whatever shipped the day of the first save.
+- **Chat rules** has no `Next session` badge -> the Human is given no signal that their edit will not reach a running Teammate until it restarts, so an edit that silently never takes effect looks like a broken prompt.
 - A `Next session` badge appears on the `Help:` fields -> the badge is decoration rather than a statement about timing, which makes it worthless on the fields that need it.
 
 **Inconclusive if**
 
-If the Hooks tab shows no fields at all, the hook catalog failed to load — check `T-A` for an error and stop. If `hooks.json` already existed at step 1 from a previous test, the 'only on first save' half of this test is inconclusive: delete the file, restart the app and begin again.
+If the Prompts tab shows no fields at all, the prompt catalog failed to load — check `T-A` for an error and stop. If `prompts.json` already existed at step 1 from a previous test, the 'only on first save' half of this test is inconclusive: delete the file, restart the app and begin again.
 
 > [!NOTE]
-> Always undo the edit (step 11). Leaving `TESTEDIT` in the Chat rules hook changes what every real Persona is told in every later paid test.
+> Always undo the edit (step 11). Leaving `TESTEDIT` in the Chat rules prompt changes what every real Persona is told in every later paid test.
 
 ### REPLYGATEBUDGET-18 — The server labels a delivery correctly even when the client chooses to stay silent
 

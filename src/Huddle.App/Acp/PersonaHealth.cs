@@ -28,10 +28,10 @@ public enum PersonaState
 /// not. This text is read by the Human — in a tooltip or a Room banner — not by a model, so it is
 /// interface copy: <c>docs/agencyteam/language.md</c> is binding for it. "Adapter", "Model", "Turn",
 /// "Budget", "Persona" and "Agent" are its defined words; "bot", "backend", "LLM", "sandbox", "rate
-/// limit", "cap" and "quota" are on its avoid list. A Reason is deliberately not a Hook: roadmap item
-/// 13 moved model-facing text into <c>HookCatalog</c>/<c>hooks.json</c>, but this text is read by the
+/// limit", "cap" and "quota" are on its avoid list. A Reason is deliberately not a Prompt: roadmap item
+/// 13 moved model-facing text into <c>PromptCatalog</c>/<c>prompts.json</c>, but this text is read by the
 /// Human, never by a model, so it stays in code and must never be routed through
-/// <c>HookCatalog</c>.
+/// <c>PromptCatalog</c>.
 /// </param>
 /// <param name="Since">
 /// When <paramref name="State"/> — or, with the State unchanged, <paramref name="Reason"/> — last
@@ -115,7 +115,7 @@ internal sealed class PersonaHealth
     /// <param name="reason">
     /// Why, when known; otherwise <see langword="null"/>. This is interface copy read by the Human —
     /// see the identical note on <see cref="PersonaStatus.Reason"/> for the vocabulary it must use and
-    /// why it is not a Hook. This task does not write any reason strings; the caller that does must
+    /// why it is not a Prompt. This task does not write any reason strings; the caller that does must
     /// follow that note.
     /// </param>
     public void Report(string personaName, PersonaState state, string? reason)

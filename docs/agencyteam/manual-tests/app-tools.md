@@ -27,23 +27,23 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 
 ## Tests
 
-### APPTOOLS-01 — Every model-facing hook is readable in the browser and no default contains the literal mcp__team__
+### APPTOOLS-01 — Every model-facing prompt is readable in the browser and no default contains the literal mcp__team__
 
 **Free** · about 8 min
 
-*Proves the 24 hook defaults are all rendered and editable, and that the tool-name prefix is substituted from code at render time rather than typed into any default — the design that stops a human misspelling a tool into nonexistence. Each field's textarea is now a `MudTextField` (Stage 3 of the MudBlazor migration), which renders as a real `<textarea>` inside the unchanged `.hooks-field` wrapper — there is no `hooks-field-value` class on it any more.*
+*Proves the 24 prompt defaults are all rendered and editable, and that the tool-name prefix is substituted from code at render time rather than typed into any default — the design that stops a human misspelling a tool into nonexistence. Each field's textarea is now a `MudTextField` (Stage 3 of the MudBlazor migration), which renders as a real `<textarea>` inside the unchanged `.prompts-field` wrapper — there is no `prompts-field-value` class on it any more.*
 
 **Before you start**
 
 - App started with `$env:Team__Acp__Enabled = "false"` set in the same PowerShell window.
-- A fresh `App_Data`, or at least no `App_Data/hooks.json`. If it already exists, run `P-RESET-SETTINGS` and relaunch.
+- A fresh `App_Data`, or at least no `App_Data/prompts.json`. If it already exists, run `P-RESET-SETTINGS` and relaunch.
 
 **Steps**
 
 1. Open http://localhost:5100 in a browser.
 2. Click **Settings** in the left sidebar.
 3. Confirm the browser URL is `http://localhost:5100/settings` and the page heading reads `Settings`.
-4. Confirm the tab rail shows exactly two buttons, **Hooks** and **Appearance**, and that **Hooks** is the one currently shown (it is the default — you did not have to click it).
+4. Confirm the tab rail shows exactly two buttons, **Prompts** and **Appearance**, and that **Prompts** is the one currently shown (it is the default — you did not have to click it).
 5. Read the second intro paragraph and confirm it names a file path and says the file 'does not exist until the first time you save here, so it being absent is expected, not a bug'.
 6. Scroll the page and confirm there are exactly four group headings, in this order: **System prompt**, **Turn**, **Get help**, **Tool descriptions**.
 7. Confirm the fields under **System prompt** are, in order: **Orientation**, **Identity**, **Chat rules**, **Tools**.
@@ -55,37 +55,37 @@ oracles `O-LOG` / `O-ADAPTERS` / `O-TRANSCRIPT` / `O-DB` / `O-WIRE`, the four re
 13. Read the **Help: tool entry** field. Confirm it contains both `{{toolName}}` and `{{toolDescription}}`.
 14. Read the **Room label** field. Confirm its whole text is exactly `[Room: {{roomName}} (id: {{roomId}})]`.
 15. Count the grey **Next session** badges next to field labels. Confirm there are exactly eleven, and that they sit on: Orientation, Identity, Chat rules, Tools, and all seven `… description` fields under Tool descriptions. Confirm no field under **Turn** or **Get help** carries one.
-16. Open the browser developer tools (F12), go to the Console tab, and paste exactly: `document.querySelectorAll('.hooks-field textarea').length` then press Enter.
+16. Open the browser developer tools (F12), go to the Console tab, and paste exactly: `document.querySelectorAll('.prompts-field textarea').length` then press Enter.
 17. Confirm the console prints `24`.
-18. In the same console paste exactly: `[...document.querySelectorAll('.hooks-field textarea')].filter(t => t.value.includes('mcp__team__')).map(t => t.closest('.hooks-field').querySelector('.hooks-field-label').textContent)` then press Enter.
+18. In the same console paste exactly: `[...document.querySelectorAll('.prompts-field textarea')].filter(t => t.value.includes('mcp__team__')).map(t => t.closest('.prompts-field').querySelector('.prompts-field-label').textContent)` then press Enter.
 19. Confirm the console prints an empty array `[]`.
-20. In File Explorer, open `E:\Repos\Huddle\src\Huddle.App\App_Data\` and confirm there is NO file named `hooks.json`.
+20. In File Explorer, open `E:\Repos\Huddle\src\Huddle.App\App_Data\` and confirm there is NO file named `prompts.json`.
 
 **Pass if — all of these**
 
 - Four group headings appear in the order System prompt, Turn, Get help, Tool descriptions.
-- The console reports exactly 24 textareas under `.hooks-field`.
-- The console reports an empty array for the `mcp__team__` search — no hook default anywhere contains that literal string.
+- The console reports exactly 24 textareas under `.prompts-field`.
+- The console reports an empty array for the `mcp__team__` search — no prompt default anywhere contains that literal string.
 - **Tools** contains `{{toolNames}}`; **Orientation** contains `{{helpTool}}`; **Help: tool entry** contains both `{{toolName}}` and `{{toolDescription}}`; **Room label** is exactly `[Room: {{roomName}} (id: {{roomId}})]`.
 - Exactly eleven **Next session** badges, on the four System prompt fields and the seven Tool descriptions fields.
-- `App_Data/hooks.json` does not exist.
+- `App_Data/prompts.json` does not exist.
 
 **Fail if — any of these**
 
-- The console array is NOT empty — a hook default has been hand-edited to hard-code a tool name such as `mcp__team__list_agents`. This reintroduces exactly the silent failure the design removed: the prefix is derived in code from the single constant `ToolServerName = "team"` in `src/Huddle.App/Acp/DotAcpAgentHostFactory.cs`, and a hard-coded copy can drift from it with no build error and no runtime error — the model simply reports the tool does not exist. Report the field names the console printed.
+- The console array is NOT empty — a prompt default has been hand-edited to hard-code a tool name such as `mcp__team__list_agents`. This reintroduces exactly the silent failure the design removed: the prefix is derived in code from the single constant `ToolServerName = "team"` in `src/Huddle.App/Acp/DotAcpAgentHostFactory.cs`, and a hard-coded copy can drift from it with no build error and no runtime error — the model simply reports the tool does not exist. Report the field names the console printed.
 - **Tools** shows seven literal tool names instead of `{{toolNames}}` -> the substitution token was replaced by its rendered output, so the tool list is now frozen text that will not follow a change to the tool roster.
 - **Room label** has lost `(id: {{roomId}})` -> every `invite_agent` and `post_message` call is silently reduced to rooms the agent created itself; the model can never learn a room id any other way.
-- The console prints a number other than 24 -> a hook has been added to or removed from the catalog without the Settings page following, or a group prefix no longer matches.
+- The console prints a number other than 24 -> a prompt has been added to or removed from the catalog without the Settings page following, or a group prefix no longer matches.
 - A **Next session** badge appears on a Get help or Turn field, or is missing from a Tool descriptions field -> the timing metadata is wrong, and testers will later be told a live edit needs a restart (or worse, that a restart-only edit is live).
 
 **Inconclusive if**
 
-If the Settings page shows a red `MudAlert` error banner (the old `composer-error` paragraph, converted in Stage 3 of the MudBlazor migration), or the tab rail is missing, the app did not start cleanly — read the console window for an unhandled startup exception and fix that before judging this test. If `App_Data/hooks.json` already existed before you started, the defaults you are reading may be overrides; that is INCONCLUSIVE, not a fail: run `P-RESET-SETTINGS`, relaunch and rerun. Do NOT file the absence of `hooks.json` as a bug — its absence is the documented normal state.
+If the Settings page shows a red `MudAlert` error banner (the old `composer-error` paragraph, converted in Stage 3 of the MudBlazor migration), or the tab rail is missing, the app did not start cleanly — read the console window for an unhandled startup exception and fix that before judging this test. If `App_Data/prompts.json` already existed before you started, the defaults you are reading may be overrides; that is INCONCLUSIVE, not a fail: run `P-RESET-SETTINGS`, relaunch and rerun. Do NOT file the absence of `prompts.json` as a bug — its absence is the documented normal state.
 
 > [!NOTE]
 > This is the cheapest test in the area and the one most likely to catch a regression introduced by a well-meaning edit to prompt text. Run it first, every time.
 
-### APPTOOLS-02 — HookValidator reports a missing placeholder and a typo, and never blocks the save
+### APPTOOLS-02 — PromptValidator reports a missing placeholder and a typo, and never blocks the save
 
 **Free** · about 10 min
 
@@ -95,11 +95,11 @@ If the Settings page shows a red `MudAlert` error banner (the old `composer-erro
 
 - APPTOOLS-01 has passed.
 - App running with `Team__Acp__Enabled=false`.
-- `App_Data/hooks.json` does not exist yet.
+- `App_Data/prompts.json` does not exist yet.
 
 **Steps**
 
-1. On http://localhost:5100/settings, Hooks tab, scroll to the **Turn** group and find the field labelled **Room label**.
+1. On http://localhost:5100/settings, Prompts tab, scroll to the **Turn** group and find the field labelled **Room label**.
 2. Click into its textarea, press Ctrl+A to select all, then type exactly: `[Room: {{roomName}}]`
 3. Look immediately below the textarea and its grey helper line. Confirm a red issue line appears naming the missing placeholder `{{roomId}}` and repeating the helper text about it being the only way an agent learns a Room's id.
 4. Look at the field's label row. Confirm a badge reading **Unsaved** has appeared next to `Room label`.
@@ -107,14 +107,14 @@ If the Settings page shows a red `MudAlert` error banner (the old `composer-erro
 6. Click **Save**.
 7. Confirm no red error paragraph appears at the top of the page.
 8. Confirm the **Room label** field's badge row now reads **Modified** and no longer reads **Unsaved**.
-9. In File Explorer open `E:\Repos\Huddle\src\Huddle.App\App_Data\hooks.json` in a text editor. Confirm it exists and contains exactly one key, `turn.roomLabel`, and no other hook key.
+9. In File Explorer open `E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json` in a text editor. Confirm it exists and contains exactly one key, `turn.roomLabel`, and no other prompt key.
 10. Back in the browser, click into the **Room label** textarea, press Ctrl+A, and type exactly: `[Room: {{roomName}} (id: {{roomID}})]` (note the capital D in roomID).
 11. Confirm TWO issue lines now appear under the field: one red line about the missing required `{{roomId}}`, and one amber line naming the token `{{roomID}}` and saying it is 'most likely a typo'.
 12. Click the **Reset** button in that field's action row.
 13. Confirm the textarea's text returns to exactly `[Room: {{roomName}} (id: {{roomId}})]`, all issue lines disappear, and the badge row shows **Unsaved** (Reset stages the default; it does not write).
 14. Click **Save**.
 15. Confirm the **Modified** and **Unsaved** badges are both gone from **Room label**.
-16. Reopen `App_Data/hooks.json` and confirm it is now an empty JSON object `{}` — saving a value equal to the catalog default removes the key rather than storing a redundant copy.
+16. Reopen `App_Data/prompts.json` and confirm it is now an empty JSON object `{}` — saving a value equal to the catalog default removes the key rather than storing a redundant copy.
 
 **Pass if — all of these**
 
@@ -122,19 +122,19 @@ If the Settings page shows a red `MudAlert` error banner (the old `composer-erro
 - The **Save** button stays enabled while the error is showing, and the save succeeds.
 - The typo `{{roomID}}` produces a second, amber (warning, not error) issue line that names the token.
 - **Reset** restores the exact default text and stages it as **Unsaved** rather than writing immediately.
-- `hooks.json` appears on the first save holding only `turn.roomLabel`, and returns to `{}` after Reset + Save.
+- `prompts.json` appears on the first save holding only `turn.roomLabel`, and returns to `{}` after Reset + Save.
 
 **Fail if — any of these**
 
-- The **Save** button is disabled, or the save is refused, while an error issue is showing -> the validator has been made a gate. `HookValidator` is explicitly documented as reporting and never refusing; a blocking validator is the bug, not the missing placeholder.
+- The **Save** button is disabled, or the save is refused, while an error issue is showing -> the validator has been made a gate. `PromptValidator` is explicitly documented as reporting and never refusing; a blocking validator is the bug, not the missing placeholder.
 - No issue line appears at all when `{{roomId}}` is deleted -> the validator is not wired to this field, and the single silent failure it exists to catch (a Room label with no id) will now ship unnoticed.
 - The typo `{{roomID}}` produces no amber warning -> the unrecognised-token check is broken, and a one-character prompt typo becomes invisible.
-- **Reset** writes to `hooks.json` immediately without a Save -> the single commit point has been bypassed and a mis-click is unrecoverable.
-- After Reset + Save the key `turn.roomLabel` is still present in `hooks.json` with the default value -> the store is accumulating redundant overrides, which makes 'what have I actually changed?' unanswerable from the file.
+- **Reset** writes to `prompts.json` immediately without a Save -> the single commit point has been bypassed and a mis-click is unrecoverable.
+- After Reset + Save the key `turn.roomLabel` is still present in `prompts.json` with the default value -> the store is accumulating redundant overrides, which makes 'what have I actually changed?' unanswerable from the file.
 
 **Inconclusive if**
 
-If `App_Data/hooks.json` cannot be written (a permissions error paragraph appears at the top of the page reading `Could not save: …`), this is an environment problem, not a defect: the app is running from a folder it cannot write to. Move the checkout or run the app with write access, then rerun. If the textarea does not accept typing at all, the Blazor circuit has disconnected — look for the reconnect dialog, reload the page, and rerun.
+If `App_Data/prompts.json` cannot be written (a permissions error paragraph appears at the top of the page reading `Could not save: …`), this is an environment problem, not a defect: the app is running from a folder it cannot write to. Move the checkout or run the app with write access, then rerun. If the textarea does not accept typing at all, the Blazor circuit has disconnected — look for the reconnect dialog, reload the page, and rerun.
 
 > [!NOTE]
 > Restore the default before moving on (the last two steps do this). Leaving `turn.roomLabel` overridden will silently break APPTOOLS-08 and every invite/post test after it.
@@ -270,7 +270,7 @@ If `tools/acp/node_modules` is missing, this test is INCONCLUSIVE, not failed �
 
 **Fail if — any of these**
 
-- Nova returns the room NAME (`Nova`) instead of an id -> the `{{roomId}}` placeholder is not reaching the rendered label. Every `invite_agent` and `post_message` test below will now fail for a reason that has nothing to do with those tools. Check the **Room label** hook on /settings before going further.
+- Nova returns the room NAME (`Nova`) instead of an id -> the `{{roomId}}` placeholder is not reaching the rendered label. Every `invite_agent` and `post_message` test below will now fail for a reason that has nothing to do with those tools. Check the **Room label** prompt on /settings before going further.
 - Nova returns a plausible-looking but different 32-character string -> it invented one. Treat every subsequent tool test as unreliable until this passes.
 - Nova says it cannot tell, or asks you for the id -> the label is absent from the prompt entirely. Stop and fix; do not spend on the invite/post tests.
 - Two message rows appear from Nova with the same content -> see APPTOOLS-15; the model both replied and posted.
@@ -316,7 +316,7 @@ If no streaming row ever appears and nothing arrives, the turn never reached the
 
 - The reply is vague, hedged, or invented — e.g. 'the room probably stops the agent' with no mention of not retrying and not rerouting -> `get_help` was not called. Progressive discovery is not working end to end, and the system prompt alone cannot supply this answer because it carries neither section.
 - The reply describes the budget correctly but says nothing about 'context only', or vice versa -> partial recall; check the Trace log. If there is no `tools/call` line, the model answered from the system prompt and guessed the rest.
-- At Trace level, the `tools/call` payload does NOT match `getHelp.txt` -> a hook override is in force. Check `App_Data/hooks.json` and the **Help: budget** / **Help: messages** fields on /settings.
+- At Trace level, the `tools/call` payload does NOT match `getHelp.txt` -> a prompt override is in force. Check `App_Data/prompts.json` and the **Help: budget** / **Help: messages** fields on /settings.
 - The console shows a `tools/call` for something other than `get_help` (for example a tool from an entirely different product) -> see the INCONCLUSIVE note; this is evidence about the model's tool index, not about registration.
 
 **Inconclusive if**
@@ -724,7 +724,7 @@ If an agent named `Zephyr` does exist in your environment (someone created one),
 If the model legitimately sends two DIFFERENT messages (an answer plus a follow-up question), that is not this failure — judge only on duplicate text. If the room already had a spent budget from an earlier test, the reply may be refused entirely and no row appears at all; that is INCONCLUSIVE here — type any human message first to reset the budget, then rerun.
 
 > [!NOTE]
-> Worth re-running specifically after any edit to the **Replying** hook (getHelp.replying) or the **Tools** hook (systemPrompt.tools) — those two are the only text that carries this instruction.
+> Worth re-running specifically after any edit to the **Replying** prompt (getHelp.replying) or the **Tools** prompt (systemPrompt.tools) — those two are the only text that carries this instruction.
 
 ### APPTOOLS-16 — create_room makes a new Room that appears in the sidebar live, named after its Agents
 
@@ -1017,11 +1017,11 @@ If clicking **Continue** produces no reply at all, read the Room first: as of #4
 > [!NOTE]
 > The F5 must come BEFORE the first click. Clicking Continue and then reloading tests nothing.
 
-### APPTOOLS-22 — Editing a hook changes model-facing text without restarting the session, and Next session hooks wait for a restart
+### APPTOOLS-22 — Editing a prompt changes model-facing text without restarting the session, and Next session prompts wait for a restart
 
 **💰 Spends money** · about 15 min
 
-*Proves the two hook timings behave as badged, and — more important — that editing a hook NEVER restarts a teammate and never costs it its conversation memory.*
+*Proves the two prompt timings behave as badged, and — more important — that editing a prompt NEVER restarts a teammate and never costs it its conversation memory.*
 
 **Before you start**
 
@@ -1032,44 +1032,44 @@ If clicking **Continue** produces no reply at all, read the Room first: as of #4
 **Steps**
 
 1. In the room named `Nova`, type exactly `Remember this word: pumpkin.` and press Enter. Wait for the reply.
-2. Go to http://localhost:5100/settings, Hooks tab.
+2. Go to http://localhost:5100/settings, Prompts tab.
 3. Find the **Help: budget** field (a LIVE field — it carries no **Next session** badge). Click into it, press Ctrl+A, and paste its existing text back with one change: add a new final line reading exactly `The word of the day is marmalade.`
 4. Find the **list_agents description** field (a **Next session** field). Click into it, press End, and append exactly ` The word of the day is marmalade.`
 5. Confirm both fields show an **Unsaved** badge, then click **Save**.
 6. Confirm both fields now show **Modified** and neither shows **Unsaved**.
-7. Open `App_Data/hooks.json` and confirm it contains exactly two keys: `getHelp.budget` and `tool.listAgents.description`, and no others.
+7. Open `App_Data/prompts.json` and confirm it contains exactly two keys: `getHelp.budget` and `tool.listAgents.description`, and no others.
 8. Read the app's console window. Confirm NO restart of the `Nova` runner is logged, and that the `Nova` tile on /teammates still reads **Online**.
 9. Return to the `Nova` room and type exactly `What word did I ask you to remember?` then press Enter.
-10. Confirm Nova answers `pumpkin` — its conversation memory survived the hook save.
+10. Confirm Nova answers `pumpkin` — its conversation memory survived the prompt save.
 11. Now type exactly: `Call mcp__team__get_help and tell me the last line of its BUDGET section, word for word.` and press Enter.
-12. Confirm Nova reports `The word of the day is marmalade.` — the LIVE hook took effect on the very next tool call, with no restart.
+12. Confirm Nova reports `The word of the day is marmalade.` — the LIVE prompt took effect on the very next tool call, with no restart.
 13. Now type exactly: `Without calling anything, what does the description of mcp__team__list_agents say at the end?` and press Enter.
-14. Confirm Nova does NOT report `marmalade` for the list_agents description — that hook is badged **Next session** and the running session was started before the edit.
+14. Confirm Nova does NOT report `marmalade` for the list_agents description — that prompt is badged **Next session** and the running session was started before the edit.
 15. Go to /teammates, click the `Nova` tile, and click **Restart** on the card. Wait for the tile to return to **Online**.
 16. Back in the room, ask again: `Without calling anything, what does the description of mcp__team__list_agents say at the end?` and confirm it NOW reports `marmalade`.
-17. Return to /settings, click **Reset** on both edited fields, and click **Save**. Confirm `hooks.json` returns to `{}`.
+17. Return to /settings, click **Reset** on both edited fields, and click **Save**. Confirm `prompts.json` returns to `{}`.
 
 **Pass if — all of these**
 
-- Saving the hooks does NOT restart the teammate: no restart in the log, tile stays **Online**, and Nova still remembers `pumpkin`.
-- `hooks.json` holds exactly the two changed keys.
-- The LIVE hook (**Help: budget**) reaches the model on the very next `get_help` call, with no restart.
-- The **Next session** hook (**list_agents description**) does NOT reach the running session, and DOES after a **Restart**.
-- Reset + Save returns `hooks.json` to `{}`.
+- Saving the prompts does NOT restart the teammate: no restart in the log, tile stays **Online**, and Nova still remembers `pumpkin`.
+- `prompts.json` holds exactly the two changed keys.
+- The LIVE prompt (**Help: budget**) reaches the model on the very next `get_help` call, with no restart.
+- The **Next session** prompt (**list_agents description**) does NOT reach the running session, and DOES after a **Restart**.
+- Reset + Save returns `prompts.json` to `{}`.
 
 **Fail if — any of these**
 
-- Nova has forgotten `pumpkin` after the hook save -> editing a Hook restarted the session and destroyed its conversation memory. That is a defect: editing a Hook must never restart a session. Editing a Persona, or changing its Model or Effort, is the only mechanism that legitimately does.
-- The LIVE hook change does NOT appear in `get_help`'s output even after several calls -> live hooks are not live; the store is caching the session's copy.
-- The **Next session** hook DOES change the running session's tool description immediately -> the badge is lying about the timing, which is the opposite error but equally misleading.
-- `hooks.json` contains keys you did not change -> the save is writing every field rather than just the edited ones.
+- Nova has forgotten `pumpkin` after the prompt save -> editing a Prompt restarted the session and destroyed its conversation memory. That is a defect: editing a Prompt must never restart a session. Editing a Persona, or changing its Model or Effort, is the only mechanism that legitimately does.
+- The LIVE prompt change does NOT appear in `get_help`'s output even after several calls -> live prompts are not live; the store is caching the session's copy.
+- The **Next session** prompt DOES change the running session's tool description immediately -> the badge is lying about the timing, which is the opposite error but equally misleading.
+- `prompts.json` contains keys you did not change -> the save is writing every field rather than just the edited ones.
 
 **Inconclusive if**
 
-A **Next session** hook silently having no effect on a running teammate is EXPECTED and is exactly why those fields are badged — do not record it as a failure. If Nova cannot quote the last line of the BUDGET section verbatim, that is a model-following weakness rather than a hook failure: read the Trace log's `App tool server replied to tools/call:` payload instead, which shows the literal text the tool returned, and judge from that. If step 14 produces an answer that mentions `marmalade` because the model inferred it from the earlier turn in the same conversation, the test is INCONCLUSIVE — restart the teammate, ask about `list_agents` FIRST in a fresh session, then edit.
+A **Next session** prompt silently having no effect on a running teammate is EXPECTED and is exactly why those fields are badged — do not record it as a failure. If Nova cannot quote the last line of the BUDGET section verbatim, that is a model-following weakness rather than a prompt failure: read the Trace log's `App tool server replied to tools/call:` payload instead, which shows the literal text the tool returned, and judge from that. If step 14 produces an answer that mentions `marmalade` because the model inferred it from the earlier turn in the same conversation, the test is INCONCLUSIVE — restart the teammate, ask about `list_agents` FIRST in a fresh session, then edit.
 
 > [!NOTE]
-> Always clean up with the final Reset + Save. A leftover hook override silently changes the text every later test reads, and `hooks.json` is not obvious to the next tester.
+> Always clean up with the final Reset + Save. A leftover prompt override silently changes the text every later test reads, and `prompts.json` is not obvious to the next tester.
 
 ### APPTOOLS-23 — follow_room wakes an agent that was not mentioned, and a non-follower in the same Room is the control
 

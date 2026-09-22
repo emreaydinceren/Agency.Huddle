@@ -8,7 +8,7 @@ using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.Acp.Tests.Fakes;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Pipes;
 
 namespace Agency.Huddle.Tests.Conformance;
@@ -156,11 +156,11 @@ public sealed class MockAdapterFixture : IAsyncDisposable
 
         IOptions<TeamOptions> options = host.Services.GetRequiredService<IOptions<TeamOptions>>();
         IAgentHostFactory factory = host.Services.GetRequiredService<IAgentHostFactory>();
-        IHookSource hooks = host.Services.GetRequiredService<IHookSource>();
+        IPromptSource prompts = host.Services.GetRequiredService<IPromptSource>();
         RoomFollows roomFollows = host.Services.GetRequiredService<RoomFollows>();
         ILogger<PersonaRunner> logger = host.Services.GetRequiredService<ILogger<PersonaRunner>>();
 
-        PersonaRunner runner = new(persona, options, factory, hooks, roomFollows, logger);
+        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger);
 
         try
         {

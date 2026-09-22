@@ -24,7 +24,7 @@ public sealed class CreateRoomToolTests
         Assert.NotNull(alpha);
         var aliasSource = new FakeMentionAliasSource();
         var chat = CreateChatService(dir, directory, aliasSource);
-        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakeHookSource());
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakePromptSource());
         var arguments = new JsonObject { ["agents"] = new JsonArray { "alpha" } };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -52,7 +52,7 @@ public sealed class CreateRoomToolTests
         Assert.NotNull(jarvis);
         var aliasSource = new FakeMentionAliasSource { Aliases = [new MentionAlias("jar", "Jarvis")] };
         var chat = CreateChatService(dir, directory, aliasSource);
-        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakeHookSource());
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakePromptSource());
         var arguments = new JsonObject { ["agents"] = new JsonArray { "jar" } };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -77,7 +77,7 @@ public sealed class CreateRoomToolTests
         Assert.NotNull(alpha);
         var aliasSource = new FakeMentionAliasSource();
         var chat = CreateChatService(dir, directory, aliasSource);
-        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakeHookSource());
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakePromptSource());
         var arguments = new JsonObject { ["agents"] = new JsonArray { "nobody" } };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -99,7 +99,7 @@ public sealed class CreateRoomToolTests
         Assert.NotNull(caller);
         var aliasSource = new FakeMentionAliasSource();
         var chat = CreateChatService(dir, directory, aliasSource);
-        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakeHookSource());
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakePromptSource());
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);
 
@@ -128,7 +128,7 @@ public sealed class CreateRoomToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
-        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakeHookSource());
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakePromptSource());
         var arguments = new JsonObject { ["agents"] = new JsonArray { "alpha" }, ["seed"] = "Let's figure out the release notes." };
 
         var result = await tool.InvokeAsync(arguments, ct);
@@ -158,7 +158,7 @@ public sealed class CreateRoomToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
-        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakeHookSource());
+        var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakePromptSource());
         var arguments = new JsonObject { ["agents"] = new JsonArray { "alpha" } };
 
         var result = await tool.InvokeAsync(arguments, ct);

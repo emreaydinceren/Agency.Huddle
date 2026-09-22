@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="hooks.default.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Update="prompts.default.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

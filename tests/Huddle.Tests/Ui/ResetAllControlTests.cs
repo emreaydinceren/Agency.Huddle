@@ -11,7 +11,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// and <see cref="ResetAllControl.AnyModified"/> parameters. bUnit can additionally click, so this
 /// suite now exercises the actual inline-confirm flow one click at a time rather than only its two
 /// snapshot states. Every test disposes the context with <c>await using</c> rather than <c>using</c> -
-/// see the note on <see cref="HooksPanelTests"/> for why a synchronous <c>Dispose</c> is unsafe once a
+/// see the note on <see cref="PromptsPanelTests"/> for why a synchronous <c>Dispose</c> is unsafe once a
 /// MudBlazor component has rendered.
 /// </summary>
 public sealed class ResetAllControlTests

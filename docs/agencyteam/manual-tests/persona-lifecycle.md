@@ -881,54 +881,54 @@ If `sqlite3` is unavailable, record this test as NOT RUN — there is no UI path
 > [!NOTE]
 > The card shows the STORED Model, not the session's live one, so it will still read the bogus id while the session actually runs on the adapter's default. That is a recorded limit.
 
-### PERSONALIFECYCLE-18 — Editing a Hook at /settings does not restart a running Teammate
+### PERSONALIFECYCLE-18 — Editing a Prompt at /settings does not restart a running Teammate
 
 **Free** · about 8 min
 
-*Proves rewording a system-prompt Hook does not throw away every teammate's conversation memory.*
+*Proves rewording a system-prompt Prompt does not throw away every teammate's conversation memory.*
 
 **Before you start**
 
 - The app is running with at least one teammate **Online**.
-- `App_Data\hooks.json` may or may not exist — either is fine.
+- `App_Data\prompts.json` may or may not exist — either is fine.
 
 **Steps**
 
 1. In the browser go to `http://localhost:5100/teammates` and confirm at least one tile reads **Online**.
 2. In `T-B` run `Adapters` and write down every row's ProcessId and CreationDate.
 3. In the sidebar click **Settings**.
-4. Confirm the **Hooks** tab is selected (it is the default).
-5. Find the first hook field. Note whether it carries a `Next session` badge.
+4. Confirm the **Prompts** tab is selected (it is the default).
+5. Find the first prompt field. Note whether it carries a `Next session` badge.
 6. Click into that field's textarea and append the text ` (edited)` at the end.
 7. Confirm a `Unsaved` badge appears next to that field's label.
 8. Click **Save** at the bottom of the form.
 9. Switch back to `/teammates` and watch every tile for 30 seconds.
 10. In `T-B` run `Adapters` and compare every ProcessId and CreationDate with step 2.
-11. In `T-B` run `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\hooks.json'`.
+11. In `T-B` run `Test-Path 'E:\Repos\Huddle\src\Huddle.App\App_Data\prompts.json'`.
 12. Return to **Settings**, click the **Reset** button on the field you edited, and click **Save** to restore the shipped wording.
 13. In `T-B` run `Adapters` once more.
 
 **Pass if — all of these**
 
-- After saving the hook, every tile stays **Online** with no flicker through Offline or Starting.
+- After saving the prompt, every tile stays **Online** with no flicker through Offline or Starting.
 - `Adapters` shows exactly the same ProcessIds and CreationDates as before the save — nothing restarted.
 - A `Modified` badge appears on the edited field after saving.
-- `App_Data\hooks.json` exists after the first save (it is absent before the first save, and that is expected).
+- `App_Data\prompts.json` exists after the first save (it is absent before the first save, and that is expected).
 - Resetting and saving again also restarts nothing.
 
 **Fail if — any of these**
 
-- Any teammate restarts on a hook save -> every reworded sentence in Settings now destroys every teammate's conversation memory.
-- All teammates go Offline and stay there -> the hook save is breaking the running sessions rather than being inert on them.
-- The Save button is disabled even after an edit -> the unsaved-change tracking is broken and hooks cannot be saved at all.
-- `An unhandled error has occurred.` on save -> the hook write path is throwing into the circuit.
+- Any teammate restarts on a prompt save -> every reworded sentence in Settings now destroys every teammate's conversation memory.
+- All teammates go Offline and stay there -> the prompt save is breaking the running sessions rather than being inert on them.
+- The Save button is disabled even after an edit -> the unsaved-change tracking is broken and prompts cannot be saved at all.
+- `An unhandled error has occurred.` on save -> the prompt write path is throwing into the circuit.
 
 **Inconclusive if**
 
-If no teammate is Online (adapters disabled, or all failed), this test cannot distinguish "did not restart" from "was never running" — get one Online first. If a hook field shows an error under it after your edit (a broken placeholder), undo the edit and pick a different field: you want a valid edit, not a rejected one.
+If no teammate is Online (adapters disabled, or all failed), this test cannot distinguish "did not restart" from "was never running" — get one Online first. If a prompt field shows an error under it after your edit (a broken placeholder), undo the edit and pick a different field: you want a valid edit, not a rejected one.
 
 > [!NOTE]
-> A reworded system-prompt Hook being inert on an already-running teammate is the documented trade, not a bug — do not file it. The `Next session` badge is the app telling you exactly that.
+> A reworded system-prompt Prompt being inert on an already-running teammate is the documented trade, not a bug — do not file it. The `Next session` badge is the app telling you exactly that.
 
 ### PERSONALIFECYCLE-19 — Removing a Persona takes it offline but leaves its Agent, Room and Transcript, and raises no alert
 

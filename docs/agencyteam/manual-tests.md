@@ -130,7 +130,7 @@ Copy-Item "$env:TEMP\App_Data.bak" src\Huddle.App\App_Data -Recurse -Force
 > `App_Data` is not tracked by git, so nothing there is recoverable from the repository. The copy
 > above is the only rollback you have.
 
-Two files are **absent on a clean install and that is correct**: `App_Data\hooks.json` appears
+Two files are **absent on a clean install and that is correct**: `App_Data\prompts.json` appears
 only on the first save from Settings, and `App_Data\appearance.json` only on the first Theme
 change. Finding neither is a pass, not a defect.
 
@@ -178,7 +178,7 @@ These are documented decisions in [Known limits](known-limits.md). Observing one
 | Renaming a Teammate leaves its old Rooms and Transcripts behind | Removing or renaming a Persona does not cascade into the chat surface. Only its Model and Effort follow. |
 | Stopping an Agent stops it in every Room | One session spans every Room, so there is nothing narrower to stop. |
 | Tool activity never appears in scrollback | It belongs to the Draft and goes when the Draft does. |
-| An editing Hook does not restart a running Teammate | A `Next session` Hook is deliberately inert until that Teammate restarts. The badge says so. |
+| An editing Prompt does not restart a running Teammate | A `Next session` Prompt is deliberately inert until that Teammate restarts. The badge says so. |
 | The Model picker is stale after upgrading the Adapter | The catalog is probed once per app run and cached. Restart the app. |
 | A `node` row appears in `O-ADAPTERS` right after New/Edit, in a lane the guard says spends nothing | The Model/Effort probe runs even with `Acp:Enabled` false — it never starts a Turn, so it costs nothing. Only a row that persists is a real Adapter. |
 | `mcp__team__` appears in tool names | Deliberate. The `Team:` config root and the `mcp__team__` prefix are the two identifiers that keep the old code name. |

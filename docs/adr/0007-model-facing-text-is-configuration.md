@@ -5,6 +5,11 @@ date: 2026-09-13
 
 # Model-facing text is configuration, not source
 
+> **Partially superseded by [ADR-0020](0020-a-hook-is-a-prompt.md).** The word "Hook",
+> everywhere it appears below and in the code it named, is now "Prompt" — the design this
+> ADR records (template not event, two timings, defaults in code, the tool prefix never
+> hand-typed) is otherwise unchanged.
+
 Every word this application sent to a model was a string literal in C# — 22 of
 them across five files. Changing one, to try a shorter orientation or reword the
 reply rules, meant an edit, a rebuild and a restart. Prompt work is inherently

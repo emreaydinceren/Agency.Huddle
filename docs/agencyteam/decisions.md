@@ -8,6 +8,30 @@ disagrees with current vocabulary and you need the old-to-new mapping.
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
 
+**2026-09-22 — A Hook is renamed to a Prompt.**
+
+ADR-0007 named it deliberately and spent the word: *"if executable extension points are
+ever wanted at these same sites, they will need a different name, because 'hook' will
+already mean a piece of text."* That bet did not pay off — "Hook" reads as an executable
+extension point to anyone who has met a git hook, a React hook, a webhook, or this very
+toolchain's own `PreToolUse` hooks, which is exactly backwards for a named piece of static,
+editable wording. Every `Hook`-prefixed identifier became its `Prompt`-prefixed equivalent,
+one for one — `HookCatalog` → `PromptCatalog`, `HookStore` → `PromptStore`, `IHookSource` →
+`IPromptSource`, and so on — along with `hooks.json` → `prompts.json`,
+`hooks.default.json` → `prompts.default.json`, and the `/settings/hooks` route →
+`/settings/prompts`. A full rename, including the persisted file names: no shipped install
+exists yet to break, and `App_Data/` is gitignored, so no tracked data was at stake. Nothing
+about the design changed — see [ADR-0020](../adr/0020-a-hook-is-a-prompt.md).
+
+**Old-to-new mapping**, for any older Markdown file in this repo still saying the left side:
+`Hook` → `Prompt`, `HookCatalog` → `PromptCatalog`, `HookDefinition` → `PromptDefinition`,
+`HookIssue`/`HookIssueSeverity` → `PromptIssue`/`PromptIssueSeverity`, `HookRenderer` →
+`PromptRenderer`, `HookStore` → `PromptStore`, `HookTiming` → `PromptTiming`,
+`HookValidator` → `PromptValidator`, `IHookSource` → `IPromptSource`, `HooksPanel` →
+`PromptsPanel`, `HookFieldFactory` → `PromptFieldFactory`, `HookFieldState`/`HookFieldGroup`
+→ `PromptFieldState`/`PromptFieldGroup`, `hooks.json` → `prompts.json`,
+`hooks.default.json` → `prompts.default.json`.
+
 **2026-09-22 — A Teammate chooses its own Avatar, and it is not part of the Persona.**
 
 An avatar was the initials of a Name on the Theme's `Primary` colour, in two places, with

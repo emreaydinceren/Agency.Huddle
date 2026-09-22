@@ -28,13 +28,13 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     public string TeamsDirPath => Path.Combine(this.dataDir.Path, "Teams");
 
     /// <summary>
-    /// The path <see cref="Agency.Huddle.App.Hooks.HookStore"/> resolves its override file to under
-    /// this factory's isolated data directory, i.e. <see cref="Agency.Huddle.App.Hooks.HookStore.FilePath"/>'s
+    /// The path <see cref="Agency.Huddle.App.Prompts.PromptStore"/> resolves its override file to under
+    /// this factory's isolated data directory, i.e. <see cref="Agency.Huddle.App.Prompts.PromptStore.FilePath"/>'s
     /// value for the instance this factory's app composes. Tests assert the Settings page shows this
     /// exact path rather than a hardcoded guess, since <c>Team:DataDir</c> is redirected to a fresh
     /// temp directory per factory.
     /// </summary>
-    public string HooksJsonPath => Path.Combine(this.dataDir.Path, "hooks.json");
+    public string PromptsJsonPath => Path.Combine(this.dataDir.Path, "prompts.json");
 
     /// <summary>
     /// The path <see cref="Agency.Huddle.App.Appearance.AppearanceStore"/> resolves its override file

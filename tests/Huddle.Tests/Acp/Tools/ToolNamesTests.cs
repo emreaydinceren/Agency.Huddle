@@ -27,13 +27,13 @@ public sealed class ToolNamesTests
         var follows = new RoomFollows();
         var tools = new IAppTool[]
         {
-            new ListAgentsTool(directory, gateway, personaStore, new FakeHookSource()),
-            new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakeHookSource()),
-            new InviteAgentTool(chat, directory, aliasSource, new FakeHookSource()),
-            new PostMessageTool(chat, "caller-id", new FakeHookSource()),
-            new FollowRoomTool(follows, directory, "caller-id", new FakeHookSource()),
-            new UnfollowRoomTool(follows, directory, "caller-id", new FakeHookSource()),
-            new GetHelpTool([], new FakeHookSource(), "mcp__team__"),
+            new ListAgentsTool(directory, gateway, personaStore, new FakePromptSource()),
+            new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakePromptSource()),
+            new InviteAgentTool(chat, directory, aliasSource, new FakePromptSource()),
+            new PostMessageTool(chat, "caller-id", new FakePromptSource()),
+            new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
+            new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
+            new GetHelpTool([], new FakePromptSource(), "mcp__team__"),
         };
 
         Assert.Equal("list_agents", tools[0].Name);

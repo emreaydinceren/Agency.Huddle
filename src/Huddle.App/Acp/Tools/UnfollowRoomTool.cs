@@ -3,7 +3,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 
 /// <summary>Stops being woken by every Message in a Room the calling Agent is following — the counterpart of <see cref="FollowRoomTool"/>.</summary>
 /// <remarks>
@@ -11,7 +11,7 @@ using Agency.Huddle.App.Hooks;
 /// Member who was removed from a Room they still follow should still be able to clear that follow, and
 /// <see cref="RoomFollows.Unfollow"/> is harmless to call for a Room the caller was never following.
 /// </remarks>
-internal sealed class UnfollowRoomTool(RoomFollows roomFollows, ITeamDirectory teamDirectory, string callerAgentId, IHookSource hooks) : IAppTool
+internal sealed class UnfollowRoomTool(RoomFollows roomFollows, ITeamDirectory teamDirectory, string callerAgentId, IPromptSource prompts) : IAppTool
 {
     private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
 
@@ -19,7 +19,7 @@ internal sealed class UnfollowRoomTool(RoomFollows roomFollows, ITeamDirectory t
     public string Name => "unfollow_room";
 
     /// <inheritdoc />
-    public string Description => hooks.Render("tool.unfollowRoom.description", NoValues);
+    public string Description => prompts.Render("tool.unfollowRoom.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject

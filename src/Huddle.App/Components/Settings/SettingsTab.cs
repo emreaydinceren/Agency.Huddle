@@ -7,8 +7,8 @@ namespace Agency.Huddle.App.Components.Settings;
 /// </summary>
 public enum SettingsTab
 {
-    /// <summary>The read-only view of every model-facing hook, grouped by area.</summary>
-    Hooks,
+    /// <summary>The read-only view of every model-facing prompt, grouped by area.</summary>
+    Prompts,
 
     /// <summary>Choosing a theme, and where to override its tokens.</summary>
     Appearance,

@@ -1,31 +1,31 @@
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 
 namespace Agency.Huddle.App.Components.Settings;
 
 /// <summary>
-/// Builds the <see cref="HookFieldState"/> rows the Settings page's Hooks tab renders, grouped and
+/// Builds the <see cref="PromptFieldState"/> rows the Settings page's Prompts tab renders, grouped and
 /// ordered for display. Pulled out of the page as a pure static function, the same way
 /// <c>Components/Pages/TeammateGrouping.cs</c> is pulled out of <c>Teammates.razor</c>: the read-only
 /// component tests this suite has can only assert on rendered HTML — <c>HtmlRenderer</c> cannot
 /// dispatch a click or change a <c>&lt;select&gt;</c> — so any behaviour worth a unit test (which
-/// hooks appear, what order, whether a value counts as modified) has to live where a plain test can
+/// prompts appear, what order, whether a value counts as modified) has to live where a plain test can
 /// call it directly.
 /// </summary>
-internal static class HookFieldFactory
+internal static class PromptFieldFactory
 {
     private const string SystemPromptPrefix = "systemPrompt.";
     private const string TurnPrefix = "turn.";
     private const string GetHelpPrefix = "getHelp.";
     private const string ToolPrefix = "tool.";
 
-    // RowsFor's clamp: 2 so a one-line hook still reads as a text box rather than a slot, 14 so the
+    // RowsFor's clamp: 2 so a one-line prompt still reads as a text box rather than a slot, 14 so the
     // longest defaults (getHelp.rooms, systemPrompt.tools) cannot make their own field dominate the
     // whole page.
     private const int MinRows = 2;
     private const int MaxRows = 14;
 
     // The display order and labels the Settings page's groups appear in. A key that matches no
-    // prefix here contributes to no group, which cannot happen while HookCatalog only ever adds
+    // prefix here contributes to no group, which cannot happen while PromptCatalog only ever adds
     // keys under one of these four areas.
     private static readonly (string Prefix, string Label)[] GroupOrder =
     [
@@ -36,39 +36,39 @@ internal static class HookFieldFactory
     ];
 
     /// <summary>
-    /// Builds one <see cref="HookFieldState"/> per <see cref="HookCatalog"/> entry, grouped by key
-    /// prefix in <see cref="GroupOrder"/>'s order, keeping <see cref="HookCatalog.All"/>'s order
+    /// Builds one <see cref="PromptFieldState"/> per <see cref="PromptCatalog"/> entry, grouped by key
+    /// prefix in <see cref="GroupOrder"/>'s order, keeping <see cref="PromptCatalog.All"/>'s order
     /// within each group.
     /// </summary>
-    /// <param name="hooks">The current hook source, used to resolve each field's stored text.</param>
+    /// <param name="prompts">The current prompt source, used to resolve each field's stored text.</param>
     /// <param name="pendingEdits">
-    /// The user's uncommitted edits, keyed by <see cref="HookDefinition.Key"/> — text typed but not
-    /// yet saved. A key present here wins over <paramref name="hooks"/>'s stored value for that
-    /// field's <see cref="HookFieldState.Value"/>; a key absent here falls back to the stored value.
+    /// The user's uncommitted edits, keyed by <see cref="PromptDefinition.Key"/> — text typed but not
+    /// yet saved. A key present here wins over <paramref name="prompts"/>'s stored value for that
+    /// field's <see cref="PromptFieldState.Value"/>; a key absent here falls back to the stored value.
     /// </param>
     /// <returns>Every non-empty group, in display order.</returns>
-    internal static IReadOnlyList<HookFieldGroup> Build(IHookSource hooks, IReadOnlyDictionary<string, string> pendingEdits)
+    internal static IReadOnlyList<PromptFieldGroup> Build(IPromptSource prompts, IReadOnlyDictionary<string, string> pendingEdits)
     {
-        ArgumentNullException.ThrowIfNull(hooks);
+        ArgumentNullException.ThrowIfNull(prompts);
         ArgumentNullException.ThrowIfNull(pendingEdits);
 
-        var groups = new List<HookFieldGroup>();
+        var groups = new List<PromptFieldGroup>();
 
         foreach (var (prefix, label) in GroupOrder)
         {
-            var fields = new List<HookFieldState>();
+            var fields = new List<PromptFieldState>();
 
-            foreach (var definition in HookCatalog.All)
+            foreach (var definition in PromptCatalog.All)
             {
                 if (definition.Key.StartsWith(prefix, StringComparison.Ordinal))
                 {
-                    fields.Add(ToFieldState(definition, hooks, pendingEdits));
+                    fields.Add(ToFieldState(definition, prompts, pendingEdits));
                 }
             }
 
             if (fields.Count > 0)
             {
-                groups.Add(new HookFieldGroup(label, fields));
+                groups.Add(new PromptFieldGroup(label, fields));
             }
         }
 
@@ -80,7 +80,7 @@ internal static class HookFieldFactory
     /// behind the Settings page's "Reset all to defaults" button, pulled out here for the same reason
     /// <see cref="Build"/> is: a plain test can call it directly, where a rendered click cannot be
     /// simulated. Mirrors a single-field Reset exactly, just for every key at once: it only ever
-    /// writes into the in-memory pending-edits map, never <c>HookStore</c> itself, so nothing reaches
+    /// writes into the in-memory pending-edits map, never <c>PromptStore</c> itself, so nothing reaches
     /// disk until a caller goes on to save.
     /// </summary>
     /// <param name="pendingEdits">The Settings page's uncommitted-edits map to stage every default into.</param>
@@ -88,7 +88,7 @@ internal static class HookFieldFactory
     {
         ArgumentNullException.ThrowIfNull(pendingEdits);
 
-        foreach (var definition in HookCatalog.All)
+        foreach (var definition in PromptCatalog.All)
         {
             pendingEdits[definition.Key] = definition.Default;
         }
@@ -117,22 +117,22 @@ internal static class HookFieldFactory
     }
 
     /// <summary>
-    /// Resolves one <see cref="HookDefinition"/> into the row its Settings field renders. Both
-    /// modified/unsaved comparisons normalise line endings first: <see cref="HookDefinition.Default"/>
-    /// carries whatever <c>HookCatalog.cs</c>'s own line endings were at compile time (raw string
+    /// Resolves one <see cref="PromptDefinition"/> into the row its Settings field renders. Both
+    /// modified/unsaved comparisons normalise line endings first: <see cref="PromptDefinition.Default"/>
+    /// carries whatever <c>PromptCatalog.cs</c>'s own line endings were at compile time (raw string
     /// literals preserve them, they do not normalise), while a browser <c>&lt;textarea&gt;</c> always
-    /// hands back <c>\n</c>. Comparing the two verbatim leaves a multi-line hook's "Modified" badge
+    /// hands back <c>\n</c>. Comparing the two verbatim leaves a multi-line prompt's "Modified" badge
     /// stuck on even when nothing but the line ending differs.
     /// </summary>
     /// <param name="definition">The catalog entry to resolve.</param>
-    /// <param name="hooks">The current hook source, giving this field's stored value.</param>
+    /// <param name="prompts">The current prompt source, giving this field's stored value.</param>
     /// <param name="pendingEdits">The user's uncommitted edits; see <see cref="Build"/>.</param>
-    private static HookFieldState ToFieldState(HookDefinition definition, IHookSource hooks, IReadOnlyDictionary<string, string> pendingEdits)
+    private static PromptFieldState ToFieldState(PromptDefinition definition, IPromptSource prompts, IReadOnlyDictionary<string, string> pendingEdits)
     {
-        var stored = hooks.Raw(definition.Key);
+        var stored = prompts.Raw(definition.Key);
         var value = pendingEdits.TryGetValue(definition.Key, out var pending) ? pending : stored;
 
-        return new HookFieldState(
+        return new PromptFieldState(
             Key: definition.Key,
             Label: definition.Label,
             HelperText: definition.HelperText,
@@ -144,6 +144,6 @@ internal static class HookFieldFactory
                 value.ReplaceLineEndings("\n"), definition.Default.ReplaceLineEndings("\n"), StringComparison.Ordinal),
             HasUnsavedChange: !string.Equals(
                 value.ReplaceLineEndings("\n"), stored.ReplaceLineEndings("\n"), StringComparison.Ordinal),
-            Issues: HookValidator.Validate(definition, value));
+            Issues: PromptValidator.Validate(definition, value));
     }
 }

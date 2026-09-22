@@ -14,7 +14,7 @@ namespace Agency.Huddle.App.Avatars;
 /// <see cref="Label"/>, then initials derived from whichever name the caller already has - and stops at
 /// the first one present. All three fields <see langword="null"/> is exactly today's rendering:
 /// initials are not a stored kind of avatar, they are what rendering falls back to when nothing has
-/// been chosen. That is the same "absent is normal" shape <c>hooks.json</c> and <c>appearance.json</c>
+/// been chosen. That is the same "absent is normal" shape <c>prompts.json</c> and <c>appearance.json</c>
 /// already use for their own per-installation overrides - an absent file, or an absent field, means the
 /// default applies, not that a value called "default" was written down.
 /// </para>

@@ -3,18 +3,18 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
 /// <summary>Creates a Room containing the calling Agent, the Human, and the named agents.</summary>
-internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirectory, string callerAgentId, IMentionAliasSource aliasSource, IHookSource hooks) : IAppTool
+internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirectory, string callerAgentId, IMentionAliasSource aliasSource, IPromptSource prompts) : IAppTool
 {
     private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
 
     public string Name => "create_room";
 
-    public string Description => hooks.Render("tool.createRoom.description", NoValues);
+    public string Description => prompts.Render("tool.createRoom.description", NoValues);
 
     public JsonObject InputSchema => new JsonObject
     {

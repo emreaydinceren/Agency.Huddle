@@ -37,7 +37,7 @@
     rewrite, no JavaScript interop of this component's own.
 
     Subscribes to AppearanceStore.AppearanceChanged the same way Settings.razor subscribes to
-    HookStore.HooksChanged, and to AvatarStore.AvatarsChanged for the same reason: both stores are
+    PromptStore.PromptsChanged, and to AvatarStore.AvatarsChanged for the same reason: both stores are
     singletons, so a hand-edit to appearance.json or avatars.json (or a save from another browser
     tab) must repaint this tab without a restart, and rules.md's "unsubscribe in Dispose" reasoning
     for RoomEvents applies here for the same reason - a leaked subscription to a singleton never
@@ -82,7 +82,7 @@
     Monokai is Wimer Hazenberg's.
 </p>
 
-<p class="settings-hooks-file-path">
+<p class="settings-prompts-file-path">
     The selection is stored at <code>@this.AppearanceStore.FilePath</code>. The file does not exist
     until you save a choice here, so it being absent is expected, not a bug.
 </p>
@@ -152,7 +152,7 @@
     <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="this.UseThemeColour">Use the theme colour</MudButton>
 </MudPaper>
 
-<p class="settings-hooks-file-path">
+<p class="settings-prompts-file-path">
     Your avatar is stored at <code>@this.Avatars.FilePath</code>, under your Name
     (<code>@this.HumanName</code>) - a different file from the Theme selection above.
 </p>

@@ -178,7 +178,7 @@ in a reported state, never a Rejected file and never a failed start. Matches the
 contract for a stale Model.
 
 **P5 — The tool prefix is code, per Adapter.**
-`rules.md` forbids a hook template containing `mcp__team__`; the prefix is built in code from
+`rules.md` forbids a prompt template containing `mcp__team__`; the prefix is built in code from
 the tool-server name. That rule survives and widens: the prefix is now built in code **from the
 Adapter profile**. A human still cannot misspell a tool into nonexistence.
 
@@ -444,7 +444,7 @@ var processOptions = AgentProcessOptionsFactory.TryCreate(profile, workDir, AppC
 var authToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 IReadOnlyList<IAppTool> chatTools = [ /* six, unchanged */ ];
 var toolNamePrefix = profile.UsesToolNamePrefix ? $"mcp__{ToolServerName}__" : string.Empty;  // ← new
-var getHelpTool = new GetHelpTool(chatTools, hooks, toolNamePrefix);
+var getHelpTool = new GetHelpTool(chatTools, prompts, toolNamePrefix);
 IReadOnlyList<IAppTool> tools = [getHelpTool, .. chatTools];
 var toolServer = new AppToolServer(ToolServerName, tools, this.loggerFactory, 0, authToken);
 // … unchanged through StartSessionAsync and ToolServerOwningAgentHost
@@ -456,7 +456,7 @@ var toolServer = new AppToolServer(ToolServerName, tools, this.loggerFactory, 0,
   `CLAUDE.md` pins the `mcp__team__` tool prefix as a name that must not be renamed to match the
   brand, and it is not being renamed. It is being made conditional.
 - The prefix still flows to exactly two places — `GetHelpTool`'s constructor and
-  `SystemPromptComposer.Compose` — and is still never typed into a hook template.
+  `SystemPromptComposer.Compose` — and is still never typed into a prompt template.
 - `warning` is returned alongside the pair so `PersonaRunner` can raise it. Rather than widen
   `IAgentHostFactory`'s return tuple (which `FakeAgentHostFactory` and every supervisor test
   depend on), the factory **logs** it and the resolver's warning is surfaced by
@@ -1206,7 +1206,7 @@ involved. Enforcement lives on the inference port, outside both products.
            └─ StartSessionAsync
                 cwd          = {DataDir}/work/Ana
                 mcpServers   = [{ team, http://127.0.0.1:p/mcp, Authorization: Bearer … }]
-                _meta        = { append: SystemPromptComposer.Compose(persona, hooks,
+                _meta        = { append: SystemPromptComposer.Compose(persona, prompts,
                                           "get_help", ["get_help", "list_agents", …]) }
                 model        = "google/gemma-4-e2b"
  6  A Message arrives in #product Mentioning @Ana
@@ -1520,7 +1520,7 @@ advertise its catalog at `session/new`. No change.
 
 > **After:** App Tool names must be spelled with **their Adapter's prefix** in the system prompt.
 > The prefix is built in code from the Adapter Profile and the tool-server name, never typed
-> into a hook template. For `claude-agent-acp` it is `mcp__team__`; for `agency-acp` it is empty,
+> into a prompt template. For `claude-agent-acp` it is `mcp__team__`; for `agency-acp` it is empty,
 > because `McpClientPool` surfaces a remote tool under the server's own name unmodified. A
 > golden test pins both.
 

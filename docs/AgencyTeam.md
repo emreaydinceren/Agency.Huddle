@@ -65,7 +65,7 @@ them without opening [Language](agencyteam/language.md):
 > Member · Invitation · Archived · Persona · Rejected file · Model · Effort · Turn ·
 > App Tool · Reply Gate · Budget · Catch-up · Progressive discovery · Work Dir ·
 > Message · Draft · Mention · Envelope · Transcript · Stop · Team Directory ·
-> Hook · Placeholder · Default · Timing · Theme · Token · Appearance
+> Prompt · Placeholder · Default · Timing · Theme · Token · Appearance
 
 Words that are *wrong here* and have a right replacement: bot, user, channel,
 direct room, group room, agent session, sandbox, profile, prompt, database.
@@ -215,18 +215,18 @@ All under the `Team:` section — `TeamOptions.cs` and `Acp/AcpOptions.cs`.
 
 Four runtime files and one runtime directory sit outside that section, because none of
 them is a setting: the Persona library under `{DataDir}/{Acp:TeamsDir}`,
-`{DataDir}/hooks.json`, `{DataDir}/appearance.json`, `{DataDir}/avatars.json`, and the
+`{DataDir}/prompts.json`, `{DataDir}/appearance.json`, `{DataDir}/avatars.json`, and the
 uploaded avatar images under `{DataDir}/avatars/`.
 
 | File | Holds |
 | --- | --- |
-| `{DataDir}/hooks.json` | **Overrides only**, one key per changed Hook. Absent is normal and means nothing is overridden; the app does not create it, and it appears on the first save from `/settings`. Hand-editing it is supported and watched — a save in an editor reaches the next Turn without a restart. |
-| `{DataDir}/appearance.json` | The selected Theme id. **That one key** — the per-Token override map went with the Tokens on 2026-09-14 ([ADR-0010](adr/0010-a-theme-is-a-mudblazor-theme.md)), and the `dark` light/dark preference went on 2026-09-21 when a Theme became a single palette ([ADR-0017](adr/0017-a-theme-is-a-palette-not-a-pair.md)). A file written before that still carries `dark`; it is an unknown key now, so it is ignored and kept, and there is no migration. Absent is normal and means the default Theme; the app does not create it. Hand-editable and watched, exactly like `hooks.json`. Not a setting under `Team:`: it is state this application writes. |
-| `{DataDir}/avatars.json` | One entry per Teammate that has chosen an **Avatar**, keyed by Name — the Human included, since the Human has a Name but no Persona file. **Overrides only**, exactly like `hooks.json`: an absent file is normal, the app does not create it, and a Teammate with no entry renders the initials it always did. Hand-editable and watched. Deliberately not part of the Persona, so changing an avatar never restarts a session ([ADR-0019](adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md)). |
+| `{DataDir}/prompts.json` | **Overrides only**, one key per changed Prompt. Absent is normal and means nothing is overridden; the app does not create it, and it appears on the first save from `/settings`. Hand-editing it is supported and watched — a save in an editor reaches the next Turn without a restart. |
+| `{DataDir}/appearance.json` | The selected Theme id. **That one key** — the per-Token override map went with the Tokens on 2026-09-14 ([ADR-0010](adr/0010-a-theme-is-a-mudblazor-theme.md)), and the `dark` light/dark preference went on 2026-09-21 when a Theme became a single palette ([ADR-0017](adr/0017-a-theme-is-a-palette-not-a-pair.md)). A file written before that still carries `dark`; it is an unknown key now, so it is ignored and kept, and there is no migration. Absent is normal and means the default Theme; the app does not create it. Hand-editable and watched, exactly like `prompts.json`. Not a setting under `Team:`: it is state this application writes. |
+| `{DataDir}/avatars.json` | One entry per Teammate that has chosen an **Avatar**, keyed by Name — the Human included, since the Human has a Name but no Persona file. **Overrides only**, exactly like `prompts.json`: an absent file is normal, the app does not create it, and a Teammate with no entry renders the initials it always did. Hand-editable and watched. Deliberately not part of the Persona, so changing an avatar never restarts a session ([ADR-0019](adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md)). |
 | `{DataDir}/avatars/` | The uploaded avatar images themselves, each named by a generated id rather than by a Teammate's Name. Served at `/teammate-avatars` by a `PhysicalFileProvider` — `MapStaticAssets` is manifest-driven and cannot see a file written at run time. Created at startup, unlike the JSON files, because a `PhysicalFileProvider` throws when its root is missing. |
-| `hooks.default.json` (beside the binary) | Every Hook's shipped wording, **generated** from `HookCatalog` and copied to the output folder. The restore source, and readable as a reference. It is not the authority: delete both files and the app still runs on exactly the text it shipped with. |
+| `prompts.default.json` (beside the binary) | Every Prompt's shipped wording, **generated** from `PromptCatalog` and copied to the output folder. The restore source, and readable as a reference. It is not the authority: delete both files and the app still runs on exactly the text it shipped with. |
 
-A Hook is one piece of text sent to a model. See [Language](agencyteam/language.md)
+A Prompt is one piece of text sent to a model. See [Language](agencyteam/language.md)
 for the word, [ADR-0007](adr/0007-model-facing-text-is-configuration.md) for why
 defaults live in code, and [Rules](agencyteam/rules.md) for the two things an edit
 must never do.

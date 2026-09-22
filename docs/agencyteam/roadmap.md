@@ -36,7 +36,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~10~~ | ~~Persona frontmatter becomes the Member's identity~~ — **delivered 2026-09-12** | `PersonaIndex`, `PersonaStore`, `MentionParser` | shipped; `Persona.cs` was not touched |
 | 11 | Notifying an Agent when a watched file changes | a new watcher beside `PersonaStore`, then `ChatService` | `PersonaStore`'s debounced `FileSystemWatcher`; frontmatter lists parse already |
 | ~~12~~ | ~~Running a Persona on a local Model~~ — **delivered 2026-09-16** | `AdapterProfile`, then one profile-aware `DotAcpAgentHostFactory` | shipped by a route this row did not foresee: no second `IAgentHostFactory` and no second `IModelCatalog`, because both Adapters advertise their catalog at `session/new` — see [ADR-0013](../adr/0013-an-adapter-is-a-property-of-the-persona.md) |
-| ~~13~~ | ~~Model-facing text is configuration~~ — **delivered 2026-09-13** | `Hooks/`, then the five sites that held the literals | shipped; never on this list before it was built, and it collides with item 9 — see [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) |
+| ~~13~~ | ~~Model-facing text is configuration~~ — **delivered 2026-09-13** | `Prompts/`, then the five sites that held the literals | shipped; never on this list before it was built, and it collides with item 9 — see [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) |
 | ~~14~~ | ~~Archiving and deleting a Room~~ — **delivered 2026-09-21** | `SqliteTeamDirectory`, `RoomList.razor` | shipped; never on this list before it was built, and it *reverses* a stance Known limits recorded — archived state went in a sibling table because `CREATE TABLE IF NOT EXISTS` never adds a column, and the one-1:1-Room-per-Agent invariant was knowingly given up — see [ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md) |
 | ~~15~~ | ~~A Teammate chooses its own Avatar~~ — **delivered 2026-09-22** | a new `Avatars/` store, `TeammateAvatar.razor` | shipped; never on this list before it was built, and it *reverses* a manual test that asserted no avatar appears in the transcript. The interesting decision was where it must **not** go: frontmatter would have made picking a colour restart the session — see [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) |
 
@@ -533,7 +533,7 @@ finds any App Tool at all.
 ## 9. Per-Persona tool grants
 
 > **Read [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) before
-> starting this.** Hooks shipped on 2026-09-13 and made the same `get_help`
+> starting this.** Prompts shipped on 2026-09-13 and made the same `get_help`
 > body and the same `DotAcpAgentHostFactory` block configurable, through a
 > *global* JSON file. This item proposes a *per-Persona* channel for the same
 > tool surface. Both are coherent; having both without deciding which wins
@@ -1025,8 +1025,8 @@ the wire cannot tell what is answering.
 > because it changed five files the other items name, and because it leaves one
 > decision open that item 9 has to close.
 
-Twenty-two strings moved out of C# into `HookCatalog` (defaults, in code) with
-per-key overrides in `{DataDir}/hooks.json`, edited at `/settings`. Four golden
+Twenty-two strings moved out of C# into `PromptCatalog` (defaults, in code) with
+per-key overrides in `{DataDir}/prompts.json`, edited at `/settings`. Four golden
 files pin the composed output of all four surfaces, and every one reproduced
 byte-for-byte on the first run of its conversion — the refactor is provably
 inert, not assumed so.
@@ -1034,12 +1034,12 @@ inert, not assumed so.
 [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) carries the
 decisions. Three are worth knowing before touching anything nearby:
 
-**A Hook edit never restarts a session.** A system prompt is fixed at
-`session/new`, so a `NextSession` Hook is silently inert on a running Teammate
+**A Prompt edit never restarts a session.** A system prompt is fixed at
+`session/new`, so a `NextSession` Prompt is silently inert on a running Teammate
 and the settings page badges exactly those fields. Restarting instead would have
 thrown away an Agent's conversation memory on every reworded sentence.
 
-**No Hook's text contains `mcp__team__`.** The prefix is built from the same
+**No Prompt's text contains `mcp__team__`.** The prefix is built from the same
 constant handed to `AppToolServer`, so one line of executable code names the tool
 server. That closes the `rules.md` failure mode by construction rather than by
 anyone remembering — which matters more here than elsewhere, because a
@@ -1116,7 +1116,7 @@ was the recommendation; this was the repo owner's call, and it is recorded in
 > because `PersonaSupervisor.NeedsRestart` is whole-record value equality and
 > `Persona.Text` is the entire file: picking a background colour would have stopped a
 > live ACP session and destroyed what that Agent remembered. That is precisely the
-> trade [Rules](rules.md) already refuses for Hooks, in the same words — so an Avatar
+> trade [Rules](rules.md) already refuses for Prompts, in the same words — so an Avatar
 > is app state in `{DataDir}/avatars.json`, and `PersonaStore.Update` can still be
 > called unconditionally on an avatar-only save, because the record compares equal.
 >

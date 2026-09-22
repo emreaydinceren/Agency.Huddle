@@ -3,7 +3,7 @@ namespace Agency.Huddle.App.Acp.Tools;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
@@ -13,7 +13,7 @@ using Agency.Huddle.Contracts;
 /// on the Room header: all three end in <see cref="ChatService.InviteAsync"/>, so a Room renames
 /// itself after its Agents the same way whoever issued the Invitation.
 /// </remarks>
-internal sealed class InviteAgentTool(ChatService chat, ITeamDirectory teamDirectory, IMentionAliasSource aliasSource, IHookSource hooks) : IAppTool
+internal sealed class InviteAgentTool(ChatService chat, ITeamDirectory teamDirectory, IMentionAliasSource aliasSource, IPromptSource prompts) : IAppTool
 {
     private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
 
@@ -21,7 +21,7 @@ internal sealed class InviteAgentTool(ChatService chat, ITeamDirectory teamDirec
     public string Name => "invite_agent";
 
     /// <inheritdoc />
-    public string Description => hooks.Render("tool.inviteAgent.description", NoValues);
+    public string Description => prompts.Render("tool.inviteAgent.description", NoValues);
 
     /// <inheritdoc />
     public JsonObject InputSchema => new JsonObject

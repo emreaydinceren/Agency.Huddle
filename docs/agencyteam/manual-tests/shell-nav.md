@@ -468,7 +468,7 @@ If a `node` process was already running before the app started (another tool on 
 > [!NOTE]
 > Do NOT click **New teammate** here. That card opens the model picker, which is the one control on this page that probes an adapter, and it belongs to the Teammates area's tests, not this one. No model or effort selection is needed anywhere in this area.
 
-### SHELLNAV-11 — /settings renders the two-button tab rail and defaults to Hooks
+### SHELLNAV-11 — /settings renders the two-button tab rail and defaults to Prompts
 
 **Free** · about 4 min
 
@@ -486,16 +486,16 @@ If a `node` process was already running before the app started (another tool on 
 3. Read the `<h1>`.
 4. Read the labels of the buttons in the tab rail ABOVE the content — `MudTabs` renders horizontally at the top by default; it is no longer a column down the left. Read left to right.
 5. In the DevTools Console, type `[...document.querySelectorAll('.mud-tabs .mud-tab')].map(b => b.textContent.trim() + ' | active=' + b.classList.contains('mud-tab-active'))` and press Enter.
-6. Read the pane below and confirm it describes hooks - it should contain the sentence beginning `A hook is one piece of wording this application sends to a model`.
+6. Read the pane below and confirm it describes prompts - it should contain the sentence beginning `A prompt is one piece of wording this application sends to a model`.
 7. In `T-B` run `O-ADAPTERS` and compare with the baseline.
 
 **Pass if — all of these**
 
 - The address bar reads exactly `http://localhost:5100/settings` with no segment appended on load.
 - The `<h1>` reads exactly `Settings`.
-- The tab rail holds exactly two buttons, reading `HOOKS` then `APPEARANCE` (MudBlazor renders tab labels upper case; step 5's `textContent` still reads `Hooks` / `Appearance`), left to right, above the pane.
-- Step 5 printed `Hooks | active=true` and `Appearance | active=false`.
-- The pane below is the Hooks pane.
+- The tab rail holds exactly two buttons, reading `PROMPTS` then `APPEARANCE` (MudBlazor renders tab labels upper case; step 5's `textContent` still reads `Prompts` / `Appearance`), left to right, above the pane.
+- Step 5 printed `Prompts | active=true` and `Appearance | active=false`.
+- The pane below is the Prompts pane.
 - A reset control is present in the page header beside the heading.
 - The `node` count is unchanged from the baseline.
 
@@ -503,16 +503,16 @@ If a `node` process was already running before the app started (another tool on 
 
 - Both tabs report `active=true`, or neither does -> the active-tab computation broke; a reader cannot tell which pane they are on.
 - The Appearance pane shows on a bare `/settings` -> the fallback picked the wrong tab.
-- The address bar gains `/hooks` on load -> the page is redirecting where it should not, which would put a spurious entry in the browser history on every visit.
+- The address bar gains `/prompts` on load -> the page is redirecting where it should not, which would put a spurious entry in the browser history on every visit.
 - The `node` count rises -> Settings is spawning an adapter, which it must never do.
 - The tab rail renders as a vertical column down the left rather than horizontally above the content -> `MudTabs.Position` was set away from its default; nothing in this area asks for that.
 
 **Inconclusive if**
 
-If the Hooks pane shows an error line above the tab rail, read it and note it, but it does not invalidate the tab-rail observations - report both. If `App_Data/hooks.json` is absent, that is normal and the pane says so on screen.
+If the Prompts pane shows an error line above the tab rail, read it and note it, but it does not invalidate the tab-rail observations - report both. If `App_Data/prompts.json` is absent, that is normal and the pane says so on screen.
 
 > [!NOTE]
-> `hooks.json` does not exist on a fresh install and the app never creates it just to read from it. Absent means 'nothing is overridden'. Do not file 'the settings file is missing' as a defect.
+> `prompts.json` does not exist on a fresh install and the app never creates it just to read from it. Absent means 'nothing is overridden'. Do not file 'the settings file is missing' as a defect.
 
 ### SHELLNAV-12 — Clicking a settings tab changes the URL, and the URL round-trips as a bookmark
 
@@ -531,7 +531,7 @@ If the Hooks pane shows an error line above the tab rail, read it and note it, b
 2. Click the **Appearance** tab button.
 3. Read the address bar.
 4. Confirm the pane below now shows a `Theme` select, a second `Appearance`-labelled select, and a paragraph naming the selection-file path.
-5. Click the **Hooks** tab button.
+5. Click the **Prompts** tab button.
 6. Read the address bar.
 7. Press the browser Back button once and read the address bar.
 8. Press Back again and read the address bar.
@@ -543,25 +543,25 @@ If the Hooks pane shows an error line above the tab rail, read it and note it, b
 **Pass if — all of these**
 
 - After step 2 the address bar reads `http://localhost:5100/settings/appearance`.
-- After step 5 the address bar reads `http://localhost:5100/settings/hooks`.
-- Back walks `…/settings/hooks` -> `…/settings/appearance` -> `…/settings`, one step at a time.
+- After step 5 the address bar reads `http://localhost:5100/settings/prompts`.
+- Back walks `…/settings/prompts` -> `…/settings/appearance` -> `…/settings`, one step at a time.
 - The fresh tab from step 10 opens directly with **Appearance** active and the `Theme` select showing.
 - Step 12 printed `Appearance`.
 
 **Fail if — any of these**
 
-- The tab flips visually but the address bar does not change -> tab selection was reduced to local component state; a bookmark to `/settings/appearance` would then always land on Hooks, and the Back button would leave the page entirely instead of returning to the previous tab. Defect.
+- The tab flips visually but the address bar does not change -> tab selection was reduced to local component state; a bookmark to `/settings/appearance` would then always land on Prompts, and the Back button would leave the page entirely instead of returning to the previous tab. Defect.
 - Back does nothing, or jumps straight past all three entries in one press -> the navigation used replace rather than push. Defect.
-- The fresh tab opens on Hooks despite the `/appearance` URL -> the route parameter is not being read on a cold load; step 12 will print `Hooks` and confirm it.
+- The fresh tab opens on Prompts despite the `/appearance` URL -> the route parameter is not being read on a cold load; step 12 will print `Prompts` and confirm it.
 
 **Inconclusive if**
 
 If the browser was already deep in history from earlier tests, the Back sequence is polluted - open a fresh tab, navigate to `/settings`, and repeat steps 2 to 9 there. If `curl.exe` is unavailable, judge from the browser alone and note that the source-level oracle was skipped.
 
 > [!NOTE]
-> The tab segment is always emitted lowercase (`/settings/hooks`, `/settings/appearance`) regardless of the button's displayed capitalisation.
+> The tab segment is always emitted lowercase (`/settings/prompts`, `/settings/appearance`) regardless of the button's displayed capitalisation.
 
-### SHELLNAV-13 — An unrecognised or miscased {Tab} segment silently falls back to Hooks
+### SHELLNAV-13 — An unrecognised or miscased {Tab} segment silently falls back to Prompts
 
 **Free** · about 6 min
 
@@ -575,7 +575,7 @@ If the browser was already deep in history from earlier tests, the Back sequence
 
 1. In `T-B` run each of these and record the status and the active tab it reports:
 2. `$u='http://localhost:5100/settings/bogus'; curl.exe -s -o NUL -w "%{http_code} " $u; $s = curl.exe -s $u | Out-String; [regex]::Match($s,'mud-tab-active"[^>]*>([A-Za-z]+)').Groups[1].Value`
-3. Repeat the previous command with `$u='http://localhost:5100/settings/HOOKS'`.
+3. Repeat the previous command with `$u='http://localhost:5100/settings/PROMPTS'`.
 4. Repeat with `$u='http://localhost:5100/settings/Appearance'`.
 5. Repeat with `$u='http://localhost:5100/settings/APPEARANCE'`.
 6. Repeat with `$u='http://localhost:5100/settings/'`.
@@ -585,18 +585,18 @@ If the browser was already deep in history from earlier tests, the Back sequence
 **Pass if — all of these**
 
 - Every one of the five URLs returned `200`.
-- `/settings/bogus` reports active tab `Hooks`.
-- `/settings/HOOKS` reports `Hooks`.
+- `/settings/bogus` reports active tab `Prompts`.
+- `/settings/PROMPTS` reports `Prompts`.
 - `/settings/Appearance` reports `Appearance`.
 - `/settings/APPEARANCE` reports `Appearance`.
-- `/settings/` reports `Hooks`.
+- `/settings/` reports `Prompts`.
 - The browser shows a normal Settings page for `/settings/bogus` - no 404, no error line, no blank content pane.
 
 **Fail if — any of these**
 
 - Any URL returns 404 -> the fallback was lost; because there is no in-app Not Found page, the user lands on the bare browser error page from a typo in a tab name. Defect.
-- `/settings/APPEARANCE` or `/settings/Appearance` falls back to Hooks -> the parse lost `ignoreCase: true`. Defect.
-- An unknown tab renders a blank content pane rather than the Hooks pane -> the switch lost its default branch. Defect.
+- `/settings/APPEARANCE` or `/settings/Appearance` falls back to Prompts -> the parse lost `ignoreCase: true`. Defect.
+- An unknown tab renders a blank content pane rather than the Prompts pane -> the switch lost its default branch. Defect.
 - An unhandled exception page -> defect, capture the stack from `T-A`.
 
 **Inconclusive if**

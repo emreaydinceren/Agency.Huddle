@@ -1344,7 +1344,7 @@ If `Jarvis` simply answers in prose without calling any tool, that is a model-be
 **Fail if — any of these**
 
 - NOTHING renames, NOTHING errors on screen, and `T-A` has NO `Invited agent` line -> THE documented silent failure: the model passed the WRONG room id. The tool result is text the model reads; it never surfaces to the user. The absence of the log line is the only signal, which is exactly why this test reads the log rather than the screen. Report the model's own reply text alongside it.
-- `Jarvis` says it does not know the room id, or asks you for one -> the Room label hook has lost its `{{roomId}}` placeholder. `docs/agencyteam/rules.md` states the Room label is the ONLY place an Agent can learn a room id; without it this fails silently and permanently. Check Settings -> Hooks for the Room-label hook text and confirm it still contains `{{roomId}}`.
+- `Jarvis` says it does not know the room id, or asks you for one -> the Room label prompt has lost its `{{roomId}}` placeholder. `docs/agencyteam/rules.md` states the Room label is the ONLY place an Agent can learn a room id; without it this fails silently and permanently. Check Settings -> Prompts for the Room-label prompt text and confirm it still contains `{{roomId}}`.
 - The WRONG Room renames -> the tool acted on a room id belonging to a different Room; check which Room changed and report both ids.
 - The Room renames but `@Friday say hello` draws no reply -> the member row was added without the Agent being wired into the fan-out.
 

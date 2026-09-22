@@ -7,7 +7,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Hooks;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -364,7 +364,7 @@ public sealed class PersonaRunnerTests
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(
@@ -404,7 +404,7 @@ public sealed class PersonaRunnerTests
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -457,7 +457,7 @@ public sealed class PersonaRunnerTests
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -501,7 +501,7 @@ public sealed class PersonaRunnerTests
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -535,7 +535,7 @@ public sealed class PersonaRunnerTests
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         for (var i = 0; i < 3; i++)
@@ -582,7 +582,7 @@ public sealed class PersonaRunnerTests
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "first"), ct);
@@ -620,7 +620,7 @@ public sealed class PersonaRunnerTests
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -660,7 +660,7 @@ public sealed class PersonaRunnerTests
         var logger = new RecordingLogger<PersonaRunner>();
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), logger);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -974,12 +974,12 @@ public sealed class PersonaRunnerTests
         var prompt = Assert.Single(factory.Session.Prompts);
 
         // "context only" used to be a literal in BuildPrompt; it now lives entirely inside the
-        // turn.catchUpHeader hook default. Deriving the expected phrase from HookCatalog rather than
+        // turn.catchUpHeader prompt default. Deriving the expected phrase from PromptCatalog rather than
         // typing it here means a reworded default still fails this test loudly when the header leaks
         // into a no-catch-up prompt, instead of silently asserting against wording nobody owns anymore.
         // Do not "simplify" this back to a literal — see task T1.11.
-        var catchUpHeaderDefault = HookCatalog.Get("turn.catchUpHeader").Default;
-        var distinctivePortion = HookRenderer
+        var catchUpHeaderDefault = PromptCatalog.Get("turn.catchUpHeader").Default;
+        var distinctivePortion = PromptRenderer
             .Render(catchUpHeaderDefault, new Dictionary<string, string> { ["{{roomLabel}}"] = string.Empty })
             .Trim();
 
@@ -987,9 +987,9 @@ public sealed class PersonaRunnerTests
     }
 
     // The mcp__team__ five-name pin and the orientation-ordering pin both moved to
-    // Hooks/HookDefaultsTests.cs (task T1.11): rendered against a caller-supplied toolNames argument,
+    // Prompts/PromptDefaultsTests.cs (task T1.11): rendered against a caller-supplied toolNames argument,
     // they proved only that Compose's own argument came back out of its own output, not anything about
-    // the product's shipped wording. HookDefaultsTests re-anchors both against HookCatalog's actual
+    // the product's shipped wording. PromptDefaultsTests re-anchors both against PromptCatalog's actual
     // defaults, which is the thing that can vary now.
 
     [Fact]
@@ -997,40 +997,40 @@ public sealed class PersonaRunnerTests
     {
         var persona = new Persona("nova", "# Nova\nYou are a helpful assistant named Nova.");
 
-        var prompt = SystemPromptComposer.Compose(persona, new FakeHookSource(), "mcp__team__get_help", ToolNames);
+        var prompt = SystemPromptComposer.Compose(persona, new FakePromptSource(), "mcp__team__get_help", ToolNames);
 
         Assert.Contains("You are a helpful assistant named Nova.", prompt, StringComparison.Ordinal);
     }
 
     /// <summary>
-    /// Proves the feature this task adds: a configured override for a hook's text reaches the composed
-    /// prompt in place of <see cref="HookCatalog"/>'s default.
+    /// Proves the feature this task adds: a configured override for a prompt's text reaches the composed
+    /// prompt in place of <see cref="PromptCatalog"/>'s default.
     /// </summary>
     [Fact]
-    public void SystemPromptComposer_HookOverride_ReachesTheComposedPrompt()
+    public void SystemPromptComposer_PromptOverride_ReachesTheComposedPrompt()
     {
         var persona = new Persona("nova", "You are Nova.");
-        var hooks = new FakeHookSource();
-        hooks.SetOverride("systemPrompt.identity", "You are, unusually, called \"{{personaName}}\" here.");
+        var prompts = new FakePromptSource();
+        prompts.SetOverride("systemPrompt.identity", "You are, unusually, called \"{{personaName}}\" here.");
 
-        var prompt = SystemPromptComposer.Compose(persona, hooks, "mcp__team__get_help", ToolNames);
+        var prompt = SystemPromptComposer.Compose(persona, prompts, "mcp__team__get_help", ToolNames);
 
         Assert.Contains("You are, unusually, called \"nova\" here.", prompt, StringComparison.Ordinal);
     }
 
     /// <summary>
-    /// Proves the same feature for the per-turn prompt: a configured override for the Room label hook
+    /// Proves the same feature for the per-turn prompt: a configured override for the Room label prompt
     /// reaches the text <see cref="PersonaRunner.BuildPrompt"/> produces, in place of the catalog
     /// default.
     /// </summary>
     [Fact]
-    public void BuildPrompt_HookOverride_ReachesTheTurnPrompt()
+    public void BuildPrompt_PromptOverride_ReachesTheTurnPrompt()
     {
-        var hooks = new FakeHookSource();
-        hooks.SetOverride("turn.roomLabel", "<<{{roomName}}/{{roomId}}>>");
+        var prompts = new FakePromptSource();
+        prompts.SetOverride("turn.roomLabel", "<<{{roomName}}/{{roomId}}>>");
         var item = new PersonaRunner.WorkItem("room-9", "Nova & You", "You", "hello", []);
 
-        var prompt = PersonaRunner.BuildPrompt(item, hooks);
+        var prompt = PersonaRunner.BuildPrompt(item, prompts);
 
         Assert.Contains("<<Nova & You/room-9>>", prompt, StringComparison.Ordinal);
     }
@@ -1510,7 +1510,7 @@ public sealed class PersonaRunnerTests
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -1552,7 +1552,7 @@ public sealed class PersonaRunnerTests
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -1697,7 +1697,7 @@ public sealed class PersonaRunnerTests
         });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), logger);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -1749,7 +1749,7 @@ public sealed class PersonaRunnerTests
         });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -1789,7 +1789,7 @@ public sealed class PersonaRunnerTests
             Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 },
         });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -1820,7 +1820,7 @@ public sealed class PersonaRunnerTests
             Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 },
         });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -1855,7 +1855,7 @@ public sealed class PersonaRunnerTests
         });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -1897,7 +1897,7 @@ public sealed class PersonaRunnerTests
         });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -1927,7 +1927,7 @@ public sealed class PersonaRunnerTests
         });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -1961,7 +1961,7 @@ public sealed class PersonaRunnerTests
         });
         List<PersonaStatus> statuses = [];
 
-        var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -1995,7 +1995,7 @@ public sealed class PersonaRunnerTests
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -2033,7 +2033,7 @@ public sealed class PersonaRunnerTests
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
         var logger = new RecordingLogger<PersonaRunner>();
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), logger);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger);
         runner.StatusChanged += _ => throw new InvalidOperationException("Simulated subscriber failure.");
         await server.HandshakeAsync(runner, ct);
 
@@ -2118,7 +2118,7 @@ public sealed class PersonaRunnerTests
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -2148,7 +2148,7 @@ public sealed class PersonaRunnerTests
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
         List<PersonaStatus> statuses = [];
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
         runner.StatusChanged += statuses.Add;
         await server.HandshakeAsync(runner, ct);
 
@@ -2186,7 +2186,7 @@ public sealed class PersonaRunnerTests
         PipeHostFixture fixture, Persona persona, FakeAgentHostFactory factory, ILogger<PersonaRunner>? logger = null)
     {
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        return new PersonaRunner(persona, options, factory, new FakeHookSource(), new RoomFollows(), logger ?? NullLogger<PersonaRunner>.Instance);
+        return new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger ?? NullLogger<PersonaRunner>.Instance);
     }
 
     /// <summary>

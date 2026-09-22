@@ -18,7 +18,7 @@ whether it is correct.
 ## From the manual test run of 2026-09-15
 
 The run drove the app for several hours across every area of the chat surface: rooms,
-teammates, budgets, hooks, personas and the app tools.
+teammates, budgets, prompts, personas and the app tools.
 
 ### 1. Silence is the product's main failure mode, and it is never explained
 
