@@ -21,7 +21,19 @@ public sealed record UnsupportedContent(string SessionId, string ContentType) : 
 public sealed record ToolCallStarted(string SessionId, string ToolCallId, string? Title, ToolKind Kind, ToolCallStatus Status, string? RawInputJson) : AgentEvent(SessionId);
 
 /// <summary>An existing tool call has been updated.</summary>
-public sealed record ToolCallUpdated(string SessionId, string ToolCallId, string? Title, ToolKind Kind, ToolCallStatus Status, string? RawOutputJson) : AgentEvent(SessionId);
+/// <param name="SessionId">The id of the session this update belongs to.</param>
+/// <param name="ToolCallId">The tool call's id.</param>
+/// <param name="Title">The tool call's human-readable title, if the agent supplied one.</param>
+/// <param name="Kind">The kind of tool call, e.g. <see cref="ToolKind.Edit"/>.</param>
+/// <param name="Status">The tool call's current status.</param>
+/// <param name="RawOutputJson">The tool call's raw output, as JSON, when this update carries it.</param>
+/// <param name="RawInputJson">
+/// The tool call's complete input, as JSON, when this update carries it. Request A-6 (finding P-1):
+/// <c>claude-agent-acp</c> reports a streamed tool call's input as empty on the initial <c>tool_call</c>
+/// and sends the complete input only on a later <c>tool_call_update</c> in the same turn, so a
+/// consumer that reads only <see cref="ToolCallStarted.RawInputJson"/> would see it dropped.
+/// </param>
+public sealed record ToolCallUpdated(string SessionId, string ToolCallId, string? Title, ToolKind Kind, ToolCallStatus Status, string? RawOutputJson, string? RawInputJson = null) : AgentEvent(SessionId);
 
 /// <summary>Describes a single entry within a plan.</summary>
 public sealed record PlanEntryInfo(string Content, PlanEntryPriority Priority, PlanEntryStatus Status);
