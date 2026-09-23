@@ -76,6 +76,13 @@ internal sealed class FakePersonaHost : IPersonaHost
     /// <summary>How long <see cref="OpenAsync"/> waits, with the caller's token, before returning. Zero by default.</summary>
     public TimeSpan OpenDelay { get; set; }
 
+    /// <summary>
+    /// When set, <see cref="OpenAsync"/> awaits this before returning its session - lets a test hold
+    /// an open in flight (RS §9 E-4: "Stop while a session is Opening") and release it deliberately,
+    /// rather than racing a fixed delay against the Stop it means to land mid-open.
+    /// </summary>
+    public TaskCompletionSource? OpenGate { get; set; }
+
     /// <summary>Whether <see cref="DisposeAsync"/> has been called.</summary>
     public bool Disposed { get; private set; }
 
@@ -102,6 +109,11 @@ internal sealed class FakePersonaHost : IPersonaHost
         if (this.OpenDelay > TimeSpan.Zero)
         {
             await Task.Delay(this.OpenDelay, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (this.OpenGate is { } gate)
+        {
+            await gate.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
 
         Exception? failure;
