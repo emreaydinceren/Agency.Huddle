@@ -88,6 +88,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private readonly TimeProvider timeProvider;
 
     private readonly RoomSessionStore? roomSessions;
+    private readonly OwnPosts? ownPosts;
 
     private RoomSessionPool? pool;
     private JsonLineStream? stream;
@@ -119,7 +120,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         ILogger<PersonaRunner> logger,
         FileChangeTracker? fileChanges = null,
         TimeProvider? timeProvider = null,
-        RoomSessionStore? roomSessions = null)
+        RoomSessionStore? roomSessions = null,
+        OwnPosts? ownPosts = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
@@ -137,6 +139,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.fileChanges = fileChanges;
         this.timeProvider = timeProvider ?? TimeProvider.System;
         this.roomSessions = roomSessions;
+        this.ownPosts = ownPosts;
         this.declaredWatches = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)
             ? identity.Watches ?? []
             : [];
@@ -329,6 +332,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         // IsFollowing for this Agent id. Doing it up front also covers an Agent that reconnects on the
         // same pipe without this PersonaRunner ever being recreated.
         this.roomFollows.ClearAgent(this.agentId);
+        this.ownPosts?.ClearAgent(this.agentId);
 
         // D16 P0-3: seeded before the Greeting block below (which also labels its Room) and before
         // the read loop starts, so RoomLabels.Distinguish always has this runner's full set of known
@@ -368,7 +372,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             this.declaredWatches,
             this.logger,
             this.runCts.Token,
-            this.roomSessions);
+            this.roomSessions,
+            this.ownPosts,
+            this.agentId);
 
         // Per-Room mode opens the Room with exactly two Members, one of them the Human - the same
         // predicate as the Greeting's below, without IsEmpty: unlike the Greeting, this open must
@@ -495,10 +501,18 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                     {
                         case ReplyDecision.Reply:
                             var missed = this.TakeCatchUp(posted.RoomId);
+
+                            // D27, RS §6.7, finding P-22: drained here, in the read loop, beside
+                            // TakeCatchUp - not by the pool at Turn start - so a post made into this
+                            // Room after this item was already queued is not missed (RS principle 4).
+                            IReadOnlyList<string> ownPostLines = this.agentId is { } takeAgentId && this.ownPosts is { } ownPostsTake
+                                ? ownPostsTake.Take(takeAgentId, posted.RoomId)
+                                : [];
                             var labelledRoomName = RoomLabels.Distinguish(posted.RoomId, posted.RoomName, this.knownRoomNames);
                             var item = new WorkItem(
                                 posted.RoomId, labelledRoomName, posted.Message.SenderName, posted.Message.Text, missed,
-                                TriggerMessageId: posted.Message.Id);
+                                TriggerMessageId: posted.Message.Id,
+                                OwnPostLines: ownPostLines.Count > 0 ? ownPostLines : null);
                             var sequence = Interlocked.Increment(ref this.sequenceCounter);
 
                             // Never call the agent from the read loop: hand the item to the pool,

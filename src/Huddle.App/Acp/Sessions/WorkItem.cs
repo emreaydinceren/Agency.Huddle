@@ -32,6 +32,12 @@ internal enum WorkItemKind
 /// show. When set with a non-empty <see cref="TranscriptCatchUp.Messages"/> it replaces
 /// <see cref="MissedMessages"/> on this Turn only.
 /// </param>
+/// <param name="OwnPostLines">
+/// This Agent's own earlier <c>post_message</c> calls into this Room from a Turn in another Room (RS
+/// §6.7, finding P-7), drained by the read loop's own <see cref="OwnPosts.Take"/> call, beside
+/// <c>TakeCatchUp</c>. <see langword="null"/> when nothing was recorded. Dropped by the Room Session
+/// when <see cref="Transcript"/> is set on this Turn: that range already holds those posts.
+/// </param>
 internal sealed record WorkItem(
     string RoomId,
     string RoomName,
@@ -41,7 +47,8 @@ internal sealed record WorkItem(
     WorkItemKind Kind = WorkItemKind.Message,
     FileChangesReport? FileChanges = null,
     string? TriggerMessageId = null,
-    TranscriptCatchUp? Transcript = null);
+    TranscriptCatchUp? Transcript = null,
+    IReadOnlyList<string>? OwnPostLines = null);
 
 /// <summary>One earlier Message the Agent was not Mentioned in, carried as catch-up context only.</summary>
 /// <param name="SenderName">Who sent it.</param>

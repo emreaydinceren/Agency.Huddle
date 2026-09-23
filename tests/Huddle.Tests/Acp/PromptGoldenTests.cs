@@ -269,6 +269,90 @@ public sealed class PromptGoldenTests
     }
 
     /// <summary>
+    /// D28, RS §6.9: with <see cref="SessionScope.PerRoom"/>, the composed prompt ends with
+    /// <c>systemPrompt.roomSessions</c> instead of <c>systemPrompt.sharedSession</c> - every earlier
+    /// part unchanged from <c>systemPrompt.txt</c>.
+    /// </summary>
+    [Fact]
+    public void SystemPrompt_PerRoom_MatchesGolden()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.PerRoom);
+
+        AssertMatchesGolden("systemPrompt.roomSessions.txt", actual);
+    }
+
+    /// <summary>
+    /// D28, RS §6.9: with <see cref="SessionScope.PerRoom"/> and a non-null Memory index, the
+    /// composed prompt appends <c>systemPrompt.roomSessionsCarry</c> as its own trailing part, after
+    /// <c>systemPrompt.roomSessions</c> - the two routes (memory, File Changes) it names only exist
+    /// when a Memory index is present.
+    /// </summary>
+    [Fact]
+    public void SystemPrompt_PerRoomWithMemory_AppendsCarry()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+        var skill = TeamBuildingSkill();
+        MemorySnapshot memory = new(
+            @"E:\Huddle\App_Data\work\Nova\memory",
+            [
+                new MemoryEntry("The Human prefers C# for all code.", @"E:\Huddle\App_Data\work\Nova\memory\code-language.md"),
+                new MemoryEntry("Launch is targeted for 2026-11-01.", @"E:\Huddle\App_Data\work\Nova\memory\launch-date.md"),
+            ],
+            NotListed: 0);
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [skill], "mcp__team__read_skill", memory, SessionScope.PerRoom);
+
+        AssertMatchesGolden("systemPrompt.roomSessions.memory.txt", actual);
+    }
+
+    /// <summary>D28: with <see cref="SessionScope.PerRoom"/> and no Memory index, no <c>systemPrompt.roomSessionsCarry</c> part is appended.</summary>
+    [Fact]
+    public void SystemPrompt_PerRoomNoMemory_NoCarry()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+        var prompts = new FakePromptSource();
+
+        var actual = SystemPromptComposer.Compose(
+            persona, prompts, "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.PerRoom);
+
+        var carry = prompts.Render("systemPrompt.roomSessionsCarry", new Dictionary<string, string>());
+        Assert.DoesNotContain(carry, actual, StringComparison.Ordinal);
+    }
+
+    /// <summary>D28: with <see cref="SessionScope.Shared"/>, the composed prompt is unchanged from the pre-D28 golden.</summary>
+    [Fact]
+    public void SystemPrompt_SharedMode_Unchanged()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared);
+
+        AssertMatchesGolden("systemPrompt.txt", actual);
+    }
+
+    /// <summary>RS §9 E-8: a configured override for <c>systemPrompt.sharedSession</c> is used only in <see cref="SessionScope.Shared"/>, never rendered for <see cref="SessionScope.PerRoom"/>.</summary>
+    [Fact]
+    public void SharedSessionOverride_UsedOnlyInSharedMode()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+        var prompts = new FakePromptSource();
+        prompts.SetOverride("systemPrompt.sharedSession", "OVERRIDDEN SHARED TEXT");
+
+        var shared = SystemPromptComposer.Compose(
+            persona, prompts, "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared);
+        Assert.Contains("OVERRIDDEN SHARED TEXT", shared, StringComparison.Ordinal);
+
+        var perRoom = SystemPromptComposer.Compose(
+            persona, prompts, "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.PerRoom);
+        Assert.DoesNotContain("OVERRIDDEN SHARED TEXT", perRoom, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// Pins <see cref="GetHelpTool"/>'s rendered body when constructed with the six real chat tools,
     /// exactly as <c>GetHelpToolTests</c> constructs them.
     /// </summary>
@@ -552,7 +636,7 @@ public sealed class PromptGoldenTests
             new ListAgentsTool(directory, gateway, personaStore, new FakePromptSource()),
             new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakePromptSource()),
             new InviteAgentTool(chat, directory, aliasSource, new FakePromptSource()),
-            new PostMessageTool(chat, "caller-id", new FakePromptSource()),
+            new PostMessageTool(chat, "caller-id", new FakePromptSource(), new OwnPosts(options)),
             new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new ValidateTeammateTool(checker, new FakePromptSource()),

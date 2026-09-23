@@ -65,8 +65,11 @@ public sealed class AdapterProfileOptions
     public bool IsolateUserSettings { get; set; }
 
     /// <summary>
-    /// Whether this Adapter gives each Room its own Room Session (RS §6.12). Defaults to false until
-    /// the Room Session work is complete (plan finding P-9); D28 makes true the default.
+    /// Whether this Adapter gives each Room its own Room Session (RS §6.12). Defaults to
+    /// <see langword="true"/> (D28, finding P-9). A configured <c>agency-acp</c> entry must set this
+    /// <see langword="false"/> explicitly until V-5 (RS §6.12): it reports <c>loadSession: false</c>
+    /// and nothing is known of its <c>resume</c> support or of holding several sessions on one
+    /// process.
     /// </summary>
-    public bool SessionPerRoom { get; set; }
+    public bool SessionPerRoom { get; set; } = true;
 }

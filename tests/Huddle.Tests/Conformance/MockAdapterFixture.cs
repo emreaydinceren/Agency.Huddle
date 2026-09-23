@@ -163,8 +163,9 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         ILogger<PersonaRunner> logger = host.Services.GetRequiredService<ILogger<PersonaRunner>>();
         FileChangeTracker fileChanges = host.Services.GetRequiredService<FileChangeTracker>();
         RoomSessionStore roomSessions = host.Services.GetRequiredService<RoomSessionStore>();
+        OwnPosts ownPosts = host.Services.GetRequiredService<OwnPosts>();
 
-        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger, fileChanges, roomSessions: roomSessions);
+        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger, fileChanges, roomSessions: roomSessions, ownPosts: ownPosts);
 
         try
         {

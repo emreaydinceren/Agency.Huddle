@@ -24,7 +24,58 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(46, PromptCatalog.All.Count);
+        Assert.Equal(49, PromptCatalog.All.Count);
+    }
+
+    /// <summary>
+    /// D28, RS §6.9: <c>systemPrompt.roomSessions</c> and <c>systemPrompt.roomSessionsCarry</c> are
+    /// both <see cref="PromptTiming.NextSession"/>, take no placeholders, and carry their exact wording.
+    /// </summary>
+    [Fact]
+    public void Catalog_HasRoomSessionsPrompts()
+    {
+        var roomSessions = PromptCatalog.Get("systemPrompt.roomSessions");
+        Assert.Equal(PromptTiming.NextSession, roomSessions.Timing);
+        Assert.Empty(roomSessions.Placeholders);
+        var expectedRoomSessions =
+            """
+            Each Room you are in is a separate conversation, and this session holds exactly one of them.
+            Every Message you receive here comes from the Room its label names, and you answer into that
+            Room. Your other Rooms have sessions of their own, which you cannot see from here. Treat each
+            Room as its own audience: do not assume the people here know what was said in another Room, and
+            do not bring it up here. If a Message seems to continue something you cannot see, say so and ask
+            rather than guess. Describe your own memory truthfully: you remember this Room's conversation,
+            and you do not remember your other Rooms' conversations.
+            """;
+        Assert.Equal(
+            expectedRoomSessions.Replace("\r\n", "\n", StringComparison.Ordinal),
+            roomSessions.Default.Replace("\r\n", "\n", StringComparison.Ordinal));
+
+        var carry = PromptCatalog.Get("systemPrompt.roomSessionsCarry");
+        Assert.Equal(PromptTiming.NextSession, carry.Timing);
+        Assert.Empty(carry.Placeholders);
+        var expectedCarry =
+            """
+            Two things do cross between your Rooms: the files in your memory folder, and the file changes
+            listed at the start of a Turn. If something should hold in every Room, write it to your memory.
+            """;
+        Assert.Equal(
+            expectedCarry.Replace("\r\n", "\n", StringComparison.Ordinal),
+            carry.Default.Replace("\r\n", "\n", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// <c>turn.ownPostLine</c> (RS §6.7, finding P-7) is <see cref="PromptTiming.Live"/>, requires
+    /// <c>{{text}}</c>, and carries the exact wording <c>"You, from another Room: {{text}}"</c>.
+    /// </summary>
+    [Fact]
+    public void Catalog_HasOwnPostLine()
+    {
+        var prompt = PromptCatalog.Get("turn.ownPostLine");
+
+        Assert.Equal(PromptTiming.Live, prompt.Timing);
+        Assert.Contains("{{text}}", prompt.RequiredPlaceholders);
+        Assert.Equal("You, from another Room: {{text}}", prompt.Default);
     }
 
     /// <summary>

@@ -39,10 +39,11 @@ namespace Agency.Huddle.App.Acp;
 /// </param>
 /// <param name="SessionPerRoom">
 /// Whether this Adapter Profile gives each Room its own Room Session (RS §6.12). Defaults to
-/// <see langword="false"/> so every existing positional call site keeps compiling unchanged.
-/// Defaults to false until the Room Session work is complete (plan finding P-9); D28 makes true the
-/// default. With <see langword="false"/>, every Room maps to one shared Room Session and the
-/// shared-session system prompt is used.
+/// <see langword="true"/> (D28, finding P-9): every configured Adapter and the synthesised legacy
+/// profile both get their own Room Session per Room unless a Profile opts out. With
+/// <see langword="false"/>, every Room maps to one shared Room Session and the shared-session
+/// system prompt is used - the mode a configured <c>agency-acp</c> entry must stay in until V-5
+/// (RS §6.12: it reports <c>loadSession: false</c> and nothing is known of its resume support).
 /// </param>
 public sealed record AdapterProfile(
     string Id,
@@ -55,4 +56,4 @@ public sealed record AdapterProfile(
     IReadOnlyDictionary<string, string>? EnvironmentOverrides = null,
     bool ReadsFiles = true,
     bool IsolateUserSettings = false,
-    bool SessionPerRoom = false);
+    bool SessionPerRoom = true);

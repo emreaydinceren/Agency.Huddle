@@ -60,6 +60,14 @@ internal sealed class RoomSession : IAsyncDisposable
     private readonly RoomSessionStore? roomSessionStore;
     private readonly IPersonaHost? host;
 
+    // D27, RS §6.7, finding P-7: marks this session's own Room (or every Room, in shared mode) Busy
+    // for the Turn's own duration, so a post OTHER of this Agent's own sessions makes into it while
+    // it runs is not recorded - this session already knows what happened here. Both null for a
+    // caller that predates D27 (P-13's "absent means off"), or when this session has no known
+    // agentId yet (unreachable in practice: PersonaRunner always has one before it builds a pool).
+    private readonly OwnPosts? ownPosts;
+    private readonly string? agentId;
+
     // Guards every field below: the queue, the state machine, the Stop marks, activeTurn and
     // pendingStopCancel - one lock, exactly as turnLock was on PersonaRunner, for the same reason:
     // the Stop path must publish its mark and read activeTurn as one atomic step against the
@@ -131,6 +139,8 @@ internal sealed class RoomSession : IAsyncDisposable
     /// <param name="persona">The Persona this session belongs to (D24): its Model and Effort gate a resume. <see langword="null"/> disables resume, like every pre-D24 caller.</param>
     /// <param name="roomSessions">Backs resume and the Transcript Catch-up cursor (RS §6.1, §6.6). <see langword="null"/> disables storing and resuming.</param>
     /// <param name="host">Supplies <see cref="IPersonaHost.CanResume"/>, <see cref="AdapterProfile.Id"/> and <see cref="IPersonaHost.ResumeAsync"/> for the resume decision. <see langword="null"/> disables resume.</param>
+    /// <param name="ownPosts">Marks this session's Room Busy for a Turn's own duration (D27, RS §6.7). <see langword="null"/> disables it, like every pre-D27 caller.</param>
+    /// <param name="agentId">This session's owning Agent's id, passed to <paramref name="ownPosts"/>. <see langword="null"/> disables it, like every pre-D27 caller.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -145,7 +155,9 @@ internal sealed class RoomSession : IAsyncDisposable
         TimeProvider? time = null,
         Persona? persona = null,
         RoomSessionStore? roomSessions = null,
-        IPersonaHost? host = null)
+        IPersonaHost? host = null,
+        OwnPosts? ownPosts = null,
+        string? agentId = null)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
@@ -170,6 +182,8 @@ internal sealed class RoomSession : IAsyncDisposable
         this.persona = persona;
         this.roomSessionStore = roomSessions;
         this.host = host;
+        this.ownPosts = ownPosts;
+        this.agentId = agentId;
 
         this.consumerTask = this.RunConsumerAsync(runToken);
     }
@@ -790,7 +804,16 @@ internal sealed class RoomSession : IAsyncDisposable
 
                 if (tail is not null)
                 {
-                    item = item with { Transcript = new TranscriptCatchUp(this.resumedOnLastOpen, tail.Messages, tail.Omitted) };
+                    // D27 correction 11: own-post lines are dropped only when the Transcript is
+                    // actually set on this Turn's WorkItem - that range already holds those posts,
+                    // whether or not it turned out to hold any Messages. A refused or timed-out read
+                    // (RS §9 E-3, tail null) leaves OwnPostLines untouched, so they still render
+                    // through the ordinary catch-up path below.
+                    item = item with
+                    {
+                        Transcript = new TranscriptCatchUp(this.resumedOnLastOpen, tail.Messages, tail.Omitted),
+                        OwnPostLines = null,
+                    };
                 }
             }
         }
@@ -844,6 +867,11 @@ internal sealed class RoomSession : IAsyncDisposable
         Task? watchdog = idleBound > TimeSpan.Zero
             ? this.WatchForAdapterSilenceAsync(activeSession, turn, item, idleBound, watchdogCancellation.Token, ct)
             : null;
+
+        if (this.agentId is { } beginTurnAgentId)
+        {
+            this.ownPosts?.BeginTurn(beginTurnAgentId, this.RoomId);
+        }
 
         try
         {
@@ -947,6 +975,11 @@ internal sealed class RoomSession : IAsyncDisposable
             await watchdogCancellation.CancelAsync();
             await SafeAwaitAsync(watchdog);
             watchdogCancellation.Dispose();
+
+            if (this.agentId is { } endTurnAgentId)
+            {
+                this.ownPosts?.EndTurn(endTurnAgentId, this.RoomId);
+            }
 
             lock (this.gate)
             {
@@ -1389,12 +1422,16 @@ internal sealed class RoomSession : IAsyncDisposable
             return builder.ToString();
         }
 
-        if (item.MissedMessages.Count == 0)
+        var ownPostLines = item.OwnPostLines ?? [];
+        if (item.MissedMessages.Count == 0 && ownPostLines.Count == 0)
         {
             builder.Append(RoomSession.RenderMessage(prompts, room, item.SenderName, item.Text));
             return builder.ToString();
         }
 
+        // RS §6.7: a block of only own posts still gets turn.catchUpHeader, exactly like a block of
+        // only missed Messages - the header introduces the whole Catch-up block, not just one kind
+        // of line inside it.
         builder.Append(prompts.Render("turn.catchUpHeader", new Dictionary<string, string> { ["{{roomLabel}}"] = room }));
         builder.Append('\n');
         foreach (var missed in item.MissedMessages)
@@ -1402,6 +1439,12 @@ internal sealed class RoomSession : IAsyncDisposable
             builder.Append(prompts.Render(
                 "turn.catchUpLine",
                 new Dictionary<string, string> { ["{{sender}}"] = missed.SenderName, ["{{text}}"] = missed.Text }));
+            builder.Append('\n');
+        }
+
+        foreach (var line in ownPostLines)
+        {
+            builder.Append(prompts.Render("turn.ownPostLine", new Dictionary<string, string> { ["{{text}}"] = line }));
             builder.Append('\n');
         }
 

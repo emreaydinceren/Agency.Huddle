@@ -35,6 +35,7 @@ internal sealed class PersonaSupervisor : BackgroundService
     // starts, the same as an explicit Team:FileChanges:Enabled=false.
     private readonly FileChangeTracker? fileChanges;
     private readonly RoomSessionStore? roomSessions;
+    private readonly OwnPosts? ownPosts;
 
     private readonly Lock gate = new();
     private readonly Dictionary<string, PersonaRunner> hosts = new(StringComparer.Ordinal);
@@ -72,7 +73,8 @@ internal sealed class PersonaSupervisor : BackgroundService
         ILogger<PersonaSupervisor> logger,
         SkillStore skills,
         FileChangeTracker? fileChanges = null,
-        RoomSessionStore? roomSessions = null)
+        RoomSessionStore? roomSessions = null,
+        OwnPosts? ownPosts = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
@@ -97,6 +99,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         this.skills = skills;
         this.fileChanges = fileChanges;
         this.roomSessions = roomSessions;
+        this.ownPosts = ownPosts;
     }
 
     /// <summary>The number of Personas with a currently running host. Test seam only.</summary>
@@ -474,7 +477,7 @@ internal sealed class PersonaSupervisor : BackgroundService
             };
 
             var host = new PersonaRunner(
-                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), tracker, roomSessions: this.roomSessions);
+                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts);
 
             // Forwards every health signal the runner itself observes (T4.3) - a session/Turn
             // fact, arriving over the wire - into the one table every UI surface reads.

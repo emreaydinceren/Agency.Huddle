@@ -2,11 +2,12 @@ namespace Agency.Huddle.App.Acp.Tools;
 
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 
 /// <summary>Posts a Message into a Room, as the calling Agent.</summary>
-internal sealed class PostMessageTool(ChatService chat, string callerAgentId, IPromptSource prompts) : IAppTool
+internal sealed class PostMessageTool(ChatService chat, string callerAgentId, IPromptSource prompts, OwnPosts ownPosts) : IAppTool
 {
     private static readonly IReadOnlyDictionary<string, string> NoValues = new Dictionary<string, string>();
 
@@ -39,6 +40,7 @@ internal sealed class PostMessageTool(ChatService chat, string callerAgentId, IP
         try
         {
             await chat.PostAsync(roomId, callerAgentId, text, ct: cancellationToken);
+            ownPosts.Record(callerAgentId, roomId, text);
             return $"Posted to room '{roomId}'.";
         }
         catch (ChatException ex)

@@ -201,6 +201,55 @@ public sealed class PersonaSupervisorFileChangesTests
         Assert.True(File.Exists(roomSessionFile));
     }
 
+    /// <summary>
+    /// D27, finding P-7: <see cref="PersonaSupervisor"/> passes its own trailing
+    /// <see cref="OwnPosts"/> through to the runner it starts. Shared mode's <c>BeginTurn(agent, null)</c>
+    /// marks every Room Busy for the Turn's duration, which is the observable this test checks: a
+    /// <see cref="OwnPosts.Record"/> call made while the held-open Turn is in flight is refused.
+    /// </summary>
+    [Fact]
+    public async Task Supervisor_PassesOwnPosts()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var release = new TaskCompletionSource();
+        factory.Session.EnqueueGatedReply(release.Task, "ok");
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        var ownPosts = new OwnPosts(options);
+        using var skillStore = new SkillStore(options, NullLogger<SkillStore>.Instance);
+        using var supervisor = new PersonaSupervisor(
+            options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, ownPosts: ownPosts);
+
+        personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []), "You are Nova.");
+        await supervisor.StartAsync(ct);
+
+        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
+
+        // Waits for the Turn to actually be in flight (PromptAsync reached), rather than a fixed
+        // delay: only then is shared mode's BeginTurn(agent, null) guaranteed to have marked every
+        // Room Busy for this Agent.
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(10);
+        while (factory.Session.Prompts.Count == 0 && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.NotEmpty(factory.Session.Prompts);
+        ownPosts.Record(agentId, roomId, "should be refused while the Turn is in flight");
+        Assert.Empty(ownPosts.Take(agentId, roomId));
+
+        release.SetResult();
+        await supervisor.StopAsync(ct);
+    }
+
     /// <summary>Builds a fresh <see cref="PersonaHealth"/> against the real clock.</summary>
     private static PersonaHealth NewHealth() => new(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
 

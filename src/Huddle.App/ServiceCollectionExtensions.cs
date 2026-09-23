@@ -63,6 +63,11 @@ public static class ServiceCollectionExtensions
         // doc comment for why this could not instead be a field on PersonaRunner.
         services.AddSingleton<RoomFollows>();
 
+        // D27, RS §6.7, finding P-7: a singleton for the same reason RoomFollows just above is one -
+        // PostMessageTool takes it from DI, and it outlives any one PersonaRunner or RoomSession, so
+        // a forgotten entry self-heals on restart through OwnPosts.ClearAgent.
+        services.AddSingleton<OwnPosts>();
+
         // FC §6.3: resolves a Watched Folder entry (a Teammate Name, a full path, or a path
         // relative to DataDir) into a full path, or refuses it with a reason.
         services.AddSingleton<WatchedFolderResolver>();

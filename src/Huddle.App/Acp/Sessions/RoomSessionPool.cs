@@ -26,6 +26,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     private readonly ILogger logger;
     private readonly CancellationToken runToken;
     private readonly RoomSessionStore? roomSessions;
+    private readonly OwnPosts? ownPosts;
+    private readonly string? agentId;
     private readonly bool sessionPerRoom;
     private readonly TurnGate gate;
     private readonly int effectiveMaxLiveSessions;
@@ -55,6 +57,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// Backs resume and the Transcript Catch-up cursor (RS §6.1, §6.6), per-Room mode only (finding
     /// P-15). <see langword="null"/> disables storing and resuming - a caller that predates D24.
     /// </param>
+    /// <param name="ownPosts">Marks each Room Session's Room Busy for a Turn's own duration (D27, RS §6.7). <see langword="null"/> disables it, like every pre-D27 caller.</param>
+    /// <param name="agentId">This Persona's Agent id, passed to <paramref name="ownPosts"/>. <see langword="null"/> disables it, like every pre-D27 caller.</param>
     public RoomSessionPool(
         IPersonaHost host,
         IRoomSessionOwner owner,
@@ -66,7 +70,9 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         IReadOnlyList<string> declaredWatches,
         ILogger logger,
         CancellationToken runToken,
-        RoomSessionStore? roomSessions = null)
+        RoomSessionStore? roomSessions = null,
+        OwnPosts? ownPosts = null,
+        string? agentId = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(owner);
@@ -88,6 +94,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         this.logger = logger;
         this.runToken = runToken;
         this.roomSessions = roomSessions;
+        this.ownPosts = ownPosts;
+        this.agentId = agentId;
         this.sessionPerRoom = host.Profile.SessionPerRoom;
 
         var configuredConcurrency = Math.Max(1, options.MaxConcurrentTurns);
@@ -318,7 +326,9 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             time: this.time,
             persona: this.persona,
             roomSessions: this.roomSessions,
-            host: this.host);
+            host: this.host,
+            ownPosts: this.ownPosts,
+            agentId: this.agentId);
 
     private RoomSession GetOrCreateSession(string roomId)
     {

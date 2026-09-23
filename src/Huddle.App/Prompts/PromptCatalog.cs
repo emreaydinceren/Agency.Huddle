@@ -236,6 +236,21 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
 
         new PromptDefinition(
+            Key: "turn.ownPostLine",
+            Label: "Own post line",
+            HelperText:
+                "One line of catch-up context for a Message the Agent itself posted into this Room " +
+                "from a Turn in another Room (RS §6.7). {{text}} is required: without it the line " +
+                "says nothing of what was posted.",
+            Default:
+                """
+                You, from another Room: {{text}}
+                """,
+            Placeholders: ["{{text}}"],
+            RequiredPlaceholders: ["{{text}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
             Key: "turn.fileChangesHeader",
             Label: "File Changes header",
             HelperText:
@@ -722,6 +737,44 @@ internal static class PromptCatalog
             Default: "…and {{count}} more in {{memoryPath}}.",
             Placeholders: ["{{count}}", "{{memoryPath}}"],
             RequiredPlaceholders: ["{{count}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.roomSessions",
+            Label: "Room Sessions",
+            HelperText:
+                "D28, RS §6.9: told to every Persona whose resolved Adapter Profile has SessionPerRoom " +
+                "true. Describes the one session per Room, truthfully. Takes no placeholders, so an " +
+                "override is plain prose, and must not name any one Room: identity stays in the " +
+                "Turn's own label (RS §6.9, \"Room identity stays out of the system prompt\").",
+            Default:
+                """
+                Each Room you are in is a separate conversation, and this session holds exactly one of them.
+                Every Message you receive here comes from the Room its label names, and you answer into that
+                Room. Your other Rooms have sessions of their own, which you cannot see from here. Treat each
+                Room as its own audience: do not assume the people here know what was said in another Room, and
+                do not bring it up here. If a Message seems to continue something you cannot see, say so and ask
+                rather than guess. Describe your own memory truthfully: you remember this Room's conversation,
+                and you do not remember your other Rooms' conversations.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.roomSessionsCarry",
+            Label: "Room Sessions, what still carries",
+            HelperText:
+                "D28, RS §6.9: appended after systemPrompt.roomSessions only when the resolved Adapter " +
+                "can read files (FC §6.11) - the two routes named here (memory, File Changes) exist " +
+                "only then. Takes no placeholders.",
+            Default:
+                """
+                Two things do cross between your Rooms: the files in your memory folder, and the file changes
+                listed at the start of a Turn. If something should hold in every Room, write it to your memory.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(

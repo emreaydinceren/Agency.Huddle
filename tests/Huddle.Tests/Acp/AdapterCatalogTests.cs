@@ -343,13 +343,12 @@ public sealed class AdapterCatalogTests
     }
 
     /// <summary>
-    /// The synthesised legacy profile (no <c>Team:Acp:Adapters</c> configured) carries
-    /// <c>SessionPerRoom</c> false — finding P-9: the default stays false until D28 flips it, so a
-    /// stock installation keeps shared-session behaviour through the whole of this deliverable and
-    /// D24-D27. Named "…UntilD28" so D28's flip finds this test.
+    /// D28: the synthesised legacy profile (no <c>Team:Acp:Adapters</c> configured) carries
+    /// <c>SessionPerRoom</c> true - finding P-9's default flip, now that Room Sessions' dependencies
+    /// (D22-D27) all exist. Renamed from <c>Legacy_SessionPerRoomFalse_UntilD28</c>.
     /// </summary>
     [Fact]
-    public void Legacy_SessionPerRoomFalse_UntilD28()
+    public void Legacy_SessionPerRoomTrue()
     {
         var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
         var options = Options.Create(new TeamOptions { Acp = acp });
@@ -357,19 +356,22 @@ public sealed class AdapterCatalogTests
         var catalog = new AdapterCatalog(options);
 
         AdapterProfile profile = Assert.Single(catalog.Profiles);
-        Assert.False(profile.SessionPerRoom);
+        Assert.True(profile.SessionPerRoom);
     }
 
-    /// <summary>A configured Adapter entry's <c>SessionPerRoom</c> binds through to the projected profile — finding P-9.</summary>
+    /// <summary>
+    /// D28: a configured Adapter entry that does not set <c>SessionPerRoom</c> at all defaults to
+    /// true, matching <see cref="AdapterProfileOptions.SessionPerRoom"/>'s own default. Renamed from
+    /// <c>Configured_SessionPerRoomBound</c>.
+    /// </summary>
     [Fact]
-    public void Configured_SessionPerRoomBound()
+    public void Configured_SessionPerRoomDefaultsTrue()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Team:Acp:Adapters:0:Id"] = "agency",
-                ["Team:Acp:Adapters:0:Command"] = "agency-acp",
-                ["Team:Acp:Adapters:0:SessionPerRoom"] = "true",
+                ["Team:Acp:Adapters:0:Id"] = "claude",
+                ["Team:Acp:Adapters:0:Command"] = "node",
             })
             .Build();
         var teamOptions = new TeamOptions();
@@ -380,5 +382,27 @@ public sealed class AdapterCatalogTests
 
         AdapterProfile profile = Assert.Single(catalog.Profiles);
         Assert.True(profile.SessionPerRoom);
+    }
+
+    /// <summary>RS §6.12: a configured <c>agency-acp</c> entry must stay shared until V-5, so <c>SessionPerRoom: false</c> still binds through explicitly.</summary>
+    [Fact]
+    public void Configured_SessionPerRoomFalse_Bound()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:Acp:Adapters:0:Id"] = "agency",
+                ["Team:Acp:Adapters:0:Command"] = "agency-acp",
+                ["Team:Acp:Adapters:0:SessionPerRoom"] = "false",
+            })
+            .Build();
+        var teamOptions = new TeamOptions();
+        configuration.GetSection(TeamOptions.SectionName).Bind(teamOptions);
+        var options = Options.Create(teamOptions);
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.False(profile.SessionPerRoom);
     }
 }

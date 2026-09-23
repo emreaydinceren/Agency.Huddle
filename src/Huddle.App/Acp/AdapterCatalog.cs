@@ -70,7 +70,7 @@ internal sealed class AdapterCatalog
                     EnvironmentOverrides: null,
                     ReadsFiles: true,
                     IsolateUserSettings: true,
-                    SessionPerRoom: false),
+                    SessionPerRoom: true),
             ];
         }
 
