@@ -5,7 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 62 Done.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 64 Done.
 
 ## How to update this tracker
 
@@ -101,8 +101,8 @@ Deliverable and Acceptance.
 | 11.3.i Implement `DeclineAsync` | | | ✔ |
 | 11.4.t Functional test: the posted Message wakes the proposer in a group Room (red → verify) | | | ✔ |
 | **D12. The Proposal card** | | | |
-| 12.1.t Test: `ProposalCard` renders and acts (red) | ✔ | | |
-| 12.1.i Implement `ProposalCard.razor` and wire it into `Chat.razor` | ✔ | | |
+| 12.1.t Test: `ProposalCard` renders and acts (red) | | | ✔ |
+| 12.1.i Implement `ProposalCard.razor` and wire it into `Chat.razor` | | | ✔ |
 | **D13. S2 documentation and goldens** | | | |
 | 13.1.t Test: the tool-descriptions golden includes the new tools (red) | ✔ | | |
 | 13.1.i Accept the golden | ✔ | | |

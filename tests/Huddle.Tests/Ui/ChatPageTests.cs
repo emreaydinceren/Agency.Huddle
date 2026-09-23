@@ -3,6 +3,8 @@ using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Pages;
@@ -10,6 +12,7 @@ using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -926,6 +929,13 @@ public sealed class ChatPageTests
         // MessageList resolves every row's avatar through the same singleton (Task 6.1) - needed
         // even though these tests never customise one.
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
+
+        // Chat.razor now renders ProposalCard directly above the Budget prompt (Task 12.1), which
+        // injects these three even though these tests never propose a Teammate - PersonaStore and
+        // RoomEvents are already copied above, for the same reason.
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ProposalStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ProposalService>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
         return ctx;
     }
 
