@@ -78,9 +78,11 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     // which items that mark drops.
     private long sequenceCounter;
 
-    // Health reporting (T4.3). Touched only from RoomSession's single-threaded consumer, through the
-    // IRoomSessionOwner members below, so - unlike tokensConsumed above - this needs no Interlocked:
-    // there is never a second thread that could observe it mid-update.
+    // Health reporting (T4.3). D26: this streak is Persona-wide (RS §6.8: "failures in any Room
+    // Session feed one consecutive-failure streak"), and at MaxConcurrentTurns >= 2 more than one
+    // RoomSession's own consumer can call IRoomSessionOwner.ReportTurnFailure at once, so - unlike
+    // when this was a single Room's own business - it now needs Interlocked, the same cross-thread
+    // reason tokensConsumed above already has.
     private int consecutiveTurnFailures;
 
     private readonly TimeProvider timeProvider;
@@ -196,14 +198,14 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     /// <inheritdoc />
     void IRoomSessionOwner.ReportTurnCompleted()
     {
-        this.consecutiveTurnFailures = 0;
+        Interlocked.Exchange(ref this.consecutiveTurnFailures, 0);
         this.RaiseStatusChanged(PersonaState.Online, null);
     }
 
     /// <inheritdoc />
     void IRoomSessionOwner.ReportIncompleteStop(StopReason reason)
     {
-        this.consecutiveTurnFailures = 0;
+        Interlocked.Exchange(ref this.consecutiveTurnFailures, 0);
         this.RaiseStatusChanged(
             PersonaState.Degraded,
             $"The last Turn ended without a reply — {DescribeIncompleteStop(reason)}.");
@@ -212,15 +214,18 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     /// <inheritdoc />
     void IRoomSessionOwner.ReportTurnFailure(string roomName, string reason)
     {
-        // roomName is plumbing for D26's Room-named wording; the message stays as it is today until
-        // then (D22 correction 1's "wording unchanged until D26").
-        _ = roomName;
-        this.consecutiveTurnFailures++;
-        var message = this.consecutiveTurnFailures >= 3
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+
+        // D26, RS §6.8: the reason always names the Room the failed Turn belonged to - a same-named
+        // Room already carries D16's " #xxxxxx" disambiguating suffix in roomName, which is what
+        // actually tells the Human which one failed.
+        var count = Interlocked.Increment(ref this.consecutiveTurnFailures);
+        var message = count >= 3
             ? string.Create(
                 CultureInfo.InvariantCulture,
-                $"{this.consecutiveTurnFailures} consecutive Turns have failed; this is unlikely to be transient — {reason}")
-            : $"A Turn failed — {reason}";
+                $"{count} consecutive Turns have failed; this is unlikely to be transient — the last, in Room '{roomName}': {reason}")
+            : $"A Turn in Room '{roomName}' failed — {reason}";
         this.RaiseStatusChanged(PersonaState.Degraded, message);
     }
 

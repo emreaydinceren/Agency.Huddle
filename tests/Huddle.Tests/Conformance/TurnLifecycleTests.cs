@@ -127,7 +127,7 @@ public sealed class TurnLifecycleTests
     /// mid-flight through the real <see cref="IAgentGateway.StopTurnAsync"/> — the same entry point the
     /// UI's Stop button calls — and proves a fourth failure afterward is reported as the streak's
     /// *third* consecutive failure, not its first: if the Stop had reset the counter, the fourth Turn's
-    /// reason would read "A Turn failed", never "3 consecutive Turns have failed".
+    /// reason would read "A Turn in Room '...' failed", never "3 consecutive Turns have failed".
     /// </summary>
     [Fact]
     public async Task StopTurnAsync_TurnInFlight_EndsStoppedAndLeavesTheFailureStreakUnbroken()

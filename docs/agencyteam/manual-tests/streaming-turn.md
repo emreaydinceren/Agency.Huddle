@@ -1351,9 +1351,9 @@ The window in which the strip is visible is short by design - if you missed it b
 
 **Pass if — all of these**
 
-- After the first failure the strip reads `Nova is Degraded: A Turn failed — <the adapter's own wording>`.
-- After the second failure the wording is still the `A Turn failed — ...` form.
-- After the THIRD consecutive failure the line changes to `Nova is Degraded: 3 consecutive Turns have failed; this is unlikely to be transient — <adapter wording>`.
+- After the first failure the strip reads `Nova is Degraded: A Turn in Room '<room name>' failed — <the adapter's own wording>`.
+- After the second failure the wording is still the `A Turn in Room '<room name>' failed — ...` form.
+- After the THIRD consecutive failure the line changes to `Nova is Degraded: 3 consecutive Turns have failed; this is unlikely to be transient — the last, in Room '<room name>': <adapter wording>`.
 - Nova stays **Degraded** throughout and is never reported **Offline**.
 - `T-A` logs one `failed to process a turn` Warning per attempt.
 - After the provider is restored and a Turn succeeds, the strip clears with no page reload.
@@ -1404,7 +1404,7 @@ If pulling the network also kills the browser's connection to the app, do not ju
 **Pass if — all of these**
 
 - The Draft row DISAPPEARS rather than freezing, within a few seconds of the kill.
-- An alert strip appears in the Room. Any ONE of these reasons is correct: `Nova is Offline: The Adapter process disconnected.`, `Nova is Offline: Its event reader ended unexpectedly: <message>`, or `Nova is Degraded: A Turn failed — <message>`.
+- An alert strip appears in the Room. Any ONE of these reasons is correct: `Nova is Offline: The Adapter process disconnected.`, `Nova is Offline: Its event reader ended unexpectedly: <message>`, or `Nova is Degraded: A Turn in Room '<room name>' failed — <message>`.
 - Nova's tile is no longer green/Online.
 - `T-A` logs at Warning `Persona 'Nova' agent event stream ended unexpectedly.` and/or `Persona 'Nova' failed to process a turn in room <id>.`
 - The transcript gains no agent line for the killed Turn.

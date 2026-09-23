@@ -42,8 +42,8 @@ internal interface IRoomSessionOwner
     void ReportIncompleteStop(StopReason reason);
 
     /// <summary>Reports a failed Turn: grows the failure streak, reports Degraded, naming the Room.</summary>
-    /// <param name="roomName">The Room the failed Turn belonged to.</param>
-    /// <param name="reason">What went wrong, in words fit to follow "A Turn failed — ".</param>
+    /// <param name="roomName">The Room the failed Turn belonged to, quoted into the reported reason.</param>
+    /// <param name="reason">What went wrong, in words fit to follow "A Turn in Room '{roomName}' failed — ".</param>
     void ReportTurnFailure(string roomName, string reason);
 
     /// <summary>Reports that the Adapter process disconnected (Offline).</summary>

@@ -69,8 +69,13 @@ internal sealed class RoomSession : IAsyncDisposable
     private readonly SemaphoreSlim itemAvailable = new(0);
 
     // Per-Room Stop marks (finding P-6): the sequence value a Stop in that Room recorded most
-    // recently. A missing key means that Room was never stopped. In a shared session this is what
-    // keeps Stop scoped to one Room even though every Room shares this one queue and session.
+    // recently. A missing key means that Room was never stopped. RS Appendix A's RS-I7 describes
+    // this as retiring Phase 0's own per-Room mark (P0-I1); it is not retired, it MOVED here and
+    // stays in both modes - a shared session (RoomId null) still serves every Room the Agent is in
+    // through this one queue, so the mark is what keeps a Stop scoped to the one Room the Human
+    // asked to stop rather than dropping every Room's queued work. A per-Room session (D25) needs it
+    // too, if only trivially: it happens to hold exactly one Room, but the mark is still what a
+    // queued item's own re-check (IsStoppedAtOrBefore) reads.
     private readonly Dictionary<string, long> stopMarks = new(StringComparer.Ordinal);
 
     private RoomSessionState state = RoomSessionState.Closed;
@@ -97,6 +102,15 @@ internal sealed class RoomSession : IAsyncDisposable
     // single-threaded loop, the same unlocked-by-construction reasoning lastUsed itself already
     // relies on (D22 correction 9, built here for D24).
     private bool usageBaselinePending;
+
+    // D26, RS §6.8, finding P-14: this Room Session's OWN consecutive-failure count - separate from
+    // the Persona-wide one IRoomSessionOwner.ReportTurnFailure tracks - counted only in per-Room mode
+    // (RoomId not null) and only for what actually called ReportTurnFailure: an open/resume failure
+    // (RunConsumerAsync's own catch) or a Turn that failed or timed out (ProcessWorkItemAsync's own
+    // catches). AgentDisconnectedException does not touch it (RS §9 E-10: "entries are kept"), and
+    // neither does a Stop (P-6: "neither counts nor resets"). Touched only by this session's single
+    // consumer thread - the same reasoning firstTurnPending relies on - so it needs no lock.
+    private int roomConsecutiveFailures;
 
     /// <summary>Initializes a new instance of the <see cref="RoomSession"/> class.</summary>
     /// <param name="roomId">The Room this session belongs to, or <see langword="null"/> for a shared session serving every Room.</param>
@@ -343,6 +357,49 @@ internal sealed class RoomSession : IAsyncDisposable
         readerCts?.Dispose();
     }
 
+    /// <summary>
+    /// D26, RS §6.8, finding P-14: the same teardown <see cref="CloseAsync"/> does - cancel the event
+    /// reader's own token, await it, dispose the agent session - but callable from
+    /// <see cref="RoomSessionState.Busy"/> rather than only <see cref="RoomSessionState.Idle"/>: the
+    /// consumer calling this still holds the failed Turn's own admitted ticket, and moving straight
+    /// to <see cref="RoomSessionState.Closed"/> here, before that ticket completes, is what P-5
+    /// invariant 1 requires. Safe to call when nothing is open (an open/resume failure already left
+    /// this <see cref="RoomSessionState.Closed"/> with no session): the guard below simply no-ops the
+    /// teardown while still stamping <see cref="RoomSessionState.Closed"/>.
+    /// </summary>
+    private async Task CloseAfterRepeatedFailureAsync()
+    {
+        IAgentSession? closing;
+        CancellationTokenSource? readerCts;
+        Task? readerTask;
+        lock (this.gate)
+        {
+            closing = this.session;
+            readerCts = this.eventReaderCts;
+            readerTask = this.eventReaderTask;
+            this.session = null;
+            this.state = RoomSessionState.Closed;
+        }
+
+        if (closing is null)
+        {
+            return;
+        }
+
+        if (readerCts is not null)
+        {
+            await readerCts.CancelAsync();
+        }
+
+        if (readerTask is not null)
+        {
+            await SafeAwaitAsync(readerTask);
+        }
+
+        await closing.DisposeAsync();
+        readerCts?.Dispose();
+    }
+
     /// <summary>Ends this session's consumer, its event reader, and disposes any open <see cref="IAgentSession"/>, in that order.</summary>
     public async ValueTask DisposeAsync()
     {
@@ -551,11 +608,23 @@ internal sealed class RoomSession : IAsyncDisposable
                             // is written; the item is simply dropped, like a Stop-marked one.
                             if (ex is AgentDisconnectedException)
                             {
+                                // RS §9 E-10: the Adapter process itself is gone, which the streak
+                                // already exists to distinguish from a repeating model/quota/network
+                                // failure - this does not count toward it, and nothing is forgotten.
                                 this.owner.ReportOffline("The Adapter process disconnected.");
                             }
                             else
                             {
                                 this.owner.ReportTurnFailure(head.Item.RoomName, ex.Message);
+
+                                // D26, finding P-14: an open/resume failure counts toward THIS
+                                // session's own streak; no store.Put ever ran for this item (no Turn
+                                // started), so there is no ordering concern - just forget and close.
+                                if (this.RoomId is { } openFailedRoomId && ++this.roomConsecutiveFailures >= 2)
+                                {
+                                    this.roomSessionStore?.Forget(this.owner.PersonaName, openFailedRoomId);
+                                    await this.CloseAfterRepeatedFailureAsync();
+                                }
                             }
 
                             this.logger.LogWarning(
@@ -667,6 +736,12 @@ internal sealed class RoomSession : IAsyncDisposable
         CollectedChanges? collected = null;
         var promptReturned = false;
         var replyPosted = false;
+
+        // D26, finding P-14: latched by this Turn's own failure/timeout catch clauses below, read
+        // only in the finally block, after the store.Put segment (correction 8's ordering) - so a
+        // second consecutive failure in per-Room mode can close and forget this session without
+        // undoing the entry this same Turn just wrote.
+        var roomFailureThisTurn = false;
 
         if (item.Kind == WorkItemKind.Message && this.fileChanges is not null)
         {
@@ -794,6 +869,10 @@ internal sealed class RoomSession : IAsyncDisposable
             {
                 case StopReason.EndTurn:
                     this.owner.ReportTurnCompleted();
+
+                    // D26, RS §6.8: "a completed Turn resets" this session's own streak too, the one
+                    // outcome that does.
+                    this.roomConsecutiveFailures = 0;
                     break;
                 case StopReason.MaxTokens:
                 case StopReason.MaxTurnRequests:
@@ -816,6 +895,7 @@ internal sealed class RoomSession : IAsyncDisposable
                 string.Create(
                     CultureInfo.InvariantCulture,
                     $"the Adapter sent nothing for {idleBound.TotalSeconds} seconds, so the Turn was abandoned and cancelled"));
+            roomFailureThisTurn = true;
             this.logger.LogWarning(
                 "Persona '{PersonaName}' turn in room {RoomId} was abandoned after {IdleBoundSeconds} seconds of silence.",
                 this.owner.PersonaName,
@@ -855,6 +935,7 @@ internal sealed class RoomSession : IAsyncDisposable
             // than Offline: the session and the pipe may both be healthy while the model provider is
             // refusing, and Offline would be a claim this runner cannot support.
             this.owner.ReportTurnFailure(item.RoomName, ex.Message);
+            roomFailureThisTurn = true;
             this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to process a turn in room {RoomId}.", this.owner.PersonaName, item.RoomId);
         }
         finally
@@ -944,6 +1025,17 @@ internal sealed class RoomSession : IAsyncDisposable
             }
 
             turnCancellation.Dispose();
+        }
+
+        // D26, RS §6.8, finding P-14: a second consecutive failure closes and forgets THIS per-Room
+        // session, so its next Turn opens fresh - checked here, after the block above, so a store
+        // entry this same Turn just wrote (P-17) is not left behind for a session about to be torn
+        // down (correction 8's ordering: Put, then Forget). A no-op in shared mode (RoomId null) and
+        // for any Turn that did not itself report a failure.
+        if (this.RoomId is { } failedRoomId && roomFailureThisTurn && ++this.roomConsecutiveFailures >= 2)
+        {
+            this.roomSessionStore?.Forget(this.owner.PersonaName, failedRoomId);
+            await this.CloseAfterRepeatedFailureAsync();
         }
     }
 

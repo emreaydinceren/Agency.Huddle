@@ -157,6 +157,47 @@ public sealed class RoomSessionTests
         }
     }
 
+    /// <summary>
+    /// D25 correction 24: strengthens TRAP 1 with the idle-timeout watchdog actually armed, unlike
+    /// <see cref="Stop_LatchWrittenBeforeCancel_ReportsNoFailure"/> (<see cref="AcpOptions.TurnIdleTimeoutSeconds"/>
+    /// defaults to 0 there, so no watchdog ever starts). Mutation-tested: moving
+    /// <c>RoomSession.StopAsync</c>'s <c>MarkStopRequested()</c> call after its <c>Cancel()</c> call
+    /// does NOT turn this test red, reliably, across repeated runs - <c>Cancel()</c> runs
+    /// synchronously and the catch clause that reads <c>StopRequested</c> only runs once the
+    /// exception has propagated back up through the awaited Task, by which time the reordered write
+    /// has long since landed. A genuine regression here needs the idle-timeout watchdog's own
+    /// <c>MarkTimedOut()</c> to race <em>the same window</em> in real wall-clock time - the identical
+    /// difficulty this correction already documents for TRAP 2's <c>CancelAsync</c> callbacks being
+    /// deferred. Kept anyway: it still pins that a Stop landing well inside an ARMED bound is
+    /// reported as Stopped, not merely as "no bound configured at all".
+    /// </summary>
+    [Fact]
+    public async Task Stop_WhileWatchdogArmed_LatchBeforeCancel_ReportedAsStopped()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "never posted");
+        FakeRoomSessionOwner owner = new();
+        AcpOptions options = new() { TurnIdleTimeoutSeconds = 5 };
+        var (room, runCts) = CreateSession(owner, FixedOpen(session), options: options);
+        try
+        {
+            room.Enqueue(new QueuedWork(1, RoomAItem));
+            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+
+            await room.StopAsync("room-a", mark: 1, ct);
+
+            await WaitUntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct);
+
+            Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
+            Assert.DoesNotContain(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportOffline));
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
     /// <summary>TRAP 2 at unit level: the idle-timeout watchdog cancels the far side before it cancels its own Turn token.</summary>
     [Fact]
     public async Task IdleTimeout_CancelsFarSideFirst()

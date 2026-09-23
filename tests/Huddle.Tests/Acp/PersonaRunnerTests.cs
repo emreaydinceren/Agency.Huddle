@@ -1882,7 +1882,9 @@ public sealed class PersonaRunnerTests
 
         Assert.Contains(
             statuses,
-            s => s.State == PersonaState.Degraded && s.Reason!.Contains("A Turn failed", StringComparison.Ordinal));
+            s => s.State == PersonaState.Degraded
+                && s.Reason!.Contains("A Turn in Room", StringComparison.Ordinal)
+                && s.Reason.Contains("failed —", StringComparison.Ordinal));
     }
 
     /// <summary>
