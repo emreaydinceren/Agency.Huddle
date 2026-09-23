@@ -5,7 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 77 Done.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 87 Done.
 
 ## How to update this tracker
 
@@ -121,16 +121,16 @@ Deliverable and Acceptance.
 | 15.4.t Test: Reset to default on the card (red) | | | ✔ |
 | 15.4.i Implement Reset | | | ✔ |
 | **D16. The Greeting** | | | |
-| 16.1.t Test: `RoomInfo.IsEmpty` on the wire (red) | ✔ | | |
-| 16.1.i Add `IsEmpty` | ✔ | | |
-| 16.2.t Functional test: the server fills `IsEmpty` (red) | ✔ | | |
-| 16.2.i Implement `HasMessagesAsync` and fill the field | ✔ | | |
-| 16.3.t Test: the runner queues exactly one Greeting (red) | ✔ | | |
-| 16.3.i Implement the Greeting `WorkItem` and `turn.greeting` | ✔ | | |
-| 16.4.t Test: the Greeting prompt golden (red) | ✔ | | |
-| 16.4.i Accept the golden | ✔ | | |
-| 16.5.t Functional test: the Greeting posts, or fails cleanly (red) | ✔ | | |
-| 16.5.i Close gaps in a Turn with no triggering Message | ✔ | | |
+| 16.1.t Test: `RoomInfo.IsEmpty` on the wire (red) | | | ✔ |
+| 16.1.i Add `IsEmpty` | | | ✔ |
+| 16.2.t Functional test: the server fills `IsEmpty` (red) | | | ✔ |
+| 16.2.i Implement `HasMessagesAsync` and fill the field | | | ✔ |
+| 16.3.t Test: the runner queues exactly one Greeting (red) | | | ✔ |
+| 16.3.i Implement the Greeting `WorkItem` and `turn.greeting` | | | ✔ |
+| 16.4.t Test: the Greeting prompt golden (red) | | | ✔ |
+| 16.4.i Accept the golden | | | ✔ |
+| 16.5.t Functional test: the Greeting posts, or fails cleanly (red) | | | ✔ |
+| 16.5.i Close gaps in a Turn with no triggering Message | | | ✔ |
 | **D17. S3 health check, manual tests, final docs** | | | |
 | 17.1 Health check on an empty data directory | ✔ | | |
 | 17.2 Write `manual-tests/skills.md` | ✔ | | |

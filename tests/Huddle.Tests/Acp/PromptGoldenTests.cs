@@ -200,6 +200,21 @@ public sealed class PromptGoldenTests
     }
 
     /// <summary>
+    /// Pins <see cref="PersonaRunner.BuildPrompt"/> for a Greeting Turn (Spec §6.14): no triggering
+    /// Message and no catch-up context, built through the same path the runner uses to queue one.
+    /// </summary>
+    [Fact]
+    public void TurnPromptGreeting_MatchesGolden()
+    {
+        var item = new PersonaRunner.WorkItem(
+            "room-3", "Chief of Staff", string.Empty, string.Empty, [], PersonaRunner.WorkItemKind.Greeting);
+
+        var actual = PersonaRunner.BuildPrompt(item, new FakePromptSource());
+
+        AssertMatchesGolden("turnPromptGreeting.txt", actual);
+    }
+
+    /// <summary>
     /// Builds <see cref="GetHelpTool"/> together with the six real chat tools it reports, using the
     /// same narrow construction <c>GetHelpToolTests</c> uses: each tool's <see cref="IAppTool.Description"/>
     /// is a plain property, so nothing here needs to actually invoke a tool, only resolve its

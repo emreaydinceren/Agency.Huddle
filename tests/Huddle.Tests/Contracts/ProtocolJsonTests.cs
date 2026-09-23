@@ -59,6 +59,50 @@ public sealed class ProtocolJsonTests
         Assert.Equal(40, result.Budget);
     }
 
+    /// <summary>
+    /// A <see cref="RoomInfo"/> for a Room that has Messages serialises <c>isEmpty</c> as a literal
+    /// <c>true</c> on the wire, per Spec §7.2.
+    /// </summary>
+    [Fact]
+    public void Welcome_RoomInfoIsEmpty_SerialisesAsLiteralJson()
+    {
+        MemberInfo member = new("agent-1", "echo", UserKind.Agent);
+        RoomInfo room = new("room-1", "echo", new List<MemberInfo> { member }, IsEmpty: true);
+        Welcome welcome = new("agent-1", "echo", new List<RoomInfo> { room });
+
+        string json = ProtocolJson.Serialize(welcome);
+
+        Assert.Contains("\"isEmpty\":true", json, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A <see cref="Welcome"/> line with no <c>isEmpty</c> field — as an older server would send —
+    /// deserialises <see cref="RoomInfo.IsEmpty"/> as <see langword="false"/>, so an older server can
+    /// never cause a Greeting.
+    /// </summary>
+    [Fact]
+    public void Welcome_IsEmptyAbsent_DeserialisesFalse()
+    {
+        string json = """
+            {"type":"welcome","version":3,"agentId":"agent-1","name":"echo",
+             "rooms":[{"id":"room-1","name":"echo","members":[]}]}
+            """.ReplaceLineEndings(string.Empty);
+
+        Welcome result = Assert.IsType<Welcome>(ProtocolJson.Deserialize(json));
+
+        Assert.False(result.Rooms[0].IsEmpty);
+    }
+
+    /// <summary>
+    /// Adding <see cref="RoomInfo.IsEmpty"/> is additive on a server-to-client record, so it costs no
+    /// <see cref="ProtocolVersion"/> bump.
+    /// </summary>
+    [Fact]
+    public void ProtocolVersion_StillThree()
+    {
+        Assert.Equal(3, ProtocolVersion.Current);
+    }
+
     // The reason a new field on a server-to-client record costs no ProtocolVersion bump: a client
     // built before it still parses the line and ignores what it does not know. traps.md records the
     // opposite case - renaming a property silently changes the protocol with no signal at all.

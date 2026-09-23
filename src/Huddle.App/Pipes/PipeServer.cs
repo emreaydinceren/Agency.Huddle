@@ -23,6 +23,7 @@ internal sealed class PipeServer : BackgroundService
     private readonly TeamOptions options;
     private readonly ITeamDirectory teamDirectory;
     private readonly ChatService chat;
+    private readonly IChatStore chatStore;
     private readonly AgentGateway gateway;
     private readonly Drafts drafts;
     private readonly RoomEvents roomEvents;
@@ -33,6 +34,7 @@ internal sealed class PipeServer : BackgroundService
         IOptions<TeamOptions> options,
         ITeamDirectory teamDirectory,
         ChatService chat,
+        IChatStore chatStore,
         AgentGateway gateway,
         Drafts drafts,
         RoomEvents roomEvents,
@@ -41,6 +43,7 @@ internal sealed class PipeServer : BackgroundService
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(teamDirectory);
         ArgumentNullException.ThrowIfNull(chat);
+        ArgumentNullException.ThrowIfNull(chatStore);
         ArgumentNullException.ThrowIfNull(gateway);
         ArgumentNullException.ThrowIfNull(drafts);
         ArgumentNullException.ThrowIfNull(roomEvents);
@@ -49,6 +52,7 @@ internal sealed class PipeServer : BackgroundService
         this.options = options.Value;
         this.teamDirectory = teamDirectory;
         this.chat = chat;
+        this.chatStore = chatStore;
         this.gateway = gateway;
         this.drafts = drafts;
         this.roomEvents = roomEvents;
@@ -104,6 +108,7 @@ internal sealed class PipeServer : BackgroundService
                 server,
                 this.teamDirectory,
                 this.chat,
+                this.chatStore,
                 this.gateway,
                 this.drafts,
                 this.roomEvents,

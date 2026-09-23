@@ -18,6 +18,7 @@ internal sealed class AgentConnection
     private readonly NamedPipeServerStream pipe;
     private readonly ITeamDirectory teamDirectory;
     private readonly ChatService chat;
+    private readonly IChatStore chatStore;
     private readonly AgentGateway gateway;
     private readonly Drafts drafts;
     private readonly RoomEvents roomEvents;
@@ -37,6 +38,7 @@ internal sealed class AgentConnection
         NamedPipeServerStream pipe,
         ITeamDirectory teamDirectory,
         ChatService chat,
+        IChatStore chatStore,
         AgentGateway gateway,
         Drafts drafts,
         RoomEvents roomEvents,
@@ -45,6 +47,7 @@ internal sealed class AgentConnection
         ArgumentNullException.ThrowIfNull(pipe);
         ArgumentNullException.ThrowIfNull(teamDirectory);
         ArgumentNullException.ThrowIfNull(chat);
+        ArgumentNullException.ThrowIfNull(chatStore);
         ArgumentNullException.ThrowIfNull(gateway);
         ArgumentNullException.ThrowIfNull(drafts);
         ArgumentNullException.ThrowIfNull(roomEvents);
@@ -53,6 +56,7 @@ internal sealed class AgentConnection
         this.pipe = pipe;
         this.teamDirectory = teamDirectory;
         this.chat = chat;
+        this.chatStore = chatStore;
         this.gateway = gateway;
         this.drafts = drafts;
         this.roomEvents = roomEvents;
@@ -204,7 +208,8 @@ internal sealed class AgentConnection
         foreach (var room in rooms)
         {
             var members = await this.teamDirectory.GetRoomMembersAsync(room.Id, ct);
-            roomInfos.Add(new RoomInfo(room.Id, room.Name, members.Select(ToMemberInfo).ToList()));
+            var isEmpty = !await this.chatStore.HasMessagesAsync(room.Id, ct);
+            roomInfos.Add(new RoomInfo(room.Id, room.Name, members.Select(ToMemberInfo).ToList(), isEmpty));
         }
 
         return new Welcome(user.Id, user.Name, roomInfos);

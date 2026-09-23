@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Channels;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Acp;
@@ -82,6 +83,12 @@ internal sealed class PersonaRunner : IAsyncDisposable
     private string? agentId;
     private bool disposed;
 
+    // Guards the Greeting (Spec §6.14) against being queued twice on this instance - at most once
+    // per runner lifetime, even if a later re-Welcome ever reaches StartAsync's caller again. Touched
+    // only from StartAsync, which runs once to completion before the read loop that could otherwise
+    // race it starts, so this needs no Interlocked.
+    private bool greetingQueued;
+
     public PersonaRunner(
         Persona persona,
         IOptions<TeamOptions> options,
@@ -157,6 +164,28 @@ internal sealed class PersonaRunner : IAsyncDisposable
         var created = await this.factory.CreateAsync(this.persona, welcome.AgentId, cancellationToken);
         this.host = created.Host;
         this.session = created.Session;
+
+        // The Greeting (Spec §6.14): queued here, only now that CreateAsync has succeeded, so a
+        // failed start never leaves a queued Turn with no session. At most once per runner lifetime
+        // (greetingQueued), only for the built-in Chief of Staff (_builtin: chief-of-staff in the
+        // Persona's own text - the runner never reads the database, only what arrived in this
+        // Welcome), and only for a Room with exactly two Members, one of them the Human, that has
+        // taken no Messages yet.
+        if (!this.greetingQueued &&
+            PersonaFrontmatter.TryReadIdentity(this.persona.Text, out var identity, out _) &&
+            string.Equals(identity.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal))
+        {
+            var humanRoom = welcome.Rooms.FirstOrDefault(room =>
+                room.Members.Count == 2 && room.Members.Any(member => member.Kind == UserKind.Human) && room.IsEmpty);
+            if (humanRoom is not null)
+            {
+                this.greetingQueued = true;
+                var greetingSequence = Interlocked.Increment(ref this.sequenceCounter);
+                this.workItems.Writer.TryWrite(new QueuedWork(
+                    greetingSequence,
+                    new WorkItem(humanRoom.Id, humanRoom.Name, string.Empty, string.Empty, [], WorkItemKind.Greeting)));
+            }
+        }
 
         // IAgentSession.Models' own doc comment: an EMPTY list means unknown, never "no models are
         // available", so it must never produce a Degraded report. Only a genuinely non-empty catalog
@@ -965,12 +994,13 @@ internal sealed class PersonaRunner : IAsyncDisposable
     }
 
     /// <summary>Builds the prompt text delivered to the model for one Turn.</summary>
-    /// <param name="item">The Turn's Room, sender, text and any catch-up context.</param>
+    /// <param name="item">The Turn's Room, sender, text, any catch-up context, and its <see cref="WorkItemKind"/>.</param>
     /// <param name="prompts">Resolves each <c>turn.*</c> prompt's current text — a configured override, or the <see cref="PromptCatalog"/> default.</param>
     /// <returns>
-    /// The full prompt: with no catch-up context, the <c>turn.message</c> line alone; with catch-up
-    /// context, a <c>turn.catchUpHeader</c> line, one <c>turn.catchUpLine</c> per missed message, a
-    /// blank line, then the <c>turn.message</c> line.
+    /// For a <see cref="WorkItemKind.Greeting"/>, the <c>turn.greeting</c> prompt alone. Otherwise: with
+    /// no catch-up context, the <c>turn.message</c> line alone; with catch-up context, a
+    /// <c>turn.catchUpHeader</c> line, one <c>turn.catchUpLine</c> per missed message, a blank line,
+    /// then the <c>turn.message</c> line.
     /// </returns>
     internal static string BuildPrompt(WorkItem item, IPromptSource prompts)
     {
@@ -981,6 +1011,13 @@ internal sealed class PersonaRunner : IAsyncDisposable
         // mcp__team__post_message and mcp__team__invite_agent both take a room id, and nothing else
         // in a turn carries it: without this they reach only Rooms the Agent created itself.
         var room = RoomLabel(item, prompts);
+
+        if (item.Kind == WorkItemKind.Greeting)
+        {
+            // No triggering Message and no catch-up (Spec §6.14): the trigger is this Prompt, not
+            // Transcript text, and a Greeting is by definition the first Turn in an empty Room.
+            return prompts.Render("turn.greeting", new Dictionary<string, string> { ["{{roomLabel}}"] = room });
+        }
 
         if (item.MissedMessages.Count == 0)
         {
@@ -1106,12 +1143,23 @@ internal sealed class PersonaRunner : IAsyncDisposable
         }
     }
 
+    /// <summary>What kind of Turn a <see cref="WorkItem"/> starts.</summary>
+    internal enum WorkItemKind
+    {
+        /// <summary>An ordinary Turn, triggered by a delivered Message.</summary>
+        Message,
+
+        /// <summary>The Chief of Staff's unprompted first Message to the Human (Spec §6.14). No triggering Message and no catch-up.</summary>
+        Greeting,
+    }
+
     internal sealed record WorkItem(
         string RoomId,
         string RoomName,
         string SenderName,
         string Text,
-        IReadOnlyList<CaughtUpMessage> MissedMessages);
+        IReadOnlyList<CaughtUpMessage> MissedMessages,
+        WorkItemKind Kind = WorkItemKind.Message);
 
     internal sealed record CaughtUpMessage(string SenderName, string Text);
 

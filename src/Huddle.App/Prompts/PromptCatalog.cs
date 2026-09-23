@@ -194,6 +194,24 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
 
         new PromptDefinition(
+            Key: "turn.greeting",
+            Label: "Greeting",
+            HelperText:
+                "The Chief of Staff's unprompted first message to a new Human, sent once, when its room " +
+                "with the Human has taken no messages yet. {{roomLabel}} is required: without it the " +
+                "model has no room to post its reply into.",
+            Default:
+                """
+                {{roomLabel}}
+                The Human has just started using this application and has not written anything yet. This is
+                your first Message to them, and nothing prompted it. Greet them: if you hold a Skill for
+                this, read it first and follow it. Keep it to one Message that ends with one question.
+                """,
+            Placeholders: ["{{roomLabel}}"],
+            RequiredPlaceholders: ["{{roomLabel}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
             Key: "getHelp.intro",
             Label: "Help: introduction",
             HelperText:

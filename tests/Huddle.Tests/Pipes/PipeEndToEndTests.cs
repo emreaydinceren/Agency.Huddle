@@ -400,6 +400,53 @@ public sealed class PipeEndToEndTests
         Assert.Null(await first.ReadAsync(ct));
     }
 
+    /// <summary>A new Agent's two-Member Room with the Human has taken no Messages yet, so its Welcome reports it empty.</summary>
+    [Fact]
+    public async Task Welcome_NewAgentRoom_IsEmptyTrue()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+
+        await using var client = await fixture.ConnectClientAsync(ct);
+        await client.WriteAsync(new Hello("echo", null), ct);
+        var welcome = Assert.IsType<Welcome>(await client.ReadAsync(ct));
+        var room = Assert.Single(welcome.Rooms);
+
+        Assert.True(room.IsEmpty);
+    }
+
+    /// <summary>
+    /// Once a Human Message lands in a Room, a later Welcome for that Room from a fresh connection
+    /// reports it not empty, proving the flag comes from the Transcript rather than from connection
+    /// state.
+    /// </summary>
+    [Fact]
+    public async Task Welcome_AfterOneMessage_ReconnectIsEmptyFalse()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+
+        await using var first = await fixture.ConnectClientAsync(ct);
+        await first.WriteAsync(new Hello("echo", null), ct);
+        var firstWelcome = Assert.IsType<Welcome>(await first.ReadAsync(ct));
+        var firstRoom = Assert.Single(firstWelcome.Rooms);
+        Assert.True(firstRoom.IsEmpty);
+
+        await chat.PostAsync(firstRoom.Id, KnownIds.Human, "hi", ct: ct);
+
+        await using var second = await fixture.ConnectClientAsync(ct);
+        await second.WriteAsync(new Hello("echo", null), ct);
+        var secondWelcome = Assert.IsType<Welcome>(await second.ReadAsync(ct));
+        var secondRoom = Assert.Single(secondWelcome.Rooms);
+
+        Assert.False(secondRoom.IsEmpty);
+    }
+
     [Fact]
     public async Task Disconnect_UnregistersAgent()
     {
