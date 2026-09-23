@@ -240,7 +240,7 @@ public sealed class PersonaRunnerTests
     /// <summary>
     /// When the session factory itself fails, <see cref="PersonaRunner.StartAsync"/> propagates the
     /// exception before it ever reaches the Greeting check: Spec §6.14 requires the Greeting to be
-    /// queued only after <c>factory.CreateAsync</c> succeeds, "so a failed start never leaves a
+    /// queued only after <c>factory.StartAsync</c> succeeds, "so a failed start never leaves a
     /// queued Turn with no session". <see cref="FakeAgentSession.Prompts"/> on a fresh, never-returned
     /// session proves nothing reached it.
     /// </summary>

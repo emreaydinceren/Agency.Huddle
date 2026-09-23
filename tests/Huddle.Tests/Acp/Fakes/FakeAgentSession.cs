@@ -24,7 +24,28 @@ internal sealed class FakeAgentSession : IAgentSession
     private int cancelCallCount;
     private bool cancelObservedPromptInFlight;
 
+    /// <summary>Initializes a new instance of the <see cref="FakeAgentSession"/> class.</summary>
+    /// <param name="completeEventsOnDispose">
+    /// Whether <see cref="DisposeAsync"/> completes <see cref="Events"/> (D19 correction 14). A
+    /// session a test constructs directly wants the default <see langword="true"/>, matching
+    /// <c>DotAcpAgentSession.DisposeAsync</c>. <see langword="false"/> is for the one shared
+    /// session <c>FakeAgentHostFactory</c> hands out from every host's first
+    /// <see cref="Agency.Huddle.App.Acp.IPersonaHost.OpenAsync"/>: a supervisor restart disposes
+    /// one host and starts another, and the second host's first open must still return a session
+    /// whose <see cref="Events"/> reader has not already completed.
+    /// </param>
+    public FakeAgentSession(bool completeEventsOnDispose = true)
+    {
+        this.CompleteEventsOnDispose = completeEventsOnDispose;
+    }
+
     public string SessionId { get; } = Guid.NewGuid().ToString("N");
+
+    /// <summary>Whether <see cref="DisposeAsync"/> has been called.</summary>
+    public bool Disposed { get; private set; }
+
+    /// <summary>See the constructor parameter of the same name.</summary>
+    public bool CompleteEventsOnDispose { get; }
 
     public ChannelReader<AgentEvent> Events => this.events.Reader;
 
@@ -201,6 +222,12 @@ internal sealed class FakeAgentSession : IAgentSession
 
     public ValueTask DisposeAsync()
     {
+        this.Disposed = true;
+        if (this.CompleteEventsOnDispose)
+        {
+            this.events.Writer.TryComplete();
+        }
+
         return ValueTask.CompletedTask;
     }
 

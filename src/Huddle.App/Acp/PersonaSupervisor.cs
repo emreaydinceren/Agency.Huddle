@@ -27,7 +27,7 @@ internal sealed class PersonaSupervisor : BackgroundService
     // warning for one that does not exist (Spec §6.4, §12 F-1) — DotAcpAgentHostFactory resolves
     // the same names again itself, for the tool grants and the Skill Index; see the comment beside
     // the AdapterProfileResolver.Resolve call in StartHostIfMissingAsync for why this duplication
-    // is the accepted cost rather than a reason to widen IAgentHostFactory.CreateAsync.
+    // is the accepted cost rather than a reason to widen IAgentHostFactory.StartAsync.
     private readonly SkillStore skills;
 
     // Optional (finding P-13): null means File Changes is off for every Persona this supervisor
@@ -235,7 +235,7 @@ internal sealed class PersonaSupervisor : BackgroundService
                 // and "running" into one `alreadyKnown` state, fell through to the restart decision,
                 // read `started = null`, took NeedsRestart's `started is null` short-circuit, and
                 // restarted a host that had never finished starting - producing a second
-                // factory.CreateAsync under the same agent id. The in-flight start reads current
+                // factory.StartAsync under the same agent id. The in-flight start reads current
                 // file and DB state when it runs, so a restart here has nothing to achieve: do
                 // nothing and let it finish. Not startup-specific - any second PersonasChanged
                 // arriving during a slow first start (a real `node` adapter) hits this same branch.
@@ -276,7 +276,7 @@ internal sealed class PersonaSupervisor : BackgroundService
     /// type, and <see cref="OperationCanceledException"/> never reaches here at all - the caller's own
     /// <c>when</c> clause excludes it, because that exception means shutdown, not a failure.
     /// </summary>
-    /// <param name="ex">The exception <see cref="IAgentHostFactory.CreateAsync"/> or <c>StartAsync</c> threw.</param>
+    /// <param name="ex">The exception <see cref="IAgentHostFactory.StartAsync"/> or the runner's own <c>OpenAsync</c> threw.</param>
     /// <returns>A Human-facing reason naming what went wrong, when the exception itself does not already say so plainly.</returns>
     private static string DescribeStartFailure(Exception ex) => ex switch
     {
@@ -426,11 +426,14 @@ internal sealed class PersonaSupervisor : BackgroundService
             }
 
             // Spec §8.2: DotAcpAgentHostFactory resolves the same Persona's Adapter again when it
-            // builds the session, so this looks like duplicated work - it is not. Widening
-            // IAgentHostFactory.CreateAsync's return tuple to also carry this diagnostic would touch
+            // starts the host, so this looks like duplicated work - it is not. Widening
+            // IAgentHostFactory.StartAsync's return type to also carry this diagnostic would touch
             // FakeAgentHostFactory and every supervisor test call site for one string. The resolver
             // is pure and touches no state, so calling it twice costs nothing and keeps that
-            // signature frozen - two calls, one truth. The Degraded report itself is issued after
+            // signature stable here - two calls, one truth. (RS §6.3 changed IAgentHostFactory's
+            // signature once, deliberately, splitting CreateAsync into StartAsync/OpenAsync; the
+            // "frozen" reasoning below still holds for the resolver call, just not for the factory
+            // interface itself.) The Degraded report itself is issued after
             // "Starting" below rather than here, so the "whatever was said during the start wins"
             // rule a few lines down does not immediately overwrite it back to Starting/Online. The
             // resolved profile itself is kept (not discarded) because FC §6.11's ReadsFiles decides

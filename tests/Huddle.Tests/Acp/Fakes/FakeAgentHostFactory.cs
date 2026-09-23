@@ -1,35 +1,44 @@
-using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
 
 namespace Agency.Huddle.Tests.Acp.Fakes;
 
 /// <summary>
-/// A test double for <see cref="IAgentHostFactory"/>. Returns one fixed <see cref="FakeAgentHost"/> and
-/// <see cref="FakeAgentSession"/> for the whole test, so a test can reach into <see cref="Session"/> to
-/// queue turn plans and inspect recorded prompts without launching a real agent process.
+/// A test double for <see cref="IAgentHostFactory"/>. Every <see cref="StartAsync"/> call returns a
+/// fresh <see cref="FakePersonaHost"/> (recorded as <see cref="Host"/>), whose first
+/// <see cref="FakePersonaHost.OpenAsync"/> returns the one fixed <see cref="Session"/> for the whole
+/// test - so a test can reach into <see cref="Session"/> to queue turn plans and inspect recorded
+/// prompts without launching a real agent process, exactly as before RS §6.3 split the factory.
 /// </summary>
 internal sealed class FakeAgentHostFactory : IAgentHostFactory
 {
     private Exception? failure;
 
-    public FakeAgentHost Host { get; } = new();
+    /// <summary>
+    /// The session every host's first <see cref="IPersonaHost.OpenAsync"/> call returns (RS §6.3
+    /// "first-open rule"). Built with <c>completeEventsOnDispose: false</c> (D19 correction 14): a
+    /// supervisor restart disposes one host and starts another, and the new host's first open must
+    /// still hand back a session whose <see cref="FakeAgentSession.Events"/> reader has not already
+    /// completed.
+    /// </summary>
+    public FakeAgentSession Session { get; } = new(completeEventsOnDispose: false);
 
-    public FakeAgentSession Session { get; } = new();
+    /// <summary>The last <see cref="FakePersonaHost"/> <see cref="StartAsync"/> returned.</summary>
+    public FakePersonaHost? Host { get; private set; }
 
     public List<(Persona Persona, string AgentId)> Calls { get; } = [];
 
     /// <summary>
-    /// Configures every future <see cref="CreateAsync"/> call to fail with <paramref name="exception"/>
-    /// instead of returning <see cref="Host"/> and <see cref="Session"/> - for a test proving what
-    /// happens when session creation itself fails, before any Turn could ever be queued against it.
+    /// Configures every future <see cref="StartAsync"/> call to fail with <paramref name="exception"/>
+    /// instead of returning a host - for a test proving what happens when the host itself fails to
+    /// start, before any Turn could ever be queued against it.
     /// </summary>
-    /// <param name="exception">The exception <see cref="CreateAsync"/> throws.</param>
+    /// <param name="exception">The exception <see cref="StartAsync"/> throws.</param>
     public void FailNextCreateWith(Exception exception)
     {
         this.failure = exception;
     }
 
-    public Task<(IAgentHost Host, IAgentSession Session)> CreateAsync(Persona persona, string agentId, CancellationToken cancellationToken)
+    public Task<IPersonaHost> StartAsync(Persona persona, string agentId, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
@@ -41,6 +50,25 @@ internal sealed class FakeAgentHostFactory : IAgentHostFactory
             throw this.failure;
         }
 
-        return Task.FromResult<(IAgentHost, IAgentSession)>((this.Host, this.Session));
+        // SessionPerRoom does not exist on AdapterProfile until D23; when it does, D23.2.i adds it
+        // here explicitly false (finding P-9's "absent means false" for the fakes, never the
+        // record's own default), so the 27 FakePersonaServer-backed runner tests, several of which
+        // run two Rooms over this one fake session, are never moved by D28's later default flip.
+        FakePersonaHost host = new(
+            this.Session,
+            new AdapterProfile(
+                Id: "claude",
+                DisplayName: "Claude",
+                Description: null,
+                Command: "claude-agent-acp",
+                Args: null,
+                AdapterPath: null,
+                UsesToolNamePrefix: true,
+                EnvironmentOverrides: null,
+                ReadsFiles: true,
+                IsolateUserSettings: true));
+
+        this.Host = host;
+        return Task.FromResult<IPersonaHost>(host);
     }
 }

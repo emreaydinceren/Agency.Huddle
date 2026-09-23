@@ -17,7 +17,7 @@ namespace Agency.Huddle.App.Acp;
 /// <see cref="PersonaRunner"/> is simultaneously a pipe client — it dials the application's own named
 /// pipe as an ordinary protocol client and registers an Agent, exactly as
 /// <see cref="Agency.Huddle.App.Demo.DemoAgentHost"/> does, deliberately with no privileged access to the Team
-/// Directory — and an ACP client, owning one <see cref="IAgentHost"/> and one
+/// Directory — and an ACP client, owning one <see cref="IPersonaHost"/> and one
 /// <see cref="IAgentSession"/> with the Persona as its system prompt.
 /// </summary>
 /// <remarks>
@@ -90,7 +90,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
 
     private ActiveTurn? activeTurn;
     private JsonLineStream? stream;
-    private IAgentHost? host;
+    private IPersonaHost? host;
     private IAgentSession? session;
     private Task? readLoopTask;
     private Task? consumerTask;
@@ -195,14 +195,17 @@ internal sealed class PersonaRunner : IAsyncDisposable
             this.knownRoomNames[room.Id] = room.Name;
         }
 
-        // Only now, with Registration complete, does the Agent id exist, so only now can the session
-        // be created with the tools bound to it by construction (docs/acp/agent-guide.md §3.6).
-        var created = await this.factory.CreateAsync(this.persona, welcome.AgentId, cancellationToken);
-        this.host = created.Host;
-        this.session = created.Session;
+        // Only now, with Registration complete, does the Agent id exist, so only now can the host
+        // be started with the tools bound to it by construction (docs/acp/agent-guide.md §3.6).
+        // this.host is assigned BEFORE OpenAsync (D19 correction 17), so a failed first open is
+        // still disposed with the runner - StartAsync's own catch used to do that for a failed
+        // CreateAsync; now that opening a session is a separate call, StopAsync's existing
+        // this.host-is-not-null disposal covers it instead.
+        this.host = await this.factory.StartAsync(this.persona, welcome.AgentId, cancellationToken);
+        this.session = await this.host.OpenAsync(cancellationToken);
 
-        // The Greeting (Spec §6.14): queued here, only now that CreateAsync has succeeded, so a
-        // failed start never leaves a queued Turn with no session. At most once per runner lifetime
+        // The Greeting (Spec §6.14): queued here, only now that the host started and OpenAsync has
+        // succeeded, so a failed start never leaves a queued Turn with no session. At most once per runner lifetime
         // (greetingQueued), only for the built-in Chief of Staff (_builtin: chief-of-staff in the
         // Persona's own text - the runner never reads the database, only what arrived in this
         // Welcome), and only for a Room with exactly two Members, one of them the Human, that has

@@ -133,7 +133,7 @@ public sealed class PersonaSupervisorTests
     /// untestable here without launching a real "node" adapter process (rules.md row 26), so this is
     /// the closest a unit test gets to proving an Effort makes it to the factory: it shows the whole
     /// Persona, Effort included, reaches whatever <see cref="IAgentHostFactory"/> is configured, which
-    /// is exactly the value <see cref="DotAcpAgentHostFactory.CreateAsync"/> reads
+    /// is exactly the value <see cref="DotAcpAgentHostFactory.StartAsync"/> reads
     /// <c>persona.Effort</c> off of to build its <c>AgentSessionOptions</c>.
     /// </summary>
     [Fact]
@@ -1106,7 +1106,7 @@ public sealed class PersonaSupervisorTests
     /// <summary>A test double for <see cref="IAgentHostFactory"/> that throws a caller-supplied exception for one named Persona and otherwise delegates to <paramref name="inner"/>.</summary>
     private sealed class FailingForOneAgentHostFactory(string failingPersonaName, Exception exception, FakeAgentHostFactory inner) : IAgentHostFactory
     {
-        public Task<(IAgentHost Host, IAgentSession Session)> CreateAsync(Persona persona, string agentId, CancellationToken cancellationToken)
+        public Task<IPersonaHost> StartAsync(Persona persona, string agentId, CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(persona);
 
@@ -1115,13 +1115,13 @@ public sealed class PersonaSupervisorTests
                 throw exception;
             }
 
-            return inner.CreateAsync(persona, agentId, cancellationToken);
+            return inner.StartAsync(persona, agentId, cancellationToken);
         }
     }
 
     /// <summary>
     /// A test double for <see cref="IAgentHostFactory"/> that throws a caller-supplied exception the
-    /// FIRST time it is asked to create the named Persona's host, and delegates to
+    /// FIRST time it is asked to start the named Persona's host, and delegates to
     /// <paramref name="inner"/> every time after that - the shape a Restart actually fixes (the
     /// adapter got installed, authentication completed) rather than one that keeps failing forever.
     /// </summary>
@@ -1129,7 +1129,7 @@ public sealed class PersonaSupervisorTests
     {
         private bool hasFailedOnce;
 
-        public Task<(IAgentHost Host, IAgentSession Session)> CreateAsync(Persona persona, string agentId, CancellationToken cancellationToken)
+        public Task<IPersonaHost> StartAsync(Persona persona, string agentId, CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(persona);
 
@@ -1139,7 +1139,7 @@ public sealed class PersonaSupervisorTests
                 throw exception;
             }
 
-            return inner.CreateAsync(persona, agentId, cancellationToken);
+            return inner.StartAsync(persona, agentId, cancellationToken);
         }
     }
 }

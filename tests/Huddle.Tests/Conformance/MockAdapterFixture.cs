@@ -182,7 +182,7 @@ public sealed class MockAdapterFixture : IAsyncDisposable
 
     /// <summary>
     /// Tears the fixture down deterministically: stops the Persona's runner (which itself disposes
-    /// its session, its host, and — via <c>DotAcpAgentHostFactory</c>'s <c>ToolServerOwningAgentHost</c>
+    /// its session, its host, and — via <c>DotAcpAgentHostFactory</c>'s <c>DotAcpPersonaHost</c>
     /// — its <c>AppToolServer</c>), then stops and disposes the host and its temp data directory. No
     /// step here waits on a fixed delay: every await is a real completion signal from the object being
     /// torn down.

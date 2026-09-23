@@ -10,8 +10,8 @@ namespace Agency.Huddle.App.Acp;
 /// <remarks>
 /// <para>
 /// A singleton, not a field on <c>PersonaRunner</c>. ADR-0005 specified a per-Persona
-/// <see cref="HashSet{T}"/> shared through <c>IAgentHostFactory.CreateAsync</c>, but that call
-/// returns only an <c>(IAgentHost, IAgentSession)</c> pair - the tools built inside it are invisible
+/// <see cref="HashSet{T}"/> shared through <c>IAgentHostFactory.StartAsync</c>, but that call
+/// returns only an <c>IPersonaHost</c> - the tools built inside it are invisible
 /// to the caller - so sharing a set that way would mean widening <see cref="IAgentHostFactory"/>,
 /// whose own doc comment calls it "purely a test seam" for exercising the pipe path against a fake
 /// agent for zero tokens. A singleton sidesteps that entirely: a future follow/unfollow tool takes

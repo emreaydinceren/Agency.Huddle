@@ -59,7 +59,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// <param name="skills">
     /// Resolves a Persona's assigned Skill names to their current <see cref="Skill"/> records
     /// (Spec §6.4, §6.5). Read here from <see cref="Persona.Text"/> directly, rather than threaded
-    /// through <see cref="IAgentHostFactory.CreateAsync"/>'s parameters, because that signature stays
+    /// through <see cref="IAgentHostFactory.StartAsync"/>'s parameters, because that signature stays
     /// narrow (Spec §6.4 Implementation notes) — <c>PersonaSupervisor</c> resolves the same names a
     /// second time, only for the Degraded warnings it reports before ever calling this factory.
     /// </param>
@@ -87,7 +87,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         this.skills = skills;
     }
 
-    public async Task<(IAgentHost Host, IAgentSession Session)> CreateAsync(Persona persona, string agentId, CancellationToken cancellationToken)
+    public async Task<IPersonaHost> StartAsync(Persona persona, string agentId, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
@@ -117,7 +117,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         var authToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 
         // Parsed from the Persona's own text rather than threaded through this method's signature
-        // (Spec §6.4 Implementation notes keeps IAgentHostFactory.CreateAsync narrow). A Persona with
+        // (Spec §6.4 Implementation notes keeps IAgentHostFactory.StartAsync narrow). A Persona with
         // no frontmatter at all - or malformed frontmatter - is not an error here: it simply holds no
         // Skills. PersonaSupervisor resolves the same names a second time, purely to report a Degraded
         // warning for one that does not exist (Task 5.2); this factory never surfaces that warning,
@@ -172,15 +172,11 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         // never changes, only whether model-facing names carry it.
         var toolNamePrefix = profile.UsesToolNamePrefix ? $"mcp__{ToolServerName}__" : string.Empty;
 
-        // FC §6.15: the index is a snapshot at session start; later edits reach the session through
-        // File Changes instead. Gated exactly like the watch tools above - File Changes off, or an
-        // Adapter that cannot read files, means no memory block either.
-        MemorySnapshot? memory = null;
-        if (this.options.FileChanges.Enabled && profile.ReadsFiles)
-        {
-            var (entries, notListed) = MemoryIndex.Build(memoryDir, this.options.FileChanges.MaxMemoryEntries);
-            memory = new MemorySnapshot(memoryDir, entries, notListed);
-        }
+        // FC §6.15: the memory index used to be a snapshot taken once here, at session start. RS
+        // §6.3 moves that into DotAcpPersonaHost.OpenAsync/ResumeAsync, rebuilt on every call, so a
+        // Room Session opened later sees what was remembered since - the gate itself (File Changes
+        // off, or an Adapter that cannot read files, means no memory block) is unchanged.
+        bool readsMemory = this.options.FileChanges.Enabled && profile.ReadsFiles;
 
         // get_help is offered first and knows every other tool, so the system prompt can name one
         // tool instead of all of them. It is built last for the obvious reason: it takes the rest.
@@ -211,6 +207,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         // the Human's own Claude Code settings and CLAUDE.md, and off its auto-memory, so FC §6.15's
         // memory folder is the only memory that session sees. Unverified until Task 14.3.m passes -
         // see AdapterProfile.IsolateUserSettings's remarks for the known settings-replacement risk.
+        // Minted once per host (RS §6.3): every session this Persona's host opens or resumes carries
+        // the same Meta, exactly as it always carried the same token below.
         IReadOnlyDictionary<string, object>? meta = profile.IsolateUserSettings
             ? new Dictionary<string, object>(StringComparer.Ordinal)
             {
@@ -228,77 +226,22 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             }
             : null;
 
-        IAgentSession session;
-        try
-        {
-            session = await innerHost.StartSessionAsync(
-                new AgentSessionOptions(
-                    workDir,
-                    // Approves the way AutoApprovePermissionHandler does, except inside the human's
-                    // own agent configuration directory - see WorkDirPermissionHandler for why that
-                    // one exception is drawn there and not around the Work Dir. Falls back to the
-                    // plain auto-approve only if the profile directory cannot be resolved at all,
-                    // rather than inventing a path to protect.
-                    WorkDirPermissionHandler.DefaultProtectedDirectory() is { } protectedDirectory
-                        ? new WorkDirPermissionHandler(protectedDirectory, this.loggerFactory.CreateLogger<WorkDirPermissionHandler>())
-                        : new AutoApprovePermissionHandler(),
-                    new SystemPromptOptions(
-                        SystemPromptComposer.Compose(
-                            persona,
-                            prompts,
-                            toolNamePrefix + getHelpTool.Name,
-                            toolNames,
-                            skillResolution.Skills,
-                            toolNamePrefix + readSkillTool.Name,
-                            memory),
-                        SystemPromptMode.Append),
-                    toolServer.Endpoint,
-                    persona.Model,
-                    persona.Effort,
-                    meta),
-                cancellationToken).ConfigureAwait(false);
-        }
-        catch
-        {
-            await innerHost.DisposeAsync().ConfigureAwait(false);
-            await toolServer.DisposeAsync().ConfigureAwait(false);
-            throw;
-        }
-
-        IAgentHost host = new ToolServerOwningAgentHost(innerHost, toolServer);
-        return (host, session);
-    }
-
-    /// <summary>
-    /// Wraps an <see cref="IAgentHost"/> so disposing it also disposes the <see cref="AppToolServer"/>
-    /// the factory started for it: the factory owns the tool server's lifetime, not the host itself.
-    /// </summary>
-    private sealed class ToolServerOwningAgentHost(IAgentHost inner, AppToolServer toolServer) : IAgentHost
-    {
-        public AgentHostInfo Info => inner.Info;
-
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            return inner.StartAsync(cancellationToken);
-        }
-
-        public Task<IAgentSession> StartSessionAsync(AgentSessionOptions options, CancellationToken cancellationToken)
-        {
-            return inner.StartSessionAsync(options, cancellationToken);
-        }
-
-        // D19 (RS §6.3) replaces this type with DotAcpPersonaHost, which resumes through
-        // IPersonaHost.ResumeAsync instead. Until then nothing calls this: the factory's only
-        // caller (PersonaSupervisor) always starts a fresh session.
-        public Task<IAgentSession> ResumeSessionAsync(string sessionId, AgentSessionOptions options, CancellationToken cancellationToken)
-        {
-            throw new NotSupportedException("Resume is not wired up until D19 (RS §6.3) replaces this type with DotAcpPersonaHost.");
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await inner.DisposeAsync().ConfigureAwait(false);
-            await toolServer.DisposeAsync().ConfigureAwait(false);
-        }
+        return new DotAcpPersonaHost(
+            innerHost,
+            toolServer,
+            profile,
+            persona,
+            prompts,
+            toolNamePrefix + getHelpTool.Name,
+            toolNames,
+            skillResolution.Skills,
+            toolNamePrefix + readSkillTool.Name,
+            memoryDir,
+            readsMemory,
+            this.options.FileChanges.MaxMemoryEntries,
+            workDir,
+            toolServer.Endpoint,
+            meta,
+            this.loggerFactory);
     }
 }

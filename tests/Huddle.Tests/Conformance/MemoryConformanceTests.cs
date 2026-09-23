@@ -7,7 +7,7 @@ using Agency.Huddle.App.Acp;
 namespace Agency.Huddle.Tests.Conformance;
 
 /// <summary>
-/// FC §6.15 (Task 12.2): whether <see cref="DotAcpAgentHostFactory.CreateAsync"/> creates the
+/// FC §6.15 (Task 12.2): whether <see cref="DotAcpAgentHostFactory.StartAsync"/> creates the
 /// <c>memory/</c> folder next to a Persona's Work Dir, and whether the memory block reaches a real
 /// composed system prompt, driven the same way <see cref="ToolPrefixTests"/> drives its tool list.
 /// </summary>
