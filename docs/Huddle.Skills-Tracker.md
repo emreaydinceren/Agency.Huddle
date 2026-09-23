@@ -5,7 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 39 Done.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 43 Done.
 
 ## How to update this tracker
 
@@ -74,10 +74,10 @@ Deliverable and Acceptance.
 | 7.1 Update the docs S1 changed | | | ✔ |
 | **S2 — Team-building tools** | | | |
 | **D8. `PersonaStore`: dry-run check and serialised writes** | | | |
-| 8.1.t Test: `PersonaStore.Check` reports every problem, writes nothing (red) | ✔ | | |
-| 8.1.i Extract `Check` | ✔ | | |
-| 8.2.t Test: concurrent Adds cannot both succeed on a collision (red) | ✔ | | |
-| 8.2.i Serialise `Add` and `Update` | ✔ | | |
+| 8.1.t Test: `PersonaStore.Check` reports every problem, writes nothing (red) | | | ✔ |
+| 8.1.i Extract `Check` | | | ✔ |
+| 8.2.t Test: concurrent Adds cannot both succeed on a collision (red) | | | ✔ |
+| 8.2.i Serialise `Add` and `Update` | | | ✔ |
 | **D9. Candidates and `validate_teammate`** | | | |
 | 9.1.t Test: parsing a Candidate from JSON (red) | ✔ | | |
 | 9.1.i Implement `Candidate` and `CandidateJson` | ✔ | | |

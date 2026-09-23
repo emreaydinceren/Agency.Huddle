@@ -367,11 +367,11 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   logging provider can already be disposed when a `FileSystemWatcher` raises a
   late `Error` event, and because the handler runs on a watcher callback thread the
   throw is unhandled and takes the process with it. It reads as a flake because it
-  needs a dropped-event overflow to land inside the teardown window. **Not fixed**,
-  because the one-line fix — move the log inside the existing `disposed` guard —
-  belongs to `PersonaStore` and was out of scope for the work that found it; rerun
-  the suite if you hit it, and do not read it as a regression in whatever you were
-  changing.
+  needs a dropped-event overflow to land inside the teardown window. **Fixed
+  2026-09-22** (Skills D8): the log moved inside the existing `disposed` guard, the
+  same order `SkillStore.OnWatcherError` uses, and
+  `PersonaStoreTests.OnWatcherError_AfterDispose_DoesNotLog` fails if it moves back.
+  A test-host crash naming `OnWatcherError` is now a regression, not this flake.
 - **Known bug, pre-existing:** `Data/SqliteTeamDirectory.cs` is not
   `IDisposable`, and SQLite connection pooling keeps a handle on `team.db`, so
   tests leave about 83 temp directories behind per run. `TempDataDir.Dispose`

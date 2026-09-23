@@ -79,6 +79,18 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     private readonly PersonaEffortStore efforts;
     private readonly ILogger<PersonaStore> logger;
     private readonly Lock watchGate = new();
+
+    // Serialises Add and Update end to end - exists-check through the synchronous index publish -
+    // so a second writer can never validate against a snapshot the first writer's own write is
+    // about to invalidate (Spec §14 D-14). Held ONLY across that span; the event raise that follows
+    // (NotifyChanged) always runs after this lock is released - see that method's remarks for why.
+    // A distinct lock from watchGate on purpose: watchGate guards the index SWAP itself (taken by
+    // the watcher's debounce too, which never writes a file and so never needs writeGate), while
+    // writeGate guards the whole check-then-write-then-publish sequence around a caller's own edit.
+    // Nested only in one direction - writeGate, then watchGate, inside PublishFreshIndex - never the
+    // reverse; see PublishFreshIndex's remarks for the ordering proof.
+    private readonly Lock writeGate = new();
+
     private readonly FileSystemWatcher watcher;
     private readonly Timer debounceTimer;
     private bool disposed;
@@ -161,9 +173,11 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// and <see cref="PersonaIndex"/> itself treat the two as equal.
     /// </summary>
     /// <remarks>
-    /// Raised SYNCHRONOUSLY and to completion, strictly BEFORE <see cref="PersonasChanged"/>, in both
-    /// <see cref="RefreshIndexAndNotify"/> and <see cref="OnDebounceElapsed"/>. This ordering is
-    /// load-bearing, not incidental: <see cref="Agency.Huddle.App.Acp.PersonaSupervisor"/> reacts to
+    /// Raised SYNCHRONOUSLY and to completion, strictly BEFORE <see cref="PersonasChanged"/>, from
+    /// <see cref="NotifyChanged"/> - called by <see cref="Add"/>, <see cref="Update"/> and
+    /// <see cref="Remove"/> (via <see cref="RefreshIndexAndNotify"/>) after each writes to disk, and
+    /// by <see cref="OnDebounceElapsed"/> when the watcher settles on an external change. This
+    /// ordering is load-bearing, not incidental: <see cref="Agency.Huddle.App.Acp.PersonaSupervisor"/> reacts to
     /// <see cref="PersonasChanged"/> by stopping the OLD Name's runner and starting the NEW Name's,
     /// and the newly started runner registers itself over the pipe under the new Name the instant it
     /// connects. If the Team Directory row has not already been renamed in place by the time that
@@ -289,22 +303,39 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
             throw new ChatException(ErrorCodes.BadMessage, "Persona text must not be blank.");
         }
 
-        var path = Path.Combine(this.teamsDir, $"{identity.Name}.md");
-        if (File.Exists(path))
+        string text;
+        PersonaEntry entry;
+        (PersonaIndex Previous, PersonaIndex Updated)? change;
+
+        // Spec §14 D-14: the exists-check, the collision check AND the write must all run under
+        // ONE lock, held through the synchronous index publish below - otherwise a second Add
+        // racing this one could pass its own check against the same pre-write snapshot and write
+        // a colliding file before this Add's write is ever visible to it.
+        lock (this.writeGate)
         {
-            throw new ChatException(ErrorCodes.BadMessage, $"Persona '{identity.Name}' already exists.");
+            var path = Path.Combine(this.teamsDir, $"{identity.Name}.md");
+            if (File.Exists(path))
+            {
+                throw new ChatException(ErrorCodes.BadMessage, $"Persona '{identity.Name}' already exists.");
+            }
+
+            text = PersonaFrontmatter.Compose(identity, body);
+
+            entry = this.ValidateCandidate(path, text, excludingPath: null);
+
+            Directory.CreateDirectory(this.teamsDir);
+            File.WriteAllText(path, text);
+            this.models.Set(entry.Name, model);
+            this.efforts.Set(entry.Name, effort);
+
+            // Published BEFORE writeGate is released, not after: the next Add or Update to take
+            // this lock must see an index that already reflects THIS write, or it would pass
+            // ValidateCandidate against the same stale snapshot this Add itself just resolved.
+            change = this.PublishFreshIndex();
         }
 
-        var text = PersonaFrontmatter.Compose(identity, body);
-
-        var entry = this.ValidateCandidate(path, text, excludingPath: null);
-
-        Directory.CreateDirectory(this.teamsDir);
-        File.WriteAllText(path, text);
-        this.models.Set(entry.Name, model);
-        this.efforts.Set(entry.Name, effort);
-
-        this.RefreshIndexAndNotify();
+        // Raised only after writeGate is released - see NotifyChanged's remarks for why.
+        this.NotifyChanged(change);
 
         return new Persona(entry.Name, text, model, effort, entry.Adapter);
     }
@@ -337,22 +368,36 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
             throw new ChatException(ErrorCodes.BadMessage, "Persona text must not be blank.");
         }
 
-        var current = this.index.ByName(name) ?? throw new ChatException(ErrorCodes.BadMessage, $"Persona '{name}' does not exist.");
+        PersonaEntry entry;
+        (PersonaIndex Previous, PersonaIndex Updated)? change;
 
-        var entry = this.ValidateCandidate(current.Path, text, excludingPath: current.Path);
-
-        File.WriteAllText(current.Path, text);
-
-        if (!string.Equals(current.Name, entry.Name, StringComparison.OrdinalIgnoreCase))
+        // Same hole as Add, and the same fix: the "current Persona" lookup, the collision check
+        // AND the write must all run under ONE lock, held through the synchronous index publish -
+        // otherwise a concurrent Add or Update could validate against the same pre-write snapshot
+        // this Update resolves its own collision check against.
+        lock (this.writeGate)
         {
-            this.models.Remove(current.Name);
-            this.efforts.Remove(current.Name);
+            var current = this.index.ByName(name) ?? throw new ChatException(ErrorCodes.BadMessage, $"Persona '{name}' does not exist.");
+
+            entry = this.ValidateCandidate(current.Path, text, excludingPath: current.Path);
+
+            File.WriteAllText(current.Path, text);
+
+            if (!string.Equals(current.Name, entry.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                this.models.Remove(current.Name);
+                this.efforts.Remove(current.Name);
+            }
+
+            this.models.Set(entry.Name, model);
+            this.efforts.Set(entry.Name, effort);
+
+            // Published BEFORE writeGate is released - see Add's matching comment.
+            change = this.PublishFreshIndex();
         }
 
-        this.models.Set(entry.Name, model);
-        this.efforts.Set(entry.Name, effort);
-
-        this.RefreshIndexAndNotify();
+        // Raised only after writeGate is released - see NotifyChanged's remarks for why.
+        this.NotifyChanged(change);
 
         return new Persona(entry.Name, text, model, effort, entry.Adapter);
     }
@@ -411,12 +456,104 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     }
 
     /// <summary>
+    /// Reports every problem each of <paramref name="texts"/> would hit if it were written as a brand
+    /// new Persona right now - collisions with the current entries AND with each other - without
+    /// writing anything to disk or raising any event (Spec §6.8). "Extract, do not copy": this runs
+    /// through <see cref="BuildCandidateIndex"/>, the exact same engine <see cref="ValidateCandidate"/>
+    /// uses for <see cref="Add"/> and <see cref="Update"/>, rather than re-implementing the collision
+    /// rules a second time. Each text is assigned a synthetic path under the Teams directory
+    /// (<see cref="SyntheticPathsFor"/>) purely so its own rejection - or the lack of one - can be
+    /// matched back to it once the shared candidate index is built; that path is never written to.
+    /// Guaranteed one result per input text, in input order, even when two texts share a Name and
+    /// therefore share the same rejection reason.
+    /// </summary>
+    /// <param name="texts">Candidate Persona file texts, none of which exist on disk yet.</param>
+    /// <returns>
+    /// One pair per input text, in the same order: the text itself, and either <see langword="null"/>
+    /// when it has no problem, or the exact rejection reason <see cref="PersonaIndex.Build"/> produced
+    /// for it.
+    /// </returns>
+    internal IReadOnlyList<(string Text, string? Problem)> Check(IReadOnlyList<string> texts)
+    {
+        ArgumentNullException.ThrowIfNull(texts);
+
+        var syntheticPaths = this.SyntheticPathsFor(texts);
+        var additions = texts.Zip(syntheticPaths, (text, path) => (Path: path, Text: text)).ToList();
+
+        var candidate = this.BuildCandidateIndex(additions, excludingPath: null);
+
+        var reasonsByPath = candidate.Rejected.ToDictionary(file => file.Path, file => file.Reason, StringComparer.Ordinal);
+
+        return texts.Select((text, index) => (text, reasonsByPath.GetValueOrDefault(syntheticPaths[index]))).ToList();
+    }
+
+    /// <summary>
+    /// One stable, synthetic, never-written-to path per <paramref name="texts"/> entry, in the same
+    /// order - <c>{Name}.md</c> for the FIRST text that parses to a given Name (matching the real path
+    /// <see cref="Add"/> would write it to), and <c>{Name}~{n}.md</c> for every LATER text that parses
+    /// to that SAME Name. Without the suffix, two Candidates proposing the same Name would collapse
+    /// onto one identical Path in the candidate index, and <see cref="PersonaIndex.Build"/>'s "others"
+    /// exclusion (which compares Path to tell a file apart from itself) would then see no "other" file
+    /// for either one - an empty, useless "used by" list instead of the real collision. A text whose
+    /// frontmatter does not parse falls back to an index-based placeholder, since it has no Name to
+    /// key on and cannot collide with another text on Name either way.
+    /// </summary>
+    /// <param name="texts">The texts <see cref="Check"/> was given, in order.</param>
+    private List<string> SyntheticPathsFor(IReadOnlyList<string> texts)
+    {
+        var occurrencesByName = new Dictionary<string, int>(StringComparer.Ordinal);
+        var paths = new List<string>(texts.Count);
+
+        for (var index = 0; index < texts.Count; index++)
+        {
+            if (!PersonaFrontmatter.TryReadIdentity(texts[index], out var identity, out _))
+            {
+                paths.Add(Path.Combine(this.teamsDir, $"__check-{index}.md"));
+                continue;
+            }
+
+            var occurrence = occurrencesByName.GetValueOrDefault(identity.Name);
+            occurrencesByName[identity.Name] = occurrence + 1;
+
+            paths.Add(occurrence == 0
+                ? Path.Combine(this.teamsDir, $"{identity.Name}.md")
+                : Path.Combine(this.teamsDir, $"{identity.Name}~{occurrence}.md"));
+        }
+
+        return paths;
+    }
+
+    /// <summary>
+    /// Builds a candidate index - the current valid entries, minus the entry at
+    /// <paramref name="excludingPath"/> if any, plus every <paramref name="additions"/> file - with no
+    /// filesystem access of its own. The one place <see cref="ValidateCandidate"/> and <see cref="Check"/>
+    /// both build the hypothetical index they inspect, so a candidate edit is always validated by
+    /// exactly the same engine that decides what the read path shows.
+    /// </summary>
+    /// <param name="additions">The candidate file(s) to add - one for <see cref="ValidateCandidate"/>, one per text for <see cref="Check"/>.</param>
+    /// <param name="excludingPath">
+    /// For an update, the path of the entry being replaced, removed from the base set before the
+    /// candidate is added back in. <see langword="null"/> when nothing should be removed.
+    /// </param>
+    private PersonaIndex BuildCandidateIndex(IReadOnlyList<(string Path, string Text)> additions, string? excludingPath)
+    {
+        var files = this.index.Entries
+            .Where(existing => excludingPath is null || !string.Equals(existing.Path, excludingPath, StringComparison.Ordinal))
+            .Select(existing => (existing.Path, existing.Text))
+            .Concat(additions)
+            .ToList();
+
+        return PersonaIndex.Build(files);
+    }
+
+    /// <summary>
     /// Builds a candidate index - the current valid entries, with the file at <paramref name="path"/>
     /// substituted for <paramref name="text"/> (and, for an update, its OLD entry at
     /// <paramref name="excludingPath"/> removed first) - and returns the resulting entry for
     /// <paramref name="path"/>, or throws <see cref="ChatException"/> naming the rejection reason if
     /// the candidate would not load. Pure and disk-free: <see cref="Add"/> and <see cref="Update"/>
-    /// both call this BEFORE writing anything, so a rejected save never touches the file.
+    /// both call this BEFORE writing anything, so a rejected save never touches the file. Delegates to
+    /// <see cref="BuildCandidateIndex"/> for the actual build - the same code <see cref="Check"/> uses.
     /// </summary>
     /// <param name="path">The path the candidate file would live (or already lives) at.</param>
     /// <param name="text">The candidate file's full raw text.</param>
@@ -427,13 +564,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// </param>
     private PersonaEntry ValidateCandidate(string path, string text, string? excludingPath)
     {
-        var files = this.index.Entries
-            .Where(existing => excludingPath is null || !string.Equals(existing.Path, excludingPath, StringComparison.Ordinal))
-            .Select(existing => (existing.Path, existing.Text))
-            .Append((path, text))
-            .ToList();
-
-        var candidate = PersonaIndex.Build(files);
+        var candidate = this.BuildCandidateIndex([(path, text)], excludingPath);
 
         var rejection = candidate.Rejected.FirstOrDefault(file => string.Equals(file.Path, path, StringComparison.Ordinal));
         if (rejection is not null)
@@ -466,39 +597,83 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     }
 
     /// <summary>
-    /// Rebuilds the index from disk and swaps it in, then raises <see cref="PersonasChanged"/> exactly
-    /// once. Used by <see cref="Add"/>, <see cref="Update"/> and <see cref="Remove"/> right after each
-    /// writes to disk, so the index is always rebuilt BEFORE the event fires - otherwise
-    /// <see cref="PersonaSupervisor.OnPersonasChanged"/> would read the stale snapshot the write was
-    /// meant to replace.
+    /// Rebuilds the index from disk and swaps it in, with no event raised - the publish half of
+    /// what used to be one <c>RefreshIndexAndNotify</c> method, split so <see cref="Add"/> and
+    /// <see cref="Update"/> can call this synchronously, BEFORE releasing <see cref="writeGate"/>,
+    /// while still raising events only afterwards through <see cref="NotifyChanged"/> (Spec §14
+    /// D-14). Takes <see cref="watchGate"/> for the swap itself, exactly as the pre-split code did -
+    /// still the single lock that guards <see cref="index"/> against <see cref="Dispose"/> and the
+    /// watcher's own debounced swap (<see cref="OnDebounceElapsed"/>). Called from inside
+    /// <see cref="writeGate"/> by <see cref="Add"/> and <see cref="Update"/>, so the lock order at
+    /// that call site is always <see cref="writeGate"/> THEN <see cref="watchGate"/>, never the
+    /// reverse - <see cref="OnWatcherEvent"/>, <see cref="OnWatcherError"/>,
+    /// <see cref="OnDebounceElapsed"/> and <see cref="Dispose"/> all take ONLY <see cref="watchGate"/>
+    /// and never attempt <see cref="writeGate"/>, so the two locks can never deadlock against each
+    /// other.
     /// </summary>
-    private void RefreshIndexAndNotify()
+    /// <returns>
+    /// The (previous, updated) index pair for <see cref="NotifyChanged"/> to diff, or
+    /// <see langword="null"/> if the store was disposed mid-write, in which case there is nothing
+    /// left to publish or notify.
+    /// </returns>
+    private (PersonaIndex Previous, PersonaIndex Updated)? PublishFreshIndex()
     {
-        PersonaIndex previous;
         lock (this.watchGate)
         {
             if (this.disposed)
             {
-                return;
+                return null;
             }
 
-            previous = this.index;
+            var previous = this.index;
             this.index = this.RebuildIndexFromDisk();
+            return (previous, this.index);
+        }
+    }
+
+    /// <summary>
+    /// Raises <see cref="PersonaRenamed"/>, then <see cref="PersonaRemoved"/>, then
+    /// <see cref="PersonasChanged"/> - in that order, for the reasons each event's own remarks give -
+    /// from the (previous, updated) pair <see cref="PublishFreshIndex"/> produced, or does nothing if
+    /// that pair is <see langword="null"/> (the store was disposed before publishing). <see cref="Add"/>
+    /// and <see cref="Update"/> call this only AFTER releasing <see cref="writeGate"/>, and
+    /// <see cref="OnDebounceElapsed"/> only after releasing <see cref="watchGate"/>: invoking
+    /// arbitrary subscriber code while holding either lock is exactly the shape that deadlocks the
+    /// moment a future subscriber takes a lock of its own - the same reasoning
+    /// <see cref="OnDebounceElapsed"/>'s own remarks already gave for <see cref="watchGate"/>, now
+    /// extended to <see cref="writeGate"/> too.
+    /// </summary>
+    /// <param name="change">The pair <see cref="PublishFreshIndex"/> returned.</param>
+    private void NotifyChanged((PersonaIndex Previous, PersonaIndex Updated)? change)
+    {
+        if (change is not { } value)
+        {
+            return;
         }
 
         // PersonaRenamed BEFORE PersonasChanged - see that event's own remarks for why the ordering
         // is load-bearing rather than incidental.
-        this.RaiseRenames(previous, this.index);
+        this.RaiseRenames(value.Previous, value.Updated);
 
         // PersonaRemoved after PersonaRenamed and still before PersonasChanged, for the same reason:
         // a subscriber cascading a removal needs it settled before PersonaSupervisor reacts.
-        this.RaiseRemovals(previous, this.index);
+        this.RaiseRemovals(value.Previous, value.Updated);
 
         // Exactly one PersonasChanged per operation: three writes raising three events would cause
         // three restarts (PersonaSupervisor spawning three "node" adapter processes) for what the
         // caller sees as a single save.
         this.PersonasChanged?.Invoke();
     }
+
+    /// <summary>
+    /// Publishes a fresh index and notifies, as one call - used by <see cref="Remove"/>, which has
+    /// no <see cref="writeGate"/> hole to close: Spec §14 D-14 is about two WRITES racing each
+    /// other, and a delete never collides with anything the way a colliding Name or Alias can.
+    /// <see cref="Add"/> and <see cref="Update"/> instead call <see cref="PublishFreshIndex"/>
+    /// themselves, synchronously, before releasing <see cref="writeGate"/>, and call
+    /// <see cref="NotifyChanged"/> only after releasing it.
+    /// </summary>
+    private void RefreshIndexAndNotify() => this.NotifyChanged(this.PublishFreshIndex());
 
     /// <summary>
     /// Diffs <paramref name="previous"/> against <paramref name="updated"/>, keyed by
@@ -665,24 +840,36 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
 
     private static bool HasNoExtension(string? name) => name is not null && Path.GetExtension(name).Length == 0;
 
-    // FileSystemWatcher raises this instead of a normal change event when its internal buffer
-    // overflows and the OS drops events - see WatcherInternalBufferSize's comment. There is no way
-    // to know which paths were dropped, so the only correct response is the same one a normal
-    // change takes: schedule a refresh on the existing debounce path rather than trust whatever
-    // the watcher's view of the world now is.
-    private void OnWatcherError(object sender, ErrorEventArgs e)
+    /// <summary>
+    /// FileSystemWatcher raises this instead of a normal change event when its internal buffer
+    /// overflows and the OS drops events - see <see cref="WatcherInternalBufferSize"/>'s comment.
+    /// There is no way to know which paths were dropped, so the only correct response is the same
+    /// one a normal change takes: schedule a refresh on the existing debounce path rather than trust
+    /// whatever the watcher's view of the world now is. <c>internal</c> rather than <c>private</c>
+    /// only so <c>Huddle.Tests</c> can invoke it directly after <see cref="Dispose"/> - see
+    /// docs/agencyteam/known-limits.md's "Third known flake" entry and
+    /// <c>PersonaStoreTests.OnWatcherError_AfterDispose_DoesNotLog</c>.
+    /// </summary>
+    /// <param name="sender">Unused; required by the <see cref="FileSystemWatcher.Error"/> event shape.</param>
+    /// <param name="e">Carries the exception the watcher caught.</param>
+    internal void OnWatcherError(object sender, ErrorEventArgs e)
     {
-        this.logger.LogWarning(
-            e.GetException(),
-            "PersonaStore's FileSystemWatcher reported an error (likely a dropped-event buffer overflow); scheduling a refresh.");
-
         lock (this.watchGate)
         {
+            // Checked BEFORE logging, not after: logging first and checking disposed second meant
+            // a watcher Error event that fires during host teardown, after this store (and possibly
+            // the logging provider itself) has been disposed, threw an unhandled
+            // ObjectDisposedException on the watcher callback thread and crashed the process -
+            // docs/agencyteam/known-limits.md's "Third known flake" entry.
+            // SkillStore.OnWatcherError already gets this ordering right; this now matches it.
             if (this.disposed)
             {
                 return;
             }
 
+            this.logger.LogWarning(
+                e.GetException(),
+                "PersonaStore's FileSystemWatcher reported an error (likely a dropped-event buffer overflow); scheduling a refresh.");
             this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
         }
     }

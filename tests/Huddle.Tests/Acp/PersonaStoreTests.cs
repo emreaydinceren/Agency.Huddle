@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
@@ -1176,6 +1177,178 @@ public sealed class PersonaStoreTests
         Assert.DoesNotContain("coo", store.ListNames());
     }
 
+    /// <summary>
+    /// Pins Spec §6.8's "joint" check: two brand-new texts that collide with EACH OTHER on Alias
+    /// must both come back with a problem, not just the second one enumerated - the same
+    /// "every file on either side of a collision is rejected" rule <see cref="PersonaIndex"/>
+    /// already enforces for files on disk, now proven for <see cref="PersonaStore.Check"/>'s
+    /// dry run over supplied texts that were never written anywhere.
+    /// </summary>
+    [Fact]
+    public void Check_TwoNewTextsSameAlias_BothRejectedWithReasons()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        var textA = "---\nName: alpha\nTitle: Alpha\nAlias: shared\n---\nAlpha body.";
+        var textB = "---\nName: beta\nTitle: Beta\nAlias: shared\n---\nBeta body.";
+
+        var results = store.Check([textA, textB]);
+
+        Assert.Equal(2, results.Count);
+        Assert.All(results, result => Assert.Contains("shared", result.Problem, StringComparison.Ordinal));
+        Assert.Empty(Directory.GetFiles(Path.Combine(dir.Path, "Teams"), "*.md", SearchOption.AllDirectories));
+    }
+
+    /// <summary>
+    /// A brand-new text whose Alias equals an EXISTING Persona's Name is rejected - the same
+    /// collision <see cref="PersonaIndex.Build"/> enforces across files already on disk, now
+    /// caught by <see cref="PersonaStore.Check"/> against the current entries BEFORE
+    /// <see cref="PersonaStore.Add"/> ever gets a chance to write the colliding file.
+    /// </summary>
+    [Fact]
+    public void Check_NewTextAliasEqualsExistingName_Rejected()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("coo"), "You are the Chief of Staff.");
+        var candidateText = "---\nName: vp\nTitle: VP\nAlias: coo\n---\nVP body.";
+
+        var results = store.Check([candidateText]);
+
+        var result = Assert.Single(results);
+        Assert.Equal(candidateText, result.Text);
+        Assert.Contains("coo", result.Problem, StringComparison.Ordinal);
+        Assert.False(File.Exists(Path.Combine(dir.Path, "Teams", "vp.md")));
+    }
+
+    /// <summary>
+    /// A candidate text with a clean identity and no collisions reports no problem, and
+    /// <see cref="PersonaStore.Check"/> writes nothing to disk either way - the whole point of a
+    /// dry-run check an Agent can call for free before proposing a Teammate.
+    /// </summary>
+    [Fact]
+    public void Check_ValidText_NoProblems_NoFileWritten()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        var text = "---\nName: coo\nTitle: Chief of Staff\nAlias: coo\n---\nYou are the Chief of Staff.";
+
+        var results = store.Check([text]);
+
+        var result = Assert.Single(results);
+        Assert.Equal(text, result.Text);
+        Assert.Null(result.Problem);
+        Assert.False(File.Exists(Path.Combine(dir.Path, "Teams", "coo.md")));
+        Assert.Empty(store.ListNames());
+    }
+
+    /// <summary>
+    /// Two brand-new texts that collide with EACH OTHER on Name (not merely Alias) must both be
+    /// rejected, AND each reason must actually name the OTHER text's synthetic path - a naive
+    /// "{Name}.md" synthetic path for every occurrence would collapse both texts onto the
+    /// identical Path, and <see cref="PersonaIndex"/>'s "others" exclusion (which compares Path)
+    /// would then see no "other" file at all for either one, producing a reason with an empty
+    /// "used by" list rather than naming the real collision. Also proves <see cref="PersonaStore.Check"/>
+    /// never drops or merges a result even when two inputs share a synthetic path: two texts in,
+    /// two results out, in the same order.
+    /// </summary>
+    [Fact]
+    public void Check_TwoNewTextsSameName_BothRejectedNamingEachOther()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        var textA = "---\nName: coo\nTitle: Alpha\nAlias: alpha\n---\nAlpha body.";
+        var textB = "---\nName: coo\nTitle: Beta\nAlias: beta\n---\nBeta body.";
+
+        var results = store.Check([textA, textB]);
+
+        Assert.Equal(2, results.Count);
+        Assert.Equal(textA, results[0].Text);
+        Assert.Equal(textB, results[1].Text);
+        Assert.NotNull(results[0].Problem);
+        Assert.NotNull(results[1].Problem);
+
+        // Each reason must name the OTHER text's own synthetic path, proving the two texts did
+        // not collapse onto one shared Path with an empty "used by" list.
+        Assert.Contains("coo~1.md", results[0].Problem, StringComparison.Ordinal);
+        Assert.Contains("coo.md", results[1].Problem, StringComparison.Ordinal);
+        Assert.DoesNotContain("used by .", results[0].Problem, StringComparison.Ordinal);
+        Assert.DoesNotContain("used by .", results[1].Problem, StringComparison.Ordinal);
+
+        Assert.Empty(Directory.GetFiles(Path.Combine(dir.Path, "Teams"), "*.md", SearchOption.AllDirectories));
+    }
+
+    /// <summary>
+    /// Pins Spec §14 D-14: <see cref="PersonaStore.Add"/>'s exists check and its
+    /// <c>ValidateCandidate</c> call both run against <c>this.index</c>, a snapshot only refreshed
+    /// AFTER a write completes - so two concurrent Adds proposing DIFFERENT Names but the SAME
+    /// Alias can both read the same stale snapshot, both pass validation, and both write, rather
+    /// than one being rejected before it ever touches disk. Released together from a
+    /// <see cref="Barrier"/> so both threads reach <see cref="PersonaStore.Add"/> at (as close to)
+    /// the same instant as possible, and run across 20 iterations, because the race window is
+    /// small enough that any single run can get lucky and serialise cleanly on its own.
+    /// </summary>
+    [Fact]
+    public async Task Add_ConcurrentSameAlias_ExactlyOneSucceeds()
+    {
+        var ct = TestContext.Current.CancellationToken;
+
+        for (var iteration = 0; iteration < 20; iteration++)
+        {
+            using var dir = new TempDataDir();
+            using var store = CreateStore(dir);
+            using var barrier = new Barrier(2);
+
+            bool TryAdd(string name)
+            {
+                barrier.SignalAndWait(ct);
+                try
+                {
+                    store.Add(Identity(name, alias: "shared"), $"You are {name}.");
+                    return true;
+                }
+                catch (ChatException)
+                {
+                    return false;
+                }
+            }
+
+            var first = Task.Run(() => TryAdd("alpha"), ct);
+            var second = Task.Run(() => TryAdd("beta"), ct);
+            var outcomes = await Task.WhenAll(first, second);
+
+            Assert.True(
+                outcomes[0] != outcomes[1],
+                $"Iteration {iteration}: expected exactly one success and one ChatException, got [alpha={outcomes[0]}, beta={outcomes[1]}].");
+            Assert.Empty(store.RejectedFiles);
+        }
+    }
+
+    /// <summary>
+    /// Pins docs/agencyteam/known-limits.md's "Third known flake": <see cref="PersonaStore.OnWatcherError"/>
+    /// used to call the logger BEFORE taking <c>watchGate</c> and checking <c>disposed</c>, so a late
+    /// <see cref="FileSystemWatcher"/> Error event arriving after <see cref="PersonaStore.Dispose"/> -
+    /// during host teardown, when the logging provider itself can already be disposed - threw an
+    /// unhandled <see cref="ObjectDisposedException"/> on the watcher callback thread and crashed the
+    /// process. <see cref="ThrowingLogger{T}"/> stands in for that disposed logging provider: it
+    /// throws on every call, so if the handler still reaches the logger after <c>Dispose</c>, this
+    /// test surfaces the exact same exception type the real crash did. Invokes the handler directly
+    /// (narrowed to <c>internal</c> for exactly this) rather than via reflection or a real watcher
+    /// overflow, which cannot be triggered deterministically.
+    /// </summary>
+    [Fact]
+    public void OnWatcherError_AfterDispose_DoesNotLog()
+    {
+        using var dir = new TempDataDir();
+        var throwingLogger = new ThrowingLogger<PersonaStore>();
+        using var store = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), throwingLogger);
+        store.Dispose();
+
+        var exception = Record.Exception(() => store.OnWatcherError(store, new ErrorEventArgs(new IOException("simulated buffer overflow"))));
+
+        Assert.Null(exception);
+    }
+
     private static PersonaStore CreateStore(TempDataDir dir)
     {
         return new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
@@ -1190,4 +1363,44 @@ public sealed class PersonaStoreTests
 
     /// <summary>Overload of <see cref="PersonaText(string, string)"/> that also hand-writes an <c>Adapter:</c> line, for tests pinning Spec §7.2/§7.3's Adapter round trip.</summary>
     private static string PersonaText(string name, string body, string adapter) => $"---\nName: {name}\nTitle: {name}\nAlias: {name}\nAdapter: {adapter}\n---\n{body}";
+
+    /// <summary>
+    /// A hand-written fake <see cref="ILogger{T}"/> that throws <see cref="ObjectDisposedException"/>
+    /// on every call, standing in for a logging provider that has already been disposed during host
+    /// teardown - the scenario <see cref="OnWatcherError_AfterDispose_DoesNotLog"/> exists to prove
+    /// <see cref="PersonaStore.OnWatcherError"/> never reaches once <see cref="PersonaStore.Dispose"/>
+    /// has run.
+    /// </summary>
+    /// <typeparam name="T">The category type the fake logger stands in for.</typeparam>
+    private sealed class ThrowingLogger<T> : ILogger<T>
+    {
+        /// <summary>Not used by this fake: scoping is irrelevant to the ordering this fake exists to prove.</summary>
+        /// <typeparam name="TState">The scope state type.</typeparam>
+        /// <param name="state">The scope state.</param>
+        /// <returns>A no-op <see cref="IDisposable"/>.</returns>
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        /// <summary>Always enabled, so a call that should never happen is never accidentally skipped by a level check.</summary>
+        /// <param name="logLevel">The level being checked.</param>
+        /// <returns><see langword="true"/>, always.</returns>
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        /// <summary>Throws unconditionally, simulating a disposed logging provider.</summary>
+        /// <typeparam name="TState">The state type carrying this call's structured values.</typeparam>
+        /// <param name="logLevel">Unused; this fake throws regardless of level.</param>
+        /// <param name="eventId">Unused.</param>
+        /// <param name="state">Unused.</param>
+        /// <param name="exception">Unused.</param>
+        /// <param name="formatter">Unused.</param>
+        public void Log<TState>(
+            LogLevel logLevel,
+            EventId eventId,
+            TState state,
+            Exception? exception,
+            Func<TState, Exception?, string> formatter)
+        {
+            throw new ObjectDisposedException(nameof(PersonaStore));
+        }
+    }
 }
