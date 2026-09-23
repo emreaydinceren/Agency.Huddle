@@ -5,6 +5,7 @@ using System.Text.Json;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Pipes;
@@ -49,7 +50,7 @@ public sealed class PersonaRunnerFileChangesTests
 
         var room = await directory.GetRoomAsync(roomId, ct);
         Assert.NotNull(room);
-        var expected = PersonaRunner.BuildPrompt(new PersonaRunner.WorkItem(roomId, room.Name, "You", "hi", []), new FakePromptSource());
+        var expected = RoomSession.BuildPrompt(new WorkItem(roomId, room.Name, "You", "hi", []), new FakePromptSource());
 
         Assert.Single(factory.Session.Prompts);
         Assert.Equal(expected, factory.Session.Prompts[0]);
@@ -425,8 +426,8 @@ public sealed class PersonaRunnerFileChangesTests
 
         var room = await directory.GetRoomAsync(roomId, ct);
         Assert.NotNull(room);
-        var expected1 = PersonaRunner.BuildPrompt(new PersonaRunner.WorkItem(roomId, room.Name, "You", "hi", []), new FakePromptSource());
-        var expected2 = PersonaRunner.BuildPrompt(new PersonaRunner.WorkItem(roomId, room.Name, "You", "hi again", []), new FakePromptSource());
+        var expected1 = RoomSession.BuildPrompt(new WorkItem(roomId, room.Name, "You", "hi", []), new FakePromptSource());
+        var expected2 = RoomSession.BuildPrompt(new WorkItem(roomId, room.Name, "You", "hi again", []), new FakePromptSource());
 
         Assert.Equal(2, factory.Session.Prompts.Count);
         Assert.Equal(expected1, factory.Session.Prompts[0]);

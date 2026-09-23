@@ -6,6 +6,7 @@ using System.IO.Pipes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
@@ -629,7 +630,7 @@ public sealed class PersonaRunnerTests
     /// Regression test for the crashed-agent hang (roadmap item 3): before <c>RunEventReaderAsync</c>
     /// grew its <c>finally</c>, faulting the event stream mid-turn left <c>ProcessWorkItemAsync</c>
     /// awaiting a <c>TurnCompleted</c> that could now never arrive, so the single consumer never
-    /// drained another <see cref="PersonaRunner.WorkItem"/> - the Agent went deaf in every Room,
+    /// drained another <see cref="WorkItem"/> - the Agent went deaf in every Room,
     /// permanently. A second message posted after the fault is only ever attempted (recorded in
     /// <see cref="FakeAgentSession.Prompts"/>) if the consumer actually moved past the faulted turn.
     /// </summary>
@@ -1557,7 +1558,7 @@ public sealed class PersonaRunnerTests
 
     /// <summary>
     /// Proves the same feature for the per-turn prompt: a configured override for the Room label prompt
-    /// reaches the text <see cref="PersonaRunner.BuildPrompt"/> produces, in place of the catalog
+    /// reaches the text <see cref="RoomSession.BuildPrompt"/> produces, in place of the catalog
     /// default.
     /// </summary>
     [Fact]
@@ -1565,9 +1566,9 @@ public sealed class PersonaRunnerTests
     {
         var prompts = new FakePromptSource();
         prompts.SetOverride("turn.roomLabel", "<<{{roomName}}/{{roomId}}>>");
-        var item = new PersonaRunner.WorkItem("room-9", "Nova & You", "You", "hello", []);
+        var item = new WorkItem("room-9", "Nova & You", "You", "hello", []);
 
-        var prompt = PersonaRunner.BuildPrompt(item, prompts);
+        var prompt = RoomSession.BuildPrompt(item, prompts);
 
         Assert.Contains("<<Nova & You/room-9>>", prompt, StringComparison.Ordinal);
     }

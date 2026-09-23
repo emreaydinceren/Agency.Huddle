@@ -149,7 +149,7 @@ public sealed class GetHelpToolTests
         //
         // TODO(follow-up, out of scope for T1.11): nothing yet asserts that this documented format —
         // "[Room: <name> (id: <id>)]" — actually matches what turn.roomLabel's default renders in
-        // PersonaRunner.BuildPrompt. The two prompts (getHelp.messages and turn.roomLabel) can drift
+        // RoomSession.BuildPrompt. The two prompts (getHelp.messages and turn.roomLabel) can drift
         // apart with no test noticing, now that each is independently overridable.
         Assert.Contains("[Room: <name> (id: <id>)]", help, StringComparison.Ordinal);
     }

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
@@ -19,7 +20,7 @@ using Agency.Huddle.Tests.Acp.Tools;
 /// <summary>
 /// Golden-output safety net for task T1.1. Every model-facing string produced by
 /// <see cref="SystemPromptComposer"/>, <see cref="GetHelpTool"/>, the six real chat tools, and
-/// <see cref="PersonaRunner.BuildPrompt(PersonaRunner.WorkItem, Agency.Huddle.App.Prompts.IPromptSource)"/> is captured here as committed text
+/// <see cref="RoomSession.BuildPrompt(WorkItem, Agency.Huddle.App.Prompts.IPromptSource)"/> is captured here as committed text
 /// under <c>Acp/Golden</c>, so the later move of these strings into a JSON config file can prove it
 /// changed no behaviour, byte-for-byte.
 /// </summary>
@@ -295,50 +296,50 @@ public sealed class PromptGoldenTests
         AssertMatchesGolden("toolDescriptions.txt", actual);
     }
 
-    /// <summary>Pins <see cref="PersonaRunner.BuildPrompt"/> for a turn with no catch-up messages.</summary>
+    /// <summary>Pins <see cref="RoomSession.BuildPrompt"/> for a turn with no catch-up messages.</summary>
     [Fact]
     public void BuildPrompt_NoCatchUp_MatchesGolden()
     {
-        var item = new PersonaRunner.WorkItem("room-1", "Nova & You", "You", "hello there", []);
+        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []);
 
-        var actual = PersonaRunner.BuildPrompt(item, new FakePromptSource());
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptPlain.txt", actual);
     }
 
-    /// <summary>Pins <see cref="PersonaRunner.BuildPrompt"/> for a turn carrying two catch-up messages.</summary>
+    /// <summary>Pins <see cref="RoomSession.BuildPrompt"/> for a turn carrying two catch-up messages.</summary>
     [Fact]
     public void BuildPrompt_WithCatchUp_MatchesGolden()
     {
-        PersonaRunner.CaughtUpMessage[] missed =
+        CaughtUpMessage[] missed =
         [
             new("Alice", "did anyone see the release notes?"),
             new("Bob", "I have not, checking now"),
         ];
-        var item = new PersonaRunner.WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed);
+        var item = new WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed);
 
-        var actual = PersonaRunner.BuildPrompt(item, new FakePromptSource());
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptCatchUp.txt", actual);
     }
 
     /// <summary>
-    /// Pins <see cref="PersonaRunner.BuildPrompt"/> for a Greeting Turn (Spec §6.14): no triggering
+    /// Pins <see cref="RoomSession.BuildPrompt"/> for a Greeting Turn (Spec §6.14): no triggering
     /// Message and no catch-up context, built through the same path the runner uses to queue one.
     /// </summary>
     [Fact]
     public void TurnPromptGreeting_MatchesGolden()
     {
-        var item = new PersonaRunner.WorkItem(
-            "room-3", "Chief of Staff", string.Empty, string.Empty, [], PersonaRunner.WorkItemKind.Greeting);
+        var item = new WorkItem(
+            "room-3", "Chief of Staff", string.Empty, string.Empty, [], WorkItemKind.Greeting);
 
-        var actual = PersonaRunner.BuildPrompt(item, new FakePromptSource());
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptGreeting.txt", actual);
     }
 
     /// <summary>
-    /// Pins <see cref="PersonaRunner.BuildPrompt"/> for a Turn carrying a non-empty File Changes
+    /// Pins <see cref="RoomSession.BuildPrompt"/> for a Turn carrying a non-empty File Changes
     /// report together with Catch-up context, per FC §6.8: the File Changes block goes first, ahead
     /// of Catch-up, then exactly what today's Catch-up path already writes. The golden file was
     /// written by hand from FC §6.8's sample, not seeded from this test's own output.
@@ -355,20 +356,20 @@ public sealed class PromptGoldenTests
             NotListed: 12,
             Unchecked: [@"E:\Huddle\App_Data\Shared\big-folder"],
             MaxFilesPerFolder: 5000);
-        PersonaRunner.CaughtUpMessage[] missed =
+        CaughtUpMessage[] missed =
         [
             new("Alice", "did anyone see the release notes?"),
             new("Bob", "I have not, checking now"),
         ];
-        var item = new PersonaRunner.WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { FileChanges = report };
+        var item = new WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { FileChanges = report };
 
-        var actual = PersonaRunner.BuildPrompt(item, new FakePromptSource());
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptFileChanges.txt", actual);
     }
 
     /// <summary>
-    /// Pins <see cref="PersonaRunner.BuildPrompt"/>'s <c>by you</c> suffix (FC §6.15, D13): a change
+    /// Pins <see cref="RoomSession.BuildPrompt"/>'s <c>by you</c> suffix (FC §6.15, D13): a change
     /// carrying <see cref="FileChange.ByYouRoomName"/> gets <c>turn.fileByYouSuffix</c> appended to
     /// its line.
     /// </summary>
@@ -379,9 +380,9 @@ public sealed class PromptGoldenTests
             [new FileChange(FileChangeKind.Added, @"E:\Huddle\App_Data\work\Nova\memory\code-language.md", "Alpha")],
             NotListed: 0,
             Unchecked: []);
-        var item = new PersonaRunner.WorkItem("room-1", "Nova & You", "You", "hello there", []) with { FileChanges = report };
+        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { FileChanges = report };
 
-        var actual = PersonaRunner.BuildPrompt(item, new FakePromptSource());
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptFileChangesByYou.txt", actual);
     }
@@ -393,22 +394,22 @@ public sealed class PromptGoldenTests
     [Fact]
     public void BuildPrompt_EmptyReport_ByteIdenticalToExistingGoldens()
     {
-        var plainWithEmpty = new PersonaRunner.WorkItem("room-1", "Nova & You", "You", "hello there", []) with { FileChanges = FileChangesReport.Empty };
-        AssertMatchesGolden("turnPromptPlain.txt", PersonaRunner.BuildPrompt(plainWithEmpty, new FakePromptSource()));
+        var plainWithEmpty = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { FileChanges = FileChangesReport.Empty };
+        AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(plainWithEmpty, new FakePromptSource()));
 
-        var plainWithNull = new PersonaRunner.WorkItem("room-1", "Nova & You", "You", "hello there", []) with { FileChanges = null };
-        AssertMatchesGolden("turnPromptPlain.txt", PersonaRunner.BuildPrompt(plainWithNull, new FakePromptSource()));
+        var plainWithNull = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { FileChanges = null };
+        AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(plainWithNull, new FakePromptSource()));
 
-        PersonaRunner.CaughtUpMessage[] missed =
+        CaughtUpMessage[] missed =
         [
             new("Alice", "did anyone see the release notes?"),
             new("Bob", "I have not, checking now"),
         ];
-        var catchUpWithEmpty = new PersonaRunner.WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { FileChanges = FileChangesReport.Empty };
-        AssertMatchesGolden("turnPromptCatchUp.txt", PersonaRunner.BuildPrompt(catchUpWithEmpty, new FakePromptSource()));
+        var catchUpWithEmpty = new WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { FileChanges = FileChangesReport.Empty };
+        AssertMatchesGolden("turnPromptCatchUp.txt", RoomSession.BuildPrompt(catchUpWithEmpty, new FakePromptSource()));
 
-        var catchUpWithNull = new PersonaRunner.WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { FileChanges = null };
-        AssertMatchesGolden("turnPromptCatchUp.txt", PersonaRunner.BuildPrompt(catchUpWithNull, new FakePromptSource()));
+        var catchUpWithNull = new WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { FileChanges = null };
+        AssertMatchesGolden("turnPromptCatchUp.txt", RoomSession.BuildPrompt(catchUpWithNull, new FakePromptSource()));
     }
 
     /// <summary>A Greeting Turn never carries a File Changes block, even with a non-empty report.</summary>
@@ -419,10 +420,10 @@ public sealed class PromptGoldenTests
             [new FileChange(FileChangeKind.Changed, @"E:\Huddle\App_Data\work\Nova\memory\launch-date.md")],
             NotListed: 0,
             Unchecked: []);
-        var item = new PersonaRunner.WorkItem(
-            "room-3", "Chief of Staff", string.Empty, string.Empty, [], PersonaRunner.WorkItemKind.Greeting) with { FileChanges = report };
+        var item = new WorkItem(
+            "room-3", "Chief of Staff", string.Empty, string.Empty, [], WorkItemKind.Greeting) with { FileChanges = report };
 
-        var actual = PersonaRunner.BuildPrompt(item, new FakePromptSource());
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptGreeting.txt", actual);
     }
