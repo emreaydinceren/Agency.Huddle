@@ -5,6 +5,7 @@ using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
@@ -60,6 +61,14 @@ public static class ServiceCollectionExtensions
         // and it never crosses the wire, so it costs no ProtocolVersion bump. See RoomFollows' own
         // doc comment for why this could not instead be a field on PersonaRunner.
         services.AddSingleton<RoomFollows>();
+
+        // FC §6.3: resolves a Watched Folder entry (a Teammate Name, a full path, or a path
+        // relative to DataDir) into a full path, or refuses it with a reason.
+        services.AddSingleton<WatchedFolderResolver>();
+
+        // FC §6.6: one JSON file per Agent under {DataDir}/file-state/, holding what that Agent
+        // last saw per Room.
+        services.AddSingleton<FileStateStore>();
 
         services.AddSingleton<AgentGateway>();
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());
