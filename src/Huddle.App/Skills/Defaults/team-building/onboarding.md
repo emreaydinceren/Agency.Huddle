@@ -40,9 +40,10 @@ order:
      `@cos`. Use your own Alias in the example.
    - The Human is in every Room, so they see all the work.
 3. **Why a team, and what it can be,** in two sentences:
-   - Why a team beats one agent: a critic who did not write the work, views
-     that stay separate instead of blending, characters who keep secrets, and a
-     second opinion from a different Model. The reasons are in
+   - Why a team beats one agent: each Teammate's attention stays on one job, a
+     critic who did not write the work, views that stay separate instead of
+     blending, characters who keep secrets, and a second opinion from a
+     different Model. The reasons are in
      `team-patterns.md`, under "Why a team rather than one agent".
    - The four kinds: a panel to ask for different views, companions to talk to
      one at a time, a rehearsal where Teammates play people the Human needs to
@@ -63,9 +64,10 @@ agent, and I put together the right ones for what you're working on.
 - In a bigger Room, it answers when you Mention it, like @cos.
 - You're in every Room, so you see all the work.
 
-A team does what one agent can't: it gives you a critic who didn't write the
-work, views that stay separate instead of blending into one answer, characters
-who can keep secrets, and a second opinion from a different Model.
+A team does what one agent can't: each Teammate keeps its attention on one
+job, and you get a critic who didn't write the work, views that stay separate
+instead of blending into one answer, characters who can keep secrets, and a
+second opinion from a different Model.
 A team can be a **panel** you ask for views, **companions** you talk to one at
 a time, a **rehearsal** with people to practise on, or a **pipeline** that
 hands work along and brings you the result.
@@ -78,7 +80,7 @@ Here's everything I can set up for you:
 **Work alongside you**
 - **Design review:** an Architect, a Security Reviewer and a Skeptic.
 - **Writing room:** an Editor, a Fact-checker and your target reader.
-- **Second opinion:** the same Reviewer twice, on two different Models.
+- **Model council:** three different Models answer on their own, and a Chair combines them.
 
 **Work for you** (these cost more: a coordinator reads every step)
 - **Research desk:** a Researcher, an Analyst and a Writer bring you a report.
@@ -91,7 +93,15 @@ Here's everything I can set up for you:
 - **Pre-mortem:** three Teammates who each explain a way your plan could fail.
 - **Board of advisors:** a CFO, a customer advocate and a rival who argues back.
 
+**Run your business**
+- **Growth team:** an SEO Specialist and an Ads Specialist, each with its own library of notes, who ask each other what they need.
+- **Proposal desk:** a Proposal Writer, the Buyer who reads it, and a Deal Skeptic.
+- **Client gate:** a Screener with your red flags, a Rainmaker who argues back, and a Decline Writer.
+- **Troubleshooting desk:** a Hypothesis Keeper, a Test Chooser and a Challenger for anything broken.
+- **Paperwork read-through:** your advocate, their advocate and a plain-English explainer.
+
 **Practise**
+- **Hard conversation rehearsal:** the person you're dreading, plus a Mentor who helps you try again.
 - **Interview prep:** an Interviewer and a Hiring Manager, plus a Coach.
 - **Negotiation practice:** a tough counterparty, plus an Advisor on your side.
 - **Pitch rehearsal:** a skeptical investor, plus a Coach to debrief with.
@@ -103,10 +113,12 @@ Here's everything I can set up for you:
 **Learn**
 - **Language practice:** a partner who speaks only the language you're learning.
 - **Learning cohort:** a Tutor, a Quizmaster and a Study Buddy who gets it wrong.
+- **Teach-back:** you teach a Novice, and an Observer quietly flags what you got wrong.
 
 **Everyday help**
 - **Personal staff:** a Planner, a Writing Coach and a Rubber Duck.
 - **Household staff:** a Meal Planner, a Budget Keeper and a Trip Planner.
+- **Family health advisor:** keeps notes on each family member and says when to call for help.
 
 **Play**
 - **Tabletop game:** a Game Master and a few characters, with you as the hero.
@@ -129,7 +141,7 @@ what the Human is doing. Say only what stays true until they answer.
 The menu in the example is the whole catalogue of first teams, and every team on
 it has an entry in `team-patterns.md`, so you can build any team the Human picks.
 
-- **Show every team, in the example's seven groups.** You may reword a line, but
+- **Show every team, in the example's eight groups.** You may reword a line, but
   do not drop teams, merge groups, or add teams that are not in
   `team-patterns.md`.
 - **Put the most relevant group first** when the Human has said anything about

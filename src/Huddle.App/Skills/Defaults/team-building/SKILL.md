@@ -38,7 +38,7 @@ can name a pattern from `team-patterns.md`. You need to know:
 | Ask about | Because it decides |
 | --- | --- |
 | **The goal**, and what a finished result looks like | The roles |
-| **One-off or recurring** | Whether new Teammates are worth creating at all |
+| **One-off or recurring** | Whether new Teammates are worth creating at all, and whether they should keep notes or a library that grows with each piece of work |
 | **How involved** they want to be: every step, or only the result | Panel or pipeline |
 | **Practice or real work**: are they rehearsing something, or getting it done? | Whether this is a simulation |
 | **Which Team** this belongs to, if they already use Teams | The `teams` label |
@@ -69,6 +69,9 @@ Teammate already covers it.
   dedicated.
 - **Do not reuse a Teammate the Human talks to privately** for a group
   simulation. Its private conversation will leak into the scene.
+- **Do not reuse a specialist outside its field.** A Specialist with a library
+  is valuable because its context and its library hold one field. Put it in a
+  second kind of work and both get diluted; propose a new specialist instead.
 
 ## 3. Choose how the team works
 
@@ -100,12 +103,28 @@ points. Every Candidate has these fields:
 **Write the body in the second person**, as a brief to a new colleague:
 
 - Start with who they are and what they are for: *"You are the team's Skeptic."*
+- **Describe a job, not a personality.** What they check, by which criteria, in
+  which order, and what they produce. Adjectives such as "sharp" or "aggressive"
+  change little on their own.
 - Say what good output looks like, including its length and form.
 - Say what they must not do. Most roles fail by drifting into a neighbour's job,
   such as a Reviewer rewriting the code instead of reviewing it.
 - Say when to hand off, and to whom.
-- **For a character**, also give it its own goals, anything it knows that the
-  Human does not, and what makes it step out of character.
+- **For a specialist**, add: if the brief is missing something it needs, ask
+  one clarifying question before starting, rather than guessing.
+- **For a panellist**, add: give your own answer first, change it only for a
+  new fact or argument, and say what would change your mind. Panellists who
+  read each other drift toward agreement unless told not to.
+- **For a character**, also give it a specific life rather than a label: a
+  name, a situation, its own goals, anything it knows that the Human does not,
+  and what makes it step out of character.
+- **Put every secret in the body, never in a field.** Other Teammates see a
+  Teammate's frontmatter fields in `list_agents`, including `title`, `alias`,
+  `teams` and `consult_when`, but never its body. A walk-away point or a hidden alibi in `consult_when` is known to the
+  whole cast.
+- **For a Teammate that keeps notes or a library**, use the Keeper or the
+  Specialist with a library in `roles.md`. Its body must say that its files are
+  its only memory, and how to read them selectively.
 - **Say it plainly when a role must hold back.** A model pulls every role toward
   a complete, correct, helpful answer. A Study Buddy that must sometimes be
   wrong, or a Rubber Duck that must never give the answer, will become a second
@@ -124,7 +143,9 @@ your Proposal. Two cases are worth mentioning:
 - A Tester, Quizmaster or Fact-checker usually does well on a faster, cheaper
   Model.
 - A second opinion is worth most when it comes from a different Model: the
-  same role, twice, on two Models.
+  same role on two or three Models.
+- A judge, chair or grader should be on a Model none of the others use. On the
+  same Model as one of them, it favours that one's answers.
 
 Call `validate_teammate` on each Candidate and fix every problem it reports
 before moving on. Validation is free, so call it as often as you need to.
@@ -190,7 +211,11 @@ Once Teammates exist:
    giving it work.
 2. For a panel, a simulation or private companions, tell the Human how to use
    the team: which Room, and whom to Mention for what. Create a group Room with
-   `create_room` if the pattern needs one.
+   `create_room` if the pattern needs one. For a panel, tell them to Mention
+   every panellist in the same Message, so each answers before seeing the
+   others, and to compare the answers rather than ask the panel to debate. For
+   a Teammate that keeps a library or notes, tell them where its folder is, by
+   default `App_Data/work/<Name>/`, so they can add material to it.
 3. For a pipeline, call `create_room` with every member of the team and a
    `seed`, then `follow_room` on it. The seed is the only context the team will
    have, so write it as below.

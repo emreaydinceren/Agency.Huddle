@@ -879,9 +879,9 @@ Out: a Persona file; nothing else.
 | File | Holds | Read when |
 | --- | --- | --- |
 | `SKILL.md` | Trigger description; step 0 for a new Human; the procedure: interview → take stock → choose a pattern → draft Candidates → validate → propose → after approval, kick off | Always, first |
-| `onboarding.md` | Greeting a new Human: who the Chief of Staff is, what a team can be, a menu of every first team (30 in eight groups, pipelines marked as costing more), one closing question | When step 0 applies: a Greeting Turn (§6.14), or a Human with no other Teammates greeting it |
+| `onboarding.md` | Greeting a new Human: who the Chief of Staff is, what a team can be, a menu of every first team (31 in eight groups, pipelines marked as costing more), one closing question | When step 0 applies: a Greeting Turn (§6.14), or a Human with no other Teammates greeting it |
 | `team-patterns.md` | Panel, private companions, simulation, pipeline, self-organising; set-up, why it works, what to watch, examples, relative cost; what a team cannot do yet | When choosing a pattern |
-| `roles.md` | 29 roles in seven groups, with an index table, each with `consult_when` and a starter Body | When drafting Candidates |
+| `roles.md` | 30 roles in seven groups, with an index table, each with `consult_when` and a starter Body | When drafting Candidates |
 
 **Changes required from the draft** (it predates D-1):
 - Frontmatter `tools: [validate_teammate, propose_teammates]`.
