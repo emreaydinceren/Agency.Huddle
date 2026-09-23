@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
@@ -331,6 +332,85 @@ public sealed class PersonaRenameCascadeTests
         Assert.False(File.Exists(imagePath));
     }
 
+    /// <summary>
+    /// FC §6.12: a rename cascades to <see cref="FileStateStore"/> even for a Persona whose Agent has
+    /// never registered - the stock case, since <c>Team:Acp:Enabled</c> is false by default. Mirrors
+    /// <see cref="Rename_PersonaWithNoRegisteredAgent_MovesTheAvatarKey"/> for file state.
+    /// </summary>
+    [Fact]
+    public async Task OnPersonaRenamed_NoAgentRow_StillRenamesFileState()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("ghost"), "Nobody has ever started this one.");
+        harness.FileState.Save("ghost", FileState.Empty with { Subscribed = ["Shared"] });
+
+        harness.PersonaStore.Update("ghost", PersonaText("ghostprime", "Nobody has ever started this one."), model: null, effort: null);
+
+        FileState? renamed = harness.FileState.Load("ghostprime");
+        Assert.NotNull(renamed);
+        Assert.Equal(["Shared"], renamed.Subscribed);
+        Assert.Null(harness.FileState.Load("ghost"));
+    }
+
+    /// <summary>FC §6.12, F12: renaming an Agent rewrites every OTHER Agent's <c>subscribed</c> entry naming it, via the same <see cref="FileStateStore.Rename"/> the avatar cascade sits beside.</summary>
+    [Fact]
+    public async Task OnPersonaRenamed_RewritesOtherAgentsSubscriptions()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("Nova"), "You are Nova.");
+        harness.PersonaStore.Add(Identity("Coach"), "You are Coach.");
+        harness.FileState.Save("Coach", FileState.Empty with { Subscribed = ["Nova"] });
+
+        harness.PersonaStore.Update("Nova", PersonaText("Star", "You are Nova."), model: null, effort: null);
+
+        FileState? coach = harness.FileState.Load("Coach");
+        Assert.NotNull(coach);
+        Assert.Equal(["Star"], coach.Subscribed);
+    }
+
+    /// <summary>FC §6.12: removing a Persona deletes its <see cref="FileStateStore"/> file, alongside its Avatar.</summary>
+    [Fact]
+    public async Task OnPersonaRemoved_RemovesFileState()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.FileState.Save("echo", FileState.Empty with { Subscribed = ["Shared"] });
+        Assert.NotNull(harness.FileState.Load("echo"));
+
+        harness.PersonaStore.Remove("echo");
+
+        Assert.Null(harness.FileState.Load("echo"));
+    }
+
+    /// <summary>
+    /// FC §6.12: a Name inside frontmatter is never rewritten by the cascade - Huddle never edits the
+    /// Human's Persona text on another Persona's behalf. Coach's frontmatter still reads
+    /// <c>watches: [Nova]</c> after Nova is renamed; §6.10's warning surfaces the mismatch instead.
+    /// </summary>
+    [Fact]
+    public async Task OnPersonaRenamed_DoesNotEditFrontmatter()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("Nova"), "You are Nova.");
+        const string coachText = "---\nName: Coach\nTitle: Coach\nAlias: Coach\nwatches: [Nova]\n---\nYou are Coach.";
+        harness.PersonaStore.Add(Identity("Coach"), "You are Coach.");
+        harness.PersonaStore.Update("Coach", coachText, model: null, effort: null);
+
+        harness.PersonaStore.Update("Nova", PersonaText("Star", "You are Nova."), model: null, effort: null);
+
+        var coach = harness.PersonaStore.Get("Coach");
+        Assert.NotNull(coach);
+        Assert.Contains("watches: [Nova]", coach.Text, StringComparison.Ordinal);
+    }
+
     /// <summary>Builds a real <see cref="ITeamDirectory"/>, <see cref="PersonaStore"/>, <see cref="AvatarStore"/> and started <see cref="PersonaRenameCascade"/> over <paramref name="dir"/>, seeding the Human.</summary>
     private static async Task<Harness> CreateHarnessAsync(TempDataDir dir, CancellationToken ct, ILogger<PersonaRenameCascade>? cascadeLogger = null)
     {
@@ -344,11 +424,13 @@ public sealed class PersonaRenameCascadeTests
             NullLogger<PersonaStore>.Instance);
         var roomEvents = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var avatarStore = new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance);
+        var fileState = new FileStateStore(dir.Options(), NullLogger<FileStateStore>.Instance);
         var cascade = new PersonaRenameCascade(
             teamDirectory,
             personaStore,
             roomEvents,
             avatarStore,
+            fileState,
             dir.Options(),
             TimeProvider.System,
             cascadeLogger ?? NullLogger<PersonaRenameCascade>.Instance);
@@ -361,6 +443,7 @@ public sealed class PersonaRenameCascadeTests
             PersonaStore = personaStore,
             RoomEvents = roomEvents,
             AvatarStore = avatarStore,
+            FileState = fileState,
             Cascade = cascade,
         };
     }
@@ -431,6 +514,8 @@ public sealed class PersonaRenameCascadeTests
         public required RoomEvents RoomEvents { get; init; }
 
         public required AvatarStore AvatarStore { get; init; }
+
+        public required FileStateStore FileState { get; init; }
 
         public required PersonaRenameCascade Cascade { get; init; }
 

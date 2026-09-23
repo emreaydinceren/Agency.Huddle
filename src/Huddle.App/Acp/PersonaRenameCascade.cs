@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
@@ -13,10 +14,11 @@ namespace Agency.Huddle.App.Acp;
 /// auto-name, and moves its Work Dir — see
 /// <c>docs/adr/0011-a-rename-moves-the-teammate-not-its-history.md</c> for why this is a rename in
 /// place rather than a stop-and-start under a new id. Also moves the renamed Persona's Avatar entry
-/// under the same subscription, and subscribes to <see cref="PersonaStore.PersonaRemoved"/> to delete
-/// a removed Persona's Avatar entry and image file - see <see cref="OnPersonaRemoved"/>'s doc comment
-/// for why a removal cascades here even though <c>docs/agencyteam/rules.md</c> row 38 says a removal
-/// does not cascade to Agents, Rooms or Transcripts.
+/// and its <see cref="FileStateStore"/> file under the same subscription (FC §6.12), and subscribes
+/// to <see cref="PersonaStore.PersonaRemoved"/> to delete a removed Persona's Avatar entry, image
+/// file and <see cref="FileStateStore"/> file - see <see cref="OnPersonaRemoved"/>'s doc comment for
+/// why a removal cascades here even though <c>docs/agencyteam/rules.md</c> row 38 says a removal does
+/// not cascade to Agents, Rooms or Transcripts.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -42,14 +44,16 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="personaStore">The source of <see cref="PersonaStore.PersonaRenamed"/> and <see cref="PersonaStore.PersonaRemoved"/>.</param>
 /// <param name="roomEvents">Published once, after any Room this cascade renamed.</param>
 /// <param name="avatars">Moves a renamed Persona's Avatar entry, and deletes a removed Persona's Avatar entry and image file.</param>
+/// <param name="fileState">Moves a renamed Persona's <see cref="FileStateStore"/> file, and deletes a removed Persona's file — FC §6.12.</param>
 /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/> and <see cref="AcpOptions.WorkDir"/>, which together locate the Work Dir to move.</param>
 /// <param name="timeProvider">Drives the backoff between Work Dir move attempts, so a test can control it without a real delay.</param>
-/// <param name="logger">Records a rejected rename, a Work Dir that could not be moved, and any failure in the detached half of the cascade.</param>
+/// <param name="logger">Records a rejected rename, a Work Dir that could not be moved, a file state move that failed, and any failure in the detached half of the cascade.</param>
 internal sealed partial class PersonaRenameCascade(
     ITeamDirectory teamDirectory,
     PersonaStore personaStore,
     RoomEvents roomEvents,
     AvatarStore avatars,
+    FileStateStore fileState,
     IOptions<TeamOptions> options,
     TimeProvider timeProvider,
     ILogger<PersonaRenameCascade> logger) : IHostedService, IDisposable
@@ -116,6 +120,21 @@ internal sealed partial class PersonaRenameCascade(
         // however long the detached task takes to run.
         avatars.Rename(renamed.OldName, renamed.NewName);
 
+        // Same placement and the same reason as the Avatar rename immediately above (FC §6.12): file
+        // state exists whether or not an Agent has ever connected, so this must sit ABOVE the "no
+        // Agent row" early return below, or a stock installation (Acp:Enabled false by default) would
+        // never reach it. Caught rather than allowed to propagate: a failed file move must never skip
+        // the race-critical ITeamDirectory.RenameUser call below it, which is what actually keeps
+        // ADR-0011's guarantee (the same Team Directory row, under its new Name).
+        try
+        {
+            fileState.Rename(renamed.OldName, renamed.NewName);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LogFileStateMoveFailed(logger, renamed.OldName, renamed.NewName, ex);
+        }
+
         var user = teamDirectory.FindUserByName(renamed.OldName);
         if (user is null || user.Kind != UserKind.Agent)
         {
@@ -150,6 +169,15 @@ internal sealed partial class PersonaRenameCascade(
     private void OnPersonaRemoved(PersonaRemoved removed)
     {
         avatars.Remove(removed.Name);
+
+        try
+        {
+            fileState.Remove(removed.Name);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LogFileStateRemoveFailed(logger, removed.Name, ex);
+        }
     }
 
     /// <summary>
@@ -278,4 +306,12 @@ internal sealed partial class PersonaRenameCascade(
     /// <summary>Logs that a Work Dir move failed after every retry.</summary>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not move the Work Dir for '{OldName}' to '{NewName}' after several attempts.")]
     private static partial void LogWorkDirMoveFailed(ILogger logger, string oldName, string newName, Exception exception);
+
+    /// <summary>Logs that moving a renamed Persona's File Changes state failed. The Team Directory rename proceeds regardless.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not move File Changes state for '{OldName}' to '{NewName}'.")]
+    private static partial void LogFileStateMoveFailed(ILogger logger, string oldName, string newName, Exception exception);
+
+    /// <summary>Logs that deleting a removed Persona's File Changes state failed.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not remove File Changes state for '{Name}'.")]
+    private static partial void LogFileStateRemoveFailed(ILogger logger, string name, Exception exception);
 }

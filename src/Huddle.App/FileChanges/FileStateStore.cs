@@ -78,9 +78,14 @@ internal sealed class FileStateStore(IOptions<TeamOptions> options, ILogger<File
     }
 
     /// <summary>
-    /// Moves <paramref name="oldName"/>'s file to <paramref name="newName"/>, then rewrites every
-    /// other file's <c>subscribed</c> entries, Room folder keys and Writer keys equal to
-    /// <paramref name="oldName"/>, case-insensitively. A Room id is never rewritten.
+    /// Moves <paramref name="oldName"/>'s file to <paramref name="newName"/>, rewriting that MOVED
+    /// file's own keys equal to <paramref name="oldName"/> too — its own-Work-Dir folder key and its
+    /// Writers key both describe the Agent's own folder, so they carry the old Name just like every
+    /// other file's reference to it (correction item 10, settled: skipping the moved file here used
+    /// to leave those two keys stale, so the first Turn per Room after a rename lost the Agent's own
+    /// changes and every "by you" mark). Then rewrites every other file's <c>subscribed</c> entries,
+    /// Room folder keys and Writer keys equal to <paramref name="oldName"/>, case-insensitively. A
+    /// Room id is never rewritten.
     /// </summary>
     /// <param name="oldName">The Agent's current Name.</param>
     /// <param name="newName">The Agent's new Name.</param>
@@ -98,6 +103,7 @@ internal sealed class FileStateStore(IOptions<TeamOptions> options, ILogger<File
             if (File.Exists(oldPath))
             {
                 File.Move(oldPath, newPath, overwrite: true);
+                this.RewriteName(newPath, oldName, replacement: newName);
             }
 
             foreach (string file in Directory.EnumerateFiles(this.Folder, "*.json"))

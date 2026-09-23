@@ -294,6 +294,52 @@ public sealed class FileStateStoreTests
         Assert.False(reloaded.Writers.ContainsKey("Nova"));
     }
 
+    /// <summary>
+    /// <c>Rename</c> also rewrites the MOVED file's own keys: its own-Work-Dir folder key and its
+    /// Writers key are both keyed by the Agent's OLD Name, since they describe the Agent's own
+    /// folder rather than referring to another Agent - correction item 10 (settled). Left unfixed,
+    /// the first Turn per Room after a rename would lose the Agent's own-folder changes and every
+    /// "by you" mark, because <see cref="FileChangeTracker"/> looks its own Watched Folder up by the
+    /// CURRENT Name.
+    /// </summary>
+    [Fact]
+    public void Rename_RewritesTheMovedFilesOwnKeys()
+    {
+        using TempDataDir dataDir = new();
+        FileStateStore store = new(dataDir.Options(), NullLogger<FileStateStore>.Instance);
+
+        FileState nova = BuildState(
+            subscribed: [],
+            rooms: new Dictionary<string, RoomBaseline>(StringComparer.Ordinal)
+            {
+                ["room-1"] = new RoomBaseline(new Dictionary<string, FolderSnapshot>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["Nova"] = new FolderSnapshot(new Dictionary<string, FileEntry>(FolderSnapshot.PathComparer)
+                    {
+                        ["own.md"] = new FileEntry(2, DateTimeOffset.UtcNow),
+                    }),
+                }),
+            },
+            writers: new Dictionary<string, IReadOnlyDictionary<string, FileWriter>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Nova"] = new Dictionary<string, FileWriter>(FolderSnapshot.PathComparer)
+                {
+                    ["own.md"] = new FileWriter("room-1", new FileEntry(2, DateTimeOffset.UtcNow)),
+                },
+            });
+        store.Save("Nova", nova);
+
+        store.Rename("Nova", "Nora");
+
+        FileState? reloaded = store.Load("Nora");
+        Assert.NotNull(reloaded);
+        Assert.True(reloaded.Rooms["room-1"].Folders.ContainsKey("Nora"));
+        Assert.False(reloaded.Rooms["room-1"].Folders.ContainsKey("Nova"));
+        Assert.Equal(2, reloaded.Rooms["room-1"].Folders["Nora"].Files["own.md"].Size);
+        Assert.True(reloaded.Writers.ContainsKey("Nora"));
+        Assert.False(reloaded.Writers.ContainsKey("Nova"));
+    }
+
     /// <summary>A Room id equal to the renamed Name (an unlikely coincidence) is never rewritten by <c>Rename</c>.</summary>
     [Fact]
     public void Rename_NeverRewritesRoomIds()
