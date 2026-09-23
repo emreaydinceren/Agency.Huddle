@@ -25,6 +25,22 @@ internal sealed class FakeAgentHostFactory : IAgentHostFactory
     /// <summary>The last <see cref="FakePersonaHost"/> <see cref="StartAsync"/> returned.</summary>
     public FakePersonaHost? Host { get; private set; }
 
+    /// <summary>
+    /// The <see cref="AdapterProfile.SessionPerRoom"/> value <see cref="StartAsync"/> gives the host
+    /// it creates. Set before a test's runner is started - <see cref="Host"/> does not exist until
+    /// then, so there is nothing to set the profile on beforehand except through this factory-level
+    /// switch. Defaults false, matching the profile's own default (finding P-9).
+    /// </summary>
+    public bool SessionPerRoom { get; set; }
+
+    /// <summary>
+    /// Runs, if set, right after <see cref="StartAsync"/> creates its <see cref="FakePersonaHost"/>
+    /// and before returning it - the only point at which a test can script that host (for example
+    /// <see cref="FakePersonaHost.FailNextOpenWith"/>) before the runner's own first open call
+    /// reaches it, since <see cref="Host"/> does not exist beforehand.
+    /// </summary>
+    public Action<FakePersonaHost>? OnHostStarted { get; set; }
+
     public List<(Persona Persona, string AgentId)> Calls { get; } = [];
 
     /// <summary>
@@ -50,10 +66,11 @@ internal sealed class FakeAgentHostFactory : IAgentHostFactory
             throw this.failure;
         }
 
-        // SessionPerRoom does not exist on AdapterProfile until D23; when it does, D23.2.i adds it
-        // here explicitly false (finding P-9's "absent means false" for the fakes, never the
-        // record's own default), so the 27 FakePersonaServer-backed runner tests, several of which
-        // run two Rooms over this one fake session, are never moved by D28's later default flip.
+        // SessionPerRoom comes from this.SessionPerRoom, false by default (finding P-9's "absent
+        // means false" for the fakes, never the record's own default), so the many
+        // FakePersonaServer-backed runner tests that never touch this switch, several of which run
+        // two Rooms over this one fake session, are never moved by D28's later default flip. A D23
+        // test sets it true before starting its runner to exercise per-Room mode.
         FakePersonaHost host = new(
             this.Session,
             new AdapterProfile(
@@ -66,9 +83,11 @@ internal sealed class FakeAgentHostFactory : IAgentHostFactory
                 UsesToolNamePrefix: true,
                 EnvironmentOverrides: null,
                 ReadsFiles: true,
-                IsolateUserSettings: true));
+                IsolateUserSettings: true,
+                SessionPerRoom: this.SessionPerRoom));
 
         this.Host = host;
+        this.OnHostStarted?.Invoke(host);
         return Task.FromResult<IPersonaHost>(host);
     }
 }

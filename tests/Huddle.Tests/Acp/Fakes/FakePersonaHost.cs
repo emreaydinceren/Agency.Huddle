@@ -18,6 +18,8 @@ internal sealed class FakePersonaHost : IPersonaHost
     private readonly List<string> resumeCalls = [];
     private bool firstOpenDone;
     private Exception? pendingOpenFailure;
+    private int liveSessionCount;
+    private int liveSessionHighWaterMark;
 
     /// <summary>Initializes a new instance of the <see cref="FakePersonaHost"/> class.</summary>
     /// <param name="sharedSession">The session <see cref="OpenAsync"/> returns the first time it is called.</param>
@@ -77,6 +79,14 @@ internal sealed class FakePersonaHost : IPersonaHost
     /// <summary>Whether <see cref="DisposeAsync"/> has been called.</summary>
     public bool Disposed { get; private set; }
 
+    /// <summary>
+    /// The most sessions this host has ever had open (returned from <see cref="OpenAsync"/> but not
+    /// yet disposed) at once - lets a test prove <c>RoomSessionPool</c>'s live cap (RS §6.14
+    /// <c>MaxLiveSessions</c>) is actually honoured, not merely that the right sessions were
+    /// eventually closed.
+    /// </summary>
+    public int LiveSessionHighWaterMark => Volatile.Read(ref this.liveSessionHighWaterMark);
+
     /// <summary>Configures the next <see cref="OpenAsync"/> call to fail with <paramref name="exception"/> instead of returning a session.</summary>
     /// <param name="exception">The exception <see cref="OpenAsync"/> throws once.</param>
     public void FailNextOpenWith(Exception exception)
@@ -122,8 +132,26 @@ internal sealed class FakePersonaHost : IPersonaHost
             this.sessions.Add(session);
         }
 
+        session.OnDisposed = () => Interlocked.Decrement(ref this.liveSessionCount);
+        FakePersonaHost.RaiseToMax(ref this.liveSessionHighWaterMark, Interlocked.Increment(ref this.liveSessionCount));
+
         this.OnOpen?.Invoke(session);
         return session;
+    }
+
+    /// <summary>Atomically raises <paramref name="highWaterMark"/> to <paramref name="current"/> when it is higher.</summary>
+    private static void RaiseToMax(ref int highWaterMark, int current)
+    {
+        int observed;
+        do
+        {
+            observed = Volatile.Read(ref highWaterMark);
+            if (current <= observed)
+            {
+                return;
+            }
+        }
+        while (Interlocked.CompareExchange(ref highWaterMark, current, observed) != observed);
     }
 
     public Task<IAgentSession?> ResumeAsync(string sessionId, CancellationToken cancellationToken)

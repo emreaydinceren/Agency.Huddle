@@ -341,4 +341,44 @@ public sealed class AdapterCatalogTests
         AdapterProfile profile = Assert.Single(catalog.Profiles);
         Assert.False(profile.IsolateUserSettings);
     }
+
+    /// <summary>
+    /// The synthesised legacy profile (no <c>Team:Acp:Adapters</c> configured) carries
+    /// <c>SessionPerRoom</c> false — finding P-9: the default stays false until D28 flips it, so a
+    /// stock installation keeps shared-session behaviour through the whole of this deliverable and
+    /// D24-D27. Named "…UntilD28" so D28's flip finds this test.
+    /// </summary>
+    [Fact]
+    public void Legacy_SessionPerRoomFalse_UntilD28()
+    {
+        var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.False(profile.SessionPerRoom);
+    }
+
+    /// <summary>A configured Adapter entry's <c>SessionPerRoom</c> binds through to the projected profile — finding P-9.</summary>
+    [Fact]
+    public void Configured_SessionPerRoomBound()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:Acp:Adapters:0:Id"] = "agency",
+                ["Team:Acp:Adapters:0:Command"] = "agency-acp",
+                ["Team:Acp:Adapters:0:SessionPerRoom"] = "true",
+            })
+            .Build();
+        var teamOptions = new TeamOptions();
+        configuration.GetSection(TeamOptions.SectionName).Bind(teamOptions);
+        var options = Options.Create(teamOptions);
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.True(profile.SessionPerRoom);
+    }
 }

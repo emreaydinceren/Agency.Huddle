@@ -98,4 +98,34 @@ public sealed class AcpOptions
     /// disables the limit entirely.
     /// </summary>
     public int MaxTeammates { get; set; } = 8;
+
+    /// <summary>
+    /// How many minutes an <c>Idle</c> Room Session with an empty queue may sit open before
+    /// <c>RoomSessionPool</c>'s sweep closes it (RS §6.14). Applies in per-Room mode only (finding
+    /// P-20): in shared mode the sweep never runs, since there is exactly one session and closing it
+    /// would lose the whole conversation. Zero or less never closes an idle Room Session.
+    /// </summary>
+    public int SessionIdleMinutes { get; set; } = 30;
+
+    /// <summary>
+    /// The most Room Sessions one Persona keeps open at once (RS §6.14), per-Room mode only (finding
+    /// P-20). Opening beyond this first closes the least recently used <c>Idle</c> Room Session; a
+    /// value below <see cref="MaxConcurrentTurns"/> is raised to it, with a startup warning, since a
+    /// running Turn always needs its Room Session open.
+    /// </summary>
+    public int MaxLiveSessions { get; set; } = 3;
+
+    /// <summary>
+    /// The most Turns one Persona runs at once, across every Room Session (RS §6.14, finding P-4).
+    /// The default, 1, is today's behaviour: Turns run one at a time, in arrival order, across every
+    /// Room.
+    /// </summary>
+    public int MaxConcurrentTurns { get; set; } = 1;
+
+    /// <summary>
+    /// The most Messages a Room Session's first Turn carries as Transcript Catch-up (RS §6.5, §6.14):
+    /// the latest ones when the session opens fresh, or the ones after its stored <c>LastMessageId</c>
+    /// when it resumes.
+    /// </summary>
+    public int TranscriptCatchUpMessages { get; set; } = 20;
 }

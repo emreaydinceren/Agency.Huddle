@@ -70,7 +70,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     // there is never a second thread that could observe it mid-update.
     private int consecutiveTurnFailures;
 
-    private RoomSession? roomSession;
+    private readonly TimeProvider timeProvider;
+
+    private RoomSessionPool? pool;
     private JsonLineStream? stream;
     private IPersonaHost? host;
     private Task? readLoopTask;
@@ -98,7 +100,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         IPromptSource prompts,
         RoomFollows roomFollows,
         ILogger<PersonaRunner> logger,
-        FileChangeTracker? fileChanges = null)
+        FileChangeTracker? fileChanges = null,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
@@ -114,6 +117,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.roomFollows = roomFollows;
         this.logger = logger;
         this.fileChanges = fileChanges;
+        this.timeProvider = timeProvider ?? TimeProvider.System;
         this.declaredWatches = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)
             ? identity.Watches ?? []
             : [];
@@ -260,22 +264,29 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         // with the runner - StopAsync's this.host-is-not-null disposal covers it.
         this.host = await this.factory.StartAsync(this.persona, welcome.AgentId, cancellationToken);
 
-        // Shared mode (RS §6.1, RS principle 6: "SessionPerRoom: false is today plus Phase 0"): one
-        // RoomSession, RoomId null, serves every Room this Agent is in. Opened here, exactly where
-        // this runner opened its one session before, so the start-up failure modes and the
-        // Model-not-in-catalog warning below are unchanged.
-        this.roomSession = new RoomSession(
-            roomId: null,
-            open: this.host.OpenAsync,
-            owner: this,
-            scheduler: new ImmediateTurnScheduler(),
-            prompts: this.prompts,
-            options: this.options.Acp,
-            fileChanges: this.fileChanges,
-            declaredWatches: this.declaredWatches,
-            logger: this.logger,
-            runToken: this.runCts.Token);
-        await this.roomSession.OpenAsync(cancellationToken);
+        // RS §6.2: the pool owns lazy per-Room opens, eviction and Stop routing; in shared mode (RS
+        // principle 6: "SessionPerRoom: false is today plus Phase 0") it holds one RoomSession,
+        // RoomId null, serving every Room this Agent is in.
+        this.pool = new RoomSessionPool(
+            this.host,
+            this,
+            this.prompts,
+            this.options.Acp,
+            this.timeProvider,
+            this.fileChanges,
+            this.declaredWatches,
+            this.logger,
+            this.runCts.Token);
+
+        // Per-Room mode opens the Room with exactly two Members, one of them the Human - the same
+        // predicate as the Greeting's below, without IsEmpty: unlike the Greeting, this open must
+        // happen whether or not that Room already has Messages. Shared mode ignores this id and opens
+        // its one shared session instead. Opened here, exactly where this runner opened its one
+        // session before, so the start-up failure modes and the Model-not-in-catalog warning below
+        // are unchanged.
+        var humanRoom = welcome.Rooms.FirstOrDefault(room =>
+            room.Members.Count == 2 && room.Members.Any(member => member.Kind == UserKind.Human));
+        await this.pool.OpenAtStartAsync(humanRoom?.Id, cancellationToken);
 
         // The Greeting (Spec §6.14): queued here, only now that the session opened successfully, so a
         // failed start never leaves a queued Turn with no session. At most once per runner lifetime
@@ -287,16 +298,16 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             PersonaFrontmatter.TryReadIdentity(this.persona.Text, out var identity, out _) &&
             string.Equals(identity.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal))
         {
-            var humanRoom = welcome.Rooms.FirstOrDefault(room =>
+            var emptyHumanRoom = welcome.Rooms.FirstOrDefault(room =>
                 room.Members.Count == 2 && room.Members.Any(member => member.Kind == UserKind.Human) && room.IsEmpty);
-            if (humanRoom is not null)
+            if (emptyHumanRoom is not null)
             {
                 this.greetingQueued = true;
                 var greetingSequence = Interlocked.Increment(ref this.sequenceCounter);
-                var greetingRoomName = RoomLabels.Distinguish(humanRoom.Id, humanRoom.Name, this.knownRoomNames);
-                this.roomSession.Enqueue(new QueuedWork(
+                var greetingRoomName = RoomLabels.Distinguish(emptyHumanRoom.Id, emptyHumanRoom.Name, this.knownRoomNames);
+                this.pool.Enqueue(new QueuedWork(
                     greetingSequence,
-                    new WorkItem(humanRoom.Id, greetingRoomName, string.Empty, string.Empty, [], WorkItemKind.Greeting)));
+                    new WorkItem(emptyHumanRoom.Id, greetingRoomName, string.Empty, string.Empty, [], WorkItemKind.Greeting)));
             }
         }
 
@@ -304,10 +315,12 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         // available", so it must never produce a Degraded report. Only a genuinely non-empty catalog
         // that omits the stored Model is worth a warning - and only a warning: the session still
         // started on the Adapter's own default, and the Persona still answers (rules.md: "A Model the
-        // agent does not advertise is a warning, never a failure").
+        // agent does not advertise is a warning, never a failure"). Reads whichever session
+        // OpenAtStartAsync opened - the shared one, or the Human Room's - empty when nothing opened
+        // (per-Room mode with no Human Room).
         if (this.persona.Model is { Length: > 0 } storedModel &&
-            this.roomSession.Models.Count > 0 &&
-            !this.roomSession.Models.Any(model => string.Equals(model.Id, storedModel, StringComparison.Ordinal)))
+            this.pool.Models.Count > 0 &&
+            !this.pool.Models.Any(model => string.Equals(model.Id, storedModel, StringComparison.Ordinal)))
         {
             this.RaiseStatusChanged(
                 PersonaState.Degraded,
@@ -316,6 +329,13 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 
         this.readLoopTask = this.RunReadLoopAsync(this.runCts.Token);
     }
+
+    /// <summary>
+    /// Delegates to the pool's idle sweep (RS §6.2). The production caller is the pool's own 30-second
+    /// timer; this is the test seam that lets a test drive the sweep directly against a settable
+    /// clock rather than waiting out real minutes.
+    /// </summary>
+    internal Task SweepIdleSessionsAsync() => this.pool?.SweepIdleAsync() ?? Task.CompletedTask;
 
     public async Task StopAsync()
     {
@@ -328,12 +348,15 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 
         await SafeAwaitAsync(this.readLoopTask);
 
-        if (this.roomSession is not null)
+        // RoomSessionPool.DisposeAsync disposes every Room Session it holds, then the host (RS §6.2
+        // "Disposal"). this.host is assigned BEFORE the pool is constructed, so a host that started
+        // but never got as far as the pool (unreachable in practice, but not provably impossible) is
+        // still disposed here rather than leaked.
+        if (this.pool is not null)
         {
-            await this.roomSession.DisposeAsync();
+            await this.pool.DisposeAsync();
         }
-
-        if (this.host is not null)
+        else if (this.host is not null)
         {
             await this.host.DisposeAsync();
         }
@@ -398,9 +421,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                             var item = new WorkItem(posted.RoomId, labelledRoomName, posted.Message.SenderName, posted.Message.Text, missed);
                             var sequence = Interlocked.Increment(ref this.sequenceCounter);
 
-                            // Never call the agent from the read loop: hand the item to the one
-                            // shared Room Session's queue.
-                            this.roomSession?.Enqueue(new QueuedWork(sequence, item));
+                            // Never call the agent from the read loop: hand the item to the pool,
+                            // which routes it to the shared session or that Room's own one.
+                            this.pool?.Enqueue(new QueuedWork(sequence, item));
                             break;
 
                         case ReplyDecision.CatchUp:
@@ -460,9 +483,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                     // 2): the counter itself stays on this runner - it also numbers the Greeting - but
                     // what it drops is entirely RoomSession's own business now (finding P-6).
                     var mark = Interlocked.Read(ref this.sequenceCounter);
-                    if (this.roomSession is not null)
+                    if (this.pool is not null)
                     {
-                        await this.roomSession.StopAsync(stop.RoomId, mark, ct);
+                        await this.pool.StopAsync(stop.RoomId, mark, ct);
                     }
                 }
             }

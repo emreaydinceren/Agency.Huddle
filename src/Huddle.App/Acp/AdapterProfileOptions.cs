@@ -63,4 +63,10 @@ public sealed class AdapterProfileOptions
     /// risk.
     /// </summary>
     public bool IsolateUserSettings { get; set; }
+
+    /// <summary>
+    /// Whether this Adapter gives each Room its own Room Session (RS §6.12). Defaults to false until
+    /// the Room Session work is complete (plan finding P-9); D28 makes true the default.
+    /// </summary>
+    public bool SessionPerRoom { get; set; }
 }

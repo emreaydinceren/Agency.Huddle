@@ -37,6 +37,13 @@ namespace Agency.Huddle.App.Acp;
 /// model override that session would otherwise have carried; <c>settingSources</c> merges instead
 /// of replacing.
 /// </param>
+/// <param name="SessionPerRoom">
+/// Whether this Adapter Profile gives each Room its own Room Session (RS §6.12). Defaults to
+/// <see langword="false"/> so every existing positional call site keeps compiling unchanged.
+/// Defaults to false until the Room Session work is complete (plan finding P-9); D28 makes true the
+/// default. With <see langword="false"/>, every Room maps to one shared Room Session and the
+/// shared-session system prompt is used.
+/// </param>
 public sealed record AdapterProfile(
     string Id,
     string DisplayName,
@@ -47,4 +54,5 @@ public sealed record AdapterProfile(
     bool UsesToolNamePrefix,
     IReadOnlyDictionary<string, string>? EnvironmentOverrides = null,
     bool ReadsFiles = true,
-    bool IsolateUserSettings = false);
+    bool IsolateUserSettings = false,
+    bool SessionPerRoom = false);

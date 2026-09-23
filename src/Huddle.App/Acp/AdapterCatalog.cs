@@ -69,7 +69,8 @@ internal sealed class AdapterCatalog
                     UsesToolNamePrefix: true,
                     EnvironmentOverrides: null,
                     ReadsFiles: true,
-                    IsolateUserSettings: true),
+                    IsolateUserSettings: true,
+                    SessionPerRoom: false),
             ];
         }
 
@@ -86,7 +87,8 @@ internal sealed class AdapterCatalog
                 UsesToolNamePrefix: entry.UsesToolNamePrefix,
                 EnvironmentOverrides: AdapterCatalog.CopyEnvironment(entry.EnvironmentOverrides),
                 ReadsFiles: entry.ReadsFiles,
-                IsolateUserSettings: entry.IsolateUserSettings));
+                IsolateUserSettings: entry.IsolateUserSettings,
+                SessionPerRoom: entry.SessionPerRoom));
         }
 
         return profiles;

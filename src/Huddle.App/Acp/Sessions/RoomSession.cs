@@ -50,6 +50,7 @@ internal sealed class RoomSession : IAsyncDisposable
     private readonly IReadOnlyList<string> declaredWatches;
     private readonly ILogger logger;
     private readonly CancellationToken runToken;
+    private readonly TimeProvider time;
 
     // Guards every field below: the queue, the state machine, the Stop marks, activeTurn and
     // pendingStopCancel - one lock, exactly as turnLock was on PersonaRunner, for the same reason:
@@ -65,7 +66,7 @@ internal sealed class RoomSession : IAsyncDisposable
     private readonly Dictionary<string, long> stopMarks = new(StringComparer.Ordinal);
 
     private RoomSessionState state = RoomSessionState.Closed;
-    private DateTimeOffset lastActivity = TimeProvider.System.GetUtcNow();
+    private DateTimeOffset lastActivity;
     private IAgentSession? session;
     private Task? openTask;
     private readonly Task consumerTask;
@@ -87,6 +88,11 @@ internal sealed class RoomSession : IAsyncDisposable
     /// <param name="declaredWatches">The Persona's declared Watched Folders.</param>
     /// <param name="logger">Where this session logs.</param>
     /// <param name="runToken">The runner's own run token; cancelled means shutdown, never a Stop.</param>
+    /// <param name="time">
+    /// Drives <see cref="LastActivity"/> (D23), so a test can advance it without waiting out real
+    /// wall-clock minutes. Defaults to <see cref="TimeProvider.System"/> when omitted, so every
+    /// pre-D23 caller keeps compiling and behaving unchanged.
+    /// </param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -97,7 +103,8 @@ internal sealed class RoomSession : IAsyncDisposable
         FileChangeTracker? fileChanges,
         IReadOnlyList<string> declaredWatches,
         ILogger logger,
-        CancellationToken runToken)
+        CancellationToken runToken,
+        TimeProvider? time = null)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
@@ -117,6 +124,8 @@ internal sealed class RoomSession : IAsyncDisposable
         this.declaredWatches = declaredWatches;
         this.logger = logger;
         this.runToken = runToken;
+        this.time = time ?? TimeProvider.System;
+        this.lastActivity = this.time.GetUtcNow();
 
         this.consumerTask = this.RunConsumerAsync(runToken);
     }
@@ -189,6 +198,29 @@ internal sealed class RoomSession : IAsyncDisposable
     /// <summary>Opens this session's <see cref="IAgentSession"/>, idempotently: a second call while already open or opening awaits the same result.</summary>
     /// <param name="cancellationToken">Cancels the open.</param>
     internal Task OpenAsync(CancellationToken cancellationToken) => this.OpenCoreAsync(cancellationToken);
+
+    /// <summary>
+    /// Atomically transitions this session <see cref="RoomSessionState.Closed"/> to
+    /// <see cref="RoomSessionState.Opening"/>, one compare-and-set under <see cref="gate"/> (D23
+    /// correction 12, P-5 invariant 2). Called by <c>RoomSessionPool.MakeRoomToOpenAsync</c> under
+    /// its own pool lock, so the capacity check and this requester's own transition to "live" happen
+    /// as one atomic step relative to any other concurrent requester (P-5 invariant 3). The lock
+    /// order is always pool → session → this <see cref="gate"/>, never the reverse.
+    /// </summary>
+    /// <returns><see langword="true"/> if this call performed the transition; <see langword="false"/> if the session was not <see cref="RoomSessionState.Closed"/>.</returns>
+    internal bool TryMarkOpening()
+    {
+        lock (this.gate)
+        {
+            if (this.state != RoomSessionState.Closed)
+            {
+                return false;
+            }
+
+            this.state = RoomSessionState.Opening;
+            return true;
+        }
+    }
 
     /// <summary>Ends this Room's live Turn and clears this Room's queue, and nothing else (finding P-6).</summary>
     /// <param name="roomId">The Room the Human asked to stop.</param>
@@ -344,7 +376,7 @@ internal sealed class RoomSession : IAsyncDisposable
                 this.session = opened;
                 this.eventReaderCts = readerCts;
                 this.state = RoomSessionState.Idle;
-                this.lastActivity = TimeProvider.System.GetUtcNow();
+                this.lastActivity = this.time.GetUtcNow();
                 this.lastUsed = 0;
             }
 
@@ -436,7 +468,7 @@ internal sealed class RoomSession : IAsyncDisposable
                     {
                         this.running = false;
                         this.state = this.state == RoomSessionState.Busy ? RoomSessionState.Idle : this.state;
-                        this.lastActivity = TimeProvider.System.GetUtcNow();
+                        this.lastActivity = this.time.GetUtcNow();
 
                         // RS §6.1 ticket protocol rule 4: if a next item exists, offer it BEFORE
                         // completing the current ticket - finding P-4's cross-Room arrival order

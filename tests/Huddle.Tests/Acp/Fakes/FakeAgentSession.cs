@@ -201,6 +201,34 @@ internal sealed class FakeAgentSession : IAgentSession
         }
     }
 
+    /// <summary>
+    /// Queues a turn whose reply chunks are published immediately, but whose <see cref="TurnCompleted"/>
+    /// waits for <paramref name="release"/> before it is written - so a test can hold a Turn "in
+    /// flight" on purpose (for example to prove two Room Sessions' Turns overlap at
+    /// <c>MaxConcurrentTurns</c> 2) and let it finish only when the test says so.
+    /// </summary>
+    /// <param name="release">Awaited before <see cref="TurnCompleted"/> is published.</param>
+    /// <param name="chunks">The reply text, published before the wait.</param>
+    public void EnqueueGatedReply(Task release, params string[] chunks)
+    {
+        ArgumentNullException.ThrowIfNull(release);
+
+        lock (this.gate)
+        {
+            this.plannedTurns.Enqueue(new TurnPlan(chunks, null, TimeSpan.Zero, [], Gate: release));
+        }
+    }
+
+    /// <summary>
+    /// Runs, if set, the instant a <see cref="PromptAsync"/> call starts, with the prompt text - a
+    /// shared recorder a test can set on several <see cref="FakeAgentSession"/> instances (one per
+    /// Room Session) to observe cross-Room prompt ordering (findings P-4 and P-5) in one list.
+    /// </summary>
+    public Action<string>? OnPrompt { get; set; }
+
+    /// <summary>Runs once, at the start of <see cref="DisposeAsync"/> - lets a host track how many sessions it opened are still live.</summary>
+    public Action? OnDisposed { get; set; }
+
     public Task<PromptResult> PromptAsync(string text, CancellationToken cancellationToken)
     {
         return this.RunPromptAsync(text, cancellationToken);
@@ -223,6 +251,7 @@ internal sealed class FakeAgentSession : IAgentSession
     public ValueTask DisposeAsync()
     {
         this.Disposed = true;
+        this.OnDisposed?.Invoke();
         if (this.CompleteEventsOnDispose)
         {
             this.events.Writer.TryComplete();
@@ -244,6 +273,8 @@ internal sealed class FakeAgentSession : IAgentSession
             this.promptInFlight = true;
             this.prompts.Add(text);
         }
+
+        this.OnPrompt?.Invoke(text);
 
         try
         {
@@ -297,6 +328,11 @@ internal sealed class FakeAgentSession : IAgentSession
                 }
             }
 
+            if (plan.Gate is { } releaseGate)
+            {
+                await releaseGate;
+            }
+
             this.events.Writer.TryWrite(new TurnCompleted(this.SessionId, plan.Reason));
 
             return new PromptResult(plan.Reason);
@@ -316,5 +352,6 @@ internal sealed class FakeAgentSession : IAgentSession
         TimeSpan Delay,
         IReadOnlyList<long> UsageLevels,
         StopReason Reason = StopReason.EndTurn,
-        TimeSpan? DripGap = null);
+        TimeSpan? DripGap = null,
+        Task? Gate = null);
 }
