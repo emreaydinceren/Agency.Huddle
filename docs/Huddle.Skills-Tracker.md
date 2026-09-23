@@ -5,7 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 55 Done.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 62 Done.
 
 ## How to update this tracker
 
@@ -93,13 +93,13 @@ Deliverable and Acceptance.
 | 10.3.t Test: archiving or deleting a Room drops its Proposal (red) | | | ✔ |
 | 10.3.i Drop on archive and delete | | | ✔ |
 | **D11. Approve and Decline** | | | |
-| 11.1.t Functional test: Approve creates all and wakes the proposer (red) | ✔ | | |
-| 11.1.i Implement `ApproveAsync` (happy path) | ✔ | | |
-| 11.2.t Functional test: partial, over-limit, gone, renamed (red) | ✔ | | |
-| 11.2.i Implement the non-happy paths | ✔ | | |
-| 11.3.t Functional test: Decline (red) | ✔ | | |
-| 11.3.i Implement `DeclineAsync` | ✔ | | |
-| 11.4.t Functional test: the posted Message wakes the proposer in a group Room (red → verify) | ✔ | | |
+| 11.1.t Functional test: Approve creates all and wakes the proposer (red) | | | ✔ |
+| 11.1.i Implement `ApproveAsync` (happy path) | | | ✔ |
+| 11.2.t Functional test: partial, over-limit, gone, renamed (red) | | | ✔ |
+| 11.2.i Implement the non-happy paths | | | ✔ |
+| 11.3.t Functional test: Decline (red) | | | ✔ |
+| 11.3.i Implement `DeclineAsync` | | | ✔ |
+| 11.4.t Functional test: the posted Message wakes the proposer in a group Room (red → verify) | | | ✔ |
 | **D12. The Proposal card** | | | |
 | 12.1.t Test: `ProposalCard` renders and acts (red) | ✔ | | |
 | 12.1.i Implement `ProposalCard.razor` and wire it into `Chat.razor` | ✔ | | |

@@ -1279,6 +1279,33 @@ public sealed class PersonaStoreTests
     }
 
     /// <summary>
+    /// A brand-new text whose Name equals an EXISTING Persona's own Name is rejected with a reason
+    /// that actually names the real file - not the collapsed-path bug the sibling-duplicate test
+    /// above guards for a different pair: the candidate's synthetic path used to be the SAME string
+    /// as the real file's path (both <c>{teamsDir}/Iris.md</c>), so <see cref="PersonaIndex"/>'s
+    /// "others" exclusion (which compares Path) found nothing to name, producing a reason with an
+    /// empty "used by" list. <c>PersonaStore.SyntheticPathsFor</c> now gives a text whose
+    /// Name already has an entry on disk a <c>~n</c> synthetic path too, the same way it already
+    /// did for a second sibling proposing the same Name.
+    /// </summary>
+    [Fact]
+    public void Check_NewTextNameEqualsExistingPersonaName_NamesTheFile()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("Iris"), "Existing Iris body.");
+        var candidateText = "---\nName: Iris\nTitle: Reviewer\nAlias: new-iris\n---\nCandidate body.";
+
+        var results = store.Check([candidateText]);
+
+        var result = Assert.Single(results);
+        Assert.Equal(candidateText, result.Text);
+        Assert.NotNull(result.Problem);
+        Assert.Contains("Iris.md", result.Problem, StringComparison.Ordinal);
+        Assert.DoesNotContain("used by .", result.Problem, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// Pins Spec §14 D-14: <see cref="PersonaStore.Add"/>'s exists check and its
     /// <c>ValidateCandidate</c> call both run against <c>this.index</c>, a snapshot only refreshed
     /// AFTER a write completes - so two concurrent Adds proposing DIFFERENT Names but the SAME

@@ -518,8 +518,10 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// One stable, synthetic, never-written-to path per <paramref name="texts"/> entry, in the same
     /// order - <c>{Name}.md</c> for the FIRST text that parses to a given Name (matching the real path
     /// <see cref="Add"/> would write it to), and <c>{Name}~{n}.md</c> for every LATER text that parses
-    /// to that SAME Name. Without the suffix, two Candidates proposing the same Name would collapse
-    /// onto one identical Path in the candidate index, and <see cref="PersonaIndex.Build"/>'s "others"
+    /// to that SAME Name, OR whose plain <c>{Name}.md</c> is already taken by a real file
+    /// (<see cref="PlainPathIsTaken"/>). Without the suffix, two Candidates proposing the same Name -
+    /// or one Candidate proposing a Name a real Persona already has - would collapse onto one
+    /// identical Path in the candidate index, and <see cref="PersonaIndex.Build"/>'s "others"
     /// exclusion (which compares Path to tell a file apart from itself) would then see no "other" file
     /// for either one - an empty, useless "used by" list instead of the real collision. A text whose
     /// frontmatter does not parse falls back to an index-based placeholder, since it has no Name to
@@ -539,6 +541,16 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
                 continue;
             }
 
+            if (!occurrencesByName.ContainsKey(identity.Name) && this.PlainPathIsTaken(identity.Name))
+            {
+                // The plain "{Name}.md" path is already a real file's own path - a loaded Persona
+                // entry, or a file on disk that never became one - so the FIRST text proposing this
+                // Name must not reuse that exact Path too. Seeding the occurrence count at 1 gives it
+                // "{Name}~1.md" instead, exactly like a second sibling proposing the same Name
+                // already got before this fix.
+                occurrencesByName[identity.Name] = 1;
+            }
+
             var occurrence = occurrencesByName.GetValueOrDefault(identity.Name);
             occurrencesByName[identity.Name] = occurrence + 1;
 
@@ -548,6 +560,19 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
         }
 
         return paths;
+    }
+
+    /// <summary>
+    /// Whether <c>{teamsDir}/{name}.md</c> - the plain synthetic path <see cref="SyntheticPathsFor"/>
+    /// would otherwise give the FIRST text proposing <paramref name="name"/> - is already a real
+    /// file's own path: a loaded Persona entry's <see cref="PersonaEntry.Path"/>, or a file on disk
+    /// that never became one (a rejected file, or one written outside this process).
+    /// </summary>
+    /// <param name="name">The Name to check.</param>
+    private bool PlainPathIsTaken(string name)
+    {
+        var plainPath = Path.Combine(this.teamsDir, $"{name}.md");
+        return this.index.Entries.Any(entry => string.Equals(entry.Path, plainPath, StringComparison.Ordinal)) || File.Exists(plainPath);
     }
 
     /// <summary>

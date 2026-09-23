@@ -110,6 +110,12 @@ public static class ServiceCollectionExtensions
         // of this method, so construction order is safe regardless of where in this list it sits.
         services.AddSingleton<ProposalStore>();
 
+        // No interface, same reasoning as ProposalStore and CandidateChecker just above. Every one
+        // of its own dependencies (ProposalStore, CandidateChecker, PersonaStore, ChatService,
+        // ITeamDirectory) is already a singleton registered above, and none of them takes a
+        // ProposalService back - construction order is safe and there is no cycle.
+        services.AddSingleton<ProposalService>();
+
         // No interface: nothing needs to substitute this, and CSharpPrinciples.md says not to add
         // abstraction a feature has not asked for. This is state the app writes (a chosen theme, a
         // few token overrides), not host-supplied configuration, so it is registered here rather

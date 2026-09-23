@@ -141,6 +141,32 @@ public sealed partial class CandidateCheckerTests
         AssertProblemsAreModelFacing(result.Problems);
     }
 
+    /// <summary>
+    /// Spec §8.3 order 5: a Candidate whose NAME equals an existing Persona's own Name is rejected
+    /// with a reason that names the real file - not the collapsed-path bug where the candidate's
+    /// synthetic path and the real file's path were both literally <c>Iris.md</c>, leaving
+    /// <see cref="PersonaIndex"/>'s "others" exclusion (which compares Path) with nothing to name
+    /// and producing <c>"Persona Name 'Iris' is also used by . ..."</c> instead. Fixed at the
+    /// source in <c>PersonaStore.SyntheticPathsFor</c>.
+    /// </summary>
+    [Fact]
+    public async Task CheckAsync_CandidateNameEqualsExistingPersonaName_NamesTheFile()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var fixture = await CreateFixtureAsync(ct);
+
+        fixture.Personas.Add(new PersonaIdentity("Iris", "Existing Role", "existing-iris", []), "Existing Iris body.");
+
+        var candidate = MakeCandidate(name: "Iris", alias: "new-iris");
+
+        var result = await fixture.Checker.CheckAsync([candidate], ct);
+
+        Assert.False(result.IsValid);
+        Assert.Contains(result.Problems, p => p.Contains("Teams/Iris.md", StringComparison.Ordinal));
+        Assert.DoesNotContain(result.Problems, p => p.Contains("used by .", StringComparison.Ordinal));
+        AssertProblemsAreModelFacing(result.Problems);
+    }
+
     /// <summary>Spec §8.3 order 6 / F-9: a Name equal to the Human's Name, worded exactly as the Spec's own example.</summary>
     [Fact]
     public async Task CheckAsync_NameEqualsHumanName_ReportsProblem()
@@ -272,9 +298,11 @@ public sealed partial class CandidateCheckerTests
     /// Asserts that none of <paramref name="problems"/> leaks a filesystem implementation detail: no
     /// Windows drive-letter absolute path, no <c>~</c> disambiguator (only ever produced by
     /// <see cref="PersonaStore.Check"/> for a sibling Candidate's synthetic path), and no bare
-    /// <c>{Name}.md</c> reference that is not a real, relative <c>Teams/</c> path.
+    /// <c>{Name}.md</c> reference that is not a real, relative <c>Teams/</c> path. Internal rather
+    /// than private so <c>ProposalServiceTests</c> can reuse it for a <see cref="CandidateFailure.Reason"/>
+    /// that ultimately came from the same <see cref="CandidateChecker"/> problem text.
     /// </summary>
-    private static void AssertProblemsAreModelFacing(IReadOnlyList<string> problems)
+    internal static void AssertProblemsAreModelFacing(IReadOnlyList<string> problems)
     {
         foreach (var problem in problems)
         {
