@@ -134,9 +134,23 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAdapterProbeRunner, AdapterProcessProbeRunner>();
         services.AddSingleton<IModelCatalog, ModelCatalogProbe>();
 
+        // No interface, same reasoning as AppearanceStore/AvatarStore above: nothing needs to
+        // substitute this, and it is built entirely from PersonaStore, already registered above.
+        // Deliberately a plain singleton rather than folded into the hosted BuiltinTeammateSeeder
+        // below - TeammateCard's "Reset to default" (Spec §6.12) needs to inject it directly, and a
+        // component must never depend on an IHostedService.
+        services.AddSingleton<BuiltinTeammateReset>();
+
         services.AddHostedService<DataInitializer>();
         services.AddHostedService<PipeServer>();
         services.AddHostedService<DemoAgentHost>();
+
+        // Registered immediately before PersonaSupervisor's own hosted service, and never behind
+        // Team:Acp:Enabled: hosted services start in registration order (Spec §10), so this is what
+        // guarantees the supervisor's first reconciliation already sees the Chief of Staff the
+        // seeder just wrote, rather than racing a later PersonasChanged (Spec §6.12 Implementation
+        // notes).
+        services.AddHostedService<BuiltinTeammateSeeder>();
 
         // Same instance as the hosted service, not a second registration - mirrors every other pair
         // in this file (AgentGateway/IAgentGateway, PersonaStore/IMentionAliasSource, PromptStore/IPromptSource).

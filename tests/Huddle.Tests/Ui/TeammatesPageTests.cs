@@ -7,6 +7,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 using TeammatesPage = Agency.Huddle.App.Components.Pages.Teammates;
 
@@ -302,7 +303,14 @@ public sealed class TeammatesPageTests
         Assert.Contains("No team", html, StringComparison.Ordinal);
     }
 
-    /// <summary>A file missing a required identity field is listed by its path and reason, above the list, and never renders as a tile.</summary>
+    /// <summary>
+    /// A file missing a required identity field is listed by its path and reason, above the list,
+    /// and contributes no tile of its own. Since D15, <see cref="Agency.Huddle.App.Teammates.BuiltinTeammateSeeder"/>
+    /// writes a real Chief of Staff into every empty library at startup (Spec §6.12), so this
+    /// factory's Teams directory is no longer literally empty by the time the page renders - the
+    /// broken file, still the only one this test wrote, must still add nothing beyond that one
+    /// seeded tile, never two.
+    /// </summary>
     [Fact]
     public async Task TeammatesPage_RejectedFile_IsListedByPathAndReason_AndDoesNotAppearAsATile()
     {
@@ -320,7 +328,11 @@ public sealed class TeammatesPageTests
 
         Assert.Contains(path, html, StringComparison.Ordinal);
         Assert.Contains("Alias", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("teammate-tile", html, StringComparison.Ordinal);
+
+        // Exactly the one seeded Chief of Staff tile - the class attribute value itself, not the
+        // bare substring "teammate-tile", which also prefixes "teammate-tile-text", "-role" and
+        // "-status" on the very same tile and would over-count.
+        Assert.Equal(1, CountOccurrences(html, "class=\"teammate-tile\""));
     }
 
     /// <summary>
@@ -427,6 +439,7 @@ public sealed class TeammatesPageTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AdapterCatalog>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<BuiltinTeammateReset>());
         return ctx;
     }
 

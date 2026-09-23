@@ -5,7 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 69 Done.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 77 Done.
 
 ## How to update this tracker
 
@@ -112,14 +112,14 @@ Deliverable and Acceptance.
 | 14.1.t Test: the shipped content honours its contract (red against the old draft) | | | ✔ |
 | 14.1.i Close any gap in the content | | | ✔ |
 | **D15. The built-in Chief of Staff** | | | |
-| 15.1.t Test: an empty library gets the Chief of Staff (red) | ✔ | | |
-| 15.1.i Implement the seeder and embed the default | ✔ | | |
-| 15.2.t Test: marker, free names, no reverting (red) | ✔ | | |
-| 15.2.i Implement detection and the free-name search | ✔ | | |
-| 15.3.t Test: the seeder runs before the supervisor (red) | ✔ | | |
-| 15.3.i Register the seeder | ✔ | | |
-| 15.4.t Test: Reset to default on the card (red) | ✔ | | |
-| 15.4.i Implement Reset | ✔ | | |
+| 15.1.t Test: an empty library gets the Chief of Staff (red) | | | ✔ |
+| 15.1.i Implement the seeder and embed the default | | | ✔ |
+| 15.2.t Test: marker, free names, no reverting (red) | | | ✔ |
+| 15.2.i Implement detection and the free-name search | | | ✔ |
+| 15.3.t Test: the seeder runs before the supervisor (red) | | | ✔ |
+| 15.3.i Register the seeder | | | ✔ |
+| 15.4.t Test: Reset to default on the card (red) | | | ✔ |
+| 15.4.i Implement Reset | | | ✔ |
 | **D16. The Greeting** | | | |
 | 16.1.t Test: `RoomInfo.IsEmpty` on the wire (red) | ✔ | | |
 | 16.1.i Add `IsEmpty` | ✔ | | |

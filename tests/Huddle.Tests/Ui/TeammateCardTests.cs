@@ -11,6 +11,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Teammates;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -109,7 +110,12 @@ public sealed class TeammateCardTests
 
         var cut = await OpenViewCardAsync(ctx, factory, name);
 
-        var avatars = cut.FindAll(".mud-avatar");
+        // Scoped to the open dialog, not "the last .mud-avatar on the whole page": since D15, the
+        // "Chief of Staff" row above seeds its own Persona of that exact Name, so
+        // BuiltinTeammateSeeder's free-name search writes a second, real "Chief of Staff 2" - whose
+        // own tile avatar can render after the dialog's in the DOM and would otherwise be "last".
+        var dialogContainer = cut.Find(".mud-dialog-container");
+        var avatars = dialogContainer.QuerySelectorAll(".mud-avatar");
         var avatar = avatars[^1];
         Assert.Equal(expectedMonogram, avatar.TextContent.Trim());
     }
@@ -410,6 +416,95 @@ public sealed class TeammateCardTests
 
         Assert.Null(factory.Services.GetRequiredService<PersonaStore>().Get("coo"));
         Assert.Empty(cut.FindAll(".mud-dialog-container"));
+    }
+
+    /// <summary>
+    /// Spec §6.12: the Chief of Staff's card offers "Reset to default" in place of Remove, since it
+    /// cannot be removed the way an ordinary Teammate can. Reuses the real seeded default -
+    /// <see cref="TeamWebApplicationFactory"/> now runs <see cref="BuiltinTeammateSeeder"/> like any
+    /// other host (D15) - rather than hand-writing a marker-carrying Persona file.
+    /// </summary>
+    [Fact]
+    public async Task BuiltinTeammate_ShowsResetNotRemove()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "Chief of Staff");
+
+        Assert.True(HasButton(cut, "Reset to default"));
+        Assert.False(HasButton(cut, "Remove"));
+    }
+
+    /// <summary>
+    /// Spec §6.12's Reset: renaming the seeded Chief of Staff to Alfred, editing its Title and Body
+    /// away from the shipped default, and storing a Model and an Effort, all survive right up until
+    /// Reset is confirmed - at which point the Title, Body, Teams, Skills, Model and Effort are all
+    /// back to default, the <c>_builtin</c> marker is still present, and only the Name (Alfred) and
+    /// Alias are kept, exactly as the confirm copy promises.
+    /// </summary>
+    [Fact]
+    public async Task Reset_RestoresDefaultsKeepsNameAndAlias()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        var personas = factory.Services.GetRequiredService<PersonaStore>();
+        var seeded = personas.Entries.Single(
+            entry => string.Equals(entry.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal));
+
+        // Rename to Alfred, edit Title and Body away from the shipped default, and store a Model
+        // and an Effort - every field Reset promises to restore - while keeping the marker, so this
+        // remains the same edited Chief of Staff rather than becoming an ordinary Persona.
+        var editedText = PersonaFrontmatter.Compose(
+            new PersonaIdentity(
+                "Alfred", "Edited Title", seeded.Alias, Teams: [], Skills: ["team-building"], Builtin: BuiltinTeammate.ChiefOfStaffMarker),
+            "This Body has been hand-edited and no longer matches the shipped default.");
+        personas.Update(seeded.Name, editedText, model: "claude-opus-4", effort: "high");
+
+        await using var ctx = NewContext(factory);
+        var cut = await OpenViewCardAsync(ctx, factory, "Alfred");
+
+        FindButton(cut, "Reset to default").Click();
+
+        Assert.Contains(
+            "Restore the Chief of Staff's instructions, Title, Teams, Skills, Model and Effort to "
+            + "their defaults? Its Name, Alias, Rooms and history are kept.",
+            cut.Markup,
+            StringComparison.Ordinal);
+
+        FindButton(cut, "Confirm").Click();
+
+        var reset = personas.Get("Alfred");
+        Assert.NotNull(reset);
+        Assert.Null(reset.Model);
+        Assert.Null(reset.Effort);
+
+        var parsed = PersonaFrontmatter.TryReadIdentity(reset.Text, out PersonaIdentity? identity, out var error);
+        Assert.True(parsed, error);
+        Assert.NotNull(identity);
+        Assert.Equal("Alfred", identity.Name);
+        Assert.Equal(seeded.Alias, identity.Alias);
+        Assert.Equal("Chief of Staff", identity.Title);
+        Assert.Empty(identity.Teams);
+        Assert.Equal(["team-building"], identity.Skills);
+        Assert.Equal(BuiltinTeammate.ChiefOfStaffMarker, identity.Builtin);
+
+        var (_, defaultBody) = PersonaFrontmatter.Parse(BuiltinTeammate.DefaultText);
+        var (_, resetBody) = PersonaFrontmatter.Parse(reset.Text);
+        Assert.Equal(defaultBody, resetBody);
+    }
+
+    /// <summary>An ordinary, non-built-in Teammate keeps Remove - only the Chief of Staff's card swaps it for Reset (see <see cref="BuiltinTeammate_ShowsResetNotRemove"/>).</summary>
+    [Fact]
+    public async Task NonBuiltin_StillShowsRemove()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "x");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+
+        Assert.True(HasButton(cut, "Remove"));
+        Assert.False(HasButton(cut, "Reset to default"));
     }
 
     /// <summary>Clicking Close asks the dialog to close - the <c>MudIconButton</c> replacement for the old <c>&amp;times;</c> button.</summary>
@@ -1112,8 +1207,13 @@ public sealed class TeammateCardTests
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
 
-        Assert.Contains("Starting", cut.Markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Offline", cut.Markup, StringComparison.Ordinal);
+        // Scoped to the open dialog itself, not the whole page: since D15, the page also carries a
+        // tile for the real, always-Offline "Chief of Staff" Agency.Huddle.App.Teammates.BuiltinTeammateSeeder
+        // seeds by default (Spec §6.12), and that tile's own "Offline" status text would otherwise
+        // make this assertion fail for a reason that has nothing to do with "coo"'s card.
+        var dialogMarkup = cut.Find(".mud-dialog-container").OuterHtml;
+        Assert.Contains("Starting", dialogMarkup, StringComparison.Ordinal);
+        Assert.DoesNotContain("Offline", dialogMarkup, StringComparison.Ordinal);
         Assert.False(HasButton(cut, "Restart"));
     }
 
@@ -1443,6 +1543,7 @@ public sealed class TeammateCardTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AdapterCatalog>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<BuiltinTeammateReset>());
         return ctx;
     }
 
@@ -1457,12 +1558,28 @@ public sealed class TeammateCardTests
         });
     }
 
-    /// <summary>Renders the page and clicks the tile matching <paramref name="personaName"/>, opening its View card.</summary>
+    /// <summary>
+    /// Renders the page and clicks the tile matching <paramref name="personaName"/> exactly,
+    /// opening its View card.
+    /// </summary>
+    /// <remarks>
+    /// Matches the tile's own <c>.teammates-item-name</c> span - the exact Name text and nothing
+    /// else - rather than a substring <c>Contains</c> against the whole tile. Since D15's
+    /// <see cref="Agency.Huddle.App.Teammates.BuiltinTeammateSeeder"/> writes a real "Chief of
+    /// Staff" whenever no other Persona already carries its marker, a test seeding its own Persona
+    /// literally named "Chief of Staff" now shares the page with a free-name "Chief of Staff 2" -
+    /// whose tile text also CONTAINS "Chief of Staff" - and a substring match would click that one
+    /// instead.
+    /// </remarks>
     private static async Task<IRenderedComponent<ContainerFragment>> OpenViewCardAsync(MudBunitContext ctx, TeamWebApplicationFactory factory, string personaName)
     {
         await Task.Yield();
         var cut = RenderPage(ctx, factory);
-        cut.FindAll("button.teammate-tile").First(tile => tile.TextContent.Contains(personaName, StringComparison.Ordinal)).Click();
+        var nameSpan = cut.FindAll(".teammates-item-name")
+            .First(span => string.Equals(span.TextContent.Trim(), personaName, StringComparison.Ordinal));
+        var tile = nameSpan.Closest("button.teammate-tile")
+            ?? throw new InvalidOperationException($"No teammate-tile ancestor found for Persona '{personaName}'.");
+        tile.Click();
         return cut;
     }
 
