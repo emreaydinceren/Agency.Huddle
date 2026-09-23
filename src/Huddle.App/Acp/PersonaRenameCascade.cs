@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
@@ -45,15 +46,17 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="roomEvents">Published once, after any Room this cascade renamed.</param>
 /// <param name="avatars">Moves a renamed Persona's Avatar entry, and deletes a removed Persona's Avatar entry and image file.</param>
 /// <param name="fileState">Moves a renamed Persona's <see cref="FileStateStore"/> file, and deletes a removed Persona's file — FC §6.12.</param>
+/// <param name="roomSessions">Moves a renamed Persona's <see cref="RoomSessionStore"/> file, and deletes a removed Persona's file — RS §6.13.</param>
 /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/> and <see cref="AcpOptions.WorkDir"/>, which together locate the Work Dir to move.</param>
 /// <param name="timeProvider">Drives the backoff between Work Dir move attempts, so a test can control it without a real delay.</param>
-/// <param name="logger">Records a rejected rename, a Work Dir that could not be moved, a file state move that failed, and any failure in the detached half of the cascade.</param>
+/// <param name="logger">Records a rejected rename, a Work Dir that could not be moved, a file state move that failed, a Room Session move that failed, and any failure in the detached half of the cascade.</param>
 internal sealed partial class PersonaRenameCascade(
     ITeamDirectory teamDirectory,
     PersonaStore personaStore,
     RoomEvents roomEvents,
     AvatarStore avatars,
     FileStateStore fileState,
+    RoomSessionStore roomSessions,
     IOptions<TeamOptions> options,
     TimeProvider timeProvider,
     ILogger<PersonaRenameCascade> logger) : IHostedService, IDisposable
@@ -135,6 +138,20 @@ internal sealed partial class PersonaRenameCascade(
             LogFileStateMoveFailed(logger, renamed.OldName, renamed.NewName, ex);
         }
 
+        // Same placement and the same reason again (RS §6.13): a stored Room Session entry exists
+        // whether or not an Agent has ever connected, so this must sit ABOVE the "no Agent row" early
+        // return too, or a stock installation would never move it. Its own try/catch, separate from
+        // the file state one above, so a failure moving one store never skips the other or the
+        // race-critical Team Directory rename below.
+        try
+        {
+            roomSessions.Rename(renamed.OldName, renamed.NewName);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LogRoomSessionsMoveFailed(logger, renamed.OldName, renamed.NewName, ex);
+        }
+
         var user = teamDirectory.FindUserByName(renamed.OldName);
         if (user is null || user.Kind != UserKind.Agent)
         {
@@ -177,6 +194,15 @@ internal sealed partial class PersonaRenameCascade(
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             LogFileStateRemoveFailed(logger, removed.Name, ex);
+        }
+
+        try
+        {
+            roomSessions.Remove(removed.Name);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LogRoomSessionsRemoveFailed(logger, removed.Name, ex);
         }
     }
 
@@ -314,4 +340,12 @@ internal sealed partial class PersonaRenameCascade(
     /// <summary>Logs that deleting a removed Persona's File Changes state failed.</summary>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not remove File Changes state for '{Name}'.")]
     private static partial void LogFileStateRemoveFailed(ILogger logger, string name, Exception exception);
+
+    /// <summary>Logs that moving a renamed Persona's Room Session state failed.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not move Room Session state for '{OldName}' to '{NewName}'.")]
+    private static partial void LogRoomSessionsMoveFailed(ILogger logger, string oldName, string newName, Exception exception);
+
+    /// <summary>Logs that deleting a removed Persona's Room Session state failed.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not remove Room Session state for '{Name}'.")]
+    private static partial void LogRoomSessionsRemoveFailed(ILogger logger, string name, Exception exception);
 }

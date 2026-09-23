@@ -356,6 +356,14 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         {
             this.roomSessions.Prune(this.persona.Name, welcome.Rooms.Select(room => room.Id).ToList());
         }
+        else if (this.roomSessions is not null)
+        {
+            // E-12: shared mode never resumes (finding P-15), so any stored entries here are stale -
+            // most likely left behind by a switch away from per-Room. Forgetting them on every shared
+            // start is what makes a later switch back to per-Room start fresh rather than resuming
+            // against a session, Model or Effort that no longer matches.
+            this.roomSessions.ForgetAll(this.persona.Name);
+        }
 
         // RS §6.2: the pool owns lazy per-Room opens, eviction and Stop routing; in shared mode (RS
         // principle 6: "SessionPerRoom: false is today plus Phase 0") it holds one RoomSession,

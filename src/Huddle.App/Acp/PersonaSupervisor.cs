@@ -331,6 +331,16 @@ internal sealed class PersonaSupervisor : BackgroundService
             this.logger.LogWarning(ex, "Persona '{PersonaName}' host failed to stop cleanly after removal.", name);
         }
 
+        // This is both the removal path AND the rename path: OnPersonasChanged sees a rename as the
+        // old Name disappearing from ListNames(), so it reaches here too. Forgetting AFTER dispose -
+        // never before - beats the resurrection race: the old runner's own final Turn-end write
+        // (RoomSessionPool.Put) can otherwise land moments after this method decided the Persona is
+        // gone and resurrect an entry under a Name nothing will ever look up again (D29 correction 16,
+        // RS §6.13). A rename has already moved the file to the new Name by the time this runs
+        // (PersonaRenameCascade.OnPersonaRenamed runs synchronously, before PersonasChanged), so this
+        // is a harmless no-op there - it exists purely to close the race, not to do the rename itself.
+        this.roomSessions?.ForgetAll(name);
+
         // The Persona is gone, and PersonaRunner.StopAsync above (via DisposeAsync) sees its own
         // run token already cancelled, so its loops report nothing on their way out (T4.4) - this is
         // the one place that removes the now-stale health entry rather than leaving it to rot.
@@ -382,6 +392,16 @@ internal sealed class PersonaSupervisor : BackgroundService
                     this.logger.LogWarning(ex, "Persona '{PersonaName}' old host failed to stop cleanly during restart.", name);
                 }
             }
+
+            // RS §6.13: a Restart - the button, or the automatic one a Persona edit / Model / Effort /
+            // Adapter change triggers - forgets every stored Room Session for this Persona, so its
+            // next Turn in every Room starts fresh with Catch-up rather than resuming a session tied
+            // to a system prompt, Model or Effort that may no longer match (U7). Deliberately AFTER
+            // the whole block above, not inside it (D29 correction 16): this must still run when
+            // oldHost was null (a Restart of a Persona that failed to start), and placing it after the
+            // old host's dispose - rather than before - beats the same resurrection race StopHostAsync
+            // closes for removal and rename.
+            this.roomSessions?.ForgetAll(name);
 
             await this.StartHostIfMissingAsync(name, cancellationToken).ConfigureAwait(false);
         }

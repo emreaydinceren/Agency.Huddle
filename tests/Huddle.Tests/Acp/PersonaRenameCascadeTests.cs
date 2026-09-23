@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
@@ -411,6 +412,38 @@ public sealed class PersonaRenameCascadeTests
         Assert.Contains("watches: [Nova]", coach.Text, StringComparison.Ordinal);
     }
 
+    /// <summary>RS §6.13: a rename moves the <see cref="RoomSessionStore"/> file even when no Agent has ever registered - the stock case, since <c>Team:Acp:Enabled</c> is false by default. Mirrors <see cref="Rename_PersonaWithNoRegisteredAgent_MovesTheAvatarKey"/> and <see cref="OnPersonaRenamed_NoAgentRow_StillRenamesFileState"/> for Room Sessions.</summary>
+    [Fact]
+    public async Task Rename_NoAgentRow_StillRenamesRoomSessions()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("ghost"), "Nobody has ever started this one.");
+        harness.RoomSessions.Put("ghost", "room-1", new RoomSessionEntry("sess-1", "claude", null, null, null, DateTimeOffset.UtcNow));
+
+        harness.PersonaStore.Update("ghost", PersonaText("ghostprime", "Nobody has ever started this one."), model: null, effort: null);
+
+        Assert.NotNull(harness.RoomSessions.Get("ghostprime", "room-1"));
+        Assert.Null(harness.RoomSessions.Get("ghost", "room-1"));
+    }
+
+    /// <summary>RS §6.13: removing a Persona deletes its <see cref="RoomSessionStore"/> file, alongside its Avatar and File Changes state.</summary>
+    [Fact]
+    public async Task Removal_RemovesRoomSessions()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.RoomSessions.Put("echo", "room-1", new RoomSessionEntry("sess-1", "claude", null, null, null, DateTimeOffset.UtcNow));
+        Assert.NotNull(harness.RoomSessions.Get("echo", "room-1"));
+
+        harness.PersonaStore.Remove("echo");
+
+        Assert.Null(harness.RoomSessions.Get("echo", "room-1"));
+    }
+
     /// <summary>Builds a real <see cref="ITeamDirectory"/>, <see cref="PersonaStore"/>, <see cref="AvatarStore"/> and started <see cref="PersonaRenameCascade"/> over <paramref name="dir"/>, seeding the Human.</summary>
     private static async Task<Harness> CreateHarnessAsync(TempDataDir dir, CancellationToken ct, ILogger<PersonaRenameCascade>? cascadeLogger = null)
     {
@@ -425,12 +458,14 @@ public sealed class PersonaRenameCascadeTests
         var roomEvents = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var avatarStore = new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance);
         var fileState = new FileStateStore(dir.Options(), NullLogger<FileStateStore>.Instance);
+        var roomSessions = new RoomSessionStore(dir.Options(), NullLogger<RoomSessionStore>.Instance);
         var cascade = new PersonaRenameCascade(
             teamDirectory,
             personaStore,
             roomEvents,
             avatarStore,
             fileState,
+            roomSessions,
             dir.Options(),
             TimeProvider.System,
             cascadeLogger ?? NullLogger<PersonaRenameCascade>.Instance);
@@ -444,6 +479,7 @@ public sealed class PersonaRenameCascadeTests
             RoomEvents = roomEvents,
             AvatarStore = avatarStore,
             FileState = fileState,
+            RoomSessions = roomSessions,
             Cascade = cascade,
         };
     }
@@ -516,6 +552,8 @@ public sealed class PersonaRenameCascadeTests
         public required AvatarStore AvatarStore { get; init; }
 
         public required FileStateStore FileState { get; init; }
+
+        public required RoomSessionStore RoomSessions { get; init; }
 
         public required PersonaRenameCascade Cascade { get; init; }
 

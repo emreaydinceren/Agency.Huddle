@@ -87,6 +87,14 @@ internal sealed class FakePersonaHost : IPersonaHost
     public bool Disposed { get; private set; }
 
     /// <summary>
+    /// Runs, if set, inside <see cref="DisposeAsync"/>, before it returns - lets a test simulate a
+    /// runner's own final Turn-end write (for example a late <c>RoomSessionStore.Put</c>) landing
+    /// concurrently with disposal, so a store-forgetting caller can be proven to forget AFTER
+    /// disposal rather than racing it (D29 correction 16, RS §6.13 U7).
+    /// </summary>
+    public Action? OnDispose { get; set; }
+
+    /// <summary>
     /// The most sessions this host has ever had open (returned from <see cref="OpenAsync"/> but not
     /// yet disposed) at once - lets a test prove <c>RoomSessionPool</c>'s live cap (RS §6.14
     /// <c>MaxLiveSessions</c>) is actually honoured, not merely that the right sessions were
@@ -181,6 +189,7 @@ internal sealed class FakePersonaHost : IPersonaHost
     public ValueTask DisposeAsync()
     {
         this.Disposed = true;
+        this.OnDispose?.Invoke();
         return ValueTask.CompletedTask;
     }
 }
