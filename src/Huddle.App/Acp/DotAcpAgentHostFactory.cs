@@ -287,6 +287,14 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             return inner.StartSessionAsync(options, cancellationToken);
         }
 
+        // D19 (RS §6.3) replaces this type with DotAcpPersonaHost, which resumes through
+        // IPersonaHost.ResumeAsync instead. Until then nothing calls this: the factory's only
+        // caller (PersonaSupervisor) always starts a fresh session.
+        public Task<IAgentSession> ResumeSessionAsync(string sessionId, AgentSessionOptions options, CancellationToken cancellationToken)
+        {
+            throw new NotSupportedException("Resume is not wired up until D19 (RS §6.3) replaces this type with DotAcpPersonaHost.");
+        }
+
         public async ValueTask DisposeAsync()
         {
             await inner.DisposeAsync().ConfigureAwait(false);
