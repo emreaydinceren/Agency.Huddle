@@ -41,13 +41,14 @@ namespace Agency.Huddle.Tests.Conformance;
 /// </para>
 /// <para>
 /// The assertion is deliberately limited to "the Turn completed" — a reply from the Persona landed in
-/// the Room — never the exact chunk count or reply text. <c>ChunkedReplyFirstOrderer</c>'s remarks
-/// document a known, diagnosed race in the ACP client's event dispatch
-/// (<c>DotAcpAgentSession</c>/<c>DotAcpClientAdapter</c>) that can drop trailing
-/// <c>MessageDelta</c> chunks when a <c>session/prompt</c> response is dispatched ahead of
-/// <c>session/update</c> notifications the peer sent before it; pinning chunk counts or full text
-/// here would make this test intermittently red for a defect that belongs to that class, not this
-/// one.
+/// the Room — never the exact chunk count or reply text. <c>DotAcpAgentSession.WaitForQuietDispatchAsync</c>'s
+/// remarks document a diagnosed race in the ACP client's event dispatch
+/// (<c>DotAcpAgentSession</c>/<c>DotAcpClientAdapter</c>) that could drop trailing
+/// <c>MessageDelta</c> chunks when a <c>session/prompt</c> response was dispatched ahead of
+/// <c>session/update</c> notifications the peer sent before it; a bounded quiet-window wait now
+/// mitigates it, but that method's own remarks explain why it is a mitigation and not a hard
+/// guarantee, so pinning chunk counts or full text here would still risk this test going
+/// intermittently red for a defect that belongs to that class, not this one.
 /// </para>
 /// </remarks>
 public sealed class ProcessModeTests

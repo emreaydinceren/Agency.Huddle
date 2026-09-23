@@ -21,24 +21,24 @@ namespace Agency.Huddle.Tests.Conformance;
 /// of waiting out real wall-clock minutes.
 /// </summary>
 /// <remarks>
-/// <b>A known, reported defect affects <see cref="TwoRooms_TwoSessionNewCalls_OneProcess"/>,
-/// skipped below.</b> With two Room Sessions concurrently live on one Adapter process, the SECOND
-/// one ever Turned — whichever physical Room it is; swapping post order moves the failure with it —
-/// completes its <c>session/prompt</c> RPC successfully (<c>stopReason: end_turn</c> is returned and
-/// recorded in <see cref="FakeAcpAgent.Received"/>), but the reply text is empty and nothing is
-/// posted into the Room: <c>Agency.Huddle.App.Acp.Sessions.RoomSession.AppendAndPublishDeltaAsync</c>
-/// drops the <c>MessageChunk</c> because <c>this.activeTurn</c> reads back <see langword="null"/>
-/// (traced with a temporary log line, since reverted). The two independent single-Room tests in this
-/// class pass every time. The most likely cause sits in
-/// <c>src/Huddle.Acp/DotAcp/DotAcpAgentSession.cs</c>: <c>PromptAsync</c> publishes
-/// <c>TurnCompleted</c> synchronously, the instant its own <c>session/prompt</c> RPC returns, with no
-/// ordering guarantee against a concurrently in-flight <c>session/update</c> notification handler
-/// (which publishes <c>MessageChunk</c> from a different call path) for a second, simultaneously open
-/// session — a race that a single-session Turn never exercises. This is <c>src/Huddle.Acp</c>, the
-/// ACP effort's subtree per root <c>CLAUDE.md</c>'s "Two owners" table, not chat-surface's to fix
-/// here (D30 correction covers only "anything in <c>FakeAcpAgent.cs</c>"; this is deeper than that).
-/// Reported rather than patched, per this task's own instruction to treat anything outside the
-/// chat-surface subtree as a request to that owner.
+/// <b><see cref="TwoRooms_TwoSessionNewCalls_OneProcess"/> used to be skipped here for a known,
+/// reported defect; it no longer is.</b> With two Room Sessions concurrently live on one Adapter
+/// process, the SECOND one ever Turned — whichever physical Room it was; swapping post order moved
+/// the failure with it — completed its <c>session/prompt</c> RPC successfully (<c>stopReason:
+/// end_turn</c> was returned and recorded in <see cref="FakeAcpAgent.Received"/>), but the reply text
+/// came back empty and nothing was posted into the Room:
+/// <c>Agency.Huddle.App.Acp.Sessions.RoomSession.AppendAndPublishDeltaAsync</c> dropped the
+/// <c>MessageChunk</c> because <c>this.activeTurn</c> read back <see langword="null"/>. Root cause,
+/// confirmed empirically: <c>src/Huddle.Acp/DotAcp/DotAcpAgentSession.cs</c>'s <c>PromptAsync</c>
+/// published <c>TurnCompleted</c> the instant its own <c>session/prompt</c> RPC returned, with no
+/// ordering guarantee against a concurrently in-flight <c>session/update</c> notification dispatch
+/// (StreamJsonRpc completes an outbound request through a different path than the one that invokes an
+/// inbound notification's target method) — a race a single-session Turn rarely exercises enough to
+/// surface. Traced with temporary instrumentation (since reverted); see
+/// <c>Conversation/red-D30-30.1.i-fix.txt</c> for that capture and
+/// <c>DotAcpAgentSession.WaitForQuietDispatchAsync</c>'s remarks for the root cause writeup and the
+/// bounded quiet-window mitigation now in place there (Huddle.Acp, per root <c>CLAUDE.md</c>'s "Two
+/// owners" table, the repo owner authorised this edit).
 /// </remarks>
 public sealed class RoomSessionConformanceTests
 {
@@ -49,7 +49,7 @@ public sealed class RoomSessionConformanceTests
     /// <c>initialize</c> — sent exactly once, when the process itself starts — appears only once, so
     /// a second process was never spawned to serve the second Room.
     /// </summary>
-    [Fact(Skip = "Known, reported defect (see class remarks): the second concurrently-open Room Session's reply is silently dropped, traced to a likely ordering race in src/Huddle.Acp/DotAcp/DotAcpAgentSession.cs — outside the chat-surface subtree this task owns.")]
+    [Fact]
     public async Task TwoRooms_TwoSessionNewCalls_OneProcess()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;

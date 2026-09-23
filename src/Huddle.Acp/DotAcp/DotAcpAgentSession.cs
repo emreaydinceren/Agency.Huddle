@@ -10,8 +10,15 @@ using System.Threading.Tasks;
 using Agency.Huddle.Acp.Abstractions;
 
 /// <summary>Represents one ACP session: the concrete <see cref="IAgentSession"/> backed by a dotacp connection.</summary>
-internal sealed class DotAcpAgentSession : IAgentSession, ISessionSink
+internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
 {
+    // Bounds WaitForQuietDispatchAsync - see that method's remarks for the defect this mitigates and
+    // why it cannot be a hard guarantee. Internal rather than const so a future caller can read them
+    // (e.g. an assertion on the warning's threshold); TimeSpan has no const form regardless.
+    internal static readonly TimeSpan DispatchQuietWindow = TimeSpan.FromMilliseconds(100);
+
+    internal static readonly TimeSpan DispatchQuietCap = TimeSpan.FromSeconds(2);
+
     private readonly dotacp.client.Connection connection;
 
     private readonly Action<string> onDisposed;
@@ -24,6 +31,12 @@ internal sealed class DotAcpAgentSession : IAgentSession, ISessionSink
     private readonly Lock gate = new Lock();
 
     private CancellationTokenSource? promptCts;
+
+    // Stamped by TryPublish whenever it publishes anything other than TurnCompleted - i.e. every
+    // agent-originated session/update this session's sink has actually applied. Read and written via
+    // Interlocked/Volatile since TryPublish runs on whatever thread dotacp/StreamJsonRpc dispatches a
+    // notification on, concurrently with PromptAsync's own await chain.
+    private long lastUpdateTicks;
 
     private bool disposed;
 
@@ -117,6 +130,8 @@ internal sealed class DotAcpAgentSession : IAgentSession, ISessionSink
                 },
                 cancellationToken).ConfigureAwait(false);
 
+            await this.WaitForQuietDispatchAsync(cancellationToken).ConfigureAwait(false);
+
             StopReason stopReason = SessionUpdateMapper.MapStopReason(response.StopReason);
             this.TryPublish(new TurnCompleted(this.SessionId, stopReason));
             return new PromptResult(stopReason);
@@ -172,8 +187,101 @@ internal sealed class DotAcpAgentSession : IAgentSession, ISessionSink
 
     public bool TryPublish(AgentEvent agentEvent)
     {
+        // Excludes TurnCompleted itself: WaitForQuietDispatchAsync's whole point is to notice when a
+        // session/update-derived event was published SHORTLY BEFORE it runs, and TurnCompleted is
+        // published by that same method's own caller, never by dotacp's notification dispatch - so
+        // stamping it here would make every Turn look "still busy" the instant it publishes its own
+        // completion, achieving nothing.
+        if (agentEvent is not TurnCompleted)
+        {
+            Interlocked.Exchange(ref this.lastUpdateTicks, Environment.TickCount64);
+        }
+
         return this.channel.Writer.TryWrite(agentEvent);
     }
+
+    /// <summary>
+    /// Mitigates the ACP client dispatch-ordering defect documented in
+    /// <c>docs/agencyteam/known-limits.md</c> ("Second known flake, pre-existing") and reproduced
+    /// deterministically by <c>DotAcpAgentSessionTests.PromptAsync_ChunkDispatchedAfterResponse_StillPrecedesTurnCompleted</c>:
+    /// ACP guarantees the agent writes every <c>session/update</c> for a Turn to the wire strictly
+    /// before its <c>session/prompt</c> response, but StreamJsonRpc completes that response through a
+    /// different path than the one that invokes an inbound notification's target method
+    /// (<see cref="DotAcpClientAdapter.SessionUpdateAsync"/>), with no ordering between them - so
+    /// <see cref="PromptAsync"/> can observe the response, and be ready to publish
+    /// <see cref="TurnCompleted"/>, before a notification the peer sent first has even reached this
+    /// session's sink.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Why this is a mitigation, not a fix.</b> A true ordering barrier would need
+    /// <c>StreamJsonRpc.JsonRpc.SynchronizationContext</c> installed on the connection's underlying
+    /// <c>JsonRpc</c> before it starts listening, so every notification dispatch serializes through
+    /// one queue a barrier could join the back of. <c>dotacp.client.Connection</c> does not expose
+    /// that <c>JsonRpc</c>, and - confirmed empirically, not merely assumed - it starts listening
+    /// synchronously within construction: both its public constructor and the static <c>RunClient</c>
+    /// factory lock <c>SynchronizationContext</c> before any caller, including one reaching the
+    /// private field that holds it via reflection, gets a chance to set it
+    /// (<c>JsonRpc.SynchronizationContext</c>'s setter throws <c>"This cannot be done after listening
+    /// has started."</c> in both cases). A real fix would mean constructing <c>StreamJsonRpc.JsonRpc</c>
+    /// directly against <c>dotacp.protocol</c>'s wire types instead of going through
+    /// <c>dotacp.client.Connection</c>'s convenience wrapper - a materially larger change, and a
+    /// follow-up, not this one.
+    /// </para>
+    /// <para>
+    /// <b>What this does instead.</b> Waits, re-checking in a loop, until at least
+    /// <see cref="DispatchQuietWindow"/> has elapsed since BOTH the response arrived AND the last
+    /// <see cref="TryPublish"/> of anything other than <see cref="TurnCompleted"/> - so a notification
+    /// that is merely running a little behind gets a real chance to land and extend the wait, while a
+    /// session with nothing left to say pays only the one base <see cref="DispatchQuietWindow"/>. Never
+    /// waits past <see cref="DispatchQuietCap"/>: past that bound this publishes anyway and logs a
+    /// warning, since an agent that is still silent that long almost certainly is not dispatch skew.
+    /// Skips the wait entirely once <paramref name="cancellationToken"/> is cancelled - a Human's Stop
+    /// must never be held up by it.
+    /// </para>
+    /// </remarks>
+    /// <param name="cancellationToken">The Turn's own token; cancelling ends the wait immediately without publishing a warning.</param>
+    private async Task WaitForQuietDispatchAsync(CancellationToken cancellationToken)
+    {
+        long responseTicks = Environment.TickCount64;
+        long capTicks = responseTicks + (long)DotAcpAgentSession.DispatchQuietCap.TotalMilliseconds;
+        long windowMs = (long)DotAcpAgentSession.DispatchQuietWindow.TotalMilliseconds;
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            long now = Environment.TickCount64;
+            long sinceResponse = now - responseTicks;
+            long sinceLastUpdate = now - Interlocked.Read(ref this.lastUpdateTicks);
+
+            if (sinceResponse >= windowMs && sinceLastUpdate >= windowMs)
+            {
+                return;
+            }
+
+            if (now >= capTicks)
+            {
+                DotAcpAgentSession.LogDispatchQuietCapExceeded(this.logger, this.SessionId, DotAcpAgentSession.DispatchQuietCap.TotalMilliseconds);
+                return;
+            }
+
+            long remainingUntilCap = capTicks - now;
+            long delayMs = Math.Max(1, Math.Min(windowMs, remainingUntilCap));
+
+            try
+            {
+                await Task.Delay((int)delayMs, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // A Stop arrived mid-wait: publish TurnCompleted with the response already in hand
+                // rather than holding it up further, exactly as if the wait had never started.
+                return;
+            }
+        }
+    }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Session {SessionId}: no session/update settled within the {CapMilliseconds}ms dispatch-quiet cap; publishing TurnCompleted anyway.")]
+    private static partial void LogDispatchQuietCapExceeded(ILogger logger, string sessionId, double capMilliseconds);
 
     public void Fault(Exception exception)
     {
