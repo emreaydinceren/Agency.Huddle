@@ -719,6 +719,49 @@ public sealed class PersonaSupervisorTests
         Assert.True(watchIndex > skillIndex, reason);
     }
 
+    /// <summary>
+    /// FC §6.11: with the resolved Adapter Profile's <c>ReadsFiles</c> false and the Persona's
+    /// frontmatter declaring a non-empty <c>watches</c> list, the supervisor reports the "ignored"
+    /// warning instead of <see cref="Agency.Huddle.App.FileChanges.FileChangeTracker.CheckDeclared"/>'s
+    /// - and does so independent of whether a <see cref="Agency.Huddle.App.FileChanges.FileChangeTracker"/>
+    /// was even injected, which this test's construction call deliberately omits.
+    /// </summary>
+    [Fact]
+    public async Task Start_ProfileReadsFilesFalse_WarnsWatchesIgnored()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?>
+            {
+                ["Team:Acp:Enabled"] = "true",
+                ["Team:Acp:Adapters:0:Id"] = "agency",
+                ["Team:Acp:Adapters:0:Command"] = "agency-acp",
+                ["Team:Acp:Adapters:0:ReadsFiles"] = "false",
+            },
+            ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var health = NewHealth();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
+
+        personaStore.Add(Identity("nova") with { Adapter = "agency", Watches = ["Shared"] }, "You are Nova.");
+
+        await supervisor.StartAsync(ct);
+
+        await WaitUntilAsync(() => factory.Calls.Any(call => call.Persona.Name == "nova"), ct);
+        await supervisor.StopAsync(ct);
+
+        var status = health.Get("nova");
+        Assert.NotNull(status);
+        Assert.Equal(PersonaState.Degraded, status.State);
+        Assert.Equal("Watched folders are ignored: the Adapter 'agency' cannot read files.", status.Reason);
+    }
+
     /// <summary>An adapter-not-installed <see cref="InvalidOperationException"/> - the same shape <c>DotAcpAgentHostFactory</c> throws - is recorded as Offline, carrying the exception's own actionable message.</summary>
     [Fact]
     public async Task MissingAdapter_IsRecordedAsOfflineWithItsReason()

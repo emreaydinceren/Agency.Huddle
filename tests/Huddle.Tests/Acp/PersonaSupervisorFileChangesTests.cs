@@ -92,6 +92,52 @@ public sealed class PersonaSupervisorFileChangesTests
         Assert.False(File.Exists(stateFile));
     }
 
+    /// <summary>
+    /// FC §6.11: with the resolved Adapter Profile's <c>ReadsFiles</c> false, the supervisor passes no
+    /// tracker to the runner even though <c>Team:FileChanges:Enabled</c> is left at its default (true)
+    /// and a real <see cref="FileChangeTracker"/> singleton is passed to this supervisor's
+    /// constructor - a Turn on that Adapter writes no state file at all.
+    /// </summary>
+    [Fact]
+    public async Task Supervisor_ReadsFilesFalse_TurnWritesNoFileState()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?>
+            {
+                ["Team:Acp:Enabled"] = "true",
+                ["Team:Acp:Adapters:0:Id"] = "agency",
+                ["Team:Acp:Adapters:0:Command"] = "agency-acp",
+                ["Team:Acp:Adapters:0:ReadsFiles"] = "false",
+            },
+            ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReply("ok");
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
+        using var skillStore = new SkillStore(options, NullLogger<SkillStore>.Instance);
+        using var supervisor = new PersonaSupervisor(
+            options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, tracker);
+
+        personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []) { Adapter = "agency" }, "You are Nova.");
+        await supervisor.StartAsync(ct);
+
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        var store = fixture.Services.GetRequiredService<IChatStore>();
+        await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
+        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+
+        await supervisor.StopAsync(ct);
+
+        var stateFile = Path.Combine(options.Value.DataDir, "file-state", "nova.json");
+        Assert.False(File.Exists(stateFile));
+    }
+
     /// <summary>Finding P-13's real production wiring: <see cref="PersonaSupervisor"/> passes its own <see cref="FileChangeTracker"/> through to the runner it starts, over the real <see cref="Agency.Huddle.App.Acp.DotAcpAgentHostFactory"/>.</summary>
     [Fact]
     public async Task MockAdapterFixture_PassesTracker()

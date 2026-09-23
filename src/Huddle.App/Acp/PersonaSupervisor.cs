@@ -432,8 +432,10 @@ internal sealed class PersonaSupervisor : BackgroundService
             // is pure and touches no state, so calling it twice costs nothing and keeps that
             // signature frozen - two calls, one truth. The Degraded report itself is issued after
             // "Starting" below rather than here, so the "whatever was said during the start wins"
-            // rule a few lines down does not immediately overwrite it back to Starting/Online.
-            var (_, adapterWarning) = this.resolver.Resolve(persona.Adapter);
+            // rule a few lines down does not immediately overwrite it back to Starting/Online. The
+            // resolved profile itself is kept (not discarded) because FC §6.11's ReadsFiles decides
+            // both the tracker below and the warning wording.
+            var (profile, adapterWarning) = this.resolver.Resolve(persona.Adapter);
 
             // Same argument as the Adapter warning immediately above, for Skills (Spec §6.4, §12
             // F-1): DotAcpAgentHostFactory resolves the same names again itself, for the tool
@@ -444,13 +446,25 @@ internal sealed class PersonaSupervisor : BackgroundService
                 : [];
             SkillResolution skillResolution = this.skills.Resolve(skillNames);
 
-            // FC §6.10: File Changes is off for this Persona when the tracker itself is absent
-            // (finding P-13) or Team:FileChanges:Enabled is false - either way the runner gets no
-            // tracker, and CheckDeclared has nothing to report against.
-            FileChangeTracker? tracker = this.options.FileChanges.Enabled ? this.fileChanges : null;
-            IReadOnlyList<string> watchWarnings = tracker is not null
-                ? tracker.CheckDeclared(identity?.Watches ?? [])
-                : [];
+            // FC §6.10, §6.11: File Changes is off for this Persona when the tracker itself is
+            // absent (finding P-13), Team:FileChanges:Enabled is false, or the resolved Adapter
+            // Profile cannot read files - any of the three, the runner gets no tracker.
+            FileChangeTracker? tracker = this.options.FileChanges.Enabled && profile.ReadsFiles ? this.fileChanges : null;
+            IReadOnlyList<string> declaredWatches = identity?.Watches ?? [];
+
+            // The "ignored" warning fires whenever File Changes is on but this Adapter cannot read
+            // files and the Persona declared a watch anyway - independent of whether a tracker was
+            // ever injected into this supervisor, because the fact it reports is about the Adapter,
+            // not about this process' wiring. CheckDeclared's own warnings need all three: a
+            // tracker, FileChanges.Enabled and ReadsFiles - so the two warnings are mutually
+            // exclusive by construction.
+            IReadOnlyList<string> watchWarnings = this.options.FileChanges.Enabled switch
+            {
+                false => [],
+                true when !profile.ReadsFiles && declaredWatches.Count > 0 =>
+                    [$"Watched folders are ignored: the Adapter '{profile.Id}' cannot read files."],
+                true => tracker is not null ? tracker.CheckDeclared(declaredWatches) : [],
+            };
 
             var host = new PersonaRunner(
                 persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), tracker);

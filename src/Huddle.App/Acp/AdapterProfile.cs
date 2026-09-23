@@ -17,6 +17,13 @@ namespace Agency.Huddle.App.Acp;
 /// Adapter needs none. Defaults to <see langword="null"/> so every existing positional call site
 /// keeps compiling unchanged.
 /// </param>
+/// <param name="ReadsFiles">
+/// Whether this Adapter's agent process can read files at all — FC §6.11. Defaults to
+/// <see langword="true"/> so every existing positional call site keeps compiling unchanged; an
+/// Adapter with no file tools (<c>agency-acp</c>) sets it <see langword="false"/>, which turns off
+/// the Watched Folder list, <c>watch_folder</c>/<c>unwatch_folder</c> and frontmatter <c>watches</c>
+/// for every Persona on that Adapter.
+/// </param>
 public sealed record AdapterProfile(
     string Id,
     string DisplayName,
@@ -25,4 +32,5 @@ public sealed record AdapterProfile(
     IReadOnlyList<string>? Args,
     string? AdapterPath,
     bool UsesToolNamePrefix,
-    IReadOnlyDictionary<string, string>? EnvironmentOverrides = null);
+    IReadOnlyDictionary<string, string>? EnvironmentOverrides = null,
+    bool ReadsFiles = true);

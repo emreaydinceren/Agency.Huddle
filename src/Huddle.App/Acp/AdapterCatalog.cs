@@ -67,7 +67,8 @@ internal sealed class AdapterCatalog
                     Args: acp.Args,
                     AdapterPath: acp.AdapterPath,
                     UsesToolNamePrefix: true,
-                    EnvironmentOverrides: null),
+                    EnvironmentOverrides: null,
+                    ReadsFiles: true),
             ];
         }
 
@@ -82,7 +83,8 @@ internal sealed class AdapterCatalog
                 Args: entry.Args,
                 AdapterPath: entry.AdapterPath,
                 UsesToolNamePrefix: entry.UsesToolNamePrefix,
-                EnvironmentOverrides: AdapterCatalog.CopyEnvironment(entry.EnvironmentOverrides)));
+                EnvironmentOverrides: AdapterCatalog.CopyEnvironment(entry.EnvironmentOverrides),
+                ReadsFiles: entry.ReadsFiles));
         }
 
         return profiles;

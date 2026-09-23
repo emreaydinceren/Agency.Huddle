@@ -584,5 +584,33 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.watchFolder.description",
+            Label: "watch_folder description",
+            HelperText:
+                "The one-line job description a model reads for the watch_folder tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Watches a folder, so that on each of your later Turns the files added, changed or deleted there since your last Turn in that Room are listed, by full path, at the top of your prompt. A change you make yourself is not listed in the Room you made it in. Name a Teammate to watch their working folder, or give a folder inside App_Data. Your own working folder is always watched. Use it for folders you depend on but do not own, such as a shared notes folder or another Teammate's output. It lasts until you call unwatch_folder, even across a restart. Read a listed file only when it matters to what you are doing.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.unwatchFolder.description",
+            Label: "unwatch_folder description",
+            HelperText:
+                "The one-line job description a model reads for the unwatch_folder tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Stops listing file changes for a folder you started watching with watch_folder. Your own folder, and folders your Persona lists, stay watched.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
     ];
 }

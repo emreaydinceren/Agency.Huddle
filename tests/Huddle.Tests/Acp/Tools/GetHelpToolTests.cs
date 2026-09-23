@@ -54,6 +54,42 @@ public sealed class GetHelpToolTests
         }
     }
 
+    /// <summary>
+    /// <c>get_help</c> is built from the tools it is handed, so when <c>watch_folder</c> and
+    /// <c>unwatch_folder</c> are offered (FC §6.9, §6.11), it lists both by their prefixed model-facing
+    /// name - the same guarantee <see cref="GetHelp_NamesEveryOtherToolWithItsMcpPrefix"/> pins for the
+    /// original tool set, needed separately because <c>PromptGoldenTests</c> builds its tool roster from
+    /// a fixed list that never includes these two, so <c>getHelp.txt</c> and <c>toolDescriptions.txt</c>
+    /// cannot cover this.
+    /// </summary>
+    [Fact]
+    public async Task GetHelp_WithWatchTools_ListsBothByPrefixedName()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new Agency.Huddle.Tests.TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var store = new Agency.Huddle.App.FileChanges.FileStateStore(dir.Options(), NullLogger<Agency.Huddle.App.FileChanges.FileStateStore>.Instance);
+        var resolver = new Agency.Huddle.App.FileChanges.WatchedFolderResolver(dir.Options());
+        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        var tracker = new Agency.Huddle.App.FileChanges.FileChangeTracker(store, personaStore, directory, resolver, dir.Options(), NullLogger<Agency.Huddle.App.FileChanges.FileChangeTracker>.Instance);
+
+        IAppTool[] watchTools =
+        [
+            new WatchFolderTool(tracker, "Nova", new FakePromptSource()),
+            new UnwatchFolderTool(tracker, "Nova", new FakePromptSource()),
+        ];
+        var tool = new GetHelpTool(watchTools, new FakePromptSource(), "mcp__team__");
+
+        var help = await tool.InvokeAsync(new JsonObject(), ct);
+
+        foreach (var other in watchTools)
+        {
+            Assert.Contains($"mcp__team__{other.Name}", help, StringComparison.Ordinal);
+            Assert.Contains(other.Description, help, StringComparison.Ordinal);
+        }
+    }
+
     /// <summary>An override configured on a prompt <see cref="GetHelpTool"/> renders must actually reach its output.</summary>
     [Fact]
     public async Task GetHelp_OverriddenBudgetPrompt_AppearsInHelp()

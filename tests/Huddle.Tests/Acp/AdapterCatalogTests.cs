@@ -255,4 +255,58 @@ public sealed class AdapterCatalogTests
         AdapterProfile profile = Assert.Single(catalog.Profiles);
         Assert.Null(profile.EnvironmentOverrides);
     }
+
+    /// <summary>The synthesised legacy profile (no <c>Team:Acp:Adapters</c> configured) carries <c>ReadsFiles</c> true — FC §6.11, Spec §4 P6: a stock installation reads its own files.</summary>
+    [Fact]
+    public void Legacy_ReadsFilesTrue()
+    {
+        var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.True(profile.ReadsFiles);
+    }
+
+    /// <summary>A configured Adapter entry with no <c>ReadsFiles</c> key defaults to true — FC §6.11.</summary>
+    [Fact]
+    public void Configured_ReadsFilesDefaultsTrue()
+    {
+        var acp = new AcpOptions
+        {
+            Adapters =
+            [
+                new AdapterProfileOptions { Id = "agency", DisplayName = "Agency", Command = "agency-acp" },
+            ],
+        };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.True(profile.ReadsFiles);
+    }
+
+    /// <summary><c>Team:Acp:Adapters:0:ReadsFiles = false</c> binds through to the projected profile — FC §6.11, for an Adapter with no file tools such as <c>agency-acp</c>.</summary>
+    [Fact]
+    public void Configured_ReadsFilesFalse_Bound()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:Acp:Adapters:0:Id"] = "agency",
+                ["Team:Acp:Adapters:0:Command"] = "agency-acp",
+                ["Team:Acp:Adapters:0:ReadsFiles"] = "false",
+            })
+            .Build();
+        var teamOptions = new TeamOptions();
+        configuration.GetSection(TeamOptions.SectionName).Bind(teamOptions);
+        var options = Options.Create(teamOptions);
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.False(profile.ReadsFiles);
+    }
 }

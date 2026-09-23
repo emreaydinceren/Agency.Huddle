@@ -10,19 +10,20 @@ using Agency.Huddle.App.Prompts;
 public sealed partial class PromptCatalogTests
 {
     /// <summary>
-    /// The catalog carries exactly the 35 prompts the task specifies, no more and no fewer: the original
+    /// The catalog carries exactly the 37 prompts the task specifies, no more and no fewer: the original
     /// 24, plus <c>systemPrompt.skills</c> and <c>tool.readSkill.description</c> added for Spec §6.4, plus
     /// <c>tool.validateTeammate.description</c> added for Spec §6.8 (Task 9.3), plus
     /// <c>tool.proposeTeammates.description</c> added for Spec §6.9 (Task 10.2), plus
     /// <c>turn.greeting</c> added for Spec §6.14 (Task 16.3), plus the six File Changes Turn prompts
     /// (<c>turn.fileChangesHeader</c>, <c>turn.fileAdded</c>, <c>turn.fileChanged</c>,
     /// <c>turn.fileDeleted</c>, <c>turn.fileChangesMore</c>, <c>turn.folderUnchecked</c>) added for
-    /// FC §6.13 (Task 7.1).
+    /// FC §6.13 (Task 7.1), plus <c>tool.watchFolder.description</c> and
+    /// <c>tool.unwatchFolder.description</c> added for FC §6.9/§6.13 (Task 10.2).
     /// </summary>
     [Fact]
-    public void All_HasExactlyThirtyFivePrompts()
+    public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(35, PromptCatalog.All.Count);
+        Assert.Equal(37, PromptCatalog.All.Count);
     }
 
     /// <summary>The six File Changes Turn prompts FC §6.13 defines all exist, are Live, and carry no <c>mcp__team__</c> literal.</summary>
@@ -35,6 +36,21 @@ public sealed partial class PromptCatalogTests
         AssertFileChangesPrompt("turn.fileDeleted", ["{{path}}"], ["{{path}}"]);
         AssertFileChangesPrompt("turn.fileChangesMore", ["{{count}}"], ["{{count}}"]);
         AssertFileChangesPrompt("turn.folderUnchecked", ["{{path}}", "{{max}}"], ["{{path}}"]);
+    }
+
+    /// <summary>The two <c>watch_folder</c>/<c>unwatch_folder</c> tool descriptions exist, are <see cref="PromptTiming.NextSession"/> like every other <c>tool.*.description</c>, declare no placeholders, and carry no <c>mcp__team__</c> literal — FC §6.9, §6.13.</summary>
+    [Fact]
+    public void Catalog_HasWatchFolderToolPrompts()
+    {
+        var watch = PromptCatalog.Get("tool.watchFolder.description");
+        Assert.Equal(PromptTiming.NextSession, watch.Timing);
+        Assert.Empty(watch.Placeholders);
+        Assert.False(watch.Default.Contains("mcp__team__", StringComparison.Ordinal));
+
+        var unwatch = PromptCatalog.Get("tool.unwatchFolder.description");
+        Assert.Equal(PromptTiming.NextSession, unwatch.Timing);
+        Assert.Empty(unwatch.Placeholders);
+        Assert.False(unwatch.Default.Contains("mcp__team__", StringComparison.Ordinal));
     }
 
     /// <summary>Asserts one File Changes Turn prompt exists, is <see cref="PromptTiming.Live"/>, declares exactly <paramref name="placeholders"/> and requires exactly <paramref name="requiredPlaceholders"/>, and carries no <c>mcp__team__</c> literal.</summary>

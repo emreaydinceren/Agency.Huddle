@@ -48,4 +48,11 @@ public sealed class AdapterProfileOptions
 
     /// <summary>Whether model-facing tool names carry the <c>mcp__team__</c> prefix.</summary>
     public bool UsesToolNamePrefix { get; set; } = true;
+
+    /// <summary>
+    /// Whether this Adapter's agent process can read files at all — FC §6.11. A <c>bool</c>, not a
+    /// collection, so an initialiser is safe (docs/agencyteam/rules.md, "Collection options need no
+    /// initialiser" does not apply here).
+    /// </summary>
+    public bool ReadsFiles { get; set; } = true;
 }
