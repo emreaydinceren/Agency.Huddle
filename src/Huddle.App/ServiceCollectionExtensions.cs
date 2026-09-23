@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
@@ -69,6 +70,11 @@ public static class ServiceCollectionExtensions
         // FC §6.6: one JSON file per Agent under {DataDir}/file-state/, holding what that Agent
         // last saw per Room.
         services.AddSingleton<FileStateStore>();
+
+        // RS §6.6: a singleton like RoomFollows above - touches files, never the Team Directory -
+        // one JSON file per Agent under {DataDir}/room-sessions/, holding what is kept about each
+        // Room Session so it can be resumed.
+        services.AddSingleton<RoomSessionStore>();
 
         services.AddSingleton<AgentGateway>();
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());
