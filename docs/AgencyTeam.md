@@ -51,6 +51,10 @@ question is yours; the cost column is roughly what it will spend.
 | [Skills design](Huddle.Skills-Specifications.md) | Before work on Skills, `read_skill`, `propose_teammates`, Proposals, the built-in Chief of Staff or its Greeting. Three streams, with a test-first task plan. Delivered 2026-09-22 | ~20k |
 | [Skills tracker](Huddle.Skills-Tracker.md) | To see or record where each of the plan's 90 tasks stands | ~4k |
 | [Skills project plan](Huddle.Skills-ProjectPlan.md) | **Start here to build Skills.** 90 atomic, test-first tasks in 17 deliverables, each written for an agent with no context | ~13k |
+| [Questions design](Huddle.Questions-Specifications.md) | Before work on `ask_human`, the Question card, or anything an Agent asks the Human to choose. Proposed, not built; the Proposal card it copies shipped with Skills | ~8k |
+| [File Changes design](Huddle.FileChanges-Specifications.md) | Before work on Watched Folders, `watch_folder`, `watches` frontmatter, `file-state/`, an Agent's `memory/` folder, or anything that tells an Agent a file changed or what it remembers. Replaced roadmap item 11's delivery plan. **Delivered (code) 2026-09-23**; the isolation it depends on for Memory is unverified live — see [Known limits](agencyteam/known-limits.md) and [manual-tests/file-changes.md](agencyteam/manual-tests/file-changes.md) | ~14k |
+| [Room Sessions design](Huddle.RoomSessions-Specifications.md) | Before work on per-Room sessions, `IAgentHostFactory`, session resume, `ReadTranscript`, or what Stop applies to. Roadmap item 18. Proposed, not built; build it after File Changes and Memory | ~14k |
+| [The `team-building` Skill](../src/Huddle.App/Skills/Defaults/team-building/) | Why a team rather than one agent, the five patterns, every team the Chief of Staff offers, and the role library. The product reasoning [What a team is for](#what-a-team-is-for) summarises. Model-facing text: edit it as a Skill, not as docs | ~17k |
 | [Decision record](agencyteam/decisions.md) | To revisit a decision, or to read an older doc | ~6.3k |
 | [Domain context](agencyteam/CONTEXT.md) | To see the vocabulary used in dialogue, not defined | ~0.6k |
 | [ADRs](adr/) | To read one decision in full, with what was rejected | ~1.4k each |
@@ -65,8 +69,9 @@ The defined terms, so you can tell whether a word you are about to use is one of
 them without opening [Language](agencyteam/language.md):
 
 > Teammate · Human · Agent · Name · Alias · Title · Avatar · Team · Adapter · Room ·
-> Member · Invitation · Archived · Persona · Rejected file · Model · Effort · Turn ·
-> App Tool · Reply Gate · Budget · Catch-up · Progressive discovery · Skill · Work Dir ·
+> Member · Invitation · Archived · Persona · Rejected file · Model · Effort · Turn · Room Session ·
+> App Tool · Reply Gate · Budget · Catch-up · Watched Folder · File Changes · Memory · Progressive discovery · Skill · Proposal ·
+> Candidate · Question · Greeting · Work Dir ·
 > Message · Draft · Mention · Envelope · Transcript · Stop · Team Directory ·
 > Prompt · Placeholder · Default · Timing · Theme · Token · Appearance
 
@@ -101,6 +106,45 @@ both — a Room that has spent its **Budget** answers nothing until the Human sp
 or grants more. `ReplyGate` is still the whole of that rule and still a pure
 function: the Budget reaches it as two numbers on the Envelope, so the server is
 labelling, not deciding.
+
+## What a team is for
+
+The product claim is that a small team of Teammates does things one agent cannot.
+The reasoning, the five patterns and the catalogue of teams live in the shipped
+`team-building` Skill: its
+[`team-patterns.md`](../src/Huddle.App/Skills/Defaults/team-building/team-patterns.md)
+holds the full table, and is not repeated here. In one line each, a team gives:
+
+- **A context kept for one job.** Each Teammate's session holds only its own
+  instructions and work, so its attention is not diluted. A specialist can also
+  keep its own library of notes and references in its Work Dir, which no other
+  Teammate has to carry: an SEO Specialist and an Ads Specialist each stay expert
+  in one field and trade conclusions by Mention, never their libraries.
+- **Independent first answers.** Panellists Mentioned in one Message each answer
+  before seeing the others.
+- **Secrets.** A Persona's body reaches only its own Teammate, so a character can
+  hold goals the other characters never see.
+- **Different blind spots.** The Model is per Persona, so one panel can span
+  vendors.
+- **Memory that outlives a session.** A Teammate forgets its conversation on
+  restart but not its files, so a Keeper remembers by writing notes.
+
+A team is **not** for raw accuracy on a plain question, where one strong agent
+usually does as well, or for sequential work where each step depends on the last.
+The Skill tells the Chief of Staff to say so and propose a single Teammate.
+
+### What the code must keep true
+
+Each benefit rests on a behaviour of the chat surface that no test names as a
+feature. A refactor that changes one of these removes the benefit silently:
+
+| Benefit | Rests on | Where |
+| --- | --- | --- |
+| A context kept for one job | One ACP session per Persona, never shared between Personas. The same fact makes context bleed between one Teammate's own Rooms, so focus holds only while it stays in the Rooms for its job | The cardinality diagram in [Relationships](#relationships); [Known limits](agencyteam/known-limits.md) |
+| Independent first answers | A Turn's prompt is fixed when its Mention arrives: the read loop takes the Catch-up and builds the work item there, not when the Turn starts, so a Turn queued behind another still cannot see replies posted meanwhile | `PersonaRunner.cs:283-284` |
+| Secrets | `list_agents` shows other Agents a Persona's frontmatter fields, minus `_`-prefixed and excluded keys, and never its body. A secret belongs in the body; a frontmatter field is public to every Teammate | `PersonaFrontmatter.ComposeJobDescription`, `ListAgentsTool` |
+| Different blind spots | The Model is stored per Persona and applied at session start | `PersonaModelStore` |
+| Memory that outlives a session | The Work Dir is created when missing and never deleted by the app. `run.ps1 -Clean` leaves it alone. A rename moves it, and gives up with a logged warning if the old process still holds it | `DotAcpAgentHostFactory.cs:89-90`, `run.ps1:27-31`, `PersonaRenameCascade.cs:225-264` |
 
 ## Relationships
 
@@ -193,7 +237,7 @@ The boundary holds empirically: there are zero occurrences of chat vocabulary in
 
 ## Configuration
 
-All under the `Team:` section — `TeamOptions.cs` and `Acp/AcpOptions.cs`.
+All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs` and `FileChanges/FileChangesOptions.cs`.
 
 | Key | Default | Note |
 | --- | --- | --- |
@@ -208,15 +252,22 @@ All under the `Team:` section — `TeamOptions.cs` and `Acp/AcpOptions.cs`.
 | `Acp:AdapterPath` | `null` | Otherwise located by probing upward. |
 | `Acp:Args` | `null` | |
 | `Acp:TeamsDir` | `Teams` | Relative to `DataDir`. Scanned recursively — sub-folders are organisational only; Team membership comes from each Persona's `teams` frontmatter field, not its location. Setting the old `Acp:PersonaDir` key throws at startup rather than silently scanning nothing. |
-| `Acp:WorkDir` | `work` | One subdirectory per Persona. Relative to `DataDir`. |
+| `Acp:WorkDir` | `work` | One subdirectory per Persona, named after it. Relative to `DataDir`. **It is a Teammate's durable memory**: Keepers and Specialists with a library store their notes there, so the app never deletes it, `-Clean` leaves it alone, and a removed Persona's folder is orphaned rather than deleted. Keep it that way. See [What a team is for](#what-a-team-is-for). |
 | `Acp:SkillsDir` | `Skills` | Relative to `DataDir`. Holds Skill folders: an override of a shipped Skill, file by file, or a Skill written by hand. Created at startup. See [ADR-0021](adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md). |
 | `Acp:MaxTeammates` | `8` | The most Personas the library may hold before `propose_teammates` refuses a Proposal and Approve creates nothing. Counts every loaded Persona, not only proposed ones; rejected files do not count. Checked when an Agent proposes and again at Approve, never on the Teammate card. Zero or less disables it. Exists because every Teammate is a process. |
 | `Acp:TraceWire` | `false` | **Dumps the bearer token.** Debugging only. |
 | `Acp:CatchUpMessages` | `20` | Per-Room catch-up buffer size. |
 | `Acp:TokenBudget` | `1000000` | Per-Persona token Budget, summed from the rises in `UsageUpdated.Used` and reset by any Human Message. Catches a loop that mints fresh Rooms, which the per-Room Budget cannot. Zero or less disables it. |
 | `Acp:TurnIdleTimeoutSeconds` | `180` | The longest an Adapter may say **nothing** during one Turn. Bounds silence, not duration: any event restarts the clock, so a long tool-using Turn that keeps reporting progress never trips it. Firing sends `session/cancel`, reports Degraded and counts toward the consecutive-failure streak — it is a failure, never a Stop. Zero or less disables it. Exists because an Adapter on an unreachable endpoint may return nothing at all, which reads as *hung* rather than Degraded. |
-| `Acp:Adapters` | `null` | The Adapters this installation can launch, in configuration order; the **first is the default**. Absent means exactly one profile synthesised from `Acp:Command` / `Args` / `AdapterPath`, so a stock install is unchanged and the Adapter select does not render. Per entry: `Id`, `DisplayName`, `Description`, `Command`, `Args`, `AdapterPath`, `UsesToolNamePrefix`, `EnvironmentOverrides`. A blank `Command` or a duplicate `Id` throws at **startup**, not at first Turn. See [ADR-0013](adr/0013-an-adapter-is-a-property-of-the-persona.md). |
+| `Acp:Adapters` | `null` | The Adapters this installation can launch, in configuration order; the **first is the default**. Absent means exactly one profile synthesised from `Acp:Command` / `Args` / `AdapterPath`, so a stock install is unchanged and the Adapter select does not render. Per entry: `Id`, `DisplayName`, `Description`, `Command`, `Args`, `AdapterPath`, `UsesToolNamePrefix`, `EnvironmentOverrides`, `ReadsFiles`, `IsolateUserSettings`. A blank `Command` or a duplicate `Id` throws at **startup**, not at first Turn. See [ADR-0013](adr/0013-an-adapter-is-a-property-of-the-persona.md). |
 | `Acp:Adapters:*:EnvironmentOverrides` | `null` | Environment variables set on that Adapter's process, over and above the inherited environment — how an adapter that ships no `appsettings.json` of its own gets its configuration. **Set these from `appsettings.json`, never through the environment-variable provider:** that provider rewrites every `__` into `:`, so `Team__Acp__Adapters__0__EnvironmentOverrides__Agent__DefaultModel` binds as the key `Agent:DefaultModel`, which no process will ever read. |
+| `Acp:Adapters:*:ReadsFiles` | `true` | Whether this Adapter's agent process can read files at all (FC §6.11). `false` turns off the Watched Folder list, `watch_folder`/`unwatch_folder` and frontmatter `watches` for every Persona on that Adapter; `agency-acp`, which has no file tools, sets it `false`. |
+| `Acp:Adapters:*:IsolateUserSettings` | `false` | Whether a session on this Adapter is started with the isolation `_meta` (RS §6.10 "Recommended"): `settingSources: ["project", "local"]` and `settings.autoMemoryEnabled: false`. The synthesised legacy profile sets it `true`, because `agency-acp` ignores the `claudeCode`-shaped entry anyway. **Unverified live** — see [Known limits](agencyteam/known-limits.md) and [manual-tests/file-changes.md](agencyteam/manual-tests/file-changes.md) — and known to drop a `CLAUDE_MODEL_CONFIG` model override when on, because `claude-agent-acp`'s `settings` option replaces its computed settings rather than merging. |
+| `FileChanges:Enabled` | `true` | Whether File Changes runs at all (FC §6.14). `false` passes a `null` tracker to every runner and offers neither `watch_folder` nor `unwatch_folder`. |
+| `FileChanges:Ignore` | `[".git", "node_modules", "bin", "obj"]` | Directory names `FolderScanner` prunes, compared case-insensitively. |
+| `FileChanges:MaxFilesPerFolder` | `5000` | Above this a folder scan reports `TooLarge` rather than walking it. |
+| `FileChanges:MaxListed` | `50` | The most File Changes lines listed per Turn, across every Watched Folder. |
+| `FileChanges:MaxMemoryEntries` | `100` | The most Memory lines shown in a new session's system prompt; the rest are counted rather than listed. |
 
 Four runtime files and two runtime directories sit outside that section, because none of
 them is a setting: the Persona library under `{DataDir}/{Acp:TeamsDir}`,

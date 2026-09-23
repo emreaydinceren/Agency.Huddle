@@ -70,10 +70,50 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
     residual risk ADR-0005 names and accepts. No test can catch it: the suite answers
     through `FakeAgentHostFactory`, so it is a manual-checklist question in the same class
     as whether a real model finds any App Tool at all.
-- **One session per Persona spans every Room it is in**, so context bleeds
-  between Rooms. The `[Room: name (id: …)]` prefix on each prompt is a convention
-  the model may ignore. A session per (Persona, Room) would multiply processes and
-  cost.
+- **One session per Persona spans every Room it is in** — *designed away, not
+  built*: see [roadmap item 18](roadmap.md#18-one-session-per-room--designed-2026-09-22-not-built)
+  and [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md). Until then,
+  context bleeds between Rooms. The `[Room: name (id: …)]` prefix on each prompt is
+  a convention the model may ignore. A live test on 2026-09-22 found an Agent
+  denying it carries context between Rooms while doing so, and two same-named Rooms
+  merged in its account. The design keeps one Adapter process per Persona, so a
+  session per Room costs a Claude Code CLI child each rather than a process each.
+- **File Changes is built, and here is what a Turn can miss** — see
+  [roadmap item 11, delivered 2026-09-23](roadmap.md#11-telling-an-agent-which-watched-files-changed--delivered-code-2026-09-23),
+  [ADR-0023](../adr/0023-an-agent-learns-of-file-changes-on-its-next-turn.md), and FC §8. Six
+  gaps are deliberate:
+  - **A change made through `Bash`, or any tool call not reported as `Edit`, `Delete` or
+    `Move`, is not attributed to the Agent.** It comes back as an ordinary listed line on the
+    Agent's own next Turn, in every Room including the one it was made in. An extra line, never
+    a missed change — parsing shell commands for paths risks wrongly claiming another
+    Teammate's change instead.
+  - **Two Teammates editing the same file in the same Turn:** the other Teammate's change is
+    taken in with this Agent's own commit and is not listed in this Room. Needs two writers on
+    one file within one Turn, and the Agent has just had the file open regardless.
+  - **A tool that preserves a file's old size and modified time is not listed.** Editors and
+    Agents do not do this.
+  - **Huddle shutting down mid-Turn commits nothing**, so that Room's next list repeats this
+    Turn's list, including the Agent's own edits. A shutdown-time write would slow teardown.
+  - **A commit that fails on I/O behaves the same way.** A Turn must not fail on a bookkeeping
+    write.
+  - **A corrupt or deleted state file loses one list, not the app.** The next Turn lists
+    nothing and saves a fresh baseline.
+- **Isolating a Persona's session from the Human's own Claude Code settings is unverified,
+  live.** `AdapterProfile.IsolateUserSettings` (`true` on the synthesised legacy profile,
+  `false` by default on a configured `Adapters` entry) makes `DotAcpAgentHostFactory` send
+  `settingSources: ["project", "local"]` and `settings.autoMemoryEnabled: false` in
+  `session/new`'s `_meta.claudeCode.options` (RS §6.10, ACP A-4) — but the paid checks that
+  would establish whether this actually keeps the Human's `~/.claude/settings.json`,
+  `~/.claude/CLAUDE.md` and Claude Code's own auto-memory out of a Persona's session (RS
+  Appendix B V-1, V-2; FC Appendix A FC-V; manual test FM-6) have **not been run**. Deferred to
+  the Human's user acceptance testing; see
+  [manual-tests/file-changes.md](manual-tests/file-changes.md). Until they are, treat memory
+  (FC §6.15) as depending on an unverified mechanism.
+  - **A known risk on the same mechanism:** `claude-agent-acp`'s `settings` option *replaces*
+    its own computed settings rather than merging into them, so sending
+    `autoMemoryEnabled: false` also drops any `CLAUDE_MODEL_CONFIG` model override that
+    session would otherwise have carried. `settingSources` is not affected — it merges rather
+    than replaces. `AdapterProfile.IsolateUserSettings`'s remarks carry this in code.
 - **One `AppToolServer` per Persona** — one loopback Kestrel each. Revisit past
   about four Personas.
 - **`SystemPromptMode.Append` has never been evidenced against a live model.** If
@@ -226,7 +266,11 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
 - **Stopping an Agent stops it in every Room.** One ACP session spans every Room
   its Agent is in, so there is nothing narrower to stop. `StopTurn` carries the
   Room the Human asked from as a label, not as a selector — the same
-  one-session-per-Persona limit that makes context bleed between Rooms.
+  one-session-per-Persona limit that makes context bleed between Rooms. **Worse
+  than it reads:** the drain is per Persona, so a Stop in one Room also discards
+  work queued for that Agent from its other Rooms. That is a bug to fix now, ahead of
+  [roadmap item 18](roadmap.md#18-one-session-per-room--designed-2026-09-22-not-built),
+  which makes Stop per Room.
 - **Tool activity is never written to the Transcript.** It belongs to the Draft
   and goes when the Draft does, so scrollback shows what an Agent said and not
   what it did.
