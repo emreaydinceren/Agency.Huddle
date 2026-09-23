@@ -463,10 +463,13 @@ public sealed class FileChangeTrackerTests
 
     /// <summary>
     /// An unresolvable declared entry produces the fixed warning text FC §6.10 defines, regardless
-    /// of the resolver's own specific reason. Deviation: FC's own sample entry "Nope" in fact
-    /// resolves under <see cref="WatchedFolderResolver"/> (a bare word with no slash is a folder
-    /// relative to DataDir, per its ordered rules), so this test uses "../nope" (outside DataDir)
-    /// to produce a genuinely unresolvable entry, keeping the fixed message format FC §6.10 defines.
+    /// of the resolver's own specific reason - proven by "../nope" (outside DataDir, refused by
+    /// <see cref="WatchedFolderResolver"/>). A bare word that resolves cleanly but names no Teammate
+    /// and no existing folder ("Nope") also warns, per the delivery manager's settled correction:
+    /// FC §6.10's own example is exactly this case, and D6 shipped it silently un-warned. A
+    /// multi-segment entry that does not yet exist ("Shared/missing") and a bare word that resolves
+    /// to a folder that already exists ("Docs") both warn on neither: FC E-2 lets a Watched Folder
+    /// be created later.
     /// </summary>
     [Fact]
     public async Task CheckDeclared_UnresolvableEntries_ReturnWarnings()
@@ -474,11 +477,14 @@ public sealed class FileChangeTrackerTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using Fixture fixture = await CreateFixtureAsync(ct);
         string dataDirName = Path.GetFileName(fixture.DataDir.Path);
+        Directory.CreateDirectory(Path.Combine(fixture.DataDir.Path, "Docs"));
+        Directory.CreateDirectory(Path.Combine(fixture.DataDir.Path, "Shared"));
 
-        IReadOnlyList<string> warnings = fixture.Tracker.CheckDeclared(["../nope"]);
+        IReadOnlyList<string> warnings = fixture.Tracker.CheckDeclared(["Nope", "../nope", "Shared/missing", "Docs"]);
 
-        string warning = Assert.Single(warnings);
-        Assert.Equal($"Watched folder '../nope' is not a Teammate or a folder inside {dataDirName}.", warning);
+        Assert.Equal(2, warnings.Count);
+        Assert.Contains($"Watched folder 'Nope' is not a Teammate or a folder inside {dataDirName}.", warnings);
+        Assert.Contains($"Watched folder '../nope' is not a Teammate or a folder inside {dataDirName}.", warnings);
     }
 
     /// <summary>The Agent's own Work Dir, per FC §6.7 step 1: <c>{DataDir}/work/Nova</c>.</summary>

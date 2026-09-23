@@ -267,25 +267,67 @@ internal sealed class FileChangeTracker(
     /// <summary>
     /// Checks Persona <c>watches</c> entries at startup for <see cref="Agency.Huddle.App.Acp.PersonaSupervisor"/>'s
     /// Degraded report, per FC §6.10. The message is the same fixed text for every unresolvable
-    /// entry, regardless of the resolver's own specific reason.
+    /// entry, regardless of the resolver's own specific reason, and also fires for a bare word that
+    /// resolves cleanly but is almost certainly a mistyped Teammate Name - see
+    /// <see cref="IsLikelyMistypedTeammateName"/>. Either way the entry is still watched (E-2: its
+    /// folder, or the Teammate meant, may exist later); this only ever adds a warning.
     /// </summary>
     /// <param name="declared">The Persona's <c>watches</c> frontmatter entries.</param>
-    /// <returns>One warning per entry that does not resolve.</returns>
+    /// <returns>One warning per entry that does not resolve, or looks like a typo.</returns>
     internal IReadOnlyList<string> CheckDeclared(IReadOnlyList<string> declared)
     {
         ArgumentNullException.ThrowIfNull(declared);
 
         List<string> warnings = [];
         string dataDirName = Path.GetFileName(options.Value.DataDir);
+        IReadOnlyCollection<string> teammateNames = personas.ListNames();
+
         foreach (string entry in declared)
         {
-            if (!resolver.TryResolve(entry, personas.ListNames(), out _, out _))
+            if (!resolver.TryResolve(entry, teammateNames, out WatchedFolder? folder, out _)
+                || IsLikelyMistypedTeammateName(entry, folder, teammateNames))
             {
                 warnings.Add($"Watched folder '{entry}' is not a Teammate or a folder inside {dataDirName}.");
             }
         }
 
         return warnings;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="entry"/> resolved cleanly only because FC §6.3's own fallback rule
+    /// treats a bare word with no other meaning as relative to <c>DataDir</c> - so a mistyped
+    /// Teammate Name such as <c>Nope</c> resolves to <c>{DataDir}/Nope</c> and would otherwise never
+    /// warn, even though FC §6.10's own example is exactly this case. Multi-segment entries
+    /// (<c>Shared/missing</c>) and explicitly relative ones (<c>./missing</c>) are left alone: those
+    /// name a real path someone intends to create, which is not what this checks for (E-2).
+    /// </summary>
+    /// <param name="entry">The entry as written in frontmatter.</param>
+    /// <param name="folder">What <paramref name="entry"/> resolved to.</param>
+    /// <param name="teammateNames">Every Teammate's Name, so a genuine match is never flagged.</param>
+    private static bool IsLikelyMistypedTeammateName(string entry, WatchedFolder folder, IReadOnlyCollection<string> teammateNames)
+    {
+        if (entry.Contains('/', StringComparison.Ordinal) || entry.Contains('\\', StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (entry.StartsWith("./", StringComparison.Ordinal) || entry.StartsWith(".\\", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (Path.IsPathFullyQualified(entry))
+        {
+            return false;
+        }
+
+        if (teammateNames.Any(name => string.Equals(name, entry, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        return !Directory.Exists(folder.FullPath);
     }
 
     /// <summary>Whether <paramref name="fullPath"/> is <paramref name="agentName"/>'s own Work Dir.</summary>

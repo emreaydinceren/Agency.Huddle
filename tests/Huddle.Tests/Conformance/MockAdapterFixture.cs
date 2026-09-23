@@ -8,6 +8,7 @@ using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.Acp.Tests.Fakes;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Pipes;
 
@@ -159,8 +160,9 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         IPromptSource prompts = host.Services.GetRequiredService<IPromptSource>();
         RoomFollows roomFollows = host.Services.GetRequiredService<RoomFollows>();
         ILogger<PersonaRunner> logger = host.Services.GetRequiredService<ILogger<PersonaRunner>>();
+        FileChangeTracker fileChanges = host.Services.GetRequiredService<FileChangeTracker>();
 
-        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger);
+        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger, fileChanges);
 
         try
         {

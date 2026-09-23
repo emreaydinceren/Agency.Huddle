@@ -42,6 +42,8 @@ internal sealed class PersonaRunner : IAsyncDisposable
     private readonly IPromptSource prompts;
     private readonly RoomFollows roomFollows;
     private readonly ILogger<PersonaRunner> logger;
+    private readonly FileChangeTracker? fileChanges;
+    private readonly IReadOnlyList<string> declaredWatches;
     private readonly CancellationTokenSource runCts = new();
     private readonly Channel<QueuedWork> workItems = Channel.CreateUnbounded<QueuedWork>();
     private readonly Lock turnLock = new();
@@ -96,7 +98,8 @@ internal sealed class PersonaRunner : IAsyncDisposable
         IAgentHostFactory factory,
         IPromptSource prompts,
         RoomFollows roomFollows,
-        ILogger<PersonaRunner> logger)
+        ILogger<PersonaRunner> logger,
+        FileChangeTracker? fileChanges = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
@@ -111,6 +114,10 @@ internal sealed class PersonaRunner : IAsyncDisposable
         this.prompts = prompts;
         this.roomFollows = roomFollows;
         this.logger = logger;
+        this.fileChanges = fileChanges;
+        this.declaredWatches = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)
+            ? identity.Watches ?? []
+            : [];
     }
 
     /// <summary>
@@ -397,7 +404,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
                     continue;
                 }
 
-                await this.ProcessWorkItemAsync(queued.Item, ct);
+                await this.ProcessWorkItemAsync(queued.Item, queued.Sequence, ct);
             }
         }
         catch (OperationCanceledException)
@@ -418,7 +425,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
         }
     }
 
-    private async Task ProcessWorkItemAsync(WorkItem item, CancellationToken ct)
+    private async Task ProcessWorkItemAsync(WorkItem item, long sequence, CancellationToken ct)
     {
         // Checked here rather than in the read loop so that items already queued behind the cap drain
         // without spending anything - the same surprise roadmap item 4 records for cancelling a Turn,
@@ -438,6 +445,31 @@ internal sealed class PersonaRunner : IAsyncDisposable
             return;
         }
 
+        // Declared before the try below so the finally block can see them (FC §6.8, finding P-17).
+        // collected stays null for a Greeting (FC §6.8: a Greeting neither collects nor commits, the
+        // trigger is the prompt itself, not a delivered Message) and for a null tracker (§6.11: the
+        // Adapter cannot read files).
+        CollectedChanges? collected = null;
+        var promptReturned = false;
+
+        if (item.Kind == WorkItemKind.Message && this.fileChanges is not null)
+        {
+            // Collected at Turn start, before the Turn/cancellation/watchdog exists, so a slow disk
+            // scan is never counted as Adapter silence (rules.md TRAP 1/TRAP 2 ordering) and so a Turn
+            // that waited in the queue lists changes made while it waited. A scan or directory failure
+            // must not kill the consumer loop, which nothing else drains.
+            try
+            {
+                collected = await this.fileChanges.CollectAsync(this.persona.Name, item.RoomId, this.declaredWatches, ct);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to collect File Changes for room {RoomId}.", this.persona.Name, item.RoomId);
+            }
+
+            item = item with { FileChanges = collected?.Report };
+        }
+
         // Exactly one session serves every Room the Agent is in (there is one session per Persona),
         // so a failed turn must log and continue rather than end the loop: a dying agent process must
         // not silently deafen the Agent for every other Room.
@@ -453,6 +485,19 @@ internal sealed class PersonaRunner : IAsyncDisposable
         var turn = new ActiveTurn(item.RoomId, messageId, new StringBuilder(), completion, turnCancellation);
         lock (this.turnLock)
         {
+            // Re-checked here, not only in RunConsumerAsync, because a Stop can arrive while this
+            // item sat inside the CollectAsync scan above, after the read loop's own check ran and
+            // before any Turn existed for it to cancel. Compared against today's single
+            // stopHighWaterMark, exactly as RunConsumerAsync's own check does - D16 makes this
+            // per-Room. Inside this lock because the Stop handler (RunReadLoopAsync) writes the mark
+            // before taking this same lock to read activeTurn, so either this check sees the mark or
+            // the Stop sees the Turn once published below. Nothing has been committed on this path.
+            if (sequence <= Interlocked.Read(ref this.stopHighWaterMark))
+            {
+                turnCancellation.Dispose();
+                return;
+            }
+
             this.activeTurn = turn;
         }
 
@@ -469,6 +514,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
         {
             var prompt = BuildPrompt(item, this.prompts);
             await this.session!.PromptAsync(prompt, turnCancellation.Token);
+            promptReturned = true;
             var outcome = await completion.Task.WaitAsync(turnCancellation.Token);
 
             // A refusal or a cancelled Turn is not a successful reply, even if some text arrived
@@ -591,6 +637,35 @@ internal sealed class PersonaRunner : IAsyncDisposable
                     // The pipe died before the terminator could be written; the Turn already ended
                     // one way or another, so there is nothing left to signal and nothing to retry.
                     this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to write the final delta for a turn in room {RoomId}.", this.persona.Name, item.RoomId);
+                }
+            }
+
+            // After the Draft terminator above, so a slow or failing commit never delays the Turn's
+            // own MessageDelta reaching the Room. Uses the local turn, never this.activeTurn - already
+            // nulled above - and copies Touched under turnLock since the event reader can still be
+            // writing to it concurrently with this method's own thread. Gated on !ct.IsCancellationRequested
+            // (shutdown) and, per finding P-17, on the Turn having either returned from PromptAsync or
+            // shown activity: a prompt refused outright before any event (E-5) saw neither and must not
+            // commit, so the Room's list repeats next Turn; a Stop after activity (E-6) still commits.
+            // An exception other than IOException/ObjectDisposedException from the terminator write
+            // above escapes this finally block entirely, so this commit - and the Dispose below - are
+            // both skipped in that case; acceptable, since RunConsumerAsync's own catch already logs
+            // and keeps the loop alive, and nothing was lost that a later commit could still repair.
+            if (this.fileChanges is not null && collected is not null && !ct.IsCancellationRequested && (promptReturned || turn.SawActivity))
+            {
+                HashSet<string> touched;
+                lock (this.turnLock)
+                {
+                    touched = [.. turn.Touched];
+                }
+
+                try
+                {
+                    await this.fileChanges.CommitAsync(this.persona.Name, item.RoomId, collected, touched, ct);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    this.logger.LogWarning(ex, "Persona '{PersonaName}' failed to commit File Changes for room {RoomId}.", this.persona.Name, item.RoomId);
                 }
             }
 
@@ -720,10 +795,12 @@ internal sealed class PersonaRunner : IAsyncDisposable
                 }
                 else if (agentEvent is ToolCallStarted started)
                 {
+                    this.RecordTouchedPaths(started.Kind, started.RawInputJson);
                     await this.WriteToolActivityAsync(started.ToolCallId, started.Title, MapToolCallStatus(started.Status), ct);
                 }
                 else if (agentEvent is ToolCallUpdated updated)
                 {
+                    this.RecordTouchedPaths(updated.Kind, updated.RawInputJson);
                     await this.WriteToolActivityAsync(updated.ToolCallId, updated.Title, MapToolCallStatus(updated.Status), ct);
                 }
                 else if (agentEvent is TurnCompleted completed)
@@ -868,6 +945,37 @@ internal sealed class PersonaRunner : IAsyncDisposable
                 "Persona '{PersonaName}' failed to write a tool activity update for a turn in room {RoomId}.",
                 this.persona.Name,
                 turn.RoomId);
+        }
+    }
+
+    /// <summary>
+    /// Adds every rooted path found in <paramref name="rawInputJson"/> to the active Turn's
+    /// <see cref="ActiveTurn.Touched"/> set, per FC §6.8 item 2 and FC D-3b - but only for
+    /// <see cref="ToolKind.Edit"/>, <see cref="ToolKind.Delete"/> or <see cref="ToolKind.Move"/>: an
+    /// <see cref="ToolKind.Execute"/> call is not parsed, because a shell command is not a path and
+    /// guessing at one could claim another Teammate's change as this Agent's own. A no-op when there
+    /// is no active Turn.
+    /// </summary>
+    /// <param name="kind">The tool call's category, as ACP reported it.</param>
+    /// <param name="rawInputJson">The tool call's raw input, if any.</param>
+    private void RecordTouchedPaths(ToolKind kind, string? rawInputJson)
+    {
+        if (kind is not (ToolKind.Edit or ToolKind.Delete or ToolKind.Move))
+        {
+            return;
+        }
+
+        lock (this.turnLock)
+        {
+            if (this.activeTurn is not { } turn)
+            {
+                return;
+            }
+
+            foreach (var path in TouchedPaths.From(rawInputJson))
+            {
+                turn.Touched.Add(path);
+            }
         }
     }
 
@@ -1245,6 +1353,7 @@ internal sealed class PersonaRunner : IAsyncDisposable
         private long lastActivityTicks = Environment.TickCount64;
         private bool stopRequested;
         private bool timedOut;
+        private bool sawActivity;
 
         /// <summary>
         /// Whether a <see cref="MessageDelta"/> write has already failed for this Turn. Set once a
@@ -1252,6 +1361,14 @@ internal sealed class PersonaRunner : IAsyncDisposable
         /// Touched only from the single-threaded event-reader loop, so it needs no lock of its own.
         /// </summary>
         public bool DeltaWriteFailed { get; set; }
+
+        /// <summary>
+        /// Full paths this Agent's own tool calls touched this Turn (FC §6.8 item 2), read and
+        /// written only under <see cref="turnLock"/>: <see cref="RecordTouchedPaths"/> adds to it
+        /// from the event-reader loop, and <see cref="ProcessWorkItemAsync"/>'s <c>finally</c> copies
+        /// it once the Turn has ended.
+        /// </summary>
+        public HashSet<string> Touched { get; } = new(FolderSnapshot.PathComparer);
 
         /// <summary>
         /// Whether the read loop has already latched a Stop for this Turn. Set by
@@ -1273,11 +1390,28 @@ internal sealed class PersonaRunner : IAsyncDisposable
             TimeSpan.FromMilliseconds(Environment.TickCount64 - Interlocked.Read(ref this.lastActivityTicks));
 
         /// <summary>
-        /// Restarts the idle clock. Called by the event-reader loop on any <see cref="AgentEvent"/> it
-        /// observes, including ones it otherwise ignores - what the idle-timeout bound measures is
-        /// silence, not progress, so any activity at all counts.
+        /// Whether the event-reader loop has observed any <see cref="AgentEvent"/> at all for this
+        /// Turn, set by <see cref="MarkActivity"/> - finding P-17's latch for a commit rule
+        /// <see cref="ProcessWorkItemAsync"/> applies: a Turn commits its File Changes when
+        /// <c>PromptAsync</c> returned, or when this is <see langword="true"/>, because a Stop can
+        /// make <c>PromptAsync</c> throw after real work already happened (FC §9 E-6). A late
+        /// <see cref="UsageUpdated"/> from a prior Turn setting this on a Turn that never itself saw
+        /// activity is harmless: it only ever widens when a commit is allowed, never causes one to be
+        /// skipped.
         /// </summary>
-        public void MarkActivity() => Interlocked.Exchange(ref this.lastActivityTicks, Environment.TickCount64);
+        public bool SawActivity => Volatile.Read(ref this.sawActivity);
+
+        /// <summary>
+        /// Restarts the idle clock and latches <see cref="SawActivity"/>. Called by the event-reader
+        /// loop on any <see cref="AgentEvent"/> it observes, including ones it otherwise ignores -
+        /// what the idle-timeout bound measures is silence, not progress, so any activity at all
+        /// counts.
+        /// </summary>
+        public void MarkActivity()
+        {
+            Interlocked.Exchange(ref this.lastActivityTicks, Environment.TickCount64);
+            Volatile.Write(ref this.sawActivity, true);
+        }
 
         /// <summary>
         /// Latches that this Turn is ending because a Human pressed Stop. MUST be called before

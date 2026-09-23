@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Pipes;
@@ -635,6 +636,87 @@ public sealed class PersonaSupervisorTests
         Assert.Equal(PersonaState.Degraded, status.State);
         Assert.Equal("Skill 'nonexistent' does not exist.", status.Reason);
         Assert.Single(factory.Calls, call => call.Persona.Name == "nova");
+    }
+
+    /// <summary>
+    /// Pins FC §6.10: a Persona whose frontmatter declares a <c>watches</c> entry
+    /// <see cref="Agency.Huddle.App.FileChanges.FileChangeTracker.CheckDeclared"/> flags is not
+    /// rejected either. <see cref="PersonaSupervisor"/> must report <see cref="PersonaState.Degraded"/>
+    /// with the tracker's own warning text and must still create and start a runner - the same
+    /// "degrade, never reject" shape as the Adapter and Skill tests above.
+    /// </summary>
+    [Fact]
+    public async Task Start_UnresolvableWatchesEntry_ReportsDegradedWithWarning()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var health = NewHealth();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
+        using var supervisor = new PersonaSupervisor(
+            options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, tracker);
+
+        personaStore.Add(Identity("nova") with { Watches = ["Nope"] }, "You are Nova.");
+
+        await supervisor.StartAsync(ct);
+
+        await WaitUntilAsync(() => factory.Calls.Any(call => call.Persona.Name == "nova"), ct);
+        await supervisor.StopAsync(ct);
+
+        var status = health.Get("nova");
+        Assert.NotNull(status);
+        Assert.Equal(PersonaState.Degraded, status.State);
+        var dataDirName = Path.GetFileName(options.Value.DataDir);
+        Assert.Equal($"Watched folder 'Nope' is not a Teammate or a folder inside {dataDirName}.", status.Reason);
+        Assert.Single(factory.Calls, call => call.Persona.Name == "nova");
+    }
+
+    /// <summary>The Adapter, Skill and Watches warnings are all independent sources of one Degraded report (FC §6.10) and join in that order: Adapter first, then Skills, then Watches.</summary>
+    [Fact]
+    public async Task Start_WarningsJoinAdapterSkillAndWatches()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var health = NewHealth();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
+        using var supervisor = new PersonaSupervisor(
+            options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, tracker);
+
+        personaStore.Add(Identity("nova") with { Adapter = "bogus-adapter", Skills = ["nonexistent"], Watches = ["Nope"] }, "You are Nova.");
+
+        await supervisor.StartAsync(ct);
+
+        await WaitUntilAsync(
+            () => health.Get("nova") is { State: PersonaState.Degraded } && factory.Calls.Any(call => call.Persona.Name == "nova"),
+            ct);
+        await supervisor.StopAsync(ct);
+
+        var status = health.Get("nova");
+        Assert.NotNull(status);
+        Assert.Equal(PersonaState.Degraded, status.State);
+        var reason = status.Reason!;
+        var dataDirName = Path.GetFileName(options.Value.DataDir);
+        var adapterIndex = reason.IndexOf("bogus-adapter", StringComparison.Ordinal);
+        var skillIndex = reason.IndexOf("Skill 'nonexistent' does not exist.", StringComparison.Ordinal);
+        var watchIndex = reason.IndexOf($"Watched folder 'Nope' is not a Teammate or a folder inside {dataDirName}.", StringComparison.Ordinal);
+        Assert.True(adapterIndex >= 0, reason);
+        Assert.True(skillIndex > adapterIndex, reason);
+        Assert.True(watchIndex > skillIndex, reason);
     }
 
     /// <summary>An adapter-not-installed <see cref="InvalidOperationException"/> - the same shape <c>DotAcpAgentHostFactory</c> throws - is recorded as Offline, carrying the exception's own actionable message.</summary>

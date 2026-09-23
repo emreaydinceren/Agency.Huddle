@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
 
@@ -28,6 +29,10 @@ internal sealed class PersonaSupervisor : BackgroundService
     // the AdapterProfileResolver.Resolve call in StartHostIfMissingAsync for why this duplication
     // is the accepted cost rather than a reason to widen IAgentHostFactory.CreateAsync.
     private readonly SkillStore skills;
+
+    // Optional (finding P-13): null means File Changes is off for every Persona this supervisor
+    // starts, the same as an explicit Team:FileChanges:Enabled=false.
+    private readonly FileChangeTracker? fileChanges;
 
     private readonly Lock gate = new();
     private readonly Dictionary<string, PersonaRunner> hosts = new(StringComparer.Ordinal);
@@ -63,7 +68,8 @@ internal sealed class PersonaSupervisor : BackgroundService
         RoomFollows roomFollows,
         ILoggerFactory loggerFactory,
         ILogger<PersonaSupervisor> logger,
-        SkillStore skills)
+        SkillStore skills,
+        FileChangeTracker? fileChanges = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
@@ -86,6 +92,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         this.loggerFactory = loggerFactory;
         this.logger = logger;
         this.skills = skills;
+        this.fileChanges = fileChanges;
     }
 
     /// <summary>The number of Personas with a currently running host. Test seam only.</summary>
@@ -437,8 +444,16 @@ internal sealed class PersonaSupervisor : BackgroundService
                 : [];
             SkillResolution skillResolution = this.skills.Resolve(skillNames);
 
+            // FC §6.10: File Changes is off for this Persona when the tracker itself is absent
+            // (finding P-13) or Team:FileChanges:Enabled is false - either way the runner gets no
+            // tracker, and CheckDeclared has nothing to report against.
+            FileChangeTracker? tracker = this.options.FileChanges.Enabled ? this.fileChanges : null;
+            IReadOnlyList<string> watchWarnings = tracker is not null
+                ? tracker.CheckDeclared(identity?.Watches ?? [])
+                : [];
+
             var host = new PersonaRunner(
-                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>());
+                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), tracker);
 
             // Forwards every health signal the runner itself observes (T4.3) - a session/Turn
             // fact, arriving over the wire - into the one table every UI surface reads.
@@ -455,8 +470,8 @@ internal sealed class PersonaSupervisor : BackgroundService
                 // the other - the Adapter warning first, then each Skill warning, joined with a
                 // single space.
                 IReadOnlyList<string> warnings = adapterWarning is null
-                    ? skillResolution.Warnings
-                    : [adapterWarning, .. skillResolution.Warnings];
+                    ? [.. skillResolution.Warnings, .. watchWarnings]
+                    : [adapterWarning, .. skillResolution.Warnings, .. watchWarnings];
                 if (warnings.Count > 0)
                 {
                     this.health.Report(name, PersonaState.Degraded, string.Join(' ', warnings));
