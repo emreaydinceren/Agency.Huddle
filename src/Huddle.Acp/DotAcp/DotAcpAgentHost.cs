@@ -127,19 +127,29 @@ public sealed partial class DotAcpAgentHost(
             McpServers = mcpServers,
         };
 
-        if (options.SystemPrompt is not null)
+        if (options.Meta is { Count: > 0 } || options.SystemPrompt is not null)
         {
-            object payload = options.SystemPrompt.Mode == SystemPromptMode.Replace
-                ? options.SystemPrompt.Text
-                : new Dictionary<string, object>(StringComparer.Ordinal)
-                {
-                    ["append"] = options.SystemPrompt.Text,
-                };
+            // The caller's own entries first, copied rather than aliased - options.Meta is the
+            // caller's dictionary and this method must not mutate it - then systemPrompt is set
+            // last so it always wins over a same-named entry the caller supplied (correction item
+            // 21; AgentSessionOptions.Meta documents this precedence).
+            Dictionary<string, object> meta = options.Meta is { Count: > 0 } supplied
+                ? new Dictionary<string, object>(supplied, StringComparer.Ordinal)
+                : new Dictionary<string, object>(StringComparer.Ordinal);
 
-            request.Meta = new Dictionary<string, object>(StringComparer.Ordinal)
+            if (options.SystemPrompt is not null)
             {
-                ["systemPrompt"] = payload,
-            };
+                object payload = options.SystemPrompt.Mode == SystemPromptMode.Replace
+                    ? options.SystemPrompt.Text
+                    : new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["append"] = options.SystemPrompt.Text,
+                    };
+
+                meta["systemPrompt"] = payload;
+            }
+
+            request.Meta = meta;
         }
 
         dotacp.protocol.NewSessionResponse response;
