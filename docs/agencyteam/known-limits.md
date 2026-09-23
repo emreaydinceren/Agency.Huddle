@@ -460,10 +460,11 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   runs before that line is written; if it recurs, wait for the line rather than reading
   the log once. It recurred, intermittently, during the Room Sessions build — same symptom,
   passing on rerun — which is evidence for the theory above rather than a new cause.
-- **A fifth flake, seen this week during the Room Sessions build, not diagnosed.** Two more
+- **A fifth flake, seen this week during the Room Sessions build, not diagnosed.** Three more
   tests failed intermittently in a full `dotnet test Huddle.slnx --` run and passed every time
-  when rerun alone: `TeammateCardTests.ViewMode_ShowsTheChosenModel` and
-  `RoomSessionPoolTests.Max2_ConcurrentOpens_NeverExceedCap`. Neither has been instrumented the
+  when rerun alone: `TeammateCardTests.ViewMode_ShowsTheChosenModel`,
+  `RoomSessionPoolTests.Max2_ConcurrentOpens_NeverExceedCap` and
+  `RoomSessionTests.IdleTimeout_CancelsFarSideFirst`. None has been instrumented the
   way the second flake was, so there is no mechanism to report — only the pattern, which matches
   every flake on this page so far: full-suite only, passes alone, passes on rerun. Read as timing
   under full-suite load (thread-pool warmth, `TimeProvider` scheduling, or contention on a shared

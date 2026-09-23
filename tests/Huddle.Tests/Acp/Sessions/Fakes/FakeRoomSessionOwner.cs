@@ -16,7 +16,15 @@ internal sealed class FakeRoomSessionOwner : IRoomSessionOwner
     private readonly List<string> reportCalls = [];
 
     /// <inheritdoc />
-    public string PersonaName { get; set; } = "Nova";
+    /// <remarks>
+    /// Defaults to <c>"nova"</c>, the exact casing every caller's <c>Persona("nova", ...)</c> uses:
+    /// in production <see cref="Agency.Huddle.App.Acp.PersonaRunner"/> always reads this from that
+    /// one <c>Persona.Name</c>, so it can never disagree with itself, but this fake previously
+    /// defaulted to <c>"Nova"</c> - a mismatch <see cref="Agency.Huddle.App.Acp.Sessions.RoomSessionStore"/>'s
+    /// file-per-Name keying only tolerated on Windows' case-insensitive filesystem (it fails on Linux,
+    /// where <c>Nova.json</c> and <c>nova.json</c> are different files).
+    /// </remarks>
+    public string PersonaName { get; set; } = "nova";
 
     /// <inheritdoc />
     public bool TokenBudgetSpent { get; set; }

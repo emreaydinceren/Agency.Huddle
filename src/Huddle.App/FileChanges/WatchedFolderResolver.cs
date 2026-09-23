@@ -86,7 +86,7 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options)
     {
         if (entry.StartsWith("./", StringComparison.Ordinal) || entry.StartsWith(".\\", StringComparison.Ordinal))
         {
-            return Path.GetFullPath(Path.Combine(dataDir, entry[2..]));
+            return Path.GetFullPath(Path.Combine(dataDir, WatchedFolderResolver.NormalizeSeparators(entry[2..])));
         }
 
         string? canonicalName = teammateNames.FirstOrDefault(name => string.Equals(name, entry, StringComparison.OrdinalIgnoreCase));
@@ -100,6 +100,15 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options)
             return Path.GetFullPath(entry);
         }
 
-        return Path.GetFullPath(Path.Combine(dataDir, entry));
+        return Path.GetFullPath(Path.Combine(dataDir, WatchedFolderResolver.NormalizeSeparators(entry)));
     }
+
+    /// <summary>
+    /// Maps both <c>/</c> and <c>\</c> to <see cref="Path.DirectorySeparatorChar"/> (FC §6.2-§6.3: an
+    /// entry may use either separator, regardless of the OS the app runs on). Only a fully qualified
+    /// path skips this - <see cref="Path.IsPathFullyQualified(string)"/> and <see cref="Path.GetFullPath(string)"/>
+    /// already interpret it with the platform's own separator rules.
+    /// </summary>
+    private static string NormalizeSeparators(string relativeEntry) =>
+        relativeEntry.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
 }
