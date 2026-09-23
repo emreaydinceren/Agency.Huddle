@@ -34,6 +34,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 13 | [App Tools a real model calls (progressive discovery)](app-tools.md) | 26 | 20 | 4.2h |
 | 14 | [Persona lifecycle: supervisor, work dirs, health and restarts](persona-lifecycle.md) | 32 | 7 | 6.5h |
 | 15 | [Adapters: choosing one per Persona, and running two at once](adapters.md) | 4 | 2 | 1.4h |
+| 16 | [Skills: the Chief of Staff, team-building, and the Family Health Advisor](skills.md) | 6 | 6 | 1.8h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.
@@ -76,7 +77,7 @@ change, and before committing to a full area. A failure here means stop and fix,
 
 ## Appendix A. Paid test register
 
-Every test that spends money, in one place. 56 tests, about 13.0 hours of
+Every test that spends money, in one place. 62 tests, about 14.8 hours of
 wall clock. Read [section 0.2](../manual-tests.md#02-the-cost-guard) and [section 0.3](../manual-tests.md#03-the-model-and-effort-convention) before running any of them.
 
 | Test id | Area | What it proves | Est. |
@@ -137,6 +138,12 @@ wall clock. Read [section 0.2](../manual-tests.md#02-the-cost-guard) and [sectio
 | [PERSONALIFECYCLE-32](persona-lifecycle.md#personalifecycle-32-money-a-token-budget-of-zero-disables-the-per-persona-cap-and-the-per-room-budget-still-stops-the-exchange) | `persona-lifecycle` | MONEY: a token Budget of zero disables the per-Persona cap, and the per-Room Budget still stops the exchange | 20 min |
 | [ADAPTERS-03](adapters.md#adapters-03--changing-a-teammates-adapter-resets-model-and-effort-says-so-and-restarts-the-session-) | `adapters` | MONEY: changing a Teammate's Adapter resets Model and Effort with a status note, and the restart loses the conversation memory | 15 min |
 | [ADAPTERS-04](adapters.md#adapters-04--does-a-real-local-model-call-get_help-unprompted-) | `adapters` | Whether a real local Model calls `get_help` unprompted — the question no automated test can settle | 45 min |
+| [SKILLS-01](skills.md#skills-01--the-chief-of-staff-reads-team-building-unprompted-when-asked-for-a-team) | `skills` | The Chief of Staff calls `read_skill` on `team-building` unprompted, then interviews per its step 1 | 10 min |
+| [SKILLS-02](skills.md#skills-02--approve-creates-the-teammates-wakes-the-chief-of-staff-and-it-opens-a-seeded-room) | `skills` | Approve creates the Candidates, wakes the Chief of Staff through the ordinary Reply Gate, and a pipeline opens a seeded Room | 20 min |
+| [SKILLS-03](skills.md#skills-03--decline-and-the-chief-of-staff-revises-and-proposes-again) | `skills` | Decline posts its documented Message and creates nothing; the Chief of Staff's revised Proposal replaces its own waiting one | 15 min |
+| [SKILLS-04](skills.md#skills-04--over-the-limit-approve-creates-nothing-and-the-message-says-why) | `skills` | The Teammate limit is re-checked at Approve time, not only when proposed, and Approve creates nothing over it | 15 min |
+| [SKILLS-05](skills.md#skills-05--the-greeting-on-a--clean-install-and-no-second-greeting-on-restart) | `skills` | On a fresh install the Chief of Staff's Room holds an unprompted Greeting built from `onboarding.md`, and a restart never repeats it | 15 min |
+| [SKILLS-06](skills.md#skills-06--the-family-health-advisors-safety-behaviour) | `skills` | The Family Health Advisor's starter Body leads with emergency advice, refuses dose changes, and re-reads its notes after a restart | 30 min |
 
 Before the first paid test of a session:
 

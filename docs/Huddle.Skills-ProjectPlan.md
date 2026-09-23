@@ -84,7 +84,11 @@ project.
 `src/Huddle.App/prompts.default.json` is committed and copied to output. It must equal
 `PromptCatalog.All` serialised key → `Default`. Any task that adds a `PromptDefinition` must
 regenerate it. Serialise `PromptCatalog.All.ToDictionary(p => p.Key, p => p.Default)` with
-`ProtocolJson.Options` plus `WriteIndented = true`, write it CRLF, then confirm
+`ProtocolJson.Options` plus `WriteIndented = true` **and**
+`Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping`, as `PromptStore.IndentedJsonOptions`
+does: without the encoder every em-dash becomes `—` and the file no longer matches. The
+serialiser's own newlines are already `\r\n` on Windows, so normalise to `\n` before writing
+it CRLF, or you get `\r\r\n`. Then confirm
 `tests/Huddle.Tests/Prompts/PromptDefaultsFileTests.cs` is green. The failure message of that
 test repeats this procedure.
 

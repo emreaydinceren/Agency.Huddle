@@ -1,6 +1,6 @@
 # Huddle.Skills — Design Specification
 
-**Date:** 2026-09-22 · **Status:** Proposed · **Decision record:**
+**Date:** 2026-09-22 · **Status:** Delivered 2026-09-22 · **Decision record:**
 [ADR-0021](adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) · **Vocabulary:**
 [language.md](agencyteam/language.md) (**Skill**, **Proposal**, **Candidate**)
 
@@ -879,9 +879,9 @@ Out: a Persona file; nothing else.
 | File | Holds | Read when |
 | --- | --- | --- |
 | `SKILL.md` | Trigger description; step 0 for a new Human; the procedure: interview → take stock → choose a pattern → draft Candidates → validate → propose → after approval, kick off | Always, first |
-| `onboarding.md` | Greeting a new Human: who the Chief of Staff is, what a team can be, three or four cheap first teams, one closing question | When step 0 applies: a Greeting Turn (§6.14), or a Human with no other Teammates greeting it |
+| `onboarding.md` | Greeting a new Human: who the Chief of Staff is, what a team can be, a menu of every first team (30 in eight groups, pipelines marked as costing more), one closing question | When step 0 applies: a Greeting Turn (§6.14), or a Human with no other Teammates greeting it |
 | `team-patterns.md` | Panel, private companions, simulation, pipeline, self-organising; set-up, why it works, what to watch, examples, relative cost; what a team cannot do yet | When choosing a pattern |
-| `roles.md` | 24 roles in six groups, with an index table, each with `consult_when` and a starter Body | When drafting Candidates |
+| `roles.md` | 29 roles in seven groups, with an index table, each with `consult_when` and a starter Body | When drafting Candidates |
 
 **Changes required from the draft** (it predates D-1):
 - Frontmatter `tools: [validate_teammate, propose_teammates]`.
@@ -1194,7 +1194,7 @@ was told and what it can call in agreement.
 | --- | --- | --- | --- |
 | Skill snapshot rebuild | < 10 ms for 20 Skills × 5 files | 100 ms | Same shape as `PromptStore` |
 | System prompt growth per Skill | ~1 line, ≤ 500 chars | ≤ 5 Skills per Persona recommended | This is the only recurring cost of a Skill, paid on every Turn |
-| `read_skill` response | ≤ 64 KB; `SKILL.md` is 11.6 KB ≈ 2.5–3k tokens per read | 64 KB hard cap | Paid only when read; supporting files only when a step sends the Agent there |
+| `read_skill` response | ≤ 64 KB; `SKILL.md` is about 14 KB ≈ 3–3.5k tokens per read | 64 KB hard cap | Paid only when read; supporting files only when a step sends the Agent there |
 | The Greeting | One Turn per install: `SKILL.md` + `onboarding.md` reads plus one reply, ≈ 5–8k tokens | Counts against the per-Persona token Budget | Paid once; repeats only after `-Clean` or a failed Greeting |
 | `validate_teammate` | < 5 ms | 50 ms | Builds one candidate `PersonaIndex`, O(Personas) |
 | Approve, 3 Candidates | < 100 ms to write; Teammates Online in seconds | — | File writes are serial; Adapter start dominates and is existing behaviour |

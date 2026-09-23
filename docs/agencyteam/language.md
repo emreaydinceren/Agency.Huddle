@@ -267,7 +267,7 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 : The first Message the built-in Chief of Staff posts to a new Human, unprompted,
   when its Room with the Human has no Messages. The one Turn that no delivered
   Message starts; the instruction for it is a Prompt, never a Message posted as
-  the Human. Proposed, not built — see
+  the Human. See
   [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md).
 : *Avoid*: welcome — that is the pipe handshake Envelope — and intro, onboarding
   message, first-run message.

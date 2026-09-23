@@ -699,6 +699,19 @@ Persona lifecycle: supervisor, work dirs, health and restarts — [area file](pe
 | [ADAPTERS-03](adapters.md#adapters-03--changing-a-teammates-adapter-resets-model-and-effort-says-so-and-restarts-the-session-) | 💰 | Active | | |
 | [ADAPTERS-04](adapters.md#adapters-04--does-a-real-local-model-call-get_help-unprompted-) | 💰 | Active | | Unblocked 2026-09-18 — D-1 is fixed in `AgencyDotNet.Acp` 0.1.197, published on nuget.org as `0.1.198-ga453511f0e`. **Check `agentInfo.version` first**: on 0.1.195 or earlier this test is meaningless, not merely failing. Needs a real local Adapter and a reachable inference endpoint. "Calls no tool at all" is INCONCLUSIVE and expected for a small model — record the model name |
 
+## skills
+
+Skills: the Chief of Staff, team-building, and the Family Health Advisor — [area file](skills.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [SKILLS-01](skills.md#skills-01--the-chief-of-staff-reads-team-building-unprompted-when-asked-for-a-team) | 💰 | Active | | |
+| [SKILLS-02](skills.md#skills-02--approve-creates-the-teammates-wakes-the-chief-of-staff-and-it-opens-a-seeded-room) | 💰 | Active | | |
+| [SKILLS-03](skills.md#skills-03--decline-and-the-chief-of-staff-revises-and-proposes-again) | 💰 | Active | | |
+| [SKILLS-04](skills.md#skills-04--over-the-limit-approve-creates-nothing-and-the-message-says-why) | 💰 | Active | | |
+| [SKILLS-05](skills.md#skills-05--the-greeting-on-a--clean-install-and-no-second-greeting-on-restart) | 💰 | Active | | |
+| [SKILLS-06](skills.md#skills-06--the-family-health-advisors-safety-behaviour) | 💰 | Active | | |
+
 ---
 
 Back to [the manual test script](../manual-tests.md).

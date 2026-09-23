@@ -39,6 +39,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~13~~ | ~~Model-facing text is configuration~~ — **delivered 2026-09-13** | `Prompts/`, then the five sites that held the literals | shipped; never on this list before it was built, and it collides with item 9 — see [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) |
 | ~~14~~ | ~~Archiving and deleting a Room~~ — **delivered 2026-09-21** | `SqliteTeamDirectory`, `RoomList.razor` | shipped; never on this list before it was built, and it *reverses* a stance Known limits recorded — archived state went in a sibling table because `CREATE TABLE IF NOT EXISTS` never adds a column, and the one-1:1-Room-per-Agent invariant was knowingly given up — see [ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md) |
 | ~~15~~ | ~~A Teammate chooses its own Avatar~~ — **delivered 2026-09-22** | a new `Avatars/` store, `TeammateAvatar.razor` | shipped; never on this list before it was built, and it *reverses* a manual test that asserted no avatar appears in the transcript. The interesting decision was where it must **not** go: frontmatter would have made picking a colour restart the session — see [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) |
+| ~~17~~ | ~~Skills and the Chief of Staff~~ — **delivered 2026-09-22** | `Skills/`, `Teammates/`, then `DotAcpAgentHostFactory` and `PersonaRunner` | shipped; the first mechanism for item 9's per-Persona tool grants, and the first Turn that no delivered Message starts — see [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) and [the Skills design](../Huddle.Skills-Specifications.md) |
 
 ## 1. Renaming a Teammate
 
@@ -1141,3 +1142,36 @@ was the recommendation; this was the repo owner's call, and it is recorded in
 > `OnPersonaRenamed`'s no-Agent-row early return, which is the subtlest line in the
 > change: that guard fires for every Teammate in a stock installation, where
 > `Acp:Enabled` is false and nothing has ever connected.
+
+## 17. Skills and the Chief of Staff — DELIVERED 2026-09-22
+
+> **Delivered**, with
+> [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) as the decision
+> in full, [the Skills design](../Huddle.Skills-Specifications.md) as the specification,
+> and [Language](language.md) defining Skill, Proposal, Candidate and Greeting. Never on
+> this list before it was designed, and built from a 90-task test-first plan in one day.
+>
+> **What shipped.** A **Skill** is a folder of Markdown an Agent reads on demand: its
+> name and description sit in the system prompt, and its body arrives through
+> `read_skill`. The first Skill, `team-building`, ships inside the assembly and can be
+> overridden file by file under `{DataDir}/Skills/`. A **built-in Chief of Staff**,
+> recognised only by `_builtin: chief-of-staff`, is written at startup when missing; it
+> holds that Skill, greets a new Human unprompted, and proposes Teammates with
+> `propose_teammates`. The Human answers on a Proposal card in the Room, and the outcome is
+> posted as the Human's own Message, which wakes the proposer through the ordinary Reply
+> Gate.
+>
+> **This is the first mechanism for item 9, not the whole of it.** A Skill can switch on
+> a tool from the code-defined `SkillGrants.Grantable` set for the Personas that hold it.
+> Taking a *default* tool away from one Persona is still item 9's to design.
+>
+> **Two things the plan got wrong, found by its own tests.** Serialising
+> `PersonaStore.Add` behind a lock was not enough: the lock has to cover publishing the
+> new index too, or the second writer validates against a stale snapshot and both
+> collide. And a Candidate named like an existing Persona produced a collision reason
+> naming no file, because the dry-run check and the real file shared a path.
+>
+> **Still open.** A waiting Proposal does not survive a restart
+> ([Known limits](known-limits.md)). The paid manual tests SKILLS-01 to SKILLS-06 in
+> [manual-tests/skills.md](manual-tests/skills.md) have not been run, so nothing yet
+> proves a real model reads the Skill unprompted or greets well.

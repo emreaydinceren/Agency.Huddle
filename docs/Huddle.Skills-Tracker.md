@@ -5,7 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 87 Done.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 90 Done.
 
 ## How to update this tracker
 
@@ -132,6 +132,6 @@ Deliverable and Acceptance.
 | 16.5.t Functional test: the Greeting posts, or fails cleanly (red) | | | ✔ |
 | 16.5.i Close gaps in a Turn with no triggering Message | | | ✔ |
 | **D17. S3 health check, manual tests, final docs** | | | |
-| 17.1 Health check on an empty data directory | ✔ | | |
-| 17.2 Write `manual-tests/skills.md` | ✔ | | |
-| 17.3 Final documentation | ✔ | | |
+| 17.1 Health check on an empty data directory | | | ✔ |
+| 17.2 Write `manual-tests/skills.md` | | | ✔ |
+| 17.3 Final documentation | | | ✔ |

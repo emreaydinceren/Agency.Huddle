@@ -5,9 +5,9 @@ are real Claude agents running as child processes. This page is the hub of its
 documentation: read it whole if you are picking the codebase up cold, then follow
 only the links your task needs.
 
-Applies to the repo as of 2026-09-22, after roadmap item 15 (a Teammate chooses its
-own Avatar): one solution, `Huddle.slnx`, holding all six projects, builds
-with zero warnings and its 1421 tests pass, 10 of them skipped unless
+Applies to the repo as of 2026-09-22, after roadmap item 17 (Skills and the built-in
+Chief of Staff): one solution, `Huddle.slnx`, holding all six projects, builds
+with zero warnings and its 1600 tests pass, 10 of them skipped unless
 `Team:Acp:Enabled` is on — see [Build, test, run](#build-test-run).
 
 The product is Agency.Huddle, and since 2026-09-12 so is every namespace.
@@ -48,7 +48,7 @@ question is yours; the cost column is roughly what it will spend.
 | [Adapters handoff](Huddle.Adapters-Handoff.md) | **Start here for Adapters work.** State of play, what to do first, and the traps. Points at the other three | ~9k |
 | [Adapters design](Huddle.Adapters-Specifications.md) | Before work on which ACP agent a Persona runs on — Adapter Profiles, the tool-name prefix, the Model/Effort catalogue probe, or `Huddle.MockAdapter` | ~45k |
 | [Adapters live findings](Huddle.Adapters-LiveFindings.md) | What contact with the real `agency-acp` changed. The only Adapters doc about reality rather than intent | ~13k |
-| [Skills design](Huddle.Skills-Specifications.md) | Before work on Skills, `read_skill`, `propose_teammates`, Proposals, the built-in Chief of Staff or its Greeting. Three streams, with a test-first task plan. Proposed, not built | ~20k |
+| [Skills design](Huddle.Skills-Specifications.md) | Before work on Skills, `read_skill`, `propose_teammates`, Proposals, the built-in Chief of Staff or its Greeting. Three streams, with a test-first task plan. Delivered 2026-09-22 | ~20k |
 | [Skills tracker](Huddle.Skills-Tracker.md) | To see or record where each of the plan's 90 tasks stands | ~4k |
 | [Skills project plan](Huddle.Skills-ProjectPlan.md) | **Start here to build Skills.** 90 atomic, test-first tasks in 17 deliverables, each written for an agent with no context | ~13k |
 | [Decision record](agencyteam/decisions.md) | To revisit a decision, or to read an older doc | ~6.3k |
@@ -321,7 +321,7 @@ pwsh tools/echo-bot.ps1 -Name mybot
 ```text
 Connecting to pipe '\\.\pipe\team' as agent 'mybot'...
 Sent hello. Listening for messages (Ctrl+C to exit)...
-{"type":"welcome","agentId":"01a08c...","name":"mybot","rooms":[...],"version":2}
+{"type":"welcome","agentId":"01a08c...","name":"mybot","rooms":[{"id":"01a08d...","name":"mybot","members":[...],"isEmpty":true}],"version":3}
 ```
 
 A Room named `mybot` appears in the browser immediately, with no refresh.

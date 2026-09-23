@@ -378,6 +378,14 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   same order `SkillStore.OnWatcherError` uses, and
   `PersonaStoreTests.OnWatcherError_AfterDispose_DoesNotLog` fails if it moves back.
   A test-host crash naming `OnWatcherError` is now a regression, not this flake.
+- **A fourth flake, seen once, not diagnosed — 2026-09-22.**
+  `PipeEndToEndTests.Disconnect_CleanClose_LogsExactlyOneInformationLine` failed once in a
+  full run during the Skills build (`Assert.Single()` found no matching log line) and passed
+  on the next full run and on its class alone. The test and the pipe code it covers were
+  unchanged at the time, so it is recorded rather than read as a regression. It asserts on
+  a log line written after the client disconnects, which suggests the assertion sometimes
+  runs before that line is written; if it recurs, wait for the line rather than reading
+  the log once.
 - **Known bug, pre-existing:** `Data/SqliteTeamDirectory.cs` is not
   `IDisposable`, and SQLite connection pooling keeps a handle on `team.db`, so
   tests leave about 83 temp directories behind per run. `TempDataDir.Dispose`
