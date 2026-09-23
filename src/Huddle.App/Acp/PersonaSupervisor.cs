@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Skills;
 
 namespace Agency.Huddle.App.Acp;
 
@@ -20,6 +21,13 @@ internal sealed class PersonaSupervisor : BackgroundService
     private readonly RoomFollows roomFollows;
     private readonly ILoggerFactory loggerFactory;
     private readonly ILogger<PersonaSupervisor> logger;
+
+    // Resolves a Persona's assigned Skill names a second time, purely to report the Degraded
+    // warning for one that does not exist (Spec §6.4, §12 F-1) — DotAcpAgentHostFactory resolves
+    // the same names again itself, for the tool grants and the Skill Index; see the comment beside
+    // the AdapterProfileResolver.Resolve call in StartHostIfMissingAsync for why this duplication
+    // is the accepted cost rather than a reason to widen IAgentHostFactory.CreateAsync.
+    private readonly SkillStore skills;
 
     private readonly Lock gate = new();
     private readonly Dictionary<string, PersonaRunner> hosts = new(StringComparer.Ordinal);
@@ -54,7 +62,8 @@ internal sealed class PersonaSupervisor : BackgroundService
         IPromptSource prompts,
         RoomFollows roomFollows,
         ILoggerFactory loggerFactory,
-        ILogger<PersonaSupervisor> logger)
+        ILogger<PersonaSupervisor> logger,
+        SkillStore skills)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
@@ -65,6 +74,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         ArgumentNullException.ThrowIfNull(roomFollows);
         ArgumentNullException.ThrowIfNull(loggerFactory);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(skills);
 
         this.options = options.Value;
         this.personaStore = personaStore;
@@ -75,6 +85,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         this.roomFollows = roomFollows;
         this.loggerFactory = loggerFactory;
         this.logger = logger;
+        this.skills = skills;
     }
 
     /// <summary>The number of Personas with a currently running host. Test seam only.</summary>
@@ -417,6 +428,15 @@ internal sealed class PersonaSupervisor : BackgroundService
             // rule a few lines down does not immediately overwrite it back to Starting/Online.
             var (_, adapterWarning) = this.resolver.Resolve(persona.Adapter);
 
+            // Same argument as the Adapter warning immediately above, for Skills (Spec §6.4, §12
+            // F-1): DotAcpAgentHostFactory resolves the same names again itself, for the tool
+            // grants and the Skill Index, and a Persona with no frontmatter - or malformed
+            // frontmatter - simply holds no Skills rather than failing the start.
+            IReadOnlyList<string> skillNames = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)
+                ? identity.Skills ?? []
+                : [];
+            SkillResolution skillResolution = this.skills.Resolve(skillNames);
+
             var host = new PersonaRunner(
                 persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>());
 
@@ -430,9 +450,16 @@ internal sealed class PersonaSupervisor : BackgroundService
             {
                 this.health.Report(name, PersonaState.Starting, null);
 
-                if (adapterWarning is not null)
+                // The Adapter warning and every unresolved Skill name are independent sources of the
+                // same Degraded state, so a Persona hit by both is reported once, not one overwriting
+                // the other - the Adapter warning first, then each Skill warning, joined with a
+                // single space.
+                IReadOnlyList<string> warnings = adapterWarning is null
+                    ? skillResolution.Warnings
+                    : [adapterWarning, .. skillResolution.Warnings];
+                if (warnings.Count > 0)
                 {
-                    this.health.Report(name, PersonaState.Degraded, adapterWarning);
+                    this.health.Report(name, PersonaState.Degraded, string.Join(' ', warnings));
                 }
 
                 await host.StartAsync(cancellationToken).ConfigureAwait(false);

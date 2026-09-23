@@ -7,6 +7,7 @@ using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Acp.Fakes;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -381,8 +382,9 @@ public sealed class TeammatesPageTests
         // Never started - Teammates.razor only needs a PersonaSupervisor it can inject, for the
         // Restart button this test does not exercise.
         var resolver = new AdapterProfileResolver(new AdapterCatalog(dataDir.Options()));
+        using var skillStore = new SkillStore(dataDir.Options(), NullLogger<SkillStore>.Instance);
         using var supervisor = new PersonaSupervisor(
-            dataDir.Options(), personas, new FakeAgentHostFactory(), resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+            dataDir.Options(), personas, new FakeAgentHostFactory(), resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
         using var avatars = new AvatarStore(dataDir.Options(), NullLogger<AvatarStore>.Instance);
 
         await using MudBunitContext ctx = new();

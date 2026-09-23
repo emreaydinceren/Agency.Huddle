@@ -5,7 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 30 Done.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 34 Done.
 
 ## How to update this tracker
 
@@ -61,10 +61,10 @@ Deliverable and Acceptance.
 | 4.3.t Test: `read_skill` (red) | | | ✔ |
 | 4.3.i Implement `ReadSkillTool` | | | ✔ |
 | **D5. Wiring: factory, supervisor, health** | | | |
-| 5.1.t Test: a Persona with a Skill is offered `read_skill` end to end (red) | ✔ | | |
-| 5.1.i Wire `SkillStore` and `SkillGrants` into the factory | ✔ | | |
-| 5.2.t Test: an unknown Skill reports Degraded (red) | ✔ | | |
-| 5.2.i Report Skill warnings | ✔ | | |
+| 5.1.t Test: a Persona with a Skill is offered `read_skill` end to end (red) | | | ✔ |
+| 5.1.i Wire `SkillStore` and `SkillGrants` into the factory | | | ✔ |
+| 5.2.t Test: an unknown Skill reports Degraded (red) | | | ✔ |
+| 5.2.i Report Skill warnings | | | ✔ |
 | **D6. Skills UI** | | | |
 | 6.1.t Test: the Teammate card's Skills picker (red) | ✔ | | |
 | 6.1.i Implement the picker | ✔ | | |

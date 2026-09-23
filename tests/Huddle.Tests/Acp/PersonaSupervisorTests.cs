@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Pipes;
 
@@ -36,7 +37,8 @@ public sealed class PersonaSupervisorTests
             NullLogger<PersonaStore>.Instance);
         var factory = new FakeAgentHostFactory();
         var resolver = new AdapterProfileResolver(new AdapterCatalog(options));
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         using var startCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await supervisor.StartAsync(startCts.Token);
@@ -61,7 +63,8 @@ public sealed class PersonaSupervisorTests
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => supervisor.RunningHostCount >= 2, ct);
@@ -84,7 +87,8 @@ public sealed class PersonaSupervisorTests
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         await supervisor.StartAsync(ct);
         Assert.Equal(0, supervisor.RunningHostCount);
@@ -110,7 +114,8 @@ public sealed class PersonaSupervisorTests
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         personaStore.Add(Identity("nova"), "You are Nova.", "claude-opus-4");
 
@@ -142,7 +147,8 @@ public sealed class PersonaSupervisorTests
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         personaStore.Add(Identity("nova"), "You are Nova.", "claude-opus-4", "high");
 
@@ -169,7 +175,8 @@ public sealed class PersonaSupervisorTests
         var gateway = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.IAgentGateway>();
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
@@ -198,7 +205,8 @@ public sealed class PersonaSupervisorTests
         var inner = new FakeAgentHostFactory();
         var factory = new FailingForOneAgentHostFactory("bad", new InvalidOperationException("Simulated failure starting Persona 'bad'."), inner);
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => supervisor.RunningHostCount >= 1, ct);
@@ -229,7 +237,8 @@ public sealed class PersonaSupervisorTests
         var gateway = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.IAgentGateway>();
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         // Two personas, so removing one has something to leave alone: "zeta" proves the
         // supervisor stops only the removed persona's host, not every host it manages.
@@ -271,7 +280,8 @@ public sealed class PersonaSupervisorTests
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         personaStore.Add(Identity("nova"), "You are Nova.");
         await supervisor.StartAsync(ct);
@@ -302,7 +312,8 @@ public sealed class PersonaSupervisorTests
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         personaStore.Add(Identity("nova"), "You are Nova.", "a");
         await supervisor.StartAsync(ct);
@@ -331,7 +342,8 @@ public sealed class PersonaSupervisorTests
         WritePersonaFile(options.Value, "zeta");
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
@@ -360,7 +372,8 @@ public sealed class PersonaSupervisorTests
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         personaStore.Add(Identity("zeta"), "You are a persona.", "a");
         await supervisor.StartAsync(ct);
@@ -402,7 +415,8 @@ public sealed class PersonaSupervisorTests
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         personaStore.Add(Identity("nova"), "You are Nova.", "a", "low");
         await supervisor.StartAsync(ct);
@@ -431,7 +445,8 @@ public sealed class PersonaSupervisorTests
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         personaStore.Add(Identity("zeta"), "You are a persona.", "a", "high");
         await supervisor.StartAsync(ct);
@@ -486,7 +501,8 @@ public sealed class PersonaSupervisorTests
         File.WriteAllText(Path.Combine(teamsDir, "zeta.md"), SkillsPersonaText("zeta"));
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
@@ -550,7 +566,8 @@ public sealed class PersonaSupervisorTests
         var factory = new FakeAgentHostFactory();
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         personaStore.Add(Identity("nova") with { Adapter = "bogus-adapter" }, "You are Nova.");
 
@@ -573,6 +590,53 @@ public sealed class PersonaSupervisorTests
         Assert.Single(factory.Calls, call => call.Persona.Name == "nova");
     }
 
+    /// <summary>
+    /// Pins Spec §12 F-1 and use case U14, the Skills-side twin of
+    /// <see cref="UnknownAdapter_IsRecordedAsDegradedAndStillStartsAHost"/>: a Persona whose frontmatter
+    /// names a Skill <see cref="Agency.Huddle.App.Skills.SkillStore"/> does not resolve is not rejected
+    /// either. <see cref="PersonaSupervisor"/> must report <see cref="PersonaState.Degraded"/> with the
+    /// Skill's own warning text and must still create and start a runner - asserted via
+    /// <see cref="FakeAgentHostFactory.Calls"/>, for the same reason the Adapter test asserts it: a test
+    /// that only checked for Degraded would pass even if the Persona had failed to start at all. As of
+    /// this task, <see cref="PersonaSupervisor"/>'s constructor does not yet take a
+    /// <see cref="Agency.Huddle.App.Skills.SkillStore"/> (Task 5.2.i wires it in), so nothing here yet
+    /// resolves the unknown Skill name into this Degraded report - the Persona starts and stays Online,
+    /// which is what fails <see cref="Assert.Equal{T}(T, T)"/> below.
+    /// </summary>
+    [Fact]
+    public async Task Start_UnknownSkill_ReportsDegradedWithReason()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var health = NewHealth();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
+
+        personaStore.Add(Identity("nova") with { Skills = ["nonexistent"] }, "You are Nova.");
+
+        await supervisor.StartAsync(ct);
+
+        // Waiting for the factory call alone (rather than for Degraded too, as the Adapter test does)
+        // is deliberate here: nothing in this constructor can report Degraded for a Skill yet, so
+        // waiting on that condition as well would hang until the outer CancellationTokenSource fires
+        // and fail with a cancellation, not the clean assertion failure this task calls for.
+        await WaitUntilAsync(() => factory.Calls.Any(call => call.Persona.Name == "nova"), ct);
+        await supervisor.StopAsync(ct);
+
+        var status = health.Get("nova");
+        Assert.NotNull(status);
+        Assert.Equal(PersonaState.Degraded, status.State);
+        Assert.Equal("Skill 'nonexistent' does not exist.", status.Reason);
+        Assert.Single(factory.Calls, call => call.Persona.Name == "nova");
+    }
+
     /// <summary>An adapter-not-installed <see cref="InvalidOperationException"/> - the same shape <c>DotAcpAgentHostFactory</c> throws - is recorded as Offline, carrying the exception's own actionable message.</summary>
     [Fact]
     public async Task MissingAdapter_IsRecordedAsOfflineWithItsReason()
@@ -592,7 +656,8 @@ public sealed class PersonaSupervisorTests
         var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => health.Get("nova") is { State: PersonaState.Offline }, ct);
@@ -621,7 +686,8 @@ public sealed class PersonaSupervisorTests
         var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => health.Get("nova") is { State: PersonaState.Offline }, ct);
@@ -650,7 +716,8 @@ public sealed class PersonaSupervisorTests
         var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => health.Get("nova") is { State: PersonaState.Offline }, ct);
@@ -679,7 +746,8 @@ public sealed class PersonaSupervisorTests
         var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => health.Get("nova") is { State: PersonaState.Offline }, ct);
@@ -708,7 +776,8 @@ public sealed class PersonaSupervisorTests
         var factory = new FailingForOneAgentHostFactory("nova", exception, new FakeAgentHostFactory());
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => health.Get("nova") is { State: PersonaState.Offline }, ct);
@@ -734,7 +803,8 @@ public sealed class PersonaSupervisorTests
         var factory = new FakeAgentHostFactory();
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         personaStore.Add(Identity("nova"), "You are Nova.");
         await supervisor.StartAsync(ct);
@@ -771,7 +841,8 @@ public sealed class PersonaSupervisorTests
             "nova", new InvalidOperationException("Simulated failure starting Persona 'nova'."), inner);
         var health = NewHealth();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => health.Get("nova") is { State: PersonaState.Offline }, ct);
@@ -799,7 +870,8 @@ public sealed class PersonaSupervisorTests
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         personaStore.Add(Identity("nova"), "You are Nova.");
         await supervisor.StartAsync(ct);
@@ -833,7 +905,8 @@ public sealed class PersonaSupervisorTests
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
-        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
 
         personaStore.Add(Identity("nova"), "You are Nova.");
         await supervisor.StartAsync(ct);
@@ -854,6 +927,17 @@ public sealed class PersonaSupervisorTests
 
     /// <summary>Builds a fresh <see cref="PersonaHealth"/> against the real clock - nothing in this file asserts against <see cref="PersonaStatus.Since"/> precisely enough to need a controllable one.</summary>
     private static PersonaHealth NewHealth() => new(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
+
+    /// <summary>
+    /// Builds a real <see cref="SkillStore"/> over <paramref name="options"/>'s own <c>DataDir</c>, for
+    /// a test that needs <see cref="PersonaSupervisor"/>'s new constructor parameter but does not care
+    /// about Skills itself - <c>SkillStore</c> is not nullable, and CSharpPrinciples.md's "make illegal
+    /// states unrepresentable" is exactly why this file does not give <see cref="PersonaSupervisor"/> a
+    /// test-only nullable one instead. The caller disposes the result with <see langword="using"/>: a
+    /// real <see cref="SkillStore"/> owns a <see cref="System.IO.FileSystemWatcher"/>.
+    /// </summary>
+    /// <param name="options">Supplies the <c>DataDir</c> the returned store watches and resolves Skills against.</param>
+    private static SkillStore NewSkillStore(IOptions<TeamOptions> options) => new(options, NullLogger<SkillStore>.Instance);
 
     private static void WritePersonaFile(TeamOptions options, string name, string body = "You are a persona.")
     {
