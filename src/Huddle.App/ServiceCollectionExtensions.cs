@@ -77,6 +77,10 @@ public static class ServiceCollectionExtensions
         // process and no tokens, regardless of whether Team:Acp:Enabled is set.
         services.AddSingleton<PersonaStore>();
 
+        // FC §6.7: a singleton, like RoomFollows above - the watch_folder/unwatch_folder tools and
+        // every runner share it through DI.
+        services.AddSingleton<FileChangeTracker>();
+
         // Same instance as PersonaStore above, not a second registration - mirrors the
         // AgentGateway/IAgentGateway pair just above. A second, independently constructed PersonaStore
         // would mean a second FileSystemWatcher on the same Teams directory, which
