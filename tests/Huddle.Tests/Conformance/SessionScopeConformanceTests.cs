@@ -30,7 +30,7 @@ public sealed class SessionScopeConformanceTests
         };
 
         await using MockAdapterFixture fixture =
-            await MockAdapterFixture.StartAsync(persona, additionalConfig, ct);
+            await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
 
         string appendedPrompt = await GetAppendedSystemPromptAsync(fixture, ct);
 
@@ -57,7 +57,7 @@ public sealed class SessionScopeConformanceTests
         };
 
         await using MockAdapterFixture fixture =
-            await MockAdapterFixture.StartAsync(persona, additionalConfig, ct);
+            await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
 
         string appendedPrompt = await GetAppendedSystemPromptAsync(fixture, ct);
 

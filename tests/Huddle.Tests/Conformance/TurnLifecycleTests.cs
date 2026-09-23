@@ -280,7 +280,7 @@ public sealed class TurnLifecycleTests
         };
 
         string appendedBefore;
-        await using (MockAdapterFixture beforeFixture = await MockAdapterFixture.StartAsync(before, beforeConfig, ct))
+        await using (MockAdapterFixture beforeFixture = await MockAdapterFixture.StartAsync(before, beforeConfig, cancellationToken: ct))
         {
             appendedBefore = await GetAppendedSystemPromptAsync(beforeFixture, ct);
         }
@@ -298,7 +298,7 @@ public sealed class TurnLifecycleTests
         };
 
         string appendedAfter;
-        await using (MockAdapterFixture afterFixture = await MockAdapterFixture.StartAsync(after, afterConfig, ct))
+        await using (MockAdapterFixture afterFixture = await MockAdapterFixture.StartAsync(after, afterConfig, cancellationToken: ct))
         {
             appendedAfter = await GetAppendedSystemPromptAsync(afterFixture, ct);
         }

@@ -44,7 +44,7 @@ public sealed class MemoryConformanceTests
         };
 
         await using MockAdapterFixture fixture =
-            await MockAdapterFixture.StartAsync(persona, additionalConfig, ct);
+            await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
 
         string appendedPrompt = await MemoryConformanceTests.GetAppendedSystemPromptAsync(fixture, ct);
 

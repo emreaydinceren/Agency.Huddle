@@ -103,11 +103,18 @@ public sealed class MockAdapterFixture : IAsyncDisposable
     /// earlier one of the same key — the same merge <see cref="PipeHostFixture.StartAsync(IReadOnlyDictionary{string,string?}?,CancellationToken)"/>
     /// uses. <see langword="null"/> for none.
     /// </param>
+    /// <param name="timeProvider">
+    /// The clock the hand-built <see cref="PersonaRunner"/> uses for its Room Session pool (RS §6.2's
+    /// idle sweep, among other things) — <see langword="null"/> for the real one. A conformance test
+    /// that needs to drive the idle sweep deterministically passes a settable clock instead of waiting
+    /// out real wall-clock minutes (D30 correction 17).
+    /// </param>
     /// <param name="cancellationToken">Cancels startup.</param>
     /// <returns>The started fixture.</returns>
     public static async Task<MockAdapterFixture> StartAsync(
         Persona persona,
         IReadOnlyDictionary<string, string?>? additionalConfig = null,
+        TimeProvider? timeProvider = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(persona);
@@ -165,7 +172,7 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         RoomSessionStore roomSessions = host.Services.GetRequiredService<RoomSessionStore>();
         OwnPosts ownPosts = host.Services.GetRequiredService<OwnPosts>();
 
-        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger, fileChanges, roomSessions: roomSessions, ownPosts: ownPosts);
+        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger, fileChanges, timeProvider: timeProvider, roomSessions: roomSessions, ownPosts: ownPosts);
 
         try
         {

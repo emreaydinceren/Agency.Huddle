@@ -41,7 +41,7 @@ public sealed class FileChangesToolOfferTests
         };
 
         await using MockAdapterFixture fixture =
-            await MockAdapterFixture.StartAsync(persona, additionalConfig, ct);
+            await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
 
         string toolNames = await FileChangesToolOfferTests.GetToolNamesTextAsync(fixture, ct);
 
@@ -60,7 +60,7 @@ public sealed class FileChangesToolOfferTests
         };
 
         await using MockAdapterFixture fixture =
-            await MockAdapterFixture.StartAsync(persona, additionalConfig, ct);
+            await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
 
         string toolNames = await FileChangesToolOfferTests.GetToolNamesTextAsync(fixture, ct);
 

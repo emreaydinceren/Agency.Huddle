@@ -45,7 +45,7 @@ public sealed class IsolationMetaTests
         };
 
         await using MockAdapterFixture fixture =
-            await MockAdapterFixture.StartAsync(persona, additionalConfig, ct);
+            await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
 
         JsonObject sessionNewRequest = await fixture.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(5));
         JsonObject? parameters = sessionNewRequest["params"] as JsonObject;
