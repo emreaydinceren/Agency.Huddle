@@ -185,13 +185,17 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   not one: it buys no allowance and is not spent.
 
 **Turn**
-: One prompt-to-completion cycle on a session. Load-bearing:
-  `IAgentSession.PromptAsync` throws if a turn is already in flight, which is why
-  the work queue in `PersonaRunner` is mandatory rather than an optimisation.
-: A Turn ends in one of three ways - **completed**, **stopped** by the Human, or
-  **failed** - and only the last is a fault. The distinction is load-bearing in
-  four files, because the mechanism underneath a Stop is a `CancellationToken` and
-  everywhere else here that means shutdown.
+: One prompt-to-completion cycle on a session — since Room Sessions shipped, one
+  **Room Session's** session. Load-bearing: `IAgentSession.PromptAsync` throws if
+  a turn is already in flight, which is why each Room Session's own work queue is
+  mandatory rather than an optimisation; `RoomSessionPool`'s `TurnGate` then admits
+  Turns across a Persona's Room Sessions in ticket order, so cross-Room arrival
+  order survives even though `MaxConcurrentTurns` defaults to 1 (RS §6.2, finding P-4).
+: A Turn ends one of **four** ways, not three - **completed**, **stopped** by the
+  Human, **timed out**, or **failed** - and only the last two are faults. The
+  distinction is load-bearing in several files, because the mechanism underneath
+  both a Stop and a timeout is a `CancellationToken` and everywhere else here that
+  means shutdown; see [Rules](rules.md) for the two traps that tell them apart.
 : *Avoid*: request, exchange, round.
 
 **App Tool**
@@ -220,14 +224,20 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   unattended run rather than the Room. A spent Room stops accepting agent
   Messages and asks the Human, who may grant one more Budget at a time. The
   per-Persona token Budget is the same word over a different unit — tokens rather
-  than Messages, and per Persona (summed over its Room Sessions, once they ship)
-  rather than per Room. See ADR-0006.
+  than Messages, and per Persona, summed over its Room Sessions, rather than per
+  Room: it exists to catch a loop that mints fresh Rooms, which a per-Room Budget
+  cannot, and a per-Room one would reset with every fresh Room (RS D-10). See
+  ADR-0006.
 : *Avoid*: quota, limit, cap, rate limit, throttle, allowance.
 
 **Catch-up**
 : The Messages an Agent missed in a Room while unmentioned, carried along the
-  next time it is Mentioned there. Once Room Sessions ship, a Room Session's first
-  Turn also carries the Messages it has not seen, read from the Transcript.
+  next time it is Mentioned there. A Room Session's **first** Turn instead carries
+  what it has not seen read straight from the Transcript — through the additive
+  `ReadTranscript`/`TranscriptTail` Envelope pair — ending strictly before the
+  Message that started the Turn, never up to Turn start, so a queued panellist
+  never sees another's answer (RS §6.5, D-7). Every Turn after a Room Session's
+  first reuses the in-memory buffer, as before.
 : *Avoid*: backlog, history.
 
 **Watched Folder**
@@ -330,11 +340,19 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 
 **Room Session**
 : The session one Agent holds for one Room: that Room's conversation and nothing
-  else. It opens on the Room's first Turn, closes when idle, and is resumed by id.
-  The Persona text, Work Dir, Memory, App Tools and Adapter process are per Persona,
-  and all of its Room Sessions share them. Proposed, not built — see
-  [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md). Until it ships, one
-  session per Persona spans every Room.
+  else. It opens lazily on the Room's first Turn (except the Room with the Human,
+  which opens at start), closes when idle or evicted LRU past `MaxLiveSessions`,
+  and is resumed by a stored id where the Adapter advertises resume — else opened
+  fresh with Transcript Catch-up. The Persona text, Work Dir, Memory, App Tools and
+  Adapter process are per Persona, and all of a Persona's Room Sessions share them;
+  only working context is per Room. **Delivered as code 2026-09-23** — see
+  [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md), now Accepted, and
+  [roadmap item 18](roadmap.md#18-one-session-per-room--delivered-code-2026-09-23).
+  Default (`SessionPerRoom: true`); an Adapter Profile can still set
+  `SessionPerRoom: false` for one shared session across every Room, with a
+  truthful Prompt of its own (RS §6.9, §6.12) — required until Appendix B's V-5
+  passes for `agency-acp`. Paid checks proving this live have not yet been run —
+  see [Known limits](known-limits.md).
 : *Avoid*: conversation, thread, agent session, instance.
 
 ## Messages and storage
@@ -366,11 +384,13 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   Envelope that carries one, not the thing itself.
 
 **Stop**
-: The Human ending a Turn in progress. It ends the live Turn and discards whatever
-  that Agent had queued behind it, so it means *this Agent, now* rather than *this
-  one Turn*. A normal outcome, not a failure: nothing is posted, no badge changes,
-  and the Room stays usable. Because one session spans every Room, stopping an
-  Agent stops it everywhere today. Once Room Sessions ship, it stops only that Room.
+: The Human ending a Turn in progress, in one Room. It ends that Room Session's
+  live Turn and discards whatever was queued behind it there, so it means *this
+  Agent, in this Room, now* rather than *this one Turn*. A normal outcome, not a
+  failure: nothing is posted, no badge changes, and the Room stays usable. Per
+  Room in both modes — `SessionPerRoom: false`'s one shared session still only
+  marks and cancels the stopped Room's own queued work, never another Room's
+  (RS §6.8, P-6, D-9). `Chat.razor` already sends one Stop per Agent per Room.
 : *Avoid*: cancel - that is ACP's own verb and stays inside `Huddle.Acp` - abort,
   kill, interrupt, pause (pausing a Room is a Budget of zero, which is a different
   thing).

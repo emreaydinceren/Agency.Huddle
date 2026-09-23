@@ -45,7 +45,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~15~~ | ~~A Teammate chooses its own Avatar~~ — **delivered 2026-09-22** | a new `Avatars/` store, `TeammateAvatar.razor` | shipped; never on this list before it was built, and it *reverses* a manual test that asserted no avatar appears in the transcript. The interesting decision was where it must **not** go: frontmatter would have made picking a colour restart the session — see [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) |
 | 16 | An Agent asks the Human with a Question — **designed 2026-09-22, not built** | a new `Questions/` store and service, `AskHumanTool`, `QuestionCard.razor` | nothing specific to it; it copies the Skills spec's Proposal card, which shipped with item 17 — see [the Questions spec](../Huddle.Questions-Specifications.md) and [ADR-0022](../adr/0022-an-agent-asks-the-human-with-a-question.md) |
 | ~~17~~ | ~~Skills and the Chief of Staff~~ — **delivered 2026-09-22** | `Skills/`, `Teammates/`, then `DotAcpAgentHostFactory` and `PersonaRunner` | shipped; the first mechanism for item 9's per-Persona tool grants, and the first Turn that no delivered Message starts — see [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) and [the Skills design](../Huddle.Skills-Specifications.md) |
-| 18 | One session per Room — **designed 2026-09-22, not built** | a new `Acp/Sessions/` pool, then the `IAgentHostFactory` split | per-Room Catch-up buffers and a Room-carrying `StopTurn` already exist; the Adapter already hosts many sessions per process and advertises resume — see [the Room Sessions spec](../Huddle.RoomSessions-Specifications.md) and [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md) |
+| ~~18~~ | ~~One session per Room~~ — **DELIVERED (code) 2026-09-23** | `Acp/Sessions/`, the `IAgentHostFactory`/`IPersonaHost` split | shipped: a Room Session per (Persona, Room), lazy open, LRU eviction, resume by stored id, Transcript Catch-up on a session's first Turn, Stop routed per Room. Paid checks (RS-M1 through RS-M10, V-3, V-5) not yet run — see [the Room Sessions spec](../Huddle.RoomSessions-Specifications.md), [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md) and [Known limits](known-limits.md) |
 
 ## 1. Renaming a Teammate
 
@@ -1272,12 +1272,38 @@ Three rules carry the design, and each is easy to lose in a refactor:
 > [manual-tests/skills.md](manual-tests/skills.md) have not been run, so nothing yet
 > proves a real model reads the Skill unprompted or greets well.
 
-## 18. One session per Room — DESIGNED 2026-09-22, not built
+## 18. One session per Room — DELIVERED (code) 2026-09-23
 
-> **Designed, not built.** The design is
+> **Delivered as code on 2026-09-23.** The design is
 > [Huddle.RoomSessions-Specifications.md](../Huddle.RoomSessions-Specifications.md), recorded
-> in [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md). It lifts the
+> in [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md), now **Accepted**. It lifts the
 > [Known limit](known-limits.md) "One session per Persona spans every Room it is in".
+>
+> What shipped: a **Room Session** per (Persona, Room) under `Acp/Sessions/` — `RoomSession`,
+> `RoomSessionPool`, `RoomSessionStore`, `OwnPosts`, `RoomLabels`, gated by a `TurnGate` that admits
+> Turns across Rooms in ticket order rather than release order (finding P-4). Sessions open lazily,
+> except the Room with the Human at start; an idle one is evicted LRU at `MaxLiveSessions`; a closed
+> one resumes by the id `RoomSessionStore` kept, where the Adapter advertises resume, else opens
+> fresh with Transcript Catch-up carried over the new `ReadTranscript`/`TranscriptTail` Envelope
+> pair (additive, `ProtocolVersion` still 3). Stop is routed to its own Room Session (P0-2, shipped
+> first); a same-named Room gets a ` #xxxxxx` suffix (P0-3); the failure streak and the token Budget
+> stay per Persona, summed across sessions, and two consecutive failures in one Room Session close
+> and forget it. `Team:Acp:Adapters:*:SessionPerRoom` defaults `true` as of D28 — the factory split
+> into `IAgentHostFactory`/`IPersonaHost` (one Adapter process and App Tool server per Persona,
+> opening or resuming a session per call) underpins both modes.
+>
+> Restart and a Persona edit forget every Room Session, a rename or removal moves or removes
+> `room-sessions/<Name>.json` (RS D-14, §6.13), and the built-in Chief of Staff and the
+> `team-building` Skill teach the coordinator's new shape of work (RS-T13).
+>
+> **What is not yet verified.** Resume across a rename, whether `session/resume` re-applies the
+> isolation `_meta`, and whether `agency-acp` holds several sessions per process at all (RS
+> Appendix B V-3, V-5) — the paid manual tests that would settle these, RS-M1 through RS-M10 plus
+> V-3 and V-5, are written in [manual-tests/room-sessions.md](manual-tests/room-sessions.md) and
+> have not been run; deferred to the Human's own user acceptance testing. See
+> [Known limits](known-limits.md).
+
+The rest of this section is the original reasoning, kept for why the design took the shape it did.
 
 Today one session per Persona serves every Room the Persona is in. The only thing
 telling Rooms apart is the `[Room: name (id: …)]` label on each prompt. At small scale

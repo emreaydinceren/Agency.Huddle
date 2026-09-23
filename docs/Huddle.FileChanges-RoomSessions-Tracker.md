@@ -7,7 +7,7 @@ which implements [Huddle.FileChanges-Specifications.md](Huddle.FileChanges-Speci
 (Stage 2). Deliverables and task numbers match the plan exactly; the plan holds each task's
 Goal, Read first, Deliverable and Acceptance.
 
-**Status as of 2026-09-23:** 93 tasks · 51 Active · 2 In Progress · 40 Done.
+**Status as of 2026-09-23:** 93 tasks · 4 Active · 0 In Progress · 89 Done.
 
 ## How to update this tracker
 
@@ -95,73 +95,73 @@ Goal, Read first, Deliverable and Acceptance.
 | 14.3.m Paid: verify V-1 and V-2, then FC-V (FM-6) | ✔ | | |
 | **D15. Stage 1 documentation and manual tests** | | | |
 | 15.1.m Paid: run FM-0 to FM-8 | ✔ | | |
-| 15.2 Update the docs Stage 1 changed | | ✔ | |
+| 15.2 Update the docs Stage 1 changed | | | ✔ |
 | **Stage 2 — Room Sessions** | | | |
 | **D16. Phase 0: shippable without the refactor** | | | |
-| 16.1.t Test: Stop is per Room inside the one session (red) | | ✔ | |
-| 16.1.i Implement Stop per Room | ✔ | | |
-| 16.2.t Test: the shared-session line in every system prompt (red) | ✔ | | |
-| 16.2.i Implement `systemPrompt.sharedSession` | ✔ | | |
-| 16.3.t Test: same-named Rooms get a suffix (red) | ✔ | | |
-| 16.3.i Implement `RoomLabels` and the runner's known names | ✔ | | |
+| 16.1.t Test: Stop is per Room inside the one session (red) | | | ✔ |
+| 16.1.i Implement Stop per Room | | | ✔ |
+| 16.2.t Test: the shared-session line in every system prompt (red) | | | ✔ |
+| 16.2.i Implement `systemPrompt.sharedSession` | | | ✔ |
+| 16.3.t Test: same-named Rooms get a suffix (red) | | | ✔ |
+| 16.3.i Implement `RoomLabels` and the runner's known names | | | ✔ |
 | **D17. Paid: RS-M1 "before"** | | | |
 | 17.1.m Paid: run the two-trip stress test on Phase 0 | ✔ | | |
 | **D18. ACP effort: resume, not-found, capability, fake agent** | | | |
-| 18.1.t Test: capability and not-found (red) | ✔ | | |
-| 18.1.i Implement A-2 and A-3 | ✔ | | |
-| 18.2.t Test: `ResumeSessionAsync` (red) | ✔ | | |
-| 18.2.i Implement A-1 | ✔ | | |
-| 18.3.t Test: `FakeAcpAgent` conformance (red) | ✔ | | |
-| 18.3.i Implement A-5 | ✔ | | |
+| 18.1.t Test: capability and not-found (red) | | | ✔ |
+| 18.1.i Implement A-2 and A-3 | | | ✔ |
+| 18.2.t Test: `ResumeSessionAsync` (red) | | | ✔ |
+| 18.2.i Implement A-1 | | | ✔ |
+| 18.3.t Test: `FakeAcpAgent` conformance (red) | | | ✔ |
+| 18.3.i Implement A-5 | | | ✔ |
 | **D19. `IPersonaHost` and the factory split** | | | |
-| 19.1.t Test: a host opens many sessions and resumes (red) | ✔ | | |
-| 19.1.i Implement `IPersonaHost` and split the factory | ✔ | | |
+| 19.1.t Test: a host opens many sessions and resumes (red) | | | ✔ |
+| 19.1.i Implement `IPersonaHost` and split the factory | | | ✔ |
 | **D20. `RoomSessionStore`** | | | |
-| 20.1.t Test: the store (red) | ✔ | | |
-| 20.1.i Implement `RoomSessionStore` | ✔ | | |
+| 20.1.t Test: the store (red) | | | ✔ |
+| 20.1.i Implement `RoomSessionStore` | | | ✔ |
 | **D21. `ReadTranscript` and `TranscriptTail` on the wire** | | | |
-| 21.1.t Test: the two Envelopes' literal JSON (red) | ✔ | | |
-| 21.1.i Add the two Envelopes | ✔ | | |
-| 21.2.t Functional test: `AgentConnection` answers `ReadTranscript` (red) | ✔ | | |
-| 21.2.i Handle `ReadTranscript` in `AgentConnection` | ✔ | | |
+| 21.1.t Test: the two Envelopes' literal JSON (red) | | | ✔ |
+| 21.1.i Add the two Envelopes | | | ✔ |
+| 21.2.t Functional test: `AgentConnection` answers `ReadTranscript` (red) | | | ✔ |
+| 21.2.i Handle `ReadTranscript` in `AgentConnection` | | | ✔ |
 | **D22. `RoomSession`: the Turn machinery moves out of the runner** | | | |
-| 22.1.t Test: a `RoomSession` runs Turns on its own (red) | ✔ | | |
-| 22.1.i Extract `RoomSession` | ✔ | | |
+| 22.1.t Test: a `RoomSession` runs Turns on its own (red) | | | ✔ |
+| 22.1.i Extract `RoomSession` | | | ✔ |
 | **D23. `RoomSessionPool`, `TurnGate` and the options** | | | |
-| 23.1.t Test: `TurnGate` admits in ticket order (red) | ✔ | | |
-| 23.1.i Implement `TurnGate` | ✔ | | |
-| 23.2.t Test: options and `SessionPerRoom` (red) | ✔ | | |
-| 23.2.i Add the options and the flag | ✔ | | |
-| 23.3.t Functional test: the pool (red) | ✔ | | |
-| 23.3.i Implement `RoomSessionPool` and wire it in | ✔ | | |
+| 23.1.t Test: `TurnGate` admits in ticket order (red) | | | ✔ |
+| 23.1.i Implement `TurnGate` | | | ✔ |
+| 23.2.t Test: options and `SessionPerRoom` (red) | | | ✔ |
+| 23.2.i Add the options and the flag | | | ✔ |
+| 23.3.t Functional test: the pool (red) | | | ✔ |
+| 23.3.i Implement `RoomSessionPool` and wire it in | | | ✔ |
 | **D24. Resume and Transcript Catch-up** | | | |
-| 24.1.t Test: three Turn Prompts and the Transcript block (red) | ✔ | | |
-| 24.1.i Implement the three Prompts and the block | ✔ | | |
-| 24.2.t Functional test: opening, resuming and the Transcript read (red) | ✔ | | |
-| 24.2.i Implement opening, resume and the Transcript read | ✔ | | |
+| 24.1.t Test: three Turn Prompts and the Transcript block (red) | | | ✔ |
+| 24.1.i Implement the three Prompts and the block | | | ✔ |
+| 24.2.t Functional test: opening, resuming and the Transcript read (red) | | | ✔ |
+| 24.2.i Implement opening, resume and the Transcript read | | | ✔ |
 | **D25. Stop routed to its Room Session** | | | |
-| 25.1.t Test: Stop in per-Room mode (red) | ✔ | | |
-| 25.1.i Close any gap and document | ✔ | | |
+| 25.1.t Test: Stop in per-Room mode (red) | | | ✔ |
+| 25.1.i Close any gap and document | | | ✔ |
 | **D26. One failure streak, Room-named reasons, the summed Budget** | | | |
-| 26.1.t Test: health and Budget across Room Sessions (red) | ✔ | | |
-| 26.1.i Implement | ✔ | | |
+| 26.1.t Test: health and Budget across Room Sessions (red) | | | ✔ |
+| 26.1.i Implement | | | ✔ |
 | **D27. `OwnPosts`** | | | |
-| 27.1.t Test: `OwnPosts` and `turn.ownPostLine` (red) | ✔ | | |
-| 27.1.i Implement `OwnPosts` | ✔ | | |
+| 27.1.t Test: `OwnPosts` and `turn.ownPostLine` (red) | | | ✔ |
+| 27.1.i Implement `OwnPosts` | | | ✔ |
 | **D28. The truthful system prompt per mode, and the default flip** | | | |
-| 28.1.t Test: two more system Prompts, goldens per mode (red) | ✔ | | |
-| 28.1.i Implement the per-mode text | ✔ | | |
-| 28.2 Flip `SessionPerRoom` to `true` by default | ✔ | | |
+| 28.1.t Test: two more system Prompts, goldens per mode (red) | | | ✔ |
+| 28.1.i Implement the per-mode text | | | ✔ |
+| 28.2 Flip `SessionPerRoom` to `true` by default | | | ✔ |
 | **D29. Supervisor forgets, cascade moves** | | | |
-| 29.1.t Test: Restart forgets, app restart resumes, rename moves (red) | ✔ | | |
-| 29.1.i Implement | ✔ | | |
+| 29.1.t Test: Restart forgets, app restart resumes, rename moves (red) | | | ✔ |
+| 29.1.i Implement | | | ✔ |
 | **D30. MockAdapter conformance** | | | |
-| 30.1.t Test: two sessions, a resume and a close on one mock process (red) | ✔ | | |
-| 30.1.i Close any gap | ✔ | | |
+| 30.1.t Test: two sessions, a resume and a close on one mock process (red) | | | ✔ |
+| 30.1.i Close any gap | | | ✔ |
 | **D31. The coordinator paragraph** | | | |
-| 31.1.t Test: the Skill and the Chief of Staff say it (red) | ✔ | | |
-| 31.1.i Write the paragraph | ✔ | | |
+| 31.1.t Test: the Skill and the Chief of Staff say it (red) | | | ✔ |
+| 31.1.i Write the paragraph | | | ✔ |
 | **D32. Paid manual tests** | | | |
 | 32.1.m Paid: RS-M1 "after" and RS-M2 to RS-M10 | ✔ | | |
 | **D33. Stage 2 documentation** | | | |
-| 33.1 Update the docs Stage 2 changed | ✔ | | |
+| 33.1 Update the docs Stage 2 changed | | | ✔ |

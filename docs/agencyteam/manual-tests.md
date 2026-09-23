@@ -208,6 +208,11 @@ FM-8 plus RS Appendix B's V-1, V-2 and V-4. None of them has been run — the co
 2026-09-23, and these paid checks are deferred to the Human's own user acceptance testing. See
 [Known limits](known-limits.md) for what stays unverified until they run.
 
+[**Room Sessions**](manual-tests/room-sessions.md) is also newer, and also not yet folded into the
+counts and estimates below: 12 tests, all paid, covering RS §10's RS-M1 through RS-M10 plus RS
+Appendix B's V-3 and V-5. None of them has been run — the code shipped 2026-09-23, and these paid
+checks are deferred the same way File Changes' are. See [Known limits](known-limits.md).
+
 Two pages exist for the run around the run, and neither is needed while executing:
 [**Planning**](manual-tests/planning.md) to pick what to run — the 16 areas with
 their counts and estimates, the 20-test smoke pass, the paid-test register, the
