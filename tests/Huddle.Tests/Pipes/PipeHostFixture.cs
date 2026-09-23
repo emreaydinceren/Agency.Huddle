@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System.IO.Pipes;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.Tests.Pipes;
@@ -135,6 +136,7 @@ public sealed class PipeHostFixture : IAsyncDisposable
         builder.Configuration.AddInMemoryCollection(config);
         builder.Services.AddTeamServices(builder.Configuration);
         RemovePersonaSupervisorHostedService(builder.Services);
+        RemoveBuiltinTeammateSeederHostedService(builder.Services);
 
         var loggerProvider = new CapturingLoggerProvider();
         builder.Logging.AddProvider(loggerProvider);
@@ -240,5 +242,42 @@ public sealed class PipeHostFixture : IAsyncDisposable
         }
 
         services.Remove(hostedServiceFactories[0]);
+    }
+
+    /// <summary>
+    /// Removes the <see cref="BuiltinTeammateSeeder"/> <see cref="IHostedService"/> that
+    /// <see cref="ServiceCollectionExtensions.AddTeamServices"/> just registered, so this fixture's
+    /// <see cref="IHost"/> never writes a real Chief of Staff Persona onto disk.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The seeder always runs in the product (Spec §6.12) - that is settled, and this is not a
+    /// config switch to turn it off. It IS, however, exactly the class of exclusion
+    /// <see cref="RemovePersonaSupervisorHostedService"/> already sets precedent for: this fixture
+    /// exists so a test can hand-craft a small, exact Persona library (<c>WritePersonaFile</c>,
+    /// <c>personaStore.Add</c>) and assert on it precisely - a real Chief of Staff appearing
+    /// unbidden, with its own free Name/Alias search racing whatever the test just wrote, is the
+    /// same "second, independently-behaving thing polluting a controlled fixture" problem
+    /// <see cref="RemovePersonaSupervisorHostedService"/>'s own remarks describe, one hosted service
+    /// over. <see cref="Agency.Huddle.Tests.Acp.PersonaSupervisorTests"/> is what surfaced this: with
+    /// the seeder left in, <c>Enabled_StartsOneHostPerPersonaFile</c> saw three hosts start instead
+    /// of two, and several single-Persona tests saw a second, always-Offline "Chief of Staff" host
+    /// racing the one Persona they actually wrote.
+    /// </para>
+    /// <para>
+    /// Registered by type, not by factory, so the removal is a straight <c>ImplementationType</c>
+    /// match rather than <see cref="RemovePersonaSupervisorHostedService"/>'s factory-counting
+    /// dance.
+    /// </para>
+    /// </remarks>
+    /// <param name="services">The fixture's service collection, already populated by <see cref="ServiceCollectionExtensions.AddTeamServices"/>.</param>
+    internal static void RemoveBuiltinTeammateSeederHostedService(IServiceCollection services)
+    {
+        var registration = services.FirstOrDefault(
+            d => d.ServiceType == typeof(IHostedService) && d.ImplementationType == typeof(BuiltinTeammateSeeder))
+            ?? throw new InvalidOperationException(
+                $"Expected {nameof(ServiceCollectionExtensions.AddTeamServices)} to register {nameof(BuiltinTeammateSeeder)} " +
+                "as an IHostedService, but no such registration was found. Has it been renamed or moved?");
+        services.Remove(registration);
     }
 }

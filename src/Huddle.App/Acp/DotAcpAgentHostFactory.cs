@@ -6,6 +6,7 @@ using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.Acp.Tools;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Skills;
 
 namespace Agency.Huddle.App.Acp;
 
@@ -37,6 +38,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     private readonly ILogger<DotAcpAgentHostFactory> logger;
     private readonly AdapterProfileResolver resolver;
     private readonly IAgentProcessLauncher launcher;
+    private readonly SkillStore skills;
 
     /// <summary>Initializes a new instance of the <see cref="DotAcpAgentHostFactory"/> class.</summary>
     /// <param name="options">The bound <see cref="TeamOptions"/>.</param>
@@ -53,18 +55,27 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// already existed for <see cref="DotAcpAgentHost"/> to accept - this only stops that seam being
     /// bypassed by a hardcoded <see cref="AgentProcessLauncher"/> here.
     /// </param>
+    /// <param name="skills">
+    /// Resolves a Persona's assigned Skill names to their current <see cref="Skill"/> records
+    /// (Spec §6.4, §6.5). Read here from <see cref="Persona.Text"/> directly, rather than threaded
+    /// through <see cref="IAgentHostFactory.CreateAsync"/>'s parameters, because that signature stays
+    /// narrow (Spec §6.4 Implementation notes) — <c>PersonaSupervisor</c> resolves the same names a
+    /// second time, only for the Degraded warnings it reports before ever calling this factory.
+    /// </param>
     public DotAcpAgentHostFactory(
         IOptions<TeamOptions> options,
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory,
         AdapterProfileResolver resolver,
-        IAgentProcessLauncher launcher)
+        IAgentProcessLauncher launcher,
+        SkillStore skills)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(serviceProvider);
         ArgumentNullException.ThrowIfNull(loggerFactory);
         ArgumentNullException.ThrowIfNull(resolver);
         ArgumentNullException.ThrowIfNull(launcher);
+        ArgumentNullException.ThrowIfNull(skills);
 
         this.options = options.Value;
         this.serviceProvider = serviceProvider;
@@ -72,6 +83,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         this.logger = loggerFactory.CreateLogger<DotAcpAgentHostFactory>();
         this.resolver = resolver;
         this.launcher = launcher;
+        this.skills = skills;
     }
 
     public async Task<(IAgentHost Host, IAgentSession Session)> CreateAsync(Persona persona, string agentId, CancellationToken cancellationToken)
@@ -98,9 +110,23 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         // (agent-guide.md §7.5), so this is the only place its value is held outside the tool server.
         var authToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 
+        // Parsed from the Persona's own text rather than threaded through this method's signature
+        // (Spec §6.4 Implementation notes keeps IAgentHostFactory.CreateAsync narrow). A Persona with
+        // no frontmatter at all - or malformed frontmatter - is not an error here: it simply holds no
+        // Skills. PersonaSupervisor resolves the same names a second time, purely to report a Degraded
+        // warning for one that does not exist (Task 5.2); this factory never surfaces that warning,
+        // only the resulting tool grants and Skill Index.
+        IReadOnlyList<string> skillNames = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)
+            ? identity.Skills ?? []
+            : [];
+        SkillResolution skillResolution = this.skills.Resolve(skillNames);
+
         // Built by our own service provider, bound to this Agent id, so each tool call runs the same
         // domain code the UI calls. AppToolServer's WebApplication.CreateBuilder() is a second,
         // genuinely separate DI container - the tool instances must never be resolved from it.
+        // Captured in its own local, the same reason getHelpTool is below, so this method never
+        // retypes "read_skill" - the Compose call further down reads it off readSkillTool.Name.
+        var readSkillTool = ActivatorUtilities.CreateInstance<ReadSkillTool>(this.serviceProvider, persona.Name);
         IReadOnlyList<IAppTool> chatTools =
         [
             ActivatorUtilities.CreateInstance<ListAgentsTool>(this.serviceProvider),
@@ -109,7 +135,15 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             ActivatorUtilities.CreateInstance<PostMessageTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<FollowRoomTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<UnfollowRoomTool>(this.serviceProvider, agentId),
+            readSkillTool,
+            ActivatorUtilities.CreateInstance<ValidateTeammateTool>(this.serviceProvider),
+            ActivatorUtilities.CreateInstance<ProposeTeammatesTool>(this.serviceProvider, agentId),
         ];
+
+        // Skill gating happens before GetHelpTool is built, so get_help's own listing and the system
+        // prompt's tool list both reflect only the tools this session was actually offered (Spec §6.5:
+        // "GetHelpTool is constructed from the offered list, so get_help and tools/list agree").
+        chatTools = SkillGrants.Offer(chatTools, skillResolution.Skills);
 
         var prompts = this.serviceProvider.GetRequiredService<IPromptSource>();
 
@@ -160,7 +194,13 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                         ? new WorkDirPermissionHandler(protectedDirectory, this.loggerFactory.CreateLogger<WorkDirPermissionHandler>())
                         : new AutoApprovePermissionHandler(),
                     new SystemPromptOptions(
-                        SystemPromptComposer.Compose(persona, prompts, toolNamePrefix + getHelpTool.Name, toolNames),
+                        SystemPromptComposer.Compose(
+                            persona,
+                            prompts,
+                            toolNamePrefix + getHelpTool.Name,
+                            toolNames,
+                            skillResolution.Skills,
+                            toolNamePrefix + readSkillTool.Name),
                         SystemPromptMode.Append),
                     toolServer.Endpoint,
                     persona.Model,

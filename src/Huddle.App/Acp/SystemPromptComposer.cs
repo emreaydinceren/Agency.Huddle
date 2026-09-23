@@ -1,6 +1,7 @@
 namespace Agency.Huddle.App.Acp;
 
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Skills;
 
 /// <summary>
 /// Builds the full system prompt for an Agent's session: a short canned orientation naming
@@ -21,7 +22,7 @@ using Agency.Huddle.App.Prompts;
 /// prefix, or a deferred-tool-mode model reports that no such tool exists rather than finding it by a
 /// looser name. Getting this wrong cost a previous author four rounds of debugging. That prefix is
 /// applied by the caller, in code, from the same tool-server name it hands to <c>AppToolServer</c> —
-/// never typed into a prompt's template — so <see cref="Compose"/> receives both <c>toolNames</c> and
+/// never typed into a prompt's template — so <c>Compose</c> receives both <c>toolNames</c> and
 /// <c>helpToolName</c> already prefixed, and only has to join and wrap them. This type holds no
 /// <c>"mcp__team__"</c> literal of its own, for either one.
 /// </para>
@@ -56,10 +57,47 @@ internal static class SystemPromptComposer
     /// <returns>The five parts — orientation, Persona text, identity, chat rules, tools — joined with a blank line.</returns>
     internal static string Compose(Persona persona, IPromptSource prompts, string helpToolName, IReadOnlyList<string> toolNames)
     {
+        return Compose(persona, prompts, helpToolName, toolNames, [], string.Empty);
+    }
+
+    /// <summary>
+    /// Composes a Persona's full system prompt, with a sixth part naming its assigned Skills appended
+    /// when it holds any (Spec §6.4). A Persona with no Skills gets output byte-identical to the
+    /// four-argument overload, which is exactly this overload called with an empty Skill list.
+    /// </summary>
+    /// <param name="persona">The Persona whose <see cref="Persona.Text"/> and <see cref="Persona.Name"/> are spliced in.</param>
+    /// <param name="prompts">Resolves each prompt's current text — a configured override, or the <see cref="PromptCatalog"/> default.</param>
+    /// <param name="helpToolName">
+    /// <see cref="Tools.GetHelpTool"/>'s own name, already carrying its full <c>mcp__team__</c> prefix
+    /// (e.g. <c>"mcp__team__get_help"</c>). Named by the caller from the same tool instance it built,
+    /// so this composer never retypes <c>"get_help"</c> or the prefix.
+    /// </param>
+    /// <param name="toolNames">
+    /// Every tool name this session exposes, already carrying its full <c>mcp__team__</c> prefix, in
+    /// the order they should be listed.
+    /// </param>
+    /// <param name="skills">The Persona's resolved Skills for this session; an empty list omits the block entirely.</param>
+    /// <param name="readSkillToolName">
+    /// <c>read_skill</c>'s own name, already carrying its full <c>mcp__team__</c> prefix. Only read when
+    /// <paramref name="skills"/> is non-empty, so a caller with no Skills may pass an empty string.
+    /// </param>
+    /// <returns>
+    /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/> is
+    /// non-empty.
+    /// </returns>
+    internal static string Compose(
+        Persona persona,
+        IPromptSource prompts,
+        string helpToolName,
+        IReadOnlyList<string> toolNames,
+        IReadOnlyList<Skill> skills,
+        string readSkillToolName)
+    {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
         ArgumentException.ThrowIfNullOrWhiteSpace(helpToolName);
         ArgumentNullException.ThrowIfNull(toolNames);
+        ArgumentNullException.ThrowIfNull(skills);
 
         var orientation = prompts.Render(
             "systemPrompt.orientation",
@@ -75,7 +113,30 @@ internal static class SystemPromptComposer
             "systemPrompt.tools",
             new Dictionary<string, string> { ["{{toolNames}}"] = WrapToolNames(toolNames) });
 
-        return string.Join("\n\n", orientation, persona.Text, identity, chatRules, tools);
+        if (skills.Count == 0)
+        {
+            return string.Join("\n\n", orientation, persona.Text, identity, chatRules, tools);
+        }
+
+        ArgumentException.ThrowIfNullOrWhiteSpace(readSkillToolName);
+
+        var skillsBlock = prompts.Render(
+            "systemPrompt.skills",
+            new Dictionary<string, string>
+            {
+                ["{{skillIndex}}"] = BuildSkillIndex(skills),
+                ["{{readSkillTool}}"] = readSkillToolName,
+            });
+
+        return string.Join("\n\n", orientation, persona.Text, identity, chatRules, tools, skillsBlock);
+    }
+
+    /// <summary>Renders the Skill Index: one <c>- {name}: {description}</c> line per Skill, in the given order.</summary>
+    /// <param name="skills">The Persona's resolved Skills, in the order they should be listed.</param>
+    /// <returns>The Skill Index text, ready to substitute for <c>{{skillIndex}}</c>.</returns>
+    private static string BuildSkillIndex(IReadOnlyList<Skill> skills)
+    {
+        return string.Join('\n', skills.Select(skill => $"- {skill.Name}: {skill.Description}"));
     }
 
     /// <summary>

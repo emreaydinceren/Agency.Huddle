@@ -1,0 +1,8 @@
+/* A Candidate's Body is free text an Agent wrote, so its line breaks are kept exactly as it wrote
+   them - the same reasoning that makes this a stylesheet class rather than a Style="..." attribute:
+   ThemeSourceTests.RazorComponents_NoInlineColourLiteralInStyleAttribute's colour-literal regex
+   matches "white" inside "white-space" as a whole word, so this rule could never have lived inline
+   without tripping it. No var() here because this rule carries no colour or typography of its own. */
+.proposal-card-body {
+    white-space: pre-wrap;
+}

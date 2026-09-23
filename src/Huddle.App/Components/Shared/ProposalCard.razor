@@ -1,0 +1,235 @@
+@*
+    A Proposal waiting for a decision, shown where the conversation that produced it happened (Spec
+    §6.11). Mirrors the Budget prompt in Chat.razor: view state derived from in-memory server state
+    (ProposalStore.Get(roomId)), answered by an in-process call to ProposalService - no Envelope.
+
+    The busy flag and the RoomEvents.ProposalChanged subscription interact in a way worth recording.
+    ProposalService.ApproveAsync/DeclineAsync's very first action is ProposalStore.TryTake, which
+    fires ProposalChanged synchronously, before either method's own first await - and this card is
+    itself subscribed to that event. A handler that always refreshed "proposal" on every fire would
+    therefore hide this card the instant ITS OWN Approve/Decline click began, before "busy" could
+    ever be observed disabling the buttons. OnProposalChanged below guards against exactly that: it
+    ignores a fire while this.busy is true, and the click handler's own finally block re-reads
+    ProposalStore.Get once the call returns - Approved, Declined or Gone (another tab won the race)
+    all converge on the same refresh, so nothing is lost either way. A fire for a DIFFERENT, external
+    change (another tab, while this card is idle) still updates normally.
+*@
+@implements IDisposable
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Teammates
+@using Microsoft.Extensions.Options
+
+@inject RoomEvents Events
+@inject ProposalStore Proposals
+@inject ProposalService Service
+@inject PersonaStore Personas
+@inject ITeamDirectory TeamDirectory
+@inject IOptions<TeamOptions> Options
+@inject ISnackbar Snackbar
+
+@if (this.proposal is { } current && this.room is { Archived: false })
+{
+    @* MudAlert renders no role by default - verified against the rendered markup, not assumed - so
+       role="alert" is added explicitly, per rules.md. Severity.Info rather than Warning: a Proposal
+       is not a problem, it is an ordinary agent-initiated request for a decision - the same
+       reasoning that gives it "alert" rather than "status" is the Budget prompt's own precedent
+       (Chat.razor, lines 107-138): this was not caused by the Human's own click, so it needs
+       announcing rather than merely confirming. *@
+    <MudAlert Severity="Severity.Info" Class="proposal-card" role="alert">
+        <p class="proposal-card-text">@current.ProposerName proposes new Teammates. Approve creates these Teammates.</p>
+        <p class="proposal-card-headroom">@this.HeadroomText(current)</p>
+
+        <MudTable Items="@current.Candidates" Hover="false" Dense="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Alias</MudTh>
+                <MudTh>Title</MudTh>
+                <MudTh>Teams</MudTh>
+                <MudTh>Consult When</MudTh>
+            </HeaderContent>
+            <RowTemplate Context="candidate">
+                <MudTd DataLabel="Name">@candidate.Name</MudTd>
+                <MudTd DataLabel="Alias">@candidate.Alias</MudTd>
+                <MudTd DataLabel="Title">@candidate.Title</MudTd>
+                <MudTd DataLabel="Teams">@string.Join(", ", candidate.Teams)</MudTd>
+                <MudTd DataLabel="Consult When">@candidate.ConsultWhen</MudTd>
+            </RowTemplate>
+        </MudTable>
+
+        <MudExpansionPanels Class="proposal-card-bodies">
+            @foreach (var candidate in current.Candidates)
+            {
+                <MudExpansionPanel Text="@candidate.Name">
+                    <MudText Class="proposal-card-body">@candidate.Body</MudText>
+                </MudExpansionPanel>
+            }
+        </MudExpansionPanels>
+
+        <MudStack Row="true" Spacing="2" Class="proposal-card-actions">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@this.busy" OnClick="this.ApproveAsync">Approve</MudButton>
+            <MudButton Variant="Variant.Outlined" Disabled="@this.busy" OnClick="this.DeclineAsync">Decline</MudButton>
+        </MudStack>
+    </MudAlert>
+}
+
+@code {
+    /// <summary>The Room whose pending Proposal, if any, this card shows.</summary>
+    [Parameter, EditorRequired]
+    public string RoomId { get; set; } = "";
+
+    private string? loadedRoomId;
+    private Proposal? proposal;
+    private Room? room;
+    private bool busy;
+
+    /// <summary>Subscribes to <see cref="RoomEvents.ProposalChanged"/> - unsubscribed in <see cref="Dispose"/>, per rules.md.</summary>
+    protected override void OnInitialized()
+    {
+        this.Events.ProposalChanged += this.OnProposalChanged;
+    }
+
+    /// <summary>Reloads this card's Room and pending Proposal whenever <see cref="RoomId"/> changes - a component reused across Rooms, per Spec §6.11.</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (this.RoomId == this.loadedRoomId)
+        {
+            return;
+        }
+
+        this.loadedRoomId = this.RoomId;
+        await this.LoadAsync();
+    }
+
+    /// <summary>Unsubscribes from <see cref="RoomEvents.ProposalChanged"/> - the hub is a singleton, so a component that does not unsubscribe here never dies.</summary>
+    public void Dispose()
+    {
+        this.Events.ProposalChanged -= this.OnProposalChanged;
+    }
+
+    /// <summary>Reads this card's Room (for its Archived flag) and whatever Proposal is currently pending for it.</summary>
+    private async Task LoadAsync()
+    {
+        this.room = await this.TeamDirectory.GetRoomAsync(this.RoomId);
+        this.proposal = this.Proposals.Get(this.RoomId);
+    }
+
+    /// <summary>
+    /// Reacts to <see cref="RoomEvents.ProposalChanged"/> for this card's own Room - filtered to
+    /// <see cref="RoomId"/>, and ignored entirely while <see cref="busy"/> is true, because that
+    /// case is this card's OWN Approve/Decline call taking the Proposal: its click handler's own
+    /// <c>finally</c> block refreshes state once that call returns, so reacting here too would only
+    /// hide the busy view before it could ever be seen. See the file's own top-of-file remarks.
+    /// </summary>
+    /// <param name="roomId">The Room whose pending Proposal changed.</param>
+    private void OnProposalChanged(string roomId)
+    {
+        if (!string.Equals(roomId, this.RoomId, StringComparison.Ordinal) || this.busy)
+        {
+            return;
+        }
+
+        _ = this.DispatchAsync(() =>
+        {
+            this.proposal = this.Proposals.Get(this.RoomId);
+            this.StateHasChanged();
+        });
+    }
+
+    /// <summary>
+    /// Approves <see cref="proposal"/> through the real <see cref="ProposalService"/> - the outcome
+    /// appears as the posted Message, never as card state (Spec §6.11), so this method only refreshes
+    /// whether a Proposal is still pending once the call returns. Any exception is reported through
+    /// <see cref="ISnackbar"/> rather than left to crash the circuit - <see cref="ProposalService"/>
+    /// already turns every expected failure into a <see cref="ProposalOutcome"/> rather than a throw,
+    /// so this catch exists only for whatever it does not anticipate.
+    /// </summary>
+    private async Task ApproveAsync()
+    {
+        if (this.busy || this.proposal is not { } current)
+        {
+            return;
+        }
+
+        this.busy = true;
+        try
+        {
+            _ = await this.Service.ApproveAsync(this.RoomId, current.Id, CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            this.Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            this.proposal = this.Proposals.Get(this.RoomId);
+            this.busy = false;
+        }
+    }
+
+    /// <summary>The Decline twin of <see cref="ApproveAsync"/> - see its remarks for the busy/refresh and exception-handling reasoning, both identical here.</summary>
+    private async Task DeclineAsync()
+    {
+        if (this.busy || this.proposal is not { } current)
+        {
+            return;
+        }
+
+        this.busy = true;
+        try
+        {
+            _ = await this.Service.DeclineAsync(this.RoomId, current.Id, CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            this.Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            this.proposal = this.Proposals.Get(this.RoomId);
+            this.busy = false;
+        }
+    }
+
+    /// <summary>
+    /// The headroom line (Spec §6.11): "This adds 2 Teammates; 5 of 8 exist.", singular for one
+    /// Candidate, and with the "of 8 exist" clause dropped entirely when
+    /// <see cref="Acp.AcpOptions.MaxTeammates"/> is zero or negative (no limit). Recomputed on every
+    /// render from the live <see cref="PersonaStore.Entries"/> count, never cached.
+    /// </summary>
+    /// <param name="current">The Proposal whose Candidate count is being added.</param>
+    private string HeadroomText(Proposal current)
+    {
+        var count = current.Candidates.Count;
+        var noun = count == 1 ? "Teammate" : "Teammates";
+        var max = this.Options.Value.Acp.MaxTeammates;
+
+        if (max <= 0)
+        {
+            return $"This adds {count} {noun}.";
+        }
+
+        var existing = this.Personas.Entries.Count;
+        return $"This adds {count} {noun}; {existing} of {max} exist.";
+    }
+
+    /// <summary>
+    /// Marshals <paramref name="action"/> onto this component's renderer, matching
+    /// <c>Chat.razor</c>'s and <c>InviteTeammate.razor</c>'s own <c>DispatchAsync</c> - a stale
+    /// <see cref="RoomEvents"/> subscription firing after this card has already been disposed (a
+    /// Room switch, a closed circuit) must not throw.
+    /// </summary>
+    /// <param name="action">The state update and repaint to run on the renderer.</param>
+    private async Task DispatchAsync(Action action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+}

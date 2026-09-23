@@ -1,6 +1,10 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Agency.Huddle.App;
+using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Teammates;
 
 namespace Agency.Huddle.Tests;
 
@@ -54,5 +58,47 @@ public sealed class ServiceCollectionExtensionsTests
         var result = services.AddTeamServices(configuration);
 
         Assert.Same(services, result);
+    }
+
+    /// <summary>
+    /// Spec §10's ordering constraint 1: <c>DataInitializer</c> -&gt; <c>BuiltinTeammateSeeder</c> -&gt;
+    /// <see cref="PersonaSupervisor"/>, in that order. Hosted services start in registration order, so
+    /// resolving <see cref="IHostedService"/> and checking the position each one lands at is the same
+    /// thing as checking start order: the seeder must observe an empty Chief of Staff at startup and
+    /// write it before the supervisor's first reconciliation, never after.
+    /// </summary>
+    [Fact]
+    public async Task HostedServices_SeederRegisteredAfterDataInitializerAndBeforeSupervisor()
+    {
+        using TempDataDir dataDir = new();
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:DataDir"] = dataDir.Path,
+                ["Team:HumanName"] = "You",
+                ["Team:DemoAgent:Enabled"] = "false",
+                ["Team:Acp:Enabled"] = "false",
+            })
+            .Build();
+        ServiceCollection services = new();
+        services.AddLogging();
+        services.AddTeamServices(configuration);
+
+        await using ServiceProvider provider = services.BuildServiceProvider();
+        List<IHostedService> hostedServices = [.. provider.GetServices<IHostedService>()];
+
+        var dataInitializerIndex = hostedServices.FindIndex(service => service is DataInitializer);
+        var seederIndex = hostedServices.FindIndex(service => service is BuiltinTeammateSeeder);
+        var supervisorIndex = hostedServices.FindIndex(service => service is PersonaSupervisor);
+
+        Assert.True(dataInitializerIndex >= 0, "DataInitializer was not registered as a hosted service.");
+        Assert.True(seederIndex >= 0, "BuiltinTeammateSeeder was not registered as a hosted service.");
+        Assert.True(supervisorIndex >= 0, "PersonaSupervisor was not registered as a hosted service.");
+        Assert.True(
+            dataInitializerIndex < seederIndex,
+            $"Expected DataInitializer (index {dataInitializerIndex}) to start before BuiltinTeammateSeeder (index {seederIndex}).");
+        Assert.True(
+            seederIndex < supervisorIndex,
+            $"Expected BuiltinTeammateSeeder (index {seederIndex}) to start before PersonaSupervisor (index {supervisorIndex}).");
     }
 }

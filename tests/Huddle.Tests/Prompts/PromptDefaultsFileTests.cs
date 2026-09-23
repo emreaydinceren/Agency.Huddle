@@ -14,7 +14,7 @@ using Agency.Huddle.App.Prompts;
 /// </remarks>
 public sealed class PromptDefaultsFileTests
 {
-    /// <summary>The checked-in file carries exactly the 24 keys in <see cref="PromptCatalog"/>, no more and no fewer.</summary>
+    /// <summary>The checked-in file carries exactly the keys in <see cref="PromptCatalog"/>, no more and no fewer.</summary>
     [Fact]
     public void DefaultsFile_HasExactlyTheCatalogKeys()
     {

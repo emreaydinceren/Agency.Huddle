@@ -36,6 +36,13 @@ public sealed class AcpOptions
     /// </summary>
     public string TeamsDir { get; set; } = "Teams";
 
+    /// <summary>
+    /// The Skill Library directory, relative to <see cref="TeamOptions.DataDir"/>, that
+    /// <see cref="Agency.Huddle.App.Skills.SkillStore"/> scans for Skill folders (Spec §7.3).
+    /// Created at startup if missing.
+    /// </summary>
+    public string SkillsDir { get; set; } = "Skills";
+
     // The per-Persona working directory handed to the agent process as its cwd. Not a jail:
     // agent-side Bash and Write run against the real disk.
     public string WorkDir { get; set; } = "work";
@@ -83,4 +90,12 @@ public sealed class AcpOptions
     /// Information-only path a Human pressing Stop takes.
     /// </remarks>
     public int TurnIdleTimeoutSeconds { get; set; } = 180;
+
+    /// <summary>
+    /// The most Teammates this installation allows - every loaded <see cref="PersonaStore"/> entry,
+    /// rejected files excluded (Spec §7.3). Checked by <c>propose_teammates</c> and again at Approve,
+    /// never on the Teammate card, which has no count of its own to enforce against. Zero or less
+    /// disables the limit entirely.
+    /// </summary>
+    public int MaxTeammates { get; set; } = 8;
 }

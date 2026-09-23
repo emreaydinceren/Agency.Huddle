@@ -15,7 +15,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 /// Task T1.11 moved two tests here from <c>PersonaRunnerTests</c>. Both used to pin literals that were
 /// hard-coded inside <see cref="SystemPromptComposer"/> itself, back when there was no other way for
 /// those names to reach the prompt. Now that every one of those literals is a prompt, and
-/// <see cref="SystemPromptComposer.Compose"/> takes <c>toolNames</c> as a parameter, an assertion that
+/// <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string})"/> takes <c>toolNames</c> as a parameter, an assertion that
 /// merely checks the composer's own argument came back out of its own output proves nothing about the
 /// product's actual, shipped wording — it would pass identically for any string the test happened to
 /// pass in. Rendering through a <see cref="FakePromptSource"/> configured with <em>no</em> overrides — it
@@ -46,7 +46,7 @@ public sealed class PromptDefaultsTests
     /// Rule 32, re-anchored: composing a system prompt from <see cref="PromptCatalog"/>'s own shipped
     /// defaults — no override configured — still names every one of the five real tools with its full
     /// <c>mcp__team__</c> prefix. Moved from <c>PersonaRunnerTests.SystemPromptComposer_NamesEveryToolWithMcpPrefix</c>,
-    /// which pinned only that <see cref="SystemPromptComposer.Compose"/>'s own <c>toolNames</c> argument
+    /// which pinned only that <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string})"/>'s own <c>toolNames</c> argument
     /// reappeared in its own output — true for any argument, and no longer a statement about the
     /// product's shipped text now that the composer takes that list as a parameter.
     /// </summary>
@@ -117,7 +117,7 @@ public sealed class PromptDefaultsTests
     /// override configured — validates clean against <see cref="PromptValidator.ValidateSystemPrompt"/>
     /// when checked against the five real, prefixed tool names. <c>PromptValidatorTests</c> already pins
     /// that every default validates clean per-prompt in isolation; this is the same guarantee one level
-    /// up, at the fully composed prompt <see cref="SystemPromptComposer.Compose"/> actually produces.
+    /// up, at the fully composed prompt <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string})"/> actually produces.
     /// </summary>
     [Fact]
     public void DefaultSystemPrompt_ValidatesCleanAgainstTheRealToolNames()

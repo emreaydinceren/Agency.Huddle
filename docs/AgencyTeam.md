@@ -5,9 +5,9 @@ are real Claude agents running as child processes. This page is the hub of its
 documentation: read it whole if you are picking the codebase up cold, then follow
 only the links your task needs.
 
-Applies to the repo as of 2026-09-22, after roadmap item 15 (a Teammate chooses its
-own Avatar): one solution, `Huddle.slnx`, holding all six projects, builds
-with zero warnings and its 1421 tests pass, 10 of them skipped unless
+Applies to the repo as of 2026-09-22, after roadmap item 17 (Skills and the built-in
+Chief of Staff): one solution, `Huddle.slnx`, holding all six projects, builds
+with zero warnings and its 1600 tests pass, 10 of them skipped unless
 `Team:Acp:Enabled` is on — see [Build, test, run](#build-test-run).
 
 The product is Agency.Huddle, and since 2026-09-12 so is every namespace.
@@ -48,6 +48,9 @@ question is yours; the cost column is roughly what it will spend.
 | [Adapters handoff](Huddle.Adapters-Handoff.md) | **Start here for Adapters work.** State of play, what to do first, and the traps. Points at the other three | ~9k |
 | [Adapters design](Huddle.Adapters-Specifications.md) | Before work on which ACP agent a Persona runs on — Adapter Profiles, the tool-name prefix, the Model/Effort catalogue probe, or `Huddle.MockAdapter` | ~45k |
 | [Adapters live findings](Huddle.Adapters-LiveFindings.md) | What contact with the real `agency-acp` changed. The only Adapters doc about reality rather than intent | ~13k |
+| [Skills design](Huddle.Skills-Specifications.md) | Before work on Skills, `read_skill`, `propose_teammates`, Proposals, the built-in Chief of Staff or its Greeting. Three streams, with a test-first task plan. Delivered 2026-09-22 | ~20k |
+| [Skills tracker](Huddle.Skills-Tracker.md) | To see or record where each of the plan's 90 tasks stands | ~4k |
+| [Skills project plan](Huddle.Skills-ProjectPlan.md) | **Start here to build Skills.** 90 atomic, test-first tasks in 17 deliverables, each written for an agent with no context | ~13k |
 | [Decision record](agencyteam/decisions.md) | To revisit a decision, or to read an older doc | ~6.3k |
 | [Domain context](agencyteam/CONTEXT.md) | To see the vocabulary used in dialogue, not defined | ~0.6k |
 | [ADRs](adr/) | To read one decision in full, with what was rejected | ~1.4k each |
@@ -63,7 +66,7 @@ them without opening [Language](agencyteam/language.md):
 
 > Teammate · Human · Agent · Name · Alias · Title · Avatar · Team · Adapter · Room ·
 > Member · Invitation · Archived · Persona · Rejected file · Model · Effort · Turn ·
-> App Tool · Reply Gate · Budget · Catch-up · Progressive discovery · Work Dir ·
+> App Tool · Reply Gate · Budget · Catch-up · Progressive discovery · Skill · Work Dir ·
 > Message · Draft · Mention · Envelope · Transcript · Stop · Team Directory ·
 > Prompt · Placeholder · Default · Timing · Theme · Token · Appearance
 
@@ -206,6 +209,8 @@ All under the `Team:` section — `TeamOptions.cs` and `Acp/AcpOptions.cs`.
 | `Acp:Args` | `null` | |
 | `Acp:TeamsDir` | `Teams` | Relative to `DataDir`. Scanned recursively — sub-folders are organisational only; Team membership comes from each Persona's `teams` frontmatter field, not its location. Setting the old `Acp:PersonaDir` key throws at startup rather than silently scanning nothing. |
 | `Acp:WorkDir` | `work` | One subdirectory per Persona. Relative to `DataDir`. |
+| `Acp:SkillsDir` | `Skills` | Relative to `DataDir`. Holds Skill folders: an override of a shipped Skill, file by file, or a Skill written by hand. Created at startup. See [ADR-0021](adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md). |
+| `Acp:MaxTeammates` | `8` | The most Personas the library may hold before `propose_teammates` refuses a Proposal and Approve creates nothing. Counts every loaded Persona, not only proposed ones; rejected files do not count. Checked when an Agent proposes and again at Approve, never on the Teammate card. Zero or less disables it. Exists because every Teammate is a process. |
 | `Acp:TraceWire` | `false` | **Dumps the bearer token.** Debugging only. |
 | `Acp:CatchUpMessages` | `20` | Per-Room catch-up buffer size. |
 | `Acp:TokenBudget` | `1000000` | Per-Persona token Budget, summed from the rises in `UsageUpdated.Used` and reset by any Human Message. Catches a loop that mints fresh Rooms, which the per-Room Budget cannot. Zero or less disables it. |
@@ -213,10 +218,11 @@ All under the `Team:` section — `TeamOptions.cs` and `Acp/AcpOptions.cs`.
 | `Acp:Adapters` | `null` | The Adapters this installation can launch, in configuration order; the **first is the default**. Absent means exactly one profile synthesised from `Acp:Command` / `Args` / `AdapterPath`, so a stock install is unchanged and the Adapter select does not render. Per entry: `Id`, `DisplayName`, `Description`, `Command`, `Args`, `AdapterPath`, `UsesToolNamePrefix`, `EnvironmentOverrides`. A blank `Command` or a duplicate `Id` throws at **startup**, not at first Turn. See [ADR-0013](adr/0013-an-adapter-is-a-property-of-the-persona.md). |
 | `Acp:Adapters:*:EnvironmentOverrides` | `null` | Environment variables set on that Adapter's process, over and above the inherited environment — how an adapter that ships no `appsettings.json` of its own gets its configuration. **Set these from `appsettings.json`, never through the environment-variable provider:** that provider rewrites every `__` into `:`, so `Team__Acp__Adapters__0__EnvironmentOverrides__Agent__DefaultModel` binds as the key `Agent:DefaultModel`, which no process will ever read. |
 
-Four runtime files and one runtime directory sit outside that section, because none of
+Four runtime files and two runtime directories sit outside that section, because none of
 them is a setting: the Persona library under `{DataDir}/{Acp:TeamsDir}`,
-`{DataDir}/prompts.json`, `{DataDir}/appearance.json`, `{DataDir}/avatars.json`, and the
-uploaded avatar images under `{DataDir}/avatars/`.
+`{DataDir}/prompts.json`, `{DataDir}/appearance.json`, `{DataDir}/avatars.json`, the
+uploaded avatar images under `{DataDir}/avatars/`, and Skill folders under
+`{DataDir}/Skills/`.
 
 | File | Holds |
 | --- | --- |
@@ -224,6 +230,7 @@ uploaded avatar images under `{DataDir}/avatars/`.
 | `{DataDir}/appearance.json` | The selected Theme id. **That one key** — the per-Token override map went with the Tokens on 2026-09-14 ([ADR-0010](adr/0010-a-theme-is-a-mudblazor-theme.md)), and the `dark` light/dark preference went on 2026-09-21 when a Theme became a single palette ([ADR-0017](adr/0017-a-theme-is-a-palette-not-a-pair.md)). A file written before that still carries `dark`; it is an unknown key now, so it is ignored and kept, and there is no migration. Absent is normal and means the default Theme; the app does not create it. Hand-editable and watched, exactly like `prompts.json`. Not a setting under `Team:`: it is state this application writes. |
 | `{DataDir}/avatars.json` | One entry per Teammate that has chosen an **Avatar**, keyed by Name — the Human included, since the Human has a Name but no Persona file. **Overrides only**, exactly like `prompts.json`: an absent file is normal, the app does not create it, and a Teammate with no entry renders the initials it always did. Hand-editable and watched. Deliberately not part of the Persona, so changing an avatar never restarts a session ([ADR-0019](adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md)). |
 | `{DataDir}/avatars/` | The uploaded avatar images themselves, each named by a generated id rather than by a Teammate's Name. Served at `/teammate-avatars` by a `PhysicalFileProvider` — `MapStaticAssets` is manifest-driven and cannot see a file written at run time. Created at startup, unlike the JSON files, because a `PhysicalFileProvider` throws when its root is missing. |
+| `{DataDir}/Skills/` | **Overrides and additions only.** A shipped Skill such as `team-building` lives in code as embedded resources; a folder here with the same name overrides it file by file (Source *Overridden*), and a folder with a new name is a Skill of the Human's own (*Yours*). An override whose `SKILL.md` is invalid falls back to the shipped one with a Warning; an invalid new Skill is left out. Watched: an edited file is what the next `read_skill` returns, while a changed name or description reaches a Teammate's system prompt only at its next session. Created at startup, because its watcher throws when the root is missing. Settings › Skills lists it and restores a default by deleting the override folder. |
 | `prompts.default.json` (beside the binary) | Every Prompt's shipped wording, **generated** from `PromptCatalog` and copied to the output folder. The restore source, and readable as a reference. It is not the authority: delete both files and the app still runs on exactly the text it shipped with. |
 
 A Prompt is one piece of text sent to a model. See [Language](agencyteam/language.md)
@@ -314,7 +321,7 @@ pwsh tools/echo-bot.ps1 -Name mybot
 ```text
 Connecting to pipe '\\.\pipe\team' as agent 'mybot'...
 Sent hello. Listening for messages (Ctrl+C to exit)...
-{"type":"welcome","agentId":"01a08c...","name":"mybot","rooms":[...],"version":2}
+{"type":"welcome","agentId":"01a08c...","name":"mybot","rooms":[{"id":"01a08d...","name":"mybot","members":[...],"isEmpty":true}],"version":3}
 ```
 
 A Room named `mybot` appears in the browser immediately, with no refresh.

@@ -38,6 +38,8 @@
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Pipes
+@using Agency.Huddle.App.Skills
+@using Agency.Huddle.App.Teammates
 @using System.Diagnostics
 @using System.Diagnostics.CodeAnalysis
 @using System.Globalization
@@ -51,6 +53,8 @@
 @inject IAgentGateway Gateway
 @inject ITeamDirectory TeamDirectory
 @inject AvatarStore Avatars
+@inject SkillStore Skills
+@inject BuiltinTeammateReset Reset
 
 <MudDialog>
     <TitleContent>
@@ -143,23 +147,50 @@
                 @* Deliberately an inline swap, not a nested MudDialog: MudBlazor dialogs are not
                    designed to stack, and a confirmation dialog on top of this one would need a second
                    backdrop and a second focus trap for what is only ever a yes/no choice. Swapping the
-                   one Remove button for Confirm/Cancel in place reads as a confirmation without either,
-                   and keeps the whole exchange inside the one dialog whose parameters are already
-                   frozen (see the file-level comment) - a nested dialog would need its own independent
-                   parameter set anyway. *@
-                @if (this.confirmingRemove)
+                   one Remove (or, for the Chief of Staff, Reset to default) button for Confirm/Cancel
+                   in place reads as a confirmation without either, and keeps the whole exchange inside
+                   the one dialog whose parameters are already frozen (see the file-level comment) - a
+                   nested dialog would need its own independent parameter set anyway.
+
+                   The Chief of Staff cannot be Removed (Spec §6.12) - it is recognised by its
+                   PersonaEntry.Builtin marker, resolved fresh here rather than carried as a
+                   [Parameter], since the entry can change (a rename) while this same dialog stays
+                   open, and rules.md forbids adding a member to the Persona record for this. *@
+                @if (this.IsBuiltinTeammate)
                 {
-                    <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="this.ConfirmRemove">Confirm</MudButton>
-                    <MudButton Variant="Variant.Outlined" OnClick="this.CancelRemove">Cancel</MudButton>
+                    @if (this.confirmingReset)
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="this.ConfirmReset">Confirm</MudButton>
+                        <MudButton Variant="Variant.Outlined" OnClick="this.CancelReset">Cancel</MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="this.BeginReset">Reset to default</MudButton>
+                    }
                 }
                 else
                 {
-                    <MudTooltip Text="Remove">
-                        <MudIconButton Icon="@Icons.Material.Filled.PersonRemove" Color="Color.Error"
-                                       aria-label="Remove" OnClick="this.BeginRemove" />
-                    </MudTooltip>
+                    @if (this.confirmingRemove)
+                    {
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="this.ConfirmRemove">Confirm</MudButton>
+                        <MudButton Variant="Variant.Outlined" OnClick="this.CancelRemove">Cancel</MudButton>
+                    }
+                    else
+                    {
+                        <MudTooltip Text="Remove">
+                            <MudIconButton Icon="@Icons.Material.Filled.PersonRemove" Color="Color.Error"
+                                           aria-label="Remove" OnClick="this.BeginRemove" />
+                        </MudTooltip>
+                    }
                 }
             </MudStack>
+
+            @* Spec §6.12's confirm copy, verbatim - shown only during the Reset confirm step, the
+               same way the caption line just below explains what Confirm does for every other card. *@
+            @if (this.IsBuiltinTeammate && this.confirmingReset)
+            {
+                <MudText Typo="Typo.body2" Class="d-block mb-3 mud-text-secondary">Restore the Chief of Staff's instructions, Title, Teams, Skills, Model and Effort to their defaults? Its Name, Alias, Rooms and history are kept.</MudText>
+            }
 
             @if (this.status.State is not PersonaState.Starting)
             {
@@ -253,6 +284,39 @@
                 <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4" role="status">
                     Changing the adapter reset Model and Effort to their defaults. Each adapter advertises its own models, so choices made for the previous adapter do not carry across — pick them again if you want specific ones.
                 </MudAlert>
+            }
+
+            @* Spec §6.7, §2 U7: next to the Adapter select, and the same WriteListField data flow -
+               this.text is the source of truth, re-derived by ReadSkills whenever this.text changes
+               out from under it (BeginEditAsync, a successful Save), and written back through
+               PersonaFrontmatter.WriteListField on every selection change, mirroring how the Adapter
+               select above reads/writes "adapter" through WriteScalarField. No count-gate unlike the
+               Adapter select's "@if (AdapterChoices.Count > 1)": a MultiSelection picker with zero or
+               one option is still a legitimate zero/one-Skill catalog, not a control nobody could use. *@
+            <MudSelect T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills"
+                       SelectedValuesChanged="this.OnSkillsChanged"
+                       HelperText="Changing Skills restarts this Teammate." Class="mb-4">
+                @foreach (var skill in this.Skills.All)
+                {
+                    <MudSelectItem T="string" Value="@skill.Name">
+                        <MudText>@skill.Name</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@skill.Description</MudText>
+                    </MudSelectItem>
+                }
+            </MudSelect>
+
+            @* An assigned Skill name the store no longer resolves - a Skill folder removed or renamed
+               since this Persona last saved (Spec §6.7). Shown as a removable chip rather than silently
+               dropped, so the Human can see it and take it off; OnClose runs the same WriteListField
+               write as a fresh selection, just with the missing name filtered out. *@
+            @if (this.MissingSkillNames.Count > 0)
+            {
+                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mb-4">
+                    @foreach (var missing in this.MissingSkillNames)
+                    {
+                        <MudChip T="string" Color="Color.Warning" OnClose="@(() => this.RemoveSkill(missing))">@missing</MudChip>
+                    }
+                </MudStack>
             }
 
             @* @bind-Value, not @oninput: MudSelect raises its ValueChanged on selection, the same
@@ -456,6 +520,11 @@
     private string? model;
     private string? effort;
     private string? adapter;
+
+    // Unlike model/effort/adapter above, this has no [Parameter] counterpart to seed from: a Skill
+    // assignment lives only in this.text's frontmatter (Spec §6.7), never on the Persona record, so
+    // ReadSkills(this.text) is the only source - see its own remarks.
+    private IReadOnlyList<string> skills = [];
     private Avatar avatar = Avatar.None;
 
     // Editor-only working state for the avatar editor (Part A of the avatar-editor task). None of
@@ -478,6 +547,7 @@
     private PersonaStatus status = new(PersonaState.Offline, null, DateTimeOffset.MinValue);
     private string? error;
     private bool confirmingRemove;
+    private bool confirmingReset;
     private bool restarting;
 
     // Set when PersonaFrontmatter.WriteScalarField silently refused the matching identity box's last
@@ -559,6 +629,7 @@
         this.model = this.Model;
         this.effort = this.Effort;
         this.adapter = this.Adapter;
+        this.skills = ReadSkills(this.text);
         this.SeedAvatarEditorState();
         this.roomId = this.RoomId;
         this.filePath = this.FilePath;
@@ -570,6 +641,12 @@
         // opened with.
         this.Health.Changed += this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged += this.OnHealthOrPresenceChanged;
+
+        // SkillStore is a singleton too - a Skill written or removed on disk while this card is open
+        // must repaint both the option list and MissingSkillNames, the same reasoning as the
+        // Health/Gateway subscriptions above (Spec §6.7's "Internal flow": subscribe, unsubscribe in
+        // Dispose, re-render through InvokeAsync(StateHasChanged)).
+        this.Skills.SkillsChanged += this.OnSkillsStoreChanged;
 
         if (this.mode != TeammateCardMode.Create)
         {
@@ -602,11 +679,12 @@
         }
     }
 
-    /// <summary>Unsubscribes from <see cref="PersonaHealth.Changed"/> and <see cref="IAgentGateway.PresenceChanged"/> - see the file-level comment for why this card, alone among components showing a snapshot-at-open parameter, keeps a live subscription.</summary>
+    /// <summary>Unsubscribes from <see cref="PersonaHealth.Changed"/>, <see cref="IAgentGateway.PresenceChanged"/> and <see cref="SkillStore.SkillsChanged"/> - see the file-level comment for why this card, alone among components showing a snapshot-at-open parameter, keeps live subscriptions.</summary>
     public void Dispose()
     {
         this.Health.Changed -= this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged -= this.OnHealthOrPresenceChanged;
+        this.Skills.SkillsChanged -= this.OnSkillsStoreChanged;
     }
 
     /// <summary>
@@ -647,6 +725,22 @@
         catch (InvalidOperationException)
         {
         }
+    }
+
+    /// <summary>
+    /// Repaints this card when <see cref="SkillStore.SkillsChanged"/> fires - a Skill written,
+    /// edited or removed on disk while this card is open - so the Skills select's own option list
+    /// and <see cref="MissingSkillNames"/> never lag behind what <see cref="Skills"/> currently
+    /// resolves (Spec §6.7's "Internal flow"), the same dispatch <see cref="OnHealthOrPresenceChanged"/>
+    /// uses for its own singleton subscriptions.
+    /// </summary>
+    private void OnSkillsStoreChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 
     /// <summary>
@@ -792,6 +886,19 @@
         TeammateCardMode.Edit => $"Edit {this.name}",
         _ => "Teammate",
     };
+
+    /// <summary>
+    /// Whether the Persona currently filed under <see cref="name"/> carries the
+    /// <see cref="BuiltinTeammate.ChiefOfStaffMarker"/> - resolved fresh from <see cref="Personas"/>
+    /// on every render rather than cached, so a rename in this same open dialog is reflected
+    /// immediately (Spec §6.12). Deliberately not a <c>[Parameter]</c>: rules.md forbids adding a
+    /// member to the <see cref="Persona"/> record, and <see cref="PersonaEntry.Builtin"/> already
+    /// lives on the entry this lookup reads.
+    /// </summary>
+    private bool IsBuiltinTeammate =>
+        this.Personas.Entries.Any(entry =>
+            string.Equals(entry.Name, this.name, StringComparison.Ordinal)
+            && string.Equals(entry.Builtin, BuiltinTeammate.ChiefOfStaffMarker, StringComparison.Ordinal));
 
     // AdapterCatalog is configuration read once at startup, never a probe (Spec §6.6 - "LoadAdapters()
     // - synchronous; configuration, not a probe"), so unlike ModelChoices/EffortChoices below there is
@@ -946,9 +1053,11 @@
         this.model = persona?.Model ?? this.model;
         this.effort = persona?.Effort ?? this.effort;
         this.adapter = persona?.Adapter ?? this.adapter;
+        this.skills = ReadSkills(this.text);
         this.SeedAvatarEditorState();
         this.error = null;
         this.confirmingRemove = false;
+        this.confirmingReset = false;
         this.effortResetByModelChange = false;
         this.adapterResetModelAndEffort = false;
         this.nameLocked = false;
@@ -1125,6 +1234,51 @@
         await efforts;
     }
 
+    /// <summary>
+    /// Parses <paramref name="personaText"/>'s frontmatter and returns its <c>skills</c> field, or an
+    /// empty list when the text has no frontmatter block (Create mode's Persona BODY-only <see cref="text"/>)
+    /// or none was written. The only source of the Skills select's selection (Spec §6.7): unlike
+    /// <see cref="model"/>/<see cref="effort"/>/<see cref="adapter"/>, a Skill assignment has no
+    /// [Parameter]/store counterpart to seed from - it lives only in the frontmatter itself.
+    /// </summary>
+    /// <param name="personaText">The Persona's raw file text, or body-only text in Create mode.</param>
+    private static IReadOnlyList<string> ReadSkills(string personaText) =>
+        PersonaFrontmatter.TryReadIdentity(personaText, out var identity, out _) ? identity.Skills ?? [] : [];
+
+    /// <summary>
+    /// The assigned Skills in <see cref="skills"/> that <see cref="Skills"/> (the store) no longer
+    /// resolves - a folder removed or renamed since this Persona last saved (Spec §6.7). Rendered as
+    /// removable warning chips beneath the select.
+    /// </summary>
+    private IReadOnlyList<string> MissingSkillNames =>
+        [.. this.skills.Where(name => this.Skills.Get(name) is null)];
+
+    /// <summary>
+    /// Sets the selected Skills, keeping <see cref="text"/>'s frontmatter in step through
+    /// <see cref="PersonaFrontmatter.WriteListField"/> - the list-field counterpart of
+    /// <see cref="OnAdapterChangedAsync"/>'s <see cref="PersonaFrontmatter.WriteScalarField"/> write,
+    /// and a no-op in Create mode for the same reason that one is (Spec §6.7). Unlike the Adapter
+    /// select, picking a Skill starts no probe: this is a synchronous, in-memory rewrite only.
+    /// </summary>
+    /// <param name="value">Every Skill name now selected in the picker.</param>
+    private void OnSkillsChanged(IReadOnlyCollection<string> value)
+    {
+        this.skills = [.. value];
+        this.text = PersonaFrontmatter.WriteListField(this.text, "skills", this.skills);
+    }
+
+    /// <summary>
+    /// Drops <paramref name="name"/> from <see cref="skills"/> and rewrites <see cref="text"/> through
+    /// <see cref="PersonaFrontmatter.WriteListField"/> - the Close action on one of
+    /// <see cref="MissingSkillNames"/>'s warning chips (Spec §6.7: "so it can be removed").
+    /// </summary>
+    /// <param name="name">The missing Skill name to remove.</param>
+    private void RemoveSkill(string name)
+    {
+        this.skills = [.. this.skills.Where(existing => !string.Equals(existing, name, StringComparison.Ordinal))];
+        this.text = PersonaFrontmatter.WriteListField(this.text, "skills", this.skills);
+    }
+
     private async Task OnModelChangedAsync(string value)
     {
         this.model = string.IsNullOrWhiteSpace(value) ? null : value;
@@ -1219,7 +1373,7 @@
         {
             if (creating)
             {
-                var identity = new PersonaIdentity(this.name, this.title, this.alias, TeammateCard.ParseTeams(this.teams), this.adapter);
+                var identity = new PersonaIdentity(this.name, this.title, this.alias, TeammateCard.ParseTeams(this.teams), this.adapter, this.skills);
                 persona = this.Personas.Add(identity, this.text, this.model, this.effort);
             }
             else
@@ -1267,6 +1421,26 @@
 
         // Land on the saved Teammate's details rather than closing outright, so a new teammate can be
         // read back immediately and an edit visibly took.
+        this.RefreshFromStore();
+        this.mode = TeammateCardMode.View;
+        this.confirmingRemove = false;
+        this.confirmingReset = false;
+        this.effortResetByModelChange = false;
+        this.adapterResetModelAndEffort = false;
+        this.nameLocked = false;
+        this.titleLocked = false;
+        this.aliasLocked = false;
+    }
+
+    /// <summary>
+    /// Re-reads this Teammate's Title, Alias, Teams, Text, Model, Effort and Persona file path from
+    /// <see cref="Personas"/> under the current <see cref="name"/>, the same way a successful Save
+    /// lands on what it just wrote rather than closing outright. Shared with
+    /// <see cref="ConfirmReset"/>, whose whole point is to land on the just-reset defaults the same
+    /// way.
+    /// </summary>
+    private void RefreshFromStore()
+    {
         var savedPersona = this.Personas.Get(this.name);
         var entry = this.Personas.Entries.FirstOrDefault(candidate => string.Equals(candidate.Name, this.name, StringComparison.Ordinal));
         this.title = entry?.Title ?? this.title;
@@ -1276,14 +1450,8 @@
         this.model = savedPersona?.Model;
         this.effort = savedPersona?.Effort;
         this.adapter = savedPersona?.Adapter;
+        this.skills = ReadSkills(savedPersona?.Text ?? this.text);
         this.filePath = TeammateCard.TryPathFor(this.Personas, this.name);
-        this.mode = TeammateCardMode.View;
-        this.confirmingRemove = false;
-        this.effortResetByModelChange = false;
-        this.adapterResetModelAndEffort = false;
-        this.nameLocked = false;
-        this.titleLocked = false;
-        this.aliasLocked = false;
     }
 
     // The Create card's Teams input is one comma-separated text field, mirroring the comma form
@@ -1317,6 +1485,50 @@
         }
 
         this.MudDialog.Close();
+    }
+
+    private void BeginReset()
+    {
+        this.confirmingReset = true;
+        this.error = null;
+    }
+
+    private void CancelReset()
+    {
+        this.confirmingReset = false;
+    }
+
+    /// <summary>
+    /// Confirms Reset to default (Spec §6.12): unlike <see cref="ConfirmRemove"/>, a successful reset
+    /// does not close the dialog - the Teammate still exists, so this lands on its just-restored
+    /// defaults through <see cref="RefreshFromStore"/>, the same way a successful Save does. Catches
+    /// both <see cref="ChatException"/> and <see cref="IOException"/> - <see cref="BuiltinTeammateReset.ResetToDefault"/>
+    /// can raise either, from <see cref="PersonaStore.Update"/>'s own validation or its file write -
+    /// and reports whichever the same way <see cref="ConfirmRemove"/> reports a <see cref="ChatException"/>,
+    /// so a failed Reset never crashes the circuit.
+    /// </summary>
+    private void ConfirmReset()
+    {
+        try
+        {
+            this.Reset.ResetToDefault(this.name);
+        }
+        catch (ChatException ex)
+        {
+            this.error = ex.Message;
+            this.confirmingReset = false;
+            return;
+        }
+        catch (IOException ex)
+        {
+            this.error = ex.Message;
+            this.confirmingReset = false;
+            return;
+        }
+
+        this.error = null;
+        this.confirmingReset = false;
+        this.RefreshFromStore();
     }
 
     /// <summary>

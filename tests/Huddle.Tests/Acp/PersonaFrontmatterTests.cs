@@ -322,6 +322,24 @@ public sealed class PersonaFrontmatterTests
         Assert.Contains("role", description, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>
+    /// <c>skills</c> names which Skill files a Teammate loads — plumbing, like <c>adapter</c> — so it
+    /// must never appear in the job description <c>list_agents</c> shows (Spec §6.3, §7.2). <c>_builtin</c>
+    /// is already excluded by the generic <c>_</c>-prefix rule, with no <see cref="PersonaFrontmatter"/>
+    /// change needed. <c>consult_when</c> is ordinary frontmatter and survives untouched.
+    /// </summary>
+    [Fact]
+    public void ComposeJobDescription_SkillsAndBuiltinFields_AreExcludedButConsultWhenSurvives()
+    {
+        var text = "---\nskills: [team-building]\n_builtin: chief-of-staff\nconsult_when: 'For research'\n---\nbody";
+
+        var description = PersonaFrontmatter.ComposeJobDescription(text);
+
+        Assert.Contains("Consult When: For research", description, StringComparison.Ordinal);
+        Assert.DoesNotContain("skills", description, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("builtin", description, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>A well-formed identity block yields all four fields, with <c>Teams</c> read from its comma form.</summary>
     [Fact]
     public void TryReadIdentity_WellFormedBlock_ReadsAllFourFields()
@@ -599,6 +617,91 @@ public sealed class PersonaFrontmatterTests
         Assert.Equal("agency", identity.Adapter);
     }
 
+    /// <summary>A bracketed flow list for <c>skills</c> yields <see cref="PersonaIdentity.Skills"/> as an ordered list, same shape as <c>Teams</c> (Spec §6.3).</summary>
+    [Fact]
+    public void TryReadIdentity_SkillsAsFlowList_ReadsSkillsList()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\nskills: [a, b]\n---\nbody";
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var identity, out var error);
+
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal(["a", "b"], identity.Skills);
+    }
+
+    /// <summary>The block-list form of <c>skills</c> yields the same ordered list as the flow-list form.</summary>
+    [Fact]
+    public void TryReadIdentity_SkillsAsBlockList_ReadsSameListAsFlowListForm()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\nskills:\n  - a\n  - b\n---\nbody";
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var identity, out var error);
+
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal(["a", "b"], identity.Skills);
+    }
+
+    /// <summary>An absent <c>skills</c> field yields an empty list, not <see langword="null"/>, and the Persona is still valid.</summary>
+    [Fact]
+    public void TryReadIdentity_SkillsAbsent_YieldsEmptyListAndStillSucceeds()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\n---\nbody";
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var identity, out var error);
+
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.NotNull(identity.Skills);
+        Assert.Empty(identity.Skills);
+    }
+
+    /// <summary>The <c>skills</c> key matches case-insensitively, same as the other structural keys.</summary>
+    [Fact]
+    public void TryReadIdentity_CapitalizedSkillsKey_ReadsIdenticallyToLowercaseKey()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\nSkills: [a, b]\n---\nbody";
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var identity, out var error);
+
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal(["a", "b"], identity.Skills);
+    }
+
+    /// <summary>A <c>_builtin:</c> field reads as <see cref="PersonaIdentity.Builtin"/> (Spec §6.3).</summary>
+    [Fact]
+    public void TryReadIdentity_BuiltinPresent_ReadsAsBuiltin()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\n_builtin: chief-of-staff\n---\nbody";
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var identity, out var error);
+
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal("chief-of-staff", identity.Builtin);
+    }
+
+    /// <summary>An absent <c>_builtin:</c> field yields <see langword="null"/>, and the Persona is still valid.</summary>
+    [Fact]
+    public void TryReadIdentity_BuiltinAbsent_YieldsNullAndStillSucceeds()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\n---\nbody";
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var identity, out var error);
+
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Null(identity.Builtin);
+    }
+
     /// <summary><see cref="PersonaFrontmatter.Compose"/> writes lowercase, single-quoted keys, and the result loads straight back through <see cref="PersonaFrontmatter.TryReadIdentity"/>.</summary>
     [Fact]
     public void Compose_ProducesLowercaseSingleQuotedFrontmatter_ThatRoundTripsThroughTryReadIdentity()
@@ -691,6 +794,40 @@ public sealed class PersonaFrontmatterTests
         var text = PersonaFrontmatter.Compose(identity, "body");
 
         Assert.DoesNotContain("adapter:", text, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A non-empty <see cref="PersonaIdentity.Skills"/> and a non-null <see cref="PersonaIdentity.Builtin"/>
+    /// are both emitted and round-trip back through <see cref="PersonaFrontmatter.TryReadIdentity"/> (Spec §6.3).
+    /// </summary>
+    [Fact]
+    public void Compose_WithSkillsAndBuiltin_RoundTripsThroughTryReadIdentity()
+    {
+        var identity = new PersonaIdentity("coo", "Chief of Staff", "coo", [], null, ["team-building", "research"], "chief-of-staff");
+
+        var text = PersonaFrontmatter.Compose(identity, "body");
+
+        Assert.Contains("skills: ['team-building', 'research']", text, StringComparison.Ordinal);
+        Assert.Contains("_builtin: 'chief-of-staff'", text, StringComparison.Ordinal);
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var roundTripped, out var error);
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(roundTripped);
+        Assert.NotNull(roundTripped.Skills);
+        Assert.Equal(["team-building", "research"], roundTripped.Skills);
+        Assert.Equal("chief-of-staff", roundTripped.Builtin);
+    }
+
+    /// <summary>An empty <see cref="PersonaIdentity.Skills"/> list is omitted entirely, same rule as an empty <see cref="PersonaIdentity.Teams"/> list.</summary>
+    [Fact]
+    public void Compose_EmptySkills_OmitsKey()
+    {
+        var identity = new PersonaIdentity("coo", "Chief of Staff", "coo", [], null, []);
+
+        var text = PersonaFrontmatter.Compose(identity, "body");
+
+        Assert.DoesNotContain("skills:", text, StringComparison.Ordinal);
     }
 
     /// <summary>Rewriting one field leaves every other field's value, order and single-quoted formatting untouched.</summary>
@@ -881,5 +1018,117 @@ public sealed class PersonaFrontmatterTests
         var result = PersonaFrontmatter.WriteScalarField(text, "Title", "New Title");
 
         Assert.Equal("---\nname: 'Nova'\ntitle: 'New Title'\nalias: 'nov'\n---\nbody", result);
+    }
+
+    /// <summary>
+    /// <see cref="PersonaFrontmatter.WriteListField"/>, case 1: a list key absent from the block is
+    /// inserted as a new bracketed flow-list line before the closing delimiter, and the written file
+    /// re-reads with the expected <see cref="PersonaIdentity.Skills"/>.
+    /// </summary>
+    [Fact]
+    public void WriteListField_KeyAbsent_InsertsANewFlowListLine()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\n---\nbody";
+
+        var result = PersonaFrontmatter.WriteListField(text, "skills", ["team-building", "research"]);
+
+        Assert.Contains("skills: ['team-building', 'research']", result, StringComparison.Ordinal);
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(result, out var identity, out var error);
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal(["team-building", "research"], identity.Skills);
+    }
+
+    /// <summary>
+    /// <see cref="PersonaFrontmatter.WriteListField"/>, case 2: an existing bracketed flow list is
+    /// replaced wholesale, and the written file re-reads with only the new <see cref="PersonaIdentity.Skills"/>.
+    /// </summary>
+    [Fact]
+    public void WriteListField_ExistingFlowList_Replaces()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\nskills: ['old-skill']\n---\nbody";
+
+        var result = PersonaFrontmatter.WriteListField(text, "skills", ["team-building", "research"]);
+
+        Assert.Contains("skills: ['team-building', 'research']", result, StringComparison.Ordinal);
+        Assert.DoesNotContain("old-skill", result, StringComparison.Ordinal);
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(result, out var identity, out var error);
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal(["team-building", "research"], identity.Skills);
+    }
+
+    /// <summary>
+    /// <see cref="PersonaFrontmatter.WriteListField"/>, case 3: an existing block list is replaced
+    /// wholesale by a flow list — its old item lines are gone, not left dangling below the new value —
+    /// and the written file re-reads with only the new <see cref="PersonaIdentity.Skills"/>.
+    /// </summary>
+    [Fact]
+    public void WriteListField_ExistingBlockList_ReplacesAndRemovesOldItems()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\nskills:\n  - old-skill-one\n  - old-skill-two\n---\nbody";
+
+        var result = PersonaFrontmatter.WriteListField(text, "skills", ["team-building"]);
+
+        Assert.Contains("skills: ['team-building']", result, StringComparison.Ordinal);
+        Assert.DoesNotContain("old-skill-one", result, StringComparison.Ordinal);
+        Assert.DoesNotContain("old-skill-two", result, StringComparison.Ordinal);
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(result, out var identity, out var error);
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal(["team-building"], identity.Skills);
+    }
+
+    /// <summary>
+    /// <see cref="PersonaFrontmatter.WriteListField"/>, case 4: an empty <c>values</c> list
+    /// removes the key entirely, and the written file re-reads with an empty
+    /// <see cref="PersonaIdentity.Skills"/> rather than failing.
+    /// </summary>
+    [Fact]
+    public void WriteListField_EmptyValues_RemovesTheKey()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\nskills: ['team-building']\n---\nbody";
+
+        var result = PersonaFrontmatter.WriteListField(text, "skills", []);
+
+        Assert.DoesNotContain("skills", result, StringComparison.OrdinalIgnoreCase);
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(result, out var identity, out var error);
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.NotNull(identity.Skills);
+        Assert.Empty(identity.Skills);
+    }
+
+    /// <summary>
+    /// <see cref="PersonaFrontmatter.WriteListField"/>, case 5: the body after the closing delimiter,
+    /// including its own blank lines, is byte-identical after a list-field write.
+    /// </summary>
+    [Fact]
+    public void WriteListField_MultiLineBody_IsLeftUntouched()
+    {
+        var text = "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\n---\n# Jarvis\n\nYou are Jarvis.";
+
+        var result = PersonaFrontmatter.WriteListField(text, "skills", ["team-building"]);
+
+        Assert.Equal(
+            "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\nskills: ['team-building']\n---\n# Jarvis\n\nYou are Jarvis.",
+            result);
+
+        var (_, body) = PersonaFrontmatter.Parse(result);
+        Assert.Equal("# Jarvis\n\nYou are Jarvis.", body);
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(result, out var identity, out var error);
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal(["team-building"], identity.Skills);
     }
 }

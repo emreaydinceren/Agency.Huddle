@@ -8,6 +8,8 @@ using Agency.Huddle.App.Demo;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Teammates;
 
 namespace Agency.Huddle.App;
 
@@ -92,6 +94,28 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PromptStore>();
         services.AddSingleton<IPromptSource>(sp => sp.GetRequiredService<PromptStore>());
 
+        // Same reasoning as PromptStore above: a singleton, so the app never has two independently
+        // constructed stores each creating {DataDir}/Skills and (once a later task adds one) each
+        // running their own FileSystemWatcher over it.
+        services.AddSingleton<SkillStore>();
+
+        // No interface, same reasoning as PromptStore/SkillStore above: nothing needs to
+        // substitute this, and it is built entirely from other singletons already registered
+        // above (PersonaStore, ITeamDirectory, IAgentGateway), so a second, independently
+        // constructed instance would cost nothing extra but would still be pointless duplication.
+        services.AddSingleton<CandidateChecker>();
+
+        // No interface, same reasoning as CandidateChecker just above: nothing needs to substitute
+        // this, and its only dependency, RoomEvents, is already registered as a singleton at the top
+        // of this method, so construction order is safe regardless of where in this list it sits.
+        services.AddSingleton<ProposalStore>();
+
+        // No interface, same reasoning as ProposalStore and CandidateChecker just above. Every one
+        // of its own dependencies (ProposalStore, CandidateChecker, PersonaStore, ChatService,
+        // ITeamDirectory) is already a singleton registered above, and none of them takes a
+        // ProposalService back - construction order is safe and there is no cycle.
+        services.AddSingleton<ProposalService>();
+
         // No interface: nothing needs to substitute this, and CSharpPrinciples.md says not to add
         // abstraction a feature has not asked for. This is state the app writes (a chosen theme, a
         // few token overrides), not host-supplied configuration, so it is registered here rather
@@ -110,9 +134,23 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAdapterProbeRunner, AdapterProcessProbeRunner>();
         services.AddSingleton<IModelCatalog, ModelCatalogProbe>();
 
+        // No interface, same reasoning as AppearanceStore/AvatarStore above: nothing needs to
+        // substitute this, and it is built entirely from PersonaStore, already registered above.
+        // Deliberately a plain singleton rather than folded into the hosted BuiltinTeammateSeeder
+        // below - TeammateCard's "Reset to default" (Spec §6.12) needs to inject it directly, and a
+        // component must never depend on an IHostedService.
+        services.AddSingleton<BuiltinTeammateReset>();
+
         services.AddHostedService<DataInitializer>();
         services.AddHostedService<PipeServer>();
         services.AddHostedService<DemoAgentHost>();
+
+        // Registered immediately before PersonaSupervisor's own hosted service, and never behind
+        // Team:Acp:Enabled: hosted services start in registration order (Spec §10), so this is what
+        // guarantees the supervisor's first reconciliation already sees the Chief of Staff the
+        // seeder just wrote, rather than racing a later PersonasChanged (Spec §6.12 Implementation
+        // notes).
+        services.AddHostedService<BuiltinTeammateSeeder>();
 
         // Same instance as the hosted service, not a second registration - mirrors every other pair
         // in this file (AgentGateway/IAgentGateway, PersonaStore/IMentionAliasSource, PromptStore/IPromptSource).

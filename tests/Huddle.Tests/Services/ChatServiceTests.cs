@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.Tests.Services;
@@ -1087,19 +1088,103 @@ public sealed class ChatServiceTests
         Assert.Empty(stored);
     }
 
+    /// <summary>
+    /// Spec §12 F-16: archiving a Room drops the Proposal waiting in it - the card must not go on
+    /// showing for a Room the sidebar no longer offers. Builds the <see cref="ProposalStore"/>
+    /// first and passes it into <see cref="CreateService"/>, so it is the very instance
+    /// <see cref="ChatService"/> was constructed with, not a disconnected second one - only then does
+    /// a Drop it performs show up in this test's own read of it afterwards.
+    /// </summary>
+    [Fact]
+    public async Task SetRoomArchived_True_DropsProposal()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        var proposals = new ProposalStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
+        var (service, _) = CreateService(dir, directory, proposals: proposals);
+        var proposal = MakeProposal(room.Id);
+        _ = proposals.TryPut(proposal);
+
+        await service.SetRoomArchivedAsync(room.Id, true, ct);
+
+        Assert.Null(proposals.Get(room.Id));
+    }
+
+    /// <summary>
+    /// Spec §12 F-16's other half: deleting a Room drops its pending Proposal too, for the same
+    /// reason archiving does - the Room the Proposal named is gone, so nothing can ever Approve or
+    /// Decline it. Same shared-store shape as <see cref="SetRoomArchived_True_DropsProposal"/>.
+    /// </summary>
+    [Fact]
+    public async Task DeleteRoom_DropsProposal()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        var proposals = new ProposalStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
+        var (service, _) = CreateService(dir, directory, proposals: proposals);
+        var proposal = MakeProposal(room.Id);
+        _ = proposals.TryPut(proposal);
+
+        await service.DeleteRoomAsync(room.Id, ct);
+
+        Assert.Null(proposals.Get(room.Id));
+    }
+
+    /// <summary>
+    /// The other side of Spec §12 F-16: unarchiving is not archiving, and must never drop a pending
+    /// Proposal - only <c>SetRoomArchivedAsync</c> with <see langword="true"/> and
+    /// <c>DeleteRoomAsync</c> do.
+    /// </summary>
+    [Fact]
+    public async Task SetRoomArchived_False_KeepsProposal()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        var proposals = new ProposalStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
+        var (service, _) = CreateService(dir, directory, proposals: proposals);
+        var proposal = MakeProposal(room.Id);
+        _ = proposals.TryPut(proposal);
+
+        await service.SetRoomArchivedAsync(room.Id, false, ct);
+
+        Assert.Equal(proposal, proposals.Get(room.Id));
+    }
+
+    /// <summary>Builds a minimal, valid <see cref="Proposal"/> pending in <paramref name="roomId"/>, for the Proposal-drop tests above.</summary>
+    /// <param name="roomId">The Room the Proposal is pending in.</param>
+    private static Proposal MakeProposal(string roomId)
+    {
+        Candidate candidate = new("Vera", "vee", "Researcher", "You research things.", [], null);
+        return new Proposal("proposal-1", roomId, "agent-nova", "Nova", [candidate], DateTimeOffset.UnixEpoch);
+    }
+
     // Defaults to the production Budget so every test written before it stays a test about something
     // else; the Budget's own tests pass a small number so they do not have to post forty Messages.
+    // proposals defaults to a fresh, throwaway ProposalStore - every existing caller that does not
+    // care about Proposals gets one anyway, since ChatService's constructor now requires one; a
+    // caller that DOES care (the drop tests above) builds its own and passes it in, so it is reading
+    // back the very instance ChatService was given rather than a disconnected second one.
     private static (ChatService Service, RoomEvents Events) CreateService(
         TempDataDir dir,
         ITeamDirectory directory,
         IReadOnlyList<MentionAlias>? aliases = null,
-        int agentMessageBudget = 40)
+        int agentMessageBudget = 40,
+        ProposalStore? proposals = null)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var aliasSource = new FakeMentionAliasSource { Aliases = aliases ?? [] };
         var options = Options.Create(new TeamOptions { AgentMessageBudget = agentMessageBudget });
-        var service = new ChatService(directory, store, events, aliasSource, options, NullLogger<ChatService>.Instance);
+        var service = new ChatService(directory, store, events, aliasSource, options, proposals ?? new ProposalStore(events), NullLogger<ChatService>.Instance);
         return (service, events);
     }
 }

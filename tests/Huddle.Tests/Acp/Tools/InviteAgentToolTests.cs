@@ -7,6 +7,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 
 /// <summary>
@@ -203,6 +204,7 @@ public sealed class InviteAgentToolTests
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
-        return new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
+        var proposals = new ProposalStore(events);
+        return new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
     }
 }

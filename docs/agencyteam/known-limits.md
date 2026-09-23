@@ -217,6 +217,12 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   is already there. Both are deliberate — it is a Singleton holding model output
   for the life of the process, and an Agent killed without a clean disconnect
   never sends the terminator that would clear it.
+- **A waiting Proposal does not survive a restart, and the proposer is not told.**
+  `ProposalStore` holds at most one Proposal per Room in memory, like a Draft, so a
+  restart loses it and its card. The Agent that proposed is still waiting for an
+  outcome Message that never comes; the Human has to ask again. Archiving or
+  deleting the Room drops it on purpose. Deliberate for V1: persisting it would
+  mean a table and a recovery path for a card the Human can recreate by asking.
 - **Stopping an Agent stops it in every Room.** One ACP session spans every Room
   its Agent is in, so there is nothing narrower to stop. `StopTurn` carries the
   Room the Human asked from as a label, not as a selector — the same
@@ -367,11 +373,19 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   logging provider can already be disposed when a `FileSystemWatcher` raises a
   late `Error` event, and because the handler runs on a watcher callback thread the
   throw is unhandled and takes the process with it. It reads as a flake because it
-  needs a dropped-event overflow to land inside the teardown window. **Not fixed**,
-  because the one-line fix — move the log inside the existing `disposed` guard —
-  belongs to `PersonaStore` and was out of scope for the work that found it; rerun
-  the suite if you hit it, and do not read it as a regression in whatever you were
-  changing.
+  needs a dropped-event overflow to land inside the teardown window. **Fixed
+  2026-09-22** (Skills D8): the log moved inside the existing `disposed` guard, the
+  same order `SkillStore.OnWatcherError` uses, and
+  `PersonaStoreTests.OnWatcherError_AfterDispose_DoesNotLog` fails if it moves back.
+  A test-host crash naming `OnWatcherError` is now a regression, not this flake.
+- **A fourth flake, seen once, not diagnosed — 2026-09-22.**
+  `PipeEndToEndTests.Disconnect_CleanClose_LogsExactlyOneInformationLine` failed once in a
+  full run during the Skills build (`Assert.Single()` found no matching log line) and passed
+  on the next full run and on its class alone. The test and the pipe code it covers were
+  unchanged at the time, so it is recorded rather than read as a regression. It asserts on
+  a log line written after the client disconnects, which suggests the assertion sometimes
+  runs before that line is written; if it recurs, wait for the line rather than reading
+  the log once.
 - **Known bug, pre-existing:** `Data/SqliteTeamDirectory.cs` is not
   `IDisposable`, and SQLite connection pooling keeps a handle on `team.db`, so
   tests leave about 83 temp directories behind per run. `TempDataDir.Dispose`

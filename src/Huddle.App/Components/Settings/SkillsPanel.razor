@@ -1,0 +1,190 @@
+@*
+    The Settings page's Skills tab (Spec §6.7): a read-only table of every Skill this installation
+    currently resolves - what SkillStore.All already computed, never re-derived here - plus Restore
+    default on an Overridden row. Modelled on Personas.razor for the "nothing here is editable, so
+    no local snapshot of Skill data itself" shape, but unlike that tab this one DOES have local state:
+    the SkillsChanged subscription that repaints when a Skill is written, edited or removed on disk
+    while this tab is open, the same pattern TeammateCard's own Skills picker uses (Spec §6.7's
+    "Internal flow": subscribe, unsubscribe in Dispose, re-render through InvokeAsync(StateHasChanged)).
+
+    An invalid Yours Skill - hand-written, with no shipped default to fall back to - never reaches
+    SkillStore.All at all (see SkillStore.Rebuild's own remarks): its Errors survive only in
+    SkillStore.Issues, with no Skill row to show them on. The "Problems" section below exists for
+    exactly that case, grouped by the Skill name the Issue names - the one place a Human can see why a
+    folder they just wrote never appeared in the table above or in a Teammate card's picker.
+*@
+
+@using Agency.Huddle.App.Skills
+@implements IDisposable
+
+@inject SkillStore Skills
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<p class="teammates-intro">
+    A Skill is a named folder of Markdown that teaches a teammate one kind of work, assigned to a
+    Teammate on its own card. This tab only shows what already exists on disk - nothing here is
+    editable.
+</p>
+
+<p class="settings-prompts-file-path">
+    Skills are stored at <code>@this.Skills.SkillsDirectory</code>. Write a new Skill as a folder
+    here; it appears within a second.
+</p>
+
+<MudSimpleTable Hover="true" Dense="true">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Source</th>
+            <th>Folder</th>
+            <th>Files</th>
+            <th>Issues</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var skill in this.Skills.All)
+        {
+            <tr>
+                <td>@skill.Name</td>
+                <td>@skill.Description</td>
+                <td>@skill.Source</td>
+                <td>@skill.FolderPath</td>
+                <td>@string.Join(", ", skill.Files)</td>
+                <td>
+                    @foreach (var issue in this.IssuesFor(skill.Name))
+                    {
+                        <MudChip T="string" Size="Size.Small" Color="@SkillsPanel.ChipColor(issue.Severity)" Class="mr-1 mb-1">@issue.Message</MudChip>
+                    }
+                </td>
+                <td>
+                    @if (skill.Source == SkillSource.Overridden)
+                    {
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" OnClick="@(() => this.RestoreDefaultAsync(skill))">Restore default</MudButton>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</MudSimpleTable>
+
+@if (this.OrphanIssues.Count > 0)
+{
+    <MudText Typo="Typo.overline" Class="mt-4 d-block">Problems</MudText>
+    @foreach (var group in this.OrphanIssues)
+    {
+        <MudPaper Outlined="true" Class="pa-3 mb-2">
+            <MudText Typo="Typo.subtitle2">@group.Key</MudText>
+            @foreach (var issue in group)
+            {
+                <MudChip T="string" Size="Size.Small" Color="@SkillsPanel.ChipColor(issue.Severity)" Class="mr-1 mb-1">@issue.Message</MudChip>
+            }
+        </MudPaper>
+    }
+}
+
+@code {
+    /// <summary>Unsubscribes from <see cref="SkillStore.SkillsChanged"/> - see the file-level comment for why this tab, unlike Personas, keeps a live subscription.</summary>
+    public void Dispose()
+    {
+        this.Skills.SkillsChanged -= this.OnSkillsChanged;
+    }
+
+    /// <summary>Subscribes to <see cref="SkillStore.SkillsChanged"/> so a Skill written, edited or removed on disk while this tab is open is reflected without a manual reload.</summary>
+    protected override void OnInitialized()
+    {
+        this.Skills.SkillsChanged += this.OnSkillsChanged;
+    }
+
+    /// <summary>The chip colour for one Issue's severity (Spec §6.7): Error red, Warning amber, Info plain.</summary>
+    /// <param name="severity">The Issue's severity.</param>
+    private static Color ChipColor(SkillIssueSeverity severity) => severity switch
+    {
+        SkillIssueSeverity.Error => Color.Error,
+        SkillIssueSeverity.Warning => Color.Warning,
+        _ => Color.Default,
+    };
+
+    /// <summary>Every Issue naming <paramref name="name"/>, in <see cref="SkillStore.Issues"/>'s own order.</summary>
+    /// <param name="name">A resolved Skill's name, as shown on its own row.</param>
+    private IReadOnlyList<SkillIssue> IssuesFor(string name) =>
+        [.. this.Skills.Issues.Where(issue => string.Equals(issue.Skill, name, StringComparison.Ordinal))];
+
+    /// <summary>
+    /// Every Issue whose Skill name has no row above - an invalid Yours Skill, omitted from
+    /// <see cref="SkillStore.All"/> entirely because it has no shipped default to fall back to (see
+    /// the file-level comment) - grouped by that name so several Issues for the same broken folder
+    /// show together under one heading.
+    /// </summary>
+    private IReadOnlyList<IGrouping<string, SkillIssue>> OrphanIssues =>
+        [.. this.Skills.Issues
+            .Where(issue => this.Skills.Get(issue.Skill) is null)
+            .GroupBy(issue => issue.Skill, StringComparer.Ordinal)];
+
+    /// <summary>
+    /// Confirms through a real <see cref="MudDialog"/> (Spec §6.7) - <see cref="IDialogService.ShowMessageBoxAsync(string, string, string, string?, string?, DialogOptions?)"/>,
+    /// naming <paramref name="skill"/>'s own <see cref="Skill.FolderPath"/> - never a path rebuilt
+    /// from its name, per the Spec's Constraints paragraph - then deletes that folder through
+    /// <see cref="SkillStore.RestoreDefault(string)"/>. <see cref="IOException"/> (a locked file) and
+    /// <see cref="InvalidOperationException"/> (a Yours Skill, which this button never shows for, but
+    /// a concurrent hand-edit could still race one into existence) are both reported through
+    /// <see cref="ISnackbar"/> rather than left to crash the circuit.
+    /// </summary>
+    /// <param name="skill">The Overridden row's own resolved Skill.</param>
+    private async Task RestoreDefaultAsync(Skill skill)
+    {
+        var confirmed = await this.DialogService.ShowMessageBoxAsync(
+            "Restore default",
+            $"This restores '{skill.Name}' to its shipped default. This deletes {skill.FolderPath} and everything in it.",
+            yesText: "Yes, restore default",
+            cancelText: "Cancel");
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        try
+        {
+            this.Skills.RestoreDefault(skill.Name);
+        }
+        catch (IOException ex)
+        {
+            this.Snackbar.Add(ex.Message, Severity.Error);
+            return;
+        }
+        catch (InvalidOperationException ex)
+        {
+            this.Snackbar.Add(ex.Message, Severity.Error);
+            return;
+        }
+
+        this.StateHasChanged();
+    }
+
+    /// <summary>Repaints this tab when <see cref="SkillStore.SkillsChanged"/> fires, the same dispatch <c>TeammateCard.OnSkillsStoreChanged</c> uses for its own subscription.</summary>
+    private void OnSkillsChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+}

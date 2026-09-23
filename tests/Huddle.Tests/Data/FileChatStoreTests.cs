@@ -183,6 +183,33 @@ public sealed class FileChatStoreTests
         await Assert.ThrowsAsync<ArgumentException>(() => store.DeleteAsync(roomId, ct));
     }
 
+    /// <summary>A Room nobody has posted to yet has no Transcript file, so it reports no Messages.</summary>
+    [Fact]
+    public async Task HasMessagesAsync_NoFile_False()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var store = CreateStore(dir);
+
+        var hasMessages = await store.HasMessagesAsync("never-posted-to", ct);
+
+        Assert.False(hasMessages);
+    }
+
+    /// <summary>A Room with at least one appended Message reports it has Messages.</summary>
+    [Fact]
+    public async Task HasMessagesAsync_AfterAppend_True()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var store = CreateStore(dir);
+        await store.AppendAsync("room-1", new ChatMessage("m1", DateTimeOffset.UtcNow, "human", "You", "hi"), ct);
+
+        var hasMessages = await store.HasMessagesAsync("room-1", ct);
+
+        Assert.True(hasMessages);
+    }
+
     private static FileChatStore CreateStore(TempDataDir dir)
     {
         return new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);

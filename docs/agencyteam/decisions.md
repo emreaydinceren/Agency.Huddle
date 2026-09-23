@@ -1,12 +1,71 @@
 # Decision record
 
-Seventeen dated entries from 2026-09-11 onward, newest first, each recording what
+Eighteen dated entries from 2026-09-11 onward, newest first, each recording what
 changed and — more usefully — what was considered and rejected. Read it when you are
 about to revisit a decision, or when an older Markdown file in this repo
 disagrees with current vocabulary and you need the old-to-new mapping.
 
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
+
+**2026-09-22 — Skills, and a built-in Chief of Staff who builds the team and speaks first.**
+
+A new user met three placeholder Personas and an empty Room. Now the app ships a built-in
+**Chief of Staff** that greets them unprompted and assembles a team with them, using the
+first **Skill**, `team-building`: know-how an Agent reads on demand, the way `get_help` is
+read on demand for tools. Nineteen decisions shaped it
+([ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) and the
+[Skills design](../Huddle.Skills-Specifications.md) §14 hold them in full). What each one
+turned down:
+
+- **An Agent proposes and the Human's Approve creates** (D-1). Rejected: a
+  `create_teammate` tool guarded only by prompt text, since a prompt is not a guard, and a
+  Teammate created in a pending state, which moves the decision away from the
+  conversation. The outcome is posted as a Message from the Human that Mentions the
+  proposer, so the ordinary Reply Gate wakes it with no new Envelope.
+- **`MaxTeammates` is 8 and counts every loaded Persona** (D-2). Rejected: 4, which any real
+  library reaches at once, and counting only proposed Teammates, which misses the actual
+  cost: processes.
+- **The Chief of Staff is permanent, recognised by `_builtin: chief-of-staff`, and checked
+  only at startup** (D-3, D-4). Rejected: recognition by Name, which duplicates it on
+  rename, and recreation on deletion events, which races file moves and gets both files
+  rejected. Its card offers Reset to default instead of Remove.
+- **A Candidate carries only descriptive fields** (D-5). Rejected: letting an Agent set
+  Model, Effort, Adapter or Skills, each of which spends money or grants tools.
+- **One Proposal per Room; the same proposer replaces it** (D-6). Rejected: a queue, which
+  asks the Human several questions at once.
+- **Partial success with an honest report, no rollback** (D-7). Rejected: all-or-nothing,
+  whose rollback deletes Teammates that are already starting.
+- **A read-only Settings › Skills tab and a card picker** (D-8). Rejected for V1: a full
+  editor like Prompts; the Human writes Markdown in their own editor.
+- **Which tools a Skill can grant is a code-defined set** (D-9). Rejected: "any tool a Skill
+  lists is gated", under which a hand-written Skill could take a default tool away from
+  every other Agent.
+- **Shipped Skills are embedded resources, overridden file by file** (D-10). Rejected: C#
+  raw strings like `PromptCatalog`, and a generated file beside the binary.
+- **`read_skill` and the Skill Index appear only for a Persona holding a Skill** (D-11,
+  D-12). Rejected: offering `read_skill` to everyone, which would change every tool list
+  and golden, and hiding Skills behind `get_help`, where a model would never know to look.
+- **Outcome texts are interface copy, not Prompts** (D-13). Rejected: putting them in
+  `PromptCatalog`, which would let a Prompt edit change what the Human appears to have said.
+- **`PersonaStore` serialises its own writes** (D-14). Rejected: a lock only in
+  `ProposalService`, which leaves the Teammate card racing. Building it showed the plan's
+  lock was not enough on its own: the lock must also publish the new index before it is
+  released, or a second writer validates against a stale snapshot.
+- **`skills` never goes on the `Persona` record** (D-15). Rejected: adding it for
+  convenience, since a list member breaks record equality and would restart every Teammate
+  on every refresh. A test now fails if anyone tries.
+- **The app greets a new Human unprompted, at first start** (D-16, D-17). Rejected: waiting
+  for the Human to type first, and greeting on their first *view* of the Room, which needs
+  a new Envelope and `ProtocolVersion` 4. An additive `RoomInfo.IsEmpty` needs no bump.
+- **The Greeting is triggered by a Prompt, `turn.greeting`, never by a posted Message**
+  (D-18). Rejected: posting a Message as the Human, which puts words in their mouth.
+- **Onboarding is a fourth file of the Skill** (D-19). Rejected: folding it into
+  `SKILL.md`, which every read would then pay for.
+
+**Old-to-new mapping**: ADR-0021's `create_teammate` is `propose_teammates`; a proposed
+Teammate is a **Candidate**, never a *draft*; the Chief of Staff's unprompted first Message
+is a **Greeting**, never a *welcome*.
 
 **2026-09-22 — A Hook is renamed to a Prompt.**
 

@@ -82,6 +82,10 @@ paused**. Continue grants one more Budget and asks again at the next threshold,
 rather than lifting the cap for the rest of the run: an unattended runaway can
 then never spend more than one Budget per answer the Human actually gave.
 
+The Proposal card of [ADR-0021](0021-a-skill-is-know-how-an-agent-reads-on-demand.md)
+reuses this pattern: view state derived from in-memory server state, answered by an
+in-process call, and never an Envelope.
+
 ## Continue re-delivers, because raising a number wakes nobody
 
 A Turn only ever begins with a delivered Message. At the pause, the Agent that

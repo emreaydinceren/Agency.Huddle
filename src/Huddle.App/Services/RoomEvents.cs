@@ -57,6 +57,14 @@ public sealed class RoomEvents
     /// </summary>
     public event Action<string>? DraftChanged;
 
+    /// <summary>
+    /// A Room's pending <c>Proposal</c> changed - one was stored, replaced, taken (Approved or
+    /// Declined), or dropped (archived, deleted, or restarted). Carries the Room id, not the
+    /// Proposal itself, for the same reason <see cref="DraftChanged"/> does: a subscriber re-reads
+    /// the current Proposal rather than trusting a value that may already be stale.
+    /// </summary>
+    public event Action<string>? ProposalChanged;
+
     public void PublishMessagePosted(MessagePostedEvent e)
     {
         this.Publish(this.MessagePosted, e, nameof(this.MessagePosted));
@@ -112,6 +120,16 @@ public sealed class RoomEvents
     public void PublishDraftChanged(string roomId)
     {
         this.PublishRoomId(this.DraftChanged, roomId, nameof(this.DraftChanged));
+    }
+
+    /// <summary>
+    /// Publishes <see cref="ProposalChanged"/> for <paramref name="roomId"/>. Called by
+    /// <see cref="Teammates.ProposalStore"/> after its own lock is released, never while held.
+    /// </summary>
+    /// <param name="roomId">The Room whose pending Proposal changed.</param>
+    internal void PublishProposalChanged(string roomId)
+    {
+        this.PublishRoomId(this.ProposalChanged, roomId, nameof(this.ProposalChanged));
     }
 
     private void PublishRoomId(Action<string>? handlers, string roomId, string eventName)

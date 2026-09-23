@@ -15,4 +15,12 @@ public interface IChatStore
     /// <param name="roomId">The Room whose Transcript to delete.</param>
     /// <param name="ct">Cancels the delete.</param>
     Task DeleteAsync(string roomId, CancellationToken ct = default);
+
+    /// <summary>
+    /// Whether a Room has taken any Messages yet, answered from the Transcript file itself — never by
+    /// reading its contents.
+    /// </summary>
+    /// <param name="roomId">The Room to check.</param>
+    /// <param name="ct">Cancels the check.</param>
+    Task<bool> HasMessagesAsync(string roomId, CancellationToken ct = default);
 }

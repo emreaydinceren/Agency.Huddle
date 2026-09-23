@@ -125,6 +125,13 @@ public sealed class FileChatStore : IChatStore
         }
     }
 
+    public Task<bool> HasMessagesAsync(string roomId, CancellationToken ct = default)
+    {
+        var path = this.GetRoomPath(roomId);
+        var hasMessages = File.Exists(path) && new FileInfo(path).Length > 0;
+        return Task.FromResult(hasMessages);
+    }
+
     private string GetRoomPath(string roomId)
     {
         if (!NameRules.IsValidId(roomId))

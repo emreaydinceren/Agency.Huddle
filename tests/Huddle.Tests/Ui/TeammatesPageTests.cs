@@ -3,11 +3,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
-using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
+using TeammatesPage = Agency.Huddle.App.Components.Pages.Teammates;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -16,7 +18,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// <c>ProbeCount</c>/<c>EffortProbeCount</c> are facts about the server, so they stay on a plain HTTP
 /// GET against <see cref="TeamWebApplicationFactory"/>. Everything that depends on the exact markup a
 /// MudBlazor control renders - the Create card's own content, or a <c>MudSelect</c>'s options, which
-/// only exist once opened - now renders <see cref="Teammates"/> through <see cref="MudBunitContext"/>
+/// only exist once opened - now renders <see cref="TeammatesPage"/> through <see cref="MudBunitContext"/>
 /// instead, the same split <c>SettingsPageTests</c> uses.
 /// </summary>
 public sealed class TeammatesPageTests
@@ -301,7 +303,14 @@ public sealed class TeammatesPageTests
         Assert.Contains("No team", html, StringComparison.Ordinal);
     }
 
-    /// <summary>A file missing a required identity field is listed by its path and reason, above the list, and never renders as a tile.</summary>
+    /// <summary>
+    /// A file missing a required identity field is listed by its path and reason, above the list,
+    /// and contributes no tile of its own. Since D15, <see cref="Agency.Huddle.App.Teammates.BuiltinTeammateSeeder"/>
+    /// writes a real Chief of Staff into every empty library at startup (Spec §6.12), so this
+    /// factory's Teams directory is no longer literally empty by the time the page renders - the
+    /// broken file, still the only one this test wrote, must still add nothing beyond that one
+    /// seeded tile, never two.
+    /// </summary>
     [Fact]
     public async Task TeammatesPage_RejectedFile_IsListedByPathAndReason_AndDoesNotAppearAsATile()
     {
@@ -319,7 +328,11 @@ public sealed class TeammatesPageTests
 
         Assert.Contains(path, html, StringComparison.Ordinal);
         Assert.Contains("Alias", html, StringComparison.Ordinal);
-        Assert.DoesNotContain("teammate-tile", html, StringComparison.Ordinal);
+
+        // Exactly the one seeded Chief of Staff tile - the class attribute value itself, not the
+        // bare substring "teammate-tile", which also prefixes "teammate-tile-text", "-role" and
+        // "-status" on the very same tile and would over-count.
+        Assert.Equal(1, CountOccurrences(html, "class=\"teammate-tile\""));
     }
 
     /// <summary>
@@ -381,8 +394,9 @@ public sealed class TeammatesPageTests
         // Never started - Teammates.razor only needs a PersonaSupervisor it can inject, for the
         // Restart button this test does not exercise.
         var resolver = new AdapterProfileResolver(new AdapterCatalog(dataDir.Options()));
+        using var skillStore = new SkillStore(dataDir.Options(), NullLogger<SkillStore>.Instance);
         using var supervisor = new PersonaSupervisor(
-            dataDir.Options(), personas, new FakeAgentHostFactory(), resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance);
+            dataDir.Options(), personas, new FakeAgentHostFactory(), resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
         using var avatars = new AvatarStore(dataDir.Options(), NullLogger<AvatarStore>.Instance);
 
         await using MudBunitContext ctx = new();
@@ -395,7 +409,7 @@ public sealed class TeammatesPageTests
         ctx.Services.AddSingleton(supervisor);
         ctx.Services.AddSingleton(avatars);
 
-        var cut = ctx.Render<Teammates>();
+        var cut = ctx.Render<TeammatesPage>();
         Assert.Contains("Online", cut.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Offline", cut.Markup, StringComparison.Ordinal);
 
@@ -424,14 +438,16 @@ public sealed class TeammatesPageTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AdapterCatalog>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<BuiltinTeammateReset>());
         return ctx;
     }
 
-    /// <summary>Renders the real <see cref="Teammates"/> page, with the popover and dialog providers <see cref="MudBunitContext.RenderWithPopovers"/> supplies so an opened card, and any <c>MudSelect</c> inside it, actually render.</summary>
+    /// <summary>Renders the real <see cref="TeammatesPage"/> page, with the popover and dialog providers <see cref="MudBunitContext.RenderWithPopovers"/> supplies so an opened card, and any <c>MudSelect</c> inside it, actually render.</summary>
     private static IRenderedComponent<Bunit.Rendering.ContainerFragment> RenderPage(MudBunitContext ctx) =>
         ctx.RenderWithPopovers(builder =>
         {
-            builder.OpenComponent<Teammates>(0);
+            builder.OpenComponent<TeammatesPage>(0);
             builder.CloseComponent();
         });
 

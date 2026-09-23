@@ -10,6 +10,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Pipes;
@@ -81,6 +82,300 @@ public sealed class PersonaRunnerTests
 
         Assert.NotNull(user);
         Assert.Equal("You are Nova, the router.", user.Description);
+    }
+
+    /// <summary>
+    /// The built-in Chief of Staff's empty two-Member Room with the Human gets exactly one Greeting
+    /// Turn after the session starts (Spec §6.14): the Turn's prompt is recorded on the fake session,
+    /// and it opens with the Room's label - the only way an Agent ever learns a Room's id.
+    /// </summary>
+    [Fact]
+    public async Task Start_BuiltinWithEmptyHumanRoom_RunsOneGreetingTurn()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        var persona = new Persona("Chief of Staff", BuiltinTeammate.DefaultText);
+
+        await using var runner = CreateHost(fixture, persona, factory);
+        await runner.StartAsync(ct);
+
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+        var prompts = await WaitForPromptCountAsync(factory.Session, 1, ct);
+
+        var prompt = Assert.Single(prompts);
+        Assert.StartsWith($"[Room: Chief of Staff (id: {roomId})]", prompt, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A plain, non-built-in Persona never gets a Greeting, even though its own two-Member Room with
+    /// the Human is freshly created and empty (Spec §12 F-31): the built-in check in
+    /// <see cref="PersonaRunner.StartAsync"/> gates on <c>_builtin: chief-of-staff</c> in the
+    /// Persona's own text, which this Persona's text never carries.
+    /// </summary>
+    /// <remarks>
+    /// There is nothing to wait FOR here - the point under test is that nothing happens - so this
+    /// proves the negative the same way <see cref="ABudgetExhaustedRefusal_ReportsNothing"/> does
+    /// elsewhere in this file: bound the wait to <see cref="PersonaRunner.StartAsync"/> completing
+    /// (which itself deterministically waits through the Welcome handshake and session creation, via
+    /// <see cref="WaitForDirectRoomAsync"/> confirming registration) plus a short, fixed grace period
+    /// for a wrongly-queued item to reach the fake session - a bounded, explained sleep rather than an
+    /// unbounded assertion that could only ever time out instead of failing cleanly.
+    /// </remarks>
+    [Fact]
+    public async Task Start_NotBuiltin_NoGreeting()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        var persona = new Persona("nova", "You are Nova.");
+
+        await using var runner = CreateHost(fixture, persona, factory);
+        await runner.StartAsync(ct);
+        await WaitForDirectRoomAsync(fixture, "nova", ct);
+
+        await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+
+        Assert.Empty(factory.Session.Prompts);
+    }
+
+    /// <summary>
+    /// The built-in Chief of Staff does not greet a second time once its Room with the Human has
+    /// taken a Message: <see cref="PersonaRunner.StartAsync"/>'s Greeting check reads
+    /// <see cref="RoomInfo.IsEmpty"/> straight off the <see cref="Welcome"/> for this particular
+    /// start, and a Room the Human has already posted into reports it <see langword="false"/> (Task
+    /// 16.2).
+    /// </summary>
+    /// <remarks>
+    /// The "later real Message" this test waits on is the Human's own post:
+    /// <see cref="WaitForHistoryCountAsync"/> proves it reached the Transcript - and therefore that
+    /// the Room's file is non-empty for <see cref="IChatStore.HasMessagesAsync"/> to see - before the
+    /// second runner ever says <c>hello</c>. Only the absence that follows (no Greeting on that
+    /// second start) needs the same bounded grace period <see cref="Start_NotBuiltin_NoGreeting"/>
+    /// uses, since there is no later event to wait for proving something did not happen.
+    /// </remarks>
+    [Fact]
+    public async Task Start_HumanRoomNotEmpty_NoGreeting()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var persona = new Persona("Chief of Staff", BuiltinTeammate.DefaultText);
+
+        var firstFactory = new FakeAgentHostFactory();
+        await using var firstRunner = CreateHost(fixture, persona, firstFactory);
+        await firstRunner.StartAsync(ct);
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        var store = fixture.Services.GetRequiredService<IChatStore>();
+        await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
+        await WaitForHistoryCountAsync(store, roomId, 1, ct);
+        await firstRunner.StopAsync();
+
+        var secondFactory = new FakeAgentHostFactory();
+        await using var secondRunner = CreateHost(fixture, persona, secondFactory);
+        await secondRunner.StartAsync(ct);
+        await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+
+        await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+
+        Assert.Empty(secondFactory.Session.Prompts);
+    }
+
+    /// <summary>
+    /// An empty Room the built-in Chief of Staff belongs to does not queue a Greeting when it has
+    /// three Members instead of two: the Spec §6.14 check is specific to a Room with exactly two
+    /// Members, one of them the Human, and <see cref="RoomInfo.IsEmpty"/> - a three-Member Room fails
+    /// that shape test regardless of whether it has taken any Messages.
+    /// </summary>
+    /// <remarks>
+    /// The Room with the Human is made non-empty first, exactly as
+    /// <see cref="Start_HumanRoomNotEmpty_NoGreeting"/> does, so this test isolates one variable: an
+    /// empty Room of the wrong shape must not itself queue a Greeting even while it sits alongside
+    /// that non-empty Room in the same Welcome. The same bounded grace period proves the negative,
+    /// for the same reason given there.
+    /// </remarks>
+    [Fact]
+    public async Task Start_EmptyGroupRoomOnly_NoGreeting()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var persona = new Persona("Chief of Staff", BuiltinTeammate.DefaultText);
+
+        var firstFactory = new FakeAgentHostFactory();
+        await using var firstRunner = CreateHost(fixture, persona, firstFactory);
+        await firstRunner.StartAsync(ct);
+        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        var store = fixture.Services.GetRequiredService<IChatStore>();
+        await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
+        await WaitForHistoryCountAsync(store, roomId, 1, ct);
+
+        await using var friend = await fixture.ConnectClientAsync(ct);
+        await friend.WriteAsync(new Hello("friend", null), ct);
+        var friendWelcome = Assert.IsType<Welcome>(await friend.ReadAsync(ct));
+        await chat.CreateRoomForAsync([agentId, friendWelcome.AgentId], ct);
+
+        await firstRunner.StopAsync();
+
+        var secondFactory = new FakeAgentHostFactory();
+        await using var secondRunner = CreateHost(fixture, persona, secondFactory);
+        await secondRunner.StartAsync(ct);
+        await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+
+        await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+
+        Assert.Empty(secondFactory.Session.Prompts);
+    }
+
+    /// <summary>
+    /// When the session factory itself fails, <see cref="PersonaRunner.StartAsync"/> propagates the
+    /// exception before it ever reaches the Greeting check: Spec §6.14 requires the Greeting to be
+    /// queued only after <c>factory.CreateAsync</c> succeeds, "so a failed start never leaves a
+    /// queued Turn with no session". <see cref="FakeAgentSession.Prompts"/> on a fresh, never-returned
+    /// session proves nothing reached it.
+    /// </summary>
+    [Fact]
+    public async Task Start_FactoryThrows_NoGreetingQueued()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        factory.FailNextCreateWith(new InvalidOperationException("Session creation failed."));
+        var persona = new Persona("Chief of Staff", BuiltinTeammate.DefaultText);
+
+        await using var runner = CreateHost(fixture, persona, factory);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => runner.StartAsync(ct));
+
+        await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+
+        Assert.Empty(factory.Session.Prompts);
+    }
+
+    /// <summary>
+    /// The Greeting Turn's reply is posted as an ordinary Message from the Chief of Staff's own
+    /// Agent, into its Room with the Human - and nothing else lands there. There is no fake
+    /// Human-authored Message triggering it (Spec §6.14).
+    /// </summary>
+    [Fact]
+    public async Task Greeting_FakeSessionReplies_PostedAsChiefOfStaffInHumanRoom()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReply("Welcome aboard! What would you like to get done first?");
+        var persona = new Persona("Chief of Staff", BuiltinTeammate.DefaultText);
+
+        await using var runner = CreateHost(fixture, persona, factory);
+        await runner.StartAsync(ct);
+
+        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+        var store = fixture.Services.GetRequiredService<IChatStore>();
+        var history = await WaitForHistoryCountAsync(store, roomId, 1, ct);
+
+        var greeting = Assert.Single(history);
+        Assert.Equal(agentId, greeting.SenderId);
+        Assert.Equal("Chief of Staff", greeting.SenderName);
+        Assert.Equal("Welcome aboard! What would you like to get done first?", greeting.Text);
+        Assert.DoesNotContain(history, m => m.SenderId == KnownIds.Human);
+    }
+
+    /// <summary>
+    /// A Greeting Turn that fails posts nothing, and the Room it targeted stays empty exactly as
+    /// <see cref="IChatStore.HasMessagesAsync"/> reports it server-side - the same signal
+    /// <see cref="Agency.Huddle.App.Pipes.AgentConnection"/> reads to decide whether the next start
+    /// queues a Greeting again (Spec §6.14, F-26).
+    /// </summary>
+    [Fact]
+    public async Task Greeting_TurnFails_NothingPostedRoomStillEmpty()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
+        var persona = new Persona("Chief of Staff", BuiltinTeammate.DefaultText);
+
+        await using var runner = CreateHost(fixture, persona, factory);
+        await runner.StartAsync(ct);
+
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+        await WaitForPromptCountAsync(factory.Session, 1, ct);
+
+        // Bounded grace period for the failed prompt's post-processing to finish - the same shape
+        // Start_NotBuiltin_NoGreeting above uses: there is nothing further to wait FOR (a failure
+        // posts nothing, by design), only a window to let it settle before asserting the negative.
+        await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+
+        var store = fixture.Services.GetRequiredService<IChatStore>();
+        var history = await store.ReadAllAsync(roomId, ct);
+        Assert.Empty(history);
+
+        var hasMessages = await store.HasMessagesAsync(roomId, ct);
+        Assert.False(hasMessages);
+    }
+
+    /// <summary>
+    /// A Human Message that arrives while the Greeting Turn is still running does not interrupt it
+    /// or merge into it: the Greeting Turn is queued on the runner's single consumer loop like any
+    /// other Turn, so it posts first, and only then does the Human's Message get its own separate
+    /// Turn (Spec §6.14, F-27).
+    /// </summary>
+    [Fact]
+    public async Task Greeting_HumanMessageArrivesDuring_QueuedAndAnsweredNext()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "greeting reply");
+        factory.Session.EnqueueReply("pong");
+        var persona = new Persona("Chief of Staff", BuiltinTeammate.DefaultText);
+
+        await using var runner = CreateHost(fixture, persona, factory);
+        await runner.StartAsync(ct);
+
+        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        var store = fixture.Services.GetRequiredService<IChatStore>();
+
+        // Posted well inside the Greeting Turn's 300ms hold, while its own PromptAsync call is still
+        // in flight - the runner's single consumer loop can only pick this up once that Turn ends.
+        await chat.PostAsync(roomId, KnownIds.Human, "hello, anyone there?", ct: ct);
+
+        var history = await WaitForHistoryCountAsync(store, roomId, 3, ct);
+
+        Assert.False(factory.Session.OverlapDetected);
+        Assert.Equal(2, factory.Session.Prompts.Count);
+
+        var humanMessage = Assert.Single(history, m => m.SenderId == KnownIds.Human);
+        Assert.Equal("hello, anyone there?", humanMessage.Text);
+
+        var greetingReply = Assert.Single(history, m => m.Text == "greeting reply");
+        var pongReply = Assert.Single(history, m => m.Text == "pong");
+        Assert.Equal(agentId, greetingReply.SenderId);
+        Assert.Equal(agentId, pongReply.SenderId);
+
+        var orderedHistory = history.ToList();
+        Assert.True(
+            orderedHistory.IndexOf(greetingReply) < orderedHistory.IndexOf(pongReply),
+            "The Greeting Turn must post before the Turn answering the Human's Message.");
     }
 
     [Fact]
@@ -2300,6 +2595,33 @@ public sealed class PersonaRunnerTests
             if (history.Count >= count)
             {
                 return history;
+            }
+
+            await Task.Delay(50, ct);
+        }
+    }
+
+    /// <summary>
+    /// Polls <paramref name="session"/>'s recorded <see cref="FakeAgentSession.Prompts"/> until at
+    /// least <paramref name="count"/> have arrived, the same bounded-poll shape as
+    /// <see cref="WaitForDirectRoomAsync"/> and <see cref="WaitForHistoryCountAsync"/> above: a
+    /// Greeting Turn runs on <see cref="PersonaRunner"/>'s own consumer loop, concurrently with the
+    /// test, so there is no single call this test can await for "the prompt has arrived" - only a
+    /// condition to poll for, bounded by <paramref name="ct"/> so a runner that never queues the
+    /// Greeting fails the test via cancellation rather than hanging forever.
+    /// </summary>
+    /// <param name="session">The fake session recording prompts.</param>
+    /// <param name="count">How many prompts to wait for.</param>
+    /// <param name="ct">Bounds the poll.</param>
+    /// <returns>The recorded prompts, once at least <paramref name="count"/> have arrived.</returns>
+    private static async Task<IReadOnlyList<string>> WaitForPromptCountAsync(FakeAgentSession session, int count, CancellationToken ct)
+    {
+        while (true)
+        {
+            var prompts = session.Prompts;
+            if (prompts.Count >= count)
+            {
+                return prompts;
             }
 
             await Task.Delay(50, ct);

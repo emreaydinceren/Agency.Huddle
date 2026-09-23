@@ -100,6 +100,13 @@ else
                 No teammate was @@-mentioned — name one to ask for a reply.
             </MudAlert>
         }
+        @* Directly above the Budget prompt, per Spec §6.11: a waiting Proposal is the thing you need
+           to read before deciding whether to grant another Budget, the same reasoning that places
+           the Budget prompt itself between the transcript and the composer. Unlike the strips below,
+           this one IS a component - its own leading-@ RoomId hazard is documented on ProposalCard
+           itself, and it already owns its own RoomEvents subscription rather than duplicating one
+           here. *@
+        <ProposalCard RoomId="@this.room.Id" />
         @* Between the transcript and the composer on purpose: the exchange that spent the Budget is
            the thing you need to read before deciding whether to grant another one. Rendered inline
            rather than as a component because a string Parameter missing its leading @ passes the

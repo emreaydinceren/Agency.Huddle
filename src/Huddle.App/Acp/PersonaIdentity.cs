@@ -31,9 +31,25 @@ namespace Agency.Huddle.App.Acp;
 /// whose value is blank, is still a valid Persona. The trailing default keeps every existing
 /// positional construction of this record compiling.
 /// </param>
+/// <param name="Skills">
+/// The Skills this Persona holds, in file order, with a case-insensitive repeat collapsed into its
+/// first occurrence (Spec §6.3). Never <see langword="null"/> once read through
+/// <see cref="PersonaFrontmatter.TryReadIdentity(string, out PersonaIdentity?, out string)"/> — an
+/// absent <c>skills</c> field yields an empty list, the same rule as <see cref="Teams"/>. The
+/// <see langword="null"/> default exists only so every existing positional construction of this
+/// record keeps compiling.
+/// </param>
+/// <param name="Builtin">
+/// Marks this Persona as one of the app's built-in Teammates — <c>chief-of-staff</c> is the only
+/// value V1 gives meaning to (Spec §6.3) — or <see langword="null"/> when the Persona is not a
+/// built-in. Read from the <c>_builtin</c> frontmatter key; a blank value reads as
+/// <see langword="null"/>, not an empty string.
+/// </param>
 public sealed record PersonaIdentity(
     string Name,
     string Title,
     string Alias,
     IReadOnlyList<string> Teams,
-    string? Adapter = null);
+    string? Adapter = null,
+    IReadOnlyList<string>? Skills = null,
+    string? Builtin = null);

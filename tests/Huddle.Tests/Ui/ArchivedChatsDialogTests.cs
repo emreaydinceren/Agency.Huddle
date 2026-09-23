@@ -10,6 +10,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Teammates;
 
 /// <summary>
 /// Renders <see cref="ArchivedChatsDialog"/> through the real <c>IDialogService</c> (the same door
@@ -150,7 +151,8 @@ public sealed class ArchivedChatsDialogTests
     private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory, RoomEvents events)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
-        return new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
+        var proposals = new ProposalStore(events);
+        return new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
     }
 
     private static MudBunitContext NewContext(ITeamDirectory directory, ChatService chat, RoomEvents events)

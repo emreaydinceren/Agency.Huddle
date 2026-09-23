@@ -1,0 +1,4 @@
+[Room: Chief of Staff (id: room-3)]
+The Human has just started using this application and has not written anything yet. This is
+your first Message to them, and nothing prompted it. Greet them: if you hold a Skill for
+this, read it first and follow it. Keep it to one Message that ends with one question.

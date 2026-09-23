@@ -5,6 +5,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Shared;
+using TeammatesPage = Agency.Huddle.App.Components.Pages.Teammates;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -16,8 +17,8 @@ namespace Agency.Huddle.Tests.Ui;
 /// </summary>
 /// <remarks>
 /// <para>
-/// The bug's shape survives in a new form, though. <see cref="Teammates.BuildViewParameters"/> and
-/// <see cref="Teammates.BuildCreateParameters"/> build a <see cref="DialogParameters"/> keyed by plain
+/// The bug's shape survives in a new form, though. <see cref="TeammatesPage.BuildViewParameters"/> and
+/// <see cref="TeammatesPage.BuildCreateParameters"/> build a <see cref="DialogParameters"/> keyed by plain
 /// strings; <c>Teammates.razor</c> writes every key as <c>nameof(TeammateCard.Something)</c> rather
 /// than a literal, which makes a typo a compile error today, but nothing stops a future edit from
 /// reaching for a raw string instead, or from renaming a <c>[Parameter]</c> on
@@ -37,7 +38,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// </remarks>
 public sealed class TeammateDialogParametersTests
 {
-    /// <summary>Every <see cref="DialogParameters"/> key <see cref="Teammates.BuildViewParameters"/> produces names a real public <c>[Parameter]</c> on <see cref="TeammateCard"/>.</summary>
+    /// <summary>Every <see cref="DialogParameters"/> key <see cref="TeammatesPage.BuildViewParameters"/> produces names a real public <c>[Parameter]</c> on <see cref="TeammateCard"/>.</summary>
     [Fact]
     public void ViewParameters_EveryKeyNamesARealTeammateCardParameter()
     {
@@ -45,36 +46,36 @@ public sealed class TeammateDialogParametersTests
         var persona = new Persona("Jarvis", "You are Jarvis.", "claude-opus-4", "high");
         var status = new PersonaStatus(PersonaState.Online, null, DateTimeOffset.UtcNow);
 
-        var parameters = Teammates.BuildViewParameters("Jarvis", entry, persona, status, roomId: "room-1", filePath: @"C:\Teams\Jarvis.md");
+        var parameters = TeammatesPage.BuildViewParameters("Jarvis", entry, persona, status, roomId: "room-1", filePath: @"C:\Teams\Jarvis.md");
 
         AssertEveryKeyIsARealParameter(parameters);
     }
 
-    /// <summary>The same guard against <see cref="Teammates.BuildViewParameters"/>'s null-entry, null-persona path (a Persona somehow not yet in <see cref="PersonaStore.Entries"/>), which still must name only real parameters.</summary>
+    /// <summary>The same guard against <see cref="TeammatesPage.BuildViewParameters"/>'s null-entry, null-persona path (a Persona somehow not yet in <see cref="PersonaStore.Entries"/>), which still must name only real parameters.</summary>
     [Fact]
     public void ViewParameters_WithNoEntryOrPersona_EveryKeyNamesARealTeammateCardParameter()
     {
         var status = new PersonaStatus(PersonaState.Offline, null, DateTimeOffset.MinValue);
 
-        var parameters = Teammates.BuildViewParameters("ghost", entry: null, persona: null, status, roomId: null, filePath: null);
+        var parameters = TeammatesPage.BuildViewParameters("ghost", entry: null, persona: null, status, roomId: null, filePath: null);
 
         AssertEveryKeyIsARealParameter(parameters);
     }
 
-    /// <summary>Every <see cref="DialogParameters"/> key <see cref="Teammates.BuildCreateParameters"/> produces names a real public <c>[Parameter]</c> on <see cref="TeammateCard"/>.</summary>
+    /// <summary>Every <see cref="DialogParameters"/> key <see cref="TeammatesPage.BuildCreateParameters"/> produces names a real public <c>[Parameter]</c> on <see cref="TeammateCard"/>.</summary>
     [Fact]
     public void CreateParameters_EveryKeyNamesARealTeammateCardParameter()
     {
-        var parameters = Teammates.BuildCreateParameters();
+        var parameters = TeammatesPage.BuildCreateParameters();
 
         AssertEveryKeyIsARealParameter(parameters);
     }
 
-    /// <summary><see cref="Teammates.BuildCreateParameters"/> sets <see cref="TeammateCard.Mode"/> to <see cref="TeammateCardMode.Create"/> - the one value a blank Create card cannot be opened without.</summary>
+    /// <summary><see cref="TeammatesPage.BuildCreateParameters"/> sets <see cref="TeammateCard.Mode"/> to <see cref="TeammateCardMode.Create"/> - the one value a blank Create card cannot be opened without.</summary>
     [Fact]
     public void CreateParameters_SetsModeToCreate()
     {
-        var parameters = Teammates.BuildCreateParameters();
+        var parameters = TeammatesPage.BuildCreateParameters();
 
         Assert.Equal(TeammateCardMode.Create, parameters.Get<TeammateCardMode>(nameof(TeammateCard.Mode)));
     }
