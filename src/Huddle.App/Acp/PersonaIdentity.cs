@@ -45,6 +45,15 @@ namespace Agency.Huddle.App.Acp;
 /// built-in. Read from the <c>_builtin</c> frontmatter key; a blank value reads as
 /// <see langword="null"/>, not an empty string.
 /// </param>
+/// <param name="Watches">
+/// The Watched Folder entries this Persona subscribes to from its frontmatter (FC §6.2), in file
+/// order, with a case-insensitive repeat collapsed into its first occurrence. Never
+/// <see langword="null"/> once read through
+/// <see cref="PersonaFrontmatter.TryReadIdentity(string, out PersonaIdentity?, out string)"/> — an
+/// absent <c>watches</c> field yields an empty list, the same rule as <see cref="Skills"/>. The
+/// <see langword="null"/> default exists only so every existing positional construction of this
+/// record keeps compiling.
+/// </param>
 public sealed record PersonaIdentity(
     string Name,
     string Title,
@@ -52,4 +61,5 @@ public sealed record PersonaIdentity(
     IReadOnlyList<string> Teams,
     string? Adapter = null,
     IReadOnlyList<string>? Skills = null,
-    string? Builtin = null);
+    string? Builtin = null,
+    IReadOnlyList<string>? Watches = null);

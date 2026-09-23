@@ -340,6 +340,18 @@ public sealed class PersonaFrontmatterTests
         Assert.DoesNotContain("builtin", description, StringComparison.OrdinalIgnoreCase);
     }
 
+    /// <summary>A <c>watches</c> field is excluded from the job description, the same way <c>skills</c> is (FC §6.2).</summary>
+    [Fact]
+    public void ComposeJobDescription_ExcludesWatches()
+    {
+        var text = "---\nwatches: [Nova, Shared/pricing]\nconsult_when: 'For research'\n---\nbody";
+
+        var description = PersonaFrontmatter.ComposeJobDescription(text);
+
+        Assert.Contains("Consult When: For research", description, StringComparison.Ordinal);
+        Assert.DoesNotContain("watches", description, StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>A well-formed identity block yields all four fields, with <c>Teams</c> read from its comma form.</summary>
     [Fact]
     public void TryReadIdentity_WellFormedBlock_ReadsAllFourFields()
@@ -674,6 +686,63 @@ public sealed class PersonaFrontmatterTests
         Assert.Equal(["a", "b"], identity.Skills);
     }
 
+    /// <summary>A bracketed flow list for <c>watches</c> yields <see cref="PersonaIdentity.Watches"/> as an ordered list (FC §6.2).</summary>
+    [Fact]
+    public void TryReadIdentity_WatchesFlowList_Read()
+    {
+        var text = "---\nName: Coach\nTitle: Fitness Coach\nAlias: coach\nwatches: [Nova, Shared/pricing]\n---\nbody";
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var identity, out var error);
+
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal(["Nova", "Shared/pricing"], identity.Watches);
+    }
+
+    /// <summary>The block-list form of <c>watches</c> yields the same ordered list as the flow-list form.</summary>
+    [Fact]
+    public void TryReadIdentity_WatchesBlockList_Read()
+    {
+        var text = "---\nName: Coach\nTitle: Fitness Coach\nAlias: coach\nwatches:\n  - Nova\n  - Shared/pricing\n---\nbody";
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var identity, out var error);
+
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal(["Nova", "Shared/pricing"], identity.Watches);
+    }
+
+    /// <summary>A case-insensitive repeat in <c>watches</c> is collapsed into its first occurrence.</summary>
+    [Fact]
+    public void TryReadIdentity_WatchesRepeatCaseInsensitive_CollapsedToFirst()
+    {
+        var text = "---\nName: Coach\nTitle: Fitness Coach\nAlias: coach\nwatches: [Nova, nova]\n---\nbody";
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var identity, out var error);
+
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.Equal(["Nova"], identity.Watches);
+    }
+
+    /// <summary>An absent <c>watches</c> field yields an empty list, not <see langword="null"/>, and the Persona is still valid.</summary>
+    [Fact]
+    public void TryReadIdentity_NoWatches_IsEmptyNeverNull()
+    {
+        var text = "---\nName: Coach\nTitle: Fitness Coach\nAlias: coach\n---\nbody";
+
+        var succeeded = PersonaFrontmatter.TryReadIdentity(text, out var identity, out var error);
+
+        Assert.True(succeeded);
+        Assert.Equal(string.Empty, error);
+        Assert.NotNull(identity);
+        Assert.NotNull(identity.Watches);
+        Assert.Empty(identity.Watches);
+    }
+
     /// <summary>A <c>_builtin:</c> field reads as <see cref="PersonaIdentity.Builtin"/> (Spec §6.3).</summary>
     [Fact]
     public void TryReadIdentity_BuiltinPresent_ReadsAsBuiltin()
@@ -828,6 +897,31 @@ public sealed class PersonaFrontmatterTests
         var text = PersonaFrontmatter.Compose(identity, "body");
 
         Assert.DoesNotContain("skills:", text, StringComparison.Ordinal);
+    }
+
+    /// <summary>A non-empty <see cref="PersonaIdentity.Watches"/> is written directly after <c>skills:</c> (FC §6.2).</summary>
+    [Fact]
+    public void Compose_WithWatches_WritesAfterSkills()
+    {
+        var identity = new PersonaIdentity("coo", "Chief of Staff", "coo", [], null, ["team-building"], null, ["Nova", "Shared/pricing"]);
+
+        var text = PersonaFrontmatter.Compose(identity, "body");
+        var lines = text.Split('\n');
+        var skillsIndex = Array.FindIndex(lines, line => line.StartsWith("skills:", StringComparison.Ordinal));
+
+        Assert.True(skillsIndex >= 0);
+        Assert.Equal("watches: [Nova, Shared/pricing]", lines[skillsIndex + 1]);
+    }
+
+    /// <summary>An empty <see cref="PersonaIdentity.Watches"/> list writes no line at all.</summary>
+    [Fact]
+    public void Compose_NoWatches_WritesNoLine()
+    {
+        var identity = new PersonaIdentity("coo", "Chief of Staff", "coo", []);
+
+        var text = PersonaFrontmatter.Compose(identity, "body");
+
+        Assert.DoesNotContain("watches:", text, StringComparison.Ordinal);
     }
 
     /// <summary>Rewriting one field leaves every other field's value, order and single-quoted formatting untouched.</summary>
