@@ -8,6 +8,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
@@ -208,6 +209,77 @@ public sealed class PromptGoldenTests
     {
         var item = new PersonaRunner.WorkItem(
             "room-3", "Chief of Staff", string.Empty, string.Empty, [], PersonaRunner.WorkItemKind.Greeting);
+
+        var actual = PersonaRunner.BuildPrompt(item, new FakePromptSource());
+
+        AssertMatchesGolden("turnPromptGreeting.txt", actual);
+    }
+
+    /// <summary>
+    /// Pins <see cref="PersonaRunner.BuildPrompt"/> for a Turn carrying a non-empty File Changes
+    /// report together with Catch-up context, per FC §6.8: the File Changes block goes first, ahead
+    /// of Catch-up, then exactly what today's Catch-up path already writes. The golden file was
+    /// written by hand from FC §6.8's sample, not seeded from this test's own output.
+    /// </summary>
+    [Fact]
+    public void BuildPrompt_WithFileChangesAndCatchUp_MatchesGolden()
+    {
+        FileChangesReport report = new(
+            [
+                new FileChange(FileChangeKind.Changed, @"E:\Huddle\App_Data\work\Nova\memory\launch-date.md"),
+                new FileChange(FileChangeKind.Added, @"E:\Huddle\App_Data\Shared\pricing\2026.md"),
+                new FileChange(FileChangeKind.Deleted, @"E:\Huddle\App_Data\work\Nova\notes\old.md"),
+            ],
+            NotListed: 12,
+            Unchecked: [@"E:\Huddle\App_Data\Shared\big-folder"],
+            MaxFilesPerFolder: 5000);
+        PersonaRunner.CaughtUpMessage[] missed =
+        [
+            new("Alice", "did anyone see the release notes?"),
+            new("Bob", "I have not, checking now"),
+        ];
+        var item = new PersonaRunner.WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { FileChanges = report };
+
+        var actual = PersonaRunner.BuildPrompt(item, new FakePromptSource());
+
+        AssertMatchesGolden("turnPromptFileChanges.txt", actual);
+    }
+
+    /// <summary>
+    /// An empty (or absent) File Changes report leaves <c>turnPromptPlain.txt</c> and
+    /// <c>turnPromptCatchUp.txt</c> byte-identical to today's output: "absent means unchanged".
+    /// </summary>
+    [Fact]
+    public void BuildPrompt_EmptyReport_ByteIdenticalToExistingGoldens()
+    {
+        var plainWithEmpty = new PersonaRunner.WorkItem("room-1", "Nova & You", "You", "hello there", []) with { FileChanges = FileChangesReport.Empty };
+        AssertMatchesGolden("turnPromptPlain.txt", PersonaRunner.BuildPrompt(plainWithEmpty, new FakePromptSource()));
+
+        var plainWithNull = new PersonaRunner.WorkItem("room-1", "Nova & You", "You", "hello there", []) with { FileChanges = null };
+        AssertMatchesGolden("turnPromptPlain.txt", PersonaRunner.BuildPrompt(plainWithNull, new FakePromptSource()));
+
+        PersonaRunner.CaughtUpMessage[] missed =
+        [
+            new("Alice", "did anyone see the release notes?"),
+            new("Bob", "I have not, checking now"),
+        ];
+        var catchUpWithEmpty = new PersonaRunner.WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { FileChanges = FileChangesReport.Empty };
+        AssertMatchesGolden("turnPromptCatchUp.txt", PersonaRunner.BuildPrompt(catchUpWithEmpty, new FakePromptSource()));
+
+        var catchUpWithNull = new PersonaRunner.WorkItem("room-2", "Nova & Friends", "Bob", "@Nova are you there?", missed) with { FileChanges = null };
+        AssertMatchesGolden("turnPromptCatchUp.txt", PersonaRunner.BuildPrompt(catchUpWithNull, new FakePromptSource()));
+    }
+
+    /// <summary>A Greeting Turn never carries a File Changes block, even with a non-empty report.</summary>
+    [Fact]
+    public void BuildPrompt_Greeting_HasNoFileChangesBlock()
+    {
+        FileChangesReport report = new(
+            [new FileChange(FileChangeKind.Changed, @"E:\Huddle\App_Data\work\Nova\memory\launch-date.md")],
+            NotListed: 0,
+            Unchecked: []);
+        var item = new PersonaRunner.WorkItem(
+            "room-3", "Chief of Staff", string.Empty, string.Empty, [], PersonaRunner.WorkItemKind.Greeting) with { FileChanges = report };
 
         var actual = PersonaRunner.BuildPrompt(item, new FakePromptSource());
 

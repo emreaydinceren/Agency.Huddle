@@ -1,0 +1,12 @@
+Since your last Turn in this Room, these files changed. Read one only if it matters to what you are doing now:
+changed E:\Huddle\App_Data\work\Nova\memory\launch-date.md
+added E:\Huddle\App_Data\Shared\pricing\2026.md
+deleted E:\Huddle\App_Data\work\Nova\notes\old.md
+E:\Huddle\App_Data\Shared\big-folder has more than 5000 files, so it was not checked.
+…and 12 more.
+
+[Room: Nova & Friends (id: room-2)] You were not addressed in these earlier messages, they are context only:
+Alice: did anyone see the release notes?
+Bob: I have not, checking now
+
+[Room: Nova & Friends (id: room-2)] Bob: @Nova are you there?

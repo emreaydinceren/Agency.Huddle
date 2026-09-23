@@ -4,6 +4,7 @@ using System.IO.Pipes;
 using System.Text;
 using System.Threading.Channels;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
@@ -1015,16 +1016,20 @@ internal sealed class PersonaRunner : IAsyncDisposable
         if (item.Kind == WorkItemKind.Greeting)
         {
             // No triggering Message and no catch-up (Spec §6.14): the trigger is this Prompt, not
-            // Transcript text, and a Greeting is by definition the first Turn in an empty Room.
+            // Transcript text, and a Greeting is by definition the first Turn in an empty Room. FC
+            // §6.8: the File Changes block never applies to a Greeting either.
             return prompts.Render("turn.greeting", new Dictionary<string, string> { ["{{roomLabel}}"] = room });
         }
 
+        var builder = new StringBuilder();
+        AppendFileChangesBlock(builder, item.FileChanges, prompts);
+
         if (item.MissedMessages.Count == 0)
         {
-            return RenderMessage(prompts, room, item.SenderName, item.Text);
+            builder.Append(RenderMessage(prompts, room, item.SenderName, item.Text));
+            return builder.ToString();
         }
 
-        var builder = new StringBuilder();
         builder.Append(prompts.Render("turn.catchUpHeader", new Dictionary<string, string> { ["{{roomLabel}}"] = room }));
         builder.Append('\n');
         foreach (var missed in item.MissedMessages)
@@ -1039,6 +1044,59 @@ internal sealed class PersonaRunner : IAsyncDisposable
         builder.Append(RenderMessage(prompts, room, item.SenderName, item.Text));
 
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// FC §6.8: with a non-empty <paramref name="report"/>, writes the File Changes block ahead of
+    /// everything else — the header, one line per change, one line per unchecked folder, an
+    /// "…and N more." line when the cap left some out, then a blank line. Writes nothing for a
+    /// <see langword="null"/> or empty report: "absent means unchanged".
+    /// </summary>
+    private static void AppendFileChangesBlock(StringBuilder builder, FileChangesReport? report, IPromptSource prompts)
+    {
+        if (report is null || report.IsEmpty)
+        {
+            return;
+        }
+
+        builder.Append(prompts.Render("turn.fileChangesHeader", new Dictionary<string, string>()));
+        builder.Append('\n');
+
+        foreach (var change in report.Changes)
+        {
+            var key = change.Kind switch
+            {
+                FileChangeKind.Added => "turn.fileAdded",
+                FileChangeKind.Changed => "turn.fileChanged",
+                FileChangeKind.Deleted => "turn.fileDeleted",
+                _ => throw new InvalidOperationException($"Unknown File Change kind '{change.Kind}'."),
+            };
+
+            builder.Append(prompts.Render(key, new Dictionary<string, string> { ["{{path}}"] = change.FullPath }));
+            builder.Append('\n');
+        }
+
+        foreach (var uncheckedFolder in report.Unchecked)
+        {
+            builder.Append(prompts.Render(
+                "turn.folderUnchecked",
+                new Dictionary<string, string>
+                {
+                    ["{{path}}"] = uncheckedFolder,
+                    ["{{max}}"] = report.MaxFilesPerFolder.ToString(CultureInfo.InvariantCulture),
+                }));
+            builder.Append('\n');
+        }
+
+        if (report.NotListed > 0)
+        {
+            builder.Append(prompts.Render(
+                "turn.fileChangesMore",
+                new Dictionary<string, string> { ["{{count}}"] = report.NotListed.ToString(CultureInfo.InvariantCulture) }));
+            builder.Append('\n');
+        }
+
+        builder.Append('\n');
     }
 
     /// <summary>Builds the bracketed Room label that opens every line of a prompt.</summary>
@@ -1159,7 +1217,8 @@ internal sealed class PersonaRunner : IAsyncDisposable
         string SenderName,
         string Text,
         IReadOnlyList<CaughtUpMessage> MissedMessages,
-        WorkItemKind Kind = WorkItemKind.Message);
+        WorkItemKind Kind = WorkItemKind.Message,
+        FileChangesReport? FileChanges = null);
 
     internal sealed record CaughtUpMessage(string SenderName, string Text);
 

@@ -194,6 +194,92 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
 
         new PromptDefinition(
+            Key: "turn.fileChangesHeader",
+            Label: "File Changes header",
+            HelperText:
+                "The line introducing the File Changes block, shown once above it. \"Read one only if " +
+                "it matters to what you are doing now\" is the most important part of this sentence " +
+                "(FC §6.13): without it an eager model reads every listed file on every Turn.",
+            Default:
+                """
+                Since your last Turn in this Room, these files changed. Read one only if it matters to what you are doing now:
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.fileAdded",
+            Label: "File added",
+            HelperText:
+                "One line of the File Changes block, repeated once per file added since the Agent's " +
+                "last Turn in this Room. {{path}} is required: without it the line names no file.",
+            Default:
+                """
+                added {{path}}
+                """,
+            Placeholders: ["{{path}}"],
+            RequiredPlaceholders: ["{{path}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.fileChanged",
+            Label: "File changed",
+            HelperText:
+                "One line of the File Changes block, repeated once per file changed since the Agent's " +
+                "last Turn in this Room. {{path}} is required: without it the line names no file.",
+            Default:
+                """
+                changed {{path}}
+                """,
+            Placeholders: ["{{path}}"],
+            RequiredPlaceholders: ["{{path}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.fileDeleted",
+            Label: "File deleted",
+            HelperText:
+                "One line of the File Changes block, repeated once per file deleted since the Agent's " +
+                "last Turn in this Room. {{path}} is required: without it the line names no file.",
+            Default:
+                """
+                deleted {{path}}
+                """,
+            Placeholders: ["{{path}}"],
+            RequiredPlaceholders: ["{{path}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.fileChangesMore",
+            Label: "File Changes more",
+            HelperText:
+                "The closing line of the File Changes block when more changes exist than were listed. " +
+                "{{count}} is required: without it the line does not say how many were left out.",
+            Default:
+                """
+                …and {{count}} more.
+                """,
+            Placeholders: ["{{count}}"],
+            RequiredPlaceholders: ["{{count}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.folderUnchecked",
+            Label: "Folder unchecked",
+            HelperText:
+                "One line of the File Changes block, repeated once per Watched Folder that held more " +
+                "files than the cap and so was not scanned. {{path}} is required: {{max}} is available " +
+                "for an override that wants to state the cap too.",
+            Default:
+                """
+                {{path}} has more than {{max}} files, so it was not checked.
+                """,
+            Placeholders: ["{{path}}", "{{max}}"],
+            RequiredPlaceholders: ["{{path}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
             Key: "turn.greeting",
             Label: "Greeting",
             HelperText:
