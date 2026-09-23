@@ -5,7 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 43 Done.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 49 Done.
 
 ## How to update this tracker
 
@@ -79,12 +79,12 @@ Deliverable and Acceptance.
 | 8.2.t Test: concurrent Adds cannot both succeed on a collision (red) | | | ✔ |
 | 8.2.i Serialise `Add` and `Update` | | | ✔ |
 | **D9. Candidates and `validate_teammate`** | | | |
-| 9.1.t Test: parsing a Candidate from JSON (red) | ✔ | | |
-| 9.1.i Implement `Candidate` and `CandidateJson` | ✔ | | |
-| 9.2.t Test: `CandidateChecker` (red) | ✔ | | |
-| 9.2.i Implement `CandidateChecker` | ✔ | | |
-| 9.3.t Test: `validate_teammate` (red) | ✔ | | |
-| 9.3.i Implement `ValidateTeammateTool` | ✔ | | |
+| 9.1.t Test: parsing a Candidate from JSON (red) | | | ✔ |
+| 9.1.i Implement `Candidate` and `CandidateJson` | | | ✔ |
+| 9.2.t Test: `CandidateChecker` (red) | | | ✔ |
+| 9.2.i Implement `CandidateChecker` | | | ✔ |
+| 9.3.t Test: `validate_teammate` (red) | | | ✔ |
+| 9.3.i Implement `ValidateTeammateTool` | | | ✔ |
 | **D10. Proposals and `propose_teammates`** | | | |
 | 10.1.t Test: `ProposalStore` (red) | ✔ | | |
 | 10.1.i Implement `ProposalStore` | ✔ | | |

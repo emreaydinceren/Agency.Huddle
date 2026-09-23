@@ -3,12 +3,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
-using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Acp.Fakes;
+using TeammatesPage = Agency.Huddle.App.Components.Pages.Teammates;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -17,7 +17,7 @@ namespace Agency.Huddle.Tests.Ui;
 /// <c>ProbeCount</c>/<c>EffortProbeCount</c> are facts about the server, so they stay on a plain HTTP
 /// GET against <see cref="TeamWebApplicationFactory"/>. Everything that depends on the exact markup a
 /// MudBlazor control renders - the Create card's own content, or a <c>MudSelect</c>'s options, which
-/// only exist once opened - now renders <see cref="Teammates"/> through <see cref="MudBunitContext"/>
+/// only exist once opened - now renders <see cref="TeammatesPage"/> through <see cref="MudBunitContext"/>
 /// instead, the same split <c>SettingsPageTests</c> uses.
 /// </summary>
 public sealed class TeammatesPageTests
@@ -397,7 +397,7 @@ public sealed class TeammatesPageTests
         ctx.Services.AddSingleton(supervisor);
         ctx.Services.AddSingleton(avatars);
 
-        var cut = ctx.Render<Teammates>();
+        var cut = ctx.Render<TeammatesPage>();
         Assert.Contains("Online", cut.Markup, StringComparison.Ordinal);
         Assert.DoesNotContain("Offline", cut.Markup, StringComparison.Ordinal);
 
@@ -430,11 +430,11 @@ public sealed class TeammatesPageTests
         return ctx;
     }
 
-    /// <summary>Renders the real <see cref="Teammates"/> page, with the popover and dialog providers <see cref="MudBunitContext.RenderWithPopovers"/> supplies so an opened card, and any <c>MudSelect</c> inside it, actually render.</summary>
+    /// <summary>Renders the real <see cref="TeammatesPage"/> page, with the popover and dialog providers <see cref="MudBunitContext.RenderWithPopovers"/> supplies so an opened card, and any <c>MudSelect</c> inside it, actually render.</summary>
     private static IRenderedComponent<Bunit.Rendering.ContainerFragment> RenderPage(MudBunitContext ctx) =>
         ctx.RenderWithPopovers(builder =>
         {
-            builder.OpenComponent<Teammates>(0);
+            builder.OpenComponent<TeammatesPage>(0);
             builder.CloseComponent();
         });
 

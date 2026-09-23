@@ -8,6 +8,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 
 public sealed class ToolNamesTests
@@ -25,6 +26,7 @@ public sealed class ToolNamesTests
         var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
 
         var follows = new RoomFollows();
+        var checker = new CandidateChecker(personaStore, directory, gateway);
         var tools = new IAppTool[]
         {
             new ListAgentsTool(directory, gateway, personaStore, new FakePromptSource()),
@@ -33,6 +35,7 @@ public sealed class ToolNamesTests
             new PostMessageTool(chat, "caller-id", new FakePromptSource()),
             new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
+            new ValidateTeammateTool(checker, new FakePromptSource()),
             new GetHelpTool([], new FakePromptSource(), "mcp__team__"),
         };
 
@@ -42,6 +45,7 @@ public sealed class ToolNamesTests
         Assert.Equal("post_message", tools[3].Name);
         Assert.Equal("follow_room", tools[4].Name);
         Assert.Equal("unfollow_room", tools[5].Name);
-        Assert.Equal("get_help", tools[6].Name);
+        Assert.Equal("validate_teammate", tools[6].Name);
+        Assert.Equal("get_help", tools[7].Name);
     }
 }

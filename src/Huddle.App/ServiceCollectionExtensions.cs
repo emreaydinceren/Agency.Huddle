@@ -9,6 +9,7 @@ using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Teammates;
 
 namespace Agency.Huddle.App;
 
@@ -97,6 +98,12 @@ public static class ServiceCollectionExtensions
         // constructed stores each creating {DataDir}/Skills and (once a later task adds one) each
         // running their own FileSystemWatcher over it.
         services.AddSingleton<SkillStore>();
+
+        // No interface, same reasoning as PromptStore/SkillStore above: nothing needs to
+        // substitute this, and it is built entirely from other singletons already registered
+        // above (PersonaStore, ITeamDirectory, IAgentGateway), so a second, independently
+        // constructed instance would cost nothing extra but would still be pointless duplication.
+        services.AddSingleton<CandidateChecker>();
 
         // No interface: nothing needs to substitute this, and CSharpPrinciples.md says not to add
         // abstraction a feature has not asked for. This is state the app writes (a chosen theme, a

@@ -452,5 +452,19 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.validateTeammate.description",
+            Label: "validate_teammate description",
+            HelperText:
+                "The one-line job description a model reads for the validate_teammate tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Checks one proposed Teammate without creating anything. Returns 'Valid.' or every problem, one per line. Free: call it until the Candidate is clean.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
     ];
 }

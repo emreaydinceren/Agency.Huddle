@@ -228,6 +228,14 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     public IReadOnlyList<string> Teams => this.index.Teams;
 
     /// <summary>
+    /// The absolute path of the Teams directory this store reads and writes Persona files under.
+    /// Exposed so <c>CandidateChecker</c> can rewrite an absolute path inside a
+    /// <see cref="Check"/> rejection message into one relative to it (Spec §6.8), without this
+    /// store's own layout leaking any further than that one call site.
+    /// </summary>
+    internal string TeamsDirectory => this.teamsDir;
+
+    /// <summary>
     /// Every valid Persona's Alias, paired with its Name. Implements <see cref="IMentionAliasSource"/>
     /// so <see cref="MentionParser"/> and <see cref="ChatService"/> can resolve an
     /// Alias as a Mention or an <c>/invite</c> target through the interface alone - registered against
@@ -430,6 +438,25 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
         var current = this.index.ByName(name) ?? throw new ChatException(ErrorCodes.BadMessage, $"Persona '{name}' does not exist.");
 
         return current.Path;
+    }
+
+    /// <summary>
+    /// Throws the same <see cref="ChatException"/> <see cref="Add"/> itself throws when a file
+    /// already sits at the path <see cref="Add"/> would write <paramref name="name"/> to - checked
+    /// directly against the filesystem, since a file that never became a valid Persona is invisible
+    /// to <see cref="Entries"/> and <see cref="Check"/>'s collision rules alike, both of which only
+    /// see parsed identities. Does nothing when no such file exists. <c>CandidateChecker</c> is the
+    /// one caller (Spec §6.8's "files" step); it catches this the way it catches any
+    /// <see cref="ChatException"/> the store raises, turning it into a problem string.
+    /// </summary>
+    /// <param name="name">The Name to check a file does not already exist for.</param>
+    internal void EnsureNoFileExistsFor(string name)
+    {
+        var path = Path.Combine(this.teamsDir, $"{name}.md");
+        if (File.Exists(path))
+        {
+            throw new ChatException(ErrorCodes.BadMessage, $"Persona '{name}' already exists.");
+        }
     }
 
     /// <summary>Stops watching the Teams directory and releases the debounce timer.</summary>
