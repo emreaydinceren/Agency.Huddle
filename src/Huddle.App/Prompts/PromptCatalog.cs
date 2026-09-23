@@ -194,6 +194,48 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
 
         new PromptDefinition(
+            Key: "turn.transcriptHeader",
+            Label: "Transcript header",
+            HelperText:
+                "The line introducing a fresh Room Session's first Turn (RS §6.5): the Transcript " +
+                "range that replaces the catch-up buffer on that Turn only. {{roomLabel}} is required.",
+            Default:
+                """
+                {{roomLabel}} This is a new session for this Room. Its recent Messages, oldest first, including your own:
+                """,
+            Placeholders: ["{{roomLabel}}"],
+            RequiredPlaceholders: ["{{roomLabel}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.transcriptResumedHeader",
+            Label: "Transcript resumed header",
+            HelperText:
+                "The line introducing a resumed Room Session's first Turn (RS §6.5): only the " +
+                "Messages posted after the stored LastMessageId. {{roomLabel}} is required.",
+            Default:
+                """
+                {{roomLabel}} While this session was closed, these Messages were posted here:
+                """,
+            Placeholders: ["{{roomLabel}}"],
+            RequiredPlaceholders: ["{{roomLabel}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.transcriptOmitted",
+            Label: "Transcript omitted",
+            HelperText:
+                "The line stating how many earlier Messages in range were left out of the Transcript " +
+                "block (RS §6.5). {{count}} is required: without it the line does not say how many.",
+            Default:
+                """
+                …{{count}} earlier Messages are not shown.
+                """,
+            Placeholders: ["{{count}}"],
+            RequiredPlaceholders: ["{{count}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
             Key: "turn.fileChangesHeader",
             Label: "File Changes header",
             HelperText:

@@ -4,6 +4,7 @@ using System.IO.Pipes;
 using System.Threading.Channels;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.Contracts;
@@ -109,6 +110,39 @@ public sealed class RoomSessionPoolTests
         Assert.Empty(factory.Host!.Sessions);
     }
 
+    /// <summary>
+    /// D24 correction 23: the Model-not-in-catalog warning is not tied to <c>OpenAtStartAsync</c>'s
+    /// own open - a per-Room Persona with no Human Room, whose FIRST open ever is the lazy one its
+    /// first Mention triggers, still gets it, reported once per runner (D23 correction 17).
+    /// </summary>
+    [Fact]
+    public async Task NoHumanRoom_FirstMention_StillWarnsOnModelNotInCatalog()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakeServer();
+        var factory = new FakeAgentHostFactory { SessionPerRoom = true };
+        factory.Session.Models = [new AgentModelOption("some-other-model", "Other", null)];
+        var persona = new Persona("nova", "You are Nova.", Model: "missing-model");
+        var roomB = GroupRoom("room-b", "Room B");
+
+        List<PersonaStatus> statuses = [];
+        await using var runner = CreateRunner(server, persona, factory);
+        runner.StatusChanged += statuses.Add;
+        await server.HandshakeAsync(runner, [roomB], ct);
+
+        Assert.Empty(factory.Host!.Sessions);
+
+        await server.SendAsync(Posted(roomB, "hi"), ct);
+        await server.ReceiveUntilAsync<PostMessage>(ct);
+
+        Assert.Contains(
+            statuses,
+            status => status.State == PersonaState.Degraded && status.Reason is not null
+                && status.Reason.Contains("missing-model", StringComparison.Ordinal));
+    }
+
     /// <summary>In shared mode (finding P-9), every Room routes through the one shared session.</summary>
     [Fact]
     public async Task SharedMode_OneSessionForAllRooms()
@@ -152,10 +186,16 @@ public sealed class RoomSessionPoolTests
         await server.HandshakeAsync(runner, [roomA, roomB], ct);
 
         await server.SendAsync(Posted(roomB, "hi"), ct);
-        await server.ReceiveUntilAsync<PostMessage>(ct);
 
-        time.Advance(TimeSpan.FromMinutes(6));
-        await runner.SweepIdleSessionsAsync();
+        // The reply's own PostMessage arrives well before the Turn's finally block finishes writing
+        // the terminating (IsFinal) MessageDelta, committing File Changes (off here) and storing a
+        // Room Session entry (off here too) - only after ALL of that does the consumer's own finally
+        // stamp Room B's Idle state and LastActivity. Waiting for PostMessage alone raced that
+        // stamp against the Advance below; waiting for the terminator instead closes almost all of
+        // that gap, and SweepUntilAsync's retry closes what (theoretically) remains.
+        await server.ReceiveUntilAsync<MessageDelta>(delta => delta.RoomId == roomB.Id && delta.IsFinal, ct);
+
+        await SweepUntilAsync(runner, time, TimeSpan.FromMinutes(6), () => factory.Host!.Sessions[1].Disposed, ct);
 
         Assert.True(factory.Host!.Sessions[0].Disposed);
         Assert.True(factory.Host.Sessions[1].Disposed);
@@ -545,6 +585,46 @@ public sealed class RoomSessionPoolTests
         }
     }
 
+    /// <summary>
+    /// Advances <paramref name="time"/> by <paramref name="step"/> and sweeps, repeating until
+    /// <paramref name="condition"/> is met or <paramref name="timeout"/> elapses. A single
+    /// advance-then-sweep can race a Turn that has not yet finished stamping its Room Session's
+    /// <c>LastActivity</c> at the moment it advances the clock - if that stamp lands using the
+    /// already-advanced time, the Room reads as freshly active rather than idle, and one sweep pass
+    /// simply misses it. Re-advancing on each retry is what makes this self-correcting rather than
+    /// merely re-trying the same race: once the stamp has landed (at whatever moment it actually did),
+    /// the NEXT advance necessarily pushes the clock past it, so it becomes overdue on the very next
+    /// sweep regardless of the timing that produced it.
+    /// </summary>
+    /// <param name="runner">Whose idle sweep to invoke.</param>
+    /// <param name="time">The runner's own <see cref="ManualTimeProvider"/>.</param>
+    /// <param name="step">How far to advance the clock on each attempt.</param>
+    /// <param name="condition">What the sweep is expected to have achieved.</param>
+    /// <param name="ct">Bounds each sweep call and the delay between attempts.</param>
+    /// <param name="timeout">How long to keep retrying before failing the test. Defaults to 5 seconds.</param>
+    private static async Task SweepUntilAsync(
+        PersonaRunner runner, ManualTimeProvider time, TimeSpan step, Func<bool> condition, CancellationToken ct, TimeSpan? timeout = null)
+    {
+        var deadline = DateTime.UtcNow + (timeout ?? TimeSpan.FromSeconds(5));
+        while (!condition())
+        {
+            time.Advance(step);
+            await runner.SweepIdleSessionsAsync();
+
+            if (condition())
+            {
+                return;
+            }
+
+            if (DateTime.UtcNow > deadline)
+            {
+                Assert.Fail("Condition was not met before the sweep's own timeout.");
+            }
+
+            await Task.Delay(20, ct);
+        }
+    }
+
     /// <summary>A hand-scripted pipe server giving a test full control over the Welcome a <see cref="PersonaRunner"/> receives.</summary>
     private sealed class FakeServer : IAsyncDisposable
     {
@@ -615,6 +695,25 @@ public sealed class RoomSessionPoolTests
             }
         }
 
+        /// <summary>Reads received envelopes until one of type <typeparamref name="T"/> also matching <paramref name="predicate"/> arrives, discarding everything else - so a caller can wait for one specific envelope (for example the FINAL <see cref="MessageDelta"/> of a Turn, not just its first chunk) rather than merely the first of its type.</summary>
+        /// <typeparam name="T">The envelope type to wait for.</typeparam>
+        /// <param name="predicate">Which envelope of type <typeparamref name="T"/> to stop on.</param>
+        /// <param name="ct">Bounds the read.</param>
+        public async Task<T> ReceiveUntilAsync<T>(Func<T, bool> predicate, CancellationToken ct)
+            where T : ProtocolMessage
+        {
+            ArgumentNullException.ThrowIfNull(predicate);
+
+            while (true)
+            {
+                var message = await this.received.Reader.ReadAsync(ct);
+                if (message is T typed && predicate(typed))
+                {
+                    return typed;
+                }
+            }
+        }
+
         /// <summary>Continuously reads from the pipe into <see cref="received"/> until the stream ends or faults.</summary>
         private async Task PumpAsync()
         {
@@ -626,6 +725,16 @@ public sealed class RoomSessionPoolTests
                     if (message is null)
                     {
                         break;
+                    }
+
+                    // D24 correction 22: answered here rather than forwarded to received, so a
+                    // per-Room runner's first-Turn Transcript read over this hand-scripted server
+                    // never waits out its own 10-second timeout - none of this file's tests script a
+                    // Transcript, so every read gets the same empty, no-op answer.
+                    if (message is ReadTranscript read)
+                    {
+                        await this.stream.WriteAsync(new TranscriptTail(read.RequestId, read.RoomId, [], Omitted: 0), CancellationToken.None);
+                        continue;
                     }
 
                     await this.received.Writer.WriteAsync(message, CancellationToken.None);

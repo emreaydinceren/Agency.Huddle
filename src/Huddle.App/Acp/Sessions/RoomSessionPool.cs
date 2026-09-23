@@ -17,6 +17,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
 
     private readonly IPersonaHost host;
     private readonly IRoomSessionOwner owner;
+    private readonly Persona persona;
     private readonly IPromptSource prompts;
     private readonly AcpOptions options;
     private readonly TimeProvider time;
@@ -24,6 +25,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     private readonly IReadOnlyList<string> declaredWatches;
     private readonly ILogger logger;
     private readonly CancellationToken runToken;
+    private readonly RoomSessionStore? roomSessions;
     private readonly bool sessionPerRoom;
     private readonly TurnGate gate;
     private readonly int effectiveMaxLiveSessions;
@@ -41,6 +43,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <summary>Initializes a new instance of the <see cref="RoomSessionPool"/> class.</summary>
     /// <param name="host">The Persona's running Adapter host, which opens every Room Session's <see cref="IAgentSession"/>.</param>
     /// <param name="owner">What every Room Session reports Turn outcomes, tokens and health through.</param>
+    /// <param name="persona">The Persona this pool serves (RS §6.1 resume: its Model and Effort must still match a stored entry).</param>
     /// <param name="prompts">Resolves every <c>turn.*</c> prompt's current text.</param>
     /// <param name="options">The Persona's current ACP options.</param>
     /// <param name="time">Drives idle eviction and the sweep timer.</param>
@@ -48,19 +51,26 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <param name="declaredWatches">The Persona's declared Watched Folders.</param>
     /// <param name="logger">Where this pool logs.</param>
     /// <param name="runToken">The runner's own run token; cancelled means shutdown.</param>
+    /// <param name="roomSessions">
+    /// Backs resume and the Transcript Catch-up cursor (RS §6.1, §6.6), per-Room mode only (finding
+    /// P-15). <see langword="null"/> disables storing and resuming - a caller that predates D24.
+    /// </param>
     public RoomSessionPool(
         IPersonaHost host,
         IRoomSessionOwner owner,
+        Persona persona,
         IPromptSource prompts,
         AcpOptions options,
         TimeProvider time,
         FileChangeTracker? fileChanges,
         IReadOnlyList<string> declaredWatches,
         ILogger logger,
-        CancellationToken runToken)
+        CancellationToken runToken,
+        RoomSessionStore? roomSessions = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(owner);
+        ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(time);
@@ -69,6 +79,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
 
         this.host = host;
         this.owner = owner;
+        this.persona = persona;
         this.prompts = prompts;
         this.options = options;
         this.time = time;
@@ -76,6 +87,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         this.declaredWatches = declaredWatches;
         this.logger = logger;
         this.runToken = runToken;
+        this.roomSessions = roomSessions;
         this.sessionPerRoom = host.Profile.SessionPerRoom;
 
         var configuredConcurrency = Math.Max(1, options.MaxConcurrentTurns);
@@ -303,7 +315,10 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             declaredWatches: this.declaredWatches,
             logger: this.logger,
             runToken: this.runToken,
-            time: this.time);
+            time: this.time,
+            persona: this.persona,
+            roomSessions: this.roomSessions,
+            host: this.host);
 
     private RoomSession GetOrCreateSession(string roomId)
     {

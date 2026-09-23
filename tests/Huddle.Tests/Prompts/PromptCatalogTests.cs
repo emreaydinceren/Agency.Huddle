@@ -24,7 +24,32 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(43, PromptCatalog.All.Count);
+        Assert.Equal(46, PromptCatalog.All.Count);
+    }
+
+    /// <summary>
+    /// The three Transcript Catch-up prompts RS §6.9 defines (<c>turn.transcriptHeader</c>,
+    /// <c>turn.transcriptResumedHeader</c>, <c>turn.transcriptOmitted</c>) all exist, are
+    /// <see cref="PromptTiming.Live"/>, carry their required placeholder, and carry no
+    /// <c>mcp__team__</c> literal (D24).
+    /// </summary>
+    [Fact]
+    public void Catalog_HasTranscriptCatchUpPrompts()
+    {
+        var header = PromptCatalog.Get("turn.transcriptHeader");
+        Assert.Equal(PromptTiming.Live, header.Timing);
+        Assert.Equal(["{{roomLabel}}"], header.RequiredPlaceholders);
+        Assert.False(header.Default.Contains("mcp__team__", StringComparison.Ordinal));
+
+        var resumedHeader = PromptCatalog.Get("turn.transcriptResumedHeader");
+        Assert.Equal(PromptTiming.Live, resumedHeader.Timing);
+        Assert.Equal(["{{roomLabel}}"], resumedHeader.RequiredPlaceholders);
+        Assert.False(resumedHeader.Default.Contains("mcp__team__", StringComparison.Ordinal));
+
+        var omitted = PromptCatalog.Get("turn.transcriptOmitted");
+        Assert.Equal(PromptTiming.Live, omitted.Timing);
+        Assert.Equal(["{{count}}"], omitted.RequiredPlaceholders);
+        Assert.False(omitted.Default.Contains("mcp__team__", StringComparison.Ordinal));
     }
 
     /// <summary>

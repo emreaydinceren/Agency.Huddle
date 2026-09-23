@@ -52,6 +52,14 @@ internal sealed class RoomSession : IAsyncDisposable
     private readonly CancellationToken runToken;
     private readonly TimeProvider time;
 
+    // D24: resume (RS §6.1) and the Transcript Catch-up cursor. Only ever consulted for a per-Room
+    // session (RoomId not null) with all three present - a shared session or a caller that predates
+    // D24 (persona/roomSessions/host all null, the pre-D24 default) simply never resumes and never
+    // reads a Transcript, unchanged from before this task.
+    private readonly Persona? persona;
+    private readonly RoomSessionStore? roomSessionStore;
+    private readonly IPersonaHost? host;
+
     // Guards every field below: the queue, the state machine, the Stop marks, activeTurn and
     // pendingStopCancel - one lock, exactly as turnLock was on PersonaRunner, for the same reason:
     // the Stop path must publish its mark and read activeTurn as one atomic step against the
@@ -77,6 +85,19 @@ internal sealed class RoomSession : IAsyncDisposable
     private bool running;
     private long lastUsed;
 
+    // D24: consulted and cleared only from ProcessWorkItemAsync, which the single consumer thread
+    // always calls after the open that set them (OpenCoreAsync happens-before ProcessWorkItemAsync
+    // in RunConsumerAsync's own sequence), so these need no lock of their own - the same reasoning
+    // knownRoomNames documents on PersonaRunner.
+    private bool firstTurnPending;
+    private bool resumedOnLastOpen;
+    private string? resumedAfterMessageId;
+
+    // Set alongside firstTurnPending/resumedOnLastOpen; consumed by RunEventReaderAsync's own
+    // single-threaded loop, the same unlocked-by-construction reasoning lastUsed itself already
+    // relies on (D22 correction 9, built here for D24).
+    private bool usageBaselinePending;
+
     /// <summary>Initializes a new instance of the <see cref="RoomSession"/> class.</summary>
     /// <param name="roomId">The Room this session belongs to, or <see langword="null"/> for a shared session serving every Room.</param>
     /// <param name="open">Opens a fresh <see cref="IAgentSession"/>.</param>
@@ -93,6 +114,9 @@ internal sealed class RoomSession : IAsyncDisposable
     /// wall-clock minutes. Defaults to <see cref="TimeProvider.System"/> when omitted, so every
     /// pre-D23 caller keeps compiling and behaving unchanged.
     /// </param>
+    /// <param name="persona">The Persona this session belongs to (D24): its Model and Effort gate a resume. <see langword="null"/> disables resume, like every pre-D24 caller.</param>
+    /// <param name="roomSessions">Backs resume and the Transcript Catch-up cursor (RS §6.1, §6.6). <see langword="null"/> disables storing and resuming.</param>
+    /// <param name="host">Supplies <see cref="IPersonaHost.CanResume"/>, <see cref="AdapterProfile.Id"/> and <see cref="IPersonaHost.ResumeAsync"/> for the resume decision. <see langword="null"/> disables resume.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -104,7 +128,10 @@ internal sealed class RoomSession : IAsyncDisposable
         IReadOnlyList<string> declaredWatches,
         ILogger logger,
         CancellationToken runToken,
-        TimeProvider? time = null)
+        TimeProvider? time = null,
+        Persona? persona = null,
+        RoomSessionStore? roomSessions = null,
+        IPersonaHost? host = null)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
@@ -126,6 +153,9 @@ internal sealed class RoomSession : IAsyncDisposable
         this.runToken = runToken;
         this.time = time ?? TimeProvider.System;
         this.lastActivity = this.time.GetUtcNow();
+        this.persona = persona;
+        this.roomSessionStore = roomSessions;
+        this.host = host;
 
         this.consumerTask = this.RunConsumerAsync(runToken);
     }
@@ -364,12 +394,12 @@ internal sealed class RoomSession : IAsyncDisposable
         }
     }
 
-    /// <summary>Calls the injected opener, starts this session's event reader, and publishes the resulting state.</summary>
+    /// <summary>Calls the injected opener (or resumes, RS §6.1), starts this session's event reader, and publishes the resulting state.</summary>
     private async Task OpenAndStartReaderAsync(CancellationToken cancellationToken)
     {
         try
         {
-            var opened = await this.open(cancellationToken);
+            var (opened, resumed, resumedAfterId) = await this.OpenOrResumeAsync(cancellationToken);
             var readerCts = CancellationTokenSource.CreateLinkedTokenSource(this.runToken);
             lock (this.gate)
             {
@@ -380,12 +410,29 @@ internal sealed class RoomSession : IAsyncDisposable
                 this.lastUsed = 0;
             }
 
+            // D24: this open's first Turn (a Message carrying a TriggerMessageId, per-Room only)
+            // reads the Transcript - resumedAfterId only when this open actually resumed, so a
+            // fresh open (including a "not found" fallback, RS §9 E-1) reads the latest Messages
+            // instead. usageBaselinePending mirrors resumed: a resumed session's first
+            // UsageUpdated reports its whole restored context, not tokens this Turn spent (D22
+            // correction 9).
+            this.firstTurnPending = true;
+            this.resumedOnLastOpen = resumed;
+            this.resumedAfterMessageId = resumedAfterId;
+            this.usageBaselinePending = resumed;
+
+            // D23 correction 17 / D24 correction 23: reported on every open, not only the one
+            // StartAsync makes at start-up, so a per-Room Persona with no Human Room still gets
+            // the warning the first time any of its Rooms opens.
+            this.owner.ReportModels(opened.Models);
+
             this.eventReaderTask = this.RunEventReaderAsync(opened, readerCts.Token);
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
             // A start-up open failure escapes to the caller and leaves the session Closed, not
-            // Opening (D22 correction 6).
+            // Opening (D22 correction 6). Covers both a fresh open and a resume (RS §9 E-2: "a
+            // Turn failure. The entry is kept").
             lock (this.gate)
             {
                 this.state = RoomSessionState.Closed;
@@ -393,6 +440,39 @@ internal sealed class RoomSession : IAsyncDisposable
 
             throw;
         }
+    }
+
+    /// <summary>
+    /// RS §6.1 "Opening": resumes by the stored id when this is a per-Room session with a stored
+    /// entry whose Adapter, Model and Effort all still match the Persona's current ones and the host
+    /// advertises <see cref="IPersonaHost.CanResume"/>; opens fresh otherwise, including when
+    /// <see cref="IPersonaHost.ResumeAsync"/> itself answers "not found" (<see langword="null"/>, RS
+    /// §9 E-1). A resume that throws is left to propagate - the caller's own catch reports it as an
+    /// open failure and keeps the entry (RS §9 E-2), never falling back to a fresh open.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the open or resume.</param>
+    /// <returns>The opened session, whether it was resumed, and - only when resumed - the stored <see cref="RoomSessionEntry.LastMessageId"/> the Transcript Catch-up range starts after.</returns>
+    private async Task<(IAgentSession Session, bool Resumed, string? ResumedAfterMessageId)> OpenOrResumeAsync(CancellationToken cancellationToken)
+    {
+        if (this.RoomId is { } roomId && this.roomSessionStore is not null && this.host is not null && this.persona is not null)
+        {
+            var entry = this.roomSessionStore.Get(this.owner.PersonaName, roomId);
+            if (entry is not null
+                && this.host.CanResume
+                && string.Equals(entry.AdapterId, this.host.Profile.Id, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(entry.Model, this.persona.Model, StringComparison.Ordinal)
+                && string.Equals(entry.Effort, this.persona.Effort, StringComparison.Ordinal))
+            {
+                var resumedSession = await this.host.ResumeAsync(entry.SessionId, cancellationToken);
+                if (resumedSession is not null)
+                {
+                    return (resumedSession, true, entry.LastMessageId);
+                }
+            }
+        }
+
+        var opened = await this.open(cancellationToken);
+        return (opened, false, null);
     }
 
     private async Task RunConsumerAsync(CancellationToken ct)
@@ -457,7 +537,34 @@ internal sealed class RoomSession : IAsyncDisposable
                     {
                         // Opening happens inside this admitted slot (finding P-5).
                         await this.scheduler.MakeRoomToOpenAsync(this, ct);
-                        await this.OpenCoreAsync(ct);
+
+                        try
+                        {
+                            await this.OpenCoreAsync(ct);
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            // D24 correction 20: an open or resume failure on this lazy path is a
+                            // Turn failure, not a fatal loop error - OpenAndStartReaderAsync's own
+                            // catch already left the state Closed (D22 correction 6). No Turn ever
+                            // started for this item, so nothing is minted and no final MessageDelta
+                            // is written; the item is simply dropped, like a Stop-marked one.
+                            if (ex is AgentDisconnectedException)
+                            {
+                                this.owner.ReportOffline("The Adapter process disconnected.");
+                            }
+                            else
+                            {
+                                this.owner.ReportTurnFailure(head.Item.RoomName, ex.Message);
+                            }
+
+                            this.logger.LogWarning(
+                                ex,
+                                "Persona '{PersonaName}' failed to open a session for room {RoomId}.",
+                                this.owner.PersonaName,
+                                head.Item.RoomId);
+                            continue;
+                        }
                     }
 
                     await this.ProcessWorkItemAsync(head.Item, head.Sequence, ct);
@@ -559,6 +666,7 @@ internal sealed class RoomSession : IAsyncDisposable
         // Adapter cannot read files).
         CollectedChanges? collected = null;
         var promptReturned = false;
+        var replyPosted = false;
 
         if (item.Kind == WorkItemKind.Message && this.fileChanges is not null)
         {
@@ -576,6 +684,40 @@ internal sealed class RoomSession : IAsyncDisposable
             }
 
             item = item with { FileChanges = collected?.Report };
+        }
+
+        // D24, RS §6.5: the first Turn after any open (per-Room only) reads the Room's Transcript,
+        // after the File Changes collect and before the locked check-and-publish below (D22
+        // correction 3) - open and this read must both finish before the watchdog is armed, so
+        // neither counts as Adapter silence. Cleared here regardless of outcome: RS §9 E-3 (refused
+        // or timed out) and a Greeting or a Turn with no TriggerMessageId all still consume this
+        // Turn's "first after open" opportunity (D24 correction 19) without ever reading anything.
+        if (this.firstTurnPending)
+        {
+            this.firstTurnPending = false;
+            if (this.RoomId is not null && item.Kind == WorkItemKind.Message && item.TriggerMessageId is { } triggerId)
+            {
+                TranscriptTail? tail = null;
+                try
+                {
+                    tail = await this.owner.ReadTranscriptAsync(
+                        item.RoomId,
+                        this.resumedOnLastOpen ? this.resumedAfterMessageId : null,
+                        triggerId,
+                        this.options.TranscriptCatchUpMessages,
+                        ct);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    this.logger.LogWarning(
+                        ex, "Persona '{PersonaName}' Transcript read for room {RoomId} failed.", this.owner.PersonaName, item.RoomId);
+                }
+
+                if (tail is not null)
+                {
+                    item = item with { Transcript = new TranscriptCatchUp(this.resumedOnLastOpen, tail.Messages, tail.Omitted) };
+                }
+            }
         }
 
         // Exactly one session serves every Room the Agent is in (there is one session per Persona in
@@ -642,6 +784,7 @@ internal sealed class RoomSession : IAsyncDisposable
             if (isPostable)
             {
                 await this.owner.WriteAsync(new PostMessage(item.RoomId, messageId, outcome.Text), ct);
+                replyPosted = true;
             }
 
             // Health reporting (T4.3): every StopReason but Cancelled is a Turn that completed, so
@@ -785,6 +928,21 @@ internal sealed class RoomSession : IAsyncDisposable
                 }
             }
 
+            // RS §6.6 "Written at Turn end": per-Room mode only, whenever the prompt was sent
+            // (finding P-17, same gate as the File Changes commit above) and the run is not
+            // shutting down. LastMessageId is the reply's own minted id when one was actually
+            // posted, else the triggering Message's - a Greeting with neither leaves it null,
+            // legal per RoomSessionEntry's own doc comment.
+            if (this.RoomId is { } storeRoomId && this.roomSessionStore is not null && this.host is not null && this.persona is not null
+                && !ct.IsCancellationRequested && (promptReturned || turn.SawActivity))
+            {
+                var lastMessageId = replyPosted ? messageId : item.TriggerMessageId;
+                this.roomSessionStore.Put(
+                    this.owner.PersonaName,
+                    storeRoomId,
+                    new RoomSessionEntry(activeSession.SessionId, this.host.Profile.Id, this.persona.Model, this.persona.Effort, lastMessageId, this.time.GetUtcNow()));
+            }
+
             turnCancellation.Dispose();
         }
     }
@@ -924,11 +1082,23 @@ internal sealed class RoomSession : IAsyncDisposable
                     // session actually cost. lastUsed lives here, not on the owner (RS §6.8): it is
                     // one session's context fill, and a shared lastUsed would read one session's fill
                     // against another's and count rises that never happened.
-                    var previous = this.lastUsed;
-                    this.lastUsed = usage.Used;
-                    if (usage.Used > previous)
+                    //
+                    // D22 correction 9: on a resume, this session's FIRST UsageUpdated reports its
+                    // whole restored context, not tokens this Turn spent, so it is taken as the
+                    // baseline and never added - only rises after it count.
+                    if (this.usageBaselinePending)
                     {
-                        this.owner.AddTokens(usage.Used - previous);
+                        this.usageBaselinePending = false;
+                        this.lastUsed = usage.Used;
+                    }
+                    else
+                    {
+                        var previous = this.lastUsed;
+                        this.lastUsed = usage.Used;
+                        if (usage.Used > previous)
+                        {
+                            this.owner.AddTokens(usage.Used - previous);
+                        }
                     }
                 }
 
@@ -1116,6 +1286,17 @@ internal sealed class RoomSession : IAsyncDisposable
         var builder = new StringBuilder();
         RoomSession.AppendFileChangesBlock(builder, item.FileChanges, prompts);
 
+        // RS §6.5: the Transcript block replaces the catch-up buffer on this Turn only, and only
+        // when it actually holds Messages — an empty Transcript (the read was refused, timed out, or
+        // this Room's first Turn ever has nothing before the trigger) falls through to today's
+        // buffer-based catch-up untouched, keeping every pre-D24 prompt byte-identical.
+        if (item.Transcript is { Messages.Count: > 0 } transcript)
+        {
+            RoomSession.AppendTranscriptBlock(builder, room, transcript, prompts);
+            builder.Append(RoomSession.RenderMessage(prompts, room, item.SenderName, item.Text));
+            return builder.ToString();
+        }
+
         if (item.MissedMessages.Count == 0)
         {
             builder.Append(RoomSession.RenderMessage(prompts, room, item.SenderName, item.Text));
@@ -1136,6 +1317,36 @@ internal sealed class RoomSession : IAsyncDisposable
         builder.Append(RoomSession.RenderMessage(prompts, room, item.SenderName, item.Text));
 
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// Writes RS §6.5's Transcript block: the fresh-or-resumed header, an omitted-count line when
+    /// <see cref="TranscriptCatchUp.Omitted"/> is positive, one <c>turn.catchUpLine</c> per Message
+    /// (the Agent's own Messages appear under its own Name, per RS §6.9), then a blank line.
+    /// </summary>
+    private static void AppendTranscriptBlock(StringBuilder builder, string room, TranscriptCatchUp transcript, IPromptSource prompts)
+    {
+        var headerKey = transcript.Resumed ? "turn.transcriptResumedHeader" : "turn.transcriptHeader";
+        builder.Append(prompts.Render(headerKey, new Dictionary<string, string> { ["{{roomLabel}}"] = room }));
+        builder.Append('\n');
+
+        if (transcript.Omitted > 0)
+        {
+            builder.Append(prompts.Render(
+                "turn.transcriptOmitted",
+                new Dictionary<string, string> { ["{{count}}"] = transcript.Omitted.ToString(CultureInfo.InvariantCulture) }));
+            builder.Append('\n');
+        }
+
+        foreach (var message in transcript.Messages)
+        {
+            builder.Append(prompts.Render(
+                "turn.catchUpLine",
+                new Dictionary<string, string> { ["{{sender}}"] = message.SenderName, ["{{text}}"] = message.Text }));
+            builder.Append('\n');
+        }
+
+        builder.Append('\n');
     }
 
     /// <summary>

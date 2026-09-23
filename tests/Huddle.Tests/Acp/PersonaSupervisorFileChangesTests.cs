@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Services;
@@ -160,6 +161,44 @@ public sealed class PersonaSupervisorFileChangesTests
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var stateFile = Path.Combine(options.Value.DataDir, "file-state", "nova.json");
         Assert.True(File.Exists(stateFile));
+    }
+
+    /// <summary>
+    /// D24: <see cref="PersonaSupervisor"/> passes its own trailing <see cref="RoomSessionStore"/>
+    /// through to the runner it starts - after one per-Room Turn, that Persona's file exists under
+    /// <c>{DataDir}/room-sessions/</c>.
+    /// </summary>
+    [Fact]
+    public async Task Supervisor_PassesRoomSessionStore()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory { SessionPerRoom = true };
+        factory.Session.EnqueueReply("ok");
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        var roomSessions = fixture.Services.GetRequiredService<RoomSessionStore>();
+        using var skillStore = new SkillStore(options, NullLogger<SkillStore>.Instance);
+        using var supervisor = new PersonaSupervisor(
+            options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, roomSessions: roomSessions);
+
+        personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []), "You are Nova.");
+        await supervisor.StartAsync(ct);
+
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        var store = fixture.Services.GetRequiredService<IChatStore>();
+        await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
+        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+
+        await supervisor.StopAsync(ct);
+
+        var roomSessionFile = Path.Combine(options.Value.DataDir, "room-sessions", "nova.json");
+        Assert.True(File.Exists(roomSessionFile));
     }
 
     /// <summary>Builds a fresh <see cref="PersonaHealth"/> against the real clock.</summary>

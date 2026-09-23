@@ -60,6 +60,22 @@ internal sealed class FakeRoomSessionOwner : IRoomSessionOwner
     /// <summary>The exception passed to the last <see cref="ReportLoopEnded"/> call, if any.</summary>
     public Exception? LastLoopEndedException { get; private set; }
 
+    /// <summary>Every <see cref="ReadTranscriptAsync"/> call's arguments, in call order.</summary>
+    public List<(string RoomId, string? AfterMessageId, string BeforeMessageId, int Max)> TranscriptReadCalls { get; } = [];
+
+    /// <summary>
+    /// Scripts <see cref="ReadTranscriptAsync"/>'s answer. Defaults to an empty, non-<see langword="null"/>
+    /// <see cref="TranscriptTail"/> (D24 correction 22's rule for a scripted server that never
+    /// deliberately withholds one), so a test that never touches Transcript behaviour is not made to
+    /// wait out a timeout it never asked for. A test proving E-3 (refused or timed out) sets this to
+    /// return <see langword="null"/>.
+    /// </summary>
+    public Func<string, string?, string, int, CancellationToken, Task<TranscriptTail?>> ReadTranscriptHandler { get; set; } =
+        (roomId, _, _, _, _) => Task.FromResult<TranscriptTail?>(new TranscriptTail(RequestId: "fake", roomId, [], Omitted: 0));
+
+    /// <summary>Every <see cref="AgentModelOption"/> list <see cref="ReportModels"/> has been called with, in call order.</summary>
+    public List<IReadOnlyList<AgentModelOption>> ReportedModels { get; } = [];
+
     /// <inheritdoc />
     public Task WriteAsync(ProtocolMessage message, CancellationToken cancellationToken)
     {
@@ -108,6 +124,26 @@ internal sealed class FakeRoomSessionOwner : IRoomSessionOwner
     {
         this.LastLoopEndedException = exception;
         this.RecordCall(nameof(this.ReportLoopEnded));
+    }
+
+    /// <inheritdoc />
+    public Task<TranscriptTail?> ReadTranscriptAsync(string roomId, string? afterMessageId, string beforeMessageId, int max, CancellationToken cancellationToken)
+    {
+        lock (this.gate)
+        {
+            this.TranscriptReadCalls.Add((roomId, afterMessageId, beforeMessageId, max));
+        }
+
+        return this.ReadTranscriptHandler(roomId, afterMessageId, beforeMessageId, max, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public void ReportModels(IReadOnlyList<AgentModelOption> models)
+    {
+        lock (this.gate)
+        {
+            this.ReportedModels.Add(models);
+        }
     }
 
     private void RecordCall(string name)

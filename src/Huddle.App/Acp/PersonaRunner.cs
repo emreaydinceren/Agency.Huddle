@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO.Pipes;
 using Agency.Huddle.Acp.Abstractions;
@@ -51,6 +52,18 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private readonly Dictionary<string, List<CaughtUpMessage>> catchUpBuffers = [];
     private readonly Lock catchUpLock = new();
 
+    // Pending Transcript reads (RS §6.5, D24): keyed by the ReadTranscript.RequestId this runner
+    // minted, completed either by the matching TranscriptTail or by a ProtocolError naming that
+    // RequestId as its RelatedMessageId - both arrive on the read loop, the same thread that started
+    // the wait never blocks it, so a ConcurrentDictionary (rather than catchUpLock) is what lets
+    // several Room Sessions' own consumer threads each await their own pending read concurrently.
+    private readonly ConcurrentDictionary<string, TaskCompletionSource<TranscriptTail?>> pendingTranscriptReads = new(StringComparer.Ordinal);
+
+    // D23 correction 17 / D24 correction 23: the Model-not-in-catalog warning fires at most once per
+    // runner, from whichever Room Session opens first - 0 means not yet reported, 1 means reported;
+    // Interlocked because more than one Room Session can open concurrently in per-Room mode.
+    private int modelWarningReported;
+
     // The third layer of the cap (roadmap item 2). tokensConsumed is written by RoomSession's event
     // reader (through AddTokens below) and read on both the read loop and RoomSession's own consumer,
     // so every access goes through Interlocked: a plain long is not guaranteed to be read whole
@@ -71,6 +84,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private int consecutiveTurnFailures;
 
     private readonly TimeProvider timeProvider;
+
+    private readonly RoomSessionStore? roomSessions;
 
     private RoomSessionPool? pool;
     private JsonLineStream? stream;
@@ -101,7 +116,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         RoomFollows roomFollows,
         ILogger<PersonaRunner> logger,
         FileChangeTracker? fileChanges = null,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        RoomSessionStore? roomSessions = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
@@ -118,6 +134,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.logger = logger;
         this.fileChanges = fileChanges;
         this.timeProvider = timeProvider ?? TimeProvider.System;
+        this.roomSessions = roomSessions;
         this.declaredWatches = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)
             ? identity.Watches ?? []
             : [];
@@ -214,6 +231,64 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     void IRoomSessionOwner.ReportLoopEnded(string loopName, Exception? exception) =>
         this.ReportLoopEndedUnlessShuttingDown(loopName, exception, CancellationToken.None);
 
+    /// <inheritdoc />
+    async Task<TranscriptTail?> IRoomSessionOwner.ReadTranscriptAsync(
+        string roomId, string? afterMessageId, string beforeMessageId, int max, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(roomId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(beforeMessageId);
+
+        // Guid.CreateVersion7, exactly as ProcessWorkItemAsync mints a Message id: a 32-character
+        // lowercase-hex string NameRules.IsValidId accepts, unique enough that the read loop's
+        // pendingTranscriptReads lookup below never collides with another Turn's in-flight read.
+        var requestId = Guid.CreateVersion7().ToString("N");
+        var pending = new TaskCompletionSource<TranscriptTail?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        this.pendingTranscriptReads[requestId] = pending;
+
+        try
+        {
+            await ((IRoomSessionOwner)this).WriteAsync(new ReadTranscript(requestId, roomId, afterMessageId, beforeMessageId, max), cancellationToken);
+            return await pending.Task.WaitAsync(TimeSpan.FromSeconds(10), cancellationToken);
+        }
+        catch (Exception ex) when (ex is TimeoutException or IOException or ObjectDisposedException)
+        {
+            // RS §9 E-3: a refused or timed-out Transcript read is a Warning, never a Turn failure -
+            // the Turn goes ahead without the block, exactly as if this Room had never seen one.
+            this.logger.LogWarning(
+                ex, "Persona '{PersonaName}' Transcript read for room {RoomId} was not answered in time.", this.persona.Name, roomId);
+            return null;
+        }
+        finally
+        {
+            this.pendingTranscriptReads.TryRemove(requestId, out _);
+        }
+    }
+
+    /// <inheritdoc />
+    void IRoomSessionOwner.ReportModels(IReadOnlyList<AgentModelOption> models)
+    {
+        // IAgentSession.Models' own doc comment: an EMPTY list means unknown, never "no models are
+        // available", so it must never produce a Degraded report. Only a genuinely non-empty catalog
+        // that omits the stored Model is worth a warning - and only a warning: the session still
+        // started on the Adapter's own default, and the Persona still answers (rules.md: "A Model the
+        // agent does not advertise is a warning, never a failure"). Reported at most once per runner
+        // (D23 correction 17 / D24 correction 23), from whichever Room Session opens first.
+        if (this.persona.Model is not { Length: > 0 } storedModel || models.Count == 0
+            || models.Any(model => string.Equals(model.Id, storedModel, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        if (Interlocked.CompareExchange(ref this.modelWarningReported, 1, 0) != 0)
+        {
+            return;
+        }
+
+        this.RaiseStatusChanged(
+            PersonaState.Degraded,
+            $"The Model '{storedModel}' is not in the Adapter's catalog; running on its default.");
+    }
+
     public async Task StartAsync(CancellationToken cancellationToken)
     {
         var client = await this.ConnectAsync(cancellationToken);
@@ -264,26 +339,40 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         // with the runner - StopAsync's this.host-is-not-null disposal covers it.
         this.host = await this.factory.StartAsync(this.persona, welcome.AgentId, cancellationToken);
 
+        // RS §6.6: pruned at start against Welcome.Rooms - nothing else tells this runner a Room was
+        // deleted while it was offline. Per-Room mode only (finding P-15: shared mode never touches
+        // the store); a null roomSessions (P-13's "absent means off" for a caller that predates D24)
+        // is likewise a no-op.
+        if (this.roomSessions is not null && this.host.Profile.SessionPerRoom)
+        {
+            this.roomSessions.Prune(this.persona.Name, welcome.Rooms.Select(room => room.Id).ToList());
+        }
+
         // RS §6.2: the pool owns lazy per-Room opens, eviction and Stop routing; in shared mode (RS
         // principle 6: "SessionPerRoom: false is today plus Phase 0") it holds one RoomSession,
-        // RoomId null, serving every Room this Agent is in.
+        // RoomId null, serving every Room this Agent is in. Persona and roomSessions (D24) let every
+        // Room Session it creates resume by id when the Adapter, Model and Effort all still match.
         this.pool = new RoomSessionPool(
             this.host,
             this,
+            this.persona,
             this.prompts,
             this.options.Acp,
             this.timeProvider,
             this.fileChanges,
             this.declaredWatches,
             this.logger,
-            this.runCts.Token);
+            this.runCts.Token,
+            this.roomSessions);
 
         // Per-Room mode opens the Room with exactly two Members, one of them the Human - the same
         // predicate as the Greeting's below, without IsEmpty: unlike the Greeting, this open must
         // happen whether or not that Room already has Messages. Shared mode ignores this id and opens
         // its one shared session instead. Opened here, exactly where this runner opened its one
-        // session before, so the start-up failure modes and the Model-not-in-catalog warning below
-        // are unchanged.
+        // session before, so the start-up failure modes are unchanged; it goes through the same
+        // resume path as any later lazy open (D24 correction 18), and the Model-not-in-catalog
+        // warning this open may trigger now arrives through IRoomSessionOwner.ReportModels (D24
+        // correction 23) rather than a one-time check here.
         var humanRoom = welcome.Rooms.FirstOrDefault(room =>
             room.Members.Count == 2 && room.Members.Any(member => member.Kind == UserKind.Human));
         await this.pool.OpenAtStartAsync(humanRoom?.Id, cancellationToken);
@@ -309,22 +398,6 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                     greetingSequence,
                     new WorkItem(emptyHumanRoom.Id, greetingRoomName, string.Empty, string.Empty, [], WorkItemKind.Greeting)));
             }
-        }
-
-        // IAgentSession.Models' own doc comment: an EMPTY list means unknown, never "no models are
-        // available", so it must never produce a Degraded report. Only a genuinely non-empty catalog
-        // that omits the stored Model is worth a warning - and only a warning: the session still
-        // started on the Adapter's own default, and the Persona still answers (rules.md: "A Model the
-        // agent does not advertise is a warning, never a failure"). Reads whichever session
-        // OpenAtStartAsync opened - the shared one, or the Human Room's - empty when nothing opened
-        // (per-Room mode with no Human Room).
-        if (this.persona.Model is { Length: > 0 } storedModel &&
-            this.pool.Models.Count > 0 &&
-            !this.pool.Models.Any(model => string.Equals(model.Id, storedModel, StringComparison.Ordinal)))
-        {
-            this.RaiseStatusChanged(
-                PersonaState.Degraded,
-                $"The Model '{storedModel}' is not in the Adapter's catalog; running on its default.");
         }
 
         this.readLoopTask = this.RunReadLoopAsync(this.runCts.Token);
@@ -418,7 +491,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                         case ReplyDecision.Reply:
                             var missed = this.TakeCatchUp(posted.RoomId);
                             var labelledRoomName = RoomLabels.Distinguish(posted.RoomId, posted.RoomName, this.knownRoomNames);
-                            var item = new WorkItem(posted.RoomId, labelledRoomName, posted.Message.SenderName, posted.Message.Text, missed);
+                            var item = new WorkItem(
+                                posted.RoomId, labelledRoomName, posted.Message.SenderName, posted.Message.Text, missed,
+                                TriggerMessageId: posted.Message.Id);
                             var sequence = Interlocked.Increment(ref this.sequenceCounter);
 
                             // Never call the agent from the read loop: hand the item to the pool,
@@ -455,26 +530,53 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                             break;
                     }
                 }
+                else if (message is TranscriptTail tail)
+                {
+                    // Completes the matching ReadTranscriptAsync wait, if one is still pending; an
+                    // answer to a read this runner already gave up on (its own 10-second wait
+                    // elapsed) finds nothing to complete and is simply dropped.
+                    if (this.pendingTranscriptReads.TryRemove(tail.RequestId, out var pendingTranscript))
+                    {
+                        pendingTranscript.TrySetResult(tail);
+                    }
+                }
                 else if (message is ProtocolError error)
                 {
-                    // Dropped silently until now, which made a refused post - a spent Budget, a Room
-                    // this Agent is not a Member of - invisible outside the server's own log. The Room
-                    // can now be named: ProcessWorkItemAsync mints a messageId for every post, so
-                    // error.RelatedMessageId correlates back to the Turn that sent it. Wiring that
-                    // correlation into this log line is a later task.
-                    this.logger.LogWarning(
-                        "Persona '{PersonaName}' had a message refused: {Code} - {Reason}",
-                        this.persona.Name,
-                        error.Code,
-                        error.Message);
-
-                    // notMember/unknownRoom/badMessage are a real misconfiguration the Human should
-                    // see. budgetExhausted is deliberately excluded: ADR-0006 already owns that
-                    // surface (the Room view asks the Human, with Continue), and a Degraded badge
-                    // there would mark an Agent that is working exactly as designed.
-                    if (error.Code is ErrorCodes.NotMember or ErrorCodes.UnknownRoom or ErrorCodes.BadMessage)
+                    // D24 correction 21: a refused ReadTranscript answers with a ProtocolError whose
+                    // RelatedMessageId is the pending RequestId, and that match is checked BEFORE the
+                    // NotMember/UnknownRoom/BadMessage arm below - a Transcript refusal is a Warning
+                    // only (RS §9 E-3), never the Degraded "a post was refused" report that arm makes.
+                    if (error.RelatedMessageId is not null
+                        && this.pendingTranscriptReads.TryRemove(error.RelatedMessageId, out var pendingTranscript))
                     {
-                        this.RaiseStatusChanged(PersonaState.Degraded, $"A post was refused — {error.Message}");
+                        pendingTranscript.TrySetResult(null);
+                        this.logger.LogWarning(
+                            "Persona '{PersonaName}' had a Transcript read refused: {Code} - {Reason}",
+                            this.persona.Name,
+                            error.Code,
+                            error.Message);
+                    }
+                    else
+                    {
+                        // Dropped silently until now, which made a refused post - a spent Budget, a Room
+                        // this Agent is not a Member of - invisible outside the server's own log. The
+                        // Room can now be named: ProcessWorkItemAsync mints a messageId for every post,
+                        // so error.RelatedMessageId correlates back to the Turn that sent it. Wiring
+                        // that correlation into this log line is a later task.
+                        this.logger.LogWarning(
+                            "Persona '{PersonaName}' had a message refused: {Code} - {Reason}",
+                            this.persona.Name,
+                            error.Code,
+                            error.Message);
+
+                        // notMember/unknownRoom/badMessage are a real misconfiguration the Human should
+                        // see. budgetExhausted is deliberately excluded: ADR-0006 already owns that
+                        // surface (the Room view asks the Human, with Continue), and a Degraded badge
+                        // there would mark an Agent that is working exactly as designed.
+                        if (error.Code is ErrorCodes.NotMember or ErrorCodes.UnknownRoom or ErrorCodes.BadMessage)
+                        {
+                            this.RaiseStatusChanged(PersonaState.Degraded, $"A post was refused — {error.Message}");
+                        }
                     }
                 }
                 else if (message is StopTurn stop)

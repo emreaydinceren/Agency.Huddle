@@ -1,4 +1,5 @@
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Acp.Sessions;
 
@@ -20,6 +21,17 @@ internal enum WorkItemKind
 /// <param name="MissedMessages">Earlier Messages the Agent was not Mentioned in, carried as context only.</param>
 /// <param name="Kind">Whether this is an ordinary Turn or the Greeting.</param>
 /// <param name="FileChanges">The Turn's collected File Changes report, or <see langword="null"/> when File Changes is off or this is a Greeting.</param>
+/// <param name="TriggerMessageId">
+/// The id of the Message that started this Turn (finding P-16), set from <see cref="Agency.Huddle.Contracts.MessagePosted"/>'s
+/// own <c>Message.Id</c> by the read loop. <see langword="null"/> for a <see cref="WorkItemKind.Greeting"/>, which reads no
+/// Transcript because it has no triggering Message.
+/// </param>
+/// <param name="Transcript">
+/// This Room Session's first-Turn Transcript Catch-up (RS §6.5), or <see langword="null"/> when this
+/// is not that Turn, the read was refused or timed out, or the Room's first Turn ever has nothing to
+/// show. When set with a non-empty <see cref="TranscriptCatchUp.Messages"/> it replaces
+/// <see cref="MissedMessages"/> on this Turn only.
+/// </param>
 internal sealed record WorkItem(
     string RoomId,
     string RoomName,
@@ -27,12 +39,24 @@ internal sealed record WorkItem(
     string Text,
     IReadOnlyList<CaughtUpMessage> MissedMessages,
     WorkItemKind Kind = WorkItemKind.Message,
-    FileChangesReport? FileChanges = null);
+    FileChangesReport? FileChanges = null,
+    string? TriggerMessageId = null,
+    TranscriptCatchUp? Transcript = null);
 
 /// <summary>One earlier Message the Agent was not Mentioned in, carried as catch-up context only.</summary>
 /// <param name="SenderName">Who sent it.</param>
 /// <param name="Text">What it said.</param>
 internal sealed record CaughtUpMessage(string SenderName, string Text);
+
+/// <summary>
+/// A Room Session's first-Turn Transcript Catch-up (RS §6.5): the range of a Room's Messages that
+/// replaces the in-memory catch-up buffer on that one Turn, because a fresh or resumed session has
+/// not seen them.
+/// </summary>
+/// <param name="Resumed">Whether this session was resumed (renders <c>turn.transcriptResumedHeader</c>) rather than opened fresh (<c>turn.transcriptHeader</c>).</param>
+/// <param name="Messages">The Messages in range, oldest first, ending before the triggering Message (RS principle 4).</param>
+/// <param name="Omitted">How many earlier Messages in the requested range were left out, per <see cref="Agency.Huddle.Contracts.TranscriptTail.Omitted"/>.</param>
+internal sealed record TranscriptCatchUp(bool Resumed, IReadOnlyList<ChatMessage> Messages, int Omitted);
 
 /// <summary>One queued Turn, with the sequence number a Stop compares against.</summary>
 /// <param name="Sequence">This item's position in the Persona-wide arrival order (finding P-4).</param>

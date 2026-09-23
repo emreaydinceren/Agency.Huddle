@@ -391,6 +391,30 @@ public sealed class RoomSessionTests
         }
     }
 
+    /// <summary>D23 correction 17 / D24 correction 23: opening a session reports its advertised Models to the owner, so the Model-not-in-catalog warning can fire from any Room Session's open, not only a runner's start-up one.</summary>
+    [Fact]
+    public async Task Open_ReportsModelsToOwner()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        session.EnqueueReply("ok");
+        FakeRoomSessionOwner owner = new();
+        var (room, runCts) = CreateSession(owner, FixedOpen(session));
+        try
+        {
+            room.Enqueue(new QueuedWork(1, RoomAItem));
+
+            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+
+            var reported = Assert.Single(owner.ReportedModels);
+            Assert.Same(session.Models, reported);
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
     /// <summary>
     /// Builds a <see cref="RoomSession"/> with fakes standing in for every collaborator, and its own
     /// <see cref="CancellationTokenSource"/> as the run token - the consumer's loop only ever ends

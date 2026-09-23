@@ -1,0 +1,6 @@
+[Room: Porto trip (id: 01J8PORTO)] This is a new session for this Room. Its recent Messages, oldest first, including your own:
+…12 earlier Messages are not shown.
+Human: Three options for the Porto weekend, please.
+Nova: 1. Ribeira riverside hotel … 2. Foz beach apartment … 3. Boavista flat …
+
+[Room: Porto trip (id: 01J8PORTO)] Human: go with option 2

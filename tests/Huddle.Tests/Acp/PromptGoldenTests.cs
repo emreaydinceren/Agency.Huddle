@@ -14,6 +14,7 @@ using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Teammates;
+using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
 
@@ -426,6 +427,100 @@ public sealed class PromptGoldenTests
         var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptGreeting.txt", actual);
+    }
+
+    /// <summary>
+    /// Pins <see cref="RoomSession.BuildPrompt"/> for a fresh Room Session's first Turn (RS §6.5):
+    /// the Transcript header, the omitted-count line, two Transcript lines, a blank line, then the
+    /// triggering Message line. The golden file was written by hand from RS §6.5's sample, not
+    /// seeded from this test's own output.
+    /// </summary>
+    [Fact]
+    public void BuildPrompt_FreshTranscript_MatchesGolden()
+    {
+        TranscriptCatchUp transcript = new(
+            Resumed: false,
+            Messages:
+            [
+                new ChatMessage("m1", DateTimeOffset.UtcNow, "hu-1", "Human", "Three options for the Porto weekend, please."),
+                new ChatMessage("m2", DateTimeOffset.UtcNow, "nova-1", "Nova", "1. Ribeira riverside hotel … 2. Foz beach apartment … 3. Boavista flat …"),
+            ],
+            Omitted: 12);
+        var item = new WorkItem("01J8PORTO", "Porto trip", "Human", "go with option 2", []) with { Transcript = transcript };
+
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+
+        AssertMatchesGolden("turnPromptTranscript.txt", actual);
+    }
+
+    /// <summary>
+    /// Pins <see cref="RoomSession.BuildPrompt"/> for a resumed Room Session's first Turn (RS §6.5):
+    /// the resumed header, no omitted-count line (<c>Omitted</c> is zero), the Messages posted while
+    /// closed, then the triggering Message line.
+    /// </summary>
+    [Fact]
+    public void BuildPrompt_ResumedTranscript_MatchesGolden()
+    {
+        TranscriptCatchUp transcript = new(
+            Resumed: true,
+            Messages: [new ChatMessage("m3", DateTimeOffset.UtcNow, "hu-1", "Human", "any update?")],
+            Omitted: 0);
+        var item = new WorkItem("01J8PORTO", "Porto trip", "Human", "go with option 2", []) with { Transcript = transcript };
+
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+
+        AssertMatchesGolden("turnPromptTranscriptResumed.txt", actual);
+    }
+
+    /// <summary>An item carrying both <see cref="WorkItem.MissedMessages"/> and a non-empty <see cref="WorkItem.Transcript"/> renders only the Transcript (RS §6.5: "it replaces the buffer on that Turn only").</summary>
+    [Fact]
+    public void BuildPrompt_TranscriptReplacesBuffer()
+    {
+        TranscriptCatchUp transcript = new(
+            Resumed: false,
+            Messages: [new ChatMessage("m1", DateTimeOffset.UtcNow, "hu-1", "Human", "from the transcript")],
+            Omitted: 0);
+        CaughtUpMessage[] missed = [new("Alice", "from the buffer, must not appear")];
+        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", missed) with { Transcript = transcript };
+
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+
+        Assert.DoesNotContain("from the buffer, must not appear", actual, StringComparison.Ordinal);
+        Assert.Contains("from the transcript", actual, StringComparison.Ordinal);
+    }
+
+    /// <summary>RS §8.2: the File Changes block, then the Transcript block, then the triggering Message.</summary>
+    [Fact]
+    public void BuildPrompt_FileChangesThenTranscriptThenMessage()
+    {
+        FileChangesReport report = new(
+            [new FileChange(FileChangeKind.Changed, @"E:\Huddle\App_Data\work\Nova\memory\launch-date.md")],
+            NotListed: 0,
+            Unchecked: []);
+        TranscriptCatchUp transcript = new(
+            Resumed: false,
+            Messages: [new ChatMessage("m1", DateTimeOffset.UtcNow, "hu-1", "Human", "earlier text")],
+            Omitted: 0);
+        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { FileChanges = report, Transcript = transcript };
+
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+
+        var fileChangesIndex = actual.IndexOf("Since your last Turn", StringComparison.Ordinal);
+        var transcriptIndex = actual.IndexOf("This is a new session", StringComparison.Ordinal);
+        var messageIndex = actual.IndexOf("hello there", StringComparison.Ordinal);
+        Assert.True(fileChangesIndex >= 0 && transcriptIndex > fileChangesIndex && messageIndex > transcriptIndex);
+    }
+
+    /// <summary>An empty (or absent) <see cref="WorkItem.Transcript"/> leaves <c>turnPromptPlain.txt</c> byte-identical to today's output.</summary>
+    [Fact]
+    public void BuildPrompt_EmptyTranscript_ByteIdenticalToToday()
+    {
+        var emptyTranscript = new TranscriptCatchUp(Resumed: false, Messages: [], Omitted: 0);
+        var withEmpty = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { Transcript = emptyTranscript };
+        AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(withEmpty, new FakePromptSource()));
+
+        var withNull = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { Transcript = null };
+        AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(withNull, new FakePromptSource()));
     }
 
     /// <summary>
