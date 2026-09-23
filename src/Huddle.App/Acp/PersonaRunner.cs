@@ -4,6 +4,7 @@ using System.IO.Pipes;
 using System.Text;
 using System.Threading.Channels;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Teammates;
@@ -63,13 +64,24 @@ internal sealed class PersonaRunner : IAsyncDisposable
     private long tokensConsumed;
     private long lastUsed;
 
-    // The Stop mechanism (roadmap item 5). sequenceCounter is assigned to every enqueued WorkItem;
-    // stopHighWaterMark is the sequence value a Stop recorded most recently. sequenceCounter is
-    // written on the read loop only but read by both the read loop and the consumer, and
-    // stopHighWaterMark is written on the read loop and read on the consumer - the same
-    // cross-thread reason tokensConsumed goes through Interlocked applies to both.
+    // The Stop mechanism (roadmap item 5, made per Room by D16 P0-2). sequenceCounter is assigned to
+    // every enqueued WorkItem, written on the read loop only but read by both the read loop and the
+    // consumer, so it goes through Interlocked for the same cross-thread reason tokensConsumed does.
+    // stopMarks holds, per Room id, the sequence value a Stop in that Room recorded most recently; a
+    // missing key means that Room was never stopped. It is guarded by turnLock rather than a lock of
+    // its own, because writing a mark and reading activeTurn must happen inside one critical section
+    // (see the read loop's StopTurn handling and ProcessWorkItemAsync's re-check): either the
+    // re-check sees the mark already written, or the Stop handler sees the Turn once this method has
+    // published it - there is no gap where neither is true.
     private long sequenceCounter;
-    private long stopHighWaterMark;
+    private readonly Dictionary<string, long> stopMarks = new(StringComparer.Ordinal);
+
+    // Set by the read loop's StopTurn handler under turnLock to the (fire-and-forget) task of
+    // cancelling the far side for the Room it just stopped, and awaited by the consumer - tolerating
+    // whatever it throws - before it builds its next Turn. Without this, the consumer could dequeue
+    // and prompt a different Room's queued Turn while that cancel is still travelling to the Adapter,
+    // racing it on the one session every Room shares in Phase 0.
+    private Task? pendingStopCancel;
 
     // Health reporting (T4.3). Touched only from RunConsumerAsync's single-threaded call into
     // ProcessWorkItemAsync, so - unlike tokensConsumed above - this needs no Interlocked: there is
@@ -91,6 +103,14 @@ internal sealed class PersonaRunner : IAsyncDisposable
     // only from StartAsync, which runs once to completion before the read loop that could otherwise
     // race it starts, so this needs no Interlocked.
     private bool greetingQueued;
+
+    // D16 P0-3: every Room id this runner currently knows of, mapped to that Room's current name -
+    // RoomLabels.Distinguish's input. Filled from Welcome.Rooms in StartAsync, before the read loop
+    // (and the Greeting, which is queued from StartAsync too) can touch it, and kept current by every
+    // MessagePosted the read loop sees afterward. Only ever touched by StartAsync, before its own
+    // loops start, and by the single-threaded read loop after that - never concurrently with itself -
+    // so, unlike catchUpBuffers, this needs no lock of its own.
+    private readonly Dictionary<string, string> knownRoomNames = new(StringComparer.Ordinal);
 
     public PersonaRunner(
         Persona persona,
@@ -167,6 +187,14 @@ internal sealed class PersonaRunner : IAsyncDisposable
         // same pipe without this PersonaRunner ever being recreated.
         this.roomFollows.ClearAgent(this.agentId);
 
+        // D16 P0-3: seeded before the Greeting block below (which also labels its Room) and before
+        // the read loop starts, so RoomLabels.Distinguish always has this runner's full set of known
+        // Rooms to compare against, from the very first Turn.
+        foreach (var room in welcome.Rooms)
+        {
+            this.knownRoomNames[room.Id] = room.Name;
+        }
+
         // Only now, with Registration complete, does the Agent id exist, so only now can the session
         // be created with the tools bound to it by construction (docs/acp/agent-guide.md §3.6).
         var created = await this.factory.CreateAsync(this.persona, welcome.AgentId, cancellationToken);
@@ -189,9 +217,10 @@ internal sealed class PersonaRunner : IAsyncDisposable
             {
                 this.greetingQueued = true;
                 var greetingSequence = Interlocked.Increment(ref this.sequenceCounter);
+                var greetingRoomName = RoomLabels.Distinguish(humanRoom.Id, humanRoom.Name, this.knownRoomNames);
                 this.workItems.Writer.TryWrite(new QueuedWork(
                     greetingSequence,
-                    new WorkItem(humanRoom.Id, humanRoom.Name, string.Empty, string.Empty, [], WorkItemKind.Greeting)));
+                    new WorkItem(humanRoom.Id, greetingRoomName, string.Empty, string.Empty, [], WorkItemKind.Greeting)));
             }
         }
 
@@ -271,6 +300,11 @@ internal sealed class PersonaRunner : IAsyncDisposable
 
                 if (message is MessagePosted posted)
                 {
+                    // D16 P0-3: kept current before anything below reads it, including the
+                    // catch-up-only branch, so a rename is picked up from the very next delivery in
+                    // that Room regardless of which ReplyDecision it gets (RS §9 E-7).
+                    this.knownRoomNames[posted.RoomId] = posted.RoomName;
+
                     // A Human Message ends the unattended run, so the token Budget starts over with
                     // it. The per-Room Budget resets server-side on the very same Message; this one
                     // is per Persona, because one session spans every Room the Agent is in.
@@ -289,7 +323,8 @@ internal sealed class PersonaRunner : IAsyncDisposable
                     {
                         case ReplyDecision.Reply:
                             var missed = this.TakeCatchUp(posted.RoomId);
-                            var item = new WorkItem(posted.RoomId, posted.RoomName, posted.Message.SenderName, posted.Message.Text, missed);
+                            var labelledRoomName = RoomLabels.Distinguish(posted.RoomId, posted.RoomName, this.knownRoomNames);
+                            var item = new WorkItem(posted.RoomId, labelledRoomName, posted.Message.SenderName, posted.Message.Text, missed);
                             var sequence = Interlocked.Increment(ref this.sequenceCounter);
 
                             // Never call the agent from the read loop: hand the item to the single consumer.
@@ -347,31 +382,47 @@ internal sealed class PersonaRunner : IAsyncDisposable
                         this.RaiseStatusChanged(PersonaState.Degraded, $"A post was refused — {error.Message}");
                     }
                 }
-                else if (message is StopTurn)
+                else if (message is StopTurn stop)
                 {
-                    // The mark is taken before anything else: anything already queued (sequence at
-                    // or below it) must drain without spending anything, the same stance the
-                    // token-budget guard in ProcessWorkItemAsync takes for a spent Budget.
-                    Interlocked.Exchange(ref this.stopHighWaterMark, Interlocked.Read(ref this.sequenceCounter));
-
                     ActiveTurn? turn;
                     lock (this.turnLock)
                     {
+                        // The mark is taken before anything else, in the same lock that publishes
+                        // activeTurn below and that ProcessWorkItemAsync's own re-check reads under:
+                        // anything already queued for this Room (sequence at or below it) must drain
+                        // without spending anything, the same stance the token-budget guard in
+                        // ProcessWorkItemAsync takes for a spent Budget.
+                        this.stopMarks[stop.RoomId] = Interlocked.Read(ref this.sequenceCounter);
                         turn = this.activeTurn;
                     }
 
-                    // Set BEFORE the cancellation below, so the consumer can tell this Stop apart
-                    // from the idle-timeout watchdog firing: both arrive there as the same
-                    // OperationCanceledException, and only one of them is a failure (TRAP 1).
-                    turn?.MarkStopRequested();
+                    // Only this Room's own live Turn is stopped (D16 P0-2): a Stop in one Room must
+                    // never touch another Room's Turn, which under Phase 0's one shared session is
+                    // otherwise indistinguishable from this one except by RoomId.
+                    if (turn is not null && string.Equals(turn.RoomId, stop.RoomId, StringComparison.Ordinal))
+                    {
+                        // Set BEFORE the cancellation below, so the consumer can tell this Stop apart
+                        // from the idle-timeout watchdog firing: both arrive there as the same
+                        // OperationCanceledException, and only one of them is a failure (TRAP 1).
+                        turn.MarkStopRequested();
 
-                    // Unblocks ProcessWorkItemAsync's await on this Turn immediately, without
-                    // waiting on the agent process to acknowledge the cancel notification below.
-                    turn?.Cancellation.Cancel();
+                        // Unblocks ProcessWorkItemAsync's await on this Turn immediately, without
+                        // waiting on the agent process to acknowledge the cancel notification below.
+                        turn.Cancellation.Cancel();
 
-                    // Safe from any thread: locks internally and no-ops when no prompt is in
-                    // flight (src/Huddle.Acp/DotAcp/DotAcpAgentSession.cs:144-171).
-                    await this.session!.CancelAsync(ct);
+                        // Safe from any thread: locks internally and no-ops when no prompt is in
+                        // flight (src/Huddle.Acp/DotAcp/DotAcpAgentSession.cs:144-171). NOT awaited
+                        // here - the race D16's corrections settled: awaiting it inline would block
+                        // this read loop, but a queued Turn in a different Room must not reach
+                        // PromptAsync on the shared session while this cancel is still in flight
+                        // either. So the task is handed to the consumer, which awaits it before
+                        // building its next Turn.
+                        var cancelTask = this.session!.CancelAsync(ct);
+                        lock (this.turnLock)
+                        {
+                            this.pendingStopCancel = cancelTask;
+                        }
+                    }
                 }
             }
         }
@@ -397,12 +448,19 @@ internal sealed class PersonaRunner : IAsyncDisposable
         {
             await foreach (var queued in this.workItems.Reader.ReadAllAsync(ct))
             {
-                if (queued.Sequence <= Interlocked.Read(ref this.stopHighWaterMark))
+                if (this.IsStoppedAtOrBefore(queued.Item.RoomId, queued.Sequence))
                 {
-                    // Queued at or before the last Stop: drain it without spending anything,
-                    // rather than working through a backlog the Human already asked to clear.
+                    // Queued in this Room at or before its last Stop: drain it without spending
+                    // anything, rather than working through a backlog the Human already asked to
+                    // clear for that Room. A different Room's queue is unaffected (D16 P0-2).
                     continue;
                 }
+
+                // Before building the next Turn, let a still-settling Stop cancel from a different
+                // Room finish reaching the Adapter first - see pendingStopCancel's comment. This must
+                // run even when nothing above was dropped: the very next item after a Stop is exactly
+                // the case that races it.
+                await this.AwaitPendingStopCancelAsync(ct);
 
                 await this.ProcessWorkItemAsync(queued.Item, queued.Sequence, ct);
             }
@@ -422,6 +480,52 @@ internal sealed class PersonaRunner : IAsyncDisposable
         finally
         {
             this.ReportLoopEndedUnlessShuttingDown("consumer loop", terminatingException, ct);
+        }
+    }
+
+    /// <summary>Whether a Room's Stop mark covers <paramref name="sequence"/>, under <see cref="turnLock"/>.</summary>
+    /// <param name="roomId">The Room the queued item belongs to.</param>
+    /// <param name="sequence">The queued item's sequence number.</param>
+    /// <returns><see langword="true"/> when that Room was stopped at or after this item was queued.</returns>
+    private bool IsStoppedAtOrBefore(string roomId, long sequence)
+    {
+        lock (this.turnLock)
+        {
+            return this.stopMarks.TryGetValue(roomId, out var mark) && sequence <= mark;
+        }
+    }
+
+    /// <summary>
+    /// Awaits whatever <see cref="pendingStopCancel"/> currently holds, if anything - see that
+    /// field's comment for why this must run before the next Turn is built. Any exception the far
+    /// side's cancel throws is swallowed here, except cancellation of the run itself, which must
+    /// still end this loop the normal way.
+    /// </summary>
+    /// <param name="ct">The run's own cancellation token, never the stopped Turn's.</param>
+    private async Task AwaitPendingStopCancelAsync(CancellationToken ct)
+    {
+        Task? pending;
+        lock (this.turnLock)
+        {
+            pending = this.pendingStopCancel;
+            this.pendingStopCancel = null;
+        }
+
+        if (pending is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await pending.WaitAsync(ct);
+        }
+        catch (Exception) when (!ct.IsCancellationRequested)
+        {
+            // The settling cancel may itself fault (for example AgentDisconnectedException) or land
+            // late; either way it already did its job of latching the Stop and cancelling the Turn
+            // token, and this consumer's next Turn - in whatever Room - must proceed regardless of
+            // how that cancel ended.
         }
     }
 
@@ -487,12 +591,12 @@ internal sealed class PersonaRunner : IAsyncDisposable
         {
             // Re-checked here, not only in RunConsumerAsync, because a Stop can arrive while this
             // item sat inside the CollectAsync scan above, after the read loop's own check ran and
-            // before any Turn existed for it to cancel. Compared against today's single
-            // stopHighWaterMark, exactly as RunConsumerAsync's own check does - D16 makes this
-            // per-Room. Inside this lock because the Stop handler (RunReadLoopAsync) writes the mark
-            // before taking this same lock to read activeTurn, so either this check sees the mark or
-            // the Stop sees the Turn once published below. Nothing has been committed on this path.
-            if (sequence <= Interlocked.Read(ref this.stopHighWaterMark))
+            // before any Turn existed for it to cancel. Compared against this Room's own mark in
+            // stopMarks, exactly as RunConsumerAsync's own check does (D16 makes this per-Room).
+            // Inside this lock because the Stop handler (RunReadLoopAsync) writes the mark before
+            // taking this same lock to read activeTurn, so either this check sees the mark or the
+            // Stop sees the Turn once published below. Nothing has been committed on this path.
+            if (this.stopMarks.TryGetValue(item.RoomId, out var mark) && sequence <= mark)
             {
                 turnCancellation.Dispose();
                 return;

@@ -179,6 +179,12 @@ internal static class SystemPromptComposer
             parts.Add(BuildMemoryBlock(prompts, memory));
         }
 
+        // D16 P0-1 (RS §6.9, §8.1): shipped to every Persona while SessionPerRoom stays false in
+        // Phase 0, so it is appended here, in this — the last — overload of the Compose chain, once,
+        // after everything else including a Skills or Memory block when either is present. Every
+        // other overload delegates into this one, so appending it anywhere else would double it.
+        parts.Add(prompts.Render("systemPrompt.sharedSession", new Dictionary<string, string>()));
+
         return string.Join("\n\n", parts);
     }
 

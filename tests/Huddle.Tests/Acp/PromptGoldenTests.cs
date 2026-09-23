@@ -182,7 +182,12 @@ public sealed class PromptGoldenTests
         Assert.Contains("Nothing yet.", actual, StringComparison.Ordinal);
     }
 
-    /// <summary>With more memory files than were listed, the index ends with <c>systemPrompt.memoryMore</c>'s "…and N more" line.</summary>
+    /// <summary>
+    /// With more memory files than were listed, the memory block ends with
+    /// <c>systemPrompt.memoryMore</c>'s "…and N more" line. Since D16 P0-1 the memory block is no
+    /// longer the last part of the composed prompt — <c>systemPrompt.sharedSession</c> is appended
+    /// after it — so this checks the memory block's own ending rather than the whole prompt's.
+    /// </summary>
     [Fact]
     public void SystemPrompt_MemoryOverMax_EndsWithMoreLine()
     {
@@ -195,9 +200,9 @@ public sealed class PromptGoldenTests
         var actual = SystemPromptComposer.Compose(
             persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory);
 
-        Assert.EndsWith(
+        Assert.Contains(
             "…and 12 more in E:\\Huddle\\App_Data\\work\\Nova\\memory.",
-            actual.TrimEnd(),
+            actual,
             StringComparison.Ordinal);
     }
 
@@ -219,6 +224,46 @@ public sealed class PromptGoldenTests
         var withSkills = SystemPromptComposer.Compose(
             persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [skill], "mcp__team__read_skill", memory: null);
         AssertMatchesGolden("systemPrompt.skills.txt", withSkills);
+    }
+
+    /// <summary>
+    /// D16 P0-1 (RS §8.1): every <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string})"/>
+    /// overload ends its composed prompt with the <c>systemPrompt.sharedSession</c> text, shipped to
+    /// every Persona in Phase 0 regardless of Skills or Memory.
+    /// </summary>
+    [Fact]
+    public void SystemPrompt_EndsWithSharedSessionLine()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+        var prompts = new FakePromptSource();
+        var expected = prompts.Render("systemPrompt.sharedSession", new Dictionary<string, string>());
+
+        var plain = SystemPromptComposer.Compose(persona, prompts, "mcp__team__get_help", ToolNames);
+        Assert.EndsWith(expected, plain, StringComparison.Ordinal);
+
+        var skill = TeamBuildingSkill();
+        var withSkills = SystemPromptComposer.Compose(
+            persona, prompts, "mcp__team__get_help", ToolNames, [skill], "mcp__team__read_skill");
+        Assert.EndsWith(expected, withSkills, StringComparison.Ordinal);
+
+        MemorySnapshot memory = new(@"E:\Huddle\App_Data\work\Nova\memory", [], NotListed: 0);
+        var withMemory = SystemPromptComposer.Compose(
+            persona, prompts, "mcp__team__get_help", ToolNames, [skill], "mcp__team__read_skill", memory);
+        Assert.EndsWith(expected, withMemory, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// RS §6.9: "Room identity stays out of the system prompt." The shared-session line names no
+    /// Room, so it must never carry this Persona's Room name or id.
+    /// </summary>
+    [Fact]
+    public void SystemPrompt_SharedSessionLine_HasNoRoomNameOrId()
+    {
+        var prompt = PromptCatalog.Get("systemPrompt.sharedSession");
+
+        Assert.DoesNotContain("{{roomName}}", prompt.Default, StringComparison.Ordinal);
+        Assert.DoesNotContain("{{roomId}}", prompt.Default, StringComparison.Ordinal);
+        Assert.Empty(prompt.Placeholders);
     }
 
     /// <summary>

@@ -681,5 +681,28 @@ internal static class PromptCatalog
             Placeholders: ["{{count}}", "{{memoryPath}}"],
             RequiredPlaceholders: ["{{count}}"],
             Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.sharedSession",
+            Label: "Shared session",
+            HelperText:
+                "D16 P0-1: told to every Persona, in every mode, while SessionPerRoom stays false in " +
+                "Phase 0 (RS §6.9, §8.1). Describes the one session every Room's Messages arrive in, " +
+                "truthfully. Takes no placeholders, so an override is plain prose, and must not name " +
+                "any one Room: identity stays in the Turn's own label.",
+            Default:
+                """
+                This one session spans every Room you are in. Messages from all of them arrive here, each opening
+                with its Room's label, and you answer into the Room the label names. Treat each Room as a separate
+                audience. Answer a Message from what was said in its own Room, and do not carry a decision, a
+                language or a request from one Room into another unless the Human says it applies everywhere. A
+                short reply such as "yes" or "option 2" belongs to the Room its label names, and refers to what
+                was said there, however recently another Room spoke. Rooms can share a name; the id in the label
+                tells them apart. Describe your own memory truthfully: you can see earlier Messages from all your
+                Rooms in this session, and a restart clears them.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
     ];
 }

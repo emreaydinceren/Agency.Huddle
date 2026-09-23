@@ -18,12 +18,28 @@ public sealed partial class PromptCatalogTests
     /// (<c>turn.fileChangesHeader</c>, <c>turn.fileAdded</c>, <c>turn.fileChanged</c>,
     /// <c>turn.fileDeleted</c>, <c>turn.fileChangesMore</c>, <c>turn.folderUnchecked</c>) added for
     /// FC §6.13 (Task 7.1), plus <c>tool.watchFolder.description</c> and
-    /// <c>tool.unwatchFolder.description</c> added for FC §6.9/§6.13 (Task 10.2).
+    /// <c>tool.unwatchFolder.description</c> added for FC §6.9/§6.13 (Task 10.2), plus
+    /// <c>systemPrompt.sharedSession</c> added for RS §6.9/§8.1 (Task 16.2).
     /// </summary>
     [Fact]
     public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(42, PromptCatalog.All.Count);
+        Assert.Equal(43, PromptCatalog.All.Count);
+    }
+
+    /// <summary>
+    /// <c>systemPrompt.sharedSession</c> (RS §6.9, D16) is <see cref="PromptTiming.NextSession"/>,
+    /// takes no placeholders, and its default names no Room: identity stays in the Turn's own label.
+    /// </summary>
+    [Fact]
+    public void Catalog_HasSharedSessionPrompt()
+    {
+        var prompt = PromptCatalog.Get("systemPrompt.sharedSession");
+
+        Assert.Equal(PromptTiming.NextSession, prompt.Timing);
+        Assert.Empty(prompt.Placeholders);
+        Assert.Empty(prompt.RequiredPlaceholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
     }
 
     /// <summary>The <c>turn.fileByYouSuffix</c> prompt (FC §6.15, D13) is <see cref="PromptTiming.Live"/>, keeps its leading space, requires <c>{{roomName}}</c>, and carries no <c>mcp__team__</c> literal.</summary>

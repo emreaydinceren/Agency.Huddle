@@ -85,12 +85,13 @@ public sealed record Welcome(string AgentId, string Name, IReadOnlyList<RoomInfo
 
 /// <summary>The Human ending a Turn in progress.</summary>
 /// <remarks>
-/// One ACP session spans every Room its Agent is in, so this stops that Agent everywhere;
-/// <paramref name="RoomId"/> only records where the Human asked, not what to stop. A Turn ends in
-/// one of three ways — completed, stopped, or failed — and a stopped Turn is a normal outcome, not
-/// a failure.
+/// Stops that Agent's Turn and queue in <paramref name="RoomId"/> only: a live Turn in a different
+/// Room, and anything already queued for a different Room, is untouched. The wire itself is
+/// unchanged — <paramref name="RoomId"/> has always been carried — only how the receiving Agent
+/// acts on it (D16 P0-2). A Turn ends in one of three ways — completed, stopped, or failed — and a
+/// stopped Turn is a normal outcome, not a failure.
 /// </remarks>
-/// <param name="RoomId">The Room the Human asked from.</param>
+/// <param name="RoomId">The Room the Human asked from, and the only Room this Stop affects.</param>
 public sealed record StopTurn(string RoomId) : ProtocolMessage;
 
 /// <summary>
