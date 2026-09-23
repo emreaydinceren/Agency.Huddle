@@ -48,4 +48,28 @@ public sealed class AdapterProfileOptions
 
     /// <summary>Whether model-facing tool names carry the <c>mcp__team__</c> prefix.</summary>
     public bool UsesToolNamePrefix { get; set; } = true;
+
+    /// <summary>
+    /// Whether this Adapter's agent process can read files at all — FC §6.11. A <c>bool</c>, not a
+    /// collection, so an initialiser is safe (docs/agencyteam/rules.md, "Collection options need no
+    /// initialiser" does not apply here).
+    /// </summary>
+    public bool ReadsFiles { get; set; } = true;
+
+    /// <summary>
+    /// Whether a session on this Adapter should be started with the isolation <c>_meta</c> (RS
+    /// §6.10, finding P-11). Defaults to <see langword="false"/>: an explicit <c>Adapters</c> entry
+    /// opts in. See <see cref="AdapterProfile.IsolateUserSettings"/> for the mechanism and its known
+    /// risk.
+    /// </summary>
+    public bool IsolateUserSettings { get; set; }
+
+    /// <summary>
+    /// Whether this Adapter gives each Room its own Room Session (RS §6.12). Defaults to
+    /// <see langword="true"/> (D28, finding P-9). A configured <c>agency-acp</c> entry must set this
+    /// <see langword="false"/> explicitly until V-5 (RS §6.12): it reports <c>loadSession: false</c>
+    /// and nothing is known of its <c>resume</c> support or of holding several sessions on one
+    /// process.
+    /// </summary>
+    public bool SessionPerRoom { get; set; } = true;
 }

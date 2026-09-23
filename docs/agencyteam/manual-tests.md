@@ -202,6 +202,17 @@ single file holding all of them would be too large for a git web UI to render. E
 area file carries only what is true of that area alone and names
 [Common procedures](manual-tests/common.md) for the rest.
 
+[**File Changes, Watched Folders and Memory**](manual-tests/file-changes.md) is a newer area, not
+yet folded into the counts and estimates below: 11 tests, all paid, covering FC §10's FM-0 through
+FM-8 plus RS Appendix B's V-1, V-2 and V-4. None of them has been run — the code shipped
+2026-09-23, and these paid checks are deferred to the Human's own user acceptance testing. See
+[Known limits](known-limits.md) for what stays unverified until they run.
+
+[**Room Sessions**](manual-tests/room-sessions.md) is also newer, and also not yet folded into the
+counts and estimates below: 12 tests, all paid, covering RS §10's RS-M1 through RS-M10 plus RS
+Appendix B's V-3 and V-5. None of them has been run — the code shipped 2026-09-23, and these paid
+checks are deferred the same way File Changes' are. See [Known limits](known-limits.md).
+
 Two pages exist for the run around the run, and neither is needed while executing:
 [**Planning**](manual-tests/planning.md) to pick what to run — the 16 areas with
 their counts and estimates, the 20-test smoke pass, the paid-test register, the

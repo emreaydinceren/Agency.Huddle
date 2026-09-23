@@ -1,6 +1,7 @@
 namespace Agency.Huddle.Acp.Abstractions;
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 /// <summary>Options used to start a new agent session.</summary>
@@ -12,7 +13,8 @@ public sealed class AgentSessionOptions
         SystemPromptOptions? systemPrompt = null,
         ToolServerEndpoint? toolServer = null,
         string? model = null,
-        string? effort = null)
+        string? effort = null,
+        IReadOnlyDictionary<string, object>? meta = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(cwd);
         ArgumentNullException.ThrowIfNull(permissionHandler);
@@ -33,6 +35,11 @@ public sealed class AgentSessionOptions
         // Same reasoning as Model above: a blank effort would never resolve against a catalog
         // either, and would warn on every session start for no reason.
         this.Effort = string.IsNullOrWhiteSpace(effort) ? null : effort;
+
+        // An empty Meta counts as none supplied: the caller passed a dictionary but nothing to
+        // merge, and this keeps "no meta at all" (session/new's _meta unset) reachable through
+        // the same code path as a genuinely null one, rather than sending an empty object.
+        this.Meta = meta is { Count: > 0 } ? meta : null;
     }
 
     public string Cwd { get; }
@@ -61,4 +68,17 @@ public sealed class AgentSessionOptions
     /// like an unmatched <see cref="Model"/>.
     /// </summary>
     public string? Effort { get; }
+
+    /// <summary>
+    /// Client-supplied entries merged into <c>session/new</c>'s <c>_meta</c>, beside
+    /// <see cref="SystemPrompt"/>'s own <c>systemPrompt</c> key (RS §6.4, A-4). A key named
+    /// <c>"systemPrompt"</c> here is overwritten by <see cref="SystemPrompt"/>'s own payload, never
+    /// the other way round. Every value must be a plain CLR type - a dictionary, an array, or a
+    /// primitive - never a <c>JsonNode</c>/<c>JsonElement</c>: <c>dotacp</c> serialises this
+    /// dictionary with Newtonsoft, which does not know how to serialise
+    /// <c>System.Text.Json</c>'s own node types. <see langword="null"/>, or an empty dictionary,
+    /// sends no <c>claudeCode</c>-style entries at all - this type carries no Claude-specific word
+    /// itself (RS §6.4).
+    /// </summary>
+    public IReadOnlyDictionary<string, object>? Meta { get; }
 }

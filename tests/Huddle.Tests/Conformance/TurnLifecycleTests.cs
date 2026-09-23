@@ -22,23 +22,23 @@ namespace Agency.Huddle.Tests.Conformance;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>A known, reported defect affects this class.</b> Investigating this task's fourth test
-/// surfaced a real, deterministically reproducible bug in the ACP session/event pipeline
-/// (<c>src/Huddle.Acp/DotAcp/DotAcpAgentSession.cs</c> and/or the <c>dotacp.client</c> package it
-/// wraps): running the exact Turn sequence in
+/// <b>Formerly required a fixed test order; no longer does.</b> Investigating this task's fourth test
+/// surfaced a real, deterministically reproducible bug in the ACP client's dispatch ordering
+/// (<c>src/Huddle.Acp/DotAcp/DotAcpAgentSession.cs</c> and the <c>dotacp.client</c> package it wraps):
+/// running the exact Turn sequence in
 /// <see cref="StopTurnAsync_TurnInFlight_EndsStoppedAndLeavesTheFailureStreakUnbroken"/> (two failed
-/// Turns, a Stopped Turn, then one more failed Turn, all on one session) — and only that exact
-/// sequence; every simpler sub-sequence tried did not reproduce it — leaves the process in a state
+/// Turns, a Stopped Turn, then one more failed Turn, all on one session) left the process in a state
 /// where the very next, entirely independent <see cref="MockAdapterFixture"/> session's multi-chunk
-/// streamed reply is silently truncated to just its first chunk. See this task's final report for
-/// the full reproduction record. Per this task's own instructions, that defect is reported rather
-/// than patched around here, which means <see cref="PostAsync_ChunkedReply_DeliversSeveralDraftUpdatesThenPersistsTheMessage"/>
-/// and the Stop test above can, in principle, interact if a test runner happens to schedule them
-/// back to back in that order in the same process. Both are written to test the right thing on
-/// their own merits regardless.
+/// streamed reply was silently truncated to just its first chunk. This class carried a
+/// <c>ChunkedReplyFirstOrderer</c> to force
+/// <see cref="PostAsync_ChunkedReply_DeliversSeveralDraftUpdatesThenPersistsTheMessage"/> ahead of the
+/// Stop test for exactly that reason. <c>DotAcpAgentSession.WaitForQuietDispatchAsync</c>'s remarks
+/// document the root cause and the mitigation now in place (a bounded quiet-window wait before
+/// publishing <c>TurnCompleted</c>, since the underlying dispatch race cannot be closed with a hard
+/// barrier - see those remarks for why); with it, this class's own natural (unordered) test order
+/// passes reliably, proved 10/10 before the orderer was removed, so it no longer carries one.
 /// </para>
 /// </remarks>
-[TestMethodOrderer(typeof(ChunkedReplyFirstOrderer))]
 public sealed class TurnLifecycleTests
 {
     /// <summary>
@@ -127,7 +127,7 @@ public sealed class TurnLifecycleTests
     /// mid-flight through the real <see cref="IAgentGateway.StopTurnAsync"/> — the same entry point the
     /// UI's Stop button calls — and proves a fourth failure afterward is reported as the streak's
     /// *third* consecutive failure, not its first: if the Stop had reset the counter, the fourth Turn's
-    /// reason would read "A Turn failed", never "3 consecutive Turns have failed".
+    /// reason would read "A Turn in Room '...' failed", never "3 consecutive Turns have failed".
     /// </summary>
     [Fact]
     public async Task StopTurnAsync_TurnInFlight_EndsStoppedAndLeavesTheFailureStreakUnbroken()
@@ -280,7 +280,7 @@ public sealed class TurnLifecycleTests
         };
 
         string appendedBefore;
-        await using (MockAdapterFixture beforeFixture = await MockAdapterFixture.StartAsync(before, beforeConfig, ct))
+        await using (MockAdapterFixture beforeFixture = await MockAdapterFixture.StartAsync(before, beforeConfig, cancellationToken: ct))
         {
             appendedBefore = await GetAppendedSystemPromptAsync(beforeFixture, ct);
         }
@@ -298,7 +298,7 @@ public sealed class TurnLifecycleTests
         };
 
         string appendedAfter;
-        await using (MockAdapterFixture afterFixture = await MockAdapterFixture.StartAsync(after, afterConfig, ct))
+        await using (MockAdapterFixture afterFixture = await MockAdapterFixture.StartAsync(after, afterConfig, cancellationToken: ct))
         {
             appendedAfter = await GetAppendedSystemPromptAsync(afterFixture, ct);
         }

@@ -1,4 +1,5 @@
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.FileChanges;
 
 namespace Agency.Huddle.App;
 
@@ -29,6 +30,8 @@ public sealed class TeamOptions
     public DemoAgentOptions DemoAgent { get; set; } = new();
 
     public AcpOptions Acp { get; set; } = new();
+
+    public FileChangesOptions FileChanges { get; set; } = new();
 }
 
 public sealed class DemoAgentOptions

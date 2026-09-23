@@ -1,0 +1,4 @@
+Since your last Turn in this Room, these files changed. Read one only if it matters to what you are doing now:
+added E:\Huddle\App_Data\work\Nova\memory\code-language.md (by you, in Room 'Alpha')
+
+[Room: Nova & You (id: room-1)] You: hello there

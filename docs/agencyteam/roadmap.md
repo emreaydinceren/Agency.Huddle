@@ -4,9 +4,13 @@ Read this before starting work that touches `PersonaRunner`'s event loop,
 `ReplyGate`, `IAgentHostFactory`, `wwwroot/app.css` or `Themes/ThemeCatalog.cs`. Back to the hub:
 [AgencyTeam.md](../AgencyTeam.md).
 
-Fifteen items. **Items 2 and 10 shipped on 2026-09-12; items 3, 4, 5, 6 and 13 on 2026-09-13; item 1 on 2026-09-15; items 8 and 12 on 2026-09-16; item 14 on 2026-09-21; and item 15 on 2026-09-22**, and each keeps its entry below - the delivered note first, then the reasoning that produced it. Items 13, 14 and 15 were never on this list before they were built, and are recorded after the fact — 13 because it changed files the other items name and leaves a decision open that item 9 has to close, and 14 and 15 because each reversed a position recorded as settled (14 in [Known limits](known-limits.md), 15 in a manual test), which is exactly the kind of change this list exists to keep visible. Item 7 is half delivered. The other two - items 9 and 11 - are decided but not built. They sit here rather than in [Known
+Eighteen items. **Items 2 and 10 shipped on 2026-09-12; items 3, 4, 5, 6 and 13 on 2026-09-13; item 1 on 2026-09-15; items 8 and 12 on 2026-09-16; item 14 on 2026-09-21; items 15 and 17 on 2026-09-22; and item 11's code on 2026-09-23**, and each keeps its entry below - the delivered note first, then the reasoning that produced it. Items 13, 14 and 15 were never on this list before they were built, and are recorded after the fact — 13 because it changed files the other items name and leaves a decision open that item 9 has to close, and 14 and 15 because each reversed a position recorded as settled (14 in [Known limits](known-limits.md), 15 in a manual test), which is exactly the kind of change this list exists to keep visible. Item 7 is half delivered. Item 9 is decided but not built. It sits here rather than in [Known
 limits](known-limits.md) because that section records what is deliberately absent;
-these have moved from *declined* to *not yet*. Three appear in both places, and
+it has moved from *declined* to *not yet*. Items 16 and 18 are designed but not built: each
+has a written spec, and nothing is scheduled. Item 11's code shipped 2026-09-23, but the paid
+live checks its Memory feature depends on (RS Appendix B V-1/V-2, FC Appendix A FC-V) have not
+run — see [Known limits](known-limits.md) and
+[manual-tests/file-changes.md](manual-tests/file-changes.md). Three appear in both places, and
 the Known limits entry now points here rather than warning you off.
 
 Items 8 and 9 come from
@@ -34,12 +38,14 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~8~~ | ~~Following a Room without being Mentioned~~ — **delivered 2026-09-16** | `ReplyGate.cs`, a new App Tool pair | shipped; the follow set became a Singleton rather than a per-runner field, which retro-amended [ADR-0012](../adr/0012-a-room-says-why-it-stayed-quiet.md) |
 | 9 | Per-Persona tool grants | `DotAcpAgentHostFactory`, `PersonaFrontmatter` | tools already built per `agentId`; `_` fields reserved |
 | ~~10~~ | ~~Persona frontmatter becomes the Member's identity~~ — **delivered 2026-09-12** | `PersonaIndex`, `PersonaStore`, `MentionParser` | shipped; `Persona.cs` was not touched |
-| 11 | Notifying an Agent when a watched file changes | a new watcher beside `PersonaStore`, then `ChatService` | `PersonaStore`'s debounced `FileSystemWatcher`; frontmatter lists parse already |
+| ~~11~~ | ~~Telling an Agent which watched files changed~~ — **DELIVERED (code) 2026-09-23** | `FileChanges/`, then `PersonaRunner.BuildPrompt` | shipped: the list rides on the next Turn from a saved snapshot, not a watcher and a Message. Memory's isolation from the Human's own Claude Code settings is unverified live — see [the File Changes spec](../Huddle.FileChanges-Specifications.md), [ADR-0023](../adr/0023-an-agent-learns-of-file-changes-on-its-next-turn.md) and [Known limits](known-limits.md) |
 | ~~12~~ | ~~Running a Persona on a local Model~~ — **delivered 2026-09-16** | `AdapterProfile`, then one profile-aware `DotAcpAgentHostFactory` | shipped by a route this row did not foresee: no second `IAgentHostFactory` and no second `IModelCatalog`, because both Adapters advertise their catalog at `session/new` — see [ADR-0013](../adr/0013-an-adapter-is-a-property-of-the-persona.md) |
 | ~~13~~ | ~~Model-facing text is configuration~~ — **delivered 2026-09-13** | `Prompts/`, then the five sites that held the literals | shipped; never on this list before it was built, and it collides with item 9 — see [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) |
 | ~~14~~ | ~~Archiving and deleting a Room~~ — **delivered 2026-09-21** | `SqliteTeamDirectory`, `RoomList.razor` | shipped; never on this list before it was built, and it *reverses* a stance Known limits recorded — archived state went in a sibling table because `CREATE TABLE IF NOT EXISTS` never adds a column, and the one-1:1-Room-per-Agent invariant was knowingly given up — see [ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md) |
 | ~~15~~ | ~~A Teammate chooses its own Avatar~~ — **delivered 2026-09-22** | a new `Avatars/` store, `TeammateAvatar.razor` | shipped; never on this list before it was built, and it *reverses* a manual test that asserted no avatar appears in the transcript. The interesting decision was where it must **not** go: frontmatter would have made picking a colour restart the session — see [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) |
+| 16 | An Agent asks the Human with a Question — **designed 2026-09-22, not built** | a new `Questions/` store and service, `AskHumanTool`, `QuestionCard.razor` | nothing specific to it; it copies the Skills spec's Proposal card, which shipped with item 17 — see [the Questions spec](../Huddle.Questions-Specifications.md) and [ADR-0022](../adr/0022-an-agent-asks-the-human-with-a-question.md) |
 | ~~17~~ | ~~Skills and the Chief of Staff~~ — **delivered 2026-09-22** | `Skills/`, `Teammates/`, then `DotAcpAgentHostFactory` and `PersonaRunner` | shipped; the first mechanism for item 9's per-Persona tool grants, and the first Turn that no delivered Message starts — see [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) and [the Skills design](../Huddle.Skills-Specifications.md) |
+| ~~18~~ | ~~One session per Room~~ — **DELIVERED (code) 2026-09-23** | `Acp/Sessions/`, the `IAgentHostFactory`/`IPersonaHost` split | shipped: a Room Session per (Persona, Room), lazy open, LRU eviction, resume by stored id, Transcript Catch-up on a session's first Turn, Stop routed per Room. Paid checks (RS-M1 through RS-M10, V-3, V-5) not yet run — see [the Room Sessions spec](../Huddle.RoomSessions-Specifications.md), [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md) and [Known limits](known-limits.md) |
 
 ## 1. Renaming a Teammate
 
@@ -661,7 +667,46 @@ every `PersonasChanged` and restarts a session when any part of it changed —
 that is exactly the plumbing a Name edit needs to ride on, the same way a Model
 or Effort change already does.
 
-## 11. Notifying an Agent when a file it depends on changes
+## 11. Telling an Agent which watched files changed — DELIVERED (code) 2026-09-23
+
+> **Delivered as code on 2026-09-23.** The design is
+> [Huddle.FileChanges-Specifications.md](../Huddle.FileChanges-Specifications.md), recorded
+> in [ADR-0023](../adr/0023-an-agent-learns-of-file-changes-on-its-next-turn.md), now
+> **Accepted**. It replaced the delivery plan originally recorded on this line. The problem
+> below still stands, and the redesign explains why the plan below could not have been
+> built: it ruled out the Human and a new `system` kind as the notification's sender, because
+> the only other Member of the Agent's Room with the Human is the Agent itself, and
+> `AgentGateway` never delivers a Message to its own sender, so no Turn would ever follow.
+>
+> What shipped:
+> - **Nothing wakes the Agent.** Its next Turn's prompt opens with the files `added`,
+>   `changed` or `deleted` in its Watched Folders since its previous Turn, one full path per
+>   line, the way Catch-up rides along. The Agent reads what matters with the Adapter's own
+>   tools.
+> - **No `FileSystemWatcher`.** Huddle compares snapshots of each folder at Turn start,
+>   keeping each file's path, size and modified time. **A baseline is kept per Room**: an edit
+>   is listed in every Room except the one it was made in. So when Nova adds to its own
+>   `memory.md` in one Room, its other Rooms are told. The Agent's own edits are recognised
+>   from its `Edit`, `Delete` and `Move` tool calls, not from timing, so a Teammate's write made
+>   at the same moment is never lost.
+> - **The snapshot survives a restart.** It is saved as JSON at
+>   `{DataDir}/file-state/<Name>.json`.
+> - **Deliberate Memory.** An Agent keeps what it wants to remember as one file per fact in
+>   `{WorkDir}/memory/`. Every new session's system prompt carries an index of those files,
+>   and File Changes carries later edits to its other Rooms, marked *by you, in Room 'X'*.
+> - **Three sources of Watched Folders.** The Agent's own Work Dir, always; a `watches`
+>   frontmatter list of Teammate Names or folders inside `DataDir`; and a `watch_folder` App
+>   Tool, whose subscriptions also survive a restart.
+>
+> **What is not yet verified.** Memory depends on isolating a Persona's session from the
+> Human's own Claude Code settings and auto-memory (`AdapterProfile.IsolateUserSettings`).
+> The code sends the isolation `_meta`, but the paid live checks that would prove it works —
+> RS Appendix B V-1/V-2 and FC Appendix A FC-V, manual test FM-6 — have not run. See
+> [Known limits](known-limits.md) and
+> [manual-tests/file-changes.md](manual-tests/file-changes.md).
+>
+> The rest of this section is the original reasoning. Its two traps, don't post as the Human
+> and don't invent a `system` sender, are why a Message was the wrong vehicle.
 
 An Agent writes files. `Bash` and `Write` run agent-side against the real disk —
 the Work Dir is not a jail — so a Persona that keeps notes, a memory file, or any
@@ -789,7 +834,7 @@ Every Persona runs on a cloud Claude, because that is the only thing there is.
 `DotAcpAgentHostFactory` launches the `claude-agent-acp` Node Adapter and nothing
 else can be selected — `Acp:Enabled` is the key the hub annotates **"Spends money
 when true."** A Persona that summarises a Room, routes a question, or wakes on a
-watched file under [item 11](#11-notifying-an-agent-when-a-file-it-depends-on-changes)
+watched file under [item 11](#11-telling-an-agent-which-watched-files-changed--delivered-code-2026-09-23)
 pays cloud prices for work a small model on the same machine would do adequately
 and free.
 
@@ -959,7 +1004,9 @@ Six dependencies here are real:
   every file change spends a Turn no Human asked for. Same reasoning as 2 before 8,
   and the same Budget covers both. Item 11 is unblocked, and inherits a trap its
   own section now records: do **not** send the notification as the Human, or every
-  file save resets the Budget the item depends on.
+  file save resets the Budget the item depends on. **Moot since the 2026-09-22
+  redesign:** the change list rides on a Turn the Agent was taking anyway, so it
+  spends nothing for the Budget to cap.
 - ~~**6 before 7.**~~ **Settled — 6 shipped 2026-09-13**, and the bullet understated
   it. There was indeed nothing for a generator to write until the tokens existed; what
   it did not foresee is that item 7 would inherit *constraints* from this work, not just
@@ -1019,6 +1066,26 @@ and in memory, and App Tools are settled over MCP — the pipe never learns a to
 exists. Item 12 costs none for a different reason: the backend sits *behind*
 `PersonaRunner`, which is an ordinary pipe client whichever way it is built, so
 the wire cannot tell what is answering.
+
+~~**The Skills spec's Proposal card before 16.**~~ **Settled — the Proposal card shipped
+with item 17 on 2026-09-22.** Item 16's Question card copies the
+Proposal's in-memory store, card and Human-posted outcome Message, and touches four
+of the same files: `DotAcpAgentHostFactory`'s tool list, `PromptCatalog`,
+`ChatService` and `Chat.razor`. Building it first would have meant inventing each pattern
+twice. It costs no protocol bump either, because the card never crosses the pipe.
+Item 16 is independent of 11 and 18.
+
+**The Stop fix before everything else.** Stop in one Room drops the Agent's queued work
+from its other Rooms (`PersonaRunner.cs` `stopHighWaterMark`). It is a bug in today's
+design, and it ships without waiting for item 18.
+
+**11 before 18.** With a session per Room, a preference stated in one Room reaches the
+others only through Memory, which is part of item 11's design. Built the other way
+round, a Teammate would visibly forget "I told you C#" in its next Room.
+
+**17 no longer constrains 11 or 18.** Skills has landed, so the files both share with it
+(`DotAcpAgentHostFactory`, `PersonaSupervisor`, `PersonaFrontmatter`, `PromptCatalog`)
+are free.
 
 ## 13. Model-facing text is configuration — DELIVERED 2026-09-13
 
@@ -1143,6 +1210,35 @@ was the recommendation; this was the repo owner's call, and it is recorded in
 > change: that guard fires for every Teammate in a stock installation, where
 > `Acp:Enabled` is false and nothing has ever connected.
 
+## 16. An Agent asks the Human with a Question — DESIGNED 2026-09-22, not built
+
+> **Designed, not built.** The design is
+> [Huddle.Questions-Specifications.md](../Huddle.Questions-Specifications.md), with a
+> test-first task plan in its Appendix A. The decision is
+> [ADR-0022](../adr/0022-an-agent-asks-the-human-with-a-question.md), and
+> [Language](language.md) defines **Question**. Build it after the Skills spec's
+> Proposal card (see [Ordering](#ordering)).
+
+Huddle's own version of the tappable-options tool Claude's apps offer. An Agent calls
+`ask_human` with one to three Questions, each with two to four short options, to pick
+one, pick any, or rank. They wait on one card in the Room. The Human's tap posts the
+answer as a Message from the Human that quotes each Question and Mentions the asker,
+so the ordinary Reply Gate wakes the asker. Only the Human is ever asked; an Agent
+that wants an answer from another Teammate Mentions it in plain text.
+
+Three rules carry the design, and each is easy to lose in a refactor:
+
+- **The answer is a Message, not a tool result.** A tool that waited for the Human
+  would hold a Turn open until the idle timeout reported a hung Adapter, and would
+  block that Agent in every other Room, since one session spans them all.
+- **No `@` in a question or an option.** The answer is posted *as the Human*, so an
+  option carrying a Mention would wake another Agent on the Human's authority.
+  Item 11 records the neighbouring trap: posting as the Human also resets the Budget,
+  which is correct here only because a Human tap is the Human speaking.
+- **Any typed Human Message drops a waiting card.** This is the one rule that differs
+  from a Proposal, which survives typed Messages because revising it through prose is
+  its normal path. It is why the two have separate stores.
+
 ## 17. Skills and the Chief of Staff — DELIVERED 2026-09-22
 
 > **Delivered**, with
@@ -1175,3 +1271,71 @@ was the recommendation; this was the repo owner's call, and it is recorded in
 > ([Known limits](known-limits.md)). The paid manual tests SKILLS-01 to SKILLS-06 in
 > [manual-tests/skills.md](manual-tests/skills.md) have not been run, so nothing yet
 > proves a real model reads the Skill unprompted or greets well.
+
+## 18. One session per Room — DELIVERED (code) 2026-09-23
+
+> **Delivered as code on 2026-09-23.** The design is
+> [Huddle.RoomSessions-Specifications.md](../Huddle.RoomSessions-Specifications.md), recorded
+> in [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md), now **Accepted**. It lifts the
+> [Known limit](known-limits.md) "One session per Persona spans every Room it is in".
+>
+> What shipped: a **Room Session** per (Persona, Room) under `Acp/Sessions/` — `RoomSession`,
+> `RoomSessionPool`, `RoomSessionStore`, `OwnPosts`, `RoomLabels`, gated by a `TurnGate` that admits
+> Turns across Rooms in ticket order rather than release order (finding P-4). Sessions open lazily,
+> except the Room with the Human at start; an idle one is evicted LRU at `MaxLiveSessions`; a closed
+> one resumes by the id `RoomSessionStore` kept, where the Adapter advertises resume, else opens
+> fresh with Transcript Catch-up carried over the new `ReadTranscript`/`TranscriptTail` Envelope
+> pair (additive, `ProtocolVersion` still 3). Stop is routed to its own Room Session (P0-2, shipped
+> first); a same-named Room gets a ` #xxxxxx` suffix (P0-3); the failure streak and the token Budget
+> stay per Persona, summed across sessions, and two consecutive failures in one Room Session close
+> and forget it. `Team:Acp:Adapters:*:SessionPerRoom` defaults `true` as of D28 — the factory split
+> into `IAgentHostFactory`/`IPersonaHost` (one Adapter process and App Tool server per Persona,
+> opening or resuming a session per call) underpins both modes.
+>
+> Restart and a Persona edit forget every Room Session, a rename or removal moves or removes
+> `room-sessions/<Name>.json` (RS D-14, §6.13), and the built-in Chief of Staff and the
+> `team-building` Skill teach the coordinator's new shape of work (RS-T13).
+>
+> **What is not yet verified.** Resume across a rename, whether `session/resume` re-applies the
+> isolation `_meta`, and whether `agency-acp` holds several sessions per process at all (RS
+> Appendix B V-3, V-5) — the paid manual tests that would settle these, RS-M1 through RS-M10 plus
+> V-3 and V-5, are written in [manual-tests/room-sessions.md](manual-tests/room-sessions.md) and
+> have not been run; deferred to the Human's own user acceptance testing. See
+> [Known limits](known-limits.md).
+
+The rest of this section is the original reasoning, kept for why the design took the shape it did.
+
+Today one session per Persona serves every Room the Persona is in. The only thing
+telling Rooms apart is the `[Room: name (id: …)]` label on each prompt. At small scale
+that works; a live test on 2026-09-22 confirmed it for short, dissimilar exchanges.
+Over a long run it fails silently, in four ways:
+- **A terse follow-up resolves by recency across Rooms.** "Go with option 2" picks
+  the nearest option 2, whichever Room offered it.
+- **Compaction merges Rooms.** The session is summarised into one text that no
+  longer says which Room decided what.
+- **Catch-up arrives out of order.** A Room's missed Messages land after other Rooms'
+  later Turns.
+- **With tools, a wrong reference becomes a wrong action.**
+
+The same test found three more problems:
+- an Agent denying that it carries context between Rooms while doing so;
+- two same-named Rooms merged in its account;
+- Claude Code's own auto-memory carrying a preference across a restart, from a folder
+  in the Human's profile.
+
+**The change: a Room Session for each (Persona, Room),** holding that Room's Turns
+and nothing else. What makes the Agent one Teammate stays per Persona: its Persona
+text, Work Dir, Memory, App Tools and Adapter process. Only Memory and File Changes
+([item 11](#11-telling-an-agent-which-watched-files-changed--delivered-code-2026-09-23)) cross between
+Rooms.
+
+How the sessions are run:
+- **One Adapter process per Persona hosts every Room Session.** `claude-agent-acp`
+  keeps many sessions per process, at the cost of one Claude Code CLI child each.
+- **Sessions are opened lazily and closed when idle.** Each Persona has a cap on how
+  many are live at once.
+- **A closed session is resumed by stored id** where the Adapter advertises resume.
+- **A fresh session's first Turn carries the Room's recent Messages from the
+  Transcript,** through a new additive Envelope, so the session is never blank.
+- **Turns stay serial per Persona by default.**
+- **Stop becomes per Room.**

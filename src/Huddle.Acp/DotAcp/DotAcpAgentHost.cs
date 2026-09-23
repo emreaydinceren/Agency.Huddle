@@ -94,7 +94,8 @@ public sealed partial class DotAcpAgentHost(
             response.AgentInfo?.Version,
             (int)(ushort)response.ProtocolVersion,
             DotAcpAgentHost.MapAuthMethods(response.AuthMethods),
-            response.AgentCapabilities?.LoadSession ?? false);
+            response.AgentCapabilities?.LoadSession ?? false,
+            response.AgentCapabilities?.SessionCapabilities?.Resume is not null);
 
         _ = Task.Run(() => this.WatchForDisconnectAsync(clientAdapter, establishedConnection, launchedProcess), CancellationToken.None);
     }
@@ -110,37 +111,12 @@ public sealed partial class DotAcpAgentHost(
             throw new InvalidOperationException("The host has not been started.");
         }
 
-        dotacp.protocol.McpServer[] mcpServers = options.ToolServer is null
-            ? []
-            : [
-                new dotacp.protocol.McpServerHttp
-                {
-                    Name = options.ToolServer.Name,
-                    Url = options.ToolServer.Uri.ToString(),
-                    Headers = DotAcpAgentHost.MapHeaders(options.ToolServer.Headers),
-                },
-            ];
-
         dotacp.protocol.NewSessionRequest request = new dotacp.protocol.NewSessionRequest
         {
             Cwd = options.Cwd,
-            McpServers = mcpServers,
+            McpServers = DotAcpAgentHost.BuildMcpServers(options),
+            Meta = DotAcpAgentHost.BuildMeta(options),
         };
-
-        if (options.SystemPrompt is not null)
-        {
-            object payload = options.SystemPrompt.Mode == SystemPromptMode.Replace
-                ? options.SystemPrompt.Text
-                : new Dictionary<string, object>(StringComparer.Ordinal)
-                {
-                    ["append"] = options.SystemPrompt.Text,
-                };
-
-            request.Meta = new Dictionary<string, object>(StringComparer.Ordinal)
-            {
-                ["systemPrompt"] = payload,
-            };
-        }
 
         dotacp.protocol.NewSessionResponse response;
         try
@@ -157,7 +133,73 @@ public sealed partial class DotAcpAgentHost(
         }
 
         string sessionId = (string)response.SessionId;
-        IReadOnlyList<AgentModelOption> models = ModelConfigOptions.Read(response.ConfigOptions);
+        return await this.RegisterAndConfigureAsync(
+            sessionId, activeConnection, activeAdapter, options, response.ConfigOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Resumes a session by id (RS §6.4 A-1): built exactly like <see cref="StartSessionAsync"/> -
+    /// the same request shape, the same sink registration, the same Model-then-Effort application -
+    /// but over <c>session/resume</c>. <c>ResumeSessionResponse</c> carries no session id of its
+    /// own (dotacp 2026.7.19): the caller keeps the id it asked for.
+    /// </summary>
+    public async Task<IAgentSession> ResumeSessionAsync(string sessionId, AgentSessionOptions options, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+        ArgumentNullException.ThrowIfNull(options);
+
+        dotacp.client.Connection? activeConnection = this.connection;
+        DotAcpClientAdapter? activeAdapter = this.adapter;
+        if (!this.started || activeConnection is null || activeAdapter is null)
+        {
+            throw new InvalidOperationException("The host has not been started.");
+        }
+
+        dotacp.protocol.ResumeSessionRequest request = new dotacp.protocol.ResumeSessionRequest
+        {
+            SessionId = sessionId,
+            Cwd = options.Cwd,
+            McpServers = DotAcpAgentHost.BuildMcpServers(options),
+            Meta = DotAcpAgentHost.BuildMeta(options),
+        };
+
+        dotacp.protocol.ResumeSessionResponse response;
+        try
+        {
+            response = await activeConnection.ResumeSessionAsync(request, cancellationToken).ConfigureAwait(false);
+        }
+        catch (RemoteInvocationException ex) when (ex.ErrorCode == (int)dotacp.protocol.ErrorCode.ResourceNotFound)
+        {
+            throw new AgentSessionNotFoundException(sessionId, ex);
+        }
+        catch (RemoteInvocationException ex) when (ex.ErrorCode == (int)dotacp.protocol.ErrorCode.AuthenticationRequired)
+        {
+            throw new AgentAuthenticationRequiredException(this.Info.AuthMethods);
+        }
+        catch (RemoteInvocationException ex)
+        {
+            throw new AgentException($"session/resume failed: {ex.Message}", ex);
+        }
+
+        return await this.RegisterAndConfigureAsync(
+            sessionId, activeConnection, activeAdapter, options, response.ConfigOptions, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Shared tail of <see cref="StartSessionAsync"/> and <see cref="ResumeSessionAsync"/>: builds
+    /// the session, registers its sink BEFORE touching <c>session/set_config_option</c> (which can
+    /// provoke a <c>session/update</c> carrying a <c>ConfigOptionUpdate</c>, and an unregistered
+    /// session would drop it), then applies Model and, downstream of it, Effort.
+    /// </summary>
+    private async Task<IAgentSession> RegisterAndConfigureAsync(
+        string sessionId,
+        dotacp.client.Connection activeConnection,
+        DotAcpClientAdapter activeAdapter,
+        AgentSessionOptions options,
+        dotacp.protocol.SessionConfigOption[]? initialConfigOptions,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyList<AgentModelOption> models = ModelConfigOptions.Read(initialConfigOptions);
         DotAcpAgentSession session = new DotAcpAgentSession(
             sessionId,
             activeConnection,
@@ -166,21 +208,68 @@ public sealed partial class DotAcpAgentHost(
             this.logger,
             models);
 
-        // Register before touching session/set_config_option: it can provoke a session/update
-        // carrying a ConfigOptionUpdate, and an unregistered session would drop it.
         activeAdapter.Register(session);
 
         dotacp.protocol.SessionConfigOption[]? currentConfigOptions = await this.ApplyModelAsync(
-            activeConnection, sessionId, options.Model, response.ConfigOptions, cancellationToken).ConfigureAwait(false);
+            activeConnection, sessionId, options.Model, initialConfigOptions, cancellationToken).ConfigureAwait(false);
 
         // Effort is downstream of the model: the adapter rebuilds "thought_level" on every model
         // switch, so both the advertised catalog and any resolution must use the snapshot true
-        // AFTER the model switch, never the pre-switch session/new response.
+        // AFTER the model switch, never the pre-switch response.
         session.SetEffortLevels(EffortConfigOptions.Read(currentConfigOptions));
 
         await this.ApplyEffortAsync(activeConnection, sessionId, options.Effort, currentConfigOptions, cancellationToken).ConfigureAwait(false);
 
         return session;
+    }
+
+    /// <summary>Maps <see cref="AgentSessionOptions.ToolServer"/> to the wire's <c>mcpServers</c> array; empty when there is none.</summary>
+    private static dotacp.protocol.McpServer[] BuildMcpServers(AgentSessionOptions options)
+    {
+        return options.ToolServer is null
+            ? []
+            : [
+                new dotacp.protocol.McpServerHttp
+                {
+                    Name = options.ToolServer.Name,
+                    Url = options.ToolServer.Uri.ToString(),
+                    Headers = DotAcpAgentHost.MapHeaders(options.ToolServer.Headers),
+                },
+            ];
+    }
+
+    /// <summary>
+    /// Builds the <c>_meta</c> payload shared by <c>session/new</c> and <c>session/resume</c>: the
+    /// caller's own <see cref="AgentSessionOptions.Meta"/> entries first, copied rather than
+    /// aliased - this method must not mutate the caller's dictionary - then
+    /// <see cref="AgentSessionOptions.SystemPrompt"/>'s own <c>systemPrompt</c> key set last, so it
+    /// always wins over a same-named entry the caller supplied (RS §6.4 A-4). Null when there is
+    /// nothing to send.
+    /// </summary>
+    private static Dictionary<string, object>? BuildMeta(AgentSessionOptions options)
+    {
+        if (options.Meta is not { Count: > 0 } && options.SystemPrompt is null)
+        {
+            return null;
+        }
+
+        Dictionary<string, object> meta = options.Meta is { Count: > 0 } supplied
+            ? new Dictionary<string, object>(supplied, StringComparer.Ordinal)
+            : new Dictionary<string, object>(StringComparer.Ordinal);
+
+        if (options.SystemPrompt is not null)
+        {
+            object payload = options.SystemPrompt.Mode == SystemPromptMode.Replace
+                ? options.SystemPrompt.Text
+                : new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["append"] = options.SystemPrompt.Text,
+                };
+
+            meta["systemPrompt"] = payload;
+        }
+
+        return meta;
     }
 
     /// <summary>

@@ -4,6 +4,8 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Pipes;
@@ -132,7 +134,7 @@ public sealed class PersonaSupervisorTests
     /// untestable here without launching a real "node" adapter process (rules.md row 26), so this is
     /// the closest a unit test gets to proving an Effort makes it to the factory: it shows the whole
     /// Persona, Effort included, reaches whatever <see cref="IAgentHostFactory"/> is configured, which
-    /// is exactly the value <see cref="DotAcpAgentHostFactory.CreateAsync"/> reads
+    /// is exactly the value <see cref="DotAcpAgentHostFactory.StartAsync"/> reads
     /// <c>persona.Effort</c> off of to build its <c>AgentSessionOptions</c>.
     /// </summary>
     [Fact]
@@ -637,6 +639,130 @@ public sealed class PersonaSupervisorTests
         Assert.Single(factory.Calls, call => call.Persona.Name == "nova");
     }
 
+    /// <summary>
+    /// Pins FC §6.10: a Persona whose frontmatter declares a <c>watches</c> entry
+    /// <see cref="Agency.Huddle.App.FileChanges.FileChangeTracker.CheckDeclared"/> flags is not
+    /// rejected either. <see cref="PersonaSupervisor"/> must report <see cref="PersonaState.Degraded"/>
+    /// with the tracker's own warning text and must still create and start a runner - the same
+    /// "degrade, never reject" shape as the Adapter and Skill tests above.
+    /// </summary>
+    [Fact]
+    public async Task Start_UnresolvableWatchesEntry_ReportsDegradedWithWarning()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var health = NewHealth();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
+        using var supervisor = new PersonaSupervisor(
+            options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, tracker);
+
+        personaStore.Add(Identity("nova") with { Watches = ["Nope"] }, "You are Nova.");
+
+        await supervisor.StartAsync(ct);
+
+        await WaitUntilAsync(() => factory.Calls.Any(call => call.Persona.Name == "nova"), ct);
+        await supervisor.StopAsync(ct);
+
+        var status = health.Get("nova");
+        Assert.NotNull(status);
+        Assert.Equal(PersonaState.Degraded, status.State);
+        var dataDirName = Path.GetFileName(options.Value.DataDir);
+        Assert.Equal($"Watched folder 'Nope' is not a Teammate or a folder inside {dataDirName}.", status.Reason);
+        Assert.Single(factory.Calls, call => call.Persona.Name == "nova");
+    }
+
+    /// <summary>The Adapter, Skill and Watches warnings are all independent sources of one Degraded report (FC §6.10) and join in that order: Adapter first, then Skills, then Watches.</summary>
+    [Fact]
+    public async Task Start_WarningsJoinAdapterSkillAndWatches()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var health = NewHealth();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
+        using var supervisor = new PersonaSupervisor(
+            options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, tracker);
+
+        personaStore.Add(Identity("nova") with { Adapter = "bogus-adapter", Skills = ["nonexistent"], Watches = ["Nope"] }, "You are Nova.");
+
+        await supervisor.StartAsync(ct);
+
+        await WaitUntilAsync(
+            () => health.Get("nova") is { State: PersonaState.Degraded } && factory.Calls.Any(call => call.Persona.Name == "nova"),
+            ct);
+        await supervisor.StopAsync(ct);
+
+        var status = health.Get("nova");
+        Assert.NotNull(status);
+        Assert.Equal(PersonaState.Degraded, status.State);
+        var reason = status.Reason!;
+        var dataDirName = Path.GetFileName(options.Value.DataDir);
+        var adapterIndex = reason.IndexOf("bogus-adapter", StringComparison.Ordinal);
+        var skillIndex = reason.IndexOf("Skill 'nonexistent' does not exist.", StringComparison.Ordinal);
+        var watchIndex = reason.IndexOf($"Watched folder 'Nope' is not a Teammate or a folder inside {dataDirName}.", StringComparison.Ordinal);
+        Assert.True(adapterIndex >= 0, reason);
+        Assert.True(skillIndex > adapterIndex, reason);
+        Assert.True(watchIndex > skillIndex, reason);
+    }
+
+    /// <summary>
+    /// FC §6.11: with the resolved Adapter Profile's <c>ReadsFiles</c> false and the Persona's
+    /// frontmatter declaring a non-empty <c>watches</c> list, the supervisor reports the "ignored"
+    /// warning instead of <see cref="Agency.Huddle.App.FileChanges.FileChangeTracker.CheckDeclared"/>'s
+    /// - and does so independent of whether a <see cref="Agency.Huddle.App.FileChanges.FileChangeTracker"/>
+    /// was even injected, which this test's construction call deliberately omits.
+    /// </summary>
+    [Fact]
+    public async Task Start_ProfileReadsFilesFalse_WarnsWatchesIgnored()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?>
+            {
+                ["Team:Acp:Enabled"] = "true",
+                ["Team:Acp:Adapters:0:Id"] = "agency",
+                ["Team:Acp:Adapters:0:Command"] = "agency-acp",
+                ["Team:Acp:Adapters:0:ReadsFiles"] = "false",
+            },
+            ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var health = NewHealth();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, health, new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
+
+        personaStore.Add(Identity("nova") with { Adapter = "agency", Watches = ["Shared"] }, "You are Nova.");
+
+        await supervisor.StartAsync(ct);
+
+        await WaitUntilAsync(() => factory.Calls.Any(call => call.Persona.Name == "nova"), ct);
+        await supervisor.StopAsync(ct);
+
+        var status = health.Get("nova");
+        Assert.NotNull(status);
+        Assert.Equal(PersonaState.Degraded, status.State);
+        Assert.Equal("Watched folders are ignored: the Adapter 'agency' cannot read files.", status.Reason);
+    }
+
     /// <summary>An adapter-not-installed <see cref="InvalidOperationException"/> - the same shape <c>DotAcpAgentHostFactory</c> throws - is recorded as Offline, carrying the exception's own actionable message.</summary>
     [Fact]
     public async Task MissingAdapter_IsRecordedAsOfflineWithItsReason()
@@ -925,6 +1051,178 @@ public sealed class PersonaSupervisorTests
         await supervisor.StopAsync(ct);
     }
 
+    /// <summary>
+    /// RS §6.13 / U7: the Restart button forgets every stored Room Session for the Persona, and the
+    /// forget happens AFTER the old runner is disposed, so the old runner's own final Turn-end write
+    /// (simulated here through <see cref="FakePersonaHost.OnDispose"/>) cannot resurrect an entry the
+    /// button was meant to clear (D29 correction 16).
+    /// </summary>
+    [Fact]
+    public async Task RestartButton_ForgetsEveryRoomSession()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var directory = fixture.Services.GetRequiredService<Agency.Huddle.App.Data.ITeamDirectory>();
+        var gateway = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.IAgentGateway>();
+        var chat = fixture.Services.GetRequiredService<Agency.Huddle.App.Services.ChatService>();
+        var factory = new FakeAgentHostFactory { SessionPerRoom = true };
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        var roomSessions = new RoomSessionStore(options, NullLogger<RoomSessionStore>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, roomSessions: roomSessions);
+
+        personaStore.Add(Identity("nova"), "You are Nova.");
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+        var novaId = await WaitForAgentOnlineAsync(directory, gateway, "nova", ct);
+        var room = await chat.CreateRoomForAsync([novaId], ct);
+
+        roomSessions.Put("nova", room.Id, new RoomSessionEntry("sess-1", "claude", null, null, null, DateTimeOffset.UtcNow));
+        var oldHost = factory.Host;
+        Assert.NotNull(oldHost);
+        oldHost.OnDispose = () =>
+            roomSessions.Put("nova", room.Id, new RoomSessionEntry("resurrected", "claude", null, null, null, DateTimeOffset.UtcNow));
+
+        await supervisor.RestartAsync("nova", ct);
+        await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
+        await supervisor.StopAsync(ct);
+
+        Assert.Null(roomSessions.Get("nova", room.Id));
+    }
+
+    /// <summary>RS §6.13: a Persona edit that restarts its host also forgets every one of its stored Room Sessions.</summary>
+    [Fact]
+    public async Task PersonaEdit_ForgetsEveryRoomSession()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var directory = fixture.Services.GetRequiredService<Agency.Huddle.App.Data.ITeamDirectory>();
+        var gateway = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.IAgentGateway>();
+        var chat = fixture.Services.GetRequiredService<Agency.Huddle.App.Services.ChatService>();
+        var factory = new FakeAgentHostFactory { SessionPerRoom = true };
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        var roomSessions = new RoomSessionStore(options, NullLogger<RoomSessionStore>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, roomSessions: roomSessions);
+
+        personaStore.Add(Identity("nova"), "You are Nova.");
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+        var novaId = await WaitForAgentOnlineAsync(directory, gateway, "nova", ct);
+        var room = await chat.CreateRoomForAsync([novaId], ct);
+        roomSessions.Put("nova", room.Id, new RoomSessionEntry("sess-1", "claude", null, null, null, DateTimeOffset.UtcNow));
+
+        personaStore.Update("nova", PersonaText("nova", "You are a changed Nova."), model: null, effort: null);
+
+        await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
+        await supervisor.StopAsync(ct);
+
+        Assert.Null(roomSessions.Get("nova", room.Id));
+    }
+
+    /// <summary>RS §6.13: a Model change restarts the host and forgets every stored Room Session, because a stale entry naming the old Model must never be resumed against the new one.</summary>
+    [Fact]
+    public async Task ModelChange_Forgets()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var directory = fixture.Services.GetRequiredService<Agency.Huddle.App.Data.ITeamDirectory>();
+        var gateway = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.IAgentGateway>();
+        var chat = fixture.Services.GetRequiredService<Agency.Huddle.App.Services.ChatService>();
+        var factory = new FakeAgentHostFactory { SessionPerRoom = true };
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        var roomSessions = new RoomSessionStore(options, NullLogger<RoomSessionStore>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, roomSessions: roomSessions);
+
+        personaStore.Add(Identity("nova"), "You are Nova.", "a");
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+        var novaId = await WaitForAgentOnlineAsync(directory, gateway, "nova", ct);
+        var room = await chat.CreateRoomForAsync([novaId], ct);
+        roomSessions.Put("nova", room.Id, new RoomSessionEntry("sess-1", "claude", "a", null, null, DateTimeOffset.UtcNow));
+
+        personaStore.Update("nova", PersonaText("nova", "You are Nova."), "b", effort: null);
+
+        await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
+        await supervisor.StopAsync(ct);
+
+        Assert.Null(roomSessions.Get("nova", room.Id));
+    }
+
+    /// <summary>RS §6.13: an app restart (a plain <see cref="PersonaSupervisor.StopAsync"/>, with nothing calling Restart) forgets nothing, so every Room resumes on its next Turn.</summary>
+    [Fact]
+    public async Task SupervisorStop_KeepsEntries()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var directory = fixture.Services.GetRequiredService<Agency.Huddle.App.Data.ITeamDirectory>();
+        var gateway = fixture.Services.GetRequiredService<Agency.Huddle.App.Pipes.IAgentGateway>();
+        var chat = fixture.Services.GetRequiredService<Agency.Huddle.App.Services.ChatService>();
+        var factory = new FakeAgentHostFactory { SessionPerRoom = true };
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        var roomSessions = new RoomSessionStore(options, NullLogger<RoomSessionStore>.Instance);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, roomSessions: roomSessions);
+
+        personaStore.Add(Identity("nova"), "You are Nova.");
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+        var novaId = await WaitForAgentOnlineAsync(directory, gateway, "nova", ct);
+        var room = await chat.CreateRoomForAsync([novaId], ct);
+        roomSessions.Put("nova", room.Id, new RoomSessionEntry("sess-1", "claude", null, null, null, DateTimeOffset.UtcNow));
+
+        await supervisor.StopAsync(ct);
+
+        Assert.NotNull(roomSessions.Get("nova", room.Id));
+    }
+
+    /// <summary>RS §6.13 / E-12: starting a Persona's runner in shared mode forgets every stored Room Session for it, so a later switch back to per-Room starts fresh rather than resuming a stale entry.</summary>
+    [Fact]
+    public async Task SharedModeStart_ForgetsAll()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory(); // SessionPerRoom defaults false - shared mode.
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        var roomSessions = new RoomSessionStore(options, NullLogger<RoomSessionStore>.Instance);
+        roomSessions.Put("nova", "room-1", new RoomSessionEntry("sess-1", "claude", null, null, null, DateTimeOffset.UtcNow));
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, roomSessions: roomSessions);
+
+        personaStore.Add(Identity("nova"), "You are Nova.");
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+        await supervisor.StopAsync(ct);
+
+        Assert.Null(roomSessions.Get("nova", "room-1"));
+    }
+
     /// <summary>Builds a fresh <see cref="PersonaHealth"/> against the real clock - nothing in this file asserts against <see cref="PersonaStatus.Since"/> precisely enough to need a controllable one.</summary>
     private static PersonaHealth NewHealth() => new(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
 
@@ -981,7 +1279,7 @@ public sealed class PersonaSupervisorTests
     /// <summary>A test double for <see cref="IAgentHostFactory"/> that throws a caller-supplied exception for one named Persona and otherwise delegates to <paramref name="inner"/>.</summary>
     private sealed class FailingForOneAgentHostFactory(string failingPersonaName, Exception exception, FakeAgentHostFactory inner) : IAgentHostFactory
     {
-        public Task<(IAgentHost Host, IAgentSession Session)> CreateAsync(Persona persona, string agentId, CancellationToken cancellationToken)
+        public Task<IPersonaHost> StartAsync(Persona persona, string agentId, CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(persona);
 
@@ -990,13 +1288,13 @@ public sealed class PersonaSupervisorTests
                 throw exception;
             }
 
-            return inner.CreateAsync(persona, agentId, cancellationToken);
+            return inner.StartAsync(persona, agentId, cancellationToken);
         }
     }
 
     /// <summary>
     /// A test double for <see cref="IAgentHostFactory"/> that throws a caller-supplied exception the
-    /// FIRST time it is asked to create the named Persona's host, and delegates to
+    /// FIRST time it is asked to start the named Persona's host, and delegates to
     /// <paramref name="inner"/> every time after that - the shape a Restart actually fixes (the
     /// adapter got installed, authentication completed) rather than one that keeps failing forever.
     /// </summary>
@@ -1004,7 +1302,7 @@ public sealed class PersonaSupervisorTests
     {
         private bool hasFailedOnce;
 
-        public Task<(IAgentHost Host, IAgentSession Session)> CreateAsync(Persona persona, string agentId, CancellationToken cancellationToken)
+        public Task<IPersonaHost> StartAsync(Persona persona, string agentId, CancellationToken cancellationToken)
         {
             ArgumentNullException.ThrowIfNull(persona);
 
@@ -1014,7 +1312,7 @@ public sealed class PersonaSupervisorTests
                 throw exception;
             }
 
-            return inner.CreateAsync(persona, agentId, cancellationToken);
+            return inner.StartAsync(persona, agentId, cancellationToken);
         }
     }
 }

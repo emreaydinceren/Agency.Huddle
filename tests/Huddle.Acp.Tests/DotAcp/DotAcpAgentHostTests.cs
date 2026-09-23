@@ -1,6 +1,7 @@
 namespace Agency.Huddle.Acp.Tests.DotAcp;
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Nodes;
 using System.Threading;
@@ -632,6 +633,127 @@ public sealed class DotAcpAgentHostTests
         }
     }
 
+    [Fact(Timeout = 10000)]
+    public async Task StartSessionAsync_WithMeta_MergedBesideSystemPrompt()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeAgentProcessLauncher launcher = new FakeAgentProcessLauncher();
+        DotAcpAgentHost host = new DotAcpAgentHost(
+            new AgentProcessOptions("fake", []),
+            launcher,
+            new DotAcpHostOptions(),
+            new ListLoggerFactory());
+        string cwd = Path.GetTempPath();
+        SystemPromptOptions systemPrompt = new SystemPromptOptions("You are the COO");
+        Dictionary<string, object> meta = new Dictionary<string, object>
+        {
+            ["claudeCode"] = new Dictionary<string, object> { ["options"] = new Dictionary<string, object> { ["settingSources"] = new[] { "project", "local" } } },
+        };
+        IAgentSession? session = null;
+
+        try
+        {
+            await host.StartAsync(cancellationToken);
+            session = await host.StartSessionAsync(
+                DotAcpAgentHostTests.CreateSessionOptions(cwd, systemPrompt, meta), cancellationToken);
+
+            JsonObject sessionNew = await launcher.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(2));
+            JsonObject parameters = (JsonObject)sessionNew["params"]!;
+            JsonObject metaOut = Assert.IsType<JsonObject>(parameters["_meta"]);
+
+            JsonObject claudeCode = Assert.IsType<JsonObject>(metaOut["claudeCode"]);
+            JsonObject options = Assert.IsType<JsonObject>(claudeCode["options"]);
+            Assert.True(options.ContainsKey("settingSources"));
+
+            JsonObject payload = Assert.IsType<JsonObject>(metaOut["systemPrompt"]);
+            Assert.Equal((string?)"You are the COO", (string?)payload["append"]);
+        }
+        finally
+        {
+            if (session is not null)
+            {
+                await session.DisposeAsync();
+            }
+
+            await host.DisposeAsync();
+        }
+    }
+
+    [Fact(Timeout = 10000)]
+    public async Task StartSessionAsync_MetaOnly_NoSystemPrompt_Sent()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeAgentProcessLauncher launcher = new FakeAgentProcessLauncher();
+        DotAcpAgentHost host = new DotAcpAgentHost(
+            new AgentProcessOptions("fake", []),
+            launcher,
+            new DotAcpHostOptions(),
+            new ListLoggerFactory());
+        string cwd = Path.GetTempPath();
+        Dictionary<string, object> meta = new Dictionary<string, object>
+        {
+            ["claudeCode"] = new Dictionary<string, object> { ["options"] = new Dictionary<string, object> { ["settingSources"] = new[] { "project", "local" } } },
+        };
+        IAgentSession? session = null;
+
+        try
+        {
+            await host.StartAsync(cancellationToken);
+            session = await host.StartSessionAsync(
+                DotAcpAgentHostTests.CreateSessionOptions(cwd, meta), cancellationToken);
+
+            JsonObject sessionNew = await launcher.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(2));
+            JsonObject parameters = (JsonObject)sessionNew["params"]!;
+            JsonObject metaOut = Assert.IsType<JsonObject>(parameters["_meta"]);
+
+            Assert.True(metaOut.ContainsKey("claudeCode"));
+            Assert.False(metaOut.ContainsKey("systemPrompt"));
+        }
+        finally
+        {
+            if (session is not null)
+            {
+                await session.DisposeAsync();
+            }
+
+            await host.DisposeAsync();
+        }
+    }
+
+    [Fact(Timeout = 10000)]
+    public async Task StartSessionAsync_NoMeta_RequestUnchanged()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeAgentProcessLauncher launcher = new FakeAgentProcessLauncher();
+        DotAcpAgentHost host = new DotAcpAgentHost(
+            new AgentProcessOptions("fake", []),
+            launcher,
+            new DotAcpHostOptions(),
+            new ListLoggerFactory());
+        string cwd = Path.GetTempPath();
+        IAgentSession? session = null;
+
+        try
+        {
+            await host.StartAsync(cancellationToken);
+            session = await host.StartSessionAsync(DotAcpAgentHostTests.CreateSessionOptions(cwd), cancellationToken);
+
+            JsonObject sessionNew = await launcher.Agent.WaitForAsync("session/new", TimeSpan.FromSeconds(2));
+            JsonObject parameters = (JsonObject)sessionNew["params"]!;
+
+            Assert.Null(parameters["_meta"]);
+        }
+        finally
+        {
+            if (session is not null)
+            {
+                await session.DisposeAsync();
+            }
+
+            await host.DisposeAsync();
+        }
+    }
+
     private static AgentSessionOptions CreateSessionOptions(string cwd)
     {
         return new AgentSessionOptions(cwd, new AutoApprovePermissionHandler());
@@ -640,5 +762,15 @@ public sealed class DotAcpAgentHostTests
     private static AgentSessionOptions CreateSessionOptions(string cwd, SystemPromptOptions systemPrompt)
     {
         return new AgentSessionOptions(cwd, new AutoApprovePermissionHandler(), systemPrompt);
+    }
+
+    private static AgentSessionOptions CreateSessionOptions(string cwd, IReadOnlyDictionary<string, object> meta)
+    {
+        return new AgentSessionOptions(cwd, new AutoApprovePermissionHandler(), meta: meta);
+    }
+
+    private static AgentSessionOptions CreateSessionOptions(string cwd, SystemPromptOptions systemPrompt, IReadOnlyDictionary<string, object> meta)
+    {
+        return new AgentSessionOptions(cwd, new AutoApprovePermissionHandler(), systemPrompt, meta: meta);
     }
 }

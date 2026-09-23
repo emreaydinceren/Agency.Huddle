@@ -249,6 +249,9 @@ internal sealed class AgentConnection
                 case Hello:
                 await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "already registered"), ct);
                 break;
+                case ReadTranscript read:
+                await this.HandleReadTranscriptAsync(lineStream, read, ct);
+                break;
                 default:
                 await lineStream.WriteAsync(new ProtocolError(ErrorCodes.BadMessage, "Unexpected message type."), ct);
                 break;
@@ -329,6 +332,77 @@ internal sealed class AgentConnection
             activity.MessageId, activity.ToolCallId, activity.RoomId, this.Agent!.Id, this.Agent!.Name, activity.Title, activity.Status);
 
         this.roomEvents.PublishDraftChanged(activity.RoomId);
+    }
+
+    /// <summary>
+    /// Answers a <see cref="ReadTranscript"/> (RS §6.5), for a Room Session's first Turn: slices the
+    /// Room's Transcript between <see cref="ReadTranscript.AfterMessageId"/> (exclusive) and
+    /// <see cref="ReadTranscript.BeforeMessageId"/> (exclusive), takes at most the latest
+    /// <see cref="ReadTranscript.Max"/> of that range, and trims further if the answer would not fit
+    /// the wire (finding P-21). Sent only to this connection - never broadcast - per ADR-0003: the
+    /// server labels, the client decides.
+    /// </summary>
+    private async Task HandleReadTranscriptAsync(JsonLineStream lineStream, ReadTranscript read, CancellationToken ct)
+    {
+        if (read.Max < 1)
+        {
+            await lineStream.WriteAsync(
+                new ProtocolError(ErrorCodes.BadMessage, "max must be at least 1.", read.RequestId), ct);
+            return;
+        }
+
+        // ResolveMembershipErrorAsync directly, never CheckMembershipAsync: that cache is keyed on a
+        // Message id, and RequestId is not one - reusing it would risk handing this Room's verdict to
+        // an unrelated cache entry, or vice versa.
+        var membershipError = await this.ResolveMembershipErrorAsync(read.RoomId, read.RequestId, ct);
+        if (membershipError is not null)
+        {
+            await lineStream.WriteAsync(membershipError, ct);
+            return;
+        }
+
+        var transcript = await this.chatStore.ReadAllAsync(read.RoomId, ct);
+
+        var beforeIndex = IndexOf(transcript, read.BeforeMessageId);
+        var end = beforeIndex >= 0 ? beforeIndex : transcript.Count;
+        var afterIndex = read.AfterMessageId is null ? -1 : IndexOf(transcript, read.AfterMessageId);
+        var start = afterIndex >= 0 && afterIndex < end ? afterIndex + 1 : 0;
+
+        var rangeCount = Math.Max(0, end - start);
+        var takeCount = Math.Min(rangeCount, read.Max);
+        var windowStart = end - takeCount;
+        var omitted = rangeCount - takeCount;
+
+        List<ChatMessage> messages = new(takeCount);
+        for (var i = windowStart; i < end; i++)
+        {
+            messages.Add(transcript[i]);
+        }
+
+        // Drops the oldest of what is left until the serialised answer fits under half of
+        // JsonLineStream.MaxLineBytes (finding P-21), stopping at an empty list if one Message alone
+        // is still too long (correction item 21).
+        while (messages.Count > 0
+            && ProtocolJson.Serialize(new TranscriptTail(read.RequestId, read.RoomId, messages, omitted)).Length > JsonLineStream.MaxLineBytes / 2)
+        {
+            messages.RemoveAt(0);
+            omitted++;
+        }
+
+        await lineStream.WriteAsync(new TranscriptTail(read.RequestId, read.RoomId, messages, omitted), ct);
+
+        static int IndexOf(IReadOnlyList<ChatMessage> messages, string messageId)
+        {
+            for (var i = 0; i < messages.Count; i++)
+            {
+                if (string.Equals(messages[i].Id, messageId, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
     }
 
     /// <summary>

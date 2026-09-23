@@ -5,6 +5,7 @@ using Agency.Huddle.Acp.DotAcp;
 using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.Acp.Tools;
 using Agency.Huddle.App.Acp.Tools;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
 
@@ -58,7 +59,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// <param name="skills">
     /// Resolves a Persona's assigned Skill names to their current <see cref="Skill"/> records
     /// (Spec §6.4, §6.5). Read here from <see cref="Persona.Text"/> directly, rather than threaded
-    /// through <see cref="IAgentHostFactory.CreateAsync"/>'s parameters, because that signature stays
+    /// through <see cref="IAgentHostFactory.StartAsync"/>'s parameters, because that signature stays
     /// narrow (Spec §6.4 Implementation notes) — <c>PersonaSupervisor</c> resolves the same names a
     /// second time, only for the Degraded warnings it reports before ever calling this factory.
     /// </param>
@@ -86,7 +87,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         this.skills = skills;
     }
 
-    public async Task<(IAgentHost Host, IAgentSession Session)> CreateAsync(Persona persona, string agentId, CancellationToken cancellationToken)
+    public async Task<IPersonaHost> StartAsync(Persona persona, string agentId, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentException.ThrowIfNullOrWhiteSpace(agentId);
@@ -101,6 +102,11 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         var workDir = Path.Combine(this.options.DataDir, this.options.Acp.WorkDir, persona.Name);
         Directory.CreateDirectory(workDir);
 
+        // FC §6.15: the folder is always created next to the Work Dir, even when the memory block
+        // below is left out - so it is ready the moment File Changes and ReadsFiles both turn on.
+        var memoryDir = Path.Combine(workDir, "memory");
+        Directory.CreateDirectory(memoryDir);
+
         var processOptions = AgentProcessOptionsFactory.TryCreate(profile, workDir, AppContext.BaseDirectory)
             ?? throw new InvalidOperationException(
                 $"No ACP adapter is installed for Persona '{persona.Name}' on Adapter '{profile.Id}'. Run "
@@ -111,7 +117,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         var authToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 
         // Parsed from the Persona's own text rather than threaded through this method's signature
-        // (Spec §6.4 Implementation notes keeps IAgentHostFactory.CreateAsync narrow). A Persona with
+        // (Spec §6.4 Implementation notes keeps IAgentHostFactory.StartAsync narrow). A Persona with
         // no frontmatter at all - or malformed frontmatter - is not an error here: it simply holds no
         // Skills. PersonaSupervisor resolves the same names a second time, purely to report a Degraded
         // warning for one that does not exist (Task 5.2); this factory never surfaces that warning,
@@ -145,6 +151,18 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         // "GetHelpTool is constructed from the offered list, so get_help and tools/list agree").
         chatTools = SkillGrants.Offer(chatTools, skillResolution.Skills);
 
+        // FC §6.9, §6.11: watch_folder/unwatch_folder are offered only when File Changes is on for
+        // this installation AND the resolved Adapter Profile can read files at all - an Adapter with
+        // no file tools (agency-acp) would otherwise be handed paths it cannot open. Appended after
+        // Skill gating and before GetHelpTool is built, so get_help lists them too (rules.md row 34).
+        if (this.options.FileChanges.Enabled && profile.ReadsFiles)
+        {
+            var fileChanges = this.serviceProvider.GetRequiredService<FileChangeTracker>();
+            IAppTool watchFolderTool = ActivatorUtilities.CreateInstance<WatchFolderTool>(this.serviceProvider, persona.Name);
+            IAppTool unwatchFolderTool = ActivatorUtilities.CreateInstance<UnwatchFolderTool>(this.serviceProvider, persona.Name);
+            chatTools = [.. chatTools, watchFolderTool, unwatchFolderTool];
+        }
+
         var prompts = this.serviceProvider.GetRequiredService<IPromptSource>();
 
         // The mcp__{server}__ prefix is derived from the same server name above, never typed into a
@@ -153,6 +171,12 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         // is applied at all now follows the resolved profile (Spec §6.4): the server name itself
         // never changes, only whether model-facing names carry it.
         var toolNamePrefix = profile.UsesToolNamePrefix ? $"mcp__{ToolServerName}__" : string.Empty;
+
+        // FC §6.15: the memory index used to be a snapshot taken once here, at session start. RS
+        // §6.3 moves that into DotAcpPersonaHost.OpenAsync/ResumeAsync, rebuilt on every call, so a
+        // Room Session opened later sees what was remembered since - the gate itself (File Changes
+        // off, or an Adapter that cannot read files, means no memory block) is unchanged.
+        bool readsMemory = this.options.FileChanges.Enabled && profile.ReadsFiles;
 
         // get_help is offered first and knows every other tool, so the system prompt can name one
         // tool instead of all of them. It is built last for the obvious reason: it takes the rest.
@@ -179,67 +203,45 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             throw;
         }
 
-        IAgentSession session;
-        try
-        {
-            session = await innerHost.StartSessionAsync(
-                new AgentSessionOptions(
-                    workDir,
-                    // Approves the way AutoApprovePermissionHandler does, except inside the human's
-                    // own agent configuration directory - see WorkDirPermissionHandler for why that
-                    // one exception is drawn there and not around the Work Dir. Falls back to the
-                    // plain auto-approve only if the profile directory cannot be resolved at all,
-                    // rather than inventing a path to protect.
-                    WorkDirPermissionHandler.DefaultProtectedDirectory() is { } protectedDirectory
-                        ? new WorkDirPermissionHandler(protectedDirectory, this.loggerFactory.CreateLogger<WorkDirPermissionHandler>())
-                        : new AutoApprovePermissionHandler(),
-                    new SystemPromptOptions(
-                        SystemPromptComposer.Compose(
-                            persona,
-                            prompts,
-                            toolNamePrefix + getHelpTool.Name,
-                            toolNames,
-                            skillResolution.Skills,
-                            toolNamePrefix + readSkillTool.Name),
-                        SystemPromptMode.Append),
-                    toolServer.Endpoint,
-                    persona.Model,
-                    persona.Effort),
-                cancellationToken).ConfigureAwait(false);
-        }
-        catch
-        {
-            await innerHost.DisposeAsync().ConfigureAwait(false);
-            await toolServer.DisposeAsync().ConfigureAwait(false);
-            throw;
-        }
+        // RS §6.10 "Recommended" (P0-4), gated by finding P-11's flag: keeps a Persona's session off
+        // the Human's own Claude Code settings and CLAUDE.md, and off its auto-memory, so FC §6.15's
+        // memory folder is the only memory that session sees. Unverified until Task 14.3.m passes -
+        // see AdapterProfile.IsolateUserSettings's remarks for the known settings-replacement risk.
+        // Minted once per host (RS §6.3): every session this Persona's host opens or resumes carries
+        // the same Meta, exactly as it always carried the same token below.
+        IReadOnlyDictionary<string, object>? meta = profile.IsolateUserSettings
+            ? new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["claudeCode"] = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["options"] = new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["settingSources"] = new[] { "project", "local" },
+                        ["settings"] = new Dictionary<string, object>(StringComparer.Ordinal)
+                        {
+                            ["autoMemoryEnabled"] = false,
+                        },
+                    },
+                },
+            }
+            : null;
 
-        IAgentHost host = new ToolServerOwningAgentHost(innerHost, toolServer);
-        return (host, session);
-    }
-
-    /// <summary>
-    /// Wraps an <see cref="IAgentHost"/> so disposing it also disposes the <see cref="AppToolServer"/>
-    /// the factory started for it: the factory owns the tool server's lifetime, not the host itself.
-    /// </summary>
-    private sealed class ToolServerOwningAgentHost(IAgentHost inner, AppToolServer toolServer) : IAgentHost
-    {
-        public AgentHostInfo Info => inner.Info;
-
-        public Task StartAsync(CancellationToken cancellationToken)
-        {
-            return inner.StartAsync(cancellationToken);
-        }
-
-        public Task<IAgentSession> StartSessionAsync(AgentSessionOptions options, CancellationToken cancellationToken)
-        {
-            return inner.StartSessionAsync(options, cancellationToken);
-        }
-
-        public async ValueTask DisposeAsync()
-        {
-            await inner.DisposeAsync().ConfigureAwait(false);
-            await toolServer.DisposeAsync().ConfigureAwait(false);
-        }
+        return new DotAcpPersonaHost(
+            innerHost,
+            toolServer,
+            profile,
+            persona,
+            prompts,
+            toolNamePrefix + getHelpTool.Name,
+            toolNames,
+            skillResolution.Skills,
+            toolNamePrefix + readSkillTool.Name,
+            memoryDir,
+            readsMemory,
+            this.options.FileChanges.MaxMemoryEntries,
+            workDir,
+            toolServer.Endpoint,
+            meta,
+            this.loggerFactory);
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
@@ -38,7 +39,7 @@ public sealed class GetHelpToolTests
             new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakePromptSource()),
             new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakePromptSource()),
             new InviteAgentTool(chat, directory, aliasSource, new FakePromptSource()),
-            new PostMessageTool(chat, "caller-id", new FakePromptSource()),
+            new PostMessageTool(chat, "caller-id", new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions()))),
             new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
         ];
@@ -48,6 +49,42 @@ public sealed class GetHelpToolTests
 
         Assert.Contains("mcp__team__get_help", help, StringComparison.Ordinal);
         foreach (var other in others)
+        {
+            Assert.Contains($"mcp__team__{other.Name}", help, StringComparison.Ordinal);
+            Assert.Contains(other.Description, help, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>
+    /// <c>get_help</c> is built from the tools it is handed, so when <c>watch_folder</c> and
+    /// <c>unwatch_folder</c> are offered (FC §6.9, §6.11), it lists both by their prefixed model-facing
+    /// name - the same guarantee <see cref="GetHelp_NamesEveryOtherToolWithItsMcpPrefix"/> pins for the
+    /// original tool set, needed separately because <c>PromptGoldenTests</c> builds its tool roster from
+    /// a fixed list that never includes these two, so <c>getHelp.txt</c> and <c>toolDescriptions.txt</c>
+    /// cannot cover this.
+    /// </summary>
+    [Fact]
+    public async Task GetHelp_WithWatchTools_ListsBothByPrefixedName()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new Agency.Huddle.Tests.TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var store = new Agency.Huddle.App.FileChanges.FileStateStore(dir.Options(), NullLogger<Agency.Huddle.App.FileChanges.FileStateStore>.Instance);
+        var resolver = new Agency.Huddle.App.FileChanges.WatchedFolderResolver(dir.Options());
+        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        var tracker = new Agency.Huddle.App.FileChanges.FileChangeTracker(store, personaStore, directory, resolver, dir.Options(), NullLogger<Agency.Huddle.App.FileChanges.FileChangeTracker>.Instance);
+
+        IAppTool[] watchTools =
+        [
+            new WatchFolderTool(tracker, "Nova", new FakePromptSource()),
+            new UnwatchFolderTool(tracker, "Nova", new FakePromptSource()),
+        ];
+        var tool = new GetHelpTool(watchTools, new FakePromptSource(), "mcp__team__");
+
+        var help = await tool.InvokeAsync(new JsonObject(), ct);
+
+        foreach (var other in watchTools)
         {
             Assert.Contains($"mcp__team__{other.Name}", help, StringComparison.Ordinal);
             Assert.Contains(other.Description, help, StringComparison.Ordinal);
@@ -113,7 +150,7 @@ public sealed class GetHelpToolTests
         //
         // TODO(follow-up, out of scope for T1.11): nothing yet asserts that this documented format —
         // "[Room: <name> (id: <id>)]" — actually matches what turn.roomLabel's default renders in
-        // PersonaRunner.BuildPrompt. The two prompts (getHelp.messages and turn.roomLabel) can drift
+        // RoomSession.BuildPrompt. The two prompts (getHelp.messages and turn.roomLabel) can drift
         // apart with no test noticing, now that each is independently overridable.
         Assert.Contains("[Room: <name> (id: <id>)]", help, StringComparison.Ordinal);
     }

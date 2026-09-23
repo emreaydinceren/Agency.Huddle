@@ -7,6 +7,7 @@ using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -40,13 +41,14 @@ namespace Agency.Huddle.Tests.Conformance;
 /// </para>
 /// <para>
 /// The assertion is deliberately limited to "the Turn completed" — a reply from the Persona landed in
-/// the Room — never the exact chunk count or reply text. <c>ChunkedReplyFirstOrderer</c>'s remarks
-/// document a known, diagnosed race in the ACP client's event dispatch
-/// (<c>DotAcpAgentSession</c>/<c>DotAcpClientAdapter</c>) that can drop trailing
-/// <c>MessageDelta</c> chunks when a <c>session/prompt</c> response is dispatched ahead of
-/// <c>session/update</c> notifications the peer sent before it; pinning chunk counts or full text
-/// here would make this test intermittently red for a defect that belongs to that class, not this
-/// one.
+/// the Room — never the exact chunk count or reply text. <c>DotAcpAgentSession.WaitForQuietDispatchAsync</c>'s
+/// remarks document a diagnosed race in the ACP client's event dispatch
+/// (<c>DotAcpAgentSession</c>/<c>DotAcpClientAdapter</c>) that could drop trailing
+/// <c>MessageDelta</c> chunks when a <c>session/prompt</c> response was dispatched ahead of
+/// <c>session/update</c> notifications the peer sent before it; a bounded quiet-window wait now
+/// mitigates it, but that method's own remarks explain why it is a mitigation and not a hard
+/// guarantee, so pinning chunk counts or full text here would still risk this test going
+/// intermittently red for a defect that belongs to that class, not this one.
 /// </para>
 /// </remarks>
 public sealed class ProcessModeTests
@@ -106,8 +108,9 @@ public sealed class ProcessModeTests
         IPromptSource prompts = host.Services.GetRequiredService<IPromptSource>();
         RoomFollows roomFollows = host.Services.GetRequiredService<RoomFollows>();
         ILogger<PersonaRunner> logger = host.Services.GetRequiredService<ILogger<PersonaRunner>>();
+        FileChangeTracker fileChanges = host.Services.GetRequiredService<FileChangeTracker>();
 
-        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger);
+        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger, fileChanges);
 
         try
         {

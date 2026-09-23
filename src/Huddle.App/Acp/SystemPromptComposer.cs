@@ -1,5 +1,7 @@
 namespace Agency.Huddle.App.Acp;
 
+using System.Globalization;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
 
@@ -93,6 +95,101 @@ internal static class SystemPromptComposer
         IReadOnlyList<Skill> skills,
         string readSkillToolName)
     {
+        return Compose(persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory: null);
+    }
+
+    /// <summary>
+    /// Composes a Persona's full system prompt, with a seventh part carrying the Memory index
+    /// appended after the Skills block (FC §6.15), when <paramref name="memory"/> is non-null. A
+    /// <see langword="null"/> <paramref name="memory"/> gets output byte-identical to the six-argument
+    /// overload, which is exactly this overload called with <paramref name="memory"/> null.
+    /// </summary>
+    /// <param name="persona">The Persona whose <see cref="Persona.Text"/> and <see cref="Persona.Name"/> are spliced in.</param>
+    /// <param name="prompts">Resolves each prompt's current text — a configured override, or the <see cref="PromptCatalog"/> default.</param>
+    /// <param name="helpToolName">
+    /// <see cref="Tools.GetHelpTool"/>'s own name, already carrying its full <c>mcp__team__</c> prefix
+    /// (e.g. <c>"mcp__team__get_help"</c>). Named by the caller from the same tool instance it built,
+    /// so this composer never retypes <c>"get_help"</c> or the prefix.
+    /// </param>
+    /// <param name="toolNames">
+    /// Every tool name this session exposes, already carrying its full <c>mcp__team__</c> prefix, in
+    /// the order they should be listed.
+    /// </param>
+    /// <param name="skills">The Persona's resolved Skills for this session; an empty list omits the block entirely.</param>
+    /// <param name="readSkillToolName">
+    /// <c>read_skill</c>'s own name, already carrying its full <c>mcp__team__</c> prefix. Only read when
+    /// <paramref name="skills"/> is non-empty, so a caller with no Skills may pass an empty string.
+    /// </param>
+    /// <param name="memory">
+    /// The Agent's Memory index, built at session start (FC §6.15), or <see langword="null"/> when the
+    /// resolved Adapter cannot read files, or File Changes is disabled for this installation.
+    /// </param>
+    /// <returns>
+    /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/>
+    /// is non-empty, plus a seventh memory block when <paramref name="memory"/> is non-null.
+    /// </returns>
+    internal static string Compose(
+        Persona persona,
+        IPromptSource prompts,
+        string helpToolName,
+        IReadOnlyList<string> toolNames,
+        IReadOnlyList<Skill> skills,
+        string readSkillToolName,
+        MemorySnapshot? memory)
+    {
+        return Compose(persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory, SessionScope.Shared);
+    }
+
+    /// <summary>
+    /// Composes a Persona's full system prompt, choosing D28's per-mode truthful text (RS §6.9) from
+    /// <paramref name="scope"/> instead of always appending <c>systemPrompt.sharedSession</c>.
+    /// <see cref="SessionScope.Shared"/> reproduces the seven-argument overload's output
+    /// byte-for-byte, which is exactly this overload called with <see cref="SessionScope.Shared"/>.
+    /// </summary>
+    /// <param name="persona">The Persona whose <see cref="Persona.Text"/> and <see cref="Persona.Name"/> are spliced in.</param>
+    /// <param name="prompts">Resolves each prompt's current text — a configured override, or the <see cref="PromptCatalog"/> default.</param>
+    /// <param name="helpToolName">
+    /// <see cref="Tools.GetHelpTool"/>'s own name, already carrying its full <c>mcp__team__</c> prefix
+    /// (e.g. <c>"mcp__team__get_help"</c>). Named by the caller from the same tool instance it built,
+    /// so this composer never retypes <c>"get_help"</c> or the prefix.
+    /// </param>
+    /// <param name="toolNames">
+    /// Every tool name this session exposes, already carrying its full <c>mcp__team__</c> prefix, in
+    /// the order they should be listed.
+    /// </param>
+    /// <param name="skills">The Persona's resolved Skills for this session; an empty list omits the block entirely.</param>
+    /// <param name="readSkillToolName">
+    /// <c>read_skill</c>'s own name, already carrying its full <c>mcp__team__</c> prefix. Only read when
+    /// <paramref name="skills"/> is non-empty, so a caller with no Skills may pass an empty string.
+    /// </param>
+    /// <param name="memory">
+    /// The Agent's Memory index, built at session start (FC §6.15), or <see langword="null"/> when the
+    /// resolved Adapter cannot read files, or File Changes is disabled for this installation. Also
+    /// gates <c>systemPrompt.roomSessionsCarry</c> in <see cref="SessionScope.PerRoom"/> (RS §6.9: the
+    /// carry line only applies when the two routes it names - memory, File Changes - exist).
+    /// </param>
+    /// <param name="scope">
+    /// Which of RS §6.9's two truthful texts this session gets, resolved by the caller from the
+    /// Adapter Profile's <see cref="AdapterProfile.SessionPerRoom"/>.
+    /// </param>
+    /// <returns>
+    /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/>
+    /// is non-empty, plus a seventh memory block when <paramref name="memory"/> is non-null, plus a
+    /// closing part chosen by <paramref name="scope"/>: <c>systemPrompt.sharedSession</c> for
+    /// <see cref="SessionScope.Shared"/>, or <c>systemPrompt.roomSessions</c> — with
+    /// <c>systemPrompt.roomSessionsCarry</c> as its own trailing part when <paramref name="memory"/>
+    /// is non-null — for <see cref="SessionScope.PerRoom"/>.
+    /// </returns>
+    internal static string Compose(
+        Persona persona,
+        IPromptSource prompts,
+        string helpToolName,
+        IReadOnlyList<string> toolNames,
+        IReadOnlyList<Skill> skills,
+        string readSkillToolName,
+        MemorySnapshot? memory,
+        SessionScope scope)
+    {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
         ArgumentException.ThrowIfNullOrWhiteSpace(helpToolName);
@@ -113,22 +210,77 @@ internal static class SystemPromptComposer
             "systemPrompt.tools",
             new Dictionary<string, string> { ["{{toolNames}}"] = WrapToolNames(toolNames) });
 
-        if (skills.Count == 0)
+        List<string> parts = [orientation, persona.Text, identity, chatRules, tools];
+
+        if (skills.Count > 0)
         {
-            return string.Join("\n\n", orientation, persona.Text, identity, chatRules, tools);
+            ArgumentException.ThrowIfNullOrWhiteSpace(readSkillToolName);
+
+            var skillsBlock = prompts.Render(
+                "systemPrompt.skills",
+                new Dictionary<string, string>
+                {
+                    ["{{skillIndex}}"] = BuildSkillIndex(skills),
+                    ["{{readSkillTool}}"] = readSkillToolName,
+                });
+
+            parts.Add(skillsBlock);
         }
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(readSkillToolName);
+        if (memory is not null)
+        {
+            parts.Add(BuildMemoryBlock(prompts, memory));
+        }
 
-        var skillsBlock = prompts.Render(
-            "systemPrompt.skills",
-            new Dictionary<string, string>
+        // D16 P0-1 / D28 (RS §6.9, §8.1): the truthful closing part is appended here, in this — the
+        // last — overload of the Compose chain, once, after everything else including a Skills or
+        // Memory block when either is present. Every other overload delegates into this one, so
+        // appending it anywhere else would double it.
+        if (scope == SessionScope.PerRoom)
+        {
+            parts.Add(prompts.Render("systemPrompt.roomSessions", new Dictionary<string, string>()));
+            if (memory is not null)
             {
-                ["{{skillIndex}}"] = BuildSkillIndex(skills),
-                ["{{readSkillTool}}"] = readSkillToolName,
-            });
+                parts.Add(prompts.Render("systemPrompt.roomSessionsCarry", new Dictionary<string, string>()));
+            }
+        }
+        else
+        {
+            parts.Add(prompts.Render("systemPrompt.sharedSession", new Dictionary<string, string>()));
+        }
 
-        return string.Join("\n\n", orientation, persona.Text, identity, chatRules, tools, skillsBlock);
+        return string.Join("\n\n", parts);
+    }
+
+    /// <summary>Renders the <c>systemPrompt.memory</c> block, with its index built from <paramref name="memory"/>'s entries.</summary>
+    /// <param name="prompts">Resolves each memory prompt's current text.</param>
+    /// <param name="memory">The Agent's Memory index for this session.</param>
+    private static string BuildMemoryBlock(IPromptSource prompts, MemorySnapshot memory)
+    {
+        var index = memory.Entries.Count == 0
+            ? prompts.Render("systemPrompt.memoryEmpty", new Dictionary<string, string>())
+            : string.Join(
+                '\n',
+                memory.Entries.Select(entry => prompts.Render(
+                    "systemPrompt.memoryEntry",
+                    new Dictionary<string, string> { ["{{summary}}"] = entry.Summary, ["{{path}}"] = entry.FullPath })));
+
+        if (memory.NotListed > 0)
+        {
+            var more = prompts.Render(
+                "systemPrompt.memoryMore",
+                new Dictionary<string, string>
+                {
+                    ["{{count}}"] = memory.NotListed.ToString(CultureInfo.InvariantCulture),
+                    ["{{memoryPath}}"] = memory.MemoryPath,
+                });
+
+            index = memory.Entries.Count == 0 ? more : string.Join('\n', index, more);
+        }
+
+        return prompts.Render(
+            "systemPrompt.memory",
+            new Dictionary<string, string> { ["{{memoryPath}}"] = memory.MemoryPath, ["{{memoryIndex}}"] = index });
     }
 
     /// <summary>Renders the Skill Index: one <c>- {name}: {description}</c> line per Skill, in the given order.</summary>

@@ -8,6 +8,8 @@ using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.Acp.Tests.Fakes;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.Tests.Pipes;
 
@@ -101,11 +103,18 @@ public sealed class MockAdapterFixture : IAsyncDisposable
     /// earlier one of the same key — the same merge <see cref="PipeHostFixture.StartAsync(IReadOnlyDictionary{string,string?}?,CancellationToken)"/>
     /// uses. <see langword="null"/> for none.
     /// </param>
+    /// <param name="timeProvider">
+    /// The clock the hand-built <see cref="PersonaRunner"/> uses for its Room Session pool (RS §6.2's
+    /// idle sweep, among other things) — <see langword="null"/> for the real one. A conformance test
+    /// that needs to drive the idle sweep deterministically passes a settable clock instead of waiting
+    /// out real wall-clock minutes (D30 correction 17).
+    /// </param>
     /// <param name="cancellationToken">Cancels startup.</param>
     /// <returns>The started fixture.</returns>
     public static async Task<MockAdapterFixture> StartAsync(
         Persona persona,
         IReadOnlyDictionary<string, string?>? additionalConfig = null,
+        TimeProvider? timeProvider = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(persona);
@@ -159,8 +168,11 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         IPromptSource prompts = host.Services.GetRequiredService<IPromptSource>();
         RoomFollows roomFollows = host.Services.GetRequiredService<RoomFollows>();
         ILogger<PersonaRunner> logger = host.Services.GetRequiredService<ILogger<PersonaRunner>>();
+        FileChangeTracker fileChanges = host.Services.GetRequiredService<FileChangeTracker>();
+        RoomSessionStore roomSessions = host.Services.GetRequiredService<RoomSessionStore>();
+        OwnPosts ownPosts = host.Services.GetRequiredService<OwnPosts>();
 
-        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger);
+        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger, fileChanges, timeProvider: timeProvider, roomSessions: roomSessions, ownPosts: ownPosts);
 
         try
         {
@@ -180,7 +192,7 @@ public sealed class MockAdapterFixture : IAsyncDisposable
 
     /// <summary>
     /// Tears the fixture down deterministically: stops the Persona's runner (which itself disposes
-    /// its session, its host, and — via <c>DotAcpAgentHostFactory</c>'s <c>ToolServerOwningAgentHost</c>
+    /// its session, its host, and — via <c>DotAcpAgentHostFactory</c>'s <c>DotAcpPersonaHost</c>
     /// — its <c>AppToolServer</c>), then stops and disposes the host and its temp data directory. No
     /// step here waits on a fixed delay: every await is a real completion signal from the object being
     /// torn down.

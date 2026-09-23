@@ -63,7 +63,8 @@ internal static class SessionUpdateMapper
                 toolCallUpdate.Title,
                 SessionUpdateMapper.MapToolKind(toolCallUpdate.Kind),
                 SessionUpdateMapper.MapToolCallStatus(toolCallUpdate.Status),
-                SessionUpdateMapper.SerializeRaw(toolCallUpdate.RawOutput));
+                SessionUpdateMapper.SerializeRaw(toolCallUpdate.RawOutput),
+                SessionUpdateMapper.SerializeRaw(toolCallUpdate.RawInput));
 
             case dotacp.protocol.Plan plan:
             return new PlanUpdated(sessionId, SessionUpdateMapper.MapPlanEntries(plan.Entries));

@@ -24,6 +24,8 @@ public sealed record RoomInfo(string Id, string Name, IReadOnlyList<MemberInfo> 
 [JsonDerivedType(typeof(ProtocolError), "error")]
 [JsonDerivedType(typeof(ToolActivity), "toolActivity")]
 [JsonDerivedType(typeof(StopTurn), "stopTurn")]
+[JsonDerivedType(typeof(ReadTranscript), "readTranscript")]
+[JsonDerivedType(typeof(TranscriptTail), "transcriptTail")]
 public abstract record ProtocolMessage
 {
     public int Version { get; init; } = ProtocolVersion.Current;
@@ -85,12 +87,13 @@ public sealed record Welcome(string AgentId, string Name, IReadOnlyList<RoomInfo
 
 /// <summary>The Human ending a Turn in progress.</summary>
 /// <remarks>
-/// One ACP session spans every Room its Agent is in, so this stops that Agent everywhere;
-/// <paramref name="RoomId"/> only records where the Human asked, not what to stop. A Turn ends in
-/// one of three ways — completed, stopped, or failed — and a stopped Turn is a normal outcome, not
-/// a failure.
+/// Stops that Agent's Turn and queue in <paramref name="RoomId"/> only: a live Turn in a different
+/// Room, and anything already queued for a different Room, is untouched. The wire itself is
+/// unchanged — <paramref name="RoomId"/> has always been carried — only how the receiving Agent
+/// acts on it (D16 P0-2). A Turn ends in one of three ways — completed, stopped, or failed — and a
+/// stopped Turn is a normal outcome, not a failure.
 /// </remarks>
-/// <param name="RoomId">The Room the Human asked from.</param>
+/// <param name="RoomId">The Room the Human asked from, and the only Room this Stop affects.</param>
 public sealed record StopTurn(string RoomId) : ProtocolMessage;
 
 /// <summary>
@@ -120,6 +123,23 @@ public sealed record MessagePosted(
     int AgentMessagesSinceHuman, int Budget) : ProtocolMessage;
 
 public sealed record ProtocolError(string Code, string Message, string? RelatedMessageId = null) : ProtocolMessage;
+
+/// <summary>Asks for a Room's Messages between two points, for a Room Session's first Turn (RS §6.5). Client to server.</summary>
+/// <param name="RequestId">Echoed on the answer, so the read loop can hand it to the waiting Turn.</param>
+/// <param name="RoomId">A Room the sender is a Member of.</param>
+/// <param name="AfterMessageId">Start after this Message, or <see langword="null"/> for the latest Messages.</param>
+/// <param name="BeforeMessageId">Stop before this Message: the one that started the Turn.</param>
+/// <param name="Max">At most this many, the latest ones.</param>
+public sealed record ReadTranscript(
+    string RequestId, string RoomId, string? AfterMessageId, string BeforeMessageId, int Max) : ProtocolMessage;
+
+/// <summary>The answer to one <see cref="ReadTranscript"/> (RS §6.5), sent only to the client that asked.</summary>
+/// <param name="RequestId">Echoes the <see cref="ReadTranscript.RequestId"/> it answers.</param>
+/// <param name="RoomId">Echoes the <see cref="ReadTranscript.RoomId"/> it answers.</param>
+/// <param name="Messages">The Messages in range, oldest first.</param>
+/// <param name="Omitted">How many earlier Messages in the range <see cref="ReadTranscript.Max"/> left out.</param>
+public sealed record TranscriptTail(
+    string RequestId, string RoomId, IReadOnlyList<ChatMessage> Messages, int Omitted) : ProtocolMessage;
 
 public static class ErrorCodes
 {

@@ -146,6 +146,24 @@ public sealed class SkillCatalogTests
     }
 
     /// <summary>
+    /// RS §6.11 (Coordinators and Following, RS-T13): the shipped <c>team-patterns.md</c> teaches a
+    /// coordinator following several work Rooms how to keep an overview - one memory file per piece
+    /// of work, a work Room reporting back by Mentioning the coordinator (a worker cannot post into
+    /// the coordinator's own Room with the Human: it is not a Member there), and reading the
+    /// <c>create_room</c> seed as that Room's own first Message. Asserts on short, stable phrases
+    /// per this task's own instruction, not whole sentences.
+    /// </summary>
+    [Fact]
+    public void TeamBuilding_TeachesCoordinatorRoutes()
+    {
+        string teamPatterns = SkillCatalog.All["team-building"]["team-patterns.md"];
+
+        Assert.Contains("memory folder", teamPatterns, StringComparison.Ordinal);
+        Assert.Contains("Mention you", teamPatterns, StringComparison.Ordinal);
+        Assert.Contains("seed", teamPatterns, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// The content contract checks can fail when a Skill violates it. This test builds an in-memory
     /// copy of the shipped <c>team-building</c> files, mutates its <c>SKILL.md</c> frontmatter and
     /// body to violate the contract, and asserts the helper catches both violations.

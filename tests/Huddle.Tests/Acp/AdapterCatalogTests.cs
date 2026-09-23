@@ -255,4 +255,154 @@ public sealed class AdapterCatalogTests
         AdapterProfile profile = Assert.Single(catalog.Profiles);
         Assert.Null(profile.EnvironmentOverrides);
     }
+
+    /// <summary>The synthesised legacy profile (no <c>Team:Acp:Adapters</c> configured) carries <c>ReadsFiles</c> true — FC §6.11, Spec §4 P6: a stock installation reads its own files.</summary>
+    [Fact]
+    public void Legacy_ReadsFilesTrue()
+    {
+        var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.True(profile.ReadsFiles);
+    }
+
+    /// <summary>A configured Adapter entry with no <c>ReadsFiles</c> key defaults to true — FC §6.11.</summary>
+    [Fact]
+    public void Configured_ReadsFilesDefaultsTrue()
+    {
+        var acp = new AcpOptions
+        {
+            Adapters =
+            [
+                new AdapterProfileOptions { Id = "agency", DisplayName = "Agency", Command = "agency-acp" },
+            ],
+        };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.True(profile.ReadsFiles);
+    }
+
+    /// <summary><c>Team:Acp:Adapters:0:ReadsFiles = false</c> binds through to the projected profile — FC §6.11, for an Adapter with no file tools such as <c>agency-acp</c>.</summary>
+    [Fact]
+    public void Configured_ReadsFilesFalse_Bound()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:Acp:Adapters:0:Id"] = "agency",
+                ["Team:Acp:Adapters:0:Command"] = "agency-acp",
+                ["Team:Acp:Adapters:0:ReadsFiles"] = "false",
+            })
+            .Build();
+        var teamOptions = new TeamOptions();
+        configuration.GetSection(TeamOptions.SectionName).Bind(teamOptions);
+        var options = Options.Create(teamOptions);
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.False(profile.ReadsFiles);
+    }
+
+    /// <summary>The synthesised legacy profile (no <c>Team:Acp:Adapters</c> configured) carries <c>IsolateUserSettings</c> true — RS §6.10, finding P-11: a stock installation gets isolation.</summary>
+    [Fact]
+    public void Legacy_IsolateUserSettingsTrue()
+    {
+        var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.True(profile.IsolateUserSettings);
+    }
+
+    /// <summary>A configured Adapter entry with no <c>IsolateUserSettings</c> key defaults to false — finding P-11: an explicit <c>Adapters</c> list opts in.</summary>
+    [Fact]
+    public void Configured_IsolateUserSettingsDefaultsFalse()
+    {
+        var acp = new AcpOptions
+        {
+            Adapters =
+            [
+                new AdapterProfileOptions { Id = "agency", DisplayName = "Agency", Command = "agency-acp" },
+            ],
+        };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.False(profile.IsolateUserSettings);
+    }
+
+    /// <summary>
+    /// D28: the synthesised legacy profile (no <c>Team:Acp:Adapters</c> configured) carries
+    /// <c>SessionPerRoom</c> true - finding P-9's default flip, now that Room Sessions' dependencies
+    /// (D22-D27) all exist. Renamed from <c>Legacy_SessionPerRoomFalse_UntilD28</c>.
+    /// </summary>
+    [Fact]
+    public void Legacy_SessionPerRoomTrue()
+    {
+        var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.True(profile.SessionPerRoom);
+    }
+
+    /// <summary>
+    /// D28: a configured Adapter entry that does not set <c>SessionPerRoom</c> at all defaults to
+    /// true, matching <see cref="AdapterProfileOptions.SessionPerRoom"/>'s own default. Renamed from
+    /// <c>Configured_SessionPerRoomBound</c>.
+    /// </summary>
+    [Fact]
+    public void Configured_SessionPerRoomDefaultsTrue()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:Acp:Adapters:0:Id"] = "claude",
+                ["Team:Acp:Adapters:0:Command"] = "node",
+            })
+            .Build();
+        var teamOptions = new TeamOptions();
+        configuration.GetSection(TeamOptions.SectionName).Bind(teamOptions);
+        var options = Options.Create(teamOptions);
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.True(profile.SessionPerRoom);
+    }
+
+    /// <summary>RS §6.12: a configured <c>agency-acp</c> entry must stay shared until V-5, so <c>SessionPerRoom: false</c> still binds through explicitly.</summary>
+    [Fact]
+    public void Configured_SessionPerRoomFalse_Bound()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:Acp:Adapters:0:Id"] = "agency",
+                ["Team:Acp:Adapters:0:Command"] = "agency-acp",
+                ["Team:Acp:Adapters:0:SessionPerRoom"] = "false",
+            })
+            .Build();
+        var teamOptions = new TeamOptions();
+        configuration.GetSection(TeamOptions.SectionName).Bind(teamOptions);
+        var options = Options.Create(teamOptions);
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.False(profile.SessionPerRoom);
+    }
 }

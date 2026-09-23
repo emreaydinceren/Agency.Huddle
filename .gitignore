@@ -12,3 +12,7 @@ App_Data/
 # tools/migrate-personas-to-teams.ps1 copies from here to there, adding the
 # frontmatter the Teams directory now requires.
 personas/
+
+# Hand-off notes between concurrent agent sessions. Working chatter, not
+# documentation: anything worth keeping moves into docs/.
+/Conversation/

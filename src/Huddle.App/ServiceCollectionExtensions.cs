@@ -1,10 +1,12 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Agency.Huddle.Acp.Hosting;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
@@ -61,12 +63,34 @@ public static class ServiceCollectionExtensions
         // doc comment for why this could not instead be a field on PersonaRunner.
         services.AddSingleton<RoomFollows>();
 
+        // D27, RS §6.7, finding P-7: a singleton for the same reason RoomFollows just above is one -
+        // PostMessageTool takes it from DI, and it outlives any one PersonaRunner or RoomSession, so
+        // a forgotten entry self-heals on restart through OwnPosts.ClearAgent.
+        services.AddSingleton<OwnPosts>();
+
+        // FC §6.3: resolves a Watched Folder entry (a Teammate Name, a full path, or a path
+        // relative to DataDir) into a full path, or refuses it with a reason.
+        services.AddSingleton<WatchedFolderResolver>();
+
+        // FC §6.6: one JSON file per Agent under {DataDir}/file-state/, holding what that Agent
+        // last saw per Room.
+        services.AddSingleton<FileStateStore>();
+
+        // RS §6.6: a singleton like RoomFollows above - touches files, never the Team Directory -
+        // one JSON file per Agent under {DataDir}/room-sessions/, holding what is kept about each
+        // Room Session so it can be resumed.
+        services.AddSingleton<RoomSessionStore>();
+
         services.AddSingleton<AgentGateway>();
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());
 
         // Unconditional: this is what lets the /teammates page be built and tested with no agent
         // process and no tokens, regardless of whether Team:Acp:Enabled is set.
         services.AddSingleton<PersonaStore>();
+
+        // FC §6.7: a singleton, like RoomFollows above - the watch_folder/unwatch_folder tools and
+        // every runner share it through DI.
+        services.AddSingleton<FileChangeTracker>();
 
         // Same instance as PersonaStore above, not a second registration - mirrors the
         // AgentGateway/IAgentGateway pair just above. A second, independently constructed PersonaStore

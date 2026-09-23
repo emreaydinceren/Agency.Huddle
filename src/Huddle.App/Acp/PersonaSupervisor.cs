@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
+using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
 
@@ -26,8 +28,14 @@ internal sealed class PersonaSupervisor : BackgroundService
     // warning for one that does not exist (Spec §6.4, §12 F-1) — DotAcpAgentHostFactory resolves
     // the same names again itself, for the tool grants and the Skill Index; see the comment beside
     // the AdapterProfileResolver.Resolve call in StartHostIfMissingAsync for why this duplication
-    // is the accepted cost rather than a reason to widen IAgentHostFactory.CreateAsync.
+    // is the accepted cost rather than a reason to widen IAgentHostFactory.StartAsync.
     private readonly SkillStore skills;
+
+    // Optional (finding P-13): null means File Changes is off for every Persona this supervisor
+    // starts, the same as an explicit Team:FileChanges:Enabled=false.
+    private readonly FileChangeTracker? fileChanges;
+    private readonly RoomSessionStore? roomSessions;
+    private readonly OwnPosts? ownPosts;
 
     private readonly Lock gate = new();
     private readonly Dictionary<string, PersonaRunner> hosts = new(StringComparer.Ordinal);
@@ -63,7 +71,10 @@ internal sealed class PersonaSupervisor : BackgroundService
         RoomFollows roomFollows,
         ILoggerFactory loggerFactory,
         ILogger<PersonaSupervisor> logger,
-        SkillStore skills)
+        SkillStore skills,
+        FileChangeTracker? fileChanges = null,
+        RoomSessionStore? roomSessions = null,
+        OwnPosts? ownPosts = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
@@ -86,6 +97,9 @@ internal sealed class PersonaSupervisor : BackgroundService
         this.loggerFactory = loggerFactory;
         this.logger = logger;
         this.skills = skills;
+        this.fileChanges = fileChanges;
+        this.roomSessions = roomSessions;
+        this.ownPosts = ownPosts;
     }
 
     /// <summary>The number of Personas with a currently running host. Test seam only.</summary>
@@ -228,7 +242,7 @@ internal sealed class PersonaSupervisor : BackgroundService
                 // and "running" into one `alreadyKnown` state, fell through to the restart decision,
                 // read `started = null`, took NeedsRestart's `started is null` short-circuit, and
                 // restarted a host that had never finished starting - producing a second
-                // factory.CreateAsync under the same agent id. The in-flight start reads current
+                // factory.StartAsync under the same agent id. The in-flight start reads current
                 // file and DB state when it runs, so a restart here has nothing to achieve: do
                 // nothing and let it finish. Not startup-specific - any second PersonasChanged
                 // arriving during a slow first start (a real `node` adapter) hits this same branch.
@@ -269,7 +283,7 @@ internal sealed class PersonaSupervisor : BackgroundService
     /// type, and <see cref="OperationCanceledException"/> never reaches here at all - the caller's own
     /// <c>when</c> clause excludes it, because that exception means shutdown, not a failure.
     /// </summary>
-    /// <param name="ex">The exception <see cref="IAgentHostFactory.CreateAsync"/> or <c>StartAsync</c> threw.</param>
+    /// <param name="ex">The exception <see cref="IAgentHostFactory.StartAsync"/> or the runner's own <c>OpenAsync</c> threw.</param>
     /// <returns>A Human-facing reason naming what went wrong, when the exception itself does not already say so plainly.</returns>
     private static string DescribeStartFailure(Exception ex) => ex switch
     {
@@ -316,6 +330,16 @@ internal sealed class PersonaSupervisor : BackgroundService
             // One Persona failing to stop cleanly must not affect any other Persona.
             this.logger.LogWarning(ex, "Persona '{PersonaName}' host failed to stop cleanly after removal.", name);
         }
+
+        // This is both the removal path AND the rename path: OnPersonasChanged sees a rename as the
+        // old Name disappearing from ListNames(), so it reaches here too. Forgetting AFTER dispose -
+        // never before - beats the resurrection race: the old runner's own final Turn-end write
+        // (RoomSessionPool.Put) can otherwise land moments after this method decided the Persona is
+        // gone and resurrect an entry under a Name nothing will ever look up again (D29 correction 16,
+        // RS §6.13). A rename has already moved the file to the new Name by the time this runs
+        // (PersonaRenameCascade.OnPersonaRenamed runs synchronously, before PersonasChanged), so this
+        // is a harmless no-op there - it exists purely to close the race, not to do the rename itself.
+        this.roomSessions?.ForgetAll(name);
 
         // The Persona is gone, and PersonaRunner.StopAsync above (via DisposeAsync) sees its own
         // run token already cancelled, so its loops report nothing on their way out (T4.4) - this is
@@ -369,6 +393,16 @@ internal sealed class PersonaSupervisor : BackgroundService
                 }
             }
 
+            // RS §6.13: a Restart - the button, or the automatic one a Persona edit / Model / Effort /
+            // Adapter change triggers - forgets every stored Room Session for this Persona, so its
+            // next Turn in every Room starts fresh with Catch-up rather than resuming a session tied
+            // to a system prompt, Model or Effort that may no longer match (U7). Deliberately AFTER
+            // the whole block above, not inside it (D29 correction 16): this must still run when
+            // oldHost was null (a Restart of a Persona that failed to start), and placing it after the
+            // old host's dispose - rather than before - beats the same resurrection race StopHostAsync
+            // closes for removal and rename.
+            this.roomSessions?.ForgetAll(name);
+
             await this.StartHostIfMissingAsync(name, cancellationToken).ConfigureAwait(false);
         }
         finally
@@ -419,14 +453,19 @@ internal sealed class PersonaSupervisor : BackgroundService
             }
 
             // Spec §8.2: DotAcpAgentHostFactory resolves the same Persona's Adapter again when it
-            // builds the session, so this looks like duplicated work - it is not. Widening
-            // IAgentHostFactory.CreateAsync's return tuple to also carry this diagnostic would touch
+            // starts the host, so this looks like duplicated work - it is not. Widening
+            // IAgentHostFactory.StartAsync's return type to also carry this diagnostic would touch
             // FakeAgentHostFactory and every supervisor test call site for one string. The resolver
             // is pure and touches no state, so calling it twice costs nothing and keeps that
-            // signature frozen - two calls, one truth. The Degraded report itself is issued after
+            // signature stable here - two calls, one truth. (RS §6.3 changed IAgentHostFactory's
+            // signature once, deliberately, splitting CreateAsync into StartAsync/OpenAsync; the
+            // "frozen" reasoning below still holds for the resolver call, just not for the factory
+            // interface itself.) The Degraded report itself is issued after
             // "Starting" below rather than here, so the "whatever was said during the start wins"
-            // rule a few lines down does not immediately overwrite it back to Starting/Online.
-            var (_, adapterWarning) = this.resolver.Resolve(persona.Adapter);
+            // rule a few lines down does not immediately overwrite it back to Starting/Online. The
+            // resolved profile itself is kept (not discarded) because FC §6.11's ReadsFiles decides
+            // both the tracker below and the warning wording.
+            var (profile, adapterWarning) = this.resolver.Resolve(persona.Adapter);
 
             // Same argument as the Adapter warning immediately above, for Skills (Spec §6.4, §12
             // F-1): DotAcpAgentHostFactory resolves the same names again itself, for the tool
@@ -437,8 +476,28 @@ internal sealed class PersonaSupervisor : BackgroundService
                 : [];
             SkillResolution skillResolution = this.skills.Resolve(skillNames);
 
+            // FC §6.10, §6.11: File Changes is off for this Persona when the tracker itself is
+            // absent (finding P-13), Team:FileChanges:Enabled is false, or the resolved Adapter
+            // Profile cannot read files - any of the three, the runner gets no tracker.
+            FileChangeTracker? tracker = this.options.FileChanges.Enabled && profile.ReadsFiles ? this.fileChanges : null;
+            IReadOnlyList<string> declaredWatches = identity?.Watches ?? [];
+
+            // The "ignored" warning fires whenever File Changes is on but this Adapter cannot read
+            // files and the Persona declared a watch anyway - independent of whether a tracker was
+            // ever injected into this supervisor, because the fact it reports is about the Adapter,
+            // not about this process' wiring. CheckDeclared's own warnings need all three: a
+            // tracker, FileChanges.Enabled and ReadsFiles - so the two warnings are mutually
+            // exclusive by construction.
+            IReadOnlyList<string> watchWarnings = this.options.FileChanges.Enabled switch
+            {
+                false => [],
+                true when !profile.ReadsFiles && declaredWatches.Count > 0 =>
+                    [$"Watched folders are ignored: the Adapter '{profile.Id}' cannot read files."],
+                true => tracker is not null ? tracker.CheckDeclared(declaredWatches) : [],
+            };
+
             var host = new PersonaRunner(
-                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>());
+                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts);
 
             // Forwards every health signal the runner itself observes (T4.3) - a session/Turn
             // fact, arriving over the wire - into the one table every UI surface reads.
@@ -455,8 +514,8 @@ internal sealed class PersonaSupervisor : BackgroundService
                 // the other - the Adapter warning first, then each Skill warning, joined with a
                 // single space.
                 IReadOnlyList<string> warnings = adapterWarning is null
-                    ? skillResolution.Warnings
-                    : [adapterWarning, .. skillResolution.Warnings];
+                    ? [.. skillResolution.Warnings, .. watchWarnings]
+                    : [adapterWarning, .. skillResolution.Warnings, .. watchWarnings];
                 if (warnings.Count > 0)
                 {
                     this.health.Report(name, PersonaState.Degraded, string.Join(' ', warnings));

@@ -343,6 +343,14 @@ each, inviting the right specialists and seeding each Room.
   Budget, so only the per-Teammate spending limit stops a loop that keeps
   opening Rooms. Propose this pattern only when the Human asks for a large piece
   of work to run without them, and say plainly that it is the most expensive.
+- **Reporting back.** A workstream cannot post into your Room with the Human -
+  it is not a Member there - so it should Mention you in its own work Room
+  instead when it has something to report; relay that to the Human yourself
+  with `post_message` if needed. If you keep a memory folder, one file per
+  workstream - holding that Room's id, its status and its decisions - keeps an
+  overview across Rooms you cannot otherwise see into at once. The `seed` a
+  workstream's Room is created with is that Room's own first Message, so read
+  it back as your own working brief whenever you return to that Room.
 - **Example:**
   - Science meeting: a Principal Investigator who sets the agenda, one or two
     Specialists it defines, and a Scientific Critic, meeting as a team and then

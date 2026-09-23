@@ -7,13 +7,20 @@ using System.Text;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Nerdbank.Streams;
+using StreamJsonRpc;
+using Agency.Huddle.Acp.DotAcp;
 using Xunit;
 
 /// <summary>
 /// Self-tests for <see cref="FakeAcpAgent"/>: drive it from the other end of the stream pair
 /// with a plain <see cref="StreamReader"/>/<see cref="StreamWriter"/>, deliberately without any
-/// protocol library, so the fake is proven before anything else trusts it.
+/// protocol library, so the fake is proven before anything else trusts it. The RS §6.4 A-5
+/// conformance tests below (distinct session ids, advertised resume/close capabilities,
+/// <c>session/resume</c> behaviour) instead drive it through a real <c>dotacp.client.Connection</c>
+/// - the same wire library <see cref="DotAcpAgentHost"/> uses - because they exercise the real
+/// wire shapes those capabilities are read from.
 /// </summary>
 public sealed class FakeAcpAgentTests
 {
@@ -138,6 +145,96 @@ public sealed class FakeAcpAgentTests
         Assert.Equal("auth_required", (string?)response["error"]?["message"]);
     }
 
+    /// <summary>Each <c>session/new</c> gets a distinct id, so every existing "sess-1" assertion elsewhere still holds for the first call.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task NewSession_Twice_DistinctIds()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using ConnectedFake connected = FakeAcpAgentTests.Connect();
+        await connected.InitializeAsync(cancellationToken);
+
+        dotacp.protocol.NewSessionResponse first = await connected.NewSessionAsync(cancellationToken);
+        dotacp.protocol.NewSessionResponse second = await connected.NewSessionAsync(cancellationToken);
+
+        Assert.Equal("sess-1", (string)first.SessionId);
+        Assert.Equal("sess-2", (string)second.SessionId);
+    }
+
+    /// <summary>The default <c>initialize</c> response advertises both <c>resume</c> and <c>close</c> session capabilities.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Initialize_AdvertisesResumeAndClose()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using ConnectedFake connected = FakeAcpAgentTests.Connect();
+
+        dotacp.protocol.InitializeResponse response = await connected.InitializeAsync(cancellationToken);
+
+        Assert.NotNull(response.AgentCapabilities?.SessionCapabilities?.Resume);
+        Assert.NotNull(response.AgentCapabilities?.SessionCapabilities?.Close);
+    }
+
+    /// <summary>Resuming an id the fake minted for a <c>session/new</c> succeeds.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Resume_KnownId_Succeeds()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using ConnectedFake connected = FakeAcpAgentTests.Connect();
+        await connected.InitializeAsync(cancellationToken);
+        dotacp.protocol.NewSessionResponse created = await connected.NewSessionAsync(cancellationToken);
+
+        dotacp.protocol.ResumeSessionResponse resumed = await connected.Connection.ResumeSessionAsync(
+            new dotacp.protocol.ResumeSessionRequest { SessionId = created.SessionId, Cwd = Path.GetTempPath() },
+            cancellationToken);
+
+        Assert.NotNull(resumed);
+    }
+
+    /// <summary>Resuming an id the fake never minted fails with the resource-not-found error code (RS §6.4 A-2).</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Resume_UnknownId_ResourceNotFound()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using ConnectedFake connected = FakeAcpAgentTests.Connect();
+        await connected.InitializeAsync(cancellationToken);
+
+        RemoteInvocationException exception = await Assert.ThrowsAsync<RemoteInvocationException>(() =>
+            connected.Connection.ResumeSessionAsync(
+                new dotacp.protocol.ResumeSessionRequest { SessionId = "sess-unknown", Cwd = Path.GetTempPath() },
+                cancellationToken));
+
+        Assert.Equal((int)dotacp.protocol.ErrorCode.ResourceNotFound, exception.ErrorCode);
+    }
+
+    /// <summary>A closed session can still be resumed: Claude Code keeps closed conversations on disk (RS §6.2 "Closing").</summary>
+    [Fact(Timeout = 10000)]
+    public async Task Close_ThenResume_Succeeds()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        await using ConnectedFake connected = FakeAcpAgentTests.Connect();
+        await connected.InitializeAsync(cancellationToken);
+        dotacp.protocol.NewSessionResponse created = await connected.NewSessionAsync(cancellationToken);
+
+        await connected.Connection.CloseAsync(new dotacp.protocol.CloseSessionRequest { SessionId = created.SessionId }, cancellationToken);
+        dotacp.protocol.ResumeSessionResponse resumed = await connected.Connection.ResumeSessionAsync(
+            new dotacp.protocol.ResumeSessionRequest { SessionId = created.SessionId, Cwd = Path.GetTempPath() },
+            cancellationToken);
+
+        Assert.NotNull(resumed);
+    }
+
+    private static ConnectedFake Connect()
+    {
+        (Stream clientEnd, Stream agentEnd) = FullDuplexStream.CreatePair();
+        FakeAcpAgent agent = new FakeAcpAgent(agentEnd);
+        _ = agent.RunAsync(CancellationToken.None);
+
+        DotAcpClientAdapter clientAdapter = new DotAcpClientAdapter(new ListLoggerFactory().CreateLogger<DotAcpClientAdapter>());
+        dotacp.client.Connection connection = dotacp.client.Connection.RunClient(clientAdapter, clientEnd, clientEnd, null)
+            ?? throw new InvalidOperationException("Failed to create connection.");
+
+        return new ConnectedFake(agent, connection);
+    }
+
     /// <summary>Wires a stream pair, exposing the fake's end and a plain reader/writer over the test's end.</summary>
     private sealed class Harness : IAsyncDisposable
     {
@@ -176,6 +273,41 @@ public sealed class FakeAcpAgentTests
             this.reader.Dispose();
             this.testStream.Dispose();
             await this.Agent.DisposeAsync().ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>A live <see cref="FakeAcpAgent"/> paired with a real <c>dotacp.client.Connection</c> talking to it, for the RS §6.4 A-5 conformance tests.</summary>
+    private sealed class ConnectedFake(FakeAcpAgent agent, dotacp.client.Connection connection) : IAsyncDisposable
+    {
+        internal dotacp.client.Connection Connection { get; } = connection;
+
+        internal Task<dotacp.protocol.InitializeResponse> InitializeAsync(CancellationToken cancellationToken)
+        {
+            return this.Connection.InitializeAsync(
+                new dotacp.protocol.InitializeRequest
+                {
+                    ProtocolVersion = dotacp.protocol.ProtocolMeta.Version,
+                    ClientCapabilities = new dotacp.protocol.ClientCapabilities
+                    {
+                        Fs = new dotacp.protocol.FileSystemCapabilities { ReadTextFile = false, WriteTextFile = false },
+                        Terminal = false,
+                    },
+                    ClientInfo = new dotacp.protocol.Implementation { Name = "Huddle.Acp.Tests", Version = "0.1.0" },
+                },
+                cancellationToken);
+        }
+
+        internal Task<dotacp.protocol.NewSessionResponse> NewSessionAsync(CancellationToken cancellationToken)
+        {
+            return this.Connection.NewSessionAsync(
+                new dotacp.protocol.NewSessionRequest { Cwd = Path.GetTempPath(), McpServers = [] },
+                cancellationToken);
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            this.Connection.Dispose();
+            await agent.DisposeAsync().ConfigureAwait(false);
         }
     }
 }

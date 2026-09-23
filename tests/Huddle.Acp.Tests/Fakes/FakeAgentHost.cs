@@ -21,6 +21,9 @@ internal sealed class FakeAgentHost : IAgentHost
     /// <summary>Called by <see cref="StartSessionAsync"/>. Default: returns a new <see cref="FakeAgentSession"/>.</summary>
     internal Func<AgentSessionOptions, Task<IAgentSession>>? OnStartSession { get; set; }
 
+    /// <summary>Called by <see cref="ResumeSessionAsync"/>. Default: returns a new <see cref="FakeAgentSession"/> for the requested id.</summary>
+    internal Func<string, AgentSessionOptions, Task<IAgentSession>>? OnResumeSession { get; set; }
+
     internal IReadOnlyList<AgentSessionOptions> SessionRequests
     {
         get
@@ -57,6 +60,25 @@ internal sealed class FakeAgentHost : IAgentHost
         }
 
         return new FakeAgentSession();
+    }
+
+    public async Task<IAgentSession> ResumeSessionAsync(string sessionId, AgentSessionOptions options, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+        ArgumentNullException.ThrowIfNull(options);
+
+        lock (this.gate)
+        {
+            this.sessionRequests.Add(options);
+        }
+
+        Func<string, AgentSessionOptions, Task<IAgentSession>>? handler = this.OnResumeSession;
+        if (handler is not null)
+        {
+            return await handler(sessionId, options).ConfigureAwait(false);
+        }
+
+        return new FakeAgentSession(sessionId);
     }
 
     public ValueTask DisposeAsync()

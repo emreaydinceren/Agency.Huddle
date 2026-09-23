@@ -30,7 +30,7 @@ public sealed class ToolPrefixTests
         };
 
         await using MockAdapterFixture fixture =
-            await MockAdapterFixture.StartAsync(persona, additionalConfig, ct);
+            await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
 
         string appendedPrompt = await ToolPrefixTests.GetAppendedSystemPromptAsync(fixture, ct);
 
@@ -56,7 +56,7 @@ public sealed class ToolPrefixTests
         };
 
         await using MockAdapterFixture fixture =
-            await MockAdapterFixture.StartAsync(persona, additionalConfig, ct);
+            await MockAdapterFixture.StartAsync(persona, additionalConfig, cancellationToken: ct);
 
         string appendedPrompt = await ToolPrefixTests.GetAppendedSystemPromptAsync(fixture, ct);
 

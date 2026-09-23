@@ -1,7 +1,7 @@
 # Known limits
 
 What is absent on purpose. Read it before "fixing" something that looks missing
-and before filing a bug: most entries below are decisions, three are known flakes,
+and before filing a bug: most entries below are decisions, four are known flakes,
 and one is a known bug left in place deliberately. Do not treat any of them as
 oversights or quietly add them.
 
@@ -70,10 +70,69 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
     residual risk ADR-0005 names and accepts. No test can catch it: the suite answers
     through `FakeAgentHostFactory`, so it is a manual-checklist question in the same class
     as whether a real model finds any App Tool at all.
-- **One session per Persona spans every Room it is in**, so context bleeds
-  between Rooms. The `[Room: name (id: …)]` prefix on each prompt is a convention
-  the model may ignore. A session per (Persona, Room) would multiply processes and
-  cost.
+- ~~**One session per Persona spans every Room it is in.**~~ **Lifted, as code, 2026-09-23** — see
+  [roadmap item 18](roadmap.md#18-one-session-per-room--delivered-code-2026-09-23) and
+  [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md), now **Accepted**. An Agent holds
+  one **Room Session** per Room it is in, with the Persona text, Work Dir, Memory, App Tools and
+  Adapter process still shared across all of them. Three gaps are deliberate, and one is unverified:
+  - **What is given up is implicit recall of other Rooms** (RS §1.1). "What did we decide in the
+    other Room?" is answered from Memory, or honestly not at all — a Room Session holds only its
+    own Room's Messages, so a terse follow-up, a compaction summary and a Catch-up block can no
+    longer resolve against the wrong Room. That is the design's whole point, not a residual gap.
+  - **A coordinator following several work Rooms gets its old overview back only deliberately**,
+    through Memory, reports in Messages and a `create_room` seed (RS §6.11) — never from a shared
+    context window. The built-in Chief of Staff and the `team-building` Skill now teach this (RS-T13):
+    one memory file per piece of work, and work Rooms report by Mentioning the coordinator in their
+    own Room, because a work Room is not a Member of the coordinator's Room with the Human. An
+    existing install picks up the new Chief of Staff text only through **Reset to default**.
+  - **Follow-ups outside the spec, deferred on purpose** (RS Appendix C): dropping a duplicate
+    reply when an Agent's own `post_message` and its Turn's reply land in the same Room in one
+    Turn; a `read_room` App Tool for an Agent explicitly asked to look at another Room; recovering
+    a dead Adapter process on the next Turn instead of waiting for Restart; deleting Claude Code's
+    own transcript for a deleted Room.
+  - **Unverified live:** resume across a rename, and whether `session/resume` re-applies the `_meta`
+    system prompt, Model and Effort (RS Appendix B V-3); whether `agency-acp` holds several sessions
+    per process and advertises `resume` (V-5) — until V-5 passes, a Persona configured on
+    `agency-acp` should set `SessionPerRoom: false` (RS §6.12). The paid manual tests that would
+    settle these — RS-M1 through RS-M10, and V-3/V-5 — are written in
+    [manual-tests/room-sessions.md](manual-tests/room-sessions.md) and have **not been run**;
+    deferred to the Human's own user acceptance testing, the same way File Changes' paid checks are.
+- **File Changes is built, and here is what a Turn can miss** — see
+  [roadmap item 11, delivered 2026-09-23](roadmap.md#11-telling-an-agent-which-watched-files-changed--delivered-code-2026-09-23),
+  [ADR-0023](../adr/0023-an-agent-learns-of-file-changes-on-its-next-turn.md), and FC §8. Six
+  gaps are deliberate:
+  - **A change made through `Bash`, or any tool call not reported as `Edit`, `Delete` or
+    `Move`, is not attributed to the Agent.** It comes back as an ordinary listed line on the
+    Agent's own next Turn, in every Room including the one it was made in. An extra line, never
+    a missed change — parsing shell commands for paths risks wrongly claiming another
+    Teammate's change instead.
+  - **Two Teammates editing the same file in the same Turn:** the other Teammate's change is
+    taken in with this Agent's own commit and is not listed in this Room. Needs two writers on
+    one file within one Turn, and the Agent has just had the file open regardless.
+  - **A tool that preserves a file's old size and modified time is not listed.** Editors and
+    Agents do not do this.
+  - **Huddle shutting down mid-Turn commits nothing**, so that Room's next list repeats this
+    Turn's list, including the Agent's own edits. A shutdown-time write would slow teardown.
+  - **A commit that fails on I/O behaves the same way.** A Turn must not fail on a bookkeeping
+    write.
+  - **A corrupt or deleted state file loses one list, not the app.** The next Turn lists
+    nothing and saves a fresh baseline.
+- **Isolating a Persona's session from the Human's own Claude Code settings is unverified,
+  live.** `AdapterProfile.IsolateUserSettings` (`true` on the synthesised legacy profile,
+  `false` by default on a configured `Adapters` entry) makes `DotAcpAgentHostFactory` send
+  `settingSources: ["project", "local"]` and `settings.autoMemoryEnabled: false` in
+  `session/new`'s `_meta.claudeCode.options` (RS §6.10, ACP A-4) — but the paid checks that
+  would establish whether this actually keeps the Human's `~/.claude/settings.json`,
+  `~/.claude/CLAUDE.md` and Claude Code's own auto-memory out of a Persona's session (RS
+  Appendix B V-1, V-2; FC Appendix A FC-V; manual test FM-6) have **not been run**. Deferred to
+  the Human's user acceptance testing; see
+  [manual-tests/file-changes.md](manual-tests/file-changes.md). Until they are, treat memory
+  (FC §6.15) as depending on an unverified mechanism.
+  - **A known risk on the same mechanism:** `claude-agent-acp`'s `settings` option *replaces*
+    its own computed settings rather than merging into them, so sending
+    `autoMemoryEnabled: false` also drops any `CLAUDE_MODEL_CONFIG` model override that
+    session would otherwise have carried. `settingSources` is not affected — it merges rather
+    than replaces. `AdapterProfile.IsolateUserSettings`'s remarks carry this in code.
 - **One `AppToolServer` per Persona** — one loopback Kestrel each. Revisit past
   about four Personas.
 - **`SystemPromptMode.Append` has never been evidenced against a live model.** If
@@ -226,7 +285,11 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
 - **Stopping an Agent stops it in every Room.** One ACP session spans every Room
   its Agent is in, so there is nothing narrower to stop. `StopTurn` carries the
   Room the Human asked from as a label, not as a selector — the same
-  one-session-per-Persona limit that makes context bleed between Rooms.
+  one-session-per-Persona limit that makes context bleed between Rooms. **Worse
+  than it reads:** the drain is per Persona, so a Stop in one Room also discards
+  work queued for that Agent from its other Rooms. That is a bug to fix now, ahead of
+  [roadmap item 18](roadmap.md#18-one-session-per-room--designed-2026-09-22-not-built),
+  which makes Stop per Room.
 - **Tool activity is never written to the Transcript.** It belongs to the Draft
   and goes when the Draft does, so scrollback shows what an Agent said and not
   what it did.
@@ -359,11 +422,21 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   flake: cold and quiet it does not race. A real adapter's process-pipe latency widens
   the gaps and makes it rarer than it is in-proc, but not impossible.
 
-  **Not fixed**, because the fix belongs in `DotAcpAgentSession`/`DotAcpClientAdapter`
-  (sequencing a session's notification publishes ahead of its response's
-  `TurnCompleted`) and both `PersonaRunner` and that pipeline were explicitly out of
-  scope for the work that found it. `tests/Huddle.Tests/Conformance/ChunkedReplyFirstOrderer.cs`
-  quarantines it for one Tier 3 test and carries the full evidence in its remarks.
+  **Mitigated 2026-09-23, not proven fixed.** Room Sessions made it frequent: two Room
+  Sessions prompting at once on one Adapter process lost a second Room's whole reply in
+  the conformance suite. A true barrier needs StreamJsonRpc's non-concurrent
+  `SynchronizationContext`, but dotacp's `Connection` starts listening inside its
+  constructor, which locks that setting before any caller can reach it. So
+  `DotAcpAgentSession.PromptAsync` now waits, after the response and before it publishes
+  `TurnCompleted`, until 100 ms have passed with no further update for the session
+  (capped at 2 s, with a Warning; skipped at once on Stop). Every Turn pays about 100 ms
+  more before it ends. The observed skew is a fraction of a millisecond, and the three
+  tests above now pass twenty runs in a row, but this is a timing margin, not an ordering
+  guarantee. The real fix is to build the `JsonRpc` ourselves with that context. The
+  Tier 3 quarantine (`ChunkedReplyFirstOrderer`) is gone. The two CI filter lines for
+  `PromptAsync_StreamsChunksInOrder_ThenTurnCompleted` and
+  `PromptAsync_ThoughtAndToolCallEvents_ArePublished` in `.gitea/workflows/ci-main.yaml` and
+  `ci-pr.yaml` can now be dropped. They are shared root files and were left for their owner.
 - **Third known flake, pre-existing — DIAGNOSED 2026-09-17.** A full
   `dotnet test Huddle.slnx --` occasionally crashes the test host *after* every
   assertion has passed, with an `ObjectDisposedException` raised from
@@ -378,14 +451,27 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   same order `SkillStore.OnWatcherError` uses, and
   `PersonaStoreTests.OnWatcherError_AfterDispose_DoesNotLog` fails if it moves back.
   A test-host crash naming `OnWatcherError` is now a regression, not this flake.
-- **A fourth flake, seen once, not diagnosed — 2026-09-22.**
+- **A fourth flake, seen once, not diagnosed — 2026-09-22, seen again the week of 2026-09-23.**
   `PipeEndToEndTests.Disconnect_CleanClose_LogsExactlyOneInformationLine` failed once in a
   full run during the Skills build (`Assert.Single()` found no matching log line) and passed
   on the next full run and on its class alone. The test and the pipe code it covers were
   unchanged at the time, so it is recorded rather than read as a regression. It asserts on
   a log line written after the client disconnects, which suggests the assertion sometimes
   runs before that line is written; if it recurs, wait for the line rather than reading
-  the log once.
+  the log once. It recurred, intermittently, during the Room Sessions build — same symptom,
+  passing on rerun — which is evidence for the theory above rather than a new cause.
+- **A fifth flake, seen this week during the Room Sessions build, not diagnosed.** Three more
+  tests failed intermittently in a full `dotnet test Huddle.slnx --` run and passed every time
+  when rerun alone: `TeammateCardTests.ViewMode_ShowsTheChosenModel`,
+  `RoomSessionPoolTests.Max2_ConcurrentOpens_NeverExceedCap` and
+  `RoomSessionTests.IdleTimeout_CancelsFarSideFirst`. None has been instrumented the
+  way the second flake was, so there is no mechanism to report — only the pattern, which matches
+  every flake on this page so far: full-suite only, passes alone, passes on rerun. Read as timing
+  under full-suite load (thread-pool warmth, `TimeProvider` scheduling, or contention on a shared
+  fake transport) until someone catches one with instrumentation. `Max2_ConcurrentOpens_NeverExceedCap`
+  is a new test from this week's `RoomSessionPoolTests`, so it has no history to compare against;
+  a cap test racing thread-pool scheduling under load is a plausible enough shape that it is
+  recorded here rather than filed as a defect in `TurnGate` or `RoomSessionPool`.
 - **Known bug, pre-existing:** `Data/SqliteTeamDirectory.cs` is not
   `IDisposable`, and SQLite connection pooling keeps a handle on `team.db`, so
   tests leave about 83 temp directories behind per run. `TempDataDir.Dispose`

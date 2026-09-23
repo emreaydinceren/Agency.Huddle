@@ -34,6 +34,7 @@ internal static class PersonaFrontmatter
     private const string AdapterKey = "Adapter";
     private const string SkillsKey = "Skills";
     private const string BuiltinKey = "_builtin";
+    private const string WatchesKey = "Watches";
 
     /// <summary>
     /// Frontmatter keys excluded from <see cref="ComposeJobDescription"/> beyond the <c>_</c>-prefix
@@ -47,15 +48,18 @@ internal static class PersonaFrontmatter
     /// reading "Adapter: agency", model-facing text about Huddle's own plumbing. <c>Skills</c> is
     /// excluded for the same reason (Spec §6.3, §7.2): which Skill files a Teammate loads is
     /// plumbing about how it reads its own know-how, not something another Agent reading
-    /// <c>list_agents</c> can act on. <c>_builtin</c> needs no entry here at all — it is already
-    /// caught by the generic <c>_</c>-prefix rule above, since every reserved programmatic field
-    /// starts with an underscore.
+    /// <c>list_agents</c> can act on. <c>Watches</c> is excluded for the same reason again
+    /// (FC §6.2): which folders a Teammate subscribes to is plumbing about its own File Changes
+    /// list, not something another Agent reading <c>list_agents</c> can act on. <c>_builtin</c>
+    /// needs no entry here at all — it is already caught by the generic <c>_</c>-prefix rule
+    /// above, since every reserved programmatic field starts with an underscore.
     /// </summary>
     private static readonly HashSet<string> JobDescriptionExcludedKeys = new(StringComparer.OrdinalIgnoreCase)
     {
         NameKey,
         AdapterKey,
         SkillsKey,
+        WatchesKey,
     };
 
     /// <summary>
@@ -112,7 +116,8 @@ internal static class PersonaFrontmatter
             || !TryGetField(fields, TeamsKey, out var rawTeams, out error)
             || !TryGetField(fields, AdapterKey, out var rawAdapter, out error)
             || !TryGetField(fields, SkillsKey, out var rawSkills, out error)
-            || !TryGetField(fields, BuiltinKey, out var rawBuiltin, out error))
+            || !TryGetField(fields, BuiltinKey, out var rawBuiltin, out error)
+            || !TryGetField(fields, WatchesKey, out var rawWatches, out error))
         {
             return false;
         }
@@ -139,7 +144,7 @@ internal static class PersonaFrontmatter
         var adapter = string.IsNullOrWhiteSpace(rawAdapter) ? null : rawAdapter;
         var builtin = string.IsNullOrWhiteSpace(rawBuiltin) ? null : rawBuiltin.Trim();
 
-        identity = new PersonaIdentity(name, title, alias, SplitList(rawTeams), adapter, SplitList(rawSkills), builtin);
+        identity = new PersonaIdentity(name, title, alias, SplitList(rawTeams), adapter, SplitList(rawSkills), builtin, SplitList(rawWatches));
         error = string.Empty;
         return true;
     }
@@ -190,6 +195,14 @@ internal static class PersonaFrontmatter
         if (identity.Skills is { Count: > 0 })
         {
             lines.Add($"skills: [{string.Join(", ", identity.Skills.Select(QuoteScalar))}]");
+        }
+
+        if (identity.Watches is { Count: > 0 })
+        {
+            // Unlike Teams and Skills, FC §6.2's sample shows watches: [Nova, Shared/pricing]
+            // unquoted: an entry is a folder path or Teammate Name, never free text that could
+            // need YAML escaping, so this is written raw rather than through QuoteScalar.
+            lines.Add($"watches: [{string.Join(", ", identity.Watches)}]");
         }
 
         if (identity.Builtin is not null)

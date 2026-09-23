@@ -102,6 +102,50 @@ public sealed class SessionUpdateMapperTests
             result);
     }
 
+    /// <summary>
+    /// Finding P-1: <c>claude-agent-acp</c> sends a streamed tool call's complete input on a later
+    /// <c>tool_call_update</c>, not on the initial <c>tool_call</c>. <see cref="ToolCallUpdated.RawInputJson"/>
+    /// must carry it through, alongside the existing <see cref="ToolCallUpdated.RawOutputJson"/> (asserted via <see cref="ToolCallUpdate_MapsFields"/>).
+    /// </summary>
+    [Fact]
+    public void Map_ToolCallUpdateWithRawInput_CarriesRawInputJson()
+    {
+        JsonElement rawInput = JsonSerializer.Deserialize<JsonElement>("{\"file_path\":\"C:\\\\x\\\\a.md\"}");
+        dotacp.protocol.SessionUpdateToolCallUpdate update = new dotacp.protocol.SessionUpdateToolCallUpdate
+        {
+            ToolCallId = "call-1",
+            Title = "Edit a.md",
+            Kind = dotacp.protocol.ToolKind.Edit,
+            Status = dotacp.protocol.ToolCallStatus.Completed,
+            RawInput = rawInput,
+        };
+
+        AgentEvent result = SessionUpdateMapper.Map("s", update);
+
+        ToolCallUpdated updated = Assert.IsType<ToolCallUpdated>(result);
+        Assert.Equal(ToolKind.Edit, updated.Kind);
+        Assert.NotNull(updated.RawInputJson);
+        Assert.Contains("a.md", updated.RawInputJson, StringComparison.Ordinal);
+    }
+
+    /// <summary>A <see cref="dotacp.protocol.SessionUpdateToolCallUpdate"/> carrying no <c>RawInput</c> maps to a <see langword="null"/> <see cref="ToolCallUpdated.RawInputJson"/>.</summary>
+    [Fact]
+    public void Map_ToolCallUpdateWithoutRawInput_RawInputJsonIsNull()
+    {
+        dotacp.protocol.SessionUpdateToolCallUpdate update = new dotacp.protocol.SessionUpdateToolCallUpdate
+        {
+            ToolCallId = "call-1",
+            Title = "Read x",
+            Kind = dotacp.protocol.ToolKind.Read,
+            Status = dotacp.protocol.ToolCallStatus.Completed,
+        };
+
+        AgentEvent result = SessionUpdateMapper.Map("s", update);
+
+        ToolCallUpdated updated = Assert.IsType<ToolCallUpdated>(result);
+        Assert.Null(updated.RawInputJson);
+    }
+
     [Fact]
     public void Plan_MapsEntries()
     {

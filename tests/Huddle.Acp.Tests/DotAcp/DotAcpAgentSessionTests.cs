@@ -95,6 +95,60 @@ public sealed class DotAcpAgentSessionTests
         }
     }
 
+    /// <summary>
+    /// D30 ordering defect regression (docs/agencyteam/known-limits.md, "Second known flake"):
+    /// StreamJsonRpc completes our outbound <c>session/prompt</c> request through a different path
+    /// than the one that dispatches an inbound <c>session/update</c> notification's target method, so
+    /// <see cref="DotAcpAgentSession.PromptAsync"/> can observe the response - and be ready to publish
+    /// <see cref="TurnCompleted"/> - before a same-Turn <see cref="MessageChunk"/> the peer wrote to
+    /// the wire first has even reached <see cref="DotAcpClientAdapter.SessionUpdateAsync"/>. This
+    /// forces that interleaving deterministically at the source, rather than relying on real
+    /// thread-pool timing to reproduce it (which is what made the defect read as a flake): the fake
+    /// agent answers <c>session/prompt</c> immediately and only writes its <c>session/update</c> 20ms
+    /// later, from a background task, so the response is on the wire strictly before the chunk. Before
+    /// the quiet-window wait in <see cref="DotAcpAgentSession.PromptAsync"/>, the reader observes
+    /// <c>TurnCompleted</c> with nothing after it and the late chunk is left unread; the fix must wait
+    /// long enough for it to arrive and be published first.
+    /// </summary>
+    [Fact(Timeout = 10000)]
+    public async Task PromptAsync_ChunkDispatchedAfterResponse_StillPrecedesTurnCompleted()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        try
+        {
+            harness.Launcher.Agent.OnPrompt = context =>
+            {
+                _ = Task.Run(
+                    async () =>
+                    {
+                        await Task.Delay(20, cancellationToken).ConfigureAwait(false);
+                        await context.SendTextChunkAsync("late").ConfigureAwait(false);
+                    },
+                    cancellationToken);
+                return Task.FromResult("end_turn");
+            };
+
+            Task<PromptResult> promptTask = harness.Session.PromptAsync("hello", cancellationToken);
+            List<AgentEvent> events = await DotAcpAgentSessionTests.ReadUntilTurnCompletedAsync(
+                harness.Session.Events, cancellationToken);
+            PromptResult result = await promptTask;
+
+            Assert.Equal(
+                new AgentEvent[]
+                {
+                    new MessageChunk("sess-1", "late"),
+                    new TurnCompleted("sess-1", StopReason.EndTurn),
+                },
+                events);
+            Assert.Equal(StopReason.EndTurn, result.StopReason);
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
     [Fact(Timeout = 10000)]
     public async Task PromptAsync_ThoughtAndToolCallEvents_ArePublished()
     {

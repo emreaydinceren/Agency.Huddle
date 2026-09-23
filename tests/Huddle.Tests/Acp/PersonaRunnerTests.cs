@@ -6,6 +6,7 @@ using System.IO.Pipes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
@@ -240,7 +241,7 @@ public sealed class PersonaRunnerTests
     /// <summary>
     /// When the session factory itself fails, <see cref="PersonaRunner.StartAsync"/> propagates the
     /// exception before it ever reaches the Greeting check: Spec §6.14 requires the Greeting to be
-    /// queued only after <c>factory.CreateAsync</c> succeeds, "so a failed start never leaves a
+    /// queued only after <c>factory.StartAsync</c> succeeds, "so a failed start never leaves a
     /// queued Turn with no session". <see cref="FakeAgentSession.Prompts"/> on a fresh, never-returned
     /// session proves nothing reached it.
     /// </summary>
@@ -470,6 +471,77 @@ public sealed class PersonaRunnerTests
         Assert.Equal(novaId, history[^1].SenderId);
     }
 
+    /// <summary>
+    /// D16 P0-3 (RS §2 U15, RS D-20): when a group Room is renamed to share its name with this
+    /// Agent's direct Room, the Turn's Room label distinguishes them with " #" and the last six
+    /// characters of the labelled Room's own id, so a model reading two same-named Rooms can tell
+    /// which is which.
+    /// </summary>
+    [Fact]
+    public async Task TwoRoomsSameName_PromptLabelsDiffer()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReply("group reply");
+        var persona = new Persona("nova", "You are Nova.");
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        await agentHost.StartAsync(ct);
+
+        var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+
+        await using var friend = await fixture.ConnectClientAsync(ct);
+        await friend.WriteAsync(new Hello("friend", null), ct);
+        var friendWelcome = Assert.IsType<Welcome>(await friend.ReadAsync(ct));
+
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        var room = await chat.CreateRoomForAsync([novaId, friendWelcome.AgentId], ct);
+        await chat.RenameRoomAsync(room.Id, "nova", ct);
+
+        await chat.PostAsync(room.Id, KnownIds.Human, "@nova hello", ct: ct);
+
+        var prompts = await WaitForPromptCountAsync(factory.Session, 1, ct);
+
+        var expectedSuffix = room.Id.Length <= 6 ? room.Id : room.Id[^6..];
+        Assert.Contains($"[Room: nova #{expectedSuffix} (id: {room.Id})]", prompts[0], StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// D16 P0-3 (RS §9 E-7): the runner's known-names table is refreshed from every
+    /// <see cref="MessagePosted.RoomName"/>, so a Room renamed after its direct Room was created
+    /// labels its very next Turn with the new name.
+    /// </summary>
+    [Fact]
+    public async Task RoomRenamed_NextLabelUsesNewName()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReply("first reply");
+        factory.Session.EnqueueReply("second reply");
+        var persona = new Persona("nova", "You are Nova.");
+
+        await using var agentHost = CreateHost(fixture, persona, factory);
+        await agentHost.StartAsync(ct);
+
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+
+        await chat.PostAsync(roomId, KnownIds.Human, "hello", ct: ct);
+        var firstPrompts = await WaitForPromptCountAsync(factory.Session, 1, ct);
+        Assert.Contains("[Room: nova (id:", firstPrompts[0], StringComparison.Ordinal);
+
+        await chat.RenameRoomAsync(roomId, "Porto trip", ct);
+        await chat.PostAsync(roomId, KnownIds.Human, "hello again", ct: ct);
+        var secondPrompts = await WaitForPromptCountAsync(factory.Session, 2, ct);
+        Assert.Contains("[Room: Porto trip (id:", secondPrompts[1], StringComparison.Ordinal);
+    }
+
     [Fact]
     public async Task Reply_IsTheConcatenationOfMessageChunks()
     {
@@ -558,7 +630,7 @@ public sealed class PersonaRunnerTests
     /// Regression test for the crashed-agent hang (roadmap item 3): before <c>RunEventReaderAsync</c>
     /// grew its <c>finally</c>, faulting the event stream mid-turn left <c>ProcessWorkItemAsync</c>
     /// awaiting a <c>TurnCompleted</c> that could now never arrive, so the single consumer never
-    /// drained another <see cref="PersonaRunner.WorkItem"/> - the Agent went deaf in every Room,
+    /// drained another <see cref="WorkItem"/> - the Agent went deaf in every Room,
     /// permanently. A second message posted after the fault is only ever attempted (recorded in
     /// <see cref="FakeAgentSession.Prompts"/>) if the consumer actually moved past the faulted turn.
     /// </summary>
@@ -983,6 +1055,177 @@ public sealed class PersonaRunnerTests
     }
 
     /// <summary>
+    /// D16 P0-2: <c>StopTurn(roomId)</c> only ends that Room's own live Turn and clears that Room's
+    /// own queue. Room A's live Turn is stopped and posts nothing; Room A's queued second Turn is
+    /// discarded without ever reaching <see cref="FakeAgentSession.PromptAsync"/>; Room B's queued
+    /// Turn, unaffected, still runs and posts.
+    /// </summary>
+    [Fact]
+    public async Task Stop_InRoomA_EndsAsTurnAndClearsAsQueue_BsQueuedTurnStillRuns()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "A1 live reply");
+        factory.Session.EnqueueReply("B1 reply");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-a", "a1"), ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        Assert.Single(factory.Session.Prompts);
+
+        // A2 must never itself reach PromptAsync, so it is never given a queued reply of its own -
+        // if it wrongly did run, it would consume B1's queued reply instead, which the assertions
+        // below would then catch as a mismatched posted text.
+        await server.SendAsync(NewMessagePosted("room-a", "a2"), ct);
+        await server.SendAsync(NewMessagePosted("room-b", "b1"), ct);
+        await server.SendAsync(new StopTurn("room-a"), ct);
+
+        var aFinal = await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal && delta.RoomId == "room-a", ct);
+        Assert.Equal(string.Empty, aFinal.Text);
+
+        var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
+        Assert.Equal("room-b", posted.RoomId);
+        Assert.Equal("B1 reply", posted.Text);
+
+        // Bounded grace period for the discarded A2 turn to (misbehave and) reach PromptAsync anyway.
+        await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+
+        Assert.Equal(2, factory.Session.Prompts.Count);
+        Assert.DoesNotContain(factory.Session.Prompts, prompt => prompt.Contains("a2", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// D16 P0-2: a Stop naming a Room with no live Turn is a no-op elsewhere. Room A's live Turn
+    /// keeps running and posts, and <see cref="FakeAgentSession.CancelAsync"/> is never called.
+    /// </summary>
+    [Fact]
+    public async Task Stop_InRoomB_WhileATurnRuns_LeavesATurnRunning()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "A1 reply");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-a", "a1"), ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        await server.SendAsync(new StopTurn("room-b"), ct);
+
+        var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
+        Assert.Equal("room-a", posted.RoomId);
+        Assert.Equal("A1 reply", posted.Text);
+        Assert.Equal(0, factory.Session.CancelCallCount);
+    }
+
+    /// <summary>
+    /// D16 P0-2: Room B's live Turn keeps running while Room A's queued Turn is discarded by
+    /// <c>StopTurn("room-a")</c> and never reaches <see cref="FakeAgentSession.PromptAsync"/>.
+    /// </summary>
+    [Fact]
+    public async Task Stop_InRoomA_WhileBTurnRuns_ClearsOnlyAsQueue()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "B1 live reply");
+        factory.Session.EnqueueReply("A1 should never run");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-b", "b1"), ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        await server.SendAsync(NewMessagePosted("room-a", "a1"), ct);
+        await server.SendAsync(new StopTurn("room-a"), ct);
+
+        var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
+        Assert.Equal("room-b", posted.RoomId);
+        Assert.Equal("B1 live reply", posted.Text);
+
+        // Bounded grace period for the discarded A1 turn to (misbehave and) reach PromptAsync anyway.
+        await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+
+        Assert.Single(factory.Session.Prompts);
+    }
+
+    /// <summary>
+    /// The race D16's corrections settled: a Stop in Room A must let Room B's queued Turn run only
+    /// after the far-side cancel for Room A has settled, and B's Turn must complete normally - posted,
+    /// with no failure logged - rather than racing <see cref="FakeAgentSession.CancelAsync"/>.
+    /// </summary>
+    [Fact]
+    public async Task Stop_InRoomA_BQueued_BRunsAfterCancelSettles_AndPosts()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "A1 live reply");
+        factory.Session.EnqueueReply("B1 reply");
+        var persona = new Persona("nova", "You are Nova.");
+        var logger = new RecordingLogger<PersonaRunner>();
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-a", "a1"), ct);
+
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        await server.SendAsync(NewMessagePosted("room-b", "b1"), ct);
+        await server.SendAsync(new StopTurn("room-a"), ct);
+
+        var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
+        Assert.Equal("room-b", posted.RoomId);
+        Assert.Equal("B1 reply", posted.Text);
+
+        Assert.Equal(1, factory.Session.CancelCallCount);
+        Assert.DoesNotContain(logger.Entries, entry => entry.Level == LogLevel.Warning);
+        Assert.DoesNotContain(logger.Entries, entry => entry.Level == LogLevel.Error);
+    }
+
+    /// <summary>
     /// Proves item 5 of task T2.1: a Turn that ends in <see cref="StopReason.Refusal"/> posts nothing,
     /// even though text arrived before the stop - a refusal is not a successful reply.
     /// </summary>
@@ -1315,7 +1558,7 @@ public sealed class PersonaRunnerTests
 
     /// <summary>
     /// Proves the same feature for the per-turn prompt: a configured override for the Room label prompt
-    /// reaches the text <see cref="PersonaRunner.BuildPrompt"/> produces, in place of the catalog
+    /// reaches the text <see cref="RoomSession.BuildPrompt"/> produces, in place of the catalog
     /// default.
     /// </summary>
     [Fact]
@@ -1323,9 +1566,9 @@ public sealed class PersonaRunnerTests
     {
         var prompts = new FakePromptSource();
         prompts.SetOverride("turn.roomLabel", "<<{{roomName}}/{{roomId}}>>");
-        var item = new PersonaRunner.WorkItem("room-9", "Nova & You", "You", "hello", []);
+        var item = new WorkItem("room-9", "Nova & You", "You", "hello", []);
 
-        var prompt = PersonaRunner.BuildPrompt(item, prompts);
+        var prompt = RoomSession.BuildPrompt(item, prompts);
 
         Assert.Contains("<<Nova & You/room-9>>", prompt, StringComparison.Ordinal);
     }
@@ -1639,7 +1882,9 @@ public sealed class PersonaRunnerTests
 
         Assert.Contains(
             statuses,
-            s => s.State == PersonaState.Degraded && s.Reason!.Contains("A Turn failed", StringComparison.Ordinal));
+            s => s.State == PersonaState.Degraded
+                && s.Reason!.Contains("A Turn in Room", StringComparison.Ordinal)
+                && s.Reason.Contains("failed —", StringComparison.Ordinal));
     }
 
     /// <summary>

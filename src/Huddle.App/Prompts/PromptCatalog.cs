@@ -194,6 +194,149 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
 
         new PromptDefinition(
+            Key: "turn.transcriptHeader",
+            Label: "Transcript header",
+            HelperText:
+                "The line introducing a fresh Room Session's first Turn (RS §6.5): the Transcript " +
+                "range that replaces the catch-up buffer on that Turn only. {{roomLabel}} is required.",
+            Default:
+                """
+                {{roomLabel}} This is a new session for this Room. Its recent Messages, oldest first, including your own:
+                """,
+            Placeholders: ["{{roomLabel}}"],
+            RequiredPlaceholders: ["{{roomLabel}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.transcriptResumedHeader",
+            Label: "Transcript resumed header",
+            HelperText:
+                "The line introducing a resumed Room Session's first Turn (RS §6.5): only the " +
+                "Messages posted after the stored LastMessageId. {{roomLabel}} is required.",
+            Default:
+                """
+                {{roomLabel}} While this session was closed, these Messages were posted here:
+                """,
+            Placeholders: ["{{roomLabel}}"],
+            RequiredPlaceholders: ["{{roomLabel}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.transcriptOmitted",
+            Label: "Transcript omitted",
+            HelperText:
+                "The line stating how many earlier Messages in range were left out of the Transcript " +
+                "block (RS §6.5). {{count}} is required: without it the line does not say how many.",
+            Default:
+                """
+                …{{count}} earlier Messages are not shown.
+                """,
+            Placeholders: ["{{count}}"],
+            RequiredPlaceholders: ["{{count}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.ownPostLine",
+            Label: "Own post line",
+            HelperText:
+                "One line of catch-up context for a Message the Agent itself posted into this Room " +
+                "from a Turn in another Room (RS §6.7). {{text}} is required: without it the line " +
+                "says nothing of what was posted.",
+            Default:
+                """
+                You, from another Room: {{text}}
+                """,
+            Placeholders: ["{{text}}"],
+            RequiredPlaceholders: ["{{text}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.fileChangesHeader",
+            Label: "File Changes header",
+            HelperText:
+                "The line introducing the File Changes block, shown once above it. \"Read one only if " +
+                "it matters to what you are doing now\" is the most important part of this sentence " +
+                "(FC §6.13): without it an eager model reads every listed file on every Turn.",
+            Default:
+                """
+                Since your last Turn in this Room, these files changed. Read one only if it matters to what you are doing now:
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.fileAdded",
+            Label: "File added",
+            HelperText:
+                "One line of the File Changes block, repeated once per file added since the Agent's " +
+                "last Turn in this Room. {{path}} is required: without it the line names no file.",
+            Default:
+                """
+                added {{path}}
+                """,
+            Placeholders: ["{{path}}"],
+            RequiredPlaceholders: ["{{path}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.fileChanged",
+            Label: "File changed",
+            HelperText:
+                "One line of the File Changes block, repeated once per file changed since the Agent's " +
+                "last Turn in this Room. {{path}} is required: without it the line names no file.",
+            Default:
+                """
+                changed {{path}}
+                """,
+            Placeholders: ["{{path}}"],
+            RequiredPlaceholders: ["{{path}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.fileDeleted",
+            Label: "File deleted",
+            HelperText:
+                "One line of the File Changes block, repeated once per file deleted since the Agent's " +
+                "last Turn in this Room. {{path}} is required: without it the line names no file.",
+            Default:
+                """
+                deleted {{path}}
+                """,
+            Placeholders: ["{{path}}"],
+            RequiredPlaceholders: ["{{path}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.fileChangesMore",
+            Label: "File Changes more",
+            HelperText:
+                "The closing line of the File Changes block when more changes exist than were listed. " +
+                "{{count}} is required: without it the line does not say how many were left out.",
+            Default:
+                """
+                …and {{count}} more.
+                """,
+            Placeholders: ["{{count}}"],
+            RequiredPlaceholders: ["{{count}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.folderUnchecked",
+            Label: "Folder unchecked",
+            HelperText:
+                "One line of the File Changes block, repeated once per Watched Folder that held more " +
+                "files than the cap and so was not scanned. {{path}} is required: {{max}} is available " +
+                "for an override that wants to state the cap too.",
+            Default:
+                """
+                {{path}} has more than {{max}} files, so it was not checked.
+                """,
+            Placeholders: ["{{path}}", "{{max}}"],
+            RequiredPlaceholders: ["{{path}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
             Key: "turn.greeting",
             Label: "Greeting",
             HelperText:
@@ -494,6 +637,164 @@ internal static class PromptCatalog
             Default:
                 """
                 Asks the Human to approve new Teammates. Give the id of the Room you are talking in and one to four Candidates. Nothing is created until the Human approves; you will be told the outcome in that Room.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.watchFolder.description",
+            Label: "watch_folder description",
+            HelperText:
+                "The one-line job description a model reads for the watch_folder tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Watches a folder, so that on each of your later Turns the files added, changed or deleted there since your last Turn in that Room are listed, by full path, at the top of your prompt. A change you make yourself is not listed in the Room you made it in. Name a Teammate to watch their working folder, or give a folder inside App_Data. Your own working folder is always watched. Use it for folders you depend on but do not own, such as a shared notes folder or another Teammate's output. It lasts until you call unwatch_folder, even across a restart. Read a listed file only when it matters to what you are doing.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.unwatchFolder.description",
+            Label: "unwatch_folder description",
+            HelperText:
+                "The one-line job description a model reads for the unwatch_folder tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Stops listing file changes for a folder you started watching with watch_folder. Your own folder, and folders your Persona lists, stay watched.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "turn.fileByYouSuffix",
+            Label: "File Changes: by-you suffix",
+            HelperText:
+                "Appended to a changed file's line when this Agent's own earlier Turn, in another Room, " +
+                "wrote it last (FC §6.15). Must keep {{roomName}}: it names which of this Agent's Rooms " +
+                "made the edit. Keep the leading space: it joins directly onto the file's own line.",
+            Default: " (by you, in Room '{{roomName}}')",
+            Placeholders: ["{{roomName}}"],
+            RequiredPlaceholders: ["{{roomName}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memory",
+            Label: "Memory block",
+            HelperText:
+                "Explains an Agent's memory folder and shows its current index, appended to the system " +
+                "prompt after Skills (FC §6.15). Must keep {{memoryPath}} and {{memoryIndex}}: without " +
+                "the first the Agent cannot name where to write, and without the second it is told " +
+                "nothing of what it already remembers.",
+            Default:
+                """
+                Your memory is the folder {{memoryPath}}. It belongs to you, not to any one Room: it survives
+                restarts, and every copy of you in your other Rooms reads the same folder. To remember
+                something from now on, write one Markdown file there per fact. Make its first line the fact
+                itself, in one sentence, such as "The Human prefers C# for all code.", and give the file a
+                short descriptive name. When a fact changes, edit its file, and delete it when it no longer
+                holds. Remember only what should hold in every Room: preferences, standing decisions, facts
+                about ongoing work. Do not write down something said for one Room's audience only, and do not
+                copy the conversation itself. When a memory file changes, including when another copy of you
+                writes it, the change is listed at the start of your next Turn in each Room. Do not claim to
+                remember what is not in your memory or in this conversation. Your memory now holds:
+                {{memoryIndex}}
+                """,
+            Placeholders: ["{{memoryPath}}", "{{memoryIndex}}"],
+            RequiredPlaceholders: ["{{memoryPath}}", "{{memoryIndex}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryEntry",
+            Label: "Memory index entry",
+            HelperText:
+                "One line of the memory index per remembered fact. Must keep {{summary}} and {{path}}: " +
+                "the summary is what the Agent reads at a glance, the path is where to read the rest.",
+            Default: "- {{summary}} ({{path}})",
+            Placeholders: ["{{summary}}", "{{path}}"],
+            RequiredPlaceholders: ["{{summary}}", "{{path}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryEmpty",
+            Label: "Memory index, empty",
+            HelperText: "Shown in place of the memory index when the Agent has written nothing yet.",
+            Default: "Nothing yet.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryMore",
+            Label: "Memory index, more",
+            HelperText:
+                "Appended after the listed memory entries when more exist than the cap shows. Must keep " +
+                "{{count}}: without it the Agent has no idea how much more memory it is not seeing.",
+            Default: "…and {{count}} more in {{memoryPath}}.",
+            Placeholders: ["{{count}}", "{{memoryPath}}"],
+            RequiredPlaceholders: ["{{count}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.roomSessions",
+            Label: "Room Sessions",
+            HelperText:
+                "D28, RS §6.9: told to every Persona whose resolved Adapter Profile has SessionPerRoom " +
+                "true. Describes the one session per Room, truthfully. Takes no placeholders, so an " +
+                "override is plain prose, and must not name any one Room: identity stays in the " +
+                "Turn's own label (RS §6.9, \"Room identity stays out of the system prompt\").",
+            Default:
+                """
+                Each Room you are in is a separate conversation, and this session holds exactly one of them.
+                Every Message you receive here comes from the Room its label names, and you answer into that
+                Room. Your other Rooms have sessions of their own, which you cannot see from here. Treat each
+                Room as its own audience: do not assume the people here know what was said in another Room, and
+                do not bring it up here. If a Message seems to continue something you cannot see, say so and ask
+                rather than guess. Describe your own memory truthfully: you remember this Room's conversation,
+                and you do not remember your other Rooms' conversations.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.roomSessionsCarry",
+            Label: "Room Sessions, what still carries",
+            HelperText:
+                "D28, RS §6.9: appended after systemPrompt.roomSessions only when the resolved Adapter " +
+                "can read files (FC §6.11) - the two routes named here (memory, File Changes) exist " +
+                "only then. Takes no placeholders.",
+            Default:
+                """
+                Two things do cross between your Rooms: the files in your memory folder, and the file changes
+                listed at the start of a Turn. If something should hold in every Room, write it to your memory.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.sharedSession",
+            Label: "Shared session",
+            HelperText:
+                "D16 P0-1: told to every Persona, in every mode, while SessionPerRoom stays false in " +
+                "Phase 0 (RS §6.9, §8.1). Describes the one session every Room's Messages arrive in, " +
+                "truthfully. Takes no placeholders, so an override is plain prose, and must not name " +
+                "any one Room: identity stays in the Turn's own label.",
+            Default:
+                """
+                This one session spans every Room you are in. Messages from all of them arrive here, each opening
+                with its Room's label, and you answer into the Room the label names. Treat each Room as a separate
+                audience. Answer a Message from what was said in its own Room, and do not carry a decision, a
+                language or a request from one Room into another unless the Human says it applies everywhere. A
+                short reply such as "yes" or "option 2" belongs to the Room its label names, and refers to what
+                was said there, however recently another Room spoke. Rooms can share a name; the id in the label
+                tells them apart. Describe your own memory truthfully: you can see earlier Messages from all your
+                Rooms in this session, and a restart clears them.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

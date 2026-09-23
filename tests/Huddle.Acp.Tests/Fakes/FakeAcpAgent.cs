@@ -29,23 +29,40 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
 
     private readonly ConcurrentDictionary<int, TaskCompletionSource<JsonObject>> pendingRequests = new ConcurrentDictionary<int, TaskCompletionSource<JsonObject>>();
 
+    /// <summary>Every session id this fake has minted through <c>session/new</c> (RS §6.4 A-5). Closing does not remove one: RS §6.2 "Closing" - Claude Code keeps closed conversations on disk, so a closed id still resumes.</summary>
+    private readonly HashSet<string> knownSessionIds = new HashSet<string>(StringComparer.Ordinal);
+
     private int nextRequestId = 999;
+
+    /// <summary>
+    /// The per-instance counter behind <see cref="DefaultNewSessionAsync"/>'s minted ids. A plain
+    /// instance field, not a <c>static</c> counter shared by every fake in the process: two fakes
+    /// in two tests must not observe each other's ids.
+    /// </summary>
+    private int nextSessionNumber;
 
     internal FakeAcpAgent(Stream stream)
     {
         ArgumentNullException.ThrowIfNull(stream);
         this.stream = stream;
+        this.OnNewSession = this.DefaultNewSessionAsync;
     }
 
     internal Func<JsonObject, JsonObject> OnInitialize { get; set; } = FakeAcpAgent.DefaultInitialize;
 
-    internal Func<JsonObject, Task<JsonObject>> OnNewSession { get; set; } = FakeAcpAgent.DefaultNewSessionAsync;
+    internal Func<JsonObject, Task<JsonObject>> OnNewSession { get; set; }
 
     internal Func<JsonObject, Task<JsonObject>> OnSetConfigOption { get; set; } = FakeAcpAgent.DefaultSetConfigOptionAsync;
 
     internal Func<PromptContext, Task<string>> OnPrompt { get; set; } = FakeAcpAgent.DefaultPromptAsync;
 
     internal Func<JsonObject, Task<JsonObject>> OnSessionClose { get; set; } = FakeAcpAgent.DefaultSessionCloseAsync;
+
+    /// <summary>
+    /// Scripts a <c>session/resume</c> answer for a known id (an unknown id always answers
+    /// resource-not-found before this hook runs). Default: succeeds with an empty result.
+    /// </summary>
+    internal Func<JsonObject, Task<JsonObject>> OnResumeSession { get; set; } = FakeAcpAgent.DefaultResumeSessionAsync;
 
     internal List<JsonObject> Received
     {
@@ -216,16 +233,23 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
             ["agentCapabilities"] = new JsonObject
             {
                 ["loadSession"] = false,
+                ["sessionCapabilities"] = new JsonObject
+                {
+                    ["resume"] = new JsonObject(),
+                    ["close"] = new JsonObject(),
+                },
             },
             ["authMethods"] = new JsonArray(),
         };
     }
 
-    private static Task<JsonObject> DefaultNewSessionAsync(JsonObject _)
+    /// <summary>Mints a distinct id per call (RS §6.4 A-5): "sess-1", "sess-2", and so on.</summary>
+    private Task<JsonObject> DefaultNewSessionAsync(JsonObject _)
     {
+        int number = Interlocked.Increment(ref this.nextSessionNumber);
         JsonObject result = new JsonObject
         {
-            ["sessionId"] = "sess-1",
+            ["sessionId"] = "sess-" + number.ToString(System.Globalization.CultureInfo.InvariantCulture),
         };
         return Task.FromResult(result);
     }
@@ -242,6 +266,11 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
     }
 
     private static Task<JsonObject> DefaultSessionCloseAsync(JsonObject _)
+    {
+        return Task.FromResult(new JsonObject());
+    }
+
+    private static Task<JsonObject> DefaultResumeSessionAsync(JsonObject _)
     {
         return Task.FromResult(new JsonObject());
     }
@@ -316,6 +345,19 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
                 try
                 {
                     JsonObject result = await this.OnNewSession(parameters).ConfigureAwait(false);
+
+                    // Recorded here, in the dispatch step, rather than inside DefaultNewSessionAsync -
+                    // so a test that overrides OnNewSession with its own script still gets that id
+                    // registered as resumable (correction item 8).
+                    string? mintedId = (string?)result["sessionId"];
+                    if (mintedId is not null)
+                    {
+                        lock (this.gate)
+                        {
+                            this.knownSessionIds.Add(mintedId);
+                        }
+                    }
+
                     await this.WriteResultAsync(id, result).ConfigureAwait(false);
                 }
                 catch (FakeRpcError error)
@@ -323,6 +365,10 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
                     await this.WriteErrorAsync(id, error.Code, error.Message).ConfigureAwait(false);
                 }
 
+                break;
+
+            case "session/resume":
+                await this.HandleResumeSessionAsync(id, parameters).ConfigureAwait(false);
                 break;
 
             case "session/set_config_option":
@@ -358,6 +404,37 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
             default:
                 await this.WriteErrorAsync(id, -32601, "Method not found: " + method).ConfigureAwait(false);
                 break;
+        }
+    }
+
+    /// <summary>
+    /// Answers <c>session/resume</c>: resource-not-found (-32002, RS §6.4 A-2) for an id this fake
+    /// never minted, else <see cref="OnResumeSession"/>. A closed id stays known - RS §6.2
+    /// "Closing" - so <c>session/close</c> must never remove it from <see cref="knownSessionIds"/>.
+    /// </summary>
+    private async Task HandleResumeSessionAsync(JsonNode id, JsonObject parameters)
+    {
+        string sessionId = (string?)parameters["sessionId"] ?? string.Empty;
+        bool known;
+        lock (this.gate)
+        {
+            known = this.knownSessionIds.Contains(sessionId);
+        }
+
+        if (!known)
+        {
+            await this.WriteErrorAsync(id, -32002, "No session found for id: " + sessionId).ConfigureAwait(false);
+            return;
+        }
+
+        try
+        {
+            JsonObject result = await this.OnResumeSession(parameters).ConfigureAwait(false);
+            await this.WriteResultAsync(id, result).ConfigureAwait(false);
+        }
+        catch (FakeRpcError error)
+        {
+            await this.WriteErrorAsync(id, error.Code, error.Message).ConfigureAwait(false);
         }
     }
 
