@@ -145,6 +145,83 @@ public sealed class PromptGoldenTests
     }
 
     /// <summary>
+    /// Pins the memory block (FC §6.15) appended after the Skills block, via the seven-argument
+    /// <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string}, IReadOnlyList{Skill}, string, MemorySnapshot?)"/>
+    /// overload: the golden is today's <c>systemPrompt.skills.txt</c> content, plus a blank line, plus
+    /// the rendered memory block for two entries (D12).
+    /// </summary>
+    [Fact]
+    public void SystemPrompt_WithMemory_MatchesGolden()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+        var skill = TeamBuildingSkill();
+        MemorySnapshot memory = new(
+            @"E:\Huddle\App_Data\work\Nova\memory",
+            [
+                new MemoryEntry("The Human prefers C# for all code.", @"E:\Huddle\App_Data\work\Nova\memory\code-language.md"),
+                new MemoryEntry("Launch is targeted for 2026-11-01.", @"E:\Huddle\App_Data\work\Nova\memory\launch-date.md"),
+            ],
+            NotListed: 0);
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [skill], "mcp__team__read_skill", memory);
+
+        AssertMatchesGolden("systemPrompt.memory.txt", actual);
+    }
+
+    /// <summary>With no memory files, the index renders <c>systemPrompt.memoryEmpty</c>'s "Nothing yet." text.</summary>
+    [Fact]
+    public void SystemPrompt_MemoryEmpty_ReadsNothingYet()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+        MemorySnapshot memory = new(@"E:\Huddle\App_Data\work\Nova\memory", [], NotListed: 0);
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory);
+
+        Assert.Contains("Nothing yet.", actual, StringComparison.Ordinal);
+    }
+
+    /// <summary>With more memory files than were listed, the index ends with <c>systemPrompt.memoryMore</c>'s "…and N more" line.</summary>
+    [Fact]
+    public void SystemPrompt_MemoryOverMax_EndsWithMoreLine()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+        MemorySnapshot memory = new(
+            @"E:\Huddle\App_Data\work\Nova\memory",
+            [new MemoryEntry("The Human prefers C# for all code.", @"E:\Huddle\App_Data\work\Nova\memory\code-language.md")],
+            NotListed: 12);
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory);
+
+        Assert.EndsWith(
+            "…and 12 more in E:\\Huddle\\App_Data\\work\\Nova\\memory.",
+            actual.TrimEnd(),
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>A <see langword="null"/> <see cref="MemorySnapshot"/> leaves every existing golden byte-identical (D12).</summary>
+    [Fact]
+    public void SystemPrompt_NoMemory_ByteIdenticalToExistingGoldens()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+        var skill = TeamBuildingSkill();
+
+        var plain = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory: null);
+        AssertMatchesGolden("systemPrompt.txt", plain);
+
+        var unprefixed = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "get_help", UnprefixedToolNames, [], string.Empty, memory: null);
+        AssertMatchesGolden("systemPrompt.unprefixed.txt", unprefixed);
+
+        var withSkills = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [skill], "mcp__team__read_skill", memory: null);
+        AssertMatchesGolden("systemPrompt.skills.txt", withSkills);
+    }
+
+    /// <summary>
     /// Pins <see cref="GetHelpTool"/>'s rendered body when constructed with the six real chat tools,
     /// exactly as <c>GetHelpToolTests</c> constructs them.
     /// </summary>
@@ -243,6 +320,25 @@ public sealed class PromptGoldenTests
         var actual = PersonaRunner.BuildPrompt(item, new FakePromptSource());
 
         AssertMatchesGolden("turnPromptFileChanges.txt", actual);
+    }
+
+    /// <summary>
+    /// Pins <see cref="PersonaRunner.BuildPrompt"/>'s <c>by you</c> suffix (FC §6.15, D13): a change
+    /// carrying <see cref="FileChange.ByYouRoomName"/> gets <c>turn.fileByYouSuffix</c> appended to
+    /// its line.
+    /// </summary>
+    [Fact]
+    public void BuildPrompt_ByYouLine_MatchesGolden()
+    {
+        FileChangesReport report = new(
+            [new FileChange(FileChangeKind.Added, @"E:\Huddle\App_Data\work\Nova\memory\code-language.md", "Alpha")],
+            NotListed: 0,
+            Unchecked: []);
+        var item = new PersonaRunner.WorkItem("room-1", "Nova & You", "You", "hello there", []) with { FileChanges = report };
+
+        var actual = PersonaRunner.BuildPrompt(item, new FakePromptSource());
+
+        AssertMatchesGolden("turnPromptFileChangesByYou.txt", actual);
     }
 
     /// <summary>

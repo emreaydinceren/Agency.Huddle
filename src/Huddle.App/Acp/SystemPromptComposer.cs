@@ -1,5 +1,7 @@
 namespace Agency.Huddle.App.Acp;
 
+using System.Globalization;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
 
@@ -93,6 +95,48 @@ internal static class SystemPromptComposer
         IReadOnlyList<Skill> skills,
         string readSkillToolName)
     {
+        return Compose(persona, prompts, helpToolName, toolNames, skills, readSkillToolName, memory: null);
+    }
+
+    /// <summary>
+    /// Composes a Persona's full system prompt, with a seventh part carrying the Memory index
+    /// appended after the Skills block (FC §6.15), when <paramref name="memory"/> is non-null. A
+    /// <see langword="null"/> <paramref name="memory"/> gets output byte-identical to the six-argument
+    /// overload, which is exactly this overload called with <paramref name="memory"/> null.
+    /// </summary>
+    /// <param name="persona">The Persona whose <see cref="Persona.Text"/> and <see cref="Persona.Name"/> are spliced in.</param>
+    /// <param name="prompts">Resolves each prompt's current text — a configured override, or the <see cref="PromptCatalog"/> default.</param>
+    /// <param name="helpToolName">
+    /// <see cref="Tools.GetHelpTool"/>'s own name, already carrying its full <c>mcp__team__</c> prefix
+    /// (e.g. <c>"mcp__team__get_help"</c>). Named by the caller from the same tool instance it built,
+    /// so this composer never retypes <c>"get_help"</c> or the prefix.
+    /// </param>
+    /// <param name="toolNames">
+    /// Every tool name this session exposes, already carrying its full <c>mcp__team__</c> prefix, in
+    /// the order they should be listed.
+    /// </param>
+    /// <param name="skills">The Persona's resolved Skills for this session; an empty list omits the block entirely.</param>
+    /// <param name="readSkillToolName">
+    /// <c>read_skill</c>'s own name, already carrying its full <c>mcp__team__</c> prefix. Only read when
+    /// <paramref name="skills"/> is non-empty, so a caller with no Skills may pass an empty string.
+    /// </param>
+    /// <param name="memory">
+    /// The Agent's Memory index, built at session start (FC §6.15), or <see langword="null"/> when the
+    /// resolved Adapter cannot read files, or File Changes is disabled for this installation.
+    /// </param>
+    /// <returns>
+    /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/>
+    /// is non-empty, plus a seventh memory block when <paramref name="memory"/> is non-null.
+    /// </returns>
+    internal static string Compose(
+        Persona persona,
+        IPromptSource prompts,
+        string helpToolName,
+        IReadOnlyList<string> toolNames,
+        IReadOnlyList<Skill> skills,
+        string readSkillToolName,
+        MemorySnapshot? memory)
+    {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
         ArgumentException.ThrowIfNullOrWhiteSpace(helpToolName);
@@ -113,22 +157,60 @@ internal static class SystemPromptComposer
             "systemPrompt.tools",
             new Dictionary<string, string> { ["{{toolNames}}"] = WrapToolNames(toolNames) });
 
-        if (skills.Count == 0)
+        List<string> parts = [orientation, persona.Text, identity, chatRules, tools];
+
+        if (skills.Count > 0)
         {
-            return string.Join("\n\n", orientation, persona.Text, identity, chatRules, tools);
+            ArgumentException.ThrowIfNullOrWhiteSpace(readSkillToolName);
+
+            var skillsBlock = prompts.Render(
+                "systemPrompt.skills",
+                new Dictionary<string, string>
+                {
+                    ["{{skillIndex}}"] = BuildSkillIndex(skills),
+                    ["{{readSkillTool}}"] = readSkillToolName,
+                });
+
+            parts.Add(skillsBlock);
         }
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(readSkillToolName);
+        if (memory is not null)
+        {
+            parts.Add(BuildMemoryBlock(prompts, memory));
+        }
 
-        var skillsBlock = prompts.Render(
-            "systemPrompt.skills",
-            new Dictionary<string, string>
-            {
-                ["{{skillIndex}}"] = BuildSkillIndex(skills),
-                ["{{readSkillTool}}"] = readSkillToolName,
-            });
+        return string.Join("\n\n", parts);
+    }
 
-        return string.Join("\n\n", orientation, persona.Text, identity, chatRules, tools, skillsBlock);
+    /// <summary>Renders the <c>systemPrompt.memory</c> block, with its index built from <paramref name="memory"/>'s entries.</summary>
+    /// <param name="prompts">Resolves each memory prompt's current text.</param>
+    /// <param name="memory">The Agent's Memory index for this session.</param>
+    private static string BuildMemoryBlock(IPromptSource prompts, MemorySnapshot memory)
+    {
+        var index = memory.Entries.Count == 0
+            ? prompts.Render("systemPrompt.memoryEmpty", new Dictionary<string, string>())
+            : string.Join(
+                '\n',
+                memory.Entries.Select(entry => prompts.Render(
+                    "systemPrompt.memoryEntry",
+                    new Dictionary<string, string> { ["{{summary}}"] = entry.Summary, ["{{path}}"] = entry.FullPath })));
+
+        if (memory.NotListed > 0)
+        {
+            var more = prompts.Render(
+                "systemPrompt.memoryMore",
+                new Dictionary<string, string>
+                {
+                    ["{{count}}"] = memory.NotListed.ToString(CultureInfo.InvariantCulture),
+                    ["{{memoryPath}}"] = memory.MemoryPath,
+                });
+
+            index = memory.Entries.Count == 0 ? more : string.Join('\n', index, more);
+        }
+
+        return prompts.Render(
+            "systemPrompt.memory",
+            new Dictionary<string, string> { ["{{memoryPath}}"] = memory.MemoryPath, ["{{memoryIndex}}"] = index });
     }
 
     /// <summary>Renders the Skill Index: one <c>- {name}: {description}</c> line per Skill, in the given order.</summary>

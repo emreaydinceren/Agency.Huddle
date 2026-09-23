@@ -304,6 +304,115 @@ public sealed class FileChangeTrackerTests
         Assert.Equal(file1, changeB.FullPath);
     }
 
+    /// <summary>A touched write is recorded in <see cref="FileState.Writers"/>, keyed by entry then relative path (FC §6.15, D13).</summary>
+    [Fact]
+    public async Task Commit_TouchedWrite_RecordsWriter()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string roomA = await CreateRoomAsync(fixture, "RoomA", ct);
+        string memoryDir = Path.Combine(WorkDir(fixture), "memory");
+        Directory.CreateDirectory(memoryDir);
+        string filePath = Path.Combine(memoryDir, "code-language.md");
+        File.WriteAllText(filePath, "The Human prefers C#.");
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", roomA, [], ct);
+        await fixture.Tracker.CommitAsync("Nova", roomA, collected, [filePath], ct);
+
+        FileState? loaded = fixture.Store.Load("Nova");
+        Assert.NotNull(loaded);
+        IReadOnlyDictionary<string, FileWriter> byPath = Assert.Contains("Nova", loaded.Writers);
+        FileWriter writer = Assert.Contains(Path.Combine("memory", "code-language.md"), byPath);
+        Assert.Equal(roomA, writer.RoomId);
+    }
+
+    /// <summary>
+    /// A file this Agent last wrote in Room A, still exactly as that write left it, is shown in Room B
+    /// with the <c>by you</c> suffix, naming Room A's CURRENT name even after a rename (FC §6.15, D13).
+    /// </summary>
+    [Fact]
+    public async Task Collect_OwnWriteFromRoomA_InRoomB_HasByYouWithACurrentName()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string roomA = await CreateRoomAsync(fixture, "RoomA", ct);
+        string roomB = await CreateRoomAsync(fixture, "RoomB", ct);
+
+        await fixture.Tracker.CommitAsync("Nova", roomA, await fixture.Tracker.CollectAsync("Nova", roomA, [], ct), [], ct);
+        await fixture.Tracker.CommitAsync("Nova", roomB, await fixture.Tracker.CollectAsync("Nova", roomB, [], ct), [], ct);
+
+        string memoryDir = Path.Combine(WorkDir(fixture), "memory");
+        Directory.CreateDirectory(memoryDir);
+        string filePath = Path.Combine(memoryDir, "launch-date.md");
+        File.WriteAllText(filePath, "The launch date is 2026-10-01.");
+
+        CollectedChanges collectedA = await fixture.Tracker.CollectAsync("Nova", roomA, [], ct);
+        await fixture.Tracker.CommitAsync("Nova", roomA, collectedA, [filePath], ct);
+
+        await fixture.Directory.RenameRoomAsync(roomA, "Alpha", ct);
+
+        CollectedChanges nextB = await fixture.Tracker.CollectAsync("Nova", roomB, [], ct);
+        FileChange change = Assert.Single(nextB.Report.Changes);
+        Assert.Equal("Alpha", change.ByYouRoomName);
+    }
+
+    /// <summary>E-19: once someone else changes the file, the recorded write no longer matches, and the next <c>by you</c> line carries no suffix.</summary>
+    [Fact]
+    public async Task Collect_ChangedAfterOwnWrite_NoSuffix()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string roomA = await CreateRoomAsync(fixture, "RoomA", ct);
+        string roomB = await CreateRoomAsync(fixture, "RoomB", ct);
+
+        await fixture.Tracker.CommitAsync("Nova", roomA, await fixture.Tracker.CollectAsync("Nova", roomA, [], ct), [], ct);
+        await fixture.Tracker.CommitAsync("Nova", roomB, await fixture.Tracker.CollectAsync("Nova", roomB, [], ct), [], ct);
+
+        string memoryDir = Path.Combine(WorkDir(fixture), "memory");
+        Directory.CreateDirectory(memoryDir);
+        string filePath = Path.Combine(memoryDir, "launch-date.md");
+        File.WriteAllText(filePath, "The launch date is 2026-10-01.");
+
+        CollectedChanges collectedA = await fixture.Tracker.CollectAsync("Nova", roomA, [], ct);
+        await fixture.Tracker.CommitAsync("Nova", roomA, collectedA, [filePath], ct);
+
+        // The Human edits the file afterwards - a different size AND a later time, so the recorded
+        // writer's FileEntry no longer equals the file's current state (correction item 19).
+        File.WriteAllText(filePath, "The launch date moved to 2026-11-15, per the Human.");
+        File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow.AddMinutes(5));
+
+        CollectedChanges nextB = await fixture.Tracker.CollectAsync("Nova", roomB, [], ct);
+        FileChange change = Assert.Single(nextB.Report.Changes);
+        Assert.Null(change.ByYouRoomName);
+    }
+
+    /// <summary>E-20: once the writer's Room is deleted, the next <c>by you</c> line carries no suffix.</summary>
+    [Fact]
+    public async Task Collect_WriterRoomDeleted_NoSuffix()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string roomA = await CreateRoomAsync(fixture, "RoomA", ct);
+        string roomB = await CreateRoomAsync(fixture, "RoomB", ct);
+
+        await fixture.Tracker.CommitAsync("Nova", roomA, await fixture.Tracker.CollectAsync("Nova", roomA, [], ct), [], ct);
+        await fixture.Tracker.CommitAsync("Nova", roomB, await fixture.Tracker.CollectAsync("Nova", roomB, [], ct), [], ct);
+
+        string memoryDir = Path.Combine(WorkDir(fixture), "memory");
+        Directory.CreateDirectory(memoryDir);
+        string filePath = Path.Combine(memoryDir, "launch-date.md");
+        File.WriteAllText(filePath, "The launch date is 2026-10-01.");
+
+        CollectedChanges collectedA = await fixture.Tracker.CollectAsync("Nova", roomA, [], ct);
+        await fixture.Tracker.CommitAsync("Nova", roomA, collectedA, [filePath], ct);
+
+        await fixture.Directory.DeleteRoomAsync(roomA, ct);
+
+        CollectedChanges nextB = await fixture.Tracker.CollectAsync("Nova", roomB, [], ct);
+        FileChange change = Assert.Single(nextB.Report.Changes);
+        Assert.Null(change.ByYouRoomName);
+    }
+
     /// <summary>The Watched Folder list is own, then declared, then subscribed, deduplicated by resolved full path.</summary>
     [Fact]
     public async Task Collect_WatchedFolders_OwnThenDeclaredThenSubscribed_NoRepeats()

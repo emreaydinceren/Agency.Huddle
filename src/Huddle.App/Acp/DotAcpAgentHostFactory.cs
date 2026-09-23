@@ -102,6 +102,11 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         var workDir = Path.Combine(this.options.DataDir, this.options.Acp.WorkDir, persona.Name);
         Directory.CreateDirectory(workDir);
 
+        // FC §6.15: the folder is always created next to the Work Dir, even when the memory block
+        // below is left out - so it is ready the moment File Changes and ReadsFiles both turn on.
+        var memoryDir = Path.Combine(workDir, "memory");
+        Directory.CreateDirectory(memoryDir);
+
         var processOptions = AgentProcessOptionsFactory.TryCreate(profile, workDir, AppContext.BaseDirectory)
             ?? throw new InvalidOperationException(
                 $"No ACP adapter is installed for Persona '{persona.Name}' on Adapter '{profile.Id}'. Run "
@@ -167,6 +172,16 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         // never changes, only whether model-facing names carry it.
         var toolNamePrefix = profile.UsesToolNamePrefix ? $"mcp__{ToolServerName}__" : string.Empty;
 
+        // FC §6.15: the index is a snapshot at session start; later edits reach the session through
+        // File Changes instead. Gated exactly like the watch tools above - File Changes off, or an
+        // Adapter that cannot read files, means no memory block either.
+        MemorySnapshot? memory = null;
+        if (this.options.FileChanges.Enabled && profile.ReadsFiles)
+        {
+            var (entries, notListed) = MemoryIndex.Build(memoryDir, this.options.FileChanges.MaxMemoryEntries);
+            memory = new MemorySnapshot(memoryDir, entries, notListed);
+        }
+
         // get_help is offered first and knows every other tool, so the system prompt can name one
         // tool instead of all of them. It is built last for the obvious reason: it takes the rest.
         // Captured in its own local, rather than only in the tools array below, so the system prompt
@@ -192,6 +207,27 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             throw;
         }
 
+        // RS §6.10 "Recommended" (P0-4), gated by finding P-11's flag: keeps a Persona's session off
+        // the Human's own Claude Code settings and CLAUDE.md, and off its auto-memory, so FC §6.15's
+        // memory folder is the only memory that session sees. Unverified until Task 14.3.m passes -
+        // see AdapterProfile.IsolateUserSettings's remarks for the known settings-replacement risk.
+        IReadOnlyDictionary<string, object>? meta = profile.IsolateUserSettings
+            ? new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["claudeCode"] = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["options"] = new Dictionary<string, object>(StringComparer.Ordinal)
+                    {
+                        ["settingSources"] = new[] { "project", "local" },
+                        ["settings"] = new Dictionary<string, object>(StringComparer.Ordinal)
+                        {
+                            ["autoMemoryEnabled"] = false,
+                        },
+                    },
+                },
+            }
+            : null;
+
         IAgentSession session;
         try
         {
@@ -213,11 +249,13 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                             toolNamePrefix + getHelpTool.Name,
                             toolNames,
                             skillResolution.Skills,
-                            toolNamePrefix + readSkillTool.Name),
+                            toolNamePrefix + readSkillTool.Name,
+                            memory),
                         SystemPromptMode.Append),
                     toolServer.Endpoint,
                     persona.Model,
-                    persona.Effort),
+                    persona.Effort,
+                    meta),
                 cancellationToken).ConfigureAwait(false);
         }
         catch

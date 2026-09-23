@@ -23,7 +23,43 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(37, PromptCatalog.All.Count);
+        Assert.Equal(42, PromptCatalog.All.Count);
+    }
+
+    /// <summary>The <c>turn.fileByYouSuffix</c> prompt (FC §6.15, D13) is <see cref="PromptTiming.Live"/>, keeps its leading space, requires <c>{{roomName}}</c>, and carries no <c>mcp__team__</c> literal.</summary>
+    [Fact]
+    public void Catalog_HasFileByYouSuffixPrompt()
+    {
+        var prompt = PromptCatalog.Get("turn.fileByYouSuffix");
+
+        Assert.Equal(PromptTiming.Live, prompt.Timing);
+        Assert.StartsWith(" ", prompt.Default, StringComparison.Ordinal);
+        Assert.Equal(["{{roomName}}"], prompt.RequiredPlaceholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+    }
+
+    /// <summary>The four memory prompts FC §6.13 defines all exist, are <see cref="PromptTiming.NextSession"/>, carry the right required placeholders, and carry no <c>mcp__team__</c> literal (D12).</summary>
+    [Fact]
+    public void Catalog_HasMemoryPrompts()
+    {
+        var memory = PromptCatalog.Get("systemPrompt.memory");
+        Assert.Equal(PromptTiming.NextSession, memory.Timing);
+        Assert.Equal(["{{memoryPath}}", "{{memoryIndex}}"], memory.RequiredPlaceholders);
+        Assert.False(memory.Default.Contains("mcp__team__", StringComparison.Ordinal));
+
+        var entry = PromptCatalog.Get("systemPrompt.memoryEntry");
+        Assert.Equal(PromptTiming.NextSession, entry.Timing);
+        Assert.Contains("{{summary}}", entry.Placeholders);
+        Assert.Contains("{{path}}", entry.Placeholders);
+
+        var empty = PromptCatalog.Get("systemPrompt.memoryEmpty");
+        Assert.Equal(PromptTiming.NextSession, empty.Timing);
+        Assert.Empty(empty.Placeholders);
+
+        var more = PromptCatalog.Get("systemPrompt.memoryMore");
+        Assert.Equal(PromptTiming.NextSession, more.Timing);
+        Assert.Contains("{{count}}", more.RequiredPlaceholders);
+        Assert.False(more.Default.Contains("mcp__team__", StringComparison.Ordinal));
     }
 
     /// <summary>The six File Changes Turn prompts FC §6.13 defines all exist, are Live, and carry no <c>mcp__team__</c> literal.</summary>

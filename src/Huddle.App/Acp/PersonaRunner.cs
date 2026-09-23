@@ -1181,6 +1181,12 @@ internal sealed class PersonaRunner : IAsyncDisposable
             };
 
             builder.Append(prompts.Render(key, new Dictionary<string, string> { ["{{path}}"] = change.FullPath }));
+
+            if (change.ByYouRoomName is not null)
+            {
+                builder.Append(prompts.Render("turn.fileByYouSuffix", new Dictionary<string, string> { ["{{roomName}}"] = change.ByYouRoomName }));
+            }
+
             builder.Append('\n');
         }
 

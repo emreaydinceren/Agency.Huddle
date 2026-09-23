@@ -309,4 +309,36 @@ public sealed class AdapterCatalogTests
         AdapterProfile profile = Assert.Single(catalog.Profiles);
         Assert.False(profile.ReadsFiles);
     }
+
+    /// <summary>The synthesised legacy profile (no <c>Team:Acp:Adapters</c> configured) carries <c>IsolateUserSettings</c> true — RS §6.10, finding P-11: a stock installation gets isolation.</summary>
+    [Fact]
+    public void Legacy_IsolateUserSettingsTrue()
+    {
+        var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.True(profile.IsolateUserSettings);
+    }
+
+    /// <summary>A configured Adapter entry with no <c>IsolateUserSettings</c> key defaults to false — finding P-11: an explicit <c>Adapters</c> list opts in.</summary>
+    [Fact]
+    public void Configured_IsolateUserSettingsDefaultsFalse()
+    {
+        var acp = new AcpOptions
+        {
+            Adapters =
+            [
+                new AdapterProfileOptions { Id = "agency", DisplayName = "Agency", Command = "agency-acp" },
+            ],
+        };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.False(profile.IsolateUserSettings);
+    }
 }

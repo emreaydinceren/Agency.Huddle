@@ -55,4 +55,12 @@ public sealed class AdapterProfileOptions
     /// initialiser" does not apply here).
     /// </summary>
     public bool ReadsFiles { get; set; } = true;
+
+    /// <summary>
+    /// Whether a session on this Adapter should be started with the isolation <c>_meta</c> (RS
+    /// §6.10, finding P-11). Defaults to <see langword="false"/>: an explicit <c>Adapters</c> entry
+    /// opts in. See <see cref="AdapterProfile.IsolateUserSettings"/> for the mechanism and its known
+    /// risk.
+    /// </summary>
+    public bool IsolateUserSettings { get; set; }
 }

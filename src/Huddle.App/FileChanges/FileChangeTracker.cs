@@ -81,7 +81,12 @@ internal sealed class FileChangeTracker(
 
             if (roomBaseline.Folders.TryGetValue(folder.Entry, out FolderSnapshot? previousSnapshot))
             {
-                changes.AddRange(FileStateDiff.Compare(previousSnapshot, scan.Snapshot, folder.FullPath));
+                foreach (FileChange change in FileStateDiff.Compare(previousSnapshot, scan.Snapshot, folder.FullPath))
+                {
+                    string? byYouRoomName = await this.DetermineByYouRoomNameAsync(
+                        state, folder, scan.Snapshot, roomId, change, cancellationToken).ConfigureAwait(false);
+                    changes.Add(byYouRoomName is null ? change : change with { ByYouRoomName = byYouRoomName });
+                }
             }
         }
 
@@ -330,6 +335,56 @@ internal sealed class FileChangeTracker(
         return !Directory.Exists(folder.FullPath);
     }
 
+    /// <summary>
+    /// FC §6.15: whether <paramref name="change"/> was this Agent's own last write, made in a Room
+    /// other than <paramref name="roomId"/>, so its line should carry <c>turn.fileByYouSuffix</c>.
+    /// </summary>
+    /// <param name="state">This Agent's currently saved state, read once by the caller.</param>
+    /// <param name="folder">The Watched Folder <paramref name="change"/> was found in.</param>
+    /// <param name="currentSnapshot">This Turn's fresh scan of <paramref name="folder"/>.</param>
+    /// <param name="roomId">The Room this Turn is running in.</param>
+    /// <param name="change">The change under consideration.</param>
+    /// <param name="cancellationToken">Cancels the Room lookup.</param>
+    /// <returns>The writer Room's current name, or <see langword="null"/> when no suffix applies.</returns>
+    private async Task<string?> DetermineByYouRoomNameAsync(
+        FileState? state,
+        WatchedFolder folder,
+        FolderSnapshot currentSnapshot,
+        string roomId,
+        FileChange change,
+        CancellationToken cancellationToken)
+    {
+        // A deleted file has no current state to compare against a recorded writer, so E-20-style
+        // reasoning does not apply: there is nothing left to match.
+        if (change.Kind == FileChangeKind.Deleted)
+        {
+            return null;
+        }
+
+        if (state is null || !state.Writers.TryGetValue(folder.Entry, out IReadOnlyDictionary<string, FileWriter>? byPath))
+        {
+            return null;
+        }
+
+        string relativePath = Path.GetRelativePath(folder.FullPath, change.FullPath);
+        if (!byPath.TryGetValue(relativePath, out FileWriter? writer)
+            || string.Equals(writer.RoomId, roomId, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        // E-19: someone else's edit since this Agent's own write moves the file's current state
+        // away from what that write left it as, so the match - and the suffix - no longer applies.
+        if (!currentSnapshot.Files.TryGetValue(relativePath, out FileEntry? currentEntry) || currentEntry != writer.Entry)
+        {
+            return null;
+        }
+
+        // E-20: the writer Room may since have been deleted, in which case there is nothing to name.
+        Room? room = await directory.GetRoomAsync(writer.RoomId, cancellationToken).ConfigureAwait(false);
+        return room?.Name;
+    }
+
     /// <summary>Whether <paramref name="fullPath"/> is <paramref name="agentName"/>'s own Work Dir.</summary>
     private bool IsOwnWorkDir(string agentName, string fullPath)
     {
@@ -403,6 +458,14 @@ internal sealed class FileChangeTracker(
         Dictionary<string, FolderSnapshot> newFolders = new(StringComparer.OrdinalIgnoreCase);
         baseline.Rooms.TryGetValue(roomId, out RoomBaseline? previousRoomBaseline);
 
+        // FC §6.15: this Agent's own last write per entry/relative path, updated in the same
+        // read-modify-write as everything else here (correction item 18) - never a second store.Update.
+        Dictionary<string, Dictionary<string, FileWriter>> newWriters = new(StringComparer.OrdinalIgnoreCase);
+        foreach ((string entry, IReadOnlyDictionary<string, FileWriter> byPath) in baseline.Writers)
+        {
+            newWriters[entry] = new Dictionary<string, FileWriter>(byPath, FolderSnapshot.PathComparer);
+        }
+
         foreach (WatchedFolder folder in collected.Folders)
         {
             ScanResult scan = collected.Scans[folder.Entry];
@@ -431,11 +494,24 @@ internal sealed class FileChangeTracker(
                 if (File.Exists(touchedPath))
                 {
                     FileInfo info = new(touchedPath);
-                    files[relativePath] = new FileEntry(info.Length, new DateTimeOffset(info.LastWriteTimeUtc, TimeSpan.Zero));
+                    FileEntry entry = new(info.Length, new DateTimeOffset(info.LastWriteTimeUtc, TimeSpan.Zero));
+                    files[relativePath] = entry;
+
+                    if (!newWriters.TryGetValue(folder.Entry, out Dictionary<string, FileWriter>? byPath))
+                    {
+                        byPath = new Dictionary<string, FileWriter>(FolderSnapshot.PathComparer);
+                        newWriters[folder.Entry] = byPath;
+                    }
+
+                    byPath[relativePath] = new FileWriter(roomId, entry);
                 }
                 else
                 {
                     files.Remove(relativePath);
+                    if (newWriters.TryGetValue(folder.Entry, out Dictionary<string, FileWriter>? byPath))
+                    {
+                        byPath.Remove(relativePath);
+                    }
                 }
             }
 
@@ -455,6 +531,12 @@ internal sealed class FileChangeTracker(
 
         newRooms[roomId] = new RoomBaseline(newFolders);
 
-        return baseline with { Rooms = newRooms };
+        Dictionary<string, IReadOnlyDictionary<string, FileWriter>> finalWriters = new(StringComparer.OrdinalIgnoreCase);
+        foreach ((string entry, Dictionary<string, FileWriter> byPath) in newWriters)
+        {
+            finalWriters[entry] = byPath;
+        }
+
+        return baseline with { Rooms = newRooms, Writers = finalWriters };
     }
 }

@@ -612,5 +612,74 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "turn.fileByYouSuffix",
+            Label: "File Changes: by-you suffix",
+            HelperText:
+                "Appended to a changed file's line when this Agent's own earlier Turn, in another Room, " +
+                "wrote it last (FC §6.15). Must keep {{roomName}}: it names which of this Agent's Rooms " +
+                "made the edit. Keep the leading space: it joins directly onto the file's own line.",
+            Default: " (by you, in Room '{{roomName}}')",
+            Placeholders: ["{{roomName}}"],
+            RequiredPlaceholders: ["{{roomName}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memory",
+            Label: "Memory block",
+            HelperText:
+                "Explains an Agent's memory folder and shows its current index, appended to the system " +
+                "prompt after Skills (FC §6.15). Must keep {{memoryPath}} and {{memoryIndex}}: without " +
+                "the first the Agent cannot name where to write, and without the second it is told " +
+                "nothing of what it already remembers.",
+            Default:
+                """
+                Your memory is the folder {{memoryPath}}. It belongs to you, not to any one Room: it survives
+                restarts, and every copy of you in your other Rooms reads the same folder. To remember
+                something from now on, write one Markdown file there per fact. Make its first line the fact
+                itself, in one sentence, such as "The Human prefers C# for all code.", and give the file a
+                short descriptive name. When a fact changes, edit its file, and delete it when it no longer
+                holds. Remember only what should hold in every Room: preferences, standing decisions, facts
+                about ongoing work. Do not write down something said for one Room's audience only, and do not
+                copy the conversation itself. When a memory file changes, including when another copy of you
+                writes it, the change is listed at the start of your next Turn in each Room. Do not claim to
+                remember what is not in your memory or in this conversation. Your memory now holds:
+                {{memoryIndex}}
+                """,
+            Placeholders: ["{{memoryPath}}", "{{memoryIndex}}"],
+            RequiredPlaceholders: ["{{memoryPath}}", "{{memoryIndex}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryEntry",
+            Label: "Memory index entry",
+            HelperText:
+                "One line of the memory index per remembered fact. Must keep {{summary}} and {{path}}: " +
+                "the summary is what the Agent reads at a glance, the path is where to read the rest.",
+            Default: "- {{summary}} ({{path}})",
+            Placeholders: ["{{summary}}", "{{path}}"],
+            RequiredPlaceholders: ["{{summary}}", "{{path}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryEmpty",
+            Label: "Memory index, empty",
+            HelperText: "Shown in place of the memory index when the Agent has written nothing yet.",
+            Default: "Nothing yet.",
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.memoryMore",
+            Label: "Memory index, more",
+            HelperText:
+                "Appended after the listed memory entries when more exist than the cap shows. Must keep " +
+                "{{count}}: without it the Agent has no idea how much more memory it is not seeing.",
+            Default: "…and {{count}} more in {{memoryPath}}.",
+            Placeholders: ["{{count}}", "{{memoryPath}}"],
+            RequiredPlaceholders: ["{{count}}"],
+            Timing: PromptTiming.NextSession),
     ];
 }
