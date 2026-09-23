@@ -248,7 +248,7 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   Persona assigned it through the `skills` frontmatter field; its body is read
   with `read_skill` only when the conversation calls for it. Progressive
   discovery, applied to know-how rather than tools. A Skill is text and never
-  executes; the App Tools it names do. Proposed, not built — see
+  executes; the App Tools it names do. See
   [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md).
 : *Avoid*: ability, capability, plugin, playbook, recipe. Not Claude's own
   `.claude/skills/`, which only one Adapter honours.

@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-09-22
 ---
 
@@ -41,7 +41,8 @@ Skill applies ("we are setting up a team") if it can see the Skill exists.
 {DataDir}/Skills/
 └── team-building/
     ├── SKILL.md            frontmatter: name, description, tools; body: the procedure
-    ├── team-patterns.md    supporting file, read only when SKILL.md sends the Agent there
+    ├── onboarding.md       supporting file, read only when SKILL.md sends the Agent there
+    ├── team-patterns.md
     └── roles.md
 ```
 
@@ -85,9 +86,13 @@ was wrong here. A Skill *names* App Tools and explains how to use them well; the
 themselves stay `IAppTool` implementations in `Huddle.App`. That keeps every rule that
 matters, such as validation and cost, in code, where the Skill's text cannot talk around it.
 
-A Skill's frontmatter may list the App Tools it needs in a `tools` field. **A tool that some
-Skill lists is offered only to Personas assigned that Skill. Tools that no Skill lists stay
-offered to every Agent, as today.** The grant happens at session start because MCP sends
+A Skill's frontmatter may list the App Tools it needs in a `tools` field. **Which tools a
+Skill can grant is decided in code, not by Skill files:** `SkillGrants.Grantable` holds
+`validate_teammate` and `propose_teammates`, and each is offered only to Personas assigned a
+Skill that lists it. `read_skill` is offered to any Persona holding at least one Skill. Every
+other tool stays offered to every Agent, as before, and a `tools` entry outside `Grantable` is
+a Warning that is ignored. A code-defined set means a Skill written by hand can never take a
+default tool away from every Agent just by listing it. The grant happens at session start because MCP sends
 `tools/list` once, which is why tool descriptions are badged *Next session*. Reading a Skill
 mid-conversation therefore cannot add a tool; assigning it can.
 

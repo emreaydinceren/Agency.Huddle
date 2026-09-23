@@ -5,7 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 38 Done.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 39 Done.
 
 ## How to update this tracker
 
@@ -71,7 +71,7 @@ Deliverable and Acceptance.
 | 6.2.t Test: Settings › Skills (red) | | | ✔ |
 | 6.2.i Implement the tab | | | ✔ |
 | **D7. S1 documentation** | | | |
-| 7.1 Update the docs S1 changed | ✔ | | |
+| 7.1 Update the docs S1 changed | | | ✔ |
 | **S2 — Team-building tools** | | | |
 | **D8. `PersonaStore`: dry-run check and serialised writes** | | | |
 | 8.1.t Test: `PersonaStore.Check` reports every problem, writes nothing (red) | ✔ | | |
