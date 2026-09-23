@@ -111,6 +111,14 @@ internal sealed class SkillStore : IDisposable
     /// <summary>Every currently resolved Skill, ordered ordinally by <see cref="Skill.Name"/>.</summary>
     public IReadOnlyList<Skill> All => this.snapshot.All;
 
+    /// <summary>
+    /// The Skills directory this store resolves and watches - <c>{DataDir}/{Acp:SkillsDir}</c> - the
+    /// same path a Skill's own <see cref="Skill.FolderPath"/> is built under. Settings › Skills reads
+    /// this rather than recomputing it, the same reasoning <see cref="Skill.FolderPath"/> itself
+    /// exists for: there is exactly one place that knows this path (Spec §6.7).
+    /// </summary>
+    internal string SkillsDirectory => this.skillsDir;
+
     /// <summary>Every problem found while resolving the current set of Skills.</summary>
     public IReadOnlyList<SkillIssue> Issues => this.snapshot.Issues;
 

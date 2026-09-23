@@ -5,7 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 34 Done.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 38 Done.
 
 ## How to update this tracker
 
@@ -66,10 +66,10 @@ Deliverable and Acceptance.
 | 5.2.t Test: an unknown Skill reports Degraded (red) | | | ✔ |
 | 5.2.i Report Skill warnings | | | ✔ |
 | **D6. Skills UI** | | | |
-| 6.1.t Test: the Teammate card's Skills picker (red) | ✔ | | |
-| 6.1.i Implement the picker | ✔ | | |
-| 6.2.t Test: Settings › Skills (red) | ✔ | | |
-| 6.2.i Implement the tab | ✔ | | |
+| 6.1.t Test: the Teammate card's Skills picker (red) | | | ✔ |
+| 6.1.i Implement the picker | | | ✔ |
+| 6.2.t Test: Settings › Skills (red) | | | ✔ |
+| 6.2.i Implement the tab | | | ✔ |
 | **D7. S1 documentation** | | | |
 | 7.1 Update the docs S1 changed | ✔ | | |
 | **S2 — Team-building tools** | | | |

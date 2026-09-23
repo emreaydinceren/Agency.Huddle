@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Themes;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -25,6 +26,7 @@ public sealed class SettingsPageTests
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<PromptStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AppearanceStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
         return ctx;
     }
 
@@ -338,5 +340,116 @@ public sealed class SettingsPageTests
         var html = await client.GetStringAsync("/settings/personas", ct);
 
         Assert.DoesNotContain(factory.PromptsJsonPath, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Spec §6.7 (Settings row): the Skills tab's read-only table lists every shipped default -
+    /// <c>team-building</c> included - labelled Default when no override folder exists on disk for
+    /// it. A fact about the prerendered markup, so this stays on HTTP like the sibling Personas/
+    /// Appearance content tests.
+    /// </summary>
+    [Fact]
+    public async Task SkillsTab_ListsTeamBuildingAsDefault()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/settings/skills", ct);
+
+        Assert.Contains("team-building", html, StringComparison.Ordinal);
+        Assert.Contains(">Default<", html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Spec §6.7, U10: an Overridden Skill's row offers Restore default; clicking it opens a MudDialog
+    /// confirm naming the exact folder <see cref="Agency.Huddle.App.Skills.Skill.FolderPath"/> resolved
+    /// - never typed by the UI, per the Spec's "Constraints" paragraph - and confirming it (the
+    /// dialog's own "Yes, restore default", the same naming precedent <c>ResetAllControl</c>'s "Yes,
+    /// reset everything" set) deletes that folder and the row reverts to Default. Needs
+    /// <see cref="MudBunitContext.RenderWithPopovers"/>, not a plain HTTP round trip: the dialog is
+    /// real MudBlazor content shown through <c>IDialogService</c>, the same reasoning
+    /// <c>TeammateCardTests</c> gives for <c>TeammateCard</c>'s own dialog.
+    /// </summary>
+    [Fact]
+    public async Task SkillsTab_OverriddenSkill_ShowsRestoreDefault_ClickRemovesFolder()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        var overrideFolder = Path.Combine(factory.SkillsDirPath, "team-building");
+        Directory.CreateDirectory(overrideFolder);
+        await File.WriteAllTextAsync(
+            Path.Combine(overrideFolder, "roles.md"),
+            "A hand-edited override.",
+            Xunit.TestContext.Current.CancellationToken);
+
+        await using var ctx = NewContext(factory);
+        var cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<Settings>(0);
+            builder.AddAttribute(1, nameof(Settings.Tab), "skills");
+            builder.CloseComponent();
+        });
+
+        cut.FindAll("button").First(button => button.TextContent.Contains("Restore default", StringComparison.Ordinal)).Click();
+
+        Assert.Contains(overrideFolder, cut.Markup, StringComparison.Ordinal);
+
+        cut.FindAll("button").First(button => button.TextContent.Contains("Yes, restore default", StringComparison.Ordinal)).Click();
+
+        Assert.False(Directory.Exists(overrideFolder));
+        Assert.DoesNotContain(">Overridden<", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Spec §6.7 (Settings row, "Issues" column): a hand-written Yours Skill whose SKILL.md fails
+    /// validation has no shipped default to fall back to, so the store omits it from
+    /// <see cref="Agency.Huddle.App.Skills.SkillStore.All"/> entirely and keeps its Error in
+    /// <see cref="Agency.Huddle.App.Skills.SkillStore.Issues"/> instead - so the row's error text must
+    /// be the validator's own message, not a re-derived one, or a Human editing the file has no way to
+    /// see why it never appeared.
+    /// </summary>
+    [Fact]
+    public async Task SkillsTab_InvalidYoursSkill_ShowsError()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        Directory.CreateDirectory(Path.Combine(factory.SkillsDirPath, "broken-skill"));
+        await File.WriteAllTextAsync(
+            Path.Combine(factory.SkillsDirPath, "broken-skill", "SKILL.md"),
+            "---\nname: broken-skill\n---\nBody.",
+            ct);
+
+        using var client = factory.CreateClient();
+        var html = await client.GetStringAsync("/settings/skills", ct);
+
+        Assert.Contains(
+            HtmlEncoder.Default.Encode("SKILL.md is missing required field 'description'."),
+            html,
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Spec §6.7, U8/U10: navigating to <c>/settings/skills</c> selects the Skills tab rather than
+    /// falling back to Prompts - the same routing guarantee <c>/settings/personas</c> and
+    /// <c>/settings/appearance</c> already have (<see cref="SettingsPage_UnknownTab_FallsBackToPromptsPanel"/>'s
+    /// inverse). Asserted by the ABSENCE of the Prompts panel's own content rather than by referencing
+    /// <c>SettingsTab.Skills</c> directly, so this stays an assertion red rather than a compile one.
+    /// </summary>
+    [Fact]
+    public async Task SettingsRoute_TabSkills_SelectsSkillsTab()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        using var client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/settings/skills", ct);
+
+        Assert.DoesNotContain(">System prompt<", html, StringComparison.Ordinal);
     }
 }

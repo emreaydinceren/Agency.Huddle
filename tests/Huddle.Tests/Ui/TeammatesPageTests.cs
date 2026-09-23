@@ -426,6 +426,7 @@ public sealed class TeammatesPageTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AdapterCatalog>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
         return ctx;
     }
 

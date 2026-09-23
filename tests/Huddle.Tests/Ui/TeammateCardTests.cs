@@ -10,6 +10,7 @@ using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Skills;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -487,6 +488,68 @@ public sealed class TeammateCardTests
         FindButton(cut, "New teammate").Click();
 
         Assert.Equal(1, CountControlsLabelled(cut, "Adapter"));
+    }
+
+    /// <summary>
+    /// Spec §6.7 (card row) and Spec §2 U7: picking "team-building" in the Skills select rewrites
+    /// the frontmatter inside the raw text field through <see cref="PersonaFrontmatter.WriteListField"/>
+    /// - the list-field counterpart of the <see cref="PersonaFrontmatter.WriteScalarField"/> mechanism
+    /// the Adapter select above uses - so Save persists it the same way every other identity edit does.
+    /// </summary>
+    [Fact]
+    public async Task SkillsSelect_PickTeamBuilding_TextGainsSkillsField()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "You are the Chief of Staff.");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        await OpenSelectAsync(cut, "Skills");
+        (await FindSkillOptionAsync(cut, "team-building")).Click();
+
+        Assert.Contains("skills: ['team-building']", cut.Find("textarea").TextContent, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Spec §6.7: the Skills select's helper text warns that a Skill, like a Model, an Effort and an
+    /// Adapter, is fixed for the life of a session - changing it is a restart, not a live edit.
+    /// </summary>
+    [Fact]
+    public async Task SkillsSelect_HelperText_SaysChangingRestarts()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "x");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        Assert.Contains("Changing Skills restarts this Teammate.", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Spec §6.7: an assigned Skill the store no longer resolves - here, a frontmatter <c>skills</c>
+    /// entry with no matching <see cref="Skill"/> in <see cref="SkillStore.All"/> - is listed with a
+    /// warning chip rather than silently vanishing from the card, so the Human can see it and remove
+    /// it (this is also the U14 Degraded case, seen here from the card rather than the status badge).
+    /// </summary>
+    [Fact]
+    public async Task SkillsSelect_AssignedSkillMissing_ShowsWarningChip()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await File.WriteAllTextAsync(
+            EnsureTeamsDir(factory),
+            "---\nName: coo\nTitle: coo\nAlias: coo\nskills: ['nonexistent']\n---\nx",
+            Xunit.TestContext.Current.CancellationToken);
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        FindButton(cut, "Edit").Click();
+
+        var warningChips = cut.FindAll(".mud-chip-color-warning");
+        Assert.Contains(warningChips, chip => chip.TextContent.Contains("nonexistent", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -1379,6 +1442,7 @@ public sealed class TeammateCardTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AdapterCatalog>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<SkillStore>());
         return ctx;
     }
 
@@ -1551,6 +1615,20 @@ public sealed class TeammateCardTests
     {
         await Task.Yield();
         return cut.FindAll("div.mud-list-item").First(item => item.TextContent.Trim() == text);
+    }
+
+    /// <summary>
+    /// The Skills select's open option naming <paramref name="skillName"/> - matched by
+    /// <c>Contains</c> rather than <see cref="FindSelectItemAsync"/>'s exact equality, because Spec
+    /// §6.7 has each option show its description alongside the Skill's name, so the option's full
+    /// text content is never just the bare name.
+    /// </summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="skillName">The Skill's name, as it appears in <see cref="SkillStore.All"/>.</param>
+    private static async Task<IElement> FindSkillOptionAsync(IRenderedComponent<ContainerFragment> cut, string skillName)
+    {
+        await Task.Yield();
+        return cut.FindAll("div.mud-list-item").First(item => item.TextContent.Contains(skillName, StringComparison.Ordinal));
     }
 
     private static void SetTextValue(IRenderedComponent<ContainerFragment> cut, string label, string value)

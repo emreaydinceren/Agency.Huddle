@@ -38,6 +38,7 @@
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Avatars
 @using Agency.Huddle.App.Pipes
+@using Agency.Huddle.App.Skills
 @using System.Diagnostics
 @using System.Diagnostics.CodeAnalysis
 @using System.Globalization
@@ -51,6 +52,7 @@
 @inject IAgentGateway Gateway
 @inject ITeamDirectory TeamDirectory
 @inject AvatarStore Avatars
+@inject SkillStore Skills
 
 <MudDialog>
     <TitleContent>
@@ -255,6 +257,39 @@
                 </MudAlert>
             }
 
+            @* Spec §6.7, §2 U7: next to the Adapter select, and the same WriteListField data flow -
+               this.text is the source of truth, re-derived by ReadSkills whenever this.text changes
+               out from under it (BeginEditAsync, a successful Save), and written back through
+               PersonaFrontmatter.WriteListField on every selection change, mirroring how the Adapter
+               select above reads/writes "adapter" through WriteScalarField. No count-gate unlike the
+               Adapter select's "@if (AdapterChoices.Count > 1)": a MultiSelection picker with zero or
+               one option is still a legitimate zero/one-Skill catalog, not a control nobody could use. *@
+            <MudSelect T="string" Label="Skills" MultiSelection="true" SelectedValues="@this.skills"
+                       SelectedValuesChanged="this.OnSkillsChanged"
+                       HelperText="Changing Skills restarts this Teammate." Class="mb-4">
+                @foreach (var skill in this.Skills.All)
+                {
+                    <MudSelectItem T="string" Value="@skill.Name">
+                        <MudText>@skill.Name</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">@skill.Description</MudText>
+                    </MudSelectItem>
+                }
+            </MudSelect>
+
+            @* An assigned Skill name the store no longer resolves - a Skill folder removed or renamed
+               since this Persona last saved (Spec §6.7). Shown as a removable chip rather than silently
+               dropped, so the Human can see it and take it off; OnClose runs the same WriteListField
+               write as a fresh selection, just with the missing name filtered out. *@
+            @if (this.MissingSkillNames.Count > 0)
+            {
+                <MudStack Row="true" Spacing="1" Wrap="Wrap.Wrap" Class="mb-4">
+                    @foreach (var missing in this.MissingSkillNames)
+                    {
+                        <MudChip T="string" Color="Color.Warning" OnClose="@(() => this.RemoveSkill(missing))">@missing</MudChip>
+                    }
+                </MudStack>
+            }
+
             @* @bind-Value, not @oninput: MudSelect raises its ValueChanged on selection, the same
                "change" semantics the old <select>'s @onchange comment called out - see
                OnModelChangedAsync below for why the Effort catalog must be re-read from here.
@@ -456,6 +491,11 @@
     private string? model;
     private string? effort;
     private string? adapter;
+
+    // Unlike model/effort/adapter above, this has no [Parameter] counterpart to seed from: a Skill
+    // assignment lives only in this.text's frontmatter (Spec §6.7), never on the Persona record, so
+    // ReadSkills(this.text) is the only source - see its own remarks.
+    private IReadOnlyList<string> skills = [];
     private Avatar avatar = Avatar.None;
 
     // Editor-only working state for the avatar editor (Part A of the avatar-editor task). None of
@@ -559,6 +599,7 @@
         this.model = this.Model;
         this.effort = this.Effort;
         this.adapter = this.Adapter;
+        this.skills = ReadSkills(this.text);
         this.SeedAvatarEditorState();
         this.roomId = this.RoomId;
         this.filePath = this.FilePath;
@@ -570,6 +611,12 @@
         // opened with.
         this.Health.Changed += this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged += this.OnHealthOrPresenceChanged;
+
+        // SkillStore is a singleton too - a Skill written or removed on disk while this card is open
+        // must repaint both the option list and MissingSkillNames, the same reasoning as the
+        // Health/Gateway subscriptions above (Spec §6.7's "Internal flow": subscribe, unsubscribe in
+        // Dispose, re-render through InvokeAsync(StateHasChanged)).
+        this.Skills.SkillsChanged += this.OnSkillsStoreChanged;
 
         if (this.mode != TeammateCardMode.Create)
         {
@@ -602,11 +649,12 @@
         }
     }
 
-    /// <summary>Unsubscribes from <see cref="PersonaHealth.Changed"/> and <see cref="IAgentGateway.PresenceChanged"/> - see the file-level comment for why this card, alone among components showing a snapshot-at-open parameter, keeps a live subscription.</summary>
+    /// <summary>Unsubscribes from <see cref="PersonaHealth.Changed"/>, <see cref="IAgentGateway.PresenceChanged"/> and <see cref="SkillStore.SkillsChanged"/> - see the file-level comment for why this card, alone among components showing a snapshot-at-open parameter, keeps live subscriptions.</summary>
     public void Dispose()
     {
         this.Health.Changed -= this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged -= this.OnHealthOrPresenceChanged;
+        this.Skills.SkillsChanged -= this.OnSkillsStoreChanged;
     }
 
     /// <summary>
@@ -647,6 +695,22 @@
         catch (InvalidOperationException)
         {
         }
+    }
+
+    /// <summary>
+    /// Repaints this card when <see cref="SkillStore.SkillsChanged"/> fires - a Skill written,
+    /// edited or removed on disk while this card is open - so the Skills select's own option list
+    /// and <see cref="MissingSkillNames"/> never lag behind what <see cref="Skills"/> currently
+    /// resolves (Spec §6.7's "Internal flow"), the same dispatch <see cref="OnHealthOrPresenceChanged"/>
+    /// uses for its own singleton subscriptions.
+    /// </summary>
+    private void OnSkillsStoreChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 
     /// <summary>
@@ -946,6 +1010,7 @@
         this.model = persona?.Model ?? this.model;
         this.effort = persona?.Effort ?? this.effort;
         this.adapter = persona?.Adapter ?? this.adapter;
+        this.skills = ReadSkills(this.text);
         this.SeedAvatarEditorState();
         this.error = null;
         this.confirmingRemove = false;
@@ -1125,6 +1190,51 @@
         await efforts;
     }
 
+    /// <summary>
+    /// Parses <paramref name="personaText"/>'s frontmatter and returns its <c>skills</c> field, or an
+    /// empty list when the text has no frontmatter block (Create mode's Persona BODY-only <see cref="text"/>)
+    /// or none was written. The only source of the Skills select's selection (Spec §6.7): unlike
+    /// <see cref="model"/>/<see cref="effort"/>/<see cref="adapter"/>, a Skill assignment has no
+    /// [Parameter]/store counterpart to seed from - it lives only in the frontmatter itself.
+    /// </summary>
+    /// <param name="personaText">The Persona's raw file text, or body-only text in Create mode.</param>
+    private static IReadOnlyList<string> ReadSkills(string personaText) =>
+        PersonaFrontmatter.TryReadIdentity(personaText, out var identity, out _) ? identity.Skills ?? [] : [];
+
+    /// <summary>
+    /// The assigned Skills in <see cref="skills"/> that <see cref="Skills"/> (the store) no longer
+    /// resolves - a folder removed or renamed since this Persona last saved (Spec §6.7). Rendered as
+    /// removable warning chips beneath the select.
+    /// </summary>
+    private IReadOnlyList<string> MissingSkillNames =>
+        [.. this.skills.Where(name => this.Skills.Get(name) is null)];
+
+    /// <summary>
+    /// Sets the selected Skills, keeping <see cref="text"/>'s frontmatter in step through
+    /// <see cref="PersonaFrontmatter.WriteListField"/> - the list-field counterpart of
+    /// <see cref="OnAdapterChangedAsync"/>'s <see cref="PersonaFrontmatter.WriteScalarField"/> write,
+    /// and a no-op in Create mode for the same reason that one is (Spec §6.7). Unlike the Adapter
+    /// select, picking a Skill starts no probe: this is a synchronous, in-memory rewrite only.
+    /// </summary>
+    /// <param name="value">Every Skill name now selected in the picker.</param>
+    private void OnSkillsChanged(IReadOnlyCollection<string> value)
+    {
+        this.skills = [.. value];
+        this.text = PersonaFrontmatter.WriteListField(this.text, "skills", this.skills);
+    }
+
+    /// <summary>
+    /// Drops <paramref name="name"/> from <see cref="skills"/> and rewrites <see cref="text"/> through
+    /// <see cref="PersonaFrontmatter.WriteListField"/> - the Close action on one of
+    /// <see cref="MissingSkillNames"/>'s warning chips (Spec §6.7: "so it can be removed").
+    /// </summary>
+    /// <param name="name">The missing Skill name to remove.</param>
+    private void RemoveSkill(string name)
+    {
+        this.skills = [.. this.skills.Where(existing => !string.Equals(existing, name, StringComparison.Ordinal))];
+        this.text = PersonaFrontmatter.WriteListField(this.text, "skills", this.skills);
+    }
+
     private async Task OnModelChangedAsync(string value)
     {
         this.model = string.IsNullOrWhiteSpace(value) ? null : value;
@@ -1219,7 +1329,7 @@
         {
             if (creating)
             {
-                var identity = new PersonaIdentity(this.name, this.title, this.alias, TeammateCard.ParseTeams(this.teams), this.adapter);
+                var identity = new PersonaIdentity(this.name, this.title, this.alias, TeammateCard.ParseTeams(this.teams), this.adapter, this.skills);
                 persona = this.Personas.Add(identity, this.text, this.model, this.effort);
             }
             else
@@ -1276,6 +1386,7 @@
         this.model = savedPersona?.Model;
         this.effort = savedPersona?.Effort;
         this.adapter = savedPersona?.Adapter;
+        this.skills = ReadSkills(savedPersona?.Text ?? this.text);
         this.filePath = TeammateCard.TryPathFor(this.Personas, this.name);
         this.mode = TeammateCardMode.View;
         this.confirmingRemove = false;
