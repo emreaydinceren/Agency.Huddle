@@ -217,6 +217,12 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   is already there. Both are deliberate — it is a Singleton holding model output
   for the life of the process, and an Agent killed without a clean disconnect
   never sends the terminator that would clear it.
+- **A waiting Proposal does not survive a restart, and the proposer is not told.**
+  `ProposalStore` holds at most one Proposal per Room in memory, like a Draft, so a
+  restart loses it and its card. The Agent that proposed is still waiting for an
+  outcome Message that never comes; the Human has to ask again. Archiving or
+  deleting the Room drops it on purpose. Deliberate for V1: persisting it would
+  mean a table and a recovery path for a card the Human can recreate by asking.
 - **Stopping an Agent stops it in every Room.** One ACP session spans every Room
   its Agent is in, so there is nothing narrower to stop. `StopTurn` carries the
   Room the Human asked from as a label, not as a selector — the same

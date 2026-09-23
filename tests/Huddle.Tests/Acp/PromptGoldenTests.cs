@@ -217,19 +217,29 @@ public sealed class PromptGoldenTests
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var aliasSource = new FakeMentionAliasSource();
         var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
+        var options = Options.Create(new TeamOptions());
+        var chat = new ChatService(directory, store, events, aliasSource, options, proposals, NullLogger<ChatService>.Instance);
 
+        var gateway = new FakeAgentGateway();
+        var checker = new CandidateChecker(personaStore, directory, gateway);
         var follows = new RoomFollows();
         IAppTool[] others =
         [
-            new ListAgentsTool(directory, new FakeAgentGateway(), personaStore, new FakePromptSource()),
+            new ListAgentsTool(directory, gateway, personaStore, new FakePromptSource()),
             new CreateRoomTool(chat, directory, "caller-id", aliasSource, new FakePromptSource()),
             new InviteAgentTool(chat, directory, aliasSource, new FakePromptSource()),
             new PostMessageTool(chat, "caller-id", new FakePromptSource()),
             new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
+            new ValidateTeammateTool(checker, new FakePromptSource()),
+            new ProposeTeammatesTool(proposals, checker, personaStore, directory, options, TimeProvider.System, "test-agent", new FakePromptSource()),
         ];
-        var getHelp = new GetHelpTool(others, new FakePromptSource(), "mcp__team__");
+
+        // GetHelpTool lists only the ungated tools (those not in SkillGrants.Grantable).
+        // Skill-gated tools (validate_teammate, propose_teammates) are only offered to a Persona holding a Skill that lists them.
+        // A Persona with no Skills should not see them in get_help.
+        var ungatedTools = others.Where(tool => !SkillGrants.Grantable.Contains(tool.Name, StringComparer.Ordinal)).ToList();
+        var getHelp = new GetHelpTool(ungatedTools, new FakePromptSource(), "mcp__team__");
 
         return (getHelp, others);
     }

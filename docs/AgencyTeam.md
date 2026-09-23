@@ -210,6 +210,7 @@ All under the `Team:` section — `TeamOptions.cs` and `Acp/AcpOptions.cs`.
 | `Acp:TeamsDir` | `Teams` | Relative to `DataDir`. Scanned recursively — sub-folders are organisational only; Team membership comes from each Persona's `teams` frontmatter field, not its location. Setting the old `Acp:PersonaDir` key throws at startup rather than silently scanning nothing. |
 | `Acp:WorkDir` | `work` | One subdirectory per Persona. Relative to `DataDir`. |
 | `Acp:SkillsDir` | `Skills` | Relative to `DataDir`. Holds Skill folders: an override of a shipped Skill, file by file, or a Skill written by hand. Created at startup. See [ADR-0021](adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md). |
+| `Acp:MaxTeammates` | `8` | The most Personas the library may hold before `propose_teammates` refuses a Proposal and Approve creates nothing. Counts every loaded Persona, not only proposed ones; rejected files do not count. Checked when an Agent proposes and again at Approve, never on the Teammate card. Zero or less disables it. Exists because every Teammate is a process. |
 | `Acp:TraceWire` | `false` | **Dumps the bearer token.** Debugging only. |
 | `Acp:CatchUpMessages` | `20` | Per-Room catch-up buffer size. |
 | `Acp:TokenBudget` | `1000000` | Per-Persona token Budget, summed from the rises in `UsageUpdated.Used` and reset by any Human Message. Catches a loop that mints fresh Rooms, which the per-Room Budget cannot. Zero or less disables it. |

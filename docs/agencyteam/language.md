@@ -258,7 +258,7 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   `propose_teammates` in one Room and shown there with Approve and Decline. An
   Agent never creates a Teammate; the Human's Approve does, and the outcome is
   posted as a Message from the Human, which wakes the proposer. At most one per
-  Room, held in memory, so a restart loses it. Proposed, not built.
+  Room, held in memory, so a restart loses it.
 : Each proposed Teammate in it is a **Candidate** — never a *draft*, which is
   already the Turn text shown before it becomes a Message.
 : *Avoid*: request, application, pending Teammate, draft.
