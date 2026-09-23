@@ -61,12 +61,13 @@ Teammate already covers it.
 
 - **Reuse a general role** (a Skeptic, an Editor, a Researcher). A Teammate can
   belong to several Teams, so reuse costs nothing extra.
-- **Create a dedicated Teammate for any character.** One Teammate keeps one
-  memory across every Room it is in, so a Teammate playing a hostile interviewer
-  in one Room will carry that into the next. A character is anyone the Human
-  talks *to* rather than works *with*: a counterparty, an interviewer, a
-  customer, a stakeholder in a drill, a Study Buddy. If in doubt, create it
-  dedicated.
+- **Create a dedicated Teammate for any character.** A Teammate's identity is
+  the same in every Room it is in, even though each Room now holds its own
+  separate conversation: a Teammate playing a hostile interviewer in one Room
+  brings that same persona into the next Room it is invited to. A character is
+  anyone the Human talks *to* rather than works *with*: a counterparty, an
+  interviewer, a customer, a stakeholder in a drill, a Study Buddy. If in
+  doubt, create it dedicated.
 - **Do not reuse a Teammate the Human talks to privately** for a group
   simulation. Its private conversation will leak into the scene.
 - **Do not reuse a specialist outside its field.** A Specialist with a library
