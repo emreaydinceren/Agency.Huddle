@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Services;
@@ -94,6 +95,7 @@ public sealed partial class ChatService
     private readonly IChatStore store;
     private readonly RoomEvents events;
     private readonly IMentionAliasSource aliasSource;
+    private readonly ProposalStore proposals;
     private readonly ILogger<ChatService> logger;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> postLocks = new(StringComparer.Ordinal);
 
@@ -114,6 +116,11 @@ public sealed partial class ChatService
     /// not match any Name directly.
     /// </param>
     /// <param name="options">Supplies the per-Room Budget, <see cref="TeamOptions.AgentMessageBudget"/>.</param>
+    /// <param name="proposals">
+    /// Holds each Room's pending Proposal (Spec §6.9). Dropped from <see cref="SetRoomArchivedAsync"/>
+    /// (archiving only, never unarchiving) and <see cref="DeleteRoomAsync"/>, after either succeeds -
+    /// Spec §12 F-16: a Room the sidebar no longer offers must not go on showing a Proposal card.
+    /// </param>
     /// <param name="logger">Used to log Room creation and Invitation events.</param>
     public ChatService(
         ITeamDirectory teamDirectory,
@@ -121,6 +128,7 @@ public sealed partial class ChatService
         RoomEvents events,
         IMentionAliasSource aliasSource,
         IOptions<TeamOptions> options,
+        ProposalStore proposals,
         ILogger<ChatService> logger)
     {
         ArgumentNullException.ThrowIfNull(teamDirectory);
@@ -128,6 +136,7 @@ public sealed partial class ChatService
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(aliasSource);
         ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(proposals);
         ArgumentNullException.ThrowIfNull(logger);
 
         this.teamDirectory = teamDirectory;
@@ -135,6 +144,7 @@ public sealed partial class ChatService
         this.events = events;
         this.aliasSource = aliasSource;
         this.agentMessageBudget = options.Value.AgentMessageBudget;
+        this.proposals = proposals;
         this.logger = logger;
     }
 
@@ -493,6 +503,14 @@ public sealed partial class ChatService
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
 
         await this.teamDirectory.SetRoomArchivedAsync(roomId, archived, ct);
+
+        // Never for unarchiving: an unarchived Room is exactly as live as it was, so a Proposal still
+        // pending in it is still answerable. Spec §12 F-16 only drops on archiving true and on delete.
+        if (archived)
+        {
+            this.proposals.Drop(roomId);
+        }
+
         ChatService.LogRoomArchived(this.logger, roomId, archived);
         this.events.PublishRoomsChanged();
 
@@ -514,6 +532,10 @@ public sealed partial class ChatService
 
         await this.teamDirectory.DeleteRoomAsync(roomId, ct);
         await this.store.DeleteAsync(roomId, ct);
+
+        // Spec §12 F-16: a deleted Room can never be Approved or Declined into, so any Proposal still
+        // pending in it is dropped along with everything else below.
+        this.proposals.Drop(roomId);
 
         // Both budgets and postLocks are keyed by roomId and now describe a Room that no longer
         // exists, so drop them. Drafts and RoomFollows are deliberately left untouched: both are

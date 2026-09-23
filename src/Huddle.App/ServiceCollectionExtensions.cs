@@ -105,6 +105,11 @@ public static class ServiceCollectionExtensions
         // constructed instance would cost nothing extra but would still be pointless duplication.
         services.AddSingleton<CandidateChecker>();
 
+        // No interface, same reasoning as CandidateChecker just above: nothing needs to substitute
+        // this, and its only dependency, RoomEvents, is already registered as a singleton at the top
+        // of this method, so construction order is safe regardless of where in this list it sits.
+        services.AddSingleton<ProposalStore>();
+
         // No interface: nothing needs to substitute this, and CSharpPrinciples.md says not to add
         // abstraction a feature has not asked for. This is state the app writes (a chosen theme, a
         // few token overrides), not host-supplied configuration, so it is registered here rather

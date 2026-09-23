@@ -23,7 +23,8 @@ public sealed class ToolNamesTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var aliasSource = new FakeMentionAliasSource();
-        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), NullLogger<ChatService>.Instance);
+        var proposals = new ProposalStore(events);
+        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
 
         var follows = new RoomFollows();
         var checker = new CandidateChecker(personaStore, directory, gateway);
@@ -36,6 +37,7 @@ public sealed class ToolNamesTests
             new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new ValidateTeammateTool(checker, new FakePromptSource()),
+            new ProposeTeammatesTool(proposals, checker, personaStore, directory, Options.Create(new TeamOptions()), TimeProvider.System, "caller-id", new FakePromptSource()),
             new GetHelpTool([], new FakePromptSource(), "mcp__team__"),
         };
 
@@ -46,6 +48,7 @@ public sealed class ToolNamesTests
         Assert.Equal("follow_room", tools[4].Name);
         Assert.Equal("unfollow_room", tools[5].Name);
         Assert.Equal("validate_teammate", tools[6].Name);
-        Assert.Equal("get_help", tools[7].Name);
+        Assert.Equal("propose_teammates", tools[7].Name);
+        Assert.Equal("get_help", tools[8].Name);
     }
 }

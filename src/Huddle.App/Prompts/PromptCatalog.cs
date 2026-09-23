@@ -466,5 +466,19 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.proposeTeammates.description",
+            Label: "propose_teammates description",
+            HelperText:
+                "The one-line job description a model reads for the propose_teammates tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Asks the Human to approve new Teammates. Give the id of the Room you are talking in and one to four Candidates. Nothing is created until the Human approves; you will be told the outcome in that Room.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
     ];
 }

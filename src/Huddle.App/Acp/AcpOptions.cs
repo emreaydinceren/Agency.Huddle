@@ -90,4 +90,12 @@ public sealed class AcpOptions
     /// Information-only path a Human pressing Stop takes.
     /// </remarks>
     public int TurnIdleTimeoutSeconds { get; set; } = 180;
+
+    /// <summary>
+    /// The most Teammates this installation allows - every loaded <see cref="PersonaStore"/> entry,
+    /// rejected files excluded (Spec §7.3). Checked by <c>propose_teammates</c> and again at Approve,
+    /// never on the Teammate card, which has no count of its own to enforce against. Zero or less
+    /// disables the limit entirely.
+    /// </summary>
+    public int MaxTeammates { get; set; } = 8;
 }

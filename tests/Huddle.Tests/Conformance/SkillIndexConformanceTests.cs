@@ -16,10 +16,11 @@ public sealed class SkillIndexConformanceTests
     /// <summary>
     /// A Persona whose frontmatter assigns <c>team-building</c> is offered the prefixed
     /// <c>read_skill</c> tool and its appended system prompt lists that Skill in its Skill Index.
-    /// Also proves <c>validate_teammate</c> gating end to end (Task 9.3): <c>team-building</c>'s own
-    /// <c>tools:</c> list grants it (Spec §6.8), so the real <see cref="DotAcpAgentHostFactory"/>
-    /// offers it here and its full <c>mcp__team__</c>-prefixed name reaches the appended prompt's
-    /// <c>{{toolNames}}</c> list, the same place <c>read_skill</c>'s name does.
+    /// Also proves <c>validate_teammate</c> and <c>propose_teammates</c> gating end to end (Task
+    /// 9.3, Task 10.2): <c>team-building</c>'s own <c>tools:</c> list grants both (Spec §6.8, §6.9),
+    /// so the real <see cref="DotAcpAgentHostFactory"/> offers them here and their full
+    /// <c>mcp__team__</c>-prefixed names reach the appended prompt's <c>{{toolNames}}</c> list, the
+    /// same place <c>read_skill</c>'s name does.
     /// </summary>
     [Fact]
     public async Task StartAsync_PersonaWithTeamBuilding_PromptNamesReadSkillAndTeamBuilding()
@@ -35,15 +36,16 @@ public sealed class SkillIndexConformanceTests
 
         Assert.Contains("mcp__team__read_skill", appendedPrompt, StringComparison.Ordinal);
         Assert.Contains("mcp__team__validate_teammate", appendedPrompt, StringComparison.Ordinal);
+        Assert.Contains("mcp__team__propose_teammates", appendedPrompt, StringComparison.Ordinal);
         Assert.Contains("- team-building: ", appendedPrompt, StringComparison.Ordinal);
     }
 
     /// <summary>
     /// A Persona with no <c>skills</c> field gets an appended system prompt with no Skill Index block
     /// at all and no mention of <c>read_skill</c> anywhere - Spec §14 D-11's whole point. Also proves
-    /// the other half of <c>validate_teammate</c> gating (Task 9.3): with no Skill granting it, the
-    /// real <see cref="DotAcpAgentHostFactory"/> never offers it, so its name never reaches the
-    /// appended prompt's <c>{{toolNames}}</c> list either.
+    /// the other half of <c>validate_teammate</c> and <c>propose_teammates</c> gating (Task 9.3, Task
+    /// 10.2): with no Skill granting either, the real <see cref="DotAcpAgentHostFactory"/> never
+    /// offers them, so neither name ever reaches the appended prompt's <c>{{toolNames}}</c> list.
     /// </summary>
     [Fact]
     public async Task StartAsync_PersonaWithoutSkills_PromptHasNoSkillsBlockAndNoReadSkill()
@@ -57,6 +59,7 @@ public sealed class SkillIndexConformanceTests
 
         Assert.DoesNotContain("read_skill", appendedPrompt, StringComparison.Ordinal);
         Assert.DoesNotContain("validate_teammate", appendedPrompt, StringComparison.Ordinal);
+        Assert.DoesNotContain("propose_teammates", appendedPrompt, StringComparison.Ordinal);
         Assert.DoesNotContain("You hold these Skills", appendedPrompt, StringComparison.Ordinal);
     }
 

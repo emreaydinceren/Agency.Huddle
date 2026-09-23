@@ -5,7 +5,7 @@ which implements [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.
 and task numbers match the plan exactly; the plan holds each task's Goal, Read first,
 Deliverable and Acceptance.
 
-**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 49 Done.
+**Status as of 2026-09-22:** 90 tasks · 0 In Progress · 55 Done.
 
 ## How to update this tracker
 
@@ -86,12 +86,12 @@ Deliverable and Acceptance.
 | 9.3.t Test: `validate_teammate` (red) | | | ✔ |
 | 9.3.i Implement `ValidateTeammateTool` | | | ✔ |
 | **D10. Proposals and `propose_teammates`** | | | |
-| 10.1.t Test: `ProposalStore` (red) | ✔ | | |
-| 10.1.i Implement `ProposalStore` | ✔ | | |
-| 10.2.t Test: `propose_teammates` (red) | ✔ | | |
-| 10.2.i Implement `ProposeTeammatesTool` and `MaxTeammates` | ✔ | | |
-| 10.3.t Test: archiving or deleting a Room drops its Proposal (red) | ✔ | | |
-| 10.3.i Drop on archive and delete | ✔ | | |
+| 10.1.t Test: `ProposalStore` (red) | | | ✔ |
+| 10.1.i Implement `ProposalStore` | | | ✔ |
+| 10.2.t Test: `propose_teammates` (red) | | | ✔ |
+| 10.2.i Implement `ProposeTeammatesTool` and `MaxTeammates` | | | ✔ |
+| 10.3.t Test: archiving or deleting a Room drops its Proposal (red) | | | ✔ |
+| 10.3.i Drop on archive and delete | | | ✔ |
 | **D11. Approve and Decline** | | | |
 | 11.1.t Functional test: Approve creates all and wakes the proposer (red) | ✔ | | |
 | 11.1.i Implement `ApproveAsync` (happy path) | ✔ | | |

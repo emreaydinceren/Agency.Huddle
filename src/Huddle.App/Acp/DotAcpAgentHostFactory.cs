@@ -137,6 +137,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             ActivatorUtilities.CreateInstance<UnfollowRoomTool>(this.serviceProvider, agentId),
             readSkillTool,
             ActivatorUtilities.CreateInstance<ValidateTeammateTool>(this.serviceProvider),
+            ActivatorUtilities.CreateInstance<ProposeTeammatesTool>(this.serviceProvider, agentId),
         ];
 
         // Skill gating happens before GetHelpTool is built, so get_help's own listing and the system
