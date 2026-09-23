@@ -162,4 +162,74 @@ public sealed class ProtocolJsonTests
 
         Assert.Throws<JsonException>(() => ProtocolJson.Deserialize(json));
     }
+
+    /// <summary>
+    /// A <see cref="ReadTranscript"/> with no <see cref="ReadTranscript.AfterMessageId"/> pins the
+    /// exact wire shape (RS §6.5): no <c>afterMessageId</c> key at all, since
+    /// <see cref="ProtocolJson.Options"/> sets <c>DefaultIgnoreCondition = WhenWritingNull</c>
+    /// (correction item 24: property order, version last, matches what <see cref="ProtocolJson"/>
+    /// really emits).
+    /// </summary>
+    [Fact]
+    public void ReadTranscript_SerialisesToLiteralJson()
+    {
+        ReadTranscript read = new("r1", "room1", null, "m9", 20);
+
+        string json = ProtocolJson.Serialize(read);
+
+        Assert.Equal(
+            "{\"type\":\"readTranscript\",\"requestId\":\"r1\",\"roomId\":\"room1\",\"beforeMessageId\":\"m9\",\"max\":20,\"version\":3}",
+            json);
+
+        ReadTranscript result = Assert.IsType<ReadTranscript>(ProtocolJson.Deserialize(json));
+        Assert.Equal(read, result);
+    }
+
+    /// <summary>A <see cref="ReadTranscript"/> with <see cref="ReadTranscript.AfterMessageId"/> set carries it on the wire, between <c>roomId</c> and <c>beforeMessageId</c>.</summary>
+    [Fact]
+    public void ReadTranscript_WithAfter_SerialisesIt()
+    {
+        ReadTranscript read = new("r1", "room1", "m2", "m9", 20);
+
+        string json = ProtocolJson.Serialize(read);
+
+        Assert.Equal(
+            "{\"type\":\"readTranscript\",\"requestId\":\"r1\",\"roomId\":\"room1\",\"afterMessageId\":\"m2\",\"beforeMessageId\":\"m9\",\"max\":20,\"version\":3}",
+            json);
+
+        ReadTranscript result = Assert.IsType<ReadTranscript>(ProtocolJson.Deserialize(json));
+        Assert.Equal(read, result);
+    }
+
+    /// <summary>A <see cref="TranscriptTail"/> with one <see cref="ChatMessage"/> pins the exact wire shape (RS §6.5).</summary>
+    [Fact]
+    public void TranscriptTail_SerialisesToLiteralJson()
+    {
+        ChatMessage message = new("m5", new DateTimeOffset(2026, 9, 22, 16, 2, 11, TimeSpan.Zero), "human", "You", "go with option 2");
+        TranscriptTail tail = new("r1", "room1", new List<ChatMessage> { message }, 12);
+
+        string json = ProtocolJson.Serialize(tail);
+
+        Assert.Equal(
+            "{\"type\":\"transcriptTail\",\"requestId\":\"r1\",\"roomId\":\"room1\"," +
+            "\"messages\":[{\"id\":\"m5\",\"timestamp\":\"2026-09-22T16:02:11+00:00\",\"senderId\":\"human\",\"senderName\":\"You\",\"text\":\"go with option 2\"}]," +
+            "\"omitted\":12,\"version\":3}",
+            json);
+
+        TranscriptTail result = Assert.IsType<TranscriptTail>(ProtocolJson.Deserialize(json));
+
+        // Not Assert.Equal(tail, result): Messages is a List<ChatMessage>, which has no value
+        // equality of its own, so record equality would compare list references, not content.
+        Assert.Equal(tail.RequestId, result.RequestId);
+        Assert.Equal(tail.RoomId, result.RoomId);
+        Assert.Equal(tail.Omitted, result.Omitted);
+        Assert.Equal(tail.Messages, result.Messages);
+    }
+
+    /// <summary>Adding the two RS §6.5 Envelopes is additive, so it costs no <see cref="ProtocolVersion"/> bump.</summary>
+    [Fact]
+    public void ProtocolVersion_IsStill3()
+    {
+        Assert.Equal(3, ProtocolVersion.Current);
+    }
 }
