@@ -127,9 +127,9 @@ public sealed class RoomSessionPoolTests
         var persona = new Persona("nova", "You are Nova.", Model: "missing-model");
         var roomB = GroupRoom("room-b", "Room B");
 
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
         await using var runner = CreateRunner(server, persona, factory);
-        runner.StatusChanged += statuses.Add;
+        runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, [roomB], ct);
 
         Assert.Empty(factory.Host!.Sessions);
@@ -137,10 +137,10 @@ public sealed class RoomSessionPoolTests
         await server.SendAsync(Posted(roomB, "hi"), ct);
         await server.ReceiveUntilAsync<PostMessage>(ct);
 
-        Assert.Contains(
-            statuses,
+        await statuses.AssertContainsEventuallyAsync(
             status => status.State == PersonaState.Degraded && status.Reason is not null
-                && status.Reason.Contains("missing-model", StringComparison.Ordinal));
+                && status.Reason.Contains("missing-model", StringComparison.Ordinal),
+            ct);
     }
 
     /// <summary>In shared mode (finding P-9), every Room routes through the one shared session.</summary>

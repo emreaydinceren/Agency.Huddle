@@ -1812,17 +1812,17 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.Models = [new AgentModelOption("claude-3", "Claude 3", null)];
         var persona = new Persona("nova", "You are Nova.", Model: "claude-99");
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
-        agentHost.StatusChanged += statuses.Add;
+        agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
         await WaitForDirectRoomAsync(fixture, "nova", ct);
 
-        Assert.Contains(
-            statuses,
-            s => s.State == PersonaState.Degraded && s.Reason!.Contains("claude-99", StringComparison.Ordinal));
+        await statuses.AssertContainsEventuallyAsync(
+            s => s.State == PersonaState.Degraded && s.Reason!.Contains("claude-99", StringComparison.Ordinal),
+            ct);
     }
 
     /// <summary>
@@ -1839,10 +1839,10 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         var persona = new Persona("nova", "You are Nova.", Model: "claude-99");
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
-        agentHost.StatusChanged += statuses.Add;
+        agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
         await WaitForDirectRoomAsync(fixture, "nova", ct);
@@ -1850,7 +1850,7 @@ public sealed class PersonaRunnerTests
         // Bounded grace period: give a misbehaving check every chance to report anyway.
         await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
 
-        Assert.Empty(statuses);
+        Assert.Empty(statuses.Snapshot());
     }
 
     /// <summary>A Turn whose prompt throws is reported as Degraded, naming it as a single failure.</summary>
@@ -1864,27 +1864,21 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
         var persona = new Persona("nova", "You are Nova.");
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
-        agentHost.StatusChanged += statuses.Add;
+        agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
         var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (!statuses.Exists(s => s.State == PersonaState.Degraded) && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
-
-        Assert.Contains(
-            statuses,
+        await statuses.AssertContainsEventuallyAsync(
             s => s.State == PersonaState.Degraded
                 && s.Reason!.Contains("A Turn in Room", StringComparison.Ordinal)
-                && s.Reason.Contains("failed —", StringComparison.Ordinal));
+                && s.Reason.Contains("failed —", StringComparison.Ordinal),
+            ct);
     }
 
     /// <summary>
@@ -1903,10 +1897,10 @@ public sealed class PersonaRunnerTests
         factory.Session.EnqueueFailure(new InvalidOperationException("two"));
         factory.Session.EnqueueFailure(new InvalidOperationException("three"));
         var persona = new Persona("nova", "You are Nova.");
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
-        agentHost.StatusChanged += statuses.Add;
+        agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
         var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
@@ -1922,10 +1916,10 @@ public sealed class PersonaRunnerTests
             await Task.Delay(20, ct);
         }
 
-        Assert.Contains(
-            statuses,
+        await statuses.AssertContainsEventuallyAsync(
             s => s.State == PersonaState.Degraded &&
-                s.Reason!.Contains("3 consecutive Turns have failed", StringComparison.Ordinal));
+                s.Reason!.Contains("3 consecutive Turns have failed", StringComparison.Ordinal),
+            ct);
     }
 
     /// <summary>A Turn that completes normally clears whatever Degraded state a prior failure reported.</summary>
@@ -1940,10 +1934,10 @@ public sealed class PersonaRunnerTests
         factory.Session.EnqueueFailure(new InvalidOperationException("boom"));
         factory.Session.EnqueueReply("recovered");
         var persona = new Persona("nova", "You are Nova.");
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
-        agentHost.StatusChanged += statuses.Add;
+        agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
         var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
@@ -1952,15 +1946,16 @@ public sealed class PersonaRunnerTests
         await chat.PostAsync(roomId, KnownIds.Human, "first message", ct: ct);
         await chat.PostAsync(roomId, KnownIds.Human, "second message", ct: ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while ((statuses.Count == 0 || statuses[^1].State != PersonaState.Online) && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        // Completed from the StatusChanged handler the moment an Online lands after a Degraded - the
+        // recovery this test is about - rather than polled.
+        var seen = await statuses.WaitForAsync(
+            static history => history.Count > 0 && history[^1].State == PersonaState.Online
+                && history.Any(static status => status.State == PersonaState.Degraded),
+            ct);
 
-        Assert.Contains(statuses, s => s.State == PersonaState.Degraded);
-        Assert.NotEmpty(statuses);
-        Assert.Equal(PersonaState.Online, statuses[^1].State);
+        Assert.Contains(seen, s => s.State == PersonaState.Degraded);
+        Assert.NotEmpty(seen);
+        Assert.Equal(PersonaState.Online, seen[^1].State);
     }
 
     /// <summary>An <see cref="AgentDisconnectedException"/> from a Turn is reported as Offline.</summary>
@@ -1974,23 +1969,17 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueFailure(new AgentDisconnectedException());
         var persona = new Persona("nova", "You are Nova.");
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
-        agentHost.StatusChanged += statuses.Add;
+        agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
         var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (!statuses.Exists(s => s.State == PersonaState.Offline) && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
-
-        Assert.Contains(statuses, s => s.State == PersonaState.Offline);
+        await statuses.AssertContainsEventuallyAsync(s => s.State == PersonaState.Offline, ct);
     }
 
     /// <summary>The three StopReasons a Turn can end in without producing a reply are all reported as Degraded.</summary>
@@ -2006,25 +1995,19 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyEndingIn(reason, "partial");
         var persona = new Persona("nova", "You are Nova.");
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
-        agentHost.StatusChanged += statuses.Add;
+        agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
         var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (!statuses.Exists(s => s.State == PersonaState.Degraded) && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
-
-        Assert.Contains(
-            statuses,
-            s => s.State == PersonaState.Degraded && s.Reason!.Contains("without a reply", StringComparison.Ordinal));
+        await statuses.AssertContainsEventuallyAsync(
+            s => s.State == PersonaState.Degraded && s.Reason!.Contains("without a reply", StringComparison.Ordinal),
+            ct);
     }
 
     /// <summary>The three <see cref="StopReason"/> values <see cref="EachStopReason_ReportsDegraded"/> exercises.</summary>
@@ -2048,10 +2031,10 @@ public sealed class PersonaRunnerTests
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "never posted");
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
-        runner.StatusChanged += statuses.Add;
+        runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -2068,7 +2051,7 @@ public sealed class PersonaRunnerTests
         // Bounded grace period for a misbehaving Stop to report something anyway.
         await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
 
-        Assert.Empty(statuses);
+        Assert.Empty(statuses.Snapshot());
     }
 
     /// <summary>
@@ -2090,10 +2073,10 @@ public sealed class PersonaRunnerTests
         factory.Session.EnqueueFailure(new InvalidOperationException("four"));
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
-        runner.StatusChanged += statuses.Add;
+        runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         // Turn 1: fails.
@@ -2117,10 +2100,10 @@ public sealed class PersonaRunnerTests
         await server.SendAsync(NewMessagePosted("room-1", "four"), ct);
         await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
 
-        Assert.Contains(
-            statuses,
+        await statuses.AssertContainsEventuallyAsync(
             s => s.State == PersonaState.Degraded &&
-                s.Reason!.Contains("3 consecutive Turns have failed", StringComparison.Ordinal));
+                s.Reason!.Contains("3 consecutive Turns have failed", StringComparison.Ordinal),
+            ct);
     }
 
     /// <summary>Spending the per-Persona token Budget is reported as Degraded.</summary>
@@ -2140,10 +2123,10 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyWithUsage([150], "first reply");
         var persona = new Persona("nova", "You are Nova.");
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
-        agentHost.StatusChanged += statuses.Add;
+        agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
         var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
 
@@ -2153,15 +2136,9 @@ public sealed class PersonaRunnerTests
 
         await chat.PostAsync(room.Id, friendId, "@nova two", ct: ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (!statuses.Exists(s => s.State == PersonaState.Degraded) && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
-
-        Assert.Contains(
-            statuses,
-            s => s.State == PersonaState.Degraded && s.Reason!.Contains("token Budget", StringComparison.Ordinal));
+        await statuses.AssertContainsEventuallyAsync(
+            s => s.State == PersonaState.Degraded && s.Reason!.Contains("token Budget", StringComparison.Ordinal),
+            ct);
     }
 
     /// <summary>A Human Message clears the Degraded state a spent token Budget reported.</summary>
@@ -2182,10 +2159,10 @@ public sealed class PersonaRunnerTests
         factory.Session.EnqueueReplyWithUsage([150], "first reply");
         factory.Session.EnqueueReply("after the human spoke");
         var persona = new Persona("nova", "You are Nova.");
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
-        agentHost.StatusChanged += statuses.Add;
+        agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
         var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
 
@@ -2194,13 +2171,7 @@ public sealed class PersonaRunnerTests
         await WaitForHistoryCountAsync(store, room.Id, 2, ct);
 
         await chat.PostAsync(room.Id, friendId, "@nova two", ct: ct);
-        var degradedDeadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (!statuses.Exists(s => s.State == PersonaState.Degraded) && DateTimeOffset.UtcNow < degradedDeadline)
-        {
-            await Task.Delay(20, ct);
-        }
-
-        Assert.Contains(statuses, s => s.State == PersonaState.Degraded);
+        await statuses.AssertContainsEventuallyAsync(s => s.State == PersonaState.Degraded, ct);
 
         await chat.PostAsync(room.Id, KnownIds.Human, "@nova carry on", ct: ct);
 
@@ -2209,7 +2180,8 @@ public sealed class PersonaRunnerTests
         var history = await WaitForHistoryCountAsync(store, room.Id, 5, ct);
 
         Assert.Equal("after the human spoke", history[^1].Text);
-        Assert.Equal(PersonaState.Online, statuses[^1].State);
+        var settled = await statuses.WaitForAsync(static history => history.Count > 0 && history[^1].State == PersonaState.Online, ct);
+        Assert.Equal(PersonaState.Online, settled[^1].State);
     }
 
     /// <summary>
@@ -2235,10 +2207,10 @@ public sealed class PersonaRunnerTests
             PipeName = server.PipeName,
             Acp = new AcpOptions { TurnIdleTimeoutSeconds = 5 },
         });
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger);
-        runner.StatusChanged += statuses.Add;
+        runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -2262,7 +2234,7 @@ public sealed class PersonaRunnerTests
         Assert.Contains(
             logger.Entries,
             entry => entry.Level == LogLevel.Information && entry.Message.Contains("was stopped", StringComparison.Ordinal));
-        Assert.DoesNotContain(statuses, s => s.State == PersonaState.Degraded);
+        Assert.DoesNotContain(statuses.Snapshot(), s => s.State == PersonaState.Degraded);
     }
 
     /// <summary>
@@ -2287,23 +2259,17 @@ public sealed class PersonaRunnerTests
             PipeName = server.PipeName,
             Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 },
         });
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
-        runner.StatusChanged += statuses.Add;
+        runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(8);
-        while (!statuses.Exists(s => s.State == PersonaState.Degraded) && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(50, ct);
-        }
-
-        Assert.Contains(
-            statuses,
-            s => s.State == PersonaState.Degraded && s.Reason!.Contains("for 1 seconds", StringComparison.Ordinal));
+        await statuses.AssertContainsEventuallyAsync(
+            s => s.State == PersonaState.Degraded && s.Reason!.Contains("for 1 seconds", StringComparison.Ordinal),
+            ct, TimeSpan.FromSeconds(8));
     }
 
     /// <summary>
@@ -2393,10 +2359,10 @@ public sealed class PersonaRunnerTests
             PipeName = server.PipeName,
             Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 },
         });
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
-        runner.StatusChanged += statuses.Add;
+        runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "one"), ct);
@@ -2408,10 +2374,10 @@ public sealed class PersonaRunnerTests
         await server.SendAsync(NewMessagePosted("room-1", "three"), ct);
         await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
 
-        Assert.Contains(
-            statuses,
+        await statuses.AssertContainsEventuallyAsync(
             s => s.State == PersonaState.Degraded &&
-                s.Reason!.Contains("3 consecutive Turns have failed", StringComparison.Ordinal));
+                s.Reason!.Contains("3 consecutive Turns have failed", StringComparison.Ordinal),
+            ct);
     }
 
     /// <summary>
@@ -2435,10 +2401,10 @@ public sealed class PersonaRunnerTests
             PipeName = server.PipeName,
             Acp = new AcpOptions { TurnIdleTimeoutSeconds = 2 },
         });
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
-        runner.StatusChanged += statuses.Add;
+        runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -2446,7 +2412,7 @@ public sealed class PersonaRunnerTests
         var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
 
         Assert.Equal(string.Concat(chunks), posted.Text);
-        Assert.DoesNotContain(statuses, s => s.State == PersonaState.Degraded);
+        Assert.DoesNotContain(statuses.Snapshot(), s => s.State == PersonaState.Degraded);
     }
 
     /// <summary>A bound of zero or less disables the idle timeout entirely, exactly as <see cref="AcpOptions.TokenBudget"/>'s own zero-disables convention.</summary>
@@ -2465,10 +2431,10 @@ public sealed class PersonaRunnerTests
             PipeName = server.PipeName,
             Acp = new AcpOptions { TurnIdleTimeoutSeconds = 0 },
         });
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
-        runner.StatusChanged += statuses.Add;
+        runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -2476,7 +2442,7 @@ public sealed class PersonaRunnerTests
         var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
 
         Assert.Equal("still here", posted.Text);
-        Assert.DoesNotContain(statuses, s => s.State == PersonaState.Degraded);
+        Assert.DoesNotContain(statuses.Snapshot(), s => s.State == PersonaState.Degraded);
     }
 
     /// <summary>
@@ -2499,10 +2465,10 @@ public sealed class PersonaRunnerTests
             PipeName = server.PipeName,
             Acp = new AcpOptions { TurnIdleTimeoutSeconds = 5 },
         });
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
-        runner.StatusChanged += statuses.Add;
+        runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
@@ -2515,7 +2481,7 @@ public sealed class PersonaRunnerTests
 
         await runner.StopAsync();
 
-        Assert.Empty(statuses);
+        Assert.Empty(statuses.Snapshot());
     }
 
     /// <summary>
@@ -2533,23 +2499,17 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
-        runner.StatusChanged += statuses.Add;
+        runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         // Kills the server side of the pipe without the runner's own shutdown ever running, so the
         // read loop's stream.ReadAsync throws instead of observing a cooperative cancellation.
         await server.DisposeAsync();
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (!statuses.Exists(s => s.State == PersonaState.Offline) && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
-
-        Assert.Contains(statuses, s => s.State == PersonaState.Offline);
+        await statuses.AssertContainsEventuallyAsync(s => s.State == PersonaState.Offline, ct);
     }
 
     /// <summary>
@@ -2601,10 +2561,10 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "never posted");
         var persona = new Persona("nova", "You are Nova.");
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
-        agentHost.StatusChanged += statuses.Add;
+        agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
 
         var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
@@ -2614,13 +2574,7 @@ public sealed class PersonaRunnerTests
         await Task.Delay(TimeSpan.FromMilliseconds(50), ct);
         factory.Session.FaultEvents(new IOException("adapter process died"));
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (!statuses.Exists(s => s.State == PersonaState.Offline) && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
-
-        Assert.Contains(statuses, s => s.State == PersonaState.Offline);
+        await statuses.AssertContainsEventuallyAsync(s => s.State == PersonaState.Offline, ct);
     }
 
     /// <summary>An ordinary shutdown reports nothing - the regression that would otherwise paint every tile red on Ctrl-C.</summary>
@@ -2633,16 +2587,16 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         var persona = new Persona("nova", "You are Nova.");
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         var agentHost = CreateHost(fixture, persona, factory);
-        agentHost.StatusChanged += statuses.Add;
+        agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
         await WaitForDirectRoomAsync(fixture, "nova", ct);
 
         await agentHost.DisposeAsync();
 
-        Assert.Empty(statuses);
+        Assert.Empty(statuses.Snapshot());
     }
 
     /// <summary>A refused post naming a real misconfiguration - not a Member, an unknown Room, or a bad Message - is reported as Degraded.</summary>
@@ -2656,23 +2610,17 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
-        runner.StatusChanged += statuses.Add;
+        runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(new ProtocolError(ErrorCodes.NotMember, "Not a member of that room."), ct);
 
-        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (!statuses.Exists(s => s.State == PersonaState.Degraded) && DateTimeOffset.UtcNow < deadline)
-        {
-            await Task.Delay(20, ct);
-        }
-
-        Assert.Contains(
-            statuses,
-            s => s.State == PersonaState.Degraded && s.Reason!.Contains("Not a member", StringComparison.Ordinal));
+        await statuses.AssertContainsEventuallyAsync(
+            s => s.State == PersonaState.Degraded && s.Reason!.Contains("Not a member", StringComparison.Ordinal),
+            ct);
     }
 
     /// <summary>ADR-0006 already owns the spent-Budget surface, so that refusal alone must report nothing.</summary>
@@ -2686,10 +2634,10 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
 
         await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
-        runner.StatusChanged += statuses.Add;
+        runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(new ProtocolError(ErrorCodes.BudgetExhausted, "The room has spent its budget."), ct);
@@ -2697,7 +2645,7 @@ public sealed class PersonaRunnerTests
         // Bounded grace period for a misbehaving refusal to report something anyway.
         await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
 
-        Assert.Empty(statuses);
+        Assert.Empty(statuses.Snapshot());
     }
 
     /// <summary>
