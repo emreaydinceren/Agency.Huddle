@@ -402,6 +402,9 @@ public sealed partial class DotAcpAgentHost(
 
         if (activeProcess is not null)
         {
+            // Disposing the connection leaves the agent's stdin open; closing it is the agent's
+            // cue to exit, so the grace period below is spent only on an agent that ignores it.
+            activeProcess.StandardInput.Dispose();
             await Task.WhenAny(activeProcess.Exited, Task.Delay(TimeSpan.FromSeconds(3))).ConfigureAwait(false);
 
             if (!activeProcess.Exited.IsCompleted)
