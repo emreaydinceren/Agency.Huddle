@@ -91,6 +91,11 @@ Agent takes a single action.
 | T18 | An Agent calls `list_tasks` with `assignee: "me"` | It gets its own Active Tasks, one line each |
 | T19 | The Human clicks **Make a copy** | An unsaved editor opens with `Copy of …`, in Backlog. Nothing is written until Save |
 | T20 | A task file has `status: Doing` | It is listed under *Tasks that didn't load*, with the reason. It isn't silently dropped |
+| T21 | The Human clicks the copy button next to `PLAT-0042` in the Task panel | `PLAT-0042` is on the clipboard, and a toast says *"Copied PLAT-0042"*. Pasting it into a chat Message sends the plain id |
+| T22 | A Message from anyone (the Human, an Agent or a wake-up) contains `PLAT-0042` | It is shown as a link with the Task's title as a tooltip. Clicking it opens `/tasks/item/PLAT-0042` with the Task's panel open. `UTF-8` in the same Message stays plain text |
+| T23 | The Human types `see #saml` in the composer | A picker lists up to 8 matching Tasks. Arrow keys move, and Enter or Tab replaces `#saml` with `PLAT-0042 `. **Enter doesn't send the Message while the picker is open** |
+| T24 | The Human types `# Heading`, or `C#` | No picker opens. `#` followed by a space, or `#` inside a word, is ordinary text |
+| T25 | Huddle is opened as `http://<host>:port` from another machine | The copy button still works through the fallback. If both copy methods fail, the toast says so and the id is left selected for Ctrl+C |
 
 ---
 
@@ -217,6 +222,9 @@ Agent takes a single action.
 | `Prompts/PromptCatalog.cs`, `prompts.default.json` | Six tool descriptions, `task.wake.message`, `getHelp.tasks`, one clause in `systemPrompt.tools` | §11.9 |
 | `Acp/Tools/GetHelpTool.cs` (:113-127) | Add `getHelp.tasks` to `sections` when Tasks is enabled | §11.9 |
 | `Components/Layout/MainLayout.razor` (between :22 and :23) | `<TaskViewNav />` | §13.1 |
+| `Services/MarkdownRenderer.cs` | Recognise Task ids in rendered text and link them; allow the `/tasks/item/` link prefix through `IsSafe` | §13.13.2 |
+| `Components/Shared/MessageList.razor` (:13 and :24, both `ToHtml` calls) | Inject `TaskStore` and pass it to `MarkdownRenderer.ToHtml` as the resolver | §13.13.2 |
+| `Components/Shared/Composer.razor`, `wwwroot/app.js` (`teamComposer`) | The `#` Task picker | §13.13.4 |
 | `wwwroot/app.js` | `window.huddleStorage` get/set | §13.9 |
 | `wwwroot/app.css` | Task styles, using `--mud-*` variables only | §13.10 |
 | Golden files, `PromptGoldenTests.cs` (:59-82), `PromptDefaultsTests.cs` (:31-42), `ToolNamesTests.cs` | Regenerate or extend | §16 |
@@ -229,7 +237,8 @@ No package is added, so `Directory.Packages.props` doesn't change.
 | --- | --- | --- |
 | `ServiceCollectionExtensions.cs` | WS3 (TaskService) registers every Tasks singleton at once, with stubs if needed | Hand WS3 the line you need |
 | `PromptCatalog.cs`, `prompts.default.json`, goldens | WS5 (App Tools) | WS4's `task.wake.message` is added by WS5, and WS4 reads it by key |
-| `app.css`, `app.js` | WS7 (UI shell) | Later UI workstreams append to their own clearly marked `/* Tasks: … */` blocks |
+| `app.css`, `app.js` | WS7 (UI shell) | Later UI workstreams append to their own clearly marked `/* Tasks: … */` blocks. WS11 extends `teamComposer` in place, because the picker changes its Enter handling |
+| `MarkdownRenderer.cs`, `MessageList.razor`, `Composer.razor` | WS11 | Shared with the chat. Keep every existing `MarkdownRendererTests` test passing unchanged |
 | `MainLayout.razor` | WS7 | — |
 
 ---
@@ -1141,13 +1150,13 @@ checks each description.
 | Key | Timing | Content (the author writes the final text; this is the brief) |
 | --- | --- | --- |
 | `tool.createTask.description` | NextSession | What a Task is, *when* to create one (to hand work to a Teammate durably, or to track your own multi-step work), that the assignee is woken, and to pass `originRoomId` when acting in a Room |
-| `tool.getTask.description` | NextSession | Reads one Task, with an option for its Change log |
+| `tool.getTask.description` | NextSession | Reads one Task, with an option for its Change log. **Must also say:** *Task ids such as PLAT-0042 in Messages refer to Tasks; call get_task to read one* (§13.13) |
 | `tool.listTasks.description` | NextSession | Filters, and `assignee: "me"` to find your own work |
 | `tool.updateTask.description` | NextSession | Changing fields wakes the assignee unless it's you. Set status as you work (To Do → In Progress → Review → Done). Duplicate needs `duplicate_of` |
 | `tool.closeTask.description` | NextSession | Closing hides it from active lists, and is separate from Done |
 | `tool.reopenTask.description` | NextSession | — |
 | `task.wake.message` | Live | §10.5. Placeholders `assignee`, `taskId`, `title`, `actor`, `changes`, `status`, `team`, and all of them are required. HelperText explains that it is posted in a Room to wake the assignee |
-| `getHelp.tasks` | Live | A short section: Tasks, assignee wake-ups, and the six tools, named without a prefix |
+| `getHelp.tasks` | Live | A short section: Tasks, assignee wake-ups, and the six tools, named without a prefix. Also: *write a Task's id, for example PLAT-0042, to refer to it in a Message; the Human sees it as a link* |
 
 **`systemPrompt.tools`** (`PromptCatalog.cs:99-118`) gains one clause in the same style as the
 others: *"… to track work as Tasks and hand it to a Teammate …"*.
@@ -1804,6 +1813,196 @@ Each `catch` block needs its comment, because an empty catch fails the build.
 | Filters match nothing | *"No tasks match this View."* with **Reset filters** |
 | Search matches nothing | *"No tasks match '{text}'."* |
 
+### 13.13 Referencing a Task in chat
+
+**The id is the reference.** `PLAT-0042` is short, and readable by people and models. It never
+changes, even when the Task moves or is Closed (ADR-0025). Agents already pass it to `get_task`,
+and every wake-up Message contains it.
+
+Referencing a Task therefore needs three things, and none of them adds a new syntax or a new
+wire format:
+- **a way to get the id:** the copy button, or the `#` picker;
+- **a way to show it:** links in rendered Messages;
+- **somewhere a link goes:** a route that opens the Task.
+
+#### 13.13.1 The copy button
+
+- **Where it appears:** in `TaskDetail`'s header in both sizes, next to the id, as
+  `PLAT-0042` followed by a `MudIconButton Icon="@Icons.Material.Outlined.ContentCopy"
+  aria-label="Copy task id PLAT-0042"` inside a `MudTooltip Text="Copy id"`. Each Board card's
+  ⋮ menu (§13.4) and each List row also get a **Copy id** item.
+- **What it copies:** exactly `PLAT-0042`, with no title, no link and no markup (D-31).
+- **Copy link:** a small `MudMenu` next to the button offers **Copy link**, which copies
+  `NavigationManager.BaseUri + "tasks/item/PLAT-0042"` for pasting outside Huddle.
+- **The id text is selectable:** it carries `user-select: all`, so a single click selects it for
+  Ctrl+C if the button fails.
+- **Feedback:** `ISnackbar.Add("Copied PLAT-0042", Severity.Success, key: "copy")`. If the copy
+  failed, show `Severity.Warning` with *"Couldn't copy. The id is selected; press Ctrl+C."* and
+  select the text.
+
+**The helper, appended to `wwwroot/app.js`:**
+
+```js
+window.huddleClipboard = {
+  // Returns true only when the text really reached the clipboard.
+  copy: async function (text) {
+    if (window.isSecureContext && navigator.clipboard) {
+      try { await navigator.clipboard.writeText(text); return true; } catch { /* fall through */ }
+    }
+    const area = document.createElement("textarea");
+    area.value = text; area.setAttribute("readonly", ""); area.style.position = "fixed"; area.style.opacity = "0";
+    document.body.appendChild(area); area.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch { ok = false; }
+    area.remove();
+    return ok;
+  }
+};
+```
+
+> [!WARNING]
+> **`navigator.clipboard` exists only in a secure context:** `https`, or `localhost`. When Huddle is
+> opened as `http://<host>:port` from another machine on the network, the modern API is simply
+> missing. The `execCommand("copy")` fallback is what makes the button work there, which is use case
+> T25. Both paths need the click's *user activation*: call
+> `JS.InvokeAsync<bool>("huddleClipboard.copy", id)` **directly from the click handler**, with no
+> other `await` before it, so the Blazor Server round trip stays within the browser's activation
+> window.
+
+The helper's `style` assignments are layout, not colour, so they don't conflict with the
+no-colour-literal rules.
+
+#### 13.13.2 Task ids as links in rendered Messages
+
+`MarkdownRenderer` (`Services/MarkdownRenderer.cs`) gains an overload. The existing
+`ToHtml(string)` keeps working unchanged for its current tests.
+
+```csharp
+public interface ITaskReferenceResolver
+{
+    /// <summary>The Task with this id, or null. Called once per candidate token while rendering.</summary>
+    TaskReference? Resolve(TaskId id);
+}
+public sealed record TaskReference(TaskId Id, string Title, bool Closed);
+
+public static string ToHtml(string markdown, ITaskReferenceResolver? tasks);
+```
+
+`TaskStore` implements `ITaskReferenceResolver` with a dictionary lookup. `MessageList.razor`
+injects `TaskStore` and calls `ToHtml(message.Text, this.Tasks)` at both call sites (:13 and :24).
+The description Preview in `TaskDetail` (§13.6) makes the same call, so ids in descriptions become
+links too.
+
+**How recognition works.** Recognition is a rewrite of the parsed Markdig document, **not** a
+regex over the HTML:
+
+1. After `Markdown.Parse(markdown, Pipeline)`, walk `document.Descendants<LiteralInline>()`.
+2. **Skip** any literal whose ancestors include a `LinkInline`, whether an existing link or an
+   autolink. Code spans (`CodeInline`) and code blocks never produce `LiteralInline`s, so ids in
+   code stay plain automatically.
+3. In each remaining literal, find tokens matching
+   `(?<![A-Za-z0-9_-])([A-Z][A-Z0-9]{0,7}-[0-9]{1,9})(?![A-Za-z0-9_-])`, using a `[GeneratedRegex]`.
+   The prefix must be **upper case** in chat, which is stricter than `TaskId.TryParse` (D-32).
+4. For each token, run `TaskId.TryParse` and then `tasks.Resolve(id)`. **Link only when it
+   resolves.** `UTF-8`, `ISO-8601` and `COVID-19` stay text unless a Task with exactly that id
+   exists.
+5. Split the literal and insert a `LinkInline { Url = "/tasks/item/PLAT-0042", Title = task.Title }`
+   holding the token as its text, with `link.GetAttributes().AddClass("task-ref")` (from
+   `Markdig.Renderers.Html`). A Closed Task also gets the `task-ref-closed` class, which is drawn
+   struck through.
+
+> [!WARNING]
+> **`IsSafe` would rewrite the new link to `#`.** The existing `LinkRewriter` allows only `http:`,
+> `https:` and `mailto:` (`MarkdownRenderer.cs:30-36`). Extend `IsSafe` to also allow a URL that
+> **starts with `/tasks/item/` and whose remainder parses as a `TaskId`**, and nothing broader.
+> Any relative URL would reopen what the rewriter exists to close. Add a test that
+> `[x](/tasks/item/../../evil)` is still rewritten.
+
+**Styling.** `.task-ref` goes in `app.css`, using `--mud-palette-primary` and a dotted underline,
+so a Task link looks different from a web link. `.task-ref-closed` adds
+`text-decoration: line-through`.
+
+**Freshness.** A link reflects the index at render time. A Message that mentions a Task created
+later becomes a link on its next render, and nothing forces a re-render. That's acceptable, and it
+goes in known-limits.
+
+**Links are plain `href`s, not Blazor handlers.** Messages are rendered as a `MarkupString`, so
+Blazor can't attach `@onclick` inside them. The link navigates, and the browser's Back button
+returns to the Room.
+
+#### 13.13.3 The route `/tasks/item/{TaskId}`
+
+`Components/Pages/Tasks.razor` gains `@page "/tasks/item/{TaskIdText}"`:
+
+1. Parse the id. If it's invalid or unknown, show
+   `MudAlert Severity.Warning role="status"` reading *"No task PLAT-0999."* over the last View.
+2. Otherwise, load the **last-opened View** (the same `huddleStorage` rule as `/tasks`, §13.2)
+   and open the Task's **panel** (§13.6) on top of it. The Task doesn't need to match the View;
+   the panel shows it regardless.
+3. A **Closed** Task opens the same way, with a *Closed* `MudChip` in the panel header.
+4. Closing the panel changes the URL to `/tasks/{viewId}` (`NavigateTo(…, replace: true)`), so
+   Back doesn't reopen the panel.
+
+#### 13.13.4 The `#` Task picker in the composer
+
+The composer is a plain `<textarea>` (`Components/Shared/Composer.razor`). Its Enter key is handled
+in JavaScript: `teamComposer.attach` (`wwwroot/app.js:1-11`) sends on Enter and clears the box.
+There's no autocomplete in the app today, and MudBlazor has no mention-style picker for a textarea.
+So the picker is a **composition**: JavaScript watches the caret, and Blazor renders the list as a
+`MudPopover` holding a `MudList<TaskReference>`.
+
+**When the picker opens.** It opens on every `input` event where the text **before the caret**
+matches `(?:^|\s)#([A-Za-z0-9-]{0,40})$`:
+- `#` at the start or after whitespace, followed by zero or more id or word characters, with the
+  caret still inside that token.
+- `C#`, `a#b` and `# Heading` (a space after `#`) never match, so Markdown headings and ordinary
+  `#` characters are unaffected, which is use case T24.
+
+**The JavaScript side**, extending `teamComposer` and keeping its current Enter behaviour when the
+picker is closed:
+
+| Event | While the picker is **closed** | While the picker is **open** |
+| --- | --- | --- |
+| `input` | If the regex matches, call `dotnetRef.invokeMethodAsync("TaskQueryAsync", query)` and mark it open | The same: update the query, or close it if the regex no longer matches |
+| `Enter` (without Shift) | Send, as today | `preventDefault()` and call `PickAsync()`. **Never send** |
+| `Tab` | Browser default | `preventDefault()` and call `PickAsync()` |
+| `ArrowUp` / `ArrowDown` | Browser default | `preventDefault()` and call `MoveAsync(-1 or +1)` |
+| `Escape` | Browser default | Close the picker and keep the typed text |
+| `blur` | — | Close the picker after 150 ms, so a mouse click on an item still lands |
+
+`teamComposer.insertTask(el, id)` replaces the `#query` token that ends at the caret with
+`PLAT-0042 ` (the id plus a space), puts the caret after it, and closes the picker. The `#` is not
+kept (D-33). The text sent is the plain id, the same as a paste.
+
+**The Blazor side (`Composer.razor`):**
+
+- `[JSInvokable] Task TaskQueryAsync(string query)`: runs a search and renders the popover. `null`
+  closes it.
+- `[JSInvokable] Task MoveAsync(int delta)`: moves the highlight, wrapping around.
+- `[JSInvokable] Task<string?> PickAsync()`: returns the highlighted id to JavaScript, which calls
+  `insertTask`. With no matches it returns `null`, and JavaScript then does nothing, so a stray
+  Enter still doesn't send.
+- **A mouse click** on an item calls `JS.InvokeVoidAsync("teamComposer.insertTask", this.textarea, id)`.
+- **The popover:** `MudPopover Open="@this.pickerOpen" AnchorOrigin="Origin.TopLeft"
+  TransformOrigin="Origin.BottomLeft"` above the textarea. It holds a dense `MudList` whose items
+  show `PLAT-0042`, the title (through `MudHighlighter` on the query) and a status `MudChip`
+  (§13.10's colours). The highlighted item gets `aria-selected="true"`.
+- **Accessibility:** the textarea gets `aria-expanded`, `aria-controls` pointing at the list, and
+  `aria-activedescendant` set to the highlighted item. The list has `role="listbox"`.
+- **With no matches**, the list shows one disabled row: *"No task matches '#saml'"*.
+
+**The search** is pure, and lives in `TaskQuery.Suggest(IReadOnlyList<TaskItem> all, string query, int limit = 8)`:
+- **An empty query** (just `#`) returns the most recently updated Active Tasks.
+- **Otherwise it matches:**
+  1. an id that starts with the query, ignoring case (`pl`, `plat-4`);
+  2. then, a title that contains the query, ignoring case.
+- **Order:** Active before Closed; within each group, the id matches first, then by `Updated`
+  descending.
+
+**Scope.** The picker is in the chat composer only. The description editor in `TaskDetail` is a
+`MudTextField`, and adding the picker there would need the same JavaScript attached to MudBlazor's
+inner textarea. That goes to Appendix B.
+
 ---
 
 ## 14. Configuration
@@ -1896,6 +2095,9 @@ TASKS-10 to TASKS-12 are paid 💰.
 | TASKS-10 💰 | Assigning to a live Claude Persona wakes it in the right Room, and it calls `update_task` to set In Progress |
 | TASKS-11 💰 | Two Personas reassigning to each other stop at the wake budget, and Allow 10 more resumes them |
 | TASKS-12 💰 | An Agent that creates a Task with `originRoomId` wakes the assignee in that Room |
+| TASKS-13 | The copy button works on `localhost` **and** from another machine over `http://<host>:port` (the fallback), and the pasted id shows as a link in the sent Message |
+| TASKS-14 | The `#` picker, keyboard only: `#sa` lists matches; the arrow keys, Enter and Tab insert; **Enter with the picker open never sends**; Escape keeps the text; `C#` and `# Heading` open nothing; a screen reader announces the highlighted item |
+| TASKS-15 💰 | An Agent that is sent `please look at PLAT-0042` calls `get_task` with that id, without being told the tool name |
 
 ---
 
@@ -1933,6 +2135,11 @@ TASKS-10 to TASKS-12 are paid 💰.
 | D-28 | **`MudExitPrompt`, plus a message box, guard unsaved edits** | No guard, which is `TeammateCard`'s behaviour | A panel collects several edits, and losing them to a stray click in the nav is the likeliest way to lose work |
 | D-29 | **Deleting a View is confirmed through `ShowMessageBoxAsync`** | An inline Confirm/Cancel swap | mudblazor.md's choice for destructive confirmations, and the `SkillsPanel` precedent. The drawer isn't a dialog, so nothing is nested |
 | D-30 | **Blocked by and Tags are a closable `MudChipSet` plus a single-value `MudAutocomplete`** | A multi-select autocomplete | 9.10's `MudAutocomplete` has no `MultiSelection` (checked in the XML docs) |
+| D-31 | **A Task is referenced in chat by its plain id**, which is what the copy button copies | Copying a URL, a markdown link, or the id with its title | The id never changes and is short. Models already use it with `get_task`. A title copied along with it goes out of date. *Owner* |
+| D-32 | **Ids become links only when they resolve, and only with an upper-case prefix** | Linking anything that parses as an id | Keeps `UTF-8`, `ISO-8601` and `COVID-19` as text |
+| D-33 | **`#` opens the picker and is then removed**; the inserted text is the plain id | Keeping `#PLAT-0042` as a marker | One format whether the id was pasted or picked, and no marker for a model to drop or copy. *Owner* |
+| D-34 | **Task links are plain `href`s to `/tasks/item/{id}`** | Opening a dialog over the chat | Messages render as a `MarkupString`, so Blazor can't handle clicks inside them without new JavaScript. Back returns to the Room |
+| D-35 | **`IsSafe` allows `/tasks/item/<valid id>` exactly, and no other relative URL** | Allowing relative URLs in general | A general allowance would reopen what the link rewriter closes |
 
 ---
 
@@ -1954,6 +2161,8 @@ WS1 Domain+format ──┬──▶ WS2 TaskStore ──▶ WS3 TaskService ─
                     └──▶ WS6 Views (model, store, query) ─────────────────────────┤
                                                                                   ▼
                                                WS7 UI shell ──▶ WS8 Board, WS9 View editor, WS10 Task detail (parallel)
+                                                                                  ▼
+                                               WS11 Task references (copy, links, route, # picker) — needs WS2 + WS7 + WS10
                                                                                   ▼
                                                                           TK-D Docs
 ```
@@ -1995,7 +2204,13 @@ WS5 lands `task.wake.message` first.
 | TK-I15 | 9 | Impl | `ViewEditorDrawer` | §13.5 | T15 green |
 | TK-T16 | 10 | bUnit | `TaskDetailTests`: Save label per `WakePreview`; unsaved-edits bar and Revert; Won't do menu, the Duplicate picker required; a conflict shows both versions and Save stays disabled until resolved; Make a copy opens create mode and writes nothing; Expand opens the dialog with only the id; the Change log `MudTimeline` is collapsed and newest first; `MudExitPrompt` is enabled only while there are unsaved edits; adding and removing a blocker chip updates `pending`; `DateOnly` round-trips through `MudDatePicker` | §13.0, §13.6-13.7 | Fails |
 | TK-I16 | 10 | Impl | `TaskDetail`, `TaskDetailDialog`, the toast and the AI-reacting chip | §13.6-13.8 | T16 green |
-| TK-D | — | Docs | **Already written on 2026-09-24:** ADR-0025 and ADR-0026 (status *proposed*), and `language.md`'s *Tasks* section plus the Team entry's ADR-0025 sentence. **When the feature ships:** set both ADRs to *accepted*, and replace the *Tasks* section's "Proposed, not built" line. `code-map.md` gets a row per new file. `AgencyTeam.md` gets a map row plus config rows for `Team:Tasks:*`. `known-limits.md` covers: an offline assignee misses the wake-up; startup edits wake no one; wake budgets reset on restart; tags can't contain `,` or `;`. `decisions.md` gets a dated entry. `roadmap.md` gets an item. `manual-tests/tasks.md` plus `tracker.md` rows. `mudblazor.md` → *Components Huddle already uses* gains rows for `MudDataGrid` (`TaskListView.razor`), `MudDropContainer`/`MudDropZone` (`TaskBoard.razor`), `MudToggleGroup`, `MudTimeline`, `MudExitPrompt`, `MudBadge` and `MudNavGroup`, each pointing at its Tasks file | all | Reviewed |
+| TK-T17 | 11 | Unit | `MarkdownRendererTests` gains: an id that resolves becomes `<a class="task-ref" href="/tasks/item/PLAT-0042" title="…">`; an unknown id, `UTF-8`, a lower-case `plat-0042`, and ids inside a code span, a code block or an existing link stay plain; a Closed Task gets `task-ref-closed`; `[x](/tasks/item/../../evil)` and `[x](/other)` are still rewritten to `#`; `ToHtml(string)` without a resolver is unchanged (all existing tests pass as they are) | §13.13.2 | Fails |
+| TK-I17 | 11 | Impl | `ITaskReferenceResolver`, `TaskReference`, the AST rewrite, `IsSafe`, `TaskStore` as the resolver, and both `MessageList` call sites | §13.13.2 | T17 green |
+| TK-T18 | 11 | bUnit | The `/tasks/item/{id}` route opens the panel over the last View; an unknown id shows the alert; closing the panel replaces the URL. `TaskQueryTests.Suggest_*` covers an empty query, an id prefix before a title match, Active before Closed, and the limit | §13.13.3-13.13.4 | Fails |
+| TK-I18 | 11 | Impl | The route, the copy button and its menu items, `huddleClipboard`, `TaskQuery.Suggest` | §13.13.1, §13.13.3 | T18 green |
+| TK-T19 | 11 | bUnit | `ComposerTests`: `TaskQueryAsync` opens the popover and `null` closes it; `MoveAsync` wraps; `PickAsync` returns the highlighted id, or null with no matches; the listbox has `aria-activedescendant`. The JavaScript key handling can't be tested by bUnit, so it is manual test TASKS-14 | §13.13.4 | Fails |
+| TK-I19 | 11 | Impl | The `#` picker: `teamComposer` extended in `app.js`, plus `Composer.razor`'s popover and three `[JSInvokable]`s | §13.13.4 | T19 green, TASKS-14 passes |
+| TK-D | — | Docs | **Already written on 2026-09-24:** ADR-0025 and ADR-0026 (status *proposed*), and `language.md`'s *Tasks* section plus the Team entry's ADR-0025 sentence. **When the feature ships:** set both ADRs to *accepted*, and replace the *Tasks* section's "Proposed, not built" line. `code-map.md` gets a row per new file. `AgencyTeam.md` gets a map row plus config rows for `Team:Tasks:*`. `known-limits.md` covers: an offline assignee misses the wake-up; startup edits wake no one; wake budgets reset on restart; tags can't contain `,` or `;`; a Task link reflects the index when the Message was last rendered. `decisions.md` gets a dated entry. `roadmap.md` gets an item. `manual-tests/tasks.md` plus `tracker.md` rows. `mudblazor.md` → *Components Huddle already uses* gains rows for `MudDataGrid` (`TaskListView.razor`), `MudDropContainer`/`MudDropZone` (`TaskBoard.razor`), `MudToggleGroup`, `MudTimeline`, `MudExitPrompt`, `MudBadge` and `MudNavGroup`, each pointing at its Tasks file | all | Reviewed |
 
 ---
 
@@ -2010,3 +2225,5 @@ WS5 lands `task.wake.message` first.
 | Queued delivery to an offline assignee | Needs a change to the ACP side (ADR-0004) |
 | Agents using Views | A `view` argument on `list_tasks` |
 | Attachments | A sibling `<ID>/` folder that moves with the Task |
+| The `#` picker in the description editor | The same `teamComposer` logic attached to `MudTextField`'s inner textarea |
+| A preview card on hovering a Task link | Needs a Blazor-rendered Message body, or a small JavaScript-delegated click and hover handler |
