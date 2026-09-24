@@ -36,8 +36,8 @@ code, kbd, samp, pre {
    is won by whichever rule the cascade reads last. .mud-button-root's outline reset is only
    (0,1,0), so it loses outright. Colour comes from --mud-palette-text-primary, not
    --mud-palette-primary: the dark palette darkens Primary rather than lightening it, so
-   #5e2b60-on-#1b1b1f measures 1.63:1 - well under the 3:1 WCAG 1.4.11 non-text contrast minimum
-   for a focus indicator - while text-primary measures 13.79:1 in dark and 15.91:1 in light,
+   #5e2b60-on-#1b1b1f measured 1.63:1 - well under the 3:1 WCAG 1.4.11 non-text contrast minimum
+   for a focus indicator - while text-primary measures 14.42:1 in Huddle Dark and 17.80:1 in Huddle Light,
    comfortable in both. Do not "improve" this back to an accent colour. */
 a:focus-visible,
 button:focus-visible {
@@ -118,7 +118,7 @@ button:focus-visible {
     font: inherit;
     padding: 0.5rem;
     border: 1px solid var(--mud-palette-lines-inputs);
-    border-radius: 4px;
+    border-radius: var(--mud-default-borderradius);
 }
 
 .teammates-field textarea {
@@ -207,7 +207,7 @@ button:focus-visible {
 
 .room-list-row .room-list-menu-button {
     opacity: 0;
-    border-radius: 4px;
+    border-radius: var(--mud-default-borderradius);
     transition: opacity 120ms ease;
 }
 
@@ -270,7 +270,7 @@ button:focus-visible {
     padding: 1rem;
     background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-divider);
-    border-radius: 4px;
+    border-radius: var(--mud-default-borderradius);
     box-shadow: var(--mud-elevation-2);
 }
 
@@ -294,7 +294,7 @@ button:focus-visible {
     text-align: left;
     background: none;
     border: none;
-    border-radius: 4px;
+    border-radius: var(--mud-default-borderradius);
     cursor: pointer;
 }
 
@@ -323,6 +323,32 @@ button:focus-visible {
 
 .message-content {
     min-width: 0;
+}
+
+/* ---- The Human's own Message: a right-aligned bubble ----------------------------------------
+   No avatar gutter, so the grid above is swapped for a flex row pushed to the end. The bubble is
+   one step off the ground (background-gray) rather than an accent fill, so the Human's text reads
+   as set apart without shouting over the replies it asked for. */
+.message-row.human {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.message-bubble {
+    max-width: min(75%, 40rem);
+    padding: 0.5rem 1rem;
+    background: var(--mud-palette-background-gray);
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    overflow-wrap: anywhere;
+}
+
+/* The rendered Markdown's paragraph margins would otherwise pad the bubble unevenly. */
+.message-bubble > :first-child {
+    margin-top: 0;
+}
+
+.message-bubble > :last-child {
+    margin-bottom: 0;
 }
 
 .message-meta {
@@ -398,9 +424,26 @@ button:focus-visible {
     max-height: 8rem;
     resize: vertical;
     font: inherit;
-    padding: 0.5rem;
+    padding: 0.75rem 1rem;
+    color: var(--mud-palette-text-primary);
+    background: var(--mud-palette-surface);
     border: 1px solid var(--mud-palette-lines-inputs);
-    border-radius: 4px;
+
+    /* One and a half times the theme's corner: the message box is the largest control on the
+       page, so it reads as a raised card on the ground rather than a form field. */
+    border-radius: calc(var(--mud-default-borderradius) * 1.5);
+    box-shadow: var(--mud-elevation-1);
+}
+
+.composer-input::placeholder {
+    color: var(--mud-palette-text-disabled);
+}
+
+/* The border itself is the focus indicator, so it must clear WCAG 1.4.11's 3:1: text-disabled
+   does against the white surface, where lines-default would not. */
+.composer-input:focus-visible {
+    outline: none;
+    border-color: var(--mud-palette-text-disabled);
 }
 
 .composer-error {
@@ -689,7 +732,7 @@ button:focus-visible {
    cannot push the credit paragraph and the file path below it off the page. */
 .theme-picker {
     border: 1px solid var(--mud-palette-divider-light);
-    border-radius: 4px;
+    border-radius: var(--mud-default-borderradius);
     max-height: 22rem;
     overflow-y: auto;
     padding: 0;
