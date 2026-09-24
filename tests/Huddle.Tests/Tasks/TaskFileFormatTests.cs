@@ -663,6 +663,60 @@ public sealed class TaskFileFormatTests
         Assert.Equal(expected, result);
     }
 
+    /// <summary>ComputeVersion returns a 16-character lowercase hex string (Spec §7.6).</summary>
+    [Fact]
+    public void ComputeVersion_Is16LowerHex()
+    {
+        string text = SpecExampleText();
+
+        string version = TaskFileFormat.ComputeVersion(text);
+
+        Assert.Equal(16, version.Length);
+        Assert.True(version.All(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')), $"Version contains non-hex characters: {version}");
+    }
+
+    /// <summary>ComputeVersion produces the same result for CRLF and LF line endings (Spec §7.6 normalizes to \n).</summary>
+    [Fact]
+    public void ComputeVersion_CrlfAndLf_Equal()
+    {
+        string lfText = SpecExampleText();
+        string crlfText = lfText.ReplaceLineEndings("\r\n");
+
+        string lfVersion = TaskFileFormat.ComputeVersion(lfText);
+        string crlfVersion = TaskFileFormat.ComputeVersion(crlfText);
+
+        Assert.Equal(lfVersion, crlfVersion);
+    }
+
+    /// <summary>ComputeVersion produces different results for different text.</summary>
+    [Fact]
+    public void ComputeVersion_DifferentText_Differs()
+    {
+        string text1 = SpecExampleText();
+        string text2 = text1.Replace("Support SAML login", "Support OAuth login", StringComparison.Ordinal);
+
+        string version1 = TaskFileFormat.ComputeVersion(text1);
+        string version2 = TaskFileFormat.ComputeVersion(text2);
+
+        Assert.NotEqual(version1, version2);
+    }
+
+    /// <summary>TryParse sets the Version field to the result of ComputeVersion applied to the file text.</summary>
+    [Fact]
+    public void TryParse_SetsVersionFromText()
+    {
+        string text = SpecExampleText();
+        TaskLocation location = new("Platform", null, false);
+
+        bool result = TaskFileFormat.TryParse(text, "p.md", location, out TaskItem? task, out _);
+
+        Assert.True(result);
+        Assert.NotNull(task);
+        Assert.Matches("^[0-9a-f]{16}$", task.Version);
+        string expectedVersion = TaskFileFormat.ComputeVersion(text);
+        Assert.Equal(expectedVersion, task.Version);
+    }
+
     /// <summary>Parses a TaskId from a known-valid string, for building expected values in tests.</summary>
     private static TaskId Id(string text)
     {

@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Acp;
@@ -373,11 +374,12 @@ internal static partial class TaskFileFormat
     /// text after CRLF has been normalised to '\n' (Spec §7.6).
     /// </summary>
     /// <param name="fileText">The Task file's raw text.</param>
-    // TODO(2.4): stub until Task 2.4 implements the real SHA-256 based hash.
     public static string ComputeVersion(string fileText)
     {
         ArgumentNullException.ThrowIfNull(fileText);
-        return "";
+        byte[] normalized = Encoding.UTF8.GetBytes(fileText.ReplaceLineEndings("\n"));
+        byte[] hash = SHA256.HashData(normalized);
+        return Convert.ToHexStringLower(hash)[..16];
     }
 
     /// <summary>
