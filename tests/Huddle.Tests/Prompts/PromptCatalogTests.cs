@@ -19,12 +19,13 @@ public sealed partial class PromptCatalogTests
     /// <c>turn.fileDeleted</c>, <c>turn.fileChangesMore</c>, <c>turn.folderUnchecked</c>) added for
     /// FC §6.13 (Task 7.1), plus <c>tool.watchFolder.description</c> and
     /// <c>tool.unwatchFolder.description</c> added for FC §6.9/§6.13 (Task 10.2), plus
-    /// <c>systemPrompt.sharedSession</c> added for RS §6.9/§8.1 (Task 16.2).
+    /// <c>systemPrompt.sharedSession</c> added for RS §6.9/§8.1 (Task 16.2), plus
+    /// <c>task.wake.message</c> added for Spec §10.5/§11.9 (Task 9.2).
     /// </summary>
     [Fact]
     public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(49, PromptCatalog.All.Count);
+        Assert.Equal(50, PromptCatalog.All.Count);
     }
 
     /// <summary>
@@ -240,6 +241,24 @@ public sealed partial class PromptCatalogTests
         var exception = Assert.Throws<KeyNotFoundException>(() => PromptCatalog.Get("nope"));
 
         Assert.Contains("nope", exception.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The <c>task.wake.message</c> Prompt (Spec §10.5, §11.9) exists, is <see cref="PromptTiming.Live"/>,
+    /// requires all seven placeholders a wake-up Message needs, its Default starts with the Mention
+    /// that must stay first, and it carries no <c>mcp__team__</c> literal.
+    /// </summary>
+    [Fact]
+    public void TaskWakeMessage_Exists_Live_RequiresAllSevenPlaceholders()
+    {
+        var prompt = PromptCatalog.Get("task.wake.message");
+
+        Assert.Equal(PromptTiming.Live, prompt.Timing);
+        Assert.Equal(
+            ["{{assignee}}", "{{taskId}}", "{{title}}", "{{actor}}", "{{changes}}", "{{status}}", "{{team}}"],
+            prompt.RequiredPlaceholders);
+        Assert.StartsWith("@{{assignee}}", prompt.Default, StringComparison.Ordinal);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
     }
 
     /// <summary>

@@ -799,5 +799,22 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "task.wake.message",
+            Label: "Task wake-up message",
+            HelperText:
+                "Posted in a Room to wake a Task's assignee after the Task changes. The Mention must " +
+                "stay first. An override may drop the leading {{assignee}} Mention, but a Room's Reply " +
+                "Gate then may not recognise the assignee as addressed.",
+            Default:
+                """
+                @{{assignee}} Task {{taskId}} "{{title}}" ({{status}}, {{team}}) was changed by {{actor}}:
+                {{changes}}
+                Call get_task with taskId {{taskId}} for the full task.
+                """,
+            Placeholders: ["{{assignee}}", "{{taskId}}", "{{title}}", "{{actor}}", "{{changes}}", "{{status}}", "{{team}}"],
+            RequiredPlaceholders: ["{{assignee}}", "{{taskId}}", "{{title}}", "{{actor}}", "{{changes}}", "{{status}}", "{{team}}"],
+            Timing: PromptTiming.Live),
     ];
 }

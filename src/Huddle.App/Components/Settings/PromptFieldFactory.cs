@@ -17,6 +17,7 @@ internal static class PromptFieldFactory
     private const string TurnPrefix = "turn.";
     private const string GetHelpPrefix = "getHelp.";
     private const string ToolPrefix = "tool.";
+    private const string TaskPrefix = "task.";
 
     // RowsFor's clamp: 2 so a one-line prompt still reads as a text box rather than a slot, 14 so the
     // longest defaults (getHelp.rooms, systemPrompt.tools) cannot make their own field dominate the
@@ -26,13 +27,14 @@ internal static class PromptFieldFactory
 
     // The display order and labels the Settings page's groups appear in. A key that matches no
     // prefix here contributes to no group, which cannot happen while PromptCatalog only ever adds
-    // keys under one of these four areas.
+    // keys under one of these five areas.
     private static readonly (string Prefix, string Label)[] GroupOrder =
     [
         (SystemPromptPrefix, "System prompt"),
         (TurnPrefix, "Turn"),
         (GetHelpPrefix, "Get help"),
         (ToolPrefix, "Tool descriptions"),
+        (TaskPrefix, "Tasks"),
     ];
 
     /// <summary>
