@@ -214,6 +214,11 @@ public sealed class RoomSessionTests
 
             await WaitUntilAsync(() => session.CancelObservedPromptInFlight, ct, TimeSpan.FromSeconds(5));
 
+            // The far-side cancel above is the FIRST thing the watchdog does; the Turn only fails -
+            // and reports it - once that cancel has returned and its own token has fired, so the
+            // report is waited for rather than read straight after the cancel was observed.
+            await WaitUntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTurnFailure)), ct);
+
             Assert.Contains(owner.ReportCalls, call => call == nameof(IRoomSessionOwner.ReportTurnFailure));
         }
         finally

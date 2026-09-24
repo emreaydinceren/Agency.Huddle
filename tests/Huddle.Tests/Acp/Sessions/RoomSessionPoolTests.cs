@@ -539,6 +539,65 @@ public sealed class RoomSessionPoolTests
         Assert.True(factory.Host!.LiveSessionHighWaterMark <= 2);
     }
 
+    /// <summary>
+    /// The deterministic form of the race <see cref="Max2_ConcurrentOpens_NeverExceedCap"/> hit about
+    /// once in twenty loaded runs: a session opened lazily INSIDE its first Turn must read Busy for
+    /// that whole Turn. It used to publish Idle when the open finished, so a third Room opening at the
+    /// live cap picked it as the eviction victim - it had the oldest <c>LastActivity</c> - and closed
+    /// it mid-Turn, losing that Turn's reply.
+    /// </summary>
+    [Fact]
+    public async Task LazyOpenedSession_MidFirstTurn_IsNeverTheEvictionVictim()
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cts.CancelAfter(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        var acp = new AcpOptions { MaxConcurrentTurns = 2, MaxLiveSessions = 2 };
+        await using var server = new FakeServer();
+        var factory = new FakeAgentHostFactory { SessionPerRoom = true };
+        var releaseC = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // No Room holds only the Human, so nothing opens at start and Room C's lazy open is the
+        // host's first - which hands back factory.Session, scripted here to hold its Turn in flight.
+        factory.Session.EnqueueGatedReply(releaseC.Task, "c reply");
+        var persona = new Persona("nova", "You are Nova.");
+        var roomB = GroupRoom("room-b", "Room B");
+        var roomC = GroupRoom("room-c", "Room C");
+        var roomD = GroupRoom("room-d", "Room D");
+
+        await using var runner = CreateRunner(server, persona, factory, acp);
+        await server.HandshakeAsync(runner, [roomB, roomC, roomD], ct);
+
+        try
+        {
+            await server.SendAsync(Posted(roomC, "hi"), ct);
+            await WaitUntilAsync(() => factory.Session.Prompts.Count == 1, ct);
+
+            // Room B opens and finishes a whole Turn while C's is still in flight, so B's LastActivity
+            // is newer than C's: were C Idle, it - not B - would be the least recently used candidate.
+            await server.SendAsync(Posted(roomB, "hi"), ct);
+            await server.ReceiveUntilAsync<PostMessage>(post => string.Equals(post.RoomId, roomB.Id, StringComparison.Ordinal), ct);
+
+            // Room D takes the slot B freed and opens at the cap: one of B and C must be closed.
+            await server.SendAsync(Posted(roomD, "hi"), ct);
+            await server.ReceiveUntilAsync<PostMessage>(post => string.Equals(post.RoomId, roomD.Id, StringComparison.Ordinal), ct);
+
+            Assert.False(factory.Session.Disposed);
+
+            releaseC.SetResult();
+            var cPost = await server.ReceiveUntilAsync<PostMessage>(post => string.Equals(post.RoomId, roomC.Id, StringComparison.Ordinal), ct);
+            Assert.Equal("c reply", cPost.Text);
+        }
+        finally
+        {
+            // factory.Session never completes its event stream on dispose, so a C Turn evicted
+            // mid-flight would otherwise wait on it forever and hang the runner's disposal - a
+            // failing assertion above must fail the test, not hang it.
+            releaseC.TrySetResult();
+        }
+    }
+
     private static RoomInfo HumanRoom(string id) =>
         new(id, "Direct", [new MemberInfo("human", "Human", UserKind.Human), new MemberInfo("agent-1", "nova", UserKind.Agent)]);
 

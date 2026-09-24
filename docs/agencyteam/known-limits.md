@@ -460,17 +460,20 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   runs before that line is written; if it recurs, wait for the line rather than reading
   the log once. It recurred, intermittently, during the Room Sessions build — same symptom,
   passing on rerun — which is evidence for the theory above rather than a new cause.
-- **A fifth flake, seen this week during the Room Sessions build, not diagnosed.** Two more
-  tests failed intermittently in a full `dotnet test Huddle.slnx --` run and passed every time
-  when rerun alone: `RoomSessionPoolTests.Max2_ConcurrentOpens_NeverExceedCap` and
-  `RoomSessionTests.IdleTimeout_CancelsFarSideFirst`. Neither has been instrumented the
-  way the second flake was, so there is no mechanism to report — only the pattern, which matches
-  every flake on this page so far: full-suite only, passes alone, passes on rerun. Read as timing
-  under full-suite load (thread-pool warmth, `TimeProvider` scheduling, or contention on a shared
-  fake transport) until someone catches one with instrumentation. `Max2_ConcurrentOpens_NeverExceedCap`
-  is a new test from this week's `RoomSessionPoolTests`, so it has no history to compare against;
-  a cap test racing thread-pool scheduling under load is a plausible enough shape that it is
-  recorded here rather than filed as a defect in `TurnGate` or `RoomSessionPool`.
+- **A fifth flake, seen during the Room Sessions build — DIAGNOSED and fixed 2026-09-24.**
+  Three tests failed intermittently under full-suite load. Two were tests asserting before
+  async work landed: `TeammateCardTests.ViewMode_ShowsTheChosenModel` (a find-then-click racing
+  the page's SQLite-backed completion render) and `RoomSessionTests.IdleTimeout_CancelsFarSideFirst`
+  (reading the Turn-failure report straight after the far-side cancel, which precedes it).
+  The third, `RoomSessionPoolTests.Max2_ConcurrentOpens_NeverExceedCap`, was **a real defect**,
+  not timing: a session opened lazily inside its first Turn published `Idle` rather than `Busy`
+  when the open finished, so a third Room opening at the live cap could pick it as
+  `RoomSessionPool`'s eviction victim and close it mid-Turn, losing that Turn's reply.
+  `RoomSession.OpenAndStartReaderAsync` now publishes `Busy` when a Turn is running, and
+  `RoomSessionPoolTests.LazyOpenedSession_MidFirstTurn_IsNeverTheEvictionVictim` pins it
+  deterministically. The same investigation found and fixed a sixth, unrecorded one of the first
+  kind: `RoomSessionResumeTests` read the Room Session store right after the reply was posted,
+  though the store entry is only written at Turn end.
 - **Known bug, pre-existing:** `Data/SqliteTeamDirectory.cs` is not
   `IDisposable`, and SQLite connection pooling keeps a handle on `team.db`, so
   tests leave about 83 temp directories behind per run. `TempDataDir.Dispose`
