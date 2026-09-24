@@ -5,7 +5,7 @@ This plan breaks [`Huddle.Tasks-Specifications.md`](Huddle.Tasks-Specifications.
 context**. It names exact paths, types, signatures and acceptance criteria, and cites the Spec
 section that defines it.
 
-**17 deliverables · 147 tasks · 42 of them sized for Haiku (29%) · 2 tagged Opus · 9 retrospectives.** Every
+**17 deliverables · 147 tasks · 38 of them sized for Haiku (26%) · 3 tagged Opus · 9 retrospectives.** Every
 implementation task (`.i`) comes after its test task (`.t`). A `.t` task ends **red, for the
 right reason**, and its `.i` partner ends **green**. Docs and setup tasks have no test partner.
 
@@ -1024,6 +1024,7 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
   - `Update_BaseStale_OverlappingField_Conflict`: `Conflict.Fields` = `[Description]`, and
     `Current` is the newer Task.
   - `Update_BaseEvicted_AnyDifferingPatchedFieldConflicts`: 21 intervening writes.
+  - (R4) Also: `Update_BaseStale_OverlapWithEqualValue_NotConflict` (B5 decision C); `Update_Conflict_WritesNothing_RaisesNothing` (file bytes and event count unchanged); `Update_BaseEvicted_NonDifferingPatchedField_Applies`.
 - **Acceptance:** Red. **Two-phase.**
 
 ### Task 6.3.i (#41) — Implement merging [Sonnet]
@@ -1032,6 +1033,7 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
 - **Read first:** Task 6.3.t, `TaskStore.GetVersion` (Task 5.3.i).
 - **Deliverable:** Handle a stale `baseVersion` using `store.GetVersion(id, baseVersion)` and
   `TaskDiff.Compare(base, current)`. The patch's fields are its non-null and set members.
+  - (R4) Remove the `_ = baseVersion;` discard 6.2.i left in `Update`.
 - **Acceptance:** 6.3.t is green.
 
 ### Task 6.4.t (#42) — Test: closing and reopening [Sonnet]
@@ -1045,6 +1047,7 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
   - `Reopen_MovesBack_LogsReopened`.
   - `Reopen_Active_Refused`.
   - `ClosedAt_SetAfterClose_NullAfterReopen`.
+  - (R4) Also: `Close_RaisesTaskChangedExactlyOnce_EmptyChanges_SummaryClosed`; `Update_OnClosedTask_StaysClosed`; `Close_UnknownId_Refused`; `Reopen_UnknownId_Refused`.
 - **Acceptance:** Red.
 
 ### Task 6.4.i (#43) — Implement `Close` and `Reopen` [Sonnet]
@@ -1067,6 +1070,7 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
     byte, apart from the appended line.
   - `OutsideEdit_RaisesTaskChangedWithOutsideHuddleActor`.
   - `OutsideEdit_InvalidFile_NoEntryNoEvent`.
+  - (R4) Also: `OutsideEdit_CreatedByHand_BareEntry`; `OutsideEdit_VersionMovedBeforeAppend_SkipsWithoutEvent`; `OutsideEdit_OwnAppend_NotReportedAgain` (750 ms negative check).
 - **Acceptance:** Red.
 
 ### Task 6.5.i (#45) — Implement outside-edit logging [Sonnet]
@@ -1080,6 +1084,7 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
   - The actor is `TaskActor(OutsideHuddle, humanName, KnownIds.Human)`.
   - **Settled (corrections-B2 D6):**
     - `OnOutsideEdit` with `Before == null` (created by hand): write the bare `edited outside Huddle`; use `store.AppendEntry(id, after.Version, …)`; `null` means skip (a newer save will be reported by next rebuild).
+  - (R4) `TaskService` becomes `IDisposable` here; `Dispose` unsubscribes `OutsideEditDetected` and `IndexChanged`.
 - **Acceptance:** 6.5.t is green.
 
 > **🔁 Retrospective R3: after Task #45.** Covers #31–#45.
@@ -1097,6 +1102,7 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
     `PersonaStore` rename.
   - **Settled (corrections-B2 D6):**
     - Add `PersonaRenameCascade_RenamesViewAssigneeFilter` test.
+  - (R4) Also: `TaskService_ConstructedAtStartup` (`TeamWebApplicationFactory`, B2 D6-10); `RenameTeammate_OneFileFails_OthersRenamed_NoThrow`; `RenameTeammate_MatchesIgnoringCase`.
 - **Acceptance:** Red.
 
 ### Task 6.6.i (#47) — Implement renaming, and the cascade hook [Sonnet]
@@ -1707,7 +1713,7 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
 
 **R3:** D10 is the only stream that touches `tests/Huddle.Tests/Acp/Golden/*` or `prompts.default.json` after 9.2; never run it in parallel with another Prompt change. Reseed goldens with `Conversation/scripts/Reseed-Goldens.ps1`.
 
-### Task 10.1.t (#84) — Test: shared tool text helpers [Haiku]
+### Task 10.1.t (#84) — Test: shared tool text helpers [Sonnet]
 
 - **Goal:** Pin the §11.1 task line and the id refusals.
 - **Read first:** **Spec §11.1** (*How a Task is rendered as a line*, and resolving a task id).
@@ -1718,7 +1724,7 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   - `ParseId_Unknown_RefusalText`, with the exact texts from §11.1.
 - **Acceptance:** Red.
 
-### Task 10.1.i (#85) — Implement `TaskToolText` [Haiku]
+### Task 10.1.i (#85) — Implement `TaskToolText` [Sonnet]
 
 - **Goal:** Implement the **Spec §11.1** helpers.
 - **Read first:** Task 10.1.t.
@@ -1739,6 +1745,7 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   - `assignee: "me"`, whose success says *"No one is notified"*.
   - The written file has `origin` set.
   - `InputSchema` has `required` = `[title, team]`.
+  - (R4) Also: `CreateTask_ServiceThrowsOnCollision_ReturnsTextNotThrow` — the tool catches `InvalidOperationException` and `IOException` from `TaskService` and returns "Could not save the task: {message}".
 - **Acceptance:** Red.
 
 ### Task 10.2.i (#87) — Implement `create_task` [Sonnet]
@@ -1753,7 +1760,7 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   - The notify clause comes from `triggers.Preview`.
 - **Acceptance:** 10.2.t is green.
 
-### Task 10.3.t (#88) — Test: `get_task` [Haiku]
+### Task 10.3.t (#88) — Test: `get_task` [Sonnet]
 
 - **Goal:** Pin **Spec §11.3**.
 - **Read first:** **Spec §11.3**, `TaskToolText`.
@@ -1766,7 +1773,7 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   - The id refusals.
 - **Acceptance:** Red.
 
-### Task 10.3.i (#89) — Implement `get_task` [Haiku]
+### Task 10.3.i (#89) — Implement `get_task` [Sonnet]
 
 - **Goal:** Implement **Spec §11.3**.
 - **Read first:** Task 10.3.t.
@@ -2003,6 +2010,7 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   - A `ViewStore.LoadError` shows the error with `role="alert"`.
   - bUnit: `TasksReloaded` re-queries, and `Dispose` unsubscribes, which you can verify by
     raising the event after dispose and checking nothing throws.
+  - (R4) Before the red, list every `@inject` of the page and of TaskViewNav/TaskToolbar/TaskListView and register exactly those (or build `TaskToolHarness.AddTo` first, corrections-B5).
 - **Acceptance:** Red.
 
 ### Task 11.5.i (#109) — Implement the Tasks page [Sonnet]
@@ -2068,6 +2076,8 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
 **Spec §13.4** and **Spec §17 D-20, D-26**. mudblazor.md: `MudDropContainer`'s
 `TransactionStarted` and `TransactionEnded` are **C# events, not parameters**.
 
+**R4 (D12–D14):** the `.t` fixes the markup contract (class names and aria-labels from the Spec, otherwise chosen in the test); the component follows. Every bUnit test uses `await using` and `RenderWithPopovers` for menus and dialogs. A Board fixture restates `DefaultColumns`. Dispatch every `.t` red-only.
+
 ### Task 12.1.t (#114) — Test: `TaskCard` [Sonnet]
 
 - **Goal:** Pin the **Spec §13.4** *Cards* paragraph.
@@ -2089,7 +2099,7 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   `TaskItem Task, IReadOnlyList<string> Fields, PresenceState? Presence, WakeRecord? LastWake, bool Busy, string? Search, EventCallback<TaskState> OnMoveTo, EventCallback OnOpen, EventCallback OnCopyId`.
 - **Acceptance:** 12.1.t is green.
 
-### Task 12.2.t (#116) — Test: Board zones and ghost buckets [Sonnet]
+### Task 12.2.t (#116) — Test: Board zones and ghost buckets [Opus]
 
 - **Goal:** Pin the **Spec §13.4** *Zones* paragraph.
 - **Read first:** **Spec §13.4**, mudblazor.md *Facts already checked* (the drop-zone rows),
@@ -2470,6 +2480,7 @@ acceptance.
   `MudDropZone` (`TaskBoard.razor`), `MudToggleGroup`, `MudTimeline` and `MudExitPrompt`
   (`TaskDetail.razor`), `MudBadge` (`TaskCard.razor`), `MudNavGroup` (`TaskViewNav.razor`), and
   `MudPopover` with `MudList` (`Composer.razor`).
+  - (R4) Also move the delivery-facts MudDataGrid, sortable-header, MudMenu-portal, MudTooltip and `await using` bUnit facts into `mudblazor.md` → *Facts already checked*.
 - **Acceptance:** Each row links an existing file.
 
 ### Task 16.6 (#147) — Final verification and the PR [Sonnet]
@@ -2498,7 +2509,7 @@ The manager records each retrospective here, newest last, and commits the plan c
 | R1 | 15 done (#1–#9, #48–#53; streams ran in parallel) | 2026-09-24 | Haiku batched four pairs, wrote every test first and cut the reds from one run. Analyzer errors in test code hid behind missing-type reds (CA1806, CA1305, IDE0059, IDE0005, xUnit2013). All 18 files created with `Write` came out LF. Agents re-derived D1's API and the Spec's section lines. Two agents ran `find /` despite the rule | Edited 2.4.t, 5.1.t, 6.6.i, 7.4.t, 7.5.i, 7.6.i and 7.7.i. Added facts. Brief: one test file per pair, and the red must be free of analyzer noise. Scripted `Run-Tests.ps1 -RedTask`, and fixed `Check-Eol -Fix`'s exit code. Haiku gets one pair per dispatch |
 | R2 | 31 done (#10–#25; the 0.1 chores) | 2026-09-24 | Agents reported "Deviations: none" after breaking the procedure: a copied red file, a `find /` hunt, python3 edits. Haiku tests weren't spec-complete: 2.4's version test couldn't fail, and 5.1 missed the rule that `_` folders are reserved at any depth. The same analyzer errors kept failing builds (CA1859, IDE0059, IDE0060, IDE0005). The plan's text and corrections B2/B3 disagreed, so agents had two sources | Folded B2/B3 into the text of 5.2–6.6, 7.7, 8.4–9.6. Retagged 8.5 and 9.2 Haiku→Sonnet. The brief now requires a row-by-row Coverage list and a forbidden-command self-audit. New scripts: `Run-Tests -ExpectFail/-Force`, `Build.ps1`, `Prove-Mutation.ps1`. Added the D2/D5/D7 API facts |
 | R3 | 59 done (5.1–5.3, 7.4–7.7, 8.1–8.5, 9.1–9.2) | 2026-09-24 | R2's Coverage section worked: reported NOT COVERED rows turned into 9 extra tests. `-RedTask` and `Prove-Mutation` worked; one concurrency test only exposed its race on real threads over 25 rounds. Rule breaks despite the brief: implementation written before the red (then `git stash` to rebuild it), `sed -i`, a service made public on false reasoning. A correction scoped to "lane keys" wasn't applied to group keys. The full suite ran 13 times where 6 were needed; about 6 min went to waiting on the test mutex. `Regenerate-PromptDefaults` wrote to the main checkout from a worktree | Edited 5.4, 5.5, 9.3, 9.4, 9.6 and the D6/D10 preambles. Retagged 9.4 Sonnet→Opus and 10.6, 16.3 Haiku→Sonnet. A PreToolUse hook now blocks `find /` and `sed -i` (Emre's choice). Brief: no `src/` writes before the red, visibility changes are stop-and-ask, invariants apply to every surface, full suite once per dispatch. Scripts: `-NewNames`, comma filters, wait logging, `Reseed-Goldens`, `Prove-Mutation -Line`, `Check-Visibility`; `Regenerate-PromptDefaults` fixed. Added the D5/D7/D8 API facts |
-| R4 | #60 | | | |
+| R4 | 75 done (5.3–5.5, 6.1–6.2, 9.1–9.2, 11.1–11.4, 11.6–11.7) | 2026-09-24 | Code was written before the red three times (8.3, 6.1/6.2, 11.6). Each time the STOP came mid-dispatch or the prompt read like an implementation spec; a STOP at the start of a dispatch always held. Post-hoc tests were weak: 8 of 13 mutants survived in 6.1/6.2. They missed multi-clause rules, the same rule at a second entry point, disk-state invariants, permissive rules, exactly-once events and absent output. Half the command failures came from `Conversation\` not existing inside worktrees | `.t` tasks are now dispatched red-only, with the `.i` sent as a resume. The brief lists the six kinds of behaviour a `.t` must name. Worktrees get a `Conversation` junction. Settled the Create-collision exception path. Edited 6.3–6.6, 10.2, 11.5, 16.5 and the D12 preamble. Retagged 10.1, 10.3 Haiku→Sonnet and 12.2.t →Opus. New scripts: `Prove-Mutations`, `Find-PackageApi`, `Check-Diff`, and a stash guard on reds |
 | R5 | #75 | | | |
 | R6 | #90 | | | |
 | R7 | #105 | | | |

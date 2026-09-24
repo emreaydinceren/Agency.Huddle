@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then.
 
-**Status:** 59 of 147 tasks Done · 3 of 9 retrospectives done · last updated 2026-09-24.
+**Status:** 81 of 147 tasks Done · 4 of 9 retrospectives done · last updated 2026-09-24.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -53,15 +53,15 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 5.3.t Test: writing, moving and keeping versions · #30 · Sonnet | | | ✔ |
 | 🔁 R2 — Opus retrospective after #30, and plan update | | | ✔ |
 | 5.3.i Implement writing and moving · #31 · Sonnet | | | ✔ |
-| 5.4.t Test: noticing edits made outside Huddle · #32 · Sonnet | ✔ | | |
-| 5.4.i Implement the watcher · #33 · Sonnet | ✔ | | |
-| 5.5.t Test: reconciling at startup · #34 · Sonnet | ✔ | | |
-| 5.5.i Implement startup reconciliation · #35 · Sonnet | ✔ | | |
+| 5.4.t Test: noticing edits made outside Huddle · #32 · Sonnet | | | ✔ |
+| 5.4.i Implement the watcher · #33 · Sonnet | | | ✔ |
+| 5.5.t Test: reconciling at startup · #34 · Sonnet | | | ✔ |
+| 5.5.i Implement startup reconciliation · #35 · Sonnet | | | ✔ |
 | **D6. `TaskService`** | | | |
-| 6.1.t Test: creating a Task · #36 · Sonnet | ✔ | | |
-| 6.1.i Implement the mutation types and `Create` · #37 · Sonnet | ✔ | | |
-| 6.2.t Test: updating a Task · #38 · Sonnet | ✔ | | |
-| 6.2.i Implement `Update` · #39 · Sonnet | ✔ | | |
+| 6.1.t Test: creating a Task · #36 · Sonnet | | | ✔ |
+| 6.1.i Implement the mutation types and `Create` · #37 · Sonnet | | | ✔ |
+| 6.2.t Test: updating a Task · #38 · Sonnet | | | ✔ |
+| 6.2.i Implement `Update` · #39 · Sonnet | | | ✔ |
 | 6.3.t Test: merging and conflicts · #40 · Sonnet | ✔ | | |
 | 6.3.i Implement merging · #41 · Sonnet | ✔ | | |
 | 6.4.t Test: closing and reopening · #42 · Sonnet | ✔ | | |
@@ -85,7 +85,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 7.6.t Test: `BoardLayout` · #58 · Sonnet | | | ✔ |
 | 7.6.i Implement `BoardLayout` · #59 · Sonnet | | | ✔ |
 | 7.7.t Test: `ViewStore` · #60 · Sonnet | | | ✔ |
-| 🔁 R4 — Opus retrospective after #60, and plan update | ✔ | | |
+| 🔁 R4 — Opus retrospective after #60, and plan update | | | ✔ |
 | 7.7.i Implement `ViewStore` · #61 · Sonnet | | | ✔ |
 | **D8. The waking infrastructure** | | | |
 | 8.1.t Test: finding a Room by its exact members · #62 · Sonnet | | | ✔ |
@@ -131,21 +131,21 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 10.8.t Test: registering the tools, and the goldens · #98 · Sonnet | ✔ | | |
 | 10.8.i Register the tools and reseed the goldens · #99 · Sonnet | ✔ | | |
 | **D11. UI shell: nav, page, toolbar, List** | | | |
-| 11.1.t Test: `TaskColors` · #100 · Haiku | ✔ | | |
-| 11.1.i Implement `TaskColors` · #101 · Haiku | ✔ | | |
-| 11.2.t Test: the `app.js` helpers are present · #102 · Haiku | ✔ | | |
-| 11.2.i Add the `app.js` helpers · #103 · Haiku | ✔ | | |
-| 11.3.t Test: the Tasks CSS block · #104 · Haiku | ✔ | | |
-| 11.3.i Write the Tasks CSS block · #105 · Haiku | ✔ | | |
+| 11.1.t Test: `TaskColors` · #100 · Haiku | | | ✔ |
+| 11.1.i Implement `TaskColors` · #101 · Haiku | | | ✔ |
+| 11.2.t Test: the `app.js` helpers are present · #102 · Haiku | | | ✔ |
+| 11.2.i Add the `app.js` helpers · #103 · Haiku | | | ✔ |
+| 11.3.t Test: the Tasks CSS block · #104 · Haiku | | | ✔ |
+| 11.3.i Write the Tasks CSS block · #105 · Haiku | | | ✔ |
 | 🔁 R7 — Opus retrospective after #105, and plan update | ✔ | | |
-| 11.4.t Test: `TaskViewNav` · #106 · Sonnet | ✔ | | |
-| 11.4.i Implement `TaskViewNav` · #107 · Sonnet | ✔ | | |
+| 11.4.t Test: `TaskViewNav` · #106 · Sonnet | | | ✔ |
+| 11.4.i Implement `TaskViewNav` · #107 · Sonnet | | | ✔ |
 | 11.5.t Test: the Tasks page · #108 · Sonnet | ✔ | | |
 | 11.5.i Implement the Tasks page · #109 · Sonnet | ✔ | | |
-| 11.6.t Test: `TaskToolbar` · #110 · Sonnet | ✔ | | |
-| 11.6.i Implement `TaskToolbar` · #111 · Sonnet | ✔ | | |
-| 11.7.t Test: `TaskListView` · #112 · Sonnet | ✔ | | |
-| 11.7.i Implement `TaskListView` · #113 · Sonnet | ✔ | | |
+| 11.6.t Test: `TaskToolbar` · #110 · Sonnet | | | ✔ |
+| 11.6.i Implement `TaskToolbar` · #111 · Sonnet | | | ✔ |
+| 11.7.t Test: `TaskListView` · #112 · Sonnet | | | ✔ |
+| 11.7.i Implement `TaskListView` · #113 · Sonnet | | | ✔ |
 | **D12. The Board** | | | |
 | 12.1.t Test: `TaskCard` · #114 · Sonnet | ✔ | | |
 | 12.1.i Implement `TaskCard` · #115 · Sonnet | ✔ | | |
@@ -174,8 +174,8 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 14.5.i Implement the notifications · #135 · Sonnet | ✔ | | |
 | 🔁 R9 — Opus retrospective after #135, and plan update | ✔ | | |
 | **D15. Referencing a Task in chat** | | | |
-| 15.1.t Test: Task ids as links · #136 · Sonnet | ✔ | | |
-| 15.1.i Implement id linking · #137 · Sonnet | ✔ | | |
+| 15.1.t Test: Task ids as links · #136 · Sonnet | | | ✔ |
+| 15.1.i Implement id linking · #137 · Sonnet | | | ✔ |
 | 15.2.t Test: the route and the copy button · #138 · Sonnet | ✔ | | |
 | 15.2.i Implement the route and the copy button · #139 · Sonnet | ✔ | | |
 | 15.3.t Test: the `#` picker's Blazor side · #140 · Sonnet | ✔ | | |
