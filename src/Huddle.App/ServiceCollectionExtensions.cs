@@ -127,6 +127,7 @@ public static class ServiceCollectionExtensions
         // once the tasks that add them (D5's watcher, D6) land - this line is theirs to extend, not
         // duplicate.
         services.AddSingleton<TaskStore>();
+        services.AddSingleton<ITaskReferenceResolver>(sp => sp.GetRequiredService<TaskStore>());
 
         // A plain hub with no dependencies of its own (Spec §9.5). TaskService is a lazy singleton
         // (Settled corrections-B2 D6 item 10): nothing constructs it until 6.6.i injects it into the

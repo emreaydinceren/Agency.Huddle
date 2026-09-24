@@ -1,9 +1,12 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Agency.Huddle.App;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -171,6 +174,11 @@ public sealed class MessageListTests
     {
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
+
+        // MessageList now injects ITaskReferenceResolver and IOptions<TeamOptions> (Task 15.1) to
+        // decide whether to link Task ids - needed even though these tests never resolve one.
+        ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
         return ctx;
     }
 }

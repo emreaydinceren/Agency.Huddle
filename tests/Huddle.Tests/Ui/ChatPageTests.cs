@@ -12,6 +12,7 @@ using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 
@@ -936,6 +937,10 @@ public sealed class ChatPageTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<ProposalStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<ProposalService>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
+
+        // Chat.razor's MessageList child now injects ITaskReferenceResolver (Task 15.1) to link Task
+        // ids - needed even though these tests never resolve one.
+        ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
         return ctx;
     }
 

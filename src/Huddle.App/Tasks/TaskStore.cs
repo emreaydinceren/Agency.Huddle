@@ -13,7 +13,7 @@ namespace Agency.Huddle.App.Tasks;
 /// Task file (Spec §8.3), watches for edits made outside Huddle (Spec §8.4), and reconciles any
 /// edit made while Huddle was stopped once, at startup (Spec §8.5).
 /// </summary>
-internal sealed partial class TaskStore : IDisposable
+internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
 {
     /// <summary>The most version history <see cref="GetVersion"/> keeps per Task id (Spec §9.3 step 1).</summary>
     private const int MaxVersionHistory = 20;
@@ -192,6 +192,14 @@ internal sealed partial class TaskStore : IDisposable
         changed?.Invoke();
         return written;
     }
+
+    /// <summary>
+    /// Resolves <paramref name="id"/> for <see cref="Services.MarkdownRenderer"/> (Spec §13.13.2), by
+    /// the same lock-free <see cref="FrozenDictionary{TKey,TValue}"/> read as <see cref="Get"/>.
+    /// </summary>
+    /// <param name="id">The candidate Task id.</param>
+    TaskReference? ITaskReferenceResolver.Resolve(TaskId id) =>
+        this.Get(id) is { } task ? new TaskReference(task.Id, task.Title, task.Location.Closed) : null;
 
     /// <summary>
     /// Writes <paramref name="text"/> atomically to <paramref name="task"/>'s file (Spec §8.3), after
