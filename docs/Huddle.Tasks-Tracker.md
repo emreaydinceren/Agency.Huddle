@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then.
 
-**Status:** 23 of 147 tasks Done · 1 of 9 retrospectives done · last updated 2026-09-24.
+**Status:** 45 of 147 tasks Done · 2 of 9 retrospectives done · last updated 2026-09-24.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -26,15 +26,15 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 1.4.t Test: `Team:Tasks` options · #8 · Haiku | | | ✔ |
 | 1.4.i Implement `TasksOptions` · #9 · Haiku | | | ✔ |
 | **D2. The task file format** | | | |
-| 2.1.t Test: parsing the frontmatter · #10 · Sonnet | | ✔ | |
-| 2.1.i Implement frontmatter parsing · #11 · Sonnet | | ✔ | |
-| 2.2.t Test: splitting out and reading the Change log · #12 · Sonnet | | ✔ | |
-| 2.2.i Implement the Change log grammar · #13 · Sonnet | | ✔ | |
-| 2.3.t Test: composing a task file · #14 · Sonnet | | ✔ | |
-| 2.3.i Implement `Compose` · #15 · Sonnet | | ✔ | |
+| 2.1.t Test: parsing the frontmatter · #10 · Sonnet | | | ✔ |
+| 2.1.i Implement frontmatter parsing · #11 · Sonnet | | | ✔ |
+| 2.2.t Test: splitting out and reading the Change log · #12 · Sonnet | | | ✔ |
+| 2.2.i Implement the Change log grammar · #13 · Sonnet | | | ✔ |
+| 2.3.t Test: composing a task file · #14 · Sonnet | | | ✔ |
+| 2.3.i Implement `Compose` · #15 · Sonnet | | | ✔ |
 | 🔁 R1 — Opus retrospective after #15, and plan update | | | ✔ |
-| 2.4.t Test: `ComputeVersion` · #16 · Haiku | ✔ | | |
-| 2.4.i Implement `ComputeVersion` · #17 · Haiku | ✔ | | |
+| 2.4.t Test: `ComputeVersion` · #16 · Haiku | | | ✔ |
+| 2.4.i Implement `ComputeVersion` · #17 · Haiku | | | ✔ |
 | **D3. Diffing two versions of a Task** | | | |
 | 3.1.t Test: `TaskDiff.Compare` · #18 · Sonnet | | | ✔ |
 | 3.1.i Implement `TaskDiff.Compare` · #19 · Sonnet | | | ✔ |
@@ -46,12 +46,12 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 4.2.t Test: allocating numbers against `team.db` · #24 · Sonnet | | | ✔ |
 | 4.2.i Implement the allocator storage · #25 · Sonnet | | | ✔ |
 | **D5. `TaskStore`** | | | |
-| 5.1.t Test: mapping a path to a location · #26 · Haiku | ✔ | | |
-| 5.1.i Implement `TaskLayout` · #27 · Haiku | ✔ | | |
+| 5.1.t Test: mapping a path to a location · #26 · Haiku | | | ✔ |
+| 5.1.i Implement `TaskLayout` · #27 · Haiku | | | ✔ |
 | 5.2.t Test: scanning, rejected files and Teams · #28 · Sonnet | ✔ | | |
 | 5.2.i Implement the scan and the index · #29 · Sonnet | ✔ | | |
 | 5.3.t Test: writing, moving and keeping versions · #30 · Sonnet | ✔ | | |
-| 🔁 R2 — Opus retrospective after #30, and plan update | ✔ | | |
+| 🔁 R2 — Opus retrospective after #30, and plan update | | | ✔ |
 | 5.3.i Implement writing and moving · #31 · Sonnet | ✔ | | |
 | 5.4.t Test: noticing edits made outside Huddle · #32 · Sonnet | ✔ | | |
 | 5.4.i Implement the watcher · #33 · Sonnet | ✔ | | |
@@ -78,22 +78,22 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 7.2.i Implement `ViewValidator` · #51 · Haiku | | | ✔ |
 | 7.3.t Test: filtering and search · #52 · Sonnet | | | ✔ |
 | 7.3.i Implement `TaskQuery.Filter` · #53 · Sonnet | | | ✔ |
-| 7.4.t Test: sorting, group labels and grouping · #54 · Sonnet | ✔ | | |
-| 7.4.i Implement `Sort`, `GroupLabel` and `Group` · #55 · Sonnet | ✔ | | |
-| 7.5.t Test: `TaskQuery.Suggest` · #56 · Haiku | ✔ | | |
-| 7.5.i Implement `Suggest` · #57 · Haiku | ✔ | | |
-| 7.6.t Test: `BoardLayout` · #58 · Sonnet | ✔ | | |
-| 7.6.i Implement `BoardLayout` · #59 · Sonnet | ✔ | | |
+| 7.4.t Test: sorting, group labels and grouping · #54 · Sonnet | | | ✔ |
+| 7.4.i Implement `Sort`, `GroupLabel` and `Group` · #55 · Sonnet | | | ✔ |
+| 7.5.t Test: `TaskQuery.Suggest` · #56 · Haiku | | | ✔ |
+| 7.5.i Implement `Suggest` · #57 · Haiku | | | ✔ |
+| 7.6.t Test: `BoardLayout` · #58 · Sonnet | | | ✔ |
+| 7.6.i Implement `BoardLayout` · #59 · Sonnet | | | ✔ |
 | 7.7.t Test: `ViewStore` · #60 · Sonnet | ✔ | | |
 | 🔁 R4 — Opus retrospective after #60, and plan update | ✔ | | |
 | 7.7.i Implement `ViewStore` · #61 · Sonnet | ✔ | | |
 | **D8. The waking infrastructure** | | | |
-| 8.1.t Test: finding a Room by its exact members · #62 · Sonnet | ✔ | | |
-| 8.1.i Implement the member-set lookup · #63 · Sonnet | ✔ | | |
-| 8.2.t Test: `TurnActivity` · #64 · Haiku | ✔ | | |
-| 8.2.i Implement `TurnActivity` · #65 · Haiku | ✔ | | |
-| 8.3.t Test: `RoomSession` reports its Turns · #66 · Sonnet | ✔ | | |
-| 8.3.i Wire `TurnActivity` into `RoomSession` · #67 · Sonnet | ✔ | | |
+| 8.1.t Test: finding a Room by its exact members · #62 · Sonnet | | | ✔ |
+| 8.1.i Implement the member-set lookup · #63 · Sonnet | | | ✔ |
+| 8.2.t Test: `TurnActivity` · #64 · Haiku | | | ✔ |
+| 8.2.i Implement `TurnActivity` · #65 · Haiku | | | ✔ |
+| 8.3.t Test: `RoomSession` reports its Turns · #66 · Sonnet | | | ✔ |
+| 8.3.i Wire `TurnActivity` into `RoomSession` · #67 · Sonnet | | | ✔ |
 | 8.4.t Test: `TaskPresence.Resolve` · #68 · Haiku | ✔ | | |
 | 8.4.i Implement `TaskPresence` · #69 · Haiku | ✔ | | |
 | 8.5.t Test: `TaskActivity` · #70 · Haiku | ✔ | | |

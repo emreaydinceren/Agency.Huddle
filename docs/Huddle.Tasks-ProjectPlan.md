@@ -5,7 +5,7 @@ This plan breaks [`Huddle.Tasks-Specifications.md`](Huddle.Tasks-Specifications.
 context**. It names exact paths, types, signatures and acceptance criteria, and cites the Spec
 section that defines it.
 
-**17 deliverables · 147 tasks · 49 of them sized for Haiku (33%) · 9 retrospectives.** Every
+**17 deliverables · 147 tasks · 45 of them sized for Haiku (31%) · 9 retrospectives.** Every
 implementation task (`.i`) comes after its test task (`.t`). A `.t` task ends **red, for the
 right reason**, and its `.i` partner ends **green**. Docs and setup tasks have no test partner.
 
@@ -750,6 +750,14 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
     `PersonaStore.PersonasChanged`, and assert `IsOrphan` is false.
   - `Constructor_TasksDirInsideTeamsDir_Throws`.
   - `Get_UnknownId_ReturnsNull`.
+  - **Settled (corrections-B2):**
+    - `Constructor_UnderscoreFolderAtAnyDepth_NotRead`: unparsable files at `_archive/x.md`, `T/_drafts/x.md` and `T/P/_notes/x.md` appear in neither `All` nor `RejectedFiles`.
+    - Fixtures: a private `WriteTask(root, relativePath, TaskItem)` writes `TaskFileFormat.Compose(task)` and sets `File.SetLastWriteTimeUtc` to the last entry's `At`; use past dates before 2026-09-24; capture `dir.Options()` once.
+    - `Teams` enumerates with `Directory.GetDirectories` two levels (empty Team/Project folders count); calls `TaskLayout.TryMap` **before** `ReadAllText` so `_`-folders are not read; catches `IOException or UnauthorizedAccessException`.
+    - `TryMap` splits on `Path.DirectorySeparatorChar` and `Path.AltDirectorySeparatorChar` only.
+    - Linux Team folders differing only by case: fold them in `Teams` (first by Ordinal wins); the other folder's files are reported as rejected with a clear reason.
+    - `Teams_PersonaGainsLabel_OrphanClears`: the store recomputes orphan flags on `PersonasChanged` and raises `IndexChanged`; the test waits on `IndexChanged`.
+    - Watcher tests pre-create the target Team folders before constructing the store (inotify can miss files in a just-created subdirectory on Linux CI).
 - **Acceptance:** Red. **Two-phase.**
 
 ### Task 5.2.i (#29) — Implement the scan and the index [Sonnet]
@@ -758,7 +766,7 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
 - **Read first:** Task 5.2.t, **Spec §8** (the class sketch; follow the visibility table here).
 - **Deliverable:**
   - The constructor is
-    `(IOptions<TeamOptions> options, PersonaStore personas, TaskIdAllocator ids, TimeProvider clock, ILogger<TaskStore> logger)`.
+    `(IOptions<TeamOptions> options, PersonaStore personas, TimeProvider clock, ILogger<TaskStore> logger)`.
     It resolves `root = Path.Combine(DataDir, Tasks.Dir)`, throws `InvalidOperationException` if
     `root` lies inside `Path.Combine(DataDir, Acp.TeamsDir)`, creates `root`, and scans.
   - The scan uses `Directory.GetFiles(root, "*.md", SearchOption.AllDirectories)` and
@@ -776,6 +784,19 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
     `string RootDirectory` and `event Action? IndexChanged`.
   - Create `RejectedTaskFile.cs` and `TeamFolder.cs` as records.
   - Register it as a singleton.
+  - **Settled (corrections-B2):**
+    - One lock only: the debounce rebuild (scan, compare with `lastSeenVersion`, swap the index) runs under the same `writeGate` as `Write`/`Move` (Spec E-2); copy `AvatarStore.cs:570-573` / `PromptStore.cs:537`.
+    - `lastSeenVersion` and all path keys use `FileState.PathComparer` (`FileChanges/FileState.cs:29`).
+    - Constructor drops `TaskIdAllocator`: `(IOptions<TeamOptions>, PersonaStore, TimeProvider, ILogger<TaskStore>)` (keep the plan's order for the rest).
+    - Constructor order: validate paths → create root → scan → reconcile (5.5) → create watcher.
+    - "Inside TeamsDir" check: `Path.GetFullPath` on both, separator-terminated prefix compare with `FileState.PathComparer`; throw on equality and on either containing the other; check before creating the watcher (S2930); tests capture `dir.Options()` once and mutate `.Value.Tasks.Dir`.
+    - PersonaDir throw is at `ServiceCollectionExtensions.cs:34-40` (Spec §8.1's :121-127 is stale).
+    - `Teams`: enumerate with `Directory.GetDirectories` two levels (empty Team/Project folders count); call `TaskLayout.TryMap` **before** `ReadAllText` so `_`-folders are not read; catch `IOException or UnauthorizedAccessException` (house style).
+    - `TryMap` splits on `Path.DirectorySeparatorChar` and `Path.AltDirectorySeparatorChar` only.
+    - Linux Team folders differing only by case (DM): fold them in `Teams` (first by Ordinal wins); the other folder's files are reported as rejected with a clear reason.
+    - Registration: `TaskStore`, `TaskEvents`, `TaskService` go on the lines right after D4's `TaskIdAllocator` in `ServiceCollectionExtensions.cs`.
+    - `Tasks.Enabled=false` (DM): still register everything (renames keep files consistent).
+    - Visibility: `TeamFolder` and `RejectedTaskFile` are **public** (§13.12 renders them).
 - **Acceptance:** 5.2.t is green.
 
 ### Task 5.3.t (#30) — Test: writing, moving and keeping versions [Sonnet]
@@ -791,6 +812,11 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
   - `Move_EmptiedProjectFolder_IsLeftInPlace`.
   - `VersionHistory_KeepsLast20`: `internal TaskItem? GetVersion(TaskId, string version)` finds
     the 20 most recent versions and not the 21st.
+  - **Settled (corrections-B2):**
+    - `Move_CaseOnlyTeamChange_KeepsTheFile`: if source and target differ only in case, do the rename through a temp name (`source → source.tmp-move → target`) — never write-then-delete.
+    - `Write_DiskChangedSinceSeen_ReturnsConflict`: `Write` and `Move` take the expected disk version and return a conflict result (not throw) when the disk version differs from it — the service maps it to `Conflict`.
+    - `AppendEntry_VersionMismatch_ReturnsNull`: `internal TaskItem? AppendEntry(TaskId id, string expectedVersion, ChangeLogEntry entry)` returns `null` if `ComputeVersion(disk) != expectedVersion`.
+    - Parse before writing: Write parses the composed text first and throws `InvalidOperationException` if it doesn't parse; nothing invalid reaches disk.
 - **Acceptance:** Red.
 
 > **🔁 Retrospective R2: after Task #30.** Covers #16–#30.
@@ -808,6 +834,14 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
   - Raise `IndexChanged` **outside** it.
   - `Move` creates the target directory, refuses an existing target, writes the target
     atomically, then deletes the source.
+  - **Settled (corrections-B2):**
+    - One lock (writeGate) for both debounce rebuild and Write/Move.
+    - Move = rename, then write: Check `File.Exists(target)` first → Spec §8.3 *"A file named X already exists in Y"*. Then `File.Move(source, target, overwrite: false)`, then atomic tmp-write over target. On failure of write, move it back.
+    - Same-file guard: If source and target are equal under `FileState.PathComparer` and differ only in case, do case rename through temp name (`source → source.tmp-move → target`) — never write-then-delete.
+    - Version-checked store API: `internal string? ReadText(TaskId id)` (current disk text); `internal TaskItem? AppendEntry(TaskId id, string expectedVersion, ChangeLogEntry entry)` (returns `null` if `ComputeVersion(disk) != expectedVersion`, else compose + atomic write, return re-parsed Task); `Write` and `Move` return conflict result when disk version differs.
+    - Events: No `IndexChanged` from rebuild that changed nothing. Batch write API raises `IndexChanged` exactly once. Forced rebuild from `OnWatcherError` always raises it. Factor rebuild core as internal synchronous method tests can call.
+    - Version history: recorded at initial scan, on every rebuild that sees new version, after every write.
+    - Parse before writing: Write parses composed text first and throws `InvalidOperationException` if invalid; nothing invalid reaches disk.
 - **Acceptance:** 5.3.t is green.
 
 ### Task 5.4.t (#32) — Test: noticing edits made outside Huddle [Sonnet]
@@ -824,6 +858,11 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
   - `FileDeleted_RemovedFromIndex_NoOutsideEdit`.
   - `TmpFile_Ignored`.
   - `WatcherError_TriggersFullRebuild`: call the internal `OnWatcherError` directly.
+  - **Settled (corrections-B2):**
+    - One lock for debounce rebuild and watcher events.
+    - No `IndexChanged` from rebuild that changed nothing; forced rebuild from `OnWatcherError` always raises it.
+    - Watcher tests pre-create target Team folders before constructing store (inotify can miss files on Linux CI).
+    - Create `OutsideEdit.cs` (the event args record) in task 5.4.i.
 - **Acceptance:** Red. **Two-phase.**
 
 ### Task 5.4.i (#33) — Implement the watcher [Sonnet]
@@ -839,6 +878,11 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
   - Rebuild by comparing each file's `ComputeVersion` with `lastSeenVersion`, and match by id
     across paths.
   - Raise events outside the lock. Check `disposed` before logging an error.
+  - **Settled (corrections-B2):**
+    - One lock (writeGate) for both rebuild and Write/Move.
+    - No `IndexChanged` from rebuild that changed nothing; forced rebuild always raises it; factor rebuild core as internal synchronous method.
+    - Watcher tests pre-create target Team folders (inotify can miss files on Linux CI).
+    - Create `OutsideEdit.cs` as a public record (event args).
 - **Acceptance:** 5.4.t is green. Run it three times in a row, all green, to catch flakiness.
 
 ### Task 5.5.t (#34) — Test: reconciling at startup [Sonnet]
@@ -852,6 +896,9 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
     no `OutsideEditDetected`.
   - `Startup_FileNotNewer_Unchanged`: the bytes are identical.
   - `Startup_NoEntries_AppendsEntry`.
+  - **Settled (corrections-B2):**
+    - Constructor order: validate paths → create root → scan → reconcile (5.5) → create watcher.
+    - Fixtures: a private `WriteTask(root, relativePath, TaskItem)` writes `TaskFileFormat.Compose(task)` and sets `File.SetLastWriteTimeUtc` to the last entry's `At`; use past dates before 2026-09-24; `Startup_FileNotNewer_Unchanged` sets it explicitly.
 - **Acceptance:** Red.
 
 ### Task 5.5.i (#35) — Implement startup reconciliation [Sonnet]
@@ -862,6 +909,9 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
   `File.GetLastWriteTimeUtc(path) > lastEntry.At + 2s`, or that has no entries, write
   `TaskFileFormat.AppendEntry(text, new(clock.GetUtcNow() truncated to seconds, humanName, "edited outside Huddle"))`
   through the atomic write. Raise no event and wake no one.
+  - **Settled (corrections-B2):**
+    - Constructor order: validate paths → create root → scan → reconcile (5.5) → create watcher.
+    - Every fixture-writing helper sets `File.SetLastWriteTimeUtc(path, lastEntry.At.UtcDateTime)` (or a fixed past time when no entries) so 5.5.i doesn't rewrite fixtures; use past dates before 2026-09-24; `Startup_FileNotNewer_Unchanged` sets it explicitly.
 - **Acceptance:** 5.5.t is green, and all of D5 is green.
 
 ---
@@ -907,6 +957,15 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
   - Allocate the id with `ids.Next(team, highestSeenForPrefix)`.
   - The entry time is `clock.GetUtcNow()` truncated to whole seconds.
   - Register `TaskEvents` and `TaskService` as singletons.
+  - **Settled (corrections-B2 D6):**
+    - `private readonly Lock mutateGate` in TaskService around the whole of `Create`, `Update`, `Close`, `Reopen`, `OnOutsideEdit`, `RenameTeammate`; lock order: `mutateGate` → `writeGate`; raise `TaskChanged` outside both locks.
+    - Canonicalise Team/Project to existing folder's casing from `store.Teams` (OrdinalIgnoreCase) before diffing in Create and Update.
+    - Legal folder names (Ops:Legal): fixed Windows set on every OS — `<>:"/\|?*`, control chars, trailing `.` or space, reserved names CON PRN AUX NUL COM1-9 LPT1-9 (case-insensitive).
+    - Create never overwrites: prefix first; highest number from `store.HighestNumber(prefix)` = max over every parsed id **and** every file name (including rejected files) that parses as `TaskId`; write with `overwrite: false` semantics.
+    - Constructor drops `ITeamDirectory` (unused; Human name is `TeamOptions.HumanName`).
+    - Eager construction: TaskService is lazy singleton; until 6.6.i injects it into hosted `PersonaRenameCascade` nothing builds it at runtime.
+    - Visibility: `TaskDraft`, `TaskPatch`, `Optional<T>`, `TaskResult`, `TaskChange`, `TaskEvents` are **internal**.
+    - `TasksReloaded`: `TaskEvents` is plain hub; `TaskService` subscribes to `store.IndexChanged` and re-raises it; with D5 item 7, "once" holds.
 - **Acceptance:** 6.1.t is green.
 
 ### Task 6.2.t (#38) — Test: updating a Task [Sonnet]
@@ -924,6 +983,9 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
   - `Update_ParentCycle_Refused`.
   - `Update_UnknownId_NotFound`.
   - `Update_Unassign_WithOptionalSetNull`.
+  - **Settled (corrections-B2 D6):**
+    - `Update_HandEditedLogLine_Preserved`: hand-edited content in the Change log survives (byte for byte from the last fence-aware heading).
+    - `Update_Concurrent_BothChangesSurvive`: under `mutateGate`, two concurrent updates both log their changes.
 - **Acceptance:** Red.
 
 ### Task 6.2.i (#39) — Implement `Update` [Sonnet]
@@ -939,6 +1001,11 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
   4. Build the entry.
   5. Compose, then write, or move when the Team or Project changed.
   6. Raise `TaskChanged`.
+  - **Settled (corrections-B2 D6):**
+    - Never `Compose` a whole existing file: add `TaskFileFormat.ReplaceHead(string currentText, TaskItem after)` to D2 — compose frontmatter + description, then keep the original text from the last fence-aware `## Change log` heading onward **byte for byte**; then `AppendEntry`.
+    - `private readonly Lock mutateGate` in TaskService around Create, Update, Close, Reopen, OnOutsideEdit, RenameTeammate; lock order: `mutateGate` → `writeGate`; raise `TaskChanged` outside both locks.
+    - Update validates only fields the patch sets (missing references are allowed; a removed assignee stays).
+    - Canonicalise Team/Project to existing folder's casing from `store.Teams` (OrdinalIgnoreCase) before diffing.
 - **Acceptance:** 6.2.t is green.
 
 ### Task 6.3.t (#40) — Test: merging and conflicts [Sonnet]
@@ -981,6 +1048,8 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
 - **Read first:** Task 6.4.t.
 - **Deliverable:** `TaskResult Close(TaskId, TaskActor)` and `TaskResult Reopen(TaskId, TaskActor)`,
   using `store.Move` with `Closed` flipped and the summary `closed` or `reopened`.
+  - **Settled (corrections-B2 D6):**
+    - `TaskDiff.Compare` is empty for Close/Reopen — skip §9.4's "empty → Unchanged"; build via `AppendEntry` on the current text; raise `TaskChange` with empty `Changes`; D9 reads `Entry.Summary`; an `Update` on a closed Task keeps `Closed` when it moves the file.
 - **Acceptance:** 6.4.t is green.
 
 ### Task 6.5.t (#44) — Test: logging edits made outside Huddle [Sonnet]
@@ -1004,6 +1073,8 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
   - Use `TaskFileFormat.AppendEntry` on the **current file text**, not `Compose`.
   - Write through `store.Write`.
   - The actor is `TaskActor(OutsideHuddle, humanName, KnownIds.Human)`.
+  - **Settled (corrections-B2 D6):**
+    - `OnOutsideEdit` with `Before == null` (created by hand): write the bare `edited outside Huddle`; use `store.AppendEntry(id, after.Version, …)`; `null` means skip (a newer save will be reported by next rebuild).
 - **Acceptance:** 6.5.t is green.
 
 > **🔁 Retrospective R3: after Task #45.** Covers #31–#45.
@@ -1019,6 +1090,8 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
   - `RenameTeammate_OldLogLinesKeepOldName`.
   - `PersonaRenameCascade_RenamesTaskAssignee`: a functional test through a real
     `PersonaStore` rename.
+  - **Settled (corrections-B2 D6):**
+    - Add `PersonaRenameCascade_RenamesViewAssigneeFilter` test.
 - **Acceptance:** Red.
 
 ### Task 6.6.i (#47) — Implement renaming, and the cascade hook [Sonnet]
@@ -1032,6 +1105,15 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
   add both calls, each in its own `try/catch`. This task absorbs the `ViewStore` call that used
   to be in 7.7.i (R1), so it starts only once 7.7.i has merged. Also update the construction site
   of the `PersonaRenameCascadeTests` harness.
+  - **Settled (corrections-B2 D6):**
+    - Add `TaskService tasks, ViewStore views` to `PersonaRenameCascade`'s primary constructor (`:53-62`) with `<param>` docs.
+    - Two `[LoggerMessage]` methods beside `:337-350`.
+    - `catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)` as at `:136`/`:150`.
+    - Both calls between `:153` and `:155`.
+    - Update test harness: `PersonaRenameCascadeTests.cs:462` (factory) and `:544-566` (Harness; `Dispose` disposes TaskService, TaskStore, ViewStore).
+    - Add `PersonaRenameCascade_RenamesViewAssigneeFilter` test.
+    - `RenameTeammate` catches per file and continues; never throws (runs before `RenameUser`).
+    - 6.6 starts only after D7's 7.7.i has merged.
 - **Acceptance:** 6.6.t is green, and the full suite is green.
 
 ---
@@ -1237,6 +1319,8 @@ functions need only D1.
   - `InvalidView` and `ViewSaveResult` already exist in `TaskView.cs`. Serialise with
     `ViewJson.Options`, and validate with the two-argument `ViewValidator.Validate(view, existing)`.
   - Register it as a singleton on the line after `AvatarStore`.
+  - **Settled (corrections-B1):**
+    - `JsonException.LineNumber` and `BytePositionInLine` are 0-based; `ViewLoadError` reports 1-based (add 1), with a test.
 - **Acceptance:** 7.7.t is green, and the full suite is green.
 
 ---
@@ -1339,9 +1423,11 @@ functions need only D1.
   and `internal static class TaskPresence` with `Resolve(bool online, bool busy)`. The caller
   computes `online` as `PersonaStatusResolver.Resolve(...)` returning Online or Degraded (see
   `src/Huddle.App/Acp/PersonaStatusResolver.cs:69`). Note this in the method's `///` remarks.
+  - **Settled (corrections-B3 D8):**
+    - Online = Online or Degraded; `///` remarks note `Starting` counts as Offline.
 - **Acceptance:** 8.4.t is green.
 
-### Task 8.5.t (#70) — Test: `TaskActivity` [Haiku]
+### Task 8.5.t (#70) — Test: `TaskActivity` [Sonnet]
 
 - **Goal:** Pin **Spec §10.7** and the budget arithmetic of **Spec §10.6**.
 - **Read first:** **Spec §10.6**, **Spec §10.7**.
@@ -1352,9 +1438,12 @@ functions need only D1.
   - `Grant_AddsAnotherBudget`.
   - `ResetForHuman_ZeroesUsed`.
   - `Budget_ZeroOrLess_NeverExhausted`.
+  - **Settled (corrections-B3 D8):**
+    - `ResetForHuman_ZeroesUsedAndGrants`: `ResetForHuman` resets `Granted` to the base **and** `Used`.
+    - `Grant_NotExhausted_NoChange`: `Grant` adds nothing unless Exhausted.
 - **Acceptance:** Red.
 
-### Task 8.5.i (#71) — Implement `TaskActivity` [Haiku]
+### Task 8.5.i (#71) — Implement `TaskActivity` [Sonnet]
 
 - **Goal:** Implement **Spec §10.7**.
 - **Read first:** Task 8.5.t.
@@ -1372,6 +1461,11 @@ functions need only D1.
   Its constructor is `(IOptions<TeamOptions>)`, for `AgentWakeBudget`. Create the public records
   `WakeRecord` and `WakeBudget` and the enum
   `WakeOutcome { Woken, Offline, BudgetSpent, WakePaused, Failed }`. Register it as a singleton.
+  - **Settled (corrections-B3 D8):**
+    - Keep the plan's constructor. `WakeRecord.RoomId` and `RoomName` are `string?`.
+    - `ResetForHuman` resets `Granted` to the base **and** `Used`.
+    - `Grant` adds nothing unless Exhausted.
+    - Add `bool TryConsumeAgentWake(TaskId)` (atomic check-and-increment under the lock); use for refund or count-after-post (D9 item 11).
 - **Acceptance:** 8.5.t is green.
 
 ---
@@ -1390,27 +1484,33 @@ snippet in the conventions).
   the existing `ManualTimeProvider` doesn't.
 - **Read first:** `tests/Huddle.Tests/Acp/Fakes/ManualTimeProvider.cs` (its `CreateTimer`
   returns `NoOpTimer`).
-- **Deliverable:** `tests/Huddle.Tests/Tasks/FiringTimeProviderTests.cs`:
+- **Deliverable:** `tests/Huddle.Tests/Acp/Fakes/FiringTimeProviderTests.cs`:
   - `Advance_PastDueTime_FiresOnce`.
   - `Advance_BeforeDueTime_DoesNotFire`.
   - `Change_Reschedules`.
   - `Dispose_PreventsFiring`.
   - `Periodic_FiresEachPeriod`.
+  - **Settled (corrections-B3 D9):**
+    - `CallbackCreatesTimer_NoDeadlock`, `DisposeInsideEarlierCallback_DoesNotFire`, `ZeroDueTime_FiresOnNextAdvanceNotOnCreate`.
+    - Behaviour: snapshot due timers under the lock, run callbacks **outside** it; advance stepwise (set clock to each timer's due time, loop until nothing is due by target, set clock to target); fire in (due time, creation order); period `Zero`/`InfiniteTimeSpan` = once; due `InfiniteTimeSpan` = never; never fire inside `CreateTimer`/`Change` (zero due time fires on next `Advance`); `Change` returns false once disposed; re-check disposed just before each callback; cap at 10,000 fires per `Advance`; start at a fixed **past** instant.
 - **Acceptance:** Red.
 
 ### Task 9.1.i (#73) — Implement `FiringTimeProvider` [Haiku]
 
 - **Goal:** Provide the fake clock.
 - **Read first:** Task 9.1.t.
-- **Deliverable:** `tests/Huddle.Tests/Tasks/FiringTimeProvider.cs`:
+- **Deliverable:** `tests/Huddle.Tests/Acp/Fakes/FiringTimeProvider.cs`:
   `internal sealed class FiringTimeProvider : TimeProvider`, with `GetUtcNow()`,
   `Advance(TimeSpan)` (which fires due timers synchronously, in due-time order, and reschedules
   periodic ones), and `CreateTimer` returning a nested `ITimer` that supports `Change` and
   `Dispose`/`DisposeAsync`. Add a line to `Conversation/delivery-facts.md`: *use
   `FiringTimeProvider` when a timer must fire*.
+  - **Settled (corrections-B3 D9):**
+    - `FiringTimeProvider` goes in `tests/Huddle.Tests/Acp/Fakes/FiringTimeProvider.cs`, not under Tasks/ (B1 cross-cutting 1).
+    - Behaviour: snapshot due timers under lock, run callbacks **outside** it; advance stepwise; fire in (due time, creation order); period `Zero`/`InfiniteTimeSpan` = once; due `InfiniteTimeSpan` = never; never fire inside `CreateTimer`/`Change`; zero due time fires on next `Advance`; `Change` returns false once disposed; cap at 10,000 fires per `Advance`; start at a fixed **past** instant.
 - **Acceptance:** 9.1.t is green.
 
-### Task 9.2.t (#74) — Test: the `task.wake.message` Prompt [Haiku]
+### Task 9.2.t (#74) — Test: the `task.wake.message` Prompt [Sonnet]
 
 - **Goal:** Pin the **Spec §10.5** Message template as a catalog Prompt (**Spec §11.9**).
 - **Read first:** **Spec §10.5**, **Spec §11.9**, `src/Huddle.App/Prompts/PromptCatalog.cs` (any
@@ -1420,9 +1520,13 @@ snippet in the conventions).
   `TaskWakeMessage_Exists_Live_RequiresAllSevenPlaceholders`: `assignee`, `taskId`, `title`,
   `actor`, `changes`, `status` and `team`. `Default` starts with `@{{assignee}}` and doesn't
   contain `mcp__team__`.
+  - **Settled (corrections-B3 blocking + D9):**
+    - Prompt group: 9.2.i adds `("task.", "Tasks")` to `GroupOrder` in `Components/Settings/PromptFieldFactory.cs:30-35`; update the "four groups" test (`PromptFieldFactoryTests.cs:~22-28`); check `SettingsPageTests` for group assumptions.
+    - Prompt count: 9.2.i bumps `PromptCatalogTests.cs:27` from 49 to 50 (and its summary).
+    - Placeholder keys include braces: `PromptRenderer.Render` looks up `match.Value` = `"{{assignee}}"`; values dictionary and `Placeholders` lists use `"{{assignee}}"` etc., as `getHelp.toolEntry` does.
 - **Acceptance:** Red.
 
-### Task 9.2.i (#75) — Add the `task.wake.message` Prompt [Haiku]
+### Task 9.2.i (#75) — Add the `task.wake.message` Prompt [Sonnet]
 
 - **Goal:** Implement the **Spec §10.5** Prompt.
 - **Read first:** Task 9.2.t, [Regenerating `prompts.default.json`](#regenerating-promptsdefaultjson).
@@ -1433,6 +1537,10 @@ snippet in the conventions).
   - `Default` is the §10.5 text, with `\n` line endings. `Placeholders` and
     `RequiredPlaceholders` are all seven. `Timing` is `PromptTiming.Live`.
   - Regenerate `prompts.default.json` with the script.
+  - **Settled (corrections-B3 D9):**
+    - Add `("task.", "Tasks")` to `GroupOrder` in `Components/Settings/PromptFieldFactory.cs:30-35`; update "four groups" test (`PromptFieldFactoryTests.cs:~22-28`); check `SettingsPageTests`.
+    - Bump `PromptCatalogTests.cs:27` from 49 to 50 (and its summary).
+    - D9 owns `task.wake.message` (not WS5).
 - **Acceptance:** 9.2.t is green, and `PromptDefaultsFileTests` is green.
 
 > **🔁 Retrospective R5: after Task #75.** Covers #61–#75.
@@ -1451,6 +1559,12 @@ snippet in the conventions).
 
   Plus: an unknown Persona assignee gives `NoAssignee`, and a reassignment previews only the new
   assignee.
+  - **Settled (corrections-B3 blocking + D9):**
+    - Fix the fixture: `PipeHostFixture.RemovePersonaSupervisorHostedService` must pick by `d.ImplementationFactory?.Method.ReturnType == typeof(PersonaSupervisor)` and rewrite the remarks; callers stay green.
+    - Register by name anchors (PersonaSupervisor's pair is ~`:185-186`).
+    - Guard 1 blocks when `!Tasks.Enabled || !Tasks.WakeEnabled` (ADR-0026 guard 1); add a test.
+    - Guard 5 uses `personas.Get(name)` (PersonaStore.cs:254); `FindUserByName` only for presence.
+    - Add a `TeamWebApplicationFactory` test: `GetServices<IHostedService>()` contains the same instance as `GetRequiredService<TaskTriggerService>()`.
 - **Acceptance:** Red.
 
 ### Task 9.3.i (#77) — Implement `Preview` [Sonnet]
@@ -1464,6 +1578,10 @@ snippet in the conventions).
   - `Preview`, which is pure over those inputs.
   - Register the service as a singleton plus `AddHostedService(sp => sp.GetRequiredService<TaskTriggerService>())`,
     **after** `PersonaSupervisor` (`ServiceCollectionExtensions.cs:272-273`).
+  - **Settled (corrections-B3 D9):**
+    - Fix the fixture: `PipeHostFixture.RemovePersonaSupervisorHostedService` picks by `d.ImplementationFactory?.Method.ReturnType == typeof(PersonaSupervisor)`; rewrite remarks; callers (`PipeHostFixture:138`, `MockAdapterFixture:151`, `PersonaHostTests:217`, `ProcessModeTests:99`) stay green.
+    - Register by name anchors (PersonaSupervisor's pair is ~`:185-186`); fix the fixture.
+    - `TaskTriggerService` is **internal**.
 - **Acceptance:** 9.3.t is green.
 
 ### Task 9.4.t (#78) — Test: coalescing and posting [Sonnet]
@@ -1478,6 +1596,15 @@ snippet in the conventions).
   - `Message_StartsWithMentionOfAssignee_AndCallsGetTask`.
   - `AssigneeChangedDuringWindow_NewAssigneeGetsAll`.
   - `WakeCoalesceSecondsZero_PostsImmediately`.
+  - **Settled (corrections-B3 D9):**
+    - Firing: timer callback does `_ = this.FireAsync(key)`; `FireAsync` catches and logs everything (no `async void`); track in-flight fires; `StopAsync` cancels lifetime CTS, disposes pending timers, awaits in-flight fires; remove batch at start of fire; **subscribe in `StartAsync`**, not constructor; `WakeCoalesceSeconds <= 0` → fire directly.
+    - Determinism: add `internal Task WhenIdleAsync()` (awaits in-flight fires; `StopAsync` reuses it); tests `Advance` then `await WhenIdleAsync()`; give `TaskStore` `TimeProvider.System`.
+    - Serialise `FireAsync` behind one `SemaphoreSlim(1,1)` (two batches for same Task, `CreateRoomForAsync` isn't idempotent); use `TryConsumeAgentWake`; count only `Woken` and `Offline` outcomes (refund otherwise).
+    - `{{changes}}`: built from each batched `TaskChange.Entry.Summary`, never `Changes`; latest Task null → skip and log; `{{status}}` = `Status.ToWire()`, `{{team}}` = `Location.Team`.
+    - Fakes: `FakeAgentGateway` has only `IsOnline`, `SetOnline`, `StopTurnAsync` — does not record deliveries; watch posts via `RoomEvents.MessagePosted` (`MessagePostedEvent.Mentions`); `Woken` cases need `gateway.SetOnline(id)` (default offline).
+    - Neutralise Mentions: in `{{title}}` and `{{changes}}`, insert U+2060 (word joiner) after every `@` so Task text can't Mention a third Teammate; test it.
+    - Actor's own session: when wake is posted as an Agent, record it through `OwnPosts` (as the Agent's own post) so the actor's session in that Room gets its catch-up line.
+    - Outside edits: `OutsideHuddle` actor does not reset Task wake budget; >10 outside-edit changes delivered within one coalesce window are logged not woken (git pull must not wake every Task); test both.
 - **Acceptance:** Red. **Two-phase.**
 
 ### Task 9.4.i (#79) — Implement coalescing and posting [Sonnet]
@@ -1494,6 +1621,15 @@ snippet in the conventions).
     The timer callback has no token, so justify `None` in a comment. **Check first whether the
     analyzer accepts it**, and if not, use a service-lifetime `CancellationTokenSource` that
     `StopAsync` cancels.
+  - **Settled (corrections-B3 D9):**
+    - Firing: timer callback does `_ = this.FireAsync(key)`; `FireAsync` catches and logs everything; track in-flight fires; `StopAsync` cancels lifetime CTS, disposes pending timers, awaits in-flight fires; remove batch at **start** of fire; **subscribe in `StartAsync`**, not constructor; `WakeCoalesceSeconds <= 0` → fire directly.
+    - Determinism: add `internal Task WhenIdleAsync()` (awaits in-flight fires; `StopAsync` reuses it).
+    - Serialise `FireAsync` behind one `SemaphoreSlim(1,1)`; use `TryConsumeAgentWake`; count only `Woken` and `Offline` outcomes (refund otherwise).
+    - `{{changes}}`: built from each batched `TaskChange.Entry.Summary`, never `Changes`; latest Task null → skip and log.
+    - Fakes: `FakeAgentGateway` has only `IsOnline`, `SetOnline`, `StopTurnAsync` — does not record deliveries; watch posts via `RoomEvents.MessagePosted`; `Woken` cases need `gateway.SetOnline(id)`.
+    - Neutralise Mentions: insert U+2060 after every `@` in `{{title}}` and `{{changes}}`; test it.
+    - Actor's own session: record wake as Agent through `OwnPosts` (as Agent's own post).
+    - Outside edits: `OutsideHuddle` actor does not reset Task wake budget; >10 outside-edit changes in one coalesce window logged not woken; test both.
 - **Acceptance:** 9.4.t is green.
 
 ### Task 9.5.t (#80) — Test: choosing the Room [Sonnet]
@@ -1509,6 +1645,9 @@ snippet in the conventions).
   - `NoRoom_CreatesOne_HumanAutoAdded`.
   - `ArchivedExactSet_Skipped_CreatesNew`.
   - `AssigneeNeverRegistered_NothingPosted`.
+  - **Settled (corrections-B3 D9):**
+    - Sender: Agent actor's `TaskActor.UserId` may be null → `FindUserByNameAsync(actor.Name)` (async one in async code); still null → `Failed`; **never** fall back to Human.
+    - Step 4: S is the set from last step tried (step 3's if it ran); every such set contains sender, so `PostAsync`'s membership check passes; creator's user null → S = {Human, assignee}.
 - **Acceptance:** Red.
 
 ### Task 9.5.i (#81) — Implement choosing the Room [Sonnet]
@@ -1518,6 +1657,9 @@ snippet in the conventions).
   a single agent id returns the direct Room, and the Human is always added).
 - **Deliverable:** A private `ResolveRoomAsync(TaskItem task, TaskActor actor, User assignee, CancellationToken)`
   that implements steps 1–4, with `directory.FindUserByName` for Name → User.
+  - **Settled (corrections-B3 D9):**
+    - Sender: Agent actor's `TaskActor.UserId` may be null → `FindUserByNameAsync(actor.Name)` (async); still null → `Failed`; never fall back to Human.
+    - Step 4: S is set from last step tried (step 3's if it ran); every such set contains sender; creator's user null → S = {Human, assignee}.
 - **Acceptance:** 9.5.t is green.
 
 ### Task 9.6.t (#82) — Test: outcomes and the wake budget [Sonnet]
@@ -1532,6 +1674,8 @@ snippet in the conventions).
   - `Grant_ResumesWaking`.
   - `HumanChange_ResetsBudget`.
   - `Woken_RecordedInTaskActivity_WithRoomName`.
+  - **Settled (corrections-B3 D9):**
+    - `RoomBudgetSpent`: the already-posted message is **Agent-authored** after the last Human message (a Human post resets Budget).
 - **Acceptance:** Red.
 
 ### Task 9.6.i (#83) — Implement outcomes and the budget [Sonnet]
@@ -1545,6 +1689,8 @@ snippet in the conventions).
   - Call `activity.CountAgentWake` for Agent actors and `ResetForHuman` for Human and
     outside-Huddle actors.
   - Record a `WakeRecord` for every outcome.
+  - **Settled (corrections-B3 D9):**
+    - `ResetForHuman` is called when a Human change is **received**, even if guards block it.
 - **Acceptance:** 9.6.t is green, and all of D9 is green.
 
 ---
@@ -2344,7 +2490,7 @@ The manager records each retrospective here, newest last, and commits the plan c
 | # | After task | Date | Top findings | Plan changes made |
 | --- | --- | --- | --- | --- |
 | R1 | 15 done (#1–#9, #48–#53; streams ran in parallel) | 2026-09-24 | Haiku batched four pairs, wrote every test first and cut the reds from one run. Analyzer errors in test code hid behind missing-type reds (CA1806, CA1305, IDE0059, IDE0005, xUnit2013). All 18 files created with `Write` came out LF. Agents re-derived D1's API and the Spec's section lines. Two agents ran `find /` despite the rule | Edited 2.4.t, 5.1.t, 6.6.i, 7.4.t, 7.5.i, 7.6.i and 7.7.i. Added facts. Brief: one test file per pair, and the red must be free of analyzer noise. Scripted `Run-Tests.ps1 -RedTask`, and fixed `Check-Eol -Fix`'s exit code. Haiku gets one pair per dispatch |
-| R2 | #30 | | | |
+| R2 | 31 done (#10–#25; the 0.1 chores) | 2026-09-24 | Agents reported "Deviations: none" after breaking the procedure: a copied red file, a `find /` hunt, python3 edits. Haiku tests weren't spec-complete: 2.4's version test couldn't fail, and 5.1 missed the rule that `_` folders are reserved at any depth. The same analyzer errors kept failing builds (CA1859, IDE0059, IDE0060, IDE0005). The plan's text and corrections B2/B3 disagreed, so agents had two sources | Folded B2/B3 into the text of 5.2–6.6, 7.7, 8.4–9.6. Retagged 8.5 and 9.2 Haiku→Sonnet. The brief now requires a row-by-row Coverage list and a forbidden-command self-audit. New scripts: `Run-Tests -ExpectFail/-Force`, `Build.ps1`, `Prove-Mutation.ps1`. Added the D2/D5/D7 API facts |
 | R3 | #45 | | | |
 | R4 | #60 | | | |
 | R5 | #75 | | | |
