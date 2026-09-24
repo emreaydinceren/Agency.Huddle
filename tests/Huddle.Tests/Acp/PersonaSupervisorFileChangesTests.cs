@@ -255,6 +255,49 @@ public sealed class PersonaSupervisorFileChangesTests
         await supervisor.StopAsync(ct);
     }
 
+    /// <summary>
+    /// D8 correction 6: <see cref="PersonaSupervisor"/> passes its own trailing
+    /// <see cref="TurnActivity"/> through to the runner it starts, which reaches the
+    /// <see cref="RoomSession"/> it opens. Proven the same way as <see cref="Supervisor_PassesOwnPosts"/>:
+    /// a held-open Turn is observed busy in <see cref="TurnActivity"/> while it is in flight, and not
+    /// busy once it completes.
+    /// </summary>
+    [Fact]
+    public async Task Supervisor_PassesTurnActivity()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var release = new TaskCompletionSource();
+        factory.Session.EnqueueGatedReply(release.Task, "ok");
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        var turnActivity = new TurnActivity();
+        using var skillStore = new SkillStore(options, NullLogger<SkillStore>.Instance);
+        using var supervisor = new PersonaSupervisor(
+            options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, turnActivity: turnActivity);
+
+        personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []), "You are Nova.");
+        await supervisor.StartAsync(ct);
+
+        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
+
+        await WaitUntilAsync(() => turnActivity.IsBusyIn(agentId, roomId), ct);
+
+        Assert.True(turnActivity.IsBusyIn(agentId, roomId));
+
+        release.SetResult();
+        await WaitUntilAsync(() => !turnActivity.IsBusyIn(agentId, roomId), ct);
+
+        await supervisor.StopAsync(ct);
+    }
+
     /// <summary>Builds a fresh <see cref="PersonaHealth"/> against the real clock.</summary>
     private static PersonaHealth NewHealth() => new(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
 
@@ -278,6 +321,17 @@ public sealed class PersonaSupervisorFileChangesTests
             }
 
             await Task.Delay(50, ct);
+        }
+    }
+
+    /// <summary>Polls <paramref name="condition"/> until it is true, or the test's <paramref name="ct"/> fires.</summary>
+    /// <param name="condition">The condition to poll.</param>
+    /// <param name="ct">Bounds the poll.</param>
+    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct)
+    {
+        while (!condition())
+        {
+            await Task.Delay(20, ct);
         }
     }
 

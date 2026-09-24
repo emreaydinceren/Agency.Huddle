@@ -6,6 +6,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 
@@ -89,6 +90,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 
     private readonly RoomSessionStore? roomSessions;
     private readonly OwnPosts? ownPosts;
+    private readonly TurnActivity? turnActivity;
 
     private RoomSessionPool? pool;
     private JsonLineStream? stream;
@@ -121,7 +123,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         FileChangeTracker? fileChanges = null,
         TimeProvider? timeProvider = null,
         RoomSessionStore? roomSessions = null,
-        OwnPosts? ownPosts = null)
+        OwnPosts? ownPosts = null,
+        TurnActivity? turnActivity = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
@@ -140,6 +143,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.timeProvider = timeProvider ?? TimeProvider.System;
         this.roomSessions = roomSessions;
         this.ownPosts = ownPosts;
+        this.turnActivity = turnActivity;
         this.declaredWatches = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)
             ? identity.Watches ?? []
             : [];
@@ -333,6 +337,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         // same pipe without this PersonaRunner ever being recreated.
         this.roomFollows.ClearAgent(this.agentId);
         this.ownPosts?.ClearAgent(this.agentId);
+        this.turnActivity?.ClearAgent(this.agentId);
 
         // D16 P0-3: seeded before the Greeting block below (which also labels its Room) and before
         // the read loop starts, so RoomLabels.Distinguish always has this runner's full set of known
@@ -382,7 +387,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             this.runCts.Token,
             this.roomSessions,
             this.ownPosts,
-            this.agentId);
+            this.agentId,
+            this.turnActivity);
 
         // Per-Room mode opens the Room with exactly two Members, one of them the Human - the same
         // predicate as the Greeting's below, without IsEmpty: unlike the Greeting, this open must

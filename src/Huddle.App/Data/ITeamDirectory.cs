@@ -86,6 +86,14 @@ public interface ITeamDirectory
     /// </summary>
     Task<Room?> FindRoomWithExactMembersAsync(string humanId, string agentId, CancellationToken ct = default);
 
+    /// <summary>The oldest non-Archived Room whose Members are exactly <paramref name="memberIds"/>.</summary>
+    /// <param name="memberIds">
+    /// The exact Member set to match. Duplicate ids are treated as one set member each. An empty
+    /// collection always yields <see langword="null"/>.
+    /// </param>
+    /// <param name="ct">Cancels the read.</param>
+    Task<Room?> FindRoomWithExactMemberSetAsync(IReadOnlyCollection<string> memberIds, CancellationToken ct = default);
+
     /// <summary>
     /// Archives or unarchives a Room. Archiving is a display filter only - see
     /// <see cref="Room.Archived"/> - the Room stays live and Agents can still post into it.

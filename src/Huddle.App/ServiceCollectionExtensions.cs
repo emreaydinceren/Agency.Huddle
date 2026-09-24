@@ -69,6 +69,10 @@ public static class ServiceCollectionExtensions
         // a forgotten entry self-heals on restart through OwnPosts.ClearAgent.
         services.AddSingleton<OwnPosts>();
 
+        // Spec §10.8: which Agent has a Turn running in which Room, fed by RoomSession and read by
+        // the Tasks UI's "AI reacting" badge. A leaf singleton, same shape as OwnPosts just above.
+        services.AddSingleton<TurnActivity>();
+
         // FC §6.3: resolves a Watched Folder entry (a Teammate Name, a full path, or a path
         // relative to DataDir) into a full path, or refuses it with a reason.
         services.AddSingleton<WatchedFolderResolver>();

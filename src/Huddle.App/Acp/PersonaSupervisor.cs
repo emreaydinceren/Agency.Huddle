@@ -3,6 +3,7 @@ using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
 
 namespace Agency.Huddle.App.Acp;
@@ -36,6 +37,7 @@ internal sealed class PersonaSupervisor : BackgroundService
     private readonly FileChangeTracker? fileChanges;
     private readonly RoomSessionStore? roomSessions;
     private readonly OwnPosts? ownPosts;
+    private readonly TurnActivity? turnActivity;
 
     private readonly Lock gate = new();
     private readonly Dictionary<string, PersonaRunner> hosts = new(StringComparer.Ordinal);
@@ -74,7 +76,8 @@ internal sealed class PersonaSupervisor : BackgroundService
         SkillStore skills,
         FileChangeTracker? fileChanges = null,
         RoomSessionStore? roomSessions = null,
-        OwnPosts? ownPosts = null)
+        OwnPosts? ownPosts = null,
+        TurnActivity? turnActivity = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
@@ -100,6 +103,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         this.fileChanges = fileChanges;
         this.roomSessions = roomSessions;
         this.ownPosts = ownPosts;
+        this.turnActivity = turnActivity;
     }
 
     /// <summary>The number of Personas with a currently running host. Test seam only.</summary>
@@ -497,7 +501,7 @@ internal sealed class PersonaSupervisor : BackgroundService
             };
 
             var host = new PersonaRunner(
-                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts);
+                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity);
 
             // Forwards every health signal the runner itself observes (T4.3) - a session/Turn
             // fact, arriving over the wire - into the one table every UI surface reads.

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Sessions.Fakes;
@@ -407,6 +408,137 @@ public sealed class RoomSessionTests
         }
     }
 
+    /// <summary>
+    /// A completed Turn calls <see cref="TurnActivity.Begin"/> before it prompts and
+    /// <see cref="TurnActivity.End"/> once it finishes: busy while the reply is held open, not busy
+    /// once it is posted (Spec §10.8).
+    /// </summary>
+    [Fact]
+    public async Task Turn_Completes_BeginThenEnd()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        FakeAgentSession session = new();
+        session.EnqueueGatedReply(release.Task, "held reply");
+        FakeRoomSessionOwner owner = new();
+        TurnActivity turnActivity = new();
+        var (room, runCts) = CreateSession(owner, FixedOpen(session), agentId: "agent-1", turnActivity: turnActivity);
+        try
+        {
+            room.Enqueue(new QueuedWork(1, RoomAItem));
+
+            await WaitUntilAsync(() => turnActivity.IsBusyIn("agent-1", "room-a"), ct);
+
+            release.SetResult();
+
+            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+            await WaitUntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct);
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
+    /// <summary>
+    /// A Turn whose prompt throws still calls <see cref="TurnActivity.End"/>, so a failure never
+    /// leaves the Agent marked busy forever - and it must have called <see cref="TurnActivity.Begin"/>
+    /// first, not merely never having marked it busy at all.
+    /// </summary>
+    [Fact]
+    public async Task Turn_Throws_EndStillCalled()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        session.EnqueueFailure(new InvalidOperationException("boom"));
+        FakeRoomSessionOwner owner = new();
+        TurnActivity turnActivity = new();
+        var busyObserved = false;
+        turnActivity.Changed += () => busyObserved |= turnActivity.IsBusyIn("agent-1", "room-a");
+        var (room, runCts) = CreateSession(owner, FixedOpen(session), agentId: "agent-1", turnActivity: turnActivity);
+        try
+        {
+            room.Enqueue(new QueuedWork(1, RoomAItem));
+
+            await WaitUntilAsync(() => owner.ReportCalls.Contains(nameof(IRoomSessionOwner.ReportTurnFailure)), ct);
+
+            Assert.True(busyObserved);
+            Assert.False(turnActivity.IsBusyIn("agent-1", "room-a"));
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
+    /// <summary>A stopped Turn is marked busy while it runs, and <see cref="TurnActivity.End"/> still runs once it is stopped.</summary>
+    [Fact]
+    public async Task Turn_Stopped_EndStillCalled()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(500), "never posted");
+        FakeRoomSessionOwner owner = new();
+        TurnActivity turnActivity = new();
+        var (room, runCts) = CreateSession(owner, FixedOpen(session), agentId: "agent-1", turnActivity: turnActivity);
+        try
+        {
+            room.Enqueue(new QueuedWork(1, RoomAItem));
+            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+
+            Assert.True(turnActivity.IsBusyIn("agent-1", "room-a"));
+
+            await room.StopAsync("room-a", mark: 1, ct);
+
+            await WaitUntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct);
+
+            Assert.False(turnActivity.IsBusyIn("agent-1", "room-a"));
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
+    /// <summary>
+    /// D8 correction 1: a shared session's <see cref="RoomSession.RoomId"/> is <see langword="null"/>,
+    /// so the Turn must record the Turn's OWN Room - <c>item.RoomId</c> - not <c>this.RoomId</c>. Proven
+    /// with a Turn in Room A that completes, followed by one in Room B that is held open: while Room
+    /// B's Turn is in flight, only Room B is reported busy, never Room A.
+    /// </summary>
+    [Fact]
+    public async Task Turn_SharedSession_RecordsItemRoomId()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        FakeAgentSession session = new();
+        session.EnqueueReply("a done");
+        session.EnqueueGatedReply(release.Task, "b held");
+        FakeRoomSessionOwner owner = new();
+        TurnActivity turnActivity = new();
+        var (room, runCts) = CreateSession(owner, FixedOpen(session), agentId: "agent-1", turnActivity: turnActivity);
+        try
+        {
+            room.Enqueue(new QueuedWork(1, RoomAItem));
+            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "a done"), ct);
+            await WaitUntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-a"), ct);
+
+            room.Enqueue(new QueuedWork(2, RoomBItem));
+            await WaitUntilAsync(() => turnActivity.IsBusyIn("agent-1", "room-b"), ct);
+
+            Assert.False(turnActivity.IsBusyIn("agent-1", "room-a"));
+
+            release.SetResult();
+
+            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(message => message.Text == "b held"), ct);
+            await WaitUntilAsync(() => !turnActivity.IsBusyIn("agent-1", "room-b"), ct);
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
     /// <summary>LastActivity moves forward once a Turn ends.</summary>
     [Fact]
     public async Task LastActivity_UpdatedAtTurnEnd()
@@ -467,7 +599,9 @@ public sealed class RoomSessionTests
         FakeRoomSessionOwner owner,
         Func<CancellationToken, Task<IAgentSession>> open,
         ITurnScheduler? scheduler = null,
-        AcpOptions? options = null)
+        AcpOptions? options = null,
+        string? agentId = null,
+        TurnActivity? turnActivity = null)
     {
         CancellationTokenSource runCts = new();
         RoomSession session = new(
@@ -480,7 +614,9 @@ public sealed class RoomSessionTests
             fileChanges: null,
             declaredWatches: [],
             logger: NullLogger.Instance,
-            runToken: runCts.Token);
+            runToken: runCts.Token,
+            agentId: agentId,
+            turnActivity: turnActivity);
         return (session, runCts);
     }
 
