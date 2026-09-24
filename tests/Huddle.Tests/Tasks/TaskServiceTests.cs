@@ -534,6 +534,178 @@ public sealed class TaskServiceTests
         Assert.DoesNotContain("(reason:", saved.Change.Entry.Summary, StringComparison.Ordinal);
     }
 
+    /// <summary>A current <c>baseVersion</c> (matching the Task's own <see cref="TaskItem.Version"/>) is applied the same as a null one.</summary>
+    [Fact]
+    public void Update_BaseCurrent_Applies()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, task.Version, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal(TaskState.InProgress, saved.Task.Status);
+    }
+
+    /// <summary>A stale base whose intervening change (status) doesn't overlap this patch's field (priority) merges: both end up in the file.</summary>
+    [Fact]
+    public void Update_BaseStale_DisjointFields_Merges()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null, Priority: TaskPriority.Medium));
+        string baseVersion = task.Version;
+
+        TaskResult otherResult = service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, HumanActor);
+        TaskResult.Saved otherSaved = Assert.IsType<TaskResult.Saved>(otherResult);
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Priority = TaskPriority.High }, baseVersion, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal(TaskState.InProgress, saved.Task.Status);
+        Assert.Equal(TaskPriority.High, saved.Task.Priority);
+        _ = otherSaved;
+    }
+
+    /// <summary>A stale base whose intervening change overlaps this patch's field (both touch Description) with a genuinely different value conflicts, naming the field and the newer Task as Current.</summary>
+    [Fact]
+    public void Update_BaseStale_OverlappingField_Conflict()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null, Description: "original"));
+        string baseVersion = task.Version;
+
+        TaskResult otherResult = service.Update(task.Id, new TaskPatch { Description = "changed by someone else" }, null, HumanActor);
+        TaskResult.Saved otherSaved = Assert.IsType<TaskResult.Saved>(otherResult);
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Description = "changed by me" }, baseVersion, HumanActor);
+
+        TaskResult.Conflict conflict = Assert.IsType<TaskResult.Conflict>(result);
+        Assert.Equal([TaskField.Description], conflict.Fields);
+        Assert.Equal(otherSaved.Task.Version, conflict.Current.Version);
+    }
+
+    /// <summary>A stale base whose intervening change overlaps this patch's field, but this patch happens to set it to the same value the field already has, is not a conflict (corrections-B5 decision C).</summary>
+    [Fact]
+    public void Update_BaseStale_OverlapWithEqualValue_NotConflict()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null, Description: "original", Priority: TaskPriority.Medium));
+        string baseVersion = task.Version;
+
+        TaskResult otherResult = service.Update(task.Id, new TaskPatch { Description = "changed by someone else" }, null, HumanActor);
+        TaskResult.Saved otherSaved = Assert.IsType<TaskResult.Saved>(otherResult);
+
+        TaskResult result = service.Update(
+            task.Id,
+            new TaskPatch { Description = "changed by someone else", Priority = TaskPriority.High },
+            baseVersion,
+            HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal("changed by someone else", saved.Task.Description);
+        Assert.Equal(TaskPriority.High, saved.Task.Priority);
+        _ = otherSaved;
+    }
+
+    /// <summary>A base version evicted from the last-20 history (21 intervening writes) conflicts on any patched field that genuinely differs from the current Task.</summary>
+    [Fact]
+    public void Update_BaseEvicted_AnyDifferingPatchedFieldConflicts()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+        string baseVersion = task.Version;
+
+        for (int i = 0; i < 21; i++)
+        {
+            TaskResult intervening = service.Update(
+                task.Id,
+                new TaskPatch { Tags = [string.Create(CultureInfo.InvariantCulture, $"round{i}")] },
+                null,
+                HumanActor);
+            _ = Assert.IsType<TaskResult.Saved>(intervening);
+        }
+
+        Assert.Null(store.GetVersion(task.Id, baseVersion));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Title = "A brand new title" }, baseVersion, HumanActor);
+
+        TaskResult.Conflict conflict = Assert.IsType<TaskResult.Conflict>(result);
+        Assert.Equal([TaskField.Title], conflict.Fields);
+    }
+
+    /// <summary>A base version evicted from history, patched only with a field whose value already equals the current Task's, does not conflict.</summary>
+    [Fact]
+    public void Update_BaseEvicted_NonDifferingPatchedField_Applies()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+        string baseVersion = task.Version;
+
+        TaskItem? current = task;
+        for (int i = 0; i < 21; i++)
+        {
+            TaskResult intervening = service.Update(
+                task.Id,
+                new TaskPatch { Tags = [string.Create(CultureInfo.InvariantCulture, $"round{i}")] },
+                null,
+                HumanActor);
+            current = Assert.IsType<TaskResult.Saved>(intervening).Task;
+        }
+
+        Assert.Null(store.GetVersion(task.Id, baseVersion));
+        Assert.NotNull(current);
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Title = current.Title }, baseVersion, HumanActor);
+
+        Assert.IsNotType<TaskResult.Conflict>(result);
+    }
+
+    /// <summary>A Conflict result writes nothing and raises nothing: the file's bytes and the TaskChanged count are unchanged.</summary>
+    [Fact]
+    public void Update_Conflict_WritesNothing_RaisesNothing()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskEvents events = new();
+        TaskService service = CreateTaskService(dir, store, personas, events);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null, Description: "original"));
+        string baseVersion = task.Version;
+
+        TaskResult otherResult = service.Update(task.Id, new TaskPatch { Description = "changed by someone else" }, null, HumanActor);
+        TaskItem afterOther = Assert.IsType<TaskResult.Saved>(otherResult).Task;
+
+        int raiseCount = 0;
+        events.TaskChanged += _ => raiseCount++;
+        byte[] before = File.ReadAllBytes(afterOther.Path);
+        DateTime mtime = File.GetLastWriteTimeUtc(afterOther.Path);
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Description = "changed by me" }, baseVersion, HumanActor);
+
+        Assert.IsType<TaskResult.Conflict>(result);
+        Assert.Equal(0, raiseCount);
+        Assert.Equal(before, File.ReadAllBytes(afterOther.Path));
+        Assert.Equal(mtime, File.GetLastWriteTimeUtc(afterOther.Path));
+    }
+
     /// <summary>Creates a Task through <see cref="TaskService.Create"/> for a test to update, asserting it saved.</summary>
     private static TaskItem SeedTask(TaskService service, TaskDraft draft) =>
         Assert.IsType<TaskResult.Saved>(service.Create(draft, HumanActor)).Task;

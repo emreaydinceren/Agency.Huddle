@@ -181,7 +181,19 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
 
             string tmpPath = task.Path + ".tmp";
             File.WriteAllText(tmpPath, text);
-            File.Move(tmpPath, task.Path, overwrite: false);
+            try
+            {
+                File.Move(tmpPath, task.Path, overwrite: false);
+            }
+            catch (IOException)
+            {
+                // A file appeared at task.Path between the Exists check above and this Move - the
+                // same race Create exists to prevent (Settled facts.md R4 "Create collision"). The
+                // caller's id allocation was still valid; TaskService maps this to an
+                // InvalidOperationException rather than silently overwriting the racing file.
+                File.Delete(tmpPath);
+                return null;
+            }
 
             written = ReparseWritten(task.Path, task.Location, task.Id, "created");
             this.RecordVersion(written);

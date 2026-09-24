@@ -111,24 +111,28 @@ internal sealed class TaskService
     }
 
     /// <summary>
-    /// Applies <paramref name="patch"/> to the current Task and writes the result (Spec §9.4), with
-    /// <paramref name="baseVersion"/> ignored for now - merge and conflict detection is Task 6.3.
+    /// Applies <paramref name="patch"/> to the current Task and writes the result (Spec §9.4),
+    /// merging or conflicting against a stale <paramref name="baseVersion"/> first (Spec §9.3).
     /// </summary>
     /// <param name="id">The Task to update.</param>
     /// <param name="patch">Only the fields being changed.</param>
-    /// <param name="baseVersion">Reserved for Task 6.3's merge; not read yet.</param>
+    /// <param name="baseVersion">
+    /// The <see cref="TaskItem.Version"/> the caller last saw, or <see langword="null"/> when the
+    /// caller didn't track one (tools, drags - Spec §9.3). <see langword="null"/>, or a value equal
+    /// to the Task's current version, applies the patch outright; a stale value is merged against
+    /// what changed since, or reported as a <see cref="TaskResult.Conflict"/>.
+    /// </param>
     /// <param name="actor">Who is making the change.</param>
     public TaskResult Update(TaskId id, TaskPatch patch, string? baseVersion, TaskActor actor)
     {
         ArgumentNullException.ThrowIfNull(patch);
         ArgumentNullException.ThrowIfNull(actor);
-        _ = baseVersion;
 
         TaskChange? change;
         TaskResult result;
         lock (this.mutateGate)
         {
-            (result, change) = this.UpdateCore(id, patch, actor);
+            (result, change) = this.UpdateCore(id, patch, baseVersion, actor);
         }
 
         if (change is not null)
@@ -205,7 +209,7 @@ internal sealed class TaskService
     }
 
     /// <summary>The body of <see cref="Update"/>, run under <see cref="mutateGate"/>. Returns the change to raise, or <see langword="null"/> when nothing was written.</summary>
-    private (TaskResult Result, TaskChange? Change) UpdateCore(TaskId id, TaskPatch patch, TaskActor actor)
+    private (TaskResult Result, TaskChange? Change) UpdateCore(TaskId id, TaskPatch patch, string? baseVersion, TaskActor actor)
     {
         TaskItem? current = this.store.Get(id);
         if (current is null)
@@ -223,6 +227,16 @@ internal sealed class TaskService
         }
 
         IReadOnlyList<FieldChange> diff = TaskDiff.Compare(current, candidate);
+
+        if (baseVersion is not null && !string.Equals(baseVersion, current.Version, StringComparison.Ordinal))
+        {
+            List<TaskField> conflictFields = this.FindConflictingFields(id, baseVersion, current, resolvedPatch, diff);
+            if (conflictFields.Count > 0)
+            {
+                return (new TaskResult.Conflict(current, conflictFields), null);
+            }
+        }
+
         if (diff.Count == 0)
         {
             return (new TaskResult.Unchanged(current), null);
@@ -260,6 +274,39 @@ internal sealed class TaskService
 
         TaskChange change = new(current, written, diff, actor, entry);
         return (new TaskResult.Saved(written, change), change);
+    }
+
+    /// <summary>
+    /// Spec §9.3's merge/conflict check for a stale <paramref name="baseVersion"/> (already known to
+    /// differ from <paramref name="current"/>'s own version): finds what the base referred to via
+    /// <see cref="TaskStore.GetVersion"/>, and returns every field the caller's patch and an
+    /// intervening change both touch, restricted (corrections-B5 decision C) to the fields whose
+    /// patched value actually differs from <paramref name="current"/>'s - a patch that happens to
+    /// resubmit the value already on disk is never a conflict. When the base version has aged out of
+    /// <see cref="TaskStore.GetVersion"/>'s history (step 5), every patched field that differs from
+    /// <paramref name="current"/> conflicts, since there's no way to tell which of them an
+    /// intervening change actually touched.
+    /// </summary>
+    /// <param name="id">The Task being updated.</param>
+    /// <param name="baseVersion">The caller's stale base version.</param>
+    /// <param name="current">The Task as it is now.</param>
+    /// <param name="resolvedPatch">The patch, with its Assignee/Team/Project already resolved.</param>
+    /// <param name="patchVsCurrent">What the resolved patch actually changes relative to <paramref name="current"/>.</param>
+    private List<TaskField> FindConflictingFields(TaskId id, string baseVersion, TaskItem current, TaskPatch resolvedPatch, IReadOnlyList<FieldChange> patchVsCurrent)
+    {
+        TaskItem? baseTask = this.store.GetVersion(id, baseVersion);
+        List<TaskField> patchedFieldsThatDiffer = [.. patchVsCurrent.Select(change => change.Field)];
+
+        if (baseTask is null)
+        {
+            return patchedFieldsThatDiffer;
+        }
+
+        IReadOnlyList<FieldChange> othersChanges = TaskDiff.Compare(baseTask, current);
+        HashSet<TaskField> touchedByBoth = new(resolvedPatch.Fields());
+        touchedByBoth.IntersectWith(othersChanges.Select(change => change.Field));
+
+        return [.. patchedFieldsThatDiffer.Where(touchedByBoth.Contains)];
     }
 
     /// <summary>Resolves a patch's Assignee alias to its Name and canonicalises its Team/Project casing (Settled corrections-B2 D6 item 4), leaving every other field untouched.</summary>
