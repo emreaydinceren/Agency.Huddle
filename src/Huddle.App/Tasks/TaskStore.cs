@@ -10,7 +10,8 @@ namespace Agency.Huddle.App.Tasks;
 /// Owns every file under <c>{DataDir}/{Tasks.Dir}</c>: scans it into an in-memory index by
 /// <see cref="TaskId"/>, keeps the list of rejected files, lists every Team folder together with
 /// its Projects and orphan status (Spec §8.1-§8.2), and is the only class that writes or moves a
-/// Task file (Spec §8.3). The watcher and startup reconciliation are later work (Spec §8.4-§8.5).
+/// Task file (Spec §8.3), watches for edits made outside Huddle (Spec §8.4), and reconciles any
+/// edit made while Huddle was stopped once, at startup (Spec §8.5).
 /// </summary>
 internal sealed partial class TaskStore : IDisposable
 {
@@ -65,7 +66,7 @@ internal sealed partial class TaskStore : IDisposable
     /// </summary>
     /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>, <see cref="TasksOptions.Dir"/> and <see cref="AcpOptions.TeamsDir"/>.</param>
     /// <param name="personas">Supplies the Team labels a Team folder is checked against for §8.2's orphan flag, and its <see cref="PersonaStore.PersonasChanged"/> event.</param>
-    /// <param name="clock">Reserved for the startup reconciliation and watcher work later tasks add to this class; unused so far.</param>
+    /// <param name="clock">Supplies the timestamp for any startup-reconciliation Change log entry (Spec §8.5); the watcher's own debounce timer runs on real time, not this clock.</param>
     /// <param name="logger">Used to warn when a directory can't be enumerated or a file can't be read during the scan.</param>
     public TaskStore(IOptions<TeamOptions> options, PersonaStore personas, TimeProvider clock, ILogger<TaskStore> logger)
     {
@@ -89,6 +90,8 @@ internal sealed partial class TaskStore : IDisposable
         {
             this.RecordVersion(task);
         }
+
+        this.ReconcileOutsideEdits(clock, options.Value.HumanName);
 
         this.personas.PersonasChanged += this.OnPersonasChanged;
 
@@ -714,6 +717,61 @@ internal sealed partial class TaskStore : IDisposable
     /// <summary>The version hash of <paramref name="path"/>'s current disk text, or <see langword="null"/> when the file doesn't exist.</summary>
     private static string? ReadDiskVersion(string path) =>
         File.Exists(path) ? TaskFileFormat.ComputeVersion(File.ReadAllText(path)) : null;
+
+    /// <summary>
+    /// Startup reconciliation (Spec §8.5, Spec §17 D-16): the initial scan has no previous index to
+    /// diff against, so instead every Task whose file was written more than 2 seconds after its last
+    /// Change log entry - or that has no entries at all - gains one "edited outside Huddle" entry,
+    /// written back silently. Runs once, from the constructor, strictly before the watcher exists, so
+    /// there is no lock to take and nothing to raise: no <see cref="OutsideEditDetected"/>, and no one
+    /// is woken (D-16 - a bulk edit made while Huddle was stopped, such as a <c>git checkout</c>, must
+    /// not flood wake-ups at startup, Settled corrections-B2 D6 item 14).
+    /// </summary>
+    /// <param name="clock">Supplies the appended entry's timestamp, truncated to the second.</param>
+    /// <param name="humanName"><see cref="TeamOptions.HumanName"/>, attributed as the entry's actor - the directory isn't initialised yet when this runs (Spec §8.5).</param>
+    private void ReconcileOutsideEdits(TimeProvider clock, string humanName)
+    {
+        foreach (TaskItem task in this.index.All)
+        {
+            if (!NeedsReconciliation(task))
+            {
+                continue;
+            }
+
+            string diskText = File.ReadAllText(task.Path);
+            ChangeLogEntry entry = new(TruncateToSeconds(clock.GetUtcNow()), humanName, "edited outside Huddle");
+            string appended = TaskFileFormat.AppendEntry(diskText, entry);
+            if (!TaskFileFormat.TryParse(appended, task.Path, task.Location, out _, out string parseError))
+            {
+                throw new InvalidOperationException(
+                    string.Create(CultureInfo.InvariantCulture, $"Task '{task.Id}' could not be reconciled at startup: {parseError}"));
+            }
+
+            WriteAtomic(task.Path, appended);
+            TaskItem written = ReparseWritten(task.Path, task.Location, task.Id, "reconciled");
+            this.RecordVersion(written);
+            this.index = ReplaceInIndex(this.index, written);
+        }
+    }
+
+    /// <summary>True when <paramref name="task"/>'s file was written more than 2 seconds after its last Change log entry's <see cref="ChangeLogEntry.At"/>, or it has no entries at all (Spec §8.5).</summary>
+    /// <param name="task">The Task to check, as found by the initial scan.</param>
+    private static bool NeedsReconciliation(TaskItem task)
+    {
+        if (task.ChangeLog.Count == 0)
+        {
+            return true;
+        }
+
+        DateTime lastWriteUtc = File.GetLastWriteTimeUtc(task.Path);
+        DateTime lastEntryUtc = task.ChangeLog[^1].At.UtcDateTime;
+        return lastWriteUtc > lastEntryUtc + TimeSpan.FromSeconds(2);
+    }
+
+    /// <summary>Drops <paramref name="value"/>'s sub-second precision, matching the whole-second granularity <see cref="TaskFileFormat.FormatEntry"/> writes to disk.</summary>
+    /// <param name="value">The instant to truncate.</param>
+    private static DateTimeOffset TruncateToSeconds(DateTimeOffset value) =>
+        new(value.Year, value.Month, value.Day, value.Hour, value.Minute, value.Second, value.Offset);
 
     /// <summary>Writes <paramref name="text"/> to <paramref name="path"/> atomically: a ".tmp" file, then an overwriting <see cref="File.Move(string, string, bool)"/> (Spec §8.3; the precedent is <c>FileStateStore.cs:173-176</c>).</summary>
     private static void WriteAtomic(string path, string text)
