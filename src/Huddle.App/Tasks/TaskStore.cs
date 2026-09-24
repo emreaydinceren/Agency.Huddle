@@ -1,4 +1,5 @@
 using System.Collections.Frozen;
+using System.Globalization;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
@@ -7,20 +8,33 @@ namespace Agency.Huddle.App.Tasks;
 
 /// <summary>
 /// Owns every file under <c>{DataDir}/{Tasks.Dir}</c>: scans it into an in-memory index by
-/// <see cref="TaskId"/>, keeps the list of rejected files, and lists every Team folder together
-/// with its Projects and orphan status (Spec §8.1-§8.2). Writing, moving, the watcher and startup
-/// reconciliation are later work (Spec §8.3-§8.5); this part of the class is scan-and-index only.
+/// <see cref="TaskId"/>, keeps the list of rejected files, lists every Team folder together with
+/// its Projects and orphan status (Spec §8.1-§8.2), and is the only class that writes or moves a
+/// Task file (Spec §8.3). The watcher and startup reconciliation are later work (Spec §8.4-§8.5).
 /// </summary>
 internal sealed partial class TaskStore : IDisposable
 {
+    /// <summary>The most version history <see cref="GetVersion"/> keeps per Task id (Spec §9.3 step 1).</summary>
+    private const int MaxVersionHistory = 20;
+
     private readonly PersonaStore personas;
     private readonly ILogger<TaskStore> logger;
 
     // Guards every rebuild of `index` - the one lock this class uses for every mutation of its
-    // published snapshot, so a later Write/Move (Task 5.3) and the watcher's debounced rebuild
-    // (Task 5.4) share it too, rather than PersonaStore's two-lock design (Settled corrections-B2
-    // D5 item 1).
+    // published snapshot, so Write/Move/AppendEntry/WriteMany below and the watcher's debounced
+    // rebuild (Task 5.4) share it too, rather than PersonaStore's two-lock design (Settled
+    // corrections-B2 D5 item 1).
     private readonly Lock writeGate = new();
+
+    // Keyed with FolderSnapshot.PathComparer (Settled corrections-B2 D5 item 4) so the watcher
+    // (Task 5.4) can tell its own writes apart from an outside edit regardless of the file
+    // system's case sensitivity.
+    private readonly Dictionary<string, string> lastSeenVersion = new(FolderSnapshot.PathComparer);
+
+    // The last MaxVersionHistory versions seen per Task id, oldest first, for the base-version
+    // merge in Spec §9.3 step 1. Recorded at the initial scan and after every write (Settled
+    // corrections-B2 D5 item 8).
+    private readonly Dictionary<TaskId, Queue<TaskItem>> versionHistory = [];
 
     private volatile TaskSnapshot index;
     private bool disposed;
@@ -74,6 +88,336 @@ internal sealed partial class TaskStore : IDisposable
     /// <param name="id">The Task's id.</param>
     public TaskItem? Get(TaskId id) => this.index.ById.GetValueOrDefault(id);
 
+    /// <summary>
+    /// Writes <paramref name="text"/> atomically to <paramref name="task"/>'s file (Spec §8.3), after
+    /// first confirming two things: the text parses (Settled corrections-B2 D5 item 9 - nothing
+    /// invalid ever reaches disk), and the file on disk is still at <paramref name="expectedVersion"/>
+    /// (D5 item 6). A stale <paramref name="expectedVersion"/> is not an error - it means someone else
+    /// wrote the file first, so this returns <see langword="null"/> and leaves the file untouched, for
+    /// <c>TaskService</c> to map to a merge or a <c>Conflict</c>.
+    /// </summary>
+    /// <param name="task">The Task being written; its <see cref="TaskItem.Path"/> and <see cref="TaskItem.Location"/> are used.</param>
+    /// <param name="expectedVersion">The version <paramref name="task"/> was last seen at.</param>
+    /// <param name="text">The full file text to write, already composed.</param>
+    /// <returns>The re-parsed Task as written, or <see langword="null"/> on a version conflict.</returns>
+    internal TaskItem? Write(TaskItem task, string expectedVersion, string text)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        ArgumentNullException.ThrowIfNull(expectedVersion);
+        ArgumentNullException.ThrowIfNull(text);
+
+        if (!TaskFileFormat.TryParse(text, task.Path, task.Location, out _, out string parseError))
+        {
+            throw new InvalidOperationException(
+                string.Create(CultureInfo.InvariantCulture, $"Task '{task.Id}' could not be written: {parseError}"));
+        }
+
+        Action? changed;
+        TaskItem written;
+        lock (this.writeGate)
+        {
+            if (this.disposed)
+            {
+                return null;
+            }
+
+            string? diskVersion = ReadDiskVersion(task.Path);
+            if (diskVersion is null || !string.Equals(diskVersion, expectedVersion, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            WriteAtomic(task.Path, text);
+            written = ReparseWritten(task.Path, task.Location, task.Id, "written");
+            this.RecordVersion(written);
+            this.index = ReplaceInIndex(this.index, written);
+            changed = this.IndexChanged;
+        }
+
+        changed?.Invoke();
+        return written;
+    }
+
+    /// <summary>
+    /// Moves <paramref name="task"/> to <paramref name="to"/>, writing <paramref name="text"/> there
+    /// (Spec §8.3): create the target directory, refuse an existing target, rename then write the new
+    /// text atomically over the target - rolling the rename back if the write fails - and record the
+    /// new version. A source and target that differ only in case (a case-only Team rename) go through
+    /// a temp name instead, because a plain rename is a no-op on a case-insensitive file system and a
+    /// write-then-delete would delete the very file just written (Settled corrections-B2 D5 item 3).
+    /// Like <see cref="Write"/>, a version conflict against <paramref name="expectedVersion"/> returns
+    /// <see langword="null"/> rather than throwing; an existing target is a different failure and still
+    /// throws. Rollback of a failed write after a successful rename is implemented but not covered by
+    /// a unit test (see the brief's Coverage note): forcing that path needs an I/O failure injected
+    /// between the rename and the write, which this suite has no seam for.
+    /// </summary>
+    /// <param name="task">The Task being moved; its current <see cref="TaskItem.Path"/> is the source.</param>
+    /// <param name="expectedVersion">The version <paramref name="task"/> was last seen at.</param>
+    /// <param name="to">The Task's new location.</param>
+    /// <param name="text">The full file text to write at the target, already composed for <paramref name="to"/>.</param>
+    /// <returns>The re-parsed Task as written at the target, or <see langword="null"/> on a version conflict.</returns>
+    internal TaskItem? Move(TaskItem task, string expectedVersion, TaskLocation to, string text)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        ArgumentNullException.ThrowIfNull(expectedVersion);
+        ArgumentNullException.ThrowIfNull(to);
+        ArgumentNullException.ThrowIfNull(text);
+
+        if (!TaskFileFormat.TryParse(text, task.Path, to, out _, out string parseError))
+        {
+            throw new InvalidOperationException(
+                string.Create(CultureInfo.InvariantCulture, $"Task '{task.Id}' could not be written: {parseError}"));
+        }
+
+        string targetPath = TaskLayout.PathFor(this.RootDirectory, to, task.Id);
+
+        Action? changed;
+        TaskItem written;
+        lock (this.writeGate)
+        {
+            if (this.disposed)
+            {
+                return null;
+            }
+
+            string? diskVersion = ReadDiskVersion(task.Path);
+            if (diskVersion is null || !string.Equals(diskVersion, expectedVersion, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            string? targetDirectory = Path.GetDirectoryName(targetPath);
+            if (targetDirectory is not null)
+            {
+                Directory.CreateDirectory(targetDirectory);
+            }
+
+            bool caseOnlyRename = !string.Equals(task.Path, targetPath, StringComparison.Ordinal)
+                && FolderSnapshot.PathComparer.Equals(task.Path, targetPath);
+
+            if (caseOnlyRename)
+            {
+                string tempPath = task.Path + ".tmp-move";
+                File.Move(task.Path, tempPath, overwrite: false);
+                File.Move(tempPath, targetPath, overwrite: false);
+            }
+            else
+            {
+                if (File.Exists(targetPath))
+                {
+                    throw new IOException(string.Create(
+                        CultureInfo.InvariantCulture,
+                        $"A file named {Path.GetFileName(targetPath)} already exists in {targetDirectory}."));
+                }
+
+                File.Move(task.Path, targetPath, overwrite: false);
+            }
+
+            try
+            {
+                WriteAtomic(targetPath, text);
+            }
+            catch (IOException)
+            {
+                // Roll back the rename, so a failed write never leaves the Task missing from both
+                // the source and the target (Settled corrections-B2 D5 item 2: "On failure of the
+                // write, move it back").
+                File.Move(targetPath, task.Path, overwrite: false);
+                throw;
+            }
+
+            written = ReparseWritten(targetPath, to, task.Id, "moved");
+            this.lastSeenVersion.Remove(task.Path);
+            this.RecordVersion(written);
+            this.index = ReplaceInIndex(this.index, written);
+            changed = this.IndexChanged;
+        }
+
+        changed?.Invoke();
+        return written;
+    }
+
+    /// <summary>
+    /// Writes several Tasks in one batch, under a single acquisition of <see cref="writeGate"/>, and
+    /// raises <see cref="IndexChanged"/> at most once for the whole batch rather than once per item
+    /// (Settled corrections-B2 D5 item 7 - the Teammate-rename cascade, Task 6.6, writes many files
+    /// for one rename and must not flood subscribers with one event per file).
+    /// </summary>
+    /// <param name="writes">Each Task to write, the version it was last seen at, and its new composed text.</param>
+    /// <returns>One result per item, in order: the re-parsed Task, or <see langword="null"/> on a version conflict.</returns>
+    internal IReadOnlyList<TaskItem?> WriteMany(IReadOnlyList<(TaskItem Task, string ExpectedVersion, string Text)> writes)
+    {
+        ArgumentNullException.ThrowIfNull(writes);
+
+        foreach ((TaskItem task, string _, string text) in writes)
+        {
+            if (!TaskFileFormat.TryParse(text, task.Path, task.Location, out _, out string parseError))
+            {
+                throw new InvalidOperationException(
+                    string.Create(CultureInfo.InvariantCulture, $"Task '{task.Id}' could not be written: {parseError}"));
+            }
+        }
+
+        List<TaskItem?> results = new(writes.Count);
+        Action? changed = null;
+        lock (this.writeGate)
+        {
+            if (!this.disposed)
+            {
+                TaskSnapshot snapshot = this.index;
+                bool anyWritten = false;
+                foreach ((TaskItem task, string expectedVersion, string text) in writes)
+                {
+                    string? diskVersion = ReadDiskVersion(task.Path);
+                    if (diskVersion is null || !string.Equals(diskVersion, expectedVersion, StringComparison.Ordinal))
+                    {
+                        results.Add(null);
+                        continue;
+                    }
+
+                    WriteAtomic(task.Path, text);
+                    TaskItem written = ReparseWritten(task.Path, task.Location, task.Id, "written");
+                    this.RecordVersion(written);
+                    snapshot = ReplaceInIndex(snapshot, written);
+                    results.Add(written);
+                    anyWritten = true;
+                }
+
+                this.index = snapshot;
+                if (anyWritten)
+                {
+                    changed = this.IndexChanged;
+                }
+            }
+        }
+
+        changed?.Invoke();
+        return results;
+    }
+
+    /// <summary>
+    /// Appends <paramref name="entry"/> to <paramref name="id"/>'s file exactly as it is on disk,
+    /// without recomposing it (Spec §9.4 "Outside edits" - a hand-edited file's formatting and
+    /// unknown keys survive), when the disk is still at <paramref name="expectedVersion"/>.
+    /// </summary>
+    /// <param name="id">The Task to append to.</param>
+    /// <param name="expectedVersion">The version the file was last seen at.</param>
+    /// <param name="entry">The Change log entry to append.</param>
+    /// <returns>The re-parsed Task after the append, or <see langword="null"/> when the disk no longer matches <paramref name="expectedVersion"/> or the id is unknown.</returns>
+    internal TaskItem? AppendEntry(TaskId id, string expectedVersion, ChangeLogEntry entry)
+    {
+        ArgumentNullException.ThrowIfNull(expectedVersion);
+        ArgumentNullException.ThrowIfNull(entry);
+
+        Action? changed;
+        TaskItem written;
+        lock (this.writeGate)
+        {
+            if (this.disposed)
+            {
+                return null;
+            }
+
+            TaskItem? current = this.index.ById.GetValueOrDefault(id);
+            if (current is null || !File.Exists(current.Path))
+            {
+                return null;
+            }
+
+            string diskText = File.ReadAllText(current.Path);
+            if (!string.Equals(TaskFileFormat.ComputeVersion(diskText), expectedVersion, StringComparison.Ordinal))
+            {
+                return null;
+            }
+
+            string appended = TaskFileFormat.AppendEntry(diskText, entry);
+            if (!TaskFileFormat.TryParse(appended, current.Path, current.Location, out _, out string parseError))
+            {
+                throw new InvalidOperationException(
+                    string.Create(CultureInfo.InvariantCulture, $"Task '{id}' could not be written: {parseError}"));
+            }
+
+            WriteAtomic(current.Path, appended);
+            written = ReparseWritten(current.Path, current.Location, id, "written");
+            this.RecordVersion(written);
+            this.index = ReplaceInIndex(this.index, written);
+            changed = this.IndexChanged;
+        }
+
+        changed?.Invoke();
+        return written;
+    }
+
+    /// <summary>The current text of <paramref name="id"/>'s file straight from disk, or <see langword="null"/> when the id is unknown or its file no longer exists.</summary>
+    /// <param name="id">The Task to read.</param>
+    internal string? ReadText(TaskId id)
+    {
+        lock (this.writeGate)
+        {
+            TaskItem? task = this.index.ById.GetValueOrDefault(id);
+            return task is not null && File.Exists(task.Path) ? File.ReadAllText(task.Path) : null;
+        }
+    }
+
+    /// <summary>
+    /// Finds <paramref name="id"/> as it was at <paramref name="version"/>, among the last
+    /// <see cref="MaxVersionHistory"/> versions recorded for it (Spec §9.3 step 1). Returns
+    /// <see langword="null"/> for a version never recorded, or evicted since.
+    /// </summary>
+    /// <param name="id">The Task id to look up.</param>
+    /// <param name="version">The version hash to find.</param>
+    internal TaskItem? GetVersion(TaskId id, string version)
+    {
+        ArgumentNullException.ThrowIfNull(version);
+
+        lock (this.writeGate)
+        {
+            if (!this.versionHistory.TryGetValue(id, out Queue<TaskItem>? history))
+            {
+                return null;
+            }
+
+            foreach (TaskItem candidate in history)
+            {
+                if (string.Equals(candidate.Version, version, StringComparison.Ordinal))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// The highest Task number seen for <paramref name="prefix"/>, over every parsed Task id and
+    /// every file name - valid or rejected - that parses as a <see cref="TaskId"/> with that prefix
+    /// (Settled corrections-B2 D6 item 6, needed by <c>TaskIdAllocator.Next</c> so a file copied in
+    /// by hand with a higher number can't be reused). Returns 0 when nothing matches.
+    /// </summary>
+    /// <param name="prefix">The id prefix to search for, compared case-insensitively.</param>
+    internal int HighestNumber(string prefix)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+        string normalizedPrefix = prefix.ToUpperInvariant();
+        TaskSnapshot snapshot = this.index;
+        int highest = 0;
+
+        foreach (TaskItem task in snapshot.All)
+        {
+            highest = Math.Max(highest, NumberIfMatches(task.Id, normalizedPrefix));
+            highest = Math.Max(highest, NumberFromFileName(task.Path, normalizedPrefix));
+        }
+
+        foreach (RejectedTaskFile rejected in snapshot.Rejected)
+        {
+            highest = Math.Max(highest, NumberFromFileName(rejected.Path, normalizedPrefix));
+        }
+
+        return highest;
+    }
+
     /// <summary>Unsubscribes from <see cref="PersonaStore.PersonasChanged"/>.</summary>
     public void Dispose()
     {
@@ -114,6 +458,84 @@ internal sealed partial class TaskStore : IDisposable
     /// <summary>True when <paramref name="value"/> starts with <paramref name="prefix"/>, compared with <see cref="FolderSnapshot.PathComparer"/>.</summary>
     private static bool HasPrefix(string value, string prefix) =>
         value.Length >= prefix.Length && FolderSnapshot.PathComparer.Equals(value[..prefix.Length], prefix);
+
+    /// <summary>
+    /// Records <paramref name="task"/> as the latest version seen at its path, and pushes it onto its
+    /// id's rolling history, evicting the oldest entry past <see cref="MaxVersionHistory"/> (Spec §9.3
+    /// step 1; Settled corrections-B2 D5 item 8). Callers hold <see cref="writeGate"/>.
+    /// </summary>
+    /// <param name="task">The Task to record.</param>
+    private void RecordVersion(TaskItem task)
+    {
+        this.lastSeenVersion[task.Path] = task.Version;
+
+        if (!this.versionHistory.TryGetValue(task.Id, out Queue<TaskItem>? history))
+        {
+            history = new Queue<TaskItem>();
+            this.versionHistory[task.Id] = history;
+        }
+
+        history.Enqueue(task);
+        while (history.Count > MaxVersionHistory)
+        {
+            history.Dequeue();
+        }
+    }
+
+    /// <summary>The version hash of <paramref name="path"/>'s current disk text, or <see langword="null"/> when the file doesn't exist.</summary>
+    private static string? ReadDiskVersion(string path) =>
+        File.Exists(path) ? TaskFileFormat.ComputeVersion(File.ReadAllText(path)) : null;
+
+    /// <summary>Writes <paramref name="text"/> to <paramref name="path"/> atomically: a ".tmp" file, then an overwriting <see cref="File.Move(string, string, bool)"/> (Spec §8.3; the precedent is <c>FileStateStore.cs:173-176</c>).</summary>
+    private static void WriteAtomic(string path, string text)
+    {
+        string tmpPath = path + ".tmp";
+        File.WriteAllText(tmpPath, text);
+        File.Move(tmpPath, path, overwrite: true);
+    }
+
+    /// <summary>
+    /// Re-reads and re-parses <paramref name="path"/> right after this class wrote it. A failure here
+    /// means the text this class itself just composed and validated didn't survive the round trip -
+    /// an invariant break, not a caller mistake, so it throws rather than returning null.
+    /// </summary>
+    private static TaskItem ReparseWritten(string path, TaskLocation location, TaskId id, string verb)
+    {
+        string writtenText = File.ReadAllText(path);
+        if (!TaskFileFormat.TryParse(writtenText, path, location, out TaskItem? reparsed, out string parseError))
+        {
+            throw new InvalidOperationException(string.Create(
+                CultureInfo.InvariantCulture,
+                $"Task '{id}' failed to reparse after being {verb}: {parseError}"));
+        }
+
+        return reparsed;
+    }
+
+    /// <summary>Returns <paramref name="snapshot"/> with <paramref name="updated"/> replacing its previous entry in <see cref="TaskSnapshot.All"/> and <see cref="TaskSnapshot.ById"/>; <see cref="TaskSnapshot.Rejected"/> and <see cref="TaskSnapshot.Teams"/> are unchanged.</summary>
+    private static TaskSnapshot ReplaceInIndex(TaskSnapshot snapshot, TaskItem updated)
+    {
+        Dictionary<TaskId, TaskItem> byId = new(snapshot.ById);
+        byId[updated.Id] = updated;
+        List<TaskItem> all = [.. byId.Values];
+        return snapshot with { All = all, ById = byId.ToFrozenDictionary() };
+    }
+
+    /// <summary>The Task's <see cref="TaskId.Number"/> when its prefix equals <paramref name="normalizedPrefix"/> (already upper-cased), else 0.</summary>
+    private static int NumberIfMatches(TaskId id, string normalizedPrefix) =>
+        string.Equals(id.Prefix, normalizedPrefix, StringComparison.Ordinal) ? id.Number : 0;
+
+    /// <summary>
+    /// The parsed <see cref="TaskId.Number"/> of <paramref name="path"/>'s file name when it parses as
+    /// a <see cref="TaskId"/> with prefix <paramref name="normalizedPrefix"/> (already upper-cased),
+    /// else 0. The file name need not match the Task's actual id (Spec §8.1: "the filename isn't
+    /// identity") - this still reserves the number a hand-copied file's name carries.
+    /// </summary>
+    private static int NumberFromFileName(string path, string normalizedPrefix)
+    {
+        string fileName = Path.GetFileNameWithoutExtension(path);
+        return TaskId.TryParse(fileName, out TaskId parsedId) ? NumberIfMatches(parsedId, normalizedPrefix) : 0;
+    }
 
     /// <summary>
     /// Scans <see cref="RootDirectory"/> into a fresh <see cref="TaskSnapshot"/>: the Team folders
@@ -193,6 +615,7 @@ internal sealed partial class TaskStore : IDisposable
             {
                 all.Add(items[0].Task);
                 byId[items[0].Task.Id] = items[0].Task;
+                this.RecordVersion(items[0].Task);
                 continue;
             }
 

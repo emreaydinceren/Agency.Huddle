@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
@@ -7,7 +8,10 @@ using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.Tests.Tasks;
 
-/// <summary>Tests for <see cref="TaskStore"/>'s scan, rejected files, Teams and orphan tracking (Spec §8.1-§8.2).</summary>
+/// <summary>
+/// Tests for <see cref="TaskStore"/>'s scan, rejected files, Teams and orphan tracking (Spec
+/// §8.1-§8.2), and its writing, moving and version-history behaviour (Spec §8.3, §9.3; Task 5.3).
+/// </summary>
 public sealed class TaskStoreTests
 {
     /// <summary>Every valid Task file found under the scan root is indexed and reachable by its id.</summary>
@@ -320,6 +324,357 @@ public sealed class TaskStoreTests
 
         Assert.Empty(store.All);
         Assert.Empty(store.RejectedFiles);
+    }
+
+    /// <summary>A successful <see cref="TaskStore.Write"/> leaves no ".tmp" file behind at the target path (Spec §8.3's atomic-write precedent).</summary>
+    [Fact]
+    public void Write_LeavesNoTmpFile()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        string path = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
+        string text = TaskFileFormat.Compose(original with { Title = "Updated title" });
+
+        TaskItem? result = store.Write(original, original.Version, text);
+
+        Assert.NotNull(result);
+        Assert.False(File.Exists(path + ".tmp"));
+    }
+
+    /// <summary>A successful Write republishes the index with the new content and raises <see cref="TaskStore.IndexChanged"/> exactly once.</summary>
+    [Fact]
+    public void Write_UpdatesIndexAndRaisesIndexChangedOnce()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
+        string text = TaskFileFormat.Compose(original with { Title = "Updated title" });
+        int raisedCount = 0;
+        store.IndexChanged += () => raisedCount++;
+
+        TaskItem? result = store.Write(original, original.Version, text);
+
+        Assert.NotNull(result);
+        Assert.Equal(1, raisedCount);
+        TaskItem? indexed = store.Get(id);
+        Assert.Equal("Updated title", indexed?.Title);
+    }
+
+    /// <summary>Moving a Task to its Team's "_closed" folder moves the file on disk and the index reflects the new location (Spec §8.3).</summary>
+    [Fact]
+    public void Move_ToClosed_FileMovesAndIndexUpdates()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        string sourcePath = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
+        TaskLocation closedLocation = original.Location with { Closed = true };
+        string text = TaskFileFormat.Compose(original with { Location = closedLocation });
+
+        TaskItem? result = store.Move(original, original.Version, closedLocation, text);
+
+        Assert.NotNull(result);
+        Assert.False(File.Exists(sourcePath));
+        string targetPath = TaskLayout.PathFor(root, closedLocation, id);
+        Assert.True(File.Exists(targetPath));
+        TaskItem? indexed = store.Get(id);
+        Assert.True(indexed?.Location.Closed);
+    }
+
+    /// <summary>A Move refuses to overwrite an existing file at the target path, throwing an <see cref="IOException"/> that names it (Spec §8.3 step 4), and leaves the source untouched.</summary>
+    [Fact]
+    public void Move_TargetExists_Throws()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        string sourcePath = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        WriteRawFile(root, Path.Combine("Platform", TaskLayout.ClosedFolder, "PLAT-0001.md"), "conflicting content");
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
+        TaskLocation closedLocation = original.Location with { Closed = true };
+        string text = TaskFileFormat.Compose(original with { Location = closedLocation });
+
+        IOException exception = Assert.Throws<IOException>(() => store.Move(original, original.Version, closedLocation, text));
+
+        string targetDir = Path.Combine(root, "Platform", TaskLayout.ClosedFolder);
+        Assert.Contains("A file named PLAT-0001.md already exists in", exception.Message, StringComparison.Ordinal);
+        Assert.Contains(targetDir, exception.Message, StringComparison.Ordinal);
+        Assert.True(File.Exists(sourcePath));
+    }
+
+    /// <summary>A Project folder that becomes empty after a Move is left in place; deleting folders is the Human's job (Spec §8.3).</summary>
+    [Fact]
+    public void Move_EmptiedProjectFolder_IsLeftInPlace()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        string sourcePath = WriteTask(root, Path.Combine("Platform", "Auth", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", "Auth", false)));
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
+        TaskLocation newLocation = new("Platform", null, false);
+        string text = TaskFileFormat.Compose(original with { Location = newLocation });
+
+        TaskItem? result = store.Move(original, original.Version, newLocation, text);
+
+        Assert.NotNull(result);
+        Assert.False(File.Exists(sourcePath));
+        Assert.True(Directory.Exists(Path.Combine(root, "Platform", "Auth")));
+    }
+
+    /// <summary>
+    /// A case-only Team change - source and target equal under <c>FolderSnapshot.PathComparer</c>
+    /// and differing only in case - renames the file through a temp name rather than writing a new
+    /// file and deleting the old one (Settled corrections-B2 D5 item 3). On Windows this is the real
+    /// case (the file system resolves both paths to the same entry), so the test is not skipped.
+    /// </summary>
+    [Fact]
+    public void Move_CaseOnlyTeamChange_KeepsTheFile()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        string sourcePath = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
+        TaskLocation lowerCaseLocation = new("platform", null, false);
+        string text = TaskFileFormat.Compose(original with { Location = lowerCaseLocation, Title = "renamed casing" });
+
+        TaskItem? result = store.Move(original, original.Version, lowerCaseLocation, text);
+
+        Assert.NotNull(result);
+        Assert.True(File.Exists(sourcePath));
+        string[] filesUnderPlatform = Directory.GetFiles(Path.Combine(root, "Platform"), "*.md", SearchOption.AllDirectories);
+        Assert.Single(filesUnderPlatform);
+        Assert.False(File.Exists(sourcePath + ".tmp-move"));
+        TaskItem? indexed = store.Get(id);
+        Assert.Equal("renamed casing", indexed?.Title);
+    }
+
+    /// <summary>
+    /// <see cref="TaskStore.GetVersion"/> finds a Task as any of its last 20 recorded versions, but
+    /// not an older one that has since been evicted (Spec §9.3 step 1). The initial scan records one
+    /// version, then 20 Writes push it out.
+    /// </summary>
+    [Fact]
+    public void VersionHistory_KeepsLast20()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "v0", location: new("Platform", null, false)));
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        TaskItem current = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
+
+        List<string> versions = [current.Version];
+        for (int i = 1; i <= 20; i++)
+        {
+            string title = string.Create(CultureInfo.InvariantCulture, $"v{i}");
+            string text = TaskFileFormat.Compose(current with { Title = title });
+            current = store.Write(current, current.Version, text) ?? throw new InvalidOperationException("write unexpectedly conflicted");
+            versions.Add(current.Version);
+        }
+
+        TaskItem? evicted = store.GetVersion(id, versions[0]);
+        TaskItem? kept = store.GetVersion(id, versions[1]);
+
+        Assert.Null(evicted);
+        Assert.NotNull(kept);
+        Assert.Equal("v1", kept.Title);
+    }
+
+    /// <summary>
+    /// A Task the constructor's initial scan loaded, and that has never been written since, already
+    /// has its version in <see cref="TaskStore.GetVersion"/>'s history - the history is seeded at
+    /// scan time, not only on the first Write (Settled corrections-B2 D5 item 8; the base-version
+    /// merge path in Spec §9.3 step 1 depends on this for a Task nobody has edited yet).
+    /// </summary>
+    [Fact]
+    public void GetVersion_AfterInitialScan_KnowsTheScannedVersion()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "scanned", location: new("Platform", null, false)));
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        TaskItem scanned = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
+
+        TaskItem? found = store.GetVersion(id, scanned.Version);
+
+        Assert.NotNull(found);
+        Assert.Equal("scanned", found.Title);
+    }
+
+    /// <summary>A Write whose expected version no longer matches the file on disk - something else wrote it first - returns null rather than overwriting the newer content (Settled corrections-B2 D5 item 6).</summary>
+    [Fact]
+    public void Write_DiskChangedSinceSeen_ReturnsConflict()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        string path = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "original", location: new("Platform", null, false)));
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        TaskItem seen = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
+        string outsideText = TaskFileFormat.Compose(seen with { Title = "changed outside" });
+        File.WriteAllText(path, outsideText);
+        string attemptedText = TaskFileFormat.Compose(seen with { Title = "attempted write" });
+
+        TaskItem? result = store.Write(seen, seen.Version, attemptedText);
+
+        Assert.Null(result);
+        Assert.Equal(outsideText, File.ReadAllText(path));
+    }
+
+    /// <summary>A Write whose composed text does not parse throws before anything reaches disk, so a bad compose can never corrupt a Task file (Settled corrections-B2 D5 item 9).</summary>
+    [Fact]
+    public void Write_ComposedTextDoesNotParse_ThrowsInvalidOperationException()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        string path = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
+        string originalDiskText = File.ReadAllText(path);
+        const string invalidText = "not a valid task file at all";
+
+        Assert.Throws<InvalidOperationException>(() => store.Write(original, original.Version, invalidText));
+
+        Assert.Equal(originalDiskText, File.ReadAllText(path));
+        Assert.False(File.Exists(path + ".tmp"));
+    }
+
+    /// <summary><see cref="TaskStore.AppendEntry"/> returns null, and leaves the file untouched, when the disk no longer matches the expected version (Settled corrections-B2 D5 item 6).</summary>
+    [Fact]
+    public void AppendEntry_VersionMismatch_ReturnsNull()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        string path = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        TaskItem seen = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
+        string outsideText = TaskFileFormat.Compose(seen with { Title = "changed outside" });
+        File.WriteAllText(path, outsideText);
+        ChangeLogEntry entry = TestTasks.Entry("2020-01-01T00:00:00Z", "Human", "attempted");
+
+        TaskItem? result = store.AppendEntry(id, seen.Version, entry);
+
+        Assert.Null(result);
+        Assert.Equal(outsideText, File.ReadAllText(path));
+    }
+
+    /// <summary><see cref="TaskStore.ReadText"/> returns the Task file's current text straight from disk.</summary>
+    [Fact]
+    public void ReadText_ExistingTask_ReturnsCurrentDiskText()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        string path = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "read me", location: new("Platform", null, false)));
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+
+        string? text = store.ReadText(id);
+
+        Assert.Equal(File.ReadAllText(path), text);
+        Assert.Contains("read me", text, StringComparison.Ordinal);
+    }
+
+    /// <summary><see cref="TaskStore.ReadText"/> returns null, rather than throwing, for an id no file carries.</summary>
+    [Fact]
+    public void ReadText_UnknownId_ReturnsNull()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-9999", out TaskId unknownId);
+
+        string? text = store.ReadText(unknownId);
+
+        Assert.Null(text);
+    }
+
+    /// <summary>
+    /// <see cref="TaskStore.HighestNumber"/> is the max Task number for a prefix over both every
+    /// parsed id and every file name that parses as a <see cref="TaskId"/>, including a rejected
+    /// file's (B1 corrections-B2 D6 item 6).
+    /// </summary>
+    [Fact]
+    public void HighestNumber_ParsedIdsAndFileNames_ReturnsMax()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        WriteTask(root, Path.Combine("Platform", "a.md"), TestTasks.Make(id: "PLAT-0003", location: new("Platform", null, false)));
+        WriteRawFile(root, Path.Combine("Platform", "PLAT-0007.md"), "not a valid task file");
+        WriteTask(root, Path.Combine("Ops", "OPS-0099.md"), TestTasks.Make(id: "OPS-0099", location: new("Ops", null, false)));
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+
+        int highest = store.HighestNumber("PLAT");
+
+        Assert.Equal(7, highest);
+    }
+
+    /// <summary>
+    /// A batch of three Writes through <see cref="TaskStore.WriteMany"/> updates every Task's index
+    /// entry but raises <see cref="TaskStore.IndexChanged"/> exactly once, not three times (Settled
+    /// corrections-B2 D5 item 7 - the Teammate-rename cascade in Task 6.6 needs this to avoid firing
+    /// once per renamed file).
+    /// </summary>
+    [Fact]
+    public void WriteMany_ThreeTasks_RaisesIndexChangedOnce()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        WriteTask(root, Path.Combine("Platform", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("Platform", null, false)));
+        WriteTask(root, Path.Combine("Platform", "PLAT-0003.md"), TestTasks.Make(id: "PLAT-0003", location: new("Platform", null, false)));
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId first);
+        _ = TaskId.TryParse("PLAT-0002", out TaskId second);
+        _ = TaskId.TryParse("PLAT-0003", out TaskId third);
+        TaskItem firstTask = store.Get(first) ?? throw new InvalidOperationException("fixture task missing");
+        TaskItem secondTask = store.Get(second) ?? throw new InvalidOperationException("fixture task missing");
+        TaskItem thirdTask = store.Get(third) ?? throw new InvalidOperationException("fixture task missing");
+        List<(TaskItem Task, string ExpectedVersion, string Text)> writes =
+        [
+            (firstTask, firstTask.Version, TaskFileFormat.Compose(firstTask with { Title = "renamed 1" })),
+            (secondTask, secondTask.Version, TaskFileFormat.Compose(secondTask with { Title = "renamed 2" })),
+            (thirdTask, thirdTask.Version, TaskFileFormat.Compose(thirdTask with { Title = "renamed 3" })),
+        ];
+        int raisedCount = 0;
+        store.IndexChanged += () => raisedCount++;
+
+        IReadOnlyList<TaskItem?> results = store.WriteMany(writes);
+
+        Assert.Equal(3, results.Count);
+        Assert.All(results, result => Assert.NotNull(result));
+        Assert.Equal(1, raisedCount);
+        Assert.Equal("renamed 1", store.Get(first)?.Title);
+        Assert.Equal("renamed 2", store.Get(second)?.Title);
+        Assert.Equal("renamed 3", store.Get(third)?.Title);
     }
 
     /// <summary>Writes a valid Task file's composed text under <paramref name="root"/>, and backdates it to its last Change log entry's time (or a fixed past time with none) so a later reconciliation pass never rewrites a fixture.</summary>
