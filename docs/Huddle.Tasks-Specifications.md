@@ -1483,10 +1483,17 @@ does what the View asks for. Each of these was checked in the package's XML docs
 - **Row click.** `RowClick` opens the detail panel (§13.6).
 
 > [!NOTE]
-> **Confirm on the first build:** that grouped rows render in the order the grid receives them,
-> or sort by `GroupBy` key. If the grid sorts group keys itself, set `SortBy` on the grouped
-> column so that the order matches the Board (Unassigned and No project last). This is the one
-> grid behaviour the XML docs don't settle.
+> **Settled (Task 11.7.i, confirmed against MudBlazor 9.10.0):** `MudDataGrid` orders groups by
+> comparing each grouped column's `GroupBy` key, not by the order `Items` are given in. `GroupBy`
+> therefore returns a rank-prefixed string - `"0\0<LABEL>"` for a real value, `"1\0<LABEL>"` for
+> the null-value group - so ordinal string comparison reproduces `TaskQuery.Group`'s own rule
+> (the null group, "Unassigned" or "No project", sorts last; everything else sorts ordinally by
+> label), without re-deriving it from `TaskQuery`'s private `RawGroupKey`/`NullGroupSentinel`: the
+> null-ness is read straight from the Task's own field (`Assignee is null`, `Location.Project is
+> null`), so a real Assignee literally named "Unassigned" still gets its own group. `GroupTemplate`
+> then shows the real label via `TaskQuery.GroupLabel`, since the raw key is never fit for display.
+> `TaskListViewTests.Grouping_TwoLevels_FollowsViewGroupingWithGroupLabelText` proves the order
+> empirically (two Team groups, plus a null-Assignee group sorting after a real one).
 
 ### 13.4 Board — `TaskBoard.razor`
 
