@@ -404,7 +404,7 @@ public sealed class DotAcpAgentHostTests
     public async Task DisposeAsync_DisposesConnection_AndKillsProcessIfNotExited()
     {
         CancellationToken cancellationToken = TestContext.Current.CancellationToken;
-        FakeAgentProcessLauncher launcher = new FakeAgentProcessLauncher();
+        FakeAgentProcessLauncher launcher = new FakeAgentProcessLauncher { IgnoresInputClose = true };
         DotAcpAgentHost host = new DotAcpAgentHost(
             new AgentProcessOptions("fake", []),
             launcher,

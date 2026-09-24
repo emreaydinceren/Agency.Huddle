@@ -26,10 +26,33 @@ internal sealed class FakeAgentProcessLauncher : IAgentProcessLauncher
 
     internal AgentProcessOptions? LastOptions { get; private set; }
 
+    /// <summary>
+    /// Gets a value indicating whether the fake process keeps running after the agent's read
+    /// loop ends. By default the process exits when its standard input closes, as a real agent
+    /// does; set this to exercise the host's kill-after-grace-period path.
+    /// </summary>
+    internal bool IgnoresInputClose { get; init; }
+
     public IAgentProcess Launch(AgentProcessOptions options)
     {
         this.LastOptions = options;
-        _ = this.Agent.RunAsync(CancellationToken.None);
+        _ = this.RunAgentAsync();
         return this.Process;
+    }
+
+    /// <summary>Runs the fake agent's read loop and, unless told otherwise, exits the process when it ends.</summary>
+    private async Task RunAgentAsync()
+    {
+        try
+        {
+            await this.Agent.RunAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        finally
+        {
+            if (!this.IgnoresInputClose)
+            {
+                this.Process.ExitSource.TrySetResult(0);
+            }
+        }
     }
 }
