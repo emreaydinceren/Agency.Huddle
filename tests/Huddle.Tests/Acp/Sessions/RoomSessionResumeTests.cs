@@ -43,6 +43,10 @@ public sealed class RoomSessionResumeTests
 
             await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
 
+            // The PostMessage is written mid-Turn; the store entry only at Turn end, after the File
+            // Changes commit - so it has to be waited for, not read straight after the post.
+            await WaitUntilAsync(() => store.Get("nova", "room-1") is not null, ct);
+
             var posted = Assert.Single(owner.Written.OfType<PostMessage>());
             var entry = store.Get("nova", "room-1");
             Assert.NotNull(entry);
@@ -89,6 +93,10 @@ public sealed class RoomSessionResumeTests
             await room.StopAsync("room-1", mark: 0, ct);
 
             await WaitUntilAsync(() => owner.Written.OfType<MessageDelta>().Any(delta => delta.IsFinal), ct);
+
+            // Same Turn-end ordering as TurnEnd_StoresEntry_LastMessageIdIsReplyIdOrTrigger: the
+            // final delta precedes the store write.
+            await WaitUntilAsync(() => store.Get("nova", "room-1") is not null, ct);
 
             Assert.Empty(owner.Written.OfType<PostMessage>());
             var entry = store.Get("nova", "room-1");

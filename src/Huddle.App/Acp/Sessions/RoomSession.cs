@@ -476,7 +476,12 @@ internal sealed class RoomSession : IAsyncDisposable
             {
                 this.session = opened;
                 this.eventReaderCts = readerCts;
-                this.state = RoomSessionState.Idle;
+
+                // A lazy open runs inside an admitted Turn (running is already set), and the
+                // consumer's admission step only promotes Idle to Busy - it left this session
+                // Closed. Publishing Idle here would run that whole first Turn looking evictable,
+                // and RoomSessionPool.PickVictim would close it mid-Turn for another Room's open.
+                this.state = this.running ? RoomSessionState.Busy : RoomSessionState.Idle;
                 this.lastActivity = this.time.GetUtcNow();
                 this.lastUsed = 0;
             }
