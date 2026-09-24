@@ -12,6 +12,7 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.App.Teammates;
 
 namespace Agency.Huddle.App;
@@ -163,6 +164,11 @@ public static class ServiceCollectionExtensions
         // substitute this, and a plain registration cannot produce the two-watchers-on-one-path
         // hazard the aliased registrations elsewhere in this file exist to avoid.
         services.AddSingleton<AvatarStore>();
+
+        // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
+        // this, and a plain registration cannot produce the two-watchers-on-one-path hazard the
+        // aliased registrations elsewhere in this file exist to avoid.
+        services.AddSingleton<ViewStore>();
 
         // Unconditional too, and for the same reason: the probe spends nothing on its own (it never
         // calls PromptAsync), so registering it costs nothing when Team:Acp:Enabled is off. What
