@@ -160,7 +160,12 @@ public sealed class PersonaSupervisorFileChangesTests
 
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var stateFile = Path.Combine(options.Value.DataDir, "file-state", "nova.json");
-        Assert.True(File.Exists(stateFile));
+
+        // The reply reaching the Transcript does not mean the Turn has ended: RoomSession commits
+        // File Changes only after the Turn's final MessageDelta, so a slow commit never delays the
+        // reply. The siblings above close that gap with supervisor.StopAsync; this fixture owns its
+        // supervisor, so the test waits for the file itself, bounded so a real regression still fails.
+        Assert.True(await WaitForFileAsync(stateFile, TimeSpan.FromSeconds(10), ct));
     }
 
     /// <summary>
@@ -274,6 +279,27 @@ public sealed class PersonaSupervisorFileChangesTests
 
             await Task.Delay(50, ct);
         }
+    }
+
+    /// <summary>Waits until <paramref name="path"/> exists, or <paramref name="timeout"/> elapses.</summary>
+    /// <param name="path">The file to wait for.</param>
+    /// <param name="timeout">How long to wait before giving up.</param>
+    /// <param name="ct">The test's cancellation token.</param>
+    /// <returns><see langword="true"/> if the file appeared within <paramref name="timeout"/>.</returns>
+    private static async Task<bool> WaitForFileAsync(string path, TimeSpan timeout, CancellationToken ct)
+    {
+        var deadline = DateTimeOffset.UtcNow + timeout;
+        while (!File.Exists(path))
+        {
+            if (DateTimeOffset.UtcNow >= deadline)
+            {
+                return false;
+            }
+
+            await Task.Delay(50, ct);
+        }
+
+        return true;
     }
 
     /// <summary>Waits until <paramref name="roomId"/>'s Transcript holds at least <paramref name="count"/> Messages.</summary>

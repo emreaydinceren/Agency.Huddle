@@ -27,6 +27,14 @@ internal sealed class AgentConnection
     private JsonLineStream? stream;
     private int closed;
 
+    // Completed once the Welcome is on the wire (or the connection ends without one). RunAsync
+    // registers with the gateway BEFORE building the Welcome, so no Message can fall between the
+    // Welcome's snapshot and live delivery - but that also makes this connection a delivery target
+    // while the handshake is still in progress. The Welcome carries no history, so a MessagePosted
+    // sent in that window must be held rather than dropped; SendAsync awaits this so it can never
+    // overtake the Welcome, which the runner requires as the first envelope it reads.
+    private readonly TaskCompletionSource welcomeSent = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
     // The membership decision for the most recently checked Draft, keyed by its MessageId. A Draft
     // is one Turn's worth of MessageDelta/ToolActivity envelopes - often one per token of model
     // output - so re-checking membership through teamDirectory (a SQLite query) for every single one
@@ -101,6 +109,7 @@ internal sealed class AgentConnection
 
             var welcome = await this.BuildWelcomeAsync(user, ct);
             await lineStream.WriteAsync(welcome, ct);
+            this.welcomeSent.TrySetResult();
 
             await this.ReadLoopAsync(lineStream, ct);
         }
@@ -123,6 +132,9 @@ internal sealed class AgentConnection
         }
         finally
         {
+            // Releases any send held for a Welcome that will now never be written; it then meets
+            // the disposed pipe and fails quietly in SendAsync, instead of waiting forever.
+            this.welcomeSent.TrySetResult();
             this.gateway.Unregister(this);
 
             if (this.logger.IsEnabled(LogLevel.Information))
@@ -151,6 +163,7 @@ internal sealed class AgentConnection
 
         try
         {
+            await this.welcomeSent.Task.WaitAsync(ct);
             await current.WriteAsync(message, ct);
         }
         catch (IOException)
