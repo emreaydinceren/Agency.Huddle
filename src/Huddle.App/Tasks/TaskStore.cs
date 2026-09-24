@@ -139,6 +139,61 @@ internal sealed partial class TaskStore : IDisposable
     public TaskItem? Get(TaskId id) => this.index.ById.GetValueOrDefault(id);
 
     /// <summary>
+    /// Writes <paramref name="text"/> to a brand-new file at <paramref name="task"/>'s
+    /// <see cref="TaskItem.Path"/>, refusing to overwrite an existing one (Settled corrections-B2 D6
+    /// item 6: Create never overwrites - the id was allocated for exactly this file, so unlike
+    /// <see cref="Write"/> there is no prior version to check against). Added for <c>TaskService</c>
+    /// (Task 6.1.i); the text must already parse, the same guard <see cref="Write"/> applies.
+    /// </summary>
+    /// <param name="task">The Task being created; its <see cref="TaskItem.Path"/> and <see cref="TaskItem.Location"/> are used.</param>
+    /// <param name="text">The full file text to write, already composed.</param>
+    /// <returns>The re-parsed Task as written, or <see langword="null"/> when a file already exists at that path.</returns>
+    internal TaskItem? Create(TaskItem task, string text)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+        ArgumentNullException.ThrowIfNull(text);
+
+        if (!TaskFileFormat.TryParse(text, task.Path, task.Location, out _, out string parseError))
+        {
+            throw new InvalidOperationException(
+                string.Create(CultureInfo.InvariantCulture, $"Task '{task.Id}' could not be written: {parseError}"));
+        }
+
+        Action? changed;
+        TaskItem written;
+        lock (this.writeGate)
+        {
+            if (this.disposed)
+            {
+                return null;
+            }
+
+            if (File.Exists(task.Path))
+            {
+                return null;
+            }
+
+            string? directory = Path.GetDirectoryName(task.Path);
+            if (directory is not null)
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            string tmpPath = task.Path + ".tmp";
+            File.WriteAllText(tmpPath, text);
+            File.Move(tmpPath, task.Path, overwrite: false);
+
+            written = ReparseWritten(task.Path, task.Location, task.Id, "created");
+            this.RecordVersion(written);
+            this.index = ReplaceInIndex(this.index, written);
+            changed = this.IndexChanged;
+        }
+
+        changed?.Invoke();
+        return written;
+    }
+
+    /// <summary>
     /// Writes <paramref name="text"/> atomically to <paramref name="task"/>'s file (Spec §8.3), after
     /// first confirming two things: the text parses (Settled corrections-B2 D5 item 9 - nothing
     /// invalid ever reaches disk), and the file on disk is still at <paramref name="expectedVersion"/>

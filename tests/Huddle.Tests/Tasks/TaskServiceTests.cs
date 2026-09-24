@@ -1,0 +1,557 @@
+using System.Globalization;
+using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Tasks;
+
+namespace Agency.Huddle.Tests.Tasks;
+
+/// <summary>
+/// Tests for <see cref="TaskService"/>'s <see cref="TaskService.Create"/> and
+/// <see cref="TaskService.Update"/> paths (Spec §9.1, §9.2, §9.4, and §9.5; Tasks 6.1-6.2).
+/// </summary>
+public sealed class TaskServiceTests
+{
+    private static readonly TaskActor HumanActor = new(TaskActorKind.Human, "You", KnownIds.Human);
+
+    /// <summary>A valid Create writes the file at its Team/Project layout path with one "created" Change log entry by the actor.</summary>
+    [Fact]
+    public void Create_WritesFileAtLayoutPath_WithCreatedEntry()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskResult result = service.Create(new TaskDraft("Ship it", "Platform", "Auth v2"), HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        string expectedPath = Path.Combine(store.RootDirectory, "Platform", "Auth v2", "PLAT-0001.md");
+        Assert.Equal(expectedPath, saved.Task.Path);
+        ChangeLogEntry entry = Assert.Single(saved.Task.ChangeLog);
+        Assert.Equal("created", entry.Summary);
+        Assert.Equal("You", entry.Actor);
+    }
+
+    /// <summary>TaskChanged is raised exactly once, and only after the file has actually been written.</summary>
+    [Fact]
+    public void Create_RaisesTaskChangedOnce_AfterWrite()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskEvents events = new();
+        TaskService service = CreateTaskService(dir, store, personas, events);
+
+        int raiseCount = 0;
+        bool fileExistedWhenRaised = false;
+        events.TaskChanged += change =>
+        {
+            raiseCount++;
+            fileExistedWhenRaised = File.Exists(change.After.Path);
+        };
+
+        TaskResult result = service.Create(new TaskDraft("Ship it", "Platform", null), HumanActor);
+
+        Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal(1, raiseCount);
+        Assert.True(fileExistedWhenRaised);
+    }
+
+    /// <summary>An assignee given as an Alias is resolved and stored as the Persona's Name.</summary>
+    [Fact]
+    public void Create_AliasAssignee_StoredAsName()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskResult result = service.Create(new TaskDraft("T", "Platform", null, Assignee: "kai"), HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal("Kai", saved.Task.Assignee);
+    }
+
+    /// <summary>An empty title, an unknown Team and an unknown assignee are all reported together, in one Refused.</summary>
+    [Fact]
+    public void Create_AllProblemsReportedTogether()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskDraft draft = new(Title: "", Team: "Nonexistent", Project: null, Assignee: "Ghost");
+        TaskResult result = service.Create(draft, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Equal(3, refused.Problems.Count);
+    }
+
+    /// <summary>A description that contains the reserved Change log heading is refused.</summary>
+    [Fact]
+    public void Create_DescriptionWithLogHeading_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskDraft draft = new("T", "Platform", null, Description: "Body\n## Change log\nmore");
+        TaskResult result = service.Create(draft, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains(refused.Problems, problem => problem.Contains("Change log", StringComparison.Ordinal));
+    }
+
+    /// <summary>A Team name that can't be a folder on this computer is refused, with a problem naming the offending character.</summary>
+    [Fact]
+    public void Create_TeamWithInvalidFolderChars_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskDraft draft = new("T", "Ops:Legal", null);
+        TaskResult result = service.Create(draft, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains(refused.Problems, problem => problem.Contains("cannot be a folder name", StringComparison.Ordinal) && problem.Contains("':'", StringComparison.Ordinal));
+    }
+
+    /// <summary>A BlockedBy id that doesn't exist in the index is refused, naming the unknown id.</summary>
+    [Fact]
+    public void Create_UnknownBlockedBy_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        _ = TaskId.TryParse("PLAT-0999", out TaskId missing);
+
+        TaskDraft draft = new("T", "Platform", null, BlockedBy: [missing]);
+        TaskResult result = service.Create(draft, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains(refused.Problems, problem => problem.Contains("PLAT-0999", StringComparison.Ordinal));
+    }
+
+    /// <summary>Creating a Task in a Team whose folder already exists under a different case reuses the existing folder's casing.</summary>
+    [Fact]
+    public void Create_ExistingFolderDifferentCase_UsesExistingFolder()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        string root = Path.Combine(dir.Path, "Tasks");
+        Directory.CreateDirectory(Path.Combine(root, "Platform"));
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskResult result = service.Create(new TaskDraft("T", "platform", null), HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal("Platform", saved.Task.Location.Team);
+        Assert.Equal(Path.Combine(root, "Platform", "PLAT-0001.md"), saved.Task.Path);
+    }
+
+    /// <summary>Updating a Task's status logs a "status: ..." summary and raises exactly one TaskChanged.</summary>
+    [Fact]
+    public void Update_Status_LogsSummaryAndRaisesEvent()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskEvents events = new();
+        TaskService service = CreateTaskService(dir, store, personas, events);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskChange? raised = null;
+        events.TaskChanged += change => raised = change;
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal(TaskState.InProgress, saved.Task.Status);
+        Assert.NotNull(raised);
+        Assert.Contains("status:", saved.Change.Entry.Summary, StringComparison.Ordinal);
+    }
+
+    /// <summary>Applying a patch whose values already match the current Task returns Unchanged without touching the file.</summary>
+    [Fact]
+    public void Update_SameValues_ReturnsUnchanged_NoWrite()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null, Priority: TaskPriority.Medium));
+        byte[] before = File.ReadAllBytes(task.Path);
+        DateTime mtime = File.GetLastWriteTimeUtc(task.Path);
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Priority = TaskPriority.Medium }, null, HumanActor);
+
+        Assert.IsType<TaskResult.Unchanged>(result);
+        Assert.Equal(before, File.ReadAllBytes(task.Path));
+        Assert.Equal(mtime, File.GetLastWriteTimeUtc(task.Path));
+    }
+
+    /// <summary>Changing a Task's Team moves its file to the new Team's folder and logs a "moved:" summary.</summary>
+    [Fact]
+    public void Update_TeamChange_MovesFile_LogsMoved()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        string root = Path.Combine(dir.Path, "Tasks");
+        Directory.CreateDirectory(Path.Combine(root, "Marketing"));
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Team = "Marketing" }, null, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal("Marketing", saved.Task.Location.Team);
+        Assert.False(File.Exists(task.Path));
+        Assert.True(File.Exists(saved.Task.Path));
+        Assert.Contains("moved:", saved.Change.Entry.Summary, StringComparison.Ordinal);
+    }
+
+    /// <summary>Setting Project to null moves a Task from a Project sub-folder back to its Team root.</summary>
+    [Fact]
+    public void Update_ProjectSetNull_MovesToTeamRoot()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", "Auth v2"));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Project = Optional<string?>.Set(null) }, null, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Null(saved.Task.Location.Project);
+        Assert.Equal(Path.Combine(store.RootDirectory, "Platform", $"{task.Id}.md"), saved.Task.Path);
+    }
+
+    /// <summary>A reason given alongside a move to Cancelled is appended to the Change log summary.</summary>
+    [Fact]
+    public void Update_ReasonWithCancelled_AppendedToSummary()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Status = TaskState.Cancelled, Reason = "no longer needed" }, null, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Contains("(reason: no longer needed)", saved.Change.Entry.Summary, StringComparison.Ordinal);
+    }
+
+    /// <summary>A reason given with a move to Done, which isn't Cancelled or Rejected, is refused.</summary>
+    [Fact]
+    public void Update_ReasonWithDone_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Status = TaskState.Done, Reason = "done early" }, null, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains(refused.Problems, problem => problem.Contains("only recorded when the status becomes Cancelled or Rejected", StringComparison.Ordinal));
+    }
+
+    /// <summary>Moving a Task to Duplicate without a duplicate_of is refused.</summary>
+    [Fact]
+    public void Update_DuplicateWithoutDuplicateOf_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Status = TaskState.Duplicate }, null, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains(refused.Problems, problem => problem.Contains("Status Duplicate needs duplicate_of.", StringComparison.Ordinal));
+    }
+
+    /// <summary>Setting a Task's parent to one of its own descendants is refused as a cycle.</summary>
+    [Fact]
+    public void Update_ParentCycle_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem a = SeedTask(service, new TaskDraft("A", "Platform", null));
+        TaskItem b = SeedTask(service, new TaskDraft("B", "Platform", null, Parent: a.Id));
+
+        TaskResult result = service.Update(a.Id, new TaskPatch { Parent = Optional<TaskId?>.Set(b.Id) }, null, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains(refused.Problems, problem => problem.Contains("descendant", StringComparison.Ordinal));
+    }
+
+    /// <summary>Updating an id that isn't in the index returns NotFound.</summary>
+    [Fact]
+    public void Update_UnknownId_NotFound()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        _ = TaskId.TryParse("PLAT-9999", out TaskId missing);
+
+        TaskResult result = service.Update(missing, new TaskPatch { Title = "x" }, null, HumanActor);
+
+        Assert.IsType<TaskResult.NotFound>(result);
+    }
+
+    /// <summary>Setting Assignee to Optional.Set(null) unassigns the Task.</summary>
+    [Fact]
+    public void Update_Unassign_WithOptionalSetNull()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null, Assignee: "Kai"));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Assignee = Optional<string?>.Set(null) }, null, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Null(saved.Task.Assignee);
+    }
+
+    /// <summary>A hand-edited Change log line, with unusual spacing no formatter would produce, survives an unrelated Update byte for byte.</summary>
+    [Fact]
+    public void Update_HandEditedLogLine_Preserved()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        string original = File.ReadAllText(task.Path);
+        const string WeirdLine = "-   2026-01-01T00:00:00Z   |   Someone   |   did   something   weird  ";
+        string handEdited = original.TrimEnd('\n') + "\n" + WeirdLine + "\n";
+        TaskItem? edited = store.Write(task, task.Version, handEdited);
+        Assert.NotNull(edited);
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Priority = TaskPriority.High }, null, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        string finalText = File.ReadAllText(saved.Task.Path);
+        Assert.Contains(WeirdLine, finalText, StringComparison.Ordinal);
+    }
+
+    /// <summary>25 concurrent Updates on the same Task, released together by one gate, all succeed and every one's Change log entry survives - proven against a stub via mutation testing (mutateGate removed).</summary>
+    [Fact]
+    public void Update_Concurrent_BothChangesSurvive()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        const int Rounds = 25;
+        using ManualResetEventSlim gate = new(initialState: false);
+        TaskResult[] results = new TaskResult[Rounds];
+        Thread[] threads = new Thread[Rounds];
+
+        for (int i = 0; i < Rounds; i++)
+        {
+            int index = i;
+            threads[index] = new Thread(() =>
+            {
+                gate.Wait();
+                results[index] = service.Update(
+                    task.Id,
+                    new TaskPatch { Tags = [string.Create(CultureInfo.InvariantCulture, $"round{index}")] },
+                    null,
+                    HumanActor);
+            });
+            threads[index].Start();
+        }
+
+        gate.Set();
+        foreach (Thread thread in threads)
+        {
+            thread.Join();
+        }
+
+        Assert.All(results, result => Assert.IsType<TaskResult.Saved>(result));
+        TaskItem? final = store.Get(task.Id);
+        Assert.NotNull(final);
+        Assert.Equal(Rounds + 1, final.ChangeLog.Count);
+    }
+
+    /// <summary>Create never overwrites: a file already sitting at the id it is about to allocate (a hand-made or rejected file, as if copied in outside Huddle) makes Create throw rather than clobber it.</summary>
+    [Fact]
+    public void Create_FileAlreadyExistsAtAllocatedPath_ThrowsAndDoesNotOverwrite()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        string existingPath = Path.Combine(store.RootDirectory, "Platform", "PLAT-0001.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(existingPath) ?? throw new InvalidOperationException("Expected a parent directory."));
+        File.WriteAllText(existingPath, "not a task file");
+
+        _ = Assert.Throws<InvalidOperationException>(() => service.Create(new TaskDraft("T", "Platform", null), HumanActor));
+
+        Assert.Equal("not a task file", File.ReadAllText(existingPath));
+    }
+
+    /// <summary>A Task file present on disk with a higher number than any id the allocator itself has handed out (copied in by hand) still raises the next allocated number past it.</summary>
+    [Fact]
+    public void Create_HigherNumberedFileAlreadyOnDisk_AllocatesPastIt()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        string teamRoot = Path.Combine(dir.Path, "Tasks", "Platform");
+        Directory.CreateDirectory(teamRoot);
+        File.WriteAllText(Path.Combine(teamRoot, "PLAT-0005.md"), "not a real task file");
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskResult result = service.Create(new TaskDraft("T", "Platform", null), HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal("PLAT-0006", saved.Task.Id.ToString());
+    }
+
+    /// <summary>A status-only Update is validated only for the fields it touches: a Task whose Assignee no longer resolves (its Persona was removed after the Task was created) still accepts the status change.</summary>
+    [Fact]
+    public void Update_StatusOnly_DoesNotValidateUntouchedAssignee()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null, Assignee: "Kai"));
+        personas.Remove("Kai");
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal(TaskState.InProgress, saved.Task.Status);
+    }
+
+    /// <summary>Moving a Task to an existing Team folder under a different case reuses that folder's own casing, the same as Create does.</summary>
+    [Fact]
+    public void Update_TeamExistingFolderDifferentCase_UsesExistingFolder()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        string root = Path.Combine(dir.Path, "Tasks");
+        Directory.CreateDirectory(Path.Combine(root, "Marketing"));
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Team = "marketing" }, null, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal("Marketing", saved.Task.Location.Team);
+    }
+
+    /// <summary>A Team name that is a reserved Windows device name is refused, naming the reservation, even on an OS where that name is otherwise legal.</summary>
+    [Fact]
+    public void Create_ReservedTeamName_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskDraft draft = new("T", "CON", null);
+        TaskResult result = service.Create(draft, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains(refused.Problems, problem => problem.Contains("cannot be a folder name", StringComparison.Ordinal) && problem.Contains("reserved", StringComparison.Ordinal));
+    }
+
+    /// <summary>A Team name that ends with a trailing space is refused, naming the offending character, even on an OS that would otherwise accept it.</summary>
+    [Fact]
+    public void Create_TeamWithTrailingSpace_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskDraft draft = new("T", "Ops ", null);
+        TaskResult result = service.Create(draft, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains(refused.Problems, problem => problem.Contains("cannot be a folder name", StringComparison.Ordinal) && problem.Contains("ends with", StringComparison.Ordinal));
+    }
+
+    /// <summary>TaskChanged is raised exactly once for an Update, the same guarantee <see cref="Create_RaisesTaskChangedOnce_AfterWrite"/> proves for Create.</summary>
+    [Fact]
+    public void Update_RaisesTaskChangedExactlyOnce()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskEvents events = new();
+        TaskService service = CreateTaskService(dir, store, personas, events);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        int raiseCount = 0;
+        events.TaskChanged += _ => raiseCount++;
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, HumanActor);
+
+        Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal(1, raiseCount);
+    }
+
+    /// <summary>A status change to a state other than Cancelled or Rejected, with no Reason offered, does not grow a "(reason: ...)" suffix on the Change log summary.</summary>
+    [Fact]
+    public void Update_StatusChangeWithoutReason_SummaryHasNoReasonSuffix()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Status = TaskState.InProgress }, null, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.DoesNotContain("(reason:", saved.Change.Entry.Summary, StringComparison.Ordinal);
+    }
+
+    /// <summary>Creates a Task through <see cref="TaskService.Create"/> for a test to update, asserting it saved.</summary>
+    private static TaskItem SeedTask(TaskService service, TaskDraft draft) =>
+        Assert.IsType<TaskResult.Saved>(service.Create(draft, HumanActor)).Task;
+
+    /// <summary>Constructs a real <see cref="PersonaStore"/> with Nova (alias "nova") and Kai (alias "kai") in Team Platform, over the same <see cref="TempDataDir"/> the Task store under test also reads from.</summary>
+    private static PersonaStore CreatePersonaStore(TempDataDir dir)
+    {
+        PersonaStore personas = new(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        _ = personas.Add(new PersonaIdentity("Nova", "Nova", "nova", ["Platform"]), "You are Nova.");
+        _ = personas.Add(new PersonaIdentity("Kai", "Kai", "kai", ["Platform"]), "You are Kai.");
+        return personas;
+    }
+
+    /// <summary>Constructs the <see cref="TaskStore"/> under test with default options and a real <see cref="TimeProvider"/>.</summary>
+    private static TaskStore CreateTaskStore(TempDataDir dir, PersonaStore personas) =>
+        new(dir.Options(), personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
+
+    /// <summary>Constructs the <see cref="TaskService"/> under test, with a fresh <see cref="TaskEvents"/> hub unless <paramref name="events"/> is supplied.</summary>
+    private static TaskService CreateTaskService(TempDataDir dir, TaskStore store, PersonaStore personas, TaskEvents? events = null) =>
+        new(store, new TaskIdAllocator(dir.Options()), events ?? new TaskEvents(), personas, dir.Options(), TimeProvider.System, NullLogger<TaskService>.Instance);
+}

@@ -128,6 +128,12 @@ public static class ServiceCollectionExtensions
         // duplicate.
         services.AddSingleton<TaskStore>();
 
+        // A plain hub with no dependencies of its own (Spec §9.5). TaskService is a lazy singleton
+        // (Settled corrections-B2 D6 item 10): nothing constructs it until 6.6.i injects it into the
+        // hosted PersonaRenameCascade below, so registering it here costs nothing before then.
+        services.AddSingleton<TaskEvents>();
+        services.AddSingleton<TaskService>();
+
         // Same instance as PromptStore below, not a second registration - mirrors the
         // PersonaStore/IMentionAliasSource pair above. A second, independently constructed PromptStore
         // would mean a second file handle on prompts.json now and (once T4.1 adds one) a second

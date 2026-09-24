@@ -205,6 +205,43 @@ internal static partial class TaskFileFormat
     {
         ArgumentNullException.ThrowIfNull(task);
 
+        List<string> lines = ComposeHeadLines(task);
+        lines.Add(ChangeLogHeading);
+        foreach (ChangeLogEntry entry in task.ChangeLog)
+        {
+            lines.Add(FormatEntry(entry));
+        }
+
+        return string.Join('\n', lines);
+    }
+
+    /// <summary>
+    /// Composes <paramref name="after"/>'s frontmatter and description (Spec §7.4), then keeps
+    /// <paramref name="currentText"/>'s own text from its last fence-aware
+    /// <see cref="ChangeLogHeading"/> line onward, byte for byte (Settled corrections-B2 D6 item 1:
+    /// never recompose a whole existing file for an update - a hand-edited Change log line must
+    /// survive untouched). When <paramref name="currentText"/> has no such heading, the result is
+    /// just the composed head; <see cref="AppendEntry"/> adds a fresh heading when it appends next.
+    /// </summary>
+    /// <param name="currentText">The Task file's current raw text on disk.</param>
+    /// <param name="after">The Task as it should be after the update, for its frontmatter and description.</param>
+    public static string ReplaceHead(string currentText, TaskItem after)
+    {
+        ArgumentNullException.ThrowIfNull(currentText);
+        ArgumentNullException.ThrowIfNull(after);
+
+        string[] rawLines = currentText.Split('\n');
+        int headingIndex = FindChangeLogHeadingLineIndex(rawLines);
+        List<string> headLines = ComposeHeadLines(after);
+
+        return headingIndex < 0
+            ? string.Join('\n', headLines)
+            : string.Join('\n', headLines.Concat(rawLines[headingIndex..]));
+    }
+
+    /// <summary>The frontmatter and description lines common to <see cref="Compose"/> and <see cref="ReplaceHead"/>, ending with the blank line before the Change log heading.</summary>
+    private static List<string> ComposeHeadLines(TaskItem task)
+    {
         List<string> lines = ["---", string.Create(CultureInfo.InvariantCulture, $"id: {task.Id}")];
         lines.Add(ComposeScalarLine("title", task.Title));
         lines.Add(ComposeScalarLine("status", task.Status.ToWire()));
@@ -267,13 +304,8 @@ internal static partial class TaskFileFormat
         lines.Add("---");
         lines.Add(task.Description);
         lines.Add("");
-        lines.Add(ChangeLogHeading);
-        foreach (ChangeLogEntry entry in task.ChangeLog)
-        {
-            lines.Add(FormatEntry(entry));
-        }
 
-        return string.Join('\n', lines);
+        return lines;
     }
 
     /// <summary>True when <paramref name="description"/> has a line that trims (case-insensitively) to <see cref="ChangeLogHeading"/> outside a fenced code block.</summary>
