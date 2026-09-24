@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Prompts;
@@ -43,42 +44,74 @@ public enum WakeBlock
 
 /// <summary>
 /// Wakes a Task's assignee when the Task changes (Spec §10, ADR-0026): subscribes to
-/// <see cref="TaskEvents.TaskChanged"/>, coalesces same-actor changes to the same Task, and posts a
-/// Message through <see cref="ChatService"/> that Mentions the assignee. This task (9.3) implements
-/// only <see cref="Preview"/>, the pure guard evaluation Spec §10.1-§10.2 describes; the coalescing
-/// timer, Room choice and posting that <see cref="StartAsync"/> will drive arrive in Task 9.4, which
-/// is why <see cref="StartAsync"/>, <see cref="StopAsync"/> and <see cref="Dispose"/> are no-ops for
-/// now rather than left unimplemented.
+/// <see cref="TaskEvents.TaskChanged"/> in <see cref="StartAsync"/>, coalesces changes by the same
+/// actor to the same Task for <c>Tasks.WakeCoalesceSeconds</c> (Spec §10.3), and when a batch fires
+/// posts one Message through <see cref="ChatService"/> that Mentions the latest assignee and lists
+/// every batched Change log summary (Spec §10.5). The Message is posted as the actor (D-11): the
+/// Human for a Human or outside-Huddle change, the Agent itself for an Agent's change.
+/// <para>
+/// Fires are started by the coalescing timer (or directly, when the window is zero or less), run as
+/// tracked tasks that catch and log everything, and are serialised behind one gate - two batches for
+/// the same Task must not interleave their budget and Room decisions (corrections-B3 D9 items 7-9).
+/// </para>
 /// </summary>
 internal sealed partial class TaskTriggerService : IHostedService, IDisposable
 {
+    /// <summary>The Prompt the wake-up Message is rendered from (Spec §10.5).</summary>
+    private const string WakeMessageKey = "task.wake.message";
+
+    /// <summary>More outside-edit changes than this within one coalesce window are logged, not woken (corrections-B3 D9 item 18).</summary>
+    private const int MaxOutsideEditsPerWindow = 10;
+
+    /// <summary>An <c>@</c> followed by U+2060 (word joiner): reads as <c>@</c> but no longer starts a Mention (corrections-B3 D9 item 16).</summary>
+    private static readonly string NeutralisedAt = "@" + (char)0x2060;
+
+    private readonly TaskEvents events;
+    private readonly TaskStore store;
     private readonly TaskActivity activity;
     private readonly TurnActivity turns;
+    private readonly ChatService chat;
     private readonly ITeamDirectory directory;
     private readonly PersonaStore personas;
     private readonly IAgentGateway gateway;
     private readonly PersonaHealth health;
+    private readonly IPromptSource prompts;
     private readonly TeamOptions teamOptions;
+    private readonly TimeProvider clock;
+    private readonly ILogger<TaskTriggerService> logger;
+    private readonly OwnPosts ownPosts;
 
-    /// <summary>
-    /// Creates the service. <paramref name="events"/>, <paramref name="store"/>,
-    /// <paramref name="chat"/>, <paramref name="prompts"/>, <paramref name="clock"/> and
-    /// <paramref name="logger"/> are validated but not yet stored - Task 9.4 wires them into the
-    /// coalescing and posting this task does not implement, per the class remarks.
-    /// </summary>
-    /// <param name="events">Raises <see cref="TaskEvents.TaskChanged"/>; Task 9.4 subscribes to it in <see cref="StartAsync"/>.</param>
-    /// <param name="store">Reads a Task's latest state when a coalesced batch fires (Task 9.4).</param>
-    /// <param name="activity">The per-Task wake budget (Spec §10.6) <see cref="Preview"/> checks for guard 6.</param>
+    /// <summary>Guards <see cref="batches"/>, <see cref="inFlight"/>, <see cref="outsideWindow"/>, <see cref="subscribed"/> and <see cref="stopped"/>. Never held across an await.</summary>
+    private readonly Lock gate = new();
+
+    /// <summary>Serialises every fire (corrections-B3 D9 item 9).</summary>
+    private readonly SemaphoreSlim fireGate = new(1, 1);
+
+    /// <summary>Cancelled by <see cref="StopAsync"/>; every fire's awaited calls take its token.</summary>
+    private readonly CancellationTokenSource lifetime = new();
+
+    private readonly Dictionary<BatchKey, Batch> batches = [];
+    private readonly HashSet<Task> inFlight = [];
+    private OutsideWindow? outsideWindow;
+    private bool subscribed;
+    private bool stopped;
+    private bool disposed;
+
+    /// <summary>Creates the service. Nothing is subscribed until <see cref="StartAsync"/>.</summary>
+    /// <param name="events">Raises <see cref="TaskEvents.TaskChanged"/>, subscribed to in <see cref="StartAsync"/>.</param>
+    /// <param name="store">Reads a Task's latest state when a coalesced batch fires.</param>
+    /// <param name="activity">The per-Task wake budget (Spec §10.6): guard 6, and the count a fired Agent-made wake consumes.</param>
     /// <param name="turns">Reports whether the assignee has a Turn running, for <see cref="Preview"/>'s presence.</param>
-    /// <param name="chat">Posts the wake-up Message (Task 9.4).</param>
-    /// <param name="directory">Resolves the assignee's <see cref="User"/> row, for <see cref="Preview"/>'s presence and Task 9.4's Room choice.</param>
+    /// <param name="chat">Posts the wake-up Message.</param>
+    /// <param name="directory">Resolves Users and Rooms: presence, the assignee's user, the sender and the Room.</param>
     /// <param name="personas">Resolves whether the assignee is still a known Persona (guard 5).</param>
     /// <param name="gateway">Reports whether the assignee's pipe connection is live, for <see cref="Preview"/>'s presence.</param>
     /// <param name="health">Reports the assignee's latest health, for <see cref="Preview"/>'s presence.</param>
-    /// <param name="prompts">Renders the <c>task.wake.message</c> Prompt (Task 9.4).</param>
-    /// <param name="options">Supplies <see cref="TasksOptions"/> (guards 1 and 6) and <see cref="TeamOptions.HumanName"/> (guard 3).</param>
-    /// <param name="clock">Drives the coalescing timer (Task 9.4).</param>
-    /// <param name="logger">Records a failed wake attempt (Task 9.4).</param>
+    /// <param name="prompts">Renders the <c>task.wake.message</c> Prompt.</param>
+    /// <param name="options">Supplies <see cref="TasksOptions"/> (guards 1 and 6, the coalesce window) and <see cref="TeamOptions.HumanName"/> (guard 3).</param>
+    /// <param name="clock">Creates the coalescing timers.</param>
+    /// <param name="logger">Records skipped and failed wakes.</param>
+    /// <param name="ownPosts">Records a wake posted as an Agent as that Agent's own post, so its session in the Room gets the catch-up line (corrections-B3 D9 item 17).</param>
     public TaskTriggerService(
         TaskEvents events,
         TaskStore store,
@@ -92,7 +125,8 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         IPromptSource prompts,
         IOptions<TeamOptions> options,
         TimeProvider clock,
-        ILogger<TaskTriggerService> logger)
+        ILogger<TaskTriggerService> logger,
+        OwnPosts ownPosts)
     {
         ArgumentNullException.ThrowIfNull(events);
         ArgumentNullException.ThrowIfNull(store);
@@ -107,14 +141,22 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(clock);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(ownPosts);
 
+        this.events = events;
+        this.store = store;
         this.activity = activity;
         this.turns = turns;
+        this.chat = chat;
         this.directory = directory;
         this.personas = personas;
         this.gateway = gateway;
         this.health = health;
+        this.prompts = prompts;
         this.teamOptions = options.Value;
+        this.clock = clock;
+        this.logger = logger;
+        this.ownPosts = ownPosts;
     }
 
     /// <summary>
@@ -154,36 +196,518 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             return new WakePreview(assignee, null, WakeBlock.AssigneeIsActor);
         }
 
-        if (personas.Get(assignee) is null)
+        if (this.personas.Get(assignee) is null)
         {
             return new WakePreview(assignee, null, WakeBlock.NoAssignee);
         }
 
-        if (actor.Kind == TaskActorKind.Agent && activity.Budget(after.Id).Exhausted)
+        if (actor.Kind == TaskActorKind.Agent && this.activity.Budget(after.Id).Exhausted)
         {
             return new WakePreview(assignee, null, WakeBlock.BudgetPaused);
         }
 
-        PresenceState? presence = TaskPresence.For(assignee, directory, gateway, health, turns);
+        PresenceState? presence = TaskPresence.For(assignee, this.directory, this.gateway, this.health, this.turns);
         return new WakePreview(assignee, presence, WakeBlock.None);
     }
 
-    /// <summary>
-    /// A no-op until Task 9.4, which subscribes to <see cref="TaskEvents.TaskChanged"/> here (Spec
-    /// §10.1: "subscribes ... in <c>StartAsync</c>").
-    /// </summary>
-    /// <param name="cancellationToken">Unused for now.</param>
-    public Task StartAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    /// <summary>Subscribes to <see cref="TaskEvents.TaskChanged"/> (Spec §10.1; corrections-B3 D9 item 7: here, never in the constructor).</summary>
+    /// <param name="cancellationToken">Unused: subscribing does not wait.</param>
+    /// <returns>A completed task.</returns>
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        lock (this.gate)
+        {
+            ObjectDisposedException.ThrowIf(this.disposed, this);
+            if (!this.subscribed)
+            {
+                this.events.TaskChanged += this.OnTaskChanged;
+                this.subscribed = true;
+            }
+        }
+
+        return Task.CompletedTask;
+    }
 
     /// <summary>
-    /// A no-op until Task 9.4, which unsubscribes from <see cref="TaskEvents.TaskChanged"/> and
-    /// awaits any in-flight coalesced fire here.
+    /// Unsubscribes, drops every pending batch and its timer (so nothing still inside its window is
+    /// posted), cancels the service lifetime, and awaits every fire already in flight.
     /// </summary>
-    /// <param name="cancellationToken">Unused for now.</param>
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    /// <param name="cancellationToken">Stops waiting for in-flight fires when the host gives up.</param>
+    /// <returns>A task that completes once no fire is in flight.</returns>
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        this.Halt();
+        await this.WhenIdleAsync().WaitAsync(cancellationToken);
+    }
 
-    /// <summary>A no-op until Task 9.4, which disposes the per-batch coalescing timers here.</summary>
+    /// <summary>Unsubscribes, drops every pending batch and its timer, and releases the gate and lifetime. A fire still in flight ends on its cancelled token.</summary>
     public void Dispose()
     {
+        lock (this.gate)
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            this.disposed = true;
+        }
+
+        this.Halt();
+        this.lifetime.Dispose();
+        this.fireGate.Dispose();
+    }
+
+    /// <summary>Awaits every fire in flight, including any started while waiting (corrections-B3 D9 item 8). Fires never throw, so neither does this.</summary>
+    /// <returns>A task that completes once no fire is in flight.</returns>
+    internal async Task WhenIdleAsync()
+    {
+        while (true)
+        {
+            Task[] pending;
+            lock (this.gate)
+            {
+                this.inFlight.RemoveWhere(static fire => fire.IsCompleted);
+                pending = [.. this.inFlight];
+            }
+
+            if (pending.Length == 0)
+            {
+                return;
+            }
+
+            await Task.WhenAll(pending);
+        }
+    }
+
+    /// <summary>Replaces every <c>@</c> with <c>@</c> + U+2060 (word joiner), so Task text can't Mention a Teammate (corrections-B3 D9 item 16).</summary>
+    /// <param name="text">Task-authored text: a title or a Change log summary.</param>
+    /// <returns>The text with every Mention neutralised.</returns>
+    private static string NeutraliseMentions(string text) =>
+        text.Replace("@", NeutralisedAt, StringComparison.Ordinal);
+
+    /// <summary>Unsubscribes, marks the service stopped, disposes every pending timer and cancels the lifetime. Idempotent.</summary>
+    private void Halt()
+    {
+        List<ITimer> timers = [];
+        lock (this.gate)
+        {
+            if (this.subscribed)
+            {
+                this.events.TaskChanged -= this.OnTaskChanged;
+                this.subscribed = false;
+            }
+
+            if (this.stopped)
+            {
+                return;
+            }
+
+            this.stopped = true;
+            foreach (Batch batch in this.batches.Values)
+            {
+                if (batch.Timer is { } timer)
+                {
+                    timers.Add(timer);
+                }
+            }
+
+            this.batches.Clear();
+        }
+
+        foreach (ITimer timer in timers)
+        {
+            timer.Dispose();
+        }
+
+        this.lifetime.Cancel();
+    }
+
+    /// <summary>
+    /// Adds <paramref name="change"/> to its <c>(TaskId, actor Name)</c> batch (Spec §10.3), starting
+    /// the batch's timer on its first change only - later changes never restart it - or firing at once
+    /// when <c>WakeCoalesceSeconds &lt;= 0</c>. Also counts outside-edit changes per window (item 18).
+    /// </summary>
+    /// <param name="change">The change <see cref="TaskEvents.TaskChanged"/> published.</param>
+    private void OnTaskChanged(TaskChange change)
+    {
+        BatchKey key = new(change.After.Id, change.Actor.Name);
+        int seconds = this.teamOptions.Tasks.WakeCoalesceSeconds;
+        bool fireNow = seconds <= 0;
+        bool flooded = false;
+
+        lock (this.gate)
+        {
+            if (this.stopped)
+            {
+                return;
+            }
+
+            if (!this.batches.TryGetValue(key, out Batch? batch))
+            {
+                batch = new Batch(key);
+                if (!fireNow)
+                {
+                    batch.Timer = this.clock.CreateTimer(this.OnTimerFired, key, TimeSpan.FromSeconds(seconds), Timeout.InfiniteTimeSpan);
+                }
+
+                this.batches[key] = batch;
+            }
+
+            batch.Actor = change.Actor;
+            batch.Entries.Add(change.Entry);
+
+            if (change.Actor.Kind == TaskActorKind.OutsideHuddle)
+            {
+                DateTimeOffset now = this.clock.GetUtcNow();
+                if (this.outsideWindow is null || now - this.outsideWindow.Start >= TimeSpan.FromSeconds(Math.Max(seconds, 0)))
+                {
+                    this.outsideWindow = new OutsideWindow(now);
+                }
+
+                this.outsideWindow.Count++;
+                flooded = this.outsideWindow.Count == MaxOutsideEditsPerWindow + 1;
+                batch.OutsideWindow = this.outsideWindow;
+            }
+        }
+
+        if (flooded)
+        {
+            LogOutsideEditFlood(this.logger, MaxOutsideEditsPerWindow);
+        }
+
+        if (fireNow)
+        {
+            this.StartFire(key);
+        }
+    }
+
+    /// <summary>A batch's coalescing timer elapsed.</summary>
+    /// <param name="state">The batch's <see cref="BatchKey"/>.</param>
+    private void OnTimerFired(object? state)
+    {
+        if (state is BatchKey key)
+        {
+            this.StartFire(key);
+        }
+    }
+
+    /// <summary>Starts a fire for <paramref name="key"/> and tracks it for <see cref="WhenIdleAsync"/>.</summary>
+    /// <param name="key">The batch to fire.</param>
+    private void StartFire(BatchKey key)
+    {
+        Task fire = this.FireAsync(key);
+        lock (this.gate)
+        {
+            this.inFlight.RemoveWhere(static done => done.IsCompleted);
+            this.inFlight.Add(fire);
+        }
+    }
+
+    /// <summary>
+    /// Fires one batch: removes it at once (a change arriving from here on opens a new batch), then,
+    /// behind the fire gate, sends its wake. Catches and logs everything - a fire runs detached from
+    /// any caller, so an escaping exception would go unobserved.
+    /// </summary>
+    /// <param name="key">The batch to fire.</param>
+    /// <returns>A task that completes when the fire is done; it never faults.</returns>
+    private async Task FireAsync(BatchKey key)
+    {
+        try
+        {
+            Batch? batch;
+            bool flooded;
+            CancellationToken ct;
+            lock (this.gate)
+            {
+                if (this.stopped || !this.batches.Remove(key, out batch))
+                {
+                    return;
+                }
+
+                flooded = batch.OutsideWindow is { Count: > MaxOutsideEditsPerWindow };
+                ct = this.lifetime.Token;
+            }
+
+            batch.Timer?.Dispose();
+            if (flooded)
+            {
+                LogOutsideEditSkipped(this.logger, key.TaskId);
+                return;
+            }
+
+            await this.fireGate.WaitAsync(ct);
+            try
+            {
+                await this.WakeAsync(batch, ct);
+            }
+            finally
+            {
+                this.fireGate.Release();
+            }
+        }
+        catch (OperationCanceledException ex) when (this.stopped)
+        {
+            LogFireCancelled(this.logger, key.TaskId, ex);
+        }
+        catch (Exception ex)
+        {
+            // Nothing awaits a fire but WhenIdleAsync, so an exception here would go unobserved: log it
+            // and let the next change wake the assignee as usual (corrections-B3 D9 item 7).
+            LogFireFailed(this.logger, key.TaskId, ex);
+        }
+    }
+
+    /// <summary>
+    /// Sends one batch's wake: reads the latest Task, applies the guards, resolves the assignee, the
+    /// sender and the Room, consumes the Agent wake budget, posts, and refunds the budget unless the
+    /// Message was posted (the outcome is Woken or Offline, the only two that count - item 9).
+    /// </summary>
+    /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>A task that completes when the wake was posted or skipped.</returns>
+    private async Task WakeAsync(Batch batch, CancellationToken ct)
+    {
+        TaskId id = batch.Key.TaskId;
+        TaskItem? latest = this.store.Get(id);
+        if (latest is null)
+        {
+            LogTaskGone(this.logger, id);
+            return;
+        }
+
+        TaskActor actor = batch.Actor;
+        WakePreview preview = this.Preview(null, latest, actor);
+        if (preview.Block != WakeBlock.None || preview.AssigneeName is not { } assigneeName)
+        {
+            LogBlocked(this.logger, id, preview.Block);
+            return;
+        }
+
+        User? assignee = await this.directory.FindUserByNameAsync(assigneeName, ct);
+        if (assignee is null)
+        {
+            LogAssigneeNeverRegistered(this.logger, id, assigneeName);
+            return;
+        }
+
+        string? senderId = await this.ResolveSenderIdAsync(actor, ct);
+        if (senderId is null)
+        {
+            LogNoSender(this.logger, id, actor.Name);
+            return;
+        }
+
+        Room? room = await this.ChooseRoomAsync(latest, senderId, assignee, ct);
+        if (room is null)
+        {
+            LogNoRoom(this.logger, id);
+            return;
+        }
+
+        bool isAgent = actor.Kind == TaskActorKind.Agent;
+        if (isAgent && !this.activity.TryConsumeAgentWake(id))
+        {
+            LogBlocked(this.logger, id, WakeBlock.BudgetPaused);
+            return;
+        }
+
+        bool posted = false;
+        try
+        {
+            string text = this.Render(latest, actor, assigneeName, batch.Entries);
+            await this.chat.PostAsync(room.Id, senderId, text, ct: ct);
+            posted = true;
+            if (isAgent)
+            {
+                this.ownPosts.Record(senderId, room.Id, text);
+            }
+        }
+        catch (ChatException ex)
+        {
+            LogPostRefused(this.logger, id, room.Id, ex.Code, ex);
+        }
+        finally
+        {
+            if (isAgent && !posted)
+            {
+                this.activity.RefundAgentWake(id);
+            }
+        }
+    }
+
+    /// <summary>The actor as a Room Member (Spec §10.4): the Human for a Human or outside-Huddle change; the Agent's own user otherwise.</summary>
+    /// <param name="actor">Who made the change.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>The sender's user id, or <see langword="null"/> when an Agent actor has no user row.</returns>
+    private async Task<string?> ResolveSenderIdAsync(TaskActor actor, CancellationToken ct)
+    {
+        if (actor.Kind != TaskActorKind.Agent)
+        {
+            return KnownIds.Human;
+        }
+
+        if (actor.UserId is { } userId)
+        {
+            return userId;
+        }
+
+        User? user = await this.directory.FindUserByNameAsync(actor.Name, ct);
+        return user?.Id;
+    }
+
+    /// <summary>
+    /// Chooses the Room the wake is posted in. Covers Spec §10.4 step 1 only: the Task's origin Room,
+    /// when it exists (Archived is allowed) and both the sender and the assignee are Members. Steps 2-4
+    /// (the creator's Room, the actor's Room, a new Room) are Task 9.5's.
+    /// </summary>
+    /// <param name="task">The latest Task.</param>
+    /// <param name="senderId">The sender's user id.</param>
+    /// <param name="assignee">The assignee's user.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>The Room, or <see langword="null"/> when no step applies.</returns>
+    private async Task<Room?> ChooseRoomAsync(TaskItem task, string senderId, User assignee, CancellationToken ct)
+    {
+        if (task.OriginRoomId is not { } originId)
+        {
+            return null;
+        }
+
+        Room? origin = await this.directory.GetRoomAsync(originId, ct);
+        if (origin is null)
+        {
+            return null;
+        }
+
+        IReadOnlyList<User> members = await this.directory.GetRoomMembersAsync(originId, ct);
+        bool senderIsMember = members.Any(m => string.Equals(m.Id, senderId, StringComparison.Ordinal));
+        bool assigneeIsMember = members.Any(m => string.Equals(m.Id, assignee.Id, StringComparison.Ordinal));
+        return senderIsMember && assigneeIsMember ? origin : null;
+    }
+
+    /// <summary>Renders <c>task.wake.message</c> (Spec §10.5) for the latest Task and the batch's summaries, neutralising Mentions in the title and the changes.</summary>
+    /// <param name="task">The latest Task.</param>
+    /// <param name="actor">Who made the changes.</param>
+    /// <param name="assigneeName">The latest assignee's Name.</param>
+    /// <param name="entries">The batch's Change log entries, in arrival order.</param>
+    /// <returns>The Message text.</returns>
+    private string Render(TaskItem task, TaskActor actor, string assigneeName, IReadOnlyList<ChangeLogEntry> entries)
+    {
+        Dictionary<string, string> values = new(StringComparer.Ordinal)
+        {
+            ["{{assignee}}"] = assigneeName,
+            ["{{taskId}}"] = task.Id.ToString(),
+            ["{{title}}"] = NeutraliseMentions(task.Title),
+            ["{{status}}"] = task.Status.ToWire(),
+            ["{{team}}"] = task.Location.Team,
+            ["{{actor}}"] = actor.Name,
+            ["{{changes}}"] = string.Join('\n', entries.Select(static e => "- " + NeutraliseMentions(e.Summary))),
+        };
+
+        return this.prompts.Render(WakeMessageKey, values);
+    }
+
+    /// <summary>Logs that more outside-edit changes than the limit arrived within one coalesce window.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="limit">The per-window limit.</param>
+    [LoggerMessage(Level = LogLevel.Information, Message = "More than {Limit} Task changes made outside Huddle arrived within one coalesce window; they are logged and nobody is woken.")]
+    private static partial void LogOutsideEditFlood(ILogger logger, int limit);
+
+    /// <summary>Logs that one Task's outside-edit wake was skipped as part of a flood.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="taskId">The Task.</param>
+    [LoggerMessage(Level = LogLevel.Information, Message = "Not waking the assignee of Task {TaskId}: it changed outside Huddle as part of a bulk edit.")]
+    private static partial void LogOutsideEditSkipped(ILogger logger, TaskId taskId);
+
+    /// <summary>Logs that a Task was gone by the time its batch fired.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="taskId">The Task.</param>
+    [LoggerMessage(Level = LogLevel.Information, Message = "Not waking anyone for Task {TaskId}: it no longer exists.")]
+    private static partial void LogTaskGone(ILogger logger, TaskId taskId);
+
+    /// <summary>Logs that a guard stopped a wake.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="taskId">The Task.</param>
+    /// <param name="block">The guard.</param>
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Not waking the assignee of Task {TaskId}: {Block}.")]
+    private static partial void LogBlocked(ILogger logger, TaskId taskId, WakeBlock block);
+
+    /// <summary>Logs that the assignee has never registered as a user.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="taskId">The Task.</param>
+    /// <param name="assignee">The assignee's Name.</param>
+    [LoggerMessage(Level = LogLevel.Information, Message = "Not waking '{Assignee}' for Task {TaskId}: that Persona has never registered.")]
+    private static partial void LogAssigneeNeverRegistered(ILogger logger, TaskId taskId, string assignee);
+
+    /// <summary>Logs that the Agent actor has no user to post as.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="taskId">The Task.</param>
+    /// <param name="actor">The actor's Name.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Not waking the assignee of Task {TaskId}: the actor '{Actor}' has no user to post as.")]
+    private static partial void LogNoSender(ILogger logger, TaskId taskId, string actor);
+
+    /// <summary>Logs that no Room could be chosen.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="taskId">The Task.</param>
+    [LoggerMessage(Level = LogLevel.Information, Message = "Not waking the assignee of Task {TaskId}: no Room has both the sender and the assignee as Members.")]
+    private static partial void LogNoRoom(ILogger logger, TaskId taskId);
+
+    /// <summary>Logs that the Room refused the wake-up Message.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="taskId">The Task.</param>
+    /// <param name="roomId">The Room.</param>
+    /// <param name="code">The refusal's error code.</param>
+    /// <param name="exception">The refusal.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not wake the assignee of Task {TaskId} in Room {RoomId}: {Code}.")]
+    private static partial void LogPostRefused(ILogger logger, TaskId taskId, string roomId, string code, Exception exception);
+
+    /// <summary>Logs that a fire was cancelled by shutdown.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="taskId">The Task.</param>
+    /// <param name="exception">The cancellation.</param>
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Wake-up for Task {TaskId} cancelled by shutdown.")]
+    private static partial void LogFireCancelled(ILogger logger, TaskId taskId, Exception exception);
+
+    /// <summary>Logs that a fire failed unexpectedly.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="taskId">The Task.</param>
+    /// <param name="exception">The failure.</param>
+    [LoggerMessage(Level = LogLevel.Error, Message = "Wake-up for Task {TaskId} failed.")]
+    private static partial void LogFireFailed(ILogger logger, TaskId taskId, Exception exception);
+
+    /// <summary>Identifies a batch: changes by one actor (by Name) to one Task (Spec §10.3).</summary>
+    /// <param name="TaskId">The Task.</param>
+    /// <param name="ActorName">The actor's Name.</param>
+    private readonly record struct BatchKey(TaskId TaskId, string ActorName);
+
+    /// <summary>One coalescing batch. Mutated only under <see cref="gate"/> until its fire removes it.</summary>
+    /// <param name="key">The batch's key.</param>
+    private sealed class Batch(BatchKey key)
+    {
+        /// <summary>The batch's key.</summary>
+        public BatchKey Key { get; } = key;
+
+        /// <summary>The actor of the latest change: the Message is posted as them.</summary>
+        public TaskActor Actor { get; set; } = new(TaskActorKind.Human, key.ActorName, null);
+
+        /// <summary>Every batched change's Change log entry, in arrival order.</summary>
+        public List<ChangeLogEntry> Entries { get; } = [];
+
+        /// <summary>The coalescing timer, or <see langword="null"/> when the batch fires directly.</summary>
+        public ITimer? Timer { get; set; }
+
+        /// <summary>The outside-edit window of this batch's latest outside-Huddle change, if any.</summary>
+        public OutsideWindow? OutsideWindow { get; set; }
+    }
+
+    /// <summary>A coalesce window of outside-edit changes, counted to spot a bulk edit (corrections-B3 D9 item 18).</summary>
+    /// <param name="start">When the window's first outside-edit change arrived.</param>
+    private sealed class OutsideWindow(DateTimeOffset start)
+    {
+        /// <summary>When the window's first outside-edit change arrived.</summary>
+        public DateTimeOffset Start { get; } = start;
+
+        /// <summary>How many outside-edit changes arrived in this window.</summary>
+        public int Count { get; set; }
     }
 }
