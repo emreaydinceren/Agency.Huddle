@@ -12,6 +12,18 @@
             "statusMessage": "Checking C# principles"
           }
         ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/block-disk-wide-and-inplace-edits.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking for disk-wide find and sed -i"
+          }
+        ]
       }
     ],
     "PostToolUse": [
