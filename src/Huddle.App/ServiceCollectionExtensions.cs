@@ -11,6 +11,7 @@ using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teammates;
 
 namespace Agency.Huddle.App;
@@ -109,6 +110,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AdapterProfileResolver>();
         services.AddSingleton<PersonaModelStore>();
         services.AddSingleton<PersonaEffortStore>();
+        services.AddSingleton<TaskIdAllocator>();
 
         // Same instance as PromptStore below, not a second registration - mirrors the
         // PersonaStore/IMentionAliasSource pair above. A second, independently constructed PromptStore
