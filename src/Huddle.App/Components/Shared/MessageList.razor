@@ -5,6 +5,15 @@
 <div class="message-list" @ref="this.container">
     @foreach (var message in this.Messages)
     {
+        @if (this.HumanIds.Contains(message.SenderId))
+        {
+            @* The Human's own Message needs no avatar or name to say who wrote it: its side of the
+               transcript says that, as in any chat app. The time moves into the tooltip. *@
+            <div class="message-row human" title="@message.Timestamp.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.CurrentCulture)">
+                <div class="message-bubble message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text))</div>
+            </div>
+            continue;
+        }
         <div class="message-row">
             <TeammateAvatar Name="@message.SenderName" Avatar="this.Avatars.Get(message.SenderName)" Size="Size.Small" />
             <div class="message-content">
@@ -57,6 +66,10 @@
 @code {
     [Parameter]
     public IReadOnlyList<ChatMessage> Messages { get; set; } = [];
+
+    /// <summary>The ids of the Room's Human Members, whose Messages render as right-aligned bubbles.</summary>
+    [Parameter]
+    public IReadOnlyCollection<string> HumanIds { get; set; } = [];
 
     /// <summary>Every Draft currently open in this Room, rendered after every Message.</summary>
     [Parameter]

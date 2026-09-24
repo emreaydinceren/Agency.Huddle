@@ -55,6 +55,7 @@ else
         </header>
         <MessageList
             Messages="this.messages"
+            HumanIds="this.HumanIds()"
             Drafts="this.drafts"
             StoppingAgentIds="this.stoppingAgentIds"
             OnStop="this.StopDraftAsync" />
@@ -594,6 +595,14 @@ else
         var reachable = this.ReachableAgentIds();
         return !this.members.Any(member => MessagePostedEvent.IsRecipient(member, last.SenderId) && reachable.Contains(member.Id));
     }
+
+    /// <summary>
+    /// The ids of this Room's Human Members, so <see cref="MessageList"/> can set the Human's own
+    /// Messages apart as right-aligned bubbles.
+    /// </summary>
+    /// <returns>Every Member id whose <see cref="UserKind"/> is <see cref="UserKind.Human"/>.</returns>
+    private HashSet<string> HumanIds() =>
+        this.members.Where(static member => member.Kind == UserKind.Human).Select(static member => member.Id).ToHashSet(StringComparer.Ordinal);
 
     private void OnDraftChanged(string roomId)
     {
