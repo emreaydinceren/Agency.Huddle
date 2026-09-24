@@ -38,6 +38,7 @@ question is yours; the cost column is roughly what it will spend.
 | [Code map](agencyteam/code-map.md) | To find which file does a thing | ~2.8k |
 | [Runtime architecture](agencyteam/architecture.md) | To know how a Message actually travels | ~1.1k |
 | **[Rules](agencyteam/rules.md)** | **Before editing anything in `src/Huddle.App`** | ~3.9k |
+| [MudBlazor index](agencyteam/mudblazor.md) | Before building any UI: whether MudBlazor 9.10.0 already has the component, the Huddle file that already uses it, and a deep link to the official example | ~17k; the top four sections ~3k |
 | **[Traps](agencyteam/traps.md)** | **Before editing `Huddle.Acp`, `Huddle.Contracts` or the wire** | ~2.6k |
 | [Testing](agencyteam/testing.md) | To add a test, or to verify what no test can prove | ~2.3k |
 | [Manual test script](agencyteam/manual-tests.md) | To test the running app in a browser, by hand | ~2.6k |

@@ -6,7 +6,8 @@ rather than by testing it — the compiler will not catch any of them.
 
 Protocol, ACP and wire gotchas live in [Traps](traps.md); read that too if you
 are touching `Huddle.Acp`, `Huddle.Contracts`, or the model-config path. Back to the
-hub: [AgencyTeam.md](../AgencyTeam.md).
+hub: [AgencyTeam.md](../AgencyTeam.md). Before writing a new component, check
+the [MudBlazor index](mudblazor.md) for one that already exists.
 
 These cost real time to discover. Several were found by running the app, not by
 testing it. This table is binding.
