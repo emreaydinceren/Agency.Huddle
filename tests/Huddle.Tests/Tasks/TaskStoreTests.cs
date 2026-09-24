@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.Tests.Tasks;
@@ -20,11 +19,11 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        WriteTask(root, Path.Combine("Platform", "Auth", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("Platform", "Auth", false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("Platform", "Auth", false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
-        using TaskStore store = CreateTaskStore(dir, personas);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         Assert.Equal(2, store.All.Count);
         _ = TaskId.TryParse("PLAT-0001", out TaskId first);
@@ -40,9 +39,9 @@ public sealed class TaskStoreTests
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
         string path = WriteRawFile(root, "x.md", TaskFileFormat.Compose(TestTasks.Make()));
-        using PersonaStore personas = CreatePersonaStore(dir);
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
-        using TaskStore store = CreateTaskStore(dir, personas);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         Assert.Empty(store.All);
         RejectedTaskFile rejected = Assert.Single(store.RejectedFiles);
@@ -56,11 +55,11 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        string firstPath = WriteTask(root, Path.Combine("Platform", "one.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        string secondPath = WriteTask(root, Path.Combine("Platform", "Auth", "two.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", "Auth", false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
+        string firstPath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "one.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        string secondPath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "two.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", "Auth", false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
-        using TaskStore store = CreateTaskStore(dir, personas);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         Assert.Empty(store.All);
         Assert.Equal(2, store.RejectedFiles.Count);
@@ -78,10 +77,10 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        WriteTask(root, Path.Combine("Platform", "_drafts", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_drafts", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
-        using TaskStore store = CreateTaskStore(dir, personas);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         Assert.Empty(store.All);
         Assert.Empty(store.RejectedFiles);
@@ -94,9 +93,9 @@ public sealed class TaskStoreTests
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
         string path = WriteRawFile(root, Path.Combine("Platform", "bad.md"), "---\n---\n");
-        using PersonaStore personas = CreatePersonaStore(dir);
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
-        using TaskStore store = CreateTaskStore(dir, personas);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         Assert.Empty(store.All);
         RejectedTaskFile rejected = Assert.Single(store.RejectedFiles);
@@ -110,12 +109,12 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        WriteTask(root, Path.Combine("Platform", "Auth", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("Platform", "Auth", false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("Platform", "Auth", false)));
         Directory.CreateDirectory(Path.Combine(root, "Platform", "_closed"));
-        using PersonaStore personas = CreatePersonaStore(dir);
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
-        using TaskStore store = CreateTaskStore(dir, personas);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         TeamFolder platform = Assert.Single(store.Teams, team => string.Equals(team.Name, "Platform", StringComparison.Ordinal));
         Assert.Single(platform.Projects, project => string.Equals(project, "Auth", StringComparison.Ordinal));
@@ -130,10 +129,10 @@ public sealed class TaskStoreTests
         string root = Path.Combine(dir.Path, "Tasks");
         Directory.CreateDirectory(Path.Combine(root, "Platform"));
         Directory.CreateDirectory(Path.Combine(root, "Legal"));
-        using PersonaStore personas = CreatePersonaStore(dir);
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         personas.Add(Identity("Nova", ["Platform"]), "You work on Platform.");
 
-        using TaskStore store = CreateTaskStore(dir, personas);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         TeamFolder platform = Assert.Single(store.Teams, team => string.Equals(team.Name, "Platform", StringComparison.Ordinal));
         TeamFolder legal = Assert.Single(store.Teams, team => string.Equals(team.Name, "Legal", StringComparison.Ordinal));
@@ -148,9 +147,9 @@ public sealed class TaskStoreTests
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
         Directory.CreateDirectory(Path.Combine(root, "Platform"));
-        using PersonaStore personas = CreatePersonaStore(dir);
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         personas.Add(Identity("Nova"), "You work on Platform.");
-        using TaskStore store = CreateTaskStore(dir, personas);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         Assert.True(Assert.Single(store.Teams, team => string.Equals(team.Name, "Platform", StringComparison.Ordinal)).IsOrphan);
 
         TaskCompletionSource indexChanged = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -193,7 +192,7 @@ public sealed class TaskStoreTests
                 throw new ArgumentOutOfRangeException(nameof(scenario), scenario, "unknown scenario");
         }
 
-        using PersonaStore personas = CreatePersonaStore(dir);
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => new TaskStore(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance));
@@ -222,11 +221,11 @@ public sealed class TaskStoreTests
         }
 
         Directory.CreateDirectory(Path.Combine(root, "platform"));
-        WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        string secondPath = WriteTask(root, Path.Combine("platform", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("platform", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        string secondPath = TestTaskStore.WriteTask(root, Path.Combine("platform", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
-        using TaskStore store = CreateTaskStore(dir, personas);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         TeamFolder folded = Assert.Single(store.Teams);
         Assert.Equal("Platform", folded.Name);
@@ -249,9 +248,9 @@ public sealed class TaskStoreTests
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
         Directory.CreateDirectory(Path.Combine(root, "Platform", "Auth"));
-        using PersonaStore personas = CreatePersonaStore(dir);
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
-        using TaskStore store = CreateTaskStore(dir, personas);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         TeamFolder platform = Assert.Single(store.Teams, team => string.Equals(team.Name, "Platform", StringComparison.Ordinal));
         Assert.Single(platform.Projects, project => string.Equals(project, "Auth", StringComparison.Ordinal));
@@ -275,13 +274,13 @@ public sealed class TaskStoreTests
 
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        string path = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
         using FileStream lockHandle = new(path, FileMode.Open, FileAccess.Read, FileShare.None);
         Exception? exception = Record.Exception(() =>
         {
-            using TaskStore store = CreateTaskStore(dir, personas);
+            using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
             Assert.Empty(store.All);
             Assert.Single(store.RejectedFiles);
         });
@@ -294,8 +293,8 @@ public sealed class TaskStoreTests
     public void Get_UnknownId_ReturnsNull()
     {
         using TempDataDir dir = new();
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-9999", out TaskId unknownId);
 
         TaskItem? found = store.Get(unknownId);
@@ -318,9 +317,9 @@ public sealed class TaskStoreTests
         WriteRawFile(root, Path.Combine("_archive", "x.md"), garbage);
         WriteRawFile(root, Path.Combine("T", "_drafts", "x.md"), garbage);
         WriteRawFile(root, Path.Combine("T", "P", "_notes", "x.md"), garbage);
-        using PersonaStore personas = CreatePersonaStore(dir);
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
-        using TaskStore store = CreateTaskStore(dir, personas);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         Assert.Empty(store.All);
         Assert.Empty(store.RejectedFiles);
@@ -332,9 +331,9 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        string path = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
         string text = TaskFileFormat.Compose(original with { Title = "Updated title" });
@@ -351,9 +350,9 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
         string text = TaskFileFormat.Compose(original with { Title = "Updated title" });
@@ -374,9 +373,9 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        string sourcePath = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
         TaskLocation closedLocation = original.Location with { Closed = true };
@@ -398,10 +397,10 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        string sourcePath = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         WriteRawFile(root, Path.Combine("Platform", TaskLayout.ClosedFolder, "PLAT-0001.md"), "conflicting content");
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
         TaskLocation closedLocation = original.Location with { Closed = true };
@@ -421,9 +420,9 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        string sourcePath = WriteTask(root, Path.Combine("Platform", "Auth", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", "Auth", false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", "Auth", false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
         TaskLocation newLocation = new("Platform", null, false);
@@ -447,9 +446,9 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        string sourcePath = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
         TaskLocation lowerCaseLocation = new("platform", null, false);
@@ -476,9 +475,9 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "v0", location: new("Platform", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "v0", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem current = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
 
@@ -510,9 +509,9 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "scanned", location: new("Platform", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "scanned", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem scanned = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
 
@@ -528,9 +527,9 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        string path = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "original", location: new("Platform", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "original", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem seen = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
         string outsideText = TaskFileFormat.Compose(seen with { Title = "changed outside" });
@@ -549,9 +548,9 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        string path = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
         string originalDiskText = File.ReadAllText(path);
@@ -569,9 +568,9 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        string path = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem seen = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
         string outsideText = TaskFileFormat.Compose(seen with { Title = "changed outside" });
@@ -590,9 +589,9 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        string path = WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "read me", location: new("Platform", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "read me", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
 
         string? text = store.ReadText(id);
@@ -606,8 +605,8 @@ public sealed class TaskStoreTests
     public void ReadText_UnknownId_ReturnsNull()
     {
         using TempDataDir dir = new();
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-9999", out TaskId unknownId);
 
         string? text = store.ReadText(unknownId);
@@ -625,11 +624,11 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        WriteTask(root, Path.Combine("Platform", "a.md"), TestTasks.Make(id: "PLAT-0003", location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "a.md"), TestTasks.Make(id: "PLAT-0003", location: new("Platform", null, false)));
         WriteRawFile(root, Path.Combine("Platform", "PLAT-0007.md"), "not a valid task file");
-        WriteTask(root, Path.Combine("Ops", "OPS-0099.md"), TestTasks.Make(id: "OPS-0099", location: new("Ops", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        TestTaskStore.WriteTask(root, Path.Combine("Ops", "OPS-0099.md"), TestTasks.Make(id: "OPS-0099", location: new("Ops", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         int highest = store.HighestNumber("PLAT");
 
@@ -647,11 +646,11 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
-        WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        WriteTask(root, Path.Combine("Platform", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("Platform", null, false)));
-        WriteTask(root, Path.Combine("Platform", "PLAT-0003.md"), TestTasks.Make(id: "PLAT-0003", location: new("Platform", null, false)));
-        using PersonaStore personas = CreatePersonaStore(dir);
-        using TaskStore store = CreateTaskStore(dir, personas);
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0003.md"), TestTasks.Make(id: "PLAT-0003", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId first);
         _ = TaskId.TryParse("PLAT-0002", out TaskId second);
         _ = TaskId.TryParse("PLAT-0003", out TaskId third);
@@ -677,22 +676,6 @@ public sealed class TaskStoreTests
         Assert.Equal("renamed 3", store.Get(third)?.Title);
     }
 
-    /// <summary>Writes a valid Task file's composed text under <paramref name="root"/>, and backdates it to its last Change log entry's time (or a fixed past time with none) so a later reconciliation pass never rewrites a fixture.</summary>
-    private static string WriteTask(string root, string relativePath, TaskItem task)
-    {
-        string path = Path.Combine(root, relativePath);
-        string? directory = Path.GetDirectoryName(path);
-        if (directory is not null)
-        {
-            Directory.CreateDirectory(directory);
-        }
-
-        File.WriteAllText(path, TaskFileFormat.Compose(task));
-        DateTimeOffset lastWrite = task.ChangeLog.Count > 0 ? task.ChangeLog[^1].At : new DateTimeOffset(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
-        File.SetLastWriteTimeUtc(path, lastWrite.UtcDateTime);
-        return path;
-    }
-
     /// <summary>Writes arbitrary raw text - valid or deliberately unparsable - under <paramref name="root"/>, for fixtures that don't need a real Task.</summary>
     private static string WriteRawFile(string root, string relativePath, string text)
     {
@@ -706,14 +689,6 @@ public sealed class TaskStoreTests
         File.WriteAllText(path, text);
         return path;
     }
-
-    /// <summary>Constructs a real <see cref="PersonaStore"/> over the same <see cref="TempDataDir"/> a <see cref="TaskStore"/> under test also reads from.</summary>
-    private static PersonaStore CreatePersonaStore(TempDataDir dir) =>
-        new(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
-
-    /// <summary>Constructs the <see cref="TaskStore"/> under test with default options and a real <see cref="TimeProvider"/>.</summary>
-    private static TaskStore CreateTaskStore(TempDataDir dir, PersonaStore personas) =>
-        new(dir.Options(), personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
 
     /// <summary>A minimal <see cref="PersonaIdentity"/> for <paramref name="name"/>, with Title and Alias defaulting to <paramref name="name"/>.</summary>
     private static PersonaIdentity Identity(string name, IReadOnlyList<string>? teams = null) =>

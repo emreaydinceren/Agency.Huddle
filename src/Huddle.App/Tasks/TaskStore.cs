@@ -17,6 +17,17 @@ internal sealed partial class TaskStore : IDisposable
     /// <summary>The most version history <see cref="GetVersion"/> keeps per Task id (Spec §9.3 step 1).</summary>
     private const int MaxVersionHistory = 20;
 
+    /// <summary>How long the watcher waits after the last filesystem event before rebuilding (Spec §8.4). Copied from <c>PersonaStore.WatcherDebounceMilliseconds</c>.</summary>
+    private const int WatcherDebounceMilliseconds = 500;
+
+    /// <summary>
+    /// Widened from the .NET default of 8&#160;KB so a burst of changes (a <c>git checkout</c>, a script
+    /// touching several Task files at once) is less likely to overflow it and drop events - the same
+    /// reasoning as <c>PersonaStore.WatcherInternalBufferSize</c>. An overflow still can't be ruled out,
+    /// which is exactly what <see cref="OnWatcherError"/> exists to recover from.
+    /// </summary>
+    private const int WatcherInternalBufferSize = 64 * 1024;
+
     private readonly PersonaStore personas;
     private readonly ILogger<TaskStore> logger;
 
@@ -36,8 +47,17 @@ internal sealed partial class TaskStore : IDisposable
     // corrections-B2 D5 item 8).
     private readonly Dictionary<TaskId, Queue<TaskItem>> versionHistory = [];
 
+    private readonly FileSystemWatcher watcher;
+    private readonly Timer debounceTimer;
+
     private volatile TaskSnapshot index;
     private bool disposed;
+
+    // Set by OnWatcherError, under writeGate, and consumed (and reset) by the next RebuildFromWatcher
+    // - so the rebuild that follows a dropped-event buffer overflow always raises IndexChanged, even
+    // when it happens to find nothing different from the last known state (Settled corrections-B2 D5
+    // item 7: "a forced rebuild from OnWatcherError always raises it").
+    private bool forcedRebuildPending;
 
     /// <summary>
     /// Validates that <see cref="TasksOptions.Dir"/> does not resolve equal to, inside, or as a
@@ -65,11 +85,38 @@ internal sealed partial class TaskStore : IDisposable
         Directory.CreateDirectory(tasksRoot);
 
         this.index = this.Scan();
+        foreach (TaskItem task in this.index.All)
+        {
+            this.RecordVersion(task);
+        }
 
         this.personas.PersonasChanged += this.OnPersonasChanged;
+
+        this.debounceTimer = new Timer(this.OnDebounceElapsed, null, Timeout.Infinite, Timeout.Infinite);
+
+        // Filter is "*", not "*.md": a Team folder renamed in Explorer raises a Renamed event whose
+        // Name is the directory itself, never matching ".md" - AffectsATaskFile is what restores the
+        // narrowing in the handler, the same shape traps.md documents for PersonaStore.
+        // IncludeSubdirectories = true is load-bearing on its own (traps.md L115): without it, a Task
+        // under a Project sub-folder is found once by this scan and never reloads again.
+        this.watcher = new FileSystemWatcher(tasksRoot, "*")
+        {
+            IncludeSubdirectories = true,
+            InternalBufferSize = WatcherInternalBufferSize,
+            NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName,
+        };
+        this.watcher.Changed += this.OnWatcherEvent;
+        this.watcher.Created += this.OnWatcherEvent;
+        this.watcher.Deleted += this.OnWatcherEvent;
+        this.watcher.Renamed += this.OnWatcherEvent;
+        this.watcher.Error += this.OnWatcherError;
+        this.watcher.EnableRaisingEvents = true;
     }
 
-    /// <summary>Raised after any rebuild of the index - so far, only <see cref="OnPersonasChanged"/>'s orphan recomputation.</summary>
+    /// <summary>Raised when the watcher's debounced rebuild finds a Task whose content or location changed outside Huddle (Spec §8.4). Never raised for this store's own writes, and never for a plain deletion (Spec E-9).</summary>
+    public event Action<OutsideEdit>? OutsideEditDetected;
+
+    /// <summary>Raised after any rebuild that actually changed something - <see cref="OnPersonasChanged"/>'s orphan recomputation, a write or move, or the watcher's debounced rebuild finding an outside edit, a removal, or a Team/Project folder appearing or disappearing. Never raised for a rebuild that changed nothing, except one forced by <see cref="OnWatcherError"/> (Settled corrections-B2 D5 item 7).</summary>
     public event Action? IndexChanged;
 
     /// <summary>Every Task that loaded cleanly, as an immutable snapshot.</summary>
@@ -418,7 +465,7 @@ internal sealed partial class TaskStore : IDisposable
         return highest;
     }
 
-    /// <summary>Unsubscribes from <see cref="PersonaStore.PersonasChanged"/>.</summary>
+    /// <summary>Unsubscribes from <see cref="PersonaStore.PersonasChanged"/>, and stops and disposes the watcher and its debounce timer.</summary>
     public void Dispose()
     {
         lock (this.writeGate)
@@ -432,6 +479,188 @@ internal sealed partial class TaskStore : IDisposable
         }
 
         this.personas.PersonasChanged -= this.OnPersonasChanged;
+
+        this.watcher.EnableRaisingEvents = false;
+        this.watcher.Changed -= this.OnWatcherEvent;
+        this.watcher.Created -= this.OnWatcherEvent;
+        this.watcher.Deleted -= this.OnWatcherEvent;
+        this.watcher.Renamed -= this.OnWatcherEvent;
+        this.watcher.Error -= this.OnWatcherError;
+        this.watcher.Dispose();
+        this.debounceTimer.Dispose();
+    }
+
+    /// <summary>
+    /// FileSystemWatcher raises <see cref="FileSystemWatcher.Changed"/>, <see cref="FileSystemWatcher.Created"/>,
+    /// <see cref="FileSystemWatcher.Deleted"/> and <see cref="FileSystemWatcher.Renamed"/> through this one
+    /// handler (the watcher's filter is "*", widened from ".md" so a directory rename is never silently
+    /// dropped - traps.md L120), so <see cref="AffectsATaskFile"/> is what keeps a stray non-Task file
+    /// (this class's own ".md.tmp" atomic-write artefact included) from churning the debounce.
+    /// </summary>
+    /// <param name="sender">Unused; required by the event handler shape.</param>
+    /// <param name="e">Describes what changed and how.</param>
+    private void OnWatcherEvent(object sender, FileSystemEventArgs e)
+    {
+        if (!AffectsATaskFile(e))
+        {
+            return;
+        }
+
+        lock (this.writeGate)
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
+        }
+    }
+
+    /// <summary>
+    /// True for an event this store cares about: a ".md" file, a renamed directory (a Team or Project
+    /// folder renamed in Explorer - its event's <see cref="FileSystemEventArgs.Name"/> is the directory
+    /// itself, never matching ".md"), or a deleted extensionless name (the same folder disappearing
+    /// outright). Copied from <c>PersonaStore.AffectsATeamsFile</c> (traps.md L120).
+    /// </summary>
+    /// <param name="e">The watcher event to classify.</param>
+    private static bool AffectsATaskFile(FileSystemEventArgs e) =>
+        IsMarkdownFile(e.Name)
+        || (e.ChangeType == WatcherChangeTypes.Renamed && Directory.Exists(e.FullPath))
+        || (e.ChangeType == WatcherChangeTypes.Deleted && HasNoExtension(e.Name));
+
+    /// <summary>True when <paramref name="name"/> ends in ".md", compared case-insensitively.</summary>
+    private static bool IsMarkdownFile(string? name) =>
+        name is not null && string.Equals(Path.GetExtension(name), ".md", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>True when <paramref name="name"/> has no extension at all - the shape a deleted directory's name takes.</summary>
+    private static bool HasNoExtension(string? name) => name is not null && Path.GetExtension(name).Length == 0;
+
+    /// <summary>
+    /// FileSystemWatcher raises this instead of a normal change event when its internal buffer
+    /// overflows and the OS drops events (traps.md L128). There is no way to know which paths were
+    /// dropped, so the only correct response is the same one a normal change takes: schedule a
+    /// refresh on the existing debounce path, flagged so that refresh raises <see cref="IndexChanged"/>
+    /// unconditionally (Settled corrections-B2 D5 item 7) rather than trusting a rebuild that happens
+    /// to find nothing different. <c>internal</c> rather than <c>private</c> only so <c>Huddle.Tests</c>
+    /// can invoke it directly, mirroring <c>PersonaStore.OnWatcherError</c>.
+    /// </summary>
+    /// <param name="sender">Unused; required by the <see cref="FileSystemWatcher.Error"/> event shape.</param>
+    /// <param name="e">Carries the exception the watcher caught.</param>
+    internal void OnWatcherError(object sender, ErrorEventArgs e)
+    {
+        lock (this.writeGate)
+        {
+            // Checked before logging, not after, for the same reason PersonaStore.OnWatcherError gives:
+            // an Error event that fires during host teardown, after this store is disposed, must not
+            // throw ObjectDisposedException on the watcher's callback thread.
+            if (this.disposed)
+            {
+                return;
+            }
+
+            this.logger.LogWarning(
+                e.GetException(),
+                "TaskStore's FileSystemWatcher reported an error (likely a dropped-event buffer overflow); scheduling a refresh.");
+            this.forcedRebuildPending = true;
+            this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
+        }
+    }
+
+    /// <summary>Runs the debounced rebuild once the 500&#160;ms window since the last relevant filesystem event has elapsed.</summary>
+    /// <param name="state">Unused; required by the <see cref="TimerCallback"/> shape.</param>
+    private void OnDebounceElapsed(object? state) => this.RebuildFromWatcher();
+
+    /// <summary>
+    /// Rescans <see cref="RootDirectory"/>, finds every Task whose content or location changed outside
+    /// Huddle since the last rebuild (Spec §8.4) and raises <see cref="OutsideEditDetected"/> once per
+    /// one found, then publishes the new snapshot and raises <see cref="IndexChanged"/> - but only when
+    /// something actually changed, unless <see cref="forcedRebuildPending"/> says otherwise (Settled
+    /// corrections-B2 D5 item 7). <c>internal</c>, not <c>private</c>, so a test can drive the rebuild
+    /// core directly rather than only through the real watcher and its debounce.
+    /// </summary>
+    internal void RebuildFromWatcher()
+    {
+        Action? indexChanged;
+        List<OutsideEdit> edits;
+        lock (this.writeGate)
+        {
+            if (this.disposed)
+            {
+                return;
+            }
+
+            bool forceRaise = this.forcedRebuildPending;
+            this.forcedRebuildPending = false;
+
+            TaskSnapshot previous = this.index;
+            TaskSnapshot rebuilt = this.Scan();
+            bool anyRemoved;
+            (edits, anyRemoved) = this.DiffForOutsideEdits(previous, rebuilt);
+
+            bool teamsChanged = !previous.Teams.ToHashSet().SetEquals(rebuilt.Teams);
+            bool rejectedChanged = !previous.Rejected.ToHashSet().SetEquals(rebuilt.Rejected);
+            bool changed = forceRaise || edits.Count > 0 || anyRemoved || teamsChanged || rejectedChanged;
+
+            this.index = rebuilt;
+            indexChanged = changed ? this.IndexChanged : null;
+        }
+
+        foreach (OutsideEdit edit in edits)
+        {
+            this.OutsideEditDetected?.Invoke(edit);
+        }
+
+        indexChanged?.Invoke();
+    }
+
+    /// <summary>
+    /// Compares <paramref name="rebuilt"/> against <paramref name="previous"/> and the live
+    /// <see cref="lastSeenVersion"/> map to find every Task whose recorded version no longer matches
+    /// what is now on disk (Spec §8.4): unchanged since the last rebuild if the version still matches
+    /// (this includes the store's own writes, which already updated <see cref="lastSeenVersion"/> before
+    /// any watcher rebuild can run - Spec §4 principle 3), otherwise an outside edit, looked up by id
+    /// against <paramref name="previous"/> so a Task moved to a different path is still found and
+    /// reported with its old and new state. Records the new version of each one found (Settled
+    /// corrections-B2 D5 item 8) and drops the stale <see cref="lastSeenVersion"/> entry for a Task's
+    /// old path, whether it moved or disappeared entirely. Callers hold <see cref="writeGate"/>.
+    /// </summary>
+    /// <param name="previous">The snapshot as it stood before this rebuild.</param>
+    /// <param name="rebuilt">The freshly rescanned snapshot.</param>
+    /// <returns>Every outside edit found, and whether any previously-known Task disappeared entirely (Spec E-9).</returns>
+    private (List<OutsideEdit> Edits, bool AnyRemoved) DiffForOutsideEdits(TaskSnapshot previous, TaskSnapshot rebuilt)
+    {
+        List<OutsideEdit> edits = [];
+
+        foreach (TaskItem task in rebuilt.All)
+        {
+            if (this.lastSeenVersion.TryGetValue(task.Path, out string? seenVersion) &&
+                string.Equals(seenVersion, task.Version, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            TaskItem? previousById = previous.ById.GetValueOrDefault(task.Id);
+            if (previousById is not null && !string.Equals(previousById.Path, task.Path, StringComparison.Ordinal))
+            {
+                this.lastSeenVersion.Remove(previousById.Path);
+            }
+
+            edits.Add(new OutsideEdit(previousById, task));
+            this.RecordVersion(task);
+        }
+
+        bool anyRemoved = false;
+        foreach (TaskItem oldTask in previous.All)
+        {
+            if (!rebuilt.ById.ContainsKey(oldTask.Id))
+            {
+                this.lastSeenVersion.Remove(oldTask.Path);
+                anyRemoved = true;
+            }
+        }
+
+        return (edits, anyRemoved);
     }
 
     /// <summary>
@@ -540,7 +769,10 @@ internal sealed partial class TaskStore : IDisposable
     /// <summary>
     /// Scans <see cref="RootDirectory"/> into a fresh <see cref="TaskSnapshot"/>: the Team folders
     /// (Spec §8.2), then every ".md" file mapped, read and parsed (Spec §8.1). The only place this
-    /// class touches the filesystem to build the index.
+    /// class touches the filesystem to build the index. Deliberately does not record any version
+    /// itself - the constructor does that once for the whole initial scan, and
+    /// <see cref="DiffForOutsideEdits"/> does it selectively for the watcher's rebuild, so a rebuild
+    /// that finds nothing new never touches <see cref="versionHistory"/> at all.
     /// </summary>
     private TaskSnapshot Scan()
     {
@@ -615,7 +847,6 @@ internal sealed partial class TaskStore : IDisposable
             {
                 all.Add(items[0].Task);
                 byId[items[0].Task.Id] = items[0].Task;
-                this.RecordVersion(items[0].Task);
                 continue;
             }
 
