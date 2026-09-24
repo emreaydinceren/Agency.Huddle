@@ -60,7 +60,9 @@ public sealed class TaskToolbarTests
         toolbar.Render(builder => builder.Add(t => t.EffectiveView, updated));
 
         Assert.NotEmpty(root.FindAll(".task-toolbar-save"));
-        Assert.Null(store.Get("v1")!.Filter.Teams.SingleOrDefault());
+        TaskView? unsaved = store.Get("v1");
+        Assert.NotNull(unsaved);
+        Assert.Null(unsaved.Filter.Teams.SingleOrDefault());
     }
 
     /// <summary>The Search field debounces at 200ms and is never part of a saved View.</summary>
@@ -101,7 +103,9 @@ public sealed class TaskToolbarTests
 
         TaskView updated = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
         Assert.Equal(ViewKind.Board, updated.Kind);
-        Assert.Equal(ViewKind.List, store.Get("v1")!.Kind);
+        TaskView? stillSaved = store.Get("v1");
+        Assert.NotNull(stillSaved);
+        Assert.Equal(ViewKind.List, stillSaved.Kind);
 
         toolbar.Render(builder => builder.Add(t => t.EffectiveView, updated));
 

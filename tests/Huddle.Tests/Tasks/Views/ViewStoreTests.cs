@@ -73,9 +73,10 @@ public sealed class ViewStoreTests
 
         using ViewStore store = new(dataDir.Options(), NullLogger<ViewStore>.Instance);
 
-        Assert.NotNull(store.LoadError);
-        Assert.Equal((expected!.LineNumber ?? 0) + 1, store.LoadError!.Line);
-        Assert.Equal((expected.BytePositionInLine ?? 0) + 1, store.LoadError.Column);
+        ViewLoadError? loadError = store.LoadError;
+        Assert.NotNull(loadError);
+        Assert.Equal((expected.LineNumber ?? 0) + 1, loadError.Line);
+        Assert.Equal((expected.BytePositionInLine ?? 0) + 1, loadError.Column);
 
         ViewSaveResult result = store.Save(ListView("custom-1", "Custom View"));
 
@@ -98,9 +99,10 @@ public sealed class ViewStoreTests
 
         using ViewStore store = new(dataDir.Options(), NullLogger<ViewStore>.Instance);
 
-        Assert.NotNull(store.LoadError);
-        Assert.Equal(1, store.LoadError!.Line);
-        Assert.Equal(1, store.LoadError.Column);
+        ViewLoadError? loadError = store.LoadError;
+        Assert.NotNull(loadError);
+        Assert.Equal(1, loadError.Line);
+        Assert.Equal(1, loadError.Column);
     }
 
     /// <summary>One malformed entry in an otherwise well-formed file is kept and flagged with a reason; the well-formed entries beside it still load.</summary>
@@ -153,10 +155,15 @@ public sealed class ViewStoreTests
 
         Assert.True(result.Saved);
         JsonNode? node = JsonNode.Parse(File.ReadAllText(path));
-        JsonArray views = node!["views"]!.AsArray();
-        JsonObject badEntry = views.Select(entry => entry!.AsObject()).Single(entry => entry["id"]!.GetValue<string>() == "bad-1");
-        Assert.Equal("nonsense", badEntry["kind"]!.GetValue<string>());
-        Assert.Equal("keepme", badEntry["customField"]!.GetValue<string>());
+        Assert.NotNull(node);
+        JsonNode? viewsNode = node["views"];
+        Assert.NotNull(viewsNode);
+        JsonArray views = viewsNode.AsArray();
+        JsonObject badEntry = views
+            .OfType<JsonObject>()
+            .Single(entry => string.Equals(entry["id"]?.GetValue<string>(), "bad-1", StringComparison.Ordinal));
+        Assert.Equal("nonsense", badEntry["kind"]?.GetValue<string>());
+        Assert.Equal("keepme", badEntry["customField"]?.GetValue<string>());
     }
 
     /// <summary>A save leaves no temp file behind, and raises <see cref="ViewStore.ViewsChanged"/> exactly once by the time it returns.</summary>
@@ -188,12 +195,14 @@ public sealed class ViewStoreTests
         TaskView? allTasks = store.Get("all-tasks");
         Assert.NotNull(allTasks);
 
-        ViewSaveResult result = store.Save(allTasks! with { Name = "Everything" });
+        ViewSaveResult result = store.Save(allTasks with { Name = "Everything" });
 
         Assert.True(result.Saved);
         Assert.True(File.Exists(path));
         Assert.Contains("Everything", File.ReadAllText(path), StringComparison.Ordinal);
-        Assert.Equal("Everything", store.Get("all-tasks")!.Name);
+        TaskView? updated = store.Get("all-tasks");
+        Assert.NotNull(updated);
+        Assert.Equal("Everything", updated.Name);
     }
 
     /// <summary>Deleting a built-in View is refused, and it is still there afterward.</summary>
@@ -284,7 +293,9 @@ public sealed class ViewStoreTests
 
         Assert.True(second.Saved);
         Assert.Empty(second.Problems);
-        Assert.Equal("Updated", store.Get("custom-1")!.Description);
+        TaskView? renamed = store.Get("custom-1");
+        Assert.NotNull(renamed);
+        Assert.Equal("Updated", renamed.Description);
     }
 
     /// <summary><see cref="ViewStore.RenameTeammate(string, string)"/> rewrites every View's assignee filter that named the old Teammate, leaving other assignee values untouched.</summary>
@@ -299,7 +310,7 @@ public sealed class ViewStoreTests
 
         TaskView? updated = store.Get("custom-1");
         Assert.NotNull(updated);
-        Assert.Contains("NovaPrime", updated!.Filter.Assignees);
+        Assert.Contains("NovaPrime", updated.Filter.Assignees);
         Assert.DoesNotContain("Nova", updated.Filter.Assignees);
         Assert.Contains("@unassigned", updated.Filter.Assignees);
     }

@@ -10,6 +10,7 @@
 *@
 
 @using System.Text.Json
+@inject ViewStore ViewStore
 
 <MudToolBar Dense="true" Class="task-toolbar">
     <MudTooltip Text="A Board always shows Active tasks.">
@@ -90,9 +91,6 @@
     /// <summary>Raised, debounced, as the search text changes.</summary>
     [Parameter]
     public EventCallback<string?> SearchChanged { get; set; }
-
-    [Inject]
-    private ViewStore ViewStore { get; set; } = null!;
 
     private bool IsBoard => this.EffectiveView.Kind == ViewKind.Board;
 

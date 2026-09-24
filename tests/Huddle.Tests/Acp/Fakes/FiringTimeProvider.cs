@@ -50,18 +50,27 @@ internal sealed class FiringTimeProvider : TimeProvider
             FiringTimer? due;
             lock (this.gate)
             {
-                due = this.timers
-                    .Where(timer => timer.DueAt(target) is not null)
-                    .OrderBy(timer => timer.DueAt(target)!.Value)
-                    .ThenBy(timer => timer.Sequence)
-                    .FirstOrDefault();
+                List<(FiringTimer Timer, DateTimeOffset DueAt)> candidates = [];
+                foreach (FiringTimer timer in this.timers)
+                {
+                    if (timer.DueAt(target) is { } at)
+                    {
+                        candidates.Add((timer, at));
+                    }
+                }
 
-                if (due is null)
+                if (candidates.Count == 0)
                 {
                     break;
                 }
 
-                this.utcNow = due.DueAt(target)!.Value;
+                (FiringTimer Timer, DateTimeOffset DueAt) next = candidates
+                    .OrderBy(candidate => candidate.DueAt)
+                    .ThenBy(candidate => candidate.Timer.Sequence)
+                    .First();
+
+                due = next.Timer;
+                this.utcNow = next.DueAt;
             }
 
             due.Fire();

@@ -131,7 +131,15 @@ public sealed class TurnActivityRunnerTests
         /// <summary>Writes one envelope to the connected runner.</summary>
         /// <param name="message">The envelope to send.</param>
         /// <param name="ct">Cancels the write.</param>
-        public Task SendAsync(ProtocolMessage message, CancellationToken ct) => this.stream!.WriteAsync(message, ct);
+        public Task SendAsync(ProtocolMessage message, CancellationToken ct)
+        {
+            if (this.stream is not { } lineStream)
+            {
+                throw new InvalidOperationException("HandshakeAsync must complete before SendAsync is called.");
+            }
+
+            return lineStream.WriteAsync(message, ct);
+        }
 
         /// <summary>Reads received envelopes until one of type <typeparamref name="T"/> arrives, discarding everything else.</summary>
         /// <typeparam name="T">The envelope type to wait for.</typeparam>
@@ -154,9 +162,14 @@ public sealed class TurnActivityRunnerTests
         {
             try
             {
+                if (this.stream is not { } lineStream)
+                {
+                    throw new InvalidOperationException("HandshakeAsync must complete before PumpAsync is called.");
+                }
+
                 while (true)
                 {
-                    var message = await this.stream!.ReadAsync(CancellationToken.None);
+                    var message = await lineStream.ReadAsync(CancellationToken.None);
                     if (message is null)
                     {
                         break;
@@ -165,7 +178,7 @@ public sealed class TurnActivityRunnerTests
                     if (message is ReadTranscript read)
                     {
                         ProtocolMessage answer = new TranscriptTail(read.RequestId, read.RoomId, [], Omitted: 0);
-                        await this.stream.WriteAsync(answer, CancellationToken.None);
+                        await lineStream.WriteAsync(answer, CancellationToken.None);
                         continue;
                     }
 
