@@ -1,0 +1,311 @@
+@*
+    Spec §13.2: the Tasks page. Holds the *effective* View - the saved one with the toolbar's own
+    session overrides applied (§13.3) - and requeries on exactly three hubs, narrowed from Spec
+    §13.2's full subscription list by corrections-B4 D11 item 9: TaskEvents.TasksReloaded,
+    TaskEvents.TaskChanged and ViewStore.ViewsChanged. TaskActivity/TurnActivity/PresenceChanged/
+    PersonaHealth.Changed feed the AI-reacting chip, which is D14's work.
+
+    The Board (§13.4), the View editor drawer (§13.5) and the Task detail panel (§13.6) don't exist
+    yet (D12/D13/D15/D16), so this page only ever renders the List, leaves Edit View and + New task
+    as no-op EventCallbacks (Blazor's EventCallback.InvokeAsync is a safe no-op when nothing is
+    bound), and gives the detail panel an empty MudDrawer slot that shows only which Task id was
+    clicked - the minimum "empty slot" the plan's Deliverable asks for.
+
+    /tasks/new (corrections-B5 resume: "stays with D13") matches its own route but is not yet
+    distinguished from the bare /tasks case - it still resolves to All Tasks - because opening the
+    View editor for a new View is that later task's job, not this one's.
+*@
+
+@page "/tasks"
+@page "/tasks/{ViewId}"
+@page "/tasks/new"
+@implements IDisposable
+@using System.Text.Json
+@using Microsoft.Extensions.Options
+@inject TaskStore Store
+@inject TaskEvents Events
+@inject ViewStore Views
+@inject IOptions<TeamOptions> Options
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+<div class="tasks-page">
+    @if (!this.Options.Value.Tasks.Enabled)
+    {
+        @* corrections-B4 D11 item 13: Tasks turned off shows only this notice. *@
+        <MudAlert Severity="Severity.Info" role="status" Class="tasks-disabled-alert">Tasks are turned off.</MudAlert>
+    }
+    else if (this.viewNotFound)
+    {
+        <MudAlert Severity="Severity.Warning" role="status" Class="tasks-view-not-found-alert">
+            That View no longer exists.
+            <MudLink Href="/tasks">All Tasks</MudLink>
+        </MudAlert>
+    }
+    else
+    {
+        <header class="tasks-header">
+            <h1>Tasks: @this.effectiveView.Name</h1>
+            @if (!string.IsNullOrEmpty(this.effectiveView.Description))
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary tasks-description">@this.effectiveView.Description</MudText>
+            }
+            @if (this.HasOverrides)
+            {
+                <MudLink OnClick="this.ResetOverrides" Class="tasks-reset">Reset</MudLink>
+            }
+        </header>
+
+        @if (this.Views.LoadError is { } loadError)
+        {
+            @* Spec §13.12: the exact wording, with the parse error's own line/column and message. *@
+            <MudAlert Severity="Severity.Error" role="alert" Class="tasks-views-load-error-alert">
+                views.json could not be read (line @loadError.Line, column @loadError.Column): @loadError.Message. Views are read-only until the file is fixed; nothing has been lost.
+            </MudAlert>
+        }
+
+        @if (this.Store.RejectedFiles.Count > 0)
+        {
+            @* Teammates.razor:32-48's precedent, with role="status" added per traps.md L22-27. *@
+            <MudAlert Severity="Severity.Warning" role="status" Class="tasks-rejected-alert">
+                <MudText Typo="Typo.subtitle2">Tasks that didn't load</MudText>
+                <ul class="tasks-rejected-list">
+                    @foreach (RejectedTaskFile rejected in this.Store.RejectedFiles)
+                    {
+                        <li class="tasks-rejected-item">
+                            <span class="tasks-rejected-path">@rejected.Path</span>
+                            <span class="tasks-rejected-reason">@rejected.Reason</span>
+                        </li>
+                    }
+                </ul>
+            </MudAlert>
+        }
+
+        <TaskToolbar EffectiveView="this.effectiveView" EffectiveViewChanged="this.OnEffectiveViewChangedAsync"
+                     Search="this.search" SearchChanged="this.OnSearchChangedAsync" />
+
+        @if (this.effectiveView.Kind == ViewKind.List)
+        {
+            <TaskListView View="this.effectiveView" Tasks="this.FilteredTasks()" Search="this.search" OnOpenTask="this.OnOpenTask" />
+        }
+
+        <MudDrawer @bind-Open="this.detailOpen" Anchor="Anchor.End" Variant="DrawerVariant.Temporary" Class="tasks-detail-drawer">
+            @* Spec §13.6's TaskDetail isn't built yet (D15/D16): this is the empty slot 11.5.i owes. *@
+            @if (this.selectedTaskId is { } selected)
+            {
+                <MudText Typo="Typo.body2" Class="tasks-detail-placeholder">@selected</MudText>
+            }
+        </MudDrawer>
+    }
+</div>
+
+@code {
+    /// <summary>The route's View id segment - null for the bare <c>/tasks</c> and <c>/tasks/new</c> routes.</summary>
+    [Parameter]
+    public string? ViewId { get; set; }
+
+    private TaskView effectiveView = new() { Id = ViewStore.AllTasksId, Name = "All Tasks", Kind = ViewKind.List };
+    private string? search;
+    private bool viewNotFound;
+    private bool detailOpen;
+    private TaskId? selectedTaskId;
+
+    /// <summary>Subscribes to the three hubs Spec §13.2 (narrowed by corrections-B4 D11 item 9) names.</summary>
+    protected override void OnInitialized()
+    {
+        this.Events.TasksReloaded += this.OnTasksReloaded;
+        this.Events.TaskChanged += this.OnTaskChanged;
+        this.Views.ViewsChanged += this.OnViewsChanged;
+    }
+
+    /// <summary>Unsubscribes from all three hubs (rules.md: every component subscribing to a singleton hub must unsubscribe in Dispose).</summary>
+    public void Dispose()
+    {
+        this.Events.TasksReloaded -= this.OnTasksReloaded;
+        this.Events.TaskChanged -= this.OnTaskChanged;
+        this.Views.ViewsChanged -= this.OnViewsChanged;
+    }
+
+    /// <summary>Resolves the effective View from the route's ViewId every time it changes.</summary>
+    protected override void OnParametersSet()
+    {
+        if (this.ViewId is null)
+        {
+            // The bare /tasks and /tasks/new routes both default to All Tasks; OnAfterRenderAsync
+            // below may still redirect the bare route to a remembered last View.
+            this.viewNotFound = false;
+            this.SetEffectiveViewFromStore(ViewStore.AllTasksId);
+            return;
+        }
+
+        TaskView? found = this.Views.Get(this.ViewId);
+        if (found is null)
+        {
+            this.viewNotFound = true;
+            return;
+        }
+
+        this.viewNotFound = false;
+        this.effectiveView = found;
+    }
+
+    /// <summary>Spec §13.9: on first render of the bare route, reads the remembered last View and navigates there if it still exists.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && this.ViewId is null && this.Options.Value.Tasks.Enabled)
+        {
+            await this.TryNavigateToLastViewAsync();
+            return;
+        }
+
+        if (this.ViewId is not null && !this.viewNotFound && this.Options.Value.Tasks.Enabled)
+        {
+            await this.TryStoreLastViewAsync(this.ViewId);
+        }
+    }
+
+    /// <summary>Whether the effective View differs from the one <see cref="ViewStore"/> has saved, ignoring <see cref="TaskView.Scope"/> (the Active/Closed toggle is page state only, per Spec §13.3 and <c>TaskToolbar</c>'s own <c>ShowSaveToView</c>).</summary>
+    private bool HasOverrides
+    {
+        get
+        {
+            TaskView? saved = this.Views.Get(this.effectiveView.Id);
+            if (saved is null)
+            {
+                return false;
+            }
+
+            TaskView forCompare = this.effectiveView with { Scope = saved.Scope };
+            string effectiveJson = JsonSerializer.Serialize(forCompare, ViewJson.Options);
+            string savedJson = JsonSerializer.Serialize(saved, ViewJson.Options);
+            return !string.Equals(effectiveJson, savedJson, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>Discards the toolbar's session overrides, falling back to the saved View.</summary>
+    private void ResetOverrides()
+    {
+        TaskView? saved = this.Views.Get(this.effectiveView.Id);
+        if (saved is not null)
+        {
+            this.effectiveView = saved;
+            this.search = null;
+        }
+    }
+
+    /// <summary>The Tasks matching the effective View's scope and filter, sorted per its Sort keys - recomputed on every render, so a requery after any of the three subscribed events shows straight away.</summary>
+    private IReadOnlyList<TaskItem> FilteredTasks()
+    {
+        IReadOnlyList<TaskItem> filtered = TaskQuery.Filter(
+            this.Store.All,
+            this.effectiveView.Scope,
+            this.effectiveView.Filter,
+            this.search,
+            this.Options.Value.HumanName);
+        return TaskQuery.Sort(filtered, this.effectiveView.Sort);
+    }
+
+    private void SetEffectiveViewFromStore(string id)
+    {
+        if (this.Views.Get(id) is { } view)
+        {
+            this.effectiveView = view;
+        }
+    }
+
+    private Task OnEffectiveViewChangedAsync(TaskView view)
+    {
+        this.effectiveView = view;
+        return Task.CompletedTask;
+    }
+
+    private Task OnSearchChangedAsync(string? value)
+    {
+        this.search = value;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Opens the (still empty) detail drawer for the clicked row.</summary>
+    /// <param name="id">The clicked Task's id.</param>
+    private void OnOpenTask(TaskId id)
+    {
+        this.selectedTaskId = id;
+        this.detailOpen = true;
+    }
+
+    private void OnTasksReloaded() => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    private void OnTaskChanged(TaskChange change) => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    private void OnViewsChanged() => _ = this.DispatchAsync(() =>
+    {
+        this.SetEffectiveViewFromStore(this.effectiveView.Id);
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a hub event racing component teardown can throw (§13.11).</summary>
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to render.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
+    }
+
+    private async Task TryNavigateToLastViewAsync()
+    {
+        string? lastViewId;
+        try
+        {
+            lastViewId = await this.JS.InvokeAsync<string?>("huddleStorage.get", "huddle.tasks.lastView");
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit gone; nothing to navigate.
+            return;
+        }
+        catch (JSException)
+        {
+            // Storage inaccessible (e.g. a private window); stay on All Tasks.
+            return;
+        }
+
+        if (lastViewId is not null && this.Views.Get(lastViewId) is not null)
+        {
+            this.Navigation.NavigateTo($"/tasks/{lastViewId}", replace: true);
+        }
+    }
+
+    private async Task TryStoreLastViewAsync(string viewId)
+    {
+        try
+        {
+            await this.JS.InvokeVoidAsync("huddleStorage.set", "huddle.tasks.lastView", viewId);
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit gone; nothing to persist.
+        }
+        catch (JSException)
+        {
+            // Storage inaccessible; the key is the only thing lost.
+        }
+    }
+}
