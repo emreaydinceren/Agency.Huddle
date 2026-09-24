@@ -9,9 +9,9 @@ namespace Agency.Huddle.App.Tasks;
 /// The only way to change a Task (Spec §9): validates a <see cref="TaskDraft"/> or a
 /// <see cref="TaskPatch"/> (Spec §9.2), builds the Change log entry, writes or moves the file
 /// through <see cref="TaskStore"/>, and raises <see cref="TaskEvents.TaskChanged"/> after the write,
-/// outside every lock. Only <see cref="Create"/> and <see cref="Update"/> are implemented so far
-/// (Tasks 6.1-6.2); <c>Close</c>, <c>Reopen</c>, outside-edit logging and Teammate renaming follow
-/// in later tasks of D6.
+/// outside every lock. <see cref="Create"/>, <see cref="Update"/>, <see cref="Close"/> and
+/// <see cref="Reopen"/> are implemented so far (Tasks 6.1-6.4); outside-edit logging and Teammate
+/// renaming follow in later tasks of D6.
 /// </summary>
 internal sealed class TaskService
 {
@@ -133,6 +133,58 @@ internal sealed class TaskService
         lock (this.mutateGate)
         {
             (result, change) = this.UpdateCore(id, patch, baseVersion, actor);
+        }
+
+        if (change is not null)
+        {
+            this.events.RaiseTaskChanged(change);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Moves <paramref name="id"/> into its Team's (or Project's) "_closed" folder (Spec §9): refused
+    /// when it's already Closed. Unlike <see cref="Update"/>, there is no <c>baseVersion</c> - a
+    /// concurrent change to the file since it was last read is instead caught by
+    /// <see cref="TaskStore.Move"/>'s own version check and reported as a <see cref="TaskResult.Conflict"/>.
+    /// </summary>
+    /// <param name="id">The Task to close.</param>
+    /// <param name="actor">Who is closing it; becomes the Change log entry's actor.</param>
+    public TaskResult Close(TaskId id, TaskActor actor)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+
+        TaskChange? change;
+        TaskResult result;
+        lock (this.mutateGate)
+        {
+            (result, change) = this.CloseOrReopenCore(id, actor, closing: true);
+        }
+
+        if (change is not null)
+        {
+            this.events.RaiseTaskChanged(change);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Moves <paramref name="id"/> back out of "_closed" (Spec §9): refused when it isn't Closed. See
+    /// <see cref="Close"/> for the conflict note.
+    /// </summary>
+    /// <param name="id">The Task to reopen.</param>
+    /// <param name="actor">Who is reopening it; becomes the Change log entry's actor.</param>
+    public TaskResult Reopen(TaskId id, TaskActor actor)
+    {
+        ArgumentNullException.ThrowIfNull(actor);
+
+        TaskChange? change;
+        TaskResult result;
+        lock (this.mutateGate)
+        {
+            (result, change) = this.CloseOrReopenCore(id, actor, closing: false);
         }
 
         if (change is not null)
@@ -273,6 +325,56 @@ internal sealed class TaskService
         }
 
         TaskChange change = new(current, written, diff, actor, entry);
+        return (new TaskResult.Saved(written, change), change);
+    }
+
+    /// <summary>
+    /// The shared body of <see cref="Close"/> and <see cref="Reopen"/>, run under
+    /// <see cref="mutateGate"/>. Skips §9.4's diff-then-Unchanged step (Settled corrections-B2 D6
+    /// item 7: <see cref="TaskDiff.Compare(TaskItem, TaskItem)"/> is empty for a Closed flip alone,
+    /// since it ignores <see cref="TaskLocation.Closed"/>) and appends the entry to the Task's
+    /// current file text directly, then moves it - never <see cref="TaskFileFormat.Compose"/> or
+    /// <see cref="TaskFileFormat.ReplaceHead"/>, since Closed lives in the folder, not the
+    /// frontmatter (Spec ~:125).
+    /// </summary>
+    /// <param name="id">The Task to close or reopen.</param>
+    /// <param name="actor">Who is making the change.</param>
+    /// <param name="closing"><see langword="true"/> for <see cref="Close"/>, <see langword="false"/> for <see cref="Reopen"/>.</param>
+    private (TaskResult Result, TaskChange? Change) CloseOrReopenCore(TaskId id, TaskActor actor, bool closing)
+    {
+        TaskItem? current = this.store.Get(id);
+        if (current is null)
+        {
+            return (new TaskResult.NotFound(id), null);
+        }
+
+        if (current.Location.Closed == closing)
+        {
+            string problem = closing
+                ? string.Create(CultureInfo.InvariantCulture, $"{id} is already closed.")
+                : string.Create(CultureInfo.InvariantCulture, $"{id} is already active.");
+            return (new TaskResult.Refused([problem]), null);
+        }
+
+        string? currentText = this.store.ReadText(id);
+        if (currentText is null)
+        {
+            return (new TaskResult.NotFound(id), null);
+        }
+
+        DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
+        string summary = closing ? "closed" : "reopened";
+        ChangeLogEntry entry = new(at, actor.Name, summary);
+        string finalText = TaskFileFormat.AppendEntry(currentText, entry);
+
+        TaskLocation newLocation = current.Location with { Closed = closing };
+        TaskItem? written = this.store.Move(current, current.Version, newLocation, finalText);
+        if (written is null)
+        {
+            return (new TaskResult.Conflict(this.store.Get(id) ?? current, []), null);
+        }
+
+        TaskChange change = new(current, written, [], actor, entry);
         return (new TaskResult.Saved(written, change), change);
     }
 

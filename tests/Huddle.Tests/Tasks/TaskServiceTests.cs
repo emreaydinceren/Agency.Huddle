@@ -706,6 +706,287 @@ public sealed class TaskServiceTests
         Assert.Equal(mtime, File.GetLastWriteTimeUtc(afterOther.Path));
     }
 
+    /// <summary>A Team-level Task moves into the Team's "_closed" folder, gains a "closed" Change log entry, and raises TaskChanged (Spec §9, §7.4).</summary>
+    [Fact]
+    public void Close_MovesToClosed_LogsClosed_RaisesEvent()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskEvents events = new();
+        TaskService service = CreateTaskService(dir, store, personas, events);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        int raiseCount = 0;
+        events.TaskChanged += _ => raiseCount++;
+
+        TaskResult result = service.Close(task.Id, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        string expectedPath = Path.Combine(store.RootDirectory, "Platform", "_closed", $"{task.Id}.md");
+        Assert.Equal(expectedPath, saved.Task.Path);
+        Assert.True(saved.Task.Location.Closed);
+        Assert.Equal("closed", Assert.Single(saved.Task.ChangeLog, entry => entry.Summary == "closed").Summary);
+        Assert.Equal(1, raiseCount);
+    }
+
+    /// <summary>A Task under a Project moves into that Project's "_closed" folder, not the Team's (Spec §5.2, §9).</summary>
+    [Fact]
+    public void Close_ProjectTask_MovesToClosedUnderProject()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", "Auth v2"));
+
+        TaskResult result = service.Close(task.Id, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        string expectedPath = Path.Combine(store.RootDirectory, "Platform", "Auth v2", "_closed", $"{task.Id}.md");
+        Assert.Equal(expectedPath, saved.Task.Path);
+    }
+
+    /// <summary>Closing isn't restricted to Done: an In Progress Task can be closed too (Spec §9).</summary>
+    [Fact]
+    public void Close_InProgressTask_Allowed()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null, Status: TaskState.InProgress));
+
+        TaskResult result = service.Close(task.Id, HumanActor);
+
+        Assert.IsType<TaskResult.Saved>(result);
+    }
+
+    /// <summary>Closing an already-Closed Task is refused, naming the Task by id (Spec §11.6, reused for TaskService).</summary>
+    [Fact]
+    public void Close_AlreadyClosed_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+        _ = Assert.IsType<TaskResult.Saved>(service.Close(task.Id, HumanActor));
+
+        TaskResult result = service.Close(task.Id, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Equal([string.Create(CultureInfo.InvariantCulture, $"{task.Id} is already closed.")], refused.Problems);
+    }
+
+    /// <summary>A successful Close raises TaskChanged exactly once, with an empty Changes list (TaskDiff.Compare ignores Location.Closed - Settled corrections-B2 D6 item 7) and a "closed" entry summary.</summary>
+    [Fact]
+    public void Close_RaisesTaskChangedExactlyOnce_EmptyChanges_SummaryClosed()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskEvents events = new();
+        TaskService service = CreateTaskService(dir, store, personas, events);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        List<TaskChange> raised = [];
+        events.TaskChanged += raised.Add;
+
+        TaskResult result = service.Close(task.Id, HumanActor);
+
+        Assert.IsType<TaskResult.Saved>(result);
+        TaskChange change = Assert.Single(raised);
+        Assert.Empty(change.Changes);
+        Assert.Equal("closed", change.Entry.Summary);
+    }
+
+    /// <summary>Closing an id that isn't in the index reports the Task as not found (mirrors Update_UnknownId_NotFound; Spec §9.1's TaskResult.NotFound).</summary>
+    [Fact]
+    public void Close_UnknownId_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskId unknown = new("PLAT", 9999);
+
+        TaskResult result = service.Close(unknown, HumanActor);
+
+        TaskResult.NotFound notFound = Assert.IsType<TaskResult.NotFound>(result);
+        Assert.Equal(unknown, notFound.Id);
+    }
+
+    /// <summary>
+    /// Close has no baseVersion parameter, but still goes through TaskStore's version-checked Move
+    /// (Spec §9.3's mechanism, reused): if the file on disk was changed since this TaskService last
+    /// read it - simulated here by writing a valid outside edit straight to disk, bypassing the
+    /// store, so its cached index still holds the old version - the Move's version check fails and
+    /// TaskService reports a Conflict instead of silently overwriting the other change.
+    /// </summary>
+    [Fact]
+    public void Close_DiskVersionChangedSinceRead_Conflict()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskEvents events = new();
+        TaskService service = CreateTaskService(dir, store, personas, events);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        string onDisk = File.ReadAllText(task.Path);
+        string outsideEdit = TaskFileFormat.AppendEntry(onDisk, new ChangeLogEntry(DateTimeOffset.UtcNow, "Someone", "edited outside Huddle"));
+        File.WriteAllText(task.Path, outsideEdit);
+
+        int raiseCount = 0;
+        events.TaskChanged += _ => raiseCount++;
+
+        TaskResult result = service.Close(task.Id, HumanActor);
+
+        Assert.IsType<TaskResult.Conflict>(result);
+        Assert.Equal(0, raiseCount);
+    }
+
+    /// <summary>A Closed Task moves back out of "_closed", gains a "reopened" Change log entry, and raises TaskChanged (Spec §9, §7.4).</summary>
+    [Fact]
+    public void Reopen_MovesBack_LogsReopened()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskEvents events = new();
+        TaskService service = CreateTaskService(dir, store, personas, events);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", "Auth v2"));
+        TaskItem closed = Assert.IsType<TaskResult.Saved>(service.Close(task.Id, HumanActor)).Task;
+
+        int raiseCount = 0;
+        events.TaskChanged += _ => raiseCount++;
+
+        TaskResult result = service.Reopen(closed.Id, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        string expectedPath = Path.Combine(store.RootDirectory, "Platform", "Auth v2", $"{task.Id}.md");
+        Assert.Equal(expectedPath, saved.Task.Path);
+        Assert.False(saved.Task.Location.Closed);
+        Assert.Equal("reopened", Assert.Single(saved.Task.ChangeLog, entry => entry.Summary == "reopened").Summary);
+        Assert.Equal(1, raiseCount);
+    }
+
+    /// <summary>Reopening an Active (not Closed) Task is refused, mirroring Close_AlreadyClosed_Refused's wording (Spec §11.6: "reopening an Active one returns the mirror of that").</summary>
+    [Fact]
+    public void Reopen_Active_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Reopen(task.Id, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Equal([string.Create(CultureInfo.InvariantCulture, $"{task.Id} is already active.")], refused.Problems);
+    }
+
+    /// <summary>Reopening an id that isn't in the index reports the Task as not found, mirroring Close_UnknownId_Refused.</summary>
+    [Fact]
+    public void Reopen_UnknownId_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskId unknown = new("PLAT", 9999);
+
+        TaskResult result = service.Reopen(unknown, HumanActor);
+
+        TaskResult.NotFound notFound = Assert.IsType<TaskResult.NotFound>(result);
+        Assert.Equal(unknown, notFound.Id);
+    }
+
+    /// <summary>Reopen mirrors Close_DiskVersionChangedSinceRead_Conflict: a stale cached version loses the Move's version check and reports a Conflict rather than overwriting an outside edit.</summary>
+    [Fact]
+    public void Reopen_DiskVersionChangedSinceRead_Conflict()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskEvents events = new();
+        TaskService service = CreateTaskService(dir, store, personas, events);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+        TaskItem closed = Assert.IsType<TaskResult.Saved>(service.Close(task.Id, HumanActor)).Task;
+
+        string onDisk = File.ReadAllText(closed.Path);
+        string outsideEdit = TaskFileFormat.AppendEntry(onDisk, new ChangeLogEntry(DateTimeOffset.UtcNow, "Someone", "edited outside Huddle"));
+        File.WriteAllText(closed.Path, outsideEdit);
+
+        int raiseCount = 0;
+        events.TaskChanged += _ => raiseCount++;
+
+        TaskResult result = service.Reopen(closed.Id, HumanActor);
+
+        Assert.IsType<TaskResult.Conflict>(result);
+        Assert.Equal(0, raiseCount);
+    }
+
+    /// <summary>An Update that only changes the Team keeps a Closed Task closed - it moves within "_closed", it doesn't reopen it (Settled corrections-B2 D6 item 7: "An Update on a closed Task keeps Closed when it moves the file").</summary>
+    [Fact]
+    public void Update_OnClosedTask_StaysClosed()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        _ = personas.Add(new PersonaIdentity("Rae", "Rae", "rae", ["Marketing"]), "You are Rae.");
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+        TaskItem closed = Assert.IsType<TaskResult.Saved>(service.Close(task.Id, HumanActor)).Task;
+
+        TaskResult result = service.Update(closed.Id, new TaskPatch { Team = "Marketing" }, null, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.True(saved.Task.Location.Closed);
+        Assert.Equal("Marketing", saved.Task.Location.Team);
+        string expectedPath = Path.Combine(store.RootDirectory, "Marketing", "_closed", $"{task.Id}.md");
+        Assert.Equal(expectedPath, saved.Task.Path);
+    }
+
+    /// <summary>ClosedAt is set to the "closed" entry's time after Close, and cleared after Reopen (Spec §7.4: "the At of the last closed entry that isn't followed by a reopened entry, and only when Location.Closed is true").</summary>
+    [Fact]
+    public void ClosedAt_SetAfterClose_NullAfterReopen()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+        Assert.Null(task.ClosedAt);
+
+        TaskItem closed = Assert.IsType<TaskResult.Saved>(service.Close(task.Id, HumanActor)).Task;
+        Assert.NotNull(closed.ClosedAt);
+
+        TaskItem reopened = Assert.IsType<TaskResult.Saved>(service.Reopen(closed.Id, HumanActor)).Task;
+        Assert.Null(reopened.ClosedAt);
+    }
+
+    /// <summary>A second Close after a Reopen derives ClosedAt from the newest "closed" entry, not the first one (Spec §7.4).</summary>
+    [Fact]
+    public void ClosedAt_AfterCloseReopenClose_UsesLatestClosedEntry()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskItem firstClosed = Assert.IsType<TaskResult.Saved>(service.Close(task.Id, HumanActor)).Task;
+        TaskItem reopened = Assert.IsType<TaskResult.Saved>(service.Reopen(firstClosed.Id, HumanActor)).Task;
+        TaskItem secondClosed = Assert.IsType<TaskResult.Saved>(service.Close(reopened.Id, HumanActor)).Task;
+
+        Assert.NotNull(secondClosed.ClosedAt);
+        ChangeLogEntry lastClosedEntry = secondClosed.ChangeLog.Last(entry => entry.Summary == "closed");
+        Assert.Equal(lastClosedEntry.At, secondClosed.ClosedAt);
+    }
+
     /// <summary>Creates a Task through <see cref="TaskService.Create"/> for a test to update, asserting it saved.</summary>
     private static TaskItem SeedTask(TaskService service, TaskDraft draft) =>
         Assert.IsType<TaskResult.Saved>(service.Create(draft, HumanActor)).Task;
