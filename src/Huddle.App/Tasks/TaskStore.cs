@@ -116,8 +116,8 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         this.watcher.EnableRaisingEvents = true;
     }
 
-    /// <summary>Raised when the watcher's debounced rebuild finds a Task whose content or location changed outside Huddle (Spec §8.4). Never raised for this store's own writes, and never for a plain deletion (Spec E-9).</summary>
-    public event Action<OutsideEdit>? OutsideEditDetected;
+    /// <summary>Raised when the watcher's debounced rebuild finds a Task whose content or location changed outside Huddle (Spec §8.4). Never raised for this store's own writes, and never for a plain deletion (Spec E-9). Internal: <see cref="OutsideEdit"/> is internal (Task 6.5, Check-Visibility.ps1).</summary>
+    internal event Action<OutsideEdit>? OutsideEditDetected;
 
     /// <summary>Raised after any rebuild that actually changed something - <see cref="OnPersonasChanged"/>'s orphan recomputation, a write or move, or the watcher's debounced rebuild finding an outside edit, a removal, or a Team/Project folder appearing or disappearing. Never raised for a rebuild that changed nothing, except one forced by <see cref="OnWatcherError"/> (Settled corrections-B2 D5 item 7).</summary>
     public event Action? IndexChanged;

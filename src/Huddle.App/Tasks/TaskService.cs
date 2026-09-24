@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Data;
 
 namespace Agency.Huddle.App.Tasks;
 
@@ -9,11 +10,14 @@ namespace Agency.Huddle.App.Tasks;
 /// The only way to change a Task (Spec §9): validates a <see cref="TaskDraft"/> or a
 /// <see cref="TaskPatch"/> (Spec §9.2), builds the Change log entry, writes or moves the file
 /// through <see cref="TaskStore"/>, and raises <see cref="TaskEvents.TaskChanged"/> after the write,
-/// outside every lock. <see cref="Create"/>, <see cref="Update"/>, <see cref="Close"/> and
-/// <see cref="Reopen"/> are implemented so far (Tasks 6.1-6.4); outside-edit logging and Teammate
-/// renaming follow in later tasks of D6.
+/// outside every lock. <see cref="Create"/>, <see cref="Update"/>, <see cref="Close"/>,
+/// <see cref="Reopen"/> and outside-edit logging (<see cref="OnOutsideEdit"/>) are implemented so
+/// far (Tasks 6.1-6.5); Teammate renaming follows in Task 6.6. Subscribes to
+/// <see cref="TaskStore.OutsideEditDetected"/> and <see cref="TaskStore.IndexChanged"/> in its
+/// constructor, so it also implements <see cref="IDisposable"/> to unsubscribe from both
+/// (Spec §9.4, traps.md L98).
 /// </summary>
-internal sealed class TaskService
+internal sealed class TaskService : IDisposable
 {
     /// <summary>The fixed Windows-illegal characters, enforced on every OS (Settled corrections-B2 D6 item 5) - not <see cref="Path.GetInvalidFileNameChars"/>, which on Linux is only NUL and '/'.</summary>
     private static readonly char[] IllegalFolderNameCharacters = ['<', '>', ':', '"', '/', '\\', '|', '?', '*'];
@@ -82,6 +86,17 @@ internal sealed class TaskService
         // turns TaskStore's own index-rebuild notification into the same event a Task mutation
         // raises, so a UI list needs only one subscription regardless of which one fired.
         this.store.IndexChanged += this.events.RaiseTasksReloaded;
+
+        // Spec §9.4: turns an edit made outside Huddle into a Change log entry. Unsubscribed in
+        // Dispose alongside IndexChanged above (traps.md L98).
+        this.store.OutsideEditDetected += this.OnOutsideEdit;
+    }
+
+    /// <summary>Unsubscribes from every <see cref="TaskStore"/> event this service subscribed to in its constructor.</summary>
+    public void Dispose()
+    {
+        this.store.OutsideEditDetected -= this.OnOutsideEdit;
+        this.store.IndexChanged -= this.events.RaiseTasksReloaded;
     }
 
     /// <summary>
@@ -193,6 +208,65 @@ internal sealed class TaskService
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Turns an edit made outside Huddle (Spec §9.4) into a Change log entry, subscribed to
+    /// <see cref="TaskStore.OutsideEditDetected"/> in the constructor. Runs under
+    /// <see cref="mutateGate"/> like every other mutation (Settled corrections-B2 D6 item 2), and
+    /// raises <see cref="TaskEvents.TaskChanged"/> outside both locks.
+    /// </summary>
+    /// <param name="edit">The Task's state before and after the outside edit.</param>
+    private void OnOutsideEdit(OutsideEdit edit)
+    {
+        TaskChange? change;
+        lock (this.mutateGate)
+        {
+            change = this.OnOutsideEditCore(edit);
+        }
+
+        if (change is not null)
+        {
+            this.events.RaiseTaskChanged(change);
+        }
+    }
+
+    /// <summary>
+    /// The body of <see cref="OnOutsideEdit"/>, run under <see cref="mutateGate"/>. Appends the
+    /// Change log entry to the file exactly as it now reads (Spec §9.4: the Human's formatting and
+    /// unknown keys aren't recomposed), through <see cref="TaskStore.AppendEntry"/> rather than
+    /// <see cref="TaskFileFormat.Compose"/>.
+    /// </summary>
+    /// <param name="edit">The Task's state before and after the outside edit.</param>
+    private TaskChange? OnOutsideEditCore(OutsideEdit edit)
+    {
+        TaskActor actor = new(TaskActorKind.OutsideHuddle, this.options.HumanName, KnownIds.Human);
+        DateTimeOffset at = TruncateToSeconds(this.clock.GetUtcNow());
+
+        // Settled corrections-B2 D6 item 8: a file created outside Huddle (no previous Task to
+        // diff against) gets the bare summary, with no diff suffix.
+        if (edit.Before is null)
+        {
+            ChangeLogEntry bareEntry = new(at, actor.Name, "edited outside Huddle");
+            TaskItem? bareWritten = this.store.AppendEntry(edit.After.Id, edit.After.Version, bareEntry);
+
+            // null means the disk version moved again before this append reached it; a newer save
+            // will be reported by the next rebuild, so this one is silently skipped (Settled
+            // corrections-B2 D6 item 8).
+            return bareWritten is null ? null : new TaskChange(null, bareWritten, [], actor, bareEntry);
+        }
+
+        IReadOnlyList<FieldChange> changes = TaskDiff.Compare(edit.Before, edit.After);
+        if (changes.Count == 0)
+        {
+            return null;
+        }
+
+        string summary = string.Create(CultureInfo.InvariantCulture, $"edited outside Huddle: {TaskDiff.Summarise(changes)}");
+        ChangeLogEntry entry = new(at, actor.Name, summary);
+        TaskItem? written = this.store.AppendEntry(edit.After.Id, edit.After.Version, entry);
+
+        return written is null ? null : new TaskChange(edit.Before, written, changes, actor, entry);
     }
 
     /// <summary>The body of <see cref="Create"/>, run under <see cref="mutateGate"/>. Returns the change to raise, or <see langword="null"/> when nothing was written.</summary>

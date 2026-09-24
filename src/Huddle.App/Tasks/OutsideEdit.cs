@@ -10,4 +10,4 @@ namespace Agency.Huddle.App.Tasks;
 /// created outside Huddle, or an existing id that just moved here from a different path.
 /// </param>
 /// <param name="After">The Task as it now reads on disk, at whatever path the rebuild found it.</param>
-public sealed record OutsideEdit(TaskItem? Before, TaskItem After);
+internal sealed record OutsideEdit(TaskItem? Before, TaskItem After);
