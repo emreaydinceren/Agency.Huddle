@@ -10,21 +10,21 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then.
 
-**Status:** 0 of 147 tasks Done · 0 of 9 retrospectives done · last updated 2026-09-24.
+**Status:** 9 of 147 tasks Done · 0 of 9 retrospectives done · last updated 2026-09-24.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
 | **D0. Delivery scaffolding** | | | |
-| 0.1 Branch, facts file and chore scripts · #1 · Haiku | | ✔ | |
+| 0.1 Branch, facts file and chore scripts · #1 · Haiku | | | ✔ |
 | **D1. Domain types** | | | |
-| 1.1.t Test: task states and priorities · #2 · Haiku | ✔ | | |
-| 1.1.i Implement `TaskState` and `TaskPriority` · #3 · Haiku | ✔ | | |
-| 1.2.t Test: `TaskId` · #4 · Haiku | ✔ | | |
-| 1.2.i Implement `TaskId` · #5 · Haiku | ✔ | | |
-| 1.3.t Test: `TaskItem` derived dates · #6 · Haiku | ✔ | | |
-| 1.3.i Implement the domain records · #7 · Haiku | ✔ | | |
-| 1.4.t Test: `Team:Tasks` options · #8 · Haiku | ✔ | | |
-| 1.4.i Implement `TasksOptions` · #9 · Haiku | ✔ | | |
+| 1.1.t Test: task states and priorities · #2 · Haiku | | | ✔ |
+| 1.1.i Implement `TaskState` and `TaskPriority` · #3 · Haiku | | | ✔ |
+| 1.2.t Test: `TaskId` · #4 · Haiku | | | ✔ |
+| 1.2.i Implement `TaskId` · #5 · Haiku | | | ✔ |
+| 1.3.t Test: `TaskItem` derived dates · #6 · Haiku | | | ✔ |
+| 1.3.i Implement the domain records · #7 · Haiku | | | ✔ |
+| 1.4.t Test: `Team:Tasks` options · #8 · Haiku | | | ✔ |
+| 1.4.i Implement `TasksOptions` · #9 · Haiku | | | ✔ |
 | **D2. The task file format** | | | |
 | 2.1.t Test: parsing the frontmatter · #10 · Sonnet | ✔ | | |
 | 2.1.i Implement frontmatter parsing · #11 · Sonnet | ✔ | | |
