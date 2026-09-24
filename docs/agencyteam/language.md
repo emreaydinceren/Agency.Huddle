@@ -85,6 +85,10 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   through `mcp__team__list_agents`, and any Agent can be invited to any Room.
 : A Team is emphatically **not a folder**. Sub-folders under the Teams directory
   are organisational only, and moving a file between them changes nothing at all.
+: **In Tasks, the opposite holds, and on purpose.** Under the Tasks directory, a
+  Task's top-level folder *is* its Team, and it names a Team label by convention.
+  That rule applies to Tasks only and never to Personas; see
+  [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md).
 : *Avoid*: group, squad, workspace, tenant.
 
 **Adapter**
@@ -354,6 +358,92 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   passes for `agency-acp`. Paid checks proving this live have not yet been run —
   see [Known limits](known-limits.md).
 : *Avoid*: conversation, thread, agent session, instance.
+
+## Tasks
+
+Proposed, not built. See
+[Huddle.Tasks-Specifications.md](../Huddle.Tasks-Specifications.md),
+[ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md) and
+[ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md).
+
+**Task**
+: A unit of work that the Human and the Agents share. It is one Markdown file at
+  `{DataDir}/Tasks/<Team>/[<Project>/]<ID>.md`: a title, a status, a priority, at
+  most one assignee, a description, and a Change log. Its identity is the `id` in
+  its frontmatter, such as `PLAT-0042`, and it never changes, even when the Task
+  moves. In code the record is `TaskItem`, because a type named `Task` would
+  shadow `System.Threading.Tasks.Task`.
+: Capitalised, it means only this. A task in the ordinary sense stays lower case.
+: *Avoid*: ticket, issue, work item, card (a card is how a Board draws a Task),
+  todo.
+
+**Project**
+: An optional grouping of Tasks inside one Team: the folder below the Team's
+  folder. Its name is unique only within its Team, so write it as
+  *Team / Project* wherever the Team isn't clear.
+: *Avoid*: epic, milestone, board, workspace.
+
+**Closed**
+: A Task that has been put away. Its file sits in a `_closed/` folder, and it is
+  hidden until the Human looks at Closed Tasks. Closing is separate from status.
+  It doesn't require a terminal status, and a Closed Task can be **Reopened**. In
+  the interface the verbs are **Close** and **Reopen**.
+: *Avoid*: archived, and archive (**Archived** belongs to Rooms, where it means
+  hidden but still live), done (that is a status), resolved, deleted.
+
+**Won't do**
+: The three terminal statuses other than Done: **Cancelled**, **Duplicate** and
+  **Rejected**. On a Board they share one column. Dropping a card there shows one
+  drop target per status, called a **ghost bucket**. A Duplicate names the Task
+  it duplicates.
+: *Avoid*: invalid, won't fix, discarded, abandoned.
+
+**Change log**
+: The history at the end of a Task file, under a `## Change log` heading. Only
+  the app writes to it, and only by appending. Each line records when, who, and
+  what changed. It is the Task's only history: the Created, Updated and Closed
+  dates are derived from it. This is the name in the interface as well as in the
+  docs.
+: *Avoid*: activity, history, audit log, timeline (the component that draws it).
+
+**Origin**
+: The Room a Task was created from, if it came from a conversation. When the
+  assignee is woken, the wake-up goes there first.
+: *Avoid*: source, parent Room, home Room.
+
+**Wake**
+: What a change to a Task does to its AI assignee. A Message listing the change
+  is posted into a Room with the assignee Mentioned, which starts the assignee's
+  Turn through the ordinary Reply Gate. The actor posts it: the Human for the
+  Human's changes, the Agent for an Agent's. Nobody is woken when the assignee is
+  the Human, is the actor, or when the Task's **wake budget** is spent. The wake
+  budget is a per-Task count of wake-ups caused by Agents; the Human grants more.
+  See [ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md).
+: *Avoid*: notify (except in button text such as *Save & Notify Nova*), ping,
+  trigger, alert, nudge.
+
+**Awake / Asleep / Offline**
+: An AI Teammate's presence as the Tasks interface shows it. **Awake** means a
+  Turn is running. **Asleep** means the Persona is running with no Turn in
+  progress, and can be woken. **Offline** means the Persona isn't running; a
+  wake-up Message is still posted, but the Teammate doesn't receive it.
+: *Avoid*: idle, busy, online (that is `PersonaState`'s word, which these three
+  refine), available.
+
+**View**
+: A saved way of looking at Tasks, stored in `{DataDir}/views.json`. It has a
+  name, a kind (**List** or **Board**), Active or Closed, the fields shown,
+  filters, grouping, sort and, for a Board, columns. *All Tasks* and *My Tasks*
+  are built in. Views belong to the Human; Agents use `list_tasks`.
+: *Avoid*: filter (a filter is one part of a View), query, saved search,
+  perspective, dashboard.
+
+**Board**
+: A View that draws Tasks as cards in columns of statuses, and changes a status
+  when a card is dragged. Each column holds one or more statuses, and every
+  status is in exactly one column. Always shows Active Tasks.
+: *Avoid*: kanban in interface copy (fine in prose about the design), swimlane
+  board, sprint board.
 
 ## Messages and storage
 
