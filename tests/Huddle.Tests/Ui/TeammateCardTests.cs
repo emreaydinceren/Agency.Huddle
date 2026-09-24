@@ -149,7 +149,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "Chief of Staff");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         Assert.NotEmpty(cut.FindAll("textarea"));
         Assert.Contains("You keep the team honest.", cut.Markup, StringComparison.Ordinal);
@@ -166,7 +166,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         Assert.Contains("clears what it remembers", cut.Markup, StringComparison.Ordinal);
     }
@@ -189,7 +189,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         // Scoped to the open dialog's own avatar-and-identity stack, not the whole dialog: the dialog
         // now legitimately contains "Legendary Assistant" both inside the raw textarea and inside the
@@ -216,9 +216,9 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
-        SetTextValue(cut, "Title", "Head of Everything");
+        await SetTextValueAsync(cut, "Title", "Head of Everything");
 
         Assert.Contains("Head of Everything", cut.Find("textarea").TextContent, StringComparison.Ordinal);
 
@@ -236,9 +236,9 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
-        SetTextValue(cut, "Persona text", "---\nName: coo\nTitle: Reseeded Title\nAlias: newalias\n---\nYou are the Chief of Staff.");
+        await SetTextValueAsync(cut, "Persona text", "---\nName: coo\nTitle: Reseeded Title\nAlias: newalias\n---\nYou are the Chief of Staff.");
 
         var titleInput = FindInputControl(cut, "Title").QuerySelector("input") ?? throw new InvalidOperationException("No Title input.");
         var aliasInput = FindInputControl(cut, "Alias").QuerySelector("input") ?? throw new InvalidOperationException("No Alias input.");
@@ -263,9 +263,9 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
-        SetTextValue(cut, "Title", "New Title");
+        await SetTextValueAsync(cut, "Title", "New Title");
 
         var titleInput = FindInputControl(cut, "Title").QuerySelector("input") ?? throw new InvalidOperationException("No Title input.");
         Assert.True(titleInput.HasAttribute("readonly"));
@@ -284,11 +284,11 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         Assert.DoesNotContain("keep the old name", cut.Markup, StringComparison.Ordinal);
 
-        SetTextValue(cut, "Name", "newcoo");
+        await SetTextValueAsync(cut, "Name", "newcoo");
 
         Assert.Contains("keep the old name", cut.Markup, StringComparison.Ordinal);
 
@@ -312,10 +312,10 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
-        SetTextValue(cut, "Name", "newcoo");
-        FindButton(cut, "Save").Click();
+        await SetTextValueAsync(cut, "Name", "newcoo");
+        await ClickButtonAsync(cut, "Save");
 
         Assert.Contains("newcoo", cut.Markup, StringComparison.Ordinal);
         Assert.Null(factory.Services.GetRequiredService<PersonaStore>().Get("coo"));
@@ -335,7 +335,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
+        await ClickButtonAsync(cut, "New teammate");
 
         Assert.NotEmpty(cut.FindAll("input[placeholder='Chief of Staff']"));
         Assert.NotEmpty(cut.FindAll("textarea"));
@@ -356,7 +356,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
+        await ClickButtonAsync(cut, "New teammate");
 
         Assert.Contains("Persona body", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("no front matter needed here", cut.Markup, StringComparison.Ordinal);
@@ -375,13 +375,13 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
+        await ClickButtonAsync(cut, "New teammate");
 
-        SetTextValue(cut, "Name", "bad/name");
-        SetTextValue(cut, "Title", "Title");
-        SetTextValue(cut, "Alias", "alias");
-        SetTextValue(cut, "Persona body", "a draft worth keeping");
-        FindButton(cut, "Add teammate").Click();
+        await SetTextValueAsync(cut, "Name", "bad/name");
+        await SetTextValueAsync(cut, "Title", "Title");
+        await SetTextValueAsync(cut, "Alias", "alias");
+        await SetTextValueAsync(cut, "Persona body", "a draft worth keeping");
+        await ClickButtonAsync(cut, "Add teammate");
 
         Assert.Contains("is not a valid Persona name.", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("a draft worth keeping", cut.Markup, StringComparison.Ordinal);
@@ -396,7 +396,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Remove").Click();
+        await ClickButtonAsync(cut, "Remove");
 
         Assert.True(HasButton(cut, "Confirm"));
         Assert.False(HasButton(cut, "Remove"));
@@ -411,8 +411,8 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Remove").Click();
-        FindButton(cut, "Confirm").Click();
+        await ClickButtonAsync(cut, "Remove");
+        await ClickButtonAsync(cut, "Confirm");
 
         Assert.Null(factory.Services.GetRequiredService<PersonaStore>().Get("coo"));
         Assert.Empty(cut.FindAll(".mud-dialog-container"));
@@ -463,7 +463,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
         var cut = await OpenViewCardAsync(ctx, factory, "Alfred");
 
-        FindButton(cut, "Reset to default").Click();
+        await ClickButtonAsync(cut, "Reset to default");
 
         Assert.Contains(
             "Restore the Chief of Staff's instructions, Title, Teams, Skills, Model and Effort to "
@@ -471,7 +471,7 @@ public sealed class TeammateCardTests
             cut.Markup,
             StringComparison.Ordinal);
 
-        FindButton(cut, "Confirm").Click();
+        await ClickButtonAsync(cut, "Confirm");
 
         var reset = personas.Get("Alfred");
         Assert.NotNull(reset);
@@ -516,7 +516,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        cut.Find("button[aria-label='Close']").Click();
+        await ClickAsync(cut, () => cut.Find("button[aria-label='Close']"));
 
         Assert.Empty(cut.FindAll(".mud-dialog-container"));
     }
@@ -546,7 +546,7 @@ public sealed class TeammateCardTests
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
         factory.Services.GetRequiredService<PersonaStore>().Remove("coo");
-        FindButton(cut, "Open").Click();
+        await ClickButtonAsync(cut, "Open");
 
         Assert.Contains("Persona 'coo' does not exist.", cut.Markup, StringComparison.Ordinal);
     }
@@ -566,7 +566,7 @@ public sealed class TeammateCardTests
         ctx.Services.AddSingleton(BuildAdapterCatalog(("claude", "Claude")));
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
+        await ClickButtonAsync(cut, "New teammate");
 
         Assert.Equal(0, CountControlsLabelled(cut, "Adapter"));
     }
@@ -580,7 +580,7 @@ public sealed class TeammateCardTests
         ctx.Services.AddSingleton(BuildAdapterCatalog(("claude", "Claude"), ("agency", "Agency")));
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
+        await ClickButtonAsync(cut, "New teammate");
 
         Assert.Equal(1, CountControlsLabelled(cut, "Adapter"));
     }
@@ -599,10 +599,10 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         await OpenSelectAsync(cut, "Skills");
-        (await FindSkillOptionAsync(cut, "team-building")).Click();
+        await ClickSkillOptionAsync(cut, "team-building");
 
         Assert.Contains("skills: ['team-building']", cut.Find("textarea").TextContent, StringComparison.Ordinal);
     }
@@ -619,7 +619,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         Assert.Contains("Changing Skills restarts this Teammate.", cut.Markup, StringComparison.Ordinal);
     }
@@ -641,7 +641,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         var warningChips = cut.FindAll(".mud-chip-color-warning");
         Assert.Contains(warningChips, chip => chip.TextContent.Contains("nonexistent", StringComparison.Ordinal));
@@ -672,10 +672,10 @@ public sealed class TeammateCardTests
         ctx.Services.AddSingleton(BuildAdapterCatalog(("claude", "Claude"), ("agency", "Agency")));
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         await OpenSelectAsync(cut, "Adapter");
-        (await FindSelectItemAsync(cut, "Agency")).Click();
+        await ClickSelectItemAsync(cut, "Agency");
 
         Assert.Equal(string.Empty, FindSelectInput(cut, "Model").GetAttribute("value"));
         Assert.Equal(string.Empty, FindSelectInput(cut, "Effort").GetAttribute("value"));
@@ -710,20 +710,20 @@ public sealed class TeammateCardTests
         ctx.Services.AddSingleton(BuildAdapterCatalog(("claude", "Claude"), ("agency", "Agency"), ("mock", "Mock")));
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         TaskCompletionSource gateA = new(TaskCreationOptions.RunContinuationsAsynchronously);
         factory.FakeModelCatalog.ModelsGate = gateA;
 
         await OpenSelectAsync(cut, "Adapter");
-        (await FindSelectItemAsync(cut, "Agency")).Click();
+        await ClickSelectItemAsync(cut, "Agency");
 
         // The Agency probe is now stuck on gateA. Clearing the gate before switching again lets the
         // SECOND probe (Mock) answer immediately - the ordering this test exists to prove wrong.
         factory.FakeModelCatalog.ModelsGate = null;
 
         await OpenSelectAsync(cut, "Adapter");
-        (await FindSelectItemAsync(cut, "Mock")).Click();
+        await ClickSelectItemAsync(cut, "Mock");
 
         var optionsBeforeRelease = await OpenSelectAndListOptionsAsync(cut, "Model");
         Assert.Contains(optionsBeforeRelease, option => string.Equals(option.TextContent.Trim(), "Mock Model", StringComparison.Ordinal));
@@ -747,7 +747,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
+        await ClickButtonAsync(cut, "New teammate");
         await OpenSelectAsync(cut, "Model");
 
         Assert.Contains("Opus", cut.Markup, StringComparison.Ordinal);
@@ -764,7 +764,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
+        await ClickButtonAsync(cut, "New teammate");
 
         var modelInput = FindSelectInput(cut, "Model");
         Assert.Equal(string.Empty, modelInput.GetAttribute("value"));
@@ -780,7 +780,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         // MudSelect<string> shows the raw Value as its closed-state text by default (no
         // ToStringFunc maps a value to its MudSelectItem's child content), so the id itself - not
@@ -805,7 +805,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         var modelInput = FindSelectInput(cut, "Model");
         Assert.Equal("claude-vintage-1", modelInput.GetAttribute("value"));
@@ -818,7 +818,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
+        await ClickButtonAsync(cut, "New teammate");
 
         Assert.NotEmpty(cut.FindAll(".mud-select"));
         Assert.Contains("advertises no models", cut.Markup, StringComparison.Ordinal);
@@ -832,7 +832,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
+        await ClickButtonAsync(cut, "New teammate");
 
         Assert.Contains("Reading the models this agent offers", cut.Markup, StringComparison.Ordinal);
     }
@@ -865,14 +865,14 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
-        SetTextValue(cut, "Name", "coo");
-        SetTextValue(cut, "Title", "Chief of Staff");
-        SetTextValue(cut, "Alias", "coo");
-        SetTextValue(cut, "Persona body", "You are the Chief of Staff.");
+        await ClickButtonAsync(cut, "New teammate");
+        await SetTextValueAsync(cut, "Name", "coo");
+        await SetTextValueAsync(cut, "Title", "Chief of Staff");
+        await SetTextValueAsync(cut, "Alias", "coo");
+        await SetTextValueAsync(cut, "Persona body", "You are the Chief of Staff.");
         await OpenSelectAsync(cut, "Model");
-        (await FindSelectItemAsync(cut, "Opus")).Click();
-        FindButton(cut, "Add teammate").Click();
+        await ClickSelectItemAsync(cut, "Opus");
+        await ClickButtonAsync(cut, "Add teammate");
 
         // The display name, not the raw wire id.
         Assert.Contains("Opus", cut.Markup, StringComparison.Ordinal);
@@ -900,14 +900,14 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
-        SetTextValue(cut, "Name", "coo");
-        SetTextValue(cut, "Title", "Chief of Staff");
-        SetTextValue(cut, "Alias", "coo");
-        SetTextValue(cut, "Persona body", "You are the Chief of Staff.");
+        await ClickButtonAsync(cut, "New teammate");
+        await SetTextValueAsync(cut, "Name", "coo");
+        await SetTextValueAsync(cut, "Title", "Chief of Staff");
+        await SetTextValueAsync(cut, "Alias", "coo");
+        await SetTextValueAsync(cut, "Persona body", "You are the Chief of Staff.");
         await OpenSelectAsync(cut, "Effort");
-        (await FindSelectItemAsync(cut, "High")).Click();
-        FindButton(cut, "Add teammate").Click();
+        await ClickSelectItemAsync(cut, "High");
+        await ClickButtonAsync(cut, "Add teammate");
 
         // The display name, not the raw wire id.
         Assert.Contains("High", cut.Markup, StringComparison.Ordinal);
@@ -922,7 +922,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
+        await ClickButtonAsync(cut, "New teammate");
         await OpenSelectAsync(cut, "Effort");
 
         Assert.Contains("High", cut.Markup, StringComparison.Ordinal);
@@ -940,7 +940,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         // MudSelect<string> shows the raw Value as its closed-state text by default - see the same
         // note on EditMode_PreselectsTheStoredModel.
@@ -962,7 +962,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         var effortInput = FindSelectInput(cut, "Effort");
         Assert.Equal("vintage", effortInput.GetAttribute("value"));
@@ -975,7 +975,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
+        await ClickButtonAsync(cut, "New teammate");
 
         Assert.Contains("offers no effort choice", cut.Markup, StringComparison.Ordinal);
     }
@@ -988,7 +988,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
+        await ClickButtonAsync(cut, "New teammate");
 
         Assert.Contains("Reading the effort levels this model offers", cut.Markup, StringComparison.Ordinal);
     }
@@ -1008,7 +1008,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         Assert.True(IsSelectInert(cut, "Model"));
         Assert.Empty(await OpenSelectAndListOptionsAsync(cut, "Model"));
@@ -1024,7 +1024,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         Assert.True(IsSelectInert(cut, "Effort"));
         Assert.Empty(await OpenSelectAndListOptionsAsync(cut, "Effort"));
@@ -1046,7 +1046,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         Assert.Equal("claude-sonnet-4", FindSelectInput(cut, "Model").GetAttribute("value"));
     }
@@ -1061,7 +1061,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         Assert.False(IsSelectInert(cut, "Model"));
 
@@ -1088,7 +1088,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         Assert.True(IsSelectInert(cut, "Model"));
 
@@ -1234,13 +1234,13 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
+        await ClickButtonAsync(cut, "New teammate");
 
         Assert.Equal(1, factory.FakeModelCatalog.EffortProbeCount);
         Assert.Contains(null, factory.FakeModelCatalog.EffortProbedModels);
 
         await OpenSelectAsync(cut, "Model");
-        (await FindSelectItemAsync(cut, "Sonnet")).Click();
+        await ClickSelectItemAsync(cut, "Sonnet");
 
         Assert.Equal(2, factory.FakeModelCatalog.EffortProbeCount);
         Assert.Contains("claude-sonnet-4", factory.FakeModelCatalog.EffortProbedModels);
@@ -1269,10 +1269,10 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         await OpenSelectAsync(cut, "Model");
-        (await FindSelectItemAsync(cut, "Sonnet")).Click();
+        await ClickSelectItemAsync(cut, "Sonnet");
 
         Assert.Contains(EffortResetNotice, cut.Markup, StringComparison.Ordinal);
         var statusElements = cut.FindAll("[role='status']");
@@ -1293,10 +1293,10 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         await OpenSelectAsync(cut, "Model");
-        (await FindSelectItemAsync(cut, "Sonnet")).Click();
+        await ClickSelectItemAsync(cut, "Sonnet");
 
         Assert.DoesNotContain(EffortResetNotice, cut.Markup, StringComparison.Ordinal);
     }
@@ -1313,14 +1313,14 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         await OpenSelectAsync(cut, "Model");
-        (await FindSelectItemAsync(cut, "Sonnet")).Click();
+        await ClickSelectItemAsync(cut, "Sonnet");
         Assert.Contains(EffortResetNotice, cut.Markup, StringComparison.Ordinal);
 
         await OpenSelectAsync(cut, "Effort");
-        (await FindSelectItemAsync(cut, "Medium")).Click();
+        await ClickSelectItemAsync(cut, "Medium");
 
         Assert.DoesNotContain(EffortResetNotice, cut.Markup, StringComparison.Ordinal);
         var effortInput = FindSelectInput(cut, "Effort");
@@ -1349,14 +1349,14 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
         await OpenSelectAsync(cut, "Model");
-        (await FindSelectItemAsync(cut, "Sonnet")).Click();
+        await ClickSelectItemAsync(cut, "Sonnet");
         Assert.Contains(EffortResetNotice, cut.Markup, StringComparison.Ordinal);
 
         await OpenSelectAsync(cut, "Model");
-        (await FindSelectItemAsync(cut, "Haiku")).Click();
+        await ClickSelectItemAsync(cut, "Haiku");
 
         Assert.DoesNotContain(EffortResetNotice, cut.Markup, StringComparison.Ordinal);
     }
@@ -1383,7 +1383,7 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
+        await ClickButtonAsync(cut, "New teammate");
 
         Assert.Contains("Initials of the name", cut.Markup, StringComparison.Ordinal);
         Assert.Contains("A short label", cut.Markup, StringComparison.Ordinal);
@@ -1420,10 +1420,10 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = await OpenViewCardAsync(ctx, factory, "coo");
-        FindButton(cut, "Edit").Click();
+        await ClickButtonAsync(cut, "Edit");
 
-        SelectAvatarChoice(cut, "A short label");
-        SetImmediateTextValue(cut, "Label", "AB");
+        await SelectAvatarChoiceAsync(cut, "A short label");
+        await SetImmediateTextValueAsync(cut, "Label", "AB");
 
         Assert.Equal("AB", cut.Find(".mud-avatar").TextContent.Trim());
     }
@@ -1436,13 +1436,13 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
-        SelectAvatarChoice(cut, "An image");
+        await ClickButtonAsync(cut, "New teammate");
+        await SelectAvatarChoiceAsync(cut, "An image");
 
         var inputFile = cut.FindComponent<InputFile>();
         inputFile.UploadFiles(InputFileContent.CreateFromBinary(MinimalPng, "avatar.png", contentType: "image/png"));
 
-        FindButton(cut, "Cancel").Click();
+        await ClickButtonAsync(cut, "Cancel");
 
         // Program.cs creates {DataDir}/avatars unconditionally at startup so the static-file
         // middleware always has a directory to point at (see AvatarEndpointTests) - so its mere
@@ -1460,8 +1460,8 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
-        SelectAvatarChoice(cut, "An image");
+        await ClickButtonAsync(cut, "New teammate");
+        await SelectAvatarChoiceAsync(cut, "An image");
 
         var oversized = new byte[AvatarImage.MaxBytes + 1];
         var inputFile = cut.FindComponent<InputFile>();
@@ -1479,8 +1479,8 @@ public sealed class TeammateCardTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx, factory);
-        FindButton(cut, "New teammate").Click();
-        SelectAvatarChoice(cut, "An image");
+        await ClickButtonAsync(cut, "New teammate");
+        await SelectAvatarChoiceAsync(cut, "An image");
 
         var inputFile = cut.FindComponent<InputFile>();
         inputFile.UploadFiles(InputFileContent.CreateFromBinary([1, 2, 3, 4], "fake.png", contentType: "image/png"));
@@ -1508,26 +1508,26 @@ public sealed class TeammateCardTests
     /// </summary>
     /// <param name="cut">The rendered page holding the card.</param>
     /// <param name="choiceLabel">The radio's visible text - "Initials of the name", "A short label" or "An image".</param>
-    private static void SelectAvatarChoice(IRenderedComponent<ContainerFragment> cut, string choiceLabel)
-    {
-        var radio = cut.FindAll(".mud-radio").First(element => element.TextContent.Contains(choiceLabel, StringComparison.Ordinal));
-        (radio.QuerySelector("input.mud-radio-input") ?? throw new InvalidOperationException($"No radio input under '{choiceLabel}'.")).Click();
-    }
+    private static Task SelectAvatarChoiceAsync(IRenderedComponent<ContainerFragment> cut, string choiceLabel) =>
+        ClickAsync(cut, () =>
+        {
+            var radio = cut.FindAll(".mud-radio").First(element => element.TextContent.Contains(choiceLabel, StringComparison.Ordinal));
+            return radio.QuerySelector("input.mud-radio-input") ?? throw new InvalidOperationException($"No radio input under '{choiceLabel}'.");
+        });
 
     /// <summary>
-    /// The <c>Immediate="true"</c> counterpart of <see cref="SetTextValue"/>: raises <c>@oninput</c>
+    /// The <c>Immediate="true"</c> counterpart of <see cref="SetTextValueAsync"/>: raises <c>@oninput</c>
     /// rather than <c>@onchange</c>, matching the Label box's own binding (see the markup comment on
     /// why it is <c>Immediate</c>, unlike every blur-only box in this file).
     /// </summary>
     /// <param name="cut">The rendered page holding the card.</param>
     /// <param name="label">The control's label text.</param>
     /// <param name="value">The text to type.</param>
-    private static void SetImmediateTextValue(IRenderedComponent<ContainerFragment> cut, string label, string value)
-    {
-        var control = FindInputControl(cut, label);
-        var input = control.QuerySelector("input") ?? throw new InvalidOperationException($"No input under '{label}'.");
-        input.Input(value);
-    }
+    private static Task SetImmediateTextValueAsync(IRenderedComponent<ContainerFragment> cut, string label, string value) =>
+        DispatchWhenPresentAsync(
+            cut,
+            () => FindInputControl(cut, label).QuerySelector("input") ?? throw new InvalidOperationException($"No input under '{label}'."),
+            input => input.Input(value));
 
     /// <summary>Registers this factory's real services (<see cref="PersonaStore"/> and friends) into a fresh <see cref="MudBunitContext"/>, the same pattern <see cref="TeammatesPageTests"/> uses.</summary>
     private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
@@ -1570,16 +1570,23 @@ public sealed class TeammateCardTests
     /// literally named "Chief of Staff" now shares the page with a free-name "Chief of Staff 2" -
     /// whose tile text also CONTAINS "Chief of Staff" - and a substring match would click that one
     /// instead.
+    ///
+    /// The page's <c>OnInitializedAsync</c> finishes on a real SQLite lookup per tile, so its
+    /// completion render can land between finding a tile and clicking it - which is why the click
+    /// goes through <see cref="ClickAsync"/>, and why this waits for the dialog rather than assuming
+    /// the click painted it synchronously.
     /// </remarks>
     private static async Task<IRenderedComponent<ContainerFragment>> OpenViewCardAsync(MudBunitContext ctx, TeamWebApplicationFactory factory, string personaName)
     {
-        await Task.Yield();
         var cut = RenderPage(ctx, factory);
-        var nameSpan = cut.FindAll(".teammates-item-name")
-            .First(span => string.Equals(span.TextContent.Trim(), personaName, StringComparison.Ordinal));
-        var tile = nameSpan.Closest("button.teammate-tile")
-            ?? throw new InvalidOperationException($"No teammate-tile ancestor found for Persona '{personaName}'.");
-        tile.Click();
+        await ClickAsync(cut, () =>
+        {
+            var nameSpan = cut.FindAll(".teammates-item-name")
+                .First(span => string.Equals(span.TextContent.Trim(), personaName, StringComparison.Ordinal));
+            return nameSpan.Closest("button.teammate-tile")
+                ?? throw new InvalidOperationException($"No teammate-tile ancestor found for Persona '{personaName}'.");
+        });
+        cut.WaitForElement(".mud-dialog-container");
         return cut;
     }
 
@@ -1653,6 +1660,43 @@ public sealed class TeammateCardTests
     private static IElement FindButton(IRenderedComponent<ContainerFragment> cut, string text) =>
         cut.FindAll("button").First(button => MatchesButtonLabel(button, text));
 
+    /// <summary>Clicks the button <see cref="FindButton"/> names, through <see cref="ClickAsync"/> - see its remarks.</summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="text">The button's trimmed text or <c>aria-label</c>.</param>
+    private static Task ClickButtonAsync(IRenderedComponent<ContainerFragment> cut, string text) =>
+        ClickAsync(cut, () => FindButton(cut, text));
+
+    /// <summary>Clicks the element <paramref name="find"/> resolves, through <see cref="DispatchWhenPresentAsync"/> - see its remarks.</summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="find">Resolves the element against the current DOM, throwing when it is absent.</param>
+    private static Task ClickAsync(IRenderedComponent<ContainerFragment> cut, Func<IElement> find) =>
+        DispatchWhenPresentAsync(cut, find, static element => element.Click());
+
+    /// <summary>
+    /// Waits until <paramref name="find"/> resolves an element, then resolves it AGAIN and raises
+    /// <paramref name="raise"/> on it inside one turn of the renderer's dispatcher.
+    /// </summary>
+    /// <remarks>
+    /// Neither the page nor the card is synchronous end to end: <c>Teammates.OnInitializedAsync</c>
+    /// and a View/Edit card's own <c>OnInitializedAsync</c> each finish on a real SQLite lookup, and
+    /// their completion renders land on the dispatcher whenever that lookup answers - under full-suite
+    /// load, often mid-test. A plain <c>Find(...).Click()</c> from the test thread races them twice
+    /// over: the element may not be painted yet (<c>Sequence contains no matching element</c>), or a
+    /// render can land between the find and the event and retire the element's handler id
+    /// (<see cref="UnknownEventHandlerIdException"/>). Waiting fixes the first; finding and raising
+    /// inside <c>InvokeAsync</c>, where no render can interleave, fixes the second. The event is
+    /// raised, not awaited, exactly as the plain <c>Click()</c> it replaces - a handler parked on a
+    /// never-completing catalog probe must not hang the test.
+    /// </remarks>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="find">Resolves the element against the current DOM, throwing when it is absent.</param>
+    /// <param name="raise">Raises the event on the freshly resolved element.</param>
+    private static async Task DispatchWhenPresentAsync(IRenderedComponent<ContainerFragment> cut, Func<IElement> find, Action<IElement> raise)
+    {
+        cut.WaitForAssertion(() => _ = find());
+        await cut.InvokeAsync(() => raise(find()));
+    }
+
     private static bool MatchesButtonLabel(IElement button, string text) =>
         string.Equals(button.TextContent.Trim(), text, StringComparison.Ordinal)
         || string.Equals(button.GetAttribute("aria-label"), text, StringComparison.Ordinal);
@@ -1694,9 +1738,18 @@ public sealed class TeammateCardTests
     private static IElement FindSelectInput(IRenderedComponent<ContainerFragment> cut, string label) =>
         FindInputControl(cut, label).QuerySelector("input") ?? throw new InvalidOperationException($"No input under the '{label}' select.");
 
+    /// <summary>
+    /// Mouses down on the <c>MudSelect</c> labelled <paramref name="label"/> and awaits its handler -
+    /// found and raised inside one dispatcher turn for the same reason as
+    /// <see cref="DispatchWhenPresentAsync"/>, but awaited, unlike it, because
+    /// <see cref="OpenSelectAndListOptionsAsync"/> reads the popover straight afterwards.
+    /// </summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="label">The select's label text.</param>
     private static async Task OpenSelectAsync(IRenderedComponent<ContainerFragment> cut, string label)
     {
-        await FindInputControl(cut, label).MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+        cut.WaitForAssertion(() => _ = FindInputControl(cut, label));
+        await cut.InvokeAsync(() => FindInputControl(cut, label).MouseDownAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs()));
     }
 
     /// <summary>
@@ -1728,30 +1781,37 @@ public sealed class TeammateCardTests
         return cut.FindAll("div.mud-list-item");
     }
 
-    private static async Task<IElement> FindSelectItemAsync(IRenderedComponent<ContainerFragment> cut, string text)
-    {
-        await Task.Yield();
-        return cut.FindAll("div.mud-list-item").First(item => item.TextContent.Trim() == text);
-    }
+    /// <summary>
+    /// Clicks the open select option whose trimmed text is exactly <paramref name="text"/>, waiting for
+    /// the popover to paint it rather than yielding once and hoping - see <see cref="DispatchWhenPresentAsync"/>.
+    /// </summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="text">The option's display text.</param>
+    private static Task ClickSelectItemAsync(IRenderedComponent<ContainerFragment> cut, string text) =>
+        ClickAsync(cut, () => cut.FindAll("div.mud-list-item").First(item => string.Equals(item.TextContent.Trim(), text, StringComparison.Ordinal)));
 
     /// <summary>
-    /// The Skills select's open option naming <paramref name="skillName"/> - matched by
-    /// <c>Contains</c> rather than <see cref="FindSelectItemAsync"/>'s exact equality, because Spec
+    /// Clicks the Skills select's open option naming <paramref name="skillName"/> - matched by
+    /// <c>Contains</c> rather than <see cref="ClickSelectItemAsync"/>'s exact equality, because Spec
     /// §6.7 has each option show its description alongside the Skill's name, so the option's full
     /// text content is never just the bare name.
     /// </summary>
     /// <param name="cut">The rendered page holding the card.</param>
     /// <param name="skillName">The Skill's name, as it appears in <see cref="SkillStore.All"/>.</param>
-    private static async Task<IElement> FindSkillOptionAsync(IRenderedComponent<ContainerFragment> cut, string skillName)
-    {
-        await Task.Yield();
-        return cut.FindAll("div.mud-list-item").First(item => item.TextContent.Contains(skillName, StringComparison.Ordinal));
-    }
+    private static Task ClickSkillOptionAsync(IRenderedComponent<ContainerFragment> cut, string skillName) =>
+        ClickAsync(cut, () => cut.FindAll("div.mud-list-item").First(item => item.TextContent.Contains(skillName, StringComparison.Ordinal)));
 
-    private static void SetTextValue(IRenderedComponent<ContainerFragment> cut, string label, string value)
-    {
-        var control = FindInputControl(cut, label);
-        var input = control.QuerySelector("input") ?? control.QuerySelector("textarea") ?? throw new InvalidOperationException($"No input/textarea under '{label}'.");
-        input.Change(value);
-    }
+    /// <summary>Raises <c>@onchange</c> with <paramref name="value"/> on the input or textarea labelled <paramref name="label"/>, through <see cref="DispatchWhenPresentAsync"/>.</summary>
+    /// <param name="cut">The rendered page holding the card.</param>
+    /// <param name="label">The control's label text.</param>
+    /// <param name="value">The text to commit.</param>
+    private static Task SetTextValueAsync(IRenderedComponent<ContainerFragment> cut, string label, string value) =>
+        DispatchWhenPresentAsync(
+            cut,
+            () =>
+            {
+                var control = FindInputControl(cut, label);
+                return control.QuerySelector("input") ?? control.QuerySelector("textarea") ?? throw new InvalidOperationException($"No input/textarea under '{label}'.");
+            },
+            input => input.Change(value));
 }
