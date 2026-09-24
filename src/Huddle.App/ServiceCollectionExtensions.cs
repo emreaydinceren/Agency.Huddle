@@ -215,6 +215,21 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PersonaSupervisor>();
         services.AddHostedService(sp => sp.GetRequiredService<PersonaSupervisor>());
 
+        // Same instance as the hosted service, the same shape as PersonaSupervisor's pair just
+        // above: Spec §10.1 models TaskTriggerService's registration on this app's existing
+        // singleton-plus-AddHostedService(sp => sp.GetRequiredService<...>()) idiom, so something
+        // else (the Task panel's "Allow N more") can resolve the very instance the host is running.
+        // Task 9.3 (this registration) implements only Preview; Task 9.4 adds the
+        // TaskEvents.TaskChanged subscription StartAsync will drive.
+        //
+        // This is the second factory-registered IHostedService in this method - PipeHostFixture's
+        // RemovePersonaSupervisorHostedService (and its Conformance-test callers) had to stop
+        // counting factory registrations and start matching PersonaSupervisor's by what its factory
+        // returns, because a plain count can no longer tell the two apart (corrections-B3 blocking
+        // item 2).
+        services.AddSingleton<TaskTriggerService>();
+        services.AddHostedService(sp => sp.GetRequiredService<TaskTriggerService>());
+
         // Unconditional, unlike PersonaSupervisor's hosted service above: the Agent row a rename
         // cascades from may exist from an earlier session or a raw pipe client, so a Persona rename
         // must cascade into the Team Directory even when Team:Acp:Enabled is false and no runner is
@@ -223,12 +238,11 @@ public static class ServiceCollectionExtensions
         // resolves never subscribes to PersonaStore.PersonaRenamed or PersonaStore.PersonaRemoved,
         // so this must be constructed - hence AddHostedService rather than a plain AddSingleton.
         //
-        // Registered by type, not by the sp => sp.GetRequiredService<PersonaSupervisor>() factory
-        // shape used just above: nothing else in the app needs to resolve this same instance the way
-        // a Restart button resolves the running PersonaSupervisor, so there is no second registration
-        // to keep in sync here. It also keeps this registration out of
-        // PipeHostFixture.RemovePersonaSupervisorHostedService's factory-based search, which already
-        // fails loudly - by design - the day a second factory-registered IHostedService shows up.
+        // Registered by type, not by a sp => sp.GetRequiredService<...>() factory shape like the two
+        // pairs above: nothing else in the app needs to resolve this same instance the way a Restart
+        // button resolves the running PersonaSupervisor, so there is no second registration to keep
+        // in sync here, and it stays out of PipeHostFixture.RemovePersonaSupervisorHostedService's
+        // factory-based search entirely.
         services.AddHostedService<PersonaRenameCascade>();
 
         return services;
