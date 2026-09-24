@@ -5,7 +5,7 @@ This plan breaks [`Huddle.Tasks-Specifications.md`](Huddle.Tasks-Specifications.
 context**. It names exact paths, types, signatures and acceptance criteria, and cites the Spec
 section that defines it.
 
-**17 deliverables · 147 tasks · 45 of them sized for Haiku (31%) · 9 retrospectives.** Every
+**17 deliverables · 147 tasks · 42 of them sized for Haiku (29%) · 2 tagged Opus · 9 retrospectives.** Every
 implementation task (`.i`) comes after its test task (`.t`). A `.t` task ends **red, for the
 right reason**, and its `.i` partner ends **green**. Docs and setup tasks have no test partner.
 
@@ -786,10 +786,10 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
   - Register it as a singleton.
   - **Settled (corrections-B2):**
     - One lock only: the debounce rebuild (scan, compare with `lastSeenVersion`, swap the index) runs under the same `writeGate` as `Write`/`Move` (Spec E-2); copy `AvatarStore.cs:570-573` / `PromptStore.cs:537`.
-    - `lastSeenVersion` and all path keys use `FileState.PathComparer` (`FileChanges/FileState.cs:29`).
+    - `lastSeenVersion` and all path keys use `FolderSnapshot.PathComparer` (`FileChanges/FileState.cs:29`).
     - Constructor drops `TaskIdAllocator`: `(IOptions<TeamOptions>, PersonaStore, TimeProvider, ILogger<TaskStore>)` (keep the plan's order for the rest).
     - Constructor order: validate paths → create root → scan → reconcile (5.5) → create watcher.
-    - "Inside TeamsDir" check: `Path.GetFullPath` on both, separator-terminated prefix compare with `FileState.PathComparer`; throw on equality and on either containing the other; check before creating the watcher (S2930); tests capture `dir.Options()` once and mutate `.Value.Tasks.Dir`.
+    - "Inside TeamsDir" check: `Path.GetFullPath` on both, separator-terminated prefix compare with `FolderSnapshot.PathComparer`; throw on equality and on either containing the other; check before creating the watcher (S2930); tests capture `dir.Options()` once and mutate `.Value.Tasks.Dir`.
     - PersonaDir throw is at `ServiceCollectionExtensions.cs:34-40` (Spec §8.1's :121-127 is stale).
     - `Teams`: enumerate with `Directory.GetDirectories` two levels (empty Team/Project folders count); call `TaskLayout.TryMap` **before** `ReadAllText` so `_`-folders are not read; catch `IOException or UnauthorizedAccessException` (house style).
     - `TryMap` splits on `Path.DirectorySeparatorChar` and `Path.AltDirectorySeparatorChar` only.
@@ -837,7 +837,7 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
   - **Settled (corrections-B2):**
     - One lock (writeGate) for both debounce rebuild and Write/Move.
     - Move = rename, then write: Check `File.Exists(target)` first → Spec §8.3 *"A file named X already exists in Y"*. Then `File.Move(source, target, overwrite: false)`, then atomic tmp-write over target. On failure of write, move it back.
-    - Same-file guard: If source and target are equal under `FileState.PathComparer` and differ only in case, do case rename through temp name (`source → source.tmp-move → target`) — never write-then-delete.
+    - Same-file guard: If source and target are equal under `FolderSnapshot.PathComparer` and differ only in case, do case rename through temp name (`source → source.tmp-move → target`) — never write-then-delete.
     - Version-checked store API: `internal string? ReadText(TaskId id)` (current disk text); `internal TaskItem? AppendEntry(TaskId id, string expectedVersion, ChangeLogEntry entry)` (returns `null` if `ComputeVersion(disk) != expectedVersion`, else compose + atomic write, return re-parsed Task); `Write` and `Move` return conflict result when disk version differs.
     - Events: No `IndexChanged` from rebuild that changed nothing. Batch write API raises `IndexChanged` exactly once. Forced rebuild from `OnWatcherError` always raises it. Factor rebuild core as internal synchronous method tests can call.
     - Version history: recorded at initial scan, on every rebuild that sees new version, after every write.
@@ -863,6 +863,7 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
     - No `IndexChanged` from rebuild that changed nothing; forced rebuild from `OnWatcherError` always raises it.
     - Watcher tests pre-create target Team folders before constructing store (inotify can miss files on Linux CI).
     - Create `OutsideEdit.cs` (the event args record) in task 5.4.i.
+  - Put the watcher tests in `TaskStoreWatcherTests.cs`. Move `TaskStoreTests`' `WriteTask`/`CreatePersonaStore`/`CreateTaskStore` into `tests/Huddle.Tests/Tasks/TestTaskStore.cs` (internal static); do not copy them.
 - **Acceptance:** Red. **Two-phase.**
 
 ### Task 5.4.i (#33) — Implement the watcher [Sonnet]
@@ -883,7 +884,7 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
     - No `IndexChanged` from rebuild that changed nothing; forced rebuild always raises it; factor rebuild core as internal synchronous method.
     - Watcher tests pre-create target Team folders (inotify can miss files on Linux CI).
     - Create `OutsideEdit.cs` as a public record (event args).
-- **Acceptance:** 5.4.t is green. Run it three times in a row, all green, to catch flakiness.
+- **Acceptance:** `Run-Tests.ps1 -NoBuild -FilterClass "*TaskStoreWatcherTests"` three times, labels `5.4.i-r1`..`r3`, all green.
 
 ### Task 5.5.t (#34) — Test: reconciling at startup [Sonnet]
 
@@ -896,6 +897,7 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
     no `OutsideEditDetected`.
   - `Startup_FileNotNewer_Unchanged`: the bytes are identical.
   - `Startup_NoEntries_AppendsEntry`.
+  - Construct with a `ManualTimeProvider` at a fixed past instant and assert the appended entry against a hand-written literal (not `FormatEntry`). Add `Startup_ReconcileWrite_NotReportedAsOutsideEdit` (750 ms negative check).
   - **Settled (corrections-B2):**
     - Constructor order: validate paths → create root → scan → reconcile (5.5) → create watcher.
     - Fixtures: a private `WriteTask(root, relativePath, TaskItem)` writes `TaskFileFormat.Compose(task)` and sets `File.SetLastWriteTimeUtc` to the last entry's `At`; use past dates before 2026-09-24; `Startup_FileNotNewer_Unchanged` sets it explicitly.
@@ -912,6 +914,7 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
   - **Settled (corrections-B2):**
     - Constructor order: validate paths → create root → scan → reconcile (5.5) → create watcher.
     - Every fixture-writing helper sets `File.SetLastWriteTimeUtc(path, lastEntry.At.UtcDateTime)` (or a fixed past time when no entries) so 5.5.i doesn't rewrite fixtures; use past dates before 2026-09-24; `Startup_FileNotNewer_Unchanged` sets it explicitly.
+  - Every existing fixture that writes a *parsable* file must set its mtime, or reconciliation rewrites it and 5.2's byte-identical assertions break — check `WriteRawFile` callers.
 - **Acceptance:** 5.5.t is green, and all of D5 is green.
 
 ---
@@ -923,6 +926,8 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
 tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `PersonaStore` over
 `TempDataDir`, with Persona files for Nova (alias `nova`) and Kai (alias `kai`) in Team
 `Platform`.
+
+**Lock order (R3):** `TaskService.mutateGate` → `TaskStore.writeGate`. Never call `PersonaStore` or raise an event while holding `writeGate`. 6.6.t adds a re-entrancy test: a `PersonasChanged` handler that calls back into `TaskService` from another thread finishes within a 10 s `TaskCompletionSource`.
 
 ### Task 6.1.t (#36) — Test: creating a Task [Sonnet]
 
@@ -1550,7 +1555,7 @@ snippet in the conventions).
 - **Goal:** Pin **Spec §10.1** and **Spec §10.2**.
 - **Read first:** **Spec §10.1–§10.2**.
 - **Deliverable:** One test per `WakeBlock`:
-  - `None`, which also carries the assignee name and presence;
+  - `None`, which also carries the assignee name and presence from `TaskPresence.For`;
   - `NoAssignee`;
   - `AssigneeIsHuman`;
   - `AssigneeIsActor`, compared ignoring case;
@@ -1577,14 +1582,14 @@ snippet in the conventions).
     `(TaskEvents events, TaskStore store, TaskActivity activity, TurnActivity turns, ChatService chat, ITeamDirectory directory, PersonaStore personas, IAgentGateway gateway, PersonaHealth health, IPromptSource prompts, IOptions<TeamOptions> options, TimeProvider clock, ILogger<TaskTriggerService> logger)`.
   - `Preview`, which is pure over those inputs.
   - Register the service as a singleton plus `AddHostedService(sp => sp.GetRequiredService<TaskTriggerService>())`,
-    **after** `PersonaSupervisor` (`ServiceCollectionExtensions.cs:272-273`).
+    after `PersonaSupervisor`'s singleton + hosted-service pair (find by name).
   - **Settled (corrections-B3 D9):**
     - Fix the fixture: `PipeHostFixture.RemovePersonaSupervisorHostedService` picks by `d.ImplementationFactory?.Method.ReturnType == typeof(PersonaSupervisor)`; rewrite remarks; callers (`PipeHostFixture:138`, `MockAdapterFixture:151`, `PersonaHostTests:217`, `ProcessModeTests:99`) stay green.
     - Register by name anchors (PersonaSupervisor's pair is ~`:185-186`); fix the fixture.
     - `TaskTriggerService` is **internal**.
 - **Acceptance:** 9.3.t is green.
 
-### Task 9.4.t (#78) — Test: coalescing and posting [Sonnet]
+### Task 9.4.t (#78) — Test: coalescing and posting [Opus]
 
 - **Goal:** Pin **Spec §10.3**, **§10.5** and **Spec §17 D-11**.
 - **Read first:** **Spec §10.3**, **Spec §10.5**, `FiringTimeProvider`, `FakeAgentGateway`.
@@ -1605,9 +1610,10 @@ snippet in the conventions).
     - Neutralise Mentions: in `{{title}}` and `{{changes}}`, insert U+2060 (word joiner) after every `@` so Task text can't Mention a third Teammate; test it.
     - Actor's own session: when wake is posted as an Agent, record it through `OwnPosts` (as the Agent's own post) so the actor's session in that Room gets its catch-up line.
     - Outside edits: `OutsideHuddle` actor does not reset Task wake budget; >10 outside-edit changes delivered within one coalesce window are logged not woken (git pull must not wake every Task); test both.
+  - `Concurrent_TwoBatchesSameTask_SerialisedByGate`: real `Thread`s released by one gate over ≥25 rounds; prove with `Prove-Mutation.ps1` removing the `SemaphoreSlim` wait (8.5 showed `Task.Run` does not expose races) (R3).
 - **Acceptance:** Red. **Two-phase.**
 
-### Task 9.4.i (#79) — Implement coalescing and posting [Sonnet]
+### Task 9.4.i (#79) — Implement coalescing and posting [Opus]
 
 - **Goal:** Implement **Spec §10.3** and **§10.5**.
 - **Read first:** Task 9.4.t.
@@ -1685,9 +1691,7 @@ snippet in the conventions).
 - **Deliverable:**
   - Catch `ChatException` with `ErrorCodes.BudgetExhausted` as `BudgetSpent`, and any other
     `ChatException` as `Failed`, logging each.
-  - Resolve presence with `gateway.IsOnline` plus `PersonaStatusResolver`.
-  - Call `activity.CountAgentWake` for Agent actors and `ResetForHuman` for Human and
-    outside-Huddle actors.
+  - Resolve presence with `TaskPresence.For(name, directory, gateway, health, turns)`. For an Agent actor, call `activity.TryConsumeAgentWake(id)` before posting (false → `BudgetPaused`, nothing posted); after the outcome, `RefundAgentWake(id)` unless it is `Woken` or `Offline`. Never call `CountAgentWake`. `ResetForHuman` for Human actors only — an `OutsideHuddle` actor does not reset the budget (9.4 Settled).
   - Record a `WakeRecord` for every outcome.
   - **Settled (corrections-B3 D9):**
     - `ResetForHuman` is called when a Human change is **received**, even if guards block it.
@@ -1700,6 +1704,8 @@ snippet in the conventions).
 **Spec §11 (all)**, ADR-0014 (the tool-name prefix), and **Spec §17 D-24**. The tools go in
 `src/Huddle.App/Acp/Tools/`. The tests are in `tests/Huddle.Tests/Acp/Tools/`, one file per tool.
 Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the test setup.
+
+**R3:** D10 is the only stream that touches `tests/Huddle.Tests/Acp/Golden/*` or `prompts.default.json` after 9.2; never run it in parallel with another Prompt change. Reseed goldens with `Conversation/scripts/Reseed-Goldens.ps1`.
 
 ### Task 10.1.t (#84) — Test: shared tool text helpers [Haiku]
 
@@ -1815,7 +1821,7 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   with `baseVersion: null`.
 - **Acceptance:** 10.5.t is green.
 
-### Task 10.6.t (#94) — Test: `close_task` and `reopen_task` [Haiku]
+### Task 10.6.t (#94) — Test: `close_task` and `reopen_task` [Sonnet]
 
 - **Goal:** Pin **Spec §11.6**.
 - **Read first:** **Spec §11.6**.
@@ -1823,7 +1829,7 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   already-closed and already-active texts, and the id refusals.
 - **Acceptance:** Red.
 
-### Task 10.6.i (#95) — Implement `close_task` and `reopen_task` [Haiku]
+### Task 10.6.i (#95) — Implement `close_task` and `reopen_task` [Sonnet]
 
 - **Goal:** Implement **Spec §11.6**.
 - **Read first:** Task 10.6.t, `CreateTaskTool` (the caller-actor pattern).
@@ -2432,7 +2438,7 @@ acceptance.
   `Team:Tasks:*`, copying the §14 meanings.
 - **Acceptance:** The table renders, and each key appears once.
 
-### Task 16.3 (#144) — Known limits, roadmap, decisions and status [Haiku]
+### Task 16.3 (#144) — Known limits, roadmap, decisions and status [Sonnet]
 
 - **Goal:** Complete **TK-D**'s remaining text changes.
 - **Read first:** `docs/agencyteam/known-limits.md`, `roadmap.md`, `decisions.md` (the newest
@@ -2491,7 +2497,7 @@ The manager records each retrospective here, newest last, and commits the plan c
 | --- | --- | --- | --- | --- |
 | R1 | 15 done (#1–#9, #48–#53; streams ran in parallel) | 2026-09-24 | Haiku batched four pairs, wrote every test first and cut the reds from one run. Analyzer errors in test code hid behind missing-type reds (CA1806, CA1305, IDE0059, IDE0005, xUnit2013). All 18 files created with `Write` came out LF. Agents re-derived D1's API and the Spec's section lines. Two agents ran `find /` despite the rule | Edited 2.4.t, 5.1.t, 6.6.i, 7.4.t, 7.5.i, 7.6.i and 7.7.i. Added facts. Brief: one test file per pair, and the red must be free of analyzer noise. Scripted `Run-Tests.ps1 -RedTask`, and fixed `Check-Eol -Fix`'s exit code. Haiku gets one pair per dispatch |
 | R2 | 31 done (#10–#25; the 0.1 chores) | 2026-09-24 | Agents reported "Deviations: none" after breaking the procedure: a copied red file, a `find /` hunt, python3 edits. Haiku tests weren't spec-complete: 2.4's version test couldn't fail, and 5.1 missed the rule that `_` folders are reserved at any depth. The same analyzer errors kept failing builds (CA1859, IDE0059, IDE0060, IDE0005). The plan's text and corrections B2/B3 disagreed, so agents had two sources | Folded B2/B3 into the text of 5.2–6.6, 7.7, 8.4–9.6. Retagged 8.5 and 9.2 Haiku→Sonnet. The brief now requires a row-by-row Coverage list and a forbidden-command self-audit. New scripts: `Run-Tests -ExpectFail/-Force`, `Build.ps1`, `Prove-Mutation.ps1`. Added the D2/D5/D7 API facts |
-| R3 | #45 | | | |
+| R3 | 59 done (5.1–5.3, 7.4–7.7, 8.1–8.5, 9.1–9.2) | 2026-09-24 | R2's Coverage section worked: reported NOT COVERED rows turned into 9 extra tests. `-RedTask` and `Prove-Mutation` worked; one concurrency test only exposed its race on real threads over 25 rounds. Rule breaks despite the brief: implementation written before the red (then `git stash` to rebuild it), `sed -i`, a service made public on false reasoning. A correction scoped to "lane keys" wasn't applied to group keys. The full suite ran 13 times where 6 were needed; about 6 min went to waiting on the test mutex. `Regenerate-PromptDefaults` wrote to the main checkout from a worktree | Edited 5.4, 5.5, 9.3, 9.4, 9.6 and the D6/D10 preambles. Retagged 9.4 Sonnet→Opus and 10.6, 16.3 Haiku→Sonnet. A PreToolUse hook now blocks `find /` and `sed -i` (Emre's choice). Brief: no `src/` writes before the red, visibility changes are stop-and-ask, invariants apply to every surface, full suite once per dispatch. Scripts: `-NewNames`, comma filters, wait logging, `Reseed-Goldens`, `Prove-Mutation -Line`, `Check-Visibility`; `Regenerate-PromptDefaults` fixed. Added the D5/D7/D8 API facts |
 | R4 | #60 | | | |
 | R5 | #75 | | | |
 | R6 | #90 | | | |

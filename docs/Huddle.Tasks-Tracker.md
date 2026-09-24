@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then.
 
-**Status:** 45 of 147 tasks Done · 2 of 9 retrospectives done · last updated 2026-09-24.
+**Status:** 59 of 147 tasks Done · 3 of 9 retrospectives done · last updated 2026-09-24.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -48,11 +48,11 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | **D5. `TaskStore`** | | | |
 | 5.1.t Test: mapping a path to a location · #26 · Haiku | | | ✔ |
 | 5.1.i Implement `TaskLayout` · #27 · Haiku | | | ✔ |
-| 5.2.t Test: scanning, rejected files and Teams · #28 · Sonnet | ✔ | | |
-| 5.2.i Implement the scan and the index · #29 · Sonnet | ✔ | | |
-| 5.3.t Test: writing, moving and keeping versions · #30 · Sonnet | ✔ | | |
+| 5.2.t Test: scanning, rejected files and Teams · #28 · Sonnet | | | ✔ |
+| 5.2.i Implement the scan and the index · #29 · Sonnet | | | ✔ |
+| 5.3.t Test: writing, moving and keeping versions · #30 · Sonnet | | | ✔ |
 | 🔁 R2 — Opus retrospective after #30, and plan update | | | ✔ |
-| 5.3.i Implement writing and moving · #31 · Sonnet | ✔ | | |
+| 5.3.i Implement writing and moving · #31 · Sonnet | | | ✔ |
 | 5.4.t Test: noticing edits made outside Huddle · #32 · Sonnet | ✔ | | |
 | 5.4.i Implement the watcher · #33 · Sonnet | ✔ | | |
 | 5.5.t Test: reconciling at startup · #34 · Sonnet | ✔ | | |
@@ -68,7 +68,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 6.4.i Implement `Close` and `Reopen` · #43 · Sonnet | ✔ | | |
 | 6.5.t Test: logging edits made outside Huddle · #44 · Sonnet | ✔ | | |
 | 6.5.i Implement outside-edit logging · #45 · Sonnet | ✔ | | |
-| 🔁 R3 — Opus retrospective after #45, and plan update | ✔ | | |
+| 🔁 R3 — Opus retrospective after #45, and plan update | | | ✔ |
 | 6.6.t Test: renaming a Teammate · #46 · Sonnet | ✔ | | |
 | 6.6.i Implement renaming, and the cascade hook · #47 · Sonnet | ✔ | | |
 | **D7. Views core (pure logic and `ViewStore`)** | | | |
@@ -84,9 +84,9 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 7.5.i Implement `Suggest` · #57 · Haiku | | | ✔ |
 | 7.6.t Test: `BoardLayout` · #58 · Sonnet | | | ✔ |
 | 7.6.i Implement `BoardLayout` · #59 · Sonnet | | | ✔ |
-| 7.7.t Test: `ViewStore` · #60 · Sonnet | ✔ | | |
+| 7.7.t Test: `ViewStore` · #60 · Sonnet | | | ✔ |
 | 🔁 R4 — Opus retrospective after #60, and plan update | ✔ | | |
-| 7.7.i Implement `ViewStore` · #61 · Sonnet | ✔ | | |
+| 7.7.i Implement `ViewStore` · #61 · Sonnet | | | ✔ |
 | **D8. The waking infrastructure** | | | |
 | 8.1.t Test: finding a Room by its exact members · #62 · Sonnet | | | ✔ |
 | 8.1.i Implement the member-set lookup · #63 · Sonnet | | | ✔ |
@@ -94,15 +94,15 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 8.2.i Implement `TurnActivity` · #65 · Haiku | | | ✔ |
 | 8.3.t Test: `RoomSession` reports its Turns · #66 · Sonnet | | | ✔ |
 | 8.3.i Wire `TurnActivity` into `RoomSession` · #67 · Sonnet | | | ✔ |
-| 8.4.t Test: `TaskPresence.Resolve` · #68 · Haiku | ✔ | | |
-| 8.4.i Implement `TaskPresence` · #69 · Haiku | ✔ | | |
-| 8.5.t Test: `TaskActivity` · #70 · Haiku | ✔ | | |
-| 8.5.i Implement `TaskActivity` · #71 · Haiku | ✔ | | |
+| 8.4.t Test: `TaskPresence.Resolve` · #68 · Haiku | | | ✔ |
+| 8.4.i Implement `TaskPresence` · #69 · Haiku | | | ✔ |
+| 8.5.t Test: `TaskActivity` · #70 · Haiku | | | ✔ |
+| 8.5.i Implement `TaskActivity` · #71 · Haiku | | | ✔ |
 | **D9. Waking the assignee (`TaskTriggerService`)** | | | |
-| 9.1.t Test: a fake clock whose timers fire · #72 · Haiku | ✔ | | |
-| 9.1.i Implement `FiringTimeProvider` · #73 · Haiku | ✔ | | |
-| 9.2.t Test: the `task.wake.message` Prompt · #74 · Haiku | ✔ | | |
-| 9.2.i Add the `task.wake.message` Prompt · #75 · Haiku | ✔ | | |
+| 9.1.t Test: a fake clock whose timers fire · #72 · Haiku | | | ✔ |
+| 9.1.i Implement `FiringTimeProvider` · #73 · Haiku | | | ✔ |
+| 9.2.t Test: the `task.wake.message` Prompt · #74 · Haiku | | | ✔ |
+| 9.2.i Add the `task.wake.message` Prompt · #75 · Haiku | | | ✔ |
 | 🔁 R5 — Opus retrospective after #75, and plan update | ✔ | | |
 | 9.3.t Test: `Preview` and the guards · #76 · Sonnet | ✔ | | |
 | 9.3.i Implement `Preview` · #77 · Sonnet | ✔ | | |
