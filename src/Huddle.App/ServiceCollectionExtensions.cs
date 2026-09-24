@@ -74,6 +74,10 @@ public static class ServiceCollectionExtensions
         // the Tasks UI's "AI reacting" badge. A leaf singleton, same shape as OwnPosts just above.
         services.AddSingleton<TurnActivity>();
 
+        // Spec §10.6-§10.7: per-Task wake history and the Agent-wake budget that guards against a
+        // looping Agent. A leaf singleton, same shape as TurnActivity just above.
+        services.AddSingleton<TaskActivity>();
+
         // FC §6.3: resolves a Watched Folder entry (a Teammate Name, a full path, or a path
         // relative to DataDir) into a full path, or refuses it with a reason.
         services.AddSingleton<WatchedFolderResolver>();
