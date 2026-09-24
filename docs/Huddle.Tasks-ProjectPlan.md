@@ -532,7 +532,11 @@ validation)**. The class is `internal static partial class TaskFileFormat` in
   - `ComputeVersion_CrlfAndLf_Equal`.
   - `ComputeVersion_DifferentText_Differs`.
   - `TryParse_SetsVersionFromText`.
-- **Acceptance:** Red. The last test is red because of the 2.1.i stub.
+
+  Add them to the existing `TaskFileFormatTests.cs`. `using Xunit;` is global, so adding it
+  fails the build with IDE0005.
+- **Acceptance:** Red. The last test is red because of the 2.1.i stub. `CrlfAndLf_Equal` is green
+  on arrival against the `""` stub; that's expected.
 
 ### Task 2.4.i (#17) — Implement `ComputeVersion` [Haiku]
 
@@ -698,7 +702,8 @@ L120 and L128 (watchers). The class is `internal sealed partial class TaskStore 
 ### Task 5.1.t (#26) — Test: mapping a path to a location [Haiku]
 
 - **Goal:** Pin the **Spec §8.1** mapping table as a pure function.
-- **Read first:** **Spec §8.1** (the table).
+- **Read first:** **Spec §8.1** (the table). `TaskLocation(string Team, string? Project, bool Closed)`
+  is in `src/Huddle.App/Tasks/TaskItem.cs`.
 - **Deliverable:** `tests/Huddle.Tests/Tasks/TaskLayoutTests.cs`, a `[Theory]` over
   `TaskLayout.TryMap(string root, string fullPath, out TaskLocation? location, out string? error)`:
   - `root/T/x.md` → `(T, null, false)`.
@@ -1023,8 +1028,10 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
   `roomSessions.Rename` (:148) and before the "no Agent row" early return (:155), in its own
   `try/catch (IOException ex)` with a logged warning.
 - **Deliverable:** `internal void RenameTeammate(string oldName, string newName)`, compared with
-  `OrdinalIgnoreCase`. Inject `TaskService` into `PersonaRenameCascade`. `ViewStore` is added in
-  Task 7.7.i.
+  `OrdinalIgnoreCase`. Inject `TaskService` **and `ViewStore`** into `PersonaRenameCascade`, and
+  add both calls, each in its own `try/catch`. This task absorbs the `ViewStore` call that used
+  to be in 7.7.i (R1), so it starts only once 7.7.i has merged. Also update the construction site
+  of the `PersonaRenameCascadeTests` harness.
 - **Acceptance:** 6.6.t is green, and the full suite is green.
 
 ---
@@ -1124,7 +1131,10 @@ functions need only D1.
 ### Task 7.4.t (#54) — Test: sorting, group labels and grouping [Sonnet]
 
 - **Goal:** Pin the sorting and grouping of **Spec §12.5**.
-- **Read first:** **Spec §12.5**.
+- **Read first:** **Spec §12.5**. `TaskQuery` already exists (`src/Huddle.App/Tasks/Views/TaskQuery.cs`,
+  `internal static`, with `Filter`); add to it rather than creating a class. The test file is
+  `tests/Huddle.Tests/Tasks/Views/TaskQuerySortGroupTests.cs`. Build tasks with `TestTasks.Make`,
+  which needs no `using`. State order comes from `TaskStates.All`.
 - **Deliverable:** `TaskQuerySortGroupTests.cs`:
   - The default sort is priority descending, then due date ascending with nulls last, then id.
   - Several keys apply in order.
@@ -1165,7 +1175,7 @@ functions need only D1.
 - **Read first:** Task 7.5.t.
 - **Deliverable:**
   `internal static IReadOnlyList<TaskItem> Suggest(IReadOnlyList<TaskItem> all, string query, int limit = 8)`
-  in `TaskQuery`.
+  in the existing `TaskQuery.cs`.
 - **Acceptance:** 7.5.t is green.
 
 ### Task 7.6.t (#58) — Test: `BoardLayout` [Sonnet]
@@ -1186,7 +1196,9 @@ functions need only D1.
 - **Goal:** Implement **Spec §12.6**.
 - **Read first:** Task 7.6.t.
 - **Deliverable:** `internal static class BoardLayout`, plus the records `BoardModel`,
-  `BoardLane` and `BoardCell` (public, because the Board component renders them). Also
+  `BoardLane` and `BoardCell` (public, because the Board component renders them).
+  `BoardColumn(Label, States, Hidden)` already exists in `TaskView.cs`; don't redeclare it.
+  Field keys come from `ViewFieldKeys`. Also
   `internal static IReadOnlyList<BoardColumn> DefaultColumns`, the six columns of §12.3.
 - **Acceptance:** 7.6.t is green.
 
@@ -1220,9 +1232,11 @@ functions need only D1.
     `JsonException.LineNumber` and `BytePositionInLine`.
   - The built-in ids are `all-tasks` and `my-tasks`, and they're marked `BuiltIn = true`.
   - Writes validate with `ViewValidator` first.
-  - Add the `ViewStore.RenameTeammate` call to `PersonaRenameCascade`, beside Task 6.6.i's call,
-    in its own `try/catch`.
-  - Register it as a singleton.
+  - **Don't** edit `PersonaRenameCascade`. Task 6.6.i adds the `ViewStore.RenameTeammate`
+    call beside its own (R1: D6 and D7 both change its primary constructor).
+  - `InvalidView` and `ViewSaveResult` already exist in `TaskView.cs`. Serialise with
+    `ViewJson.Options`, and validate with the two-argument `ViewValidator.Validate(view, existing)`.
+  - Register it as a singleton on the line after `AvatarStore`.
 - **Acceptance:** 7.7.t is green, and the full suite is green.
 
 ---
@@ -2329,7 +2343,7 @@ The manager records each retrospective here, newest last, and commits the plan c
 
 | # | After task | Date | Top findings | Plan changes made |
 | --- | --- | --- | --- | --- |
-| R1 | #15 | | | |
+| R1 | 15 done (#1–#9, #48–#53; streams ran in parallel) | 2026-09-24 | Haiku batched four pairs, wrote every test first and cut the reds from one run. Analyzer errors in test code hid behind missing-type reds (CA1806, CA1305, IDE0059, IDE0005, xUnit2013). All 18 files created with `Write` came out LF. Agents re-derived D1's API and the Spec's section lines. Two agents ran `find /` despite the rule | Edited 2.4.t, 5.1.t, 6.6.i, 7.4.t, 7.5.i, 7.6.i and 7.7.i. Added facts. Brief: one test file per pair, and the red must be free of analyzer noise. Scripted `Run-Tests.ps1 -RedTask`, and fixed `Check-Eol -Fix`'s exit code. Haiku gets one pair per dispatch |
 | R2 | #30 | | | |
 | R3 | #45 | | | |
 | R4 | #60 | | | |

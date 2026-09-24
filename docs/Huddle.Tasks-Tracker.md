@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then.
 
-**Status:** 9 of 147 tasks Done · 0 of 9 retrospectives done · last updated 2026-09-24.
+**Status:** 23 of 147 tasks Done · 1 of 9 retrospectives done · last updated 2026-09-24.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -26,25 +26,25 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 1.4.t Test: `Team:Tasks` options · #8 · Haiku | | | ✔ |
 | 1.4.i Implement `TasksOptions` · #9 · Haiku | | | ✔ |
 | **D2. The task file format** | | | |
-| 2.1.t Test: parsing the frontmatter · #10 · Sonnet | ✔ | | |
-| 2.1.i Implement frontmatter parsing · #11 · Sonnet | ✔ | | |
-| 2.2.t Test: splitting out and reading the Change log · #12 · Sonnet | ✔ | | |
-| 2.2.i Implement the Change log grammar · #13 · Sonnet | ✔ | | |
-| 2.3.t Test: composing a task file · #14 · Sonnet | ✔ | | |
-| 2.3.i Implement `Compose` · #15 · Sonnet | ✔ | | |
-| 🔁 R1 — Opus retrospective after #15, and plan update | ✔ | | |
+| 2.1.t Test: parsing the frontmatter · #10 · Sonnet | | ✔ | |
+| 2.1.i Implement frontmatter parsing · #11 · Sonnet | | ✔ | |
+| 2.2.t Test: splitting out and reading the Change log · #12 · Sonnet | | ✔ | |
+| 2.2.i Implement the Change log grammar · #13 · Sonnet | | ✔ | |
+| 2.3.t Test: composing a task file · #14 · Sonnet | | ✔ | |
+| 2.3.i Implement `Compose` · #15 · Sonnet | | ✔ | |
+| 🔁 R1 — Opus retrospective after #15, and plan update | | | ✔ |
 | 2.4.t Test: `ComputeVersion` · #16 · Haiku | ✔ | | |
 | 2.4.i Implement `ComputeVersion` · #17 · Haiku | ✔ | | |
 | **D3. Diffing two versions of a Task** | | | |
-| 3.1.t Test: `TaskDiff.Compare` · #18 · Sonnet | ✔ | | |
-| 3.1.i Implement `TaskDiff.Compare` · #19 · Sonnet | ✔ | | |
-| 3.2.t Test: `TaskDiff.Summarise` · #20 · Haiku | ✔ | | |
-| 3.2.i Implement `TaskDiff.Summarise` · #21 · Haiku | ✔ | | |
+| 3.1.t Test: `TaskDiff.Compare` · #18 · Sonnet | | | ✔ |
+| 3.1.i Implement `TaskDiff.Compare` · #19 · Sonnet | | | ✔ |
+| 3.2.t Test: `TaskDiff.Summarise` · #20 · Haiku | | | ✔ |
+| 3.2.i Implement `TaskDiff.Summarise` · #21 · Haiku | | | ✔ |
 | **D4. Task id allocation** | | | |
-| 4.1.t Test: deriving a prefix · #22 · Haiku | ✔ | | |
-| 4.1.i Implement `DerivePrefix` · #23 · Haiku | ✔ | | |
-| 4.2.t Test: allocating numbers against `team.db` · #24 · Sonnet | ✔ | | |
-| 4.2.i Implement the allocator storage · #25 · Sonnet | ✔ | | |
+| 4.1.t Test: deriving a prefix · #22 · Haiku | | | ✔ |
+| 4.1.i Implement `DerivePrefix` · #23 · Haiku | | | ✔ |
+| 4.2.t Test: allocating numbers against `team.db` · #24 · Sonnet | | | ✔ |
+| 4.2.i Implement the allocator storage · #25 · Sonnet | | | ✔ |
 | **D5. `TaskStore`** | | | |
 | 5.1.t Test: mapping a path to a location · #26 · Haiku | ✔ | | |
 | 5.1.i Implement `TaskLayout` · #27 · Haiku | ✔ | | |
@@ -72,12 +72,12 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 6.6.t Test: renaming a Teammate · #46 · Sonnet | ✔ | | |
 | 6.6.i Implement renaming, and the cascade hook · #47 · Sonnet | ✔ | | |
 | **D7. Views core (pure logic and `ViewStore`)** | | | |
-| 7.1.t Test: View records and their JSON shape · #48 · Haiku | ✔ | | |
-| 7.1.i Implement the View records and `ViewJson` · #49 · Haiku | ✔ | | |
-| 7.2.t Test: `ViewValidator` · #50 · Haiku | ✔ | | |
-| 7.2.i Implement `ViewValidator` · #51 · Haiku | ✔ | | |
-| 7.3.t Test: filtering and search · #52 · Sonnet | ✔ | | |
-| 7.3.i Implement `TaskQuery.Filter` · #53 · Sonnet | ✔ | | |
+| 7.1.t Test: View records and their JSON shape · #48 · Haiku | | | ✔ |
+| 7.1.i Implement the View records and `ViewJson` · #49 · Haiku | | | ✔ |
+| 7.2.t Test: `ViewValidator` · #50 · Haiku | | | ✔ |
+| 7.2.i Implement `ViewValidator` · #51 · Haiku | | | ✔ |
+| 7.3.t Test: filtering and search · #52 · Sonnet | | | ✔ |
+| 7.3.i Implement `TaskQuery.Filter` · #53 · Sonnet | | | ✔ |
 | 7.4.t Test: sorting, group labels and grouping · #54 · Sonnet | ✔ | | |
 | 7.4.i Implement `Sort`, `GroupLabel` and `Group` · #55 · Sonnet | ✔ | | |
 | 7.5.t Test: `TaskQuery.Suggest` · #56 · Haiku | ✔ | | |
