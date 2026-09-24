@@ -116,6 +116,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PersonaEffortStore>();
         services.AddSingleton<TaskIdAllocator>();
 
+        // No interface, same reasoning as AvatarStore/PromptStore above: a second, independently
+        // constructed TaskStore would scan the Tasks folder twice and (once a later task adds one)
+        // run a second FileSystemWatcher over it. TaskEvents and TaskService are registered here too
+        // once the tasks that add them (D5's watcher, D6) land - this line is theirs to extend, not
+        // duplicate.
+        services.AddSingleton<TaskStore>();
+
         // Same instance as PromptStore below, not a second registration - mirrors the
         // PersonaStore/IMentionAliasSource pair above. A second, independently constructed PromptStore
         // would mean a second file handle on prompts.json now and (once T4.1 adds one) a second
