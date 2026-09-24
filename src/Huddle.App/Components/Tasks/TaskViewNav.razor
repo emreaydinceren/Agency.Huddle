@@ -1,0 +1,80 @@
+@*
+    Spec §13.1: the sidebar's list of Views, one MudNavGroup titled "Tasks" between the Teammates
+    MudNavMenu and the settings menu in MainLayout.razor. Copies RoomList.razor's own subscribe/
+    unsubscribe and DispatchAsync shape (§13.11) - ViewStore is a singleton, so an undisposed
+    subscription here would throw on the next publish after this component is torn down.
+*@
+
+@implements IDisposable
+@using Microsoft.Extensions.Options
+@inject ViewStore ViewStore
+@inject IOptions<TeamOptions> Options
+
+@if (this.Options.Value.Tasks.Enabled)
+{
+    <MudNavMenu Class="task-view-nav">
+        <MudNavGroup Title="Tasks" Icon="@Icons.Material.Outlined.TaskAlt" @bind-Expanded="this.expanded">
+            @foreach (TaskView view in this.ViewStore.Views)
+            {
+                <MudNavLink Href="@($"/tasks/{view.Id}")">@view.Name</MudNavLink>
+            }
+            @foreach (InvalidView invalid in this.ViewStore.InvalidViews)
+            {
+                @if (invalid.Id is { } id)
+                {
+                    <MudNavLink Href="@($"/tasks/{id}")" Class="task-view-nav-invalid">
+                        @(invalid.Name ?? id)
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" aria-label="Invalid View" />
+                    </MudNavLink>
+                }
+                else
+                {
+                    <div class="task-view-nav-invalid-item">
+                        <MudText Typo="Typo.body2">@(invalid.Name ?? "Invalid View")</MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Color="Color.Warning" aria-label="Invalid View" />
+                    </div>
+                }
+            }
+            <MudNavLink Href="/tasks/new" Icon="@Icons.Material.Filled.Add">+ New View</MudNavLink>
+        </MudNavGroup>
+    </MudNavMenu>
+}
+
+@code {
+    private bool expanded = true;
+
+    /// <summary>Subscribes to <see cref="ViewStore.ViewsChanged"/> so the nav follows every save, delete or hand edit of <c>views.json</c>.</summary>
+    protected override void OnInitialized()
+    {
+        this.ViewStore.ViewsChanged += this.OnViewsChanged;
+    }
+
+    /// <summary>Unsubscribes from <see cref="ViewStore.ViewsChanged"/>.</summary>
+    public void Dispose()
+    {
+        this.ViewStore.ViewsChanged -= this.OnViewsChanged;
+    }
+
+    private void OnViewsChanged() => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a store event racing component teardown can throw (§13.11).</summary>
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to render.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
+    }
+}
