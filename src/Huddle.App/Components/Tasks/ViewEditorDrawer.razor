@@ -1,0 +1,418 @@
+@*
+    Spec §13.5 items 1-6: the View editor's general sections (Name/Description, List-or-Board and
+    Active-or-Closed, Fields, Filters, Grouping order, Sorting). Items 7-9 (Columns, validation,
+    Delete, MudExitPrompt) are Task 13.2.i's job, and so is hosting this drawer in Tasks.razor
+    (corrections-B5 D13 item 7) - this component is self-contained and testable on its own, driven
+    only by Open and Id.
+
+    A Fields row's MudSwitch and remove button are deliberately different (delivery-manager
+    settled, 2026-09-24): the switch excludes the field from the saved View.Fields but keeps its
+    row - and its position - in the editor, so switching it back on restores the field where it
+    was; the remove button deletes the row outright and returns the field to the + Add field menu.
+    Reordering (drag or the up/down buttons) only ever moves rows, never changes which are shown.
+*@
+
+@using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Acp
+@inject ViewStore ViewStore
+@inject PersonaStore Personas
+@inject TaskStore Store
+@inject IOptions<TeamOptions> Options
+
+<MudDrawer Open="@this.Open" OpenChanged="@this.OpenChanged" Anchor="Anchor.End" Variant="DrawerVariant.Temporary"
+           Width="420px" Class="view-editor-drawer">
+    <MudStack Spacing="3" Class="pa-4">
+        <MudTextField T="string" Label="Name" Value="@this.name" ValueChanged="@this.OnNameChanged" Class="view-editor-name" />
+        <MudTextField T="string" Label="Description" Value="@this.description" ValueChanged="@this.OnDescriptionChanged" Class="view-editor-description" />
+
+        <MudToggleGroup T="ViewKind" Value="this.kind" ValueChanged="this.OnKindChanged"
+                         SelectionMode="SelectionMode.SingleSelection" Class="view-editor-kind">
+            <MudToggleItem Value="ViewKind.List" Text="List" />
+            <MudToggleItem Value="ViewKind.Board" Text="Board" />
+        </MudToggleGroup>
+
+        <MudToggleGroup T="ViewScope" Value="this.scope" ValueChanged="this.OnScopeChanged" Disabled="this.kind == ViewKind.Board"
+                         SelectionMode="SelectionMode.SingleSelection" Class="view-editor-scope">
+            <MudToggleItem Value="ViewScope.Active" Text="Active" />
+            <MudToggleItem Value="ViewScope.Closed" Text="Closed" />
+        </MudToggleGroup>
+
+        <MudText Typo="Typo.subtitle2">Fields shown</MudText>
+        <MudDropContainer T="string" Items="this.FieldKeys()" ItemsSelector="@((_, _) => true)"
+                           ItemDropped="this.OnFieldDropped" Class="view-editor-fields">
+            <ChildContent>
+                <MudDropZone T="string" Identifier="fields" AllowReorder="true" />
+            </ChildContent>
+            <ItemRenderer>
+                <div class="view-editor-field-row">
+                    <MudSwitch T="bool" Value="@this.IsShown(context)" ValueChanged="@(shown => this.SetFieldShown(context, shown))"
+                               Class="@($"view-editor-field-switch-{context}")" />
+                    <MudText>@context</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" aria-label="@($"Move {context} up")"
+                                   Class="@($"view-editor-field-up-{context}")" OnClick="@(() => this.MoveField(context, -1))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" aria-label="@($"Move {context} down")"
+                                   Class="@($"view-editor-field-down-{context}")" OnClick="@(() => this.MoveField(context, 1))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" aria-label="@($"Remove {context}")"
+                                   Class="@($"view-editor-field-remove-{context}")" OnClick="@(() => this.RemoveField(context))" />
+                </div>
+            </ItemRenderer>
+        </MudDropContainer>
+        <MudMenu Label="+ Add field" Class="view-editor-fields-add">
+            @foreach (string key in this.AddableFieldKeys())
+            {
+                <MudMenuItem Class="view-editor-fields-add-option" OnClick="@(() => this.AddField(key))">@key</MudMenuItem>
+            }
+        </MudMenu>
+
+        <MudText Typo="Typo.subtitle2">Filters</MudText>
+        <div class="view-editor-filter-team-row">
+            @foreach ((string team, int index) in this.teamFilter.Select((value, index) => (value, index)))
+            {
+                @if (index > 0)
+                {
+                    <span class="view-editor-filter-team-or">OR</span>
+                }
+                <MudChip T="string" Size="Size.Small" Class="view-editor-filter-team-chip">@team</MudChip>
+            }
+        </div>
+        <MudSelect T="string" Label="Team" MultiSelection="true" SelectedValues="this.teamFilter" SelectedValuesChanged="this.OnTeamFilterChanged"
+                   Class="view-editor-filter-team">
+            @foreach ((string value, string label) in this.TeamFilterOptions())
+            {
+                <MudSelectItem T="string" Value="@value" Class="view-editor-filter-team-option">@label</MudSelectItem>
+            }
+        </MudSelect>
+
+        <div class="view-editor-filter-project-row">
+            @foreach ((string project, int index) in this.projectFilter.Select((value, index) => (value, index)))
+            {
+                @if (index > 0)
+                {
+                    <span class="view-editor-filter-project-or">OR</span>
+                }
+                <MudChip T="string" Size="Size.Small" Class="view-editor-filter-project-chip">@project</MudChip>
+            }
+        </div>
+        <MudSelect T="string" Label="Project" MultiSelection="true" SelectedValues="this.projectFilter" SelectedValuesChanged="this.OnProjectFilterChanged"
+                   Class="view-editor-filter-project">
+            @foreach ((string value, string label) in this.ProjectFilterOptions())
+            {
+                <MudSelectItem T="string" Value="@value" Class="view-editor-filter-project-option">@label</MudSelectItem>
+            }
+        </MudSelect>
+
+        <div class="view-editor-filter-assignee-row">
+            @foreach ((string assignee, int index) in this.assigneeFilter.Select((value, index) => (value, index)))
+            {
+                @if (index > 0)
+                {
+                    <span class="view-editor-filter-assignee-or">OR</span>
+                }
+                <MudChip T="string" Size="Size.Small" Class="view-editor-filter-assignee-chip">@assignee</MudChip>
+            }
+        </div>
+        <MudSelect T="string" Label="Assignee" MultiSelection="true" SelectedValues="this.assigneeFilter" SelectedValuesChanged="this.OnAssigneeFilterChanged"
+                   Class="view-editor-filter-assignee">
+            @foreach ((string value, string label) in this.AssigneeFilterOptions())
+            {
+                <MudSelectItem T="string" Value="@value" Class="view-editor-filter-assignee-option">@label</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudSelect T="TaskState" Label="Status" MultiSelection="true" SelectedValues="this.stateFilter" SelectedValuesChanged="this.OnStateFilterChanged"
+                   Class="view-editor-filter-state">
+            @foreach (TaskState state in TaskStates.All)
+            {
+                <MudSelectItem T="TaskState" Value="@state" Class="view-editor-filter-state-option">@state.ToWire()</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudSelect T="TaskPriority" Label="Priority" MultiSelection="true" SelectedValues="this.priorityFilter" SelectedValuesChanged="this.OnPriorityFilterChanged"
+                   Class="view-editor-filter-priority">
+            @foreach (TaskPriority priority in Enum.GetValues<TaskPriority>())
+            {
+                <MudSelectItem T="TaskPriority" Value="@priority" Class="view-editor-filter-priority-option">@priority.ToWire()</MudSelectItem>
+            }
+        </MudSelect>
+
+        <MudText Typo="Typo.subtitle2">Grouping order</MudText>
+        <MudDropContainer T="TaskGroupField" Items="this.grouping" ItemsSelector="@((_, _) => true)"
+                           ItemDropped="this.OnGroupingDropped" Class="view-editor-grouping">
+            <ChildContent>
+                <MudDropZone T="TaskGroupField" Identifier="grouping" AllowReorder="true" />
+            </ChildContent>
+            <ItemRenderer>
+                <MudChip T="string" Size="Size.Small">@context</MudChip>
+            </ItemRenderer>
+        </MudDropContainer>
+        <MudMenu Label="+ Add grouping" Class="view-editor-grouping-add">
+            @foreach (TaskGroupField field in this.AddableGroupingFields())
+            {
+                <MudMenuItem Class="@($"view-editor-grouping-add-{field.ToString().ToLowerInvariant()}")"
+                             Disabled="@this.IsGroupingFieldDisabled(field)" OnClick="@(() => this.AddGrouping(field))">@field</MudMenuItem>
+            }
+        </MudMenu>
+
+        <MudText Typo="Typo.subtitle2">Sorting</MudText>
+        <MudDropContainer T="SortKey" Items="this.sort" ItemsSelector="@((_, _) => true)"
+                           ItemDropped="this.OnSortDropped" Class="view-editor-sort">
+            <ChildContent>
+                <MudDropZone T="SortKey" Identifier="sort" AllowReorder="true" />
+            </ChildContent>
+            <ItemRenderer>
+                <MudText>@context.Field (@context.Direction)</MudText>
+            </ItemRenderer>
+        </MudDropContainer>
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.Save" Class="view-editor-save">Save View</MudButton>
+    </MudStack>
+</MudDrawer>
+
+@code {
+    /// <summary>Whether the drawer is open.</summary>
+    [Parameter]
+    public bool Open { get; set; }
+
+    /// <summary>Raised when the drawer's own chrome (backdrop, Escape) asks to open or close it.</summary>
+    [Parameter]
+    public EventCallback<bool> OpenChanged { get; set; }
+
+    /// <summary>The id of the View being edited, or <see langword="null"/> to start a new one.</summary>
+    [Parameter]
+    public string? Id { get; set; }
+
+    private string? loadedId;
+    private TaskView loadedView = NewBlankView(string.Empty);
+    private FieldRow[] fieldRows = [];
+    private string name = string.Empty;
+    private string? description;
+    private ViewKind kind = ViewKind.List;
+    private ViewScope scope = ViewScope.Active;
+    private List<string> teamFilter = [];
+    private List<string> projectFilter = [];
+    private List<string> assigneeFilter = [];
+    private List<TaskState> stateFilter = [];
+    private List<TaskPriority> priorityFilter = [];
+    private List<TaskGroupField> grouping = [];
+    private List<SortKey> sort = [];
+
+    /// <summary>Loads the draft for <see cref="Id"/> the first time it is seen.</summary>
+    protected override void OnParametersSet()
+    {
+        if (string.Equals(this.loadedId, this.Id, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.loadedView = this.Id is { } id ? this.ViewStore.Get(id) ?? NewBlankView(id) : NewBlankView(Guid.NewGuid().ToString("N"));
+        this.loadedId = this.Id;
+        this.name = this.loadedView.Name;
+        this.description = this.loadedView.Description;
+        this.kind = this.loadedView.Kind;
+        this.scope = this.loadedView.Scope;
+        this.fieldRows = [.. this.loadedView.Fields.Select(key => new FieldRow(key, Shown: true))];
+        this.teamFilter = [.. this.loadedView.Filter.Teams];
+        this.projectFilter = [.. this.loadedView.Filter.Projects.Select(ProjectKey)];
+        this.assigneeFilter = [.. this.loadedView.Filter.Assignees];
+        this.stateFilter = [.. this.loadedView.Filter.States];
+        this.priorityFilter = [.. this.loadedView.Filter.Priorities];
+        this.grouping = [.. this.loadedView.Grouping];
+        this.sort = [.. this.loadedView.Sort];
+    }
+
+    private void OnNameChanged(string value) => this.name = value;
+
+    private void OnDescriptionChanged(string value) => this.description = value;
+
+    private void OnKindChanged(ViewKind value) => this.kind = value;
+
+    private void OnScopeChanged(ViewScope value) => this.scope = value;
+
+    private void OnTeamFilterChanged(IEnumerable<string> values) => this.teamFilter = [.. values];
+
+    private void OnProjectFilterChanged(IEnumerable<string> values) => this.projectFilter = [.. values];
+
+    private void OnAssigneeFilterChanged(IEnumerable<string> values) => this.assigneeFilter = [.. values];
+
+    private void OnStateFilterChanged(IEnumerable<TaskState> values) => this.stateFilter = [.. values];
+
+    private void OnPriorityFilterChanged(IEnumerable<TaskPriority> values) => this.priorityFilter = [.. values];
+
+    /// <summary>The Fields rows' keys, in their current order (shown and switched-off alike).</summary>
+    private List<string> FieldKeys() => [.. this.fieldRows.Select(row => row.Key)];
+
+    private bool IsShown(string key) => this.fieldRows.First(row => string.Equals(row.Key, key, StringComparison.Ordinal)).Shown;
+
+    private void SetFieldShown(string key, bool shown) =>
+        this.fieldRows = [.. this.fieldRows.Select(row => string.Equals(row.Key, key, StringComparison.Ordinal) ? row with { Shown = shown } : row)];
+
+    private void RemoveField(string key) =>
+        this.fieldRows = [.. this.fieldRows.Where(row => !string.Equals(row.Key, key, StringComparison.Ordinal))];
+
+    private void AddField(string key) => this.fieldRows = [.. this.fieldRows, new FieldRow(key, Shown: true)];
+
+    private void MoveField(string key, int delta)
+    {
+        List<FieldRow> rows = [.. this.fieldRows];
+        int index = rows.FindIndex(row => string.Equals(row.Key, key, StringComparison.Ordinal));
+        int newIndex = index + delta;
+        if (index < 0 || newIndex < 0 || newIndex >= rows.Count)
+        {
+            return;
+        }
+
+        (rows[index], rows[newIndex]) = (rows[newIndex], rows[index]);
+        this.fieldRows = [.. rows];
+    }
+
+    private void OnFieldDropped(MudItemDropInfo<string> info)
+    {
+        List<FieldRow> rows = [.. this.fieldRows];
+        int oldIndex = rows.FindIndex(row => string.Equals(row.Key, info.Item, StringComparison.Ordinal));
+        if (oldIndex < 0)
+        {
+            return;
+        }
+
+        FieldRow row = rows[oldIndex];
+        rows.RemoveAt(oldIndex);
+        int newIndex = Math.Min(info.IndexInZone, rows.Count);
+        rows.Insert(newIndex, row);
+        this.fieldRows = [.. rows];
+    }
+
+    /// <summary>Every known field key not currently a row, offered by the + Add field menu.</summary>
+    private List<string> AddableFieldKeys() =>
+        [.. ViewFieldKeys.All.Where(key => key is not ("id" or "title") && !this.fieldRows.Any(row => string.Equals(row.Key, key, StringComparison.Ordinal)))];
+
+    /// <summary>The Team names <see cref="PersonaStore"/> and <see cref="TaskStore"/> currently know, deduplicated.</summary>
+    private List<string> KnownTeams() =>
+        [.. this.Personas.Teams.Concat(this.Store.Teams.Select(team => team.Name)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(team => team, StringComparer.Ordinal)];
+
+    private List<(string Value, string Label)> TeamFilterOptions() => WithMissing(this.KnownTeams(), this.teamFilter);
+
+    /// <summary>Team/Project pairs, narrowed to <see cref="teamFilter"/> when it names one or more Teams.</summary>
+    private List<(string Value, string Label)> ProjectFilterOptions()
+    {
+        List<(string Value, string Label)> options = [];
+        foreach (TeamFolder team in this.Store.Teams)
+        {
+            if (this.teamFilter.Count > 0 && !this.teamFilter.Contains(team.Name, StringComparer.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            foreach (string project in team.Projects)
+            {
+                options.Add(($"{team.Name}/{project}", $"{team.Name} / {project}"));
+            }
+        }
+
+        return WithMissing([.. options.Select(o => o.Value)], this.projectFilter, options);
+    }
+
+    /// <summary>Me, Unassigned, then every Persona (Spec §13.5 item 4).</summary>
+    private List<(string Value, string Label)> AssigneeFilterOptions()
+    {
+        List<(string, string)> known = [("@me", "Me"), ("@unassigned", "Unassigned")];
+        known.AddRange(this.Personas.Entries.Select(entry => (entry.Name, entry.Name)));
+        return WithMissing([.. known.Select(o => o.Item1)], this.assigneeFilter, known);
+    }
+
+    /// <summary>Appends "{value} (missing)" for a selected value <paramref name="known"/> doesn't name, so it stays visible and selected.</summary>
+    private static List<(string Value, string Label)> WithMissing(List<string> known, List<string> selected, List<(string Value, string Label)>? labelled = null)
+    {
+        List<(string, string)> options = labelled is null ? [.. known.Select(value => (value, value))] : [.. labelled];
+        foreach (string missing in selected.Where(value => !known.Contains(value, StringComparer.OrdinalIgnoreCase)))
+        {
+            options.Add((missing, $"{missing} (missing)"));
+        }
+
+        return options;
+    }
+
+    private static string ProjectKey(ProjectRef project) => project.Project is { } name ? $"{project.Team}/{name}" : project.Team;
+
+    private static ProjectRef ParseProjectKey(string key)
+    {
+        int slash = key.IndexOf('/', StringComparison.Ordinal);
+        return slash < 0 ? new ProjectRef(key, null) : new ProjectRef(key[..slash], key[(slash + 1)..]);
+    }
+
+    private void OnGroupingDropped(MudItemDropInfo<TaskGroupField> info)
+    {
+        List<TaskGroupField> items = [.. this.grouping];
+        int oldIndex = items.IndexOf(info.Item);
+        if (oldIndex < 0)
+        {
+            return;
+        }
+
+        items.RemoveAt(oldIndex);
+        int newIndex = Math.Min(info.IndexInZone, items.Count);
+        items.Insert(newIndex, info.Item);
+        this.grouping = items;
+    }
+
+    private List<TaskGroupField> AddableGroupingFields() => [.. Enum.GetValues<TaskGroupField>().Where(field => !this.grouping.Contains(field))];
+
+    private bool IsGroupingFieldDisabled(TaskGroupField field) => field == TaskGroupField.State && this.kind == ViewKind.Board;
+
+    private void AddGrouping(TaskGroupField field)
+    {
+        if (this.IsGroupingFieldDisabled(field))
+        {
+            return;
+        }
+
+        this.grouping = [.. this.grouping, field];
+    }
+
+    private void OnSortDropped(MudItemDropInfo<SortKey> info)
+    {
+        if (info.Item is not { } dropped)
+        {
+            return;
+        }
+
+        List<SortKey> items = [.. this.sort];
+        int oldIndex = items.IndexOf(dropped);
+        if (oldIndex < 0)
+        {
+            return;
+        }
+
+        items.RemoveAt(oldIndex);
+        int newIndex = Math.Min(info.IndexInZone, items.Count);
+        items.Insert(newIndex, dropped);
+        this.sort = items;
+    }
+
+    /// <summary>Builds the View to save: the loaded View's untouched fields (Id, Columns, BuiltIn) with every edited section overlaid.</summary>
+    private TaskView BuildView() => this.loadedView with
+    {
+        Name = this.name,
+        Description = this.description,
+        Kind = this.kind,
+        Scope = this.scope,
+        Fields = [.. this.fieldRows.Where(row => row.Shown).Select(row => row.Key)],
+        Filter = new TaskFilter
+        {
+            Teams = [.. this.teamFilter],
+            Projects = [.. this.projectFilter.Select(ParseProjectKey)],
+            Assignees = [.. this.assigneeFilter],
+            States = [.. this.stateFilter],
+            Priorities = [.. this.priorityFilter],
+        },
+        Grouping = [.. this.grouping],
+        Sort = [.. this.sort],
+    };
+
+    /// <summary>Saves the draft. Validation display, refusal handling and Delete are Task 13.2.i's job.</summary>
+    private void Save() => _ = this.ViewStore.Save(this.BuildView());
+
+    private static TaskView NewBlankView(string id) => new() { Id = id, Name = string.Empty, Kind = ViewKind.List };
+
+    /// <summary>One row of the Fields section: a field key and whether it is currently shown.</summary>
+    private sealed record FieldRow(string Key, bool Shown);
+}
