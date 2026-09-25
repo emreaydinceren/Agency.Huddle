@@ -63,7 +63,7 @@ public sealed class GetTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.StartsWith(TaskToolText.Line(task), result, StringComparison.Ordinal);
+        Assert.Equal(TaskToolText.Line(task), result.Split('\n')[0]);
     }
 
     /// <summary>A Closed Task's line carries the "(closed)" suffix, exactly as <see cref="TaskToolText.Line"/> renders it.</summary>
@@ -81,8 +81,8 @@ public sealed class GetTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("(closed)", result, StringComparison.Ordinal);
-        Assert.StartsWith(TaskToolText.Line(task), result, StringComparison.Ordinal);
+        string firstLine = result.Split('\n')[0];
+        Assert.Equal(TaskToolText.Line(task), firstLine);
     }
 
     /// <summary>A non-empty field, such as tags, gets its own <c>key: value</c> line; an empty one, such as an unset parent, gets none.</summary>
@@ -100,8 +100,9 @@ public sealed class GetTaskToolTests
         JsonObject arguments = new() { ["taskId"] = "PLAT-0001" };
 
         string result = await tool.InvokeAsync(arguments, ct);
+        string[] lines = result.Split('\n');
 
-        Assert.Contains("tags: urgent", result, StringComparison.Ordinal);
+        Assert.Contains("tags: urgent", lines);
         Assert.DoesNotContain("parent:", result, StringComparison.Ordinal);
     }
 
@@ -122,7 +123,7 @@ public sealed class GetTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("blocked_by: PLAT-0011 (Done), PLAT-0030 (In Progress)", result, StringComparison.Ordinal);
+        Assert.Contains("blocked_by: PLAT-0011 (Done), PLAT-0030 (In Progress)", result.Split('\n'));
     }
 
     /// <summary>The description follows a blank line, after the id line and any <c>key: value</c> lines.</summary>
@@ -139,8 +140,11 @@ public sealed class GetTaskToolTests
         JsonObject arguments = new() { ["taskId"] = "PLAT-0001" };
 
         string result = await tool.InvokeAsync(arguments, ct);
+        string[] lines = result.Split('\n');
+        int descriptionIndex = Array.IndexOf(lines, "Some details.");
 
-        Assert.Contains("\n\nSome details.", result, StringComparison.Ordinal);
+        Assert.True(descriptionIndex > 0);
+        Assert.Equal("", lines[descriptionIndex - 1]);
     }
 
     /// <summary>Without <c>include_change_log</c>, the Change log section is omitted entirely.</summary>
@@ -178,21 +182,16 @@ public sealed class GetTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("Change log:", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("change-001", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("change-005", result, StringComparison.Ordinal);
-        Assert.Contains("change-006", result, StringComparison.Ordinal);
-        Assert.Contains("change-055", result, StringComparison.Ordinal);
-
-        int occurrences = 0;
-        int index = 0;
-        while ((index = result.IndexOf("change-", index, StringComparison.Ordinal)) >= 0)
+        List<string> expectedLines = [];
+        for (int number = 6; number <= 55; number++)
         {
-            occurrences++;
-            index += "change-".Length;
+            string summary = string.Create(CultureInfo.InvariantCulture, $"change-{number:D3}");
+            DateTimeOffset at = start.AddMinutes(number);
+            expectedLines.Add(string.Create(CultureInfo.InvariantCulture, $"{at:yyyy-MM-dd HH:mm} Nova: {summary}"));
         }
 
-        Assert.Equal(50, occurrences);
+        string expectedTail = "\n\nChange log:\n" + string.Join('\n', expectedLines);
+        Assert.Equal(expectedTail, result[^expectedTail.Length..]);
     }
 
     /// <summary>The Change log block's exact shape (Spec §11.3): a blank line, then "Change log:", then one line per entry via the §11.3 entry format, oldest first.</summary>
@@ -216,7 +215,7 @@ public sealed class GetTaskToolTests
             "\n\nChange log:\n" +
             "2026-09-01 09:00 Nova: created\n" +
             "2026-09-02 10:30 Kai: status: To Do -> In Progress";
-        Assert.EndsWith(expectedTail, result, StringComparison.Ordinal);
+        Assert.Equal(expectedTail, result[^expectedTail.Length..]);
     }
 
     /// <summary>An <c>include_change_log</c> given as text rather than a boolean is refused, naming the argument, rather than thrown.</summary>
@@ -231,7 +230,7 @@ public sealed class GetTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("include_change_log", result, StringComparison.Ordinal);
+        Assert.Equal("'include_change_log' must be true or false.", result);
     }
 
     /// <summary>The Creator field, when set, gets its own <c>creator: value</c> line.</summary>
@@ -246,7 +245,7 @@ public sealed class GetTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("creator: Nova", result, StringComparison.Ordinal);
+        Assert.Contains("creator: Nova", result.Split('\n'));
     }
 
     /// <summary>A Parent is shown as a reference with its own current status, exactly as <c>blocked_by</c> is (Spec §11.3).</summary>
@@ -265,7 +264,7 @@ public sealed class GetTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("parent: PLAT-0010 (Done)", result, StringComparison.Ordinal);
+        Assert.Contains("parent: PLAT-0010 (Done)", result.Split('\n'));
     }
 
     /// <summary>A DuplicateOf reference is shown with its own current status, exactly as <c>blocked_by</c> is (Spec §11.3).</summary>
@@ -285,7 +284,7 @@ public sealed class GetTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("duplicate_of: PLAT-0020 (Rejected)", result, StringComparison.Ordinal);
+        Assert.Contains("duplicate_of: PLAT-0020 (Rejected)", result.Split('\n'));
     }
 
     /// <summary><c>start_date</c> and <c>due_date</c> get their own <c>key: value</c> lines, in <c>yyyy-MM-dd</c>.</summary>
@@ -303,9 +302,10 @@ public sealed class GetTaskToolTests
         JsonObject arguments = new() { ["taskId"] = "PLAT-0001" };
 
         string result = await tool.InvokeAsync(arguments, ct);
+        string[] lines = result.Split('\n');
 
-        Assert.Contains("start_date: 2026-01-15", result, StringComparison.Ordinal);
-        Assert.Contains("due_date: 2026-02-01", result, StringComparison.Ordinal);
+        Assert.Contains("start_date: 2026-01-15", lines);
+        Assert.Contains("due_date: 2026-02-01", lines);
     }
 
     /// <summary>An empty field, such as unset tags, produces no line at all.</summary>

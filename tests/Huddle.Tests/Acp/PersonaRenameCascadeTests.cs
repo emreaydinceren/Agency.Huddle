@@ -497,8 +497,7 @@ public sealed class PersonaRenameCascadeTests
         harness.PersonaStore.Update("nova", PersonaText("novaprime", "You help."), model: null, effort: null);
 
         TaskView updated = harness.ViewStore.Get("custom-1") ?? throw new InvalidOperationException("fixture view missing");
-        Assert.Contains("novaprime", updated.Filter.Assignees);
-        Assert.DoesNotContain("nova", updated.Filter.Assignees);
+        Assert.Equal(["novaprime"], updated.Filter.Assignees);
     }
 
     /// <summary>Builds a real <see cref="ITeamDirectory"/>, <see cref="PersonaStore"/>, <see cref="AvatarStore"/> and started <see cref="PersonaRenameCascade"/> over <paramref name="dir"/>, seeding the Human.</summary>

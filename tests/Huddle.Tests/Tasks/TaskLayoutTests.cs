@@ -84,8 +84,7 @@ public sealed class TaskLayoutTests
 
         Assert.False(result);
         Assert.Null(location);
-        Assert.NotNull(error);
-        Assert.Contains("not inside a Team folder", error);
+        Assert.Equal("is not inside a Team folder", error);
     }
 
     /// <summary>A path nested too deeply (more than Team/Project/_closed) is rejected.</summary>
@@ -99,8 +98,7 @@ public sealed class TaskLayoutTests
 
         Assert.False(result);
         Assert.Null(location);
-        Assert.NotNull(error);
-        Assert.Contains("nested too deeply", error);
+        Assert.Equal("is nested too deeply; Tasks live at Team/[Project/][_closed/]", error);
     }
 
     /// <summary>A path with _closed/_closed is nested too deeply and is rejected.</summary>
@@ -114,8 +112,7 @@ public sealed class TaskLayoutTests
 
         Assert.False(result);
         Assert.Null(location);
-        Assert.NotNull(error);
-        Assert.Contains("nested too deeply", error);
+        Assert.Equal("is nested too deeply; Tasks live at Team/[Project/][_closed/]", error);
     }
 
     /// <summary>A path under a reserved underscore folder like _drafts is ignored and returns false with no error.</summary>
@@ -185,8 +182,7 @@ public sealed class TaskLayoutTests
 
         Assert.False(result);
         Assert.Null(location);
-        Assert.NotNull(error);
-        Assert.Contains("nested too deeply", error);
+        Assert.Equal("is nested too deeply; Tasks live at Team/[Project/][_closed/]", error);
     }
 
     /// <summary>PathFor generates the correct file path for a task location with no Project and not Closed.</summary>

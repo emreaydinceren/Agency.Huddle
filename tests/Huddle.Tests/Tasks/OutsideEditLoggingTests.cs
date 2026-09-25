@@ -77,8 +77,7 @@ public sealed class OutsideEditLoggingTests
         string finalText = File.ReadAllText(path);
         int headingIndex = HandEditedText.IndexOf(TaskFileFormat.ChangeLogHeading, StringComparison.Ordinal);
         string expectedUnchangedHead = HandEditedText[..headingIndex];
-        Assert.StartsWith(expectedUnchangedHead, finalText, StringComparison.Ordinal);
-        Assert.Contains("owner: Alice", finalText, StringComparison.Ordinal);
+        Assert.Equal(expectedUnchangedHead, finalText[..headingIndex]);
 
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem? reparsed = store.Get(id);
@@ -151,7 +150,8 @@ public sealed class OutsideEditLoggingTests
 
         Assert.Equal(InvalidText, File.ReadAllText(path));
         Assert.Equal(0, raiseCount);
-        Assert.Contains(store.RejectedFiles, rejected => string.Equals(rejected.Path, path, StringComparison.Ordinal));
+        RejectedTaskFile rejected = Assert.Single(store.RejectedFiles);
+        Assert.Equal(path, rejected.Path);
     }
 
     /// <summary>A file that appears where none existed before (Before is null) gets the bare summary "edited outside Huddle", with no diff suffix (Settled corrections-B2 D6 item 8).</summary>

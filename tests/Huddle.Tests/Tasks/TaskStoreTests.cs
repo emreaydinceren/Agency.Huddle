@@ -46,7 +46,7 @@ public sealed class TaskStoreTests
         Assert.Empty(store.All);
         RejectedTaskFile rejected = Assert.Single(store.RejectedFiles);
         Assert.Equal(path, rejected.Path);
-        Assert.Contains("not inside a Team folder", rejected.Reason, StringComparison.Ordinal);
+        Assert.Equal("is not inside a Team folder", rejected.Reason);
     }
 
     /// <summary>Two files that parse to the same id are both rejected, each naming the other's path.</summary>
@@ -65,10 +65,8 @@ public sealed class TaskStoreTests
         Assert.Equal(2, store.RejectedFiles.Count);
         RejectedTaskFile firstRejection = Assert.Single(store.RejectedFiles, file => string.Equals(file.Path, firstPath, StringComparison.Ordinal));
         RejectedTaskFile secondRejection = Assert.Single(store.RejectedFiles, file => string.Equals(file.Path, secondPath, StringComparison.Ordinal));
-        Assert.Contains("duplicate id PLAT-0001", firstRejection.Reason, StringComparison.Ordinal);
-        Assert.Contains(secondPath, firstRejection.Reason, StringComparison.Ordinal);
-        Assert.Contains("duplicate id PLAT-0001", secondRejection.Reason, StringComparison.Ordinal);
-        Assert.Contains(firstPath, secondRejection.Reason, StringComparison.Ordinal);
+        Assert.Equal($"duplicate id PLAT-0001, also in {secondPath}", firstRejection.Reason);
+        Assert.Equal($"duplicate id PLAT-0001, also in {firstPath}", secondRejection.Reason);
     }
 
     /// <summary>A file under a reserved underscore folder is ignored: it is neither indexed nor rejected.</summary>
@@ -227,11 +225,15 @@ public sealed class TaskStoreTests
 
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
+        string expectedTasksRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Tasks.Dir));
+        string expectedTeamsRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Acp.TeamsDir));
+
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => new TaskStore(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance));
 
-        Assert.Contains("Tasks", exception.Message, StringComparison.Ordinal);
-        Assert.Contains("Teams", exception.Message, StringComparison.Ordinal);
+        Assert.Equal(
+            $"Team:Tasks:Dir ('{expectedTasksRoot}') must not equal or nest with Team:Acp:TeamsDir ('{expectedTeamsRoot}').",
+            exception.Message);
     }
 
     /// <summary>
@@ -266,7 +268,7 @@ public sealed class TaskStoreTests
         Assert.NotNull(store.Get(keptId));
         RejectedTaskFile rejected = Assert.Single(store.RejectedFiles);
         Assert.Equal(secondPath, rejected.Path);
-        Assert.Contains("Platform", rejected.Reason, StringComparison.Ordinal);
+        Assert.Equal("Team folder 'platform' duplicates 'Platform' (case-insensitive); its files are rejected.", rejected.Reason);
     }
 
     /// <summary>
@@ -442,8 +444,7 @@ public sealed class TaskStoreTests
         IOException exception = Assert.Throws<IOException>(() => store.Move(original, original.Version, closedLocation, text));
 
         string targetDir = Path.Combine(root, "Platform", TaskLayout.ClosedFolder);
-        Assert.Contains("A file named PLAT-0001.md already exists in", exception.Message, StringComparison.Ordinal);
-        Assert.Contains(targetDir, exception.Message, StringComparison.Ordinal);
+        Assert.Equal($"A file named PLAT-0001.md already exists in {targetDir}.", exception.Message);
         Assert.True(File.Exists(sourcePath));
     }
 
@@ -630,7 +631,6 @@ public sealed class TaskStoreTests
         string? text = store.ReadText(id);
 
         Assert.Equal(File.ReadAllText(path), text);
-        Assert.Contains("read me", text, StringComparison.Ordinal);
     }
 
     /// <summary><see cref="TaskStore.ReadText"/> returns null, rather than throwing, for an id no file carries.</summary>

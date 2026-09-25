@@ -240,6 +240,8 @@ public sealed class GetHelpToolTests
 
         var tasksText = PromptCatalog.Get("getHelp.tasks").Default;
         var budgetText = PromptCatalog.Get("getHelp.budget").Default;
+        // contains-ok: help is the whole composed help text with every other tool's section too;
+        // this test's intent is only that the Tasks section is included, and where.
         Assert.Contains(tasksText, help, StringComparison.Ordinal);
         Assert.True(
             help.IndexOf(budgetText, StringComparison.Ordinal) < help.IndexOf(tasksText, StringComparison.Ordinal),

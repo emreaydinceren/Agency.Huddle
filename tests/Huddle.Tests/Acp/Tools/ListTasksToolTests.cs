@@ -77,8 +77,7 @@ public sealed class ListTasksToolTests
 
         string result = await tool.InvokeAsync(new JsonObject { ["team"] = "Platform", ["project"] = "Auth v2" }, ct);
 
-        Assert.Contains("PLAT-0001", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("PLAT-0002", result, StringComparison.Ordinal);
+        Assert.Equal(TaskToolText.Line(harness.Store.All.Single(t => t.Id.ToString() == "PLAT-0001")), result);
     }
 
     /// <summary>A <c>project</c> argument with no <c>team</c> is refused (corrections-B4 D10 item 3), before any query runs.</summary>
@@ -107,8 +106,7 @@ public sealed class ListTasksToolTests
 
         string result = await tool.InvokeAsync(new JsonObject { ["assignee"] = "me" }, ct);
 
-        Assert.Contains("PLAT-0001", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("PLAT-0002", result, StringComparison.Ordinal);
+        Assert.Equal(TaskToolText.Line(harness.Store.All.Single(t => t.Id.ToString() == "PLAT-0001")), result);
     }
 
     /// <summary>An unknown caller id used with <c>assignee: "me"</c> is refused, and the raw id is never used as a Name (corrections-B4 D10 item 2).</summary>
@@ -137,8 +135,7 @@ public sealed class ListTasksToolTests
 
         string result = await tool.InvokeAsync(new JsonObject { ["assignee"] = "unassigned" }, ct);
 
-        Assert.Contains("PLAT-0001", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("PLAT-0002", result, StringComparison.Ordinal);
+        Assert.Equal(TaskToolText.Line(harness.Store.All.Single(t => t.Id.ToString() == "PLAT-0001")), result);
     }
 
     /// <summary>An <c>assignee</c> value that is a Persona Alias resolves to that Persona's Name (corrections-B4 D10 item 3: <c>PersonaStore</c> added to the ctor for aliases).</summary>
@@ -155,8 +152,7 @@ public sealed class ListTasksToolTests
 
         string result = await tool.InvokeAsync(new JsonObject { ["assignee"] = "R" }, ct);
 
-        Assert.Contains("PLAT-0001", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("PLAT-0002", result, StringComparison.Ordinal);
+        Assert.Equal(TaskToolText.Line(harness.Store.All.Single(t => t.Id.ToString() == "PLAT-0001")), result);
     }
 
     /// <summary>An <c>assignee</c> value that is already a plain Name matches directly.</summary>
@@ -172,8 +168,7 @@ public sealed class ListTasksToolTests
 
         string result = await tool.InvokeAsync(new JsonObject { ["assignee"] = "Kai" }, ct);
 
-        Assert.Contains("PLAT-0001", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("PLAT-0002", result, StringComparison.Ordinal);
+        Assert.Equal(TaskToolText.Line(harness.Store.All.Single(t => t.Id.ToString() == "PLAT-0001")), result);
     }
 
     /// <summary>Filtering by a single <c>status</c> value returns only Tasks in that state.</summary>
@@ -189,8 +184,7 @@ public sealed class ListTasksToolTests
 
         string result = await tool.InvokeAsync(new JsonObject { ["status"] = new JsonArray { "In Progress" } }, ct);
 
-        Assert.Contains("PLAT-0001", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("PLAT-0002", result, StringComparison.Ordinal);
+        Assert.Equal(TaskToolText.Line(harness.Store.All.Single(t => t.Id.ToString() == "PLAT-0001")), result);
     }
 
     /// <summary>Multiple <c>status</c> values are OR'd (§12.5: values within one dimension are OR'd).</summary>
@@ -207,9 +201,11 @@ public sealed class ListTasksToolTests
 
         string result = await tool.InvokeAsync(new JsonObject { ["status"] = new JsonArray { "To Do", "In Progress" } }, ct);
 
-        Assert.Contains("PLAT-0001", result, StringComparison.Ordinal);
-        Assert.Contains("PLAT-0002", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("PLAT-0003", result, StringComparison.Ordinal);
+        string expected = string.Join(
+            '\n',
+            TaskToolText.Line(harness.Store.All.Single(t => t.Id.ToString() == "PLAT-0001")),
+            TaskToolText.Line(harness.Store.All.Single(t => t.Id.ToString() == "PLAT-0002")));
+        Assert.Equal(expected, result);
     }
 
     /// <summary>A <c>status</c> value that isn't a known wire name is refused, naming the argument, never thrown.</summary>
@@ -238,8 +234,7 @@ public sealed class ListTasksToolTests
 
         string result = await tool.InvokeAsync(new JsonObject { ["priority"] = new JsonArray { "Urgent" } }, ct);
 
-        Assert.Contains("PLAT-0001", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("PLAT-0002", result, StringComparison.Ordinal);
+        Assert.Equal(TaskToolText.Line(harness.Store.All.Single(t => t.Id.ToString() == "PLAT-0001")), result);
     }
 
     /// <summary>A <c>priority</c> value that isn't a known wire name is refused, naming the argument, never thrown.</summary>
@@ -268,8 +263,7 @@ public sealed class ListTasksToolTests
 
         string result = await tool.InvokeAsync([], ct);
 
-        Assert.Contains("PLAT-0001", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("PLAT-0002", result, StringComparison.Ordinal);
+        Assert.Equal(TaskToolText.Line(harness.Store.All.Single(t => t.Id.ToString() == "PLAT-0001")), result);
     }
 
     /// <summary><c>scope: "closed"</c> returns only Closed Tasks, and excludes Active ones.</summary>
@@ -285,8 +279,7 @@ public sealed class ListTasksToolTests
 
         string result = await tool.InvokeAsync(new JsonObject { ["scope"] = "closed" }, ct);
 
-        Assert.Contains("PLAT-0002", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("PLAT-0001", result, StringComparison.Ordinal);
+        Assert.Equal(TaskToolText.Line(harness.Store.All.Single(t => t.Id.ToString() == "PLAT-0002")), result);
     }
 
     /// <summary>A <c>scope</c> value that is neither "active" nor "closed" is refused, naming the argument, never thrown.</summary>
@@ -315,8 +308,7 @@ public sealed class ListTasksToolTests
 
         string result = await tool.InvokeAsync(new JsonObject { ["text"] = "saml" }, ct);
 
-        Assert.Contains("PLAT-0001", result, StringComparison.Ordinal);
-        Assert.DoesNotContain("PLAT-0002", result, StringComparison.Ordinal);
+        Assert.Equal(TaskToolText.Line(harness.Store.All.Single(t => t.Id.ToString() == "PLAT-0001")), result);
     }
 
     /// <summary>When results exceed <c>limit</c>, the list is cut off and ends with the §11.4 trailer line naming the shown and total counts.</summary>
@@ -333,7 +325,7 @@ public sealed class ListTasksToolTests
 
         string result = await tool.InvokeAsync(new JsonObject { ["limit"] = 2 }, ct);
 
-        Assert.Contains("Showing 2 of 3; narrow the filters or raise limit.", result, StringComparison.Ordinal);
+        Assert.Equal("Showing 2 of 3; narrow the filters or raise limit.", result.Split('\n')[^1]);
     }
 
     /// <summary>With <c>limit</c> omitted, the default of 50 applies: a 51st Task is cut off with the trailer, proving the default rather than merely "no limit".</summary>
@@ -353,7 +345,7 @@ public sealed class ListTasksToolTests
 
         string result = await tool.InvokeAsync([], ct);
 
-        Assert.Contains("Showing 50 of 51; narrow the filters or raise limit.", result, StringComparison.Ordinal);
+        Assert.Equal("Showing 50 of 51; narrow the filters or raise limit.", result.Split('\n')[^1]);
     }
 
     /// <summary>A <c>limit</c> of 0 is out of the 1-200 range and is refused (§11.4).</summary>

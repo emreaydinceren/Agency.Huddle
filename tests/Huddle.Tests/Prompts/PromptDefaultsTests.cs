@@ -63,19 +63,8 @@ public sealed class PromptDefaultsTests
 
         var prompt = SystemPromptComposer.Compose(persona, new FakePromptSource(), "mcp__team__get_help", ToolNames);
 
-        Assert.Contains("mcp__team__get_help", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__list_agents", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__create_room", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__invite_agent", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__post_message", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__follow_room", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__unfollow_room", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__create_task", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__get_task", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__list_tasks", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__update_task", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__close_task", prompt, StringComparison.Ordinal);
-        Assert.Contains("mcp__team__reopen_task", prompt, StringComparison.Ordinal);
+        // contains-ok: prompt is the whole composed system prompt; checking each of ToolNames appears is this test's whole intent.
+        Assert.All(ToolNames, name => Assert.Contains(name, prompt, StringComparison.Ordinal));
     }
 
     /// <summary>

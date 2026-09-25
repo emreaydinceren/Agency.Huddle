@@ -498,9 +498,11 @@ public sealed class TaskTriggerServiceTests
         await harness.Trigger.WhenIdleAsync();
 
         MessagePostedEvent post = Assert.Single(harness.Posts);
-        Assert.StartsWith("@Nova Task PLAT-0001 \"Fix login\" (In Progress, Platform) was changed by You:", post.Message.Text);
-        Assert.Contains("- Status: To Do → In Progress", post.Message.Text);
-        Assert.Contains("Call get_task with taskId PLAT-0001 for the full task.", post.Message.Text);
+        Assert.Equal(
+            "@Nova Task PLAT-0001 \"Fix login\" (In Progress, Platform) was changed by You:\n" +
+            "- Status: To Do → In Progress\n" +
+            "Call get_task with taskId PLAT-0001 for the full task.",
+            post.Message.Text);
         User mentioned = Assert.Single(post.Mentions);
         Assert.Equal(cast.Nova.Id, mentioned.Id);
     }
@@ -595,8 +597,11 @@ public sealed class TaskTriggerServiceTests
         await harness.Trigger.WhenIdleAsync();
 
         MessagePostedEvent post = Assert.Single(harness.Posts);
-        Assert.Contains("Pair with " + NeutralisedAt + "Kai", post.Message.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("@Kai", post.Message.Text, StringComparison.Ordinal);
+        Assert.Equal(
+            "@Nova Task PLAT-0001 \"Pair with " + NeutralisedAt + "Kai\" (To Do, Platform) was changed by You:\n" +
+            "- Status: To Do → In Progress\n" +
+            "Call get_task with taskId PLAT-0001 for the full task.",
+            post.Message.Text);
         User mentioned = Assert.Single(post.Mentions);
         Assert.Equal(cast.Nova.Id, mentioned.Id);
     }
@@ -616,8 +621,11 @@ public sealed class TaskTriggerServiceTests
         await harness.Trigger.WhenIdleAsync();
 
         MessagePostedEvent post = Assert.Single(harness.Posts);
-        Assert.Contains("- Description: asked " + NeutralisedAt + "Kai to review", post.Message.Text, StringComparison.Ordinal);
-        Assert.DoesNotContain("@Kai", post.Message.Text, StringComparison.Ordinal);
+        Assert.Equal(
+            "@Nova Task PLAT-0001 \"T\" (To Do, Platform) was changed by You:\n" +
+            "- Description: asked " + NeutralisedAt + "Kai to review\n" +
+            "Call get_task with taskId PLAT-0001 for the full task.",
+            post.Message.Text);
         User mentioned = Assert.Single(post.Mentions);
         Assert.Equal(cast.Nova.Id, mentioned.Id);
     }
@@ -643,7 +651,8 @@ public sealed class TaskTriggerServiceTests
 
         MessagePostedEvent post = Assert.Single(harness.Posts);
         Assert.Equal("PLAT-0002", post.Message.Text);
-        Assert.Contains(harness.Logger.Entries, e => e.Message.Contains("PLAT-0001", StringComparison.Ordinal));
+        (LogLevel Level, string Message, Exception? Exception) logged = Assert.Single(harness.Logger.Entries, e => e.Level == LogLevel.Information);
+        Assert.Equal("Not waking anyone for Task PLAT-0001: it no longer exists.", logged.Message);
     }
 
     /// <summary>Spec §10.2 guard 4, applied when the batch fires: the assignee's own change posts nothing, while another Task's change in the same window does.</summary>

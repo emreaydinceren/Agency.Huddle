@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 
@@ -79,8 +80,10 @@ public sealed class ViewJsonTests
 
         string json = JsonSerializer.Serialize(view, ViewJson.Options);
 
-        Assert.Contains("\"kind\": \"board\"", json, StringComparison.Ordinal);
-        Assert.Contains("\"direction\": \"descending\"", json, StringComparison.Ordinal);
+        JsonNode? root = JsonNode.Parse(json);
+        Assert.NotNull(root);
+        Assert.Equal("board", root["kind"]?.GetValue<string>());
+        Assert.Equal("descending", root["sort"]?[0]?["direction"]?.GetValue<string>());
     }
 
     /// <summary>Task states serialise as their wire names, not a camelCase enum identifier.</summary>
@@ -97,7 +100,9 @@ public sealed class ViewJsonTests
 
         string json = JsonSerializer.Serialize(view, ViewJson.Options);
 
-        Assert.Contains("\"In Progress\"", json, StringComparison.Ordinal);
+        JsonNode? root = JsonNode.Parse(json);
+        Assert.NotNull(root);
+        Assert.Equal("In Progress", root["filter"]?["states"]?[0]?.GetValue<string>());
     }
 
     /// <summary>Serialising and deserialising a View round-trips to identical text.</summary>

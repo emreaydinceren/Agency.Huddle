@@ -499,7 +499,7 @@ public sealed class UpdateTaskToolTests
 
         TaskItem? updated = harness.Store.Get(task.Id);
         Assert.NotNull(updated);
-        Assert.Contains("(reason: no longer needed)", updated.ChangeLog[^1].Summary, StringComparison.Ordinal);
+        Assert.Equal("status: To Do → Cancelled (reason: no longer needed)", updated.ChangeLog[^1].Summary);
     }
 
     /// <summary>Text that doesn't parse as a <see cref="TaskId"/> is refused with the §11.1 wording.</summary>

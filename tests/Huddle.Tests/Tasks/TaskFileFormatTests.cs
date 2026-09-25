@@ -61,7 +61,7 @@ public sealed class TaskFileFormatTests
         Assert.Equal(["security"], task.Tags);
         Assert.Equal(new DateOnly(2026, 10, 1), task.StartDate);
         Assert.Equal(new DateOnly(2026, 10, 15), task.DueDate);
-        Assert.StartsWith("Implement SAML 2.0 provider integration alongside the existing OAuth2 flow.", task.Description, StringComparison.Ordinal);
+        Assert.Equal("Implement SAML 2.0 provider integration alongside the existing OAuth2 flow.", task.Description);
         Assert.Equal(location, task.Location);
         Assert.Equal("tasks/PLAT-0042.md", task.Path);
         Assert.Empty(error);
@@ -82,7 +82,7 @@ public sealed class TaskFileFormatTests
 
         Assert.False(result);
         Assert.Null(task);
-        Assert.Contains(key, error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal($"missing required key: {key}", error);
     }
 
     /// <summary>An unrecognised status value fails, naming the key and the bad value.</summary>
@@ -95,8 +95,7 @@ public sealed class TaskFileFormatTests
 
         Assert.False(result);
         Assert.Null(task);
-        Assert.Contains("status", error, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Doing", error, StringComparison.Ordinal);
+        Assert.Equal("invalid status: 'Doing'", error);
     }
 
     /// <summary>A duplicate key, compared case-insensitively, fails and names the key.</summary>
@@ -110,7 +109,7 @@ public sealed class TaskFileFormatTests
 
         Assert.False(result);
         Assert.Null(task);
-        Assert.Contains("title", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal($"duplicate key: {secondTitleKey}", error);
     }
 
     /// <summary>Data for <see cref="TryParse_DuplicateKey_Fails"/>: a second, non-empty title line, same case and mixed case.</summary>
@@ -201,7 +200,7 @@ public sealed class TaskFileFormatTests
 
         Assert.False(result);
         Assert.Null(task);
-        Assert.Contains("duplicate_of", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("duplicate_of is only valid when status is Duplicate", error);
     }
 
     /// <summary>status Duplicate without duplicate_of fails, naming duplicate_of.</summary>
@@ -214,7 +213,7 @@ public sealed class TaskFileFormatTests
 
         Assert.False(result);
         Assert.Null(task);
-        Assert.Contains("duplicate_of", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("duplicate_of is required when status is Duplicate", error);
     }
 
     /// <summary>A tag containing a comma, written as a block list item, fails naming tags and the bad value.</summary>
@@ -227,8 +226,7 @@ public sealed class TaskFileFormatTests
 
         Assert.False(result);
         Assert.Null(task);
-        Assert.Contains("tags", error, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("a,b", error, StringComparison.Ordinal);
+        Assert.Equal("invalid tags: 'a,b'", error);
     }
 
     /// <summary>A date that doesn't match yyyy-MM-dd fails, naming due_date and the bad value.</summary>
@@ -241,8 +239,7 @@ public sealed class TaskFileFormatTests
 
         Assert.False(result);
         Assert.Null(task);
-        Assert.Contains("due_date", error, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("15/10/2026", error, StringComparison.Ordinal);
+        Assert.Equal("invalid due_date: '15/10/2026'", error);
     }
 
     /// <summary>A title longer than 200 characters after trimming fails, naming title.</summary>
@@ -256,7 +253,7 @@ public sealed class TaskFileFormatTests
 
         Assert.False(result);
         Assert.Null(task);
-        Assert.Contains("title", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal($"title must be 1-200 characters: '{longTitle}'", error);
     }
 
     /// <summary>A parent equal to the Task's own id fails, naming parent.</summary>
@@ -269,7 +266,7 @@ public sealed class TaskFileFormatTests
 
         Assert.False(result);
         Assert.Null(task);
-        Assert.Contains("parent", error, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("parent cannot reference the Task itself", error);
     }
 
     /// <summary>The Spec §7.1 example splits into the description and two Change log entries.</summary>
@@ -319,7 +316,9 @@ public sealed class TaskFileFormatTests
 
         Assert.True(result);
         Assert.NotNull(task);
-        Assert.Contains("This isn't real change log content, more text.", task.Description, StringComparison.Ordinal);
+        Assert.Equal(
+            "Description paragraph one.\n\n## Change log\nThis isn't real change log content, more text.",
+            task.Description);
         Assert.Single(task.ChangeLog);
         Assert.Equal("created", task.ChangeLog[0].Summary);
     }
@@ -352,7 +351,7 @@ public sealed class TaskFileFormatTests
 
         Assert.True(result);
         Assert.NotNull(task);
-        Assert.Contains("```", task.Description, StringComparison.Ordinal);
+        Assert.Equal("Description text.\n\n```\n## Change log\n```", task.Description);
         Assert.Single(task.ChangeLog);
         Assert.Equal("created", task.ChangeLog[0].Summary);
     }
@@ -431,9 +430,9 @@ public sealed class TaskFileFormatTests
 
         string result = TaskFileFormat.AppendEntry(fileText, entry);
 
-        Assert.Contains("Description text.", result, StringComparison.Ordinal);
-        Assert.Contains(TaskFileFormat.ChangeLogHeading, result, StringComparison.Ordinal);
-        Assert.EndsWith(TaskFileFormat.FormatEntry(entry), result.TrimEnd(), StringComparison.Ordinal);
+        Assert.Equal(
+            fileText.TrimEnd('\n') + "\n\n" + TaskFileFormat.ChangeLogHeading + "\n" + TaskFileFormat.FormatEntry(entry) + "\n",
+            result);
     }
 
     /// <summary>ClosedAt is the last "closed" entry's At not followed by a "reopened" entry, only when Location.Closed is true.</summary>

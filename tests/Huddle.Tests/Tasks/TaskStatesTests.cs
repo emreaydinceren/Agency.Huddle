@@ -77,11 +77,7 @@ public sealed class TaskStatesTests
             }
         }
 
-        Assert.Equal(4, terminals.Count);
-        Assert.Contains(TaskState.Done, terminals);
-        Assert.Contains(TaskState.Cancelled, terminals);
-        Assert.Contains(TaskState.Duplicate, terminals);
-        Assert.Contains(TaskState.Rejected, terminals);
+        Assert.Equal([TaskState.Done, TaskState.Cancelled, TaskState.Duplicate, TaskState.Rejected], terminals);
     }
 
     /// <summary>Exactly three states are "Won't do": Cancelled, Duplicate, Rejected.</summary>
@@ -97,10 +93,7 @@ public sealed class TaskStatesTests
             }
         }
 
-        Assert.Equal(3, wontDo.Count);
-        Assert.Contains(TaskState.Cancelled, wontDo);
-        Assert.Contains(TaskState.Duplicate, wontDo);
-        Assert.Contains(TaskState.Rejected, wontDo);
+        Assert.Equal([TaskState.Cancelled, TaskState.Duplicate, TaskState.Rejected], wontDo);
     }
 
     /// <summary>All states are in declaration order.</summary>

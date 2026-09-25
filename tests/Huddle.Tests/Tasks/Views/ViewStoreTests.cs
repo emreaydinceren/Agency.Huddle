@@ -81,7 +81,106 @@ public sealed class ViewStoreTests
         ViewSaveResult result = store.Save(ListView("custom-1", "Custom View"));
 
         Assert.False(result.Saved);
-        Assert.NotEmpty(result.Problems);
+        Assert.Equal([$"'{path}' has a parse error ('{path}' could not be parsed: {expected.Message}) and must be fixed by hand before a View can be saved."], result.Problems);
+        Assert.Equal(malformed, File.ReadAllText(path));
+    }
+
+    /// <summary>
+    /// A file that parses cleanly at startup but is raced to malformed JSON between
+    /// <see cref="ViewStore.Save(TaskView)"/>'s in-memory check and its re-read from disk still
+    /// refuses the save, with the same parse-error problem text as the startup case.
+    /// </summary>
+    [Fact]
+    public void Save_ConcurrentlyMalformedFile_Refused()
+    {
+        using TempDataDir dataDir = new();
+        string path = Path.Combine(dataDir.Path, "views.json");
+        using ViewStore store = new(dataDir.Options(), NullLogger<ViewStore>.Instance);
+        Assert.Null(store.LoadError);
+
+        const string malformed = "{\n  \"version\": 1,\n  \"views\": [\n    { \"id\": \"x\", \"name\": \"Bad\" broken\n";
+        File.WriteAllText(path, malformed);
+
+        JsonException? expected = null;
+        try
+        {
+            JsonNode.Parse(malformed);
+        }
+        catch (JsonException ex)
+        {
+            expected = ex;
+        }
+
+        Assert.NotNull(expected);
+
+        ViewSaveResult result = store.Save(ListView("custom-1", "Custom View"));
+
+        Assert.False(result.Saved);
+        Assert.Equal([$"'{path}' has a parse error ('{path}' could not be parsed: {expected.Message}) and must be fixed by hand before a View can be saved."], result.Problems);
+    }
+
+    /// <summary>
+    /// A file that parses cleanly at startup but is raced to malformed JSON between
+    /// <see cref="ViewStore.Delete(string)"/>'s in-memory check and its re-read from disk still
+    /// refuses the delete, with the same parse-error problem text as the startup case.
+    /// </summary>
+    [Fact]
+    public void Delete_ConcurrentlyMalformedFile_Refused()
+    {
+        using TempDataDir dataDir = new();
+        string path = Path.Combine(dataDir.Path, "views.json");
+        using ViewStore store = new(dataDir.Options(), NullLogger<ViewStore>.Instance);
+        store.Save(ListView("custom-1", "Custom View"));
+        Assert.Null(store.LoadError);
+
+        const string malformed = "{\n  \"version\": 1,\n  \"views\": [\n    { \"id\": \"x\", \"name\": \"Bad\" broken\n";
+        File.WriteAllText(path, malformed);
+
+        JsonException? expected = null;
+        try
+        {
+            JsonNode.Parse(malformed);
+        }
+        catch (JsonException ex)
+        {
+            expected = ex;
+        }
+
+        Assert.NotNull(expected);
+
+        ViewSaveResult result = store.Delete("custom-1");
+
+        Assert.False(result.Saved);
+        Assert.Equal([$"'{path}' has a parse error ('{path}' could not be parsed: {expected.Message}) and must be fixed by hand before a View can be deleted."], result.Problems);
+    }
+
+    /// <summary>A malformed file at startup also refuses a delete, with the delete-specific parse-error problem text.</summary>
+    [Fact]
+    public void Delete_MalformedFile_Refused()
+    {
+        using TempDataDir dataDir = new();
+        string path = Path.Combine(dataDir.Path, "views.json");
+        const string malformed = "{\n  \"version\": 1,\n  \"views\": [\n    { \"id\": \"x\", \"name\": \"Bad\" broken\n";
+        File.WriteAllText(path, malformed);
+
+        JsonException? expected = null;
+        try
+        {
+            JsonNode.Parse(malformed);
+        }
+        catch (JsonException ex)
+        {
+            expected = ex;
+        }
+
+        Assert.NotNull(expected);
+
+        using ViewStore store = new(dataDir.Options(), NullLogger<ViewStore>.Instance);
+
+        ViewSaveResult result = store.Delete("custom-1");
+
+        Assert.False(result.Saved);
+        Assert.Equal([$"'{path}' has a parse error ('{path}' could not be parsed: {expected.Message}) and must be fixed by hand before a View can be deleted."], result.Problems);
         Assert.Equal(malformed, File.ReadAllText(path));
     }
 
@@ -95,7 +194,20 @@ public sealed class ViewStoreTests
     public void MalformedFile_LoadError_IsOneBased()
     {
         using TempDataDir dataDir = new();
-        File.WriteAllText(Path.Combine(dataDir.Path, "views.json"), string.Empty);
+        string path = Path.Combine(dataDir.Path, "views.json");
+        File.WriteAllText(path, string.Empty);
+
+        JsonException? expected = null;
+        try
+        {
+            JsonNode.Parse(string.Empty);
+        }
+        catch (JsonException ex)
+        {
+            expected = ex;
+        }
+
+        Assert.NotNull(expected);
 
         using ViewStore store = new(dataDir.Options(), NullLogger<ViewStore>.Instance);
 
@@ -103,6 +215,7 @@ public sealed class ViewStoreTests
         Assert.NotNull(loadError);
         Assert.Equal(1, loadError.Line);
         Assert.Equal(1, loadError.Column);
+        Assert.Equal($"'{path}' could not be parsed: {expected.Message}", loadError.Message);
     }
 
     /// <summary>One malformed entry in an otherwise well-formed file is kept and flagged with a reason; the well-formed entries beside it still load.</summary>
@@ -199,7 +312,13 @@ public sealed class ViewStoreTests
 
         Assert.True(result.Saved);
         Assert.True(File.Exists(path));
-        Assert.Contains("Everything", File.ReadAllText(path), StringComparison.Ordinal);
+        JsonNode? node = JsonNode.Parse(File.ReadAllText(path));
+        Assert.NotNull(node);
+        JsonNode? viewsNode = node["views"];
+        Assert.NotNull(viewsNode);
+        JsonArray writtenViews = viewsNode.AsArray();
+        JsonObject writtenView = Assert.Single(writtenViews.OfType<JsonObject>(), v => string.Equals(v["id"]?.GetValue<string>(), "all-tasks", StringComparison.Ordinal));
+        Assert.Equal("Everything", writtenView["name"]?.GetValue<string>());
         TaskView? updated = store.Get("all-tasks");
         Assert.NotNull(updated);
         Assert.Equal("Everything", updated.Name);
@@ -215,7 +334,7 @@ public sealed class ViewStoreTests
         ViewSaveResult result = store.Delete("all-tasks");
 
         Assert.False(result.Saved);
-        Assert.NotEmpty(result.Problems);
+        Assert.Equal(["A built-in View cannot be deleted."], result.Problems);
         Assert.Contains(store.Views, v => v.Id == "all-tasks");
     }
 

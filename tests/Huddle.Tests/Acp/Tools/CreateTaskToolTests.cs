@@ -53,8 +53,9 @@ public sealed class CreateTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("not a member of room", result, StringComparison.Ordinal);
-        Assert.Contains(room.Id, result, StringComparison.Ordinal);
+        Assert.Equal(
+            $"You are not a member of room '{room.Name}' (id {room.Id}); pass an originRoomId only for a Room you belong to, or omit it.",
+            result);
         Assert.Empty(harness.Store.All);
     }
 
@@ -72,7 +73,7 @@ public sealed class CreateTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("Created", result, StringComparison.Ordinal);
+        Assert.Equal("Created PLAT-0001 \"Support SAML login\" in Platform, unassigned. No one is notified.", result);
         TaskItem written = Assert.Single(harness.Store.All);
         Assert.Equal(room.Id, written.OriginRoomId);
     }
@@ -88,7 +89,7 @@ public sealed class CreateTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("Create the task first; to mark it Cancelled, Duplicate or Rejected, call update_task.", result, StringComparison.Ordinal);
+        Assert.Equal("Create the task first; to mark it Cancelled, Duplicate or Rejected, call update_task.", result);
         Assert.Empty(harness.Store.All);
     }
 
@@ -103,7 +104,7 @@ public sealed class CreateTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("due_date", result, StringComparison.Ordinal);
+        Assert.Equal("'due_date' must be a date in the form yyyy-MM-dd.", result);
         Assert.Empty(harness.Store.All);
     }
 
@@ -118,9 +119,9 @@ public sealed class CreateTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("limit is 200", result, StringComparison.Ordinal);
-        Assert.Contains("Unknown team", result, StringComparison.Ordinal);
-        Assert.Contains('\n', result);
+        Assert.Equal(
+            "Title is 201 characters; the limit is 200.\nUnknown team 'Nonexistent Team'. Known teams: Platform.",
+            result);
         Assert.Empty(harness.Store.All);
     }
 
@@ -181,7 +182,7 @@ public sealed class CreateTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("ghost-agent-id", result, StringComparison.Ordinal);
+        Assert.Equal("Could not identify caller 'ghost-agent-id' as a Teammate.", result);
         Assert.Empty(harness.Store.All);
     }
 
@@ -196,7 +197,7 @@ public sealed class CreateTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("blocked_by", result, StringComparison.Ordinal);
+        Assert.Equal("'blocked_by' must be a list of text.", result);
         Assert.Empty(harness.Store.All);
     }
 
@@ -211,7 +212,7 @@ public sealed class CreateTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("title", result, StringComparison.Ordinal);
+        Assert.Equal("'title' must be text.", result);
         Assert.Empty(harness.Store.All);
     }
 

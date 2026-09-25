@@ -259,8 +259,11 @@ public sealed partial class PromptCatalogTests
         Assert.Equal(
             ["{{assignee}}", "{{taskId}}", "{{title}}", "{{actor}}", "{{changes}}", "{{status}}", "{{team}}"],
             prompt.RequiredPlaceholders);
-        Assert.StartsWith("@{{assignee}}", prompt.Default, StringComparison.Ordinal);
-        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+        Assert.Equal(
+            "@{{assignee}} Task {{taskId}} \"{{title}}\" ({{status}}, {{team}}) was changed by {{actor}}:\n" +
+            "{{changes}}\n" +
+            "Call get_task with taskId {{taskId}} for the full task.",
+            prompt.Default);
     }
 
     /// <summary>
@@ -336,8 +339,9 @@ public sealed partial class PromptCatalogTests
     {
         var prompt = PromptCatalog.Get("tool.getTask.description");
 
-        Assert.Contains("PLAT-0042", prompt.Default, StringComparison.Ordinal);
-        Assert.Contains("get_task", prompt.Default, StringComparison.Ordinal);
+        Assert.Equal(
+            "Reads one Task by its id, such as PLAT-0042, with an option to also see its full Change log. Task ids such as PLAT-0042 seen in a Message refer to Tasks; call get_task to read one.",
+            prompt.Default);
     }
 
     /// <summary>Spec §11.9: <c>getHelp.tasks</c> exists and is <see cref="PromptTiming.Live"/> (rendered fresh into <c>BuildHelp</c>'s output, not baked into the system prompt at session start).</summary>
@@ -355,7 +359,8 @@ public sealed partial class PromptCatalogTests
     {
         var prompt = PromptCatalog.Get("systemPrompt.tools");
 
-        Assert.Contains("Tasks", prompt.Default, StringComparison.Ordinal);
+        // contains-ok: prompt.Default is the whole multi-paragraph tools clause; this test only checks the Task-tracking phrase Task 10.7 added.
+        Assert.Contains("to track work as Tasks and", prompt.Default, StringComparison.Ordinal);
     }
 
     /// <summary>

@@ -102,7 +102,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Create(draft, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains("The description must not contain a '## Change log' heading; that heading is reserved for the task's history.", refused.Problems);
+        Assert.Equal(["The description must not contain a '## Change log' heading; that heading is reserved for the task's history."], refused.Problems);
     }
 
     /// <summary>Updating a Task's Description to one that contains the reserved Change log heading is refused with the same exact text as Create (shared rule, second entry point).</summary>
@@ -118,7 +118,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Update(task.Id, new TaskPatch { Description = "Body\n## Change log\nmore" }, null, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains("The description must not contain a '## Change log' heading; that heading is reserved for the task's history.", refused.Problems);
+        Assert.Equal(["The description must not contain a '## Change log' heading; that heading is reserved for the task's history."], refused.Problems);
     }
 
     /// <summary>An empty (or whitespace-only) title is refused with the exact Spec §9.2 text.</summary>
@@ -134,7 +134,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Create(draft, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains("Title is empty.", refused.Problems);
+        Assert.Equal(["Title is empty."], refused.Problems);
     }
 
     /// <summary>Updating a Task's Title to an empty (or whitespace-only) one is refused with the same exact text as Create (shared rule, second entry point).</summary>
@@ -150,7 +150,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Update(task.Id, new TaskPatch { Title = "   " }, null, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains("Title is empty.", refused.Problems);
+        Assert.Equal(["Title is empty."], refused.Problems);
     }
 
     /// <summary>A title over 200 characters is refused with the exact Spec §9.2 text, naming the trimmed length.</summary>
@@ -166,7 +166,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Create(draft, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains("Title is 240 characters; the limit is 200.", refused.Problems);
+        Assert.Equal(["Title is 240 characters; the limit is 200."], refused.Problems);
     }
 
     /// <summary>Updating a Task's Title to one over 200 characters is refused with the same exact text as Create (shared rule, second entry point).</summary>
@@ -182,7 +182,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Update(task.Id, new TaskPatch { Title = new string('A', 240) }, null, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains("Title is 240 characters; the limit is 200.", refused.Problems);
+        Assert.Equal(["Title is 240 characters; the limit is 200."], refused.Problems);
     }
 
     /// <summary>A title spanning more than one line is refused with the exact Spec §9.2 text.</summary>
@@ -198,7 +198,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Create(draft, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains("Title must be one line.", refused.Problems);
+        Assert.Equal(["Title must be one line."], refused.Problems);
     }
 
     /// <summary>Updating a Task's Title to one spanning more than one line is refused with the same exact text as Create (shared rule, second entry point).</summary>
@@ -214,7 +214,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Update(task.Id, new TaskPatch { Title = "Line one\nLine two" }, null, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains("Title must be one line.", refused.Problems);
+        Assert.Equal(["Title must be one line."], refused.Problems);
     }
 
     /// <summary>A tag containing a comma is refused with the exact Spec §9.2/§7.2 text, naming the offending tag.</summary>
@@ -230,7 +230,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Create(draft, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains("Tag 'a,b' must not contain ',' or ';'.", refused.Problems);
+        Assert.Equal(["Tag 'a,b' must not contain ',' or ';'."], refused.Problems);
     }
 
     /// <summary>Updating a Task's Tags to one containing a semicolon is refused with the same wording as Create (shared rule, second entry point).</summary>
@@ -246,7 +246,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Update(task.Id, new TaskPatch { Tags = ["x;y"] }, null, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains("Tag 'x;y' must not contain ',' or ';'.", refused.Problems);
+        Assert.Equal(["Tag 'x;y' must not contain ',' or ';'."], refused.Problems);
     }
 
     /// <summary>Setting a Task's Parent to its own id is refused with the exact Spec §9.2 self-reference text (one of three call sites sharing this wording).</summary>
@@ -262,7 +262,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Update(task.Id, new TaskPatch { Parent = Optional<TaskId?>.Set(task.Id) }, null, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains("A task cannot block itself.", refused.Problems);
+        Assert.Equal(["A task cannot block itself."], refused.Problems);
     }
 
     /// <summary>Setting a Task's BlockedBy to include its own id is refused with the exact Spec §9.2 self-reference text (the second of three call sites sharing this wording).</summary>
@@ -278,7 +278,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Update(task.Id, new TaskPatch { BlockedBy = [task.Id] }, null, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains("A task cannot block itself.", refused.Problems);
+        Assert.Equal(["A task cannot block itself."], refused.Problems);
     }
 
     /// <summary>Setting a Task's DuplicateOf to its own id (alongside Status Duplicate, so the coupling rule is satisfied) is refused with the exact Spec §9.2 self-reference text (the third of three call sites sharing this wording).</summary>
@@ -298,7 +298,7 @@ public sealed class TaskServiceTests
             HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains("A task cannot block itself.", refused.Problems);
+        Assert.Equal(["A task cannot block itself."], refused.Problems);
     }
 
     /// <summary>A Reason over 200 characters is refused with the exact length text, isolated from the status-coupling rule by pairing it with Cancelled.</summary>
@@ -318,7 +318,7 @@ public sealed class TaskServiceTests
             HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains("Reason is 240 characters; the limit is 200.", refused.Problems);
+        Assert.Equal(["Reason is 240 characters; the limit is 200."], refused.Problems);
     }
 
     /// <summary>A Team name that can't be a folder on this computer is refused, with a problem naming the offending character.</summary>
@@ -334,7 +334,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Create(draft, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains(refused.Problems, problem => problem.Contains("cannot be a folder name", StringComparison.Ordinal) && problem.Contains("':'", StringComparison.Ordinal));
+        Assert.Equal(["The team name 'Ops:Legal' cannot be a folder name on this computer (it contains ':')."], refused.Problems);
     }
 
     /// <summary>A BlockedBy id that doesn't exist in the index is refused, naming the unknown id.</summary>
@@ -351,7 +351,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Create(draft, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains(refused.Problems, problem => problem.Contains("PLAT-0999", StringComparison.Ordinal));
+        Assert.Equal(["Unknown task 'PLAT-0999'."], refused.Problems);
     }
 
     /// <summary>Creating a Task in a Team whose folder already exists under a different case reuses the existing folder's casing.</summary>
@@ -391,7 +391,7 @@ public sealed class TaskServiceTests
         TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
         Assert.Equal(TaskState.InProgress, saved.Task.Status);
         Assert.NotNull(raised);
-        Assert.Contains("status:", saved.Change.Entry.Summary, StringComparison.Ordinal);
+        Assert.Equal("status: Backlog → In Progress", saved.Change.Entry.Summary);
     }
 
     /// <summary>Applying a patch whose values already match the current Task returns Unchanged without touching the file.</summary>
@@ -431,7 +431,7 @@ public sealed class TaskServiceTests
         Assert.Equal("Marketing", saved.Task.Location.Team);
         Assert.False(File.Exists(task.Path));
         Assert.True(File.Exists(saved.Task.Path));
-        Assert.Contains("moved:", saved.Change.Entry.Summary, StringComparison.Ordinal);
+        Assert.Equal("moved: Platform → Marketing", saved.Change.Entry.Summary);
     }
 
     /// <summary>Setting Project to null moves a Task from a Project sub-folder back to its Team root.</summary>
@@ -464,7 +464,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Update(task.Id, new TaskPatch { Status = TaskState.Cancelled, Reason = "no longer needed" }, null, HumanActor);
 
         TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
-        Assert.Contains("(reason: no longer needed)", saved.Change.Entry.Summary, StringComparison.Ordinal);
+        Assert.Equal("status: Backlog → Cancelled (reason: no longer needed)", saved.Change.Entry.Summary);
     }
 
     /// <summary>A reason given with a move to Done, which isn't Cancelled or Rejected, is refused with the exact Spec §9.2 text.</summary>
@@ -496,7 +496,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Update(task.Id, new TaskPatch { Status = TaskState.Duplicate }, null, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains(refused.Problems, problem => problem.Contains("Status Duplicate needs duplicate_of.", StringComparison.Ordinal));
+        Assert.Equal(["Status Duplicate needs duplicate_of."], refused.Problems);
     }
 
     /// <summary>Setting a Task's parent to one of its own descendants is refused as a cycle.</summary>
@@ -513,7 +513,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Update(a.Id, new TaskPatch { Parent = Optional<TaskId?>.Set(b.Id) }, null, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains(refused.Problems, problem => problem.Contains("descendant", StringComparison.Ordinal));
+        Assert.Equal([$"{a.Id} is already a descendant of {b.Id}, so it cannot be its parent."], refused.Problems);
     }
 
     /// <summary>Updating an id that isn't in the index returns NotFound.</summary>
@@ -566,8 +566,10 @@ public sealed class TaskServiceTests
         TaskResult result = service.Update(task.Id, new TaskPatch { Priority = TaskPriority.High }, null, HumanActor);
 
         TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
-        string finalText = File.ReadAllText(saved.Task.Path);
-        Assert.Contains(WeirdLine, finalText, StringComparison.Ordinal);
+        string[] handEditedLines = handEdited.Split('\n');
+        int weirdLineIndex = Array.IndexOf(handEditedLines, WeirdLine);
+        string[] finalLines = File.ReadAllText(saved.Task.Path).Split('\n');
+        Assert.Equal(WeirdLine, finalLines[weirdLineIndex]);
     }
 
     /// <summary>25 concurrent Updates on the same Task, released together by one gate, all succeed and every one's Change log entry survives - proven against a stub via mutation testing (mutateGate removed).</summary>
@@ -695,7 +697,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Create(draft, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains(refused.Problems, problem => problem.Contains("cannot be a folder name", StringComparison.Ordinal) && problem.Contains("reserved", StringComparison.Ordinal));
+        Assert.Equal(["The team name 'CON' cannot be a folder name on this computer (it is reserved)."], refused.Problems);
     }
 
     /// <summary>A Team name that ends with a trailing space is refused, naming the offending character, even on an OS that would otherwise accept it.</summary>
@@ -711,7 +713,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Create(draft, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains(refused.Problems, problem => problem.Contains("cannot be a folder name", StringComparison.Ordinal) && problem.Contains("ends with", StringComparison.Ordinal));
+        Assert.Equal(["The team name 'Ops ' cannot be a folder name on this computer (it ends with ' ')."], refused.Problems);
     }
 
     /// <summary>TaskChanged is raised exactly once for an Update, the same guarantee <see cref="Create_RaisesTaskChangedOnce_AfterWrite"/> proves for Create.</summary>

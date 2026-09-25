@@ -41,8 +41,8 @@ public sealed class TaskStoreStartupReconciliationTests
         Assert.Equal("You", appended.Actor);
         Assert.Equal("edited outside Huddle", appended.Summary);
         Assert.Equal(clock.UtcNow, appended.At);
-        string fileText = File.ReadAllText(path);
-        Assert.Contains("- 2026-01-15T09:00:00Z | You | edited outside Huddle", fileText, StringComparison.Ordinal);
+        string[] lines = File.ReadAllText(path).TrimEnd().Split('\n');
+        Assert.Equal("- 2026-01-15T09:00:00Z | You | edited outside Huddle", lines[^1].TrimEnd('\r'));
         Assert.False(raised);
     }
 
@@ -92,8 +92,8 @@ public sealed class TaskStoreStartupReconciliationTests
         Assert.Equal("edited outside Huddle", appended.Summary);
         Assert.Equal("You", appended.Actor);
         Assert.Equal(clock.UtcNow, appended.At);
-        string fileText = File.ReadAllText(path);
-        Assert.Contains("- 2025-06-15T08:30:00Z | You | edited outside Huddle", fileText, StringComparison.Ordinal);
+        string[] lines = File.ReadAllText(path).TrimEnd().Split('\n');
+        Assert.Equal("- 2025-06-15T08:30:00Z | You | edited outside Huddle", lines[^1].TrimEnd('\r'));
     }
 
     /// <summary>The atomic write reconciliation makes at startup is recorded as the file's known version, so the watcher's debounced rebuild never later reports it as a separate outside edit (Spec §4 principle 3). Waits 750&#160;ms, a full debounce window and then some, before asserting the negative.</summary>

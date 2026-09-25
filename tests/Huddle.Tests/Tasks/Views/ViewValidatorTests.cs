@@ -84,7 +84,7 @@ public sealed class ViewValidatorTests
     {
         TaskView view = ValidList() with { Grouping = [TaskGroupField.Team, TaskGroupField.Team] };
 
-        Assert.NotEmpty(ViewValidator.Validate(view, []));
+        Assert.Equal(["A field can only be grouped by once."], ViewValidator.Validate(view, []));
     }
 
     /// <summary>A Board grouped by State is a problem.</summary>
@@ -93,7 +93,7 @@ public sealed class ViewValidatorTests
     {
         TaskView view = ValidBoard() with { Grouping = [TaskGroupField.State] };
 
-        Assert.NotEmpty(ViewValidator.Validate(view, []));
+        Assert.Equal(["A Board cannot group by State."], ViewValidator.Validate(view, []));
     }
 
     /// <summary>A Board with scope Closed is a problem.</summary>
@@ -102,7 +102,7 @@ public sealed class ViewValidatorTests
     {
         TaskView view = ValidBoard() with { Scope = ViewScope.Closed };
 
-        Assert.NotEmpty(ViewValidator.Validate(view, []));
+        Assert.Equal(["A Board's scope must be Active."], ViewValidator.Validate(view, []));
     }
 
     /// <summary>A Board missing Review from every column is a problem.</summary>
@@ -141,7 +141,7 @@ public sealed class ViewValidatorTests
             ],
         };
 
-        Assert.NotEmpty(ViewValidator.Validate(view, []));
+        Assert.Equal(["Done appears in more than one column."], ViewValidator.Validate(view, []));
     }
 
     /// <summary>A column with no states is a problem.</summary>
@@ -191,7 +191,7 @@ public sealed class ViewValidatorTests
     {
         TaskView view = ValidList() with { Columns = [new BoardColumn("Backlog", [TaskState.Backlog])] };
 
-        Assert.NotEmpty(ViewValidator.Validate(view, []));
+        Assert.Equal(["A List cannot have columns."], ViewValidator.Validate(view, []));
     }
 
     /// <summary>Sorting by tags, an unsortable field, is a problem.</summary>
@@ -200,7 +200,7 @@ public sealed class ViewValidatorTests
     {
         TaskView view = ValidList() with { Sort = [new SortKey("tags", SortDirection.Ascending)] };
 
-        Assert.NotEmpty(ViewValidator.Validate(view, []));
+        Assert.Equal(["'tags' cannot be sorted on."], ViewValidator.Validate(view, []));
     }
 
     /// <summary>A duplicate sort field is a problem.</summary>
@@ -216,6 +216,6 @@ public sealed class ViewValidatorTests
             ],
         };
 
-        Assert.NotEmpty(ViewValidator.Validate(view, []));
+        Assert.Equal(["'priority' is sorted on more than once."], ViewValidator.Validate(view, []));
     }
 }

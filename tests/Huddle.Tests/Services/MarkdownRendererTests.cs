@@ -112,9 +112,10 @@ public sealed class MarkdownRendererTests
         FakeTaskReferenceResolver resolver = new();
 
         var html = MarkdownRenderer.ToHtml("See PLAT-0999 for details.", resolver);
+        var document = new HtmlParser().ParseDocument(html);
 
         Assert.DoesNotContain("<a", html, StringComparison.Ordinal);
-        Assert.Contains("PLAT-0999", html, StringComparison.Ordinal);
+        Assert.Equal("See PLAT-0999 for details.", document.Body?.TextContent.Trim());
     }
 
     /// <summary>"UTF-8" has the same shape as a Task id but never resolves, so it stays plain even though the resolver is present.</summary>
@@ -136,9 +137,10 @@ public sealed class MarkdownRendererTests
         FakeTaskReferenceResolver resolver = new(new TaskReference(id, "Ship the thing", Closed: false));
 
         var html = MarkdownRenderer.ToHtml("See plat-0042 for details.", resolver);
+        var document = new HtmlParser().ParseDocument(html);
 
         Assert.DoesNotContain("<a", html, StringComparison.Ordinal);
-        Assert.Contains("plat-0042", html, StringComparison.Ordinal);
+        Assert.Equal("See plat-0042 for details.", document.Body?.TextContent.Trim());
     }
 
     /// <summary>An id inside an inline code span is never a candidate literal, so it is never linked.</summary>
@@ -149,9 +151,12 @@ public sealed class MarkdownRendererTests
         FakeTaskReferenceResolver resolver = new(new TaskReference(id, "Ship the thing", Closed: false));
 
         var html = MarkdownRenderer.ToHtml("Run `PLAT-0042` locally.", resolver);
+        var document = new HtmlParser().ParseDocument(html);
+        var code = document.QuerySelector("code");
 
         Assert.DoesNotContain("<a", html, StringComparison.Ordinal);
-        Assert.Contains("<code>PLAT-0042</code>", html, StringComparison.Ordinal);
+        Assert.NotNull(code);
+        Assert.Equal("PLAT-0042", code.TextContent);
     }
 
     /// <summary>An id inside a fenced code block is never a candidate literal, so it is never linked.</summary>
@@ -187,8 +192,11 @@ public sealed class MarkdownRendererTests
     public void ToHtml_ExplicitTaskItemLink_IsSafe()
     {
         var html = MarkdownRenderer.ToHtml("[x](/tasks/item/PLAT-0042)");
+        var document = new HtmlParser().ParseDocument(html);
+        var anchor = document.QuerySelector("a");
 
-        Assert.Contains("href=\"/tasks/item/PLAT-0042\"", html, StringComparison.Ordinal);
+        Assert.NotNull(anchor);
+        Assert.Equal("/tasks/item/PLAT-0042", anchor.GetAttribute("href"));
     }
 
     /// <summary>A lower-case remainder does not equal the canonical id text exactly, so the link is rewritten to "#".</summary>
@@ -196,8 +204,11 @@ public sealed class MarkdownRendererTests
     public void ToHtml_TaskItemLinkWithLowerCaseRemainder_IsRewrittenToHash()
     {
         var html = MarkdownRenderer.ToHtml("[x](/tasks/item/plat-0042)");
+        var document = new HtmlParser().ParseDocument(html);
+        var anchor = document.QuerySelector("a");
 
-        Assert.Contains("href=\"#\"", html, StringComparison.Ordinal);
+        Assert.NotNull(anchor);
+        Assert.Equal("#", anchor.GetAttribute("href"));
     }
 
     /// <summary>Trailing path segments after the id are not a bare task reference, so the link is rewritten to "#".</summary>
@@ -205,8 +216,11 @@ public sealed class MarkdownRendererTests
     public void ToHtml_TaskItemLinkWithTrailingSegment_IsRewrittenToHash()
     {
         var html = MarkdownRenderer.ToHtml("[x](/tasks/item/PLAT-0042/x)");
+        var document = new HtmlParser().ParseDocument(html);
+        var anchor = document.QuerySelector("a");
 
-        Assert.Contains("href=\"#\"", html, StringComparison.Ordinal);
+        Assert.NotNull(anchor);
+        Assert.Equal("#", anchor.GetAttribute("href"));
     }
 
     /// <summary>A query string after the id is not a bare task reference, so the link is rewritten to "#".</summary>
@@ -214,8 +228,11 @@ public sealed class MarkdownRendererTests
     public void ToHtml_TaskItemLinkWithQueryString_IsRewrittenToHash()
     {
         var html = MarkdownRenderer.ToHtml("[x](/tasks/item/PLAT-0042?x)");
+        var document = new HtmlParser().ParseDocument(html);
+        var anchor = document.QuerySelector("a");
 
-        Assert.Contains("href=\"#\"", html, StringComparison.Ordinal);
+        Assert.NotNull(anchor);
+        Assert.Equal("#", anchor.GetAttribute("href"));
     }
 
     /// <summary>A traversal attempt dressed up as a task path is still rewritten to "#", the case the narrowed <c>IsSafe</c> exists to close.</summary>
@@ -223,8 +240,11 @@ public sealed class MarkdownRendererTests
     public void ToHtml_PathTraversalDressedAsTaskLink_IsRewrittenToHash()
     {
         var html = MarkdownRenderer.ToHtml("[x](/tasks/item/../../evil)");
+        var document = new HtmlParser().ParseDocument(html);
+        var anchor = document.QuerySelector("a");
 
-        Assert.Contains("href=\"#\"", html, StringComparison.Ordinal);
+        Assert.NotNull(anchor);
+        Assert.Equal("#", anchor.GetAttribute("href"));
     }
 
     /// <summary>An unrelated relative link is still rewritten to "#".</summary>
@@ -232,8 +252,11 @@ public sealed class MarkdownRendererTests
     public void ToHtml_UnrelatedRelativeLink_IsRewrittenToHash()
     {
         var html = MarkdownRenderer.ToHtml("[x](/other)");
+        var document = new HtmlParser().ParseDocument(html);
+        var anchor = document.QuerySelector("a");
 
-        Assert.Contains("href=\"#\"", html, StringComparison.Ordinal);
+        Assert.NotNull(anchor);
+        Assert.Equal("#", anchor.GetAttribute("href"));
     }
 
     /// <summary>A Task title carrying markup stays HTML-escaped in the rendered <c>title</c> attribute, never breaking out of it.</summary>
@@ -298,9 +321,10 @@ public sealed class MarkdownRendererTests
     public void ToHtml_NoResolverOverload_NeverLinksTaskIds()
     {
         var html = MarkdownRenderer.ToHtml("See PLAT-0042 for details.");
+        var document = new HtmlParser().ParseDocument(html);
 
         Assert.DoesNotContain("<a", html, StringComparison.Ordinal);
-        Assert.Contains("PLAT-0042", html, StringComparison.Ordinal);
+        Assert.Equal("See PLAT-0042 for details.", document.Body?.TextContent.Trim());
     }
 
     /// <summary>With <c>Tasks.Enabled</c> false the renderer is called with a null resolver, so nothing links even for an id that a real resolver would resolve.</summary>
@@ -308,9 +332,10 @@ public sealed class MarkdownRendererTests
     public void ToHtml_NullResolver_NeverLinksTaskIds()
     {
         var html = MarkdownRenderer.ToHtml("See PLAT-0042 for details.", null);
+        var document = new HtmlParser().ParseDocument(html);
 
         Assert.DoesNotContain("<a", html, StringComparison.Ordinal);
-        Assert.Contains("PLAT-0042", html, StringComparison.Ordinal);
+        Assert.Equal("See PLAT-0042 for details.", document.Body?.TextContent.Trim());
     }
 
     /// <summary>Parses <paramref name="text"/> into a <see cref="TaskId"/>, failing the test loudly if the fixture text is not a valid id rather than silently falling back to <c>default</c>.</summary>

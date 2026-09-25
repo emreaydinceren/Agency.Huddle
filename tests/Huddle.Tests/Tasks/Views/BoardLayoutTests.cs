@@ -34,10 +34,8 @@ public sealed class BoardLayoutTests
 
         BoardModel model = BoardLayout.Build(tasks, view);
 
-        Assert.Equal(3, model.Lanes.Count);
-        Assert.Contains(model.Lanes, lane => lane.Label == "Growth · Nova");
-        Assert.Contains(model.Lanes, lane => lane.Label == "Platform · Nova");
-        Assert.Contains(model.Lanes, lane => lane.Label == "Platform · Sable");
+        List<string?> labels = [.. model.Lanes.Select(lane => lane.Label).OrderBy(label => label, StringComparer.Ordinal)];
+        Assert.Equal(["Growth · Nova", "Platform · Nova", "Platform · Sable"], labels);
     }
 
     /// <summary>Each lane's cells follow the View's columns, one cell per column, holding the Tasks in that column's states.</summary>

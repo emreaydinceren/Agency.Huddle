@@ -22,6 +22,8 @@ public sealed class TaskToolOfferTests
 
         string toolNames = await TaskToolOfferTests.GetToolNamesTextAsync(fixture, ct);
 
+        // contains-ok: toolNames is the whole composed system prompt, which also lists every
+        // non-Task tool; this test's intent is only that these six names are among them.
         Assert.Contains("mcp__team__create_task", toolNames, StringComparison.Ordinal);
         Assert.Contains("mcp__team__get_task", toolNames, StringComparison.Ordinal);
         Assert.Contains("mcp__team__list_tasks", toolNames, StringComparison.Ordinal);
