@@ -197,7 +197,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
 
             written = ReparseWritten(task.Path, task.Location, task.Id, "created");
             this.RecordVersion(written);
-            this.index = ReplaceInIndex(this.index, written);
+            this.index = this.RefreshTeams(ReplaceInIndex(this.index, written));
             changed = this.IndexChanged;
         }
 
@@ -354,7 +354,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             written = ReparseWritten(targetPath, to, task.Id, "moved");
             this.lastSeenVersion.Remove(task.Path);
             this.RecordVersion(written);
-            this.index = ReplaceInIndex(this.index, written);
+            this.index = this.RefreshTeams(ReplaceInIndex(this.index, written));
             changed = this.IndexChanged;
         }
 
@@ -874,7 +874,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         return reparsed;
     }
 
-    /// <summary>Returns <paramref name="snapshot"/> with <paramref name="updated"/> replacing its previous entry in <see cref="TaskSnapshot.All"/> and <see cref="TaskSnapshot.ById"/>; <see cref="TaskSnapshot.Rejected"/> and <see cref="TaskSnapshot.Teams"/> are unchanged.</summary>
+    /// <summary>Gives back <paramref name="snapshot"/> with <paramref name="updated"/> replacing its previous entry in <see cref="TaskSnapshot.All"/> and <see cref="TaskSnapshot.ById"/>; <see cref="TaskSnapshot.Rejected"/> and <see cref="TaskSnapshot.Teams"/> are unchanged. A caller whose write can introduce a brand-new Team or Project folder (<see cref="Create"/>, <see cref="Move"/>) must also refresh <see cref="TaskSnapshot.Teams"/> itself, with <see cref="RefreshTeams(TaskSnapshot)"/> - otherwise the folder stays invisible to <see cref="TaskSnapshot.Teams"/> until the watcher's own debounced rebuild notices it, which raises a spurious <see cref="IndexChanged"/> half a second later (the bug this fixed: the debounced rebuild's freshly-scanned Team list no longer matches the stale in-memory one, so <see cref="RebuildFromWatcher"/> sees a real difference and republishes even though nothing changed since the write).</summary>
     private static TaskSnapshot ReplaceInIndex(TaskSnapshot snapshot, TaskItem updated)
     {
         Dictionary<TaskId, TaskItem> byId = new(snapshot.ById);
@@ -882,6 +882,11 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         List<TaskItem> all = [.. byId.Values];
         return snapshot with { All = all, ById = byId.ToFrozenDictionary() };
     }
+
+    /// <summary>Recomputes <paramref name="snapshot"/>'s <see cref="TaskSnapshot.Teams"/> from disk (the same <see cref="BuildTeams"/>/<see cref="RecomputeOrphans"/> pair <see cref="Scan"/> uses), so a Team or Project folder <see cref="Create"/> or <see cref="Move"/> just created is reflected immediately rather than only after the watcher's own debounced rebuild finds it (see <see cref="ReplaceInIndex"/>'s remarks). Callers hold <see cref="writeGate"/>.</summary>
+    /// <param name="snapshot">The snapshot to refresh.</param>
+    private TaskSnapshot RefreshTeams(TaskSnapshot snapshot) =>
+        snapshot with { Teams = this.RecomputeOrphans(this.BuildTeams().Teams) };
 
     /// <summary>The Task's <see cref="TaskId.Number"/> when its prefix equals <paramref name="normalizedPrefix"/> (already upper-cased), else 0.</summary>
     private static int NumberIfMatches(TaskId id, string normalizedPrefix) =>
@@ -1079,7 +1084,15 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         return updated;
     }
 
-    /// <summary>Recomputes every Team folder's orphan flag and republishes the snapshot, raising <see cref="IndexChanged"/> outside the lock.</summary>
+    /// <summary>
+    /// Recomputes every Team folder's orphan flag and republishes the snapshot, raising
+    /// <see cref="IndexChanged"/> outside the lock, but only when a flag actually flipped. Without
+    /// that check this fired on every <see cref="PersonaStore.PersonasChanged"/>, including the
+    /// redundant one <see cref="PersonaStore"/>'s own debounced watcher raises ~500&#160;ms after a
+    /// Persona write it already knew about (the same shape of bug <see cref="RefreshTeams"/> fixes for
+    /// <see cref="Create"/> and <see cref="Move"/>) - a spurious index reload a UI component such as
+    /// <c>TaskDetail</c>, subscribed to reloads, would visibly re-render for.
+    /// </summary>
     private void OnPersonasChanged()
     {
         Action? changed;
@@ -1091,8 +1104,10 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             }
 
             TaskSnapshot previous = this.index;
-            this.index = previous with { Teams = this.RecomputeOrphans(previous.Teams) };
-            changed = this.IndexChanged;
+            List<TeamFolder> recomputed = this.RecomputeOrphans(previous.Teams);
+            bool teamsChanged = !previous.Teams.SequenceEqual(recomputed);
+            this.index = previous with { Teams = recomputed };
+            changed = teamsChanged ? this.IndexChanged : null;
         }
 
         changed?.Invoke();

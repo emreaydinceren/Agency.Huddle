@@ -164,6 +164,39 @@ public sealed class TaskStoreTests
     }
 
     /// <summary>
+    /// <see cref="PersonaStore.Update"/> raises <see cref="PersonaStore.PersonasChanged"/> twice for
+    /// one save - once synchronously, once again about 500&#160;ms later once its own debounced watcher
+    /// settles on the write it already knew about (<c>PersonaStore.RaiseRenames</c>'s remarks: "naturally
+    /// idempotent"). When neither call actually flips a Team's orphan flag (here, Nova already claimed
+    /// "Platform" before and after the edit), <see cref="TaskStore.IndexChanged"/> must not fire at all:
+    /// before this fix, <c>TaskStore.OnPersonasChanged</c> republished unconditionally on every
+    /// <see cref="PersonaStore.PersonasChanged"/>, so a UI component such as <c>TaskDetail</c>, subscribed
+    /// to reloads, saw a needless reload and re-render about half a second after every Persona save,
+    /// whether or not anything a Task-facing view cares about actually changed. Waits 900&#160;ms, a full
+    /// debounce window and then some, before asserting the count.
+    /// </summary>
+    [Fact]
+    public async Task Teams_PersonaEditedWithNoOrphanChange_IndexChangedNeverRaised()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        Directory.CreateDirectory(Path.Combine(root, "Platform"));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        _ = personas.Add(Identity("Nova", ["Platform"]), "You work on Platform.");
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        Assert.False(Assert.Single(store.Teams, team => string.Equals(team.Name, "Platform", StringComparison.Ordinal)).IsOrphan);
+
+        int indexChangedCount = 0;
+        store.IndexChanged += () => indexChangedCount++;
+        personas.Update("Nova", PersonaTextWithTeams("Nova", "You still work on Platform.", "Platform"), model: null, effort: null);
+
+        await Task.Delay(TimeSpan.FromMilliseconds(900), ct);
+
+        Assert.Equal(0, indexChangedCount);
+    }
+
+    /// <summary>
     /// Configuring the Tasks folder to resolve equal to, inside, or as a parent of the Teams folder
     /// is rejected at startup either way (Settled corrections-B2 D5 item 12: "throw on equality and
     /// on either containing the other").

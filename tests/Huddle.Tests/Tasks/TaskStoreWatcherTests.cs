@@ -74,6 +74,102 @@ public sealed class TaskStoreWatcherTests
         Assert.False(raised);
     }
 
+    /// <summary>
+    /// A <see cref="TaskStore.Create"/> into a Team folder that did not exist before must not raise a
+    /// second, spurious <see cref="TaskStore.IndexChanged"/> once the real watcher's debounced rebuild
+    /// notices that folder: <see cref="TaskStore.Create"/> already refreshes its own in-memory Team
+    /// list, so the rebuild's freshly-scanned Teams match what <see cref="TaskStore.Create"/> already
+    /// published and finds nothing to report. Before this fix, <see cref="TaskStore.Create"/> left the
+    /// stale (folder-less) Team list in place, so the watcher's rebuild ~500&#160;ms later always saw a
+    /// "new" Team and republished - a needless index reload that a UI component such as
+    /// <c>TaskDetail</c>, subscribed to reloads, would visibly re-render for, which is what made
+    /// <c>TaskDetailFieldsTests</c> flaky under load (Conversation delivery-brief D7). Waits 900&#160;ms,
+    /// a full debounce window and then some, before asserting the negative.
+    /// </summary>
+    [Fact]
+    public async Task Create_IntoBrandNewTeamFolder_DoesNotRaiseASecondIndexChangedOnceTheWatcherCatchesUp()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        int indexChangedCount = 0;
+        store.IndexChanged += () => indexChangedCount++;
+
+        TaskItem candidate = TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false));
+        TaskItem toWrite = candidate with { Path = TaskLayout.PathFor(store.RootDirectory, candidate.Location, candidate.Id) };
+        TaskItem? written = store.Create(toWrite, TaskFileFormat.Compose(toWrite));
+        Assert.NotNull(written);
+        int countRightAfterCreate = indexChangedCount;
+
+        await Task.Delay(TimeSpan.FromMilliseconds(900), ct);
+
+        Assert.Equal(1, countRightAfterCreate);
+        Assert.Equal(1, indexChangedCount);
+        Assert.Single(store.Teams, team => string.Equals(team.Name, "Platform", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Two <see cref="TaskStore.Create"/> calls into the same, already-existing Team folder (the
+    /// <c>TaskDetailFieldsTests</c> setup shape: create one Task, then a second one to reference as a
+    /// duplicate target) raise exactly one <see cref="TaskStore.IndexChanged"/> per call and no more,
+    /// once the real watcher's debounced rebuild has had a full window to catch up.
+    /// </summary>
+    [Fact]
+    public async Task Create_TwiceIntoTheSameFolder_RaisesExactlyOneIndexChangedPerCreate()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        int indexChangedCount = 0;
+        store.IndexChanged += () => indexChangedCount++;
+
+        TaskItem c1 = TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false));
+        TaskItem w1 = c1 with { Path = TaskLayout.PathFor(store.RootDirectory, c1.Location, c1.Id) };
+        Assert.NotNull(store.Create(w1, TaskFileFormat.Compose(w1)));
+
+        TaskItem c2 = TestTasks.Make(id: "PLAT-0002", title: "Other task", location: new("Platform", null, false));
+        TaskItem w2 = c2 with { Path = TaskLayout.PathFor(store.RootDirectory, c2.Location, c2.Id) };
+        Assert.NotNull(store.Create(w2, TaskFileFormat.Compose(w2)));
+
+        int countRightAfter = indexChangedCount;
+        await Task.Delay(TimeSpan.FromMilliseconds(900), ct);
+
+        Assert.Equal(2, countRightAfter);
+        Assert.Equal(2, indexChangedCount);
+    }
+
+    /// <summary>The same fix as <see cref="Create_IntoBrandNewTeamFolder_DoesNotRaiseASecondIndexChangedOnceTheWatcherCatchesUp"/>, for <see cref="TaskStore.Move"/>: moving a Task into a Team folder that did not exist before must not raise a second, spurious <see cref="TaskStore.IndexChanged"/> once the watcher's debounced rebuild notices that folder.</summary>
+    [Fact]
+    public async Task Move_IntoBrandNewTeamFolder_DoesNotRaiseASecondIndexChangedOnceTheWatcherCatchesUp()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
+
+        int indexChangedCount = 0;
+        store.IndexChanged += () => indexChangedCount++;
+
+        TaskLocation newTeamLocation = new("Legal", null, false);
+        TaskItem? written = store.Move(original, original.Version, newTeamLocation, TaskFileFormat.Compose(original with { Location = newTeamLocation }));
+        Assert.NotNull(written);
+        int countRightAfterMove = indexChangedCount;
+
+        await Task.Delay(TimeSpan.FromMilliseconds(900), ct);
+
+        Assert.Equal(1, countRightAfterMove);
+        Assert.Equal(1, indexChangedCount);
+        Assert.Single(store.Teams, team => string.Equals(team.Name, "Legal", StringComparison.Ordinal));
+    }
+
     /// <summary>A file that appears where none existed before raises <see cref="TaskStore.OutsideEditDetected"/> with a <see langword="null"/> <see cref="OutsideEdit.Before"/> (Spec §8.4).</summary>
     [Fact]
     public async Task OutsideEdit_NewFile_BeforeIsNull()
