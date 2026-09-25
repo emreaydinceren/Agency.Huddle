@@ -161,6 +161,38 @@ public sealed class TaskDetailFieldsTests
         _ = other;
     }
 
+    /// <summary>
+    /// Settled J55 (a product bug found reviewing 14.3): leaving Cancelled or Rejected must clear the
+    /// pending Reason, exactly as leaving Duplicate clears duplicate_of (corrections-B5 D14 item 8) -
+    /// proven by actually saving afterwards, not just checking the Reason box disappears: a component
+    /// that left a stale Reason in <c>pending</c> after switching away from Rejected would have
+    /// <c>TaskService</c> refuse the whole Save ("A reason is only recorded when the status becomes
+    /// Cancelled or Rejected.", Spec §9.2), so the Task would stay at its old Status and the Save would
+    /// show a <c>role="alert"</c> error instead of persisting Done - and even if the write somehow went
+    /// through, a leftover Reason would still show up in the Change log's own summary text.
+    /// </summary>
+    /// <param name="mode">Both entry points.</param>
+    [Theory]
+    [MemberData(nameof(BothModesData))]
+    public async Task StatusRow_LeavingRejectedForAnotherState_ClearsReasonOnSave(TaskDetailMode mode)
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness);
+        await using MudBunitContext ctx = NewContext(harness);
+        var cut = RenderDetail(ctx, task.Id, mode);
+        ClickWontDoItem(cut, TaskState.Rejected.ToWire());
+        IRenderedComponent<MudTextField<string>> reason = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-reason", StringComparison.Ordinal));
+        await cut.InvokeAsync(() => reason.Instance.ValueChanged.InvokeAsync("no longer needed"));
+
+        ClickStatusToggle(cut, TaskState.Done);
+        FindButton(cut, "Save").Click();
+
+        TaskItem? saved = harness.Store.Get(task.Id);
+        Assert.Equal(TaskState.Done, saved?.Status);
+        string lastSummary = saved is { ChangeLog.Count: > 0 } ? saved.ChangeLog[^1].Summary : "";
+        Assert.DoesNotContain("reason:", lastSummary, StringComparison.Ordinal);
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Blocked by (Spec §13.6, mudblazor.md: MudAutocomplete selects one value only in 9.10).
     // ---------------------------------------------------------------------------------------------

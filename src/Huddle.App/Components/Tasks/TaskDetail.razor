@@ -48,11 +48,52 @@ else if (this.loaded is { } task)
     string saveLabel = TaskDetail.SaveLabel(preview);
     bool budgetExhausted = this.Activity.Budget(task.Id).Exhausted;
     int agentWakeBudget = this.Options.Value.Tasks.AgentWakeBudget;
-    bool saveDisabled = effective.Status == TaskState.Duplicate && effective.DuplicateOf is null;
+    bool saveDisabled = (effective.Status == TaskState.Duplicate && effective.DuplicateOf is null) ||
+        (this.conflict is { } openConflict && !openConflict.Fields.All(this.conflictChoices.ContainsKey));
 
     @if (this.saveError is not null)
     {
         <MudAlert Severity="Severity.Error" role="alert" Class="task-detail-save-error">@this.saveError</MudAlert>
+    }
+
+    @if (this.conflict is { } activeConflict)
+    {
+        List<FieldChange> conflictDiff = [.. TaskDiff.Compare(activeConflict.Current, this.pending.ApplyTo(activeConflict.Current))
+            .Where(change => activeConflict.Fields.Contains(change.Field))];
+        string conflictFieldList = string.Join(", ", activeConflict.Fields.Select(TaskDiff.FieldLabel));
+
+        <MudAlert Severity="Severity.Warning" role="alert" Class="task-detail-conflict-alert">
+            @($"{TaskDetail.ConflictActorName(activeConflict)} changed this task while you were editing: {conflictFieldList}.")
+        </MudAlert>
+
+        <MudSimpleTable Dense="true" Class="task-detail-conflict-table">
+            <tbody>
+                @foreach (TaskField conflictField in activeConflict.Fields)
+                {
+                    FieldChange? change = conflictDiff.FirstOrDefault(c => c.Field == conflictField);
+                    <tr class="task-detail-conflict-row">
+                        <td class="task-detail-conflict-field">@TaskDiff.FieldLabel(conflictField)</td>
+                        @if (conflictField == TaskField.Description)
+                        {
+                            <td><MudTextField T="string" Value="@activeConflict.Current.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-theirs" /></td>
+                            <td><MudTextField T="string" Value="@effective.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-yours" /></td>
+                        }
+                        else
+                        {
+                            <td class="task-detail-conflict-theirs">@change?.Old</td>
+                            <td class="task-detail-conflict-yours">@change?.New</td>
+                        }
+                        <td>
+                            <MudRadioGroup T="ConflictChoice" Value="@(this.conflictChoices.TryGetValue(conflictField, out ConflictChoice chosenChoice) ? chosenChoice : default)"
+                                           ValueChanged="@(choice => this.ResolveConflict(conflictField, choice))">
+                                <MudRadio T="ConflictChoice" Value="ConflictChoice.Mine">Keep mine</MudRadio>
+                                <MudRadio T="ConflictChoice" Value="ConflictChoice.Theirs">Take theirs</MudRadio>
+                            </MudRadioGroup>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
     }
 
     @if (budgetExhausted)
@@ -265,6 +306,8 @@ else if (this.loaded is { } task)
     private bool deleted;
     private TaskPatch pending = new();
     private string? baseVersion;
+    private TaskResult.Conflict? conflict;
+    private Dictionary<TaskField, ConflictChoice> conflictChoices = [];
     private string? saveError;
     private bool titleEditing;
     private DescriptionViewMode descriptionMode = DescriptionViewMode.Edit;
@@ -409,7 +452,13 @@ else if (this.loaded is { } task)
 
     private void OnDescriptionModeChanged(DescriptionViewMode value) => this.descriptionMode = value;
 
-    /// <summary>Sets the new Status; leaving Duplicate for any other state clears <see cref="TaskPatch.DuplicateOf"/> (Settled corrections-B5 D12 item 8, applies to TaskDetail too).</summary>
+    /// <summary>
+    /// Sets the new Status; leaving Duplicate for any other state clears <see cref="TaskPatch.DuplicateOf"/>
+    /// (Settled corrections-B5 D12 item 8, applies to TaskDetail too), and leaving Cancelled or Rejected
+    /// for any other state likewise clears <see cref="TaskPatch.Reason"/> (Settled J55: a product bug -
+    /// a leftover Reason otherwise gets Save refused outright, since Reason is only valid alongside
+    /// Cancelled or Rejected, Spec §9.2).
+    /// </summary>
     /// <param name="value">The newly chosen Status.</param>
     private void OnStatusChanged(TaskState value)
     {
@@ -422,6 +471,11 @@ else if (this.loaded is { } task)
         if (value != TaskState.Duplicate)
         {
             updated = updated with { DuplicateOf = Optional<TaskId?>.Set(null) };
+        }
+
+        if (value is not (TaskState.Cancelled or TaskState.Rejected))
+        {
+            updated = updated with { Reason = null };
         }
 
         this.pending = updated;
@@ -645,7 +699,59 @@ else if (this.loaded is { } task)
     {
         this.pending = new TaskPatch();
         this.saveError = null;
+        this.conflict = null;
+        this.conflictChoices = [];
     }
+
+    /// <summary>
+    /// Records the Human's choice for one conflicting field (Spec §13.7): "Take theirs" drops that
+    /// field from <see cref="pending"/> (corrections-B5 D14 item 8's composite drop for the coupled
+    /// <see cref="TaskField.Location"/> and <see cref="TaskField.Status"/> fields), and resolving
+    /// either way advances <see cref="baseVersion"/> to <see cref="TaskResult.Conflict.Current"/>'s
+    /// Version, so a clean re-save no longer conflicts on an already-resolved field.
+    /// </summary>
+    /// <param name="field">The conflicting field being resolved.</param>
+    /// <param name="choice">Keep the Human's own edit, or take the server's current value.</param>
+    private void ResolveConflict(TaskField field, ConflictChoice choice)
+    {
+        if (this.conflict is not { } activeConflict)
+        {
+            return;
+        }
+
+        this.conflictChoices = new Dictionary<TaskField, ConflictChoice>(this.conflictChoices) { [field] = choice };
+        if (choice == ConflictChoice.Theirs)
+        {
+            this.pending = TaskDetail.DropField(this.pending, field);
+        }
+
+        this.baseVersion = activeConflict.Current.Version;
+    }
+
+    /// <summary>Clears <paramref name="field"/> from <paramref name="patch"/> - dropping the coupled Reason and DuplicateOf alongside Status, and both Team and Project alongside Location (corrections-B5 D14 item 8).</summary>
+    /// <param name="patch">The patch to clear the field from.</param>
+    /// <param name="field">The field to drop.</param>
+    private static TaskPatch DropField(TaskPatch patch, TaskField field) => field switch
+    {
+        TaskField.Title => patch with { Title = null },
+        TaskField.Priority => patch with { Priority = null },
+        TaskField.Assignee => patch with { Assignee = default },
+        TaskField.Parent => patch with { Parent = default },
+        TaskField.BlockedBy => patch with { BlockedBy = null },
+        TaskField.DuplicateOf => patch with { DuplicateOf = default },
+        TaskField.Tags => patch with { Tags = null },
+        TaskField.StartDate => patch with { StartDate = default },
+        TaskField.DueDate => patch with { DueDate = default },
+        TaskField.Description => patch with { Description = null },
+        TaskField.Location => patch with { Team = null, Project = default },
+        TaskField.Status => patch with { Status = null, Reason = null, DuplicateOf = default },
+        _ => patch,
+    };
+
+    /// <summary>The Name that most recently touched <paramref name="conflict"/>'s Task, from its own last Change log entry - <see cref="TaskResult.Conflict"/> itself carries no actor (Settled by the delivery manager, J50).</summary>
+    /// <param name="conflict">The conflict to name the other editor for.</param>
+    private static string ConflictActorName(TaskResult.Conflict conflict) =>
+        conflict.Current.ChangeLog.Count > 0 ? conflict.Current.ChangeLog[^1].Actor : "Someone";
 
     /// <summary>
     /// Saves <see cref="pending"/> through <see cref="TaskService.Update"/> with the panel's own
@@ -675,13 +781,27 @@ else if (this.loaded is { } task)
                     this.loaded = saved.Task;
                     this.baseVersion = saved.Task.Version;
                     this.pending = new TaskPatch();
+                    this.conflict = null;
+                    this.conflictChoices = [];
                     break;
                 case TaskResult.Unchanged unchanged:
                     this.loaded = unchanged.Task;
                     this.baseVersion = unchanged.Task.Version;
                     this.pending = new TaskPatch();
+                    this.conflict = null;
+                    this.conflictChoices = [];
                     break;
-                default:
+                case TaskResult.Conflict conflictResult:
+                    this.loaded = conflictResult.Current;
+                    this.conflict = conflictResult;
+                    this.conflictChoices = [];
+                    break;
+                case TaskResult.Refused refused:
+                    this.saveError = string.Join(" ", refused.Problems);
+                    break;
+                case TaskResult.NotFound:
+                    this.deleted = true;
+                    this.loaded = null;
                     break;
             }
         }

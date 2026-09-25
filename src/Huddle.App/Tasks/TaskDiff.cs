@@ -28,6 +28,24 @@ internal static class TaskDiff
         { TaskField.DueDate, "due_date" },
     };
 
+    /// <summary>
+    /// The short, Human-facing field label used by the conflict UI (Spec §13.7): the same wire key
+    /// <see cref="WireKeys"/> already carries for a scalar or list field (matching what a Change log
+    /// summary shows), "team/project" for <see cref="TaskField.Location"/> (Settled by the delivery
+    /// manager, J55: "location" means nothing to a Human, who only ever sees Team and Project as two
+    /// separate fields - <see cref="Summarise"/> keeps its own "moved: X → Y" wording for that field,
+    /// unrelated to this one), or the lowercase enum name for a field - Description, Unknown - that has
+    /// no wire key of its own, since neither is ever set directly by name on the wire. Exposed so
+    /// callers reuse this one map instead of duplicating it (corrections-B7 "14.3" - Settled by the
+    /// delivery manager, J50).
+    /// </summary>
+    /// <param name="field">The field to label.</param>
+    public static string FieldLabel(TaskField field) => field switch
+    {
+        TaskField.Location => "team/project",
+        _ => WireKeys.TryGetValue(field, out string? key) ? key : field.ToString().ToLowerInvariant(),
+    };
+
     /// <summary>What changed, field by field, ignoring Path, Version and ChangeLog.</summary>
     public static IReadOnlyList<FieldChange> Compare(TaskItem before, TaskItem after)
     {
