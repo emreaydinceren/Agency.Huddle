@@ -100,31 +100,33 @@
                         }
                     }
 
-                    @for (int i = 0; i < lane.Cells.Count; i++)
-                    {
-                        BoardCell cell = lane.Cells[i];
-                        <div class="task-board-column">
-                            @if (cell.Column.States.Count == 1)
-                            {
-                                <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, cell.Column.States[0])" Class="task-zone" />
-                            }
-                            else
-                            {
-                                <MudDropZone T="TaskItem" Identifier="@DisplayZoneId(lane.Key, i)" Class="task-zone task-zone-display">
-                                    @if (this.dragging)
-                                    {
-                                        @foreach (TaskState state in cell.Column.States)
+                    <div class="task-board-lane-columns">
+                        @for (int i = 0; i < lane.Cells.Count; i++)
+                        {
+                            BoardCell cell = lane.Cells[i];
+                            <div class="task-board-column">
+                                @if (cell.Column.States.Count == 1)
+                                {
+                                    <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, cell.Column.States[0])" Class="task-zone" />
+                                }
+                                else
+                                {
+                                    <MudDropZone T="TaskItem" Identifier="@DisplayZoneId(lane.Key, i)" Class="task-zone task-zone-display">
+                                        @if (this.dragging)
                                         {
-                                            <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, state)" OnlyZone="true" Class="task-ghost-bucket">
-                                                <MudIcon Icon="@BucketIcon(state)" Size="Size.Small" />
-                                                <span class="task-ghost-bucket-label">@state.ToWire()</span>
-                                            </MudDropZone>
+                                            @foreach (TaskState state in cell.Column.States)
+                                            {
+                                                <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, state)" OnlyZone="true" Class="task-ghost-bucket">
+                                                    <MudIcon Icon="@BucketIcon(state)" Size="Size.Small" />
+                                                    <span class="task-ghost-bucket-label">@state.ToWire()</span>
+                                                </MudDropZone>
+                                            }
                                         }
-                                    }
-                                </MudDropZone>
-                            }
-                        </div>
-                    }
+                                    </MudDropZone>
+                                }
+                            </div>
+                        }
+                    </div>
                 </div>
             }
         </ChildContent>

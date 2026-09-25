@@ -802,12 +802,94 @@ button:focus-visible {
 
 /* Tasks */
 
-/* The Board's horizontal scroller: one fixed-width column per lane, laid out with CSS grid
-   rather than flex so every column keeps the same width regardless of its content. */
-.task-board-lane {
+/* ---- Board layout (Spec §13.4, §13.10) --------------------------------------------------------
+   The Board is a header row (.task-board-columns) followed by one horizontal band per lane
+   (.task-board-lane). A lane is flex-column, not grid: its label (rendered only when the View
+   groups) must span the full width above its cards, not be squeezed into a 240px grid track the
+   way a card would be. The actual row of fixed-width columns - both the header's and every
+   lane's - is CSS grid, per the Spec's own snippet ("display: grid; grid-auto-flow: column;
+   grid-auto-columns: minmax(240px, 1fr) on the lane row"): .task-board-columns and
+   .task-board-lane-columns share the exact same grid-auto-columns function, so their tracks land
+   at identical x offsets and a header cell sits directly above the cards it describes. The board
+   itself scrolls horizontally once the columns are wider than the page. */
+.task-board {
+    overflow-x: auto;
+}
+
+.task-board-columns,
+.task-board-lane-columns {
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: minmax(240px, 1fr);
+}
+
+.task-board-column-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.5rem 0.5rem 0;
+}
+
+.task-board-column-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.task-board-column-count {
+    flex: 0 0 auto;
+    padding: 0 0.35rem;
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.85rem;
+}
+
+.task-board-column-menu {
+    flex: 0 0 auto;
+}
+
+/* Claims its own row under the label/count/menu, the same way .budget-prompt-warning claims a
+   full-width row inside a wrapping flex header - so the caption reads under the header rather
+   than crowding the menu button. */
+.task-board-drag-caption {
+    flex: 1 1 100%;
+    color: var(--mud-palette-text-secondary);
+}
+
+.task-board-hidden-count {
+    margin-bottom: 0.5rem;
+}
+
+.task-board-lane {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.task-board-lane-label {
+    font-weight: 600;
+    padding: 0.25rem 0;
+}
+
+.task-board-column {
+    min-width: 0;
+}
+
+/* Every zone - a single-state column, a multi-state display zone, or a ghost bucket's own
+   OnlyZone - stacks its children vertically with a gap, and keeps a min-height so an empty
+   column is still a visible, reachable drop target. */
+.task-zone {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-height: 4rem;
+    padding: 0.25rem;
+}
+
+.task-ghost-bucket-label {
+    font-size: 0.85rem;
 }
 
 /* One class per TaskColors state family, so a Board column's left edge reads the same
@@ -836,8 +918,13 @@ button:focus-visible {
     border-inline-start: 3px solid var(--mud-palette-error);
 }
 
-/* A ghost bucket: a drop zone with nothing in it. Dashed until a drag can land there. */
+/* A ghost bucket: a drop zone with nothing in it, its icon and state name laid out in a row.
+   Dashed until a drag can land there. */
 .task-ghost-bucket {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
     border: 1px dashed var(--mud-palette-lines-default);
 }
 
