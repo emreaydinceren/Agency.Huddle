@@ -73,6 +73,13 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     // overflow far rarer, though OnWatcherError below is the real backstop.
     private const int WatcherInternalBufferSize = 64 * 1024;
 
+    // A definition file can be locked (an editor saving, antivirus, a rename's folder move) at the
+    // exact instant the debounce timer fires. Skipping it would publish an index WITHOUT that
+    // Persona and raise PersonaRemoved, cascading into an avatar/file-state/Room Session delete for
+    // a Persona that never actually went away - so the debounced rebuild aborts instead and retries
+    // on the same debounce interval, capped here so a permanently-locked file cannot retry forever.
+    private const int MaxConsecutiveLockRetries = 10;
+
     private readonly TeammatePaths teammatePaths;
     private readonly PersonaModelStore models;
     private readonly PersonaEffortStore efforts;
@@ -104,6 +111,12 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     // reader never sees warnings for a stale index or vice versa.
     private volatile IReadOnlyList<RejectedPersonaFile> folderWarnings = [];
 
+    // Guarded by watchGate. Counts consecutive debounced rebuilds aborted by a locked file; reset
+    // to 0 by a successful rebuild or by OnWatcherEvent scheduling a fresh debounce for a new
+    // external change, so a permanently-locked file gives up after MaxConsecutiveLockRetries rather
+    // than retrying forever, but a later, unrelated change gets its own full retry budget.
+    private int consecutiveLockRetries;
+
     /// <summary>Scans the Teams directory and starts watching it for changes.</summary>
     /// <param name="teammatePaths">Locates the Teams directory that this store scans and watches.</param>
     /// <param name="models">The SQLite-backed store for each Persona's chosen Model.</param>
@@ -129,7 +142,12 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         // to watch from the moment the app starts, even before any Persona has been added.
         Directory.CreateDirectory(this.Paths.DefinitionsRoot);
 
-        (this.index, this.folderWarnings) = this.RebuildIndexFromDisk();
+        // The initial scan never aborts: there is no previous index to protect from a stray
+        // PersonaRemoved, so a locked file is simply treated as a rejected file (isInitialScan:
+        // true never returns null - the `??` below is unreachable, kept only so the compiler can
+        // prove `index` is assigned without a null-forgiving operator).
+        var initialScan = this.RebuildIndexFromDisk(isInitialScan: true);
+        (this.index, this.folderWarnings) = initialScan ?? (PersonaIndex.Build([]), []);
 
         this.debounceTimer = new Timer(this.OnDebounceElapsed, null, Timeout.Infinite, Timeout.Infinite);
 
@@ -665,7 +683,15 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// The fresh index, and the folder-name-mismatch warnings (corrections-B2 item 12) for every
     /// entry it loaded whose own folder is named differently from its frontmatter Name.
     /// </returns>
-    private (PersonaIndex Index, IReadOnlyList<RejectedPersonaFile> FolderWarnings) RebuildIndexFromDisk()
+    /// <param name="isInitialScan">
+    /// <see langword="true"/> only for the constructor's first scan, which has no previous index to
+    /// protect: a locked definition file is recorded as a rejected file (never <see langword="null"/>).
+    /// <see langword="false"/> for every rescan that follows (the debounced watcher path and
+    /// <see cref="RescanNow"/>/<see cref="PublishFreshIndex"/>): a locked file there aborts the whole
+    /// rebuild and returns <see langword="null"/>, so the caller keeps its current index rather than
+    /// publish one missing that Persona and raising a spurious <see cref="PersonaRemoved"/>.
+    /// </param>
+    private (PersonaIndex Index, IReadOnlyList<RejectedPersonaFile> FolderWarnings)? RebuildIndexFromDisk(bool isInitialScan)
     {
         if (!Directory.Exists(this.Paths.DefinitionsRoot))
         {
@@ -707,7 +733,27 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
             {
                 if (string.Equals(file, ownDefinition, StringComparison.Ordinal))
                 {
-                    candidates.Add((file, File.ReadAllText(file)));
+                    string text;
+                    try
+                    {
+                        text = File.ReadAllText(file);
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        if (isInitialScan)
+                        {
+                            preRejected.Add(new RejectedPersonaFile(file, "Couldn't read this file; it's in use."));
+                            continue;
+                        }
+
+                        this.logger.LogWarning(
+                            ex,
+                            "PersonaStore couldn't read '{Path}' while rebuilding the index; it's in use, so the current index is kept and the rebuild will retry.",
+                            file);
+                        return null;
+                    }
+
+                    candidates.Add((file, text));
                 }
                 else
                 {
@@ -775,8 +821,19 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
                 return null;
             }
 
+            var rebuilt = this.RebuildIndexFromDisk(isInitialScan: false);
+            if (rebuilt is not { } fresh)
+            {
+                // A locked file aborted the rebuild: nothing to publish, same as the disposed
+                // case above - RescanNow (PersonaRenameCascade's caller) must not throw here, and
+                // Add/Update still wrote their own file successfully even though this republish
+                // of the WHOLE index did not happen this time.
+                return null;
+            }
+
+            this.consecutiveLockRetries = 0;
             var previous = this.index;
-            (this.index, this.folderWarnings) = this.RebuildIndexFromDisk();
+            (this.index, this.folderWarnings) = fresh;
             return (previous, this.index);
         }
     }
@@ -976,6 +1033,9 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
                 return;
             }
 
+            // A genuine new external change gets its own full retry budget, even if the previous
+            // burst had exhausted MaxConsecutiveLockRetries against a file that was locked then.
+            this.consecutiveLockRetries = 0;
             this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
         }
     }
@@ -1087,8 +1147,31 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
             // reading this store from inside its own PersonasChanged handler (PersonaSupervisor
             // does exactly this) must see the state the filesystem change just produced, not
             // whatever was true before it.
+            var rebuilt = this.RebuildIndexFromDisk(isInitialScan: false);
+            if (rebuilt is not { } fresh)
+            {
+                // Aborted by a locked file: keep the current index, raise nothing (skipping the
+                // file would raise a spurious PersonaRemoved and cascade-delete its state - see
+                // RebuildIndexFromDisk's remarks), and re-arm the debounce to retry, capped so a
+                // permanently-locked file does not retry forever.
+                this.consecutiveLockRetries++;
+                if (this.consecutiveLockRetries <= MaxConsecutiveLockRetries)
+                {
+                    this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
+                }
+                else
+                {
+                    this.logger.LogError(
+                        "PersonaStore gave up retrying a locked Persona file after {Retries} consecutive attempts; it will try again on the next change.",
+                        this.consecutiveLockRetries);
+                }
+
+                return;
+            }
+
+            this.consecutiveLockRetries = 0;
             previous = this.index;
-            (updated, this.folderWarnings) = this.RebuildIndexFromDisk();
+            (updated, this.folderWarnings) = fresh;
             this.index = updated;
             changed = this.PersonasChanged;
         }

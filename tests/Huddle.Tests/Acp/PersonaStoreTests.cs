@@ -1,3 +1,4 @@
+using System.Runtime.Versioning;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Agency.Huddle.App.Acp;
@@ -1514,6 +1515,85 @@ public sealed class PersonaStoreTests
 
         Assert.Empty(removedNames);
         Assert.Contains("Nova", store.ListNames());
+    }
+
+    /// <summary>
+    /// The defect this test pins: the debounce timer callback ran on a
+    /// <see cref="System.Threading.Timer"/> callback and let an <see cref="IOException"/> from a
+    /// definition file locked at that instant escape the thread pool, which killed the process. The
+    /// settled fix aborts the debounced rebuild instead of publishing an index without the locked
+    /// Persona (which would raise <see cref="PersonaStore.PersonaRemoved"/> and cascade-delete its
+    /// state): the current index is kept, nothing is raised, and the debounce timer retries. Holds
+    /// <c>Nova.md</c> open with <see cref="FileShare.None"/>, touches a second definition to trigger
+    /// the watcher, and proves the process is still alive and Nova is untouched by reaching the
+    /// asserts below the gate; then releases the handle and proves the store catches up.
+    /// </summary>
+    [Fact]
+    [SupportedOSPlatform("windows")]
+    public async Task Watcher_DefinitionFileLockedDuringRebuild_KeepsCurrentIndexAndRetries()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("FileShare.None does not reliably lock a file against reads on this platform.");
+            return;
+        }
+
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var paths = new TeammatePaths(dir.Options());
+        TestPersonaFiles.Write(paths, "Nova", PersonaText("Nova", "You are Nova."));
+        using var store = CreateStore(dir);
+        List<string> removedNames = [];
+        store.PersonaRemoved += removed => removedNames.Add(removed.Name);
+        var novaPath = Path.Combine(paths.TeammateFolder("Nova"), "Nova.md");
+
+        using (var handle = new FileStream(novaPath, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            TestPersonaFiles.Write(paths, "Zed", PersonaText("Zed", "You are Zed."));
+            await Task.Delay(TimeSpan.FromMilliseconds(750), ct);
+
+            // Reaching this line proves the debounce callback did not crash the process.
+            Assert.Empty(removedNames);
+            Assert.Contains("Nova", store.ListNames());
+        }
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        store.PersonasChanged += () => tcs.TrySetResult();
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());
+        await tcs.Task;
+
+        Assert.Contains("Zed", store.ListNames());
+        Assert.Empty(removedNames);
+    }
+
+    /// <summary>
+    /// The constructor's first scan has no previous index to protect, so a locked definition file is
+    /// treated as a rejected file - matching every other unreadable-file case - rather than aborting
+    /// startup, and the next watcher event rescans it once the lock clears.
+    /// </summary>
+    [Fact]
+    [SupportedOSPlatform("windows")]
+    public void Construct_DefinitionFileLockedAtStartup_IsRejectedWithReason()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("FileShare.None does not reliably lock a file against reads on this platform.");
+            return;
+        }
+
+        using var dir = new TempDataDir();
+        var paths = new TeammatePaths(dir.Options());
+        TestPersonaFiles.Write(paths, "Nova", PersonaText("Nova", "You are Nova."));
+        var novaPath = Path.Combine(paths.TeammateFolder("Nova"), "Nova.md");
+
+        using var handle = new FileStream(novaPath, FileMode.Open, FileAccess.Read, FileShare.None);
+        using var store = CreateStore(dir);
+
+        Assert.Empty(store.ListNames());
+        var rejection = Assert.Single(store.RejectedFiles);
+        Assert.Equal(novaPath, rejection.Path);
+        Assert.Equal("Couldn't read this file; it's in use.", rejection.Reason);
     }
 
     private static PersonaStore CreateStore(TempDataDir dir)
