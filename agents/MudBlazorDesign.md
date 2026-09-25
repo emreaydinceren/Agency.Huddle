@@ -1,37 +1,37 @@
-# MudBlazor for design and planning
-
-Use this page while writing a spec or a project plan for UI in `src/Huddle.App`. It tells
-you, in one scan, whether MudBlazor already ships what a feature needs, and links straight to
-the official example that shows it. It does not re-document MudBlazor: every row is a pointer,
-and the linked page is the reference.
-
-When you move from the plan to code, switch to
-[MudBlazorImplementation.md](MudBlazorImplementation.md): the house patterns to copy, the
-Huddle rules MudBlazor examples lead you to break, and the facts already checked against the
-pinned package.
-
-Applies to **MudBlazor 9.10.0**, the version pinned in
-[`Directory.Packages.props`](../Directory.Packages.props). Built and link-checked on 2026-09-24.
-
-## Choosing components for a design
-
-1. **Find the need** in [Finding a component by what you need](#finding-a-component-by-what-you-need).
-   If it is not there, scan the [catalogue](#the-catalogue) for your category.
-2. **Check whether Huddle already uses it** in
-   [Components Huddle already uses](MudBlazorImplementation.md#components-huddle-already-uses),
-   and name that house pattern in the spec so the implementer copies it.
-3. **Open the example link.** The "Examples on its page" column names every section of the
-   official page, and each one deep-links to a live, runnable demo with its source.
-4. **Settle what MudBlazor doesn't decide for you**: every user-facing text, the date and number
-   formats, and the markup a test will assert (a stable class hook per element). The Tasks
-   delivery drifted wherever these were left open, and sibling features built in parallel chose
-   three different wordings for the same thing.
-5. **Confirm any parameter the design depends on against the package, not the website.**
-   mudblazor.com documents the latest release; see
-   [Checking an API against 9.10.0](MudBlazorImplementation.md#checking-an-api-against-9100).
-
-Write your own component only when no row fits, or when composing two or three MudBlazor
-components is the component. A new Razor component that wraps one MudBlazor component to
+# MudBlazor for design and planning
+
+Use this page while writing a spec or a project plan for UI in `src/Huddle.App`. It tells
+you, in one scan, whether MudBlazor already ships what a feature needs, and links straight to
+the official example that shows it. It does not re-document MudBlazor: every row is a pointer,
+and the linked page is the reference.
+
+When you move from the plan to code, switch to
+[MudBlazorImplementation.md](MudBlazorImplementation.md): the house patterns to copy, the
+Huddle rules MudBlazor examples lead you to break, and the facts already checked against the
+pinned package.
+
+Applies to **MudBlazor 9.10.0**, the version pinned in
+[`Directory.Packages.props`](../Directory.Packages.props). Built and link-checked on 2026-09-24.
+
+## Choosing components for a design
+
+1. **Find the need** in [Finding a component by what you need](#finding-a-component-by-what-you-need).
+   If it is not there, scan the [catalogue](#the-catalogue) for your category.
+2. **Check whether Huddle already uses it** in
+   [Components Huddle already uses](MudBlazorImplementation.md#components-huddle-already-uses),
+   and name that house pattern in the spec so the implementer copies it.
+3. **Open the example link.** The "Examples on its page" column names every section of the
+   official page, and each one deep-links to a live, runnable demo with its source.
+4. **Settle what MudBlazor doesn't decide for you**: every user-facing text, the date and number
+   formats, and the markup a test will assert (a stable class hook per element). The Tasks
+   delivery drifted wherever these were left open, and sibling features built in parallel chose
+   three different wordings for the same thing.
+5. **Confirm any parameter the design depends on against the package, not the website.**
+   mudblazor.com documents the latest release; see
+   [Checking an API against 9.10.0](MudBlazorImplementation.md#checking-an-api-against-9100).
+
+Write your own component only when no row fits, or when composing two or three MudBlazor
+components is the component. A new Razor component that wraps one MudBlazor component to
 restyle it is almost always a Theme change or a parameter you missed.
 
 ## Finding a component by what you need

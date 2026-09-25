@@ -1,12 +1,12 @@
-# MudBlazor for implementation
-
-Use this page while writing or testing a component in `src/Huddle.App`: the house patterns to
-copy, the Huddle rules that MudBlazor's own examples lead you to break, and how to check an API
-against the pinned package, with the facts already checked. Choosing components belongs to the
-spec and the plan — see [MudBlazorDesign.md](MudBlazorDesign.md). For bUnit technique, see
-[BlazorTesting.md](BlazorTesting.md).
-
-Applies to **MudBlazor 9.10.0**, the version pinned in
+# MudBlazor for implementation
+
+Use this page while writing or testing a component in `src/Huddle.App`: the house patterns to
+copy, the Huddle rules that MudBlazor's own examples lead you to break, and how to check an API
+against the pinned package, with the facts already checked. Choosing components belongs to the
+spec and the plan — see [MudBlazorDesign.md](MudBlazorDesign.md). For bUnit technique, see
+[BlazorTesting.md](BlazorTesting.md).
+
+Applies to **MudBlazor 9.10.0**, the version pinned in
 [`Directory.Packages.props`](../Directory.Packages.props).
 
 ## Components Huddle already uses
@@ -147,10 +147,10 @@ website, or from what a MudBlazor example suggests.
 When you check a new fact, add a row. When `Directory.Packages.props` moves
 MudBlazor to a new version, re-check every row.
 
-## Keeping this page current
-
-Add a row to [Facts already checked](#facts-already-checked) whenever you confirm a parameter,
-event or rendering detail against the package, one fact per row, saying how it was confirmed.
-Add a row to [Components Huddle already uses](#components-huddle-already-uses) when a component
-first ships in `src/Huddle.App`. When you bump MudBlazor in `Directory.Packages.props`, re-check
+## Keeping this page current
+
+Add a row to [Facts already checked](#facts-already-checked) whenever you confirm a parameter,
+event or rendering detail against the package, one fact per row, saying how it was confirmed.
+Add a row to [Components Huddle already uses](#components-huddle-already-uses) when a component
+first ships in `src/Huddle.App`. When you bump MudBlazor in `Directory.Packages.props`, re-check
 every fact.
