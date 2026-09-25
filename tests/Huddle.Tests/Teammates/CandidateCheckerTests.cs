@@ -4,6 +4,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Teammates;
+using Agency.Huddle.Tests.Acp;
 using Agency.Huddle.Tests.Acp.Tools;
 
 namespace Agency.Huddle.Tests.Teammates;
@@ -122,7 +123,7 @@ public sealed partial class CandidateCheckerTests
     /// <summary>
     /// Spec §8.3 order 5: an Alias equal to an existing Persona's Name is rejected by
     /// <c>PersonaStore.Check</c>'s collision rules, and the message must name the real file - a
-    /// path this really exists at - relative to the Teams directory, never absolute.
+    /// path this really exists at - relative to the data directory, never absolute.
     /// </summary>
     [Fact]
     public async Task CheckAsync_AliasEqualsExistingPersonaName_NamesTheRealFileRelatively()
@@ -137,7 +138,9 @@ public sealed partial class CandidateCheckerTests
         var result = await fixture.Checker.CheckAsync([candidate], ct);
 
         Assert.False(result.IsValid);
-        Assert.Contains(result.Problems, p => p.Contains("Teams/Jarvis.md", StringComparison.Ordinal));
+        // contains-ok: the rest of the sentence (which Persona/Alias collided) is PersonaStore.Check's
+        // own text, already pinned by PersonaStoreTests; this only proves the rewritten path survived.
+        Assert.Contains(result.Problems, p => p.Contains("Teammates/Jarvis/Jarvis.md", StringComparison.Ordinal));
         AssertProblemsAreModelFacing(result.Problems);
     }
 
@@ -162,7 +165,9 @@ public sealed partial class CandidateCheckerTests
         var result = await fixture.Checker.CheckAsync([candidate], ct);
 
         Assert.False(result.IsValid);
-        Assert.Contains(result.Problems, p => p.Contains("Teams/Iris.md", StringComparison.Ordinal));
+        // contains-ok: the rest of the sentence is PersonaStore.Check's own text, already pinned by
+        // PersonaStoreTests; this only proves the rewritten path survived.
+        Assert.Contains(result.Problems, p => p.Contains("Teammates/Iris/Iris.md", StringComparison.Ordinal));
         Assert.DoesNotContain(result.Problems, p => p.Contains("used by .", StringComparison.Ordinal));
         AssertProblemsAreModelFacing(result.Problems);
     }
@@ -220,7 +225,7 @@ public sealed partial class CandidateCheckerTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using var fixture = await CreateFixtureAsync(
             ct,
-            teamsDir => File.WriteAllText(Path.Combine(teamsDir, "Ghost.md"), "not even a valid Persona file"));
+            paths => TestPersonaFiles.Write(paths, "Ghost", "not even a valid Persona file"));
 
         var candidate = MakeCandidate(name: "Ghost", alias: "ghost");
 
@@ -276,18 +281,17 @@ public sealed partial class CandidateCheckerTests
     /// when given, writes files into the Teams directory BEFORE <see cref="PersonaStore"/> is
     /// constructed, so its constructor's own startup scan picks them up deterministically.
     /// </summary>
-    private static async Task<Fixture> CreateFixtureAsync(CancellationToken ct, Action<string>? seedTeamsDir = null)
+    private static async Task<Fixture> CreateFixtureAsync(CancellationToken ct, Action<TeammatePaths>? seedTeamsDir = null)
     {
         var dataDir = new TempDataDir();
-        var teamsDir = Path.Combine(dataDir.Path, "Teammates");
-        Directory.CreateDirectory(teamsDir);
-        seedTeamsDir?.Invoke(teamsDir);
+        var paths = new TeammatePaths(dataDir.Options());
+        seedTeamsDir?.Invoke(paths);
 
         var directory = new SqliteTeamDirectory(dataDir.Options());
         await directory.InitializeAsync("You", ct);
 
         var personas = new PersonaStore(
-            new TeammatePaths(dataDir.Options()), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+            paths, new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
         var gateway = new FakeAgentGateway();
         var checker = new CandidateChecker(personas, directory, gateway);
 
@@ -298,7 +302,7 @@ public sealed partial class CandidateCheckerTests
     /// Asserts that none of <paramref name="problems"/> leaks a filesystem implementation detail: no
     /// Windows drive-letter absolute path, no <c>~</c> disambiguator (only ever produced by
     /// <see cref="PersonaStore.Check"/> for a sibling Candidate's synthetic path), and no bare
-    /// <c>{Name}.md</c> reference that is not a real, relative <c>Teams/</c> path. Internal rather
+    /// <c>{Name}.md</c> reference that is not a real, relative <c>Teammates/</c> path. Internal rather
     /// than private so <c>ProposalServiceTests</c> can reuse it for a <see cref="CandidateFailure.Reason"/>
     /// that ultimately came from the same <see cref="CandidateChecker"/> problem text.
     /// </summary>
@@ -311,7 +315,9 @@ public sealed partial class CandidateCheckerTests
 
             foreach (Match match in MdReferenceRegex().Matches(problem))
             {
-                Assert.StartsWith("Teams/", match.Value, StringComparison.Ordinal);
+                // contains-ok: proving the reference is a real, DataDir-relative Teammates/ path,
+                // not a Windows-absolute or bare filename leak - the exact remainder is per-test text.
+                Assert.StartsWith("Teammates/", match.Value, StringComparison.Ordinal);
             }
         }
     }

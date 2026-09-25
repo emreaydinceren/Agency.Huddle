@@ -323,6 +323,12 @@ internal sealed partial class PersonaRenameCascade(
             return;
         }
 
+        // The new Name's own Teammate folder may not exist yet (it is normally created alongside
+        // the moved definition file elsewhere in the cascade) - Directory.Move throws
+        // DirectoryNotFoundException (an IOException) when the target's PARENT is missing, which the
+        // retry loop below would retry on the injected clock without ever succeeding.
+        Directory.CreateDirectory(teammatePaths.TeammateFolder(newName));
+
         for (var attempt = 1; attempt <= MaxWorkDirMoveAttempts; attempt++)
         {
             try

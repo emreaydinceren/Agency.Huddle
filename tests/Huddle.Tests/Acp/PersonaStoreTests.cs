@@ -17,7 +17,7 @@ public sealed class PersonaStoreTests
 
         store.Add(Identity("coo"), "You are the Chief of Staff.");
 
-        var path = Path.Combine(dir.Path, "Teammates", "coo.md");
+        var path = store.PathFor("coo");
         Assert.True(File.Exists(path));
 
         // Add composes its own canonical front matter - lowercase keys, single-quoted scalars -
@@ -37,7 +37,7 @@ public sealed class PersonaStoreTests
 
         store.Add(Identity("Chief of Staff"), "You keep the team honest.");
 
-        var path = Path.Combine(dir.Path, "Teammates", "Chief of Staff.md");
+        var path = store.PathFor("Chief of Staff");
         Assert.True(File.Exists(path));
 
         // Listing reads the Name back off the composed frontmatter, so this is what proves the
@@ -64,7 +64,7 @@ public sealed class PersonaStoreTests
 
         store.Add(identity, "You are the Chief of Staff.");
 
-        var path = Path.Combine(dir.Path, "Teammates", "coo.md");
+        var path = store.PathFor("coo");
         var written = File.ReadAllText(path);
 
         // YAML's own escape for an embedded apostrophe inside a single-quoted scalar is "''" - the
@@ -146,9 +146,7 @@ public sealed class PersonaStoreTests
         // PersonaStore.Get comes back with both.
         using var dir = new TempDataDir();
         var options = dir.Options();
-        var teamsDir = Path.Combine(dir.Path, "Teammates");
-        Directory.CreateDirectory(teamsDir);
-        File.WriteAllText(Path.Combine(teamsDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff."));
+        TestPersonaFiles.Write(new TeammatePaths(options), "coo", PersonaText("coo", "You are the Chief of Staff."));
         var models = new PersonaModelStore(options);
         models.Set("coo", "claude-opus-4");
         using var store = new PersonaStore(new TeammatePaths(options), models, new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
@@ -168,9 +166,7 @@ public sealed class PersonaStoreTests
         // yet PersonaStore.Get comes back with both.
         using var dir = new TempDataDir();
         var options = dir.Options();
-        var teamsDir = Path.Combine(dir.Path, "Teammates");
-        Directory.CreateDirectory(teamsDir);
-        File.WriteAllText(Path.Combine(teamsDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff."));
+        TestPersonaFiles.Write(new TeammatePaths(options), "coo", PersonaText("coo", "You are the Chief of Staff."));
         var efforts = new PersonaEffortStore(options);
         efforts.Set("coo", "high");
         using var store = new PersonaStore(new TeammatePaths(options), new PersonaModelStore(options), efforts, NullLogger<PersonaStore>.Instance);
@@ -188,9 +184,7 @@ public sealed class PersonaStoreTests
     {
         using var dir = new TempDataDir();
         var options = dir.Options();
-        var teamsDir = Path.Combine(dir.Path, "Teammates");
-        Directory.CreateDirectory(teamsDir);
-        File.WriteAllText(Path.Combine(teamsDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff.", "agency"));
+        TestPersonaFiles.Write(new TeammatePaths(options), "coo", PersonaText("coo", "You are the Chief of Staff.", "agency"));
         using var store = new PersonaStore(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
 
         var persona = store.Get("coo");
@@ -223,10 +217,8 @@ public sealed class PersonaStoreTests
     {
         using var dir = new TempDataDir();
         var options = dir.Options();
-        var teamsDir = Path.Combine(dir.Path, "Teammates");
-        Directory.CreateDirectory(teamsDir);
         var text = PersonaText("coo", "first", "agency");
-        File.WriteAllText(Path.Combine(teamsDir, "coo.md"), text);
+        TestPersonaFiles.Write(new TeammatePaths(options), "coo", text);
         using var store = new PersonaStore(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
 
         var updated = store.Update("coo", text, model: null, effort: null);
@@ -383,7 +375,7 @@ public sealed class PersonaStoreTests
         var updated = store.Update("coo", PersonaText("coo", "second"), model: null, effort: null);
 
         Assert.Equal(PersonaText("coo", "second"), updated.Text);
-        var path = Path.Combine(dir.Path, "Teammates", "coo.md");
+        var path = store.PathFor("coo");
         Assert.Equal(PersonaText("coo", "second"), File.ReadAllText(path));
     }
 
@@ -458,7 +450,7 @@ public sealed class PersonaStoreTests
 
         Assert.Equal(PersonaText("coo", "unchanged text"), updated.Text);
         Assert.Equal("claude-opus-4", updated.Model);
-        var path = Path.Combine(dir.Path, "Teammates", "coo.md");
+        var path = store.PathFor("coo");
         Assert.Equal(PersonaText("coo", "unchanged text"), File.ReadAllText(path));
     }
 
@@ -474,7 +466,7 @@ public sealed class PersonaStoreTests
         Assert.Equal(PersonaText("coo", "unchanged text"), updated.Text);
         Assert.Equal("claude-opus-4", updated.Model);
         Assert.Equal("high", updated.Effort);
-        var path = Path.Combine(dir.Path, "Teammates", "coo.md");
+        var path = store.PathFor("coo");
         Assert.Equal(PersonaText("coo", "unchanged text"), File.ReadAllText(path));
     }
 
@@ -679,7 +671,6 @@ public sealed class PersonaStoreTests
     [Fact]
     public async Task Update_ChangingTheName_MovesTheModelAndEffortRowsRatherThanLeavingThemBehind()
     {
-        var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var store = CreateStore(dir);
         store.Add(Identity("coo"), "You are the Chief of Staff.", "claude-opus-4", "high");
@@ -705,10 +696,7 @@ public sealed class PersonaStoreTests
         // than colliding on the old path.
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         store.PersonasChanged += () => tcs.TrySetResult();
-        await File.WriteAllTextAsync(
-            Path.Combine(dir.Path, "Teammates", "coo-new.md"),
-            PersonaText("coo", "You are a brand new Chief of Staff."),
-            ct);
+        TestPersonaFiles.Write(new TeammatePaths(dir.Options()), "coo-new", PersonaText("coo", "You are a brand new Chief of Staff."));
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());
         await tcs.Task;
@@ -852,7 +840,7 @@ public sealed class PersonaStoreTests
 
         var path = store.PathFor("coo");
 
-        Assert.Equal(Path.Combine(dir.Path, "Teammates", "coo.md"), path);
+        Assert.Equal(Path.Combine(dir.Path, "Teammates", "coo", "coo.md"), path);
         Assert.True(File.Exists(path));
     }
 
@@ -863,15 +851,11 @@ public sealed class PersonaStoreTests
         // PersonasChanged: this writes a .md file directly to disk, bypassing the store entirely.
         using var dir = new TempDataDir();
         using var store = CreateStore(dir);
-        Directory.CreateDirectory(Path.Combine(dir.Path, "Teammates"));
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         store.PersonasChanged += () => tcs.TrySetResult();
 
-        await File.WriteAllTextAsync(
-            Path.Combine(dir.Path, "Teammates", "external.md"),
-            PersonaText("external", "You are External."),
-            TestContext.Current.CancellationToken);
+        TestPersonaFiles.Write(new TeammatePaths(dir.Options()), "external", PersonaText("external", "You are External."));
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());
@@ -928,9 +912,7 @@ public sealed class PersonaStoreTests
     public void ListNames_UsesTheFrontMatterNameRatherThanTheFilename()
     {
         using var dir = new TempDataDir();
-        var teamsDir = Path.Combine(dir.Path, "Teammates");
-        Directory.CreateDirectory(teamsDir);
-        File.WriteAllText(Path.Combine(teamsDir, "zzz.md"), PersonaText("Jarvis", "You are Jarvis."));
+        TestPersonaFiles.Write(new TeammatePaths(dir.Options()), "zzz", PersonaText("Jarvis", "You are Jarvis."));
         using var store = CreateStore(dir);
 
         var names = store.ListNames();
@@ -997,10 +979,9 @@ public sealed class PersonaStoreTests
     public void RejectedFiles_ReportsAMalformedFilesPathAndReason()
     {
         using var dir = new TempDataDir();
-        var teamsDir = Path.Combine(dir.Path, "Teammates");
-        Directory.CreateDirectory(teamsDir);
-        var path = Path.Combine(teamsDir, "broken.md");
-        File.WriteAllText(path, "---\nTitle: Chief of Staff\nAlias: coo\n---\nYou are the Chief of Staff.");
+        var paths = new TeammatePaths(dir.Options());
+        TestPersonaFiles.Write(paths, "broken", "---\nTitle: Chief of Staff\nAlias: coo\n---\nYou are the Chief of Staff.");
+        var path = paths.DefinitionFile("broken");
         using var store = CreateStore(dir);
 
         var rejection = Assert.Single(store.RejectedFiles);
@@ -1113,7 +1094,7 @@ public sealed class PersonaStoreTests
         // still gets noticed.
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         store.PersonasChanged += () => tcs.TrySetResult();
-        await File.WriteAllTextAsync(Path.Combine(teamsDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff."), ct);
+        TestPersonaFiles.Write(new TeammatePaths(dir.Options()), "coo", PersonaText("coo", "You are the Chief of Staff."));
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());

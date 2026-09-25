@@ -151,12 +151,15 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
         ArgumentException.ThrowIfNullOrWhiteSpace(stem);
         ArgumentNullException.ThrowIfNull(text);
 
-        Directory.CreateDirectory(this.TeammatesDirPath);
+        Directory.CreateDirectory(this.TeammateFolder(stem));
         await File.WriteAllTextAsync(this.DefinitionFile(stem), text, cancellationToken).ConfigureAwait(false);
     }
 
-    /// <summary>The path to <paramref name="stem"/>'s definition file under <see cref="TeammatesDirPath"/>.</summary>
-    private string DefinitionFile(string stem) => Path.Combine(this.TeammatesDirPath, $"{stem}.md");
+    /// <summary>The teammate's own folder under <see cref="TeammatesDirPath"/>, named after <paramref name="stem"/>.</summary>
+    private string TeammateFolder(string stem) => Path.Combine(this.TeammatesDirPath, stem);
+
+    /// <summary>The path to <paramref name="stem"/>'s definition file inside <see cref="TeammateFolder"/>.</summary>
+    private string DefinitionFile(string stem) => Path.Combine(this.TeammateFolder(stem), $"{stem}.md");
 
     protected override void Dispose(bool disposing)
     {

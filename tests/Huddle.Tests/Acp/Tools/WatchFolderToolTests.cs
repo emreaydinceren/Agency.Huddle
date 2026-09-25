@@ -65,7 +65,7 @@ public sealed class WatchFolderToolTests
         var ct = TestContext.Current.CancellationToken;
         using var fixture = await Fixture.CreateAsync(ct);
         var tool = new WatchFolderTool(fixture.Tracker, "Nova", new FakePromptSource());
-        var ownFullPath = Path.Combine(fixture.Options.Value.DataDir, fixture.Options.Value.Acp.WorkDir, "Nova");
+        var ownFullPath = new TeammatePaths(fixture.Options).WorkDir("Nova");
 
         var result = await tool.InvokeAsync(new JsonObject { ["folder"] = "Nova" }, ct);
 

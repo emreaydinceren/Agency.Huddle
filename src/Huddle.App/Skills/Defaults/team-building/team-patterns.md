@@ -79,7 +79,7 @@ only its own library.
 - **Set up:** each specialist's folder holds an `index.md` listing what is
   there, a `notes.md` of what it has learned, a dated `log.md`, and a
   `references/` folder. Tell the Human where each folder is, by default
-  `App_Data/work/<Name>/`, so they can add articles and documents themselves.
+  `App_Data/Teammates/<Name>/work/`, so they can add articles and documents themselves.
 - **They work together by Mentioning each other** with one specific question,
   and answer with a conclusion and the evidence for it, never with their
   library. The Human, or a coordinator, brings the answers together.

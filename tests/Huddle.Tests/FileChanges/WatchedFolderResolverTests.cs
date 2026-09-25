@@ -21,7 +21,7 @@ public sealed class WatchedFolderResolverTests
         Assert.Null(reason);
         Assert.NotNull(folder);
         Assert.Equal("nova", folder.Entry);
-        Assert.Equal(Path.Combine(dataDir.Path, "work", "Nova"), folder.FullPath);
+        Assert.Equal(Path.Combine(dataDir.Path, "Teammates", "Nova", "work"), folder.FullPath);
     }
 
     /// <summary>A Teammate Name wins over a same-named folder directly under <c>DataDir</c>.</summary>
@@ -37,7 +37,7 @@ public sealed class WatchedFolderResolverTests
         Assert.True(resolved);
         Assert.Null(reason);
         Assert.NotNull(folder);
-        Assert.Equal(Path.Combine(dataDir.Path, "work", "Nova"), folder.FullPath);
+        Assert.Equal(Path.Combine(dataDir.Path, "Teammates", "Nova", "work"), folder.FullPath);
     }
 
     /// <summary>A leading <c>./</c> or <c>.\</c> means the folder under <c>DataDir</c>, overriding a Teammate Name match.</summary>

@@ -4,7 +4,9 @@ using Agency.Huddle.App.Acp;
 
 namespace Agency.Huddle.Tests.Acp;
 
-/// <summary>TeammatePaths constructs and caches paths for teammate definitions and work directories.</summary>
+/// <summary>TeammatePaths constructs and caches paths for teammate definitions and work directories
+/// under the ADR-0031 layout, where each Teammate has its own folder holding its definition file and
+/// its Work Dir as a sub-folder.</summary>
 public sealed class TeammatePathsTests
 {
     /// <summary>DefinitionFile with null throws ArgumentNullException.</summary>
@@ -55,9 +57,23 @@ public sealed class TeammatePathsTests
         _ = Assert.Throws<ArgumentException>(() => { paths.WorkDir(name); });
     }
 
-    /// <summary>DefinitionFile returns Teammates directory joined with name and .md extension.</summary>
+    /// <summary>TeammateFolder returns the Teammates directory joined with the teammate's name.</summary>
     [Fact]
-    public void DefinitionFile_Name_IsTeammatesDirNameDotMd()
+    public void TeammateFolder_Name_IsTeammatesName()
+    {
+        using TempDataDir tempDir = new();
+        IOptions<TeamOptions> options = tempDir.Options();
+        TeammatePaths paths = new(options);
+
+        string result = paths.TeammateFolder("Nova");
+
+        string expected = Path.Combine(tempDir.Path, "Teammates", "Nova");
+        Assert.Equal(expected, result);
+    }
+
+    /// <summary>DefinitionFile returns the definition file inside the teammate's own folder.</summary>
+    [Fact]
+    public void DefinitionFile_Name_IsInsideTeammateFolder()
     {
         using TempDataDir tempDir = new();
         IOptions<TeamOptions> options = tempDir.Options();
@@ -65,13 +81,13 @@ public sealed class TeammatePathsTests
 
         string result = paths.DefinitionFile("Nova");
 
-        string expected = Path.Combine(tempDir.Path, "Teammates", "Nova.md");
+        string expected = Path.Combine(tempDir.Path, "Teammates", "Nova", "Nova.md");
         Assert.Equal(expected, result);
     }
 
-    /// <summary>WorkDir returns work root directory joined with name.</summary>
+    /// <summary>WorkDir returns the configured Work Dir folder name as a sub-folder of the teammate's own folder.</summary>
     [Fact]
-    public void WorkDir_Name_IsWorkRootName()
+    public void WorkDir_Name_IsWorkInsideTeammateFolder()
     {
         using TempDataDir tempDir = new();
         IOptions<TeamOptions> options = tempDir.Options();
@@ -79,7 +95,7 @@ public sealed class TeammatePathsTests
 
         string result = paths.WorkDir("Nova");
 
-        string expected = Path.Combine(tempDir.Path, "work", "Nova");
+        string expected = Path.Combine(tempDir.Path, "Teammates", "Nova", "work");
         Assert.Equal(expected, result);
     }
 
@@ -97,38 +113,24 @@ public sealed class TeammatePathsTests
         Assert.Equal(expected, result);
     }
 
-    /// <summary>WorkDirRoot returns the work directory.</summary>
-    [Fact]
-    public void WorkDirRoot_IsWorkDir()
-    {
-        using TempDataDir tempDir = new();
-        IOptions<TeamOptions> options = tempDir.Options();
-        TeammatePaths paths = new(options);
-
-        string result = paths.WorkDirRoot;
-
-        string expected = Path.Combine(tempDir.Path, "work");
-        Assert.Equal(expected, result);
-    }
-
-    /// <summary>Paths honour configured TeammatesDir and WorkDir options.</summary>
+    /// <summary>Paths honour a configured TeammatesDir and WorkDir folder name.</summary>
     [Fact]
     public void Paths_HonourConfiguredDirs()
     {
         using TempDataDir tempDir = new();
         IOptions<TeamOptions> options = tempDir.Options();
-        options.Value.Acp.TeammatesDir = "P";
-        options.Value.Acp.WorkDir = "W";
+        options.Value.Acp.TeammatesDir = "M";
+        options.Value.Acp.WorkDir = "w";
 
         TeammatePaths paths = new(options);
 
-        string expectedDefinitionsRoot = Path.Combine(tempDir.Path, "P");
-        string expectedWorkDirRoot = Path.Combine(tempDir.Path, "W");
-        string expectedDefinitionFile = Path.Combine(tempDir.Path, "P", "Nova.md");
-        string expectedWorkDir = Path.Combine(tempDir.Path, "W", "Nova");
+        string expectedDefinitionsRoot = Path.Combine(tempDir.Path, "M");
+        string expectedTeammateFolder = Path.Combine(tempDir.Path, "M", "Nova");
+        string expectedDefinitionFile = Path.Combine(tempDir.Path, "M", "Nova", "Nova.md");
+        string expectedWorkDir = Path.Combine(tempDir.Path, "M", "Nova", "w");
 
         Assert.Equal(expectedDefinitionsRoot, paths.DefinitionsRoot);
-        Assert.Equal(expectedWorkDirRoot, paths.WorkDirRoot);
+        Assert.Equal(expectedTeammateFolder, paths.TeammateFolder("Nova"));
         Assert.Equal(expectedDefinitionFile, paths.DefinitionFile("Nova"));
         Assert.Equal(expectedWorkDir, paths.WorkDir("Nova"));
     }

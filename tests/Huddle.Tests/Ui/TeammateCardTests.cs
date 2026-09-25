@@ -321,8 +321,9 @@ public sealed class TeammateCardTests
         Assert.NotNull(factory.Services.GetRequiredService<PersonaStore>().Get("newcoo"));
 
         // PersonaStore.Update rewrites the SAME file in place - identity is frontmatter, never the
-        // filename (rules.md) - so the file path a rename lands on is still the original "coo.md".
-        var expectedPath = Path.Combine(factory.TeammatesDirPath, "coo.md");
+        // filename (rules.md) - so the file path a rename lands on is still the original "coo.md"
+        // inside its own, still "coo"-named, Teammate folder.
+        var expectedPath = Path.Combine(factory.TeammatesDirPath, "coo", "coo.md");
         Assert.True(File.Exists(expectedPath));
         Assert.Contains(expectedPath, cut.Markup, StringComparison.Ordinal);
     }

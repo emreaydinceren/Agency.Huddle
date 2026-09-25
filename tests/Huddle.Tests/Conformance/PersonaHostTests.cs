@@ -69,7 +69,7 @@ public sealed class PersonaHostTests
         string firstPrompt = await fixture.AppendedSystemPromptAsync(occurrence: 1, ct);
         Assert.DoesNotContain("Porto trip notes", firstPrompt, StringComparison.Ordinal);
 
-        string memoryDir = Path.Combine(fixture.DataDir, "work", fixture.Persona.Name, "memory");
+        string memoryDir = Path.Combine(fixture.DataDir, "Teammates", fixture.Persona.Name, "work", "memory");
         await File.WriteAllTextAsync(Path.Combine(memoryDir, "porto.md"), "# Porto trip notes\n", ct);
 
         _ = await host.OpenAsync(ct);

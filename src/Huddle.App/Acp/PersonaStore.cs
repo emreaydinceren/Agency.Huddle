@@ -337,7 +337,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
 
             entry = this.ValidateCandidate(path, text, excludingPath: null);
 
-            Directory.CreateDirectory(this.Paths.DefinitionsRoot);
+            Directory.CreateDirectory(this.Paths.TeammateFolder(identity.Name));
             File.WriteAllText(path, text);
             this.models.Set(entry.Name, model);
             this.efforts.Set(entry.Name, effort);

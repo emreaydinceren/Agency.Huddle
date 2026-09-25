@@ -93,7 +93,7 @@ public sealed class ProposalCardTests
         FindButton(cut, "Approve").Click();
 
         cut.WaitForAssertion(() => Assert.True(string.IsNullOrWhiteSpace(cut.Markup)));
-        Assert.True(File.Exists(Path.Combine(fixture.Personas.TeamsDirectory, "Vera.md")));
+        Assert.True(File.Exists(fixture.Personas.Paths.DefinitionFile("Vera")));
         Assert.Null(fixture.Proposals.Get(room.Id));
     }
 

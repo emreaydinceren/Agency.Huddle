@@ -232,12 +232,12 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
 
     private async Task<(bool Succeeded, ProbeResult Result)> ProbeAsync(AdapterProfile profile, string? model, CancellationToken cancellationToken)
     {
-        // The Work Dir ROOT, Directory.CreateDirectory'd — not a Persona's work dir, since this
+        // The Teammates ROOT, Directory.CreateDirectory'd — not a Persona's own folder, since this
         // probe is not a Persona and has no name to scope a subdirectory to. Never the repo root or
         // AppContext.BaseDirectory either: the adapter auto-loads CLAUDE.md and
         // .claude/settings.json from its cwd, so either of those would silently hand the repo's own
         // instructions to a process that is only being asked what models it offers.
-        var probeCwd = this.teammatePaths.WorkDirRoot;
+        var probeCwd = this.teammatePaths.DefinitionsRoot;
         Directory.CreateDirectory(probeCwd);
 
         // profile is already resolved by the caller (GetAsync/GetEffortLevelsAsync) - resolving

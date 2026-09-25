@@ -180,7 +180,7 @@ public sealed class PersonaRenameCascadeTests
         await WaitForWorkDirMoveAsync(dir, "echoprime", ct);
 
         Assert.False(Directory.Exists(oldWorkDir));
-        var newWorkDir = Path.Combine(dir.Path, "work", "echoprime");
+        var newWorkDir = new TeammatePaths(dir.Options()).WorkDir("echoprime");
         Assert.True(File.Exists(Path.Combine(newWorkDir, "CLAUDE.md")));
     }
 
@@ -253,8 +253,8 @@ public sealed class PersonaRenameCascadeTests
         Assert.NotNull(updatedRoom);
         Assert.Equal("echoprime", updatedRoom.Name);
 
-        Assert.False(Directory.Exists(Path.Combine(dir.Path, "work", "echo")));
-        Assert.True(Directory.Exists(Path.Combine(dir.Path, "work", "echoprime")));
+        Assert.False(Directory.Exists(new TeammatePaths(dir.Options()).WorkDir("echo")));
+        Assert.True(Directory.Exists(new TeammatePaths(dir.Options()).WorkDir("echoprime")));
     }
 
     /// <summary>
@@ -558,7 +558,7 @@ public sealed class PersonaRenameCascadeTests
     /// <summary>Creates the Work Dir folder a Persona named <paramref name="name"/> would have as its <c>cwd</c>, and returns its path.</summary>
     private static string CreateWorkDir(TempDataDir dir, string name)
     {
-        var path = Path.Combine(dir.Path, "work", name);
+        var path = new TeammatePaths(dir.Options()).WorkDir(name);
         Directory.CreateDirectory(path);
         return path;
     }
@@ -570,7 +570,7 @@ public sealed class PersonaRenameCascadeTests
     /// </summary>
     private static async Task WaitForWorkDirMoveAsync(TempDataDir dir, string newName, CancellationToken ct)
     {
-        var target = Path.Combine(dir.Path, "work", newName);
+        var target = new TeammatePaths(dir.Options()).WorkDir(newName);
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
 

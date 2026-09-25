@@ -4,6 +4,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.Tests.Acp;
 
 namespace Agency.Huddle.Tests.FileChanges;
 
@@ -596,8 +597,8 @@ public sealed class FileChangeTrackerTests
         Assert.Contains($"Watched folder '../nope' is not a Teammate or a folder inside {dataDirName}.", warnings);
     }
 
-    /// <summary>The Agent's own Work Dir, per FC §6.7 step 1: <c>{DataDir}/work/Nova</c>.</summary>
-    private static string WorkDir(Fixture fixture) => Path.Combine(fixture.DataDir.Path, "work", "Nova");
+    /// <summary>The Agent's own Work Dir, per FC §6.7 step 1: <c>{DataDir}/Teammates/Nova/work</c>.</summary>
+    private static string WorkDir(Fixture fixture) => Path.Combine(fixture.DataDir.Path, "Teammates", "Nova", "work");
 
     /// <summary>Creates a real Room through the fixture's <see cref="ITeamDirectory"/>, returning its id.</summary>
     private static async Task<string> CreateRoomAsync(Fixture fixture, string name, CancellationToken ct)
@@ -621,15 +622,13 @@ public sealed class FileChangeTrackerTests
         IOptions<TeamOptions> options = dataDir.Options();
         configureFileChanges?.Invoke(options.Value.FileChanges);
 
-        string teamsDir = Path.Combine(options.Value.DataDir, options.Value.Acp.TeammatesDir);
-        Directory.CreateDirectory(teamsDir);
+        TeammatePaths teammatePaths = new(options);
         string watchesLine = watches is null ? string.Empty : $"\nwatches: [{watches}]";
-        File.WriteAllText(Path.Combine(teamsDir, "nova.md"), $"---\nName: Nova\nTitle: Nova\nAlias: Nova{watchesLine}\n---\nYou are Nova.");
+        TestPersonaFiles.Write(teammatePaths, "nova", $"---\nName: Nova\nTitle: Nova\nAlias: Nova{watchesLine}\n---\nYou are Nova.");
 
         SqliteTeamDirectory directory = new(options);
         await directory.InitializeAsync("You", ct);
 
-        TeammatePaths teammatePaths = new(options);
         PersonaStore personas = new(
             teammatePaths,
             new PersonaModelStore(options),

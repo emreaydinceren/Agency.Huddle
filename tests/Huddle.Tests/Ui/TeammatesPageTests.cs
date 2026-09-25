@@ -313,7 +313,7 @@ public sealed class TeammatesPageTests
 
         await using var factory = new TeamWebApplicationFactory();
 
-        var path = Path.Combine(factory.TeammatesDirPath, "broken.md");
+        var path = Path.Combine(factory.TeammatesDirPath, "broken", "broken.md");
         await factory.WriteDefinitionAsync("broken", "---\nName: coo\nTitle: Chief of Staff\n---\nYou are the Chief of Staff.", ct);
 
         using var client = factory.CreateClient();

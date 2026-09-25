@@ -216,7 +216,7 @@ Once Teammates exist:
    every panellist in the same Message, so each answers before seeing the
    others, and to compare the answers rather than ask the panel to debate. For
    a Teammate that keeps a library or notes, tell them where its folder is, by
-   default `App_Data/work/<Name>/`, so they can add material to it.
+   default `App_Data/Teammates/<Name>/work/`, so they can add material to it.
 3. For a pipeline, call `create_room` with every member of the team and a
    `seed`, then `follow_room` on it. The seed is the only context the team will
    have, so write it as below.

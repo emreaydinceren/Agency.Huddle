@@ -23,7 +23,7 @@ internal static class TestPersonaFiles
         ArgumentNullException.ThrowIfNull(text);
 
         string file = paths.DefinitionFile(stem);
-        Directory.CreateDirectory(paths.DefinitionsRoot);
+        Directory.CreateDirectory(paths.TeammateFolder(stem));
         File.WriteAllText(file, text);
     }
 }

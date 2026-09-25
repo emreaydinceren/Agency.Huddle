@@ -450,7 +450,7 @@ public sealed class PersonaRunnerFileChangesTests
 
     /// <summary><paramref name="agentName"/>'s own Work Dir, always the first Watched Folder (FC §6.7 step 1).</summary>
     private static string OwnWorkDir(TeamOptions options, string agentName) =>
-        Path.Combine(options.DataDir, options.Acp.WorkDir, agentName);
+        new TeammatePaths(Options.Create(options)).WorkDir(agentName);
 
     /// <summary>A minimal <c>file_path</c> raw-input JSON body naming <paramref name="fullPath"/>.</summary>
     private static string RawInputFor(string fullPath) =>
