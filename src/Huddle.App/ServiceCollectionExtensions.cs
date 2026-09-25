@@ -94,6 +94,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AgentGateway>();
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());
 
+        services.AddSingleton<TeammatePaths>();
+
         // Unconditional: this is what lets the /teammates page be built and tested with no agent
         // process and no tokens, regardless of whether Team:Acp:Enabled is set.
         services.AddSingleton<PersonaStore>();
