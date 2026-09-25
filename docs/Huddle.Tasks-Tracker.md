@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then.
 
-**Status:** 136 of 147 tasks Done · 8 of 9 retrospectives done · last updated 2026-09-24.
+**Status:** 146 of 147 tasks Done · 8 of 9 retrospectives done · last updated 2026-09-25.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -166,24 +166,24 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 14.1.i Implement `TaskDetail`'s core · #127 · Sonnet | | | ✔ |
 | 14.2.t Test: status, blockers, tags and dates · #128 · Sonnet | | | ✔ |
 | 14.2.i Implement those fields · #129 · Sonnet | | | ✔ |
-| 14.3.t Test: the conflict UI · #130 · Sonnet | | ✔ | |
-| 14.3.i Implement the conflict UI · #131 · Sonnet | | ✔ | |
+| 14.3.t Test: the conflict UI · #130 · Sonnet | | | ✔ |
+| 14.3.i Implement the conflict UI · #131 · Sonnet | | | ✔ |
 | 14.4.t Test: Expand, Make a copy, Close and the Change log · #132 · Sonnet | | | ✔ |
-| 14.4.i Implement the dialog and the buttons · #133 · Sonnet | ✔ | | |
+| 14.4.i Implement the dialog and the buttons · #133 · Sonnet | | | ✔ |
 | 14.5.t Test: toast, AI reacting and the wake budget · #134 · Sonnet | | | ✔ |
-| 14.5.i Implement the notifications · #135 · Sonnet | | ✔ | |
+| 14.5.i Implement the notifications · #135 · Sonnet | | | ✔ |
 | 🔁 R9 — Opus retrospective after #135, and plan update | ✔ | | |
 | **D15. Referencing a Task in chat** | | | |
 | 15.1.t Test: Task ids as links · #136 · Sonnet | | | ✔ |
 | 15.1.i Implement id linking · #137 · Sonnet | | | ✔ |
 | 15.2.t Test: the route and the copy button · #138 · Sonnet | | | ✔ |
-| 15.2.i Implement the route and the copy button · #139 · Sonnet | ✔ | | |
+| 15.2.i Implement the route and the copy button · #139 · Sonnet | | | ✔ |
 | 15.3.t Test: the `#` picker's Blazor side · #140 · Sonnet | | | ✔ |
 | 15.3.i Implement the `#` picker · #141 · Sonnet | | | ✔ |
 | **D16. Docs and verification** | | | |
-| 16.1 `code-map.md` rows · #142 · Haiku | ✔ | | |
-| 16.2 The hub and its configuration rows · #143 · Haiku | ✔ | | |
-| 16.3 Known limits, roadmap, decisions and status · #144 · Haiku | ✔ | | |
-| 16.4 The manual test area · #145 · Sonnet | ✔ | | |
-| 16.5 `mudblazor.md` rows · #146 · Haiku | ✔ | | |
+| 16.1 `code-map.md` rows · #142 · Haiku | | | ✔ |
+| 16.2 The hub and its configuration rows · #143 · Haiku | | | ✔ |
+| 16.3 Known limits, roadmap, decisions and status · #144 · Haiku | | | ✔ |
+| 16.4 The manual test area · #145 · Sonnet | | | ✔ |
+| 16.5 `mudblazor.md` rows · #146 · Haiku | | | ✔ |
 | 16.6 Final verification and the PR · #147 · Sonnet | ✔ | | |
