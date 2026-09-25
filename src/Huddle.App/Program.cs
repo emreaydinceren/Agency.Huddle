@@ -1,4 +1,5 @@
 using Agency.Huddle.App;
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components;
 using Agency.Huddle.App.Logging;
 using Microsoft.AspNetCore.StaticFiles;
@@ -31,6 +32,14 @@ builder.Services.AddTeamServices(builder.Configuration);
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+
+// Right after Build() and before anything resolves PersonaStore: a hosted service is too late,
+// because PersonaStore scans Teammates/ in its own constructor and all hosted services are
+// resolved before the first StartAsync (Spec §6.15, corrections-B2 #29). ILogger<TeammateLayoutMigration>
+// does not compile for a static class (CS0718), hence the named-category logger (#28).
+TeammateLayoutMigration.Run(
+    app.Services.GetRequiredService<IOptions<TeamOptions>>(),
+    app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Agency.Huddle.App.Acp.TeammateLayoutMigration"));
 
 app.UseAntiforgery();
 
