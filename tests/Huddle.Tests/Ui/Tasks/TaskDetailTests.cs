@@ -13,6 +13,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teammates;
@@ -502,6 +503,10 @@ public sealed class TaskDetailTests
         private readonly TaskEvents events;
         private readonly TaskTriggerService triggers;
         private readonly TaskActivity taskActivity;
+        private readonly TurnActivity turnActivity;
+        private readonly PersonaHealth health;
+        private readonly Agency.Huddle.Tests.Ui.FakeAgentGateway gateway;
+        private readonly Agency.Huddle.App.Avatars.AvatarStore avatars;
         private readonly SqliteTeamDirectory directory;
         private readonly IOptions<TeamOptions> options;
 
@@ -521,10 +526,11 @@ public sealed class TaskDetailTests
             this.events = new TaskEvents();
             this.service = new TaskService(this.store, ids, this.events, this.personas, this.options, TimeProvider.System, NullLogger<TaskService>.Instance);
 
-            TurnActivity turnActivity = new();
+            this.turnActivity = new TurnActivity();
             this.taskActivity = new TaskActivity(this.options);
-            PersonaHealth health = new(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
-            Agency.Huddle.Tests.Ui.FakeAgentGateway gateway = new();
+            this.health = new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
+            this.gateway = new Agency.Huddle.Tests.Ui.FakeAgentGateway();
+            this.avatars = new Agency.Huddle.App.Avatars.AvatarStore(this.options, NullLogger<Agency.Huddle.App.Avatars.AvatarStore>.Instance);
 
             this.directory = new SqliteTeamDirectory(this.options);
             FileChatStore chatStore = new(this.options, NullLogger<FileChatStore>.Instance);
@@ -537,12 +543,12 @@ public sealed class TaskDetailTests
                 this.events,
                 this.store,
                 this.taskActivity,
-                turnActivity,
+                this.turnActivity,
                 chat,
                 this.directory,
                 this.personas,
-                gateway,
-                health,
+                this.gateway,
+                this.health,
                 new FakePromptSource(),
                 this.options,
                 TimeProvider.System,
@@ -572,12 +578,19 @@ public sealed class TaskDetailTests
         {
             MudBunitContext ctx = new();
             ctx.Services.AddSingleton(this.options);
+            ctx.Services.AddSingleton(TimeProvider.System);
             ctx.Services.AddSingleton(this.personas);
             ctx.Services.AddSingleton(this.store);
             ctx.Services.AddSingleton(this.events);
             ctx.Services.AddSingleton(this.service);
             ctx.Services.AddSingleton(this.triggers);
             ctx.Services.AddSingleton(this.taskActivity);
+            ctx.Services.AddSingleton(this.turnActivity);
+            ctx.Services.AddSingleton(this.health);
+            ctx.Services.AddSingleton<IAgentGateway>(this.gateway);
+            ctx.Services.AddSingleton(this.directory);
+            ctx.Services.AddSingleton<ITeamDirectory>(this.directory);
+            ctx.Services.AddSingleton(this.avatars);
             return ctx;
         }
 
@@ -588,6 +601,7 @@ public sealed class TaskDetailTests
             this.service.Dispose();
             this.store.Dispose();
             this.personas.Dispose();
+            this.avatars.Dispose();
             this.dir.Dispose();
             return ValueTask.CompletedTask;
         }

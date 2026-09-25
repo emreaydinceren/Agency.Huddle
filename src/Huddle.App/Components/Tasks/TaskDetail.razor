@@ -1,23 +1,37 @@
 @*
-    Task detail (Spec §13.6): one component, two sizes. This dispatch (14.1.i) implements only the
-    core state machine and the "simple fields" - Title, Priority, Description - plus the Save/Revert
-    cycle, the wake notice/Save-label table and the Budget banner (corrections-B5 D14 items 1-6, 13).
-    Status, Assignee, Team/Project, Parent, Blocked by, dates and Tags (14.2), the conflict UI (14.3),
-    Expand/Make a copy/Close/Reopen/the Change log/MudExitPrompt (14.4) and the wake toast/AI-reacting
-    chip (14.5) are later dispatches' work - see TaskDetailTests.cs's own remarks for the split.
+    Task detail (Spec §13.6): one component, two sizes. 14.1.i implemented the core state machine and
+    the "simple fields" - Title, Priority, Description - plus the Save/Revert cycle, the wake
+    notice/Save-label table and the Budget banner (corrections-B5 D14 items 1-6, 13). 14.2.i adds every
+    other field the plan or the R7 scope addendum assigns here: Status (the five toggles, the Won't do
+    menu, duplicate_of, Reason), Blocked by, Tags, Start/Due dates, the Priority icon, Assignee,
+    Team/Project, Parent, Origin, and Created/Updated/Closed. The conflict UI (14.3), Expand/Make a
+    copy/Close/Reopen/the Change log/MudExitPrompt (14.4) and the wake toast/AI-reacting chip (14.5) are
+    later dispatches' work - see TaskDetailTests.cs's and TaskDetailFieldsTests.cs's own remarks for the
+    split.
 
     TaskDetailDialog passes only Id (or a Draft for create/copy), because MudBlazor freezes a dialog's
     parameters once it opens (TeammateCard.razor:12-24) - TaskDetail loads the Task itself and
     subscribes to TaskEvents (Spec §13.6).
 *@
+@using System.Globalization
 @using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Pipes
 @using Agency.Huddle.App.Services
 @inject TaskStore Store
 @inject TaskEvents Events
 @inject TaskService Service
 @inject TaskTriggerService Triggers
 @inject TaskActivity Activity
+@inject PersonaStore Personas
+@inject ITeamDirectory Directory
+@inject IAgentGateway Gateway
+@inject PersonaHealth Health
+@inject TurnActivity Turns
+@inject AvatarStore Avatars
 @inject IOptions<TeamOptions> Options
+@inject TimeProvider Clock
 @implements IDisposable
 
 <div class="task-detail">
@@ -34,6 +48,7 @@ else if (this.loaded is { } task)
     string saveLabel = TaskDetail.SaveLabel(preview);
     bool budgetExhausted = this.Activity.Budget(task.Id).Exhausted;
     int agentWakeBudget = this.Options.Value.Tasks.AgentWakeBudget;
+    bool saveDisabled = effective.Status == TaskState.Duplicate && effective.DuplicateOf is null;
 
     @if (this.saveError is not null)
     {
@@ -52,7 +67,7 @@ else if (this.loaded is { } task)
     {
         <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="task-detail-unsaved">
             <span class="task-detail-unsaved-text">Unsaved edits</span>
-            <MudButton OnClick="this.SaveAsync">@saveLabel</MudButton>
+            <MudButton OnClick="this.SaveAsync" Disabled="saveDisabled">@saveLabel</MudButton>
             <MudButton Variant="Variant.Text" OnClick="this.Revert">Revert</MudButton>
         </MudAlert>
     }
@@ -69,16 +84,145 @@ else if (this.loaded is { } task)
         }
     </div>
 
-    <MudSelect T="TaskPriority" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority" Label="Priority">
-        <MudSelectItem T="TaskPriority" Value="TaskPriority.Low">Low</MudSelectItem>
-        <MudSelectItem T="TaskPriority" Value="TaskPriority.Medium">Medium</MudSelectItem>
-        <MudSelectItem T="TaskPriority" Value="TaskPriority.High">High</MudSelectItem>
-        <MudSelectItem T="TaskPriority" Value="TaskPriority.Urgent">Urgent</MudSelectItem>
+    <MudToggleGroup T="TaskState" Value="effective.Status" ValueChanged="this.OnStatusChanged"
+                     SelectionMode="SelectionMode.SingleSelection" Class="task-detail-status">
+        <MudToggleItem Value="TaskState.Backlog" Text="@TaskState.Backlog.ToWire()" />
+        <MudToggleItem Value="TaskState.ToDo" Text="@TaskState.ToDo.ToWire()" />
+        <MudToggleItem Value="TaskState.InProgress" Text="@TaskState.InProgress.ToWire()" />
+        <MudToggleItem Value="TaskState.Review" Text="@TaskState.Review.ToWire()" />
+        <MudToggleItem Value="TaskState.Done" Text="@TaskState.Done.ToWire()" />
+    </MudToggleGroup>
+    <MudMenu AriaLabel="Won't do" Label="@(effective.Status.IsWontDo() ? effective.Status.ToWire() : "Won't do")">
+        <MudMenuItem OnClick="@(() => this.OnStatusChanged(TaskState.Cancelled))">@TaskState.Cancelled.ToWire()</MudMenuItem>
+        <MudMenuItem OnClick="@(() => this.OnStatusChanged(TaskState.Duplicate))">@TaskState.Duplicate.ToWire()</MudMenuItem>
+        <MudMenuItem OnClick="@(() => this.OnStatusChanged(TaskState.Rejected))">@TaskState.Rejected.ToWire()</MudMenuItem>
+    </MudMenu>
+
+    @if (effective.Status == TaskState.Duplicate)
+    {
+        <MudAutocomplete T="TaskItem" Strict="true" SearchFunc="this.SearchTaskCandidates" ToStringFunc="TaskDetail.TaskToString"
+                          Value="@(effective.DuplicateOf is { } dupId ? this.Store.Get(dupId) : null)" ValueChanged="this.OnDuplicateOfChanged"
+                          Label="Duplicate of" Class="task-detail-duplicate-of" />
+    }
+    else if (effective.Status is TaskState.Cancelled or TaskState.Rejected)
+    {
+        <MudTextField T="string" Value="@(this.pending.Reason ?? string.Empty)" ValueChanged="this.OnReasonChanged"
+                      Label="Reason (optional)" Class="task-detail-reason" />
+    }
+
+    <MudSelect T="TaskPriority" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority"
+               Label="Priority" AdornmentIcon="@TaskColors.Icon(effective.Priority)" Adornment="Adornment.Start">
+        <MudSelectItem T="TaskPriority" Value="TaskPriority.Low">@TaskPriority.Low.ToWire()</MudSelectItem>
+        <MudSelectItem T="TaskPriority" Value="TaskPriority.Medium">@TaskPriority.Medium.ToWire()</MudSelectItem>
+        <MudSelectItem T="TaskPriority" Value="TaskPriority.High">@TaskPriority.High.ToWire()</MudSelectItem>
+        <MudSelectItem T="TaskPriority" Value="TaskPriority.Urgent">@TaskPriority.Urgent.ToWire()</MudSelectItem>
     </MudSelect>
 
     @if (notice is not null)
     {
         <div class="task-detail-wake-notice">@notice</div>
+    }
+
+    <MudAutocomplete T="AssigneeOption" Strict="true" SearchFunc="this.SearchAssignees" ToStringFunc="@(o => o?.Name)"
+                      Value="@(effective.Assignee is { } assigneeName ? new AssigneeOption(assigneeName, string.Empty, null) : null)"
+                      ValueChanged="this.OnAssigneeChanged" Class="task-detail-assignee" Label="Assignee">
+        <ItemTemplate Context="option">
+            <MudBadge Dot="true" Overlap="true" Color="@(option.Presence is { } p ? TaskColors.For(p) : Color.Error)"
+                      BadgeAriaLabel="@($"{option.Name} is {(option.Presence?.ToString() ?? "Offline")}")">
+                <TeammateAvatar Name="@option.Name" Avatar="this.Avatars.Get(option.Name)" Size="Size.Small" />
+            </MudBadge>
+            <span class="task-detail-assignee-option-name">@option.Name</span>
+            @if (!string.IsNullOrEmpty(option.Title))
+            {
+                <MudChip T="string" Size="Size.Small">@option.Title</MudChip>
+            }
+            <span>@(option.Presence?.ToString() ?? "Offline")</span>
+        </ItemTemplate>
+    </MudAutocomplete>
+    @if (this.Activity.LastWake(task.Id) is { RoomId: { } wokenRoomId, RoomName: { } wokenRoomName })
+    {
+        <MudLink Href="@($"/rooms/{wokenRoomId}")" Class="task-detail-woken-link">@($"Woken in Room: {wokenRoomName}")</MudLink>
+    }
+
+    @if (this.Mode == TaskDetailMode.Panel)
+    {
+        <div class="task-detail-team-project">
+            <span class="task-detail-team-project-label">Team / Project</span>
+            <MudSelect T="string" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team">
+                @foreach (string teamName in this.TeamOptions())
+                {
+                    <MudSelectItem T="string" Value="teamName">@teamName</MudSelectItem>
+                }
+            </MudSelect>
+            <MudAutocomplete T="string" Value="effective.Location.Project" ValueChanged="this.OnProjectChanged"
+                              CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" />
+        </div>
+    }
+    else
+    {
+        <MudSelect T="string" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team" Label="Team">
+            @foreach (string teamName in this.TeamOptions())
+            {
+                <MudSelectItem T="string" Value="teamName">@teamName</MudSelectItem>
+            }
+        </MudSelect>
+        <MudAutocomplete T="string" Value="effective.Location.Project" ValueChanged="this.OnProjectChanged"
+                          CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" Label="Project" />
+    }
+
+    <MudAutocomplete T="TaskItem" Strict="true" SearchFunc="this.SearchTaskCandidates" ToStringFunc="TaskDetail.TaskToString"
+                      Value="@(effective.Parent is { } parentId ? this.Store.Get(parentId) : null)" ValueChanged="this.OnParentChanged"
+                      Label="Parent" Class="task-detail-parent" />
+
+    <MudChipSet T="TaskId" AllClosable="true" OnClose="this.OnRemoveBlocker" Class="task-detail-blocked-by-chips">
+        @foreach (TaskId blockerId in effective.BlockedBy)
+        {
+            TaskItem? blockerTask = this.Store.Get(blockerId);
+            <MudChip T="TaskId" Value="blockerId" OnClose="this.OnRemoveBlocker" Icon="@(blockerTask is { } bt && bt.Status.IsTerminal() ? Icons.Material.Filled.Check : null)">
+                @($"{blockerId} {blockerTask?.Status.ToWire() ?? "?"}")
+            </MudChip>
+        }
+    </MudChipSet>
+    <MudAutocomplete T="TaskItem" Strict="true" SearchFunc="this.SearchTaskCandidates" ToStringFunc="TaskDetail.TaskToString"
+                      Value="null" ValueChanged="this.OnAddBlocker" Label="Add blocker" Class="task-detail-blocked-by-add" />
+    <div class="task-detail-blocked-by-summary">@this.BlockedBySummary(effective)</div>
+
+    <MudChipSet T="string" AllClosable="true" OnClose="this.OnRemoveTag" Class="task-detail-tags-chips">
+        @foreach (string tag in effective.Tags)
+        {
+            <MudChip T="string" Value="@tag" OnClose="this.OnRemoveTag">@tag</MudChip>
+        }
+    </MudChipSet>
+    <MudTextField T="string" Immediate="true" Value="@this.tagInput" ValueChanged="this.OnTagInputChanged"
+                  OnKeyDown="this.OnTagKeyDown" Label="Add tag" Class="task-detail-tags-add" />
+
+    <MudDatePicker Date="@(effective.StartDate is { } startDate ? startDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
+                   DateChanged="this.OnStartDateChanged" Label="Start date" Class="task-detail-start-date" />
+    <MudDatePicker Date="@(effective.DueDate is { } dueDate ? dueDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
+                   DateChanged="this.OnDueDateChanged" Label="Due date"
+                   Class="@($"task-detail-due-date{(this.IsOverdue(effective) ? " task-overdue" : string.Empty)}")"
+                   Adornment="@(this.IsOverdue(effective) ? Adornment.Start : Adornment.None)"
+                   AdornmentIcon="@(this.IsOverdue(effective) ? Icons.Material.Filled.Warning : null)" />
+
+    @if (effective.OriginRoomId is { } originRoomId)
+    {
+        <span class="task-detail-origin">
+            @if (this.originRoomName is not null)
+            {
+                <MudLink Href="@($"/rooms/{originRoomId}")">@this.originRoomName</MudLink>
+            }
+            else
+            {
+                @:(Room no longer exists)
+            }
+        </span>
+    }
+
+    <span class="task-detail-created">@(task.Created?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))</span>
+    <span class="task-detail-updated">@(task.Updated?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))</span>
+    @if (task.ClosedAt is { } closedAt)
+    {
+        <span class="task-detail-closed">@closedAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</span>
     }
 
     <div class="task-detail-description">
@@ -101,7 +245,7 @@ else if (this.loaded is { } task)
 
     @if (!this.HasPending)
     {
-        <MudButton OnClick="this.SaveAsync">@saveLabel</MudButton>
+        <MudButton OnClick="this.SaveAsync" Disabled="saveDisabled">@saveLabel</MudButton>
     }
 }
 </div>
@@ -124,6 +268,8 @@ else if (this.loaded is { } task)
     private string? saveError;
     private bool titleEditing;
     private DescriptionViewMode descriptionMode = DescriptionViewMode.Edit;
+    private string tagInput = string.Empty;
+    private string? originRoomName;
 
     /// <summary>The Task to show, or <see langword="null"/> when creating or copying (a later dispatch's job).</summary>
     [Parameter]
@@ -133,7 +279,7 @@ else if (this.loaded is { } task)
     [Parameter]
     public TaskDraft? Draft { get; set; }
 
-    /// <summary>Whether this instance is the Panel or the Expanded dialog layout. Only Panel is implemented so far.</summary>
+    /// <summary>Whether this instance is the Panel or the Expanded dialog layout. The two share every field's logic; only the Team/Project combining (Spec §13.6) differs so far.</summary>
     [Parameter]
     public TaskDetailMode Mode { get; set; }
 
@@ -152,12 +298,13 @@ else if (this.loaded is { } task)
     private TaskItem? Effective => this.loaded is { } current ? this.pending.ApplyTo(current) : null;
 
     /// <inheritdoc />
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         this.Refresh();
         this.Events.TaskChanged += this.OnTaskChanged;
         this.Events.TasksReloaded += this.OnTasksReloaded;
         this.Activity.Changed += this.OnActivityChanged;
+        await this.RefreshOriginRoomAsync();
     }
 
     /// <summary>Re-reads <see cref="Id"/> from <see cref="Store"/>: updates <see cref="loaded"/>, and advances <see cref="baseVersion"/> only while <see cref="pending"/> is empty (corrections-B5 D14 item 6).</summary>
@@ -184,6 +331,19 @@ else if (this.loaded is { } task)
         }
     }
 
+    /// <summary>Resolves <see cref="loaded"/>'s Origin Room name, or leaves it <see langword="null"/> when there is none or it no longer exists (Spec §13.6).</summary>
+    private async Task RefreshOriginRoomAsync()
+    {
+        if (this.loaded?.OriginRoomId is not { } roomId)
+        {
+            this.originRoomName = null;
+            return;
+        }
+
+        Room? room = await this.Directory.GetRoomAsync(roomId, CancellationToken.None);
+        this.originRoomName = room?.Name;
+    }
+
     private void OnTaskChanged(TaskChange change) => this.DispatchRefresh();
 
     private void OnTasksReloaded() => this.DispatchRefresh();
@@ -193,14 +353,22 @@ else if (this.loaded is { } task)
     /// <summary>Marshals a requery back onto the render's synchronisation context (the <c>RoomList.razor</c> pattern), tolerating a disposed component.</summary>
     private void DispatchRefresh()
     {
-        _ = this.DispatchAsync(() =>
+        _ = this.DispatchAsync(async () =>
         {
             this.Refresh();
+            await this.RefreshOriginRoomAsync();
             this.StateHasChanged();
-            return Task.CompletedTask;
         });
     }
 
+    /// <summary>
+    /// Marshals <paramref name="action"/> onto the render's synchronisation context via
+    /// <see cref="ComponentBase.InvokeAsync(Action)"/>'s <see cref="Task"/> overload. Both catches are
+    /// deliberately empty: they exist only to swallow the component having already been disposed (its
+    /// Renderer torn down, or the underlying circuit gone) between an event firing and this callback
+    /// running - a race inherent to any hub subscription outliving a component's own lifetime, not a bug
+    /// to surface, and there is nothing left to notify since nothing is listening any more (Spec §13.11).
+    /// </summary>
     private async Task DispatchAsync(Func<Task> action)
     {
         try
@@ -209,9 +377,11 @@ else if (this.loaded is { } task)
         }
         catch (ObjectDisposedException)
         {
+            // The component (or its Renderer) was disposed before this dispatched requery ran - nothing left to update.
         }
         catch (InvalidOperationException)
         {
+            // The component's render handle is gone (e.g. the circuit ended) - same as above, safe to drop.
         }
     }
 
@@ -227,16 +397,6 @@ else if (this.loaded is { } task)
         this.pending = this.pending with { Title = value };
     }
 
-    private void OnPriorityChanged(TaskPriority value)
-    {
-        if (this.loaded is null)
-        {
-            return;
-        }
-
-        this.pending = this.pending with { Priority = value };
-    }
-
     private void OnDescriptionChanged(string value)
     {
         if (this.loaded is null)
@@ -248,6 +408,229 @@ else if (this.loaded is { } task)
     }
 
     private void OnDescriptionModeChanged(DescriptionViewMode value) => this.descriptionMode = value;
+
+    /// <summary>Sets the new Status; leaving Duplicate for any other state clears <see cref="TaskPatch.DuplicateOf"/> (Settled corrections-B5 D12 item 8, applies to TaskDetail too).</summary>
+    /// <param name="value">The newly chosen Status.</param>
+    private void OnStatusChanged(TaskState value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        TaskPatch updated = this.pending with { Status = value };
+        if (value != TaskState.Duplicate)
+        {
+            updated = updated with { DuplicateOf = Optional<TaskId?>.Set(null) };
+        }
+
+        this.pending = updated;
+    }
+
+    private void OnDuplicateOfChanged(TaskItem value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        this.pending = this.pending with { DuplicateOf = Optional<TaskId?>.Set(value.Id) };
+    }
+
+    private void OnReasonChanged(string value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        this.pending = this.pending with { Reason = value };
+    }
+
+    private void OnPriorityChanged(TaskPriority value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        this.pending = this.pending with { Priority = value };
+    }
+
+    private void OnAssigneeChanged(AssigneeOption value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        this.pending = this.pending with { Assignee = Optional<string?>.Set(value.Name) };
+    }
+
+    /// <summary>Searches known Personas by Name for the Assignee autocomplete, resolving each one's presence (Spec §13.6).</summary>
+    /// <param name="query">The typed text, or <see langword="null"/> for no filter.</param>
+    /// <param name="cancellationToken">Unused: the search is synchronous over in-memory data.</param>
+    private Task<IEnumerable<AssigneeOption>> SearchAssignees(string? query, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        IEnumerable<AssigneeOption> options = this.Personas.Entries
+            .Where(entry => query is null || entry.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .Select(entry => new AssigneeOption(entry.Name, entry.Title, TaskPresence.For(entry.Name, this.Directory, this.Gateway, this.Health, this.Turns)));
+        return Task.FromResult(options);
+    }
+
+    private void OnTeamChanged(string value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        this.pending = this.pending with { Team = value };
+    }
+
+    private void OnProjectChanged(string? value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        this.pending = this.pending with { Project = Optional<string?>.Set(value) };
+    }
+
+    /// <summary>Every known Team, for the Team select (the <c>ViewEditorDrawer</c> pattern: Personas' Teams union the Task store's own Team folders).</summary>
+    private List<string> TeamOptions() =>
+        [.. this.Personas.Teams.Union(this.Store.Teams.Select(t => t.Name), StringComparer.Ordinal).Distinct(StringComparer.Ordinal).OrderBy(t => t, StringComparer.Ordinal)];
+
+    /// <summary>Searches the current Task's Team's known Projects for the Project autocomplete.</summary>
+    /// <param name="query">The typed text, or <see langword="null"/> for no filter.</param>
+    /// <param name="cancellationToken">Unused: the search is synchronous over in-memory data.</param>
+    private Task<IEnumerable<string>> SearchProjects(string? query, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        if (this.loaded is not { } current)
+        {
+            return Task.FromResult(Enumerable.Empty<string>());
+        }
+
+        TeamFolder? team = this.Store.Teams.FirstOrDefault(t => string.Equals(t.Name, current.Location.Team, StringComparison.Ordinal));
+        IEnumerable<string> projects = (team?.Projects ?? []).Where(p => query is null || p.Contains(query, StringComparison.OrdinalIgnoreCase));
+        return Task.FromResult(projects);
+    }
+
+    private void OnParentChanged(TaskItem value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        this.pending = this.pending with { Parent = Optional<TaskId?>.Set(value.Id) };
+    }
+
+    /// <summary>Searches every other Task by title, for Parent, Duplicate of, and Blocked-by (Spec §13.6).</summary>
+    /// <param name="query">The typed text, or <see langword="null"/> for no filter.</param>
+    /// <param name="cancellationToken">Unused: the search is synchronous over in-memory data.</param>
+    private Task<IEnumerable<TaskItem>> SearchTaskCandidates(string? query, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        if (this.loaded is not { } current)
+        {
+            return Task.FromResult(Enumerable.Empty<TaskItem>());
+        }
+
+        IEnumerable<TaskItem> matches = this.Store.All
+            .Where(t => t.Id != current.Id && (query is null || t.Title.Contains(query, StringComparison.OrdinalIgnoreCase)));
+        return Task.FromResult(matches);
+    }
+
+    private void OnAddBlocker(TaskItem value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<TaskId> current = this.Effective?.BlockedBy ?? [];
+        if (!current.Contains(value.Id))
+        {
+            this.pending = this.pending with { BlockedBy = [.. current, value.Id] };
+        }
+    }
+
+    private void OnRemoveBlocker(MudChip<TaskId> chip)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<TaskId> current = this.Effective?.BlockedBy ?? [];
+        this.pending = this.pending with { BlockedBy = [.. current.Where(id => id != chip.Value)] };
+    }
+
+    /// <summary>The read-only "Blocked by N open tasks" summary (Spec §13.6's own plural example; the singular form is provisional).</summary>
+    /// <param name="effective">The Task with <see cref="pending"/> applied.</param>
+    private string BlockedBySummary(TaskItem effective)
+    {
+        int openCount = effective.BlockedBy.Count(id => this.Store.Get(id) is { } blocker && !blocker.Status.IsTerminal());
+        return openCount == 1 ? "Blocked by 1 open task" : $"Blocked by {openCount} open tasks";
+    }
+
+    private void OnTagInputChanged(string value) => this.tagInput = value;
+
+    private void OnTagKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (this.loaded is null || !string.Equals(e.Key, "Enter", StringComparison.Ordinal) || string.IsNullOrWhiteSpace(this.tagInput))
+        {
+            return;
+        }
+
+        IReadOnlyList<string> current = this.Effective?.Tags ?? [];
+        if (!current.Contains(this.tagInput, StringComparer.OrdinalIgnoreCase))
+        {
+            this.pending = this.pending with { Tags = [.. current, this.tagInput] };
+        }
+
+        this.tagInput = string.Empty;
+    }
+
+    private void OnRemoveTag(MudChip<string> chip)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        IReadOnlyList<string> current = this.Effective?.Tags ?? [];
+        this.pending = this.pending with { Tags = [.. current.Where(t => !string.Equals(t, chip.Value, StringComparison.Ordinal))] };
+    }
+
+    private void OnStartDateChanged(DateTime? value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        this.pending = this.pending with { StartDate = Optional<DateOnly?>.Set(value is { } v ? DateOnly.FromDateTime(v) : null) };
+    }
+
+    private void OnDueDateChanged(DateTime? value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        this.pending = this.pending with { DueDate = Optional<DateOnly?>.Set(value is { } v ? DateOnly.FromDateTime(v) : null) };
+    }
+
+    /// <summary>Whether <paramref name="effective"/>'s Due date is in the past and it is not terminal (Spec §13.6).</summary>
+    /// <param name="effective">The Task with <see cref="pending"/> applied.</param>
+    private bool IsOverdue(TaskItem effective) =>
+        effective.DueDate is { } due && due < DateOnly.FromDateTime(this.Clock.GetUtcNow().UtcDateTime) && !effective.Status.IsTerminal();
 
     /// <summary>Adds another base budget to the loaded Task's wake budget (corrections-B5 D14 item 4).</summary>
     private void AllowMore()
@@ -334,6 +717,10 @@ else if (this.loaded is { } task)
         { Block: WakeBlock.Disabled } => "Wake-ups are off.",
         _ => null,
     };
+
+    /// <summary>Formats a Task for the Parent, Duplicate of and Blocked-by pickers: Spec §13.6's own example, "PLAT-0030 · title".</summary>
+    /// <param name="candidate">The candidate Task, or <see langword="null"/>.</param>
+    private static string? TaskToString(TaskItem? candidate) => candidate is null ? null : $"{candidate.Id} · {candidate.Title}";
 
     /// <inheritdoc />
     public void Dispose()
