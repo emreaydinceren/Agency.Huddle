@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then.
 
-**Status:** 146 of 147 tasks Done · 8 of 9 retrospectives done · last updated 2026-09-25.
+**Status:** 147 of 147 tasks Done · 8 of 9 retrospectives done · last updated 2026-09-25.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -186,4 +186,4 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 16.3 Known limits, roadmap, decisions and status · #144 · Haiku | | | ✔ |
 | 16.4 The manual test area · #145 · Sonnet | | | ✔ |
 | 16.5 `mudblazor.md` rows · #146 · Haiku | | | ✔ |
-| 16.6 Final verification and the PR · #147 · Sonnet | ✔ | | |
+| 16.6 Final verification and the PR · #147 · Sonnet | | | ✔ |
