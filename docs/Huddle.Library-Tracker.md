@@ -10,24 +10,24 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 0 of 131 tasks Done · 0 of 8 retrospectives done · last updated 2026-09-25.
+**Status:** 8 of 143 tasks Done · 0 of 8 retrospectives done · last updated 2026-09-25.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
 | **D0. Delivery scaffolding** | | | |
-| 0.1 Branch, facts file and brief · #1 · Haiku | | ✔ | |
-| 0.2 Platform spike: Recycle Bin and junctions on `net10.0` · #2 · Sonnet | ✔ | | |
+| 0.1 Branch, facts file and brief · #1 · Haiku | | | ✔ |
+| 0.2 Platform spike: Recycle Bin and junctions on `net10.0` · #2 · Sonnet | | | ✔ |
 | **D1. `TeammatePaths` (a pure refactor, old layout)** | | | |
-| 1.1.t Test: `TeammatePaths` in the current layout · #3 · Haiku | ✔ | | |
-| 1.1.i Implement `TeammatePaths` · #4 · Haiku | ✔ | | |
+| 1.1.t Test: `TeammatePaths` in the current layout · #3 · Haiku | | | ✔ |
+| 1.1.i Implement `TeammatePaths` · #4 · Haiku | | | ✔ |
 | 1.2.t Characterisation: every Work Dir join · #5 · Sonnet | ✔ | | |
 | 1.2.i Move the Work Dir joins onto `TeammatePaths` · #6 · Sonnet | ✔ | | |
 | 1.3.i Move the Persona-file joins onto `TeammatePaths` · #7 · Sonnet | ✔ | | |
 | **D2. Library types and options** | | | |
-| 2.1.t Test: `LibraryOptions` and `TeamsOptions` · #8 · Haiku | ✔ | | |
-| 2.1.i Implement the options · #9 · Haiku | ✔ | | |
-| 2.2.t Test: root, path and location records · #10 · Haiku | ✔ | | |
-| 2.2.i Implement root, path and location records · #11 · Haiku | ✔ | | |
+| 2.1.t Test: `LibraryOptions` and `TeamsOptions` · #8 · Haiku | | | ✔ |
+| 2.1.i Implement the options · #9 · Haiku | | | ✔ |
+| 2.2.t Test: root, path and location records · #10 · Haiku | | | ✔ |
+| 2.2.i Implement root, path and location records · #11 · Haiku | | | ✔ |
 | 2.3.t Test: document and file records · #12 · Haiku | ✔ | | |
 | 2.3.i Implement document and file records · #13 · Haiku | ✔ | | |
 | 2.4.t Test: `LibrarySize.Format` · #14 · Haiku | ✔ | | |
@@ -55,6 +55,19 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 3.8.t Test: `Teams/` and `Teammates/` must not overlap · #33 · Haiku | ✔ | | |
 | 3.8.i Implement `LayoutGuard` · #34 · Haiku | ✔ | | |
 | 3.9 `run.ps1 -Clean` for the new layout · #35 · Sonnet | ✔ | | |
+| **G1. Tasks into Team folders (added 2026-09-25)** | | | |
+| G1.0 Route Task fixtures through layout helpers · #35a · Sonnet | ✔ | | |
+| G1.1.t Test: `TaskLayout` maps only `_tasks/` · #35b · Sonnet | ✔ | | |
+| G1.1.i Implement the `_tasks` layout · #35c · Sonnet | ✔ | | |
+| G1.2.t Test: `Team:Teams:Dir` is the Tasks root · #35d · Haiku | ✔ | | |
+| G1.2.i Implement the root switch · #35e · Haiku | ✔ | | |
+| G1.3.t Test: the Team/Project scan beside notes · #35f · Sonnet | ✔ | | |
+| G1.3.i Implement the targeted scan · #35g · Sonnet | ✔ | | |
+| G1.4.t Test: the watcher ignores Library notes · #35h · Sonnet | ✔ | | |
+| G1.4.i Filter the watcher with `AffectsTasks` · #35i · Sonnet | ✔ | | |
+| G1.5.t Test: migration step 4 · #35j · Sonnet | ✔ | | |
+| G1.5.i Implement step 4 · #35k · Sonnet | ✔ | | |
+| G1.6 Tasks docs · #35l · Haiku | ✔ | | |
 | **D4. The path boundary and Library Roots** | | | |
 | 4.1.t Test: `LibraryRootStore` · #36 · Sonnet | ✔ | | |
 | 4.1.i Implement `LibraryRootStore` · #37 · Sonnet | ✔ | | |

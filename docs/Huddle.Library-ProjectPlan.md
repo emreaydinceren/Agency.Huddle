@@ -791,6 +791,155 @@ rename, then the migration that moves real data. **Nothing in D7 starts before 3
 
 ---
 
+# G1 — Tasks into Team folders (Spec §6.3, ADR-0030; added 2026-09-25)
+
+**The Human decided on 2026-09-25 that this delivery implements the Tasks side of ADR-0030 itself.**
+The Tasks effort shipped on `Tasks/<Team>/[<Project>/]` and asked for the move with L0
+(`Conversation/2026-09-25-tasks-reply-library-workspaces.md`). These tasks come after D3, because
+`Teams/` must be free of Persona files first, and before 4.1.t. They carry running numbers
+#35a–#35l and count toward the retrospective after #45. Designed by the B2 architect review.
+`FolderSnapshot.PathComparer` is at `FileChanges/FileState.cs:28`.
+
+### Task G1.0 (#35a) — Route Task fixtures through layout helpers [Sonnet]
+
+- **Goal:** One place encodes the Tasks layout in tests.
+- **Read first:** `tests/Huddle.Tests/Tasks/TestTaskStore.cs:16-45`; `TeamWebApplicationFactory.cs:44`;
+  `Acp/Tools/TaskToolHarness.cs:223-248`.
+- **Deliverable:** `TestTaskStore.Root(TempDataDir)` (returns `…/Tasks` for now) and
+  `TestTaskStore.RelativePath(string team, string? project, bool closed, string fileName)` (old
+  layout for now). Replace the ~60 `Path.Combine(dir.Path, "Tasks")` sites (TaskStoreTests,
+  TaskStoreWatcherTests, OutsideEditLoggingTests, TaskServiceRenameTeammateTests,
+  TaskStoreStartupReconciliationTests, TaskServiceTests) and every literal Task path
+  (`TaskServiceTests:29,:451,:625,:640,:944,:964,:1086,:1167`; `TaskServiceRenameTeammateTests:39`;
+  `CloseTaskToolTests:144`; `ReopenTaskToolTests:134`; `CreateTaskToolTests:225`;
+  `TaskToolTextTests:86`; `TaskBoardColumnMenuTests:661`; `WriteTask` in
+  `PersonaRenameCascadeTests`). Leave deliberately misplaced fixtures (root `x.md`, `_drafts`, too
+  deep) as literals. No production change.
+- **Acceptance:** Full suite green.
+
+### Task G1.1.t (#35b) — Test: `TaskLayout` maps only `_tasks/` [Sonnet]
+
+- **Goal:** Pin Spec §6.3 bullet 2 and ADR-0030.
+- **Read first:** `src/Huddle.App/Tasks/TaskLayout.cs:15-137`; Spec §6.3.
+- **Deliverable:** Rewrite `tests/Huddle.Tests/Tasks/TaskLayoutTests.cs`:
+  `TryMap_TeamTasks_NoProject` (`T/_tasks/X.md` → `(T,null,false)`), `TryMap_TeamTasksClosed`,
+  `TryMap_ProjectTasks`, `TryMap_ProjectTasksClosed`; `[Theory] TryMap_NotATaskPath_IsIgnored`
+  (returns false, location and error null) over `x.md`, `T/note.md`, `T/X.md`, `T/_closed/X.md`,
+  `T/P/plan.md`, `T/P/research/d.md`, `T/_tasks/sub/X.md`, `T/_tasks/_closed/_closed/X.md`,
+  `T/P/Q/_tasks/X.md`, `_tasks/X.md`, `_x/_tasks/X.md`, `.obsidian/_tasks/X.md`,
+  `T/_drafts/_tasks/X.md`; `TryMap_TasksFolderCase_FollowsPathComparer` (`T/_Tasks/X.md` maps on
+  Windows, ignored otherwise); `PathFor_*` (four rows, `root/T/[P/]_tasks/[_closed/]ID.md`) and
+  `PathFor_RoundTrip`; `[Theory] AffectsTasks(string root, string fullPath)`: true for a Task
+  file, dir `T`, dir `T/P`, `T/_tasks`, `T/P/_tasks/_closed`, `T/v1.2`; false for `T/note.md`,
+  `T/P/research/x.md`, dir `T/P/research`, `.obsidian/w.json`, `T/_tasks/X.md.tmp`;
+  `IsReservedFolderName` (`_x`, `.git` true; `Launch Q4` false).
+- **Acceptance:** Red, `-NewNames "TasksFolder,AffectsTasks,IsReservedFolderName"`, with the path
+  asserts failing.
+
+### Task G1.1.i (#35c) — Implement the `_tasks` layout [Sonnet]
+
+- **Deliverable:** `internal const string TasksFolder = "_tasks"`; `TryMap` keeps its signature but
+  `error` is always null; `PathFor` writes into `_tasks/`; `AffectsTasks` and
+  `IsReservedFolderName` are pure string code, reserved names compared with
+  `FolderSnapshot.PathComparer`. Flip `TestTaskStore.RelativePath` to the new layout. Tests that
+  pinned rejections become "ignored": `TaskStoreTests:41-49` (root `x.md`) and
+  `TasksPageTests:77-80` (move `garbage.md` to `Platform/_tasks/garbage.md`, where it still fails
+  to parse).
+- **Acceptance:** G1.1.t green; full suite green.
+
+### Task G1.2.t (#35d) — Test: `Team:Teams:Dir` is the Tasks root; `Tasks:Dir` retires [Haiku]
+
+- **Read first:** `TaskStore.cs:71-86,:776-794`; `ServiceCollectionExtensions.cs:36-45`;
+  `TasksOptionsTests.cs:17,:40`; `Acp/LayoutGuard.cs` (Task 3.8).
+- **Deliverable:** `tests/Huddle.Tests/Tasks/TasksRootTests.cs`: `RootDirectory_IsTeamsDir`,
+  `RootDirectory_HonoursTeamsDir` (`Teams.Dir = "T2"`), `AddTeam_WithTasksDir_Throws` with the
+  exact message `Configuration key 'Team:Tasks:Dir' was replaced by 'Team:Teams:Dir'. Tasks now live in each Team folder's _tasks/ folder; remove the key (the start-up migration reads {DataDir}/Tasks). There is no automatic fallback.`,
+  and `Constructor_TeamsInsideTeammates_ThrowsLayoutGuardMessage`. Delete `TasksOptionsTests:17,:40`
+  and `TaskStoreTests:214-228`.
+- **Acceptance:** Red.
+
+### Task G1.2.i (#35e) — Implement the root switch [Haiku]
+
+- **Deliverable:** Remove `TasksOptions.Dir`. `TaskStore` reads `options.Value.Teams.Dir`;
+  `ThrowIfNested` becomes `LayoutGuard.ValidateTeamsAndTeammates(options.Value)` (one message, kept
+  in the constructor for hosts without `PostConfigure`). Add the retired-key guard beside the
+  `PersonaDir` guard. `TestTaskStore.Root` and `TeamWebApplicationFactory.TasksDirPath` point at
+  `Teams`.
+- **Acceptance:** G1.2.t green; full suite green.
+
+### Task G1.3.t (#35f) — Test: the Team/Project scan beside notes [Sonnet]
+
+- **Read first:** `TaskStore.cs:942-1097`.
+- **Deliverable:** In `TaskStoreTests.cs`, region `// ADR-0030`:
+  `Scan_NotesAtEveryLevel_AreNeitherTasksNorRejected`, `Teams_EveryNonReservedSubfolder_IsAProject`
+  (`Launch Q4/` holding only `plan.md`, and an empty `Ideas/`), `Teams_TasksAndClosedFolders_AreNotProjects`,
+  `Teams_DotAndUnderscoreFoldersAtRoot_AreNotTeams` (`.obsidian`, `_closed`, `_x`),
+  `Scan_DeepNoteTree_IsNotEnumerated` (a Project with `research/a/b/c.md` and an unreadable deep
+  folder still scans, with no warning logged).
+- **Acceptance:** Red.
+
+### Task G1.3.i (#35g) — Implement the targeted scan [Sonnet]
+
+- **Deliverable:** `Scan` enumerates only `{Team}/_tasks`, `{Team}/_tasks/_closed`,
+  `{Team}/{Project}/_tasks` and `{Team}/{Project}/_tasks/_closed` (`TopDirectoryOnly`), not
+  `AllDirectories` (`:952`). `BuildTeams` and `ListProjects` exclude `IsReservedFolderName`. Drop
+  the rejected branch at `:964-967`.
+- **Acceptance:** G1.3.t green; full suite green.
+
+### Task G1.4.t (#35h) — Test: the watcher ignores Library notes [Sonnet]
+
+- **Read first:** `TaskStore.cs:607-642`; `TaskStoreWatcherTests.cs` (its wait pattern).
+- **Deliverable:** `Watcher_NoteWritten_DoesNotRebuild` (write `Platform/note.md` and
+  `Platform/P/research/x.md`; no `IndexChanged`, and a new `internal int RebuildCount`, incremented
+  in `RebuildFromWatcher`, is unchanged — wait on a positive signal written after the notes, not a
+  bare sleep); `Watcher_ProjectFolderCreated_AppearsInTeams` (the Library creates an empty
+  `Platform/New/`, and it appears in `Teams` without calling `RebuildFromWatcher`; today a
+  directory `Created` event is dropped at `:632-635`); `Watcher_TaskWrittenOutside_Rebuilds`.
+- **Acceptance:** Red.
+
+### Task G1.4.i (#35i) — Filter the watcher with `TaskLayout.AffectsTasks` [Sonnet]
+
+- **Deliverable:** `AffectsATaskFile` delegates to `TaskLayout.AffectsTasks(RootDirectory, e.FullPath)`
+  (and `OldFullPath` for a `RenamedEventArgs`). Add `RebuildCount`.
+- **Acceptance:** G1.4.t green; full suite green.
+
+### Task G1.5.t (#35j) — Test: migration step 4 [Sonnet]
+
+- **Read first:** ADR-0031 *Migration*; `Acp/TeammateLayoutMigration.cs` (Task 3.5.i); the old
+  rules (`git show 36377de:src/Huddle.App/Tasks/TaskLayout.cs`).
+- **Deliverable:** In `TeammateLayoutMigrationTests.cs`: `Run_Tasks_MoveIntoTasksFolders` (all four
+  locations, e.g. `Tasks/Platform/PLAT-1.md` → `Teams/Platform/_tasks/PLAT-1.md` and
+  `Tasks/Platform/Auth/_closed/PLAT-2.md` → `Teams/Platform/Auth/_tasks/_closed/PLAT-2.md`),
+  `Run_TasksAfterPersonas_OrgFolderRemovedThenTeamFolderCreated`, `Run_TasksNonTaskFiles_LeftAndLogged`
+  (root `x.md`, `_drafts/`, too deep; `Tasks/` kept), `Run_TasksEmpty_RootRemoved`,
+  `Run_TasksAbsent_NoOp`, `Run_TasksTargetExists_Throws`; and `Startup_OldTasks_LoadFromTeams` in
+  `TeammateLayoutStartupTests`.
+- **Acceptance:** Red.
+
+### Task G1.5.i (#35k) — Implement step 4 [Sonnet]
+
+- **Deliverable:** A private `LegacyTaskPath.TryMap` (a copy of the old rules, kept inside the
+  migration). Step 4 runs after step 3 and plans every move before executing any. Source
+  `{DataDir}/Tasks`, target `Teams:Dir`; the same throw-on-first-failure rule. Leftover files are
+  logged, never moved.
+- **Acceptance:** G1.5.t green; full suite green.
+
+### Task G1.6 (#35l) — Tasks docs [Haiku]
+
+- **Deliverable:** Tasks spec §8.1 (the layout block, the scan, the mapping table — ignored, not
+  rejected — and the guard, now `LayoutGuard`), §8.2 (Projects are non-`_`/`.` folders) and §14
+  (`Tasks:Dir` retired); ADR-0025's first paragraph (the new path, pointing at ADR-0030);
+  `docs/agencyteam/language.md:371` and the Project entry; a dated note to the Tasks effort in
+  `Conversation/`.
+- **Acceptance:** `grep -rn "Tasks/<Team>" docs` finds only ADR history and the migration.
+
+**What 7.4.t and 7.4.i still do after G1:** 7.4.t drops the gate text, keeps the three hand-off
+tests (`LibraryProject_AppearsInTaskStoreTeams` relies on the watcher, which G1.4 makes work) and
+adds `LibraryList_HidesTasksFolder`. 7.4.i fixes Library-side gaps only; a Tasks-side regression
+goes back to G1's tests.
+
+---
+
 # D4 — The path boundary and Library Roots
 
 **Spec §6.1**, **Spec §6.10**, **ADR-0027**.
