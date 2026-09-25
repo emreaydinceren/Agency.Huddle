@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then.
 
-**Status:** 125 of 147 tasks Done · 7 of 9 retrospectives done · last updated 2026-09-24.
+**Status:** 136 of 147 tasks Done · 8 of 9 retrospectives done · last updated 2026-09-24.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -152,23 +152,23 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 12.2.t Test: Board zones and ghost buckets · #116 · Sonnet | | | ✔ |
 | 12.2.i Implement `TaskBoard`'s zones · #117 · Sonnet | | | ✔ |
 | 12.3.t Test: dropping, and Move to · #118 · Sonnet | | | ✔ |
-| 12.3.i Implement dropping and the dialogs · #119 · Sonnet | | ✔ | |
-| 12.4.t Test: the column header menu · #120 · Sonnet | ✔ | | |
-| 🔁 R8 — Opus retrospective after #120, and plan update | ✔ | | |
-| 12.4.i Implement the column header menu · #121 · Sonnet | ✔ | | |
+| 12.3.i Implement dropping and the dialogs · #119 · Sonnet | | | ✔ |
+| 12.4.t Test: the column header menu · #120 · Sonnet | | | ✔ |
+| 🔁 R8 — Opus retrospective after #120, and plan update | | | ✔ |
+| 12.4.i Implement the column header menu · #121 · Sonnet | | | ✔ |
 | **D13. The View editor** | | | |
 | 13.1.t Test: the editor's general sections · #122 · Sonnet | | | ✔ |
 | 13.1.i Implement the general sections · #123 · Sonnet | | | ✔ |
-| 13.2.t Test: columns, validation, delete and unsaved changes · #124 · Sonnet | | ✔ | |
-| 13.2.i Implement the rest of the editor · #125 · Sonnet | ✔ | | |
+| 13.2.t Test: columns, validation, delete and unsaved changes · #124 · Sonnet | | | ✔ |
+| 13.2.i Implement the rest of the editor · #125 · Sonnet | | | ✔ |
 | **D14. Task detail (one component, two sizes)** | | | |
 | 14.1.t Test: fields, pending edits and the Save label · #126 · Sonnet | | | ✔ |
 | 14.1.i Implement `TaskDetail`'s core · #127 · Sonnet | | | ✔ |
-| 14.2.t Test: status, blockers, tags and dates · #128 · Sonnet | | ✔ | |
-| 14.2.i Implement those fields · #129 · Sonnet | ✔ | | |
-| 14.3.t Test: the conflict UI · #130 · Sonnet | ✔ | | |
-| 14.3.i Implement the conflict UI · #131 · Sonnet | ✔ | | |
-| 14.4.t Test: Expand, Make a copy, Close and the Change log · #132 · Sonnet | ✔ | | |
+| 14.2.t Test: status, blockers, tags and dates · #128 · Sonnet | | | ✔ |
+| 14.2.i Implement those fields · #129 · Sonnet | | | ✔ |
+| 14.3.t Test: the conflict UI · #130 · Sonnet | | ✔ | |
+| 14.3.i Implement the conflict UI · #131 · Sonnet | | ✔ | |
+| 14.4.t Test: Expand, Make a copy, Close and the Change log · #132 · Sonnet | | | ✔ |
 | 14.4.i Implement the dialog and the buttons · #133 · Sonnet | ✔ | | |
 | 14.5.t Test: toast, AI reacting and the wake budget · #134 · Sonnet | | | ✔ |
 | 14.5.i Implement the notifications · #135 · Sonnet | | ✔ | |
@@ -176,10 +176,10 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | **D15. Referencing a Task in chat** | | | |
 | 15.1.t Test: Task ids as links · #136 · Sonnet | | | ✔ |
 | 15.1.i Implement id linking · #137 · Sonnet | | | ✔ |
-| 15.2.t Test: the route and the copy button · #138 · Sonnet | ✔ | | |
+| 15.2.t Test: the route and the copy button · #138 · Sonnet | | | ✔ |
 | 15.2.i Implement the route and the copy button · #139 · Sonnet | ✔ | | |
-| 15.3.t Test: the `#` picker's Blazor side · #140 · Sonnet | | ✔ | |
-| 15.3.i Implement the `#` picker · #141 · Sonnet | ✔ | | |
+| 15.3.t Test: the `#` picker's Blazor side · #140 · Sonnet | | | ✔ |
+| 15.3.i Implement the `#` picker · #141 · Sonnet | | | ✔ |
 | **D16. Docs and verification** | | | |
 | 16.1 `code-map.md` rows · #142 · Haiku | ✔ | | |
 | 16.2 The hub and its configuration rows · #143 · Haiku | ✔ | | |
