@@ -332,6 +332,13 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <param name="change">The change <see cref="TaskEvents.TaskChanged"/> published.</param>
     private void OnTaskChanged(TaskChange change)
     {
+        if (change.Actor.Kind == TaskActorKind.Human)
+        {
+            // Corrections-B3 D9 item 15: on receipt, before any guard - a Human change resets the Task's
+            // wake budget even when it wakes nobody. An OutsideHuddle actor never resets it (item 18).
+            this.activity.ResetForHuman(change.After.Id);
+        }
+
         BatchKey key = new(change.After.Id, change.Actor.Name);
         int seconds = this.teamOptions.Tasks.WakeCoalesceSeconds;
         bool fireNow = seconds <= 0;
@@ -462,7 +469,11 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <summary>
     /// Sends one batch's wake: reads the latest Task, applies the guards, resolves the assignee, the
     /// sender and the Room, consumes the Agent wake budget, posts, and refunds the budget unless the
-    /// Message was posted (the outcome is Woken or Offline, the only two that count - item 9).
+    /// Message was posted (the outcome is Woken or Offline, the only two that count - item 9). Every
+    /// outcome of Spec §10.5 is recorded in <see cref="TaskActivity"/>: Woken or Offline by the
+    /// assignee's presence after posting, BudgetSpent for a Room Budget refusal, WakePaused for a spent
+    /// Task wake budget, and Failed for any other <see cref="ChatException"/> or an Agent actor with no
+    /// user - the last two with no Room.
     /// </summary>
     /// <param name="batch">The batch, already removed from <see cref="batches"/>.</param>
     /// <param name="ct">The service lifetime.</param>
@@ -479,6 +490,13 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
 
         TaskActor actor = batch.Actor;
         WakePreview preview = this.Preview(null, latest, actor);
+        if (preview.Block == WakeBlock.BudgetPaused && preview.AssigneeName is { } pausedAssignee)
+        {
+            LogBlocked(this.logger, id, preview.Block);
+            this.RecordOutcome(id, pausedAssignee, null, WakeOutcome.WakePaused);
+            return;
+        }
+
         if (preview.Block != WakeBlock.None || preview.AssigneeName is not { } assigneeName)
         {
             LogBlocked(this.logger, id, preview.Block);
@@ -496,41 +514,73 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
         if (senderId is null)
         {
             LogNoSender(this.logger, id, actor.Name);
+            this.RecordOutcome(id, assigneeName, null, WakeOutcome.Failed);
             return;
         }
 
-        Room room = await this.ChooseRoomAsync(latest, senderId, assignee, ct);
+        Room room;
+        try
+        {
+            room = await this.ChooseRoomAsync(latest, senderId, assignee, ct);
+        }
+        catch (ChatException ex)
+        {
+            LogRoomRefused(this.logger, id, ex.Code, ex);
+            this.RecordOutcome(id, assigneeName, null, WakeOutcome.Failed);
+            return;
+        }
 
         bool isAgent = actor.Kind == TaskActorKind.Agent;
         if (isAgent && !this.activity.TryConsumeAgentWake(id))
         {
             LogBlocked(this.logger, id, WakeBlock.BudgetPaused);
+            this.RecordOutcome(id, assigneeName, null, WakeOutcome.WakePaused);
             return;
         }
 
-        bool posted = false;
+        WakeOutcome outcome;
+        bool counted = false;
         try
         {
             string text = this.Render(latest, actor, assigneeName, batch.Entries);
             await this.chat.PostAsync(room.Id, senderId, text, ct: ct);
-            posted = true;
             if (isAgent)
             {
                 this.ownPosts.Record(senderId, room.Id, text);
             }
+
+            PresenceState? presence = TaskPresence.For(assigneeName, this.directory, this.gateway, this.health, this.turns);
+            outcome = presence is PresenceState.Awake or PresenceState.Asleep ? WakeOutcome.Woken : WakeOutcome.Offline;
+            counted = true;
+        }
+        catch (ChatException ex) when (string.Equals(ex.Code, ErrorCodes.BudgetExhausted, StringComparison.Ordinal))
+        {
+            LogPostRefused(this.logger, id, room.Id, ex.Code, ex);
+            outcome = WakeOutcome.BudgetSpent;
         }
         catch (ChatException ex)
         {
             LogPostRefused(this.logger, id, room.Id, ex.Code, ex);
+            outcome = WakeOutcome.Failed;
         }
         finally
         {
-            if (isAgent && !posted)
+            if (isAgent && !counted)
             {
                 this.activity.RefundAgentWake(id);
             }
         }
+
+        this.RecordOutcome(id, assigneeName, room, outcome);
     }
+
+    /// <summary>Records one wake outcome in <see cref="TaskActivity"/> (Spec §10.5, §10.7), stamped with the clock at fire time.</summary>
+    /// <param name="id">The Task.</param>
+    /// <param name="assigneeName">The assignee the wake targeted.</param>
+    /// <param name="room">The Room posted in, or <see langword="null"/> when none was chosen.</param>
+    /// <param name="outcome">What the wake did.</param>
+    private void RecordOutcome(TaskId id, string assigneeName, Room? room, WakeOutcome outcome) =>
+        this.activity.Record(new WakeRecord(id, assigneeName, room?.Id, room?.Name, outcome, this.clock.GetUtcNow()));
 
     /// <summary>The actor as a Room Member (Spec §10.4): the Human for a Human or outside-Huddle change; the Agent's own user otherwise.</summary>
     /// <param name="actor">Who made the change.</param>
@@ -704,6 +754,14 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <param name="exception">The refusal.</param>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not wake the assignee of Task {TaskId} in Room {RoomId}: {Code}.")]
     private static partial void LogPostRefused(ILogger logger, TaskId taskId, string roomId, string code, Exception exception);
+
+    /// <summary>Logs that choosing or creating the Room was refused.</summary>
+    /// <param name="logger">The logger to write to.</param>
+    /// <param name="taskId">The Task.</param>
+    /// <param name="code">The refusal's error code.</param>
+    /// <param name="exception">The refusal.</param>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not wake the assignee of Task {TaskId}: no Room could be chosen ({Code}).")]
+    private static partial void LogRoomRefused(ILogger logger, TaskId taskId, string code, Exception exception);
 
     /// <summary>Logs that a fire was cancelled by shutdown.</summary>
     /// <param name="logger">The logger to write to.</param>

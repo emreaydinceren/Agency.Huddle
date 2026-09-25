@@ -1519,6 +1519,274 @@ public sealed class TaskTriggerServiceTests
         Assert.Equal(KnownIds.Human, post.Message.SenderId);
     }
 
+    /// <summary>
+    /// Spec §10.5 outcomes and §10.7: a wake posted while the assignee is online is recorded as
+    /// <see cref="WakeOutcome.Woken"/> with the Task, the assignee, the Room's id and name and the
+    /// fire time, and <see cref="TaskActivity.Woken"/> is raised once with that record.
+    /// </summary>
+    [Fact]
+    public async Task Woken_RecordedInTaskActivity_WithRoomName()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        harness.Gateway.SetOnline(cast.Nova.Id);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+        List<WakeRecord> raised = [];
+        harness.Activity.Woken += raised.Add;
+
+        harness.Raise(task, HumanActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        Assert.Single(harness.Posts);
+        WakeRecord? record = harness.Activity.LastWake(task.Id);
+        Assert.NotNull(record);
+        Assert.Equal(WakeOutcome.Woken, record.Outcome);
+        Assert.Equal("Nova", record.Assignee);
+        Assert.Equal(cast.Room.Id, record.RoomId);
+        Assert.Equal("Platform", record.RoomName);
+        Assert.Equal(harness.Clock.GetUtcNow(), record.At);
+        Assert.Equal(record, Assert.Single(raised));
+    }
+
+    /// <summary>Spec §10.5: an offline assignee is still posted to, and the outcome is <see cref="WakeOutcome.Offline"/>, with the Room recorded.</summary>
+    [Fact]
+    public async Task AssigneeOffline_PostedAndOutcomeOffline()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+
+        harness.Raise(task, cast.KaiActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        Assert.Single(harness.Posts);
+        WakeRecord? record = harness.Activity.LastWake(task.Id);
+        Assert.NotNull(record);
+        Assert.Equal(WakeOutcome.Offline, record.Outcome);
+        Assert.Equal(cast.Room.Id, record.RoomId);
+    }
+
+    /// <summary>
+    /// Spec §10.5 and corrections-B3 D9 item 14: the Room's Budget is spent by an Agent-authored
+    /// Message after the last Human one, so Kai's wake is refused with <c>BudgetExhausted</c>. The
+    /// outcome is <see cref="WakeOutcome.BudgetSpent"/> with the Room recorded, nothing escapes as an
+    /// error, and the Task wake is refunded.
+    /// </summary>
+    [Fact]
+    public async Task RoomBudgetSpent_OutcomeBudgetSpent_NoThrow()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You", AgentMessageBudget = 1 };
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        _ = await harness.Chat.PostAsync(cast.Room.Id, cast.Kai.Id, "Working on it.", ct: ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+
+        harness.Raise(task, cast.KaiActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent only = Assert.Single(harness.Posts);
+        Assert.Equal("Working on it.", only.Message.Text);
+        WakeRecord? record = harness.Activity.LastWake(task.Id);
+        Assert.NotNull(record);
+        Assert.Equal(WakeOutcome.BudgetSpent, record.Outcome);
+        Assert.Equal(cast.Room.Id, record.RoomId);
+        Assert.Equal("Platform", record.RoomName);
+        Assert.Equal(0, harness.Activity.Budget(task.Id).Used);
+        Assert.DoesNotContain(harness.Logger.Entries, e => e.Level >= LogLevel.Error);
+    }
+
+    /// <summary>Spec §10.6: an Agent's change to a Task whose wake budget is spent is <see cref="WakeOutcome.WakePaused"/> - recorded with no Room, and nothing posted.</summary>
+    [Fact]
+    public async Task WakeBudgetSpent_OutcomeWakePaused_NoRoom()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You" };
+        options.Tasks.AgentWakeBudget = 1;
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+        Assert.True(harness.Activity.TryConsumeAgentWake(task.Id));
+
+        harness.Raise(task, cast.KaiActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        Assert.Empty(harness.Posts);
+        WakeRecord? record = harness.Activity.LastWake(task.Id);
+        Assert.NotNull(record);
+        Assert.Equal(WakeOutcome.WakePaused, record.Outcome);
+        Assert.Equal("Nova", record.Assignee);
+        Assert.Null(record.RoomId);
+        Assert.Null(record.RoomName);
+    }
+
+    /// <summary>Spec §10.6: ten Agent-made wakes are posted; the eleventh change is still saved, but is <see cref="WakeOutcome.WakePaused"/> and posts nothing.</summary>
+    [Fact]
+    public async Task TenAgentWakes_EleventhPaused_ChangeStillSaved()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+
+        for (int i = 1; i <= 11; i++)
+        {
+            TaskItem saved = harness.Replace(task with { Title = string.Create(CultureInfo.InvariantCulture, $"Step {i}") });
+            harness.Raise(saved, cast.KaiActor, "Title changed");
+            harness.Clock.Advance(DefaultWindow);
+            await harness.Trigger.WhenIdleAsync();
+        }
+
+        Assert.Equal(10, harness.Posts.Count);
+        Assert.Equal("Step 11", harness.Store.Get(task.Id)?.Title);
+        WakeRecord? record = harness.Activity.LastWake(task.Id);
+        Assert.NotNull(record);
+        Assert.Equal(WakeOutcome.WakePaused, record.Outcome);
+    }
+
+    /// <summary>Spec §10.6: <see cref="TaskActivity.Grant"/> on a paused Task lets the next Agent-made change wake the assignee again.</summary>
+    [Fact]
+    public async Task Grant_ResumesWaking()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You" };
+        options.Tasks.AgentWakeBudget = 1;
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+
+        await RaiseAndFireAsync(harness, task, cast.KaiActor, "First");
+        await RaiseAndFireAsync(harness, task, cast.KaiActor, "Paused");
+        WakeRecord? paused = harness.Activity.LastWake(task.Id);
+        harness.Activity.Grant(task.Id);
+        await RaiseAndFireAsync(harness, task, cast.KaiActor, "Resumed");
+
+        Assert.Equal(2, harness.Posts.Count);
+        Assert.Equal(WakeOutcome.WakePaused, paused?.Outcome);
+        Assert.Equal(WakeOutcome.Offline, harness.Activity.LastWake(task.Id)?.Outcome);
+    }
+
+    /// <summary>Spec §10.6: a Human change resets the Task's wake budget, so a paused Task's next Agent-made change wakes the assignee again.</summary>
+    [Fact]
+    public async Task HumanChange_ResetsBudget()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You" };
+        options.Tasks.AgentWakeBudget = 1;
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{changes}}");
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+        Assert.True(harness.Activity.TryConsumeAgentWake(task.Id));
+
+        await RaiseAndFireAsync(harness, task, HumanActor, "By the Human");
+        await RaiseAndFireAsync(harness, task, cast.KaiActor, "By Kai");
+
+        string[] expected = ["- By the Human", "- By Kai"];
+        Assert.Equal(expected, harness.Posts.Select(p => p.Message.Text));
+        Assert.Equal(1, harness.Activity.Budget(task.Id).Used);
+    }
+
+    /// <summary>Corrections-B3 D9 item 15: the budget is reset when a Human change is <b>received</b> - before any window elapses, and even when a guard (here, the Task is assigned to the Human) blocks the wake itself.</summary>
+    [Fact]
+    public async Task HumanChange_GuardBlocked_StillResetsBudgetOnReceipt()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        TeamOptions options = new() { HumanName = "You" };
+        options.Tasks.AgentWakeBudget = 1;
+        using Harness harness = await CreateHarnessAsync(dir, options, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "You", originRoomId: cast.Room.Id));
+        Assert.True(harness.Activity.TryConsumeAgentWake(task.Id));
+
+        harness.Raise(task, HumanActor, "Priority: Medium → High");
+        WakeBudget onReceipt = harness.Activity.Budget(task.Id);
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        Assert.Equal(0, onReceipt.Used);
+        Assert.False(onReceipt.Exhausted);
+        Assert.Empty(harness.Posts);
+    }
+
+    /// <summary>Corrections-B3 D9 item 12 and Spec §10.5: an Agent actor with no user to post as is <see cref="WakeOutcome.Failed"/>, recorded with no Room - never posted as the Human.</summary>
+    [Fact]
+    public async Task UnknownAgentSender_OutcomeFailed_NoRoom()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Cast cast = await StartWakingAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(assignee: "Nova", originRoomId: cast.Room.Id));
+
+        harness.Raise(task, new TaskActor(TaskActorKind.Agent, "Phantom", null), "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        Assert.Empty(harness.Posts);
+        WakeRecord? record = harness.Activity.LastWake(task.Id);
+        Assert.NotNull(record);
+        Assert.Equal(WakeOutcome.Failed, record.Outcome);
+        Assert.Equal("Nova", record.Assignee);
+        Assert.Null(record.RoomId);
+        Assert.Null(record.RoomName);
+    }
+
+    /// <summary>
+    /// Spec §10.5: a <see cref="ChatException"/> other than <c>BudgetExhausted</c> - here from
+    /// <see cref="ChatService.CreateRoomForAsync"/> meeting a stale Agent while creating step 4's Room -
+    /// is <see cref="WakeOutcome.Failed"/>, recorded with no Room, and Kai's Task wake is not left counted.
+    /// </summary>
+    [Fact]
+    public async Task StaleAgentWhileCreatingRoom_OutcomeFailed_NoRoom()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova"));
+        harness.Directory.HideUserId = agents.Kai.Id;
+
+        harness.Raise(task, agents.KaiActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        Assert.Empty(harness.Posts);
+        WakeRecord? record = harness.Activity.LastWake(task.Id);
+        Assert.NotNull(record);
+        Assert.Equal(WakeOutcome.Failed, record.Outcome);
+        Assert.Null(record.RoomId);
+        Assert.Null(record.RoomName);
+        Assert.Equal(0, harness.Activity.Budget(task.Id).Used);
+    }
+
+    /// <summary>Raises one change and lets its window elapse, awaiting the fire.</summary>
+    /// <param name="harness">The harness.</param>
+    /// <param name="task">The Task changed.</param>
+    /// <param name="actor">Who changed it.</param>
+    /// <param name="summary">The change's summary.</param>
+    /// <returns>A task that completes once the fire is done.</returns>
+    private static async Task RaiseAndFireAsync(Harness harness, TaskItem task, TaskActor actor, string summary)
+    {
+        harness.Raise(task, actor, summary);
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+    }
+
     /// <summary>Registers Nova and Kai as Personas and Agent users, creates no Room, and starts the service - the arrangement the Room-choice tests (Spec §10.4) build their own Rooms on.</summary>
     /// <param name="harness">The harness to arrange.</param>
     /// <param name="ct">Cancels the directory writes and <see cref="TaskTriggerService.StartAsync"/>.</param>
@@ -1649,6 +1917,7 @@ public sealed class TaskTriggerServiceTests
             OwnPosts = ownPosts,
             Clock = clock,
             Logger = logger,
+            Chat = chat,
         };
         roomEvents.MessagePosted += harness.OnMessagePosted;
         return harness;
@@ -1701,6 +1970,9 @@ public sealed class TaskTriggerServiceTests
 
         /// <summary>The hub <see cref="Trigger"/> subscribes to.</summary>
         public required TaskEvents Events { get; init; }
+
+        /// <summary>The Chat service <see cref="Trigger"/> posts through, for a test to post its own Messages.</summary>
+        public required ChatService Chat { get; init; }
 
         /// <summary>The Prompt source <see cref="Trigger"/> renders <c>task.wake.message</c> through.</summary>
         public required FakePromptSource Prompts { get; init; }
@@ -1902,7 +2174,13 @@ public sealed class TaskTriggerServiceTests
         public bool RenameUser(string userId, string newName) => inner.RenameUser(userId, newName);
 
         /// <inheritdoc />
-        public Task<User?> GetUserAsync(string id, CancellationToken ct = default) => inner.GetUserAsync(id, ct);
+        public Task<User?> GetUserAsync(string id, CancellationToken ct = default) =>
+            this.HideUserId is { } hidden && string.Equals(hidden, id, StringComparison.Ordinal)
+                ? Task.FromResult<User?>(null)
+                : inner.GetUserAsync(id, ct);
+
+        /// <summary>When set, <see cref="GetUserAsync"/> reports this user id as unknown - a stale Agent, as <c>ChatService.CreateRoomForAsync</c> sees one.</summary>
+        public string? HideUserId { get; set; }
 
         /// <inheritdoc />
         public Task<User?> FindUserByNameAsync(string name, CancellationToken ct = default) => inner.FindUserByNameAsync(name, ct);
