@@ -143,6 +143,12 @@ website, or from what a MudBlazor example suggests.
 | `MudDialog` with `CloseButton` | Renders `button.mud-button-close`; the title renders in `.mud-dialog-title` |
 | bUnit `Find`/`Click` | A `Find(...)` then `.Click()` can race a fire-and-forget re-render under load (`UnknownEventHandlerIdException`) — click via `await cut.InvokeAsync(() => cut.Find(sel).Click())` instead |
 | `ISnackbar.Add` | Every overload (`string`, `MarkupString`, `RenderFragment`, component parameters) takes `(message, Severity, Action<SnackbarOptions>? configure, string? key)`. The same `key` collapses duplicates |
+| `MudDrawer` | **No resize.** `Width` is a fixed string, and there is no drag handle or width callback. For two resizable panes use `MudSplitPanel`. *Checked 2026-09-24 for the Library* |
+| `MudSplitPanel` | `FirstPanel`/`SecondPanel` are `RenderFragment`s. `FirstPanelInitialSize` is `int?` and `MinPanelSize` is `int`, **both in pixels**. `Horizontal` picks the direction. There is **no change callback**: read the divider with `GetDividerPositionAsync()` (`Task<int>`) and restore it with `SetDividerPositionAsync(int offset)` through `@ref`. *Checked for the Library* |
+| `MudTreeView<T>` | `ServerData` is `Func<T, Task<IReadOnlyCollection<TreeItemData<T>>>>`, for lazy child loading. `ItemTemplate`, `FilterFunc`, `SelectedValue`/`SelectedValueChanged` exist. *Checked for the Library* |
+| `MudTreeViewItem<T>` | Has `OnClick` and `OnDoubleClick` but **no right-click event**. For a context menu, wrap the item content in a `MudMenu` (next row). *Checked for the Library* |
+| `MudMenu` | `ActivationEvent` is a `MouseEvent` (`LeftClick`, `RightClick`, `MouseOver`). `PositionAtCursor` opens it at the pointer. `OpenMenuAsync(EventArgs, bool)` opens it from code. *Checked for the Library* |
+| `MudHotkey` | `Key` is a `JsKey` and `KeyModifiers` is an `IEnumerable<JsKeyModifier>` whose values are **side-specific** (`ControlLeft`, `ControlRight`, `ShiftLeft`…), with no plain `Control`. *Checked for the Library* |
 
 When you check a new fact, add a row. When `Directory.Packages.props` moves
 MudBlazor to a new version, re-check every row.
