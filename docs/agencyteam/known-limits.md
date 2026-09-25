@@ -505,12 +505,11 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
     tell apart from a real hand edit, so it appends that entry to every Task in the repository.
     Accepted (corrections-B2 D6 item 14) rather than guarded against — there is no cheap way to
     tell a checkout from a hand edit from mtime alone.
-  - **The Tasks folder layout is interim.** Tasks live at `{DataDir}/Tasks/<Team>/[<Project>/]`
-    today. The Library effort's [ADR-0030](../adr/0030-a-team-folder-is-its-library-and-holds-its-tasks.md)
-    was accepted in principle on 2026-09-25 to move them under
-    `Teams/<Team>/[<Project>/]_tasks/` once Personas themselves leave `Teams/`
-    ([ADR-0031](../adr/0031-teammates-and-teams-are-sibling-folders.md)); the migration is planned,
-    not scheduled.
+  - **Tasks folder layout changed on 2026-09-25.** Tasks now live at
+    `{DataDir}/{Team:Teams:Dir}/<Team>/[<Project>/]_tasks/[_closed/]<ID>.md`, moved from the
+    interim `{DataDir}/Tasks/<Team>/...` layout by the Library effort's
+    [ADR-0030](../adr/0030-a-team-folder-is-its-library-and-holds-its-tasks.md); a start-up
+    migration moves any existing `{DataDir}/Tasks` folder into Team folders.
   - **`close_task` and `reopen_task`'s Conflict text is untested under a real concurrent-move
     race.** `update_task`'s Conflict arm is unreachable (`baseVersion` is always null there) and
     throws `UnreachableException`; Close and Reopen can still receive a genuine Conflict from

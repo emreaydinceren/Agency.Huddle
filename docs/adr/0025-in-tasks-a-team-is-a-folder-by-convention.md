@@ -5,11 +5,12 @@ date: 2026-09-24
 
 # In Tasks, a Team is a folder by convention
 
-A **Task** lives at `{DataDir}/Tasks/<Team>/[<Project>/]<ID>.md`, and a Closed Task lives in the
-`_closed/` folder at the same level. For a Task, **the folder is the source of truth** for its
-Team, its Project and whether it is Closed. The Team folder's name is expected to match a Team
-label, matched case-insensitively. A Task's `id` lives in its frontmatter and never changes. The
-full design is [Huddle.Tasks-Specifications.md](../Huddle.Tasks-Specifications.md) (§7, §8).
+A **Task** lives at `{DataDir}/{Team:Teams:Dir}/<Team>/[<Project>/]_tasks/[_closed/]<ID>.md`.
+For a Task, **the folder is the source of truth** for its Team, its Project and whether it is
+Closed. The Team folder's name is expected to match a Team label, matched case-insensitively.
+A Task's `id` lives in its frontmatter and never changes. See also
+[ADR-0030](0030-a-team-folder-is-its-library-and-holds-its-tasks.md). The full design is
+[Huddle.Tasks-Specifications.md](../Huddle.Tasks-Specifications.md) (§7, §8).
 
 This is the **opposite** of the rule for Personas, which [language.md](../agencyteam/language.md)
 states as *a Team is emphatically not a folder*. This ADR records why the two differ, so that

@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 46 of 143 tasks Done · 2 of 8 retrospectives done · last updated 2026-09-25.
+**Status:** 47 of 143 tasks Done · 2 of 8 retrospectives done · last updated 2026-09-25.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -67,7 +67,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | G1.4.i Filter the watcher with `AffectsTasks` · #35i · Sonnet | | | ✔ |
 | G1.5.t Test: migration step 4 · #35j · Sonnet | | | ✔ |
 | G1.5.i Implement step 4 · #35k · Sonnet | | | ✔ |
-| G1.6 Tasks docs · #35l · Haiku | ✔ | | |
+| G1.6 Tasks docs · #35l · Haiku | | | ✔ |
 | **D4. The path boundary and Library Roots** | | | |
 | 4.1.t Test: `LibraryRootStore` · #36 · Sonnet | ✔ | | |
 | 4.1.i Implement `LibraryRootStore` · #37 · Sonnet | ✔ | | |

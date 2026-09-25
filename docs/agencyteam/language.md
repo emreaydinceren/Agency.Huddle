@@ -368,11 +368,11 @@ See
 
 **Task**
 : A unit of work that the Human and the Agents share. It is one Markdown file at
-  `{DataDir}/Tasks/<Team>/[<Project>/]<ID>.md`: a title, a status, a priority, at
-  most one assignee, a description, and a Change log. Its identity is the `id` in
-  its frontmatter, such as `PLAT-0042`, and it never changes, even when the Task
-  moves. In code the record is `TaskItem`, because a type named `Task` would
-  shadow `System.Threading.Tasks.Task`.
+  `{DataDir}/{Team:Teams:Dir}/<Team>/[<Project>/]_tasks/[_closed/]<ID>.md`: a title, a status,
+  a priority, at most one assignee, a description, and a Change log. Its identity is the `id`
+  in its frontmatter, such as `PLAT-0042`, and it never changes, even when the Task moves. In
+  code the record is `TaskItem`, because a type named `Task` would shadow
+  `System.Threading.Tasks.Task`.
 : Capitalised, it means only this. A task in the ordinary sense stays lower case.
 : A Task is **referenced** in chat by writing its plain id. Rendered Messages turn
   an id that matches a real Task into a link. The copy button and the composer's
