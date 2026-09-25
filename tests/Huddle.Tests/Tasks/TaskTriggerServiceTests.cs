@@ -1125,6 +1125,426 @@ public sealed class TaskTriggerServiceTests
         Assert.Equal(1, probe.MaxConcurrent);
     }
 
+    /// <summary>
+    /// Spec §10.4 step 1 and D-12: the origin Room is used when both the sender and the assignee are
+    /// Members - even Archived, and even though a non-Archived Room with step 2's exact set also
+    /// exists. Green on arrival (9.4 implemented step 1).
+    /// </summary>
+    [Fact]
+    public async Task Origin_BothMembers_UsesOrigin()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        Room origin = await harness.Directory.CreateRoomAsync("Origin", [KnownIds.Human, agents.Nova.Id], ct);
+        await harness.Directory.SetRoomArchivedAsync(origin.Id, true, ct);
+        _ = await harness.Directory.CreateRoomAsync("Direct", [KnownIds.Human, agents.Nova.Id], ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova", originRoomId: origin.Id));
+
+        harness.Raise(task, HumanActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal(origin.Id, post.Room.Id);
+    }
+
+    /// <summary>Spec §10.4 step 1 → 2: the origin Room doesn't hold the assignee, so the wake falls through to the creator Room {Human, creator, assignee}.</summary>
+    [Fact]
+    public async Task Origin_AssigneeNotMember_FallsThrough()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        Room origin = await harness.Directory.CreateRoomAsync("Origin", [KnownIds.Human, agents.Kai.Id], ct);
+        Room creatorRoom = await harness.Directory.CreateRoomAsync("Creator", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova", originRoomId: origin.Id));
+
+        harness.Raise(task, HumanActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal(creatorRoom.Id, post.Room.Id);
+    }
+
+    /// <summary>Spec §10.4 step 1 → 2: the origin Room doesn't hold the Agent sender, so the wake falls through to the creator Room, which does.</summary>
+    [Fact]
+    public async Task Origin_SenderNotMember_FallsThrough()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        Room origin = await harness.Directory.CreateRoomAsync("Origin", [KnownIds.Human, agents.Nova.Id], ct);
+        Room creatorRoom = await harness.Directory.CreateRoomAsync("Creator", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova", originRoomId: origin.Id));
+
+        harness.Raise(task, agents.KaiActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal(creatorRoom.Id, post.Room.Id);
+        Assert.Equal(agents.Kai.Id, post.Message.SenderId);
+    }
+
+    /// <summary>Spec §10.4 step 1 → 2: an origin id that names no Room (deleted) falls through to the creator Room.</summary>
+    [Fact]
+    public async Task Origin_RoomGone_FallsThrough()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        Room creatorRoom = await harness.Directory.CreateRoomAsync("Creator", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova", originRoomId: "no-such-room"));
+
+        harness.Raise(task, HumanActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal(creatorRoom.Id, post.Room.Id);
+    }
+
+    /// <summary>Spec §10.4 step 2: with no origin, the Room whose Members are <b>exactly</b> {Human, creator, assignee} is used - not a larger Room that merely contains them.</summary>
+    [Fact]
+    public async Task CreatorRoom_ExactSetExists_UsesIt()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        User? zeta = await harness.Directory.UpsertAgentUserAsync("Zeta", null, ct);
+        Assert.NotNull(zeta);
+        _ = await harness.Directory.CreateRoomAsync("Superset", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id, zeta.Id], ct);
+        Room exact = await harness.Directory.CreateRoomAsync("Exact", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova"));
+
+        harness.Raise(task, HumanActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal(exact.Id, post.Room.Id);
+    }
+
+    /// <summary>Spec §10.4 step 2 with an Agent sender: the creator is the actor, so the sender is in S and the wake is posted as that Agent in the creator Room.</summary>
+    [Fact]
+    public async Task CreatorRoom_AgentSenderIsCreator_PostedAsThatAgent()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        Room exact = await harness.Directory.CreateRoomAsync("Exact", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova"));
+
+        harness.Raise(task, agents.KaiActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal(exact.Id, post.Room.Id);
+        Assert.Equal(agents.Kai.Id, post.Message.SenderId);
+    }
+
+    /// <summary>Spec §10.4 step 2: when the creator is the Human, S is {Human, assignee} - the direct Room - rather than a larger Room holding the assignee.</summary>
+    [Fact]
+    public async Task CreatorIsHuman_UsesDirectRoom()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        _ = await harness.Directory.CreateRoomAsync("Trio", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
+        Room direct = await harness.Directory.CreateRoomAsync("Direct", [KnownIds.Human, agents.Nova.Id], ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova"));
+
+        harness.Raise(task, HumanActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal(direct.Id, post.Room.Id);
+    }
+
+    /// <summary>Corrections-B3 D9 item 13: a creator with no user row (never registered, or removed) gives S = {Human, assignee}, so the direct Room is used.</summary>
+    [Fact]
+    public async Task CreatorUserUnknown_UsesDirectRoom()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        Room direct = await harness.Directory.CreateRoomAsync("Direct", [KnownIds.Human, agents.Nova.Id], ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "Ghost", assignee: "Nova"));
+
+        harness.Raise(task, HumanActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal(direct.Id, post.Room.Id);
+    }
+
+    /// <summary>
+    /// Spec §10.4 step 3 and D-13: a third Agent (neither creator nor assignee) isn't in step 2's set,
+    /// so step 2 is skipped even though its Room exists, and {Human, actor, assignee} is used, posted
+    /// as that Agent.
+    /// </summary>
+    [Fact]
+    public async Task ThirdAgentActor_UsesActorSet()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        _ = await harness.Directory.CreateRoomAsync("Direct", [KnownIds.Human, agents.Nova.Id], ct);
+        Room actorRoom = await harness.Directory.CreateRoomAsync("Actor", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova"));
+
+        harness.Raise(task, agents.KaiActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal(actorRoom.Id, post.Room.Id);
+        Assert.Equal(agents.Kai.Id, post.Message.SenderId);
+    }
+
+    /// <summary>Spec §10.4 step 3 → 4 and corrections-B3 D9 item 13: no Room for step 3's set, so one is created with that set - the last step tried's - which contains the Agent sender.</summary>
+    [Fact]
+    public async Task ThirdAgentActor_NoActorSetRoom_CreatesActorSetRoom()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        Room direct = await harness.Directory.CreateRoomAsync("Direct", [KnownIds.Human, agents.Nova.Id], ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova"));
+
+        harness.Raise(task, agents.KaiActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.NotEqual(direct.Id, post.Room.Id);
+        Assert.Equal(SortedIds(KnownIds.Human, agents.Kai.Id, agents.Nova.Id), SortedIds(post.Members));
+        Assert.Equal(agents.Kai.Id, post.Message.SenderId);
+    }
+
+    /// <summary>Spec §10.4 step 4: no Room fits, so exactly one Room is created for {creator, assignee}, the Human added automatically, and the wake is posted there Mentioning the assignee.</summary>
+    [Fact]
+    public async Task NoRoom_CreatesOne_HumanAutoAdded()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova"));
+        int roomsBefore = (await harness.Directory.GetRoomsAsync(ct)).Count;
+
+        harness.Raise(task, HumanActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal(SortedIds(KnownIds.Human, agents.Kai.Id, agents.Nova.Id), SortedIds(post.Members));
+        Assert.Equal(roomsBefore + 1, (await harness.Directory.GetRoomsAsync(ct)).Count);
+        User mentioned = Assert.Single(post.Mentions);
+        Assert.Equal(agents.Nova.Id, mentioned.Id);
+    }
+
+    /// <summary>Spec §10.4 step 4 when the creator is the Human: S is {Human, assignee}, so the direct Room is created.</summary>
+    [Fact]
+    public async Task NoRoom_CreatorHuman_CreatesDirectRoom()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova"));
+
+        harness.Raise(task, HumanActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal(SortedIds(KnownIds.Human, agents.Nova.Id), SortedIds(post.Members));
+    }
+
+    /// <summary>Spec E-12 and D-12: an Archived Room with step 2's exact set is skipped, and a new Room with that set is created.</summary>
+    [Fact]
+    public async Task ArchivedExactSet_Skipped_CreatesNew()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        Room archived = await harness.Directory.CreateRoomAsync("Old", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
+        await harness.Directory.SetRoomArchivedAsync(archived.Id, true, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova"));
+
+        harness.Raise(task, HumanActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.NotEqual(archived.Id, post.Room.Id);
+        Assert.Equal(SortedIds(KnownIds.Human, agents.Kai.Id, agents.Nova.Id), SortedIds(post.Members));
+    }
+
+    /// <summary>Spec E-12 and D-12 for the two-Member set: an Archived direct Room is skipped too, and a new direct Room is created.</summary>
+    [Fact]
+    public async Task ArchivedDirectRoom_Skipped_CreatesNew()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        Room archived = await harness.Directory.CreateRoomAsync("Old", [KnownIds.Human, agents.Nova.Id], ct);
+        await harness.Directory.SetRoomArchivedAsync(archived.Id, true, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova"));
+
+        harness.Raise(task, HumanActor, "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.NotEqual(archived.Id, post.Room.Id);
+        Assert.Equal(SortedIds(KnownIds.Human, agents.Nova.Id), SortedIds(post.Members));
+    }
+
+    /// <summary>
+    /// Corrections-B3 D9 item 9 (<c>CreateRoomForAsync</c> isn't idempotent): two batches for the same
+    /// Task fire together and both need a new Room for the same set; the gate serialises them, so
+    /// exactly one Room is created and both wakes land in it.
+    /// </summary>
+    [Fact]
+    public async Task TwoFiresNeedingSameNewRoom_CreateExactlyOne()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "Kai", assignee: "Nova"));
+        int roomsBefore = (await harness.Directory.GetRoomsAsync(ct)).Count;
+
+        harness.Raise(task, HumanActor, "By the Human");
+        harness.Raise(task, agents.KaiActor, "By Kai");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        Assert.Equal(2, harness.Posts.Count);
+        Assert.Single(harness.Posts.Select(p => p.Room.Id).Distinct(StringComparer.Ordinal));
+        Assert.Equal(roomsBefore + 1, (await harness.Directory.GetRoomsAsync(ct)).Count);
+    }
+
+    /// <summary>
+    /// Spec §10.4: an assignee who is a known Persona but has never registered (no user row) stops the
+    /// wake - nothing is posted and no Room is created - while another Task's wake still posts. Green
+    /// on arrival (9.4).
+    /// </summary>
+    [Fact]
+    public async Task AssigneeNeverRegistered_NothingPosted()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        _ = harness.Personas.Add(new PersonaIdentity("Zeta", "Zeta", "zeta", ["Platform"]), "You are Zeta.");
+        Room direct = await harness.Directory.CreateRoomAsync("Direct", [KnownIds.Human, agents.Nova.Id], ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{taskId}}");
+        TaskItem blocked = harness.Seed(TestTasks.Make(id: "PLAT-0001", creator: "You", assignee: "Zeta"));
+        TaskItem control = harness.Seed(TestTasks.Make(id: "PLAT-0002", creator: "You", assignee: "Nova", originRoomId: direct.Id));
+        int roomsBefore = (await harness.Directory.GetRoomsAsync(ct)).Count;
+
+        harness.Raise(blocked, HumanActor, "Status: To Do → In Progress");
+        harness.Raise(control, HumanActor, "Kept");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal("PLAT-0002", post.Message.Text);
+        Assert.Equal(roomsBefore, (await harness.Directory.GetRoomsAsync(ct)).Count);
+    }
+
+    /// <summary>Corrections-B3 D9 item 12: an Agent actor whose <see cref="TaskActor.UserId"/> is null is resolved by Name, and the wake is posted as that Agent. Green on arrival (9.4).</summary>
+    [Fact]
+    public async Task AgentActorWithoutUserId_ResolvedByName_PostedAsThatAgent()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        Room origin = await harness.Directory.CreateRoomAsync("Origin", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
+        TaskItem task = harness.Seed(TestTasks.Make(creator: "You", assignee: "Nova", originRoomId: origin.Id));
+
+        harness.Raise(task, new TaskActor(TaskActorKind.Agent, "Kai", null), "Status: To Do → In Progress");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal(agents.Kai.Id, post.Message.SenderId);
+    }
+
+    /// <summary>
+    /// Corrections-B3 D9 item 12: an Agent actor with no user id and no user by that Name posts
+    /// nothing - never falling back to the Human - while another Task's Human change still posts.
+    /// Green on arrival (9.4).
+    /// </summary>
+    [Fact]
+    public async Task AgentActorUnknown_NothingPosted_NeverAsHuman()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using Harness harness = await CreateHarnessAsync(dir, new TeamOptions { HumanName = "You" }, ct);
+        Agents agents = await RegisterAgentsAsync(harness, ct);
+        Room origin = await harness.Directory.CreateRoomAsync("Origin", [KnownIds.Human, agents.Kai.Id, agents.Nova.Id], ct);
+        harness.Prompts.SetOverride(WakeMessageKey, "{{taskId}}");
+        TaskItem blocked = harness.Seed(TestTasks.Make(id: "PLAT-0001", creator: "You", assignee: "Nova", originRoomId: origin.Id));
+        TaskItem control = harness.Seed(TestTasks.Make(id: "PLAT-0002", creator: "You", assignee: "Nova", originRoomId: origin.Id));
+
+        harness.Raise(blocked, new TaskActor(TaskActorKind.Agent, "Phantom", null), "Status: To Do → In Progress");
+        harness.Raise(control, HumanActor, "Kept");
+        harness.Clock.Advance(DefaultWindow);
+        await harness.Trigger.WhenIdleAsync();
+
+        MessagePostedEvent post = Assert.Single(harness.Posts);
+        Assert.Equal("PLAT-0002", post.Message.Text);
+        Assert.Equal(KnownIds.Human, post.Message.SenderId);
+    }
+
+    /// <summary>Registers Nova and Kai as Personas and Agent users, creates no Room, and starts the service - the arrangement the Room-choice tests (Spec §10.4) build their own Rooms on.</summary>
+    /// <param name="harness">The harness to arrange.</param>
+    /// <param name="ct">Cancels the directory writes and <see cref="TaskTriggerService.StartAsync"/>.</param>
+    /// <returns>The two Agents.</returns>
+    private static async Task<Agents> RegisterAgentsAsync(Harness harness, CancellationToken ct)
+    {
+        _ = harness.Personas.Add(new PersonaIdentity("Nova", "Nova", "nova", ["Platform"]), "You are Nova.");
+        _ = harness.Personas.Add(new PersonaIdentity("Kai", "Kai", "kai", ["Platform"]), "You are Kai.");
+        User? nova = await harness.Directory.UpsertAgentUserAsync("Nova", null, ct);
+        User? kai = await harness.Directory.UpsertAgentUserAsync("Kai", null, ct);
+        Assert.NotNull(nova);
+        Assert.NotNull(kai);
+        await harness.Trigger.StartAsync(ct);
+        return new Agents(nova, kai);
+    }
+
+    /// <summary>Sorts user ids ordinally, so two Member sets compare as sets.</summary>
+    /// <param name="ids">The ids.</param>
+    /// <returns>The ids, sorted.</returns>
+    private static string[] SortedIds(params string[] ids) => [.. ids.Order(StringComparer.Ordinal)];
+
+    /// <summary>Sorts users' ids ordinally, so two Member sets compare as sets.</summary>
+    /// <param name="users">The users.</param>
+    /// <returns>Their ids, sorted.</returns>
+    private static string[] SortedIds(IEnumerable<User> users) => [.. users.Select(u => u.Id).Order(StringComparer.Ordinal)];
+
     /// <summary>Seeds <paramref name="count"/> Tasks <c>PLAT-0001</c> onwards, each assigned to Nova with <paramref name="cast"/>'s Room as origin.</summary>
     /// <param name="harness">The harness whose store receives the Tasks.</param>
     /// <param name="cast">Supplies the origin Room.</param>
@@ -1232,6 +1652,15 @@ public sealed class TaskTriggerServiceTests
         };
         roomEvents.MessagePosted += harness.OnMessagePosted;
         return harness;
+    }
+
+    /// <summary>The two registered Agents a Room-choice test arranges (<see cref="RegisterAgentsAsync"/>), with no Room.</summary>
+    /// <param name="Nova">The usual assignee.</param>
+    /// <param name="Kai">A second Teammate: creator, third-Agent actor, or neither.</param>
+    private sealed record Agents(User Nova, User Kai)
+    {
+        /// <summary>Kai, acting through an App Tool.</summary>
+        public TaskActor KaiActor => new(TaskActorKind.Agent, this.Kai.Name, this.Kai.Id);
     }
 
     /// <summary>The two Agents and the origin Room a waking test arranges (<see cref="StartWakingAsync"/>).</summary>

@@ -5,6 +5,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Tasks;
 
@@ -498,12 +499,7 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
             return;
         }
 
-        Room? room = await this.ChooseRoomAsync(latest, senderId, assignee, ct);
-        if (room is null)
-        {
-            LogNoRoom(this.logger, id);
-            return;
-        }
+        Room room = await this.ChooseRoomAsync(latest, senderId, assignee, ct);
 
         bool isAgent = actor.Kind == TaskActorKind.Agent;
         if (isAgent && !this.activity.TryConsumeAgentWake(id))
@@ -557,16 +553,70 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     }
 
     /// <summary>
-    /// Chooses the Room the wake is posted in. Covers Spec §10.4 step 1 only: the Task's origin Room,
-    /// when it exists (Archived is allowed) and both the sender and the assignee are Members. Steps 2-4
-    /// (the creator's Room, the actor's Room, a new Room) are Task 9.5's.
+    /// Chooses the Room the wake is posted in, by Spec §10.4 steps 1-4 in order:
+    /// <list type="number">
+    /// <item><description>The Task's origin Room, when it exists (Archived is allowed, D-12) and both the sender and the assignee are Members.</description></item>
+    /// <item><description>The creator Room: S = {Human, creator, assignee}, or {Human, assignee} when the creator is the Human or has no user row (corrections-B3 D9 item 13). Used only when the sender is in S, via <see cref="ITeamDirectory.FindRoomWithExactMemberSetAsync"/> (which skips Archived Rooms).</description></item>
+    /// <item><description>Otherwise - a third Agent made the change (D-13) - the actor Room: S = {Human, sender, assignee}, looked up the same way.</description></item>
+    /// <item><description>No Room found: <see cref="ChatService.CreateRoomForAsync"/> creates one for the last step's S without the Human (it adds the Human itself, and one Agent gives the direct Room).</description></item>
+    /// </list>
+    /// Every set tried contains the sender, so <see cref="ChatService.PostAsync"/>'s membership check
+    /// passes. Runs inside the fire gate, which is what keeps two racing fires from creating two Rooms.
     /// </summary>
     /// <param name="task">The latest Task.</param>
     /// <param name="senderId">The sender's user id.</param>
     /// <param name="assignee">The assignee's user.</param>
     /// <param name="ct">The service lifetime.</param>
-    /// <returns>The Room, or <see langword="null"/> when no step applies.</returns>
-    private async Task<Room?> ChooseRoomAsync(TaskItem task, string senderId, User assignee, CancellationToken ct)
+    /// <returns>The Room to post in.</returns>
+    private async Task<Room> ChooseRoomAsync(TaskItem task, string senderId, User assignee, CancellationToken ct)
+    {
+        if (await this.FindUsableOriginAsync(task, senderId, assignee, ct) is { } origin)
+        {
+            return origin;
+        }
+
+        List<string> memberSet = [KnownIds.Human];
+        User? creator = await this.directory.FindUserByNameAsync(task.Creator, ct);
+        if (creator is { Kind: UserKind.Agent })
+        {
+            memberSet.Add(creator.Id);
+        }
+
+        AddOnce(memberSet, assignee.Id);
+        if (!memberSet.Contains(senderId, StringComparer.Ordinal))
+        {
+            memberSet = [KnownIds.Human, senderId];
+            AddOnce(memberSet, assignee.Id);
+        }
+
+        Room? existing = await this.directory.FindRoomWithExactMemberSetAsync(memberSet, ct);
+        if (existing is not null)
+        {
+            return existing;
+        }
+
+        List<string> agentIds = [.. memberSet.Where(static id => !string.Equals(id, KnownIds.Human, StringComparison.Ordinal))];
+        return await this.chat.CreateRoomForAsync(agentIds, ct);
+    }
+
+    /// <summary>Adds <paramref name="id"/> to <paramref name="ids"/> unless it is already there (ordinal).</summary>
+    /// <param name="ids">The member set being built.</param>
+    /// <param name="id">The id to add.</param>
+    private static void AddOnce(List<string> ids, string id)
+    {
+        if (!ids.Contains(id, StringComparer.Ordinal))
+        {
+            ids.Add(id);
+        }
+    }
+
+    /// <summary>Spec §10.4 step 1: the Task's origin Room, if it exists (Archived is allowed) and both the sender and the assignee are Members.</summary>
+    /// <param name="task">The latest Task.</param>
+    /// <param name="senderId">The sender's user id.</param>
+    /// <param name="assignee">The assignee's user.</param>
+    /// <param name="ct">The service lifetime.</param>
+    /// <returns>The origin Room, or <see langword="null"/> when step 1 doesn't apply.</returns>
+    private async Task<Room?> FindUsableOriginAsync(TaskItem task, string senderId, User assignee, CancellationToken ct)
     {
         if (task.OriginRoomId is not { } originId)
         {
@@ -645,12 +695,6 @@ internal sealed partial class TaskTriggerService : IHostedService, IDisposable
     /// <param name="actor">The actor's Name.</param>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Not waking the assignee of Task {TaskId}: the actor '{Actor}' has no user to post as.")]
     private static partial void LogNoSender(ILogger logger, TaskId taskId, string actor);
-
-    /// <summary>Logs that no Room could be chosen.</summary>
-    /// <param name="logger">The logger to write to.</param>
-    /// <param name="taskId">The Task.</param>
-    [LoggerMessage(Level = LogLevel.Information, Message = "Not waking the assignee of Task {TaskId}: no Room has both the sender and the assignee as Members.")]
-    private static partial void LogNoRoom(ILogger logger, TaskId taskId);
 
     /// <summary>Logs that the Room refused the wake-up Message.</summary>
     /// <param name="logger">The logger to write to.</param>
