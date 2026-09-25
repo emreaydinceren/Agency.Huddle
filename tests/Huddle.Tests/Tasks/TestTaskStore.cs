@@ -13,6 +13,32 @@ namespace Agency.Huddle.Tests.Tasks;
 /// </summary>
 internal static class TestTaskStore
 {
+    /// <summary>Returns the Tasks scan root under a temporary data directory.</summary>
+    /// <param name="dir">The temporary data directory a Task store under test scans.</param>
+    public static string Root(TempDataDir dir) => Path.Combine(dir.Path, "Tasks");
+
+    /// <summary>Returns a Task file's path, relative to <see cref="Root"/>, in today's on-disk layout.</summary>
+    /// <param name="team">The owning Team's label.</param>
+    /// <param name="project">The owning Project's label, or <see langword="null"/> for a Team-level Task.</param>
+    /// <param name="closed">Whether the Task lives under the closed folder.</param>
+    /// <param name="fileName">The Task file's name, including extension.</param>
+    public static string RelativePath(string team, string? project, bool closed, string fileName)
+    {
+        List<string> segments = [team];
+        if (project is not null)
+        {
+            segments.Add(project);
+        }
+
+        if (closed)
+        {
+            segments.Add("_closed");
+        }
+
+        segments.Add(fileName);
+        return Path.Combine([.. segments]);
+    }
+
     /// <summary>Writes a valid Task file's composed text under <paramref name="root"/>, and backdates it to its last Change log entry's time (or a fixed past time with none) so a later reconciliation pass never rewrites a fixture.</summary>
     /// <param name="root">The Tasks scan root.</param>
     /// <param name="relativePath">The file's path, relative to <paramref name="root"/>.</param>

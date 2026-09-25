@@ -20,7 +20,7 @@ public sealed class TaskStoreWatcherTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
@@ -56,7 +56,7 @@ public sealed class TaskStoreWatcherTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -148,7 +148,7 @@ public sealed class TaskStoreWatcherTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -176,7 +176,7 @@ public sealed class TaskStoreWatcherTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         Directory.CreateDirectory(Path.Combine(root, "Platform"));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -211,7 +211,7 @@ public sealed class TaskStoreWatcherTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         Directory.CreateDirectory(Path.Combine(root, "Ops"));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
@@ -247,7 +247,7 @@ public sealed class TaskStoreWatcherTests
     public async Task FileDeleted_RemovedFromIndex_NoOutsideEdit()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -275,7 +275,7 @@ public sealed class TaskStoreWatcherTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         Directory.CreateDirectory(Path.Combine(root, "Platform"));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -298,7 +298,7 @@ public sealed class TaskStoreWatcherTests
     public async Task WatcherError_TriggersFullRebuild()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -328,7 +328,7 @@ public sealed class TaskStoreWatcherTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),

@@ -360,7 +360,7 @@ public sealed class TaskServiceTests
     {
         using TempDataDir dir = new();
         using PersonaStore personas = CreatePersonaStore(dir);
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         Directory.CreateDirectory(Path.Combine(root, "Platform"));
         using TaskStore store = CreateTaskStore(dir, personas);
         TaskService service = CreateTaskService(dir, store, personas);
@@ -419,7 +419,7 @@ public sealed class TaskServiceTests
     {
         using TempDataDir dir = new();
         using PersonaStore personas = CreatePersonaStore(dir);
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         Directory.CreateDirectory(Path.Combine(root, "Marketing"));
         using TaskStore store = CreateTaskStore(dir, personas);
         TaskService service = CreateTaskService(dir, store, personas);
@@ -672,7 +672,7 @@ public sealed class TaskServiceTests
     {
         using TempDataDir dir = new();
         using PersonaStore personas = CreatePersonaStore(dir);
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         Directory.CreateDirectory(Path.Combine(root, "Marketing"));
         using TaskStore store = CreateTaskStore(dir, personas);
         TaskService service = CreateTaskService(dir, store, personas);

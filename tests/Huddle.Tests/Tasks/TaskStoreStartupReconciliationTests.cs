@@ -19,7 +19,7 @@ public sealed class TaskStoreStartupReconciliationTests
     public void Startup_FileNewerThanLastEntry_AppendsOneOutsideEntry_NoEvent()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         TaskItem task = TestTasks.Make(
             id: "PLAT-0001",
             location: new("Platform", null, false),
@@ -51,7 +51,7 @@ public sealed class TaskStoreStartupReconciliationTests
     public void Startup_FileNotNewer_Unchanged()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         TaskItem task = TestTasks.Make(
             id: "PLAT-0001",
             location: new("Platform", null, false),
@@ -75,7 +75,7 @@ public sealed class TaskStoreStartupReconciliationTests
     public void Startup_NoEntries_AppendsEntry()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
@@ -102,7 +102,7 @@ public sealed class TaskStoreStartupReconciliationTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),

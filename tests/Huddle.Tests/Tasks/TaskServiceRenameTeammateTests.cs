@@ -24,7 +24,7 @@ public sealed class TaskServiceRenameTeammateTests
     public void RenameTeammate_RewritesCreatorAndAssignee_IncludingClosed()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
@@ -63,7 +63,7 @@ public sealed class TaskServiceRenameTeammateTests
     public void RenameTeammate_NoChangeLogEntry_NoTaskChanged()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
@@ -96,7 +96,7 @@ public sealed class TaskServiceRenameTeammateTests
     public void RenameTeammate_RaisesTasksReloadedOnce()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
@@ -123,7 +123,7 @@ public sealed class TaskServiceRenameTeammateTests
     public void RenameTeammate_OldLogLinesKeepOldName()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
@@ -150,7 +150,7 @@ public sealed class TaskServiceRenameTeammateTests
     public void RenameTeammate_MatchesIgnoringCase()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
@@ -180,7 +180,7 @@ public sealed class TaskServiceRenameTeammateTests
     public void RenameTeammate_OneFileFails_OthersRenamed_NoThrow()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string racedPath = TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
@@ -217,7 +217,7 @@ public sealed class TaskServiceRenameTeammateTests
     public void RenameTeammate_ThenWatcherRebuild_NoOutsideEditEntry()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),

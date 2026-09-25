@@ -21,7 +21,7 @@ public sealed class OutsideEditLoggingTests
     public void OutsideEdit_Priority_AppendsPrefixedEntryAsHuman()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
@@ -48,7 +48,7 @@ public sealed class OutsideEditLoggingTests
     public void OutsideEdit_KeepsHumansFormatting()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
@@ -90,7 +90,7 @@ public sealed class OutsideEditLoggingTests
     public void OutsideEdit_RaisesTaskChangedWithOutsideHuddleActor()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
@@ -120,7 +120,7 @@ public sealed class OutsideEditLoggingTests
     public void OutsideEdit_InvalidFile_NoEntryNoEvent()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
@@ -159,7 +159,7 @@ public sealed class OutsideEditLoggingTests
     public void OutsideEdit_CreatedByHand_BareEntry()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         Directory.CreateDirectory(Path.Combine(root, "Platform"));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -185,7 +185,7 @@ public sealed class OutsideEditLoggingTests
     public void OutsideEdit_VersionMovedBeforeAppend_SkipsWithoutEvent()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
@@ -228,7 +228,7 @@ public sealed class OutsideEditLoggingTests
     public void OutsideEdit_TeamMovedByHand_LogsMoved()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string sourcePath = TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
@@ -258,7 +258,7 @@ public sealed class OutsideEditLoggingTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
             Path.Combine("Platform", "PLAT-0001.md"),
