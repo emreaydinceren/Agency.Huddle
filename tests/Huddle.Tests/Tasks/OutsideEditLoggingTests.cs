@@ -24,7 +24,7 @@ public sealed class OutsideEditLoggingTests
         string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", creator: "You", priority: TaskPriority.High, location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -51,7 +51,7 @@ public sealed class OutsideEditLoggingTests
         string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", title: "T", creator: "You", priority: TaskPriority.Medium, location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -93,7 +93,7 @@ public sealed class OutsideEditLoggingTests
         string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", priority: TaskPriority.High, location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -123,7 +123,7 @@ public sealed class OutsideEditLoggingTests
         string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -167,7 +167,7 @@ public sealed class OutsideEditLoggingTests
 
         TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", title: "Hand made", creator: "Someone", location: new("Platform", null, false)));
 
         store.RebuildFromWatcher();
@@ -188,7 +188,7 @@ public sealed class OutsideEditLoggingTests
         string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(
                 id: "PLAT-0001",
                 priority: TaskPriority.Medium,
@@ -231,16 +231,16 @@ public sealed class OutsideEditLoggingTests
         string root = TestTaskStore.Root(dir);
         string sourcePath = TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", creator: "You", location: new("Platform", null, false)));
-        Directory.CreateDirectory(Path.Combine(root, "Support"));
+        Directory.CreateDirectory(Path.Combine(root, "Support", "_tasks"));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         using TaskService service = CreateTaskService(dir, store, personas);
 
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
         TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
-        string targetPath = Path.Combine(root, "Support", "PLAT-0001.md");
+        string targetPath = Path.Combine(root, "Support", "_tasks", "PLAT-0001.md");
         File.WriteAllText(targetPath, TaskFileFormat.Compose(original with { Location = new("Support", null, false) }));
         File.Delete(sourcePath);
 
@@ -261,7 +261,7 @@ public sealed class OutsideEditLoggingTests
         string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", priority: TaskPriority.Medium, location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);

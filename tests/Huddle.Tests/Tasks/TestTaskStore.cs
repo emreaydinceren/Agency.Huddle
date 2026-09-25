@@ -30,6 +30,8 @@ internal static class TestTaskStore
             segments.Add(project);
         }
 
+        segments.Add("_tasks");
+
         if (closed)
         {
             segments.Add("_closed");

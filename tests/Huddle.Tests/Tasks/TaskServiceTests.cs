@@ -369,7 +369,7 @@ public sealed class TaskServiceTests
 
         TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
         Assert.Equal("Platform", saved.Task.Location.Team);
-        Assert.Equal(Path.Combine(root, "Platform", "PLAT-0001.md"), saved.Task.Path);
+        Assert.Equal(Path.Combine(root, "Platform", "_tasks", "PLAT-0001.md"), saved.Task.Path);
     }
 
     /// <summary>Updating a Task's status logs a "status: ..." summary and raises exactly one TaskChanged.</summary>
@@ -637,9 +637,9 @@ public sealed class TaskServiceTests
     {
         using TempDataDir dir = new();
         using PersonaStore personas = CreatePersonaStore(dir);
-        string teamRoot = Path.Combine(TestTaskStore.Root(dir), "Platform");
-        Directory.CreateDirectory(teamRoot);
-        File.WriteAllText(Path.Combine(teamRoot, "PLAT-0005.md"), "not a real task file");
+        string tasksDir = Path.Combine(TestTaskStore.Root(dir), "Platform", "_tasks");
+        Directory.CreateDirectory(tasksDir);
+        File.WriteAllText(Path.Combine(tasksDir, "PLAT-0005.md"), "not a real task file");
         using TaskStore store = CreateTaskStore(dir, personas);
         TaskService service = CreateTaskService(dir, store, personas);
 

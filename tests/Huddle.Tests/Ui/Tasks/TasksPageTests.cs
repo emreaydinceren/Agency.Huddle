@@ -74,10 +74,12 @@ public sealed class TasksPageTests
         var ct = cts.Token;
 
         await using var factory = new TeamWebApplicationFactory();
-        Directory.CreateDirectory(factory.TasksDirPath);
+        string tasksFolder = Path.Combine(factory.TasksDirPath, "Platform", "_tasks");
+        Directory.CreateDirectory(tasksFolder);
         // Empty frontmatter delimiters, no fields: guaranteed to fail every required-field check,
-        // the same fixture TaskStoreTests.cs:95 uses for "definitely rejected".
-        await File.WriteAllTextAsync(Path.Combine(factory.TasksDirPath, "garbage.md"), "---\n---\n", ct);
+        // the same fixture TaskStoreTests.cs:95 uses for "definitely rejected". It still lives
+        // where TryMap maps it to a location, so the store attempts to parse it and rejects it.
+        await File.WriteAllTextAsync(Path.Combine(tasksFolder, "garbage.md"), "---\n---\n", ct);
 
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/tasks", ct);
@@ -173,7 +175,7 @@ public sealed class TasksPageTests
 
         TestTaskStore.WriteTask(
             harness.TasksDirPath,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", title: "Freshly written on disk"));
         harness.Store.RebuildFromWatcher();
 

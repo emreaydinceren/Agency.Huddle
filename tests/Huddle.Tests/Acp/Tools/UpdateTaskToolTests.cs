@@ -602,9 +602,9 @@ public sealed class UpdateTaskToolTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         TaskItem task = CreateTask(harness);
-        string growthDir = Path.Combine(harness.TasksDirPath, "Growth");
-        Directory.CreateDirectory(growthDir);
-        File.WriteAllText(Path.Combine(growthDir, $"{task.Id}.md"), "racing file");
+        string growthTasksDir = Path.Combine(harness.TasksDirPath, "Growth", "_tasks");
+        Directory.CreateDirectory(growthTasksDir);
+        File.WriteAllText(Path.Combine(growthTasksDir, $"{task.Id}.md"), "racing file");
         harness.Store.RebuildFromWatcher();
         UpdateTaskTool tool = CreateTool(harness, RequireNovaId(harness));
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString(), ["team"] = "Growth" };
@@ -612,7 +612,7 @@ public sealed class UpdateTaskToolTests
         string result = await tool.InvokeAsync(arguments, ct);
 
         Assert.Equal(
-            $"Could not save the task: A file named {task.Id}.md already exists in {growthDir}.",
+            $"Could not save the task: A file named {task.Id}.md already exists in {growthTasksDir}.",
             result);
     }
 

@@ -27,7 +27,7 @@ public sealed class TaskServiceRenameTeammateTests
         string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(
                 id: "PLAT-0001",
                 assignee: "Nova",
@@ -66,7 +66,7 @@ public sealed class TaskServiceRenameTeammateTests
         string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(
                 id: "PLAT-0001",
                 assignee: "Nova",
@@ -99,11 +99,11 @@ public sealed class TaskServiceRenameTeammateTests
         string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", assignee: "Nova", location: new("Platform", null, false), changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
         TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0002.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0002.md"),
             TestTasks.Make(id: "PLAT-0002", assignee: "Nova", location: new("Platform", null, false), changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -126,7 +126,7 @@ public sealed class TaskServiceRenameTeammateTests
         string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(
                 id: "PLAT-0001",
                 assignee: "Nova",
@@ -153,7 +153,7 @@ public sealed class TaskServiceRenameTeammateTests
         string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(
                 id: "PLAT-0001",
                 creator: "Nova",
@@ -183,11 +183,11 @@ public sealed class TaskServiceRenameTeammateTests
         string root = TestTaskStore.Root(dir);
         string racedPath = TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", assignee: "Nova", location: new("Platform", null, false), changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
         TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0002.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0002.md"),
             TestTasks.Make(id: "PLAT-0002", assignee: "Nova", location: new("Platform", null, false), changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -220,7 +220,7 @@ public sealed class TaskServiceRenameTeammateTests
         string root = TestTaskStore.Root(dir);
         TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", assignee: "Nova", location: new("Platform", null, false), changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);

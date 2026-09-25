@@ -2,15 +2,15 @@ using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.Tests.Tasks;
 
-/// <summary>Tests for TaskLayout path mapping and file path generation.</summary>
+/// <summary>Tests for <see cref="TaskLayout"/>: it maps only the `_tasks/` layout (ADR-0030, Spec §6.3).</summary>
 public sealed class TaskLayoutTests
 {
-    /// <summary>A path directly under a Team folder maps to a location with no Project and not Closed.</summary>
+    /// <summary>A path under Team/_tasks maps to a location with no Project and not Closed.</summary>
     [Fact]
-    public void TryMap_TeamLevel_NoProject()
+    public void TryMap_TeamTasks_NoProject()
     {
         string root = Path.Combine("root");
-        string fullPath = Path.Combine(root, "T", "x.md");
+        string fullPath = Path.Combine(root, "T", "_tasks", "X.md");
 
         bool result = TaskLayout.TryMap(root, fullPath, out TaskLocation? location, out string? error);
 
@@ -22,12 +22,12 @@ public sealed class TaskLayoutTests
         Assert.Null(error);
     }
 
-    /// <summary>A path under Team/_closed folder maps to a location with no Project and Closed.</summary>
+    /// <summary>A path under Team/_tasks/_closed maps to a location with no Project and Closed.</summary>
     [Fact]
-    public void TryMap_TeamClosedFolder_NoProject()
+    public void TryMap_TeamTasksClosed()
     {
         string root = Path.Combine("root");
-        string fullPath = Path.Combine(root, "T", "_closed", "x.md");
+        string fullPath = Path.Combine(root, "T", "_tasks", "_closed", "X.md");
 
         bool result = TaskLayout.TryMap(root, fullPath, out TaskLocation? location, out string? error);
 
@@ -39,12 +39,12 @@ public sealed class TaskLayoutTests
         Assert.Null(error);
     }
 
-    /// <summary>A path under Team/Project folder maps to a location with a Project and not Closed.</summary>
+    /// <summary>A path under Team/Project/_tasks maps to a location with a Project and not Closed.</summary>
     [Fact]
-    public void TryMap_ProjectLevel_NoClosedFolder()
+    public void TryMap_ProjectTasks()
     {
         string root = Path.Combine("root");
-        string fullPath = Path.Combine(root, "T", "P", "x.md");
+        string fullPath = Path.Combine(root, "T", "P", "_tasks", "X.md");
 
         bool result = TaskLayout.TryMap(root, fullPath, out TaskLocation? location, out string? error);
 
@@ -56,12 +56,12 @@ public sealed class TaskLayoutTests
         Assert.Null(error);
     }
 
-    /// <summary>A path under Team/Project/_closed folder maps to a location with a Project and Closed.</summary>
+    /// <summary>A path under Team/Project/_tasks/_closed maps to a location with a Project and Closed.</summary>
     [Fact]
-    public void TryMap_ProjectClosedFolder_WithProject()
+    public void TryMap_ProjectTasksClosed()
     {
         string root = Path.Combine("root");
-        string fullPath = Path.Combine(root, "T", "P", "_closed", "x.md");
+        string fullPath = Path.Combine(root, "T", "P", "_tasks", "_closed", "X.md");
 
         bool result = TaskLayout.TryMap(root, fullPath, out TaskLocation? location, out string? error);
 
@@ -73,54 +73,26 @@ public sealed class TaskLayoutTests
         Assert.Null(error);
     }
 
-    /// <summary>A path at the root directory level is not inside a Team folder and is rejected.</summary>
-    [Fact]
-    public void TryMap_AtRoot_ErrorNotInsideTeamFolder()
+    /// <summary>Every path outside the `_tasks/` layout is ignored: TryMap returns false with a null location and null error.</summary>
+    [Theory]
+    [InlineData("x.md")]
+    [InlineData("T/note.md")]
+    [InlineData("T/X.md")]
+    [InlineData("T/_closed/X.md")]
+    [InlineData("T/P/plan.md")]
+    [InlineData("T/P/research/d.md")]
+    [InlineData("T/_tasks/sub/X.md")]
+    [InlineData("T/_tasks/_closed/_closed/X.md")]
+    [InlineData("T/P/Q/_tasks/X.md")]
+    [InlineData("_tasks/X.md")]
+    [InlineData("_x/_tasks/X.md")]
+    [InlineData(".obsidian/_tasks/X.md")]
+    [InlineData("T/_drafts/_tasks/X.md")]
+    public void TryMap_NotATaskPath_IsIgnored(string relativePath)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
         string root = Path.Combine("root");
-        string fullPath = Path.Combine(root, "x.md");
-
-        bool result = TaskLayout.TryMap(root, fullPath, out TaskLocation? location, out string? error);
-
-        Assert.False(result);
-        Assert.Null(location);
-        Assert.Equal("is not inside a Team folder", error);
-    }
-
-    /// <summary>A path nested too deeply (more than Team/Project/_closed) is rejected.</summary>
-    [Fact]
-    public void TryMap_NestedTooDeep_Error()
-    {
-        string root = Path.Combine("root");
-        string fullPath = Path.Combine(root, "T", "P", "Q", "x.md");
-
-        bool result = TaskLayout.TryMap(root, fullPath, out TaskLocation? location, out string? error);
-
-        Assert.False(result);
-        Assert.Null(location);
-        Assert.Equal("is nested too deeply; Tasks live at Team/[Project/][_closed/]", error);
-    }
-
-    /// <summary>A path with _closed/_closed is nested too deeply and is rejected.</summary>
-    [Fact]
-    public void TryMap_ClosedClosedFolder_Error()
-    {
-        string root = Path.Combine("root");
-        string fullPath = Path.Combine(root, "T", "_closed", "_closed", "x.md");
-
-        bool result = TaskLayout.TryMap(root, fullPath, out TaskLocation? location, out string? error);
-
-        Assert.False(result);
-        Assert.Null(location);
-        Assert.Equal("is nested too deeply; Tasks live at Team/[Project/][_closed/]", error);
-    }
-
-    /// <summary>A path under a reserved underscore folder like _drafts is ignored and returns false with no error.</summary>
-    [Fact]
-    public void TryMap_ReservedDraftsFolder_IgnoredNoError()
-    {
-        string root = Path.Combine("root");
-        string fullPath = Path.Combine(root, "T", "_drafts", "x.md");
+        string fullPath = Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar));
 
         bool result = TaskLayout.TryMap(root, fullPath, out TaskLocation? location, out string? error);
 
@@ -129,60 +101,30 @@ public sealed class TaskLayoutTests
         Assert.Null(error);
     }
 
-    /// <summary>A path under a reserved folder at project level is ignored, not rejected as nested too deeply.</summary>
+    /// <summary>The `_tasks` folder name follows <c>FolderSnapshot.PathComparer</c>: it maps case-insensitively on Windows/macOS and is ignored elsewhere.</summary>
     [Fact]
-    public void TryMap_ReservedProjectLevel_IgnoredNoError()
+    public void TryMap_TasksFolderCase_FollowsPathComparer()
     {
         string root = Path.Combine("root");
-        string fullPath = Path.Combine(root, "Platform", "Auth", "_drafts", "x.md");
+        string fullPath = Path.Combine(root, "T", "_Tasks", "X.md");
 
         bool result = TaskLayout.TryMap(root, fullPath, out TaskLocation? location, out string? error);
 
-        Assert.False(result);
-        Assert.Null(location);
+        if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS())
+        {
+            Assert.True(result);
+            Assert.NotNull(location);
+            Assert.Equal("T", location.Team);
+            Assert.Null(location.Project);
+            Assert.False(location.Closed);
+        }
+        else
+        {
+            Assert.False(result);
+            Assert.Null(location);
+        }
+
         Assert.Null(error);
-    }
-
-    /// <summary>A path with reserved folder multiple levels deep is ignored, not rejected as nested too deeply.</summary>
-    [Fact]
-    public void TryMap_ReservedDeeplyNested_IgnoredNoError()
-    {
-        string root = Path.Combine("root");
-        string fullPath = Path.Combine(root, "Platform", "Auth", "_drafts", "deep", "x.md");
-
-        bool result = TaskLayout.TryMap(root, fullPath, out TaskLocation? location, out string? error);
-
-        Assert.False(result);
-        Assert.Null(location);
-        Assert.Null(error);
-    }
-
-    /// <summary>A reserved folder at the team level is ignored.</summary>
-    [Fact]
-    public void TryMap_ReservedTeamFolder_IgnoredNoError()
-    {
-        string root = Path.Combine("root");
-        string fullPath = Path.Combine(root, "_x", "P", "y.md");
-
-        bool result = TaskLayout.TryMap(root, fullPath, out TaskLocation? location, out string? error);
-
-        Assert.False(result);
-        Assert.Null(location);
-        Assert.Null(error);
-    }
-
-    /// <summary>A path with _closed/_closed is nested too deeply (not a reserved folder issue).</summary>
-    [Fact]
-    public void TryMap_ClosedClosedStillNested_Error()
-    {
-        string root = Path.Combine("root");
-        string fullPath = Path.Combine(root, "T", "_closed", "_closed", "x.md");
-
-        bool result = TaskLayout.TryMap(root, fullPath, out TaskLocation? location, out string? error);
-
-        Assert.False(result);
-        Assert.Null(location);
-        Assert.Equal("is nested too deeply; Tasks live at Team/[Project/][_closed/]", error);
     }
 
     /// <summary>PathFor generates the correct file path for a task location with no Project and not Closed.</summary>
@@ -195,7 +137,7 @@ public sealed class TaskLayoutTests
 
         string path = TaskLayout.PathFor(root, location, id);
 
-        string expected = Path.Combine(root, "T", "PLAT-0001.md");
+        string expected = Path.Combine(root, "T", "_tasks", "PLAT-0001.md");
         Assert.Equal(expected, path);
     }
 
@@ -209,7 +151,7 @@ public sealed class TaskLayoutTests
 
         string path = TaskLayout.PathFor(root, location, id);
 
-        string expected = Path.Combine(root, "T", "_closed", "PLAT-0001.md");
+        string expected = Path.Combine(root, "T", "_tasks", "_closed", "PLAT-0001.md");
         Assert.Equal(expected, path);
     }
 
@@ -223,7 +165,7 @@ public sealed class TaskLayoutTests
 
         string path = TaskLayout.PathFor(root, location, id);
 
-        string expected = Path.Combine(root, "T", "P", "PLAT-0001.md");
+        string expected = Path.Combine(root, "T", "P", "_tasks", "PLAT-0001.md");
         Assert.Equal(expected, path);
     }
 
@@ -237,13 +179,13 @@ public sealed class TaskLayoutTests
 
         string path = TaskLayout.PathFor(root, location, id);
 
-        string expected = Path.Combine(root, "T", "P", "_closed", "PLAT-0001.md");
+        string expected = Path.Combine(root, "T", "P", "_tasks", "_closed", "PLAT-0001.md");
         Assert.Equal(expected, path);
     }
 
-    /// <summary>PathFor and TryMap are inverse operations for a valid Team/Project/_closed location.</summary>
+    /// <summary>PathFor and TryMap are inverse operations for a valid Team/Project/_tasks/_closed location.</summary>
     [Fact]
-    public void PathFor_RoundTrip_WithProjectAndClosed()
+    public void PathFor_RoundTrip()
     {
         string root = Path.Combine("root");
         TaskLocation location = new TaskLocation("T", "P", true);
@@ -257,5 +199,41 @@ public sealed class TaskLayoutTests
         Assert.NotNull(mappedLocation);
         Assert.Equal(location, mappedLocation);
         Assert.Null(error);
+    }
+
+    /// <summary>AffectsTasks tells a Task file, a Team folder, a Project folder and a `_tasks`/`_closed` folder from an unrelated note, its research subtree, hidden folders and a temp file.</summary>
+    [Theory]
+    [InlineData("T/_tasks/PLAT-0001.md", true)]
+    [InlineData("T", true)]
+    [InlineData("T/P", true)]
+    [InlineData("T/_tasks", true)]
+    [InlineData("T/P/_tasks/_closed", true)]
+    [InlineData("T/v1.2", true)]
+    [InlineData("T/note.md", false)]
+    [InlineData("T/P/research/x.md", false)]
+    [InlineData("T/P/research", false)]
+    [InlineData(".obsidian/w.json", false)]
+    [InlineData("T/_tasks/X.md.tmp", false)]
+    public void AffectsTasks(string relativePath, bool expected)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
+        string root = Path.Combine("root");
+        string fullPath = Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar));
+
+        bool result = TaskLayout.AffectsTasks(root, fullPath);
+
+        Assert.Equal(expected, result);
+    }
+
+    /// <summary>IsReservedFolderName treats both `_`- and `.`-prefixed names as reserved; an ordinary name, even with a space, is not.</summary>
+    [Theory]
+    [InlineData("_x", true)]
+    [InlineData(".git", true)]
+    [InlineData("Launch Q4", false)]
+    public void IsReservedFolderName(string name, bool expected)
+    {
+        bool result = TaskLayout.IsReservedFolderName(name);
+
+        Assert.Equal(expected, result);
     }
 }

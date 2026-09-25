@@ -19,8 +19,8 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("Platform", "Auth", false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "_tasks", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("Platform", "Auth", false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -32,21 +32,20 @@ public sealed class TaskStoreTests
         Assert.NotNull(store.Get(second));
     }
 
-    /// <summary>A file directly at the Tasks root, not inside any Team folder, is rejected.</summary>
+    /// <summary>A file directly at the Tasks root, not inside any Team's <c>_tasks/</c> folder, is
+    /// ignored: it is neither indexed nor rejected (Spec §6.3, Task G1.1.i).</summary>
     [Fact]
-    public void Constructor_FileAtRoot_Rejected()
+    public void Constructor_FileAtRoot_Ignored()
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        string path = WriteRawFile(root, "x.md", TaskFileFormat.Compose(TestTasks.Make()));
+        _ = WriteRawFile(root, "x.md", TaskFileFormat.Compose(TestTasks.Make()));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
         Assert.Empty(store.All);
-        RejectedTaskFile rejected = Assert.Single(store.RejectedFiles);
-        Assert.Equal(path, rejected.Path);
-        Assert.Equal("is not inside a Team folder", rejected.Reason);
+        Assert.Empty(store.RejectedFiles);
     }
 
     /// <summary>Two files that parse to the same id are both rejected, each naming the other's path.</summary>
@@ -55,8 +54,8 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        string firstPath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "one.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        string secondPath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "two.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", "Auth", false)));
+        string firstPath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "one.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        string secondPath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "_tasks", "two.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", "Auth", false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -90,7 +89,7 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        string path = WriteRawFile(root, Path.Combine("Platform", "bad.md"), "---\n---\n");
+        string path = WriteRawFile(root, Path.Combine("Platform", "_tasks", "bad.md"), "---\n---\n");
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -107,8 +106,8 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("Platform", "Auth", false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "_tasks", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("Platform", "Auth", false)));
         Directory.CreateDirectory(Path.Combine(root, "Platform", "_closed"));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
@@ -256,8 +255,8 @@ public sealed class TaskStoreTests
         }
 
         Directory.CreateDirectory(Path.Combine(root, "platform"));
-        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        string secondPath = TestTaskStore.WriteTask(root, Path.Combine("platform", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        string secondPath = TestTaskStore.WriteTask(root, Path.Combine("platform", "_tasks", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
@@ -309,7 +308,7 @@ public sealed class TaskStoreTests
 
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
         using FileStream lockHandle = new(path, FileMode.Open, FileAccess.Read, FileShare.None);
@@ -366,7 +365,7 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
@@ -385,7 +384,7 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
@@ -408,7 +407,7 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
@@ -432,8 +431,8 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        WriteRawFile(root, Path.Combine("Platform", TaskLayout.ClosedFolder, "PLAT-0001.md"), "conflicting content");
+        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        WriteRawFile(root, Path.Combine("Platform", "_tasks", TaskLayout.ClosedFolder, "PLAT-0001.md"), "conflicting content");
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
@@ -443,7 +442,7 @@ public sealed class TaskStoreTests
 
         IOException exception = Assert.Throws<IOException>(() => store.Move(original, original.Version, closedLocation, text));
 
-        string targetDir = Path.Combine(root, "Platform", TaskLayout.ClosedFolder);
+        string targetDir = Path.Combine(root, "Platform", "_tasks", TaskLayout.ClosedFolder);
         Assert.Equal($"A file named PLAT-0001.md already exists in {targetDir}.", exception.Message);
         Assert.True(File.Exists(sourcePath));
     }
@@ -454,7 +453,7 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", "Auth", false)));
+        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", "Auth", false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
@@ -485,7 +484,7 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
@@ -519,7 +518,7 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", "Auth", false)));
+        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", "Auth", false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
@@ -561,7 +560,7 @@ public sealed class TaskStoreTests
 
         Assert.NotNull(written);
         Assert.Equal("Platform", written.Location.Team);
-        Assert.Equal(Path.Combine(root, "Platform", "PLAT-0001.md"), written.Path);
+        Assert.Equal(Path.Combine(root, "Platform", "_tasks", "PLAT-0001.md"), written.Path);
         string[] teamDirs = Directory.GetDirectories(root);
         string teamDirName = Assert.Single(teamDirs, d => string.Equals(Path.GetFileName(d), "Platform", StringComparison.Ordinal));
         Assert.DoesNotContain(teamDirs, d => string.Equals(Path.GetFileName(d), "platform", StringComparison.Ordinal) && !string.Equals(d, teamDirName, StringComparison.Ordinal));
@@ -577,7 +576,7 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "v0", location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "v0", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
@@ -611,7 +610,7 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "scanned", location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "scanned", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
@@ -629,7 +628,7 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "original", location: new("Platform", null, false)));
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "original", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
@@ -650,7 +649,7 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
@@ -670,7 +669,7 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
@@ -691,7 +690,7 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "read me", location: new("Platform", null, false)));
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", title: "read me", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);
@@ -725,9 +724,9 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        TestTaskStore.WriteTask(root, Path.Combine("Platform", "a.md"), TestTasks.Make(id: "PLAT-0003", location: new("Platform", null, false)));
-        WriteRawFile(root, Path.Combine("Platform", "PLAT-0007.md"), "not a valid task file");
-        TestTaskStore.WriteTask(root, Path.Combine("Ops", "OPS-0099.md"), TestTasks.Make(id: "OPS-0099", location: new("Ops", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "a.md"), TestTasks.Make(id: "PLAT-0003", location: new("Platform", null, false)));
+        WriteRawFile(root, Path.Combine("Platform", "_tasks", "PLAT-0007.md"), "not a valid task file");
+        TestTaskStore.WriteTask(root, Path.Combine("Ops", "_tasks", "OPS-0099.md"), TestTasks.Make(id: "OPS-0099", location: new("Ops", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
 
@@ -747,9 +746,9 @@ public sealed class TaskStoreTests
     {
         using TempDataDir dir = new();
         string root = TestTaskStore.Root(dir);
-        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
-        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("Platform", null, false)));
-        TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0003.md"), TestTasks.Make(id: "PLAT-0003", location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0002.md"), TestTasks.Make(id: "PLAT-0002", location: new("Platform", null, false)));
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0003.md"), TestTasks.Make(id: "PLAT-0003", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         _ = TaskId.TryParse("PLAT-0001", out TaskId first);
