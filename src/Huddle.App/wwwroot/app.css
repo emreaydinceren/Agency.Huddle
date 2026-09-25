@@ -11,6 +11,9 @@ html, body {
     background: var(--mud-palette-background);
     color: var(--mud-palette-text-primary);
     font-family: var(--mud-typography-default-family);
+
+    /* Recommended setup for clear rendering of Inter's optical-size axis. */
+    font-optical-sizing: auto;
 }
 
 /* 100% honours the browser's own font-size setting; every existing rem scales from this one token. */
@@ -126,6 +129,13 @@ button:focus-visible {
     resize: vertical;
 }
 
+/* MudMainContent reserves padding-top for a MudAppBar; this layout has none, so that reservation
+   was only ever a blank band above every page. The doubled class outranks MudBlazor's own
+   .mud-main-content rule regardless of stylesheet order. */
+.mud-main-content.main-column {
+    padding-top: 0;
+}
+
 .main-column {
     display: flex;
     flex-direction: column;
@@ -187,6 +197,28 @@ button:focus-visible {
     margin-top: auto;
 }
 
+/* ---- Left menu: a top-level MudNavLink vs. a MudNavGroup and everything inside it ------------
+   A top-level left-menu row (a Room, Teammates, Settings) is a MudNavLink with no MudNavGroup
+   ancestor, rendering its label inside a ".mud-nav-link-text" element. The drawer's one
+   MudNavGroup ("Tasks") renders its own title the exact same way, because a MudNavGroup's header
+   is itself a MudNavLink - and every view link nested inside it (All Tasks, My Tasks, ...) is a
+   plain MudNavLink too. So "belongs to the group" is what sets 14px, at (0,2,0) via the
+   ".mud-nav-group" ancestor - naturally beating the 15px default's (0,1,0) regardless of source
+   order - and only the group's own header additionally gets the 600 weight, via the more specific
+   *direct*-child selector that a nested view link's ".mud-nav-link" never matches. */
+.mud-nav-link-text {
+    font-size: 15px;
+}
+
+.mud-nav-group .mud-nav-link-text {
+    font-size: 14px;
+}
+
+.mud-nav-group > .mud-nav-link .mud-nav-link-text {
+    font-weight: 600;
+    color: var(--mud-palette-text-secondary);
+}
+
 /* ---- Room list: the hover/focus-revealed row actions menu ------------------------------------
    .room-list already existed as a markup prompt with no rule behind it. Each row is a flex box so
    the NavLink can grow and the "..." button sits fixed-width beside it; the button stays in the
@@ -229,6 +261,30 @@ button:focus-visible {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* ---- Task view nav: the same hover/focus-revealed row actions menu as the Room list above ----- */
+
+.task-view-nav-row {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.task-view-nav-row .task-view-nav-link {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.task-view-nav-row .task-view-nav-menu-button {
+    opacity: 0;
+    border-radius: var(--mud-default-borderradius);
+    transition: opacity 120ms ease;
+}
+
+.task-view-nav-row:hover .task-view-nav-menu-button,
+.task-view-nav-row:focus-within .task-view-nav-menu-button {
+    opacity: 1;
 }
 
 /* ---- Archived chats dialog: one row per archived Room ---------------------------------------- */
@@ -366,12 +422,48 @@ button:focus-visible {
 }
 
 .message-body {
-    line-height: 1.4;
     font-family: var(--mud-typography-body1-family);
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 18px;
 }
 
+/* Adjacent block margins collapse to whichever side is larger, not their sum, so two consecutive
+   paragraphs only ever get *one* 0.75rem gap between them - not the 1.5rem the top+bottom values
+   might suggest. 0.25rem read as no gap at all next to .message-body's own 18px line-height. */
 .message-body p {
-    margin: 0.25rem 0;
+    margin: 0.75rem 0;
+}
+
+/* An agent's reply has no .message-bubble wrapper the way a Human's does - the two rules below are
+   what stops the first paragraph's own top margin from reading as a gap under the sender/timestamp
+   line above it, and the last one's bottom margin from adding to .message-row's own margin-bottom.
+   Redundant, not conflicting, for a Human bubble: that element already carries this exact pairing
+   under the .message-bubble selector above, since a Human message is one div with both classes. */
+.message-body > :first-child {
+    margin-top: 0;
+}
+
+.message-body > :last-child {
+    margin-bottom: 0;
+}
+
+/* ---- A Persona's ad-hoc "**Header**" line, marked by MarkdownRenderer.
+   MarkStandaloneBoldParagraphsAsHeadings ------------------------------------------------------
+   Renders to the same <strong> as a bullet's own "**Label:**" lead-in, so a rule keyed on that tag
+   alone could never tell the two apart - the divider and extra top margin are what a plain
+   font-weight bump on <strong> cannot give it: a visible break between one section and the next. */
+.message-body p.message-heading {
+    margin: 1rem 0 0.25rem 0;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--mud-palette-divider-light);
+    font-size: 15px;
+}
+
+.message-body p.message-heading:first-child {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
 }
 
 /* ---- Drafts: a Turn's text as it streams in, before it becomes a Message ------------------- */
@@ -424,6 +516,12 @@ button:focus-visible {
     max-height: 8rem;
     resize: vertical;
     font: inherit;
+
+    /* Matches .message-body's own literals below, so what you type reads at the same size and
+       weight as what lands in the transcript once it's sent. */
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 18px;
     padding: 0.75rem 1rem;
     color: var(--mud-palette-text-primary);
     background: var(--mud-palette-surface);
@@ -531,19 +629,14 @@ button:focus-visible {
 
 /* ---- Teammates: directory tiles and the profile card -------------------- */
 
-.teammates-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-}
-
 .teammates-header h1 {
     margin: 0;
 }
 
-.teammates-new {
-    flex: 0 0 auto;
+/* Sits between the description and the directory, like .task-toolbar on the Tasks page. */
+.teammates-toolbar {
+    gap: 1rem;
+    margin-bottom: 1rem;
 }
 
 /* A responsive grid of people, like Slack's Directories. auto-fill with a
@@ -669,7 +762,6 @@ button:focus-visible {
 
 .teammates-filter {
     max-width: 16rem;
-    margin-bottom: 1rem;
 }
 
 .invite-filter {
@@ -974,6 +1066,31 @@ button:focus-visible {
     user-select: all;
 }
 
+/* ---- The Task detail panel: comfortable margins around and between its fields -----------------
+   Every field TaskDetail.razor renders in Panel mode (fieldsContent/sideContent) is a flat sibling
+   directly under .task-detail - there is no per-field wrapper to carry spacing of its own - so this
+   one rule is what gives the whole form a left/right inset from the drawer's edge and a consistent
+   vertical rhythm between rows, in place of the edge-to-edge, touching layout MudBlazor's own
+   unstyled fields render as. Expanded mode's two-column MudGrid is just one more sibling here, so
+   the same gap still separates it from the alerts and buttons around it, even though its own two
+   columns space themselves independently. */
+.task-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+}
+
+/* A rounder corner than MudBlazor's own outlined-field default (--mud-default-borderradius, 8px in
+   this theme) - closer to a native form field's look - scoped to the detail panel's own inputs so
+   the rest of the app's buttons, cards and dialogs keep their existing radius. Repeats the ".mud-
+   input.mud-input-outlined" prefix MudBlazor.min.css's own rule carries on this same selector, not
+   just ".mud-input-outlined-border" alone: that prefix makes the library's own rule three classes
+   specific, and a two-class override here would lose the cascade to it regardless of load order. */
+.task-detail .mud-input.mud-input-outlined .mud-input-outlined-border {
+    border-radius: 12px;
+}
+
 /* The Panel's conflict rows (manual test TASKS-07 finding F17): at ~300px the table's four columns
    (Field, Theirs, Yours, radios) overflow, pushing the radio choices off-screen. TaskDetail.razor
    gives the Panel a div-based ".task-detail-conflict-stacked" container instead of a table there, and
@@ -987,5 +1104,49 @@ button:focus-visible {
     gap: 4px;
     padding-block-end: 8px;
     border-block-end: 1px solid var(--mud-palette-lines-default);
+}
+
+/* ---- The Task detail panel's drag-to-resize width ---------------------------------------------
+   MudBlazor's own compiled CSS (Drawer.min.css, package 9.10.0) reads a Temporary drawer's width
+   from "var(--mud-drawer-width, var(--mud-drawer-width-right))" - an instance-level override this
+   rule declares a default for, and huddleResize.attachDrawer (app.js) then reassigns directly on
+   drag, restoring a saved width from localStorage with no round trip to the server on every
+   pointermove. huddleResize finds the drawer itself via ".mud-drawer", so this handle only needs
+   to sit inside it. */
+.tasks-detail-drawer {
+    --mud-drawer-width: 420px;
+}
+
+/* A strip straddling the drawer's left (content-facing) edge - Anchor.End puts the drawer on the
+   right, so dragging this leftward is what grows it. The 8px width is the pointer target, wider
+   than the visible line it carries so the target stays comfortable to grab; the line itself
+   (::before) is what makes the strip read as draggable at rest, not just once the pointer finds
+   it - a hover-only cue is what the panel shipped with first and it read as invisible. */
+.tasks-detail-resize-handle {
+    position: absolute;
+    top: 0;
+    left: -4px;
+    z-index: 1;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+    touch-action: none;
+}
+
+.tasks-detail-resize-handle::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 3px;
+    width: 3px;
+    height: 100%;
+    background-color: var(--mud-palette-action-default);
+}
+
+.tasks-detail-resize-handle:hover::before,
+.tasks-detail-resize-handle:active::before {
+    left: 2px;
+    width: 5px;
+    background-color: var(--mud-palette-primary);
 }
 

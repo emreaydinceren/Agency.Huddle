@@ -60,8 +60,41 @@
     private void ApplyAppearance(AppearanceSettings settings)
     {
         var descriptor = FindDescriptor(settings.ThemeId);
-        this.theme = descriptor.Theme;
+        this.theme = ResolveTheme(descriptor, settings.AccentColorHex);
         this.isDarkMode = descriptor.Mode == ThemeMode.Dark;
+    }
+
+    /// <summary>
+    /// <paramref name="descriptor"/>'s own <see cref="ThemeDescriptor.Theme"/>, except for
+    /// <see cref="AccentTheme.LightDescriptor"/> and <see cref="AccentTheme.DarkDescriptor"/> - whose
+    /// <c>Theme</c> is only ever a placeholder (see their own remarks) - when
+    /// <paramref name="accentColorHex"/> is set, when this builds the real, accent-derived theme
+    /// instead. Compares by reference, not by id, so it can never drift out of sync with a rename of
+    /// either id. No JavaScript is involved: <paramref name="accentColorHex"/> is a Human-picked,
+    /// server-persisted value, known synchronously on every render like every other appearance
+    /// setting - unlike the browser-detection approach this replaced, there is no first-render race
+    /// to resolve.
+    /// </summary>
+    /// <param name="descriptor">The resolved catalog entry to render.</param>
+    /// <param name="accentColorHex">The Human's own accent colour, as <c>#rrggbb</c>, or <see langword="null"/> when none is chosen yet.</param>
+    private static MudTheme ResolveTheme(ThemeDescriptor descriptor, string? accentColorHex)
+    {
+        if (accentColorHex is null)
+        {
+            return descriptor.Theme;
+        }
+
+        if (ReferenceEquals(descriptor, AccentTheme.LightDescriptor))
+        {
+            return AccentTheme.BuildTheme(accentColorHex, dark: false);
+        }
+
+        if (ReferenceEquals(descriptor, AccentTheme.DarkDescriptor))
+        {
+            return AccentTheme.BuildTheme(accentColorHex, dark: true);
+        }
+
+        return descriptor.Theme;
     }
 
     /// <summary>Finds the catalog entry named by <paramref name="themeId"/>, or the catalog's first entry when it is <see langword="null"/> or names none.</summary>

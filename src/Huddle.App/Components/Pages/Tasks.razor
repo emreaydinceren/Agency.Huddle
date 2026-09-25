@@ -10,20 +10,27 @@
     lands (14.5.i); + New task is still a no-op EventCallback. The Board's column header changes a
     saved Board View through ViewStore (the page follows ViewsChanged) and anything else through
     ViewChanged (the effective View), and its "Edit columns…" opens the View editor at Columns.
-    Above either view, one §13.12 empty state: "No tasks yet." when there are no Tasks at all, "No
+    Below either view, one §13.12 empty state: "No tasks yet." when there are no Tasks at all, "No
     tasks match '{text}'." when only the search excludes everything, otherwise "No tasks match this
     View." with Reset filters, which drops the toolbar's overrides and the search (J43).
 
     The View editor drawer (§13.5) IS hosted here (corrections-B5 D13 item 7; 13.2.i, the only agent
-    editing this file for that dispatch per corrections-B7's ordering, J42): Edit View opens it for
-    the effective View; /tasks/new opens it for a new View, detected from NavigationManager.Uri
-    since that route's own @page template carries no ViewId to distinguish it from the bare /tasks
-    case. An invalid View route (corrections-B7 §13.2 item 4) shows its ViewValidator reason and an
-    Edit View button, never the "no longer exists" wording that only ever meant "no such id at all".
+    editing this file for that dispatch per corrections-B7's ordering, J42), for two triggers that
+    are both about the page's own on-screen state rather than an arbitrary View: the Board's "Edit
+    columns…" (12.4.i, opens at Columns) and /tasks/new, which opens it for a new View, detected
+    from NavigationManager.Uri since that route's own @page template carries no ViewId to
+    distinguish it from the bare /tasks case. An invalid View route (corrections-B7 §13.2 item 4)
+    shows its ViewValidator reason and its own Edit View button, opening this same hosted drawer,
+    never the "no longer exists" wording that only ever meant "no such id at all". Editing any OTHER
+    View - including the one currently effective here, by name rather than by being on screen - goes
+    through TaskViewNav's own separate ViewEditorDrawer instance instead, reached from that View's
+    row menu in the sidebar (moved there from a standalone toolbar button, so any View can be edited
+    or deleted from wherever the Human is in the app, not only while it happens to be the page open
+    here).
 
     14.5.i (this dispatch, third page-wiring step, corrections-B7): the detail drawer now hosts a real
-    TaskDetail (Mode=Panel) instead of the placeholder - opening a row/card, "+ New task" (the header
-    button and the empty-state button) and switching between two already-open Tasks all go through
+    TaskDetail (Mode=Panel) instead of the placeholder - opening a row/card, "+ New task" (the toolbar
+    button) and switching between two already-open Tasks all go through
     ConfirmSwitchAsync, which calls the currently mounted TaskDetail's own ConfirmDiscardAsync before
     tearing it down (a fresh @key forces recreation, since TaskDetail only loads its Id/Draft once, in
     OnInitializedAsync - Cancel in that "Discard changes?" box leaves the current Task open).
@@ -77,7 +84,7 @@
     else
     {
         <header class="tasks-header">
-            <h1>Tasks: @this.effectiveView.Name</h1>
+            <h1>@this.effectiveView.Name</h1>
             @if (!string.IsNullOrEmpty(this.effectiveView.Description))
             {
                 <MudText Typo="Typo.body2" Class="mud-text-secondary tasks-description">@this.effectiveView.Description</MudText>
@@ -115,18 +122,28 @@
         }
 
         <TaskToolbar EffectiveView="this.effectiveView" EffectiveViewChanged="this.OnEffectiveViewChangedAsync"
-                     Search="@this.search" SearchChanged="this.OnSearchChangedAsync" OnEditView="this.OnEditViewClickedAsync"
+                     Search="@this.search" SearchChanged="this.OnSearchChangedAsync"
                      OnNewTask="this.OnNewTaskAsync" />
 
         IReadOnlyList<TaskItem> tasks = this.FilteredTasks(this.search);
+        @if (this.effectiveView.Kind == ViewKind.List)
+        {
+            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTaskAsync" OnCopyId="this.OnCopyIdAsync" />
+        }
+        else
+        {
+            <TaskBoard View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTaskAsync"
+                       ViewChanged="this.OnEffectiveViewChangedAsync" OnEditColumns="this.OnEditColumnsClicked" OnCopyId="this.OnCopyIdAsync" />
+        }
+
         @if (tasks.Count == 0)
         {
-            @* Spec §13.12 empty states, one rendering above the List and the Board (corrections-B7 12.4 item 1). *@
+            @* Spec §13.12 empty states, one rendering below the List and the Board (corrections-B7 12.4 item 1).
+               "No tasks yet." carries no button of its own: the toolbar's "+ New task" is right above it. *@
             <div class="tasks-empty">
                 @if (this.Store.All.Count == 0)
                 {
                     <MudText Typo="Typo.body1" Class="tasks-empty-message">No tasks yet.</MudText>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.OnEmptyStateNewTaskAsync" Class="tasks-empty-action">+ New task</MudButton>
                 }
                 else if (!string.IsNullOrWhiteSpace(this.search) && this.FilteredTasks(null).Count > 0)
                 {
@@ -140,16 +157,6 @@
             </div>
         }
 
-        @if (this.effectiveView.Kind == ViewKind.List)
-        {
-            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTaskAsync" OnCopyId="this.OnCopyIdAsync" />
-        }
-        else
-        {
-            <TaskBoard View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTaskAsync"
-                       ViewChanged="this.OnEffectiveViewChangedAsync" OnEditColumns="this.OnEditColumnsClicked" OnCopyId="this.OnCopyIdAsync" />
-        }
-
         @if (this.itemNotFoundText is not null)
         {
             @* Spec §13.13.3 step 1: an item-route id that is invalid or names no Task, over the last View. *@
@@ -158,6 +165,7 @@
 
         <MudDrawer Open="this.detailOpen" OpenChanged="this.OnDetailOpenChanged" Anchor="Anchor.End" Variant="DrawerVariant.Temporary"
                    OverlayAutoClose="@(!this.detailHasPending)" Class="tasks-detail-drawer">
+            <div @ref="this.detailResizeHandle" class="tasks-detail-resize-handle" role="separator" aria-orientation="vertical" aria-label="Resize Task detail panel"></div>
             @if (this.selectedTaskId is not null || this.selectedDraft is not null)
             {
                 <TaskDetail @ref="this.detail" @key="this.DetailKey" Id="this.selectedTaskId" Draft="this.selectedDraft"
@@ -188,6 +196,17 @@
     private TaskDraft? selectedDraft;
     private TaskDetail? detail;
     private bool detailHasPending;
+    private ElementReference detailResizeHandle;
+
+    /// <summary>The <c>localStorage</c> key <c>huddleResize.attachDrawer</c> (app.js) remembers the detail panel's dragged width under.</summary>
+    private const string DetailWidthStorageKey = "taskDetailPanelWidth";
+
+    /// <summary>The detail panel's narrowest and widest drag-resized widths, in pixels - narrow enough to still fit the Panel-mode conflict rows' stacked layout (manual test TASKS-07 finding F17), wide enough to stay short of crowding the List/Board behind it on a typical laptop screen.</summary>
+    private const int DetailWidthMinPx = 320;
+    private const int DetailWidthMaxPx = 800;
+
+    /// <summary>The detail panel's width before any drag has been recorded - matches <c>.tasks-detail-drawer</c>'s own CSS default in app.css, so a fresh browser (nothing in <c>localStorage</c> yet) renders the same width either way.</summary>
+    private const int DetailWidthDefaultPx = 420;
     private bool editorOpen;
     private string? editorViewId;
     private ViewEditorSection editorSection = ViewEditorSection.General;
@@ -318,13 +337,6 @@
         this.editorOpen = true;
     }
 
-    /// <summary>Opens the View editor drawer for the currently effective View (Edit View, Spec §13.3).</summary>
-    private Task OnEditViewClickedAsync()
-    {
-        this.OpenEditorFor(this.effectiveView.Id);
-        return Task.CompletedTask;
-    }
-
     /// <summary>Reflects the drawer's own chrome (backdrop, Escape) closing it.</summary>
     private void OnEditorOpenChanged(bool open) => this.editorOpen = open;
 
@@ -332,10 +344,26 @@
     /// Spec §13.9: on first render of the bare route, reads the remembered last View and navigates
     /// there if it still exists. The item route (Spec §13.13.3 step 2) reads the same remembered View
     /// to decide what renders under its panel, but never navigates - the URL stays on
-    /// <c>/tasks/item/{TaskIdText}</c> until the panel closes.
+    /// <c>/tasks/item/{TaskIdText}</c> until the panel closes. First render is also when the detail
+    /// drawer's drag-to-resize handle is wired up (<c>huddleResize.attachDrawer</c>, app.js): the
+    /// drawer itself is never re-created while this page lives - only its <see cref="TaskDetail"/>
+    /// child is, per <see cref="DetailKey"/> - so one attach call is enough for the page's whole
+    /// lifetime, and every width the handle drags to afterwards is set and remembered entirely in
+    /// JS, with no further round trip through this method.
     /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            await this.JS.InvokeVoidAsync(
+                "huddleResize.attachDrawer",
+                this.detailResizeHandle,
+                DetailWidthStorageKey,
+                DetailWidthMinPx,
+                DetailWidthMaxPx,
+                DetailWidthDefaultPx);
+        }
+
         if (firstRender && this.ViewId is null && this.TaskIdText is null && this.Options.Value.Tasks.Enabled)
         {
             await this.TryNavigateToLastViewAsync();
@@ -448,17 +476,6 @@
         this.selectedDraft = new TaskDraft(string.Empty, defaults.Team ?? string.Empty, defaults.Project);
         this.detailHasPending = false;
         this.detailOpen = true;
-    }
-
-    /// <summary>"+ New task" (the §13.12 empty state's own button): computes the same defaults <see cref="TaskToolbar.OnNewTask"/> would, since the button lives outside the toolbar.</summary>
-    private Task OnEmptyStateNewTaskAsync() => this.OnNewTaskAsync(this.BuildNewTaskDefaults());
-
-    /// <summary>The Team/Project defaults for a freshly opened create-mode <see cref="TaskDetail"/>, from the effective View's filter when it names exactly one of each (Spec §13.3) - the same rule <see cref="TaskToolbar"/>'s own "+ New task" button applies.</summary>
-    private NewTaskDefaults BuildNewTaskDefaults()
-    {
-        string? team = this.effectiveView.Filter.Teams.Count == 1 ? this.effectiveView.Filter.Teams[0] : null;
-        string? project = this.effectiveView.Filter.Projects.Count == 1 ? this.effectiveView.Filter.Projects[0].Project : null;
-        return new NewTaskDefaults(team, project);
     }
 
     /// <summary>

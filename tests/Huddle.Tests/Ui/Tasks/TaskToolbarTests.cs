@@ -11,30 +11,12 @@ using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 
 /// <summary>
-/// Pins Spec §13.3: Active/Closed is disabled on a Board; a filter, group/sort or kind change is
+/// Pins Spec §13.3: a filter, group/sort or kind change is
 /// session-only and only offers <c>Save to View</c> rather than writing straight through; Search is
 /// debounced and never saved; and <c>+ New task</c> defaults the Team from a single-Team filter.
 /// </summary>
 public sealed class TaskToolbarTests
 {
-    /// <summary>The Active/Closed toggle is disabled while the effective View is a Board (its scope is always Active).</summary>
-    [Fact]
-    public async Task ActiveClosedToggle_DisabledOnBoard_EnabledOnList()
-    {
-        using var dir = new TempDataDir();
-        using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
-        var listView = Save(store, "v1", ViewKind.List, []);
-        var boardView = Save(store, "v2", ViewKind.Board, BoardDefaultColumns);
-
-        await using var listCtx = NewContext(store);
-        var (_, listToolbar) = RenderToolbar(listCtx, listView);
-        await using var boardCtx = NewContext(store);
-        var (_, boardToolbar) = RenderToolbar(boardCtx, boardView);
-
-        Assert.False(listToolbar.FindComponent<MudToggleGroup<ViewScope>>().Instance.Disabled);
-        Assert.True(boardToolbar.FindComponent<MudToggleGroup<ViewScope>>().Instance.Disabled);
-    }
-
     /// <summary>Adding a team to the filter raises <c>EffectiveViewChanged</c> and, once the parent reflects it back, shows <c>Save to View</c> - without writing to <see cref="ViewStore"/>.</summary>
     [Fact]
     public async Task AddingATeamFilter_RaisesEffectiveViewChanged_AndShowsSaveToView_WithoutWritingToViewStore()
@@ -86,30 +68,21 @@ public sealed class TaskToolbarTests
         Assert.Empty(root.FindAll(".task-toolbar-save"));
     }
 
-    /// <summary>Switching List/Board raises the change but is session-only: <see cref="ViewStore"/> keeps the saved Kind until Save to View is clicked.</summary>
+    /// <summary>The toolbar carries neither the Active/Closed nor the List/Board toggle (both are set in the View editor), and <c>+ New task</c> is its first control.</summary>
     [Fact]
-    public async Task SwitchingListToBoard_IsSessionOnly_UntilSaved()
+    public async Task Toolbar_HasNoScopeOrKindToggle_AndLeadsWithNewTask()
     {
         using var dir = new TempDataDir();
         using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
-        var saved = Save(store, "v1", ViewKind.List, []);
+        var saved = Save(store, "v1", ViewKind.Board, BoardDefaultColumns);
 
-        TaskView? raised = null;
         await using var ctx = NewContext(store);
-        var (root, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
+        var (_, toolbar) = RenderToolbar(ctx, saved);
 
-        var kindToggle = toolbar.FindComponent<MudToggleGroup<ViewKind>>();
-        await toolbar.InvokeAsync(() => kindToggle.Instance.ValueChanged.InvokeAsync(ViewKind.Board));
-
-        TaskView updated = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
-        Assert.Equal(ViewKind.Board, updated.Kind);
-        TaskView? stillSaved = store.Get("v1");
-        Assert.NotNull(stillSaved);
-        Assert.Equal(ViewKind.List, stillSaved.Kind);
-
-        toolbar.Render(builder => builder.Add(t => t.EffectiveView, updated));
-
-        Assert.NotEmpty(root.FindAll(".task-toolbar-save"));
+        Assert.Empty(toolbar.FindComponents<MudToggleGroup<ViewScope>>());
+        Assert.Empty(toolbar.FindComponents<MudToggleGroup<ViewKind>>());
+        var firstControl = toolbar.Find(".task-toolbar").Children[0];
+        Assert.Contains("task-toolbar-new-task", firstControl.ClassList);
     }
 
     /// <summary><c>+ New task</c> defaults the Team from the filter when it names exactly one, and leaves it unset otherwise.</summary>

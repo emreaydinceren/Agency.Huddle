@@ -681,6 +681,40 @@ public sealed class ViewEditorDrawerTests
         Assert.Equal("My unsaved edit", NameInputValue(root));
     }
 
+    /// <summary>
+    /// Regression test: a View created through a drawer instance whose <see cref="ViewEditorDrawer.Id"/>
+    /// starts (and stays) <see langword="null"/> - exactly what <c>/tasks/new</c> passes, on the very
+    /// first render of that instance - gets a real, non-empty id when saved. A stale seed-guard used to
+    /// treat that first null <c>Id</c> as already having been seen (its own tracking field also
+    /// defaults to null), skip seeding a fresh id for it, and save the drawer's untouched placeholder
+    /// draft - <c>NewBlankView(string.Empty)</c> - instead. Confirmed live: the empty id it wrote to
+    /// <c>views.json</c> then threw out of <see cref="ViewStore.Delete(string)"/>'s own
+    /// <c>ArgumentException.ThrowIfNullOrWhiteSpace</c> guard the first time anything tried to remove it.
+    /// </summary>
+    [Fact]
+    public async Task NewView_Id_IsNeverBlank_EvenOnThisInstancesVeryFirstParametersSet()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+
+        await using MudBunitContext ctx = NewContext(harness);
+        IRenderedComponent<ContainerFragment> root = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<ViewEditorDrawer>(0);
+            builder.AddAttribute(1, nameof(ViewEditorDrawer.Open), true);
+            builder.CloseComponent();
+        });
+        IRenderedComponent<ViewEditorDrawer> drawer = root.FindComponent<ViewEditorDrawer>();
+        Assert.Null(drawer.Instance.Id);
+
+        var name = root.FindComponents<MudTextField<string>>().Single(HasClass("view-editor-name"));
+        await root.InvokeAsync(() => name.Instance.ValueChanged.InvokeAsync("Fresh View"));
+        await ClickAsync(root, drawer, ".view-editor-save");
+
+        TaskView saved = Assert.Single(harness.Views.Views, v => string.Equals(v.Name, "Fresh View", StringComparison.Ordinal));
+        Assert.False(string.IsNullOrWhiteSpace(saved.Id));
+    }
+
     /// <summary>The columns a Board View needs to pass <c>ViewValidator</c>: every <see cref="TaskState"/> covered exactly once, restated because <c>BoardLayout.DefaultColumns</c> is internal to production code (same restatement as <c>TaskToolbarTests</c>).</summary>
     private static readonly IReadOnlyList<BoardColumn> BoardDefaultColumns =
     [

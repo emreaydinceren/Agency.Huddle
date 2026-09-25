@@ -67,7 +67,7 @@ public sealed class ThemeCatalogTests
         var dark = ThemeCatalog.BuiltIn.Single(descriptor => string.Equals(descriptor.Id, "huddle-dark", StringComparison.Ordinal));
 
         Assert.Equal(ThemeMode.Light, light.Mode);
-        Assert.Equal("#4A154B", Hex(light.Theme.PaletteLight.Primary), ignoreCase: true);
+        Assert.Equal("#007C85", Hex(light.Theme.PaletteLight.Primary), ignoreCase: true);
         Assert.Equal("#FBFBFA", Hex(light.Theme.PaletteLight.Background), ignoreCase: true);
 
         Assert.Equal(ThemeMode.Dark, dark.Mode);

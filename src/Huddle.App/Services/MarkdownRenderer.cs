@@ -45,6 +45,7 @@ public static partial class MarkdownRenderer
         Pipeline.Setup(renderer);
 
         var document = Markdown.Parse(markdown, Pipeline);
+        MarkdownRenderer.MarkStandaloneBoldParagraphsAsHeadings(document);
         if (tasks is not null)
         {
             MarkdownRenderer.LinkTaskReferences(document, tasks);
@@ -53,6 +54,56 @@ public static partial class MarkdownRenderer
         renderer.Render(document);
 
         return writer.ToString();
+    }
+
+    /// <summary>
+    /// Marks a top-level paragraph shaped like an ad-hoc section header - a Persona's only way of
+    /// writing one, since it writes prose rather than reaching for <c>#</c> Markdown headings - with
+    /// the <c>message-heading</c> class, so app.css can style it apart from a bullet's own
+    /// "<c>**Label:**</c> description" lead-in. Both a header and a lead-in render an identical
+    /// <c>&lt;strong&gt;</c>, and CSS alone cannot tell "the whole paragraph" from "the first few
+    /// words of it", so the distinction is made here, at the one point that can see the full
+    /// paragraph structure. Scoped to <paramref name="document"/>'s direct children only - a
+    /// paragraph nested inside a list item or blockquote is never one of these standalone headers.
+    /// </summary>
+    /// <param name="document">The parsed Markdown document, mutated in place.</param>
+    private static void MarkStandaloneBoldParagraphsAsHeadings(MarkdownDocument document)
+    {
+        foreach (Block block in document)
+        {
+            if (block is ParagraphBlock { Inline: { } inline } paragraph && MarkdownRenderer.IsHeadingShaped(inline))
+            {
+                paragraph.GetAttributes().AddClass("message-heading");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="inline"/> is exactly a <c>**bold**</c> run and nothing else, or that
+    /// same bold run - followed by whatever whitespace Markdig kept as the space typed between the
+    /// two - and exactly one trailing <c>*italic*</c> aside, as in
+    /// <c>**Work for you** *(these cost more)*</c>, and nothing else.
+    /// </summary>
+    /// <param name="inline">A paragraph's inline content.</param>
+    private static bool IsHeadingShaped(ContainerInline inline)
+    {
+        if (inline.FirstChild is not EmphasisInline { DelimiterCount: 2 } bold)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(bold, inline.LastChild))
+        {
+            return true;
+        }
+
+        Inline? afterBold = bold.NextSibling;
+        if (afterBold is LiteralInline gap && string.IsNullOrWhiteSpace(gap.Content.ToString()))
+        {
+            afterBold = afterBold.NextSibling;
+        }
+
+        return afterBold is EmphasisInline { DelimiterCount: 1 } italic && ReferenceEquals(italic, inline.LastChild);
     }
 
     /// <summary>

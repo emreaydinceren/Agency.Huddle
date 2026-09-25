@@ -102,22 +102,6 @@ public sealed class TasksPageDetailTests
         Assert.Equal("Alpha", draft.Project);
     }
 
-    /// <summary>The §13.12 "No tasks yet." empty state's own "+ New task" button also opens create mode (Spec §13.12).</summary>
-    [Fact]
-    public async Task EmptyStateNewTaskButton_NoTasksAtAll_OpensCreateMode()
-    {
-        using TaskToolHarness harness = new();
-        await using MudBunitContext ctx = NewContext(harness);
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
-        Assert.Equal("No tasks yet.", cut.Find(".tasks-empty-message").TextContent.Trim());
-
-        await cut.InvokeAsync(() => cut.Find(".tasks-empty-action").Click());
-
-        TaskDetail detail = cut.FindComponent<TaskDetail>().Instance;
-        Assert.Null(detail.Id);
-        Assert.NotNull(detail.Draft);
-    }
-
     /// <summary>Opening a second Task while the first has a pending edit asks "Discard changes?"; Cancel leaves the first Task open with its edit intact (corrections-B7 14.5.i item 2).</summary>
     [Fact]
     public async Task SwitchingToAnotherTask_WithPendingEdits_CancelKeepsTheCurrentTask()

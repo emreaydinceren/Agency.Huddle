@@ -258,6 +258,15 @@
     [Parameter]
     public ViewEditorSection Section { get; set; }
 
+    // Whether OnParametersSet has ever actually seeded the draft. Needed because "no id seen yet" and
+    // "Id is null" are otherwise indistinguishable: loadedId's own default is null, so a fresh
+    // instance whose very first Id is ALSO null (every /tasks/new visit - Id null IS the "create a
+    // new View" signal) used to compare equal to that default and skip SeedFrom entirely, leaving
+    // loadedView stuck at NewBlankView(string.Empty) below - an unsaved-but-real-looking View with no
+    // id at all. Confirmed live: creating a View through the very first /tasks/new of a session wrote
+    // an entry with "id": "" to views.json, which then threw ArgumentException out of
+    // ViewStore.Delete's ThrowIfNullOrWhiteSpace guard the first time anything tried to remove it.
+    private bool seeded;
     private string? loadedId;
     private TaskView loadedView = NewBlankView(string.Empty);
     private FieldRow[] fieldRows = [];
@@ -286,14 +295,15 @@
     /// <summary>Unsubscribes from <see cref="ViewStore.ViewsChanged"/> (rules.md: every subscriber to a singleton hub must unsubscribe).</summary>
     public void Dispose() => this.ViewStore.ViewsChanged -= this.OnViewsChanged;
 
-    /// <summary>Loads the draft for <see cref="Id"/> the first time it is seen.</summary>
+    /// <summary>Loads the draft for <see cref="Id"/> the first time it is seen - always on this instance's very first call, per <see cref="seeded"/>'s own remarks, even when <see cref="Id"/> is null both then and now.</summary>
     protected override void OnParametersSet()
     {
-        if (string.Equals(this.loadedId, this.Id, StringComparison.Ordinal))
+        if (this.seeded && string.Equals(this.loadedId, this.Id, StringComparison.Ordinal))
         {
             return;
         }
 
+        this.seeded = true;
         this.loadedId = this.Id;
         this.SeedFrom(this.Id is { } id ? this.ViewStore.Get(id) ?? NewBlankView(id) : NewBlankView(Guid.NewGuid().ToString("N")));
     }

@@ -18,11 +18,12 @@ namespace Agency.Huddle.App.Themes;
 /// </remarks>
 internal static class ThemeDefaults
 {
-    // The application's UI font stack, unchanged from the retired wwwroot/theme.css's --font-ui
-    // token, so the base font does not change under this migration.
+    // The application's UI font stack. Inter is loaded as a variable-weight web font via the
+    // Google Fonts <link> in App.razor's <head>; "Helvetica Neue" and "sans-serif" are the system
+    // fallback for the moment before that stylesheet loads (or if it fails to).
     private static readonly string[] UiFontFamily =
     [
-        "-apple-system", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif",
+        "Inter", "Helvetica Neue", "sans-serif",
     ];
 
     /// <summary>Builds a <see cref="MudTheme"/> for a light theme, applying the shared <see cref="UiFontFamily"/>.</summary>
