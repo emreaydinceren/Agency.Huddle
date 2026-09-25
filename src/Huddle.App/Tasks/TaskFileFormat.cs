@@ -272,10 +272,10 @@ internal static partial class TaskFileFormat
             }
         }
 
-        lines.Add(
-            task.DuplicateOf is { } duplicateOf
-                ? string.Create(CultureInfo.InvariantCulture, $"duplicate_of: {duplicateOf}")
-                : "duplicate_of:");
+        if (task.DuplicateOf is { } duplicateOf)
+        {
+            lines.Add(string.Create(CultureInfo.InvariantCulture, $"duplicate_of: {duplicateOf}"));
+        }
 
         if (task.Tags.Count > 0)
         {

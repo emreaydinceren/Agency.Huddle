@@ -85,37 +85,71 @@ else if (this.loaded is { } task)
         string conflictFieldList = string.Join(", ", activeConflict.Fields.Select(TaskDiff.FieldLabel));
 
         <MudAlert Severity="Severity.Warning" role="alert" Class="task-detail-conflict-alert">
-            @($"{TaskDetail.ConflictActorName(activeConflict)} changed this task while you were editing: {conflictFieldList}.")
+            @TaskDetail.ConflictBannerText(activeConflict, conflictFieldList)
         </MudAlert>
 
-        <MudSimpleTable Dense="true" Class="task-detail-conflict-table">
-            <tbody>
+        @if (this.Mode == TaskDetailMode.Panel)
+        {
+            @* Manual test TASKS-07 finding F17: at Panel width (~300 px) the table's four columns
+               (Field, Theirs, Yours, radios) overflow horizontally and push the radios off-screen.
+               Each row stacks instead - field label, then Theirs/Yours, then the radios - so nothing
+               needs horizontal room. Expanded keeps the table (plenty of width there). *@
+            <div class="task-detail-conflict-stacked">
                 @foreach (TaskField conflictField in activeConflict.Fields)
                 {
                     FieldChange? change = conflictDiff.FirstOrDefault(c => c.Field == conflictField);
-                    <tr class="task-detail-conflict-row">
-                        <td class="task-detail-conflict-field">@TaskDiff.FieldLabel(conflictField)</td>
+                    <div class="task-detail-conflict-row">
+                        <div class="task-detail-conflict-field">@TaskDiff.FieldLabel(conflictField)</div>
                         @if (conflictField == TaskField.Description)
                         {
-                            <td><MudTextField T="string" Value="@activeConflict.Current.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-theirs" /></td>
-                            <td><MudTextField T="string" Value="@effective.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-yours" /></td>
+                            <MudTextField T="string" Value="@activeConflict.Current.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-theirs" />
+                            <MudTextField T="string" Value="@effective.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-yours" />
                         }
                         else
                         {
-                            <td class="task-detail-conflict-theirs">@change?.Old</td>
-                            <td class="task-detail-conflict-yours">@change?.New</td>
+                            <div class="task-detail-conflict-theirs">@change?.Old</div>
+                            <div class="task-detail-conflict-yours">@change?.New</div>
                         }
-                        <td>
-                            <MudRadioGroup T="ConflictChoice" Value="@(this.conflictChoices.TryGetValue(conflictField, out ConflictChoice chosenChoice) ? chosenChoice : default)"
-                                           ValueChanged="@(choice => this.ResolveConflict(conflictField, choice))">
-                                <MudRadio T="ConflictChoice" Value="ConflictChoice.Mine">Keep mine</MudRadio>
-                                <MudRadio T="ConflictChoice" Value="ConflictChoice.Theirs">Take theirs</MudRadio>
-                            </MudRadioGroup>
-                        </td>
-                    </tr>
+                        <MudRadioGroup T="ConflictChoice?" Value="@(this.conflictChoices.TryGetValue(conflictField, out ConflictChoice chosenChoice) ? chosenChoice : (ConflictChoice?)null)"
+                                       ValueChanged="@(choice => this.ResolveConflict(conflictField, choice))">
+                            <MudRadio T="ConflictChoice?" Value="ConflictChoice.Mine">Keep mine</MudRadio>
+                            <MudRadio T="ConflictChoice?" Value="ConflictChoice.Theirs">Take theirs</MudRadio>
+                        </MudRadioGroup>
+                    </div>
                 }
-            </tbody>
-        </MudSimpleTable>
+            </div>
+        }
+        else
+        {
+            <MudSimpleTable Dense="true" Class="task-detail-conflict-table">
+                <tbody>
+                    @foreach (TaskField conflictField in activeConflict.Fields)
+                    {
+                        FieldChange? change = conflictDiff.FirstOrDefault(c => c.Field == conflictField);
+                        <tr class="task-detail-conflict-row">
+                            <td class="task-detail-conflict-field">@TaskDiff.FieldLabel(conflictField)</td>
+                            @if (conflictField == TaskField.Description)
+                            {
+                                <td><MudTextField T="string" Value="@activeConflict.Current.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-theirs" /></td>
+                                <td><MudTextField T="string" Value="@effective.Description" ReadOnly="true" Lines="6" Class="task-detail-conflict-yours" /></td>
+                            }
+                            else
+                            {
+                                <td class="task-detail-conflict-theirs">@change?.Old</td>
+                                <td class="task-detail-conflict-yours">@change?.New</td>
+                            }
+                            <td>
+                                <MudRadioGroup T="ConflictChoice?" Value="@(this.conflictChoices.TryGetValue(conflictField, out ConflictChoice chosenChoice) ? chosenChoice : (ConflictChoice?)null)"
+                                               ValueChanged="@(choice => this.ResolveConflict(conflictField, choice))">
+                                    <MudRadio T="ConflictChoice?" Value="ConflictChoice.Mine">Keep mine</MudRadio>
+                                    <MudRadio T="ConflictChoice?" Value="ConflictChoice.Theirs">Take theirs</MudRadio>
+                                </MudRadioGroup>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+        }
     }
 
     @if (budgetExhausted)
@@ -139,7 +173,7 @@ else if (this.loaded is { } task)
             <div class="task-detail-title-row">
                 @if (this.titleEditing)
                 {
-                    <MudTextField T="string" Value="@effective.Title" ValueChanged="this.OnTitleChanged" Class="task-detail-title" />
+                    <MudTextField T="string" Value="@effective.Title" ValueChanged="this.OnTitleChanged" Class="task-detail-title" aria-label="Title" />
                 }
                 else
                 {
@@ -231,26 +265,26 @@ else if (this.loaded is { } task)
             {
                 <div class="task-detail-team-project">
                     <span class="task-detail-team-project-label">Team / Project</span>
-                    <MudSelect T="string" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team">
+                    <MudSelect T="string" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team" aria-label="Team">
                         @foreach (string teamName in this.TeamOptions())
                         {
                             <MudSelectItem T="string" Value="teamName">@teamName</MudSelectItem>
                         }
                     </MudSelect>
                     <MudAutocomplete T="string" Value="effective.Location.Project" ValueChanged="this.OnProjectChanged"
-                                      CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" />
+                                      CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" aria-label="Project" />
                 </div>
             }
             else
             {
-                <MudSelect T="string" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team" Label="Team">
+                <MudSelect T="string" Value="effective.Location.Team" ValueChanged="this.OnTeamChanged" Class="task-detail-team" Label="Team" aria-label="Team">
                     @foreach (string teamName in this.TeamOptions())
                     {
                         <MudSelectItem T="string" Value="teamName">@teamName</MudSelectItem>
                     }
                 </MudSelect>
                 <MudAutocomplete T="string" Value="effective.Location.Project" ValueChanged="this.OnProjectChanged"
-                                  CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" Label="Project" />
+                                  CoerceValue="true" SearchFunc="this.SearchProjects" Class="task-detail-project" Label="Project" aria-label="Project" />
             }
 
             <MudAutocomplete T="TaskItem" Strict="true" SearchFunc="this.SearchTaskCandidates" ToStringFunc="TaskDetail.TaskToString"
@@ -268,7 +302,10 @@ else if (this.loaded is { } task)
             </MudChipSet>
             <MudAutocomplete T="TaskItem" Strict="true" SearchFunc="this.SearchTaskCandidates" ToStringFunc="TaskDetail.TaskToString"
                               Value="null" ValueChanged="this.OnAddBlocker" Label="Add blocker" Class="task-detail-blocked-by-add" />
-            <div class="task-detail-blocked-by-summary">@this.BlockedBySummary(effective)</div>
+            @if (this.BlockedBySummary(effective) is { } blockedBySummary)
+            {
+                <div class="task-detail-blocked-by-summary">@blockedBySummary</div>
+            }
 
             <MudChipSet T="string" AllClosable="true" OnClose="this.OnRemoveTag" Class="task-detail-tags-chips">
                 @foreach (string tag in effective.Tags)
@@ -792,12 +829,17 @@ else if (this.loaded is { } task)
         this.SetPending(this.pending with { BlockedBy = [.. current.Where(id => id != chip.Value)] });
     }
 
-    /// <summary>The read-only "Blocked by N open tasks" summary (Spec §13.6's own plural example; the singular form is provisional).</summary>
+    /// <summary>The read-only "Blocked by N open tasks" summary (Spec §13.6's own plural example; the singular form is provisional), or <see langword="null"/> when there are no open blockers - manual test TASKS-01 finding F7: "Blocked by 0 open tasks" reads worse than no line at all.</summary>
     /// <param name="effective">The Task with <see cref="pending"/> applied.</param>
-    private string BlockedBySummary(TaskItem effective)
+    private string? BlockedBySummary(TaskItem effective)
     {
         int openCount = effective.BlockedBy.Count(id => this.Store.Get(id) is { } blocker && !blocker.Status.IsTerminal());
-        return openCount == 1 ? "Blocked by 1 open task" : $"Blocked by {openCount} open tasks";
+        return openCount switch
+        {
+            0 => null,
+            1 => "Blocked by 1 open task",
+            _ => $"Blocked by {openCount} open tasks",
+        };
     }
 
     private void OnTagInputChanged(string value) => this.tagInput = value;
@@ -1027,19 +1069,22 @@ else if (this.loaded is { } task)
     /// field from <see cref="pending"/> (corrections-B5 D14 item 8's composite drop for the coupled
     /// <see cref="TaskField.Location"/> and <see cref="TaskField.Status"/> fields), and resolving
     /// either way advances <see cref="baseVersion"/> to <see cref="TaskResult.Conflict.Current"/>'s
-    /// Version, so a clean re-save no longer conflicts on an already-resolved field.
+    /// Version, so a clean re-save no longer conflicts on an already-resolved field. A
+    /// <see langword="null"/> <paramref name="choice"/> (manual test TASKS-07 finding F16: the row's
+    /// <c>MudRadioGroup</c> starts with nothing selected, never a default "Keep mine") is a no-op -
+    /// nothing to resolve yet.
     /// </summary>
     /// <param name="field">The conflicting field being resolved.</param>
-    /// <param name="choice">Keep the Human's own edit, or take the server's current value.</param>
-    private void ResolveConflict(TaskField field, ConflictChoice choice)
+    /// <param name="choice">Keep the Human's own edit, take the server's current value, or <see langword="null"/> when the row is still unresolved.</param>
+    private void ResolveConflict(TaskField field, ConflictChoice? choice)
     {
-        if (this.conflict is not { } activeConflict)
+        if (choice is not { } resolvedChoice || this.conflict is not { } activeConflict)
         {
             return;
         }
 
-        this.conflictChoices = new Dictionary<TaskField, ConflictChoice>(this.conflictChoices) { [field] = choice };
-        if (choice == ConflictChoice.Theirs)
+        this.conflictChoices = new Dictionary<TaskField, ConflictChoice>(this.conflictChoices) { [field] = resolvedChoice };
+        if (resolvedChoice == ConflictChoice.Theirs)
         {
             this.SetPending(TaskDetail.DropField(this.pending, field));
         }
@@ -1071,6 +1116,33 @@ else if (this.loaded is { } task)
     /// <param name="conflict">The conflict to name the other editor for.</param>
     private static string ConflictActorName(TaskResult.Conflict conflict) =>
         conflict.Current.ChangeLog.Count > 0 ? conflict.Current.ChangeLog[^1].Actor : "Someone";
+
+    /// <summary>
+    /// True when <paramref name="conflict"/>'s last Change log entry is an outside edit - its Summary
+    /// starts with <c>"edited outside Huddle"</c> (<see cref="TaskService"/> and <see cref="TaskStore"/>
+    /// both stamp that exact prefix, Spec §8.4). An outside edit's <see cref="ChangeLogEntry.Actor"/> is
+    /// the Human's own Name (<c>TaskActorKind.OutsideHuddle</c> carries no distinct Name), so the plain
+    /// "{Name} changed…" wording would otherwise read "You changed this task while you were editing"
+    /// (manual test TASKS-07 finding F15) - misattributing a hand-edit of the file to the Human's own
+    /// concurrent Panel edit.
+    /// </summary>
+    /// <param name="conflict">The conflict to check.</param>
+    private static bool IsOutsideEditConflict(TaskResult.Conflict conflict) =>
+        conflict.Current.ChangeLog.Count > 0
+        && conflict.Current.ChangeLog[^1].Summary.StartsWith("edited outside Huddle", StringComparison.Ordinal);
+
+    /// <summary>
+    /// The conflict banner's exact text (manual test TASKS-07 finding F15's settled wording): an
+    /// outside edit reads "This task was changed outside Huddle while you were editing: {fields}.",
+    /// never attributing it to "You"; any other conflicting actor keeps the original
+    /// "{Name} changed this task while you were editing: {fields}." wording.
+    /// </summary>
+    /// <param name="conflict">The conflict to describe.</param>
+    /// <param name="fieldList">The conflicting fields' labels, already joined for display.</param>
+    private static string ConflictBannerText(TaskResult.Conflict conflict, string fieldList) =>
+        TaskDetail.IsOutsideEditConflict(conflict)
+            ? $"This task was changed outside Huddle while you were editing: {fieldList}."
+            : $"{TaskDetail.ConflictActorName(conflict)} changed this task while you were editing: {fieldList}.";
 
     /// <summary>
     /// In create mode (corrections-B7 "14.4" item 2), calls <see cref="TaskService.Create"/> with a

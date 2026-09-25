@@ -974,3 +974,18 @@ button:focus-visible {
     user-select: all;
 }
 
+/* The Panel's conflict rows (manual test TASKS-07 finding F17): at ~300px the table's four columns
+   (Field, Theirs, Yours, radios) overflow, pushing the radio choices off-screen. TaskDetail.razor
+   gives the Panel a div-based ".task-detail-conflict-stacked" container instead of a table there, and
+   each row stacks its own children - field label, then Theirs, then Yours, then the radios - instead
+   of laying them out side by side, so nothing needs horizontal room. This selector is scoped to that
+   container so it never reaches the Expanded layout's <tr class="task-detail-conflict-row">, which
+   keeps the plain MudSimpleTable (plenty of width there). */
+.task-detail-conflict-stacked .task-detail-conflict-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-block-end: 8px;
+    border-block-end: 1px solid var(--mud-palette-lines-default);
+}
+

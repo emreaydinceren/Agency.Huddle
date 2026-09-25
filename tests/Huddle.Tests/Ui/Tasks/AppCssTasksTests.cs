@@ -186,4 +186,19 @@ public sealed class AppCssTasksTests
         Assert.True(braceEnd > braceStart, $"Expected '{selector}''s rule to be closed.");
         return text[selectorIndex..(braceEnd + 1)];
     }
+
+    /// <summary>Manual test TASKS-07 finding F17: the Panel's stacked conflict row is scoped to <c>.task-detail-conflict-stacked</c> and laid out as a column, so it never reaches the Expanded layout's table row.</summary>
+    [Fact]
+    public void AppCss_DeclaresConflictStackedRow_ScopedAndColumnLaidOut()
+    {
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+
+        int classIndex = text.IndexOf(".task-detail-conflict-stacked .task-detail-conflict-row", StringComparison.Ordinal);
+        Assert.True(classIndex >= 0, "Expected a scoped .task-detail-conflict-stacked .task-detail-conflict-row rule in app.css.");
+        int braceEnd = text.IndexOf('}', classIndex);
+        Assert.True(braceEnd > classIndex, "Expected the rule to be closed.");
+        string rule = text[classIndex..(braceEnd + 1)];
+        // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
+        Assert.Contains("flex-direction: column", rule, StringComparison.Ordinal);
+    }
 }

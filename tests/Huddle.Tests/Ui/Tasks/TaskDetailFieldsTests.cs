@@ -268,6 +268,20 @@ public sealed class TaskDetailFieldsTests
         Assert.Equal(expected, TextOf(cut, ".task-detail-blocked-by-summary"));
     }
 
+    /// <summary>Manual test TASKS-01 finding F7: a Task with no blockers shows no summary line at all - not "Blocked by 0 open tasks".</summary>
+    /// <param name="mode">Both entry points.</param>
+    [Theory]
+    [MemberData(nameof(BothModesData))]
+    public async Task BlockedBy_ReadOnlySummary_NoLineWhenNoBlockers(TaskDetailMode mode)
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness);
+        await using MudBunitContext ctx = NewContext(harness);
+        var cut = RenderDetail(ctx, task.Id, mode);
+
+        Assert.Empty(cut.FindAll(".task-detail-blocked-by-summary"));
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Tags (Spec §13.6): the same chip-set pattern as Blocked by.
     // ---------------------------------------------------------------------------------------------
@@ -496,6 +510,27 @@ public sealed class TaskDetailFieldsTests
         IRenderedComponent<MudAutocomplete<string>> project = cut.FindComponents<MudAutocomplete<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-project", StringComparison.Ordinal));
         Assert.Equal("Team", team.Instance.Label);
         Assert.Equal("Project", project.Instance.Label);
+    }
+
+    /// <summary>
+    /// Manual test TASKS-01 finding F3: in the Panel, Team and Project share only the
+    /// "Team / Project" caption with no label of their own - each needs its own accessible name.
+    /// Checked at both entry points (the task lists "both modes"): the Panel's Team/Project have no
+    /// visible <c>Label</c>, so they need <c>aria-label</c>; the Expanded layout already shows a
+    /// visible <c>Label</c>, which must keep working as the accessible name.
+    /// </summary>
+    /// <param name="mode">Both entry points.</param>
+    [Theory]
+    [MemberData(nameof(BothModesData))]
+    public async Task TeamProject_HaveTheirOwnAccessibleNames(TaskDetailMode mode)
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness);
+        await using MudBunitContext ctx = NewContext(harness);
+        var cut = RenderDetail(ctx, task.Id, mode);
+
+        Assert.Equal("Team", cut.Find(".task-detail-team input").GetAttribute("aria-label"));
+        Assert.Equal("Project", cut.Find(".task-detail-project input").GetAttribute("aria-label"));
     }
 
     /// <summary>Typing a new Project name (<c>CoerceValue</c>) and saving creates that Project's folder (Spec §13.6).</summary>

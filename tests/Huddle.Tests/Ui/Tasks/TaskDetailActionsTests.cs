@@ -465,6 +465,26 @@ public sealed class TaskDetailActionsTests
         Assert.Equal($"{created.Id}: Copy of Ship the thing", TextOf(cut, ".task-detail-title-display"));
     }
 
+    /// <summary>
+    /// Manual test TASKS-01 finding F8: after a successful create-mode Save the panel stays open (J51)
+    /// and must switch to the created Task's own header - the id shown, and the copy button present -
+    /// exactly as when that Task is opened normally, rather than keeping the draft's id-less header.
+    /// </summary>
+    [Fact]
+    public async Task CreateMode_Save_Success_HeaderShowsCreatedIdAndCopyButton()
+    {
+        using TaskToolHarness harness = new();
+        TaskDraft draft = new("Ship the thing", "Platform", null);
+        await using MudBunitContext ctx = NewContext(harness);
+        var cut = RenderCreate(ctx, draft);
+
+        await cut.InvokeAsync(() => FindButton(cut, "Save").Click());
+
+        TaskItem created = harness.Store.All.Single(t => string.Equals(t.Title, "Ship the thing", StringComparison.Ordinal));
+        Assert.Equal(created.Id.ToString(), TextOf(cut, ".task-id"));
+        Assert.Single(cut.FindAll(".task-detail-copy-id"));
+    }
+
     /// <summary>Create mode's Save shows a <see cref="TaskResult.Refused"/>'s problems exactly and creates nothing (corrections-B7 "14.4" item 2).</summary>
     [Fact]
     public async Task CreateMode_Save_Refused_ShowsProblemsExactly_CreatesNothing()
