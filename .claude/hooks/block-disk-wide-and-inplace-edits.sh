@@ -21,8 +21,10 @@ deny() {
 # escaped newline, or as the last segment of a path such as ...\find.exe), so prose that merely
 # mentions the command - a commit message, an echo - passes.
 # Disk-wide roots: /, a drive (/c), a drive's Users folder or one user's home (/c/Users/me), ~,
-# $HOME, or C:\ (JSON-escaped as C:\\). Deeper paths such as ~/.nuget/packages/x or the repo pass.
-if printf '%s' "$payload" | perl -0777 -ne 'exit(m{(?:\x22command\x22\s*:\s*\x22|[;&|(]\s*|\\n\s*|[\\/])find(?:\.exe)?[\x22\x27\\]*\s+[\x22\x27\\]*(?:/(?:[a-zA-Z](?:/Users(?:/[^/\s\x22\x27\\]+)?)?)?|~|\$HOME|[A-Za-z]:(?:\\\\|/)?(?:Users(?:(?:\\\\|/)[^\\/\s\x22\x27]+)?)?)/?(?=[\s\x22\x27\\]|$)} ? 0 : 1)' ; then
+# $HOME, or C:\ (JSON-escaped as C:\\). Deeper paths such as ~/.nuget/packages/x or the repo pass:
+# the root must be followed by whitespace, a quote (possibly JSON-escaped) or the end, so
+# "E:\Repos\..." is not mistaken for the bare drive.
+if printf '%s' "$payload" | perl -0777 -ne 'exit(m{(?:\x22command\x22\s*:\s*\x22|[;&|(]\s*|\\n\s*|[\\/])find(?:\.exe)?[\x22\x27\\]*\s+[\x22\x27\\]*(?:/(?:[a-zA-Z](?:/Users(?:/[^/\s\x22\x27\\]+)?)?)?|~|\$HOME|[A-Za-z]:(?:\\\\|/)?(?:Users(?:(?:\\\\|/)[^\\/\s\x22\x27]+)?)?)/?(?=[\s\x22\x27]|\\+[\x22\x27]|\\[nrt]|$)} ? 0 : 1)' ; then
     deny "Blocked: find / searches every drive and leaves an orphaned find.exe. Search the repo instead (src/, tests/, docs/) with the Grep or Glob tool; NuGet package docs are under %USERPROFILE%\\\\.nuget\\\\packages\\\\<id>\\\\<version>\\\\."
 fi
 

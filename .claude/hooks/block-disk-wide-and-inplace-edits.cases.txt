@@ -11,6 +11,10 @@ BLOCK|multiline 2nd line find /|{"tool_input":{"command":"echo hi\nfind / -name 
 allow|find /c/Users/user/.nuget/packages|{"tool_input":{"command":"find /c/Users/user/.nuget/packages/mudblazor -name \"*.xml\""}}
 allow|find ~/.nuget/packages|{"tool_input":{"command":"find ~/.nuget/packages/bunit -name x"}}
 allow|find /e/Repos/Huddle/src|{"tool_input":{"command":"find /e/Repos/Huddle/src -name \"*.cs\""}}
+allow|find "E:\\Repos\\...\\Tasks" quoted repo path|{"tool_input":{"command":"cat x 2>/dev/null || find \"E:\\Repos\\Huddle-wt\\d8\\src\\Huddle.App\\Tasks\" -iname \"TaskService.cs\""}}
+allow|find E:/Repos/Huddle/tests|{"tool_input":{"command":"find E:/Repos/Huddle/tests -name x"}}
+BLOCK|find "C:\\" quoted drive|{"tool_input":{"command":"find \"C:\\\\\" -name x"}}
+BLOCK|find C: then newline|{"tool_input":{"command":"find C:\nls"}}
 allow|find . -name|{"tool_input":{"command":"find . -name x"}}
 allow|prose commit msg|{"tool_input":{"command":"git commit -m \"agents ran find / and sed -i despite rules\""}}
 BLOCK|sed -i|{"tool_input":{"command":"sed -i s/a/b/ src/x.cs"}}
