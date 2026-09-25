@@ -1,0 +1,293 @@
+@*
+    The Board (Spec §13.4 Zones; corrections-B5 D12-4, -5, -6, -9). One MudDropContainer, keyed by
+    the View's Id, holds one MudDropZone per (lane, column):
+
+    - a single-state column is one zone with Identifier = BoardLayout.ZoneId(lane, state);
+    - a multi-state column is a display zone "lane:{b64}|col:{visible index}" that TryParseZone
+      rejects, so CanDrop refuses it; while a drag is in progress it also holds one OnlyZone
+      "ghost bucket" per state, each identified by ZoneId(lane, state).
+
+    Cards are placed by a task-id -> zone map built from BoardLayout.Build (D12-5), so a card in a
+    multi-state column matches its display zone, never a bucket, and a card in a hidden column
+    matches no zone at all.
+
+    Drag start and end are C# events on the container, not parameters: they are (re)subscribed in
+    OnAfterRender whenever the container instance changes (@key per View replaces it, D12-6) and
+    unsubscribed in Dispose. StartTransaction raises TransactionStarted synchronously, and
+    Cancel/CommitTransaction raise TransactionEnded (MudBlazor 9.10). The drop path (ItemDropped),
+    the dialogs and the wake caption are Task 12.3's; the column header menu is Task 12.4's.
+*@
+
+@using System.Globalization
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Pipes
+@implements IDisposable
+@inject ITeamDirectory Directory
+@inject IAgentGateway Gateway
+@inject PersonaHealth Health
+@inject TurnActivity Turns
+@inject TaskActivity Activity
+
+<div class="task-board">
+    @if (this.model.HiddenTaskCount > 0)
+    {
+        <MudChip T="string" Size="Size.Small" Class="task-board-hidden-count">@HiddenCountText(this.model.HiddenTaskCount)</MudChip>
+    }
+
+    <div class="task-board-columns">
+        @for (int i = 0; i < this.model.VisibleColumns.Count; i++)
+        {
+            BoardColumn column = this.model.VisibleColumns[i];
+            <div class="task-board-column-header">
+                <span class="task-board-column-label">@column.Label</span>
+                <span class="task-board-column-count">@this.ColumnCount(i).ToString(CultureInfo.InvariantCulture)</span>
+            </div>
+        }
+    </div>
+
+    <MudDropContainer T="TaskItem" @key="@this.View.Id" @ref="this.container" Items="@this.Tasks"
+                      ItemsSelector="@this.IsInZone" CanDrop="@this.CanDrop"
+                      ApplyDropClassesOnDragStarted="true" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
+                      ItemDraggingClass="task-card-dragging">
+        <ChildContent>
+            @foreach (BoardLane lane in this.model.Lanes)
+            {
+                <div class="task-board-lane">
+                    @if (this.View.Grouping.Count > 0)
+                    {
+                        <div class="task-board-lane-label">@lane.Label</div>
+                    }
+
+                    @for (int i = 0; i < lane.Cells.Count; i++)
+                    {
+                        BoardCell cell = lane.Cells[i];
+                        <div class="task-board-column">
+                            @if (cell.Column.States.Count == 1)
+                            {
+                                <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, cell.Column.States[0])" Class="task-zone" />
+                            }
+                            else
+                            {
+                                <MudDropZone T="TaskItem" Identifier="@DisplayZoneId(lane.Key, i)" Class="task-zone task-zone-display">
+                                    @if (this.dragging)
+                                    {
+                                        @foreach (TaskState state in cell.Column.States)
+                                        {
+                                            <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, state)" OnlyZone="true" Class="task-ghost-bucket">
+                                                <MudIcon Icon="@BucketIcon(state)" Size="Size.Small" />
+                                                <span class="task-ghost-bucket-label">@state.ToWire()</span>
+                                            </MudDropZone>
+                                        }
+                                    }
+                                </MudDropZone>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </ChildContent>
+        <ItemRenderer>
+            <TaskCard Task="@context" Fields="@this.View.Fields" Presence="@this.PresenceOf(context)"
+                      LastWake="@this.Activity.LastWake(context.Id)" Busy="@this.IsBusy(context)" Search="@this.Search"
+                      OnOpen="@(() => this.OnOpenTask.InvokeAsync(context.Id))" />
+        </ItemRenderer>
+    </MudDropContainer>
+</div>
+
+@code {
+    /// <summary>The Board View: its columns and its lane grouping.</summary>
+    [Parameter, EditorRequired]
+    public required TaskView View { get; set; }
+
+    /// <summary>The already-filtered and sorted Tasks to lay out.</summary>
+    [Parameter, EditorRequired]
+    public required IReadOnlyList<TaskItem> Tasks { get; set; }
+
+    /// <summary>The active search term, highlighted on each card.</summary>
+    [Parameter]
+    public string? Search { get; set; }
+
+    /// <summary>Raised with a card's id when the Human opens it (Spec §13.4, "Clicking a card opens the detail panel").</summary>
+    [Parameter]
+    public EventCallback<TaskId> OnOpenTask { get; set; }
+
+    private BoardModel model = new([], [], 0);
+    private Dictionary<TaskId, string> zoneOf = [];
+    private Dictionary<TaskId, string> laneOf = [];
+    private MudDropContainer<TaskItem>? container;
+    private MudDropContainer<TaskItem>? subscribed;
+    private IReadOnlyList<TaskItem>? laidOut;
+    private bool refreshPending;
+    private bool dragging;
+
+    /// <summary>Joins the presence, health, Turn and wake-budget change events, each of which can change a card (D12-4).</summary>
+    protected override void OnInitialized()
+    {
+        this.Gateway.PresenceChanged += this.OnCardsChanged;
+        this.Health.Changed += this.OnCardsChanged;
+        this.Turns.Changed += this.OnCardsChanged;
+        this.Activity.Changed += this.OnCardsChanged;
+    }
+
+    /// <summary>Rebuilds the layout and the task-id maps; a changed Task list also asks the container to refresh after rendering (D12-9).</summary>
+    protected override void OnParametersSet()
+    {
+        this.model = BoardLayout.Build(this.Tasks, this.View);
+        Dictionary<TaskId, string> zones = [];
+        Dictionary<TaskId, string> lanes = [];
+        foreach (BoardLane lane in this.model.Lanes)
+        {
+            for (int i = 0; i < lane.Cells.Count; i++)
+            {
+                BoardCell cell = lane.Cells[i];
+                string zone = cell.Column.States.Count == 1
+                    ? BoardLayout.ZoneId(lane.Key, cell.Column.States[0])
+                    : DisplayZoneId(lane.Key, i);
+                foreach (TaskItem item in cell.Items)
+                {
+                    zones[item.Id] = zone;
+                    lanes[item.Id] = lane.Key;
+                }
+            }
+        }
+
+        this.zoneOf = zones;
+        this.laneOf = lanes;
+        if (this.laidOut is not null && !ReferenceEquals(this.laidOut, this.Tasks))
+        {
+            this.refreshPending = true;
+        }
+
+        this.laidOut = this.Tasks;
+    }
+
+    /// <summary>Follows the container: (re)subscribes to its transaction events whenever the instance changed, and runs a pending refresh.</summary>
+    /// <param name="firstRender">Unused: the container can change on any render (D12-6).</param>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!ReferenceEquals(this.container, this.subscribed))
+        {
+            this.Unsubscribe();
+            if (this.container is { } current)
+            {
+                current.TransactionStarted += this.OnDragStarted;
+                current.TransactionEnded += this.OnDragEnded;
+                this.subscribed = current;
+            }
+        }
+
+        if (this.refreshPending)
+        {
+            this.refreshPending = false;
+            this.container?.Refresh();
+        }
+    }
+
+    /// <summary>Leaves every event this Board joined.</summary>
+    public void Dispose()
+    {
+        this.Gateway.PresenceChanged -= this.OnCardsChanged;
+        this.Health.Changed -= this.OnCardsChanged;
+        this.Turns.Changed -= this.OnCardsChanged;
+        this.Activity.Changed -= this.OnCardsChanged;
+        this.Unsubscribe();
+    }
+
+    /// <summary>The display zone id of a multi-state column: the lane part of <see cref="BoardLayout.ZoneId"/>, then <c>|col:{index}</c>, which <see cref="BoardLayout.TryParseZone"/> rejects (D12-5).</summary>
+    /// <param name="laneKey">The lane's raw key.</param>
+    /// <param name="columnIndex">The column's index among the visible columns.</param>
+    private static string DisplayZoneId(string laneKey, int columnIndex)
+    {
+        string stateZone = BoardLayout.ZoneId(laneKey, TaskState.Backlog);
+        string lanePart = stateZone[..stateZone.IndexOf("|state:", StringComparison.Ordinal)];
+        return string.Create(CultureInfo.InvariantCulture, $"{lanePart}|col:{columnIndex}");
+    }
+
+    /// <summary>The hidden-count chip's text (Spec §13.4 Columns): "1 task in hidden columns", otherwise "{n} tasks in hidden columns".</summary>
+    /// <param name="count">How many Tasks the hidden columns hold; always positive here.</param>
+    private static string HiddenCountText(int count) =>
+        count == 1
+            ? "1 task in hidden columns"
+            : string.Create(CultureInfo.InvariantCulture, $"{count} tasks in hidden columns");
+
+    /// <summary>A ghost bucket's icon (Spec §13.4): Cancelled Block, Duplicate ContentCopy, Rejected DoNotDisturbOn, and Label for a state placed in some other multi-state column.</summary>
+    /// <param name="state">The bucket's state.</param>
+    private static string BucketIcon(TaskState state) => state switch
+    {
+        TaskState.Cancelled => Icons.Material.Outlined.Block,
+        TaskState.Duplicate => Icons.Material.Outlined.ContentCopy,
+        TaskState.Rejected => Icons.Material.Outlined.DoNotDisturbOn,
+        _ => Icons.Material.Outlined.Label,
+    };
+
+    /// <summary>How many Tasks the visible column at <paramref name="columnIndex"/> holds across every lane.</summary>
+    /// <param name="columnIndex">The column's index among the visible columns.</param>
+    private int ColumnCount(int columnIndex) => this.model.Lanes.Sum(lane => lane.Cells[columnIndex].Items.Count);
+
+    /// <summary>The container's <c>ItemsSelector</c>: a card belongs to exactly the zone the layout put it in.</summary>
+    /// <param name="item">The card's Task.</param>
+    /// <param name="zone">A zone Identifier.</param>
+    private bool IsInZone(TaskItem item, string zone) =>
+        this.zoneOf.TryGetValue(item.Id, out string? own) && string.Equals(own, zone, StringComparison.Ordinal);
+
+    /// <summary>The container's <c>CanDrop</c>: only a parseable state zone (a single-state column or a bucket) in the card's own lane (Spec §13.4).</summary>
+    /// <param name="item">The dragged Task.</param>
+    /// <param name="zone">The target zone Identifier.</param>
+    private bool CanDrop(TaskItem item, string zone) =>
+        BoardLayout.TryParseZone(zone, out string laneKey, out _)
+        && this.laneOf.TryGetValue(item.Id, out string? ownLane)
+        && string.Equals(ownLane, laneKey, StringComparison.Ordinal);
+
+    /// <summary>The card's presence badge, from <c>TaskPresence.For</c> (D12-4); none for an unassigned Task.</summary>
+    /// <param name="task">The card's Task.</param>
+    private PresenceState? PresenceOf(TaskItem task) =>
+        task.Assignee is { } assignee ? TaskPresence.For(assignee, this.Directory, this.Gateway, this.Health, this.Turns) : null;
+
+    /// <summary>Whether the assignee has a Turn running in the card's last-wake Room: <c>IsBusyIn(agentId, LastWake.RoomId)</c> (B3 D9-20).</summary>
+    /// <param name="task">The card's Task.</param>
+    private bool IsBusy(TaskItem task) =>
+        task.Assignee is { } assignee
+        && this.Activity.LastWake(task.Id) is { RoomId: { } roomId }
+        && this.Directory.FindUserByName(assignee) is { } user
+        && this.Turns.IsBusyIn(user.Id, roomId);
+
+    /// <summary>
+    /// A service event that can change a card: re-render on the renderer's thread, and refresh the
+    /// container - a zone whose own parameters didn't change would otherwise skip re-rendering, and
+    /// its cards with it.
+    /// </summary>
+    private void OnCardsChanged() => _ = this.InvokeAsync(() =>
+    {
+        this.StateHasChanged();
+        this.container?.Refresh();
+    });
+
+    /// <summary><c>TransactionStarted</c>: show the ghost buckets.</summary>
+    /// <param name="sender">The container.</param>
+    /// <param name="e">The transaction.</param>
+    private void OnDragStarted(object? sender, MudDragAndDropItemTransaction<TaskItem> e)
+    {
+        this.dragging = true;
+        _ = this.InvokeAsync(this.StateHasChanged);
+    }
+
+    /// <summary><c>TransactionEnded</c>: hide the ghost buckets.</summary>
+    /// <param name="sender">The container.</param>
+    /// <param name="e">How the transaction finished.</param>
+    private void OnDragEnded(object? sender, MudDragAndDropTransactionFinishedEventArgs<TaskItem> e)
+    {
+        this.dragging = false;
+        _ = this.InvokeAsync(this.StateHasChanged);
+    }
+
+    /// <summary>Leaves the subscribed container's transaction events, if any.</summary>
+    private void Unsubscribe()
+    {
+        if (this.subscribed is { } old)
+        {
+            old.TransactionStarted -= this.OnDragStarted;
+            old.TransactionEnded -= this.OnDragEnded;
+            this.subscribed = null;
+        }
+    }
+}
