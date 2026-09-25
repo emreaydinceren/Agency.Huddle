@@ -500,13 +500,14 @@ public sealed class TaskFileFormatTests
         TaskItem task = TestTasks.Make(
             id: "PLAT-0042",
             title: "Support SAML login",
-            status: TaskState.InProgress,
+            status: TaskState.Duplicate,
             priority: TaskPriority.Urgent,
             creator: "Emre",
             assignee: "Nova",
             originRoomId: "01J8Z4Q6M2",
             parent: Id("PLAT-0030"),
             blockedBy: [Id("PLAT-0011")],
+            duplicateOf: Id("PLAT-0020"),
             tags: ["security"],
             startDate: new DateOnly(2026, 10, 1),
             dueDate: new DateOnly(2026, 10, 15));
@@ -584,7 +585,7 @@ public sealed class TaskFileFormatTests
         Assert.Equal("  - PLAT-0012", lines[blockedByIndex + 2]);
     }
 
-    /// <summary>Empty optional keys are omitted, except duplicate_of, which is written bare when status isn't Duplicate.</summary>
+    /// <summary>Every optional key - including duplicate_of - is omitted entirely when the Task carries no value for it (manual test TASKS-01 finding F1: a blank <c>duplicate_of:</c> line was written even when no Duplicate status was chosen).</summary>
     [Fact]
     public void Compose_OmitsEmptyOptionalKeys()
     {
@@ -600,7 +601,36 @@ public sealed class TaskFileFormatTests
         Assert.DoesNotContain(lines, l => l.StartsWith("tags:", StringComparison.Ordinal));
         Assert.DoesNotContain(lines, l => l.StartsWith("start_date:", StringComparison.Ordinal));
         Assert.DoesNotContain(lines, l => l.StartsWith("due_date:", StringComparison.Ordinal));
-        Assert.Contains("duplicate_of:", lines);
+        Assert.DoesNotContain(lines, l => l.StartsWith("duplicate_of:", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// A minimal Task - every optional field at its default (no assignee, origin, parent, blocked_by,
+    /// duplicate_of, tags, start_date or due_date) - composes to an exact, whole file: only the five
+    /// required keys, the closing fence, the (empty) description, a blank line and the Change log
+    /// heading with no entries (manual test TASKS-01 finding F1's fix, checked for every optional key
+    /// at once rather than key by key).
+    /// </summary>
+    [Fact]
+    public void Compose_MinimalTask_ExactWholeFileText()
+    {
+        TaskItem task = TestTasks.Make(id: "PLAT-0001", title: "T", status: TaskState.ToDo, priority: TaskPriority.Medium, creator: "Human");
+
+        string composed = TaskFileFormat.Compose(task);
+
+        string expected = string.Join(
+            '\n',
+            "---",
+            "id: PLAT-0001",
+            "title: T",
+            "status: To Do",
+            "priority: Medium",
+            "creator: Human",
+            "---",
+            string.Empty,
+            string.Empty,
+            TaskFileFormat.ChangeLogHeading);
+        Assert.Equal(expected, composed);
     }
 
     /// <summary>Composed text uses '\n' line endings only.</summary>
@@ -642,12 +672,12 @@ public sealed class TaskFileFormatTests
         string composed = TaskFileFormat.Compose(task);
         string[] lines = composed.Split('\n');
 
-        int duplicateOfIndex = Array.FindIndex(lines, l => l.StartsWith("duplicate_of:", StringComparison.Ordinal));
+        int creatorIndex = Array.FindIndex(lines, l => l.StartsWith("creator:", StringComparison.Ordinal));
         int ownerIndex = Array.IndexOf(lines, "owner: x");
         int estimateIndex = Array.IndexOf(lines, "estimate: 3");
 
-        Assert.True(duplicateOfIndex >= 0);
-        Assert.True(ownerIndex > duplicateOfIndex);
+        Assert.True(creatorIndex >= 0);
+        Assert.True(ownerIndex > creatorIndex);
         Assert.True(estimateIndex > ownerIndex);
     }
 

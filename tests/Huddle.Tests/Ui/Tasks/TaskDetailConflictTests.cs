@@ -42,6 +42,104 @@ using Agency.Huddle.Tests.Acp.Tools;
 /// </summary>
 public sealed class TaskDetailConflictTests
 {
+    /// <summary>
+    /// Manual test TASKS-07 finding F15: the conflict banner used to read "You changed this task while
+    /// you were editing: priority." for an outside edit, because <see cref="TaskActorKind.OutsideHuddle"/>
+    /// carries the Human's own Name. An outside edit - a hand edit on disk, picked up through
+    /// <see cref="TaskStore.RebuildFromWatcher"/>, which stamps its Change log entry's Summary
+    /// "edited outside Huddle: …" (the same mechanism TASKS-02 exercises) - must instead say "This task
+    /// was changed outside Huddle while you were editing: {fields}.".
+    /// </summary>
+    [Fact]
+    public async Task Conflict_OutsideEdit_BannerSaysChangedOutsideHuddle_NotYou()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
+        await using MudBunitContext ctx = NewContext(harness);
+        var cut = RenderPanel(ctx, task.Id);
+        await EditPriorityAsync(cut, TaskPriority.Urgent);
+
+        TaskItem current = harness.Store.Get(task.Id) ?? throw new InvalidOperationException("Task not found.");
+        File.WriteAllText(current.Path, TaskFileFormat.Compose(current with { Priority = TaskPriority.Low }));
+        harness.Store.RebuildFromWatcher();
+
+        await ClickSaveAsync(cut);
+
+        cut.WaitForAssertion(() => Assert.Equal(
+            "This task was changed outside Huddle while you were editing: priority.",
+            TextOf(cut, ".task-detail-conflict-alert")));
+    }
+
+    /// <summary>
+    /// Manual test TASKS-07 finding F17: at Panel width (~300 px) the conflict table's four columns
+    /// overflow horizontally, pushing the radios off-screen. The Panel must use the stacked
+    /// <c>.task-detail-conflict-stacked</c> layout instead of a <see cref="MudSimpleTable"/>; the
+    /// Expanded layout, which has room for the columns, keeps the table.
+    /// </summary>
+    [Fact]
+    public async Task Conflict_PanelUsesStackedLayout_ExpandedKeepsTable()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem panelTask = CreateTask(harness, priority: TaskPriority.Medium);
+        await using MudBunitContext panelCtx = NewContext(harness);
+        var panelCut = RenderPanel(panelCtx, panelTask.Id);
+        await CausePriorityConflictAsync(panelCut, harness, panelTask, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
+
+        Assert.Single(panelCut.FindAll(".task-detail-conflict-stacked"));
+        Assert.Empty(panelCut.FindAll(".task-detail-conflict-table"));
+
+        TaskItem expandedTask = CreateTask(harness, title: "Other", priority: TaskPriority.Medium);
+        await using MudBunitContext expandedCtx = NewContext(harness);
+        var expandedCut = RenderExpanded(expandedCtx, expandedTask.Id);
+        await CausePriorityConflictAsync(expandedCut, harness, expandedTask, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
+
+        Assert.Single(expandedCut.FindAll(".task-detail-conflict-table"));
+        Assert.Empty(expandedCut.FindAll(".task-detail-conflict-stacked"));
+    }
+
+    /// <summary>Contrast to <see cref="Conflict_OutsideEdit_BannerSaysChangedOutsideHuddle_NotYou"/>: an Agent's concurrent edit keeps the original "{Name} changed…" wording exactly.</summary>
+    [Fact]
+    public async Task Conflict_AgentEdit_BannerKeepsNameChangedWording()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
+        await using MudBunitContext ctx = NewContext(harness);
+        var cut = RenderPanel(ctx, task.Id);
+
+        await CausePriorityConflictAsync(cut, harness, task, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
+
+        Assert.Equal("Nova changed this task while you were editing: priority.", TextOf(cut, ".task-detail-conflict-alert"));
+    }
+
+    /// <summary>
+    /// Manual test TASKS-07 finding F16: a fresh conflict row's <c>MudRadioGroup&lt;ConflictChoice&gt;</c>
+    /// used to start at <c>default(ConflictChoice)</c> ("Mine"), so "Keep mine" rendered as checked
+    /// while <c>TaskDetail</c> still treated the row as unresolved and kept Save disabled - a choice
+    /// the Human never made, with a dead Save button. The group must start with nothing checked, and a
+    /// real DOM click on "Keep mine" (not the 14.3 suite's own <c>ValueChanged.InvokeAsync</c>
+    /// shortcut, which is why this slipped) must both check it and enable Save.
+    /// </summary>
+    [Fact]
+    public async Task Conflict_FreshRow_NoRadioChecked_AndRealClickChecksItAndEnablesSave()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness, priority: TaskPriority.Medium);
+        await using MudBunitContext ctx = NewContext(harness);
+        var cut = RenderPanel(ctx, task.Id);
+        await CausePriorityConflictAsync(cut, harness, task, mine: TaskPriority.Urgent, theirs: TaskPriority.Low);
+
+        IReadOnlyList<bool> checkedStates = [.. cut.FindAll(".task-detail-conflict-stacked input[type=\"radio\"]").Select(r => r.HasAttribute("checked"))];
+        Assert.Equal([false, false], checkedStates);
+        Assert.True(FindButton(cut, "Save").HasAttribute("disabled"));
+
+        IElement keepMineInput = cut.FindAll(".task-detail-conflict-stacked label.mud-radio").Single(l => l.TextContent.Contains("Keep mine", StringComparison.Ordinal)).QuerySelector("input[type=\"radio\"]")
+            ?? throw new InvalidOperationException("Keep mine radio input not found.");
+        await cut.InvokeAsync(() => keepMineInput.Click());
+
+        Assert.True(cut.Find(".task-detail-conflict-stacked input[type=\"radio\"]").HasAttribute("checked"));
+        Assert.False(FindButton(cut, "Save").HasAttribute("disabled"));
+    }
+
     /// <summary>Spec §13.7: a <see cref="TaskResult.Conflict"/> shows a warning alert with <c>role="alert"</c> and the exact banner text for one conflicting field.</summary>
     [Fact]
     public async Task Conflict_OneFieldConflicts_ShowsWarningAlertWithRoleAndExactText()
@@ -72,7 +170,7 @@ public sealed class TaskDetailConflictTests
         Assert.Equal("priority", row.QuerySelector(".task-detail-conflict-field")?.TextContent.Trim());
         Assert.Equal("Low", row.QuerySelector(".task-detail-conflict-theirs")?.TextContent.Trim());
         Assert.Equal("Urgent", row.QuerySelector(".task-detail-conflict-yours")?.TextContent.Trim());
-        Assert.Single(cut.FindComponents<MudRadioGroup<ConflictChoice>>());
+        Assert.Single(cut.FindComponents<MudRadioGroup<ConflictChoice?>>());
     }
 
     /// <summary>Spec §13.7: two conflicting fields (Title and Priority) each get their own row, and the banner lists both wire-key labels, in <see cref="TaskDiff.Compare(TaskItem, TaskItem)"/>'s own field order.</summary>
@@ -95,7 +193,7 @@ public sealed class TaskDetailConflictTests
 
         cut.WaitForAssertion(() => Assert.Equal("Nova changed this task while you were editing: title, priority.", TextOf(cut, ".task-detail-conflict-alert")));
         Assert.Equal(2, cut.FindAll(".task-detail-conflict-row").Count);
-        Assert.Equal(2, cut.FindComponents<MudRadioGroup<ConflictChoice>>().Count);
+        Assert.Equal(2, cut.FindComponents<MudRadioGroup<ConflictChoice?>>().Count);
     }
 
     /// <summary>
@@ -551,7 +649,7 @@ public sealed class TaskDetailConflictTests
             throw new InvalidOperationException($"No conflict row for '{fieldLabel}'.");
         }
 
-        IRenderedComponent<MudRadioGroup<ConflictChoice>> group = cut.FindComponents<MudRadioGroup<ConflictChoice>>()[index];
+        IRenderedComponent<MudRadioGroup<ConflictChoice?>> group = cut.FindComponents<MudRadioGroup<ConflictChoice?>>()[index];
         await cut.InvokeAsync(() => group.Instance.ValueChanged.InvokeAsync(choice));
     }
 
@@ -580,6 +678,18 @@ public sealed class TaskDetailConflictTests
             builder.OpenComponent<TaskDetail>(0);
             builder.AddAttribute(1, nameof(TaskDetail.Id), (TaskId?)id);
             builder.AddAttribute(2, nameof(TaskDetail.Mode), TaskDetailMode.Panel);
+            builder.CloseComponent();
+        });
+    }
+
+    /// <summary>Renders <c>TaskDetail</c> in Expanded mode for <paramref name="id"/> - for finding F17's Panel-vs-Expanded conflict layout markup test.</summary>
+    private static IRenderedComponent<ContainerFragment> RenderExpanded(MudBunitContext ctx, TaskId id)
+    {
+        return ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TaskDetail>(0);
+            builder.AddAttribute(1, nameof(TaskDetail.Id), (TaskId?)id);
+            builder.AddAttribute(2, nameof(TaskDetail.Mode), TaskDetailMode.Expanded);
             builder.CloseComponent();
         });
     }

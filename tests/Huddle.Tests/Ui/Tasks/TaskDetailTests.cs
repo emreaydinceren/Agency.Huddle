@@ -336,6 +336,20 @@ public sealed class TaskDetailTests
         Assert.Equal("Retitled by the Human", titleField.Instance.GetState(x => x.Value));
     }
 
+    /// <summary>Manual test TASKS-01 finding F2: the Title edit textbox has no accessible name for a screen reader - it must carry <c>aria-label="Title"</c> on its rendered <c>&lt;input&gt;</c>.</summary>
+    [Fact]
+    public async Task EditingTitle_TextFieldHasAccessibleNameTitle()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness, title: "Original title");
+        await using MudBunitContext ctx = NewContext(harness);
+        var cut = RenderPanel(ctx, task.Id);
+
+        cut.Find("button[aria-label=\"Edit title\"]").Click();
+
+        Assert.Equal("Title", cut.Find(".task-detail-title input").GetAttribute("aria-label"));
+    }
+
     /// <summary>
     /// Description (Spec §13.6 Description row, corrections-B5 D14 item 3): the Edit-mode text field
     /// is <c>Lines="10" Sizing="InputSizing.Auto" MaxLines="30"</c> (no <c>AutoGrow</c>, which does not
