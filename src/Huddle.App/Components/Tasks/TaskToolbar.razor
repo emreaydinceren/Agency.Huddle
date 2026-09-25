@@ -122,8 +122,14 @@
     private Task OnScopeChangedAsync(ViewScope scope) =>
         this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Scope = scope });
 
-    private Task OnKindChangedAsync(ViewKind kind) =>
-        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Kind = kind });
+    private Task OnKindChangedAsync(ViewKind kind)
+    {
+        // corrections-B7 12.4 item 2: a View with no Columns shown as a Board gets the default columns.
+        TaskView updated = kind == ViewKind.Board && this.EffectiveView.Columns.Count == 0
+            ? this.EffectiveView with { Kind = kind, Columns = BoardLayout.DefaultColumns }
+            : this.EffectiveView with { Kind = kind };
+        return this.EffectiveViewChanged.InvokeAsync(updated);
+    }
 
     private void OnTeamFilterInputChanged(string value) => this.teamFilterInput = value;
 

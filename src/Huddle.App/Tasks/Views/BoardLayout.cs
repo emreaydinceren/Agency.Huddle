@@ -46,6 +46,12 @@ internal static class BoardLayout
             .ToHashSet();
         int hiddenTaskCount = sorted.Count(task => hiddenStates.Contains(task.Status));
 
+        // A grouped Board with no Tasks has no groups, so no lanes - there is no value to key a lane by.
+        if (sorted.Count == 0 && view.Grouping.Count > 0)
+        {
+            return new BoardModel([], visibleColumns, hiddenTaskCount);
+        }
+
         TaskGroupNode root = TaskQuery.Group(sorted, view.Grouping);
         List<BoardLane> lanes = FlattenLeaves(root, [])
             .Select(leaf => BuildLane(leaf.Labels, leaf.Items, visibleColumns, view.Grouping))

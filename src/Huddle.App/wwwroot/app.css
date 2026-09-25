@@ -837,13 +837,13 @@ button:focus-visible {
 }
 
 /* A ghost bucket: a drop zone with nothing in it. Dashed until a drag can land there. */
-.ghost-bucket {
+.task-ghost-bucket {
     border: 1px dashed var(--mud-palette-lines-default);
 }
 
 /* While a drag is over a bucket that will accept it: a solid primary border on a
    hover-tinted background, so "this can take the drop" reads at a glance. */
-.ghost-bucket.task-zone-can {
+.task-ghost-bucket.task-zone-can {
     border: 1px solid var(--mud-palette-primary);
     background-color: var(--mud-palette-action-default-hover);
 }
@@ -857,10 +857,10 @@ button:focus-visible {
     border: 1px solid var(--mud-palette-primary);
 }
 
-/* task-card's own focus ring: text-primary, not primary - the same WCAG 1.4.11 contrast
-   reasoning as the page-wide :focus-visible rule above. Do not "improve" this back to an
-   accent colour. */
-.task-card:focus-visible {
+/* The card's focus ring, on its focusable open button (the card itself is a div): text-primary,
+   not primary - the same WCAG 1.4.11 contrast reasoning as the page-wide :focus-visible rule
+   above. Do not "improve" this back to an accent colour. */
+.task-card-open:focus-visible {
     outline: 2px solid var(--mud-palette-text-primary);
 }
 

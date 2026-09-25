@@ -5,11 +5,14 @@
     TaskEvents.TaskChanged and ViewStore.ViewsChanged. TaskActivity/TurnActivity/PresenceChanged/
     PersonaHealth.Changed feed the AI-reacting chip, which is D14's work.
 
-    The Board (§13.4) and the Task detail panel (§13.6) don't exist yet (D12/D15/D16), so this page
-    only ever renders the List, leaves + New task as a no-op EventCallback (Blazor's
-    EventCallback.InvokeAsync is a safe no-op when nothing is bound), and gives the detail panel an
-    empty MudDrawer slot that shows only which Task id was clicked - the minimum "empty slot" the
-    plan's Deliverable asks for.
+    The effective View's Kind picks the List or the Board (§13.4; 12.4.i). Both open a Task into the
+    detail drawer, which is still an empty slot showing only the clicked Task's id until TaskDetail
+    lands (14.5.i); + New task is still a no-op EventCallback. The Board's column header changes a
+    saved Board View through ViewStore (the page follows ViewsChanged) and anything else through
+    ViewChanged (the effective View), and its "Edit columns…" opens the View editor at Columns.
+    Above either view, one §13.12 empty state: "No tasks yet." when there are no Tasks at all, "No
+    tasks match '{text}'." when only the search excludes everything, otherwise "No tasks match this
+    View." with Reset filters, which drops the toolbar's overrides and the search (J43).
 
     The View editor drawer (§13.5) IS hosted here (corrections-B5 D13 item 7; 13.2.i, the only agent
     editing this file for that dispatch per corrections-B7's ordering, J42): Edit View opens it for
@@ -94,11 +97,38 @@
         }
 
         <TaskToolbar EffectiveView="this.effectiveView" EffectiveViewChanged="this.OnEffectiveViewChangedAsync"
-                     Search="this.search" SearchChanged="this.OnSearchChangedAsync" OnEditView="this.OnEditViewClickedAsync" />
+                     Search="@this.search" SearchChanged="this.OnSearchChangedAsync" OnEditView="this.OnEditViewClickedAsync" />
+
+        IReadOnlyList<TaskItem> tasks = this.FilteredTasks(this.search);
+        @if (tasks.Count == 0)
+        {
+            @* Spec §13.12 empty states, one rendering above the List and the Board (corrections-B7 12.4 item 1). *@
+            <div class="tasks-empty">
+                @if (this.Store.All.Count == 0)
+                {
+                    <MudText Typo="Typo.body1" Class="tasks-empty-message">No tasks yet.</MudText>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="tasks-empty-action">+ New task</MudButton>
+                }
+                else if (!string.IsNullOrWhiteSpace(this.search) && this.FilteredTasks(null).Count > 0)
+                {
+                    <MudText Typo="Typo.body1" Class="tasks-empty-message">No tasks match '@this.search'.</MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body1" Class="tasks-empty-message">No tasks match this View.</MudText>
+                    <MudButton Variant="Variant.Text" OnClick="this.ResetOverrides" Class="tasks-empty-action">Reset filters</MudButton>
+                }
+            </div>
+        }
 
         @if (this.effectiveView.Kind == ViewKind.List)
         {
-            <TaskListView View="this.effectiveView" Tasks="this.FilteredTasks()" Search="this.search" OnOpenTask="this.OnOpenTask" />
+            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTask" />
+        }
+        else
+        {
+            <TaskBoard View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTask"
+                       ViewChanged="this.OnEffectiveViewChangedAsync" OnEditColumns="this.OnEditColumnsClicked" />
         }
 
         <MudDrawer @bind-Open="this.detailOpen" Anchor="Anchor.End" Variant="DrawerVariant.Temporary" Class="tasks-detail-drawer">
@@ -110,7 +140,7 @@
         </MudDrawer>
     }
 
-    <ViewEditorDrawer Open="this.editorOpen" OpenChanged="this.OnEditorOpenChanged" Id="@this.editorViewId" />
+    <ViewEditorDrawer Open="this.editorOpen" OpenChanged="this.OnEditorOpenChanged" Id="@this.editorViewId" Section="this.editorSection" />
 </div>
 
 @code {
@@ -126,6 +156,7 @@
     private TaskId? selectedTaskId;
     private bool editorOpen;
     private string? editorViewId;
+    private ViewEditorSection editorSection = ViewEditorSection.General;
 
     /// <summary>Subscribes to the three hubs Spec §13.2 (narrowed by corrections-B4 D11 item 9) names.</summary>
     protected override void OnInitialized()
@@ -194,6 +225,15 @@
     private void OpenEditorFor(string id)
     {
         this.editorViewId = id;
+        this.editorSection = ViewEditorSection.General;
+        this.editorOpen = true;
+    }
+
+    /// <summary>The Board's <i>Edit columns…</i>: opens the View editor for the effective View at its Columns section (corrections-B7 12.4 item 7).</summary>
+    private void OnEditColumnsClicked()
+    {
+        this.editorViewId = this.effectiveView.Id;
+        this.editorSection = ViewEditorSection.Columns;
         this.editorOpen = true;
     }
 
@@ -251,14 +291,15 @@
         }
     }
 
-    /// <summary>The Tasks matching the effective View's scope and filter, sorted per its Sort keys - recomputed on every render, so a requery after any of the three subscribed events shows straight away.</summary>
-    private IReadOnlyList<TaskItem> FilteredTasks()
+    /// <summary>The Tasks matching the effective View's scope and filter and <paramref name="searchText"/>, sorted per its Sort keys - recomputed on every render, so a requery after any of the three subscribed events shows straight away.</summary>
+    /// <param name="searchText">The search to apply; <see langword="null"/> for none (to tell "the search matches nothing" from "the filters match nothing").</param>
+    private IReadOnlyList<TaskItem> FilteredTasks(string? searchText)
     {
         IReadOnlyList<TaskItem> filtered = TaskQuery.Filter(
             this.Store.All,
             this.effectiveView.Scope,
             this.effectiveView.Filter,
-            this.search,
+            searchText,
             this.Options.Value.HumanName);
         return TaskQuery.Sort(filtered, this.effectiveView.Sort);
     }

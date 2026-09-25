@@ -41,6 +41,8 @@
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
 @inject IOptions<TeamOptions> TeamOptions
+@inject ViewStore ViewStore
+@inject TaskStore Store
 
 <div class="task-board">
     @if (this.model.HiddenTaskCount > 0)
@@ -49,12 +51,30 @@
     }
 
     <div class="task-board-columns">
-        @for (int i = 0; i < this.model.VisibleColumns.Count; i++)
+        @foreach ((BoardColumn column, int i) in this.model.VisibleColumns.Select((column, index) => (column, index)))
         {
-            BoardColumn column = this.model.VisibleColumns[i];
             <div class="task-board-column-header">
-                <span class="task-board-column-label">@column.Label</span>
+                @if (this.renamingColumn == i)
+                {
+                    <MudTextField T="string" Class="task-board-column-rename" Value="@column.Label" AutoFocus="true"
+                                  ValueChanged="@(label => this.RenameAsync(i, label))" />
+                }
+                else
+                {
+                    <span class="task-board-column-label">@column.Label</span>
+                }
                 <span class="task-board-column-count">@this.ColumnCount(i).ToString(CultureInfo.InvariantCulture)</span>
+                <MudMenu Class="task-board-column-menu">
+                    <ActivatorContent Context="menuContext">
+                        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                       aria-label="@($"{column.Label} column menu")" OnClick="menuContext.ToggleAsync" />
+                    </ActivatorContent>
+                    <ChildContent>
+                        <MudMenuItem OnClick="@(() => this.StartRename(i))">Rename</MudMenuItem>
+                        <MudMenuItem OnClick="@(() => this.HideAsync(i))">Hide</MudMenuItem>
+                        <MudMenuItem OnClick="@(() => this.OnEditColumns.InvokeAsync())">Edit columns…</MudMenuItem>
+                    </ChildContent>
+                </MudMenu>
                 @if (this.dragging && this.caption is { } text && i != this.draggedColumn)
                 {
                     <MudText Typo="Typo.caption" Class="task-board-drag-caption">@text</MudText>
@@ -74,6 +94,10 @@
                     @if (this.View.Grouping.Count > 0)
                     {
                         <div class="task-board-lane-label">@lane.Label</div>
+                        @if (this.OrphanTeamOf(lane) is { } orphan)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="task-orphan-team-chip">No teammate is in @orphan</MudChip>
+                        }
                     }
 
                     @for (int i = 0; i < lane.Cells.Count; i++)
@@ -130,7 +154,16 @@
     [Parameter]
     public EventCallback<TaskId> OnOpenTask { get; set; }
 
+    /// <summary>Raised by a column header's <i>Edit columns…</i> (Spec §13.4 Columns): the page opens the View editor at its Columns section.</summary>
+    [Parameter]
+    public EventCallback OnEditColumns { get; set; }
+
+    /// <summary>Raised with the changed effective View when a column header changes a View that isn't a saved Board - a List View shown as a Board (corrections-B5 D12-13, DM decision D).</summary>
+    [Parameter]
+    public EventCallback<TaskView> ViewChanged { get; set; }
+
     private BoardModel model = new([], [], 0);
+    private int renamingColumn = -1;
     private Dictionary<TaskId, string> zoneOf = [];
     private Dictionary<TaskId, string> laneOf = [];
     private MudDropContainer<TaskItem>? container;
@@ -212,6 +245,83 @@
         this.Turns.Changed -= this.OnCardsChanged;
         this.Activity.Changed -= this.OnCardsChanged;
         this.Unsubscribe();
+    }
+
+    /// <summary>Shows the inline rename field in the header of the visible column at <paramref name="visibleIndex"/>.</summary>
+    /// <param name="visibleIndex">The column's index among the visible columns.</param>
+    private void StartRename(int visibleIndex) => this.renamingColumn = visibleIndex;
+
+    /// <summary>Commits the inline rename (Spec §13.4 Columns): the field closes and the new label is saved.</summary>
+    /// <param name="visibleIndex">The column's index among the visible columns.</param>
+    /// <param name="label">The new label, as typed.</param>
+    private Task RenameAsync(int visibleIndex, string? label)
+    {
+        this.renamingColumn = -1;
+        return this.ChangeColumnAsync(visibleIndex, column => column with { Label = label ?? string.Empty });
+    }
+
+    /// <summary>Hides the visible column at <paramref name="visibleIndex"/> (Spec §13.4 Columns).</summary>
+    /// <param name="visibleIndex">The column's index among the visible columns.</param>
+    private Task HideAsync(int visibleIndex) => this.ChangeColumnAsync(visibleIndex, column => column with { Hidden = true });
+
+    /// <summary>
+    /// Applies a header-menu change to one column (corrections-B5 D12-13). A saved Board View is
+    /// changed at once through <see cref="ViewStore.Save"/> - the <b>saved</b> View with only its
+    /// Columns replaced, never the effective one - and a refusal shows a Snackbar error. Any other
+    /// View (a List View shown as a Board, DM decision D) changes only the effective View, raised
+    /// through <see cref="ViewChanged"/>, so the toolbar offers Save to View.
+    /// </summary>
+    /// <param name="visibleIndex">The column's index among the visible columns.</param>
+    /// <param name="change">The change to the column.</param>
+    private async Task ChangeColumnAsync(int visibleIndex, Func<BoardColumn, BoardColumn> change)
+    {
+        int index = this.FullIndexOf(visibleIndex);
+        if (this.ViewStore.Get(this.View.Id) is { Kind: ViewKind.Board } saved && index < saved.Columns.Count)
+        {
+            List<BoardColumn> columns = [.. saved.Columns];
+            columns[index] = change(columns[index]);
+            ViewSaveResult result = this.ViewStore.Save(saved with { Columns = columns });
+            if (!result.Saved)
+            {
+                this.Snackbar.Add($"Could not save the View: {string.Join(' ', result.Problems)}", Severity.Error);
+            }
+
+            return;
+        }
+
+        List<BoardColumn> effective = [.. this.View.Columns];
+        effective[index] = change(effective[index]);
+        await this.ViewChanged.InvokeAsync(this.View with { Columns = effective });
+    }
+
+    /// <summary>The index among all of the View's columns of the visible column at <paramref name="visibleIndex"/>.</summary>
+    /// <param name="visibleIndex">The column's index among the visible columns.</param>
+    private int FullIndexOf(int visibleIndex)
+    {
+        int seen = -1;
+        for (int i = 0; i < this.View.Columns.Count; i++)
+        {
+            if (!this.View.Columns[i].Hidden && ++seen == visibleIndex)
+            {
+                return i;
+            }
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(visibleIndex), visibleIndex, "No visible column has that index.");
+    }
+
+    /// <summary>The lane's Team when the View groups by Team and that Team folder has no Persona in it (Spec §13.12 orphan chip, corrections-B7 12.4 item 3); otherwise <see langword="null"/>.</summary>
+    /// <param name="lane">A lane.</param>
+    private string? OrphanTeamOf(BoardLane lane)
+    {
+        if (!this.View.Grouping.Contains(TaskGroupField.Team)
+            || lane.Cells.SelectMany(cell => cell.Items).FirstOrDefault() is not { } sample)
+        {
+            return null;
+        }
+
+        string team = sample.Location.Team;
+        return this.Store.Teams.Any(folder => folder.IsOrphan && string.Equals(folder.Name, team, StringComparison.Ordinal)) ? team : null;
     }
 
     /// <summary>The display zone id of a multi-state column: the lane part of <see cref="BoardLayout.ZoneId"/>, then <c>|col:{index}</c>, which <see cref="BoardLayout.TryParseZone"/> rejects (D12-5).</summary>

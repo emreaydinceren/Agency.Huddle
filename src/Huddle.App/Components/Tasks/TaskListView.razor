@@ -21,6 +21,7 @@
 
 @using System.Globalization
 @inject TimeProvider Clock
+@inject TaskStore Store
 
 <MudDataGrid T="TaskItem" @key="@this.View.Id" Items="@this.Tasks" ReadOnly="true" Dense="true" Hover="true"
              Groupable="true" GroupExpanded="true" ShowColumnOptions="false" Filterable="false"
@@ -80,7 +81,13 @@
                                      Grouping="@this.IsGrouped(TaskGroupField.Team)" GroupByOrder="@this.GroupOrder(TaskGroupField.Team)"
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Team))">
                         <CellTemplate>@context.Item.Location.Team</CellTemplate>
-                        <GroupTemplate>@this.GroupHeading(context, TaskGroupField.Team)</GroupTemplate>
+                        <GroupTemplate>
+                            @this.GroupHeading(context, TaskGroupField.Team)
+                            @if (this.OrphanTeamOf(context) is { } orphan)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="task-orphan-team-chip">No teammate is in @orphan</MudChip>
+                            }
+                        </GroupTemplate>
                     </TemplateColumn>
                     break;
                 case "project":
@@ -241,6 +248,14 @@
     }
 
     /// <summary>The group header text shown by GroupTemplate: the real label (never the raw sort key) and the group's count.</summary>
+    /// <summary>The Team of a Team group whose folder no Persona is in (Spec §13.12 orphan chip, corrections-B7 12.4 item 3), or <see langword="null"/>.</summary>
+    /// <param name="group">A Team group.</param>
+    private string? OrphanTeamOf(GroupDefinition<TaskItem> group)
+    {
+        string team = group.Grouping.First().Location.Team;
+        return this.Store.Teams.Any(folder => folder.IsOrphan && string.Equals(folder.Name, team, StringComparison.Ordinal)) ? team : null;
+    }
+
     private string GroupHeading(GroupDefinition<TaskItem> group, TaskGroupField field)
     {
         TaskItem sample = group.Grouping.First();

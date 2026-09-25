@@ -38,10 +38,12 @@
         {
             @if (this.Presence is { } presence)
             {
-                <MudBadge Dot="true" Overlap="true" Color="@TaskColors.For(presence)"
-                          BadgeAriaLabel="@string.Create(CultureInfo.InvariantCulture, $"{assignee} is {presence}")">
-                    <TeammateAvatar Name="@assignee" Avatar="this.AvatarStore.Get(assignee)" Size="Size.Small" />
-                </MudBadge>
+                string presenceText = string.Create(CultureInfo.InvariantCulture, $"{assignee} is {presence}");
+                <MudTooltip Text="@presenceText">
+                    <MudBadge Dot="true" Overlap="true" Color="@TaskColors.For(presence)" BadgeAriaLabel="@presenceText">
+                        <TeammateAvatar Name="@assignee" Avatar="this.AvatarStore.Get(assignee)" Size="Size.Small" />
+                    </MudBadge>
+                </MudTooltip>
             }
             else
             {
@@ -49,9 +51,12 @@
             }
         }
 
-        @if (this.DueDateField is { } dueDate)
+        @foreach (string field in this.Fields)
         {
-            <span class="task-card-field-due-date">@dueDate.ToString("d", CultureInfo.InvariantCulture)</span>
+            @if (this.FieldText(field) is { } text)
+            {
+                <span class="@($"task-card-field-{field.Replace('_', '-')}")">@text</span>
+            }
         }
     </button>
 
@@ -85,7 +90,7 @@
     [Parameter, EditorRequired]
     public required TaskItem Task { get; set; }
 
-    /// <summary>The View's field keys, so far only consulted for <c>"due_date"</c> - the one extra field this card shows beyond its always-visible id, title and priority.</summary>
+    /// <summary>The View's field keys: the card shows each one's value beyond its always-visible id, title and priority chip (corrections-B7 12.4 item 4).</summary>
     [Parameter, EditorRequired]
     public required IReadOnlyList<string> Fields { get; set; }
 
@@ -142,6 +147,30 @@
         }
     }
 
-    /// <summary>The Task's due date, when the View names <c>"due_date"</c> among <see cref="Fields"/> and one is set.</summary>
-    private DateOnly? DueDateField => this.Fields.Contains("due_date", StringComparer.Ordinal) ? this.Task.DueDate : null;
+    /// <summary>
+    /// The text a card shows for one of the View's field keys (corrections-B7 12.4 item 4), or
+    /// <see langword="null"/> when the Task has no value for it - or when the key is <c>id</c> or
+    /// <c>title</c>, which the card always shows anyway, or unknown. Dates use the invariant short
+    /// date; lists are comma-joined.
+    /// </summary>
+    /// <param name="field">A §12.2 field key.</param>
+    private string? FieldText(string field) => field switch
+    {
+        "status" => this.Task.Status.ToWire(),
+        "priority" => this.Task.Priority.ToWire(),
+        "assignee" => this.Task.Assignee,
+        "creator" => this.Task.Creator,
+        "team" => this.Task.Location.Team,
+        "project" => this.Task.Location.Project,
+        "parent" => this.Task.Parent?.ToString(),
+        "blocked_by" => this.Task.BlockedBy.Count > 0 ? string.Join(", ", this.Task.BlockedBy) : null,
+        "tags" => this.Task.Tags.Count > 0 ? string.Join(", ", this.Task.Tags) : null,
+        "start_date" => this.Task.StartDate?.ToString("d", CultureInfo.InvariantCulture),
+        "due_date" => this.Task.DueDate?.ToString("d", CultureInfo.InvariantCulture),
+        "created" => this.Task.Created?.ToString("d", CultureInfo.InvariantCulture),
+        "updated" => this.Task.Updated?.ToString("d", CultureInfo.InvariantCulture),
+        "closed" => this.Task.ClosedAt?.ToString("d", CultureInfo.InvariantCulture),
+        "origin" => this.Task.OriginRoomId,
+        _ => null,
+    };
 }

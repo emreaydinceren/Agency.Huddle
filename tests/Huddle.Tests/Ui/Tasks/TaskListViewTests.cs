@@ -19,8 +19,27 @@ using Agency.Huddle.Tests.Tasks;
 /// non-terminal row is flagged, a row click raises <see cref="TaskListView.OnOpenTask"/>, and a
 /// search term is highlighted with <c>MudHighlighter</c>.
 /// </summary>
-public sealed class TaskListViewTests
+public sealed class TaskListViewTests : IDisposable
 {
+    private readonly TempDataDir dataDir = new();
+    private readonly Agency.Huddle.App.Acp.PersonaStore personas;
+    private readonly TaskStore store;
+
+    /// <summary>Builds an empty <see cref="TaskStore"/>: <see cref="TaskListView"/> reads its Team folders for the orphan-Team chip (corrections-B7 12.4 item 3).</summary>
+    public TaskListViewTests()
+    {
+        this.personas = TestTaskStore.CreatePersonaStore(this.dataDir);
+        this.store = TestTaskStore.CreateTaskStore(this.dataDir, this.personas);
+    }
+
+    /// <summary>Releases the stores and the temporary data directory.</summary>
+    public void Dispose()
+    {
+        this.store.Dispose();
+        this.personas.Dispose();
+        this.dataDir.Dispose();
+    }
+
     /// <summary>ID and Title are always shown; every other field column is hidden unless named in <see cref="TaskView.Fields"/>.</summary>
     [Fact]
     public async Task Columns_HiddenWhenNotInFields_ExceptIdAndTitle()
@@ -187,7 +206,7 @@ public sealed class TaskListViewTests
     };
 
     /// <summary>Renders <see cref="TaskListView"/> with the popover provider present, registering a fixed <see cref="TimeProvider"/> so overdue checks are deterministic.</summary>
-    private static IRenderedComponent<ContainerFragment> Render(
+    private IRenderedComponent<ContainerFragment> Render(
         MudBunitContext ctx,
         TaskView view,
         IReadOnlyList<TaskItem> tasks,
@@ -196,6 +215,7 @@ public sealed class TaskListViewTests
     {
         ManualTimeProvider clock = new() { UtcNow = new DateTimeOffset(2026, 9, 24, 0, 0, 0, TimeSpan.Zero) };
         ctx.Services.AddSingleton<TimeProvider>(clock);
+        ctx.Services.AddSingleton(this.store);
 
         return ctx.RenderWithPopovers(builder =>
         {

@@ -42,7 +42,7 @@ public sealed class AppCssTasksTests
     /// <summary>The ghost bucket, its droppable state, the dragged card, the overdue marker and the two chat-reference classes are all declared.</summary>
     [Theory]
     [InlineData(".task-zone-can")]
-    [InlineData(".ghost-bucket")]
+    [InlineData(".task-ghost-bucket")]
     [InlineData(".task-card")]
     [InlineData(".task-card-dragging")]
     [InlineData(".task-overdue")]
