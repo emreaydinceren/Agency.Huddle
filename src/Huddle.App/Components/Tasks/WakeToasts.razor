@@ -1,0 +1,115 @@
+@*
+    Spec §13.8 (D14 correction item 12): renders nothing itself - it exists only to turn
+    TaskActivity.Woken into a Snackbar toast while the Tasks page is open. Woken adds an info toast
+    keyed "wake:{id}" (MudBlazor's per-key duplicate collapsing - mudblazor.md notes ISnackbar.Add
+    takes a key); BudgetSpent and Failed add a warning toast; Offline and WakePaused add nothing,
+    because those are shown only in the Task panel (Spec §13.6, §13.8). The Failed wording is the
+    delivery manager's settled text (J38): Spec §10.5 says only "the error text, logged", but
+    WakeRecord carries no error text of its own. Copies TaskViewNav.razor's subscribe/DispatchAsync
+    shape (Spec §13.11) so a wake racing this component's teardown cannot throw.
+*@
+
+@implements IDisposable
+@inject TaskActivity Activity
+@inject ISnackbar Snackbar
+
+@code {
+    /// <summary>Raised when the toast's Task link is clicked, so the caller can open that Task's panel.</summary>
+    [Parameter]
+    public EventCallback<TaskId> OnOpenTask { get; set; }
+
+    /// <summary>Subscribes to <see cref="TaskActivity.Woken"/>.</summary>
+    protected override void OnInitialized()
+    {
+        this.Activity.Woken += this.OnWoken;
+    }
+
+    /// <summary>Unsubscribes from <see cref="TaskActivity.Woken"/>.</summary>
+    public void Dispose()
+    {
+        this.Activity.Woken -= this.OnWoken;
+    }
+
+    /// <summary>Turns one recorded wake into a toast, or nothing, per Spec §13.8.</summary>
+    /// <param name="record">The wake attempt that was just recorded.</param>
+    private void OnWoken(WakeRecord record) => _ = this.DispatchAsync(() =>
+    {
+        string key = $"wake:{record.TaskId}";
+        switch (record.Outcome)
+        {
+            case WakeOutcome.Woken:
+                this.Snackbar.Add(this.WokenMessage(record), Severity.Info, configure: null, key: key);
+                break;
+            case WakeOutcome.BudgetSpent:
+                this.Snackbar.Add(
+                    $"Couldn't wake {record.Assignee}: Room {record.RoomName} is paused. Open the Room to continue",
+                    Severity.Warning,
+                    configure: null,
+                    key: key);
+                break;
+            case WakeOutcome.Failed:
+                this.AddFailedToast(record, key);
+                break;
+            case WakeOutcome.Offline:
+            case WakeOutcome.WakePaused:
+                break;
+        }
+
+        return Task.CompletedTask;
+    });
+
+    /// <summary>Adds the Failed toast (Spec §13.8, J38): the settled plain text, plus a Room link when a Room was chosen.</summary>
+    /// <param name="record">The failed wake attempt.</param>
+    /// <param name="key">The per-Task Snackbar key that collapses a burst of failures.</param>
+    private void AddFailedToast(WakeRecord record, string key)
+    {
+        string text = $"Couldn't wake {record.Assignee}; see the log for details.";
+        if (record.RoomId is null)
+        {
+            this.Snackbar.Add(text, Severity.Warning, configure: null, key: key);
+        }
+        else
+        {
+            this.Snackbar.Add(this.TextWithRoomLink(text, record), Severity.Warning, configure: null, key: key);
+        }
+    }
+
+    /// <summary>Builds the Woken toast's content: the Spec §13.8 sentence, a Task link that raises <see cref="OnOpenTask"/>, and a Room link when a Room was chosen.</summary>
+    /// <param name="record">The successful wake to describe.</param>
+    private RenderFragment WokenMessage(WakeRecord record) =>
+        @<text>
+            <span>@($"{record.Assignee} woken for {record.TaskId} in Room: {record.RoomName}")</span>
+            <a class="wake-toast-task-link" role="button" tabindex="0" @onclick="() => this.OnOpenTask.InvokeAsync(record.TaskId)">@record.TaskId.ToString()</a>
+            @if (record.RoomId is not null)
+            {
+                <a class="wake-toast-room-link" href="@($"/rooms/{record.RoomId}")">@record.RoomName</a>
+            }
+        </text>;
+
+    /// <summary>Builds a toast's content from plain <paramref name="text"/> plus a Room link.</summary>
+    /// <param name="text">The message text.</param>
+    /// <param name="record">Carries the Room to link to; its <c>RoomId</c> must not be <see langword="null"/>.</param>
+    private RenderFragment TextWithRoomLink(string text, WakeRecord record) =>
+        @<text>
+            <span>@text</span>
+            <a class="wake-toast-room-link" href="@($"/rooms/{record.RoomId}")">@record.RoomName</a>
+        </text>;
+
+    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a store event racing component teardown can throw (Spec §13.11).</summary>
+    /// <param name="action">The state update to run.</param>
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to render.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
+    }
+}
