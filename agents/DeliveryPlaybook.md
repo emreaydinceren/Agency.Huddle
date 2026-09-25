@@ -134,10 +134,9 @@ storage layout before shipping.
 
 ## Notes
 
-- The delivery scripts the Tasks delivery wrote (`Run-Tests.ps1`, `Build.ps1`, `Prove-Mutation(s).ps1`,
-  `Check-Diff.ps1`, `Check-Eol.ps1`, `Check-Visibility.ps1`, `Audit-Transcript.ps1`,
-  `Find-PackageApi.ps1`, `Reseed-Goldens.ps1`, `Regenerate-PromptDefaults.ps1`, `Set-Tracker.ps1`)
-  live in the gitignored `Conversation/scripts/`. They are not in version control; copy them
-  forward (or promote them into the repo) before starting a new delivery.
+- The delivery scripts the Tasks delivery wrote live in version control at
+  [`agents/scripts/`](scripts/README.md). Logs and red files still go to the gitignored main
+  checkout's `Conversation/`; allowlists like `public-types.txt` are `*.example.txt` there — copy one
+  per project rather than sharing the Tasks feature's.
 - `Check-Diff.ps1 -Scope Branch -Base origin/main -GroupByFile` lists untested user-facing texts
   and loose `Contains` asserts per file — run it before the PR and clear it.
