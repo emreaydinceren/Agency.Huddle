@@ -17,7 +17,7 @@ public sealed class PersonaStoreTests
 
         store.Add(Identity("coo"), "You are the Chief of Staff.");
 
-        var path = Path.Combine(dir.Path, "Teams", "coo.md");
+        var path = Path.Combine(dir.Path, "Teammates", "coo.md");
         Assert.True(File.Exists(path));
 
         // Add composes its own canonical front matter - lowercase keys, single-quoted scalars -
@@ -37,7 +37,7 @@ public sealed class PersonaStoreTests
 
         store.Add(Identity("Chief of Staff"), "You keep the team honest.");
 
-        var path = Path.Combine(dir.Path, "Teams", "Chief of Staff.md");
+        var path = Path.Combine(dir.Path, "Teammates", "Chief of Staff.md");
         Assert.True(File.Exists(path));
 
         // Listing reads the Name back off the composed frontmatter, so this is what proves the
@@ -64,7 +64,7 @@ public sealed class PersonaStoreTests
 
         store.Add(identity, "You are the Chief of Staff.");
 
-        var path = Path.Combine(dir.Path, "Teams", "coo.md");
+        var path = Path.Combine(dir.Path, "Teammates", "coo.md");
         var written = File.ReadAllText(path);
 
         // YAML's own escape for an embedded apostrophe inside a single-quoted scalar is "''" - the
@@ -108,7 +108,7 @@ public sealed class PersonaStoreTests
         var ex = Assert.Throws<ChatException>(() => store.Add(Identity("coo", alias: "bad/alias"), "text"));
 
         Assert.Equal(ErrorCodes.BadMessage, ex.Code);
-        Assert.False(File.Exists(Path.Combine(dir.Path, "Teams", "coo.md")));
+        Assert.False(File.Exists(Path.Combine(dir.Path, "Teammates", "coo.md")));
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public sealed class PersonaStoreTests
         // PersonaStore.Get comes back with both.
         using var dir = new TempDataDir();
         var options = dir.Options();
-        var teamsDir = Path.Combine(dir.Path, "Teams");
+        var teamsDir = Path.Combine(dir.Path, "Teammates");
         Directory.CreateDirectory(teamsDir);
         File.WriteAllText(Path.Combine(teamsDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff."));
         var models = new PersonaModelStore(options);
@@ -168,7 +168,7 @@ public sealed class PersonaStoreTests
         // yet PersonaStore.Get comes back with both.
         using var dir = new TempDataDir();
         var options = dir.Options();
-        var teamsDir = Path.Combine(dir.Path, "Teams");
+        var teamsDir = Path.Combine(dir.Path, "Teammates");
         Directory.CreateDirectory(teamsDir);
         File.WriteAllText(Path.Combine(teamsDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff."));
         var efforts = new PersonaEffortStore(options);
@@ -188,7 +188,7 @@ public sealed class PersonaStoreTests
     {
         using var dir = new TempDataDir();
         var options = dir.Options();
-        var teamsDir = Path.Combine(dir.Path, "Teams");
+        var teamsDir = Path.Combine(dir.Path, "Teammates");
         Directory.CreateDirectory(teamsDir);
         File.WriteAllText(Path.Combine(teamsDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff.", "agency"));
         using var store = new PersonaStore(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
@@ -223,7 +223,7 @@ public sealed class PersonaStoreTests
     {
         using var dir = new TempDataDir();
         var options = dir.Options();
-        var teamsDir = Path.Combine(dir.Path, "Teams");
+        var teamsDir = Path.Combine(dir.Path, "Teammates");
         Directory.CreateDirectory(teamsDir);
         var text = PersonaText("coo", "first", "agency");
         File.WriteAllText(Path.Combine(teamsDir, "coo.md"), text);
@@ -268,7 +268,7 @@ public sealed class PersonaStoreTests
         var ex = Assert.Throws<ChatException>(() => store.Add(Identity("../evil"), "text"));
 
         Assert.Equal(ErrorCodes.BadMessage, ex.Code);
-        Assert.False(File.Exists(Path.Combine(dir.Path, "Teams", "evil.md")));
+        Assert.False(File.Exists(Path.Combine(dir.Path, "Teammates", "evil.md")));
         Assert.False(File.Exists(Path.Combine(Path.GetDirectoryName(dir.Path)!, "evil.md")));
     }
 
@@ -307,7 +307,7 @@ public sealed class PersonaStoreTests
         var ex = Assert.Throws<ChatException>(() => store.Add(Identity("coo", title: "   "), "text"));
 
         Assert.Equal(ErrorCodes.BadMessage, ex.Code);
-        Assert.False(File.Exists(Path.Combine(dir.Path, "Teams", "coo.md")));
+        Assert.False(File.Exists(Path.Combine(dir.Path, "Teammates", "coo.md")));
     }
 
     [Fact]
@@ -383,7 +383,7 @@ public sealed class PersonaStoreTests
         var updated = store.Update("coo", PersonaText("coo", "second"), model: null, effort: null);
 
         Assert.Equal(PersonaText("coo", "second"), updated.Text);
-        var path = Path.Combine(dir.Path, "Teams", "coo.md");
+        var path = Path.Combine(dir.Path, "Teammates", "coo.md");
         Assert.Equal(PersonaText("coo", "second"), File.ReadAllText(path));
     }
 
@@ -458,7 +458,7 @@ public sealed class PersonaStoreTests
 
         Assert.Equal(PersonaText("coo", "unchanged text"), updated.Text);
         Assert.Equal("claude-opus-4", updated.Model);
-        var path = Path.Combine(dir.Path, "Teams", "coo.md");
+        var path = Path.Combine(dir.Path, "Teammates", "coo.md");
         Assert.Equal(PersonaText("coo", "unchanged text"), File.ReadAllText(path));
     }
 
@@ -474,7 +474,7 @@ public sealed class PersonaStoreTests
         Assert.Equal(PersonaText("coo", "unchanged text"), updated.Text);
         Assert.Equal("claude-opus-4", updated.Model);
         Assert.Equal("high", updated.Effort);
-        var path = Path.Combine(dir.Path, "Teams", "coo.md");
+        var path = Path.Combine(dir.Path, "Teammates", "coo.md");
         Assert.Equal(PersonaText("coo", "unchanged text"), File.ReadAllText(path));
     }
 
@@ -706,7 +706,7 @@ public sealed class PersonaStoreTests
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         store.PersonasChanged += () => tcs.TrySetResult();
         await File.WriteAllTextAsync(
-            Path.Combine(dir.Path, "Teams", "coo-new.md"),
+            Path.Combine(dir.Path, "Teammates", "coo-new.md"),
             PersonaText("coo", "You are a brand new Chief of Staff."),
             ct);
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -724,7 +724,7 @@ public sealed class PersonaStoreTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var businessDir = Path.Combine(dir.Path, "Teams", "Business");
+        var businessDir = Path.Combine(dir.Path, "Teammates", "Business");
         Directory.CreateDirectory(businessDir);
         var nestedPath = Path.Combine(businessDir, "coo.md");
         await File.WriteAllTextAsync(nestedPath, PersonaText("coo", "You are the Chief of Staff."), ct);
@@ -734,7 +734,7 @@ public sealed class PersonaStoreTests
         store.Update("coo", PersonaText("coo", "You are the revised Chief of Staff."), model: null, effort: null);
 
         Assert.Equal(PersonaText("coo", "You are the revised Chief of Staff."), await File.ReadAllTextAsync(nestedPath, ct));
-        Assert.False(File.Exists(Path.Combine(dir.Path, "Teams", "coo.md")));
+        Assert.False(File.Exists(Path.Combine(dir.Path, "Teammates", "coo.md")));
         Assert.Equal(nestedPath, store.PathFor("coo"));
     }
 
@@ -744,7 +744,7 @@ public sealed class PersonaStoreTests
         using var dir = new TempDataDir();
         using var store = CreateStore(dir);
         store.Add(Identity("coo"), "text");
-        var path = Path.Combine(dir.Path, "Teams", "coo.md");
+        var path = Path.Combine(dir.Path, "Teammates", "coo.md");
 
         store.Remove("coo");
 
@@ -852,7 +852,7 @@ public sealed class PersonaStoreTests
 
         var path = store.PathFor("coo");
 
-        Assert.Equal(Path.Combine(dir.Path, "Teams", "coo.md"), path);
+        Assert.Equal(Path.Combine(dir.Path, "Teammates", "coo.md"), path);
         Assert.True(File.Exists(path));
     }
 
@@ -863,13 +863,13 @@ public sealed class PersonaStoreTests
         // PersonasChanged: this writes a .md file directly to disk, bypassing the store entirely.
         using var dir = new TempDataDir();
         using var store = CreateStore(dir);
-        Directory.CreateDirectory(Path.Combine(dir.Path, "Teams"));
+        Directory.CreateDirectory(Path.Combine(dir.Path, "Teammates"));
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         store.PersonasChanged += () => tcs.TrySetResult();
 
         await File.WriteAllTextAsync(
-            Path.Combine(dir.Path, "Teams", "external.md"),
+            Path.Combine(dir.Path, "Teammates", "external.md"),
             PersonaText("external", "You are External."),
             TestContext.Current.CancellationToken);
 
@@ -889,7 +889,7 @@ public sealed class PersonaStoreTests
     public void ListNames_IncludesAPersonaNestedInATeamSubFolder()
     {
         using var dir = new TempDataDir();
-        var teamsDir = Path.Combine(dir.Path, "Teams", "Business");
+        var teamsDir = Path.Combine(dir.Path, "Teammates", "Business");
         Directory.CreateDirectory(teamsDir);
         File.WriteAllText(Path.Combine(teamsDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff."));
         using var store = CreateStore(dir);
@@ -910,8 +910,8 @@ public sealed class PersonaStoreTests
     public void TwoPersonaFilesWithTheSameNameInDifferentTeamSubFolders_AreBothRejectedAsACollision()
     {
         using var dir = new TempDataDir();
-        var teamA = Path.Combine(dir.Path, "Teams", "Business");
-        var teamB = Path.Combine(dir.Path, "Teams", "Engineering");
+        var teamA = Path.Combine(dir.Path, "Teammates", "Business");
+        var teamB = Path.Combine(dir.Path, "Teammates", "Engineering");
         Directory.CreateDirectory(teamA);
         Directory.CreateDirectory(teamB);
         File.WriteAllText(Path.Combine(teamA, "coo.md"), PersonaText("coo", "Business flavour."));
@@ -928,7 +928,7 @@ public sealed class PersonaStoreTests
     public void ListNames_UsesTheFrontMatterNameRatherThanTheFilename()
     {
         using var dir = new TempDataDir();
-        var teamsDir = Path.Combine(dir.Path, "Teams");
+        var teamsDir = Path.Combine(dir.Path, "Teammates");
         Directory.CreateDirectory(teamsDir);
         File.WriteAllText(Path.Combine(teamsDir, "zzz.md"), PersonaText("Jarvis", "You are Jarvis."));
         using var store = CreateStore(dir);
@@ -953,7 +953,7 @@ public sealed class PersonaStoreTests
         var oldPath = store.PathFor("coo");
         var before = store.Get("coo");
 
-        var businessDir = Path.Combine(dir.Path, "Teams", "Business");
+        var businessDir = Path.Combine(dir.Path, "Teammates", "Business");
         Directory.CreateDirectory(businessDir);
         var newPath = Path.Combine(businessDir, Path.GetFileName(oldPath));
 
@@ -980,7 +980,7 @@ public sealed class PersonaStoreTests
     public void NestedPersona_IsFullyReachableThroughGetAndPathFor()
     {
         using var dir = new TempDataDir();
-        var teamsDir = Path.Combine(dir.Path, "Teams", "Business");
+        var teamsDir = Path.Combine(dir.Path, "Teammates", "Business");
         Directory.CreateDirectory(teamsDir);
         var path = Path.Combine(teamsDir, "coo.md");
         File.WriteAllText(path, PersonaText("coo", "You are the Chief of Staff."));
@@ -997,7 +997,7 @@ public sealed class PersonaStoreTests
     public void RejectedFiles_ReportsAMalformedFilesPathAndReason()
     {
         using var dir = new TempDataDir();
-        var teamsDir = Path.Combine(dir.Path, "Teams");
+        var teamsDir = Path.Combine(dir.Path, "Teammates");
         Directory.CreateDirectory(teamsDir);
         var path = Path.Combine(teamsDir, "broken.md");
         File.WriteAllText(path, "---\nTitle: Chief of Staff\nAlias: coo\n---\nYou are the Chief of Staff.");
@@ -1038,7 +1038,7 @@ public sealed class PersonaStoreTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var teamsDir = Path.Combine(dir.Path, "Teams", "Business");
+        var teamsDir = Path.Combine(dir.Path, "Teammates", "Business");
         Directory.CreateDirectory(teamsDir);
         var path = Path.Combine(teamsDir, "coo.md");
         File.WriteAllText(path, PersonaText("coo", "You are the Chief of Staff."));
@@ -1067,7 +1067,7 @@ public sealed class PersonaStoreTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var store = CreateStore(dir);
-        var newTeamDir = Path.Combine(dir.Path, "Teams", "NewTeam");
+        var newTeamDir = Path.Combine(dir.Path, "Teammates", "NewTeam");
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         store.PersonasChanged += () => tcs.TrySetResult();
@@ -1096,7 +1096,7 @@ public sealed class PersonaStoreTests
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         using var store = CreateStore(dir);
-        var teamsDir = Path.Combine(dir.Path, "Teams");
+        var teamsDir = Path.Combine(dir.Path, "Teammates");
 
         var raised = false;
         store.PersonasChanged += () => raised = true;
@@ -1130,7 +1130,7 @@ public sealed class PersonaStoreTests
     public async Task TeamSubFolderRename_IsNoticedThroughPersonasChanged()
     {
         using var dir = new TempDataDir();
-        var oldTeamDir = Path.Combine(dir.Path, "Teams", "Business");
+        var oldTeamDir = Path.Combine(dir.Path, "Teammates", "Business");
         Directory.CreateDirectory(oldTeamDir);
         File.WriteAllText(Path.Combine(oldTeamDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff."));
         using var store = CreateStore(dir);
@@ -1138,7 +1138,7 @@ public sealed class PersonaStoreTests
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         store.PersonasChanged += () => tcs.TrySetResult();
 
-        Directory.Move(oldTeamDir, Path.Combine(dir.Path, "Teams", "BusinessOps"));
+        Directory.Move(oldTeamDir, Path.Combine(dir.Path, "Teammates", "BusinessOps"));
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());
@@ -1159,7 +1159,7 @@ public sealed class PersonaStoreTests
     public async Task TeamSubFolderDeleted_IsNoticedThroughPersonasChanged()
     {
         using var dir = new TempDataDir();
-        var teamDir = Path.Combine(dir.Path, "Teams", "Business");
+        var teamDir = Path.Combine(dir.Path, "Teammates", "Business");
         Directory.CreateDirectory(teamDir);
         File.WriteAllText(Path.Combine(teamDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff."));
         using var store = CreateStore(dir);
@@ -1196,7 +1196,7 @@ public sealed class PersonaStoreTests
 
         Assert.Equal(2, results.Count);
         Assert.All(results, result => Assert.Contains("shared", result.Problem, StringComparison.Ordinal));
-        Assert.Empty(Directory.GetFiles(Path.Combine(dir.Path, "Teams"), "*.md", SearchOption.AllDirectories));
+        Assert.Empty(Directory.GetFiles(Path.Combine(dir.Path, "Teammates"), "*.md", SearchOption.AllDirectories));
     }
 
     /// <summary>
@@ -1218,7 +1218,7 @@ public sealed class PersonaStoreTests
         var result = Assert.Single(results);
         Assert.Equal(candidateText, result.Text);
         Assert.Contains("coo", result.Problem, StringComparison.Ordinal);
-        Assert.False(File.Exists(Path.Combine(dir.Path, "Teams", "vp.md")));
+        Assert.False(File.Exists(Path.Combine(dir.Path, "Teammates", "vp.md")));
     }
 
     /// <summary>
@@ -1238,7 +1238,7 @@ public sealed class PersonaStoreTests
         var result = Assert.Single(results);
         Assert.Equal(text, result.Text);
         Assert.Null(result.Problem);
-        Assert.False(File.Exists(Path.Combine(dir.Path, "Teams", "coo.md")));
+        Assert.False(File.Exists(Path.Combine(dir.Path, "Teammates", "coo.md")));
         Assert.Empty(store.ListNames());
     }
 
@@ -1275,7 +1275,7 @@ public sealed class PersonaStoreTests
         Assert.DoesNotContain("used by .", results[0].Problem, StringComparison.Ordinal);
         Assert.DoesNotContain("used by .", results[1].Problem, StringComparison.Ordinal);
 
-        Assert.Empty(Directory.GetFiles(Path.Combine(dir.Path, "Teams"), "*.md", SearchOption.AllDirectories));
+        Assert.Empty(Directory.GetFiles(Path.Combine(dir.Path, "Teammates"), "*.md", SearchOption.AllDirectories));
     }
 
     /// <summary>

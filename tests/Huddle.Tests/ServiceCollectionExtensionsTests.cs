@@ -18,13 +18,13 @@ namespace Agency.Huddle.Tests;
 public sealed class ServiceCollectionExtensionsTests
 {
     /// <summary>
-    /// Renaming <c>Acp.PersonaDir</c> to <c>Acp.TeamsDir</c> (the Teams rename) has no fallback:
-    /// nothing in appsettings*.json sets the old key today, so keeping one would be dead weight.
-    /// But a value left behind in a user secret or an environment variable would otherwise bind to
-    /// nothing, leaving <see cref="Agency.Huddle.App.Acp.PersonaStore"/> to scan an empty default
-    /// "Teams" folder - zero teammates, no exception, no log anywhere. That silent-degradation
-    /// shape is exactly what docs/agencyteam/traps.md exists to catch, so this must fail loudly at
-    /// startup instead, naming the new key.
+    /// Renaming <c>Acp.PersonaDir</c> to <c>Acp.TeammatesDir</c> (the Teammates rename) has no
+    /// fallback: nothing in appsettings*.json sets the old key today, so keeping one would be dead
+    /// weight. But a value left behind in a user secret or an environment variable would otherwise
+    /// bind to nothing, leaving <see cref="Agency.Huddle.App.Acp.PersonaStore"/> to scan an empty
+    /// default "Teammates" folder - zero teammates, no exception, no log anywhere. That
+    /// silent-degradation shape is exactly what docs/agencyteam/traps.md exists to catch, so this
+    /// must fail loudly at startup instead, naming the new key.
     /// </summary>
     [Fact]
     public void AddTeamServices_WithTheOldPersonaDirKey_ThrowsNamingTheNewKey()
@@ -41,7 +41,7 @@ public sealed class ServiceCollectionExtensionsTests
         var ex = Assert.Throws<InvalidOperationException>(() => services.AddTeamServices(configuration));
 
         Assert.Contains("Team:Acp:PersonaDir", ex.Message, StringComparison.Ordinal);
-        Assert.Contains("Team:Acp:TeamsDir", ex.Message, StringComparison.Ordinal);
+        Assert.Contains("Team:Acp:TeammatesDir", ex.Message, StringComparison.Ordinal);
     }
 
     /// <summary>

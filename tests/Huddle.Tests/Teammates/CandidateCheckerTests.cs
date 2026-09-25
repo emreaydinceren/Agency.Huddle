@@ -279,7 +279,7 @@ public sealed partial class CandidateCheckerTests
     private static async Task<Fixture> CreateFixtureAsync(CancellationToken ct, Action<string>? seedTeamsDir = null)
     {
         var dataDir = new TempDataDir();
-        var teamsDir = Path.Combine(dataDir.Path, "Teams");
+        var teamsDir = Path.Combine(dataDir.Path, "Teammates");
         Directory.CreateDirectory(teamsDir);
         seedTeamsDir?.Invoke(teamsDir);
 

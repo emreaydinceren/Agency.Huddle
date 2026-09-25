@@ -71,9 +71,8 @@ public sealed class TeammateCardTests
     public async Task ViewMode_ShowsTitleAliasAndTeams()
     {
         await using var factory = new TeamWebApplicationFactory();
-        Directory.CreateDirectory(factory.TeamsDirPath);
-        await File.WriteAllTextAsync(
-            Path.Combine(factory.TeamsDirPath, "jarvis.md"),
+        await factory.WriteDefinitionAsync(
+            "jarvis",
             "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\nTeams: Business, Household\n---\nYou are Jarvis.",
             Xunit.TestContext.Current.CancellationToken);
         await using var ctx = NewContext(factory);
@@ -323,7 +322,7 @@ public sealed class TeammateCardTests
 
         // PersonaStore.Update rewrites the SAME file in place - identity is frontmatter, never the
         // filename (rules.md) - so the file path a rename lands on is still the original "coo.md".
-        var expectedPath = Path.Combine(factory.TeamsDirPath, "coo.md");
+        var expectedPath = Path.Combine(factory.TeammatesDirPath, "coo.md");
         Assert.True(File.Exists(expectedPath));
         Assert.Contains(expectedPath, cut.Markup, StringComparison.Ordinal);
     }
@@ -1590,17 +1589,14 @@ public sealed class TeammateCardTests
         return cut;
     }
 
-    /// <summary>Writes a minimally-valid Persona file (Name, Title and Alias all <paramref name="name"/>) and ensures the factory's Teams directory exists.</summary>
-    private static async Task SeedPersonaAsync(TeamWebApplicationFactory factory, string name, string body)
-    {
-        Directory.CreateDirectory(factory.TeamsDirPath);
-        await File.WriteAllTextAsync(Path.Combine(factory.TeamsDirPath, $"{SanitizeFileName(name)}.md"), $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}");
-    }
+    /// <summary>Writes a minimally-valid Persona file (Name, Title and Alias all <paramref name="name"/>), creating the factory's Teammates directory first.</summary>
+    private static async Task SeedPersonaAsync(TeamWebApplicationFactory factory, string name, string body) =>
+        await factory.WriteDefinitionAsync(SanitizeFileName(name), $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}", CancellationToken.None);
 
     private static string EnsureTeamsDir(TeamWebApplicationFactory factory)
     {
-        Directory.CreateDirectory(factory.TeamsDirPath);
-        return Path.Combine(factory.TeamsDirPath, "coo.md");
+        Directory.CreateDirectory(factory.TeammatesDirPath);
+        return Path.Combine(factory.TeammatesDirPath, "coo.md");
     }
 
     private static string SanitizeFileName(string name) => name.Replace(' ', '_');

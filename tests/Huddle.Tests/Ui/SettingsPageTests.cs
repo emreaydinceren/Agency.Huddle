@@ -323,7 +323,7 @@ public sealed class SettingsPageTests
 
         var html = await client.GetStringAsync("/settings/personas", ct);
 
-        Assert.Contains(factory.TeamsDirPath, html, StringComparison.Ordinal);
+        Assert.Contains(factory.TeammatesDirPath, html, StringComparison.Ordinal);
         Assert.Contains(factory.DbPath, html, StringComparison.Ordinal);
     }
 

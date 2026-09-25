@@ -47,7 +47,7 @@ public sealed class ListAgentsToolTests
         // this file - proving ListAgentsTool surfaces an OTHER frontmatter field through
         // PersonaFrontmatter.ComposeJobDescription - is written directly, as a hand-authored file
         // would be, rather than through Add.
-        var teamsDir = Path.Combine(dir.Path, "Teams");
+        var teamsDir = Path.Combine(dir.Path, "Teammates");
         Directory.CreateDirectory(teamsDir);
         await File.WriteAllTextAsync(
             Path.Combine(teamsDir, "coo.md"),

@@ -62,9 +62,9 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
 
     /// <summary>
     /// Validates that <see cref="TasksOptions.Dir"/> does not resolve equal to, inside, or as a
-    /// parent of <see cref="AcpOptions.TeamsDir"/>, creates the Tasks root, then scans it.
+    /// parent of <see cref="AcpOptions.TeammatesDir"/>, creates the Tasks root, then scans it.
     /// </summary>
-    /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>, <see cref="TasksOptions.Dir"/> and <see cref="AcpOptions.TeamsDir"/>.</param>
+    /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>, <see cref="TasksOptions.Dir"/> and <see cref="AcpOptions.TeammatesDir"/>.</param>
     /// <param name="personas">Supplies the Team labels a Team folder is checked against for §8.2's orphan flag, and its <see cref="PersonaStore.PersonasChanged"/> event.</param>
     /// <param name="clock">Supplies the timestamp for any startup-reconciliation Change log entry (Spec §8.5); the watcher's own debounce timer runs on real time, not this clock.</param>
     /// <param name="logger">Used to warn when a directory can't be enumerated or a file can't be read during the scan.</param>
@@ -79,7 +79,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         this.logger = logger;
 
         string tasksRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Tasks.Dir));
-        string teamsRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Acp.TeamsDir));
+        string teamsRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Acp.TeammatesDir));
         ThrowIfNested(tasksRoot, teamsRoot);
 
         this.RootDirectory = tasksRoot;
@@ -785,7 +785,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         if (equal || tasksInsideTeams || teamsInsideTasks)
         {
             throw new InvalidOperationException(
-                $"Team:Tasks:Dir ('{tasksRoot}') must not equal or nest with Team:Acp:TeamsDir ('{teamsRoot}').");
+                $"Team:Tasks:Dir ('{tasksRoot}') must not equal or nest with Team:Acp:TeammatesDir ('{teamsRoot}').");
         }
     }
 

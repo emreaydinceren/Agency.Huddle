@@ -4,16 +4,16 @@ namespace Agency.Huddle.App.Acp;
 
 /// <summary>
 /// Provides paths for teammate definitions and work directories, abstracting the current layout
-/// where definitions are in {DataDir}/{TeamsDir}/{name}.md and work directories are in
+/// where definitions are in {DataDir}/{TeammatesDir}/{name}.md and work directories are in
 /// {DataDir}/{WorkDir}/{name}.
 /// </summary>
 internal sealed class TeammatePaths(IOptions<TeamOptions> options)
 {
     /// <summary>
     /// The root directory containing teammate definitions, derived from
-    /// {DataDir}/{Acp:TeamsDir}.
+    /// {DataDir}/{Acp:TeammatesDir}.
     /// </summary>
-    public string DefinitionsRoot => Path.Combine(this.options.Value.DataDir, this.options.Value.Acp.TeamsDir);
+    public string DefinitionsRoot => Path.Combine(this.options.Value.DataDir, this.options.Value.Acp.TeammatesDir);
 
     /// <summary>
     /// The root directory containing teammate work directories, derived from

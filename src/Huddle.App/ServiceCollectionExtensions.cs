@@ -24,20 +24,29 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
-        // Acp.PersonaDir was renamed to Acp.TeamsDir (the "Teams" rename) with no back-compat
-        // fallback: nothing in appsettings*.json still sets the old key, so a fallback would be
-        // dead weight. But a value left behind in a user secret or an environment variable would
-        // otherwise bind to nothing, and PersonaStore would quietly scan an empty default "Teams"
-        // folder - zero teammates, no exception, no log anywhere. That silent-degradation shape is
-        // exactly what docs/agencyteam/traps.md exists to catch, so fail loudly at startup instead,
-        // naming the new key. This runs ahead of Configure<TeamOptions> below, in the one place
-        // both this app's Program.cs and every test that composes it (TeamWebApplicationFactory)
-        // are guaranteed to pass through.
+        // Acp.PersonaDir was renamed to Acp.TeamsDir (the "Teams" rename), and Acp.TeamsDir was in
+        // turn renamed to Acp.TeammatesDir (Spec §6.15, the Teammates-beside-Teams layout), with no
+        // back-compat fallback either time: nothing in appsettings*.json still sets either old key,
+        // so a fallback would be dead weight. But a value left behind in a user secret or an
+        // environment variable would otherwise bind to nothing, and PersonaStore would quietly scan
+        // an empty default "Teammates" folder - zero teammates, no exception, no log anywhere. That
+        // silent-degradation shape is exactly what docs/agencyteam/traps.md exists to catch, so fail
+        // loudly at startup instead, naming the new key. This runs ahead of Configure<TeamOptions>
+        // below, in the one place both this app's Program.cs and every test that composes it
+        // (TeamWebApplicationFactory) are guaranteed to pass through.
         if (configuration[$"{TeamOptions.SectionName}:Acp:PersonaDir"] is not null)
         {
             throw new InvalidOperationException(
                 $"Configuration key '{TeamOptions.SectionName}:Acp:PersonaDir' was renamed to " +
-                $"'{TeamOptions.SectionName}:Acp:TeamsDir'. Update the configuration source that sets it " +
+                $"'{TeamOptions.SectionName}:Acp:TeammatesDir'. Update the configuration source that sets it " +
+                "(environment variable, user secret, etc.) - there is no automatic fallback.");
+        }
+
+        if (configuration[$"{TeamOptions.SectionName}:Acp:TeamsDir"] is not null)
+        {
+            throw new InvalidOperationException(
+                $"Configuration key '{TeamOptions.SectionName}:Acp:TeamsDir' was renamed to " +
+                $"'{TeamOptions.SectionName}:Acp:TeammatesDir'. Update the configuration source that sets it " +
                 "(environment variable, user secret, etc.) - there is no automatic fallback.");
         }
 

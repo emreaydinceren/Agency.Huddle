@@ -21,17 +21,26 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     public string PipeName { get; } = "team-test-" + Guid.NewGuid().ToString("N");
 
     /// <summary>
-    /// The Team Library directory this factory's data dir resolves to, matching
-    /// <see cref="Agency.Huddle.App.Acp.AcpOptions"/>'s default <c>TeamsDir</c> ("Teams"), which is never
-    /// overridden by <see cref="ConfigureWebHost"/>. Tests use this to seed Persona files directly.
+    /// This factory's isolated data directory, i.e. what <c>Team:DataDir</c> is redirected to for
+    /// the app this factory composes. Tests use this when a path needs building from scratch rather
+    /// than through one of the more specific <c>*Path</c> properties below.
     /// </summary>
-    public string TeamsDirPath => Path.Combine(this.dataDir.Path, "Teams");
+    public string DataDirPath => this.dataDir.Path;
+
+    /// <summary>
+    /// The Teammate folders directory this factory's data dir resolves to, matching
+    /// <see cref="Agency.Huddle.App.Acp.AcpOptions"/>'s default <c>TeammatesDir</c> ("Teammates"), which is
+    /// never overridden by <see cref="ConfigureWebHost"/>. Tests use this to seed Persona/Teammate
+    /// definition files directly; prefer <see cref="WriteDefinitionAsync"/> for that instead of
+    /// combining this path by hand.
+    /// </summary>
+    public string TeammatesDirPath => Path.Combine(this.dataDir.Path, "Teammates");
 
     /// <summary>
     /// The Skills directory this factory's data dir resolves to, matching
     /// <see cref="Agency.Huddle.App.Acp.AcpOptions"/>'s default <c>SkillsDir</c> ("Skills"), which is
     /// never overridden by <see cref="ConfigureWebHost"/>. Tests use this to seed Skill override
-    /// folders directly, the same reasoning <see cref="TeamsDirPath"/>'s own doc records.
+    /// folders directly, the same reasoning <see cref="TeammatesDirPath"/>'s own doc records.
     /// </summary>
     public string SkillsDirPath => Path.Combine(this.dataDir.Path, "Skills");
 
@@ -39,7 +48,7 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     /// The Tasks directory this factory's data dir resolves to, matching
     /// <see cref="Agency.Huddle.App.Tasks.TasksOptions.Dir"/>'s default ("Tasks"), which is never
     /// overridden by <see cref="ConfigureWebHost"/>. Tests use this to seed Task files directly, the
-    /// same reasoning <see cref="TeamsDirPath"/>'s own doc records.
+    /// same reasoning <see cref="TeammatesDirPath"/>'s own doc records.
     /// </summary>
     public string TasksDirPath => Path.Combine(this.dataDir.Path, "Tasks");
 
@@ -127,6 +136,27 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
             services.AddSingleton<IAgentGateway>(this.FakeAgentGateway);
         });
     }
+
+    /// <summary>
+    /// Writes a Persona/Teammate definition file for <paramref name="stem"/> under
+    /// <see cref="TeammatesDirPath"/>, creating that directory first. The one seed path UI tests
+    /// should use instead of combining <see cref="TeammatesDirPath"/> and <see cref="Path.Combine(string, string)"/>
+    /// themselves, so a later change to the on-disk layout (Spec §6.15) touches this method only.
+    /// </summary>
+    /// <param name="stem">The Persona/Teammate's file stem (its Alias), e.g. "coo".</param>
+    /// <param name="text">The definition file's full text (frontmatter and system prompt).</param>
+    /// <param name="cancellationToken">Propagated to the file write.</param>
+    public async Task WriteDefinitionAsync(string stem, string text, CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(stem);
+        ArgumentNullException.ThrowIfNull(text);
+
+        Directory.CreateDirectory(this.TeammatesDirPath);
+        await File.WriteAllTextAsync(this.DefinitionFile(stem), text, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>The path to <paramref name="stem"/>'s definition file under <see cref="TeammatesDirPath"/>.</summary>
+    private string DefinitionFile(string stem) => Path.Combine(this.TeammatesDirPath, $"{stem}.md");
 
     protected override void Dispose(bool disposing)
     {

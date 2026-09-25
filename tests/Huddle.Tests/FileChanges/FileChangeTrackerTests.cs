@@ -621,7 +621,7 @@ public sealed class FileChangeTrackerTests
         IOptions<TeamOptions> options = dataDir.Options();
         configureFileChanges?.Invoke(options.Value.FileChanges);
 
-        string teamsDir = Path.Combine(options.Value.DataDir, options.Value.Acp.TeamsDir);
+        string teamsDir = Path.Combine(options.Value.DataDir, options.Value.Acp.TeammatesDir);
         Directory.CreateDirectory(teamsDir);
         string watchesLine = watches is null ? string.Empty : $"\nwatches: [{watches}]";
         File.WriteAllText(Path.Combine(teamsDir, "nova.md"), $"---\nName: Nova\nTitle: Nova\nAlias: Nova{watchesLine}\n---\nYou are Nova.");

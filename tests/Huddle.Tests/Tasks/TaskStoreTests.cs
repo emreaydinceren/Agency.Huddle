@@ -211,13 +211,13 @@ public sealed class TaskStoreTests
         switch (scenario)
         {
             case "equal":
-                options.Value.Tasks.Dir = options.Value.Acp.TeamsDir;
+                options.Value.Tasks.Dir = options.Value.Acp.TeammatesDir;
                 break;
             case "tasksInsideTeams":
-                options.Value.Tasks.Dir = Path.Combine(options.Value.Acp.TeamsDir, "Sub");
+                options.Value.Tasks.Dir = Path.Combine(options.Value.Acp.TeammatesDir, "Sub");
                 break;
             case "teamsInsideTasks":
-                options.Value.Acp.TeamsDir = Path.Combine(options.Value.Tasks.Dir, "Sub");
+                options.Value.Acp.TeammatesDir = Path.Combine(options.Value.Tasks.Dir, "Sub");
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(scenario), scenario, "unknown scenario");
@@ -226,13 +226,13 @@ public sealed class TaskStoreTests
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
 
         string expectedTasksRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Tasks.Dir));
-        string expectedTeamsRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Acp.TeamsDir));
+        string expectedTeamsRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Acp.TeammatesDir));
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => new TaskStore(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance));
 
         Assert.Equal(
-            $"Team:Tasks:Dir ('{expectedTasksRoot}') must not equal or nest with Team:Acp:TeamsDir ('{expectedTeamsRoot}').",
+            $"Team:Tasks:Dir ('{expectedTasksRoot}') must not equal or nest with Team:Acp:TeammatesDir ('{expectedTeamsRoot}').",
             exception.Message);
     }
 

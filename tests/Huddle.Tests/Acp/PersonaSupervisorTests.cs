@@ -498,7 +498,7 @@ public sealed class PersonaSupervisorTests
             new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
-        var teamsDir = Path.Combine(options.Value.DataDir, options.Value.Acp.TeamsDir);
+        var teamsDir = Path.Combine(options.Value.DataDir, options.Value.Acp.TeammatesDir);
         Directory.CreateDirectory(teamsDir);
         File.WriteAllText(Path.Combine(teamsDir, "zeta.md"), SkillsPersonaText("zeta"));
         var factory = new FakeAgentHostFactory();
@@ -1239,7 +1239,7 @@ public sealed class PersonaSupervisorTests
 
     private static void WritePersonaFile(TeamOptions options, string name, string body = "You are a persona.")
     {
-        var teamsDir = Path.Combine(options.DataDir, options.Acp.TeamsDir);
+        var teamsDir = Path.Combine(options.DataDir, options.Acp.TeammatesDir);
         Directory.CreateDirectory(teamsDir);
         File.WriteAllText(Path.Combine(teamsDir, $"{name}.md"), PersonaText(name, body));
     }

@@ -118,11 +118,10 @@ public sealed class InviteTeammateTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        Directory.CreateDirectory(Path.Combine(dir.Path, "Teams"));
-        await File.WriteAllTextAsync(
-            Path.Combine(dir.Path, "Teams", "coo.md"),
-            "---\nName: coo\nTitle: Chief of Staff\nAlias: coo\nTeams: Business\n---\nbody",
-            ct);
+        Agency.Huddle.Tests.Acp.TestPersonaFiles.Write(
+            new TeammatePaths(dir.Options()),
+            "coo",
+            "---\nName: coo\nTitle: Chief of Staff\nAlias: coo\nTeams: Business\n---\nbody");
         var directory = new SqliteTeamDirectory(dir.Options());
         await directory.InitializeAsync("You", ct);
         var member = await directory.UpsertAgentUserAsync("member", null, ct);

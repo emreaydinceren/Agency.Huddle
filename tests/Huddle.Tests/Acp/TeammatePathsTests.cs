@@ -55,9 +55,9 @@ public sealed class TeammatePathsTests
         _ = Assert.Throws<ArgumentException>(() => { paths.WorkDir(name); });
     }
 
-    /// <summary>DefinitionFile returns Teams directory joined with name and .md extension.</summary>
+    /// <summary>DefinitionFile returns Teammates directory joined with name and .md extension.</summary>
     [Fact]
-    public void DefinitionFile_Name_IsTeamsDirNameDotMd()
+    public void DefinitionFile_Name_IsTeammatesDirNameDotMd()
     {
         using TempDataDir tempDir = new();
         IOptions<TeamOptions> options = tempDir.Options();
@@ -65,7 +65,7 @@ public sealed class TeammatePathsTests
 
         string result = paths.DefinitionFile("Nova");
 
-        string expected = Path.Combine(tempDir.Path, "Teams", "Nova.md");
+        string expected = Path.Combine(tempDir.Path, "Teammates", "Nova.md");
         Assert.Equal(expected, result);
     }
 
@@ -83,9 +83,9 @@ public sealed class TeammatePathsTests
         Assert.Equal(expected, result);
     }
 
-    /// <summary>DefinitionsRoot returns the Teams directory.</summary>
+    /// <summary>DefinitionsRoot returns the Teammates directory.</summary>
     [Fact]
-    public void DefinitionsRoot_IsTeamsDir()
+    public void DefinitionsRoot_IsTeammatesDir()
     {
         using TempDataDir tempDir = new();
         IOptions<TeamOptions> options = tempDir.Options();
@@ -93,7 +93,7 @@ public sealed class TeammatePathsTests
 
         string result = paths.DefinitionsRoot;
 
-        string expected = Path.Combine(tempDir.Path, "Teams");
+        string expected = Path.Combine(tempDir.Path, "Teammates");
         Assert.Equal(expected, result);
     }
 
@@ -111,13 +111,13 @@ public sealed class TeammatePathsTests
         Assert.Equal(expected, result);
     }
 
-    /// <summary>Paths honour configured TeamsDir and WorkDir options.</summary>
+    /// <summary>Paths honour configured TeammatesDir and WorkDir options.</summary>
     [Fact]
     public void Paths_HonourConfiguredDirs()
     {
         using TempDataDir tempDir = new();
         IOptions<TeamOptions> options = tempDir.Options();
-        options.Value.Acp.TeamsDir = "P";
+        options.Value.Acp.TeammatesDir = "P";
         options.Value.Acp.WorkDir = "W";
 
         TeammatePaths paths = new(options);
