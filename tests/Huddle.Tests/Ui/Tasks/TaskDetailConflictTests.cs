@@ -417,11 +417,20 @@ public sealed class TaskDetailConflictTests
 
     /// <summary>
     /// Corrections-B7 "14.3" item 1: a <see cref="TaskResult.NotFound"/> from <c>SaveAsync</c> itself
-    /// (the Task vanished from the store between the panel's last refresh and the click - here, a file
-    /// deletion applied to the store just before the click, before the watcher's own
-    /// <c>TasksReloaded</c>-driven refresh has run) shows the same "This Task was deleted" state Spec
-    /// §13.6 already defines for the watcher path, rather than the switch's <c>default:</c> silently
-    /// doing nothing and leaving the stale pending edit up.
+    /// (the Task vanished from the store between the panel's last refresh and the click) shows the same
+    /// "This Task was deleted" state Spec §13.6 already defines for the watcher path, rather than the
+    /// switch's <c>default:</c> silently doing nothing and leaving the stale pending edit up.
+    ///
+    /// Deliberately deletes the file directly and never calls <c>harness.Store.RebuildFromWatcher()</c>
+    /// (contrast <see cref="CausePriorityConflictAsync"/>, which needs the watcher-raised
+    /// <c>TaskChanged</c>/<c>IndexChanged</c> to reach the running component): the Store's in-memory index
+    /// still reports the Task present, so no <c>TasksReloaded</c> fires and <c>TaskDetail</c>'s own
+    /// <c>DispatchRefresh</c> never runs - there is nothing left to race against. Clicking Save then
+    /// reaches <c>TaskService.UpdateCore</c> with a live in-memory <c>current</c> but a missing file on
+    /// disk, which is <c>TaskService.cs</c>'s own second <c>NotFound</c> check (<c>ReadText</c> returning
+    /// <see langword="null"/>) - so this proves <c>SaveAsync</c>'s own <see cref="TaskResult.NotFound"/>
+    /// handling deterministically, on every run, rather than by winning a race against the unrelated
+    /// watcher-driven Refresh path <c>TaskDetailTests</c> already covers.
     /// </summary>
     [Fact]
     public async Task Save_NotFoundResult_ShowsDeletedState()
@@ -433,16 +442,10 @@ public sealed class TaskDetailConflictTests
         await EditPriorityAsync(cut, TaskPriority.Urgent);
 
         File.Delete(task.Path);
-        harness.Store.RebuildFromWatcher();
 
-        // Deliberately a plain synchronous click here, not ClickSaveAsync: this test exploits the
-        // opposite race on purpose (Spec §13.6, corrections-B7 "14.3" item 1) - it needs the click to
-        // reach SaveAsync itself BEFORE the watcher's own fire-and-forget DispatchRefresh has flipped
-        // `deleted` to true, so the assertion actually proves SaveAsync's own NotFound handling rather
-        // than the unrelated watcher-driven Refresh path TaskDetailTests already covers.
-        FindButton(cut, "Save").Click();
+        await ClickSaveAsync(cut);
 
-        Assert.Equal("This Task was deleted", TextOf(cut, ".task-detail-deleted"));
+        cut.WaitForAssertion(() => Assert.Equal("This Task was deleted", TextOf(cut, ".task-detail-deleted")));
     }
 
     /// <summary>Edits Priority to <paramref name="mine"/>, then has "Nova" concurrently save <paramref name="theirs"/> with a null <c>baseVersion</c> (merges, Spec §9.3 rule 1), then clicks Save - which must now conflict, since the Human's own patch also touches Priority.</summary>
