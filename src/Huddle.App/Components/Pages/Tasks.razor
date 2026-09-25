@@ -5,15 +5,18 @@
     TaskEvents.TaskChanged and ViewStore.ViewsChanged. TaskActivity/TurnActivity/PresenceChanged/
     PersonaHealth.Changed feed the AI-reacting chip, which is D14's work.
 
-    The Board (§13.4), the View editor drawer (§13.5) and the Task detail panel (§13.6) don't exist
-    yet (D12/D13/D15/D16), so this page only ever renders the List, leaves Edit View and + New task
-    as no-op EventCallbacks (Blazor's EventCallback.InvokeAsync is a safe no-op when nothing is
-    bound), and gives the detail panel an empty MudDrawer slot that shows only which Task id was
-    clicked - the minimum "empty slot" the plan's Deliverable asks for.
+    The Board (§13.4) and the Task detail panel (§13.6) don't exist yet (D12/D15/D16), so this page
+    only ever renders the List, leaves + New task as a no-op EventCallback (Blazor's
+    EventCallback.InvokeAsync is a safe no-op when nothing is bound), and gives the detail panel an
+    empty MudDrawer slot that shows only which Task id was clicked - the minimum "empty slot" the
+    plan's Deliverable asks for.
 
-    /tasks/new (corrections-B5 resume: "stays with D13") matches its own route but is not yet
-    distinguished from the bare /tasks case - it still resolves to All Tasks - because opening the
-    View editor for a new View is that later task's job, not this one's.
+    The View editor drawer (§13.5) IS hosted here (corrections-B5 D13 item 7; 13.2.i, the only agent
+    editing this file for that dispatch per corrections-B7's ordering, J42): Edit View opens it for
+    the effective View; /tasks/new opens it for a new View, detected from NavigationManager.Uri
+    since that route's own @page template carries no ViewId to distinguish it from the bare /tasks
+    case. An invalid View route (corrections-B7 §13.2 item 4) shows its ViewValidator reason and an
+    Edit View button, never the "no longer exists" wording that only ever meant "no such id at all".
 *@
 
 @page "/tasks"
@@ -34,6 +37,15 @@
     {
         @* corrections-B4 D11 item 13: Tasks turned off shows only this notice. *@
         <MudAlert Severity="Severity.Info" role="status" Class="tasks-disabled-alert">Tasks are turned off.</MudAlert>
+    }
+    else if (this.invalidView is { } invalid)
+    {
+        @* corrections-B7 §13.2 item 4: an invalid View (parses, fails ViewValidator) shows its
+           reason and an Edit View button - never "no longer exists", which means no such id at all. *@
+        <MudAlert Severity="Severity.Warning" role="status" Class="tasks-invalid-view-alert">
+            This View is invalid: @string.Join(" ", invalid.Problems)
+        </MudAlert>
+        <MudButton OnClick="@(() => this.OpenEditorFor(invalid.Id ?? this.ViewId ?? string.Empty))" Class="tasks-invalid-view-edit">Edit View</MudButton>
     }
     else if (this.viewNotFound)
     {
@@ -82,7 +94,7 @@
         }
 
         <TaskToolbar EffectiveView="this.effectiveView" EffectiveViewChanged="this.OnEffectiveViewChangedAsync"
-                     Search="this.search" SearchChanged="this.OnSearchChangedAsync" />
+                     Search="this.search" SearchChanged="this.OnSearchChangedAsync" OnEditView="this.OnEditViewClickedAsync" />
 
         @if (this.effectiveView.Kind == ViewKind.List)
         {
@@ -97,6 +109,8 @@
             }
         </MudDrawer>
     }
+
+    <ViewEditorDrawer Open="this.editorOpen" OpenChanged="this.OnEditorOpenChanged" Id="@this.editorViewId" />
 </div>
 
 @code {
@@ -107,8 +121,11 @@
     private TaskView effectiveView = new() { Id = ViewStore.AllTasksId, Name = "All Tasks", Kind = ViewKind.List };
     private string? search;
     private bool viewNotFound;
+    private InvalidView? invalidView;
     private bool detailOpen;
     private TaskId? selectedTaskId;
+    private bool editorOpen;
+    private string? editorViewId;
 
     /// <summary>Subscribes to the three hubs Spec §13.2 (narrowed by corrections-B4 D11 item 9) names.</summary>
     protected override void OnInitialized()
@@ -132,22 +149,63 @@
         if (this.ViewId is null)
         {
             // The bare /tasks and /tasks/new routes both default to All Tasks; OnAfterRenderAsync
-            // below may still redirect the bare route to a remembered last View.
+            // below may still redirect the bare route to a remembered last View. /tasks/new carries
+            // no ViewId of its own to tell the two apart, so the route itself is read from the URI.
             this.viewNotFound = false;
+            this.invalidView = null;
             this.SetEffectiveViewFromStore(ViewStore.AllTasksId);
+            if (this.IsTasksNewRoute())
+            {
+                this.editorViewId = null;
+                this.editorOpen = true;
+            }
+
             return;
         }
 
         TaskView? found = this.Views.Get(this.ViewId);
-        if (found is null)
+        if (found is not null)
         {
-            this.viewNotFound = true;
+            this.viewNotFound = false;
+            this.invalidView = null;
+            this.effectiveView = found;
             return;
         }
 
-        this.viewNotFound = false;
-        this.effectiveView = found;
+        // corrections-B7 §13.2 item 4: an entry that parsed but failed ViewValidator is InvalidView,
+        // not merely absent - it gets its own reason and an Edit View button, never "no longer exists".
+        InvalidView? invalid = this.Views.InvalidViews.FirstOrDefault(v => string.Equals(v.Id, this.ViewId, StringComparison.Ordinal));
+        if (invalid is not null)
+        {
+            this.viewNotFound = false;
+            this.invalidView = invalid;
+            return;
+        }
+
+        this.viewNotFound = true;
+        this.invalidView = null;
     }
+
+    /// <summary>Whether the current URL is the literal <c>/tasks/new</c> route, which carries no <see cref="ViewId"/> of its own to tell it apart from the bare <c>/tasks</c> route.</summary>
+    private bool IsTasksNewRoute() =>
+        this.Navigation.ToAbsoluteUri(this.Navigation.Uri).AbsolutePath.EndsWith("/tasks/new", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Opens the View editor drawer for <paramref name="id"/> (the invalid-View route's Edit View button).</summary>
+    private void OpenEditorFor(string id)
+    {
+        this.editorViewId = id;
+        this.editorOpen = true;
+    }
+
+    /// <summary>Opens the View editor drawer for the currently effective View (Edit View, Spec §13.3).</summary>
+    private Task OnEditViewClickedAsync()
+    {
+        this.OpenEditorFor(this.effectiveView.Id);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Reflects the drawer's own chrome (backdrop, Escape) closing it.</summary>
+    private void OnEditorOpenChanged(bool open) => this.editorOpen = open;
 
     /// <summary>Spec §13.9: on first render of the bare route, reads the remembered last View and navigates there if it still exists.</summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)

@@ -1,5 +1,13 @@
 using System.Reflection;
 using Bunit;
+using Bunit.TestDoubles;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Agency.Huddle.App;
+using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.Tests.Acp.Tools;
@@ -203,6 +211,85 @@ public sealed class TasksPageTests
         ctx.JSInterop.VerifyInvoke("huddleStorage.set");
     }
 
+    /// <summary>Corrections-B7 §13.2 item 4: a route naming an invalid View (parses, but fails <see cref="ViewValidator"/>) shows its reason and an Edit View button, not "no longer exists".</summary>
+    [Fact]
+    public async Task TasksPage_InvalidViewRoute_ShowsItsReasonAndEditViewButton()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        // Kind "list" with an empty name fails only ValidateName ("Name must be 1-60 characters."),
+        // so the raw entry parses but ViewValidator refuses it - exactly the InvalidView case, not LoadError.
+        await File.WriteAllTextAsync(Path.Combine(dir.Path, "views.json"), "{\"version\":1,\"views\":[{\"id\":\"bad-view\",\"name\":\"\",\"kind\":\"list\"}]}", ct);
+        PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        TaskEvents events = new();
+        using ViewStore views = new(dir.Options(), NullLogger<ViewStore>.Instance);
+        Assert.Single(views.InvalidViews);
+
+        await using MudBunitContext ctx = new();
+        ctx.Services.AddSingleton(personas);
+        ctx.Services.AddSingleton(store);
+        ctx.Services.AddSingleton(events);
+        ctx.Services.AddSingleton(views);
+        ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
+
+        var cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TasksPage>(0);
+            builder.AddAttribute(1, nameof(TasksPage.ViewId), "bad-view");
+            builder.CloseComponent();
+        });
+
+        Assert.Empty(cut.FindAll(".tasks-view-not-found-alert"));
+        var alert = cut.Find(".tasks-invalid-view-alert");
+        Assert.Equal("This View is invalid: Name must be 1-60 characters.", alert.TextContent.Trim());
+
+        await cut.InvokeAsync(() => cut.Find(".tasks-invalid-view-edit").Click());
+        var drawer = cut.FindComponent<ViewEditorDrawer>();
+        Assert.True(drawer.Instance.Open);
+        Assert.Equal("bad-view", drawer.Instance.Id);
+    }
+
+    /// <summary>Clicking Edit View opens <see cref="ViewEditorDrawer"/> for the currently effective View (corrections-B5 D13 item 7: hosting moves here from 13.1.i).</summary>
+    [Fact]
+    public async Task TasksPage_EditViewClicked_OpensTheViewEditorDrawer()
+    {
+        using TaskToolHarness harness = new();
+        await using MudBunitContext ctx = NewContext(harness);
+
+        var cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TasksPage>(0);
+            builder.CloseComponent();
+        });
+
+        await cut.InvokeAsync(() => cut.Find(".task-toolbar-edit-view").Click());
+
+        var drawer = cut.FindComponent<ViewEditorDrawer>();
+        Assert.True(drawer.Instance.Open);
+        Assert.Equal(ViewStore.AllTasksId, drawer.Instance.Id);
+    }
+
+    /// <summary><c>/tasks/new</c> opens <see cref="ViewEditorDrawer"/> for a new View (<c>Id</c> null), rather than falling through to All Tasks.</summary>
+    [Fact]
+    public async Task TasksPage_NavigatedToTasksNew_OpensTheViewEditorDrawerForANewView()
+    {
+        using TaskToolHarness harness = new();
+        await using MudBunitContext ctx = NewContext(harness);
+        BunitNavigationManager navigation = (BunitNavigationManager)ctx.Services.GetRequiredService<NavigationManager>();
+        navigation.NavigateTo("/tasks/new");
+
+        var cut = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<TasksPage>(0);
+            builder.CloseComponent();
+        });
+
+        var drawer = cut.FindComponent<ViewEditorDrawer>();
+        Assert.True(drawer.Instance.Open);
+        Assert.Null(drawer.Instance.Id);
+    }
+
     /// <summary>
     /// Disposing the page removes its handlers from all three hubs it subscribes to
     /// (<see cref="TaskEvents.TasksReloaded"/>, <see cref="TaskEvents.TaskChanged"/> and
@@ -224,7 +311,9 @@ public sealed class TasksPageTests
 
         Assert.Equal(1, SubscriberCount(harness.Events, nameof(TaskEvents.TasksReloaded)));
         Assert.Equal(1, SubscriberCount(harness.Events, nameof(TaskEvents.TaskChanged)));
-        Assert.Equal(1, SubscriberCount(harness.Views, nameof(ViewStore.ViewsChanged)));
+        // 2, not 1: the page's own subscription plus ViewEditorDrawer's (13.2.i hosts it here now,
+        // and it re-seeds its draft on ViewsChanged too - corrections-B5 D13 item 4).
+        Assert.Equal(2, SubscriberCount(harness.Views, nameof(ViewStore.ViewsChanged)));
 
         await ctx.DisposeAsync();
 

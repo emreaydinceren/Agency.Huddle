@@ -1,37 +1,55 @@
 @*
-    Spec §13.5 items 1-6: the View editor's general sections (Name/Description, List-or-Board and
-    Active-or-Closed, Fields, Filters, Grouping order, Sorting). Items 7-9 (Columns, validation,
-    Delete, MudExitPrompt) are Task 13.2.i's job, and so is hosting this drawer in Tasks.razor
-    (corrections-B5 D13 item 7) - this component is self-contained and testable on its own, driven
-    only by Open and Id.
+    Spec §13.5, all nine items: Name/Description, List-or-Board and Active-or-Closed, Fields,
+    Filters, Grouping order, Sorting (Task 13.1.i), and Columns, validation, Delete and
+    MudExitPrompt (Task 13.2.i, corrections-B5 D13 items 1 and 3-7, corrections-B7 §13.2). Hosting
+    this drawer in Tasks.razor, including /tasks/new, is also 13.2.i's job (corrections-B5 D13 item
+    7) - this component stays self-contained and testable on its own, driven only by Open, Id and
+    Section.
 
     A Fields row's MudSwitch and remove button are deliberately different (delivery-manager
     settled, 2026-09-24): the switch excludes the field from the saved View.Fields but keeps its
     row - and its position - in the editor, so switching it back on restores the field where it
     was; the remove button deletes the row outright and returns the field to the + Add field menu.
     Reordering (drag or the up/down buttons) only ever moves rows, never changes which are shown.
+
+    dirty (corrections-B5 D13 item 1) is the serialised draft compared to the serialised loaded
+    View (ViewJson.Options), never record ==, because Filter/Grouping/Sort/Columns are lists and
+    compare by reference. ViewsChanged (item 4) re-seeds the draft from the store only when not
+    dirty, so an in-flight edit is never silently overwritten by the store's own echo of this
+    drawer's last Save (~500ms later via the file watcher) or someone else's concurrent edit.
 *@
 
+@implements IDisposable
+@using System.Text.Json
 @using Microsoft.Extensions.Options
 @using Agency.Huddle.App.Acp
 @inject ViewStore ViewStore
 @inject PersonaStore Personas
 @inject TaskStore Store
 @inject IOptions<TeamOptions> Options
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
 
 <MudDrawer Open="@this.Open" OpenChanged="@this.OpenChanged" Anchor="Anchor.End" Variant="DrawerVariant.Temporary"
            Width="420px" Class="view-editor-drawer">
     <MudStack Spacing="3" Class="pa-4">
-        <MudTextField T="string" Label="Name" Value="@this.name" ValueChanged="@this.OnNameChanged" Class="view-editor-name" />
-        <MudTextField T="string" Label="Description" Value="@this.description" ValueChanged="@this.OnDescriptionChanged" Class="view-editor-description" />
+        @if (this.ViewStore.LoadError is { } loadError)
+        {
+            <MudAlert Severity="Severity.Error" role="alert" Class="view-editor-load-error-alert">
+                @loadError.Message
+            </MudAlert>
+        }
 
-        <MudToggleGroup T="ViewKind" Value="this.kind" ValueChanged="this.OnKindChanged"
+        <MudTextField T="string" Label="Name" Value="@this.name" ValueChanged="@this.OnNameChanged" Disabled="this.ControlsDisabled" Class="view-editor-name" />
+        <MudTextField T="string" Label="Description" Value="@this.description" ValueChanged="@this.OnDescriptionChanged" Disabled="this.ControlsDisabled" Class="view-editor-description" />
+
+        <MudToggleGroup T="ViewKind" Value="this.kind" ValueChanged="this.OnKindChanged" Disabled="this.ControlsDisabled"
                          SelectionMode="SelectionMode.SingleSelection" Class="view-editor-kind">
             <MudToggleItem Value="ViewKind.List" Text="List" />
             <MudToggleItem Value="ViewKind.Board" Text="Board" />
         </MudToggleGroup>
 
-        <MudToggleGroup T="ViewScope" Value="this.scope" ValueChanged="this.OnScopeChanged" Disabled="this.kind == ViewKind.Board"
+        <MudToggleGroup T="ViewScope" Value="this.scope" ValueChanged="this.OnScopeChanged" Disabled="@(this.kind == ViewKind.Board || this.ControlsDisabled)"
                          SelectionMode="SelectionMode.SingleSelection" Class="view-editor-scope">
             <MudToggleItem Value="ViewScope.Active" Text="Active" />
             <MudToggleItem Value="ViewScope.Closed" Text="Closed" />
@@ -76,10 +94,16 @@
             }
         </div>
         <MudSelect T="string" Label="Team" MultiSelection="true" SelectedValues="this.teamFilter" SelectedValuesChanged="this.OnTeamFilterChanged"
-                   Class="view-editor-filter-team">
+                   Disabled="this.ControlsDisabled" Class="view-editor-filter-team">
             @foreach ((string value, string label) in this.TeamFilterOptions())
             {
-                <MudSelectItem T="string" Value="@value" Class="view-editor-filter-team-option">@label</MudSelectItem>
+                <MudSelectItem T="string" Value="@value" Class="view-editor-filter-team-option">
+                    <span class="view-editor-filter-team-option-label">@label</span>
+                    @if (this.IsOrphanTeam(value))
+                    {
+                        <span class="view-editor-filter-team-orphan">No teammate is in @value</span>
+                    }
+                </MudSelectItem>
             }
         </MudSelect>
 
@@ -94,7 +118,7 @@
             }
         </div>
         <MudSelect T="string" Label="Project" MultiSelection="true" SelectedValues="this.projectFilter" SelectedValuesChanged="this.OnProjectFilterChanged"
-                   Class="view-editor-filter-project">
+                   Disabled="this.ControlsDisabled" Class="view-editor-filter-project">
             @foreach ((string value, string label) in this.ProjectFilterOptions())
             {
                 <MudSelectItem T="string" Value="@value" Class="view-editor-filter-project-option">@label</MudSelectItem>
@@ -112,7 +136,7 @@
             }
         </div>
         <MudSelect T="string" Label="Assignee" MultiSelection="true" SelectedValues="this.assigneeFilter" SelectedValuesChanged="this.OnAssigneeFilterChanged"
-                   Class="view-editor-filter-assignee">
+                   Disabled="this.ControlsDisabled" Class="view-editor-filter-assignee">
             @foreach ((string value, string label) in this.AssigneeFilterOptions())
             {
                 <MudSelectItem T="string" Value="@value" Class="view-editor-filter-assignee-option">@label</MudSelectItem>
@@ -120,7 +144,7 @@
         </MudSelect>
 
         <MudSelect T="TaskState" Label="Status" MultiSelection="true" SelectedValues="this.stateFilter" SelectedValuesChanged="this.OnStateFilterChanged"
-                   Class="view-editor-filter-state">
+                   Disabled="this.ControlsDisabled" Class="view-editor-filter-state">
             @foreach (TaskState state in TaskStates.All)
             {
                 <MudSelectItem T="TaskState" Value="@state" Class="view-editor-filter-state-option">@state.ToWire()</MudSelectItem>
@@ -128,7 +152,7 @@
         </MudSelect>
 
         <MudSelect T="TaskPriority" Label="Priority" MultiSelection="true" SelectedValues="this.priorityFilter" SelectedValuesChanged="this.OnPriorityFilterChanged"
-                   Class="view-editor-filter-priority">
+                   Disabled="this.ControlsDisabled" Class="view-editor-filter-priority">
             @foreach (TaskPriority priority in Enum.GetValues<TaskPriority>())
             {
                 <MudSelectItem T="TaskPriority" Value="@priority" Class="view-editor-filter-priority-option">@priority.ToWire()</MudSelectItem>
@@ -164,7 +188,56 @@
             </ItemRenderer>
         </MudDropContainer>
 
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.Save" Class="view-editor-save">Save View</MudButton>
+        @if (this.kind == ViewKind.Board)
+        {
+            <div class="@this.ColumnsSectionClass">
+                <MudText Typo="Typo.subtitle2">Columns</MudText>
+                @foreach ((BoardColumn column, int index) in this.columns.Select((c, i) => (c, i)))
+                {
+                    Dictionary<TaskState, string> otherColumn = this.StatesUsedElsewhere(index);
+                    <div class="view-editor-column-row">
+                        <MudTextField T="string" Label="Label" Value="@column.Label" ValueChanged="@(value => this.SetColumnLabel(index, value))"
+                                       Disabled="this.ControlsDisabled" Class="@($"view-editor-column-label-{index}")" />
+                        <MudSelect T="TaskState" Label="States" MultiSelection="true" SelectedValues="column.States"
+                                   SelectedValuesChanged="@(states => this.SetColumnStates(index, states))"
+                                   Disabled="this.ControlsDisabled" Class="@($"view-editor-column-states-{index}")">
+                            @foreach (TaskState state in TaskStates.All)
+                            {
+                                bool usedElsewhere = otherColumn.TryGetValue(state, out string? otherLabel);
+                                <MudSelectItem T="TaskState" Value="@state" Disabled="@usedElsewhere" Class="view-editor-column-state-option">
+                                    @(usedElsewhere ? $"{state.ToWire()} (in {otherLabel})" : state.ToWire())
+                                </MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudSwitch T="bool" Value="@column.Hidden" ValueChanged="@(hidden => this.SetColumnHidden(index, hidden))"
+                                   Disabled="this.ControlsDisabled" Class="@($"view-editor-column-hidden-{index}")">Hidden</MudSwitch>
+                    </div>
+                }
+            </div>
+        }
+
+        @{
+            IReadOnlyList<string> problems = this.ValidationProblems();
+        }
+        @if (problems.Count > 0)
+        {
+            <MudAlert Severity="Severity.Error" role="alert" Class="view-editor-validation-alert">
+                @foreach (string problem in problems)
+                {
+                    <div class="view-editor-validation-problem">@problem</div>
+                }
+            </MudAlert>
+        }
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.Save"
+                   Disabled="@(problems.Count > 0 || this.ControlsDisabled)" Class="view-editor-save">Save View</MudButton>
+        @if (!this.loadedView.BuiltIn)
+        {
+            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="this.DeleteAsync"
+                       Disabled="this.ControlsDisabled" Class="view-editor-delete">Delete</MudButton>
+        }
+
+        <MudExitPrompt Title="Discard changes?" Text="This View has unsaved changes." Disabled="@(!this.IsDirty())" Class="view-editor-exit-prompt" />
     </MudStack>
 </MudDrawer>
 
@@ -181,6 +254,10 @@
     [Parameter]
     public string? Id { get; set; }
 
+    /// <summary>Which section should render as initially active (corrections-B7 §13.2 item 1) - <see cref="ViewEditorSection.Columns"/> at least, for the Board's "Edit columns…" menu (12.4.i).</summary>
+    [Parameter]
+    public ViewEditorSection Section { get; set; }
+
     private string? loadedId;
     private TaskView loadedView = NewBlankView(string.Empty);
     private FieldRow[] fieldRows = [];
@@ -195,6 +272,19 @@
     private List<TaskPriority> priorityFilter = [];
     private List<TaskGroupField> grouping = [];
     private List<SortKey> sort = [];
+    private List<BoardColumn> columns = [];
+
+    /// <summary>Whether every control should be disabled: <see cref="ViewStore.LoadError"/> makes the whole file read-only (Spec §13.5, "every control is disabled").</summary>
+    private bool ControlsDisabled => this.ViewStore.LoadError is not null;
+
+    /// <summary>The Columns section's own class, carrying "active" when <see cref="Section"/> asks for it (corrections-B7 §13.2 item 1).</summary>
+    private string ColumnsSectionClass => this.Section == ViewEditorSection.Columns ? "view-editor-section-columns view-editor-section-active" : "view-editor-section-columns";
+
+    /// <summary>Subscribes to <see cref="ViewStore.ViewsChanged"/> so an external Save re-seeds the draft (item 4), unless it is dirty.</summary>
+    protected override void OnInitialized() => this.ViewStore.ViewsChanged += this.OnViewsChanged;
+
+    /// <summary>Unsubscribes from <see cref="ViewStore.ViewsChanged"/> (rules.md: every subscriber to a singleton hub must unsubscribe).</summary>
+    public void Dispose() => this.ViewStore.ViewsChanged -= this.OnViewsChanged;
 
     /// <summary>Loads the draft for <see cref="Id"/> the first time it is seen.</summary>
     protected override void OnParametersSet()
@@ -204,27 +294,71 @@
             return;
         }
 
-        this.loadedView = this.Id is { } id ? this.ViewStore.Get(id) ?? NewBlankView(id) : NewBlankView(Guid.NewGuid().ToString("N"));
         this.loadedId = this.Id;
-        this.name = this.loadedView.Name;
-        this.description = this.loadedView.Description;
-        this.kind = this.loadedView.Kind;
-        this.scope = this.loadedView.Scope;
-        this.fieldRows = [.. this.loadedView.Fields.Select(key => new FieldRow(key, Shown: true))];
-        this.teamFilter = [.. this.loadedView.Filter.Teams];
-        this.projectFilter = [.. this.loadedView.Filter.Projects.Select(ProjectKey)];
-        this.assigneeFilter = [.. this.loadedView.Filter.Assignees];
-        this.stateFilter = [.. this.loadedView.Filter.States];
-        this.priorityFilter = [.. this.loadedView.Filter.Priorities];
-        this.grouping = [.. this.loadedView.Grouping];
-        this.sort = [.. this.loadedView.Sort];
+        this.SeedFrom(this.Id is { } id ? this.ViewStore.Get(id) ?? NewBlankView(id) : NewBlankView(Guid.NewGuid().ToString("N")));
+    }
+
+    /// <summary>Replaces every draft field from <paramref name="view"/>, including <see cref="loadedView"/> itself (the dirty baseline).</summary>
+    private void SeedFrom(TaskView view)
+    {
+        this.loadedView = view;
+        this.name = view.Name;
+        this.description = view.Description;
+        this.kind = view.Kind;
+        this.scope = view.Scope;
+        this.fieldRows = [.. view.Fields.Select(key => new FieldRow(key, Shown: true))];
+        this.teamFilter = [.. view.Filter.Teams];
+        this.projectFilter = [.. view.Filter.Projects.Select(ProjectKey)];
+        this.assigneeFilter = [.. view.Filter.Assignees];
+        this.stateFilter = [.. view.Filter.States];
+        this.priorityFilter = [.. view.Filter.Priorities];
+        this.grouping = [.. view.Grouping];
+        this.sort = [.. view.Sort];
+        this.columns = [.. view.Columns];
+    }
+
+    /// <summary>On an external <see cref="ViewStore.ViewsChanged"/>, re-seeds the draft from the store - but only when it is not dirty (corrections-B5 D13 item 4), so this drawer's own in-flight edit is never silently overwritten.</summary>
+    private void OnViewsChanged() => _ = this.DispatchAsync(() =>
+    {
+        if (!this.IsDirty() && this.Id is { } id && this.ViewStore.Get(id) is { } fresh)
+        {
+            this.SeedFrom(fresh);
+        }
+
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a hub event racing component teardown can throw (Spec §13.11's pattern).</summary>
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to render.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
     }
 
     private void OnNameChanged(string value) => this.name = value;
 
     private void OnDescriptionChanged(string value) => this.description = value;
 
-    private void OnKindChanged(ViewKind value) => this.kind = value;
+    /// <summary>Switching to Board seeds <see cref="BoardLayout.DefaultColumns"/> when the draft has none yet (corrections-B7 §13.2 item 2).</summary>
+    private void OnKindChanged(ViewKind value)
+    {
+        this.kind = value;
+        if (value == ViewKind.Board && this.columns.Count == 0)
+        {
+            this.columns = [.. BoardLayout.DefaultColumns];
+        }
+    }
 
     private void OnScopeChanged(ViewScope value) => this.scope = value;
 
@@ -291,6 +425,10 @@
 
     private List<(string Value, string Label)> TeamFilterOptions() => WithMissing(this.KnownTeams(), this.teamFilter);
 
+    /// <summary>Whether <paramref name="team"/> is a <see cref="TaskStore"/> Team folder no Persona lists (Spec §13.12's Orphan Team row).</summary>
+    private bool IsOrphanTeam(string team) =>
+        this.Store.Teams.Any(folder => folder.IsOrphan && string.Equals(folder.Name, team, StringComparison.OrdinalIgnoreCase));
+
     /// <summary>Team/Project pairs, narrowed to <see cref="teamFilter"/> when it names one or more Teams.</summary>
     private List<(string Value, string Label)> ProjectFilterOptions()
     {
@@ -337,6 +475,47 @@
     {
         int slash = key.IndexOf('/', StringComparison.Ordinal);
         return slash < 0 ? new ProjectRef(key, null) : new ProjectRef(key[..slash], key[(slash + 1)..]);
+    }
+
+    private void SetColumnLabel(int index, string label)
+    {
+        List<BoardColumn> updated = [.. this.columns];
+        updated[index] = updated[index] with { Label = label };
+        this.columns = updated;
+    }
+
+    private void SetColumnHidden(int index, bool hidden)
+    {
+        List<BoardColumn> updated = [.. this.columns];
+        updated[index] = updated[index] with { Hidden = hidden };
+        this.columns = updated;
+    }
+
+    private void SetColumnStates(int index, IEnumerable<TaskState> states)
+    {
+        List<BoardColumn> updated = [.. this.columns];
+        updated[index] = updated[index] with { States = [.. states] };
+        this.columns = updated;
+    }
+
+    /// <summary>Maps each state used by a column other than <paramref name="excludingIndex"/> to that column's label (Spec §13.5 item 7, J39's settled label).</summary>
+    private Dictionary<TaskState, string> StatesUsedElsewhere(int excludingIndex)
+    {
+        Dictionary<TaskState, string> map = [];
+        for (int i = 0; i < this.columns.Count; i++)
+        {
+            if (i == excludingIndex)
+            {
+                continue;
+            }
+
+            foreach (TaskState state in this.columns[i].States)
+            {
+                map[state] = this.columns[i].Label;
+            }
+        }
+
+        return map;
     }
 
     private void OnGroupingDropped(MudItemDropInfo<TaskGroupField> info)
@@ -388,7 +567,7 @@
         this.sort = items;
     }
 
-    /// <summary>Builds the View to save: the loaded View's untouched fields (Id, Columns, BuiltIn) with every edited section overlaid.</summary>
+    /// <summary>Builds the View to save: the loaded View's untouched fields (Id, BuiltIn) with every edited section overlaid.</summary>
     private TaskView BuildView() => this.loadedView with
     {
         Name = this.name,
@@ -406,10 +585,35 @@
         },
         Grouping = [.. this.grouping],
         Sort = [.. this.sort],
+        Columns = [.. this.columns],
     };
 
-    /// <summary>Saves the draft. Validation display, refusal handling and Delete are Task 13.2.i's job.</summary>
+    /// <summary>Every <see cref="ViewValidator"/> problem the current draft has, against every other saved View.</summary>
+    private IReadOnlyList<string> ValidationProblems() => ViewValidator.Validate(this.BuildView(), this.ViewStore.Views);
+
+    /// <summary>Whether the serialised draft differs from the serialised loaded View (corrections-B5 D13 item 1) - never record <c>==</c>, since <see cref="TaskFilter"/>, <see cref="TaskView.Grouping"/>, <see cref="TaskView.Sort"/> and <see cref="TaskView.Columns"/> are lists and compare by reference.</summary>
+    private bool IsDirty() => !string.Equals(
+        JsonSerializer.Serialize(this.BuildView(), ViewJson.Options),
+        JsonSerializer.Serialize(this.loadedView, ViewJson.Options),
+        StringComparison.Ordinal);
+
+    /// <summary>Saves the draft, unconditionally except for the Save button's own <c>Disabled</c> gate above.</summary>
     private void Save() => _ = this.ViewStore.Save(this.BuildView());
+
+    /// <summary>Confirms through <see cref="IDialogService.ShowMessageBoxAsync(string, string, string, string?, string?, DialogOptions?)"/> with Spec §13.5 item 8's exact texts, then deletes and navigates to <c>/tasks</c> (corrections-B5 D13 item 5).</summary>
+    private async Task DeleteAsync()
+    {
+        bool? confirmed = await this.DialogService.ShowMessageBoxAsync(
+            "Delete View",
+            $"Delete '{this.loadedView.Name}'? Tasks are not affected.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+        if (confirmed == true)
+        {
+            _ = this.ViewStore.Delete(this.loadedView.Id);
+            this.Navigation.NavigateTo("/tasks");
+        }
+    }
 
     private static TaskView NewBlankView(string id) => new() { Id = id, Name = string.Empty, Kind = ViewKind.List };
 
