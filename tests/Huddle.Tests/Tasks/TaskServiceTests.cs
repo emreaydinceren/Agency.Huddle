@@ -89,7 +89,7 @@ public sealed class TaskServiceTests
         Assert.Equal(3, refused.Problems.Count);
     }
 
-    /// <summary>A description that contains the reserved Change log heading is refused.</summary>
+    /// <summary>A description that contains the reserved Change log heading is refused with the exact Spec §9.2 text.</summary>
     [Fact]
     public void Create_DescriptionWithLogHeading_Refused()
     {
@@ -102,7 +102,223 @@ public sealed class TaskServiceTests
         TaskResult result = service.Create(draft, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains(refused.Problems, problem => problem.Contains("Change log", StringComparison.Ordinal));
+        Assert.Contains("The description must not contain a '## Change log' heading; that heading is reserved for the task's history.", refused.Problems);
+    }
+
+    /// <summary>Updating a Task's Description to one that contains the reserved Change log heading is refused with the same exact text as Create (shared rule, second entry point).</summary>
+    [Fact]
+    public void Update_DescriptionWithLogHeading_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Description = "Body\n## Change log\nmore" }, null, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("The description must not contain a '## Change log' heading; that heading is reserved for the task's history.", refused.Problems);
+    }
+
+    /// <summary>An empty (or whitespace-only) title is refused with the exact Spec §9.2 text.</summary>
+    [Fact]
+    public void Create_EmptyTitle_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskDraft draft = new("   ", "Platform", null);
+        TaskResult result = service.Create(draft, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("Title is empty.", refused.Problems);
+    }
+
+    /// <summary>Updating a Task's Title to an empty (or whitespace-only) one is refused with the same exact text as Create (shared rule, second entry point).</summary>
+    [Fact]
+    public void Update_EmptyTitle_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Title = "   " }, null, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("Title is empty.", refused.Problems);
+    }
+
+    /// <summary>A title over 200 characters is refused with the exact Spec §9.2 text, naming the trimmed length.</summary>
+    [Fact]
+    public void Create_TitleTooLong_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskDraft draft = new(new string('A', 240), "Platform", null);
+        TaskResult result = service.Create(draft, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("Title is 240 characters; the limit is 200.", refused.Problems);
+    }
+
+    /// <summary>Updating a Task's Title to one over 200 characters is refused with the same exact text as Create (shared rule, second entry point).</summary>
+    [Fact]
+    public void Update_TitleTooLong_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Title = new string('A', 240) }, null, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("Title is 240 characters; the limit is 200.", refused.Problems);
+    }
+
+    /// <summary>A title spanning more than one line is refused with the exact Spec §9.2 text.</summary>
+    [Fact]
+    public void Create_TitleMultiline_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskDraft draft = new("Line one\nLine two", "Platform", null);
+        TaskResult result = service.Create(draft, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("Title must be one line.", refused.Problems);
+    }
+
+    /// <summary>Updating a Task's Title to one spanning more than one line is refused with the same exact text as Create (shared rule, second entry point).</summary>
+    [Fact]
+    public void Update_TitleMultiline_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Title = "Line one\nLine two" }, null, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("Title must be one line.", refused.Problems);
+    }
+
+    /// <summary>A tag containing a comma is refused with the exact Spec §9.2/§7.2 text, naming the offending tag.</summary>
+    [Fact]
+    public void Create_TagWithComma_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskDraft draft = new("T", "Platform", null, Tags: ["a,b"]);
+        TaskResult result = service.Create(draft, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("Tag 'a,b' must not contain ',' or ';'.", refused.Problems);
+    }
+
+    /// <summary>Updating a Task's Tags to one containing a semicolon is refused with the same wording as Create (shared rule, second entry point).</summary>
+    [Fact]
+    public void Update_TagWithSemicolon_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Tags = ["x;y"] }, null, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("Tag 'x;y' must not contain ',' or ';'.", refused.Problems);
+    }
+
+    /// <summary>Setting a Task's Parent to its own id is refused with the exact Spec §9.2 self-reference text (one of three call sites sharing this wording).</summary>
+    [Fact]
+    public void Update_ParentSelf_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Parent = Optional<TaskId?>.Set(task.Id) }, null, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("A task cannot block itself.", refused.Problems);
+    }
+
+    /// <summary>Setting a Task's BlockedBy to include its own id is refused with the exact Spec §9.2 self-reference text (the second of three call sites sharing this wording).</summary>
+    [Fact]
+    public void Update_BlockedBySelf_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { BlockedBy = [task.Id] }, null, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("A task cannot block itself.", refused.Problems);
+    }
+
+    /// <summary>Setting a Task's DuplicateOf to its own id (alongside Status Duplicate, so the coupling rule is satisfied) is refused with the exact Spec §9.2 self-reference text (the third of three call sites sharing this wording).</summary>
+    [Fact]
+    public void Update_DuplicateOfSelf_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(
+            task.Id,
+            new TaskPatch { Status = TaskState.Duplicate, DuplicateOf = Optional<TaskId?>.Set(task.Id) },
+            null,
+            HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("A task cannot block itself.", refused.Problems);
+    }
+
+    /// <summary>A Reason over 200 characters is refused with the exact length text, isolated from the status-coupling rule by pairing it with Cancelled.</summary>
+    [Fact]
+    public void Update_ReasonTooLong_Refused()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(
+            task.Id,
+            new TaskPatch { Status = TaskState.Cancelled, Reason = new string('B', 240) },
+            null,
+            HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Contains("Reason is 240 characters; the limit is 200.", refused.Problems);
     }
 
     /// <summary>A Team name that can't be a folder on this computer is refused, with a problem naming the offending character.</summary>
@@ -251,7 +467,7 @@ public sealed class TaskServiceTests
         Assert.Contains("(reason: no longer needed)", saved.Change.Entry.Summary, StringComparison.Ordinal);
     }
 
-    /// <summary>A reason given with a move to Done, which isn't Cancelled or Rejected, is refused.</summary>
+    /// <summary>A reason given with a move to Done, which isn't Cancelled or Rejected, is refused with the exact Spec §9.2 text.</summary>
     [Fact]
     public void Update_ReasonWithDone_Refused()
     {
@@ -264,7 +480,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Update(task.Id, new TaskPatch { Status = TaskState.Done, Reason = "done early" }, null, HumanActor);
 
         TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
-        Assert.Contains(refused.Problems, problem => problem.Contains("only recorded when the status becomes Cancelled or Rejected", StringComparison.Ordinal));
+        Assert.Contains("A reason is only recorded when the status becomes Cancelled or Rejected.", refused.Problems);
     }
 
     /// <summary>Moving a Task to Duplicate without a duplicate_of is refused.</summary>
