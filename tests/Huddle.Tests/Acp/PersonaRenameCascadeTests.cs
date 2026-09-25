@@ -532,7 +532,7 @@ public sealed class PersonaRenameCascadeTests
             avatarStore,
             fileState,
             roomSessions,
-            dir.Options(),
+            new(dir.Options()),
             TimeProvider.System,
             cascadeLogger ?? NullLogger<PersonaRenameCascade>.Instance,
             tasks: taskService,

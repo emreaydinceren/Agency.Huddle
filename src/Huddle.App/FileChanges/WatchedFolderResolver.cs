@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Acp;
 
 namespace Agency.Huddle.App.FileChanges;
 
@@ -13,7 +14,7 @@ internal sealed record WatchedFolder(string Entry, string FullPath);
 /// <c>DataDir</c> — into a <see cref="WatchedFolder"/>, or refuses it with a reason, per
 /// FC §6.2-§6.3. Pure apart from <see cref="Path.GetFullPath(string)"/>; never touches the disk.
 /// </summary>
-internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options)
+internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options, TeammatePaths teammatePaths)
 {
     /// <summary>
     /// The folder names Huddle reserves for its own data, compared case-insensitively: an entry
@@ -54,7 +55,7 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options)
         }
 
         string dataDir = options.Value.DataDir;
-        string fullPath = ResolveFullPath(entry, dataDir, options.Value.Acp.WorkDir, teammateNames);
+        string fullPath = this.ResolveFullPath(entry, dataDir, teammateNames);
 
         if (string.Equals(fullPath, dataDir, StringComparison.OrdinalIgnoreCase))
         {
@@ -82,7 +83,7 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options)
     }
 
     /// <summary>Resolves <paramref name="entry"/> to a full path, per the ordered rules in FC §6.3, before the containment checks run.</summary>
-    private static string ResolveFullPath(string entry, string dataDir, string workDir, IReadOnlyCollection<string> teammateNames)
+    private string ResolveFullPath(string entry, string dataDir, IReadOnlyCollection<string> teammateNames)
     {
         if (entry.StartsWith("./", StringComparison.Ordinal) || entry.StartsWith(".\\", StringComparison.Ordinal))
         {
@@ -92,7 +93,7 @@ internal sealed class WatchedFolderResolver(IOptions<TeamOptions> options)
         string? canonicalName = teammateNames.FirstOrDefault(name => string.Equals(name, entry, StringComparison.OrdinalIgnoreCase));
         if (canonicalName is not null)
         {
-            return Path.GetFullPath(Path.Combine(dataDir, workDir, canonicalName));
+            return Path.GetFullPath(teammatePaths.WorkDir(canonicalName));
         }
 
         if (Path.IsPathFullyQualified(entry))

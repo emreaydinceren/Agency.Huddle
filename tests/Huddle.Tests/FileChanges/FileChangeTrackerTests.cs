@@ -635,8 +635,9 @@ public sealed class FileChangeTrackerTests
             new PersonaEffortStore(options),
             NullLogger<PersonaStore>.Instance);
         FileStateStore store = new(options, NullLogger<FileStateStore>.Instance);
-        WatchedFolderResolver resolver = new(options);
-        FileChangeTracker tracker = new(store, personas, directory, resolver, options, NullLogger<FileChangeTracker>.Instance);
+        TeammatePaths teammatePaths = new(options);
+        WatchedFolderResolver resolver = new(options, teammatePaths);
+        FileChangeTracker tracker = new(store, personas, directory, resolver, options, teammatePaths, NullLogger<FileChangeTracker>.Instance);
 
         return new Fixture(dataDir, directory, personas, store, tracker);
     }

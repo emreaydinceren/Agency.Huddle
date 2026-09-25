@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 
 namespace Agency.Huddle.App.Acp;
@@ -26,7 +25,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     // for, and nothing has asked to tune how long a one-off probe is allowed to hang.
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(20);
 
-    private readonly TeamOptions options;
+    private readonly TeammatePaths teammatePaths;
     private readonly ILogger<ModelCatalogProbe> logger;
     private readonly AdapterProfileResolver resolver;
     private readonly IAdapterProbeRunner probeRunner;
@@ -58,7 +57,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         new(StringComparer.Ordinal);
 
     /// <summary>Builds the probe over its resolver and its process-spawning seam.</summary>
-    /// <param name="options">The bound <see cref="TeamOptions"/>, read for the Work Dir root.</param>
+    /// <param name="teammatePaths">Locates the Work Dir root the probe spawns into.</param>
     /// <param name="loggerFactory">Used to create this type's own logger.</param>
     /// <param name="resolver">Turns a requested Adapter id into a profile; never fails (Spec §6.2).</param>
     /// <param name="probeRunner">
@@ -67,17 +66,17 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     /// <see cref="IAdapterProbeRunner"/>'s own doc comment for why this seam exists.
     /// </param>
     public ModelCatalogProbe(
-        IOptions<TeamOptions> options,
+        TeammatePaths teammatePaths,
         ILoggerFactory loggerFactory,
         AdapterProfileResolver resolver,
         IAdapterProbeRunner probeRunner)
     {
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(teammatePaths);
         ArgumentNullException.ThrowIfNull(loggerFactory);
         ArgumentNullException.ThrowIfNull(resolver);
         ArgumentNullException.ThrowIfNull(probeRunner);
 
-        this.options = options.Value;
+        this.teammatePaths = teammatePaths;
         this.logger = loggerFactory.CreateLogger<ModelCatalogProbe>();
         this.resolver = resolver;
         this.probeRunner = probeRunner;
@@ -238,7 +237,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         // AppContext.BaseDirectory either: the adapter auto-loads CLAUDE.md and
         // .claude/settings.json from its cwd, so either of those would silently hand the repo's own
         // instructions to a process that is only being asked what models it offers.
-        var probeCwd = Path.Combine(this.options.DataDir, this.options.Acp.WorkDir);
+        var probeCwd = this.teammatePaths.WorkDirRoot;
         Directory.CreateDirectory(probeCwd);
 
         // profile is already resolved by the caller (GetAsync/GetEffortLevelsAsync) - resolving

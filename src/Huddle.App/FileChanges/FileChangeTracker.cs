@@ -30,6 +30,7 @@ internal sealed class FileChangeTracker(
     ITeamDirectory directory,
     WatchedFolderResolver resolver,
     IOptions<TeamOptions> options,
+    TeammatePaths teammatePaths,
     ILogger<FileChangeTracker> logger)
 {
     /// <summary>
@@ -388,7 +389,7 @@ internal sealed class FileChangeTracker(
     /// <summary>Whether <paramref name="fullPath"/> is <paramref name="agentName"/>'s own Work Dir.</summary>
     private bool IsOwnWorkDir(string agentName, string fullPath)
     {
-        string ownFullPath = Path.Combine(options.Value.DataDir, options.Value.Acp.WorkDir, agentName);
+        string ownFullPath = teammatePaths.WorkDir(agentName);
         return string.Equals(ownFullPath, fullPath, StringComparison.OrdinalIgnoreCase);
     }
 
@@ -423,7 +424,7 @@ internal sealed class FileChangeTracker(
         List<WatchedFolder> folders = [];
         HashSet<string> seenFullPaths = new(StringComparer.OrdinalIgnoreCase);
 
-        WatchedFolder own = new(agentName, Path.Combine(options.Value.DataDir, options.Value.Acp.WorkDir, agentName));
+        WatchedFolder own = new(agentName, teammatePaths.WorkDir(agentName));
         folders.Add(own);
         seenFullPaths.Add(own.FullPath);
 

@@ -140,8 +140,9 @@ public sealed class WatchFolderToolTests
                 new PersonaEffortStore(options),
                 NullLogger<PersonaStore>.Instance);
             FileStateStore store = new(options, NullLogger<FileStateStore>.Instance);
-            WatchedFolderResolver resolver = new(options);
-            FileChangeTracker tracker = new(store, personas, directory, resolver, options, NullLogger<FileChangeTracker>.Instance);
+            TeammatePaths teammatePaths = new(options);
+            WatchedFolderResolver resolver = new(options, teammatePaths);
+            FileChangeTracker tracker = new(store, personas, directory, resolver, options, teammatePaths, NullLogger<FileChangeTracker>.Instance);
 
             // Registered so "Nova" resolves via the Teammate-Name rule (FC §6.3) to its own Work Dir,
             // matching the caller Name every tool test below binds at construction.

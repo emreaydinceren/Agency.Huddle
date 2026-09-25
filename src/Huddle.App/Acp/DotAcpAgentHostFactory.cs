@@ -40,6 +40,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     private readonly AdapterProfileResolver resolver;
     private readonly IAgentProcessLauncher launcher;
     private readonly SkillStore skills;
+    private readonly TeammatePaths teammatePaths;
 
     /// <summary>Initializes a new instance of the <see cref="DotAcpAgentHostFactory"/> class.</summary>
     /// <param name="options">The bound <see cref="TeamOptions"/>.</param>
@@ -63,13 +64,15 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// narrow (Spec §6.4 Implementation notes) — <c>PersonaSupervisor</c> resolves the same names a
     /// second time, only for the Degraded warnings it reports before ever calling this factory.
     /// </param>
+    /// <param name="teammatePaths">Locates each Persona's Work Dir.</param>
     public DotAcpAgentHostFactory(
         IOptions<TeamOptions> options,
         IServiceProvider serviceProvider,
         ILoggerFactory loggerFactory,
         AdapterProfileResolver resolver,
         IAgentProcessLauncher launcher,
-        SkillStore skills)
+        SkillStore skills,
+        TeammatePaths teammatePaths)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(serviceProvider);
@@ -77,6 +80,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         ArgumentNullException.ThrowIfNull(resolver);
         ArgumentNullException.ThrowIfNull(launcher);
         ArgumentNullException.ThrowIfNull(skills);
+        ArgumentNullException.ThrowIfNull(teammatePaths);
 
         this.options = options.Value;
         this.serviceProvider = serviceProvider;
@@ -85,6 +89,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         this.resolver = resolver;
         this.launcher = launcher;
         this.skills = skills;
+        this.teammatePaths = teammatePaths;
     }
 
     public async Task<IPersonaHost> StartAsync(Persona persona, string agentId, CancellationToken cancellationToken)
@@ -99,7 +104,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                 "Persona '{PersonaName}' Adapter resolution warning: {Warning}", persona.Name, warning);
         }
 
-        var workDir = Path.Combine(this.options.DataDir, this.options.Acp.WorkDir, persona.Name);
+        var workDir = this.teammatePaths.WorkDir(persona.Name);
         Directory.CreateDirectory(workDir);
 
         // FC §6.15: the folder is always created next to the Work Dir, even when the memory block

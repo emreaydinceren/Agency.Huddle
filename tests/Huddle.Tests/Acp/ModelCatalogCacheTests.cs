@@ -183,6 +183,6 @@ public sealed class ModelCatalogCacheTests
         AdapterCatalog catalog = new(options);
         AdapterProfileResolver resolver = new(catalog);
 
-        return new ModelCatalogProbe(options, NullLoggerFactory.Instance, resolver, runner);
+        return new ModelCatalogProbe(new(options), NullLoggerFactory.Instance, resolver, runner);
     }
 }

@@ -72,9 +72,10 @@ public sealed class GetHelpToolTests
         var directory = new SqliteTeamDirectory(dir.Options());
         await directory.InitializeAsync("You", ct);
         var store = new Agency.Huddle.App.FileChanges.FileStateStore(dir.Options(), NullLogger<Agency.Huddle.App.FileChanges.FileStateStore>.Instance);
-        var resolver = new Agency.Huddle.App.FileChanges.WatchedFolderResolver(dir.Options());
+        var teammatePaths = new Agency.Huddle.App.Acp.TeammatePaths(dir.Options());
+        var resolver = new Agency.Huddle.App.FileChanges.WatchedFolderResolver(dir.Options(), teammatePaths);
         using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
-        var tracker = new Agency.Huddle.App.FileChanges.FileChangeTracker(store, personaStore, directory, resolver, dir.Options(), NullLogger<Agency.Huddle.App.FileChanges.FileChangeTracker>.Instance);
+        var tracker = new Agency.Huddle.App.FileChanges.FileChangeTracker(store, personaStore, directory, resolver, dir.Options(), teammatePaths, NullLogger<Agency.Huddle.App.FileChanges.FileChangeTracker>.Instance);
 
         IAppTool[] watchTools =
         [

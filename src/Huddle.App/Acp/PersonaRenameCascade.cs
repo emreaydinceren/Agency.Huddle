@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
@@ -49,7 +48,7 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="avatars">Moves a renamed Persona's Avatar entry, and deletes a removed Persona's Avatar entry and image file.</param>
 /// <param name="fileState">Moves a renamed Persona's <see cref="FileStateStore"/> file, and deletes a removed Persona's file — FC §6.12.</param>
 /// <param name="roomSessions">Moves a renamed Persona's <see cref="RoomSessionStore"/> file, and deletes a removed Persona's file — RS §6.13.</param>
-/// <param name="options">Supplies <see cref="TeamOptions.DataDir"/> and <see cref="AcpOptions.WorkDir"/>, which together locate the Work Dir to move.</param>
+/// <param name="teammatePaths">Locates the Work Dir to move.</param>
 /// <param name="timeProvider">Drives the backoff between Work Dir move attempts, so a test can control it without a real delay.</param>
 /// <param name="logger">Records a rejected rename, a Work Dir that could not be moved, a file state move that failed, a Room Session move that failed, and any failure in the detached half of the cascade.</param>
 /// <param name="tasks">Rewrites <c>creator:</c>/<c>assignee:</c> in a renamed Persona's Task files — Spec §9.6.</param>
@@ -61,7 +60,7 @@ internal sealed partial class PersonaRenameCascade(
     AvatarStore avatars,
     FileStateStore fileState,
     RoomSessionStore roomSessions,
-    IOptions<TeamOptions> options,
+    TeammatePaths teammatePaths,
     TimeProvider timeProvider,
     ILogger<PersonaRenameCascade> logger,
     TaskService tasks,
@@ -73,7 +72,6 @@ internal sealed partial class PersonaRenameCascade(
     private const int MaxWorkDirMoveAttempts = 5;
     private static readonly TimeSpan WorkDirMoveRetryDelay = TimeSpan.FromMilliseconds(250);
 
-    private readonly TeamOptions teamOptions = options?.Value ?? throw new ArgumentNullException(nameof(options));
     private bool subscribed;
 
     /// <inheritdoc />
@@ -309,9 +307,8 @@ internal sealed partial class PersonaRenameCascade(
     /// </summary>
     private async Task MoveWorkDirAsync(string oldName, string newName)
     {
-        var workDirRoot = Path.Combine(this.teamOptions.DataDir, this.teamOptions.Acp.WorkDir);
-        var source = Path.Combine(workDirRoot, oldName);
-        var target = Path.Combine(workDirRoot, newName);
+        var source = teammatePaths.WorkDir(oldName);
+        var target = teammatePaths.WorkDir(newName);
 
         if (!Directory.Exists(source))
         {
