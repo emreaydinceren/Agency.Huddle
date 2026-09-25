@@ -746,7 +746,7 @@ rename, then the migration that moves real data. **Nothing in D7 starts before 3
   `IOptions<TeamOptions>` and an `ILogger` from `app.Services`).
 - **Acceptance:** 3.6.t green; full suite green. **Retrospective R2 follows this task.**
 
-### Task 3.7.t (#31) — Test: the Chief of Staff is seeded into its folder [Haiku]
+### Task 3.7.t (#31) — Test: the Chief of Staff is seeded into its folder [Sonnet]
 
 - **Goal:** Pin **Spec §6.15** (*`BuiltinTeammateSeeder` writes … `Teammates/<Name>/<Name>.md`*).
 - **Read first:** `Teammates/BuiltinTeammateSeeder.cs:70`, `:113`; `BuiltinTeammateSeederTests.cs`.
@@ -757,7 +757,7 @@ rename, then the migration that moves real data. **Nothing in D7 starts before 3
 - **Acceptance:** Red, or green-on-arrival proven by `Prove-Mutation` on `:113` (the seeder already
   goes through `PersonaStore.Add` and `TeammatePaths`).
 
-### Task 3.7.i (#32) — Seeder follow-through [Haiku]
+### Task 3.7.i (#32) — Seeder follow-through [Sonnet]
 
 - **Goal:** Make 3.7.t green, **Spec §6.15**.
 - **Read first:** Task 3.7.t.
@@ -862,7 +862,7 @@ The Tasks effort shipped on `Tasks/<Team>/[<Project>/]` and asked for the move w
   to parse).
 - **Acceptance:** G1.1.t green; full suite green.
 
-### Task G1.2.t (#35d) — Test: `Team:Teams:Dir` is the Tasks root; `Tasks:Dir` retires [Haiku]
+### Task G1.2.t (#35d) — Test: `Team:Teams:Dir` is the Tasks root; `Tasks:Dir` retires [Sonnet]
 
 - **Read first:** `TaskStore.cs:71-86,:776-794`; `ServiceCollectionExtensions.cs:36-45`;
   `TasksOptionsTests.cs:17,:40`; `Library/LayoutGuard.cs` (Task 3.8).
@@ -1391,7 +1391,7 @@ byte-exact*).
 
 **Spec §6.2 (Team folders)**, **Spec §6.13**, **ADR-0030**.
 
-### Task 7.1.t (#64) — Test: `TeamFolderCatalog.List` [Haiku]
+### Task 7.1.t (#64) — Test: `TeamFolderCatalog.List` [Sonnet]
 
 - **Goal:** Pin the Team folder listing with orphans, **Spec §6.2** (first paragraph).
 - **Read first:** **Spec §6.2**; `src/Huddle.App/Tasks/TeamFolder.cs:17` (the Tasks side's record,
@@ -1406,7 +1406,7 @@ byte-exact*).
   - `List_LabelWithoutFolder_IsNotListed` (creating it is the provisioner's job).
 - **Acceptance:** Red.
 
-### Task 7.1.i (#65) — Implement `TeamFolderCatalog` [Haiku]
+### Task 7.1.i (#65) — Implement `TeamFolderCatalog` [Sonnet]
 
 - **Goal:** Implement the listing.
 - **Read first:** Task 7.1.t.
@@ -1769,7 +1769,7 @@ byte-exact*).
   Register it as a singleton and forward both interfaces to it.
 - **Acceptance:** 9.3.t green.
 
-### Task 9.4.t (#88) — Test: chat messages render Library links [Haiku]
+### Task 9.4.t (#88) — Test: chat messages render Library links [Sonnet]
 
 - **Goal:** Pin the `MessageList` wiring, **Spec §6.6** and **Spec §5.2**.
 - **Read first:** `Components/Shared/MessageList.razor:16`, `:27`; the existing `MessageList`
@@ -1780,7 +1780,7 @@ byte-exact*).
   `Render_LibraryDisabled_NoLibraryRef`.
 - **Acceptance:** Red.
 
-### Task 9.4.i (#89) — Wire `MessageList` [Haiku]
+### Task 9.4.i (#89) — Wire `MessageList` [Sonnet]
 
 - **Goal:** Pass the Library resolver to the renderer.
 - **Read first:** Task 9.4.t.
@@ -2409,7 +2409,7 @@ Every UI text comes from *Settled texts*. Every component test renders with
   another session made; never overwrite.
 - **Acceptance:** Both files CRLF; every row links to a file that exists.
 
-### Task 14.4 (#129) — Manual test script [Sonnet]
+### Task 14.4 (#129) — Manual test script [Haiku]
 
 - **Goal:** Write the script for **Spec §2**'s use cases L0–L13 (Appendix A LB-M1).
 - **Read first:** **Spec §2**; `docs/agencyteam/manual-tests.md` and one file in
@@ -2446,6 +2446,36 @@ Every UI text comes from *Settled texts*. Every component test renders with
 
 ---
 
+## Risk tags (R2, 2026-09-25)
+
+The implementer's model follows the task's risk: **data** (records, enums, options, pure formatting,
+docs) → Haiku; **logic** (pure functions, single-class behaviour) and **boundary** (filesystem,
+concurrency, the path boundary, migration, protocol, DI/start-up, JS interop) → Sonnet. **SPLIT**
+means dispatch it as two or more green steps, because one dispatch would exceed ~50 calls.
+
+| Tasks | Risk | Notes |
+| --- | --- | --- |
+| 3.7.t, 3.7.i | boundary | one dispatch |
+| 3.8.t / 3.8.i | logic / boundary | `PostConfigure` wiring |
+| 3.9 | boundary | deletes files |
+| G1.0 | boundary | **SPLIT**: helpers, then the Rewrite-Calls pass and literal paths |
+| G1.1.t / G1.1.i | logic / boundary | **SPLIT G1.1.i**: `TaskLayout`, then the fixture flip |
+| G1.2.t, G1.2.i | boundary | **SPLIT risk** for G1.2.i (touches every Tasks test) |
+| G1.3–G1.5 | boundary | scan, watcher, migration step 4 |
+| G1.6 | data | |
+| 4.1–4.3 | boundary | the path boundary |
+| 5.1 / 5.2 | logic / data | |
+| 6.1, 6.2 | logic | kept on Haiku (small pure validation; manager's call) |
+| 6.3–6.9 | boundary | |
+| 7.1–7.4 | boundary | |
+| 8.1–8.4 / 8.5 | logic / boundary | 8.2 kept on Haiku |
+| 9.1 / 9.2, 9.3 / 9.4 | boundary / logic / boundary | |
+| 10.1 / 10.2, 10.3 / 10.4 | data / logic / boundary | |
+| 11.1 / 11.2 / 11.3 | boundary / boundary / data | 11.1 vendoring is manager-run |
+| 12.1, 12.2, 12.4, 12.5 / 12.3, 12.6, 12.8 / 12.7 | logic / boundary / boundary | **SPLIT 12.7** |
+| 13.1 / 13.2 / 13.3, 13.4 | data / boundary / logic | **SPLIT 13.2.i** |
+| 14.1–14.4 / 14.5 / 14.6 | data / boundary / boundary | **SPLIT 14.6** (docs vs the Docker repro loop) |
+
 ## Retrospective log
 
 The manager records each retrospective here, newest last, and commits the plan change separately.
@@ -2453,7 +2483,7 @@ The manager records each retrospective here, newest last, and commits the plan c
 | # | After task | Date | Top findings | Plan changes made |
 | --- | --- | --- | --- | --- |
 | R1 | #15 | 2026-09-25 | The brief named the wrong red folder and nothing warned about `using Xunit;` (IDE0005): ~45 calls lost in 1.1.t and 2.1.t. 1.3.i spent ~50 of 110 calls on one-Edit-per-site constructor rewrites. Every agent re-read the whole facts file. Two agents ran past the 150K context cap (1.3.i 227K; the D2 Haiku chain 177K). | Facts file gets a *Core* section (red path, usings, paths, CS0051, `new(options)`); brief fixed. New `Conversation/scripts/Rewrite-Calls.ps1` for >10 mechanical sites. Read-first/Deliverable edits: 3.1.t, 3.1.i, 3.2.i, 3.3.t, 3.4.i, 3.6.i, 3.8.t, G1.0, G1.2.t (`Library/LayoutGuard.cs`). Retag G1.2.i Haiku → Sonnet. |
-| R2 | #30 | | | |
+| R2 | #30 | 2026-09-25 | 16 runs, 818 calls, 121M re-read; ~43% is the fixed 71K start (inherited tool/skill listings) and 11 of 16 agents read the whole 39 KB facts file despite the Core rule. Overruns (3.2.i 150, 3.1 95, 3.4.i 79) came from hand renames, repeated searches, whole-file reads, repeated full-suite runs and a timing workaround. 5 of 16 dispatches reworked tests after review. | Facts file split: Core only (5 KB) + a grep-only reference file; Core gains Spec line pointers, big-file list, Run-Tests/Prove-Mutation rules, no-delay rule. Brief: no repeated searches, harness-counted budgets. `.claude/agents/library-dev.md` with a narrow tool list (to measure). Risk tags table above; retag 3.7, G1.2.t, 7.1, 9.4 → Sonnet and 14.4 → Haiku. Manager: short "fix cards" for follow-ups; review each red against every correction before `.i`. |
 | R3 | #45 | | | |
 | R4 | #60 | | | |
 | R5 | #75 | | | |
