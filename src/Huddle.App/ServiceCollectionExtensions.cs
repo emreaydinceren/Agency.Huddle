@@ -211,6 +211,13 @@ public static class ServiceCollectionExtensions
 
         // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
         // this, and a plain registration cannot produce the two-watchers-on-one-path hazard the
+        // aliased registrations elsewhere in this file exist to avoid. Registered unconditionally
+        // (Team:Library:Enabled only gates the UI, per corrections-B3 4.1.i item 13); the
+        // constructor never throws on bad configuration.
+        services.AddSingleton<LibraryRootStore>();
+
+        // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
+        // this, and a plain registration cannot produce the two-watchers-on-one-path hazard the
         // aliased registrations elsewhere in this file exist to avoid.
         services.AddSingleton<ViewStore>();
 
