@@ -337,7 +337,7 @@ public sealed class TaskDetailConflictTests
         TaskItem other = CreateTask(harness, title: "Other task");
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderPanel(ctx, task.Id);
-        ClickWontDoItem(cut, TaskState.Duplicate.ToWire());
+        await ClickWontDoItem(cut, TaskState.Duplicate.ToWire());
         IRenderedComponent<MudAutocomplete<TaskItem>> duplicateOf = cut.FindComponents<MudAutocomplete<TaskItem>>().Single(m => string.Equals(m.Instance.Class, "task-detail-duplicate-of", StringComparison.Ordinal));
         TaskItem chosen = await SearchAndPickFirst(cut, duplicateOf, "Other");
         Assert.Equal(other.Id, chosen.Id);
@@ -354,7 +354,7 @@ public sealed class TaskDetailConflictTests
         await ChooseConflictAsync(cut, "status", ConflictChoice.Theirs);
 
         Assert.Empty(cut.FindAll(".task-detail-duplicate-of"));
-        ClickWontDoItem(cut, TaskState.Duplicate.ToWire());
+        await ClickWontDoItem(cut, TaskState.Duplicate.ToWire());
         Assert.True(FindButton(cut, "Save").HasAttribute("disabled"));
     }
 
@@ -371,7 +371,7 @@ public sealed class TaskDetailConflictTests
         TaskItem task = CreateTask(harness, status: TaskState.ToDo);
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderPanel(ctx, task.Id);
-        ClickWontDoItem(cut, TaskState.Cancelled.ToWire());
+        await ClickWontDoItem(cut, TaskState.Cancelled.ToWire());
         IRenderedComponent<MudTextField<string>> reason = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-reason", StringComparison.Ordinal));
         await cut.InvokeAsync(() => reason.Instance.ValueChanged.InvokeAsync("no longer needed"));
 
@@ -387,7 +387,7 @@ public sealed class TaskDetailConflictTests
         await ChooseConflictAsync(cut, "status", ConflictChoice.Theirs);
 
         Assert.Empty(cut.FindAll(".task-detail-reason"));
-        ClickWontDoItem(cut, TaskState.Cancelled.ToWire());
+        await ClickWontDoItem(cut, TaskState.Cancelled.ToWire());
         IRenderedComponent<MudTextField<string>> reasonAfter = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-reason", StringComparison.Ordinal));
         Assert.Equal(string.Empty, reasonAfter.Instance.GetState(x => x.Value));
     }
@@ -502,11 +502,17 @@ public sealed class TaskDetailConflictTests
         await cut.InvokeAsync(() => project.Instance.ValueChanged.InvokeAsync(value));
     }
 
-    /// <summary>Opens the Won't-do <c>MudMenu</c> and clicks the item whose text is <paramref name="wireName"/> - the <c>TaskDetailFieldsTests.ClickWontDoItem</c> pattern.</summary>
-    private static void ClickWontDoItem(IRenderedComponent<ContainerFragment> cut, string wireName)
+    /// <summary>
+    /// Opens the Won't-do <c>MudMenu</c> and clicks the item whose text is <paramref name="wireName"/> -
+    /// the <c>TaskDetailFieldsTests.ClickWontDoItem</c> pattern, with the same fix that pattern needed:
+    /// each Find+Click is its own <c>InvokeAsync</c> (the <c>ClickSaveAsync</c> pattern below), because a
+    /// fire-and-forget dispatched re-render can otherwise land between the two plain synchronous clicks
+    /// under parallel test-exe load and throw <c>UnknownEventHandlerIdException</c>.
+    /// </summary>
+    private static async Task ClickWontDoItem(IRenderedComponent<ContainerFragment> cut, string wireName)
     {
-        cut.Find("button[aria-label=\"Won't do\"]").Click();
-        cut.FindAll("div.mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), wireName, StringComparison.Ordinal)).Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Won't do\"]").Click());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), wireName, StringComparison.Ordinal)).Click());
     }
 
     /// <summary>Awaits <paramref name="autocomplete"/>'s own <c>SearchFunc</c> for <paramref name="query"/>, then invokes <c>ValueChanged</c> with the first result - the <c>TaskDetailFieldsTests.SearchAndPickFirst</c> pattern; never constructs a <typeparamref name="T"/> by hand.</summary>

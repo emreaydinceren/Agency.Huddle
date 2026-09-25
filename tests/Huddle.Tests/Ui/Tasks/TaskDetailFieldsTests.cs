@@ -103,7 +103,7 @@ public sealed class TaskDetailFieldsTests
         var cut = RenderDetail(ctx, task.Id, mode);
         Assert.Empty(cut.FindAll(".task-detail-duplicate-of"));
 
-        ClickWontDoItem(cut, TaskState.Duplicate.ToWire());
+        await ClickWontDoItem(cut, TaskState.Duplicate.ToWire());
 
         IRenderedComponent<MudAutocomplete<TaskItem>> duplicateOf = cut.FindComponents<MudAutocomplete<TaskItem>>().Single(m => string.Equals(m.Instance.Class, "task-detail-duplicate-of", StringComparison.Ordinal));
         Assert.True(FindButton(cut, "Save").HasAttribute("disabled"));
@@ -127,7 +127,7 @@ public sealed class TaskDetailFieldsTests
         var cut = RenderDetail(ctx, task.Id, mode);
         Assert.Empty(cut.FindAll(".task-detail-reason"));
 
-        ClickWontDoItem(cut, wontDo.ToWire());
+        await ClickWontDoItem(cut, wontDo.ToWire());
 
         IRenderedComponent<MudTextField<string>> reason = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-reason", StringComparison.Ordinal));
         Assert.Equal("Reason (optional)", reason.Instance.Label);
@@ -148,7 +148,7 @@ public sealed class TaskDetailFieldsTests
         TaskItem other = CreateTask(harness, title: "Other task");
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
-        ClickWontDoItem(cut, TaskState.Duplicate.ToWire());
+        await ClickWontDoItem(cut, TaskState.Duplicate.ToWire());
         IRenderedComponent<MudAutocomplete<TaskItem>> duplicateOf = cut.FindComponents<MudAutocomplete<TaskItem>>().Single(m => string.Equals(m.Instance.Class, "task-detail-duplicate-of", StringComparison.Ordinal));
         _ = await SearchAndPickFirst(cut, duplicateOf, "Other");
 
@@ -180,7 +180,7 @@ public sealed class TaskDetailFieldsTests
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
-        ClickWontDoItem(cut, TaskState.Rejected.ToWire());
+        await ClickWontDoItem(cut, TaskState.Rejected.ToWire());
         IRenderedComponent<MudTextField<string>> reason = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-reason", StringComparison.Ordinal));
         await cut.InvokeAsync(() => reason.Instance.ValueChanged.InvokeAsync("no longer needed"));
 
@@ -696,11 +696,18 @@ public sealed class TaskDetailFieldsTests
         return [.. cut.FindAll("div.mud-menu-item").Select(i => i.TextContent.Trim())];
     }
 
-    /// <summary>Opens the Won't-do menu and clicks the item whose text is <paramref name="wireName"/>.</summary>
-    private static void ClickWontDoItem(IRenderedComponent<ContainerFragment> cut, string wireName)
+    /// <summary>
+    /// Opens the Won't-do menu and clicks the item whose text is <paramref name="wireName"/>. Each
+    /// Find+Click is its own <c>InvokeAsync</c> (the <c>TaskDetailConflictTests.ClickSaveAsync</c>
+    /// pattern) - found by 14.3 under parallel test-exe load: a fire-and-forget dispatched re-render
+    /// (<c>TaskDetail.DispatchRefresh</c>) can land between the plain synchronous <c>Find</c> and
+    /// <c>Click</c> that opens the menu and the one that picks an item, detaching the element bUnit
+    /// found and throwing <c>UnknownEventHandlerIdException</c> on the second click.
+    /// </summary>
+    private static async Task ClickWontDoItem(IRenderedComponent<ContainerFragment> cut, string wireName)
     {
-        cut.Find("button[aria-label=\"Won't do\"]").Click();
-        cut.FindAll("div.mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), wireName, StringComparison.Ordinal)).Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Won't do\"]").Click());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), wireName, StringComparison.Ordinal)).Click());
     }
 
     /// <summary>Clicks the Status toggle item for <paramref name="state"/> (one of the five ordinary states, not a Won't-do one).</summary>

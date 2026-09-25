@@ -1,0 +1,41 @@
+@*
+    Task detail (Spec §13.6), Expanded layout: wraps TaskDetail in a MudDialog. Takes only Id (or a
+    Draft for create/copy) - never both, and never TaskDetail's other state - because MudBlazor freezes
+    a dialog's parameters once it opens (TeammateCard.razor:12-24); TaskDetail loads the Task itself.
+*@
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
+            <MudText Typo="Typo.h6">@(this.Id?.ToString() ?? "New task")</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" title="Close" aria-label="Close" OnClick="this.Close" />
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        <TaskDetail Id="this.Id" Draft="this.Draft" Mode="TaskDetailMode.Expanded" OnClose="this.Close" />
+    </DialogContent>
+</MudDialog>
+
+@code {
+    /// <summary>The <see cref="DialogOptions"/> this dialog opens with (14.4.i's own Deliverable, Spec §13.6).</summary>
+    public static readonly DialogOptions Options = new()
+    {
+        MaxWidth = MaxWidth.Large,
+        FullWidth = true,
+        CloseOnEscapeKey = true,
+    };
+
+    /// <summary>The hosting dialog instance, cascaded by <c>MudDialogProvider</c>; <c>required</c> instead of <c>= default!</c> since a null-forgiving operator is never used in this codebase.</summary>
+    [CascadingParameter]
+    public required IMudDialogInstance MudDialog { get; set; }
+
+    /// <summary>The Task to show, or <see langword="null"/> when creating or copying.</summary>
+    [Parameter]
+    public TaskId? Id { get; set; }
+
+    /// <summary>A draft for create or copy mode, used only when <see cref="Id"/> is <see langword="null"/>.</summary>
+    [Parameter]
+    public TaskDraft? Draft { get; set; }
+
+    private void Close() => this.MudDialog.Close();
+}
