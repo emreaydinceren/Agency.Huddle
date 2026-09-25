@@ -55,6 +55,7 @@ question is yours; the cost column is roughly what it will spend.
 | [Questions design](Huddle.Questions-Specifications.md) | Before work on `ask_human`, the Question card, or anything an Agent asks the Human to choose. Proposed, not built; the Proposal card it copies shipped with Skills | ~8k |
 | [File Changes design](Huddle.FileChanges-Specifications.md) | Before work on Watched Folders, `watch_folder`, `watches` frontmatter, `file-state/`, an Agent's `memory/` folder, or anything that tells an Agent a file changed or what it remembers. Replaced roadmap item 11's delivery plan. **Delivered (code) 2026-09-23**; the isolation it depends on for Memory is unverified live — see [Known limits](agencyteam/known-limits.md) and [manual-tests/file-changes.md](agencyteam/manual-tests/file-changes.md) | ~14k |
 | [Room Sessions design](Huddle.RoomSessions-Specifications.md) | Before work on per-Room sessions, `IAgentHostFactory`, session resume, `ReadTranscript`, or what Stop applies to. Roadmap item 18. Proposed, not built; build it after File Changes and Memory | ~14k |
+| [Tasks design](Huddle.Tasks-Specifications.md) | Before work on Tasks — Task files, Views, the Board or List, the six App Tools, or wake notifications; `Huddle.Tasks-ProjectPlan.md` holds the task-by-task delivery plan. **Delivered (code) 2026-09-25** | ~37k |
 | [The `team-building` Skill](../src/Huddle.App/Skills/Defaults/team-building/) | Why a team rather than one agent, the five patterns, every team the Chief of Staff offers, and the role library. The product reasoning [What a team is for](#what-a-team-is-for) summarises. Model-facing text: edit it as a Skill, not as docs | ~17k |
 | [Decision record](agencyteam/decisions.md) | To revisit a decision, or to read an older doc | ~6.3k |
 | [Domain context](agencyteam/CONTEXT.md) | To see the vocabulary used in dialogue, not defined | ~0.6k |
@@ -238,7 +239,7 @@ The boundary holds empirically: there are zero occurrences of chat vocabulary in
 
 ## Configuration
 
-All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs` and `FileChanges/FileChangesOptions.cs`.
+All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileChanges/FileChangesOptions.cs` and `Tasks/TasksOptions.cs`.
 
 | Key | Default | Note |
 | --- | --- | --- |
@@ -274,6 +275,11 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs` and `Fil
 | `FileChanges:MaxFilesPerFolder` | `5000` | Above this a folder scan reports `TooLarge` rather than walking it. |
 | `FileChanges:MaxListed` | `50` | The most File Changes lines listed per Turn, across every Watched Folder. |
 | `FileChanges:MaxMemoryEntries` | `100` | The most Memory lines shown in a new session's system prompt; the rest are counted rather than listed. |
+| `Tasks:Enabled` | `true` | `false` hides the UI, offers no tools and wakes no one. The Task files stay where they are. |
+| `Tasks:Dir` | `Tasks` | Relative to `DataDir`. Startup throws if it resolves inside `Acp:TeamsDir`. |
+| `Tasks:WakeEnabled` | `true` | `false` keeps Tasks but never wakes anyone. |
+| `Tasks:WakeCoalesceSeconds` | `5` | How long a Task's changes are coalesced before one wake-up is sent. `0` wakes on every change. |
+| `Tasks:AgentWakeBudget` | `10` | The most Agent-made wakes one Task allows before pausing. `0` or less disables the per-Task budget. |
 
 An installation running `agency-acp`, unverified for resume or for several sessions per process
 (RS Appendix B V-5), sets that Adapter's `SessionPerRoom` to `false` until V-5 passes:

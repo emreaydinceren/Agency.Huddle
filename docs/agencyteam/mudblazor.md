@@ -96,6 +96,11 @@ styles and tests the component, which the MudBlazor example does not.
 | `MudSimpleTable`, `MudChip` | [`SkillsPanel.razor`](../../src/Huddle.App/Components/Settings/SkillsPanel.razor) |
 | `MudCollapse`, `MudCheckBox` | [`NewChat.razor`](../../src/Huddle.App/Components/Shared/NewChat.razor) |
 | `MudAvatar` | [`TeammateAvatar.razor`](../../src/Huddle.App/Components/Shared/TeammateAvatar.razor) |
+| `MudDataGrid` grouped, with hidden columns | [`TaskListView.razor`](../../src/Huddle.App/Components/Tasks/TaskListView.razor) |
+| `MudDropContainer`, `MudDropZone` | [`TaskBoard.razor`](../../src/Huddle.App/Components/Tasks/TaskBoard.razor) |
+| `MudToggleGroup`, `MudTimeline`, `MudExitPrompt` | [`TaskDetail.razor`](../../src/Huddle.App/Components/Tasks/TaskDetail.razor) |
+| `MudBadge` | [`TaskCard.razor`](../../src/Huddle.App/Components/Tasks/TaskCard.razor) |
+| `MudNavGroup` | [`TaskViewNav.razor`](../../src/Huddle.App/Components/Tasks/TaskViewNav.razor) |
 
 To refresh this list, search `src/Huddle.App` for `<Mud`.
 
@@ -193,6 +198,18 @@ website, or from what a MudBlazor example suggests.
 | `MudChipSet<T>` | `SelectedValue`, `SelectedValues`, `CloseIcon`, and `OnClose` (an `EventCallback<MudChip<T>>`) |
 | `MudTimelineItem` | Content goes in `ItemContent` and the opposite side in `ItemOpposite` (both `RenderFragment`s). It also has `Color` and `Size` |
 | `MudExitPrompt` | Parameters are `Title`, `Text`, `Disabled` and `UseNativePrompt`. With `UseNativePrompt` false (the default), in-app navigation asks through a MudBlazor message box. Closing the tab, reloading or typing a URL always uses the browser's own prompt |
+| `MudDataGrid<T>` | A sortable header's clickable element is `span.sortable-column-header` inside the `<th>` — clicking the `<th>` itself throws `MissingEventHandlerException` |
+| `MudMenu` | Its content portals into `MudPopoverProvider` from `RenderWithPopovers` — search the outer render fragment, not a `FindComponent<Owner>()` handle. Open it by clicking its activator button |
+| `MudTooltip` | Its text is not in bUnit's static markup without a hover — assert via `aria-label` instead |
+| `MudBunitContext` | Must be disposed with `await using` — its services are `IAsyncDisposable` only |
+| MUD0012 / `GetState` | A bindable parameter (`MudSelect.SelectedValues`, `MudTextField.Value`) is analyzer-blocked from a direct `.Instance.Value` read — use `component.Instance.GetState(x => x.Value)` (`using MudBlazor.Extensions;`), or assert the rendered markup |
+| `MudSelect<T>` | Its popover toggles on `mousedown`, not `click` — a plain `click` throws `MissingEventHandlerException` |
+| `MudExpansionPanel` | Keeps its collapsed content in the DOM — `MudCollapse` only hides it with CSS. Don't assert `Empty` before expanding |
+| `MudChip<T>.Icon` | Renders as `svg.mud-chip-icon`. AngleSharp re-serialises the path tags, so a literal icon-string `Contains` assertion fails |
+| `IDialogService.ShowMessageBoxAsync` | Its DOM is `.mud-dialog-title` / `.mud-dialog-content` / `.mud-dialog-actions button` |
+| `MudDropContainer<T>` | `StartTransaction` (void) raises `TransactionStarted` synchronously; `CancelTransaction`/`CommitTransaction` return `Task` and raise `TransactionEnded`; `Commit` does not re-check `CanDrop`. A parent's `StateHasChanged` does not re-render its cards — call `container.Refresh()` instead |
+| `MudDialog` with `CloseButton` | Renders `button.mud-button-close`; the title renders in `.mud-dialog-title` |
+| bUnit `Find`/`Click` | A `Find(...)` then `.Click()` can race a fire-and-forget re-render under load (`UnknownEventHandlerIdException`) — click via `await cut.InvokeAsync(() => cut.Find(sel).Click())` instead |
 | `ISnackbar.Add` | Every overload (`string`, `MarkupString`, `RenderFragment`, component parameters) takes `(message, Severity, Action<SnackbarOptions>? configure, string? key)`. The same `key` collapses duplicates |
 
 When you check a new fact, add a row. When `Directory.Packages.props` moves
