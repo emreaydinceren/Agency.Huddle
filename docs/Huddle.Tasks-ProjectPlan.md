@@ -2273,6 +2273,10 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   - `DateOnly` round-trips through `MudDatePicker`.
   - The overdue adornment.
   - Each rule at both entry points: the compact panel and the expanded `TaskDetail` (R6).
+  - (R7) Also owns the §13.6 rows no other task names: Assignee (Strict, `TeammateAvatar` in the
+    presence badge), Team and Project (Project `CoerceValue` creates the folder), Parent
+    (`PLAT-0030 · title`), Origin (a link, or *(Room no longer exists)*), and Created / Updated /
+    Closed, read-only.
   - Every user-facing text is asserted exactly (`Assert.Equal`), from the Spec or the delivery
     manager's settled texts (R6).
 - **Acceptance:** Red.
@@ -2336,7 +2340,8 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
     in a row still show one.
   - `BudgetSpent` gives a warning toast.
   - The AI-reacting chip appears when a `LastWake` Room is busy, and disappears when it isn't.
-  - A paused Task shows **Allow 10 more**, which calls `TaskActivity.Grant`.
+  - ~~A paused Task shows **Allow 10 more**~~ — moved to 14.1 (R7, judgement J38: it is
+    `TaskDetail`'s BudgetPaused row).
   - (R5) Needs `harness.Triggers` (for `Preview`). 14.5 needs 9.6 merged (`WakeRecord` outcomes).
 - **Acceptance:** Red.
 
@@ -2344,8 +2349,8 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
 
 - **Goal:** Implement **Spec §13.8**.
 - **Read first:** Task 14.5.t.
-- **Deliverable:** The toast wiring and the chip in `Tasks.razor`, and the budget banner in
-  `TaskDetail`. Wire the panel into `Tasks.razor`'s drawer.
+- **Deliverable:** The toast wiring and the chip in `Tasks.razor` (the budget banner is in
+  `TaskDetail` since 14.1 — R7). Wire the panel into `Tasks.razor`'s drawer.
 - **Acceptance:** 14.5.t is green, and the full suite is green.
 
 > **🔁 Retrospective R9: after Task #135.** Covers #121–#135.
@@ -2529,6 +2534,6 @@ The manager records each retrospective here, newest last, and commits the plan c
 | R4 | 75 done (5.3–5.5, 6.1–6.2, 9.1–9.2, 11.1–11.4, 11.6–11.7) | 2026-09-24 | Code was written before the red three times (8.3, 6.1/6.2, 11.6). Each time the STOP came mid-dispatch or the prompt read like an implementation spec; a STOP at the start of a dispatch always held. Post-hoc tests were weak: 8 of 13 mutants survived in 6.1/6.2. They missed multi-clause rules, the same rule at a second entry point, disk-state invariants, permissive rules, exactly-once events and absent output. Half the command failures came from `Conversation\` not existing inside worktrees | `.t` tasks are now dispatched red-only, with the `.i` sent as a resume. The brief lists the six kinds of behaviour a `.t` must name. Worktrees get a `Conversation` junction. Settled the Create-collision exception path. Edited 6.3–6.6, 10.2, 11.5, 16.5 and the D12 preamble. Retagged 10.1, 10.3 Haiku→Sonnet and 12.2.t →Opus. New scripts: `Prove-Mutations`, `Find-PackageApi`, `Check-Diff`, and a stash guard on reds |
 | R5 | 91 done (6.3–6.5, 9.3, 11.5, 15.1, plus in-flight 10.1 and 9.4) | 2026-09-24 | Red-only dispatch worked: no code before the red, and every STOP was respected. Resumes cost seconds, but a fresh agent spent up to 9.5 min orienting. Test gaps were down to one fix-round (11.5); mutation proofs caught 5 of 5. Forbidden commands were still under-reported (a `find /c/Users`, a python3 edit, a blocked `sed -i`). The runner error with 0 failed tests happened 3×. `Check-Diff` couldn't see uncommitted work. D10's parallel tools would have collided on the harness | Edited 9.5.i, 9.6.t, 6.6.t, 10.6.t, 13.1.t, 12.3.t, 14.1.t, 14.5.t and the D10 preamble. Consecutive tasks on one class now resume the same agent. A harness chore runs before D10. The brief gains a citation rule for NOT COVERED and a transcript self-audit. Scripts: `Check-Diff -Scope Mine`, runner-error auto-rerun with diagnostics, `Audit-Transcript`. The find hook was widened to home, Users and `C:\` roots |
 | R6 | 105 done (6.6, 9.4–9.6, 10.1–10.7) | 2026-09-24 | Red-only dispatch held in all 7 `.t` dispatches; resuming the same agent cost 2–6 calls vs 45–56 for a fresh one. `.i` agents wrote refusals and get_task lines with no test and listed them as "design calls" (10.2/10.3, 10.5); 10.5's fix round skipped the second date entry point. Refusal wording drifted three ways across tools built in parallel (enum, date). The list_tasks description advertised a nonexistent `tags` filter, written before the tool existed in that worktree. The guard hook blocked repo-scoped `find "E:\…"`. A test `Seed` bug stayed hidden behind a compile-only red | Brief: untested `.i` branches need a test or a NOT COVERED line; Settled texts only, no substring asserts; Bash paths as `/e/…`. Facts: `IAppTool`, Settled tool texts, folder-derived Task location. Plan: 10.8.t description-vs-schema test; exact texts in 13.2.t/14.2.t; 14.2.t both entry points. Scripts: `Check-Diff` untested-texts and `Contains`-only checks; `Audit-Transcript` flags path errors. Hook fixed in 8e29e42 |
-| R7 | #105 | | | |
+| R7 | 121 done (12.1, 12.2, 13.1, 14.5 components, D6 texts chore, D10 follow-ups; 14.1, 10.8 in flight) | 2026-09-24 | R6's `.i` rule worked: 12.2 and 10.2/10.3 added tests for their own branches (11/11 mutations caught), and Untested texts was empty at every `.i`. An exact assert found 13.1's duplicated option, which hid behind a Contains warning the agent had dismissed; agents dismissed about 42 Contains warnings, 23 of them collection membership. Three agents edited test files with python3 because the hard rule names only `sed -i` on "source" files; one `find /` went unreported. §13.6 has no row owner map: Description and the Budget banner were found late, and Assignee, Team/Project, Parent, Origin and dates are still unowned. Resumed agents cost 2–3× per turn, and fix rounds reran the full suite | Brief: python3/perl banned for every file, markup Contains must become element-level Equal, lists asserted whole, checks before the full suite, blocked commands listed. Plan: 14.2.t takes the unowned §13.6 rows; Budget banner removed from 14.5; row-ownership sweep before 12.4/13.2/14.3/14.4/15.x. Scripts: Check-Diff fails markup-Contains and quiets `var`/DOM noise; Audit-Transcript flags python writes. Facts: bUnit element identity, Find-PackageApi first |
 | R8 | #120 | | | |
 | R9 | #135 | | | |
