@@ -148,6 +148,24 @@ public sealed class ModelCatalogCacheTests
         Assert.Equal(2, runner.Calls.Count);
     }
 
+    /// <summary>The probe's cwd is the Work Dir ROOT (<c>DataDir/work</c>), never a Persona's own subfolder.</summary>
+    [Fact]
+    public async Task GetAsync_ProbeCwd_IsWorkDirRoot()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new()
+        {
+            Handler = static (_, _, _) => new AdapterProbeOutcome([new AgentModelOption("m1", "Model 1", null)], []),
+        };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        await probe.GetAsync("claude", ct);
+
+        Assert.Single(runner.Calls);
+        Assert.Equal(Path.Combine(dir.Path, "work"), runner.Calls[0].ProbeCwd);
+    }
+
     /// <summary>Builds a <see cref="ModelCatalogProbe"/> over two configured Adapters, "claude" and "agency".</summary>
     /// <param name="dir">The isolated data directory the probe's Work Dir root lives under.</param>
     /// <param name="runner">The fake probe runner standing in for the real process spawn.</param>
