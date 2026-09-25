@@ -249,7 +249,7 @@ public sealed class WakeToastsTests
         Assert.Null(thrown);
     }
 
-    /// <summary>Renders a <c>MudSnackbarProvider</c> alongside <c>WakeToasts</c> so a toast's <see cref="RenderFragment"/> body actually reaches the DOM (mudblazor.md: a popover/provider paints as a sibling, not a descendant, of the component that opened it).</summary>
+    /// <summary>Renders a <c>MudSnackbarProvider</c> alongside <c>WakeToasts</c> so a toast's <see cref="RenderFragment"/> body actually reaches the DOM (agents/MudBlazorImplementation.md: a popover/provider paints as a sibling, not a descendant, of the component that opened it).</summary>
     private static (MudBunitContext Ctx, IRenderedComponent<ContainerFragment> Cut, ISnackbar Snackbar, TaskActivity Activity) RenderToasts(Action<TaskId>? onOpenTask = null)
     {
         MudBunitContext ctx = new();

@@ -1,7 +1,7 @@
 @*
     Spec §13.8 (D14 correction item 12): renders nothing itself - it exists only to turn
     TaskActivity.Woken into a Snackbar toast while the Tasks page is open. Woken adds an info toast
-    keyed "wake:{id}" (MudBlazor's per-key duplicate collapsing - mudblazor.md notes ISnackbar.Add
+    keyed "wake:{id}" (MudBlazor's per-key duplicate collapsing - agents/MudBlazorImplementation.md notes ISnackbar.Add
     takes a key); BudgetSpent and Failed add a warning toast; Offline and WakePaused add nothing,
     because those are shown only in the Task panel (Spec §13.6, §13.8). The Failed wording is the
     delivery manager's settled text (J38): Spec §10.5 says only "the error text, logged", but

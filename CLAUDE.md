@@ -76,4 +76,16 @@ Read `agents/GiteaOperations.md` before talking to the remote directly — openi
 listing or deleting a branch, or re-running a workflow via the Gitea API rather than the
 web UI. `origin` is a self-hosted Gitea instance, not GitHub, so `gh` does not work here.
 
+## Agent guides
+
+Read the one that matches the stage you're in:
+
+| Guide | Read it when |
+| --- | --- |
+| `agents/MudBlazorDesign.md` | Writing a spec or plan with UI: does MudBlazor already ship it, and where is the example |
+| `agents/MudBlazorImplementation.md` | Coding or testing a component: the house pattern to copy, the rules MudBlazor examples break, the API facts already checked |
+| `agents/Testing.md` | Writing or changing any test: what a test must pin, proving it can fail, flaky-test triage, the shared helpers, prompts and goldens |
+| `agents/BlazorTesting.md` | Testing a Razor component with bUnit, and the Razor traps those tests catch |
+| `agents/DeliveryPlaybook.md` | Running a project plan with parallel subagents; its scripts are in `agents/scripts/` |
+
 @agents/CSharpPrinciples.md

@@ -195,7 +195,7 @@ public sealed class TaskDetailFieldsTests
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Blocked by (Spec §13.6, mudblazor.md: MudAutocomplete selects one value only in 9.10).
+    // Blocked by (Spec §13.6, agents/MudBlazorDesign.md: MudAutocomplete selects one value only in 9.10).
     // ---------------------------------------------------------------------------------------------
 
     /// <summary>A blocker chip is added by the autocomplete and removed by <c>OnClose</c> - the chip list is asserted whole (R7), never by membership.</summary>
