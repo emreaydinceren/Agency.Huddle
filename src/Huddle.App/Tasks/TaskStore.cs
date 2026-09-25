@@ -139,13 +139,17 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     public TaskItem? Get(TaskId id) => this.index.ById.GetValueOrDefault(id);
 
     /// <summary>
-    /// Writes <paramref name="text"/> to a brand-new file at <paramref name="task"/>'s
-    /// <see cref="TaskItem.Path"/>, refusing to overwrite an existing one (Settled corrections-B2 D6
-    /// item 6: Create never overwrites - the id was allocated for exactly this file, so unlike
-    /// <see cref="Write"/> there is no prior version to check against). Added for <c>TaskService</c>
-    /// (Task 6.1.i); the text must already parse, the same guard <see cref="Write"/> applies.
+    /// Writes <paramref name="text"/> to a brand-new file for <paramref name="task"/>, refusing to
+    /// overwrite an existing one (Settled corrections-B2 D6 item 6: Create never overwrites - the id
+    /// was allocated for exactly this file, so unlike <see cref="Write"/> there is no prior version
+    /// to check against). Added for <c>TaskService</c> (Task 6.1.i); the text must already parse, the
+    /// same guard <see cref="Write"/> applies. <paramref name="task"/>'s <see cref="TaskItem.Location"/>
+    /// is resolved through <see cref="CanonicalizeLocation"/> before the path is built (ADR-0025: a
+    /// Team or Project folder is matched case-insensitively on every OS), so this never creates a
+    /// second, differently-cased folder next to one that already exists - even if a future caller,
+    /// unlike <c>TaskService.CreateCore</c> today, forgets to canonicalise first.
     /// </summary>
-    /// <param name="task">The Task being created; its <see cref="TaskItem.Path"/> and <see cref="TaskItem.Location"/> are used.</param>
+    /// <param name="task">The Task being created; its <see cref="TaskItem.Id"/> and <see cref="TaskItem.Location"/> are used to compute the path actually written to.</param>
     /// <param name="text">The full file text to write, already composed.</param>
     /// <returns>The re-parsed Task as written, or <see langword="null"/> when a file already exists at that path.</returns>
     internal TaskItem? Create(TaskItem task, string text)
@@ -153,7 +157,10 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         ArgumentNullException.ThrowIfNull(task);
         ArgumentNullException.ThrowIfNull(text);
 
-        if (!TaskFileFormat.TryParse(text, task.Path, task.Location, out _, out string parseError))
+        TaskLocation location = this.CanonicalizeLocation(task.Location);
+        string path = TaskLayout.PathFor(this.RootDirectory, location, task.Id);
+
+        if (!TaskFileFormat.TryParse(text, path, location, out _, out string parseError))
         {
             throw new InvalidOperationException(
                 string.Create(CultureInfo.InvariantCulture, $"Task '{task.Id}' could not be written: {parseError}"));
@@ -168,26 +175,26 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 return null;
             }
 
-            if (File.Exists(task.Path))
+            if (File.Exists(path))
             {
                 return null;
             }
 
-            string? directory = Path.GetDirectoryName(task.Path);
+            string? directory = Path.GetDirectoryName(path);
             if (directory is not null)
             {
                 Directory.CreateDirectory(directory);
             }
 
-            string tmpPath = task.Path + ".tmp";
+            string tmpPath = path + ".tmp";
             File.WriteAllText(tmpPath, text);
             try
             {
-                File.Move(tmpPath, task.Path, overwrite: false);
+                File.Move(tmpPath, path, overwrite: false);
             }
             catch (IOException)
             {
-                // A file appeared at task.Path between the Exists check above and this Move - the
+                // A file appeared at path between the Exists check above and this Move - the
                 // same race Create exists to prevent (Settled facts.md R4 "Create collision"). The
                 // caller's id allocation was still valid; TaskService maps this to an
                 // InvalidOperationException rather than silently overwriting the racing file.
@@ -195,7 +202,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 return null;
             }
 
-            written = ReparseWritten(task.Path, task.Location, task.Id, "created");
+            written = ReparseWritten(path, location, task.Id, "created");
             this.RecordVersion(written);
             this.index = this.RefreshTeams(ReplaceInIndex(this.index, written));
             changed = this.IndexChanged;
@@ -267,14 +274,24 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// Moves <paramref name="task"/> to <paramref name="to"/>, writing <paramref name="text"/> there
     /// (Spec §8.3): create the target directory, refuse an existing target, rename then write the new
     /// text atomically over the target - rolling the rename back if the write fails - and record the
-    /// new version. A source and target that differ only in case (a case-only Team rename) go through
-    /// a temp name instead, because a plain rename is a no-op on a case-insensitive file system and a
-    /// write-then-delete would delete the very file just written (Settled corrections-B2 D5 item 3).
-    /// Like <see cref="Write"/>, a version conflict against <paramref name="expectedVersion"/> returns
-    /// <see langword="null"/> rather than throwing; an existing target is a different failure and still
-    /// throws. Rollback of a failed write after a successful rename is implemented but not covered by
-    /// a unit test (see the brief's Coverage note): forcing that path needs an I/O failure injected
-    /// between the rename and the write, which this suite has no seam for.
+    /// new version. <paramref name="to"/> is resolved through <see cref="CanonicalizeLocation"/> first
+    /// (ADR-0025: a Team or Project folder is matched case-insensitively, on every OS), so requesting a
+    /// Team or Project by a different casing than an existing folder's reuses that folder instead of
+    /// building a second, differently-cased one next to it - the file-system-dependent bug this fixed:
+    /// on a case-insensitive file system (Windows, macOS) an unresolved target happened to collide with
+    /// the source and looked like a same-folder move, while on a case-sensitive one (Linux) it silently
+    /// created a sibling folder. When the resolved target is the source path itself - nothing about the
+    /// folder actually changes - this writes in place, the same way <see cref="Write"/> does, rather
+    /// than attempting a rename to the file's own path. A source and resolved target that differ only in
+    /// case without either being the other - a caller renaming a Team folder's own casing before any
+    /// Task exists under the new one - still goes through a temp name, because a plain rename is a no-op
+    /// on a case-insensitive file system and a write-then-delete would delete the very file just written
+    /// (Settled corrections-B2 D5 item 3). Like <see cref="Write"/>, a version conflict against
+    /// <paramref name="expectedVersion"/> returns <see langword="null"/> rather than throwing; an
+    /// existing target is a different failure and still throws. Rollback of a failed write after a
+    /// successful rename is implemented but not covered by a unit test (see the brief's Coverage note):
+    /// forcing that path needs an I/O failure injected between the rename and the write, which this
+    /// suite has no seam for.
     /// </summary>
     /// <param name="task">The Task being moved; its current <see cref="TaskItem.Path"/> is the source.</param>
     /// <param name="expectedVersion">The version <paramref name="task"/> was last seen at.</param>
@@ -288,13 +305,15 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         ArgumentNullException.ThrowIfNull(to);
         ArgumentNullException.ThrowIfNull(text);
 
-        if (!TaskFileFormat.TryParse(text, task.Path, to, out _, out string parseError))
+        TaskLocation canonicalTo = this.CanonicalizeLocation(to);
+
+        if (!TaskFileFormat.TryParse(text, task.Path, canonicalTo, out _, out string parseError))
         {
             throw new InvalidOperationException(
                 string.Create(CultureInfo.InvariantCulture, $"Task '{task.Id}' could not be written: {parseError}"));
         }
 
-        string targetPath = TaskLayout.PathFor(this.RootDirectory, to, task.Id);
+        string targetPath = TaskLayout.PathFor(this.RootDirectory, canonicalTo, task.Id);
 
         Action? changed;
         TaskItem written;
@@ -317,25 +336,29 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
                 Directory.CreateDirectory(targetDirectory);
             }
 
-            bool caseOnlyRename = !string.Equals(task.Path, targetPath, StringComparison.Ordinal)
-                && FolderSnapshot.PathComparer.Equals(task.Path, targetPath);
+            bool sameLocation = string.Equals(task.Path, targetPath, StringComparison.Ordinal);
 
-            if (caseOnlyRename)
+            if (!sameLocation)
             {
-                string tempPath = task.Path + ".tmp-move";
-                File.Move(task.Path, tempPath, overwrite: false);
-                File.Move(tempPath, targetPath, overwrite: false);
-            }
-            else
-            {
-                if (File.Exists(targetPath))
+                bool caseOnlyRename = FolderSnapshot.PathComparer.Equals(task.Path, targetPath);
+
+                if (caseOnlyRename)
                 {
-                    throw new IOException(string.Create(
-                        CultureInfo.InvariantCulture,
-                        $"A file named {Path.GetFileName(targetPath)} already exists in {targetDirectory}."));
+                    string tempPath = task.Path + ".tmp-move";
+                    File.Move(task.Path, tempPath, overwrite: false);
+                    File.Move(tempPath, targetPath, overwrite: false);
                 }
+                else
+                {
+                    if (File.Exists(targetPath))
+                    {
+                        throw new IOException(string.Create(
+                            CultureInfo.InvariantCulture,
+                            $"A file named {Path.GetFileName(targetPath)} already exists in {targetDirectory}."));
+                    }
 
-                File.Move(task.Path, targetPath, overwrite: false);
+                    File.Move(task.Path, targetPath, overwrite: false);
+                }
             }
 
             try
@@ -346,12 +369,16 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             {
                 // Roll back the rename, so a failed write never leaves the Task missing from both
                 // the source and the target (Settled corrections-B2 D5 item 2: "On failure of the
-                // write, move it back").
-                File.Move(targetPath, task.Path, overwrite: false);
+                // write, move it back"). Nothing to roll back when the target was the source all along.
+                if (!sameLocation)
+                {
+                    File.Move(targetPath, task.Path, overwrite: false);
+                }
+
                 throw;
             }
 
-            written = ReparseWritten(targetPath, to, task.Id, "moved");
+            written = ReparseWritten(targetPath, canonicalTo, task.Id, "moved");
             this.lastSeenVersion.Remove(task.Path);
             this.RecordVersion(written);
             this.index = this.RefreshTeams(ReplaceInIndex(this.index, written));
@@ -1067,6 +1094,45 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             this.logger.LogWarning(ex, "TaskStore could not list Project folders under '{TeamPath}'.", teamPath);
             return [];
         }
+    }
+
+    /// <summary>
+    /// Resolves <paramref name="location"/>'s Team, and Project when it has one, to an existing Team or
+    /// Project folder's on-disk casing, matched case-insensitively (ADR-0025 "a Team folder is a folder
+    /// by convention": "the comparison ignores case, because Windows paths do" - a rule <see cref="Teams"/>
+    /// already states holds "on every OS", not only the ones that happen to fold case for free). Reads
+    /// the live <see cref="Teams"/> snapshot without taking <see cref="writeGate"/>, the same lock-free
+    /// pattern <see cref="Get"/> uses. A Team with no existing folder yet, or a Project with no existing
+    /// sub-folder under its (now-resolved) Team, passes through unchanged - it is about to become the
+    /// new canonical casing itself.
+    /// </summary>
+    /// <param name="location">The location as requested by a caller, in whatever casing it used.</param>
+    private TaskLocation CanonicalizeLocation(TaskLocation location)
+    {
+        foreach (TeamFolder folder in this.Teams)
+        {
+            if (!string.Equals(folder.Name, location.Team, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (location.Project is not { Length: > 0 } project)
+            {
+                return location with { Team = folder.Name };
+            }
+
+            foreach (string existingProject in folder.Projects)
+            {
+                if (string.Equals(existingProject, project, StringComparison.OrdinalIgnoreCase))
+                {
+                    return location with { Team = folder.Name, Project = existingProject };
+                }
+            }
+
+            return location with { Team = folder.Name };
+        }
+
+        return location;
     }
 
     /// <summary>Recomputes each folder's <see cref="TeamFolder.IsOrphan"/> against the live <see cref="PersonaStore.Teams"/> list, without rescanning any file (Spec §8.2).</summary>

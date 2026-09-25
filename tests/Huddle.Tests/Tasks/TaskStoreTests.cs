@@ -470,10 +470,15 @@ public sealed class TaskStoreTests
     }
 
     /// <summary>
-    /// A case-only Team change - source and target equal under <c>FolderSnapshot.PathComparer</c>
-    /// and differing only in case - renames the file through a temp name rather than writing a new
-    /// file and deleting the old one (Settled corrections-B2 D5 item 3). On Windows this is the real
-    /// case (the file system resolves both paths to the same entry), so the test is not skipped.
+    /// A Team change that only differs in case from the Task's current, existing Team folder is not a
+    /// move at all once the target is resolved against that folder's on-disk casing (ADR-0025: a Team
+    /// folder is matched case-insensitively, "because Windows paths do" - a rule that must hold on
+    /// every OS, not only the ones that fold directory case for free). The file stays at its original,
+    /// canonical-case path; no sibling folder differing only by case is created alongside it. This is
+    /// the regression test for the bug where <see cref="TaskStore.Move"/> built its target path from
+    /// the requested casing directly: on a case-insensitive file system (Windows, macOS) that path
+    /// coincided with the source and merely looked correct, while on a case-sensitive one (Linux) it
+    /// silently created a second "platform" folder next to "Platform" and moved the file into it.
     /// </summary>
     [Fact]
     public void Move_CaseOnlyTeamChange_KeepsTheFile()
@@ -492,11 +497,74 @@ public sealed class TaskStoreTests
 
         Assert.NotNull(result);
         Assert.True(File.Exists(sourcePath));
-        string[] filesUnderPlatform = Directory.GetFiles(Path.Combine(root, "Platform"), "*.md", SearchOption.AllDirectories);
-        Assert.Single(filesUnderPlatform);
-        Assert.False(File.Exists(sourcePath + ".tmp-move"));
+        string[] filesUnderRoot = Directory.GetFiles(root, "*.md", SearchOption.AllDirectories);
         TaskItem? indexed = store.Get(id);
         Assert.Equal("renamed casing", indexed?.Title);
+        Assert.Equal(sourcePath, indexed?.Path);
+        Assert.Single(filesUnderRoot);
+        Assert.False(File.Exists(sourcePath + ".tmp-move"));
+
+        string[] teamDirs = Directory.GetDirectories(root);
+        string teamDirName = Assert.Single(teamDirs, d => string.Equals(Path.GetFileName(d), "Platform", StringComparison.Ordinal));
+        Assert.DoesNotContain(teamDirs, d => string.Equals(Path.GetFileName(d), "platform", StringComparison.Ordinal) && !string.Equals(d, teamDirName, StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// The same case-only-Team-change guarantee as <see cref="Move_CaseOnlyTeamChange_KeepsTheFile"/>,
+    /// but for a Project folder nested under an already-canonical Team (ADR-0025 §8.2 applies the same
+    /// case-insensitive matching to Project folders as to Team folders).
+    /// </summary>
+    [Fact]
+    public void Move_CaseOnlyProjectChange_KeepsTheFile()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        string sourcePath = TestTaskStore.WriteTask(root, Path.Combine("Platform", "Auth", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", "Auth", false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        TaskItem original = store.Get(id) ?? throw new InvalidOperationException("fixture task missing");
+        TaskLocation lowerCaseLocation = new("Platform", "auth", false);
+        string text = TaskFileFormat.Compose(original with { Location = lowerCaseLocation, Title = "renamed casing" });
+
+        TaskItem? result = store.Move(original, original.Version, lowerCaseLocation, text);
+
+        Assert.NotNull(result);
+        Assert.True(File.Exists(sourcePath));
+        TaskItem? indexed = store.Get(id);
+        Assert.Equal(sourcePath, indexed?.Path);
+
+        string[] projectDirs = Directory.GetDirectories(Path.Combine(root, "Platform"));
+        string projectDirName = Assert.Single(projectDirs, d => string.Equals(Path.GetFileName(d), "Auth", StringComparison.Ordinal));
+        Assert.DoesNotContain(projectDirs, d => string.Equals(Path.GetFileName(d), "auth", StringComparison.Ordinal) && !string.Equals(d, projectDirName, StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// <see cref="TaskStore.Create"/> resolves a differently-cased Team straight to the existing
+    /// folder's on-disk casing itself (ADR-0025), the store's own guarantee independent of
+    /// <c>TaskService.CreateCore</c>'s own canonicalisation before it calls in - this is the direct
+    /// regression test for that layer, so the invariant holds even for a caller that skips it.
+    /// </summary>
+    [Fact]
+    public void Create_ExistingFolderDifferentCase_ReusesExistingFolder()
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        Directory.CreateDirectory(Path.Combine(root, "Platform"));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        TaskItem candidate = TestTasks.Make(id: "PLAT-0001", location: new("platform", null, false), path: "");
+        string text = TaskFileFormat.Compose(candidate);
+
+        TaskItem? written = store.Create(candidate, text);
+
+        Assert.NotNull(written);
+        Assert.Equal("Platform", written.Location.Team);
+        Assert.Equal(Path.Combine(root, "Platform", "PLAT-0001.md"), written.Path);
+        string[] teamDirs = Directory.GetDirectories(root);
+        string teamDirName = Assert.Single(teamDirs, d => string.Equals(Path.GetFileName(d), "Platform", StringComparison.Ordinal));
+        Assert.DoesNotContain(teamDirs, d => string.Equals(Path.GetFileName(d), "platform", StringComparison.Ordinal) && !string.Equals(d, teamDirName, StringComparison.Ordinal));
     }
 
     /// <summary>
