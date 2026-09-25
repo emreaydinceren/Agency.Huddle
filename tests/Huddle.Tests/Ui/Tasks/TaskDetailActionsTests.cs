@@ -1,23 +1,14 @@
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
-using System.Globalization;
 using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using MudBlazor;
-using Agency.Huddle.App;
-using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Components.Tasks;
-using Agency.Huddle.App.Data;
-using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
-using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
 
@@ -313,21 +304,25 @@ public sealed class TaskDetailActionsTests
     /// A Change log entry's date renders as the Human's local time through the injected
     /// <see cref="TimeProvider"/> (J51), formatted <c>yyyy-MM-dd HH:mm</c> invariant - not
     /// <see cref="DateTimeOffset.ToLocalTime"/>'s machine time zone, so a fixed
-    /// <see cref="TimeProvider.LocalTimeZone"/> in a test (<see cref="FixedClockStack"/>) makes it
-    /// deterministic.
+    /// <see cref="TimeProvider.LocalTimeZone"/> in a test (a <see cref="ManualTimeProvider"/> built with
+    /// <see cref="FixedUtcNow"/> and <see cref="FixedZone"/>, given to <see cref="TaskToolHarness"/>'s
+    /// clock parameter) makes it deterministic. The expected text is a literal, not computed from the
+    /// same <see cref="TimeZoneInfo.ConvertTime(DateTimeOffset, TimeZoneInfo)"/> call the component
+    /// itself would use, so a bug in that conversion can't cancel out in both places.
     /// </summary>
     [Fact]
     public async Task ChangeLog_EntryDate_FormatsAsHumanLocalTimeViaInjectedClock()
     {
-        await using FixedClockStack stack = await FixedClockStack.CreateAsync(Xunit.TestContext.Current.CancellationToken);
-        TaskItem task = stack.CreateTask();
-        await using MudBunitContext ctx = stack.NewContext();
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(
+            ct, new ManualTimeProvider(TaskDetailActionsTests.FixedUtcNow, TaskDetailActionsTests.FixedZone));
+        TaskItem task = CreateTask(harness);
+        await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderPanel(ctx, task.Id);
 
         cut.Find(".task-detail-changelog .mud-expand-panel-header").Click();
 
-        string expected = TimeZoneInfo.ConvertTime(FixedClockStack.FixedUtcNow, FixedClockStack.FixedZone).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
-        Assert.Equal(expected, cut.Find(".task-detail-changelog-date").TextContent.Trim());
+        Assert.Equal("2026-01-15 12:30", cut.Find(".task-detail-changelog-date").TextContent.Trim());
     }
 
     /// <summary><c>MudExitPrompt</c> is disabled with nothing pending, and enabled once an edit is made (Spec §13.6 "Leaving with unsaved edits").</summary>
@@ -581,142 +576,16 @@ public sealed class TaskDetailActionsTests
     private static string TextOf(IRenderedComponent<TaskDetailDialog> dialog, string cssSelector) =>
         dialog.Find(cssSelector).TextContent.Trim();
 
-    /// <summary>A <see cref="TimeProvider"/> fixed at <see cref="FixedClockStack.FixedUtcNow"/>, whose <see cref="LocalTimeZone"/> is a made-up, portable offset (never a named system zone, which may not exist under every OS/ICU combination) - so a Change log entry's rendered local time is deterministic without depending on the test machine's own time zone.</summary>
-    /// <param name="utcNow">The fixed instant every <see cref="GetUtcNow"/> call returns.</param>
-    /// <param name="zone">The fixed zone <see cref="LocalTimeZone"/> returns.</param>
-    private sealed class FixedTimeProvider(DateTimeOffset utcNow, TimeZoneInfo zone) : TimeProvider
-    {
-        /// <inheritdoc />
-        public override DateTimeOffset GetUtcNow() => utcNow;
-
-        /// <inheritdoc />
-        public override TimeZoneInfo LocalTimeZone => zone;
-    }
+    /// <summary>
+    /// The fixed instant <see cref="ChangeLog_EntryDate_FormatsAsHumanLocalTimeViaInjectedClock"/>
+    /// gives its <see cref="ManualTimeProvider"/>, so the Task it creates carries a known,
+    /// deterministic <see cref="ChangeLogEntry.At"/>.
+    /// </summary>
+    private static readonly DateTimeOffset FixedUtcNow = new(2026, 1, 15, 10, 30, 0, TimeSpan.Zero);
 
     /// <summary>
-    /// A from-scratch Tasks stack, independent of <see cref="TaskToolHarness"/> (whose own
-    /// <see cref="TaskToolHarness.Clock"/> is fixed to <see cref="TimeProvider.System"/> with no
-    /// constructor override), built with a <see cref="FixedTimeProvider"/> instead - so a Task's
-    /// Change log entries carry a known, deterministic <see cref="ChangeLogEntry.At"/>
-    /// (<see cref="TaskDetailTests.DisabledWakeStack"/>'s own construction, mirrored rather than
-    /// editing the shared harness, which every other wave's agent is touching concurrently this run).
+    /// A made-up, portable +02:00 zone for the same test's <see cref="ManualTimeProvider"/> - never a
+    /// named system zone, which may not exist under every OS/ICU combination.
     /// </summary>
-    private sealed class FixedClockStack : IAsyncDisposable
-    {
-        /// <summary>The fixed instant every Change log entry this stack writes carries.</summary>
-        public static readonly DateTimeOffset FixedUtcNow = new(2026, 1, 15, 10, 30, 0, TimeSpan.Zero);
-
-        /// <summary>A made-up, portable +02:00 zone - see <see cref="FixedTimeProvider"/>'s own remarks on why not a named system zone.</summary>
-        public static readonly TimeZoneInfo FixedZone = TimeZoneInfo.CreateCustomTimeZone("Fixed+02", TimeSpan.FromHours(2), "Fixed+02", "Fixed+02");
-
-        private readonly TempDataDir dir = new();
-        private readonly FixedTimeProvider clock = new(FixedUtcNow, FixedZone);
-        private readonly PersonaStore personas;
-        private readonly TaskStore store;
-        private readonly TaskService service;
-        private readonly TaskEvents events;
-        private readonly TaskTriggerService triggers;
-        private readonly TaskActivity taskActivity;
-        private readonly TurnActivity turnActivity;
-        private readonly PersonaHealth health;
-        private readonly Agency.Huddle.Tests.Ui.FakeAgentGateway gateway;
-        private readonly Agency.Huddle.App.Avatars.AvatarStore avatars;
-        private readonly SqliteTeamDirectory directory;
-        private readonly IOptions<TeamOptions> options;
-
-        private FixedClockStack()
-        {
-            this.options = Options.Create(new TeamOptions { DataDir = this.dir.Path });
-
-            this.personas = new PersonaStore(
-                this.options,
-                new PersonaModelStore(this.options),
-                new PersonaEffortStore(this.options),
-                NullLogger<PersonaStore>.Instance);
-            this.personas.Add(new PersonaIdentity("Nova", "Nova", "Nova", ["Platform"]), "You are Nova.");
-
-            this.store = new TaskStore(this.options, this.personas, this.clock, NullLogger<TaskStore>.Instance);
-            TaskIdAllocator ids = new(this.options);
-            this.events = new TaskEvents();
-            this.service = new TaskService(this.store, ids, this.events, this.personas, this.options, this.clock, NullLogger<TaskService>.Instance);
-
-            this.turnActivity = new TurnActivity();
-            this.taskActivity = new TaskActivity(this.options);
-            this.health = new PersonaHealth(this.clock, NullLogger<PersonaHealth>.Instance);
-            this.gateway = new Agency.Huddle.Tests.Ui.FakeAgentGateway();
-            this.avatars = new Agency.Huddle.App.Avatars.AvatarStore(this.options, NullLogger<Agency.Huddle.App.Avatars.AvatarStore>.Instance);
-
-            this.directory = new SqliteTeamDirectory(this.options);
-            FileChatStore chatStore = new(this.options, NullLogger<FileChatStore>.Instance);
-            RoomEvents roomEvents = new(NullLogger<RoomEvents>.Instance);
-            ProposalStore proposals = new(roomEvents);
-            ChatService chat = new(this.directory, chatStore, roomEvents, new FakeMentionAliasSource(), this.options, proposals, NullLogger<ChatService>.Instance);
-            OwnPosts ownPosts = new(this.options);
-
-            this.triggers = new TaskTriggerService(
-                this.events,
-                this.store,
-                this.taskActivity,
-                this.turnActivity,
-                chat,
-                this.directory,
-                this.personas,
-                this.gateway,
-                this.health,
-                new FakePromptSource(),
-                this.options,
-                this.clock,
-                NullLogger<TaskTriggerService>.Instance,
-                ownPosts);
-        }
-
-        /// <summary>Builds the stack and seeds its <see cref="SqliteTeamDirectory"/> with the Human row.</summary>
-        /// <param name="ct">Cancels the seeding call.</param>
-        public static async Task<FixedClockStack> CreateAsync(CancellationToken ct)
-        {
-            FixedClockStack stack = new();
-            await stack.directory.InitializeAsync("You", ct);
-            return stack;
-        }
-
-        /// <summary>Creates a Task through this stack's own <see cref="TaskService"/>.</summary>
-        public TaskItem CreateTask()
-        {
-            TaskResult result = this.service.Create(new TaskDraft("T", "Platform", null), TaskActors.Human(this.options.Value));
-            return Assert.IsType<TaskResult.Saved>(result).Task;
-        }
-
-        /// <summary>Registers this stack's own services - including its own fixed <see cref="TimeProvider"/> - into a fresh <see cref="MudBunitContext"/>.</summary>
-        public MudBunitContext NewContext()
-        {
-            MudBunitContext ctx = new();
-            ctx.Services.AddSingleton(this.options);
-            ctx.Services.AddSingleton<TimeProvider>(this.clock);
-            ctx.Services.AddSingleton(this.personas);
-            ctx.Services.AddSingleton(this.store);
-            ctx.Services.AddSingleton(this.events);
-            ctx.Services.AddSingleton(this.service);
-            ctx.Services.AddSingleton(this.triggers);
-            ctx.Services.AddSingleton(this.taskActivity);
-            ctx.Services.AddSingleton(this.turnActivity);
-            ctx.Services.AddSingleton(this.health);
-            ctx.Services.AddSingleton<IAgentGateway>(this.gateway);
-            ctx.Services.AddSingleton(this.directory);
-            ctx.Services.AddSingleton<ITeamDirectory>(this.directory);
-            ctx.Services.AddSingleton(this.avatars);
-            return ctx;
-        }
-
-        /// <summary>Disposes every disposable service above, then the temp directory itself.</summary>
-        public ValueTask DisposeAsync()
-        {
-            this.triggers.Dispose();
-            this.service.Dispose();
-            this.store.Dispose();
-            this.personas.Dispose();
-            this.avatars.Dispose();
-            this.dir.Dispose();
-            return ValueTask.CompletedTask;
-        }
-    }
+    private static readonly TimeZoneInfo FixedZone = TimeZoneInfo.CreateCustomTimeZone("Fixed+02", TimeSpan.FromHours(2), "Fixed+02", "Fixed+02");
 }

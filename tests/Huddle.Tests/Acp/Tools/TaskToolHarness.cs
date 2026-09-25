@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -44,11 +45,20 @@ internal sealed class TaskToolHarness : IDisposable
 {
     private readonly TempDataDir dir = new();
 
-    /// <summary>Builds the whole stack: a fresh <see cref="TempDataDir"/>, a real <see cref="PersonaStore"/> seeded with Nova and Kai, and every Tasks service constructed over it.</summary>
-    public TaskToolHarness()
+    /// <summary>
+    /// Builds the whole stack: a fresh <see cref="TempDataDir"/>, a real <see cref="PersonaStore"/>
+    /// seeded with Nova and Kai, and every Tasks service constructed over it.
+    /// </summary>
+    /// <param name="clock">
+    /// The <see cref="TimeProvider"/> every clock-taking service above shares, exposed as
+    /// <see cref="Clock"/>; defaults to <see cref="TimeProvider.System"/> when omitted. Pass a fake
+    /// clock (e.g. <see cref="Agency.Huddle.Tests.Acp.Fakes.ManualTimeProvider"/>) for a test that
+    /// needs a deterministic Change log time (R8 facts "TaskToolHarness.Clock").
+    /// </param>
+    public TaskToolHarness(TimeProvider? clock = null)
     {
         this.Options = this.dir.Options();
-        this.Clock = TimeProvider.System;
+        this.Clock = clock ?? TimeProvider.System;
 
         this.Personas = new PersonaStore(
             this.Options,
@@ -120,10 +130,11 @@ internal sealed class TaskToolHarness : IDisposable
     /// is asynchronous.
     /// </summary>
     /// <param name="ct">Cancels the seeding calls.</param>
+    /// <param name="clock">Forwarded to the constructor; see its own parameter doc.</param>
     /// <returns>A harness whose <see cref="Directory"/> already knows the Human, Nova and Kai.</returns>
-    public static async Task<TaskToolHarness> CreateAsync(CancellationToken ct)
+    public static async Task<TaskToolHarness> CreateAsync(CancellationToken ct, TimeProvider? clock = null)
     {
-        TaskToolHarness harness = new();
+        TaskToolHarness harness = new(clock);
 
         await harness.Directory.InitializeAsync("You", ct);
         User nova = await harness.Directory.UpsertAgentUserAsync("Nova", null, ct)
@@ -210,6 +221,38 @@ internal sealed class TaskToolHarness : IDisposable
 
     /// <summary>The Tasks scan root on disk, i.e. <see cref="TaskStore.RootDirectory"/>.</summary>
     public string TasksDirPath => this.Store.RootDirectory;
+
+    /// <summary>
+    /// Writes <paramref name="task"/> to disk at the path its <see cref="TaskItem.Location"/> and
+    /// <see cref="TaskItem.Id"/> resolve to (<see cref="TaskLayout.PathFor"/>), through
+    /// <see cref="TaskStore.Create"/> rather than a raw file write. <see cref="TaskStore.Create"/>
+    /// records the written version as already seen before returning, so the next
+    /// <see cref="TaskStore.RebuildFromWatcher"/> finds nothing changed at that path: <see cref="Service"/>
+    /// (subscribed to <see cref="TaskStore.OutsideEditDetected"/> since construction) never sees this
+    /// write as an edit made outside Huddle, and never appends the "edited outside Huddle" Change log
+    /// entry that would otherwise overwrite the seeded <see cref="TaskItem.Updated"/> - the trap a raw
+    /// <c>TestTaskStore.WriteTask</c> + <see cref="TaskStore.RebuildFromWatcher"/> falls into under this
+    /// harness, because <see cref="Service"/> is live from the moment the harness is constructed (R8
+    /// facts "Harness trap"). A genuine edit made to the file afterwards, outside this method, is still
+    /// picked up as an outside edit on the following rebuild, exactly as before.
+    /// </summary>
+    /// <param name="task">
+    /// The Task to seed. Its own <see cref="TaskItem.Path"/>, if any, is ignored and replaced with the
+    /// path <see cref="TaskItem.Location"/> and <see cref="TaskItem.Id"/> resolve to.
+    /// </param>
+    /// <returns>The re-parsed Task as written to disk.</returns>
+    internal TaskItem SeedOnDisk(TaskItem task)
+    {
+        ArgumentNullException.ThrowIfNull(task);
+
+        string path = TaskLayout.PathFor(this.Store.RootDirectory, task.Location, task.Id);
+        TaskItem toWrite = task with { Path = path };
+        string text = TaskFileFormat.Compose(toWrite);
+
+        return this.Store.Create(toWrite, text)
+            ?? throw new InvalidOperationException(
+                string.Create(CultureInfo.InvariantCulture, $"SeedOnDisk: a file already exists at '{path}'."));
+    }
 
     /// <summary>
     /// Registers every service above into <paramref name="services"/>, so a Razor component

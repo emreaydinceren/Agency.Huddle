@@ -3,7 +3,6 @@ using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
-using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Tools;
@@ -106,12 +105,11 @@ public sealed class ComposerTests
     public async Task MoveAsync_NegativeFromTheFirstRow_WrapsToTheLastRow()
     {
         using TaskToolHarness harness = new();
-        using ComposerTests.OrderedTaskFixture tasks = new();
-        tasks.Seed("PLAT-0001", "Newest", "2026-01-03T00:00:00Z");
-        tasks.Seed("PLAT-0002", "Middle", "2026-01-02T00:00:00Z");
-        tasks.Seed("PLAT-0003", "Oldest", "2026-01-01T00:00:00Z");
+        ComposerTests.SeedTask(harness, "PLAT-0001", "Newest", "2026-01-03T00:00:00Z");
+        ComposerTests.SeedTask(harness, "PLAT-0002", "Middle", "2026-01-02T00:00:00Z");
+        ComposerTests.SeedTask(harness, "PLAT-0003", "Oldest", "2026-01-01T00:00:00Z");
 
-        await using MudBunitContext ctx = ComposerTests.NewContext(harness, tasks.Store);
+        await using MudBunitContext ctx = ComposerTests.NewContext(harness);
         IRenderedComponent<ContainerFragment> cut = ComposerTests.RenderComposer(ctx);
         IRenderedComponent<Composer> composer = cut.FindComponent<Composer>();
 
@@ -132,12 +130,11 @@ public sealed class ComposerTests
     public async Task MoveAsync_PositivePastTheLastRow_WrapsToTheFirstRow()
     {
         using TaskToolHarness harness = new();
-        using ComposerTests.OrderedTaskFixture tasks = new();
-        tasks.Seed("PLAT-0001", "Newest", "2026-01-03T00:00:00Z");
-        tasks.Seed("PLAT-0002", "Middle", "2026-01-02T00:00:00Z");
-        tasks.Seed("PLAT-0003", "Oldest", "2026-01-01T00:00:00Z");
+        ComposerTests.SeedTask(harness, "PLAT-0001", "Newest", "2026-01-03T00:00:00Z");
+        ComposerTests.SeedTask(harness, "PLAT-0002", "Middle", "2026-01-02T00:00:00Z");
+        ComposerTests.SeedTask(harness, "PLAT-0003", "Oldest", "2026-01-01T00:00:00Z");
 
-        await using MudBunitContext ctx = ComposerTests.NewContext(harness, tasks.Store);
+        await using MudBunitContext ctx = ComposerTests.NewContext(harness);
         IRenderedComponent<ContainerFragment> cut = ComposerTests.RenderComposer(ctx);
         IRenderedComponent<Composer> composer = cut.FindComponent<Composer>();
 
@@ -250,7 +247,13 @@ public sealed class ComposerTests
     private static string HighlightedRowId(IRenderedComponent<ContainerFragment> cut) =>
         cut.Find("[aria-selected='true'] .composer-picker-id").TextContent.Trim();
 
-    /// <summary>Writes a Task file directly under the harness's Tasks root and rebuilds the store from it, giving each fixture a distinct <see cref="TaskItem.Updated"/> (corrections-B6 "D15.3" item 7).</summary>
+    /// <summary>
+    /// Writes a Task file under the harness's Tasks root through <see cref="TaskToolHarness.SeedOnDisk"/>,
+    /// giving each fixture its own exact <see cref="TaskItem.Updated"/> (corrections-B6 "D15.3" item 7).
+    /// <see cref="TaskToolHarness.SeedOnDisk"/> (not a raw <c>TestTaskStore.WriteTask</c> write) is what
+    /// keeps that value from being overwritten by an "edited outside Huddle" Change log entry - see its
+    /// own summary (R8 facts "Harness trap").
+    /// </summary>
     private static void SeedTask(TaskToolHarness harness, string id, string title, string updatedAt, TaskState status = TaskState.ToDo)
     {
         TaskItem task = TestTasks.Make(
@@ -258,8 +261,7 @@ public sealed class ComposerTests
             title: title,
             status: status,
             changeLog: [TestTasks.Entry(updatedAt, "You", "Created")]);
-        TestTaskStore.WriteTask(harness.TasksDirPath, $"Platform/{id}.md", task);
-        harness.Store.RebuildFromWatcher();
+        harness.SeedOnDisk(task);
     }
 
     /// <summary>Renders a bare <see cref="Composer"/> the same way <c>ChatPageTests.Composer_StatusLine_DoesNotFollowARoomSwitch</c> does, through <see cref="MudBunitContext.RenderWithPopovers"/> so a floating list renders in the same subtree (corrections-B6 "D15.3" item 5).</summary>
@@ -272,81 +274,20 @@ public sealed class ComposerTests
         });
 
     /// <summary>
-    /// A fresh <see cref="MudBunitContext"/> with the harness's <c>ChatService</c> and a
+    /// A fresh <see cref="MudBunitContext"/> with the harness's <c>ChatService</c> and its
     /// <see cref="TaskStore"/> registered - the bare <c>Composer</c> context corrections-B6 "D15.1"
     /// item 1 describes, extended with Tasks services for 15.3.
     /// </summary>
-    /// <param name="harness">Supplies <c>ChatService</c> (Composer's other dependency) regardless of which store is registered.</param>
-    /// <param name="store">
-    /// The <see cref="TaskStore"/> to register; defaults to <paramref name="harness"/>'s own. Pass
-    /// <see cref="OrderedTaskFixture.Store"/> instead when a test needs exact, order-preserving
-    /// <see cref="TaskItem.Updated"/> values - see <see cref="OrderedTaskFixture"/>'s summary for why
-    /// the harness's own store cannot give that guarantee.
-    /// </param>
+    /// <param name="harness">Supplies <c>ChatService</c> and <c>TaskStore</c> (Composer's dependencies).</param>
     /// <param name="tasksEnabled">The registered <c>Team:Tasks:Enabled</c> value.</param>
-    private static MudBunitContext NewContext(TaskToolHarness harness, TaskStore? store = null, bool tasksEnabled = true)
+    private static MudBunitContext NewContext(TaskToolHarness harness, bool tasksEnabled = true)
     {
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton(harness.Chat);
-        ctx.Services.AddSingleton(store ?? harness.Store);
+        ctx.Services.AddSingleton(harness.Store);
         ctx.Services.AddSingleton(harness.Events);
         TeamOptions options = new() { Tasks = new TasksOptions { Enabled = tasksEnabled } };
         ctx.Services.AddSingleton<IOptions<TeamOptions>>(Options.Create(options));
         return ctx;
-    }
-
-    /// <summary>
-    /// A standalone <see cref="TaskStore"/> over its own <see cref="TempDataDir"/>, with no
-    /// <see cref="TaskService"/> attached to it. The <c>MoveAsync</c> wrap tests need several Tasks
-    /// with distinct, exact <see cref="TaskItem.Updated"/> values (corrections-B6 "D15.3" item 7) so
-    /// <c>TaskQuery.Suggest</c>'s "most recently updated" ordering is predictable.
-    /// </summary>
-    /// <remarks>
-    /// Seeding those Tasks into <see cref="TaskToolHarness"/>'s own store instead is what actually
-    /// caused this class's flaky <c>MoveAsync</c> tests: <see cref="TaskToolHarness"/> also builds a
-    /// live <c>TaskService</c> over the same store, and <c>TaskService</c>'s constructor subscribes to
-    /// <c>TaskStore.OutsideEditDetected</c> (<c>TaskService.cs:92</c>) to log edits made outside Huddle
-    /// (Spec §9.4). A file written directly via <c>TestTaskStore.WriteTask</c> - bypassing
-    /// <c>TaskService.Create</c> entirely - has no recorded "last seen version", so the very next
-    /// <c>RebuildFromWatcher()</c> reports it as an outside edit, and <c>TaskService</c> silently
-    /// appends its own "edited outside Huddle" <see cref="ChangeLogEntry"/>, timestamped with the real
-    /// clock and truncated to the second. That appended entry becomes the new
-    /// <see cref="TaskItem.Updated"/> (the change log's last entry), overwriting every fixture's
-    /// carefully chosen timestamp - and because all three Tasks in a test are seeded within the same
-    /// clock second, all three collapse to the *same* <c>Updated</c> value, leaving their relative
-    /// order to whatever the framework's enumeration happens to produce that run. A store built
-    /// without an attached <c>TaskService</c> has no <c>OutsideEditDetected</c> subscriber, so a
-    /// directly-written file's change log survives untouched.
-    /// </remarks>
-    private sealed class OrderedTaskFixture : IDisposable
-    {
-        private readonly TempDataDir dir = new();
-
-        /// <summary>The isolated store; seed into it with <see cref="Seed"/>.</summary>
-        public TaskStore Store { get; }
-
-        public OrderedTaskFixture()
-        {
-            PersonaStore personas = TestTaskStore.CreatePersonaStore(this.dir);
-            this.Store = TestTaskStore.CreateTaskStore(this.dir, personas);
-        }
-
-        /// <summary>Writes a Task file directly under <see cref="Store"/>'s root and rebuilds from it, exactly like the other tests' <c>SeedTask</c> helper, but against a store no <c>TaskService</c> ever reconciles.</summary>
-        public void Seed(string id, string title, string updatedAt, TaskState status = TaskState.ToDo)
-        {
-            TaskItem task = TestTasks.Make(
-                id: id,
-                title: title,
-                status: status,
-                changeLog: [TestTasks.Entry(updatedAt, "You", "Created")]);
-            TestTaskStore.WriteTask(this.Store.RootDirectory, $"Platform/{id}.md", task);
-            this.Store.RebuildFromWatcher();
-        }
-
-        public void Dispose()
-        {
-            this.Store.Dispose();
-            this.dir.Dispose();
-        }
     }
 }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
@@ -57,5 +58,60 @@ public sealed class TaskToolHarnessTests
 
         int after = ((Delegate?)field.GetValue(harness.Store))?.GetInvocationList().Length ?? 0;
         Assert.True(before > after);
+    }
+
+    /// <summary>
+    /// <see cref="TaskToolHarness.SeedOnDisk"/> writes through <see cref="TaskStore.Create"/>, which
+    /// records the file's version as already seen - so a later <see cref="TaskStore.RebuildFromWatcher"/>
+    /// finds nothing changed at that path: no <see cref="TaskStore.OutsideEditDetected"/>, and the
+    /// seeded Task keeps its own <see cref="TaskItem.Updated"/> and one-entry Change log, not an
+    /// appended "edited outside Huddle" entry (R8 facts "Harness trap").
+    /// </summary>
+    [Fact]
+    public void SeedOnDisk_ThenRebuild_KeepsSeededUpdated_RaisesNoOutsideEdit()
+    {
+        using TaskToolHarness harness = new();
+        int outsideEdits = 0;
+        harness.Store.OutsideEditDetected += _ => outsideEdits++;
+        DateTimeOffset seededAt = DateTimeOffset.Parse("2026-01-01T00:00:00Z", CultureInfo.InvariantCulture);
+        TaskItem seeded = harness.SeedOnDisk(TestTasks.Make(
+            id: "PLAT-0001",
+            title: "Seeded",
+            changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "Created")]));
+
+        harness.Store.RebuildFromWatcher();
+
+        TaskItem afterRebuild = harness.Store.Get(seeded.Id)
+            ?? throw new InvalidOperationException("Seeded Task not found after rebuild.");
+        Assert.Equal(0, outsideEdits);
+        Assert.Equal(seededAt, afterRebuild.Updated);
+        Assert.Equal(["You: Created"], afterRebuild.ChangeLog.Select(e => $"{e.Actor}: {e.Summary}").ToList());
+    }
+
+    /// <summary>
+    /// A genuine edit made straight to a <see cref="TaskToolHarness.SeedOnDisk"/>-seeded file - not
+    /// through <see cref="TaskService"/> - is still picked up as an outside edit on the next
+    /// <see cref="TaskStore.RebuildFromWatcher"/>: <see cref="TaskToolHarness.SeedOnDisk"/> only
+    /// exempts its own write, not whatever happens to the file afterwards.
+    /// </summary>
+    [Fact]
+    public void SeedOnDisk_ThenGenuineOnDiskEdit_ThenRebuild_IsLoggedAsOutsideEdit()
+    {
+        using TaskToolHarness harness = new();
+        TaskItem seeded = harness.SeedOnDisk(TestTasks.Make(
+            id: "PLAT-0001",
+            title: "Original",
+            changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "Created")]));
+        TaskItem editedOutside = seeded with { Title = "Edited outside" };
+        File.WriteAllText(seeded.Path, TaskFileFormat.Compose(editedOutside));
+
+        harness.Store.RebuildFromWatcher();
+
+        TaskItem afterRebuild = harness.Store.Get(seeded.Id)
+            ?? throw new InvalidOperationException("Task not found after rebuild.");
+        Assert.Equal(2, afterRebuild.ChangeLog.Count);
+        Assert.Equal(
+            $"{harness.Options.Value.HumanName}: edited outside Huddle: title: Original → Edited outside",
+            $"{afterRebuild.ChangeLog[^1].Actor}: {afterRebuild.ChangeLog[^1].Summary}");
     }
 }
