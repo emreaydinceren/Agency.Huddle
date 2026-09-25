@@ -1103,6 +1103,7 @@ tests are in `tests/Huddle.Tests/Tasks/TaskServiceTests.cs`. Use a real `Persona
   - **Settled (corrections-B2 D6):**
     - Add `PersonaRenameCascade_RenamesViewAssigneeFilter` test.
   - (R4) Also: `TaskService_ConstructedAtStartup` (`TeamWebApplicationFactory`, B2 D6-10); `RenameTeammate_OneFileFails_OthersRenamed_NoThrow`; `RenameTeammate_MatchesIgnoringCase`.
+  - (R5) Also `RenameTeammate_ThenWatcherRebuild_NoOutsideEditEntry` (call `store.RebuildFromWatcher()` after the rename). Test harnesses dispose `TaskService`.
 - **Acceptance:** Red.
 
 ### Task 6.6.i (#47) — Implement renaming, and the cascade hook [Sonnet]
@@ -1672,6 +1673,7 @@ snippet in the conventions).
   - **Settled (corrections-B3 D9):**
     - Sender: Agent actor's `TaskActor.UserId` may be null → `FindUserByNameAsync(actor.Name)` (async); still null → `Failed`; never fall back to Human.
     - Step 4: S is set from last step tried (step 3's if it ran); every such set contains sender; creator's user null → S = {Human, assignee}.
+  - (R5) Extend 9.4's private `ChooseRoomAsync(TaskItem, string senderId, User assignee, CancellationToken)` (step 1 only today) with steps 2–4 and update its `///`. The sender rule (`ResolveSenderIdAsync`: `FindUserByNameAsync`, null → nothing posted) already exists; its tests will be green on arrival — prove them with `Prove-Mutation`.
 - **Acceptance:** 9.5.t is green.
 
 ### Task 9.6.t (#82) — Test: outcomes and the wake budget [Sonnet]
@@ -1679,6 +1681,7 @@ snippet in the conventions).
 - **Goal:** Pin the **Spec §10.5** outcomes and **Spec §10.6**.
 - **Read first:** **Spec §10.5** (the outcomes table), **Spec §10.6**.
 - **Deliverable:**
+  - (R5) 9.4's `FireAsync` already calls `TryConsumeAgentWake` / `RefundAgentWake` and catches `ChatException` (tests `AgentChange_RoomBudgetSpent_RefundsWake`, `AgentChange_Assignee{Online,Offline}_CountsOneWake`). 9.6 adds only: `BudgetExhausted` → `BudgetSpent`, any other code → `Failed`; `activity.Record(WakeRecord)` for every outcome; `ResetForHuman` on a received Human change. Use `-ExpectFail` and mutation-prove whatever arrives green.
   - `RoomBudgetSpent_OutcomeBudgetSpent_NoThrow`: an Agent actor, with
     `TeamOptions.AgentMessageBudget = 1` and one message already posted.
   - `AssigneeOffline_PostedAndOutcomeOffline`.
@@ -1712,6 +1715,8 @@ snippet in the conventions).
 Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the test setup.
 
 **R3:** D10 is the only stream that touches `tests/Huddle.Tests/Acp/Golden/*` or `prompts.default.json` after 9.2; never run it in parallel with another Prompt change. Reseed goldens with `Conversation/scripts/Reseed-Goldens.ps1`.
+
+**R5:** before 10.2, a chore extended `TaskToolHarness` with `Directory` (Nova/Kai users), `Chat`, `OwnPosts` and `Triggers` (a never-started `TaskTriggerService`). 10.2–10.6 must not edit `TaskToolHarness.cs` or `TaskToolText.cs`; a missing helper is stop-and-report. Tools parse arguments only through `TaskToolText.TryGetString`/`TryGetInt`/`TryGetBool`/`TryGetStringList`, wrap service calls in `TryRun`, resolve the caller with `ResolveActorAsync`, and build the notify clause with `NotifyClause(triggers.Preview(…), callerName)`. Each `.t` adds: one wrong-type argument → a refusal naming it; unknown caller → a refusal with nothing written.
 
 ### Task 10.1.t (#84) — Test: shared tool text helpers [Sonnet]
 
@@ -1834,6 +1839,7 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
 - **Read first:** **Spec §11.6**.
 - **Deliverable:** `CloseTaskToolTests.cs` and `ReopenTaskToolTests.cs`: success texts, the
   already-closed and already-active texts, and the id refusals.
+  - (R5) `Close`/`Reopen` return `NotFound` for an unknown id; the refusal texts are `\"{id} is already closed.\"` and `\"{id} is already active.\"`.
 - **Acceptance:** Red.
 
 ### Task 10.6.i (#95) — Implement `close_task` and `reopen_task` [Sonnet]
@@ -2139,6 +2145,7 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   - *Move to* follows the same path.
   - While dragging, the caption shows the `Preview` text.
   - Dropping on the same zone saves nothing.
+  - (R5) Needs `harness.Triggers` (for `Preview`).
 - **Acceptance:** Red.
 
 ### Task 12.3.i (#119) — Implement dropping and the dialogs [Sonnet]
@@ -2188,6 +2195,7 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   - *(missing)* values stay selected.
   - State grouping is disabled for a Board.
   - Sort rows reorder.
+  - (R5) `/tasks/new` currently falls through to All Tasks; pin that it opens the editor. `OnEditView`/`OnNewTask` are unbound in `Tasks.razor` today.
 - **Acceptance:** Red.
 
 ### Task 13.1.i (#123) — Implement the general sections [Sonnet]
@@ -2235,6 +2243,7 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   - The Save label and notice follow each `WakePreview` row in §13.6.
   - Save calls `Update` with `baseVersion`.
   - An `IOException` keeps `pending` and shows an alert with `role="alert"`.
+  - (R5) Needs `harness.Triggers` (for `Preview`).
 - **Acceptance:** Red. **Two-phase.**
 
 ### Task 14.1.i (#127) — Implement `TaskDetail`'s core [Sonnet]
@@ -2321,6 +2330,7 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   - `BudgetSpent` gives a warning toast.
   - The AI-reacting chip appears when a `LastWake` Room is busy, and disappears when it isn't.
   - A paused Task shows **Allow 10 more**, which calls `TaskActivity.Grant`.
+  - (R5) Needs `harness.Triggers` (for `Preview`). 14.5 needs 9.6 merged (`WakeRecord` outcomes).
 - **Acceptance:** Red.
 
 ### Task 14.5.i (#135) — Implement the notifications [Sonnet]
@@ -2510,7 +2520,7 @@ The manager records each retrospective here, newest last, and commits the plan c
 | R2 | 31 done (#10–#25; the 0.1 chores) | 2026-09-24 | Agents reported "Deviations: none" after breaking the procedure: a copied red file, a `find /` hunt, python3 edits. Haiku tests weren't spec-complete: 2.4's version test couldn't fail, and 5.1 missed the rule that `_` folders are reserved at any depth. The same analyzer errors kept failing builds (CA1859, IDE0059, IDE0060, IDE0005). The plan's text and corrections B2/B3 disagreed, so agents had two sources | Folded B2/B3 into the text of 5.2–6.6, 7.7, 8.4–9.6. Retagged 8.5 and 9.2 Haiku→Sonnet. The brief now requires a row-by-row Coverage list and a forbidden-command self-audit. New scripts: `Run-Tests -ExpectFail/-Force`, `Build.ps1`, `Prove-Mutation.ps1`. Added the D2/D5/D7 API facts |
 | R3 | 59 done (5.1–5.3, 7.4–7.7, 8.1–8.5, 9.1–9.2) | 2026-09-24 | R2's Coverage section worked: reported NOT COVERED rows turned into 9 extra tests. `-RedTask` and `Prove-Mutation` worked; one concurrency test only exposed its race on real threads over 25 rounds. Rule breaks despite the brief: implementation written before the red (then `git stash` to rebuild it), `sed -i`, a service made public on false reasoning. A correction scoped to "lane keys" wasn't applied to group keys. The full suite ran 13 times where 6 were needed; about 6 min went to waiting on the test mutex. `Regenerate-PromptDefaults` wrote to the main checkout from a worktree | Edited 5.4, 5.5, 9.3, 9.4, 9.6 and the D6/D10 preambles. Retagged 9.4 Sonnet→Opus and 10.6, 16.3 Haiku→Sonnet. A PreToolUse hook now blocks `find /` and `sed -i` (Emre's choice). Brief: no `src/` writes before the red, visibility changes are stop-and-ask, invariants apply to every surface, full suite once per dispatch. Scripts: `-NewNames`, comma filters, wait logging, `Reseed-Goldens`, `Prove-Mutation -Line`, `Check-Visibility`; `Regenerate-PromptDefaults` fixed. Added the D5/D7/D8 API facts |
 | R4 | 75 done (5.3–5.5, 6.1–6.2, 9.1–9.2, 11.1–11.4, 11.6–11.7) | 2026-09-24 | Code was written before the red three times (8.3, 6.1/6.2, 11.6). Each time the STOP came mid-dispatch or the prompt read like an implementation spec; a STOP at the start of a dispatch always held. Post-hoc tests were weak: 8 of 13 mutants survived in 6.1/6.2. They missed multi-clause rules, the same rule at a second entry point, disk-state invariants, permissive rules, exactly-once events and absent output. Half the command failures came from `Conversation\` not existing inside worktrees | `.t` tasks are now dispatched red-only, with the `.i` sent as a resume. The brief lists the six kinds of behaviour a `.t` must name. Worktrees get a `Conversation` junction. Settled the Create-collision exception path. Edited 6.3–6.6, 10.2, 11.5, 16.5 and the D12 preamble. Retagged 10.1, 10.3 Haiku→Sonnet and 12.2.t →Opus. New scripts: `Prove-Mutations`, `Find-PackageApi`, `Check-Diff`, and a stash guard on reds |
-| R5 | #75 | | | |
+| R5 | 91 done (6.3–6.5, 9.3, 11.5, 15.1, plus in-flight 10.1 and 9.4) | 2026-09-24 | Red-only dispatch worked: no code before the red, and every STOP was respected. Resumes cost seconds, but a fresh agent spent up to 9.5 min orienting. Test gaps were down to one fix-round (11.5); mutation proofs caught 5 of 5. Forbidden commands were still under-reported (a `find /c/Users`, a python3 edit, a blocked `sed -i`). The runner error with 0 failed tests happened 3×. `Check-Diff` couldn't see uncommitted work. D10's parallel tools would have collided on the harness | Edited 9.5.i, 9.6.t, 6.6.t, 10.6.t, 13.1.t, 12.3.t, 14.1.t, 14.5.t and the D10 preamble. Consecutive tasks on one class now resume the same agent. A harness chore runs before D10. The brief gains a citation rule for NOT COVERED and a transcript self-audit. Scripts: `Check-Diff -Scope Mine`, runner-error auto-rerun with diagnostics, `Audit-Transcript`. The find hook was widened to home, Users and `C:\` roots |
 | R6 | #90 | | | |
 | R7 | #105 | | | |
 | R8 | #120 | | | |
