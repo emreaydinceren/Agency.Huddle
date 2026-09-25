@@ -4,6 +4,8 @@ using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Acp;
@@ -50,6 +52,8 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/> and <see cref="AcpOptions.WorkDir"/>, which together locate the Work Dir to move.</param>
 /// <param name="timeProvider">Drives the backoff between Work Dir move attempts, so a test can control it without a real delay.</param>
 /// <param name="logger">Records a rejected rename, a Work Dir that could not be moved, a file state move that failed, a Room Session move that failed, and any failure in the detached half of the cascade.</param>
+/// <param name="tasks">Rewrites <c>creator:</c>/<c>assignee:</c> in a renamed Persona's Task files — Spec §9.6.</param>
+/// <param name="views">Rewrites a renamed Persona's assignee filter in every saved View — Spec §9.6.</param>
 internal sealed partial class PersonaRenameCascade(
     ITeamDirectory teamDirectory,
     PersonaStore personaStore,
@@ -59,7 +63,9 @@ internal sealed partial class PersonaRenameCascade(
     RoomSessionStore roomSessions,
     IOptions<TeamOptions> options,
     TimeProvider timeProvider,
-    ILogger<PersonaRenameCascade> logger) : IHostedService, IDisposable
+    ILogger<PersonaRenameCascade> logger,
+    TaskService tasks,
+    ViewStore views) : IHostedService, IDisposable
 {
     // The runner it raced against restarts within milliseconds and inherits the Work Dir as its cwd,
     // so a handful of short retries covers the ordinary case (the old process has not yet exited)
@@ -150,6 +156,31 @@ internal sealed partial class PersonaRenameCascade(
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             LogRoomSessionsMoveFailed(logger, renamed.OldName, renamed.NewName, ex);
+        }
+
+        // Same placement and the same reason again (Spec §9.6): a Task's creator/assignee, and a
+        // saved View's assignee filter, both exist whether or not an Agent has ever connected, so
+        // this must sit ABOVE the "no Agent row" early return too. Two separate try/catch blocks, so
+        // a failure renaming Task files never skips the View rename or the race-critical Team
+        // Directory rename below - and, unlike the moves above, TaskService.RenameTeammate itself
+        // already never throws (Settled corrections-B2 D6 item 11), so this catch only guards
+        // against ViewStore.RenameTeammate's own file I/O.
+        try
+        {
+            tasks.RenameTeammate(renamed.OldName, renamed.NewName);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LogTaskRenameFailed(logger, renamed.OldName, renamed.NewName, ex);
+        }
+
+        try
+        {
+            views.RenameTeammate(renamed.OldName, renamed.NewName);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            LogViewRenameFailed(logger, renamed.OldName, renamed.NewName, ex);
         }
 
         var user = teamDirectory.FindUserByName(renamed.OldName);
@@ -348,4 +379,12 @@ internal sealed partial class PersonaRenameCascade(
     /// <summary>Logs that deleting a removed Persona's Room Session state failed.</summary>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not remove Room Session state for '{Name}'.")]
     private static partial void LogRoomSessionsRemoveFailed(ILogger logger, string name, Exception exception);
+
+    /// <summary>Logs that renaming a Teammate's Task files failed (Spec §9.6). The Team Directory rename proceeds regardless.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not rename Task files for '{OldName}' to '{NewName}'.")]
+    private static partial void LogTaskRenameFailed(ILogger logger, string oldName, string newName, Exception exception);
+
+    /// <summary>Logs that renaming a Teammate's saved View filters failed (Spec §9.6). The Team Directory rename proceeds regardless.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not rename View filters for '{OldName}' to '{NewName}'.")]
+    private static partial void LogViewRenameFailed(ILogger logger, string oldName, string newName, Exception exception);
 }

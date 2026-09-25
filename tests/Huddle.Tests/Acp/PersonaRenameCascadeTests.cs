@@ -6,7 +6,10 @@ using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Tasks;
 
 namespace Agency.Huddle.Tests.Acp;
 
@@ -444,6 +447,60 @@ public sealed class PersonaRenameCascadeTests
         Assert.Null(harness.RoomSessions.Get("echo", "room-1"));
     }
 
+    /// <summary>
+    /// Functional test through a real <see cref="PersonaStore.Update"/> rename (Spec §9.6, corrections-B2
+    /// D6 item 11): the cascade's new <c>this.tasks.RenameTeammate(...)</c> call rewrites a real
+    /// Task file's <c>assignee:</c> to the new Name, the same way <see cref="ITeamDirectory.RenameUser"/>
+    /// keeps the Team Directory row above it in sync.
+    /// </summary>
+    [Fact]
+    public async Task PersonaRenameCascade_RenamesTaskAssignee()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("nova"), "You help.");
+        TestTaskStore.WriteTask(
+            harness.TaskStore.RootDirectory,
+            Path.Combine("Platform", "PLAT-0001.md"),
+            TestTasks.Make(id: "PLAT-0001", assignee: "nova", location: new("Platform", null, false), changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
+        harness.TaskStore.RebuildFromWatcher();
+        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+        Assert.NotNull(harness.TaskStore.Get(id));
+
+        harness.PersonaStore.Update("nova", PersonaText("novaprime", "You help."), model: null, effort: null);
+
+        TaskItem renamed = harness.TaskStore.Get(id) ?? throw new InvalidOperationException("fixture task missing");
+        Assert.Equal("novaprime", renamed.Assignee);
+    }
+
+    /// <summary>
+    /// Settled corrections-B2 D6: the cascade's new <c>this.views.RenameTeammate(...)</c> call
+    /// rewrites a saved View's assignee filter, mirroring <see cref="PersonaRenameCascade_RenamesTaskAssignee"/>
+    /// for <see cref="ViewStore"/> rather than <see cref="TaskStore"/>.
+    /// </summary>
+    [Fact]
+    public async Task PersonaRenameCascade_RenamesViewAssigneeFilter()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("nova"), "You help.");
+        harness.ViewStore.Save(new TaskView
+        {
+            Id = "custom-1",
+            Name = "Custom",
+            Kind = ViewKind.List,
+            Filter = new TaskFilter { Assignees = ["nova"] },
+        });
+
+        harness.PersonaStore.Update("nova", PersonaText("novaprime", "You help."), model: null, effort: null);
+
+        TaskView updated = harness.ViewStore.Get("custom-1") ?? throw new InvalidOperationException("fixture view missing");
+        Assert.Contains("novaprime", updated.Filter.Assignees);
+        Assert.DoesNotContain("nova", updated.Filter.Assignees);
+    }
+
     /// <summary>Builds a real <see cref="ITeamDirectory"/>, <see cref="PersonaStore"/>, <see cref="AvatarStore"/> and started <see cref="PersonaRenameCascade"/> over <paramref name="dir"/>, seeding the Human.</summary>
     private static async Task<Harness> CreateHarnessAsync(TempDataDir dir, CancellationToken ct, ILogger<PersonaRenameCascade>? cascadeLogger = null)
     {
@@ -459,6 +516,16 @@ public sealed class PersonaRenameCascadeTests
         var avatarStore = new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance);
         var fileState = new FileStateStore(dir.Options(), NullLogger<FileStateStore>.Instance);
         var roomSessions = new RoomSessionStore(dir.Options(), NullLogger<RoomSessionStore>.Instance);
+        var taskStore = new TaskStore(dir.Options(), personaStore, TimeProvider.System, NullLogger<TaskStore>.Instance);
+        var taskService = new TaskService(
+            taskStore,
+            new TaskIdAllocator(dir.Options()),
+            new TaskEvents(),
+            personaStore,
+            dir.Options(),
+            TimeProvider.System,
+            NullLogger<TaskService>.Instance);
+        var viewStore = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
         var cascade = new PersonaRenameCascade(
             teamDirectory,
             personaStore,
@@ -468,7 +535,9 @@ public sealed class PersonaRenameCascadeTests
             roomSessions,
             dir.Options(),
             TimeProvider.System,
-            cascadeLogger ?? NullLogger<PersonaRenameCascade>.Instance);
+            cascadeLogger ?? NullLogger<PersonaRenameCascade>.Instance,
+            tasks: taskService,
+            views: viewStore);
 
         await cascade.StartAsync(ct);
 
@@ -480,6 +549,9 @@ public sealed class PersonaRenameCascadeTests
             AvatarStore = avatarStore,
             FileState = fileState,
             RoomSessions = roomSessions,
+            TaskStore = taskStore,
+            TaskService = taskService,
+            ViewStore = viewStore,
             Cascade = cascade,
         };
     }
@@ -555,12 +627,21 @@ public sealed class PersonaRenameCascadeTests
 
         public required RoomSessionStore RoomSessions { get; init; }
 
+        public required TaskStore TaskStore { get; init; }
+
+        public required TaskService TaskService { get; init; }
+
+        public required ViewStore ViewStore { get; init; }
+
         public required PersonaRenameCascade Cascade { get; init; }
 
-        /// <summary>Disposes the cascade (unsubscribing it from <see cref="PersonaStore.PersonaRenamed"/> and <see cref="PersonaStore.PersonaRemoved"/>), then the Avatar store, then the Persona store.</summary>
+        /// <summary>Disposes the cascade (unsubscribing it from <see cref="PersonaStore.PersonaRenamed"/> and <see cref="PersonaStore.PersonaRemoved"/>), then TaskService, TaskStore and ViewStore (Settled corrections-B2 D6 item 11), then the Avatar store, then the Persona store.</summary>
         public void Dispose()
         {
             this.Cascade.Dispose();
+            this.TaskService.Dispose();
+            this.TaskStore.Dispose();
+            this.ViewStore.Dispose();
             this.AvatarStore.Dispose();
             this.PersonaStore.Dispose();
         }

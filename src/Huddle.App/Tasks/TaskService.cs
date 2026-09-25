@@ -269,6 +269,96 @@ internal sealed class TaskService : IDisposable
         return written is null ? null : new TaskChange(edit.Before, written, changes, actor, entry);
     }
 
+    /// <summary>
+    /// Rewrites <c>creator:</c>/<c>assignee:</c> in every Task, including Closed ones, whose value
+    /// equals <paramref name="oldName"/> (Spec §9.6, ordinal case-insensitive). A change of identity,
+    /// not of the Task - ADR-0011 says a rename moves the Teammate, not its history - so this writes
+    /// with no Change log entry and raises no <see cref="TaskEvents.TaskChanged"/>. Called from
+    /// <see cref="Acp.PersonaRenameCascade.OnPersonaRenamed"/> before <c>RenameUser</c>, and must
+    /// never throw (Settled corrections-B2 D6 item 11) so a bad Task file never blocks the
+    /// race-critical Team Directory rename above it.
+    /// </summary>
+    /// <param name="oldName">The Teammate's current Name.</param>
+    /// <param name="newName">The Teammate's new Name.</param>
+    internal void RenameTeammate(string oldName, string newName)
+    {
+        lock (this.mutateGate)
+        {
+            this.RenameTeammateCore(oldName, newName);
+        }
+    }
+
+    /// <summary>The body of <see cref="RenameTeammate"/>, run under <see cref="mutateGate"/>.</summary>
+    /// <param name="oldName">The Teammate's current Name.</param>
+    /// <param name="newName">The Teammate's new Name.</param>
+    private void RenameTeammateCore(string oldName, string newName)
+    {
+        List<(TaskItem Task, string ExpectedVersion, string Text)> writes = [];
+        foreach (TaskItem task in this.store.All)
+        {
+            bool matchesAssignee = task.Assignee is { Length: > 0 } assignee && string.Equals(assignee, oldName, StringComparison.OrdinalIgnoreCase);
+            bool matchesCreator = string.Equals(task.Creator, oldName, StringComparison.OrdinalIgnoreCase);
+            if (!matchesAssignee && !matchesCreator)
+            {
+                continue;
+            }
+
+            string? currentText = this.store.ReadText(task.Id);
+            if (currentText is null)
+            {
+                continue;
+            }
+
+            TaskItem candidate = task with
+            {
+                Assignee = matchesAssignee ? newName : task.Assignee,
+                Creator = matchesCreator ? newName : task.Creator,
+            };
+
+            string newText = TaskFileFormat.ReplaceHead(currentText, candidate);
+            writes.Add((task, task.Version, newText));
+        }
+
+        if (writes.Count == 0)
+        {
+            return;
+        }
+
+        IReadOnlyList<TaskItem?> results;
+        try
+        {
+            // One batch, one IndexChanged (Settled corrections-B2 D5 item 7), re-raised as
+            // TasksReloaded exactly once by the subscription this class's constructor already holds
+            // - no separate raise call is needed here.
+            results = this.store.WriteMany(writes);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            // A whole-batch failure - the composed text failed to parse (an invariant break) or a
+            // file could not be written at all. Logged and swallowed: renaming a Teammate must never
+            // throw, because it runs synchronously before the race-critical Team Directory rename in
+            // PersonaRenameCascade.OnPersonaRenamed.
+            this.logger.LogWarning(ex, "Could not rename Teammate '{OldName}' to '{NewName}' in one or more Task files.", oldName, newName);
+            return;
+        }
+
+        for (int i = 0; i < writes.Count; i++)
+        {
+            if (results[i] is null)
+            {
+                // A version conflict: the file changed on disk (by hand, or a concurrent Update)
+                // between this method's read and its write. Skipped, not retried - the next Update or
+                // outside-edit rebuild will see the file as it now is. Logged and continues with the
+                // rest of the batch, matching the per-file "never throws" contract.
+                this.logger.LogWarning(
+                    "Could not rename Teammate '{OldName}' to '{NewName}' in Task '{TaskId}': the file changed on disk since it was read.",
+                    oldName,
+                    newName,
+                    writes[i].Task.Id);
+            }
+        }
+    }
+
     /// <summary>The body of <see cref="Create"/>, run under <see cref="mutateGate"/>. Returns the change to raise, or <see langword="null"/> when nothing was written.</summary>
     private (TaskResult Result, TaskChange? Change) CreateCore(TaskDraft draft, TaskActor actor)
     {
