@@ -232,6 +232,8 @@ public sealed class TasksPageTests
         ctx.Services.AddSingleton(events);
         ctx.Services.AddSingleton(views);
         ctx.Services.AddSingleton(Options.Create(new TeamOptions()));
+        // 14.5.i: the page always hosts WakeToasts (Spec §13.8), which @injects TaskActivity.
+        ctx.Services.AddSingleton<TaskActivity>();
 
         var cut = ctx.RenderWithPopovers(builder =>
         {

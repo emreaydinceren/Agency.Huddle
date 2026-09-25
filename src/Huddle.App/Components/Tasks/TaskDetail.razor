@@ -405,8 +405,31 @@ else if (this.loaded is { } task)
     [Parameter]
     public EventCallback OnExpand { get; set; }
 
-    /// <summary>Whether the Human has an unsaved edit pending.</summary>
-    private bool HasPending => !this.pending.IsEmpty;
+    /// <summary>
+    /// Raised whenever <see cref="HasPending"/> flips between empty and non-empty - an edit, Revert,
+    /// Cancel/discard, or a successful Save (settled J58). A hosting page cannot safely read
+    /// <see cref="HasPending"/> at its own leisure for something like a drawer's <c>OverlayAutoClose</c>:
+    /// this component changing its own <c>pending</c> does not, by itself, re-render an ancestor, so a
+    /// page that only reads <see cref="HasPending"/> from its last render can act on a stale "nothing
+    /// pending" and silently lose an edit. The page must instead store what this event last reported.
+    /// </summary>
+    [Parameter]
+    public EventCallback<bool> HasPendingChanged { get; set; }
+
+    /// <summary>Whether the Human has an unsaved edit pending. Public so the hosting page (corrections-B7 14.5.i item 2) can drive its own drawer's <c>OverlayAutoClose</c> from it - see <see cref="HasPendingChanged"/> for why a page must not simply read this on its own schedule.</summary>
+    public bool HasPending => !this.pending.IsEmpty;
+
+    /// <summary>Assigns <see cref="pending"/> and raises <see cref="HasPendingChanged"/> exactly when <see cref="HasPending"/> flips (J58) - every call site that used to assign <c>this.pending</c> directly goes through this instead.</summary>
+    /// <param name="value">The new pending patch.</param>
+    private void SetPending(TaskPatch value)
+    {
+        bool wasPending = this.HasPending;
+        this.pending = value;
+        if (this.HasPending != wasPending)
+        {
+            _ = this.HasPendingChanged.InvokeAsync(this.HasPending);
+        }
+    }
 
     /// <summary><see cref="loaded"/> with <see cref="pending"/> applied, or <see langword="null"/> before anything has loaded.</summary>
     private TaskItem? Effective => this.loaded is { } current ? this.pending.ApplyTo(current) : null;
@@ -557,7 +580,7 @@ else if (this.loaded is { } task)
             return;
         }
 
-        this.pending = this.pending with { Title = value };
+        this.SetPending(this.pending with { Title = value });
     }
 
     private void OnDescriptionChanged(string value)
@@ -567,7 +590,7 @@ else if (this.loaded is { } task)
             return;
         }
 
-        this.pending = this.pending with { Description = value };
+        this.SetPending(this.pending with { Description = value });
     }
 
     private void OnDescriptionModeChanged(DescriptionViewMode value) => this.descriptionMode = value;
@@ -598,7 +621,7 @@ else if (this.loaded is { } task)
             updated = updated with { Reason = null };
         }
 
-        this.pending = updated;
+        this.SetPending(updated);
     }
 
     private void OnDuplicateOfChanged(TaskItem value)
@@ -608,7 +631,7 @@ else if (this.loaded is { } task)
             return;
         }
 
-        this.pending = this.pending with { DuplicateOf = Optional<TaskId?>.Set(value.Id) };
+        this.SetPending(this.pending with { DuplicateOf = Optional<TaskId?>.Set(value.Id) });
     }
 
     private void OnReasonChanged(string value)
@@ -618,7 +641,7 @@ else if (this.loaded is { } task)
             return;
         }
 
-        this.pending = this.pending with { Reason = value };
+        this.SetPending(this.pending with { Reason = value });
     }
 
     private void OnPriorityChanged(TaskPriority value)
@@ -628,7 +651,7 @@ else if (this.loaded is { } task)
             return;
         }
 
-        this.pending = this.pending with { Priority = value };
+        this.SetPending(this.pending with { Priority = value });
     }
 
     private void OnAssigneeChanged(AssigneeOption value)
@@ -638,7 +661,7 @@ else if (this.loaded is { } task)
             return;
         }
 
-        this.pending = this.pending with { Assignee = Optional<string?>.Set(value.Name) };
+        this.SetPending(this.pending with { Assignee = Optional<string?>.Set(value.Name) });
     }
 
     /// <summary>Searches known Personas by Name for the Assignee autocomplete, resolving each one's presence (Spec §13.6).</summary>
@@ -660,7 +683,7 @@ else if (this.loaded is { } task)
             return;
         }
 
-        this.pending = this.pending with { Team = value };
+        this.SetPending(this.pending with { Team = value });
     }
 
     private void OnProjectChanged(string? value)
@@ -670,7 +693,7 @@ else if (this.loaded is { } task)
             return;
         }
 
-        this.pending = this.pending with { Project = Optional<string?>.Set(value) };
+        this.SetPending(this.pending with { Project = Optional<string?>.Set(value) });
     }
 
     /// <summary>Every known Team, for the Team select (the <c>ViewEditorDrawer</c> pattern: Personas' Teams union the Task store's own Team folders).</summary>
@@ -700,7 +723,7 @@ else if (this.loaded is { } task)
             return;
         }
 
-        this.pending = this.pending with { Parent = Optional<TaskId?>.Set(value.Id) };
+        this.SetPending(this.pending with { Parent = Optional<TaskId?>.Set(value.Id) });
     }
 
     /// <summary>Searches every other Task by title, for Parent, Duplicate of, and Blocked-by (Spec §13.6).</summary>
@@ -729,7 +752,7 @@ else if (this.loaded is { } task)
         IReadOnlyList<TaskId> current = this.Effective?.BlockedBy ?? [];
         if (!current.Contains(value.Id))
         {
-            this.pending = this.pending with { BlockedBy = [.. current, value.Id] };
+            this.SetPending(this.pending with { BlockedBy = [.. current, value.Id] });
         }
     }
 
@@ -741,7 +764,7 @@ else if (this.loaded is { } task)
         }
 
         IReadOnlyList<TaskId> current = this.Effective?.BlockedBy ?? [];
-        this.pending = this.pending with { BlockedBy = [.. current.Where(id => id != chip.Value)] };
+        this.SetPending(this.pending with { BlockedBy = [.. current.Where(id => id != chip.Value)] });
     }
 
     /// <summary>The read-only "Blocked by N open tasks" summary (Spec §13.6's own plural example; the singular form is provisional).</summary>
@@ -764,7 +787,7 @@ else if (this.loaded is { } task)
         IReadOnlyList<string> current = this.Effective?.Tags ?? [];
         if (!current.Contains(this.tagInput, StringComparer.OrdinalIgnoreCase))
         {
-            this.pending = this.pending with { Tags = [.. current, this.tagInput] };
+            this.SetPending(this.pending with { Tags = [.. current, this.tagInput] });
         }
 
         this.tagInput = string.Empty;
@@ -778,7 +801,7 @@ else if (this.loaded is { } task)
         }
 
         IReadOnlyList<string> current = this.Effective?.Tags ?? [];
-        this.pending = this.pending with { Tags = [.. current.Where(t => !string.Equals(t, chip.Value, StringComparison.Ordinal))] };
+        this.SetPending(this.pending with { Tags = [.. current.Where(t => !string.Equals(t, chip.Value, StringComparison.Ordinal))] });
     }
 
     private void OnStartDateChanged(DateTime? value)
@@ -788,7 +811,7 @@ else if (this.loaded is { } task)
             return;
         }
 
-        this.pending = this.pending with { StartDate = Optional<DateOnly?>.Set(value is { } v ? DateOnly.FromDateTime(v) : null) };
+        this.SetPending(this.pending with { StartDate = Optional<DateOnly?>.Set(value is { } v ? DateOnly.FromDateTime(v) : null) });
     }
 
     private void OnDueDateChanged(DateTime? value)
@@ -798,7 +821,7 @@ else if (this.loaded is { } task)
             return;
         }
 
-        this.pending = this.pending with { DueDate = Optional<DateOnly?>.Set(value is { } v ? DateOnly.FromDateTime(v) : null) };
+        this.SetPending(this.pending with { DueDate = Optional<DateOnly?>.Set(value is { } v ? DateOnly.FromDateTime(v) : null) });
     }
 
     /// <summary>Whether <paramref name="effective"/>'s Due date is in the past and it is not terminal (Spec §13.6).</summary>
@@ -817,7 +840,7 @@ else if (this.loaded is { } task)
 
     private void Revert()
     {
-        this.pending = new TaskPatch();
+        this.SetPending(new TaskPatch());
         this.saveError = null;
         this.saveProblems = [];
         this.conflict = null;
@@ -956,7 +979,7 @@ else if (this.loaded is { } task)
         this.conflictChoices = new Dictionary<TaskField, ConflictChoice>(this.conflictChoices) { [field] = choice };
         if (choice == ConflictChoice.Theirs)
         {
-            this.pending = TaskDetail.DropField(this.pending, field);
+            this.SetPending(TaskDetail.DropField(this.pending, field));
         }
 
         this.baseVersion = activeConflict.Current.Version;
@@ -1021,7 +1044,7 @@ else if (this.loaded is { } task)
                 case TaskResult.Saved saved:
                     this.loaded = saved.Task;
                     this.baseVersion = saved.Task.Version;
-                    this.pending = new TaskPatch();
+                    this.SetPending(new TaskPatch());
                     this.conflict = null;
                     this.conflictChoices = [];
                     this.createMode = false;
@@ -1029,7 +1052,7 @@ else if (this.loaded is { } task)
                 case TaskResult.Unchanged unchanged:
                     this.loaded = unchanged.Task;
                     this.baseVersion = unchanged.Task.Version;
-                    this.pending = new TaskPatch();
+                    this.SetPending(new TaskPatch());
                     this.conflict = null;
                     this.conflictChoices = [];
                     break;

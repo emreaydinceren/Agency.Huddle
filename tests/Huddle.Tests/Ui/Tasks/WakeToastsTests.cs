@@ -1,5 +1,6 @@
 namespace Agency.Huddle.Tests.Ui.Tasks;
 
+using AngleSharp.Dom;
 using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
@@ -12,12 +13,14 @@ using Agency.Huddle.App.Tasks;
 /// <summary>
 /// Pins Spec §13.8's toast rules: <see cref="WakeOutcome.Woken"/> adds one info toast keyed
 /// <c>wake:{id}</c> and a burst of wakes for the same Task still shows one; <see cref="WakeOutcome.BudgetSpent"/>
-/// adds a warning toast with the exact Spec §10.5 wording; <see cref="WakeOutcome.Failed"/> adds a
-/// warning toast with the delivery manager's settled wording (J38) since <see cref="WakeRecord"/>
-/// carries no error text of its own, plus a Room link when a Room was chosen; <see cref="WakeOutcome.Offline"/>
-/// and <see cref="WakeOutcome.WakePaused"/> add none, because §13.8 shows those only in the Task
-/// panel; a <see cref="WakeRecord"/> with no <c>RoomId</c> shows no Room link; and the component
-/// guards against firing into a disposed page.
+/// adds a warning toast with the exact Spec §10.5 wording and its own Room link and
+/// <c>wake-warn:{id}</c> key (corrections-B7 14.5.i item 3 - distinct from Woken's, so the two never
+/// collapse into each other); <see cref="WakeOutcome.Failed"/> adds a warning toast with the
+/// delivery manager's settled wording (J38) since <see cref="WakeRecord"/> carries no error text of
+/// its own, plus a Room link when a Room was chosen; <see cref="WakeOutcome.Offline"/> and
+/// <see cref="WakeOutcome.WakePaused"/> add none, because §13.8 shows those only in the Task panel;
+/// a <see cref="WakeRecord"/> with no <c>RoomId</c> shows no Room link; and the component guards
+/// against firing into a disposed page.
 /// </summary>
 public sealed class WakeToastsTests
 {
@@ -70,6 +73,48 @@ public sealed class WakeToastsTests
             cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
             Assert.Equal(Severity.Warning, snackbar.ShownSnackbars.Single().Severity);
             cut.WaitForAssertion(() => Assert.Contains("Couldn't wake Nova: Room SAML is paused. Open the Room to continue", cut.Markup, StringComparison.Ordinal));
+        }
+    }
+
+    /// <summary>A <see cref="WakeOutcome.BudgetSpent"/> record adds a Room link (corrections-B7 14.5.i item 3, fixing the defect where it had none).</summary>
+    [Fact]
+    public async Task BudgetSpent_AddsARoomLink()
+    {
+        (MudBunitContext ctx, IRenderedComponent<ContainerFragment> cut, ISnackbar snackbar, TaskActivity activity) = RenderToasts();
+        await using (ctx)
+        {
+            _ = TaskId.TryParse("PLAT-0042", out TaskId id);
+
+            activity.Record(new WakeRecord(id, "Nova", "room-1", "SAML", WakeOutcome.BudgetSpent, DateTimeOffset.UtcNow));
+
+            cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
+            cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".wake-toast-room-link")));
+            IElement roomLink = cut.Find(".wake-toast-room-link");
+            Assert.Equal("SAML", roomLink.TextContent.Trim());
+            Assert.Equal("/rooms/room-1", roomLink.GetAttribute("href"));
+        }
+    }
+
+    /// <summary>
+    /// A <see cref="WakeOutcome.Woken"/> and a <see cref="WakeOutcome.BudgetSpent"/> for the same Task
+    /// show as two separate toasts, not one: corrections-B7 14.5.i item 3 gives BudgetSpent its own
+    /// "wake-warn:{id}" key, distinct from Woken's "wake:{id}", specifically so the two kinds of
+    /// burst (kept being woken vs. kept hitting the spent budget) never collapse into each other.
+    /// </summary>
+    [Fact]
+    public async Task Woken_ThenBudgetSpent_SameTask_ShowsTwoSeparateToasts()
+    {
+        (MudBunitContext ctx, IRenderedComponent<ContainerFragment> cut, ISnackbar snackbar, TaskActivity activity) = RenderToasts();
+        await using (ctx)
+        {
+            _ = TaskId.TryParse("PLAT-0042", out TaskId id);
+
+            activity.Record(new WakeRecord(id, "Nova", "room-1", "SAML", WakeOutcome.Woken, DateTimeOffset.UtcNow));
+            cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
+
+            activity.Record(new WakeRecord(id, "Nova", "room-1", "SAML", WakeOutcome.BudgetSpent, DateTimeOffset.UtcNow.AddSeconds(1)));
+
+            cut.WaitForAssertion(() => Assert.Equal(2, snackbar.ShownSnackbars.Count()));
         }
     }
 

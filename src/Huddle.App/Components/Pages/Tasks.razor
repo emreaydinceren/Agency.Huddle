@@ -20,6 +20,20 @@
     since that route's own @page template carries no ViewId to distinguish it from the bare /tasks
     case. An invalid View route (corrections-B7 §13.2 item 4) shows its ViewValidator reason and an
     Edit View button, never the "no longer exists" wording that only ever meant "no such id at all".
+
+    14.5.i (this dispatch, third page-wiring step, corrections-B7): the detail drawer now hosts a real
+    TaskDetail (Mode=Panel) instead of the placeholder - opening a row/card, "+ New task" (the header
+    button and the empty-state button) and switching between two already-open Tasks all go through
+    ConfirmSwitchAsync, which calls the currently mounted TaskDetail's own ConfirmDiscardAsync before
+    tearing it down (a fresh @key forces recreation, since TaskDetail only loads its Id/Draft once, in
+    OnInitializedAsync - Cancel in that "Discard changes?" box leaves the current Task open).
+    OverlayAutoClose reads detailHasPending, a field this page keeps current from TaskDetail's own
+    HasPendingChanged (settled J58) - never a direct read of TaskDetail.HasPending, because TaskDetail
+    changing its own pending does not, by itself, re-render this ancestor: a direct read could act on
+    a stale "nothing pending" and let the drawer's overlay click silently discard a real edit (the bug
+    J58 fixed). WakeToasts (renders nothing itself) and the page-header AiReactingChip - watching every
+    Task in the current effective View, not narrowed by the search box - are D14's remaining work, per
+    corrections-B5 D14 item 12.
 *@
 
 @page "/tasks"
@@ -36,6 +50,7 @@
 @inject NavigationManager Navigation
 
 <div class="tasks-page">
+    <WakeToasts OnOpenTask="this.OnOpenTaskAsync" />
     @if (!this.Options.Value.Tasks.Enabled)
     {
         @* corrections-B4 D11 item 13: Tasks turned off shows only this notice. *@
@@ -69,6 +84,7 @@
             {
                 <MudLink OnClick="this.ResetOverrides" Class="tasks-reset">Reset</MudLink>
             }
+            <AiReactingChip Watched="this.WatchedTaskIds" />
         </header>
 
         @if (this.Views.LoadError is { } loadError)
@@ -97,7 +113,8 @@
         }
 
         <TaskToolbar EffectiveView="this.effectiveView" EffectiveViewChanged="this.OnEffectiveViewChangedAsync"
-                     Search="@this.search" SearchChanged="this.OnSearchChangedAsync" OnEditView="this.OnEditViewClickedAsync" />
+                     Search="@this.search" SearchChanged="this.OnSearchChangedAsync" OnEditView="this.OnEditViewClickedAsync"
+                     OnNewTask="this.OnNewTaskAsync" />
 
         IReadOnlyList<TaskItem> tasks = this.FilteredTasks(this.search);
         @if (tasks.Count == 0)
@@ -107,7 +124,7 @@
                 @if (this.Store.All.Count == 0)
                 {
                     <MudText Typo="Typo.body1" Class="tasks-empty-message">No tasks yet.</MudText>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="tasks-empty-action">+ New task</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.OnEmptyStateNewTaskAsync" Class="tasks-empty-action">+ New task</MudButton>
                 }
                 else if (!string.IsNullOrWhiteSpace(this.search) && this.FilteredTasks(null).Count > 0)
                 {
@@ -123,19 +140,20 @@
 
         @if (this.effectiveView.Kind == ViewKind.List)
         {
-            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTask" />
+            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTaskAsync" />
         }
         else
         {
-            <TaskBoard View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTask"
+            <TaskBoard View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTaskAsync"
                        ViewChanged="this.OnEffectiveViewChangedAsync" OnEditColumns="this.OnEditColumnsClicked" />
         }
 
-        <MudDrawer @bind-Open="this.detailOpen" Anchor="Anchor.End" Variant="DrawerVariant.Temporary" Class="tasks-detail-drawer">
-            @* Spec §13.6's TaskDetail isn't built yet (D15/D16): this is the empty slot 11.5.i owes. *@
-            @if (this.selectedTaskId is { } selected)
+        <MudDrawer @bind-Open="this.detailOpen" Anchor="Anchor.End" Variant="DrawerVariant.Temporary"
+                   OverlayAutoClose="@(!this.detailHasPending)" Class="tasks-detail-drawer">
+            @if (this.selectedTaskId is not null || this.selectedDraft is not null)
             {
-                <MudText Typo="Typo.body2" Class="tasks-detail-placeholder">@selected</MudText>
+                <TaskDetail @ref="this.detail" @key="this.DetailKey" Id="this.selectedTaskId" Draft="this.selectedDraft"
+                            Mode="TaskDetailMode.Panel" OnClose="this.OnDetailClosed" HasPendingChanged="this.OnDetailHasPendingChanged" />
             }
         </MudDrawer>
     }
@@ -154,6 +172,9 @@
     private InvalidView? invalidView;
     private bool detailOpen;
     private TaskId? selectedTaskId;
+    private TaskDraft? selectedDraft;
+    private TaskDetail? detail;
+    private bool detailHasPending;
     private bool editorOpen;
     private string? editorViewId;
     private ViewEditorSection editorSection = ViewEditorSection.General;
@@ -324,13 +345,83 @@
         return Task.CompletedTask;
     }
 
-    /// <summary>Opens the (still empty) detail drawer for the clicked row.</summary>
+    /// <summary>Opens the detail drawer's <see cref="TaskDetail"/> for the clicked row/card - a no-op when it is already showing that Task - guarded by <see cref="ConfirmSwitchAsync"/> (corrections-B7 14.5.i item 2).</summary>
     /// <param name="id">The clicked Task's id.</param>
-    private void OnOpenTask(TaskId id)
+    private async Task OnOpenTaskAsync(TaskId id)
     {
+        if (this.detailOpen && this.selectedTaskId == id)
+        {
+            return;
+        }
+
+        if (!await this.ConfirmSwitchAsync())
+        {
+            return;
+        }
+
+        this.selectedDraft = null;
         this.selectedTaskId = id;
+        this.detailHasPending = false;
         this.detailOpen = true;
     }
+
+    /// <summary>"+ New task" (the header button, Spec §13.3): opens the drawer's <see cref="TaskDetail"/> in create mode with <paramref name="defaults"/>.</summary>
+    /// <param name="defaults">The Team/Project the effective View's filter names, when it names exactly one.</param>
+    private async Task OnNewTaskAsync(NewTaskDefaults defaults)
+    {
+        if (!await this.ConfirmSwitchAsync())
+        {
+            return;
+        }
+
+        this.selectedTaskId = null;
+        this.selectedDraft = new TaskDraft(string.Empty, defaults.Team ?? string.Empty, defaults.Project);
+        this.detailHasPending = false;
+        this.detailOpen = true;
+    }
+
+    /// <summary>"+ New task" (the §13.12 empty state's own button): computes the same defaults <see cref="TaskToolbar.OnNewTask"/> would, since the button lives outside the toolbar.</summary>
+    private Task OnEmptyStateNewTaskAsync() => this.OnNewTaskAsync(this.BuildNewTaskDefaults());
+
+    /// <summary>The Team/Project defaults for a freshly opened create-mode <see cref="TaskDetail"/>, from the effective View's filter when it names exactly one of each (Spec §13.3) - the same rule <see cref="TaskToolbar"/>'s own "+ New task" button applies.</summary>
+    private NewTaskDefaults BuildNewTaskDefaults()
+    {
+        string? team = this.effectiveView.Filter.Teams.Count == 1 ? this.effectiveView.Filter.Teams[0] : null;
+        string? project = this.effectiveView.Filter.Projects.Count == 1 ? this.effectiveView.Filter.Projects[0].Project : null;
+        return new NewTaskDefaults(team, project);
+    }
+
+    /// <summary>
+    /// Asks the currently mounted <see cref="TaskDetail"/> (if any) to confirm discarding pending
+    /// edits before this page switches what the drawer shows (corrections-B7 14.5.i item 2). With
+    /// nothing mounted yet - the drawer has never been opened - there is nothing to discard.
+    /// </summary>
+    private Task<bool> ConfirmSwitchAsync() => this.detail is null ? Task.FromResult(true) : this.detail.ConfirmDiscardAsync();
+
+    /// <summary>Closes the detail drawer (<see cref="TaskDetail.OnClose"/>): Cancel, a successful Close/Reopen, or returning from Expand.</summary>
+    private void OnDetailClosed() => this.detailOpen = false;
+
+    /// <summary>
+    /// Tracks <see cref="TaskDetail.HasPendingChanged"/> (settled J58): the drawer's own
+    /// <c>OverlayAutoClose</c> reads <see cref="detailHasPending"/>, never <c>this.detail.HasPending</c>
+    /// directly - <see cref="TaskDetail"/> changing its own <c>pending</c> does not, by itself,
+    /// re-render this page, so a direct read could act on a stale "nothing pending" and let the
+    /// overlay silently discard a real edit.
+    /// </summary>
+    /// <param name="hasPending">Whether <see cref="TaskDetail"/> now has an unsaved edit pending.</param>
+    private void OnDetailHasPendingChanged(bool hasPending) => this.detailHasPending = hasPending;
+
+    /// <summary>
+    /// <see cref="TaskDetail"/> only loads its <see cref="TaskDetail.Id"/>/<see cref="TaskDetail.Draft"/>
+    /// once, in its own <c>OnInitializedAsync</c> - changing those parameters on the same instance would
+    /// not reload it. Keying on the target (the Task id, or the Draft instance itself for create mode)
+    /// forces Blazor to tear down and recreate <see cref="TaskDetail"/> whenever the drawer switches to
+    /// a different Task or a fresh create-mode Draft.
+    /// </summary>
+    private object DetailKey => this.selectedDraft is { } draft ? draft : this.selectedTaskId is { } id ? id : "tasks-detail-none";
+
+    /// <summary>The ids of every Task in the current effective View (Spec §10.8), unnarrowed by the search box, for <see cref="AiReactingChip.Watched"/>.</summary>
+    private IReadOnlyList<TaskId> WatchedTaskIds => this.FilteredTasks(null).Select(t => t.Id).ToList();
 
     private void OnTasksReloaded() => _ = this.DispatchAsync(() =>
     {

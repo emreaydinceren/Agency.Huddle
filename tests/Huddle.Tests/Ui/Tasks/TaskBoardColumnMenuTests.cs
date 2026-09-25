@@ -467,7 +467,7 @@ public sealed partial class TaskBoardColumnMenuTests
         Assert.Single(cut.FindComponents<TaskBoard>());
     }
 
-    /// <summary>corrections-B7 12.4 item 8: a Board View renders <see cref="TaskBoard"/> in the page, and opening a card opens the detail drawer's placeholder for that Task.</summary>
+    /// <summary>corrections-B7 12.4 item 8 and 14.5.i item 4: a Board View renders <see cref="TaskBoard"/> in the page, and opening a card puts a real <see cref="TaskDetail"/> (Panel mode) in the detail drawer for that Task - the 14.5.i replacement for the placeholder this test used to pin.</summary>
     [Fact]
     public async Task Page_BoardView_CardOpenOpensTheDetailDrawer()
     {
@@ -481,7 +481,9 @@ public sealed partial class TaskBoardColumnMenuTests
         Assert.Empty(cut.FindComponents<TaskListView>());
         await cut.InvokeAsync(() => cut.Find($"button[aria-label='Open {task.Id}']").Click());
 
-        Assert.Equal(task.Id.ToString(), cut.Find(".tasks-detail-placeholder").TextContent.Trim());
+        TaskDetail detail = cut.FindComponent<TaskDetail>().Instance;
+        Assert.Equal(task.Id, detail.Id);
+        Assert.Equal(TaskDetailMode.Panel, detail.Mode);
     }
 
     /// <summary>corrections-B7 12.4 item 7: the Board's <i>Edit columns…</i> opens the View editor drawer for this View at its Columns section.</summary>
