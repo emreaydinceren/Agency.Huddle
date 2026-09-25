@@ -1,0 +1,18 @@
+BLOCK|find / -iname x|{"tool_input":{"command":"find / -iname \"x\" 2>/dev/null","description":"d"}}
+BLOCK|quoted find.exe /|{"tool_input":{"command":"\"C:\\Program Files\\Git\\usr\\bin\\find.exe\" / -iname x"}}
+BLOCK|find /c -name|{"tool_input":{"command":"find /c -name foo"}}
+BLOCK|find /c/Users -iname|{"tool_input":{"command":"find /c/Users -iname \"Service*\""}}
+BLOCK|find /c/Users/user -name|{"tool_input":{"command":"find /c/Users/user -name x"}}
+BLOCK|find ~ -name|{"tool_input":{"command":"find ~ -name x"}}
+BLOCK|find $HOME -name|{"tool_input":{"command":"find $HOME -name x"}}
+BLOCK|find C:\\ -name|{"tool_input":{"command":"find C:\\ -name x"}}
+BLOCK|cd && find / -maxdepth|{"tool_input":{"command":"cd /e && find / -maxdepth 4 -name x"}}
+BLOCK|multiline 2nd line find /|{"tool_input":{"command":"echo hi\nfind / -name x"}}
+allow|find /c/Users/user/.nuget/packages|{"tool_input":{"command":"find /c/Users/user/.nuget/packages/mudblazor -name \"*.xml\""}}
+allow|find ~/.nuget/packages|{"tool_input":{"command":"find ~/.nuget/packages/bunit -name x"}}
+allow|find /e/Repos/Huddle/src|{"tool_input":{"command":"find /e/Repos/Huddle/src -name \"*.cs\""}}
+allow|find . -name|{"tool_input":{"command":"find . -name x"}}
+allow|prose commit msg|{"tool_input":{"command":"git commit -m \"agents ran find / and sed -i despite rules\""}}
+BLOCK|sed -i|{"tool_input":{"command":"sed -i s/a/b/ src/x.cs"}}
+BLOCK|x && sed -E -i|{"tool_input":{"command":"cd x && sed -E -i \"s/a/b/\" y"}}
+allow|sed -n pipe grep -i|{"tool_input":{"command":"sed -n 1,5p x | grep -i foo"}}
