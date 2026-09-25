@@ -45,6 +45,33 @@ public sealed class ServiceCollectionExtensionsTests
     }
 
     /// <summary>
+    /// <see cref="Agency.Huddle.App.Library.LayoutGuard.ValidateTeamsAndTeammates"/> runs from the same
+    /// <c>PostConfigure</c> that normalises <c>DataDir</c>, so an overlapping <c>Team:Teams:Dir</c> and
+    /// <c>Team:Acp:TeammatesDir</c> must fail loudly the moment <see cref="TeamOptions"/> is resolved,
+    /// rather than silently scanning one folder as both roots.
+    /// </summary>
+    [Fact]
+    public void AddTeamServices_WithOverlappingTeamsAndTeammatesDirs_ThrowsOnOptionsResolution()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:Teams:Dir"] = "Teammates",
+                ["Team:Acp:TeammatesDir"] = "Teammates",
+            })
+            .Build();
+
+        var services = new ServiceCollection();
+        services.AddTeamServices(configuration);
+        using var provider = services.BuildServiceProvider();
+
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<TeamOptions>>().Value);
+
+        Assert.Contains("must not overlap", ex.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// The negative case: a configuration that never mentions the old key must compose normally,
     /// so the guard above cannot be a false positive for every other test in the suite that calls
     /// <see cref="ServiceCollectionExtensions.AddTeamServices"/> without ever setting it.

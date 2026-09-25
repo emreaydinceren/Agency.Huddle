@@ -7,6 +7,7 @@ using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
@@ -51,7 +52,11 @@ public static class ServiceCollectionExtensions
         }
 
         services.Configure<TeamOptions>(configuration.GetSection(TeamOptions.SectionName));
-        services.PostConfigure<TeamOptions>(options => options.DataDir = Path.GetFullPath(options.DataDir));
+        services.PostConfigure<TeamOptions>(options =>
+        {
+            options.DataDir = Path.GetFullPath(options.DataDir);
+            LayoutGuard.ValidateTeamsAndTeammates(options);
+        });
 
         services.AddSingleton<RoomEvents>();
 
