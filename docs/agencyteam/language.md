@@ -361,7 +361,7 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 
 ## Tasks
 
-Proposed, not built. See
+See
 [Huddle.Tasks-Specifications.md](../Huddle.Tasks-Specifications.md),
 [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md) and
 [ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md).

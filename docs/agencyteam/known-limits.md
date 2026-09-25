@@ -478,3 +478,52 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   `IDisposable`, and SQLite connection pooling keeps a handle on `team.db`, so
   tests leave about 83 temp directories behind per run. `TempDataDir.Dispose`
   swallows the resulting `IOException`, which is why it is invisible.
+- **Tasks is built, and here is what it does not cover.** A Task is a Markdown file the Human
+  and Agents share, and a change to one wakes its assignee — see
+  [the Tasks spec](../Huddle.Tasks-Specifications.md),
+  [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md) and
+  [ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md). Ten gaps are deliberate,
+  unverified or interim:
+  - **An offline assignee misses the wake-up.** The wake-up Message still posts and still sits
+    in the Room's Transcript, but nothing prompts an Agent that has no running session to read
+    it. It is caught up the way any Message is, on that Agent's next Turn.
+  - **Startup edits wake no one.** A Task edited by hand while Huddle was stopped is logged as
+    "edited outside Huddle" at the next start (D-16), but the wake-up that would normally follow
+    a change is deliberately skipped — the same reasoning that keeps a bulk edit from flooding
+    every assignee with wake-ups the moment the app comes up.
+  - **Wake budgets reset on restart.** The per-Task budget of 10 Agent-made wake-ups (D-14,
+    `Allow 10 more` on the TaskDetail banner) is in-memory state, like the Room Budget it
+    parallels — a restart un-pauses every Task over a Change log that already spent one.
+  - **Tags can't contain `,` or `;`.** `TaskFileFormat` reuses `PersonaFrontmatter`'s list-join
+    convention (`"; "`), so a tag containing either character would corrupt the round trip (D-18).
+  - **A Task link reflects the index when the Message was last rendered.** `MarkdownRenderer`
+    resolves an id against `TaskStore` at render time, not at read time, so a Message rendered
+    before a Task existed, or before it was renamed away from a matching id, keeps whatever it
+    resolved to then. Reopening the Room re-renders and catches up.
+  - **A git checkout or pull marks every Task "edited outside Huddle" on next start.** A
+    checkout sets every file's mtime to now, which `TaskStore`'s startup reconciliation cannot
+    tell apart from a real hand edit, so it appends that entry to every Task in the repository.
+    Accepted (corrections-B2 D6 item 14) rather than guarded against — there is no cheap way to
+    tell a checkout from a hand edit from mtime alone.
+  - **The Tasks folder layout is interim.** Tasks live at `{DataDir}/Tasks/<Team>/[<Project>/]`
+    today. The Library effort's [ADR-0030](../adr/0030-a-team-folder-is-its-library-and-holds-its-tasks.md)
+    was accepted in principle on 2026-09-25 to move them under
+    `Teams/<Team>/[<Project>/]_tasks/` once Personas themselves leave `Teams/`
+    ([ADR-0031](../adr/0031-teammates-and-teams-are-sibling-folders.md)); the migration is planned,
+    not scheduled.
+  - **`close_task` and `reopen_task`'s Conflict text is untested under a real concurrent-move
+    race.** `update_task`'s Conflict arm is unreachable (`baseVersion` is always null there) and
+    throws `UnreachableException`; Close and Reopen can still receive a genuine Conflict from
+    `TaskStore.Move`'s disk-version check, but the real, sealed, file-backed `TaskStore` gives no
+    deterministic seam to drive that race in a test, so the text stays live but unverified.
+  - **Four paid manual tests have not yet been run:** TASKS-10, TASKS-11, TASKS-12 and TASKS-15 —
+    see [manual-tests/tasks.md](manual-tests/tasks.md). Deferred to the Human's own user
+    acceptance testing, the same way File Changes' and Room Sessions' paid checks are.
+  - **Tests seen flaky under full-suite load during this delivery.** `TeammateCardTests.EditMode_TitleWrittenAsABlockScalar_LocksTheTitleBoxReadOnly`
+    and `TeammateCardTests.ViewMode_ShowsTheChosenModel` are the fifth flake above, fixed
+    2026-09-24. `RoomSessionPoolTests.Max2_ConcurrentOpens_NeverExceedCap` and
+    `RoomSessionResumeTests.TurnStoppedAfterActivity_StillStoresEntry` are the same fix, watched
+    rather than re-diagnosed. `PipeEndToEndTests.Disconnect_CleanClose_LogsExactlyOneInformationLine`
+    is the fourth flake above, recurring but unchanged. `TeammatesPageTests.TeammatesPage_ATeammateInTwoTeams_AppearsUnderBothHeadings`
+    failed twice under full-suite load and was 5/5 green alone each time — new to this delivery, not yet
+    diagnosed, recorded here rather than filed as a Tasks defect.
