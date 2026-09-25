@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then.
 
-**Status:** 95 of 147 tasks Done · 5 of 9 retrospectives done · last updated 2026-09-24.
+**Status:** 97 of 147 tasks Done · 5 of 9 retrospectives done · last updated 2026-09-24.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -108,24 +108,24 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 9.3.i Implement `Preview` · #77 · Sonnet | | | ✔ |
 | 9.4.t Test: coalescing and posting · #78 · Sonnet | | | ✔ |
 | 9.4.i Implement coalescing and posting · #79 · Sonnet | | | ✔ |
-| 9.5.t Test: choosing the Room · #80 · Sonnet | | ✔ | |
-| 9.5.i Implement choosing the Room · #81 · Sonnet | | ✔ | |
-| 9.6.t Test: outcomes and the wake budget · #82 · Sonnet | ✔ | | |
-| 9.6.i Implement outcomes and the budget · #83 · Sonnet | ✔ | | |
+| 9.5.t Test: choosing the Room · #80 · Sonnet | | | ✔ |
+| 9.5.i Implement choosing the Room · #81 · Sonnet | | | ✔ |
+| 9.6.t Test: outcomes and the wake budget · #82 · Sonnet | | ✔ | |
+| 9.6.i Implement outcomes and the budget · #83 · Sonnet | | ✔ | |
 | **D10. App Tools** | | | |
 | 10.1.t Test: shared tool text helpers · #84 · Haiku | | | ✔ |
 | 10.1.i Implement `TaskToolText` · #85 · Haiku | | | ✔ |
-| 10.2.t Test: `create_task` · #86 · Sonnet | ✔ | | |
-| 10.2.i Implement `create_task` · #87 · Sonnet | ✔ | | |
-| 10.3.t Test: `get_task` · #88 · Haiku | ✔ | | |
-| 10.3.i Implement `get_task` · #89 · Haiku | ✔ | | |
-| 10.4.t Test: `list_tasks` · #90 · Sonnet | ✔ | | |
+| 10.2.t Test: `create_task` · #86 · Sonnet | | ✔ | |
+| 10.2.i Implement `create_task` · #87 · Sonnet | | ✔ | |
+| 10.3.t Test: `get_task` · #88 · Haiku | | ✔ | |
+| 10.3.i Implement `get_task` · #89 · Haiku | | ✔ | |
+| 10.4.t Test: `list_tasks` · #90 · Sonnet | | ✔ | |
 | 🔁 R6 — Opus retrospective after #90, and plan update | ✔ | | |
-| 10.4.i Implement `list_tasks` · #91 · Sonnet | ✔ | | |
-| 10.5.t Test: `update_task` · #92 · Sonnet | ✔ | | |
-| 10.5.i Implement `update_task` · #93 · Sonnet | ✔ | | |
-| 10.6.t Test: `close_task` and `reopen_task` · #94 · Haiku | ✔ | | |
-| 10.6.i Implement `close_task` and `reopen_task` · #95 · Haiku | ✔ | | |
+| 10.4.i Implement `list_tasks` · #91 · Sonnet | | ✔ | |
+| 10.5.t Test: `update_task` · #92 · Sonnet | | ✔ | |
+| 10.5.i Implement `update_task` · #93 · Sonnet | | ✔ | |
+| 10.6.t Test: `close_task` and `reopen_task` · #94 · Haiku | | ✔ | |
+| 10.6.i Implement `close_task` and `reopen_task` · #95 · Haiku | | ✔ | |
 | 10.7.t Test: the task Prompts · #96 · Sonnet | ✔ | | |
 | 10.7.i Write the task Prompts · #97 · Sonnet | ✔ | | |
 | 10.8.t Test: registering the tools, and the goldens · #98 · Sonnet | ✔ | | |
