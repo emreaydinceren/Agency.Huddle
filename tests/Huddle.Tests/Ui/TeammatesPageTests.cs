@@ -389,7 +389,7 @@ public sealed class TeammatesPageTests
         var health = new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
 
         using var personas = new PersonaStore(
-            dataDir.Options(), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+            new TeammatePaths(dataDir.Options()), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
 
         // Never started - Teammates.razor only needs a PersonaSupervisor it can inject, for the
         // Restart button this test does not exercise.

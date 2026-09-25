@@ -20,7 +20,7 @@ public sealed class ListAgentsToolTests
         Assert.NotNull(echo);
         var gateway = new FakeAgentGateway();
         gateway.SetOnline(echo.Id);
-        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        using var personaStore = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         personaStore.Add(new PersonaIdentity("coo", "coo", "coo", []), "You are the Chief of Staff.");
         var tool = new ListAgentsTool(directory, gateway, personaStore, new FakePromptSource());
 
@@ -54,7 +54,7 @@ public sealed class ListAgentsToolTests
             "---\nName: coo\nTitle: coo\nAlias: coo\nrole: 'Router, triage, and cross-workstation continuity'\n---\nYou are the Chief of Staff.",
             ct);
 
-        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        using var personaStore = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         var tool = new ListAgentsTool(directory, gateway, personaStore, new FakePromptSource());
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);
@@ -74,7 +74,7 @@ public sealed class ListAgentsToolTests
         Assert.NotNull(echo);
         var gateway = new FakeAgentGateway();
         gateway.SetOnline(echo.Id);
-        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        using var personaStore = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         var tool = new ListAgentsTool(directory, gateway, personaStore, new FakePromptSource());
 
         var result = await tool.InvokeAsync(new JsonObject(), ct);

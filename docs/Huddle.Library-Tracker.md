@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 14 of 143 tasks Done · 0 of 8 retrospectives done · last updated 2026-09-25.
+**Status:** 15 of 143 tasks Done · 0 of 8 retrospectives done · last updated 2026-09-25.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -22,7 +22,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 1.1.i Implement `TeammatePaths` · #4 · Haiku | | | ✔ |
 | 1.2.t Characterisation: every Work Dir join · #5 · Sonnet | | | ✔ |
 | 1.2.i Move the Work Dir joins onto `TeammatePaths` · #6 · Sonnet | | | ✔ |
-| 1.3.i Move the Persona-file joins onto `TeammatePaths` · #7 · Sonnet | ✔ | | |
+| 1.3.i Move the Persona-file joins onto `TeammatePaths` · #7 · Sonnet | | | ✔ |
 | **D2. Library types and options** | | | |
 | 2.1.t Test: `LibraryOptions` and `TeamsOptions` · #8 · Haiku | | | ✔ |
 | 2.1.i Implement the options · #9 · Haiku | | | ✔ |

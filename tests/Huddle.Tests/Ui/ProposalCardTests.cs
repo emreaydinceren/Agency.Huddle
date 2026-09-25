@@ -291,7 +291,7 @@ public sealed class ProposalCardTests
             var directory = new GatedTeamDirectory(realDirectory);
 
             var personas = new PersonaStore(
-                options, new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
+                new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
             var gateway = new FakeAgentGateway();
             var checker = new CandidateChecker(personas, directory, gateway);
             var events = new RoomEvents(NullLogger<RoomEvents>.Instance);

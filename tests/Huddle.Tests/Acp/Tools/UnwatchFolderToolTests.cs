@@ -115,13 +115,13 @@ public sealed class UnwatchFolderToolTests
             SqliteTeamDirectory directory = new(options);
             await directory.InitializeAsync("You", ct);
 
+            TeammatePaths teammatePaths = new(options);
             PersonaStore personas = new(
-                options,
+                teammatePaths,
                 new PersonaModelStore(options),
                 new PersonaEffortStore(options),
                 NullLogger<PersonaStore>.Instance);
             FileStateStore store = new(options, NullLogger<FileStateStore>.Instance);
-            TeammatePaths teammatePaths = new(options);
             WatchedFolderResolver resolver = new(options, teammatePaths);
             FileChangeTracker tracker = new(store, personas, directory, resolver, options, teammatePaths, NullLogger<FileChangeTracker>.Instance);
 

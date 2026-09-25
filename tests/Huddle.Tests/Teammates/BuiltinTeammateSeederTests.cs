@@ -26,7 +26,7 @@ public sealed class BuiltinTeammateSeederTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
         using PersonaStore personas = new(
-            dataDir.Options(), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+            new TeammatePaths(dataDir.Options()), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
         BuiltinTeammateSeeder seeder = new(personas, NullLogger<BuiltinTeammateSeeder>.Instance);
 
         await seeder.StartAsync(ct);
@@ -49,7 +49,7 @@ public sealed class BuiltinTeammateSeederTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
         using PersonaStore personas = new(
-            dataDir.Options(), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+            new TeammatePaths(dataDir.Options()), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
         personas.Add(
             new PersonaIdentity("Alfred", "Assistant", "alf", Teams: [], Builtin: BuiltinTeammate.ChiefOfStaffMarker),
             "You are Alfred, and you already carry the Chief of Staff marker.");
@@ -74,7 +74,7 @@ public sealed class BuiltinTeammateSeederTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
         using PersonaStore personas = new(
-            dataDir.Options(), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+            new TeammatePaths(dataDir.Options()), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
         personas.Add(
             new PersonaIdentity("Chief of Staff", "Someone Else", "boss", Teams: []),
             "You hold the default Name, but not the marker.");
@@ -100,7 +100,7 @@ public sealed class BuiltinTeammateSeederTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
         using PersonaStore personas = new(
-            dataDir.Options(), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+            new TeammatePaths(dataDir.Options()), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
         personas.Add(
             new PersonaIdentity("Chief of Staff", "Edited Title", "cos", Teams: [], Builtin: BuiltinTeammate.ChiefOfStaffMarker),
             "This Body was hand-edited and no longer matches the shipped default.");
@@ -125,7 +125,7 @@ public sealed class BuiltinTeammateSeederTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
         using PersonaStore personas = new(
-            dataDir.Options(), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+            new TeammatePaths(dataDir.Options()), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
         personas.Add(
             new PersonaIdentity("Chief of Staff", "Chief of Staff", "cos", Teams: [], Builtin: BuiltinTeammate.ChiefOfStaffMarker),
             "The original.");
@@ -153,7 +153,7 @@ public sealed class BuiltinTeammateSeederTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dataDir = new();
         using PersonaStore personas = new(
-            dataDir.Options(), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+            new TeammatePaths(dataDir.Options()), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
         var teamsDir = personas.TeamsDirectory;
         Directory.Delete(teamsDir, recursive: true);
         File.WriteAllText(teamsDir, "A plain file occupying where the Teams directory should be.");

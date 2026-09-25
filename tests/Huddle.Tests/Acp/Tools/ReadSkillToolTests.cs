@@ -173,7 +173,7 @@ public sealed class ReadSkillToolTests
     /// <param name="dir">Supplies the store's <c>DataDir</c>.</param>
     private static PersonaStore CreatePersonaStore(TempDataDir dir)
     {
-        return new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        return new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
     }
 
     /// <summary>A real <see cref="SkillStore"/> over a fresh <see cref="TempDataDir"/>, resolving the real shipped <c>team-building</c> Skill.</summary>

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -23,7 +22,7 @@ public sealed record PersonaRemoved(string Name);
 
 /// <summary>
 /// A Persona is a markdown file whose body becomes a Claude agent's system prompt. Files live under
-/// <c>{DataDir}/{Acp.TeamsDir}/</c>, optionally nested under Team sub-folders that are purely
+/// <see cref="TeammatePaths.DefinitionsRoot"/>, optionally nested under Team sub-folders that are purely
 /// organisational - <c>Teams/Business/coo.md</c> is exactly as much a Persona as <c>Teams/coo.md</c>,
 /// and which sub-folder (if any) a file sits under plays no part in its identity or its Team
 /// membership.
@@ -59,7 +58,7 @@ public sealed record PersonaRemoved(string Name);
 /// registers an Agent over the pipe.
 /// </para>
 /// </remarks>
-public sealed class PersonaStore : IDisposable, IMentionAliasSource
+internal sealed class PersonaStore : IDisposable, IMentionAliasSource
 {
     // Editors commonly fire several filesystem events per save (a temp-file write plus a rename,
     // or several partial writes), so raising PersonasChanged straight off FileSystemWatcher would
@@ -74,7 +73,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     // overflow far rarer, though OnWatcherError below is the real backstop.
     private const int WatcherInternalBufferSize = 64 * 1024;
 
-    private readonly string teamsDir;
+    private readonly TeammatePaths teammatePaths;
     private readonly PersonaModelStore models;
     private readonly PersonaEffortStore efforts;
     private readonly ILogger<PersonaStore> logger;
@@ -101,29 +100,29 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     private volatile PersonaIndex index;
 
     /// <summary>Scans the Teams directory and starts watching it for changes.</summary>
-    /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/> and <see cref="AcpOptions.TeamsDir"/>, which together locate the Teams directory.</param>
+    /// <param name="teammatePaths">Locates the Teams directory that this store scans and watches.</param>
     /// <param name="models">The SQLite-backed store for each Persona's chosen Model.</param>
     /// <param name="efforts">The SQLite-backed store for each Persona's chosen Effort.</param>
     /// <param name="logger">Used to warn if the filesystem watcher reports a dropped-event buffer overflow.</param>
     public PersonaStore(
-        IOptions<TeamOptions> options,
+        TeammatePaths teammatePaths,
         PersonaModelStore models,
         PersonaEffortStore efforts,
         ILogger<PersonaStore> logger)
     {
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(teammatePaths);
         ArgumentNullException.ThrowIfNull(models);
         ArgumentNullException.ThrowIfNull(efforts);
         ArgumentNullException.ThrowIfNull(logger);
 
+        this.teammatePaths = teammatePaths;
         this.models = models;
         this.efforts = efforts;
         this.logger = logger;
-        this.teamsDir = Path.Combine(options.Value.DataDir, options.Value.Acp.TeamsDir);
 
         // Created eagerly (rather than lazily on first Add) so the watcher below has a directory
         // to watch from the moment the app starts, even before any Persona has been added.
-        Directory.CreateDirectory(this.teamsDir);
+        Directory.CreateDirectory(this.Paths.DefinitionsRoot);
 
         this.index = this.RebuildIndexFromDisk();
 
@@ -138,7 +137,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
         // edit again - no error, no log, nothing, exactly the shape docs/agencyteam/traps.md warns
         // about. NotifyFilters.DirectoryName is what makes a directory rename raise an event at
         // all.
-        this.watcher = new FileSystemWatcher(this.teamsDir, "*")
+        this.watcher = new FileSystemWatcher(this.Paths.DefinitionsRoot, "*")
         {
             IncludeSubdirectories = true,
             InternalBufferSize = WatcherInternalBufferSize,
@@ -228,12 +227,19 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     public IReadOnlyList<string> Teams => this.index.Teams;
 
     /// <summary>
+    /// The <see cref="TeammatePaths"/> this store resolves every Persona-file path through -
+    /// exposed so <c>BuiltinTeammateSeeder</c> can resolve a candidate's definition path itself
+    /// without this store taking a dependency on the seeder.
+    /// </summary>
+    internal TeammatePaths Paths => this.teammatePaths;
+
+    /// <summary>
     /// The absolute path of the Teams directory this store reads and writes Persona files under.
     /// Exposed so <c>CandidateChecker</c> can rewrite an absolute path inside a
     /// <see cref="Check"/> rejection message into one relative to it (Spec §6.8), without this
     /// store's own layout leaking any further than that one call site.
     /// </summary>
-    internal string TeamsDirectory => this.teamsDir;
+    internal string TeamsDirectory => this.Paths.DefinitionsRoot;
 
     /// <summary>
     /// Every valid Persona's Alias, paired with its Name. Implements <see cref="IMentionAliasSource"/>
@@ -321,7 +327,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
         // a colliding file before this Add's write is ever visible to it.
         lock (this.writeGate)
         {
-            var path = Path.Combine(this.teamsDir, $"{identity.Name}.md");
+            var path = this.Paths.DefinitionFile(identity.Name);
             if (File.Exists(path))
             {
                 throw new ChatException(ErrorCodes.BadMessage, $"Persona '{identity.Name}' already exists.");
@@ -331,7 +337,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
 
             entry = this.ValidateCandidate(path, text, excludingPath: null);
 
-            Directory.CreateDirectory(this.teamsDir);
+            Directory.CreateDirectory(this.Paths.DefinitionsRoot);
             File.WriteAllText(path, text);
             this.models.Set(entry.Name, model);
             this.efforts.Set(entry.Name, effort);
@@ -452,7 +458,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <param name="name">The Name to check a file does not already exist for.</param>
     internal void EnsureNoFileExistsFor(string name)
     {
-        var path = Path.Combine(this.teamsDir, $"{name}.md");
+        var path = this.Paths.DefinitionFile(name);
         if (File.Exists(path))
         {
             throw new ChatException(ErrorCodes.BadMessage, $"Persona '{name}' already exists.");
@@ -537,7 +543,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
         {
             if (!PersonaFrontmatter.TryReadIdentity(texts[index], out var identity, out _))
             {
-                paths.Add(Path.Combine(this.teamsDir, $"__check-{index}.md"));
+                paths.Add(Path.Combine(this.Paths.DefinitionsRoot, $"__check-{index}.md"));
                 continue;
             }
 
@@ -555,15 +561,15 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
             occurrencesByName[identity.Name] = occurrence + 1;
 
             paths.Add(occurrence == 0
-                ? Path.Combine(this.teamsDir, $"{identity.Name}.md")
-                : Path.Combine(this.teamsDir, $"{identity.Name}~{occurrence}.md"));
+                ? this.Paths.DefinitionFile(identity.Name)
+                : Path.Combine(this.Paths.DefinitionsRoot, $"{identity.Name}~{occurrence}.md"));
         }
 
         return paths;
     }
 
     /// <summary>
-    /// Whether <c>{teamsDir}/{name}.md</c> - the plain synthetic path <see cref="SyntheticPathsFor"/>
+    /// Whether <see cref="TeammatePaths.DefinitionFile(string)"/>'s path for <paramref name="name"/> - the plain synthetic path <see cref="SyntheticPathsFor"/>
     /// would otherwise give the FIRST text proposing <paramref name="name"/> - is already a real
     /// file's own path: a loaded Persona entry's <see cref="PersonaEntry.Path"/>, or a file on disk
     /// that never became one (a rejected file, or one written outside this process).
@@ -571,7 +577,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <param name="name">The Name to check.</param>
     private bool PlainPathIsTaken(string name)
     {
-        var plainPath = Path.Combine(this.teamsDir, $"{name}.md");
+        var plainPath = this.Paths.DefinitionFile(name);
         return this.index.Entries.Any(entry => string.Equals(entry.Path, plainPath, StringComparison.Ordinal)) || File.Exists(plainPath);
     }
 
@@ -634,14 +640,14 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// </summary>
     private PersonaIndex RebuildIndexFromDisk()
     {
-        if (!Directory.Exists(this.teamsDir))
+        if (!Directory.Exists(this.Paths.DefinitionsRoot))
         {
             return PersonaIndex.Build([]);
         }
 
         // SearchOption.AllDirectories: Team sub-folders are purely organisational, so a Persona
         // nested under one is exactly as much a Persona as one at the top level.
-        var files = Directory.GetFiles(this.teamsDir, "*.md", SearchOption.AllDirectories)
+        var files = Directory.GetFiles(this.Paths.DefinitionsRoot, "*.md", SearchOption.AllDirectories)
             .Select(path => (Path: path, Text: File.ReadAllText(path)))
             .ToList();
 

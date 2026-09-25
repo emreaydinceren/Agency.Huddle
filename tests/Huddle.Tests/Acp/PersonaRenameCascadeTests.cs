@@ -507,7 +507,7 @@ public sealed class PersonaRenameCascadeTests
         await teamDirectory.InitializeAsync("You", ct);
 
         var personaStore = new PersonaStore(
-            dir.Options(),
+            new TeammatePaths(dir.Options()),
             new PersonaModelStore(dir.Options()),
             new PersonaEffortStore(dir.Options()),
             NullLogger<PersonaStore>.Instance);

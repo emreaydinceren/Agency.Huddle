@@ -33,7 +33,7 @@ public sealed class PersonaSupervisorTests
         WritePersonaFile(options.Value, "nova");
 
         using var personaStore = new PersonaStore(
-            options,
+            new TeammatePaths(options),
             new Agency.Huddle.App.Data.PersonaModelStore(options),
             new Agency.Huddle.App.Data.PersonaEffortStore(options),
             NullLogger<PersonaStore>.Instance);

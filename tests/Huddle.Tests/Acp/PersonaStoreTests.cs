@@ -151,7 +151,7 @@ public sealed class PersonaStoreTests
         File.WriteAllText(Path.Combine(teamsDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff."));
         var models = new PersonaModelStore(options);
         models.Set("coo", "claude-opus-4");
-        using var store = new PersonaStore(options, models, new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
+        using var store = new PersonaStore(new TeammatePaths(options), models, new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
 
         var persona = store.Get("coo");
 
@@ -173,7 +173,7 @@ public sealed class PersonaStoreTests
         File.WriteAllText(Path.Combine(teamsDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff."));
         var efforts = new PersonaEffortStore(options);
         efforts.Set("coo", "high");
-        using var store = new PersonaStore(options, new PersonaModelStore(options), efforts, NullLogger<PersonaStore>.Instance);
+        using var store = new PersonaStore(new TeammatePaths(options), new PersonaModelStore(options), efforts, NullLogger<PersonaStore>.Instance);
 
         var persona = store.Get("coo");
 
@@ -191,7 +191,7 @@ public sealed class PersonaStoreTests
         var teamsDir = Path.Combine(dir.Path, "Teams");
         Directory.CreateDirectory(teamsDir);
         File.WriteAllText(Path.Combine(teamsDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff.", "agency"));
-        using var store = new PersonaStore(options, new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
+        using var store = new PersonaStore(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
 
         var persona = store.Get("coo");
 
@@ -227,7 +227,7 @@ public sealed class PersonaStoreTests
         Directory.CreateDirectory(teamsDir);
         var text = PersonaText("coo", "first", "agency");
         File.WriteAllText(Path.Combine(teamsDir, "coo.md"), text);
-        using var store = new PersonaStore(options, new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
+        using var store = new PersonaStore(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
 
         var updated = store.Update("coo", text, model: null, effort: null);
 
@@ -1368,7 +1368,7 @@ public sealed class PersonaStoreTests
     {
         using var dir = new TempDataDir();
         var throwingLogger = new ThrowingLogger<PersonaStore>();
-        using var store = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), throwingLogger);
+        using var store = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), throwingLogger);
         store.Dispose();
 
         var exception = Record.Exception(() => store.OnWatcherError(store, new ErrorEventArgs(new IOException("simulated buffer overflow"))));
@@ -1378,7 +1378,7 @@ public sealed class PersonaStoreTests
 
     private static PersonaStore CreateStore(TempDataDir dir)
     {
-        return new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        return new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
     }
 
     /// <summary>A valid <see cref="PersonaIdentity"/> for <paramref name="name"/>, with Title and Alias defaulting to <paramref name="name"/> and no Teams unless <paramref name="teams"/> is given - the structured input <see cref="PersonaStore.Add"/> now takes.</summary>

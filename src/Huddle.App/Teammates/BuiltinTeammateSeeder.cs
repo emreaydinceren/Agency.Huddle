@@ -91,7 +91,7 @@ internal sealed class BuiltinTeammateSeeder(PersonaStore personas, ILogger<Built
     /// <c>Chief of Staff</c> / <c>cos</c>, then <c>Chief of Staff 2</c> / <c>cos2</c>, and so on. A
     /// pair is free when neither half equals any loaded Persona's Name or Alias - compared the way
     /// <see cref="PersonaIndex"/> itself compares them, case-insensitively - and no
-    /// <c>{Name}.md</c> file already sits on disk, checked through <see cref="PersonaStore.TeamsDirectory"/>
+    /// <c>{Name}.md</c> file already sits on disk, checked through <see cref="PersonaStore.Paths"/>
     /// rather than recomputing the Teams path.
     /// </summary>
     /// <param name="name">The first free Name, when this returns <see langword="true"/>; otherwise <see cref="string.Empty"/>.</param>
@@ -110,7 +110,7 @@ internal sealed class BuiltinTeammateSeeder(PersonaStore personas, ILogger<Built
                 || string.Equals(entry.Name, candidateAlias, StringComparison.OrdinalIgnoreCase)
                 || string.Equals(entry.Alias, candidateAlias, StringComparison.OrdinalIgnoreCase));
 
-            if (!taken && !File.Exists(Path.Combine(personas.TeamsDirectory, $"{candidateName}.md")))
+            if (!taken && !File.Exists(personas.Paths.DefinitionFile(candidateName)))
             {
                 name = candidateName;
                 alias = candidateAlias;

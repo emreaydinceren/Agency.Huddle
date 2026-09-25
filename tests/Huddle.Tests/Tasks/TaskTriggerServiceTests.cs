@@ -1897,7 +1897,7 @@ public sealed class TaskTriggerServiceTests
             directory, chatStore, roomEvents, new FakeMentionAliasSource(), teamOptions, proposals, NullLogger<ChatService>.Instance);
 
         PersonaStore personas = new(
-            dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+            new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         TaskStore store = new(dir.Options(), personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
         TaskEvents events = new();
         TaskActivity activity = new(teamOptions);
