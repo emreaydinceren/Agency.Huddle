@@ -20,7 +20,7 @@ public sealed class GetTaskToolTests
 
         string result = await tool.InvokeAsync(new JsonObject(), ct);
 
-        Assert.Contains("taskId", result, StringComparison.Ordinal);
+        Assert.Equal("'taskId' is a required argument.", result);
     }
 
     /// <summary>Text that doesn't parse as a <see cref="TaskId"/> is refused with the §11.1 wording.</summary>
@@ -193,6 +193,30 @@ public sealed class GetTaskToolTests
         }
 
         Assert.Equal(50, occurrences);
+    }
+
+    /// <summary>The Change log block's exact shape (Spec §11.3): a blank line, then "Change log:", then one line per entry via the §11.3 entry format, oldest first.</summary>
+    [Fact]
+    public async Task GetTask_IncludeChangeLog_ExactBlockShape()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = new();
+        List<ChangeLogEntry> entries =
+        [
+            new ChangeLogEntry(new DateTimeOffset(2026, 9, 1, 9, 0, 0, TimeSpan.Zero), "Nova", "created"),
+            new ChangeLogEntry(new DateTimeOffset(2026, 9, 2, 10, 30, 0, TimeSpan.Zero), "Kai", "status: To Do -> In Progress"),
+        ];
+        _ = CreateInStore(harness.Store, TestTasks.Make(id: "PLAT-0001", description: "Some details.", changeLog: entries));
+        GetTaskTool tool = new(harness.Store, new FakePromptSource());
+        JsonObject arguments = new() { ["taskId"] = "PLAT-0001", ["include_change_log"] = true };
+
+        string result = await tool.InvokeAsync(arguments, ct);
+
+        const string expectedTail =
+            "\n\nChange log:\n" +
+            "2026-09-01 09:00 Nova: created\n" +
+            "2026-09-02 10:30 Kai: status: To Do -> In Progress";
+        Assert.EndsWith(expectedTail, result, StringComparison.Ordinal);
     }
 
     /// <summary>An <c>include_change_log</c> given as text rather than a boolean is refused, naming the argument, rather than thrown.</summary>

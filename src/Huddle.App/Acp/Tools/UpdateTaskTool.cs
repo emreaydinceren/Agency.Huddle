@@ -1,5 +1,6 @@
 namespace Agency.Huddle.App.Acp.Tools;
 
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json.Nodes;
@@ -66,15 +67,15 @@ internal sealed class UpdateTaskTool(
             return taskIdRefusal;
         }
 
-        if (!TaskToolText.TryResolve(store, taskIdText, out TaskItem? current, out string resolveRefusal) || current is null)
+        if (!TaskToolText.TryResolve(store, taskIdText, out TaskItem? current, out string resolveRefusal))
         {
             return resolveRefusal;
         }
 
-        (TaskActor? actor, string? actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
         if (actor is null)
         {
-            return actorRefusal ?? "Could not identify caller.";
+            return actorRefusal;
         }
 
         if (!TryBuildPatch(actor, arguments, out TaskPatch? patch, out string patchRefusal))
@@ -98,8 +99,11 @@ internal sealed class UpdateTaskTool(
             TaskResult.Unchanged unchanged => $"{unchanged.Task.Id} already has those values; nothing changed.",
             TaskResult.Refused refused => string.Join('\n', refused.Problems),
             TaskResult.NotFound notFound => $"Unknown task '{notFound.Id}'.",
-            TaskResult.Conflict conflict => $"{conflict.Current.Id} was changed by someone else; please try again.",
-            _ => "Could not update the task.",
+
+            // Spec §11.1: "A Conflict can't happen here, because tools pass baseVersion: null" - this
+            // tool always does (above), so TaskService.Update's only remaining Conflict route (a
+            // stale baseVersion) never triggers from here.
+            _ => throw new UnreachableException("update_task always passes baseVersion: null, so TaskService.Update never returns Conflict for it (Spec §11.1)."),
         };
     }
 

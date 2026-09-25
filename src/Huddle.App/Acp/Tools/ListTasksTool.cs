@@ -182,8 +182,8 @@ internal sealed class ListTasksTool(
 
         if (string.Equals(assignee, "me", StringComparison.OrdinalIgnoreCase))
         {
-            (TaskActor? actor, string? actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
-            return actor is null ? ([], actorRefusal ?? string.Empty) : ([actor.Name], string.Empty);
+            (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+            return actor is null ? ([], actorRefusal) : ([actor.Name], string.Empty);
         }
 
         if (string.Equals(assignee, "unassigned", StringComparison.OrdinalIgnoreCase))

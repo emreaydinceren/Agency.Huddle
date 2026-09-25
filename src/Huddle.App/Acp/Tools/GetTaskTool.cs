@@ -58,7 +58,7 @@ internal sealed class GetTaskTool(TaskStore store, IPromptSource prompts) : IApp
             return Task.FromResult("'taskId' is a required argument.");
         }
 
-        if (!TaskToolText.TryResolve(store, taskIdText, out TaskItem? task, out string idRefusal) || task is null)
+        if (!TaskToolText.TryResolve(store, taskIdText, out TaskItem? task, out string idRefusal))
         {
             return Task.FromResult(idRefusal);
         }

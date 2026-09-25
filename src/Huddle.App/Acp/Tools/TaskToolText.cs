@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Nodes;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
@@ -45,7 +46,7 @@ internal static class TaskToolText
     /// <param name="text">The argument text, or <see langword="null"/>.</param>
     /// <param name="task">The resolved Task, or <see langword="null"/> when this returns <see langword="false"/>.</param>
     /// <param name="refusal">The refusal text when this returns <see langword="false"/>; otherwise <see cref="string.Empty"/>.</param>
-    public static bool TryResolve(TaskStore store, string? text, out TaskItem? task, out string refusal)
+    public static bool TryResolve(TaskStore store, string? text, [NotNullWhen(true)] out TaskItem? task, out string refusal)
     {
         ArgumentNullException.ThrowIfNull(store);
 
@@ -77,8 +78,13 @@ internal static class TaskToolText
     /// <param name="directory">Resolves the caller's <see cref="User"/> row.</param>
     /// <param name="callerAgentId">The calling Agent's user id.</param>
     /// <param name="cancellationToken">Propagated to <see cref="ITeamDirectory.GetUserAsync"/>.</param>
-    /// <returns>The resolved <see cref="TaskActor"/>, or a refusal when the caller is unknown.</returns>
-    public static async Task<(TaskActor? Actor, string? Refusal)> ResolveActorAsync(
+    /// <returns>
+    /// The resolved <see cref="TaskActor"/> paired with an empty <c>Refusal</c>, or a
+    /// <see langword="null"/> Actor paired with a non-empty <c>Refusal</c> when the caller is
+    /// unknown - never both null and never both set, so a caller need only branch on
+    /// <c>Actor is null</c>.
+    /// </returns>
+    public static async Task<(TaskActor? Actor, string Refusal)> ResolveActorAsync(
         ITeamDirectory directory, string callerAgentId, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(directory);
@@ -90,7 +96,7 @@ internal static class TaskToolText
             return (null, $"Could not identify caller '{callerAgentId}' as a Teammate.");
         }
 
-        return (new TaskActor(TaskActorKind.Agent, user.Name, callerAgentId), null);
+        return (new TaskActor(TaskActorKind.Agent, user.Name, callerAgentId), string.Empty);
     }
 
     /// <summary>

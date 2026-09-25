@@ -105,13 +105,13 @@ public sealed class TaskToolTextTests
         User? nova = await directory.UpsertAgentUserAsync("Nova", null, ct);
         Assert.NotNull(nova);
 
-        (TaskActor? actor, string? refusal) = await TaskToolText.ResolveActorAsync(directory, nova.Id, ct);
+        (TaskActor? actor, string refusal) = await TaskToolText.ResolveActorAsync(directory, nova.Id, ct);
 
         Assert.NotNull(actor);
         Assert.Equal(TaskActorKind.Agent, actor.Kind);
         Assert.Equal("Nova", actor.Name);
         Assert.Equal(nova.Id, actor.UserId);
-        Assert.Null(refusal);
+        Assert.Equal(string.Empty, refusal);
     }
 
     /// <summary>An unknown caller id yields a refusal and no <see cref="TaskActor"/> — the raw id is never used as a Name.</summary>
@@ -123,7 +123,7 @@ public sealed class TaskToolTextTests
         SqliteTeamDirectory directory = new(dir.Options());
         await directory.InitializeAsync("You", ct);
 
-        (TaskActor? actor, string? refusal) = await TaskToolText.ResolveActorAsync(directory, "ghost-id", ct);
+        (TaskActor? actor, string refusal) = await TaskToolText.ResolveActorAsync(directory, "ghost-id", ct);
 
         Assert.Null(actor);
         Assert.Equal("Could not identify caller 'ghost-id' as a Teammate.", refusal);

@@ -146,6 +146,24 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             ActivatorUtilities.CreateInstance<ProposeTeammatesTool>(this.serviceProvider, agentId),
         ];
 
+        // Spec §11.1: the six Task tools are not in SkillGrants.Grantable, so every Persona gets
+        // them for free once Tasks is on - gated only by the feature flag, never by Skill. GetTaskTool
+        // takes no agentId (corrections-B4 D10 item 1): reading a Task changes nothing, so it has no
+        // actor to resolve.
+        if (this.options.Tasks.Enabled)
+        {
+            chatTools =
+            [
+                .. chatTools,
+                ActivatorUtilities.CreateInstance<CreateTaskTool>(this.serviceProvider, agentId),
+                ActivatorUtilities.CreateInstance<GetTaskTool>(this.serviceProvider),
+                ActivatorUtilities.CreateInstance<ListTasksTool>(this.serviceProvider, agentId),
+                ActivatorUtilities.CreateInstance<UpdateTaskTool>(this.serviceProvider, agentId),
+                ActivatorUtilities.CreateInstance<CloseTaskTool>(this.serviceProvider, agentId),
+                ActivatorUtilities.CreateInstance<ReopenTaskTool>(this.serviceProvider, agentId),
+            ];
+        }
+
         // Skill gating happens before GetHelpTool is built, so get_help's own listing and the system
         // prompt's tool list both reflect only the tools this session was actually offered (Spec §6.5:
         // "GetHelpTool is constructed from the offered list, so get_help and tools/list agree").

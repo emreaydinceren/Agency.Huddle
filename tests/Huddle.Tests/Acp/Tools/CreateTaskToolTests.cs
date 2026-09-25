@@ -20,7 +20,7 @@ public sealed class CreateTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("title", result, StringComparison.Ordinal);
+        Assert.Equal("'title' is a required argument.", result);
         Assert.Empty(harness.Store.All);
     }
 
@@ -35,7 +35,7 @@ public sealed class CreateTaskToolTests
 
         string result = await tool.InvokeAsync(arguments, ct);
 
-        Assert.Contains("team", result, StringComparison.Ordinal);
+        Assert.Equal("'team' is a required argument.", result);
         Assert.Empty(harness.Store.All);
     }
 

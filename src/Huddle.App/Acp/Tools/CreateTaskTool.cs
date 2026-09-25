@@ -1,5 +1,6 @@
 namespace Agency.Huddle.App.Acp.Tools;
 
+using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
@@ -199,10 +200,10 @@ internal sealed class CreateTaskTool(
             return blockedByRefusal;
         }
 
-        (TaskActor? actor, string? actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken).ConfigureAwait(false);
         if (actor is null)
         {
-            return actorRefusal ?? string.Create(CultureInfo.InvariantCulture, $"Could not identify caller '{callerAgentId}' as a Teammate.");
+            return actorRefusal;
         }
 
         string? resolvedAssignee = string.IsNullOrEmpty(assigneeText)
@@ -233,7 +234,10 @@ internal sealed class CreateTaskTool(
         {
             TaskResult.Saved saved => this.BuildSuccessText(saved, actor),
             TaskResult.Refused refused => string.Join('\n', refused.Problems),
-            _ => "Could not save the task.",
+
+            // CreateCore (TaskService.cs) returns only Refused or Saved - or throws, caught above by
+            // TryRun - so Unchanged, Conflict and NotFound are all impossible from Create.
+            _ => throw new UnreachableException("create_task's TaskService.Create returns only Refused or Saved; every other TaskResult case is impossible here."),
         };
     }
 

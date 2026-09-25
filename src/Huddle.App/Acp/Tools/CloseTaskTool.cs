@@ -1,5 +1,6 @@
 namespace Agency.Huddle.App.Acp.Tools;
 
+using System.Diagnostics;
 using System.Text.Json.Nodes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Data;
@@ -47,15 +48,15 @@ internal sealed class CloseTaskTool(
             return taskIdRefusal;
         }
 
-        if (!TaskToolText.TryResolve(store, taskIdText, out TaskItem? current, out string resolveRefusal) || current is null)
+        if (!TaskToolText.TryResolve(store, taskIdText, out TaskItem? current, out string resolveRefusal))
         {
             return resolveRefusal;
         }
 
-        (TaskActor? actor, string? actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
+        (TaskActor? actor, string actorRefusal) = await TaskToolText.ResolveActorAsync(directory, callerAgentId, cancellationToken);
         if (actor is null)
         {
-            return actorRefusal ?? "Could not identify caller.";
+            return actorRefusal;
         }
 
         if (!TaskToolText.TryRun(() => tasks.Close(current.Id, actor), out TaskResult? result, out string runRefusal))
@@ -69,7 +70,11 @@ internal sealed class CloseTaskTool(
             TaskResult.Refused refused => string.Join('\n', refused.Problems),
             TaskResult.NotFound notFound => $"Unknown task '{notFound.Id}'.",
             TaskResult.Conflict conflict => $"{conflict.Current.Id} was changed by someone else; please try again.",
-            _ => "Could not close the task.",
+
+            // CloseOrReopenCore never diffs against an Unchanged snapshot (it skips straight from the
+            // already-closed check to writing), so Unchanged is the only case left uncovered above,
+            // and TaskService.Close never produces it.
+            _ => throw new UnreachableException("close_task's TaskService.Close never returns Unchanged; every other TaskResult case is handled above."),
         };
     }
 
