@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 15 of 143 tasks Done · 0 of 8 retrospectives done · last updated 2026-09-25.
+**Status:** 15 of 143 tasks Done · 1 of 8 retrospectives done · last updated 2026-09-25.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -32,7 +32,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 2.3.i Implement document and file records · #13 · Haiku | | | ✔ |
 | 2.4.t Test: `LibrarySize.Format` · #14 · Haiku | | | ✔ |
 | 2.4.i Implement `LibrarySize.Format` · #15 · Haiku | | | ✔ |
-| 🔁 R1 — Opus retrospective after #15, and plan update | ✔ | | |
+| 🔁 R1 — Opus retrospective after #15, and plan update | | | ✔ |
 | 2.5.t Test: `WikiLink` and `LibraryReference` · #16 · Haiku | ✔ | | |
 | 2.5.i Implement `WikiLink`, `LibraryReference` and the resolver interface · #17 · Haiku | ✔ | | |
 | 2.6 Register the public types · #18 · Haiku | ✔ | | |
@@ -60,7 +60,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | G1.1.t Test: `TaskLayout` maps only `_tasks/` · #35b · Sonnet | ✔ | | |
 | G1.1.i Implement the `_tasks` layout · #35c · Sonnet | ✔ | | |
 | G1.2.t Test: `Team:Teams:Dir` is the Tasks root · #35d · Haiku | ✔ | | |
-| G1.2.i Implement the root switch · #35e · Haiku | ✔ | | |
+| G1.2.i Implement the root switch · #35e · Sonnet | ✔ | | |
 | G1.3.t Test: the Team/Project scan beside notes · #35f · Sonnet | ✔ | | |
 | G1.3.i Implement the targeted scan · #35g · Sonnet | ✔ | | |
 | G1.4.t Test: the watcher ignores Library notes · #35h · Sonnet | ✔ | | |

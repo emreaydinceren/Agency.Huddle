@@ -560,8 +560,11 @@ rename, then the migration that moves real data. **Nothing in D7 starts before 3
 - **Deliverable:** `tests/Huddle.Tests/Acp/TeammatesDirOptionTests.cs`:
   - `Default_TeammatesDir_IsTeammates`.
   - `AddTeam_WithAcpTeamsDir_Throws`: configuration `Team:Acp:TeamsDir = "Teams"`; calling the
-    same registration entry point as the `PersonaDir` test (find it by grepping `PersonaDir` in
-    `tests/Huddle.Tests`) throws `InvalidOperationException` whose message is exactly
+    same registration entry point as the `PersonaDir` test
+    (`tests/Huddle.Tests/ServiceCollectionExtensionsTests.cs:30`,
+    `AddTeamServices_WithTheOldPersonaDirKey_ThrowsNamingTheNewKey`, is the pattern; usings
+    `Agency.Huddle.App`, `Agency.Huddle.App.Acp`, no `using Xunit;`) throws
+    `InvalidOperationException` whose message is exactly
     `Configuration key 'Team:Acp:TeamsDir' was renamed to 'Team:Acp:TeammatesDir'. Update the configuration source that sets it (environment variable, user secret, etc.) - there is no automatic fallback.`
   - `AddTeam_WithoutTeamsDir_DoesNotThrow`.
 - **Acceptance:** Red.
@@ -578,6 +581,9 @@ rename, then the migration that moves real data. **Nothing in D7 starts before 3
   definitions flat under `DefinitionsRoot`, now named `Teammates`. `PersonaStoreTests` that
   hard-code `"Teams"` are updated to read `TeammatePaths.DefinitionsRoot`. `TaskStore.cs` is
   Tasks-owned: this one-line key rename is announced in the Conversation note.
+  **Grep trap (R1):** `TeamsDir` also matches `TeamWebApplicationFactory.TeamsDirPath` (~40 uses in
+  14 files). Grep `Acp\.TeamsDir\b|TeamsDir =` for the readers; rename the property to
+  `TeammatesDirPath` with `Rewrite-Calls.ps1`.
 - **Acceptance:** 3.1.t green; full suite green; `grep -rn "TeamsDir" src tests --include=*.cs`
   finds only the guard and its test.
 
@@ -601,7 +607,11 @@ rename, then the migration that moves real data. **Nothing in D7 starts before 3
 - **Read first:** Task 3.2.t.
 - **Deliverable:** Add `string TeammateFolder(string name)`; change `DefinitionFile` and
   `WorkDir`; remove `WorkDirRoot`, and replace its one caller (`ModelCatalogProbe`) with
-  `DefinitionsRoot` (**Spec §6.15**: the probe's `cwd` becomes `Teammates/`).
+  `DefinitionsRoot` (**Spec §6.15**: the probe's `cwd` becomes `Teammates/`). Rename
+  `ModelCatalogCacheTests.GetAsync_ProbeCwd_IsWorkDirRoot` to `…_IsTeammatesRoot` and assert
+  `Path.Combine(dir.Path, "Teammates")`; delete `TeammatePathsTests.WorkDirRoot_IsWorkDir` and
+  update `Paths_HonourConfiguredDirs`. Route `CandidateChecker.cs:206`
+  (`personas.TeamsDirectory`) through `TeammatePaths` (R1).
 - **Acceptance:** 3.2.t green. **Expect other suites to go red** (PersonaStore still scans
   recursively); the manager dispatches 3.3–3.6 next and doesn't run the full suite as a gate here.
 
@@ -609,8 +619,9 @@ rename, then the migration that moves real data. **Nothing in D7 starts before 3
 
 - **Goal:** Pin **Spec §6.15** *The scan reads one level*.
 - **Read first:** **Spec §6.15**; `Acp/PersonaStore.cs:635-650` (the scan) and `:141-150` (the
-  watcher); `tests/Huddle.Tests/Acp/PersonaStoreTests.cs` (the watcher-wait helper at
-  `:625-640`, and 750 ms for negative checks).
+  watcher); `tests/Huddle.Tests/Acp/PersonaStoreTests.cs` (R1: there is no watcher-wait helper;
+  the 750 ms negative wait is at `:1105`). `PersonaStore` has no warnings surface today (only
+  `RejectedFiles` `:224` and a log at `:928`): corrections-B2 item 12 settles `FolderWarnings`.
 - **Deliverable:** In `PersonaStoreTests.cs`, a region `// ADR-0031 layout` with:
   - `Scan_DefinitionInTeammateFolder_Loads`: `Teammates/Nova/Nova.md` loads as Nova.
   - `Scan_MarkdownUnderWork_IsIgnored`: `Teammates/Nova/work/memory/fact.md` and
@@ -660,7 +671,8 @@ rename, then the migration that moves real data. **Nothing in D7 starts before 3
 ### Task 3.4.i (#26) — Implement the folder move [Sonnet]
 
 - **Goal:** Implement **Spec §6.15**'s rename.
-- **Read first:** Task 3.4.t; `PersonaRenameCascade.cs`.
+- **Read first:** Task 3.4.t; `PersonaRenameCascade.cs`; `PersonaRenamed` is
+  `PersonaStore.cs:191` (event) and `:14` (record).
 - **Deliverable:** Replace `MoveWorkDirAsync` with `MoveTeammateFolderAsync(oldName, newName)`:
   one `Directory.Move(paths.TeammateFolder(old), paths.TeammateFolder(new))` with the existing
   retry policy, then `File.Move` of `Old.md` → `New.md` inside the moved folder. Keep the log
@@ -727,7 +739,8 @@ rename, then the migration that moves real data. **Nothing in D7 starts before 3
 ### Task 3.6.i (#30) — Run the migration at start-up [Sonnet]
 
 - **Goal:** Wire **Spec §6.15**'s ordering.
-- **Read first:** Task 3.6.t; `Program.cs`.
+- **Read first:** Task 3.6.t; `Program.cs` (`:44` is the first `IOptions<TeamOptions>.Value`;
+  `app.Run()` is `:84`).
 - **Deliverable:** Call `TeammateLayoutMigration.Run(...)` in `Program.cs` after the host is built
   and before `app.Run()` or any singleton that reads Persona files is resolved (take
   `IOptions<TeamOptions>` and an `ILogger` from `app.Services`).
@@ -755,7 +768,8 @@ rename, then the migration that moves real data. **Nothing in D7 starts before 3
 ### Task 3.8.t (#33) — Test: `Teams/` and `Teammates/` must not overlap [Haiku]
 
 - **Goal:** Pin the start-up guard, **Spec §6.3** (fourth bullet) and ADR-0030 *Consequences*.
-- **Read first:** `Tasks/TaskStore.cs:65-90` (the existing overlap guard, for its shape).
+- **Read first:** `Tasks/TaskStore.cs:65-90` (the existing overlap guard, for its shape). Usings:
+  `Agency.Huddle.App` (for `TeamOptions`); omit `Agency.Huddle.App.Library` in the red.
 - **Deliverable:** `tests/Huddle.Tests/Library/TeamsTeammatesOverlapTests.cs`:
   `Validate_TeamsInsideTeammates_Throws`, `Validate_TeammatesInsideTeams_Throws`,
   `Validate_Same_Throws`, `Validate_Siblings_Passes`, calling
@@ -807,7 +821,8 @@ The Tasks effort shipped on `Tasks/<Team>/[<Project>/]` and asked for the move w
   `Acp/Tools/TaskToolHarness.cs:223-248`.
 - **Deliverable:** `TestTaskStore.Root(TempDataDir)` (returns `…/Tasks` for now) and
   `TestTaskStore.RelativePath(string team, string? project, bool closed, string fileName)` (old
-  layout for now). Replace the ~60 `Path.Combine(dir.Path, "Tasks")` sites (TaskStoreTests,
+  layout for now). The ~60 `Path.Combine(<x>.Path, "Tasks")` sites are uniform: rewrite them with
+  `Rewrite-Calls.ps1`, then hand-edit only the literal paths listed (R1). Replace the sites (TaskStoreTests,
   TaskStoreWatcherTests, OutsideEditLoggingTests, TaskServiceRenameTeammateTests,
   TaskStoreStartupReconciliationTests, TaskServiceTests) and every literal Task path
   (`TaskServiceTests:29,:451,:625,:640,:944,:964,:1086,:1167`; `TaskServiceRenameTeammateTests:39`;
@@ -850,7 +865,7 @@ The Tasks effort shipped on `Tasks/<Team>/[<Project>/]` and asked for the move w
 ### Task G1.2.t (#35d) — Test: `Team:Teams:Dir` is the Tasks root; `Tasks:Dir` retires [Haiku]
 
 - **Read first:** `TaskStore.cs:71-86,:776-794`; `ServiceCollectionExtensions.cs:36-45`;
-  `TasksOptionsTests.cs:17,:40`; `Acp/LayoutGuard.cs` (Task 3.8).
+  `TasksOptionsTests.cs:17,:40`; `Library/LayoutGuard.cs` (Task 3.8).
 - **Deliverable:** `tests/Huddle.Tests/Tasks/TasksRootTests.cs`: `RootDirectory_IsTeamsDir`,
   `RootDirectory_HonoursTeamsDir` (`Teams.Dir = "T2"`), `AddTeam_WithTasksDir_Throws` with the
   exact message `Configuration key 'Team:Tasks:Dir' was replaced by 'Team:Teams:Dir'. Tasks now live in each Team folder's _tasks/ folder; remove the key (the start-up migration reads {DataDir}/Tasks). There is no automatic fallback.`,
@@ -858,7 +873,7 @@ The Tasks effort shipped on `Tasks/<Team>/[<Project>/]` and asked for the move w
   and `TaskStoreTests:214-228`.
 - **Acceptance:** Red.
 
-### Task G1.2.i (#35e) — Implement the root switch [Haiku]
+### Task G1.2.i (#35e) — Implement the root switch [Sonnet]
 
 - **Deliverable:** Remove `TasksOptions.Dir`. `TaskStore` reads `options.Value.Teams.Dir`;
   `ThrowIfNested` becomes `LayoutGuard.ValidateTeamsAndTeammates(options.Value)` (one message, kept
@@ -2437,7 +2452,7 @@ The manager records each retrospective here, newest last, and commits the plan c
 
 | # | After task | Date | Top findings | Plan changes made |
 | --- | --- | --- | --- | --- |
-| R1 | #15 | | | |
+| R1 | #15 | 2026-09-25 | The brief named the wrong red folder and nothing warned about `using Xunit;` (IDE0005): ~45 calls lost in 1.1.t and 2.1.t. 1.3.i spent ~50 of 110 calls on one-Edit-per-site constructor rewrites. Every agent re-read the whole facts file. Two agents ran past the 150K context cap (1.3.i 227K; the D2 Haiku chain 177K). | Facts file gets a *Core* section (red path, usings, paths, CS0051, `new(options)`); brief fixed. New `Conversation/scripts/Rewrite-Calls.ps1` for >10 mechanical sites. Read-first/Deliverable edits: 3.1.t, 3.1.i, 3.2.i, 3.3.t, 3.4.i, 3.6.i, 3.8.t, G1.0, G1.2.t (`Library/LayoutGuard.cs`). Retag G1.2.i Haiku → Sonnet. |
 | R2 | #30 | | | |
 | R3 | #45 | | | |
 | R4 | #60 | | | |
