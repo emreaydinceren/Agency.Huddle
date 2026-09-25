@@ -54,4 +54,19 @@ public sealed class AppCssTasksTests
 
         Assert.Contains(className, text, StringComparison.Ordinal);
     }
+
+    /// <summary>The id text carries <c>user-select: all</c>, so a single click selects it for Ctrl+C if the copy button fails (Spec §13.13.1, corrections-B6 "D15.2" item 6).</summary>
+    [Fact]
+    public void AppCss_DeclaresTaskId_WithUserSelectAll()
+    {
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.css"));
+
+        int classIndex = text.IndexOf(".task-id", StringComparison.Ordinal);
+        Assert.True(classIndex >= 0, "Expected a .task-id rule in app.css.");
+        int braceEnd = text.IndexOf('}', classIndex);
+        Assert.True(braceEnd > classIndex, "Expected .task-id's rule to be closed.");
+        string rule = text[classIndex..(braceEnd + 1)];
+        // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
+        Assert.Contains("user-select: all", rule, StringComparison.Ordinal);
+    }
 }

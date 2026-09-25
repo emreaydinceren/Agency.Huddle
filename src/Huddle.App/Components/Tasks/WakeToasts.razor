@@ -96,7 +96,7 @@
     private RenderFragment WokenMessage(WakeRecord record) =>
         @<text>
             <span>@($"{record.Assignee} woken for {record.TaskId} in Room: {record.RoomName}")</span>
-            <a class="wake-toast-task-link" role="button" tabindex="0" @onclick="() => this.OnOpenTask.InvokeAsync(record.TaskId)">@record.TaskId.ToString()</a>
+            <a class="wake-toast-task-link" href="@($"/tasks/item/{record.TaskId}")" @onclick="() => this.OnOpenTask.InvokeAsync(record.TaskId)" @onclick:preventDefault="true">@record.TaskId.ToString()</a>
             @if (record.RoomId is not null)
             {
                 <a class="wake-toast-room-link" href="@($"/rooms/{record.RoomId}")">@record.RoomName</a>

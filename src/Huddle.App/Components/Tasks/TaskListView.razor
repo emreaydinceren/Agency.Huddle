@@ -145,6 +145,23 @@
                     break;
             }
         }
+        @* Settled design (J52): a trailing, always-visible ⋮ menu column - the List row equivalent of
+           TaskCard's own menu (Spec §13.13.1 "each List row also get a Copy id item"). *@
+        <TemplateColumn @key="@("actions")" T="TaskItem" Title="" Sortable="false" Filterable="false">
+            <CellTemplate>
+                <span @onclick:stopPropagation="true">
+                    <MudMenu Class="task-list-row-menu">
+                        <ActivatorContent Context="menuContext">
+                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                           aria-label="@($"Actions for {context.Item.Id}")" OnClick="menuContext.ToggleAsync" />
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem OnClick="@(() => this.OnCopyId.InvokeAsync(context.Item.Id))">Copy id</MudMenuItem>
+                        </ChildContent>
+                    </MudMenu>
+                </span>
+            </CellTemplate>
+        </TemplateColumn>
     </Columns>
 </MudDataGrid>
 
@@ -164,6 +181,10 @@
     /// <summary>Raised with the clicked row's id when the Human clicks a row, to open the detail panel (Spec §13.6).</summary>
     [Parameter]
     public EventCallback<TaskId> OnOpenTask { get; set; }
+
+    /// <summary>Raised with a row's id when its trailing ⋮ menu's "Copy id" is chosen (Spec §13.13.1, settled design J52).</summary>
+    [Parameter]
+    public EventCallback<TaskId> OnCopyId { get; set; }
 
     /// <summary>Maps each groupable field to its §12.2 field key, so a Grouping field not in Fields still gets a (hidden) column.</summary>
     private static readonly Dictionary<TaskGroupField, string> GroupFieldKeys = new()

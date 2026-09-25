@@ -10,8 +10,9 @@
     corrections-B5 D14 item 9), the Change log (reversed, Size.Small, local time via the injected
     TimeProvider, corrections-B5 D14 item 10), MudExitPrompt, create mode's Save via
     TaskService.Create with refusals shown (corrections-B7 "14.4" item 2), the Description Preview's
-    Task-id links (item 3), and the Budget banner's role="status" (item 4). The wake toast/AI-reacting
-    chip (14.5) are a later dispatch's work - see TaskDetailActionsTests.cs's own remarks.
+    Task-id links (item 3), and the Budget banner's role="status" (item 4). 15.2.i (this dispatch) adds
+    the header's copy button and its Copy link menu item (Spec §13.13.1, huddleClipboard, success/warning
+    toasts) and the Closed chip (Spec §13.13.3 step 3) - none shown in create mode.
 
     TaskDetailDialog (Components/Tasks/TaskDetailDialog.razor) passes only Id (or a Draft for
     create/copy), because MudBlazor freezes a dialog's parameters once it opens (TeammateCard.razor:12-24)
@@ -41,6 +42,9 @@
 @inject IOptions<TeamOptions> Options
 @inject TimeProvider Clock
 @inject IDialogService Dialogs
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
 @implements IDisposable
 
 <div class="task-detail">
@@ -139,8 +143,27 @@ else if (this.loaded is { } task)
                 }
                 else
                 {
-                    <span class="task-detail-title-display">@effective.Id: @effective.Title</span>
+                    <span class="task-detail-title-display"><span class="task-id">@effective.Id.ToString()</span>: @effective.Title</span>
                     <MudIconButton Icon="@Icons.Material.Filled.Edit" aria-label="Edit title" OnClick="this.BeginEditTitle" />
+                    @if (!this.createMode)
+                    {
+                        @if (task.Location.Closed)
+                        {
+                            <MudChip T="string" Size="Size.Small" Class="task-detail-closed-chip">Closed</MudChip>
+                        }
+                        <MudTooltip Text="Copy id">
+                            <MudIconButton Icon="@Icons.Material.Outlined.ContentCopy" aria-label="@($"Copy task id {effective.Id}")"
+                                           Class="task-detail-copy-id" OnClick="@(() => this.CopyIdAsync(effective.Id))" />
+                        </MudTooltip>
+                        <MudMenu Class="task-detail-copy-menu">
+                            <ActivatorContent Context="copyMenuContext">
+                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" aria-label="Copy options" OnClick="copyMenuContext.ToggleAsync" />
+                            </ActivatorContent>
+                            <ChildContent>
+                                <MudMenuItem Class="task-detail-copy-link" OnClick="@(() => this.CopyLinkAsync(effective.Id))">Copy link</MudMenuItem>
+                            </ChildContent>
+                        </MudMenu>
+                    }
                 }
             </div>
 
@@ -835,6 +858,43 @@ else if (this.loaded is { } task)
         if (this.loaded is { } task)
         {
             this.Activity.Grant(task.Id);
+        }
+    }
+
+    /// <summary>
+    /// The copy button (Spec §13.13.1): copies exactly <paramref name="id"/>'s text via
+    /// <c>huddleClipboard.copy</c>, called directly from the click handler with no other <c>await</c>
+    /// before it, so the browser's clipboard permission stays inside the click's own user-activation
+    /// window (the Spec's own warning).
+    /// </summary>
+    /// <param name="id">The Task id to copy.</param>
+    private async Task CopyIdAsync(TaskId id)
+    {
+        bool copied = await this.JS.InvokeAsync<bool>("huddleClipboard.copy", id.ToString());
+        this.ShowCopyToast(copied, $"Copied {id}");
+    }
+
+    /// <summary>Copy link (Spec §13.13.1): copies <see cref="NavigationManager.BaseUri"/> plus the item route for <paramref name="id"/>, for pasting outside Huddle.</summary>
+    /// <param name="id">The Task id the link opens.</param>
+    private async Task CopyLinkAsync(TaskId id)
+    {
+        string link = $"{this.Navigation.BaseUri}tasks/item/{id}";
+        bool copied = await this.JS.InvokeAsync<bool>("huddleClipboard.copy", link);
+        this.ShowCopyToast(copied, $"Copied {id}");
+    }
+
+    /// <summary>Spec §13.13.1's exact success/warning wording for a copy attempt.</summary>
+    /// <param name="copied">Whether <c>huddleClipboard.copy</c> reported success.</param>
+    /// <param name="successMessage">The success toast's text.</param>
+    private void ShowCopyToast(bool copied, string successMessage)
+    {
+        if (copied)
+        {
+            this.Snackbar.Add(successMessage, Severity.Success, configure: null, key: "copy");
+        }
+        else
+        {
+            this.Snackbar.Add("Couldn't copy. The id is selected; press Ctrl+C.", Severity.Warning, configure: null, key: "copy");
         }
     }
 

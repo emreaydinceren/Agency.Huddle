@@ -132,7 +132,8 @@
             <TaskCard Task="@context" Fields="@this.View.Fields" Presence="@this.PresenceOf(context)"
                       LastWake="@this.Activity.LastWake(context.Id)" Busy="@this.IsBusy(context)" Search="@this.Search"
                       OnOpen="@(() => this.OnOpenTask.InvokeAsync(context.Id))"
-                      OnMoveTo="@(state => this.MoveAsync(context, state))" />
+                      OnMoveTo="@(state => this.MoveAsync(context, state))"
+                      OnCopyId="@(() => this.OnCopyId.InvokeAsync(context.Id))" />
         </ItemRenderer>
     </MudDropContainer>
 </div>
@@ -161,6 +162,10 @@
     /// <summary>Raised with the changed effective View when a column header changes a View that isn't a saved Board - a List View shown as a Board (corrections-B5 D12-13, DM decision D).</summary>
     [Parameter]
     public EventCallback<TaskView> ViewChanged { get; set; }
+
+    /// <summary>Raised with a card's id when its ⋮ menu's "Copy id" is chosen (corrections-B7 "15.2.i" item 2): the page wires this to the same <c>huddleClipboard.copy</c> path as the detail header's own copy button.</summary>
+    [Parameter]
+    public EventCallback<TaskId> OnCopyId { get; set; }
 
     private BoardModel model = new([], [], 0);
     private int renamingColumn = -1;

@@ -39,6 +39,7 @@
 @page "/tasks"
 @page "/tasks/{ViewId}"
 @page "/tasks/new"
+@page "/tasks/item/{TaskIdText}"
 @implements IDisposable
 @using System.Text.Json
 @using Microsoft.Extensions.Options
@@ -47,6 +48,7 @@
 @inject ViewStore Views
 @inject IOptions<TeamOptions> Options
 @inject IJSRuntime JS
+@inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 
 <div class="tasks-page">
@@ -140,15 +142,21 @@
 
         @if (this.effectiveView.Kind == ViewKind.List)
         {
-            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTaskAsync" />
+            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTaskAsync" OnCopyId="this.OnCopyIdAsync" />
         }
         else
         {
             <TaskBoard View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTaskAsync"
-                       ViewChanged="this.OnEffectiveViewChangedAsync" OnEditColumns="this.OnEditColumnsClicked" />
+                       ViewChanged="this.OnEffectiveViewChangedAsync" OnEditColumns="this.OnEditColumnsClicked" OnCopyId="this.OnCopyIdAsync" />
         }
 
-        <MudDrawer @bind-Open="this.detailOpen" Anchor="Anchor.End" Variant="DrawerVariant.Temporary"
+        @if (this.itemNotFoundText is not null)
+        {
+            @* Spec §13.13.3 step 1: an item-route id that is invalid or names no Task, over the last View. *@
+            <MudAlert Severity="Severity.Warning" role="status" Class="tasks-item-not-found-alert">@this.itemNotFoundText</MudAlert>
+        }
+
+        <MudDrawer Open="this.detailOpen" OpenChanged="this.OnDetailOpenChanged" Anchor="Anchor.End" Variant="DrawerVariant.Temporary"
                    OverlayAutoClose="@(!this.detailHasPending)" Class="tasks-detail-drawer">
             @if (this.selectedTaskId is not null || this.selectedDraft is not null)
             {
@@ -166,10 +174,15 @@
     [Parameter]
     public string? ViewId { get; set; }
 
+    /// <summary>The route's Task id segment for <c>/tasks/item/{TaskIdText}</c> (Spec §13.13.3) - null for every other route.</summary>
+    [Parameter]
+    public string? TaskIdText { get; set; }
+
     private TaskView effectiveView = new() { Id = ViewStore.AllTasksId, Name = "All Tasks", Kind = ViewKind.List };
     private string? search;
     private bool viewNotFound;
     private InvalidView? invalidView;
+    private string? itemNotFoundText;
     private bool detailOpen;
     private TaskId? selectedTaskId;
     private TaskDraft? selectedDraft;
@@ -195,8 +208,15 @@
         this.Views.ViewsChanged -= this.OnViewsChanged;
     }
 
-    /// <summary>Resolves the effective View from the route's ViewId every time it changes.</summary>
-    protected override void OnParametersSet()
+    /// <summary>Resolves the effective View from the route's ViewId, then (Spec §13.13.3) the item route's <see cref="TaskIdText"/>, every time either changes.</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        this.ResolveEffectiveViewFromRoute();
+        await this.ResolveItemRouteAsync();
+    }
+
+    /// <summary>The View-resolution half of <see cref="OnParametersSetAsync"/> - unchanged from before the item route existed.</summary>
+    private void ResolveEffectiveViewFromRoute()
     {
         if (this.ViewId is null)
         {
@@ -238,6 +258,46 @@
         this.invalidView = null;
     }
 
+    /// <summary>
+    /// Spec §13.13.3: parses <see cref="TaskIdText"/> and opens the named Task's panel, or - if the text
+    /// is invalid or names no Task - sets <see cref="itemNotFoundText"/> to the exact wording instead.
+    /// Switching away from a different already-open Task goes through <see cref="ConfirmSwitchAsync"/>
+    /// first (corrections-B6 "D15.2" item 2), the same guard <see cref="OnOpenTaskAsync"/> uses.
+    /// </summary>
+    private async Task ResolveItemRouteAsync()
+    {
+        if (this.TaskIdText is not { } text)
+        {
+            this.itemNotFoundText = null;
+            return;
+        }
+
+        if (!TaskId.TryParse(text, out TaskId parsed) || this.Store.Get(parsed) is null)
+        {
+            this.itemNotFoundText = $"No task {text}.";
+            this.selectedTaskId = null;
+            this.selectedDraft = null;
+            this.detailOpen = false;
+            return;
+        }
+
+        this.itemNotFoundText = null;
+        if (this.detailOpen && this.selectedTaskId == parsed)
+        {
+            return;
+        }
+
+        if (!await this.ConfirmSwitchAsync())
+        {
+            return;
+        }
+
+        this.selectedDraft = null;
+        this.selectedTaskId = parsed;
+        this.detailHasPending = false;
+        this.detailOpen = true;
+    }
+
     /// <summary>Whether the current URL is the literal <c>/tasks/new</c> route, which carries no <see cref="ViewId"/> of its own to tell it apart from the bare <c>/tasks</c> route.</summary>
     private bool IsTasksNewRoute() =>
         this.Navigation.ToAbsoluteUri(this.Navigation.Uri).AbsolutePath.EndsWith("/tasks/new", StringComparison.OrdinalIgnoreCase);
@@ -268,13 +328,23 @@
     /// <summary>Reflects the drawer's own chrome (backdrop, Escape) closing it.</summary>
     private void OnEditorOpenChanged(bool open) => this.editorOpen = open;
 
-    /// <summary>Spec §13.9: on first render of the bare route, reads the remembered last View and navigates there if it still exists.</summary>
+    /// <summary>
+    /// Spec §13.9: on first render of the bare route, reads the remembered last View and navigates
+    /// there if it still exists. The item route (Spec §13.13.3 step 2) reads the same remembered View
+    /// to decide what renders under its panel, but never navigates - the URL stays on
+    /// <c>/tasks/item/{TaskIdText}</c> until the panel closes.
+    /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && this.ViewId is null && this.Options.Value.Tasks.Enabled)
+        if (firstRender && this.ViewId is null && this.TaskIdText is null && this.Options.Value.Tasks.Enabled)
         {
             await this.TryNavigateToLastViewAsync();
             return;
+        }
+
+        if (firstRender && this.TaskIdText is not null && this.Options.Value.Tasks.Enabled)
+        {
+            await this.TryLoadLastViewForItemRouteAsync();
         }
 
         if (this.ViewId is not null && !this.viewNotFound && this.Options.Value.Tasks.Enabled)
@@ -399,7 +469,23 @@
     private Task<bool> ConfirmSwitchAsync() => this.detail is null ? Task.FromResult(true) : this.detail.ConfirmDiscardAsync();
 
     /// <summary>Closes the detail drawer (<see cref="TaskDetail.OnClose"/>): Cancel, a successful Close/Reopen, or returning from Expand.</summary>
-    private void OnDetailClosed() => this.detailOpen = false;
+    private void OnDetailClosed() => this.OnDetailOpenChanged(false);
+
+    /// <summary>
+    /// Reflects the drawer's own chrome (backdrop click, Escape) closing it, and <see cref="TaskDetail.OnClose"/>
+    /// (Cancel, Close/Reopen, Expand) - both go through here. On the item route (Spec §13.13.3 step 4),
+    /// closing also replaces the URL with <c>/tasks/{effectiveView.Id}</c>, so Back does not reopen the
+    /// panel; the ordinary <c>/tasks</c>/<c>/tasks/{ViewId}</c> routes never change the URL on close.
+    /// </summary>
+    /// <param name="open">The drawer's new Open state.</param>
+    private void OnDetailOpenChanged(bool open)
+    {
+        this.detailOpen = open;
+        if (!open && this.TaskIdText is not null)
+        {
+            this.Navigation.NavigateTo($"/tasks/{this.effectiveView.Id}", replace: true);
+        }
+    }
 
     /// <summary>
     /// Tracks <see cref="TaskDetail.HasPendingChanged"/> (settled J58): the drawer's own
@@ -480,6 +566,55 @@
         if (lastViewId is not null && this.Views.Get(lastViewId) is not null)
         {
             this.Navigation.NavigateTo($"/tasks/{lastViewId}", replace: true);
+        }
+    }
+
+    /// <summary>
+    /// The item route's own half of Spec §13.9/§13.13.3 step 2: reads the same remembered last View,
+    /// but only to decide what <see cref="effectiveView"/> renders under the panel - never navigates,
+    /// since the URL stays on <c>/tasks/item/{TaskIdText}</c> until the panel closes.
+    /// </summary>
+    private async Task TryLoadLastViewForItemRouteAsync()
+    {
+        string? lastViewId;
+        try
+        {
+            lastViewId = await this.JS.InvokeAsync<string?>("huddleStorage.get", "huddle.tasks.lastView");
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit gone; nothing to render.
+            return;
+        }
+        catch (JSException)
+        {
+            // Storage inaccessible (e.g. a private window); stay on All Tasks.
+            return;
+        }
+
+        if (lastViewId is not null && this.Views.Get(lastViewId) is { } view)
+        {
+            this.effectiveView = view;
+            this.StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// The page's own copy path (corrections-B7 "15.2.i" item 2, J52): a Board card's or a List row's
+    /// "Copy id" calls <c>huddleClipboard.copy</c> directly, with no other <c>await</c> before it (the
+    /// Spec §13.13.1 warning), and shows the same success/warning toast as the detail header's button.
+    /// </summary>
+    /// <param name="id">The Task id to copy.</param>
+    private async Task OnCopyIdAsync(TaskId id)
+    {
+        bool copied = await this.JS.InvokeAsync<bool>("huddleClipboard.copy", id.ToString());
+        if (copied)
+        {
+            this.Snackbar.Add($"Copied {id}", Severity.Success, configure: null, key: "copy");
+        }
+        else
+        {
+            this.Snackbar.Add("Couldn't copy. The id is selected; press Ctrl+C.", Severity.Warning, configure: null, key: "copy");
         }
     }
 

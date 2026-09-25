@@ -881,3 +881,9 @@ button:focus-visible {
     text-decoration: line-through;
 }
 
+/* The detail header's id text (Spec §13.13.1): a single click selects it, so Ctrl+C still works if
+   the copy button's clipboard call itself fails. */
+.task-id {
+    user-select: all;
+}
+
