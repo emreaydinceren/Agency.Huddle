@@ -11,6 +11,8 @@ using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.App.Teammates;
 
 namespace Agency.Huddle.App;
@@ -68,6 +70,14 @@ public static class ServiceCollectionExtensions
         // a forgotten entry self-heals on restart through OwnPosts.ClearAgent.
         services.AddSingleton<OwnPosts>();
 
+        // Spec §10.8: which Agent has a Turn running in which Room, fed by RoomSession and read by
+        // the Tasks UI's "AI reacting" badge. A leaf singleton, same shape as OwnPosts just above.
+        services.AddSingleton<TurnActivity>();
+
+        // Spec §10.6-§10.7: per-Task wake history and the Agent-wake budget that guards against a
+        // looping Agent. A leaf singleton, same shape as TurnActivity just above.
+        services.AddSingleton<TaskActivity>();
+
         // FC §6.3: resolves a Watched Folder entry (a Teammate Name, a full path, or a path
         // relative to DataDir) into a full path, or refuses it with a reason.
         services.AddSingleton<WatchedFolderResolver>();
@@ -109,6 +119,21 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AdapterProfileResolver>();
         services.AddSingleton<PersonaModelStore>();
         services.AddSingleton<PersonaEffortStore>();
+        services.AddSingleton<TaskIdAllocator>();
+
+        // No interface, same reasoning as AvatarStore/PromptStore above: a second, independently
+        // constructed TaskStore would scan the Tasks folder twice and (once a later task adds one)
+        // run a second FileSystemWatcher over it. TaskEvents and TaskService are registered here too
+        // once the tasks that add them (D5's watcher, D6) land - this line is theirs to extend, not
+        // duplicate.
+        services.AddSingleton<TaskStore>();
+        services.AddSingleton<ITaskReferenceResolver>(sp => sp.GetRequiredService<TaskStore>());
+
+        // A plain hub with no dependencies of its own (Spec §9.5). TaskService is a lazy singleton
+        // (Settled corrections-B2 D6 item 10): nothing constructs it until 6.6.i injects it into the
+        // hosted PersonaRenameCascade below, so registering it here costs nothing before then.
+        services.AddSingleton<TaskEvents>();
+        services.AddSingleton<TaskService>();
 
         // Same instance as PromptStore below, not a second registration - mirrors the
         // PersonaStore/IMentionAliasSource pair above. A second, independently constructed PromptStore
@@ -151,6 +176,11 @@ public static class ServiceCollectionExtensions
         // hazard the aliased registrations elsewhere in this file exist to avoid.
         services.AddSingleton<AvatarStore>();
 
+        // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
+        // this, and a plain registration cannot produce the two-watchers-on-one-path hazard the
+        // aliased registrations elsewhere in this file exist to avoid.
+        services.AddSingleton<ViewStore>();
+
         // Unconditional too, and for the same reason: the probe spends nothing on its own (it never
         // calls PromptAsync), so registering it costs nothing when Team:Acp:Enabled is off. What
         // keeps it honest is WHEN it runs — the /teammates page only calls it on card-open, never on
@@ -185,6 +215,21 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<PersonaSupervisor>();
         services.AddHostedService(sp => sp.GetRequiredService<PersonaSupervisor>());
 
+        // Same instance as the hosted service, the same shape as PersonaSupervisor's pair just
+        // above: Spec §10.1 models TaskTriggerService's registration on this app's existing
+        // singleton-plus-AddHostedService(sp => sp.GetRequiredService<...>()) idiom, so something
+        // else (the Task panel's "Allow N more") can resolve the very instance the host is running.
+        // Task 9.3 (this registration) implements only Preview; Task 9.4 adds the
+        // TaskEvents.TaskChanged subscription StartAsync will drive.
+        //
+        // This is the second factory-registered IHostedService in this method - PipeHostFixture's
+        // RemovePersonaSupervisorHostedService (and its Conformance-test callers) had to stop
+        // counting factory registrations and start matching PersonaSupervisor's by what its factory
+        // returns, because a plain count can no longer tell the two apart (corrections-B3 blocking
+        // item 2).
+        services.AddSingleton<TaskTriggerService>();
+        services.AddHostedService(sp => sp.GetRequiredService<TaskTriggerService>());
+
         // Unconditional, unlike PersonaSupervisor's hosted service above: the Agent row a rename
         // cascades from may exist from an earlier session or a raw pipe client, so a Persona rename
         // must cascade into the Team Directory even when Team:Acp:Enabled is false and no runner is
@@ -193,12 +238,11 @@ public static class ServiceCollectionExtensions
         // resolves never subscribes to PersonaStore.PersonaRenamed or PersonaStore.PersonaRemoved,
         // so this must be constructed - hence AddHostedService rather than a plain AddSingleton.
         //
-        // Registered by type, not by the sp => sp.GetRequiredService<PersonaSupervisor>() factory
-        // shape used just above: nothing else in the app needs to resolve this same instance the way
-        // a Restart button resolves the running PersonaSupervisor, so there is no second registration
-        // to keep in sync here. It also keeps this registration out of
-        // PipeHostFixture.RemovePersonaSupervisorHostedService's factory-based search, which already
-        // fails loudly - by design - the day a second factory-registered IHostedService shows up.
+        // Registered by type, not by a sp => sp.GetRequiredService<...>() factory shape like the two
+        // pairs above: nothing else in the app needs to resolve this same instance the way a Restart
+        // button resolves the running PersonaSupervisor, so there is no second registration to keep
+        // in sync here, and it stays out of PipeHostFixture.RemovePersonaSupervisorHostedService's
+        // factory-based search entirely.
         services.AddHostedService<PersonaRenameCascade>();
 
         return services;

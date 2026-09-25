@@ -1,12 +1,66 @@
 # Decision record
 
-Eighteen dated entries from 2026-09-11 onward, newest first, each recording what
+Nineteen dated entries from 2026-09-11 onward, newest first, each recording what
 changed and — more usefully — what was considered and rejected. Read it when you are
 about to revisit a decision, or when an older Markdown file in this repo
 disagrees with current vocabulary and you need the old-to-new mapping.
 
 This is history, not instruction. Nothing here binds you the way [Rules](rules.md)
 and [Traps](traps.md) do. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
+
+**2026-09-25 — Tasks: a Markdown file per unit of work, wired to the same Reply Gate and Budget
+chat runs on.**
+
+Thirty-five decisions shaped it ([the Tasks spec](../Huddle.Tasks-Specifications.md) §17 holds
+them in full; [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md) and
+[ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md) are the two that needed their
+own record). What each one turned down:
+
+- **A separate `Tasks/` root, with the Team as the folder rather than a frontmatter field**
+  (D-1, D-2). Rejected: filing Tasks under `Teams/`, which is scanned recursively for Personas
+  and would reject every Task as a bad one; and a Team field, which gives a Task an identity to
+  protect that its filing already is.
+- **One assignee; eight fixed states with four terminal ones; closing doesn't require a
+  terminal state and nothing closes automatically** (D-3, D-4, D-5). Rejected: several assignees
+  plus watchers; custom states, which static tool schemas can't validate; auto-closing Done,
+  which would hide finished work from the Human.
+- **Any change wakes the assignee, bounded by a per-Task wake budget** (D-6, D-14). Rejected:
+  waking only on assignment; leaving the Room Budget alone to bound it.
+- **Room choice walks origin, then {Human, creator, assignee}, then creates one** (D-7, D-12,
+  D-13). Rejected: always the direct Room; always using an Archived Room, except as origin;
+  inviting a third Agent's actor into the creator's Room.
+- **The Change log lives in the file and derives created/updated/closed; Views live in
+  `views.json`, with only the last-opened View in browser storage** (D-8, D-9). Rejected:
+  frontmatter timestamps; `team.db` or browser storage for Views themselves.
+- **The wake-up Message posts as the actor** — the Human for UI edits and outside edits, the
+  Agent for tool calls — **so a Room's Budget stays honest** (D-11). Rejected: always posting as
+  the Human, which would reset both Budgets and let an Agent loop bypass them.
+- **Compare against the last version seen, never a self-write flag; edits made while Huddle was
+  stopped are logged at startup but wake no one** (D-15, D-16). Rejected: an "ignore my own
+  write" flag; waking at startup.
+- **Per-Team id prefixes, stored in `team.db`, never reused; tags can't contain `,` or `;`**
+  (D-17, D-18). Rejected: a global `TASK-n` counter; full YAML for tags.
+- **Merging by field, with a conflict only when the same field overlaps** (D-19). Rejected: last
+  write wins; rejecting any stale save outright.
+- **A drag saves at once; the panel waits for Save; the panel and the large editor are one
+  component** (D-20, D-21). Rejected: both immediate or both explicit; two separate designs.
+- **The words are Close/Reopen, Change log and Make a copy** (D-22). Rejected: Archive, Activity,
+  Duplicate.
+- **`BitMarkdownEditor` moves to V2; tools are offered to every Persona; a rename rewrites names
+  with no log entry or wake-up** (D-23, D-24, D-25). Rejected: adopting the editor in V1;
+  granting tools through a Skill; logging a rename.
+- **The List is a `MudDataGrid`; MudBlazor components come before custom CSS; `MudExitPrompt`
+  plus a message box guard unsaved edits; deleting a View is confirmed through
+  `ShowMessageBoxAsync`** (D-26 to D-29). Rejected: a hand-built grouped table; custom classes
+  and animations; no guard; an inline Confirm/Cancel swap.
+- **Blocked by and Tags are a closable chip set plus a single-value autocomplete** (D-30).
+  Rejected: a multi-select autocomplete — 9.10's `MudAutocomplete` has no `MultiSelection`.
+- **A Task is referenced by its plain id, which becomes a link only when it resolves and carries
+  an upper-case prefix; `#` opens a picker and is then removed, leaving the plain id; links are
+  plain `href`s to `/tasks/item/{id}`, and `IsSafe` allows exactly that shape** (D-31 to D-35).
+  Rejected: copying a URL, a markdown link, or a title alongside the id; linking anything that
+  parses as an id; keeping `#PLAT-0042` as a marker; opening a dialog over the chat; a general
+  relative-URL allowance.
 
 **2026-09-22 — Skills, and a built-in Chief of Staff who builds the team and speaks first.**
 

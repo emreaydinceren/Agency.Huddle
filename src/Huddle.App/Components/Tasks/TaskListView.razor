@@ -1,0 +1,316 @@
+@*
+    The List (Spec §13.3a): a read-only MudDataGrid<TaskItem>. Column visibility follows
+    View.Fields (id and title are always shown, implicitly), header sorting is the grid's own
+    transient state and never touches the View, and grouping is bound to View.Grouping using
+    TaskQuery.GroupLabel for its labels - the same helper the Board uses, so the two views can't
+    disagree.
+
+    Group order (Spec §13.3a note, settled by corrections-B4 D11 item 10): MudDataGrid orders its
+    groups by comparing each column's GroupBy key, not by the order Items are given in, so GroupBy
+    returns a rank-prefixed string - "0\0<LABEL>" for a real value, "1\0<LABEL>" for the null-value
+    group - rather than the raw value. Ordinal string comparison then reproduces TaskQuery.Group's
+    own rule (a null group such as "Unassigned" or "No project" sorts last, everything else sorts
+    ordinally by its label) without re-deriving it: the null-ness comes straight from the Task's own
+    field, never from parsing the label, so a real Assignee literally named "Unassigned" still gets
+    its own group. GroupTemplate then shows the real label via TaskQuery.GroupLabel, since the raw
+    key is never fit for display. See delivery-facts.md for the same note.
+
+    @key on the grid is the View's Id: switching to a different saved View recreates the grid so its
+    internal sort and expansion state doesn't leak from one View to the next.
+*@
+
+@using System.Globalization
+@inject TimeProvider Clock
+@inject TaskStore Store
+
+<MudDataGrid T="TaskItem" @key="@this.View.Id" Items="@this.Tasks" ReadOnly="true" Dense="true" Hover="true"
+             Groupable="true" GroupExpanded="true" ShowColumnOptions="false" Filterable="false"
+             RowClick="@this.OnRowClickAsync" RowClassFunc="@this.RowClass">
+    <Columns>
+        @foreach (string key in this.ColumnKeys())
+        {
+            @switch (key)
+            {
+                case "id":
+                    <PropertyColumn @key="key" T="TaskItem" TProperty="TaskId" Property="t => t.Id" Title="ID" Sortable="true"
+                                     SortBy="@(t => (object)(t.Id.Prefix, t.Id.Number))" />
+                    break;
+                case "title":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Title" Sortable="true" SortBy="@(t => (object)t.Title)">
+                        <CellTemplate>
+                            <span class="task-list-title"><MudHighlighter Text="@context.Item.Title" HighlightedText="@this.Search" /></span>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    break;
+                case "status":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Status" Hidden="@(!this.Shows("status"))" Sortable="true"
+                                     SortBy="@(t => (object)(int)t.Status)"
+                                     Grouping="@this.IsGrouped(TaskGroupField.State)" GroupByOrder="@this.GroupOrder(TaskGroupField.State)"
+                                     GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.State))">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small" Color="@TaskColors.For(context.Item.Status)">@context.Item.Status.ToWire()</MudChip>
+                        </CellTemplate>
+                        <GroupTemplate>@this.GroupHeading(context, TaskGroupField.State)</GroupTemplate>
+                    </TemplateColumn>
+                    break;
+                case "priority":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Priority" Hidden="@(!this.Shows("priority"))" Sortable="true"
+                                     SortBy="@(t => (object)(int)t.Priority)">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small" Color="@TaskColors.For(context.Item.Priority)"
+                                     Icon="@TaskColors.Icon(context.Item.Priority)">@context.Item.Priority.ToWire()</MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    break;
+                case "assignee":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Assignee" Hidden="@(!this.Shows("assignee"))" Sortable="true"
+                                     SortBy="@(t => (object)(t.Assignee ?? string.Empty))"
+                                     Grouping="@this.IsGrouped(TaskGroupField.Assignee)" GroupByOrder="@this.GroupOrder(TaskGroupField.Assignee)"
+                                     GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Assignee))">
+                        <CellTemplate>@(context.Item.Assignee ?? "Unassigned")</CellTemplate>
+                        <GroupTemplate>@this.GroupHeading(context, TaskGroupField.Assignee)</GroupTemplate>
+                    </TemplateColumn>
+                    break;
+                case "creator":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Creator" Hidden="@(!this.Shows("creator"))" Sortable="true" SortBy="@(t => (object)t.Creator)">
+                        <CellTemplate>@context.Item.Creator</CellTemplate>
+                    </TemplateColumn>
+                    break;
+                case "team":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Team" Hidden="@(!this.Shows("team"))" Sortable="true" SortBy="@(t => (object)t.Location.Team)"
+                                     Grouping="@this.IsGrouped(TaskGroupField.Team)" GroupByOrder="@this.GroupOrder(TaskGroupField.Team)"
+                                     GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Team))">
+                        <CellTemplate>@context.Item.Location.Team</CellTemplate>
+                        <GroupTemplate>
+                            @this.GroupHeading(context, TaskGroupField.Team)
+                            @if (this.OrphanTeamOf(context) is { } orphan)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="task-orphan-team-chip">No teammate is in @orphan</MudChip>
+                            }
+                        </GroupTemplate>
+                    </TemplateColumn>
+                    break;
+                case "project":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Project" Hidden="@(!this.Shows("project"))" Sortable="true"
+                                     SortBy="@(t => (object)(t.Location.Project ?? string.Empty))"
+                                     Grouping="@this.IsGrouped(TaskGroupField.Project)" GroupByOrder="@this.GroupOrder(TaskGroupField.Project)"
+                                     GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Project))">
+                        <CellTemplate>@(context.Item.Location.Project ?? "No project")</CellTemplate>
+                        <GroupTemplate>@this.GroupHeading(context, TaskGroupField.Project)</GroupTemplate>
+                    </TemplateColumn>
+                    break;
+                case "parent":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Parent" Hidden="@(!this.Shows("parent"))">
+                        <CellTemplate>@(context.Item.Parent?.ToString() ?? "")</CellTemplate>
+                    </TemplateColumn>
+                    break;
+                case "blocked_by":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Blocked by" Hidden="@(!this.Shows("blocked_by"))" Sortable="false">
+                        <CellTemplate>@string.Join(", ", context.Item.BlockedBy)</CellTemplate>
+                    </TemplateColumn>
+                    break;
+                case "tags":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Tags" Hidden="@(!this.Shows("tags"))" Sortable="false">
+                        <CellTemplate>@string.Join(", ", context.Item.Tags)</CellTemplate>
+                    </TemplateColumn>
+                    break;
+                case "start_date":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Start date" Hidden="@(!this.Shows("start_date"))" Sortable="true"
+                                     SortBy="@(t => (object?)t.StartDate)">
+                        <CellTemplate>@TaskDates.Display(context.Item.StartDate)</CellTemplate>
+                    </TemplateColumn>
+                    break;
+                case "due_date":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Due date" Hidden="@(!this.Shows("due_date"))" Sortable="true"
+                                     SortBy="@(t => (object?)t.DueDate)">
+                        <CellTemplate>
+                            @if (this.IsOverdue(context.Item))
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" aria-label="Overdue" />
+                            }
+                            @TaskDates.Display(context.Item.DueDate)
+                        </CellTemplate>
+                    </TemplateColumn>
+                    break;
+                case "created":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Created" Hidden="@(!this.Shows("created"))" Sortable="true"
+                                     SortBy="@(t => (object?)t.Created)">
+                        <CellTemplate>@TaskDates.Display(context.Item.Created)</CellTemplate>
+                    </TemplateColumn>
+                    break;
+                case "updated":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Updated" Hidden="@(!this.Shows("updated"))" Sortable="true"
+                                     SortBy="@(t => (object?)t.Updated)">
+                        <CellTemplate>@TaskDates.Display(context.Item.Updated)</CellTemplate>
+                    </TemplateColumn>
+                    break;
+                case "closed":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Closed" Hidden="@(!this.Shows("closed"))" Sortable="true"
+                                     SortBy="@(t => (object?)t.ClosedAt)">
+                        <CellTemplate>@TaskDates.Display(context.Item.ClosedAt)</CellTemplate>
+                    </TemplateColumn>
+                    break;
+                case "origin":
+                    <TemplateColumn @key="key" T="TaskItem" Title="Origin" Hidden="@(!this.Shows("origin"))">
+                        <CellTemplate>@context.Item.OriginRoomId</CellTemplate>
+                    </TemplateColumn>
+                    break;
+            }
+        }
+        @* Settled design (J52): a trailing, always-visible ⋮ menu column - the List row equivalent of
+           TaskCard's own menu (Spec §13.13.1 "each List row also get a Copy id item"). *@
+        <TemplateColumn @key="@("actions")" T="TaskItem" Title="" Sortable="false" Filterable="false">
+            <CellTemplate>
+                <span @onclick:stopPropagation="true">
+                    <MudMenu Class="task-list-row-menu">
+                        <ActivatorContent Context="menuContext">
+                            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                           aria-label="@($"Actions for {context.Item.Id}")" OnClick="menuContext.ToggleAsync" />
+                        </ActivatorContent>
+                        <ChildContent>
+                            <MudMenuItem OnClick="@(() => this.OnCopyId.InvokeAsync(context.Item.Id))">Copy id</MudMenuItem>
+                        </ChildContent>
+                    </MudMenu>
+                </span>
+            </CellTemplate>
+        </TemplateColumn>
+    </Columns>
+</MudDataGrid>
+
+@code {
+    /// <summary>The saved View this List renders: its Fields decide column visibility, its Grouping the grid's grouping.</summary>
+    [Parameter, EditorRequired]
+    public required TaskView View { get; set; }
+
+    /// <summary>The already-filtered Tasks to show. Sorting beyond the grid's own header click is applied before this component sees them.</summary>
+    [Parameter, EditorRequired]
+    public required IReadOnlyList<TaskItem> Tasks { get; set; }
+
+    /// <summary>The active search term, highlighted in the Title cell by <c>MudHighlighter</c>. Null or empty highlights nothing.</summary>
+    [Parameter]
+    public string? Search { get; set; }
+
+    /// <summary>Raised with the clicked row's id when the Human clicks a row, to open the detail panel (Spec §13.6).</summary>
+    [Parameter]
+    public EventCallback<TaskId> OnOpenTask { get; set; }
+
+    /// <summary>Raised with a row's id when its trailing ⋮ menu's "Copy id" is chosen (Spec §13.13.1, settled design J52).</summary>
+    [Parameter]
+    public EventCallback<TaskId> OnCopyId { get; set; }
+
+    /// <summary>Maps each groupable field to its §12.2 field key, so a Grouping field not in Fields still gets a (hidden) column.</summary>
+    private static readonly Dictionary<TaskGroupField, string> GroupFieldKeys = new()
+    {
+        [TaskGroupField.Team] = "team",
+        [TaskGroupField.Project] = "project",
+        [TaskGroupField.Assignee] = "assignee",
+        [TaskGroupField.State] = "status",
+    };
+
+    /// <summary>
+    /// The columns to render, in order: ID and Title first (always shown, implicit in <see cref="TaskView.Fields"/>),
+    /// then every field in <see cref="TaskView.Fields"/> in that order, then any field the View groups on that
+    /// wasn't already listed - its column must still exist, just hidden, for <c>Grouping</c> to work.
+    /// </summary>
+    private List<string> ColumnKeys()
+    {
+        List<string> keys = ["id", "title"];
+        foreach (string field in this.View.Fields)
+        {
+            if (field is not ("id" or "title") && !keys.Contains(field, StringComparer.Ordinal))
+            {
+                keys.Add(field);
+            }
+        }
+
+        foreach (TaskGroupField grouping in this.View.Grouping)
+        {
+            string key = GroupFieldKeys[grouping];
+            if (!keys.Contains(key, StringComparer.Ordinal))
+            {
+                keys.Add(key);
+            }
+        }
+
+        return keys;
+    }
+
+    /// <summary>Whether <paramref name="field"/> is one of the View's implicit-or-explicit shown columns. ID and Title are always shown.</summary>
+    /// <param name="field">The §12.2 field key to check.</param>
+    private bool Shows(string field) => field is "id" or "title" || this.View.Fields.Contains(field, StringComparer.Ordinal);
+
+    /// <summary>Whether the View groups on <paramref name="field"/>.</summary>
+    private bool IsGrouped(TaskGroupField field) => this.View.Grouping.Contains(field);
+
+    /// <summary>The nesting level of <paramref name="field"/> within the View's Grouping, or 0 when it isn't grouped.</summary>
+    private int GroupOrder(TaskGroupField field)
+    {
+        IReadOnlyList<TaskGroupField> grouping = this.View.Grouping;
+        for (int i = 0; i < grouping.Count; i++)
+        {
+            if (grouping[i] == field)
+            {
+                return i;
+            }
+        }
+
+        return 0;
+    }
+
+    /// <summary>Whether Team is also one of the View's grouping fields, which changes how a Project group is labelled.</summary>
+    private bool TeamAlsoGrouped => this.View.Grouping.Contains(TaskGroupField.Team);
+
+    /// <summary>
+    /// The grid's own grouping key for <paramref name="task"/> under <paramref name="field"/>: a rank-prefixed
+    /// string so MudDataGrid's own key-ordering reproduces TaskQuery.Group's rule (null group last, otherwise
+    /// ordinal by label) - see the header comment for why a null Assignee or Project never collides with a real
+    /// value that happens to read the same as the null group's label.
+    /// </summary>
+    private string GroupSortKey(TaskItem task, TaskGroupField field)
+    {
+        bool isNullGroup = field switch
+        {
+            TaskGroupField.Assignee => task.Assignee is null,
+            TaskGroupField.Project => task.Location.Project is null,
+            _ => false,
+        };
+
+        string label = TaskQuery.GroupLabel(task, field, this.TeamAlsoGrouped);
+        string rank = isNullGroup ? "1" : "0";
+        return string.Create(CultureInfo.InvariantCulture, $"{rank}\u0000{label.ToUpperInvariant()}");
+    }
+
+    /// <summary>The group header text shown by GroupTemplate: the real label (never the raw sort key) and the group's count.</summary>
+    /// <summary>The Team of a Team group whose folder no Persona is in (Spec §13.12 orphan chip, corrections-B7 12.4 item 3), or <see langword="null"/>.</summary>
+    /// <param name="group">A Team group.</param>
+    private string? OrphanTeamOf(GroupDefinition<TaskItem> group)
+    {
+        string team = group.Grouping.First().Location.Team;
+        return this.Store.Teams.Any(folder => folder.IsOrphan && string.Equals(folder.Name, team, StringComparison.Ordinal)) ? team : null;
+    }
+
+    private string GroupHeading(GroupDefinition<TaskItem> group, TaskGroupField field)
+    {
+        TaskItem sample = group.Grouping.First();
+        string label = TaskQuery.GroupLabel(sample, field, this.TeamAlsoGrouped);
+        return string.Create(CultureInfo.InvariantCulture, $"{label} ({group.Grouping.Count()})");
+    }
+
+    /// <summary>Whether <paramref name="task"/> is overdue: it has a due date in the past and isn't in a terminal state.</summary>
+    private bool IsOverdue(TaskItem task)
+    {
+        if (task.DueDate is not { } due || task.Status.IsTerminal())
+        {
+            return false;
+        }
+
+        DateOnly today = DateOnly.FromDateTime(this.Clock.GetUtcNow().UtcDateTime);
+        return due < today;
+    }
+
+    /// <summary>The CSS class for a row: <c>task-overdue</c> when overdue, nothing otherwise. The row index is unused; the shape is fixed by RowClassFunc.</summary>
+    private string RowClass(TaskItem task, int _) => this.IsOverdue(task) ? "task-overdue" : string.Empty;
+
+    /// <summary>Raises <see cref="OnOpenTask"/> with the clicked row's id.</summary>
+    private Task OnRowClickAsync(DataGridRowClickEventArgs<TaskItem> args) => this.OnOpenTask.InvokeAsync(args.Item.Id);
+}

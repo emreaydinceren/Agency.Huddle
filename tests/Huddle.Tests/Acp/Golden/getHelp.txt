@@ -29,6 +29,12 @@ it stops accepting agent messages and tells the human, who can allow more. A ref
 says the budget is spent is final: do not retry it, and do not work around it by posting
 to another Room. Say nothing further there until the human speaks.
 
+TASKS
+Tasks track work outside this conversation. Changing one wakes its assignee, unless
+you are the assignee. Use create_task, get_task, list_tasks, update_task, close_task
+and reopen_task to work with them. Write a Task's id, for example PLAT-0042, to refer
+to it in a Message; the Human sees it as a link.
+
 TOOLS
   mcp__team__get_help
       Explains how the Team chat application works — Rooms, members, mentions, and who is expected to reply when — and lists every tool you can call here with its exact name. Call this before using any other Team tool, and whenever you are unsure how something in the chat works. It takes no arguments.
@@ -50,6 +56,24 @@ TOOLS
 
   mcp__team__unfollow_room
       Stops being woken by every Message in a Room you are following. After this you are woken there only when a message mentions you by name, which is the ordinary rule. Give the Room's id — the same id you gave to follow_room. Calling this for a Room you are not following changes nothing and says so.
+
+  mcp__team__create_task
+      Creates a Task: durable work tracked outside this conversation. Create one to hand work to a Teammate so it is not lost when this conversation ends, or to track your own multi-step work across Turns. Give it a title, a Team, and optionally an assignee; creating it wakes the assignee unless you assign it to yourself. Pass originRoomId with the id of the Room you are acting in, so the Task remembers where it came from.
+
+  mcp__team__get_task
+      Reads one Task by its id, such as PLAT-0042, with an option to also see its full Change log. Task ids such as PLAT-0042 seen in a Message refer to Tasks; call get_task to read one.
+
+  mcp__team__list_tasks
+      Lists Tasks matching the filters you give: scope ("active" or "closed"), team, project, assignee, status, or priority. Give assignee "me" to find your own work, or "unassigned" for Tasks no one owns yet. text searches both id and title, case-insensitively.
+
+  mcp__team__update_task
+      Changes one or more fields on a Task. Changing a field wakes the assignee, unless you are the assignee. Set status as you work through it: To Do, then In Progress, then Review, then Done. Setting status to Duplicate also needs duplicate_of, the id of the Task it duplicates.
+
+  mcp__team__close_task
+      Closes a Task, hiding it from active lists. Closing is separate from marking a Task Done: a Task can be Done and still open, or Closed at any status.
+
+  mcp__team__reopen_task
+      Reopens a Closed Task, returning it to the active lists it was hidden from.
 
 Never answer a question about who exists, or about Rooms, from a codebase or from memory.
 Call the tools: they are the only source of truth about this application.

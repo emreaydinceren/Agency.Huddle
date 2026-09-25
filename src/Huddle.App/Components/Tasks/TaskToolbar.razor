@@ -1,0 +1,185 @@
+@*
+    Spec §13.3: the page's toolbar. It owns none of the persisted state itself - EffectiveView is
+    the saved View with whatever overrides the controls below have applied for this session - and
+    writes to ViewStore only when "Save to View" is clicked, never as a side effect of a filter,
+    group, sort or kind change. "Save to View" itself is computed by comparing the serialised
+    effective View against the serialised saved one (ViewJson.Options, never record ==, per D13
+    corrections item 1, which the same brief applies to this toolbar's own visibility rule too),
+    with Scope masked out first: Active/Closed changes the page's own state and is never something
+    "Save to View" offers to persist (Spec §13.3's own wording for that control).
+*@
+
+@using System.Text.Json
+@inject ViewStore ViewStore
+
+<MudToolBar Dense="true" Class="task-toolbar">
+    <MudTooltip Text="A Board always shows Active tasks.">
+        <MudToggleGroup T="ViewScope" Value="this.EffectiveView.Scope" ValueChanged="this.OnScopeChangedAsync"
+                         Disabled="this.IsBoard" SelectionMode="SelectionMode.SingleSelection" Class="task-toolbar-scope">
+            <MudToggleItem Value="ViewScope.Active" Text="Active" />
+            <MudToggleItem Value="ViewScope.Closed" Text="Closed" />
+        </MudToggleGroup>
+    </MudTooltip>
+
+    <MudMenu Label="Filter" Class="task-toolbar-filter">
+        <MudChipSet T="string" ReadOnly="false" OnClose="this.OnRemoveTeamFilterAsync" Class="task-toolbar-filter-chips">
+            @foreach (string team in this.EffectiveView.Filter.Teams)
+            {
+                <MudChip T="string" Value="@team">@team</MudChip>
+            }
+        </MudChipSet>
+        <MudTextField T="string" Label="Add team" Immediate="true" Value="@this.teamFilterInput"
+                       ValueChanged="this.OnTeamFilterInputChanged" Class="task-toolbar-filter-input" />
+        <MudIconButton Icon="@Icons.Material.Filled.Add" aria-label="Add team filter" Class="task-toolbar-filter-add"
+                        OnClick="this.OnAddTeamFilterAsync" />
+    </MudMenu>
+
+    <MudMenu Label="Group, Sort" Class="task-toolbar-group-sort">
+        <MudSelect T="TaskGroupField?" Label="Group by" Value="this.PrimaryGrouping" ValueChanged="this.OnGroupingChangedAsync"
+                   Clearable="true" Class="task-toolbar-grouping">
+            <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Team">Team</MudSelectItem>
+            <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Project">Project</MudSelectItem>
+            <MudSelectItem T="TaskGroupField?" Value="TaskGroupField.Assignee">Assignee</MudSelectItem>
+        </MudSelect>
+    </MudMenu>
+
+    <MudTextField T="string" Value="@this.Search" ValueChanged="this.OnSearchChangedAsync" Immediate="true"
+                   DebounceInterval="200" Clearable="true" Adornment="Adornment.Start"
+                   AdornmentIcon="@Icons.Material.Filled.Search" Placeholder="Search" Class="task-toolbar-search" />
+
+    <MudToggleGroup T="ViewKind" Value="this.EffectiveView.Kind" ValueChanged="this.OnKindChangedAsync"
+                     SelectionMode="SelectionMode.SingleSelection" Class="task-toolbar-kind">
+        <MudToggleItem Value="ViewKind.List" Text="List" />
+        <MudToggleItem Value="ViewKind.Board" Text="Board" />
+    </MudToggleGroup>
+
+    @if (this.ShowSaveToView)
+    {
+        <MudButton Variant="Variant.Text" OnClick="this.SaveToViewAsync" Class="task-toolbar-save">Save to View</MudButton>
+    }
+
+    <MudSpacer />
+
+    <MudButton Variant="Variant.Text" OnClick="this.OnEditViewClickedAsync" Class="task-toolbar-edit-view">Edit View</MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.OnNewTaskClickedAsync" Class="task-toolbar-new-task">+ New task</MudButton>
+</MudToolBar>
+
+@code {
+    private string teamFilterInput = string.Empty;
+
+    /// <summary>The effective View: the saved one with this session's own overrides applied.</summary>
+    [Parameter]
+    [EditorRequired]
+    public required TaskView EffectiveView { get; set; }
+
+    /// <summary>Raised whenever a control changes the effective View - never written to <see cref="ViewStore"/> until "Save to View" is clicked.</summary>
+    [Parameter]
+    public EventCallback<TaskView> EffectiveViewChanged { get; set; }
+
+    /// <summary>Raised when "Edit View" is clicked, to open the View editor drawer (§13.5).</summary>
+    [Parameter]
+    public EventCallback OnEditView { get; set; }
+
+    /// <summary>Raised when "+ New task" is clicked, carrying the Team/Project defaults the current filter names.</summary>
+    [Parameter]
+    public EventCallback<NewTaskDefaults> OnNewTask { get; set; }
+
+    /// <summary>The search text. Never saved to a View.</summary>
+    [Parameter]
+    public string? Search { get; set; }
+
+    /// <summary>Raised, debounced, as the search text changes.</summary>
+    [Parameter]
+    public EventCallback<string?> SearchChanged { get; set; }
+
+    private bool IsBoard => this.EffectiveView.Kind == ViewKind.Board;
+
+    private TaskGroupField? PrimaryGrouping => this.EffectiveView.Grouping.Count > 0 ? this.EffectiveView.Grouping[0] : null;
+
+    /// <summary>
+    /// Whether the effective View differs from the one <see cref="ViewStore"/> actually has saved,
+    /// ignoring <see cref="TaskFilter"/>... no - ignoring <see cref="TaskView.Scope"/>, which the
+    /// Active/Closed toggle changes as page state only (Spec §13.3). Compared by serialised JSON
+    /// (<c>ViewJson.Options</c>), never record equality - see the file header.
+    /// </summary>
+    private bool ShowSaveToView
+    {
+        get
+        {
+            TaskView? saved = this.ViewStore.Get(this.EffectiveView.Id);
+            if (saved is null)
+            {
+                return false;
+            }
+
+            TaskView forCompare = this.EffectiveView with { Scope = saved.Scope };
+            string effectiveJson = JsonSerializer.Serialize(forCompare, ViewJson.Options);
+            string savedJson = JsonSerializer.Serialize(saved, ViewJson.Options);
+            return !string.Equals(effectiveJson, savedJson, StringComparison.Ordinal);
+        }
+    }
+
+    private Task OnScopeChangedAsync(ViewScope scope) =>
+        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Scope = scope });
+
+    private Task OnKindChangedAsync(ViewKind kind)
+    {
+        // corrections-B7 12.4 item 2: a View with no Columns shown as a Board gets the default columns.
+        TaskView updated = kind == ViewKind.Board && this.EffectiveView.Columns.Count == 0
+            ? this.EffectiveView with { Kind = kind, Columns = BoardLayout.DefaultColumns }
+            : this.EffectiveView with { Kind = kind };
+        return this.EffectiveViewChanged.InvokeAsync(updated);
+    }
+
+    private void OnTeamFilterInputChanged(string value) => this.teamFilterInput = value;
+
+    private Task OnAddTeamFilterAsync()
+    {
+        string team = this.teamFilterInput.Trim();
+        this.teamFilterInput = string.Empty;
+        if (team.Length == 0 || this.EffectiveView.Filter.Teams.Contains(team, StringComparer.OrdinalIgnoreCase))
+        {
+            return Task.CompletedTask;
+        }
+
+        List<string> teams = [.. this.EffectiveView.Filter.Teams, team];
+        TaskView updated = this.EffectiveView with { Filter = this.EffectiveView.Filter with { Teams = teams } };
+        return this.EffectiveViewChanged.InvokeAsync(updated);
+    }
+
+    private Task OnRemoveTeamFilterAsync(MudChip<string> chip)
+    {
+        ArgumentNullException.ThrowIfNull(chip);
+        if (chip.Value is not { } team)
+        {
+            return Task.CompletedTask;
+        }
+
+        List<string> teams = [.. this.EffectiveView.Filter.Teams.Where(existing => !string.Equals(existing, team, StringComparison.Ordinal))];
+        TaskView updated = this.EffectiveView with { Filter = this.EffectiveView.Filter with { Teams = teams } };
+        return this.EffectiveViewChanged.InvokeAsync(updated);
+    }
+
+    private Task OnGroupingChangedAsync(TaskGroupField? field)
+    {
+        IReadOnlyList<TaskGroupField> grouping = field.HasValue ? [field.Value] : [];
+        return this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Grouping = grouping });
+    }
+
+    private Task OnSearchChangedAsync(string? value) => this.SearchChanged.InvokeAsync(value);
+
+    private Task OnEditViewClickedAsync() => this.OnEditView.InvokeAsync();
+
+    private Task SaveToViewAsync()
+    {
+        _ = this.ViewStore.Save(this.EffectiveView);
+        return Task.CompletedTask;
+    }
+
+    private Task OnNewTaskClickedAsync()
+    {
+        string? team = this.EffectiveView.Filter.Teams.Count == 1 ? this.EffectiveView.Filter.Teams[0] : null;
+        string? project = this.EffectiveView.Filter.Projects.Count == 1 ? this.EffectiveView.Filter.Projects[0].Project : null;
+        return this.OnNewTask.InvokeAsync(new NewTaskDefaults(team, project));
+    }
+}

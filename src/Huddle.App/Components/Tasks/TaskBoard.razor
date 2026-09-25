@@ -1,0 +1,544 @@
+@*
+    The Board (Spec §13.4 Zones; corrections-B5 D12-4, -5, -6, -9). One MudDropContainer, keyed by
+    the View's Id, holds one MudDropZone per (lane, column):
+
+    - a single-state column is one zone with Identifier = BoardLayout.ZoneId(lane, state);
+    - a multi-state column is a display zone "lane:{b64}|col:{visible index}" that TryParseZone
+      rejects, so CanDrop refuses it; while a drag is in progress it also holds one OnlyZone
+      "ghost bucket" per state, each identified by ZoneId(lane, state).
+
+    Cards are placed by a task-id -> zone map built from BoardLayout.Build (D12-5), so a card in a
+    multi-state column matches its display zone, never a bucket, and a card in a hidden column
+    matches no zone at all.
+
+    Drag start and end are C# events on the container, not parameters: they are (re)subscribed in
+    OnAfterRender whenever the container instance changes (@key per View replaces it, D12-6) and
+    unsubscribed in Dispose. StartTransaction raises TransactionStarted synchronously, and
+    Cancel/CommitTransaction raise TransactionEnded (MudBlazor 9.10). The drop path (ItemDropped),
+    the dialogs and the wake caption are Task 12.3's; the column header menu is Task 12.4's.
+
+    Moving a card (Spec §13.4 Dropping and Keyboard; corrections-B5 D12-7, -8, -11, -12): a drop and
+    the card's Move to menu both call MoveAsync. A move to the card's own state does nothing;
+    Duplicate asks DuplicatePickerDialog for the original; Cancelled and Rejected ask ReasonDialog;
+    leaving Duplicate clears DuplicateOf. The save is TaskService.Update with baseVersion null, as the
+    Human. A cancelled dialog, a Refused result or a NotFound result refreshes the container so the
+    card snaps back; the last two also show a Snackbar error. While dragging, a caption with the
+    Preview text (computed once, at drag start) shows under every column but the card's own.
+*@
+
+@using System.Globalization
+@using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Pipes
+@implements IDisposable
+@inject ITeamDirectory Directory
+@inject IAgentGateway Gateway
+@inject PersonaHealth Health
+@inject TurnActivity Turns
+@inject TaskActivity Activity
+@inject TaskService Service
+@inject TaskTriggerService Triggers
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject IOptions<TeamOptions> TeamOptions
+@inject ViewStore ViewStore
+@inject TaskStore Store
+
+<div class="task-board">
+    @if (this.model.HiddenTaskCount > 0)
+    {
+        <MudChip T="string" Size="Size.Small" Class="task-board-hidden-count">@HiddenCountText(this.model.HiddenTaskCount)</MudChip>
+    }
+
+    <div class="task-board-columns">
+        @foreach ((BoardColumn column, int i) in this.model.VisibleColumns.Select((column, index) => (column, index)))
+        {
+            <div class="task-board-column-header">
+                @if (this.renamingColumn == i)
+                {
+                    <MudTextField T="string" Class="task-board-column-rename" Value="@column.Label" AutoFocus="true"
+                                  ValueChanged="@(label => this.RenameAsync(i, label))" />
+                }
+                else
+                {
+                    <span class="task-board-column-label">@column.Label</span>
+                }
+                <span class="task-board-column-count">@this.ColumnCount(i).ToString(CultureInfo.InvariantCulture)</span>
+                <MudMenu Class="task-board-column-menu">
+                    <ActivatorContent Context="menuContext">
+                        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                       aria-label="@($"{column.Label} column menu")" OnClick="menuContext.ToggleAsync" />
+                    </ActivatorContent>
+                    <ChildContent>
+                        <MudMenuItem OnClick="@(() => this.StartRename(i))">Rename</MudMenuItem>
+                        <MudMenuItem OnClick="@(() => this.HideAsync(i))">Hide</MudMenuItem>
+                        <MudMenuItem OnClick="@(() => this.OnEditColumns.InvokeAsync())">Edit columns…</MudMenuItem>
+                    </ChildContent>
+                </MudMenu>
+                @if (this.dragging && this.caption is { } text && i != this.draggedColumn)
+                {
+                    <MudText Typo="Typo.caption" Class="task-board-drag-caption">@text</MudText>
+                }
+            </div>
+        }
+    </div>
+
+    <MudDropContainer T="TaskItem" @key="@this.View.Id" @ref="this.container" Items="@this.Tasks"
+                      ItemsSelector="@this.IsInZone" CanDrop="@this.CanDrop" ItemDropped="@this.OnDroppedAsync"
+                      ApplyDropClassesOnDragStarted="true" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
+                      ItemDraggingClass="task-card-dragging">
+        <ChildContent>
+            @foreach (BoardLane lane in this.model.Lanes)
+            {
+                <div class="task-board-lane">
+                    @if (this.View.Grouping.Count > 0)
+                    {
+                        <div class="task-board-lane-label">@lane.Label</div>
+                        @if (this.OrphanTeamOf(lane) is { } orphan)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="task-orphan-team-chip">No teammate is in @orphan</MudChip>
+                        }
+                    }
+
+                    @for (int i = 0; i < lane.Cells.Count; i++)
+                    {
+                        BoardCell cell = lane.Cells[i];
+                        <div class="task-board-column">
+                            @if (cell.Column.States.Count == 1)
+                            {
+                                <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, cell.Column.States[0])" Class="task-zone" />
+                            }
+                            else
+                            {
+                                <MudDropZone T="TaskItem" Identifier="@DisplayZoneId(lane.Key, i)" Class="task-zone task-zone-display">
+                                    @if (this.dragging)
+                                    {
+                                        @foreach (TaskState state in cell.Column.States)
+                                        {
+                                            <MudDropZone T="TaskItem" Identifier="@BoardLayout.ZoneId(lane.Key, state)" OnlyZone="true" Class="task-ghost-bucket">
+                                                <MudIcon Icon="@BucketIcon(state)" Size="Size.Small" />
+                                                <span class="task-ghost-bucket-label">@state.ToWire()</span>
+                                            </MudDropZone>
+                                        }
+                                    }
+                                </MudDropZone>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </ChildContent>
+        <ItemRenderer>
+            <TaskCard Task="@context" Fields="@this.View.Fields" Presence="@this.PresenceOf(context)"
+                      LastWake="@this.Activity.LastWake(context.Id)" Busy="@this.IsBusy(context)" Search="@this.Search"
+                      OnOpen="@(() => this.OnOpenTask.InvokeAsync(context.Id))"
+                      OnMoveTo="@(state => this.MoveAsync(context, state))"
+                      OnCopyId="@(() => this.OnCopyId.InvokeAsync(context.Id))" />
+        </ItemRenderer>
+    </MudDropContainer>
+</div>
+
+@code {
+    /// <summary>The Board View: its columns and its lane grouping.</summary>
+    [Parameter, EditorRequired]
+    public required TaskView View { get; set; }
+
+    /// <summary>The already-filtered and sorted Tasks to lay out.</summary>
+    [Parameter, EditorRequired]
+    public required IReadOnlyList<TaskItem> Tasks { get; set; }
+
+    /// <summary>The active search term, highlighted on each card.</summary>
+    [Parameter]
+    public string? Search { get; set; }
+
+    /// <summary>Raised with a card's id when the Human opens it (Spec §13.4, "Clicking a card opens the detail panel").</summary>
+    [Parameter]
+    public EventCallback<TaskId> OnOpenTask { get; set; }
+
+    /// <summary>Raised by a column header's <i>Edit columns…</i> (Spec §13.4 Columns): the page opens the View editor at its Columns section.</summary>
+    [Parameter]
+    public EventCallback OnEditColumns { get; set; }
+
+    /// <summary>Raised with the changed effective View when a column header changes a View that isn't a saved Board - a List View shown as a Board (corrections-B5 D12-13, DM decision D).</summary>
+    [Parameter]
+    public EventCallback<TaskView> ViewChanged { get; set; }
+
+    /// <summary>Raised with a card's id when its ⋮ menu's "Copy id" is chosen (corrections-B7 "15.2.i" item 2): the page wires this to the same <c>huddleClipboard.copy</c> path as the detail header's own copy button.</summary>
+    [Parameter]
+    public EventCallback<TaskId> OnCopyId { get; set; }
+
+    private BoardModel model = new([], [], 0);
+    private int renamingColumn = -1;
+    private Dictionary<TaskId, string> zoneOf = [];
+    private Dictionary<TaskId, string> laneOf = [];
+    private MudDropContainer<TaskItem>? container;
+    private MudDropContainer<TaskItem>? subscribed;
+    private IReadOnlyList<TaskItem>? laidOut;
+    private bool refreshPending;
+    private bool dragging;
+    private string? caption;
+    private int draggedColumn = -1;
+
+    /// <summary>Joins the presence, health, Turn and wake-budget change events, each of which can change a card (D12-4).</summary>
+    protected override void OnInitialized()
+    {
+        this.Gateway.PresenceChanged += this.OnCardsChanged;
+        this.Health.Changed += this.OnCardsChanged;
+        this.Turns.Changed += this.OnCardsChanged;
+        this.Activity.Changed += this.OnCardsChanged;
+    }
+
+    /// <summary>Rebuilds the layout and the task-id maps; a changed Task list also asks the container to refresh after rendering (D12-9).</summary>
+    protected override void OnParametersSet()
+    {
+        this.model = BoardLayout.Build(this.Tasks, this.View);
+        Dictionary<TaskId, string> zones = [];
+        Dictionary<TaskId, string> lanes = [];
+        foreach (BoardLane lane in this.model.Lanes)
+        {
+            for (int i = 0; i < lane.Cells.Count; i++)
+            {
+                BoardCell cell = lane.Cells[i];
+                string zone = cell.Column.States.Count == 1
+                    ? BoardLayout.ZoneId(lane.Key, cell.Column.States[0])
+                    : DisplayZoneId(lane.Key, i);
+                foreach (TaskItem item in cell.Items)
+                {
+                    zones[item.Id] = zone;
+                    lanes[item.Id] = lane.Key;
+                }
+            }
+        }
+
+        this.zoneOf = zones;
+        this.laneOf = lanes;
+        if (this.laidOut is not null && !ReferenceEquals(this.laidOut, this.Tasks))
+        {
+            this.refreshPending = true;
+        }
+
+        this.laidOut = this.Tasks;
+    }
+
+    /// <summary>Follows the container: (re)subscribes to its transaction events whenever the instance changed, and runs a pending refresh.</summary>
+    /// <param name="firstRender">Unused: the container can change on any render (D12-6).</param>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!ReferenceEquals(this.container, this.subscribed))
+        {
+            this.Unsubscribe();
+            if (this.container is { } current)
+            {
+                current.TransactionStarted += this.OnDragStarted;
+                current.TransactionEnded += this.OnDragEnded;
+                this.subscribed = current;
+            }
+        }
+
+        if (this.refreshPending)
+        {
+            this.refreshPending = false;
+            this.container?.Refresh();
+        }
+    }
+
+    /// <summary>Leaves every event this Board joined.</summary>
+    public void Dispose()
+    {
+        this.Gateway.PresenceChanged -= this.OnCardsChanged;
+        this.Health.Changed -= this.OnCardsChanged;
+        this.Turns.Changed -= this.OnCardsChanged;
+        this.Activity.Changed -= this.OnCardsChanged;
+        this.Unsubscribe();
+    }
+
+    /// <summary>Shows the inline rename field in the header of the visible column at <paramref name="visibleIndex"/>.</summary>
+    /// <param name="visibleIndex">The column's index among the visible columns.</param>
+    private void StartRename(int visibleIndex) => this.renamingColumn = visibleIndex;
+
+    /// <summary>Commits the inline rename (Spec §13.4 Columns): the field closes and the new label is saved.</summary>
+    /// <param name="visibleIndex">The column's index among the visible columns.</param>
+    /// <param name="label">The new label, as typed.</param>
+    private Task RenameAsync(int visibleIndex, string? label)
+    {
+        this.renamingColumn = -1;
+        return this.ChangeColumnAsync(visibleIndex, column => column with { Label = label ?? string.Empty });
+    }
+
+    /// <summary>Hides the visible column at <paramref name="visibleIndex"/> (Spec §13.4 Columns).</summary>
+    /// <param name="visibleIndex">The column's index among the visible columns.</param>
+    private Task HideAsync(int visibleIndex) => this.ChangeColumnAsync(visibleIndex, column => column with { Hidden = true });
+
+    /// <summary>
+    /// Applies a header-menu change to one column (corrections-B5 D12-13). A saved Board View is
+    /// changed at once through <see cref="ViewStore.Save"/> - the <b>saved</b> View with only its
+    /// Columns replaced, never the effective one - and a refusal shows a Snackbar error. Any other
+    /// View (a List View shown as a Board, DM decision D) changes only the effective View, raised
+    /// through <see cref="ViewChanged"/>, so the toolbar offers Save to View.
+    /// </summary>
+    /// <param name="visibleIndex">The column's index among the visible columns.</param>
+    /// <param name="change">The change to the column.</param>
+    private async Task ChangeColumnAsync(int visibleIndex, Func<BoardColumn, BoardColumn> change)
+    {
+        int index = this.FullIndexOf(visibleIndex);
+        if (this.ViewStore.Get(this.View.Id) is { Kind: ViewKind.Board } saved && index < saved.Columns.Count)
+        {
+            List<BoardColumn> columns = [.. saved.Columns];
+            columns[index] = change(columns[index]);
+            ViewSaveResult result = this.ViewStore.Save(saved with { Columns = columns });
+            if (!result.Saved)
+            {
+                this.Snackbar.Add($"Could not save the View: {string.Join(' ', result.Problems)}", Severity.Error);
+            }
+
+            return;
+        }
+
+        List<BoardColumn> effective = [.. this.View.Columns];
+        effective[index] = change(effective[index]);
+        await this.ViewChanged.InvokeAsync(this.View with { Columns = effective });
+    }
+
+    /// <summary>The index among all of the View's columns of the visible column at <paramref name="visibleIndex"/>.</summary>
+    /// <param name="visibleIndex">The column's index among the visible columns.</param>
+    private int FullIndexOf(int visibleIndex)
+    {
+        int seen = -1;
+        for (int i = 0; i < this.View.Columns.Count; i++)
+        {
+            if (!this.View.Columns[i].Hidden && ++seen == visibleIndex)
+            {
+                return i;
+            }
+        }
+
+        throw new ArgumentOutOfRangeException(nameof(visibleIndex), visibleIndex, "No visible column has that index.");
+    }
+
+    /// <summary>The lane's Team when the View groups by Team and that Team folder has no Persona in it (Spec §13.12 orphan chip, corrections-B7 12.4 item 3); otherwise <see langword="null"/>.</summary>
+    /// <param name="lane">A lane.</param>
+    private string? OrphanTeamOf(BoardLane lane)
+    {
+        if (!this.View.Grouping.Contains(TaskGroupField.Team)
+            || lane.Cells.SelectMany(cell => cell.Items).FirstOrDefault() is not { } sample)
+        {
+            return null;
+        }
+
+        string team = sample.Location.Team;
+        return this.Store.Teams.Any(folder => folder.IsOrphan && string.Equals(folder.Name, team, StringComparison.Ordinal)) ? team : null;
+    }
+
+    /// <summary>The display zone id of a multi-state column: the lane part of <see cref="BoardLayout.ZoneId"/>, then <c>|col:{index}</c>, which <see cref="BoardLayout.TryParseZone"/> rejects (D12-5).</summary>
+    /// <param name="laneKey">The lane's raw key.</param>
+    /// <param name="columnIndex">The column's index among the visible columns.</param>
+    private static string DisplayZoneId(string laneKey, int columnIndex)
+    {
+        string stateZone = BoardLayout.ZoneId(laneKey, TaskState.Backlog);
+        string lanePart = stateZone[..stateZone.IndexOf("|state:", StringComparison.Ordinal)];
+        return string.Create(CultureInfo.InvariantCulture, $"{lanePart}|col:{columnIndex}");
+    }
+
+    /// <summary>The hidden-count chip's text (Spec §13.4 Columns): "1 task in hidden columns", otherwise "{n} tasks in hidden columns".</summary>
+    /// <param name="count">How many Tasks the hidden columns hold; always positive here.</param>
+    private static string HiddenCountText(int count) =>
+        count == 1
+            ? "1 task in hidden columns"
+            : string.Create(CultureInfo.InvariantCulture, $"{count} tasks in hidden columns");
+
+    /// <summary>A ghost bucket's icon (Spec §13.4): Cancelled Block, Duplicate ContentCopy, Rejected DoNotDisturbOn, and Label for a state placed in some other multi-state column.</summary>
+    /// <param name="state">The bucket's state.</param>
+    private static string BucketIcon(TaskState state) => state switch
+    {
+        TaskState.Cancelled => Icons.Material.Outlined.Block,
+        TaskState.Duplicate => Icons.Material.Outlined.ContentCopy,
+        TaskState.Rejected => Icons.Material.Outlined.DoNotDisturbOn,
+        _ => Icons.Material.Outlined.Label,
+    };
+
+    /// <summary>How many Tasks the visible column at <paramref name="columnIndex"/> holds across every lane.</summary>
+    /// <param name="columnIndex">The column's index among the visible columns.</param>
+    private int ColumnCount(int columnIndex) => this.model.Lanes.Sum(lane => lane.Cells[columnIndex].Items.Count);
+
+    /// <summary>The container's <c>ItemsSelector</c>: a card belongs to exactly the zone the layout put it in.</summary>
+    /// <param name="item">The card's Task.</param>
+    /// <param name="zone">A zone Identifier.</param>
+    private bool IsInZone(TaskItem item, string zone) =>
+        this.zoneOf.TryGetValue(item.Id, out string? own) && string.Equals(own, zone, StringComparison.Ordinal);
+
+    /// <summary>The container's <c>CanDrop</c>: only a parseable state zone (a single-state column or a bucket) in the card's own lane (Spec §13.4).</summary>
+    /// <param name="item">The dragged Task.</param>
+    /// <param name="zone">The target zone Identifier.</param>
+    private bool CanDrop(TaskItem item, string zone) =>
+        BoardLayout.TryParseZone(zone, out string laneKey, out _)
+        && this.laneOf.TryGetValue(item.Id, out string? ownLane)
+        && string.Equals(ownLane, laneKey, StringComparison.Ordinal);
+
+    /// <summary>The card's presence badge, from <c>TaskPresence.For</c> (D12-4); none for an unassigned Task.</summary>
+    /// <param name="task">The card's Task.</param>
+    private PresenceState? PresenceOf(TaskItem task) =>
+        task.Assignee is { } assignee ? TaskPresence.For(assignee, this.Directory, this.Gateway, this.Health, this.Turns) : null;
+
+    /// <summary>Whether the assignee has a Turn running in the card's last-wake Room: <c>IsBusyIn(agentId, LastWake.RoomId)</c> (B3 D9-20).</summary>
+    /// <param name="task">The card's Task.</param>
+    private bool IsBusy(TaskItem task) =>
+        task.Assignee is { } assignee
+        && this.Activity.LastWake(task.Id) is { RoomId: { } roomId }
+        && this.Directory.FindUserByName(assignee) is { } user
+        && this.Turns.IsBusyIn(user.Id, roomId);
+
+    /// <summary>
+    /// A service event that can change a card: re-render on the renderer's thread, and refresh the
+    /// container - a zone whose own parameters didn't change would otherwise skip re-rendering, and
+    /// its cards with it.
+    /// </summary>
+    private void OnCardsChanged() => _ = this.InvokeAsync(() =>
+    {
+        this.StateHasChanged();
+        this.container?.Refresh();
+    });
+
+    /// <summary><c>TransactionStarted</c>: show the ghost buckets.</summary>
+    /// <param name="sender">The container.</param>
+    /// <param name="e">The transaction.</param>
+    private void OnDragStarted(object? sender, MudDragAndDropItemTransaction<TaskItem> e)
+    {
+        this.dragging = true;
+        if (e.Item is { } item)
+        {
+            this.caption = this.CaptionFor(item);
+            this.draggedColumn = this.ColumnIndexOf(item.Status);
+        }
+
+        _ = this.InvokeAsync(this.StateHasChanged);
+    }
+
+    /// <summary><c>TransactionEnded</c>: hide the ghost buckets and the caption.</summary>
+    /// <param name="sender">The container.</param>
+    /// <param name="e">How the transaction finished.</param>
+    private void OnDragEnded(object? sender, MudDragAndDropTransactionFinishedEventArgs<TaskItem> e)
+    {
+        this.EndDrag();
+        _ = this.InvokeAsync(this.StateHasChanged);
+    }
+
+    /// <summary>Clears the drag state: buckets and caption go.</summary>
+    private void EndDrag()
+    {
+        this.dragging = false;
+        this.caption = null;
+        this.draggedColumn = -1;
+    }
+
+    /// <summary>
+    /// The drag caption (D12-11): the <c>Preview</c> for the Human moving <paramref name="item"/> -
+    /// independent of the target, so computed once at drag start - as "{Name} will be notified", or
+    /// none when a guard blocks the wake.
+    /// </summary>
+    /// <param name="item">The dragged Task.</param>
+    private string? CaptionFor(TaskItem item)
+    {
+        WakePreview preview = this.Triggers.Preview(null, item, TaskActors.Human(this.TeamOptions.Value));
+        return preview.Block == WakeBlock.None ? $"{preview.AssigneeName} will be notified" : null;
+    }
+
+    /// <summary>The index, among the visible columns, of the column holding <paramref name="state"/>; -1 when hidden.</summary>
+    /// <param name="state">A Task state.</param>
+    private int ColumnIndexOf(TaskState state)
+    {
+        for (int i = 0; i < this.model.VisibleColumns.Count; i++)
+        {
+            if (this.model.VisibleColumns[i].States.Contains(state))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// <c>ItemDropped</c> (Spec §13.4 Dropping; D12-7): clears the drag first, so the buckets are gone
+    /// while a dialog is open, then moves the card to the dropped zone's state. A zone that isn't a
+    /// state zone (a multi-state column's display zone - CommitTransaction doesn't re-check CanDrop)
+    /// moves nothing.
+    /// </summary>
+    /// <param name="info">The drop.</param>
+    private async Task OnDroppedAsync(MudItemDropInfo<TaskItem> info)
+    {
+        this.EndDrag();
+        if (info.Item is not { } item || !BoardLayout.TryParseZone(info.DropzoneIdentifier, out _, out TaskState state))
+        {
+            this.container?.Refresh();
+            return;
+        }
+
+        await this.MoveAsync(item, state);
+    }
+
+    /// <summary>
+    /// Moves <paramref name="item"/> to <paramref name="target"/> - the one path for a drop and for the
+    /// card's Move to menu (Spec §13.4 Keyboard).
+    /// </summary>
+    /// <param name="item">The card's Task.</param>
+    /// <param name="target">The state to move it to.</param>
+    private async Task MoveAsync(TaskItem item, TaskState target)
+    {
+        if (target == item.Status)
+        {
+            return;
+        }
+
+        Optional<TaskId?> duplicateOf = item.Status == TaskState.Duplicate ? Optional<TaskId?>.Set(null) : default;
+        string? reason = null;
+        if (target == TaskState.Duplicate)
+        {
+            DialogParameters<DuplicatePickerDialog> parameters = new() { { dialog => dialog.Excluding, item.Id } };
+            IDialogReference picker = await this.Dialogs.ShowAsync<DuplicatePickerDialog>($"Mark {item.Id} as a duplicate", parameters, DuplicatePickerDialog.Options);
+            if (await picker.Result is not { Canceled: false, Data: TaskId original })
+            {
+                this.container?.Refresh();
+                return;
+            }
+
+            duplicateOf = Optional<TaskId?>.Set(original);
+        }
+        else if (target is TaskState.Cancelled or TaskState.Rejected)
+        {
+            IDialogReference prompt = await this.Dialogs.ShowAsync<ReasonDialog>($"Mark {item.Id} as {target.ToWire()}", ReasonDialog.Options);
+            if (await prompt.Result is not { Canceled: false } answer)
+            {
+                this.container?.Refresh();
+                return;
+            }
+
+            reason = answer.Data as string;
+        }
+
+        TaskPatch patch = new() { Status = target, DuplicateOf = duplicateOf, Reason = reason };
+        TaskResult result = this.Service.Update(item.Id, patch, baseVersion: null, TaskActors.Human(this.TeamOptions.Value));
+        string? error = result switch
+        {
+            TaskResult.Refused refused => $"Could not move {item.Id}: {string.Join(' ', refused.Problems)}",
+            TaskResult.NotFound => $"Could not move {item.Id}: it no longer exists.",
+            _ => null,
+        };
+
+        if (error is not null)
+        {
+            this.Snackbar.Add(error, Severity.Error);
+            this.container?.Refresh();
+        }
+    }
+
+    /// <summary>Leaves the subscribed container's transaction events, if any.</summary>
+    private void Unsubscribe()
+    {
+        if (this.subscribed is { } old)
+        {
+            old.TransactionStarted -= this.OnDragStarted;
+            old.TransactionEnded -= this.OnDragEnded;
+            this.subscribed = null;
+        }
+    }
+}

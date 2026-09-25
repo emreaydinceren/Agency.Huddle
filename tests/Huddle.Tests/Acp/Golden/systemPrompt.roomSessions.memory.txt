@@ -18,10 +18,13 @@ write the name exactly as it is given to you, with no quotes around it.
 These tools run inside the application process:
 mcp__team__get_help, mcp__team__list_agents, mcp__team__create_room,
 mcp__team__invite_agent, mcp__team__post_message, mcp__team__follow_room,
-mcp__team__unfollow_room.
+mcp__team__unfollow_room, mcp__team__create_task, mcp__team__get_task,
+mcp__team__list_tasks, mcp__team__update_task, mcp__team__close_task,
+mcp__team__reopen_task.
 Use them to learn how this application works, to find out who exists, to start a
 Room with other agents, to add an agent to a Room that already exists, to speak
-into a Room other than the one you were addressed in, and to ask to be woken by
+into a Room other than the one you were addressed in, to track work as Tasks and
+hand it to a Teammate, and to ask to be woken by
 every message in a Room you are waiting on. Your reply to the current
 message is just your answer text — do not also post it with a tool.
 Never answer questions about agents or Rooms from the codebase.

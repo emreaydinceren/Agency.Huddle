@@ -8,12 +8,27 @@ namespace Agency.Huddle.Tests.Acp.Fakes;
 /// </summary>
 internal sealed class ManualTimeProvider : TimeProvider
 {
+    private readonly TimeZoneInfo? zone;
     private DateTimeOffset utcNow;
 
-    /// <summary>Creates a clock fixed at <see cref="TimeProvider.System"/>'s current instant.</summary>
+    /// <summary>Creates a clock fixed at <see cref="TimeProvider.System"/>'s current instant, with the base <see cref="TimeProvider.LocalTimeZone"/> (the system's own).</summary>
     public ManualTimeProvider()
+        : this(TimeProvider.System.GetUtcNow(), zone: null)
     {
-        this.utcNow = TimeProvider.System.GetUtcNow();
+    }
+
+    /// <summary>
+    /// Creates a clock fixed at <paramref name="utcNow"/>, and, when <paramref name="zone"/> is given,
+    /// a fixed <see cref="LocalTimeZone"/> too - for a test whose local-time rendering must not depend
+    /// on the machine's own zone (e.g. a Change log entry's local timestamp, R8 facts "One date display
+    /// format").
+    /// </summary>
+    /// <param name="utcNow">This clock's fixed instant.</param>
+    /// <param name="zone">This clock's fixed <see cref="LocalTimeZone"/>, or <see langword="null"/> to keep the base implementation's system zone.</param>
+    public ManualTimeProvider(DateTimeOffset utcNow, TimeZoneInfo? zone = null)
+    {
+        this.utcNow = utcNow;
+        this.zone = zone;
     }
 
     /// <summary>This clock's current instant. Settable directly, as an alternative to <see cref="Advance"/>.</summary>
@@ -25,6 +40,9 @@ internal sealed class ManualTimeProvider : TimeProvider
 
     /// <inheritdoc/>
     public override DateTimeOffset GetUtcNow() => this.utcNow;
+
+    /// <inheritdoc/>
+    public override TimeZoneInfo LocalTimeZone => this.zone ?? base.LocalTimeZone;
 
     /// <summary>Moves this clock forward by <paramref name="delta"/>.</summary>
     /// <param name="delta">How far forward to move.</param>

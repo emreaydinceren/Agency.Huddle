@@ -394,6 +394,45 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         return await reader.ReadAsync(ct) ? ReadRoom(reader) : null;
     }
 
+    /// <inheritdoc />
+    public async Task<Room?> FindRoomWithExactMemberSetAsync(IReadOnlyCollection<string> memberIds, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(memberIds);
+
+        var distinctIds = memberIds.Distinct(StringComparer.Ordinal).ToList();
+        if (distinctIds.Count == 0)
+        {
+            return null;
+        }
+
+        await using var connection = await this.OpenConnectionAsync(ct);
+        await using var command = connection.CreateCommand();
+
+        var placeholders = new List<string>(distinctIds.Count);
+        for (var i = 0; i < distinctIds.Count; i++)
+        {
+            var name = string.Create(CultureInfo.InvariantCulture, $"$p{i}");
+            placeholders.Add(name);
+            command.Parameters.AddWithValue(name, distinctIds[i]);
+        }
+
+        var inClause = string.Join(", ", placeholders);
+        command.CommandText = string.Create(CultureInfo.InvariantCulture, $"""
+            SELECT r.id, r.name, r.created, a.room_id IS NOT NULL
+            FROM rooms r
+            LEFT JOIN archived_rooms a ON a.room_id = r.id
+            WHERE (SELECT COUNT(*) FROM room_members m WHERE m.room_id = r.id) = $count
+              AND (SELECT COUNT(*) FROM room_members m WHERE m.room_id = r.id AND m.user_id IN ({inClause})) = $count
+              AND NOT EXISTS (SELECT 1 FROM archived_rooms WHERE room_id = r.id)
+            ORDER BY r.created, r.id
+            LIMIT 1;
+            """);
+        command.Parameters.AddWithValue("$count", distinctIds.Count);
+
+        await using var reader = await command.ExecuteReaderAsync(ct);
+        return await reader.ReadAsync(ct) ? ReadRoom(reader) : null;
+    }
+
     /// <summary>
     /// Archives or unarchives a Room by adding or removing its row in <c>archived_rooms</c>. Archiving
     /// is a display filter only - see <see cref="Room.Archived"/> - so this never touches

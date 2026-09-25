@@ -1,6 +1,9 @@
 @using Agency.Huddle.App.Avatars
+@using Microsoft.Extensions.Options
 @inject IJSRuntime JS
 @inject AvatarStore Avatars
+@inject ITaskReferenceResolver Tasks
+@inject IOptions<TeamOptions> Options
 
 <div class="message-list" @ref="this.container">
     @foreach (var message in this.Messages)
@@ -10,7 +13,7 @@
             @* The Human's own Message needs no avatar or name to say who wrote it: its side of the
                transcript says that, as in any chat app. The time moves into the tooltip. *@
             <div class="message-row human" title="@message.Timestamp.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.CurrentCulture)">
-                <div class="message-bubble message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text))</div>
+                <div class="message-bubble message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver))</div>
             </div>
             continue;
         }
@@ -21,7 +24,7 @@
                     <span class="message-sender">@message.SenderName</span>
                     <span class="message-time">@message.Timestamp.ToLocalTime().ToString("HH:mm", System.Globalization.CultureInfo.CurrentCulture)</span>
                 </div>
-                <div class="message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text))</div>
+                <div class="message-body">@((MarkupString)MarkdownRenderer.ToHtml(message.Text, this.TaskResolver))</div>
             </div>
         </div>
     }
@@ -64,6 +67,12 @@
 </div>
 
 @code {
+    /// <summary>
+    /// The resolver a Message's Markdown is rendered with: <see cref="Tasks"/> when Tasks are
+    /// enabled, or <see langword="null"/> to link none (Spec §13.13.2, correction D15.1#9).
+    /// </summary>
+    private ITaskReferenceResolver? TaskResolver => this.Options.Value.Tasks.Enabled ? this.Tasks : null;
+
     [Parameter]
     public IReadOnlyList<ChatMessage> Messages { get; set; } = [];
 

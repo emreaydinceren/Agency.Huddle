@@ -1,0 +1,13 @@
+# Example "accepted untested texts" allowlist for Check-Diff.ps1: the Tasks feature's list, kept here
+# as a worked example and format reference (path|text|reason). Each project/feature keeps its own list -
+# pass it via -AcceptedUntestedPath - reviewed and grown by its own delivery manager after reading the
+# flagged code; do not add another feature's entries to this file.
+src/Huddle.App/Acp/PersonaRenameCascade.cs|no Agent row|a code comment, not a returned text
+src/Huddle.App/Acp/Tools/CloseTaskTool.cs|{conflict.Current.Id} was changed by someone else; please try again.|J41: needs a real concurrent-move race; no deterministic seam; listed in known-limits
+src/Huddle.App/Acp/Tools/ReopenTaskTool.cs|{conflict.Current.Id} was changed by someone else; please try again.|J41: as close_task
+src/Huddle.App/Components/Tasks/TaskCard.razor|task-card {edge} task-overdue|a CSS class string, pinned by TaskCardTests' class-list asserts
+src/Huddle.App/Components/Tasks/TaskListView.razor|{rank}\u0000{label.ToUpperInvariant()}|an internal sort key, never shown
+src/Huddle.App/Tasks/TaskPresence.cs|Acp.PersonaStatusResolver.Resolve(bool, Acp.PersonaStatus?)|an XML doc cref
+src/Huddle.App/Tasks/TaskService.cs|canonicalTeam|a nameof argument
+src/Huddle.App/Tasks/TaskStore.cs|MaxVersionHistory|a nameof argument
+src/Huddle.App/Tasks/Views/ViewStore.cs|WatcherDebounceMilliseconds|a nameof argument

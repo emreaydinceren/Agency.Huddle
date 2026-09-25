@@ -1,6 +1,7 @@
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Services;
 
 namespace Agency.Huddle.App.Acp.Sessions;
 
@@ -28,6 +29,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     private readonly RoomSessionStore? roomSessions;
     private readonly OwnPosts? ownPosts;
     private readonly string? agentId;
+    private readonly TurnActivity? turnActivity;
     private readonly bool sessionPerRoom;
     private readonly TurnGate gate;
     private readonly int effectiveMaxLiveSessions;
@@ -58,7 +60,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// P-15). <see langword="null"/> disables storing and resuming - a caller that predates D24.
     /// </param>
     /// <param name="ownPosts">Marks each Room Session's Room Busy for a Turn's own duration (D27, RS §6.7). <see langword="null"/> disables it, like every pre-D27 caller.</param>
-    /// <param name="agentId">This Persona's Agent id, passed to <paramref name="ownPosts"/>. <see langword="null"/> disables it, like every pre-D27 caller.</param>
+    /// <param name="agentId">This Persona's Agent id, passed to <paramref name="ownPosts"/> and <paramref name="turnActivity"/>. <see langword="null"/> disables it, like every pre-D27 caller.</param>
+    /// <param name="turnActivity">Records which Room each Room Session's Agent has a Turn running in (Spec §10.8). <see langword="null"/> disables it, like every caller that predates it.</param>
     public RoomSessionPool(
         IPersonaHost host,
         IRoomSessionOwner owner,
@@ -72,7 +75,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         CancellationToken runToken,
         RoomSessionStore? roomSessions = null,
         OwnPosts? ownPosts = null,
-        string? agentId = null)
+        string? agentId = null,
+        TurnActivity? turnActivity = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(owner);
@@ -96,6 +100,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         this.roomSessions = roomSessions;
         this.ownPosts = ownPosts;
         this.agentId = agentId;
+        this.turnActivity = turnActivity;
         this.sessionPerRoom = host.Profile.SessionPerRoom;
 
         var configuredConcurrency = Math.Max(1, options.MaxConcurrentTurns);
@@ -328,7 +333,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             roomSessions: this.roomSessions,
             host: this.host,
             ownPosts: this.ownPosts,
-            agentId: this.agentId);
+            agentId: this.agentId,
+            turnActivity: this.turnActivity);
 
     private RoomSession GetOrCreateSession(string roomId)
     {

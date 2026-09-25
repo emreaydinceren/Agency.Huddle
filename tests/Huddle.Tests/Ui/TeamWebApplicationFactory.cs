@@ -36,6 +36,14 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     public string SkillsDirPath => Path.Combine(this.dataDir.Path, "Skills");
 
     /// <summary>
+    /// The Tasks directory this factory's data dir resolves to, matching
+    /// <see cref="Agency.Huddle.App.Tasks.TasksOptions.Dir"/>'s default ("Tasks"), which is never
+    /// overridden by <see cref="ConfigureWebHost"/>. Tests use this to seed Task files directly, the
+    /// same reasoning <see cref="TeamsDirPath"/>'s own doc records.
+    /// </summary>
+    public string TasksDirPath => Path.Combine(this.dataDir.Path, "Tasks");
+
+    /// <summary>
     /// The room database path <see cref="Agency.Huddle.App.Data.SqliteTeamDirectory"/> resolves
     /// under this factory's isolated data directory. Tests use this to assert the Settings page's
     /// Personas tab shows this exact path rather than a hardcoded guess, the same reasoning

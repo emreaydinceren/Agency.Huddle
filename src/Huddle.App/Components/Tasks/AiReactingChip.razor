@@ -1,0 +1,96 @@
+@*
+    Spec §13.8, §10.8 (D14 correction item 12): the page header's "AI reacting" chip. Shows while any
+    of the Watched Tasks' TaskActivity.LastWake Room has a Turn running (TurnActivity.IsBusyIn),
+    resolving the wake's Assignee Name to an Agent id through the directory - the same
+    IsBusyIn(agentId, LastWake.RoomId) check the Board uses (D12 correction item 4). Renders nothing
+    otherwise. Copies TaskViewNav.razor's subscribe/DispatchAsync shape (Spec §13.11) so a Turn event
+    racing this component's teardown cannot throw.
+*@
+
+@implements IDisposable
+@inject TaskActivity Activity
+@inject TurnActivity Turns
+@inject ITeamDirectory Directory
+
+@if (this.IsReacting())
+{
+    <MudChip T="string" Class="ai-reacting-chip" Color="Color.Info" Text="AI reacting">
+        <AvatarContent>
+            <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+        </AvatarContent>
+    </MudChip>
+}
+
+@code {
+    /// <summary>The Tasks currently in view; the chip reacts to any of their last wakes.</summary>
+    [Parameter]
+    public IReadOnlyList<TaskId> Watched { get; set; } = [];
+
+    /// <summary>Subscribes to <see cref="TurnActivity.Changed"/> and <see cref="TaskActivity.Changed"/>, either of which can flip whether a watched Task is reacting.</summary>
+    protected override void OnInitialized()
+    {
+        this.Turns.Changed += this.OnChanged;
+        this.Activity.Changed += this.OnChanged;
+    }
+
+    /// <summary>Unsubscribes from both events.</summary>
+    public void Dispose()
+    {
+        this.Turns.Changed -= this.OnChanged;
+        this.Activity.Changed -= this.OnChanged;
+    }
+
+    /// <summary>
+    /// Whether any <see cref="Watched"/> Task's last wake Room currently has a Turn running (Spec
+    /// §10.8). A Task with no recorded wake, a wake with no Room chosen, or an Assignee Name the
+    /// directory doesn't know all count as not reacting rather than throwing.
+    /// </summary>
+    private bool IsReacting()
+    {
+        foreach (TaskId id in this.Watched)
+        {
+            WakeRecord? lastWake = this.Activity.LastWake(id);
+            if (lastWake is not { RoomId: { } roomId })
+            {
+                continue;
+            }
+
+            User? assignee = this.Directory.FindUserByName(lastWake.Assignee);
+            if (assignee is null)
+            {
+                continue;
+            }
+
+            if (this.Turns.IsBusyIn(assignee.Id, roomId))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void OnChanged() => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a store event racing component teardown can throw (Spec §13.11).</summary>
+    /// <param name="action">The state update to run.</param>
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to render.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
+    }
+}

@@ -19,12 +19,15 @@ public sealed partial class PromptCatalogTests
     /// <c>turn.fileDeleted</c>, <c>turn.fileChangesMore</c>, <c>turn.folderUnchecked</c>) added for
     /// FC §6.13 (Task 7.1), plus <c>tool.watchFolder.description</c> and
     /// <c>tool.unwatchFolder.description</c> added for FC §6.9/§6.13 (Task 10.2), plus
-    /// <c>systemPrompt.sharedSession</c> added for RS §6.9/§8.1 (Task 16.2).
+    /// <c>systemPrompt.sharedSession</c> added for RS §6.9/§8.1 (Task 16.2), plus
+    /// <c>task.wake.message</c> added for Spec §10.5/§11.9 (Task 9.2), plus the six
+    /// <c>tool.*Task.description</c> prompts and <c>getHelp.tasks</c> added for Spec §11.9 (Task 10.7;
+    /// corrections-B4 D10 item 7 - method name kept, count updated to 57).
     /// </summary>
     [Fact]
     public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(49, PromptCatalog.All.Count);
+        Assert.Equal(57, PromptCatalog.All.Count);
     }
 
     /// <summary>
@@ -243,6 +246,27 @@ public sealed partial class PromptCatalogTests
     }
 
     /// <summary>
+    /// The <c>task.wake.message</c> Prompt (Spec §10.5, §11.9) exists, is <see cref="PromptTiming.Live"/>,
+    /// requires all seven placeholders a wake-up Message needs, its Default starts with the Mention
+    /// that must stay first, and it carries no <c>mcp__team__</c> literal.
+    /// </summary>
+    [Fact]
+    public void TaskWakeMessage_Exists_Live_RequiresAllSevenPlaceholders()
+    {
+        var prompt = PromptCatalog.Get("task.wake.message");
+
+        Assert.Equal(PromptTiming.Live, prompt.Timing);
+        Assert.Equal(
+            ["{{assignee}}", "{{taskId}}", "{{title}}", "{{actor}}", "{{changes}}", "{{status}}", "{{team}}"],
+            prompt.RequiredPlaceholders);
+        Assert.Equal(
+            "@{{assignee}} Task {{taskId}} \"{{title}}\" ({{status}}, {{team}}) was changed by {{actor}}:\n" +
+            "{{changes}}\n" +
+            "Call get_task with taskId {{taskId}} for the full task.",
+            prompt.Default);
+    }
+
+    /// <summary>
     /// Every <c>{{...}}</c> token that appears in a prompt's Default is declared in that same prompt's
     /// Placeholders — catching a typo'd placeholder at build/test time rather than at render time.
     /// </summary>
@@ -276,6 +300,86 @@ public sealed partial class PromptCatalogTests
                 prompt.Default.Contains("mcp__team__", StringComparison.Ordinal),
                 $"Prompt '{prompt.Key}' still contains the literal 'mcp__team__' prefix in its Default.");
         }
+    }
+
+    /// <summary>
+    /// The six <c>tool.*Task.description</c> prompts Spec §11.9 defines all exist, are
+    /// <see cref="PromptTiming.NextSession"/> like every other <c>tool.*.description</c>, declare no
+    /// placeholders, and carry no <c>mcp__team__</c> literal (Task 10.7).
+    /// </summary>
+    [Fact]
+    public void Catalog_HasTaskToolDescriptionPrompts()
+    {
+        AssertTaskToolDescriptionPrompt("tool.createTask.description");
+        AssertTaskToolDescriptionPrompt("tool.getTask.description");
+        AssertTaskToolDescriptionPrompt("tool.listTasks.description");
+        AssertTaskToolDescriptionPrompt("tool.updateTask.description");
+        AssertTaskToolDescriptionPrompt("tool.closeTask.description");
+        AssertTaskToolDescriptionPrompt("tool.reopenTask.description");
+    }
+
+    /// <summary>Asserts one <c>tool.*Task.description</c> prompt exists, is <see cref="PromptTiming.NextSession"/>, declares no placeholders, and carries no <c>mcp__team__</c> literal.</summary>
+    /// <param name="key">The prompt's key.</param>
+    private static void AssertTaskToolDescriptionPrompt(string key)
+    {
+        var prompt = PromptCatalog.Get(key);
+
+        Assert.Equal(PromptTiming.NextSession, prompt.Timing);
+        Assert.Empty(prompt.Placeholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Spec §13.13's sentence — Agents already pass a Task id such as <c>PLAT-0042</c> to
+    /// <c>get_task</c> — must appear in <c>tool.getTask.description</c>'s Default, so a model reading
+    /// only its own tool description still learns what the id it sees in a Message is for.
+    /// </summary>
+    [Fact]
+    public void ToolGetTaskDescription_MentionsTaskIdAndGetTask()
+    {
+        var prompt = PromptCatalog.Get("tool.getTask.description");
+
+        Assert.Equal(
+            "Reads one Task by its id, such as PLAT-0042, with an option to also see its full Change log. Task ids such as PLAT-0042 seen in a Message refer to Tasks; call get_task to read one.",
+            prompt.Default);
+    }
+
+    /// <summary>Spec §11.9: <c>getHelp.tasks</c> exists and is <see cref="PromptTiming.Live"/> (rendered fresh into <c>BuildHelp</c>'s output, not baked into the system prompt at session start).</summary>
+    [Fact]
+    public void GetHelpTasks_Exists_Live()
+    {
+        var prompt = PromptCatalog.Get("getHelp.tasks");
+
+        Assert.Equal(PromptTiming.Live, prompt.Timing);
+    }
+
+    /// <summary>Spec §11.9: <c>systemPrompt.tools</c> gains a clause mentioning Tasks (Task 10.7).</summary>
+    [Fact]
+    public void SystemPromptTools_MentionsTasks()
+    {
+        var prompt = PromptCatalog.Get("systemPrompt.tools");
+
+        // contains-ok: prompt.Default is the whole multi-paragraph tools clause; this test only checks the Task-tracking phrase Task 10.7 added.
+        Assert.Contains("to track work as Tasks and", prompt.Default, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Corrections-B4 D10 item 8 (DM): the new <c>systemPrompt.tools</c> clause is static and generic
+    /// - it names no individual tool - so that <c>Team:Tasks:Enabled=false</c> stays truthful even
+    /// though this prompt is baked in at session start regardless of whether the Tasks tools are
+    /// actually offered.
+    /// </summary>
+    [Fact]
+    public void SystemPromptTools_TasksClause_NeverNamesATool()
+    {
+        var prompt = PromptCatalog.Get("systemPrompt.tools");
+
+        Assert.DoesNotContain("create_task", prompt.Default, StringComparison.Ordinal);
+        Assert.DoesNotContain("get_task", prompt.Default, StringComparison.Ordinal);
+        Assert.DoesNotContain("list_tasks", prompt.Default, StringComparison.Ordinal);
+        Assert.DoesNotContain("update_task", prompt.Default, StringComparison.Ordinal);
+        Assert.DoesNotContain("close_task", prompt.Default, StringComparison.Ordinal);
+        Assert.DoesNotContain("reopen_task", prompt.Default, StringComparison.Ordinal);
     }
 
     [GeneratedRegex(@"\{\{[a-zA-Z]+\}\}")]

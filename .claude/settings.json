@@ -12,6 +12,32 @@
             "statusMessage": "Checking C# principles"
           }
         ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/block-disk-wide-and-inplace-edits.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking for disk-wide find and sed -i"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/.claude/hooks/crlf-after-write.sh\"",
+            "timeout": 10,
+            "statusMessage": "Normalising line endings"
+          }
+        ]
       }
     ]
   }

@@ -214,6 +214,22 @@ public sealed class PipeHostFixture : IAsyncDisposable
     /// hand-built <see cref="Agency.Huddle.App.Acp.PersonaRunner"/> against a real <see cref="IAgentHostFactory"/>
     /// whose process launcher it substitutes, rather than reimplementing this same removal a second time.
     /// </para>
+    /// <para>
+    /// <b>Matched by what the factory returns, not by counting factories (D9, corrections-B3 blocking
+    /// item 2).</b> This method originally found <see cref="PersonaSupervisor"/>'s hosted-service
+    /// registration by asserting there was exactly one factory-registered <see cref="IHostedService"/>
+    /// at all - a delegate is the only thing that told it apart from <c>DataInitializer</c>,
+    /// <c>PipeServer</c> and <c>DemoAgentHost</c>, which are all registered by type. Task 9.3 added
+    /// <see cref="Agency.Huddle.App.Tasks.TaskTriggerService"/>'s hosted service, registered the same
+    /// factory way, so that count is now two and the old assertion would throw on every call. A
+    /// <see cref="ServiceDescriptor.ImplementationFactory"/> is a <c>Func&lt;IServiceProvider, object&gt;</c>,
+    /// but <c>Func&lt;T, TResult&gt;</c>'s return-type covariance means assigning
+    /// <c>sp =&gt; sp.GetRequiredService&lt;PersonaSupervisor&gt;()</c> to it does not wrap the lambda
+    /// in a new delegate - the underlying method is untouched, so
+    /// <c>ImplementationFactory.Method.ReturnType</c> is still <see cref="PersonaSupervisor"/>, and
+    /// stays a reliable fingerprint for exactly this registration no matter how many other
+    /// factory-registered hosted services join it later.
+    /// </para>
     /// </remarks>
     internal static void RemovePersonaSupervisorHostedService(IServiceCollection services)
     {
@@ -223,25 +239,14 @@ public sealed class PipeHostFixture : IAsyncDisposable
                 "as a singleton, but no such registration was found. Has it been renamed or moved?");
         services.Remove(singleton);
 
-        // SingleOrDefault, not FirstOrDefault: a factory is the only thing that tells this
-        // registration apart from DataInitializer, PipeServer and DemoAgentHost, which are all
-        // registered by type. The day something else is added by factory, that stops being a unique
-        // identifier - and picking the first match would quietly remove the wrong hosted service and
-        // leave this fixture running a PersonaSupervisor it believes it removed. Failing loudly here
-        // costs one confusing test run; getting it wrong silently costs an afternoon.
-        var hostedServiceFactories = services
-            .Where(d => d.ServiceType == typeof(IHostedService) && d.ImplementationFactory is not null)
-            .ToList();
+        var hostedServiceFactory = services.FirstOrDefault(d =>
+            d.ServiceType == typeof(IHostedService) && d.ImplementationFactory?.Method.ReturnType == typeof(PersonaSupervisor))
+            ?? throw new InvalidOperationException(
+                $"Expected {nameof(ServiceCollectionExtensions.AddTeamServices)} to register a factory-based "
+                + $"{nameof(IHostedService)} whose factory returns {nameof(PersonaSupervisor)}, but none was found. "
+                + "Has it been renamed or moved?");
 
-        if (hostedServiceFactories.Count != 1)
-        {
-            throw new InvalidOperationException(
-                $"Expected exactly one factory-registered IHostedService - {nameof(PersonaSupervisor)}'s - but found "
-                + $"{hostedServiceFactories.Count}. Another hosted service is now registered by factory too, so this "
-                + "method can no longer tell them apart; identify them explicitly rather than by shape.");
-        }
-
-        services.Remove(hostedServiceFactories[0]);
+        services.Remove(hostedServiceFactory);
     }
 
     /// <summary>
@@ -266,8 +271,8 @@ public sealed class PipeHostFixture : IAsyncDisposable
     /// </para>
     /// <para>
     /// Registered by type, not by factory, so the removal is a straight <c>ImplementationType</c>
-    /// match rather than <see cref="RemovePersonaSupervisorHostedService"/>'s factory-counting
-    /// dance.
+    /// match rather than <see cref="RemovePersonaSupervisorHostedService"/>'s factory-return-type
+    /// match.
     /// </para>
     /// </remarks>
     /// <param name="services">The fixture's service collection, already populated by <see cref="ServiceCollectionExtensions.AddTeamServices"/>.</param>

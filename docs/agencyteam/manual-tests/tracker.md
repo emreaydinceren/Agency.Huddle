@@ -1,6 +1,6 @@
 # Manual test tracker
 
-Where every one of the 484 tests stands. One row per test, updated as you run it.
+Where every one of the 499 tests stands. One row per test, updated as you run it.
 
 > [!NOTE]
 > **An earlier full run exists, against the previous UI, and its results are deliberately not
@@ -108,6 +108,7 @@ the per-area tables below.
 | [The named pipe: external agents and the wire](pipe-external.md) | 36 | — | [below](#pipe-external) |
 | [App Tools a real model calls (progressive discovery)](app-tools.md) | 26 | 20 | [below](#app-tools) |
 | [Persona lifecycle: supervisor, work dirs, health and restarts](persona-lifecycle.md) | 32 | 7 | [below](#persona-lifecycle) |
+| [Tasks: creating, moving, viewing and referencing a unit of work](tasks.md) | 15 | 4 | [below](#tasks) |
 
 ---
 
@@ -689,6 +690,28 @@ Persona lifecycle: supervisor, work dirs, health and restarts — [area file](pe
 | [PERSONALIFECYCLE-30](persona-lifecycle.md#personalifecycle-30-money-context-bleeds-between-rooms-confirm-the-known-limit-and-that-replies-still-land-in-the-right-room) | 💰 | Active | | |
 | [PERSONALIFECYCLE-31](persona-lifecycle.md#personalifecycle-31-money-the-per-persona-token-budget-shows-as-degraded-with-its-reason-and-any-human-message-clears-it) | 💰 | Active | | |
 | [PERSONALIFECYCLE-32](persona-lifecycle.md#personalifecycle-32-money-a-token-budget-of-zero-disables-the-per-persona-cap-and-the-per-room-budget-still-stops-the-exchange) | 💰 | Active | | |
+
+## tasks
+
+Tasks: creating, moving, viewing and referencing a unit of work — [area file](tasks.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [TASKS-01](tasks.md#tasks-01-creating-a-task-in-the-ui-writes-the-file-at-the-right-path-with-the-canonical-frontmatter) |  | Active | | |
+| [TASKS-02](tasks.md#tasks-02-a-hand-edit-in-a-text-editor-appears-within-a-second-with-an-edited-outside-huddle-entry) |  | Active | | |
+| [TASKS-03](tasks.md#tasks-03-board-drag-ghost-buckets-the-duplicate-picker-and-cancelling-snaps-the-card-back) |  | Active | | |
+| [TASKS-04](tasks.md#tasks-04-the-view-editor-saves-reorders-fields-and-refuses-a-board-with-an-unplaced-state) |  | Active | | |
+| [TASKS-05](tasks.md#tasks-05-a-broken-viewsjson-shows-the-error-and-the-file-is-untouched) |  | Active | | |
+| [TASKS-06](tasks.md#tasks-06-the-last-view-reopens-after-a-browser-restart-and-a-private-window-falls-back-to-all-tasks) |  | Active | | |
+| [TASKS-07](tasks.md#tasks-07-a-conflict-shows-both-versions-and-merging-changes-to-different-fields-is-silent) |  | Active | | |
+| [TASKS-08](tasks.md#tasks-08-renaming-a-persona-rewrites-assignee-in-every-task-file-and-view-filter-with-no-wake-up) |  | Active | | |
+| [TASKS-09](tasks.md#tasks-09-keyboard-only-move-to-the-view-editor-and-the-task-panel-with-no-dragging) |  | Active | | |
+| [TASKS-10](tasks.md#tasks-10-assigning-to-a-live-claude-persona-wakes-it-in-the-right-room-and-it-calls-update_task-to-set-in-progress) | 💰 | Active | | |
+| [TASKS-11](tasks.md#tasks-11-two-personas-reassigning-to-each-other-stop-at-the-wake-budget-and-allow-10-more-resumes-them) | 💰 | Active | | |
+| [TASKS-12](tasks.md#tasks-12-an-agent-that-creates-a-task-with-originroomid-wakes-the-assignee-in-that-room) | 💰 | Active | | |
+| [TASKS-13](tasks.md#tasks-13-the-copy-button-works-on-localhost-and-from-another-machine-and-the-pasted-id-shows-as-a-link) |  | Active | | |
+| [TASKS-14](tasks.md#tasks-14-the-picker-keyboard-only) |  | Active | | |
+| [TASKS-15](tasks.md#tasks-15-an-agent-sent-please-look-at-plat-0042-calls-get_task-with-that-id-without-being-told-the-tool-name) | 💰 | Active | | |
 
 ## adapters
 

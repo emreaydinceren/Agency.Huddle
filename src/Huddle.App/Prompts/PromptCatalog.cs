@@ -108,7 +108,8 @@ internal static class PromptCatalog
                 {{toolNames}}.
                 Use them to learn how this application works, to find out who exists, to start a
                 Room with other agents, to add an agent to a Room that already exists, to speak
-                into a Room other than the one you were addressed in, and to ask to be woken by
+                into a Room other than the one you were addressed in, to track work as Tasks and
+                hand it to a Teammate, and to ask to be woken by
                 every message in a Room you are waiting on. Your reply to the current
                 message is just your answer text — do not also post it with a tool.
                 Never answer questions about agents or Rooms from the codebase.
@@ -799,5 +800,125 @@ internal static class PromptCatalog
             Placeholders: [],
             RequiredPlaceholders: [],
             Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "task.wake.message",
+            Label: "Task wake-up message",
+            HelperText:
+                "Posted in a Room to wake a Task's assignee after the Task changes. The Mention must " +
+                "stay first. An override may drop the leading {{assignee}} Mention, but a Room's Reply " +
+                "Gate then may not recognise the assignee as addressed.",
+            Default:
+                """
+                @{{assignee}} Task {{taskId}} "{{title}}" ({{status}}, {{team}}) was changed by {{actor}}:
+                {{changes}}
+                Call get_task with taskId {{taskId}} for the full task.
+                """,
+            Placeholders: ["{{assignee}}", "{{taskId}}", "{{title}}", "{{actor}}", "{{changes}}", "{{status}}", "{{team}}"],
+            RequiredPlaceholders: ["{{assignee}}", "{{taskId}}", "{{title}}", "{{actor}}", "{{changes}}", "{{status}}", "{{team}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "tool.createTask.description",
+            Label: "create_task description",
+            HelperText:
+                "The one-line job description a model reads for the create_task tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Creates a Task: durable work tracked outside this conversation. Create one to hand work to a Teammate so it is not lost when this conversation ends, or to track your own multi-step work across Turns. Give it a title, a Team, and optionally an assignee; creating it wakes the assignee unless you assign it to yourself. Pass originRoomId with the id of the Room you are acting in, so the Task remembers where it came from.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.getTask.description",
+            Label: "get_task description",
+            HelperText:
+                "The one-line job description a model reads for the get_task tool. Must keep the " +
+                "sentence about a Task id in a Message (Spec §13.13): it is what tells a model what " +
+                "an id such as PLAT-0042 seen in a Message means. Takes no placeholders.",
+            Default:
+                """
+                Reads one Task by its id, such as PLAT-0042, with an option to also see its full Change log. Task ids such as PLAT-0042 seen in a Message refer to Tasks; call get_task to read one.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.listTasks.description",
+            Label: "list_tasks description",
+            HelperText:
+                "The one-line job description a model reads for the list_tasks tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Lists Tasks matching the filters you give: scope ("active" or "closed"), team, project, assignee, status, or priority. Give assignee "me" to find your own work, or "unassigned" for Tasks no one owns yet. text searches both id and title, case-insensitively.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.updateTask.description",
+            Label: "update_task description",
+            HelperText:
+                "The one-line job description a model reads for the update_task tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Changes one or more fields on a Task. Changing a field wakes the assignee, unless you are the assignee. Set status as you work through it: To Do, then In Progress, then Review, then Done. Setting status to Duplicate also needs duplicate_of, the id of the Task it duplicates.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.closeTask.description",
+            Label: "close_task description",
+            HelperText:
+                "The one-line job description a model reads for the close_task tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Closes a Task, hiding it from active lists. Closing is separate from marking a Task Done: a Task can be Done and still open, or Closed at any status.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.reopenTask.description",
+            Label: "reopen_task description",
+            HelperText:
+                "The one-line job description a model reads for the reopen_task tool. Takes no " +
+                "placeholders.",
+            Default:
+                """
+                Reopens a Closed Task, returning it to the active lists it was hidden from.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "getHelp.tasks",
+            Label: "Help: tasks",
+            HelperText:
+                "A short TASKS section in get_help's output, added right after BUDGET only when the " +
+                "Tasks tools are offered (Spec §11.9). Takes no placeholders.",
+            Default:
+                """
+                TASKS
+                Tasks track work outside this conversation. Changing one wakes its assignee, unless
+                you are the assignee. Use create_task, get_task, list_tasks, update_task, close_task
+                and reopen_task to work with them. Write a Task's id, for example PLAT-0042, to refer
+                to it in a Message; the Human sees it as a link.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.Live),
     ];
 }

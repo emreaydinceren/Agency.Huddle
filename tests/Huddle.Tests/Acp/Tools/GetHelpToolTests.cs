@@ -9,6 +9,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
@@ -219,5 +220,61 @@ public sealed class GetHelpToolTests
     public void Constructor_NullToolNamePrefix_Throws()
     {
         Assert.Throws<ArgumentNullException>(() => new GetHelpTool([], new FakePromptSource(), null!));
+    }
+
+    /// <summary>
+    /// Corrections-B4 D10 item 6 (overrides the plan's "constructor flag"): <c>get_help</c> takes no
+    /// new constructor parameter for Tasks. Instead, <c>BuildHelp</c> adds the <c>getHelp.tasks</c>
+    /// section, right after <c>getHelp.budget</c>, whenever the tool catalog it was already handed
+    /// contains <c>create_task</c> - the same "read the catalog it already has" shape
+    /// <see cref="GetHelpTool"/>'s remarks describe for every other section.
+    /// </summary>
+    [Fact]
+    public async Task GetHelp_CatalogContainsCreateTask_IncludesTasksSectionAfterBudget()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        IAppTool[] others = [new StubTool("create_task")];
+        var tool = new GetHelpTool(others, new FakePromptSource(), "mcp__team__");
+
+        var help = await tool.InvokeAsync(new JsonObject(), ct);
+
+        var tasksText = PromptCatalog.Get("getHelp.tasks").Default;
+        var budgetText = PromptCatalog.Get("getHelp.budget").Default;
+        // contains-ok: help is the whole composed help text with every other tool's section too;
+        // this test's intent is only that the Tasks section is included, and where.
+        Assert.Contains(tasksText, help, StringComparison.Ordinal);
+        Assert.True(
+            help.IndexOf(budgetText, StringComparison.Ordinal) < help.IndexOf(tasksText, StringComparison.Ordinal),
+            "The getHelp.tasks section must appear after getHelp.budget.");
+    }
+
+    /// <summary>The other half of corrections-B4 D10 item 6: with no <c>create_task</c> in the catalog (Tasks disabled, or not yet offered), the <c>getHelp.tasks</c> section is omitted entirely.</summary>
+    [Fact]
+    public async Task GetHelp_CatalogWithoutCreateTask_OmitsTasksSection()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        IAppTool[] others = [new StubTool("list_agents")];
+        var tool = new GetHelpTool(others, new FakePromptSource(), "mcp__team__");
+
+        var help = await tool.InvokeAsync(new JsonObject(), ct);
+
+        var tasksText = PromptCatalog.Get("getHelp.tasks").Default;
+        Assert.DoesNotContain(tasksText, help, StringComparison.Ordinal);
+    }
+
+    /// <summary>A minimal <see cref="IAppTool"/> stand-in identified only by its <see cref="Name"/>, mirroring <c>SkillGrantsTests.StubTool</c> for the same purpose here.</summary>
+    /// <param name="name">The tool's name, and its whole behaviour for this stub.</param>
+    private sealed class StubTool(string name) : IAppTool
+    {
+        public string Name => name;
+
+        public string Description => name;
+
+        public JsonObject InputSchema => new JsonObject { ["type"] = "object" };
+
+        public Task<string> InvokeAsync(JsonObject arguments, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(name);
+        }
     }
 }

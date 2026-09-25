@@ -1,0 +1,34 @@
+@*
+    Asks for an optional reason when a Task moves to Cancelled or Rejected (Spec §13.4 Dropping step 3;
+    corrections-B5 D12-12). Save returns the typed reason (null when empty), Skip returns no reason,
+    and the close button (or Escape) cancels the move. The title, "Mark {id} as {State}", is passed
+    by the caller.
+*@
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField T="string" Label="Reason (optional)" @bind-Value="this.reason" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="this.Skip">Skip</MudButton>
+        <MudButton Color="Color.Primary" OnClick="this.Save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>How the Board shows this dialog: small, full-width, with a close button that cancels.</summary>
+    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    /// <summary>The dialog instance, for closing with a result.</summary>
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    private string? reason;
+
+    /// <summary>Closes with the typed reason, or with none when the field is blank.</summary>
+    private void Save() =>
+        this.Dialog?.Close(DialogResult.Ok<string?>(string.IsNullOrWhiteSpace(this.reason) ? null : this.reason));
+
+    /// <summary>Closes with no reason.</summary>
+    private void Skip() => this.Dialog?.Close(DialogResult.Ok<string?>(null));
+}

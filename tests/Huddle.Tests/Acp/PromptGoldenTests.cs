@@ -66,6 +66,12 @@ public sealed class PromptGoldenTests
         "mcp__team__post_message",
         "mcp__team__follow_room",
         "mcp__team__unfollow_room",
+        "mcp__team__create_task",
+        "mcp__team__get_task",
+        "mcp__team__list_tasks",
+        "mcp__team__update_task",
+        "mcp__team__close_task",
+        "mcp__team__reopen_task",
     ];
 
     /// <summary>
@@ -81,6 +87,12 @@ public sealed class PromptGoldenTests
         "post_message",
         "follow_room",
         "unfollow_room",
+        "create_task",
+        "get_task",
+        "list_tasks",
+        "update_task",
+        "close_task",
+        "reopen_task",
     ];
 
     /// <summary>Pins <see cref="SystemPromptComposer.Compose(Persona, IPromptSource, string, IReadOnlyList{string})"/>'s output for a plain Persona.</summary>
@@ -631,6 +643,7 @@ public sealed class PromptGoldenTests
         var gateway = new FakeAgentGateway();
         var checker = new CandidateChecker(personaStore, directory, gateway);
         var follows = new RoomFollows();
+        using TaskToolHarness taskHarness = new();
         IAppTool[] others =
         [
             new ListAgentsTool(directory, gateway, personaStore, new FakePromptSource()),
@@ -641,6 +654,12 @@ public sealed class PromptGoldenTests
             new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new ValidateTeammateTool(checker, new FakePromptSource()),
             new ProposeTeammatesTool(proposals, checker, personaStore, directory, options, TimeProvider.System, "test-agent", new FakePromptSource()),
+            new CreateTaskTool(taskHarness.Service, taskHarness.Triggers, taskHarness.Directory, new FakePromptSource(), "caller-id"),
+            new GetTaskTool(taskHarness.Store, new FakePromptSource()),
+            new ListTasksTool(taskHarness.Store, taskHarness.Directory, taskHarness.Personas, new FakePromptSource(), "caller-id"),
+            new UpdateTaskTool(taskHarness.Service, taskHarness.Store, taskHarness.Triggers, taskHarness.Directory, new FakePromptSource(), "caller-id"),
+            new CloseTaskTool(taskHarness.Service, taskHarness.Store, taskHarness.Triggers, taskHarness.Directory, new FakePromptSource(), "caller-id"),
+            new ReopenTaskTool(taskHarness.Service, taskHarness.Store, taskHarness.Triggers, taskHarness.Directory, new FakePromptSource(), "caller-id"),
         ];
 
         // GetHelpTool lists only the ungated tools (those not in SkillGrants.Grantable).

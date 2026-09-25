@@ -361,7 +361,7 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 
 ## Tasks
 
-Proposed, not built. See
+See
 [Huddle.Tasks-Specifications.md](../Huddle.Tasks-Specifications.md),
 [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md) and
 [ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md).
@@ -374,8 +374,11 @@ Proposed, not built. See
   moves. In code the record is `TaskItem`, because a type named `Task` would
   shadow `System.Threading.Tasks.Task`.
 : Capitalised, it means only this. A task in the ordinary sense stays lower case.
+: A Task is **referenced** in chat by writing its plain id. Rendered Messages turn
+  an id that matches a real Task into a link. The copy button and the composer's
+  `#` picker both produce exactly the id, with no marker kept.
 : *Avoid*: ticket, issue, work item, card (a card is how a Board draws a Task),
-  todo.
+  todo; and for the reference, tag or hashtag (the `#` isn't kept).
 
 **Project**
 : An optional grouping of Tasks inside one Team: the folder below the Team's

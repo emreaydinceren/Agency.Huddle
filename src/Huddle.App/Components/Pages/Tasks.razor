@@ -1,0 +1,636 @@
+@*
+    Spec §13.2: the Tasks page. Holds the *effective* View - the saved one with the toolbar's own
+    session overrides applied (§13.3) - and requeries on exactly three hubs, narrowed from Spec
+    §13.2's full subscription list by corrections-B4 D11 item 9: TaskEvents.TasksReloaded,
+    TaskEvents.TaskChanged and ViewStore.ViewsChanged. TaskActivity/TurnActivity/PresenceChanged/
+    PersonaHealth.Changed feed the AI-reacting chip, which is D14's work.
+
+    The effective View's Kind picks the List or the Board (§13.4; 12.4.i). Both open a Task into the
+    detail drawer, which is still an empty slot showing only the clicked Task's id until TaskDetail
+    lands (14.5.i); + New task is still a no-op EventCallback. The Board's column header changes a
+    saved Board View through ViewStore (the page follows ViewsChanged) and anything else through
+    ViewChanged (the effective View), and its "Edit columns…" opens the View editor at Columns.
+    Above either view, one §13.12 empty state: "No tasks yet." when there are no Tasks at all, "No
+    tasks match '{text}'." when only the search excludes everything, otherwise "No tasks match this
+    View." with Reset filters, which drops the toolbar's overrides and the search (J43).
+
+    The View editor drawer (§13.5) IS hosted here (corrections-B5 D13 item 7; 13.2.i, the only agent
+    editing this file for that dispatch per corrections-B7's ordering, J42): Edit View opens it for
+    the effective View; /tasks/new opens it for a new View, detected from NavigationManager.Uri
+    since that route's own @page template carries no ViewId to distinguish it from the bare /tasks
+    case. An invalid View route (corrections-B7 §13.2 item 4) shows its ViewValidator reason and an
+    Edit View button, never the "no longer exists" wording that only ever meant "no such id at all".
+
+    14.5.i (this dispatch, third page-wiring step, corrections-B7): the detail drawer now hosts a real
+    TaskDetail (Mode=Panel) instead of the placeholder - opening a row/card, "+ New task" (the header
+    button and the empty-state button) and switching between two already-open Tasks all go through
+    ConfirmSwitchAsync, which calls the currently mounted TaskDetail's own ConfirmDiscardAsync before
+    tearing it down (a fresh @key forces recreation, since TaskDetail only loads its Id/Draft once, in
+    OnInitializedAsync - Cancel in that "Discard changes?" box leaves the current Task open).
+    OverlayAutoClose reads detailHasPending, a field this page keeps current from TaskDetail's own
+    HasPendingChanged (settled J58) - never a direct read of TaskDetail.HasPending, because TaskDetail
+    changing its own pending does not, by itself, re-render this ancestor: a direct read could act on
+    a stale "nothing pending" and let the drawer's overlay click silently discard a real edit (the bug
+    J58 fixed). WakeToasts (renders nothing itself) and the page-header AiReactingChip - watching every
+    Task in the current effective View, not narrowed by the search box - are D14's remaining work, per
+    corrections-B5 D14 item 12.
+*@
+
+@page "/tasks"
+@page "/tasks/{ViewId}"
+@page "/tasks/new"
+@page "/tasks/item/{TaskIdText}"
+@implements IDisposable
+@using System.Text.Json
+@using Microsoft.Extensions.Options
+@inject TaskStore Store
+@inject TaskEvents Events
+@inject ViewStore Views
+@inject IOptions<TeamOptions> Options
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<div class="tasks-page">
+    <WakeToasts OnOpenTask="this.OnOpenTaskAsync" />
+    @if (!this.Options.Value.Tasks.Enabled)
+    {
+        @* corrections-B4 D11 item 13: Tasks turned off shows only this notice. *@
+        <MudAlert Severity="Severity.Info" role="status" Class="tasks-disabled-alert">Tasks are turned off.</MudAlert>
+    }
+    else if (this.invalidView is { } invalid)
+    {
+        @* corrections-B7 §13.2 item 4: an invalid View (parses, fails ViewValidator) shows its
+           reason and an Edit View button - never "no longer exists", which means no such id at all. *@
+        <MudAlert Severity="Severity.Warning" role="status" Class="tasks-invalid-view-alert">
+            This View is invalid: @string.Join(" ", invalid.Problems)
+        </MudAlert>
+        <MudButton OnClick="@(() => this.OpenEditorFor(invalid.Id ?? this.ViewId ?? string.Empty))" Class="tasks-invalid-view-edit">Edit View</MudButton>
+    }
+    else if (this.viewNotFound)
+    {
+        <MudAlert Severity="Severity.Warning" role="status" Class="tasks-view-not-found-alert">
+            That View no longer exists.
+            <MudLink Href="/tasks">All Tasks</MudLink>
+        </MudAlert>
+    }
+    else
+    {
+        <header class="tasks-header">
+            <h1>Tasks: @this.effectiveView.Name</h1>
+            @if (!string.IsNullOrEmpty(this.effectiveView.Description))
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary tasks-description">@this.effectiveView.Description</MudText>
+            }
+            @if (this.HasOverrides)
+            {
+                <MudLink OnClick="this.ResetOverrides" Class="tasks-reset">Reset</MudLink>
+            }
+            <AiReactingChip Watched="this.WatchedTaskIds" />
+        </header>
+
+        @if (this.Views.LoadError is { } loadError)
+        {
+            @* Spec §13.12: the exact wording, with the parse error's own line/column and message. *@
+            <MudAlert Severity="Severity.Error" role="alert" Class="tasks-views-load-error-alert">
+                views.json could not be read (line @loadError.Line, column @loadError.Column): @loadError.Message. Views are read-only until the file is fixed; nothing has been lost.
+            </MudAlert>
+        }
+
+        @if (this.Store.RejectedFiles.Count > 0)
+        {
+            @* Teammates.razor:32-48's precedent, with role="status" added per traps.md L22-27. *@
+            <MudAlert Severity="Severity.Warning" role="status" Class="tasks-rejected-alert">
+                <MudText Typo="Typo.subtitle2" Class="tasks-rejected-heading">Tasks that didn't load</MudText>
+                <ul class="tasks-rejected-list">
+                    @foreach (RejectedTaskFile rejected in this.Store.RejectedFiles)
+                    {
+                        <li class="tasks-rejected-item">
+                            <span class="tasks-rejected-path">@rejected.Path</span>
+                            <span class="tasks-rejected-reason">@rejected.Reason</span>
+                        </li>
+                    }
+                </ul>
+            </MudAlert>
+        }
+
+        <TaskToolbar EffectiveView="this.effectiveView" EffectiveViewChanged="this.OnEffectiveViewChangedAsync"
+                     Search="@this.search" SearchChanged="this.OnSearchChangedAsync" OnEditView="this.OnEditViewClickedAsync"
+                     OnNewTask="this.OnNewTaskAsync" />
+
+        IReadOnlyList<TaskItem> tasks = this.FilteredTasks(this.search);
+        @if (tasks.Count == 0)
+        {
+            @* Spec §13.12 empty states, one rendering above the List and the Board (corrections-B7 12.4 item 1). *@
+            <div class="tasks-empty">
+                @if (this.Store.All.Count == 0)
+                {
+                    <MudText Typo="Typo.body1" Class="tasks-empty-message">No tasks yet.</MudText>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.OnEmptyStateNewTaskAsync" Class="tasks-empty-action">+ New task</MudButton>
+                }
+                else if (!string.IsNullOrWhiteSpace(this.search) && this.FilteredTasks(null).Count > 0)
+                {
+                    <MudText Typo="Typo.body1" Class="tasks-empty-message">No tasks match '@this.search'.</MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body1" Class="tasks-empty-message">No tasks match this View.</MudText>
+                    <MudButton Variant="Variant.Text" OnClick="this.ResetOverrides" Class="tasks-empty-action">Reset filters</MudButton>
+                }
+            </div>
+        }
+
+        @if (this.effectiveView.Kind == ViewKind.List)
+        {
+            <TaskListView View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTaskAsync" OnCopyId="this.OnCopyIdAsync" />
+        }
+        else
+        {
+            <TaskBoard View="this.effectiveView" Tasks="tasks" Search="@this.search" OnOpenTask="this.OnOpenTaskAsync"
+                       ViewChanged="this.OnEffectiveViewChangedAsync" OnEditColumns="this.OnEditColumnsClicked" OnCopyId="this.OnCopyIdAsync" />
+        }
+
+        @if (this.itemNotFoundText is not null)
+        {
+            @* Spec §13.13.3 step 1: an item-route id that is invalid or names no Task, over the last View. *@
+            <MudAlert Severity="Severity.Warning" role="status" Class="tasks-item-not-found-alert">@this.itemNotFoundText</MudAlert>
+        }
+
+        <MudDrawer Open="this.detailOpen" OpenChanged="this.OnDetailOpenChanged" Anchor="Anchor.End" Variant="DrawerVariant.Temporary"
+                   OverlayAutoClose="@(!this.detailHasPending)" Class="tasks-detail-drawer">
+            @if (this.selectedTaskId is not null || this.selectedDraft is not null)
+            {
+                <TaskDetail @ref="this.detail" @key="this.DetailKey" Id="this.selectedTaskId" Draft="this.selectedDraft"
+                            Mode="TaskDetailMode.Panel" OnClose="this.OnDetailClosed" HasPendingChanged="this.OnDetailHasPendingChanged" />
+            }
+        </MudDrawer>
+    }
+
+    <ViewEditorDrawer Open="this.editorOpen" OpenChanged="this.OnEditorOpenChanged" Id="@this.editorViewId" Section="this.editorSection" />
+</div>
+
+@code {
+    /// <summary>The route's View id segment - null for the bare <c>/tasks</c> and <c>/tasks/new</c> routes.</summary>
+    [Parameter]
+    public string? ViewId { get; set; }
+
+    /// <summary>The route's Task id segment for <c>/tasks/item/{TaskIdText}</c> (Spec §13.13.3) - null for every other route.</summary>
+    [Parameter]
+    public string? TaskIdText { get; set; }
+
+    private TaskView effectiveView = new() { Id = ViewStore.AllTasksId, Name = "All Tasks", Kind = ViewKind.List };
+    private string? search;
+    private bool viewNotFound;
+    private InvalidView? invalidView;
+    private string? itemNotFoundText;
+    private bool detailOpen;
+    private TaskId? selectedTaskId;
+    private TaskDraft? selectedDraft;
+    private TaskDetail? detail;
+    private bool detailHasPending;
+    private bool editorOpen;
+    private string? editorViewId;
+    private ViewEditorSection editorSection = ViewEditorSection.General;
+
+    /// <summary>Subscribes to the three hubs Spec §13.2 (narrowed by corrections-B4 D11 item 9) names.</summary>
+    protected override void OnInitialized()
+    {
+        this.Events.TasksReloaded += this.OnTasksReloaded;
+        this.Events.TaskChanged += this.OnTaskChanged;
+        this.Views.ViewsChanged += this.OnViewsChanged;
+    }
+
+    /// <summary>Unsubscribes from all three hubs (rules.md: every component subscribing to a singleton hub must unsubscribe in Dispose).</summary>
+    public void Dispose()
+    {
+        this.Events.TasksReloaded -= this.OnTasksReloaded;
+        this.Events.TaskChanged -= this.OnTaskChanged;
+        this.Views.ViewsChanged -= this.OnViewsChanged;
+    }
+
+    /// <summary>Resolves the effective View from the route's ViewId, then (Spec §13.13.3) the item route's <see cref="TaskIdText"/>, every time either changes.</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        this.ResolveEffectiveViewFromRoute();
+        await this.ResolveItemRouteAsync();
+    }
+
+    /// <summary>The View-resolution half of <see cref="OnParametersSetAsync"/> - unchanged from before the item route existed.</summary>
+    private void ResolveEffectiveViewFromRoute()
+    {
+        if (this.ViewId is null)
+        {
+            // The bare /tasks and /tasks/new routes both default to All Tasks; OnAfterRenderAsync
+            // below may still redirect the bare route to a remembered last View. /tasks/new carries
+            // no ViewId of its own to tell the two apart, so the route itself is read from the URI.
+            this.viewNotFound = false;
+            this.invalidView = null;
+            this.SetEffectiveViewFromStore(ViewStore.AllTasksId);
+            if (this.IsTasksNewRoute())
+            {
+                this.editorViewId = null;
+                this.editorOpen = true;
+            }
+
+            return;
+        }
+
+        TaskView? found = this.Views.Get(this.ViewId);
+        if (found is not null)
+        {
+            this.viewNotFound = false;
+            this.invalidView = null;
+            this.effectiveView = found;
+            return;
+        }
+
+        // corrections-B7 §13.2 item 4: an entry that parsed but failed ViewValidator is InvalidView,
+        // not merely absent - it gets its own reason and an Edit View button, never "no longer exists".
+        InvalidView? invalid = this.Views.InvalidViews.FirstOrDefault(v => string.Equals(v.Id, this.ViewId, StringComparison.Ordinal));
+        if (invalid is not null)
+        {
+            this.viewNotFound = false;
+            this.invalidView = invalid;
+            return;
+        }
+
+        this.viewNotFound = true;
+        this.invalidView = null;
+    }
+
+    /// <summary>
+    /// Spec §13.13.3: parses <see cref="TaskIdText"/> and opens the named Task's panel, or - if the text
+    /// is invalid or names no Task - sets <see cref="itemNotFoundText"/> to the exact wording instead.
+    /// Switching away from a different already-open Task goes through <see cref="ConfirmSwitchAsync"/>
+    /// first (corrections-B6 "D15.2" item 2), the same guard <see cref="OnOpenTaskAsync"/> uses.
+    /// </summary>
+    private async Task ResolveItemRouteAsync()
+    {
+        if (this.TaskIdText is not { } text)
+        {
+            this.itemNotFoundText = null;
+            return;
+        }
+
+        if (!TaskId.TryParse(text, out TaskId parsed) || this.Store.Get(parsed) is null)
+        {
+            this.itemNotFoundText = $"No task {text}.";
+            this.selectedTaskId = null;
+            this.selectedDraft = null;
+            this.detailOpen = false;
+            return;
+        }
+
+        this.itemNotFoundText = null;
+        if (this.detailOpen && this.selectedTaskId == parsed)
+        {
+            return;
+        }
+
+        if (!await this.ConfirmSwitchAsync())
+        {
+            return;
+        }
+
+        this.selectedDraft = null;
+        this.selectedTaskId = parsed;
+        this.detailHasPending = false;
+        this.detailOpen = true;
+    }
+
+    /// <summary>Whether the current URL is the literal <c>/tasks/new</c> route, which carries no <see cref="ViewId"/> of its own to tell it apart from the bare <c>/tasks</c> route.</summary>
+    private bool IsTasksNewRoute() =>
+        this.Navigation.ToAbsoluteUri(this.Navigation.Uri).AbsolutePath.EndsWith("/tasks/new", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Opens the View editor drawer for <paramref name="id"/> (the invalid-View route's Edit View button).</summary>
+    private void OpenEditorFor(string id)
+    {
+        this.editorViewId = id;
+        this.editorSection = ViewEditorSection.General;
+        this.editorOpen = true;
+    }
+
+    /// <summary>The Board's <i>Edit columns…</i>: opens the View editor for the effective View at its Columns section (corrections-B7 12.4 item 7).</summary>
+    private void OnEditColumnsClicked()
+    {
+        this.editorViewId = this.effectiveView.Id;
+        this.editorSection = ViewEditorSection.Columns;
+        this.editorOpen = true;
+    }
+
+    /// <summary>Opens the View editor drawer for the currently effective View (Edit View, Spec §13.3).</summary>
+    private Task OnEditViewClickedAsync()
+    {
+        this.OpenEditorFor(this.effectiveView.Id);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Reflects the drawer's own chrome (backdrop, Escape) closing it.</summary>
+    private void OnEditorOpenChanged(bool open) => this.editorOpen = open;
+
+    /// <summary>
+    /// Spec §13.9: on first render of the bare route, reads the remembered last View and navigates
+    /// there if it still exists. The item route (Spec §13.13.3 step 2) reads the same remembered View
+    /// to decide what renders under its panel, but never navigates - the URL stays on
+    /// <c>/tasks/item/{TaskIdText}</c> until the panel closes.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && this.ViewId is null && this.TaskIdText is null && this.Options.Value.Tasks.Enabled)
+        {
+            await this.TryNavigateToLastViewAsync();
+            return;
+        }
+
+        if (firstRender && this.TaskIdText is not null && this.Options.Value.Tasks.Enabled)
+        {
+            await this.TryLoadLastViewForItemRouteAsync();
+        }
+
+        if (this.ViewId is not null && !this.viewNotFound && this.Options.Value.Tasks.Enabled)
+        {
+            await this.TryStoreLastViewAsync(this.ViewId);
+        }
+    }
+
+    /// <summary>Whether the effective View differs from the one <see cref="ViewStore"/> has saved, ignoring <see cref="TaskView.Scope"/> (the Active/Closed toggle is page state only, per Spec §13.3 and <c>TaskToolbar</c>'s own <c>ShowSaveToView</c>).</summary>
+    private bool HasOverrides
+    {
+        get
+        {
+            TaskView? saved = this.Views.Get(this.effectiveView.Id);
+            if (saved is null)
+            {
+                return false;
+            }
+
+            TaskView forCompare = this.effectiveView with { Scope = saved.Scope };
+            string effectiveJson = JsonSerializer.Serialize(forCompare, ViewJson.Options);
+            string savedJson = JsonSerializer.Serialize(saved, ViewJson.Options);
+            return !string.Equals(effectiveJson, savedJson, StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>Discards the toolbar's session overrides, falling back to the saved View.</summary>
+    private void ResetOverrides()
+    {
+        TaskView? saved = this.Views.Get(this.effectiveView.Id);
+        if (saved is not null)
+        {
+            this.effectiveView = saved;
+            this.search = null;
+        }
+    }
+
+    /// <summary>The Tasks matching the effective View's scope and filter and <paramref name="searchText"/>, sorted per its Sort keys - recomputed on every render, so a requery after any of the three subscribed events shows straight away.</summary>
+    /// <param name="searchText">The search to apply; <see langword="null"/> for none (to tell "the search matches nothing" from "the filters match nothing").</param>
+    private IReadOnlyList<TaskItem> FilteredTasks(string? searchText)
+    {
+        IReadOnlyList<TaskItem> filtered = TaskQuery.Filter(
+            this.Store.All,
+            this.effectiveView.Scope,
+            this.effectiveView.Filter,
+            searchText,
+            this.Options.Value.HumanName);
+        return TaskQuery.Sort(filtered, this.effectiveView.Sort);
+    }
+
+    private void SetEffectiveViewFromStore(string id)
+    {
+        if (this.Views.Get(id) is { } view)
+        {
+            this.effectiveView = view;
+        }
+    }
+
+    private Task OnEffectiveViewChangedAsync(TaskView view)
+    {
+        this.effectiveView = view;
+        return Task.CompletedTask;
+    }
+
+    private Task OnSearchChangedAsync(string? value)
+    {
+        this.search = value;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Opens the detail drawer's <see cref="TaskDetail"/> for the clicked row/card - a no-op when it is already showing that Task - guarded by <see cref="ConfirmSwitchAsync"/> (corrections-B7 14.5.i item 2).</summary>
+    /// <param name="id">The clicked Task's id.</param>
+    private async Task OnOpenTaskAsync(TaskId id)
+    {
+        if (this.detailOpen && this.selectedTaskId == id)
+        {
+            return;
+        }
+
+        if (!await this.ConfirmSwitchAsync())
+        {
+            return;
+        }
+
+        this.selectedDraft = null;
+        this.selectedTaskId = id;
+        this.detailHasPending = false;
+        this.detailOpen = true;
+    }
+
+    /// <summary>"+ New task" (the header button, Spec §13.3): opens the drawer's <see cref="TaskDetail"/> in create mode with <paramref name="defaults"/>.</summary>
+    /// <param name="defaults">The Team/Project the effective View's filter names, when it names exactly one.</param>
+    private async Task OnNewTaskAsync(NewTaskDefaults defaults)
+    {
+        if (!await this.ConfirmSwitchAsync())
+        {
+            return;
+        }
+
+        this.selectedTaskId = null;
+        this.selectedDraft = new TaskDraft(string.Empty, defaults.Team ?? string.Empty, defaults.Project);
+        this.detailHasPending = false;
+        this.detailOpen = true;
+    }
+
+    /// <summary>"+ New task" (the §13.12 empty state's own button): computes the same defaults <see cref="TaskToolbar.OnNewTask"/> would, since the button lives outside the toolbar.</summary>
+    private Task OnEmptyStateNewTaskAsync() => this.OnNewTaskAsync(this.BuildNewTaskDefaults());
+
+    /// <summary>The Team/Project defaults for a freshly opened create-mode <see cref="TaskDetail"/>, from the effective View's filter when it names exactly one of each (Spec §13.3) - the same rule <see cref="TaskToolbar"/>'s own "+ New task" button applies.</summary>
+    private NewTaskDefaults BuildNewTaskDefaults()
+    {
+        string? team = this.effectiveView.Filter.Teams.Count == 1 ? this.effectiveView.Filter.Teams[0] : null;
+        string? project = this.effectiveView.Filter.Projects.Count == 1 ? this.effectiveView.Filter.Projects[0].Project : null;
+        return new NewTaskDefaults(team, project);
+    }
+
+    /// <summary>
+    /// Asks the currently mounted <see cref="TaskDetail"/> (if any) to confirm discarding pending
+    /// edits before this page switches what the drawer shows (corrections-B7 14.5.i item 2). With
+    /// nothing mounted yet - the drawer has never been opened - there is nothing to discard.
+    /// </summary>
+    private Task<bool> ConfirmSwitchAsync() => this.detail is null ? Task.FromResult(true) : this.detail.ConfirmDiscardAsync();
+
+    /// <summary>Closes the detail drawer (<see cref="TaskDetail.OnClose"/>): Cancel, a successful Close/Reopen, or returning from Expand.</summary>
+    private void OnDetailClosed() => this.OnDetailOpenChanged(false);
+
+    /// <summary>
+    /// Reflects the drawer's own chrome (backdrop click, Escape) closing it, and <see cref="TaskDetail.OnClose"/>
+    /// (Cancel, Close/Reopen, Expand) - both go through here. On the item route (Spec §13.13.3 step 4),
+    /// closing also replaces the URL with <c>/tasks/{effectiveView.Id}</c>, so Back does not reopen the
+    /// panel; the ordinary <c>/tasks</c>/<c>/tasks/{ViewId}</c> routes never change the URL on close.
+    /// </summary>
+    /// <param name="open">The drawer's new Open state.</param>
+    private void OnDetailOpenChanged(bool open)
+    {
+        this.detailOpen = open;
+        if (!open && this.TaskIdText is not null)
+        {
+            this.Navigation.NavigateTo($"/tasks/{this.effectiveView.Id}", replace: true);
+        }
+    }
+
+    /// <summary>
+    /// Tracks <see cref="TaskDetail.HasPendingChanged"/> (settled J58): the drawer's own
+    /// <c>OverlayAutoClose</c> reads <see cref="detailHasPending"/>, never <c>this.detail.HasPending</c>
+    /// directly - <see cref="TaskDetail"/> changing its own <c>pending</c> does not, by itself,
+    /// re-render this page, so a direct read could act on a stale "nothing pending" and let the
+    /// overlay silently discard a real edit.
+    /// </summary>
+    /// <param name="hasPending">Whether <see cref="TaskDetail"/> now has an unsaved edit pending.</param>
+    private void OnDetailHasPendingChanged(bool hasPending) => this.detailHasPending = hasPending;
+
+    /// <summary>
+    /// <see cref="TaskDetail"/> only loads its <see cref="TaskDetail.Id"/>/<see cref="TaskDetail.Draft"/>
+    /// once, in its own <c>OnInitializedAsync</c> - changing those parameters on the same instance would
+    /// not reload it. Keying on the target (the Task id, or the Draft instance itself for create mode)
+    /// forces Blazor to tear down and recreate <see cref="TaskDetail"/> whenever the drawer switches to
+    /// a different Task or a fresh create-mode Draft.
+    /// </summary>
+    private object DetailKey => this.selectedDraft is { } draft ? draft : this.selectedTaskId is { } id ? id : "tasks-detail-none";
+
+    /// <summary>The ids of every Task in the current effective View (Spec §10.8), unnarrowed by the search box, for <see cref="AiReactingChip.Watched"/>.</summary>
+    private IReadOnlyList<TaskId> WatchedTaskIds => this.FilteredTasks(null).Select(t => t.Id).ToList();
+
+    private void OnTasksReloaded() => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    private void OnTaskChanged(TaskChange change) => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    private void OnViewsChanged() => _ = this.DispatchAsync(() =>
+    {
+        this.SetEffectiveViewFromStore(this.effectiveView.Id);
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a hub event racing component teardown can throw (§13.11).</summary>
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to render.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
+    }
+
+    private async Task TryNavigateToLastViewAsync()
+    {
+        string? lastViewId;
+        try
+        {
+            lastViewId = await this.JS.InvokeAsync<string?>("huddleStorage.get", "huddle.tasks.lastView");
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit gone; nothing to navigate.
+            return;
+        }
+        catch (JSException)
+        {
+            // Storage inaccessible (e.g. a private window); stay on All Tasks.
+            return;
+        }
+
+        if (lastViewId is not null && this.Views.Get(lastViewId) is not null)
+        {
+            this.Navigation.NavigateTo($"/tasks/{lastViewId}", replace: true);
+        }
+    }
+
+    /// <summary>
+    /// The item route's own half of Spec §13.9/§13.13.3 step 2: reads the same remembered last View,
+    /// but only to decide what <see cref="effectiveView"/> renders under the panel - never navigates,
+    /// since the URL stays on <c>/tasks/item/{TaskIdText}</c> until the panel closes.
+    /// </summary>
+    private async Task TryLoadLastViewForItemRouteAsync()
+    {
+        string? lastViewId;
+        try
+        {
+            lastViewId = await this.JS.InvokeAsync<string?>("huddleStorage.get", "huddle.tasks.lastView");
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit gone; nothing to render.
+            return;
+        }
+        catch (JSException)
+        {
+            // Storage inaccessible (e.g. a private window); stay on All Tasks.
+            return;
+        }
+
+        if (lastViewId is not null && this.Views.Get(lastViewId) is { } view)
+        {
+            this.effectiveView = view;
+            this.StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// The page's own copy path (corrections-B7 "15.2.i" item 2, J52): a Board card's or a List row's
+    /// "Copy id" calls <c>huddleClipboard.copy</c> directly, with no other <c>await</c> before it (the
+    /// Spec §13.13.1 warning), and shows the same success/warning toast as the detail header's button.
+    /// </summary>
+    /// <param name="id">The Task id to copy.</param>
+    private async Task OnCopyIdAsync(TaskId id)
+    {
+        bool copied = await this.JS.InvokeAsync<bool>("huddleClipboard.copy", id.ToString());
+        if (copied)
+        {
+            this.Snackbar.Add($"Copied {id}", Severity.Success, configure: null, key: "copy");
+        }
+        else
+        {
+            this.Snackbar.Add("Couldn't copy. The id is selected; press Ctrl+C.", Severity.Warning, configure: null, key: "copy");
+        }
+    }
+
+    private async Task TryStoreLastViewAsync(string viewId)
+    {
+        try
+        {
+            await this.JS.InvokeVoidAsync("huddleStorage.set", "huddle.tasks.lastView", viewId);
+        }
+        catch (JSDisconnectedException)
+        {
+            // Circuit gone; nothing to persist.
+        }
+        catch (JSException)
+        {
+            // Storage inaccessible; the key is the only thing lost.
+        }
+    }
+}

@@ -800,3 +800,90 @@ button:focus-visible {
     justify-content: flex-end;
 }
 
+/* Tasks */
+
+/* The Board's horizontal scroller: one fixed-width column per lane, laid out with CSS grid
+   rather than flex so every column keeps the same width regardless of its content. */
+.task-board-lane {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(240px, 1fr);
+}
+
+/* One class per TaskColors state family, so a Board column's left edge reads the same
+   colour as the state's chip without a second lookup table. */
+.task-col-edge-default {
+    border-inline-start: 3px solid var(--mud-palette-lines-default);
+}
+
+.task-col-edge-info {
+    border-inline-start: 3px solid var(--mud-palette-info);
+}
+
+.task-col-edge-warning {
+    border-inline-start: 3px solid var(--mud-palette-warning);
+}
+
+.task-col-edge-secondary {
+    border-inline-start: 3px solid var(--mud-palette-secondary);
+}
+
+.task-col-edge-success {
+    border-inline-start: 3px solid var(--mud-palette-success);
+}
+
+.task-col-edge-error {
+    border-inline-start: 3px solid var(--mud-palette-error);
+}
+
+/* A ghost bucket: a drop zone with nothing in it. Dashed until a drag can land there. */
+.task-ghost-bucket {
+    border: 1px dashed var(--mud-palette-lines-default);
+}
+
+/* While a drag is over a bucket that will accept it: a solid primary border on a
+   hover-tinted background, so "this can take the drop" reads at a glance. */
+.task-ghost-bucket.task-zone-can {
+    border: 1px solid var(--mud-palette-primary);
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+.task-card {
+    text-align: left;
+}
+
+/* The card currently being dragged. */
+.task-card-dragging {
+    border: 1px solid var(--mud-palette-primary);
+}
+
+/* The card's focus ring, on its focusable open button (the card itself is a div): text-primary,
+   not primary - the same WCAG 1.4.11 contrast reasoning as the page-wide :focus-visible rule
+   above. Do not "improve" this back to an accent colour. */
+.task-card-open:focus-visible {
+    outline: 2px solid var(--mud-palette-text-primary);
+}
+
+/* A row or date past its due date. */
+.task-overdue {
+    color: var(--mud-palette-warning);
+}
+
+/* A Task id rendered as a link inside a chat Message: a dotted underline keeps it visibly
+   different from an ordinary web link. */
+.task-ref {
+    color: var(--mud-palette-primary);
+    text-decoration: underline dotted;
+}
+
+/* A link to a Closed Task, drawn struck through in addition to .task-ref's styling. */
+.task-ref-closed {
+    text-decoration: line-through;
+}
+
+/* The detail header's id text (Spec §13.13.1): a single click selects it, so Ctrl+C still works if
+   the copy button's clipboard call itself fails. */
+.task-id {
+    user-select: all;
+}
+

@@ -29,6 +29,7 @@ public sealed class ToolNamesTests
 
         var follows = new RoomFollows();
         var checker = new CandidateChecker(personaStore, directory, gateway);
+        using TaskToolHarness taskHarness = new();
         var tools = new IAppTool[]
         {
             new ListAgentsTool(directory, gateway, personaStore, new FakePromptSource()),
@@ -40,6 +41,12 @@ public sealed class ToolNamesTests
             new ValidateTeammateTool(checker, new FakePromptSource()),
             new ProposeTeammatesTool(proposals, checker, personaStore, directory, Options.Create(new TeamOptions()), TimeProvider.System, "caller-id", new FakePromptSource()),
             new GetHelpTool([], new FakePromptSource(), "mcp__team__"),
+            new CreateTaskTool(taskHarness.Service, taskHarness.Triggers, taskHarness.Directory, new FakePromptSource(), "caller-id"),
+            new GetTaskTool(taskHarness.Store, new FakePromptSource()),
+            new ListTasksTool(taskHarness.Store, taskHarness.Directory, taskHarness.Personas, new FakePromptSource(), "caller-id"),
+            new UpdateTaskTool(taskHarness.Service, taskHarness.Store, taskHarness.Triggers, taskHarness.Directory, new FakePromptSource(), "caller-id"),
+            new CloseTaskTool(taskHarness.Service, taskHarness.Store, taskHarness.Triggers, taskHarness.Directory, new FakePromptSource(), "caller-id"),
+            new ReopenTaskTool(taskHarness.Service, taskHarness.Store, taskHarness.Triggers, taskHarness.Directory, new FakePromptSource(), "caller-id"),
         };
 
         Assert.Equal("list_agents", tools[0].Name);
@@ -51,5 +58,11 @@ public sealed class ToolNamesTests
         Assert.Equal("validate_teammate", tools[6].Name);
         Assert.Equal("propose_teammates", tools[7].Name);
         Assert.Equal("get_help", tools[8].Name);
+        Assert.Equal("create_task", tools[9].Name);
+        Assert.Equal("get_task", tools[10].Name);
+        Assert.Equal("list_tasks", tools[11].Name);
+        Assert.Equal("update_task", tools[12].Name);
+        Assert.Equal("close_task", tools[13].Name);
+        Assert.Equal("reopen_task", tools[14].Name);
     }
 }

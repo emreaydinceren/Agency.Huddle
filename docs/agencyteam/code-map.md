@@ -21,6 +21,7 @@ the hub: [AgencyTeam.md](../AgencyTeam.md).
 | `Services/MentionParser.cs` | Finds Mentions. Resolves `@name` against the Room's Members, longest handle first — **not** by pattern. Candidates are every Member's Name plus every Persona Alias whose owner is in the Room; a Name beats an equal-length Alias. See [Rules](rules.md). |
 | `Services/MentionAlias.cs`, `IMentionAliasSource.cs` | Supplies the Aliases in force, so `ChatService` and the invite tools need no dependency on `PersonaStore`. Implemented by `PersonaStore`, registered to the same singleton instance. |
 | `Services/MarkdownRenderer.cs` | Markdig. **Never call `UseAdvancedExtensions()`**. |
+| `Services/TurnActivity.cs` | Which Agent has a Turn running in which Room, fed by `RoomSession`; the Tasks UI reads it for the "AI reacting" badge (Spec §10.8). |
 | `Data/SqliteTeamDirectory.cs` | Humans, Agents, Rooms, Members. `ITeamDirectory` is the interface. |
 | `Data/FileChatStore.cs` | One JSONL Transcript per Room under `App_Data/rooms/`. |
 | `Data/PersonaModelStore.cs` | One row per Persona: its chosen Model. A separate table in the same `team.db`, **not** a column on `users` — see [Rules](rules.md). Synchronous, because its only caller is. |
@@ -31,6 +32,24 @@ the hub: [AgencyTeam.md](../AgencyTeam.md).
 | `Components/Pages/Teammates.razor` | The Persona library UI, at `/teammates`. Teammate tiles grouped by Team with a Team filter, the rejected-file list above them; owns the open card's state. |
 | `Components/Pages/TeammateGrouping.cs` | The grouping and filtering behind that page, as a pure function — extracted because `HtmlRenderer` cannot simulate choosing a `<select>` option, so inline it would have been untestable. |
 | `Components/Pages/Settings.razor` | The settings shell at `/settings`. Its tab rail is `MudTabs`, but the tabs still **route** — `ActivePanelIndex` is derived from the `{Tab}` route parameter and a click calls `NavigateTo`, so `/settings/prompts` stays bookmarkable and an unknown tab still falls back. Owns every editable Prompt value; `PromptsPanel` holds none. |
+| `Components/Pages/Tasks.razor` | The Tasks page (Spec §13.2): holds the effective View — the saved View with the toolbar's session overrides applied — and requeries on `TasksReloaded`, `TaskChanged` and `ViewsChanged`. |
+| `Components/Tasks/TaskColors.cs` | The Spec §13.10 mapping from a Task's state, priority or presence to a MudBlazor `Color` (and the priority icon). |
+| `Components/Tasks/TaskDetailMode.cs` | Which of `TaskDetail`'s two layouts (Spec §13.6) is shown. |
+| `Components/Tasks/ConflictChoice.cs` | Which side of a conflicting field the Human picked when resolving a `TaskResult.Conflict` (Spec §13.7). |
+| `Components/Tasks/NewTaskDefaults.cs` | The Team and Project a freshly opened create-mode `TaskDetail` dialog should default to (Spec §13.3). |
+| `Components/Tasks/ViewEditorSection.cs` | Which section of `ViewEditorDrawer` renders as initially active when it opens. |
+| `Components/Tasks/TaskToolbar.razor` | The page's toolbar (Spec §13.3): session-only filter/group/sort/kind overrides over the saved View, and "Save to View" when they diverge. |
+| `Components/Tasks/TaskViewNav.razor` | The sidebar's list of Views (Spec §13.1), one `MudNavGroup` titled "Tasks" between Teammates and Settings. |
+| `Components/Tasks/TaskListView.razor` | The List (Spec §13.3a): a read-only `MudDataGrid<TaskItem>` whose columns follow `View.Fields` and whose grouping matches `TaskQuery`'s own ordering rule. |
+| `Components/Tasks/TaskBoard.razor` | The Board (Spec §13.4): one `MudDropContainer` with one `MudDropZone` per lane/column, laid out from `BoardLayout.Build`. |
+| `Components/Tasks/TaskCard.razor` | The Board's card (Spec §13.4): a `<div>` root so the ⋮ menu's activator and the Awake link sit outside the clickable open-detail control. |
+| `Components/Tasks/TaskDetail.razor` | Task detail (Spec §13.6), both the drawer and expanded layouts: every field, the Save/Revert cycle, the conflict UI, Expand/Close/Reopen/Make a copy, and the Change log. |
+| `Components/Tasks/TaskDetailDialog.razor` | Task detail's Expanded layout (Spec §13.6): wraps `TaskDetail` in a `MudDialog`, taking only an id or a create/copy draft. |
+| `Components/Tasks/ViewEditorDrawer.razor` | The View editor (Spec §13.5): Name/Description, kind and scope, Fields, Filters, Grouping, Sorting, Columns, validation and Delete. |
+| `Components/Tasks/DuplicatePickerDialog.razor` | Asks which Task a moved Task duplicates (Spec §13.4 Dropping step 2), a strict `MudAutocomplete` over the Task index. |
+| `Components/Tasks/ReasonDialog.razor` | Asks for an optional reason when a Task moves to Cancelled or Rejected (Spec §13.4 Dropping step 3). |
+| `Components/Tasks/AiReactingChip.razor` | The page header's "AI reacting" chip (Spec §13.8, §10.8): shown while a Watched Task's last wake's Room has a Turn running. |
+| `Components/Tasks/WakeToasts.razor` | Turns `TaskActivity` wake events into Snackbar toasts while the Tasks page is open (Spec §13.8). |
 | `Components/Settings/PromptsPanel.razor` | The twenty-two Prompts, grouped and editable. Takes exactly one non-string parameter, so it cannot hit the missing-`@` trap [Rules](rules.md) describes and needs no source-regex guard of its own. |
 | `Components/Settings/PromptFieldFactory.cs` | The grouping, the three-state flags and the textarea sizing, as pure functions — extracted for the same reason `TeammateGrouping` is: `HtmlRenderer` cannot dispatch a click, so logic inside a component is untestable here. |
 | `Components/Settings/PromptFieldState.cs` | One row's view-model, plus `PromptEdit` and the group record. Public because a Razor `[Parameter]` may not be of an internal type; the catalog and the store stay internal behind it. |
@@ -112,6 +131,13 @@ order decides per Token, independently.
 | `Tools/CreateRoomTool.cs` | Takes `agents[]` and no name — a Room is named after its Agents. |
 | `Tools/InviteAgentTool.cs` | Adds an Agent to a Room that already exists. Takes the Room's id, which a Turn's `[Room: …]` label carries. |
 | `Tools/PostMessageTool.cs` | Speak into a Room other than the current one. Without this an agent-created Room stays silent. After a successful post it calls `OwnPosts.Record` (RS §6.7), so the target Room's next Turn carries it as *You, from another Room: …* — the only way that Room Session learns of a post its own Turn did not make. |
+| `Tools/TaskToolText.cs` | Shared text and argument-parsing helpers every Task App Tool reuses (Spec §11.1): rendering a Task as one line, resolving an id or actor, phrasing the notify clause, and turning a `TaskService` exception into refusal text. |
+| `Tools/CreateTaskTool.cs` | Creates a Task (Spec §11.2): validates arguments in the spec's order, then hands the rest to `TaskService.Create` and reports who will be notified. |
+| `Tools/GetTaskTool.cs` | Reads one Task's full text (Spec §11.3), including its Change log on request; the one read-only Task tool, so it takes no caller identity. |
+| `Tools/ListTasksTool.cs` | Lists Tasks matching a filter, sorted the same way Views are (Spec §11.4), through the same pure `TaskQuery` helpers the Tasks page uses. |
+| `Tools/UpdateTaskTool.cs` | Changes one or more fields of an existing Task (Spec §11.5) through `TaskService.Update`, always with `baseVersion: null` since a tool call tracks no draft version. |
+| `Tools/CloseTaskTool.cs` | Closes a Task into its Team's (or Project's) `_closed` folder (Spec §11.6); refused when already Closed. Mirrors `ReopenTaskTool`. |
+| `Tools/ReopenTaskTool.cs` | Reopens a Task out of `_closed` (Spec §11.6); refused when already Active. Mirrors `CloseTaskTool`. |
 
 `src/Huddle.App/Acp/Sessions` — a Room Session for each (Persona, Room), delivering
 [roadmap item 18](roadmap.md#18-one-session-per-room--delivered-code-2026-09-23) and
@@ -153,6 +179,47 @@ order decides per Token, independently.
 | `PromptRenderer.cs` | `{{name}}` substitution. Single-pass by construction — matches are found against the original template and the output is built from literal slices, so a substituted value containing `{{b}}` is never re-expanded. |
 | `PromptValidator.cs`, `PromptIssue.cs` | The two failures that are otherwise invisible: a prompt that stopped naming a tool, a Room label that lost its id. Reports and never refuses — see [Rules](rules.md). |
 | `PromptStore.cs`, `IPromptSource.cs` | Resolves overrides over defaults per key. One frozen snapshot behind a volatile field, rebuilt before `PromptsChanged` is raised and never mutated after publish. Debounced `FileSystemWatcher`, same recipe as `PersonaStore` — see [Traps](traps.md). Synchronous, because a tool's `Description` getter and a Razor render cannot await. |
+
+`src/Huddle.App/Tasks` — Tasks, the work item the Human and AI Teammates share (Spec §7-§13):
+
+| Path | Responsibility |
+| --- | --- |
+| `TaskId.cs` | A Task's unique identifier: `PREFIX-0042`, parsed and formatted case-insensitively. |
+| `TaskItem.cs` | The Task record itself, plus `TaskActor`, `TaskActorKind`, `TaskLocation` and `ChangeLogEntry`. |
+| `TaskState.cs` | `TaskState` and `TaskPriority`, their wire names, declaration order and `TryParse`/`ToWire` extensions. |
+| `TaskLayout.cs` | Maps a file path to a `TaskLocation` under the Team/Project/`_closed` folder rules, and back to a file path. |
+| `TaskFileFormat.cs` | Parses, composes and version-hashes a Task file (Spec §7); the only place that reads or writes a Task file's text. |
+| `TaskStore.cs` | Owns every file under `{DataDir}/{Tasks.Dir}`: the in-memory index, rejected files, Team/Project listing, writes and moves, and the outside-edit watcher (Spec §8). |
+| `RejectedTaskFile.cs` | A file under the Tasks scan root that did not become an indexed `TaskItem` (Spec §8.1-§8.2). |
+| `TeamFolder.cs` | A Team folder found under the Tasks scan root, with its Project sub-folders (Spec §8.2). |
+| `TaskIdAllocator.cs` | Assigns Task ids: a per-Team prefix and a never-reused per-Team number (Spec §8.6), stored in `team.db`. |
+| `OutsideEdit.cs` | A Task's state before and after an edit made outside Huddle, noticed by `TaskStore`'s filesystem watcher (Spec §8.4). |
+| `TaskDraft.cs` | A new Task, as offered to `TaskService.Create` (Spec §9.1). |
+| `TaskPatch.cs` | Distinguishes "leave this field alone" from "set this field, possibly to null" for a Task update (Spec §9.1). |
+| `TaskResult.cs` | The outcome of a `TaskService` mutation (Spec §9.1): expected failures are values, never exceptions. |
+| `TaskDiff.cs` | A field-by-field diff between two versions of a `TaskItem` (Spec §7.5) and the Change log summary vocabulary (Spec §7.4). |
+| `TaskDiffTypes.cs` | `FieldChange` and `TaskField`, the fields a Task diff can name. |
+| `TaskEvents.cs` | One successful change to a Task (Spec §9.5): before, after, what changed, who changed it, and its Change log entry. |
+| `TaskService.cs` | The only way to change a Task (Spec §9): validates, builds the Change log entry, writes through `TaskStore`, and raises `TaskEvents.TaskChanged`. |
+| `TaskActors.cs` | Builds the `TaskActor` for the Human, the one actor `PersonaStore` knows nothing about. |
+| `TaskTriggerService.cs` | What saving a Task change would do to its assignee (Spec §10.1): who it would notify, their presence, and which guard stops it. |
+| `TaskActivity.cs` | `WakeOutcome`, `WakeRecord` and `WakeBudget`, plus the in-memory per-Task record of Agent-made wake attempts (Spec §10.6-§10.7). |
+| `AssigneeOption.cs` | One candidate in `TaskDetail`'s Assignee autocomplete (Spec §13.6): a known Persona's Name, title and presence. |
+| `TaskPresence.cs` | Resolves the Tasks UI's presence badge (Awake/Asleep/Offline) from an Agent's online and busy state (Spec §10.8). |
+| `TaskReference.cs` | Resolves a candidate Task id found in rendered Markdown to the Task it names, so `MarkdownRenderer` can link it (Spec §13.13.2). |
+| `TasksOptions.cs` | Configuration for the Tasks feature: `Enabled`, `Dir`, `WakeEnabled`, `WakeCoalesceSeconds`, `AgentWakeBudget`. |
+
+`src/Huddle.App/Tasks/Views` — saved arrangements of Tasks (Spec §12):
+
+| Path | Responsibility |
+| --- | --- |
+| `TaskView.cs` | A saved arrangement of Tasks: `TaskView`, `TaskFilter`, `ViewKind`, `ViewScope`, `TaskGroupField`, `SortKey`, `BoardColumn` and the Views-document shape. |
+| `ViewFieldKeys.cs` | The field keys a View's Fields and sort keys can name (Spec §12.2). |
+| `ViewJson.cs` | JSON options and converters for `views.json`, including the wire-name converters for `TaskState` and `TaskPriority`. |
+| `ViewStore.cs` | Joins the two built-in Views with the Human-editable `views.json`, resolving the current set of Views every render reads. |
+| `ViewValidator.cs` | Validates a `TaskView` against Spec §12.4; pure, never throws for an invalid View. |
+| `BoardLayout.cs` | Builds a `BoardModel` (lanes and columns) from sorted Tasks and a `TaskView`, for Spec §12.6. |
+| `TaskQuery.cs` | Pure querying over Tasks: filtering, sorting, grouping and the `#` picker's search (Spec §12.5, §13.13.4). |
 
 `src/Huddle.Acp` — the ACP client:
 

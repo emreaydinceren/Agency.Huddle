@@ -3,6 +3,7 @@ using System.Text;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
+using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Acp.Sessions;
@@ -67,6 +68,11 @@ internal sealed class RoomSession : IAsyncDisposable
     // agentId yet (unreachable in practice: PersonaRunner always has one before it builds a pool).
     private readonly OwnPosts? ownPosts;
     private readonly string? agentId;
+
+    // Spec §10.8: records which Room this session's Agent has a Turn running in, for the Tasks UI's
+    // "AI reacting" badge. Both null for a caller that predates it, the same "absent means off"
+    // reasoning as ownPosts just above.
+    private readonly TurnActivity? turnActivity;
 
     // Guards every field below: the queue, the state machine, the Stop marks, activeTurn and
     // pendingStopCancel - one lock, exactly as turnLock was on PersonaRunner, for the same reason:
@@ -140,7 +146,8 @@ internal sealed class RoomSession : IAsyncDisposable
     /// <param name="roomSessions">Backs resume and the Transcript Catch-up cursor (RS §6.1, §6.6). <see langword="null"/> disables storing and resuming.</param>
     /// <param name="host">Supplies <see cref="IPersonaHost.CanResume"/>, <see cref="AdapterProfile.Id"/> and <see cref="IPersonaHost.ResumeAsync"/> for the resume decision. <see langword="null"/> disables resume.</param>
     /// <param name="ownPosts">Marks this session's Room Busy for a Turn's own duration (D27, RS §6.7). <see langword="null"/> disables it, like every pre-D27 caller.</param>
-    /// <param name="agentId">This session's owning Agent's id, passed to <paramref name="ownPosts"/>. <see langword="null"/> disables it, like every pre-D27 caller.</param>
+    /// <param name="agentId">This session's owning Agent's id, passed to <paramref name="ownPosts"/> and <paramref name="turnActivity"/>. <see langword="null"/> disables it, like every pre-D27 caller.</param>
+    /// <param name="turnActivity">Records which Room this Agent has a Turn running in (Spec §10.8). <see langword="null"/> disables it, like every caller that predates it.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -157,7 +164,8 @@ internal sealed class RoomSession : IAsyncDisposable
         RoomSessionStore? roomSessions = null,
         IPersonaHost? host = null,
         OwnPosts? ownPosts = null,
-        string? agentId = null)
+        string? agentId = null,
+        TurnActivity? turnActivity = null)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
@@ -184,6 +192,7 @@ internal sealed class RoomSession : IAsyncDisposable
         this.host = host;
         this.ownPosts = ownPosts;
         this.agentId = agentId;
+        this.turnActivity = turnActivity;
 
         this.consumerTask = this.RunConsumerAsync(runToken);
     }
@@ -876,6 +885,11 @@ internal sealed class RoomSession : IAsyncDisposable
         if (this.agentId is { } beginTurnAgentId)
         {
             this.ownPosts?.BeginTurn(beginTurnAgentId, this.RoomId);
+
+            // D8 correction 1: this.RoomId is null for a shared session, but the Turn itself always
+            // belongs to a real Room - turn.RoomId, captured from item.RoomId above - so TurnActivity
+            // is always told the Turn's own Room, never this session's (possibly null) one.
+            this.turnActivity?.Begin(beginTurnAgentId, turn.RoomId);
         }
 
         try
@@ -984,6 +998,7 @@ internal sealed class RoomSession : IAsyncDisposable
             if (this.agentId is { } endTurnAgentId)
             {
                 this.ownPosts?.EndTurn(endTurnAgentId, this.RoomId);
+                this.turnActivity?.End(endTurnAgentId, turn.RoomId);
             }
 
             lock (this.gate)

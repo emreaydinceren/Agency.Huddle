@@ -26,16 +26,16 @@ public sealed class PromptFieldFactoryTests
         }
     }
 
-    /// <summary>The four groups appear in the documented order, with the labels the Settings page shows.</summary>
+    /// <summary>The five groups appear in the documented order, with the labels the Settings page shows.</summary>
     [Fact]
-    public void Build_GroupsInOrder_SystemPromptTurnGetHelpTool()
+    public void Build_GroupsInOrder_SystemPromptTurnGetHelpToolTasks()
     {
         var prompts = new FakePromptSource();
 
         var groups = PromptFieldFactory.Build(prompts, NoPendingEdits);
 
         Assert.Equal(
-            ["System prompt", "Turn", "Get help", "Tool descriptions"],
+            ["System prompt", "Turn", "Get help", "Tool descriptions", "Tasks"],
             groups.Select(group => group.Label).ToList());
     }
 

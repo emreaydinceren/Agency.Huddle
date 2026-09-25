@@ -439,6 +439,12 @@ public sealed class ProposalCardTests
         }
 
         /// <inheritdoc />
+        public Task<Room?> FindRoomWithExactMemberSetAsync(IReadOnlyCollection<string> memberIds, CancellationToken ct = default)
+        {
+            return inner.FindRoomWithExactMemberSetAsync(memberIds, ct);
+        }
+
+        /// <inheritdoc />
         public Task SetRoomArchivedAsync(string roomId, bool archived, CancellationToken ct = default)
         {
             return inner.SetRoomArchivedAsync(roomId, archived, ct);
