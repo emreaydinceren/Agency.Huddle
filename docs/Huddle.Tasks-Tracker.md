@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then.
 
-**Status:** 97 of 147 tasks Done · 5 of 9 retrospectives done · last updated 2026-09-24.
+**Status:** 101 of 147 tasks Done · 5 of 9 retrospectives done · last updated 2026-09-24.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -69,8 +69,8 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 6.5.t Test: logging edits made outside Huddle · #44 · Sonnet | | | ✔ |
 | 6.5.i Implement outside-edit logging · #45 · Sonnet | | | ✔ |
 | 🔁 R3 — Opus retrospective after #45, and plan update | | | ✔ |
-| 6.6.t Test: renaming a Teammate · #46 · Sonnet | | ✔ | |
-| 6.6.i Implement renaming, and the cascade hook · #47 · Sonnet | | ✔ | |
+| 6.6.t Test: renaming a Teammate · #46 · Sonnet | | | ✔ |
+| 6.6.i Implement renaming, and the cascade hook · #47 · Sonnet | | | ✔ |
 | **D7. Views core (pure logic and `ViewStore`)** | | | |
 | 7.1.t Test: View records and their JSON shape · #48 · Haiku | | | ✔ |
 | 7.1.i Implement the View records and `ViewJson` · #49 · Haiku | | | ✔ |
@@ -110,8 +110,8 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 9.4.i Implement coalescing and posting · #79 · Sonnet | | | ✔ |
 | 9.5.t Test: choosing the Room · #80 · Sonnet | | | ✔ |
 | 9.5.i Implement choosing the Room · #81 · Sonnet | | | ✔ |
-| 9.6.t Test: outcomes and the wake budget · #82 · Sonnet | | ✔ | |
-| 9.6.i Implement outcomes and the budget · #83 · Sonnet | | ✔ | |
+| 9.6.t Test: outcomes and the wake budget · #82 · Sonnet | | | ✔ |
+| 9.6.i Implement outcomes and the budget · #83 · Sonnet | | | ✔ |
 | **D10. App Tools** | | | |
 | 10.1.t Test: shared tool text helpers · #84 · Haiku | | | ✔ |
 | 10.1.i Implement `TaskToolText` · #85 · Haiku | | | ✔ |
@@ -126,7 +126,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 10.5.i Implement `update_task` · #93 · Sonnet | | ✔ | |
 | 10.6.t Test: `close_task` and `reopen_task` · #94 · Haiku | | ✔ | |
 | 10.6.i Implement `close_task` and `reopen_task` · #95 · Haiku | | ✔ | |
-| 10.7.t Test: the task Prompts · #96 · Sonnet | ✔ | | |
+| 10.7.t Test: the task Prompts · #96 · Sonnet | | ✔ | |
 | 10.7.i Write the task Prompts · #97 · Sonnet | ✔ | | |
 | 10.8.t Test: registering the tools, and the goldens · #98 · Sonnet | ✔ | | |
 | 10.8.i Register the tools and reseed the goldens · #99 · Sonnet | ✔ | | |
