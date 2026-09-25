@@ -1,5 +1,6 @@
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App;
@@ -33,6 +34,12 @@ public sealed class TeamOptions
     public AcpOptions Acp { get; set; } = new();
 
     public FileChangesOptions FileChanges { get; set; } = new();
+
+    /// <summary>Configuration for the Library feature, per Spec §7: file explorer, document viewer, wikilinks, pinned roots.</summary>
+    public LibraryOptions Library { get; set; } = new();
+
+    /// <summary>Configuration for team and teammate folder names, per Spec §7. Shared with the Tasks feature.</summary>
+    public TeamsOptions Teams { get; set; } = new();
 
     /// <summary>Configuration for the Tasks feature.</summary>
     public TasksOptions Tasks { get; set; } = new();
