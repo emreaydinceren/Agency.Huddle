@@ -36,7 +36,7 @@ public sealed class TaskServiceRenameTeammateTests
                 changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
         TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "_closed", "PLAT-0002.md"),
+            TestTaskStore.RelativePath("Platform", null, closed: true, "PLAT-0002.md"),
             TestTasks.Make(
                 id: "PLAT-0002",
                 assignee: "You",

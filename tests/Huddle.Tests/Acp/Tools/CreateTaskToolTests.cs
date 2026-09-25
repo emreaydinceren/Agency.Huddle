@@ -5,6 +5,7 @@ using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Tasks;
 
 /// <summary>Covers Spec §11.2's <c>create_task</c> tool: its checks, in order, its success text, and that every expected failure is text, never a throw.</summary>
 public sealed class CreateTaskToolTests
@@ -222,7 +223,7 @@ public sealed class CreateTaskToolTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        string collidingPath = Path.Combine(harness.Store.RootDirectory, "Platform", "PLAT-0001.md");
+        string collidingPath = Path.Combine(harness.Store.RootDirectory, TestTaskStore.RelativePath("Platform", null, closed: false, "PLAT-0001.md"));
         Directory.CreateDirectory(Path.GetDirectoryName(collidingPath) ?? throw new InvalidOperationException("Expected a parent directory."));
         File.WriteAllText(collidingPath, "not a task file");
         CreateTaskTool tool = new(harness.Service, harness.Triggers, harness.Directory, new FakePromptSource(), RequireId(harness.NovaId));

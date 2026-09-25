@@ -658,7 +658,7 @@ public sealed partial class TaskBoardColumnMenuTests
             title: "Legal work",
             location: legalLocation,
             changeLog: [TestTasks.Entry("2026-09-20T10:00:00Z", "You", "created")]);
-        _ = TestTaskStore.WriteTask(harness.TasksDirPath, Path.Combine("Legal", "LEGA-0001.md"), legal);
+        _ = TestTaskStore.WriteTask(harness.TasksDirPath, TestTaskStore.RelativePath("Legal", null, closed: false, "LEGA-0001.md"), legal);
         harness.Store.RebuildFromWatcher();
         Assert.True(harness.Store.Teams.Single(t => string.Equals(t.Name, "Legal", StringComparison.Ordinal)).IsOrphan);
         return [.. harness.Store.All.Where(t => t.Id == platform.Id || string.Equals(t.Location.Team, "Legal", StringComparison.Ordinal))];

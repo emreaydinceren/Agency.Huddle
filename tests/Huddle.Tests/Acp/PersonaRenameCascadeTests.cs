@@ -463,7 +463,7 @@ public sealed class PersonaRenameCascadeTests
         harness.PersonaStore.Add(Identity("nova"), "You help.");
         TestTaskStore.WriteTask(
             harness.TaskStore.RootDirectory,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            TestTaskStore.RelativePath("Platform", null, closed: false, "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", assignee: "nova", location: new("Platform", null, false), changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
         harness.TaskStore.RebuildFromWatcher();
         _ = TaskId.TryParse("PLAT-0001", out TaskId id);

@@ -6,6 +6,7 @@ using System.Globalization;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Tasks;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -50,7 +51,7 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
     /// overridden by <see cref="ConfigureWebHost"/>. Tests use this to seed Task files directly, the
     /// same reasoning <see cref="TeammatesDirPath"/>'s own doc records.
     /// </summary>
-    public string TasksDirPath => Path.Combine(this.dataDir.Path, "Tasks");
+    public string TasksDirPath => TestTaskStore.Root(this.dataDir);
 
     /// <summary>
     /// The room database path <see cref="Agency.Huddle.App.Data.SqliteTeamDirectory"/> resolves

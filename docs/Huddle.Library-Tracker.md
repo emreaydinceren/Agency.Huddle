@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 35 of 143 tasks Done · 2 of 8 retrospectives done · last updated 2026-09-25.
+**Status:** 36 of 143 tasks Done · 2 of 8 retrospectives done · last updated 2026-09-25.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -56,7 +56,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 3.8.i Implement `LayoutGuard` · #34 · Haiku | | | ✔ |
 | 3.9 `run.ps1 -Clean` for the new layout · #35 · Sonnet | | | ✔ |
 | **G1. Tasks into Team folders (added 2026-09-25)** | | | |
-| G1.0 Route Task fixtures through layout helpers · #35a · Sonnet | ✔ | | |
+| G1.0 Route Task fixtures through layout helpers · #35a · Sonnet | | | ✔ |
 | G1.1.t Test: `TaskLayout` maps only `_tasks/` · #35b · Sonnet | ✔ | | |
 | G1.1.i Implement the `_tasks` layout · #35c · Sonnet | ✔ | | |
 | G1.2.t Test: `Team:Teams:Dir` is the Tasks root · #35d · Sonnet | ✔ | | |
