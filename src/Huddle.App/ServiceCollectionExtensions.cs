@@ -217,6 +217,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<LibraryRootStore>();
 
         // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
+        // this. Registered right after LibraryRootStore (corrections-B3 4.2.i item 28): it depends
+        // on nothing else, and the constructor never throws on bad configuration either.
+        services.AddSingleton<LibraryPathResolver>();
+
+        // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
         // this, and a plain registration cannot produce the two-watchers-on-one-path hazard the
         // aliased registrations elsewhere in this file exist to avoid.
         services.AddSingleton<ViewStore>();
