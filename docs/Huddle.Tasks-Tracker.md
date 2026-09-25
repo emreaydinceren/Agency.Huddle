@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then.
 
-**Status:** 101 of 147 tasks Done · 5 of 9 retrospectives done · last updated 2026-09-24.
+**Status:** 109 of 147 tasks Done · 6 of 9 retrospectives done · last updated 2026-09-24.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -119,15 +119,15 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 10.2.i Implement `create_task` · #87 · Sonnet | | ✔ | |
 | 10.3.t Test: `get_task` · #88 · Haiku | | ✔ | |
 | 10.3.i Implement `get_task` · #89 · Haiku | | ✔ | |
-| 10.4.t Test: `list_tasks` · #90 · Sonnet | | ✔ | |
-| 🔁 R6 — Opus retrospective after #90, and plan update | ✔ | | |
-| 10.4.i Implement `list_tasks` · #91 · Sonnet | | ✔ | |
-| 10.5.t Test: `update_task` · #92 · Sonnet | | ✔ | |
-| 10.5.i Implement `update_task` · #93 · Sonnet | | ✔ | |
-| 10.6.t Test: `close_task` and `reopen_task` · #94 · Haiku | | ✔ | |
-| 10.6.i Implement `close_task` and `reopen_task` · #95 · Haiku | | ✔ | |
-| 10.7.t Test: the task Prompts · #96 · Sonnet | | ✔ | |
-| 10.7.i Write the task Prompts · #97 · Sonnet | ✔ | | |
+| 10.4.t Test: `list_tasks` · #90 · Sonnet | | | ✔ |
+| 🔁 R6 — Opus retrospective after #90, and plan update | | | ✔ |
+| 10.4.i Implement `list_tasks` · #91 · Sonnet | | | ✔ |
+| 10.5.t Test: `update_task` · #92 · Sonnet | | | ✔ |
+| 10.5.i Implement `update_task` · #93 · Sonnet | | | ✔ |
+| 10.6.t Test: `close_task` and `reopen_task` · #94 · Haiku | | | ✔ |
+| 10.6.i Implement `close_task` and `reopen_task` · #95 · Haiku | | | ✔ |
+| 10.7.t Test: the task Prompts · #96 · Sonnet | | | ✔ |
+| 10.7.i Write the task Prompts · #97 · Sonnet | | | ✔ |
 | 10.8.t Test: registering the tools, and the goldens · #98 · Sonnet | ✔ | | |
 | 10.8.i Register the tools and reseed the goldens · #99 · Sonnet | ✔ | | |
 | **D11. UI shell: nav, page, toolbar, List** | | | |
@@ -147,7 +147,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 11.7.t Test: `TaskListView` · #112 · Sonnet | | | ✔ |
 | 11.7.i Implement `TaskListView` · #113 · Sonnet | | | ✔ |
 | **D12. The Board** | | | |
-| 12.1.t Test: `TaskCard` · #114 · Sonnet | ✔ | | |
+| 12.1.t Test: `TaskCard` · #114 · Sonnet | | ✔ | |
 | 12.1.i Implement `TaskCard` · #115 · Sonnet | ✔ | | |
 | 12.2.t Test: Board zones and ghost buckets · #116 · Sonnet | ✔ | | |
 | 12.2.i Implement `TaskBoard`'s zones · #117 · Sonnet | ✔ | | |
@@ -157,12 +157,12 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 🔁 R8 — Opus retrospective after #120, and plan update | ✔ | | |
 | 12.4.i Implement the column header menu · #121 · Sonnet | ✔ | | |
 | **D13. The View editor** | | | |
-| 13.1.t Test: the editor's general sections · #122 · Sonnet | ✔ | | |
+| 13.1.t Test: the editor's general sections · #122 · Sonnet | | ✔ | |
 | 13.1.i Implement the general sections · #123 · Sonnet | ✔ | | |
 | 13.2.t Test: columns, validation, delete and unsaved changes · #124 · Sonnet | ✔ | | |
 | 13.2.i Implement the rest of the editor · #125 · Sonnet | ✔ | | |
 | **D14. Task detail (one component, two sizes)** | | | |
-| 14.1.t Test: fields, pending edits and the Save label · #126 · Sonnet | ✔ | | |
+| 14.1.t Test: fields, pending edits and the Save label · #126 · Sonnet | | ✔ | |
 | 14.1.i Implement `TaskDetail`'s core · #127 · Sonnet | ✔ | | |
 | 14.2.t Test: status, blockers, tags and dates · #128 · Sonnet | ✔ | | |
 | 14.2.i Implement those fields · #129 · Sonnet | ✔ | | |
@@ -170,7 +170,7 @@ This is the Kanban status of every task in [Huddle.Tasks-ProjectPlan.md](Huddle.
 | 14.3.i Implement the conflict UI · #131 · Sonnet | ✔ | | |
 | 14.4.t Test: Expand, Make a copy, Close and the Change log · #132 · Sonnet | ✔ | | |
 | 14.4.i Implement the dialog and the buttons · #133 · Sonnet | ✔ | | |
-| 14.5.t Test: toast, AI reacting and the wake budget · #134 · Sonnet | ✔ | | |
+| 14.5.t Test: toast, AI reacting and the wake budget · #134 · Sonnet | | ✔ | |
 | 14.5.i Implement the notifications · #135 · Sonnet | ✔ | | |
 | 🔁 R9 — Opus retrospective after #135, and plan update | ✔ | | |
 | **D15. Referencing a Task in chat** | | | |

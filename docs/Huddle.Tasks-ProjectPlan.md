@@ -1891,6 +1891,8 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
     and to `BuildToolsAsync`.
   - A factory test: with `Tasks.Enabled` the six are offered to a Persona with no Skills, and
     with it false none are.
+  - Each registered Task tool's description names only properties of its own `InputSchema`
+    (R6: `list_tasks`' description once advertised a nonexistent `tags` filter).
 - **Acceptance:** Red.
 
 ### Task 10.8.i (#99) — Register the tools and reseed the goldens [Sonnet]
@@ -2217,6 +2219,8 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   - Delete confirms through `ShowMessageBoxAsync`, and the built-ins have no Delete.
   - `MudExitPrompt` is enabled only while the View has unsaved changes.
   - A `LoadError` disables everything.
+  - Every user-facing text (the placement message, the Delete message box's title, text and
+    buttons, the column-in-use label) is asserted exactly (`Assert.Equal`) (R6).
 - **Acceptance:** Red.
 
 ### Task 13.2.i (#125) — Implement the rest of the editor [Sonnet]
@@ -2268,6 +2272,9 @@ Copy `FollowRoomTool.cs` for the shape, and `PostMessageToolTests.cs` for the te
   - A tag is added on Enter.
   - `DateOnly` round-trips through `MudDatePicker`.
   - The overdue adornment.
+  - Each rule at both entry points: the compact panel and the expanded `TaskDetail` (R6).
+  - Every user-facing text is asserted exactly (`Assert.Equal`), from the Spec or the delivery
+    manager's settled texts (R6).
 - **Acceptance:** Red.
 
 ### Task 14.2.i (#129) — Implement those fields [Sonnet]
@@ -2521,7 +2528,7 @@ The manager records each retrospective here, newest last, and commits the plan c
 | R3 | 59 done (5.1–5.3, 7.4–7.7, 8.1–8.5, 9.1–9.2) | 2026-09-24 | R2's Coverage section worked: reported NOT COVERED rows turned into 9 extra tests. `-RedTask` and `Prove-Mutation` worked; one concurrency test only exposed its race on real threads over 25 rounds. Rule breaks despite the brief: implementation written before the red (then `git stash` to rebuild it), `sed -i`, a service made public on false reasoning. A correction scoped to "lane keys" wasn't applied to group keys. The full suite ran 13 times where 6 were needed; about 6 min went to waiting on the test mutex. `Regenerate-PromptDefaults` wrote to the main checkout from a worktree | Edited 5.4, 5.5, 9.3, 9.4, 9.6 and the D6/D10 preambles. Retagged 9.4 Sonnet→Opus and 10.6, 16.3 Haiku→Sonnet. A PreToolUse hook now blocks `find /` and `sed -i` (Emre's choice). Brief: no `src/` writes before the red, visibility changes are stop-and-ask, invariants apply to every surface, full suite once per dispatch. Scripts: `-NewNames`, comma filters, wait logging, `Reseed-Goldens`, `Prove-Mutation -Line`, `Check-Visibility`; `Regenerate-PromptDefaults` fixed. Added the D5/D7/D8 API facts |
 | R4 | 75 done (5.3–5.5, 6.1–6.2, 9.1–9.2, 11.1–11.4, 11.6–11.7) | 2026-09-24 | Code was written before the red three times (8.3, 6.1/6.2, 11.6). Each time the STOP came mid-dispatch or the prompt read like an implementation spec; a STOP at the start of a dispatch always held. Post-hoc tests were weak: 8 of 13 mutants survived in 6.1/6.2. They missed multi-clause rules, the same rule at a second entry point, disk-state invariants, permissive rules, exactly-once events and absent output. Half the command failures came from `Conversation\` not existing inside worktrees | `.t` tasks are now dispatched red-only, with the `.i` sent as a resume. The brief lists the six kinds of behaviour a `.t` must name. Worktrees get a `Conversation` junction. Settled the Create-collision exception path. Edited 6.3–6.6, 10.2, 11.5, 16.5 and the D12 preamble. Retagged 10.1, 10.3 Haiku→Sonnet and 12.2.t →Opus. New scripts: `Prove-Mutations`, `Find-PackageApi`, `Check-Diff`, and a stash guard on reds |
 | R5 | 91 done (6.3–6.5, 9.3, 11.5, 15.1, plus in-flight 10.1 and 9.4) | 2026-09-24 | Red-only dispatch worked: no code before the red, and every STOP was respected. Resumes cost seconds, but a fresh agent spent up to 9.5 min orienting. Test gaps were down to one fix-round (11.5); mutation proofs caught 5 of 5. Forbidden commands were still under-reported (a `find /c/Users`, a python3 edit, a blocked `sed -i`). The runner error with 0 failed tests happened 3×. `Check-Diff` couldn't see uncommitted work. D10's parallel tools would have collided on the harness | Edited 9.5.i, 9.6.t, 6.6.t, 10.6.t, 13.1.t, 12.3.t, 14.1.t, 14.5.t and the D10 preamble. Consecutive tasks on one class now resume the same agent. A harness chore runs before D10. The brief gains a citation rule for NOT COVERED and a transcript self-audit. Scripts: `Check-Diff -Scope Mine`, runner-error auto-rerun with diagnostics, `Audit-Transcript`. The find hook was widened to home, Users and `C:\` roots |
-| R6 | #90 | | | |
+| R6 | 105 done (6.6, 9.4–9.6, 10.1–10.7) | 2026-09-24 | Red-only dispatch held in all 7 `.t` dispatches; resuming the same agent cost 2–6 calls vs 45–56 for a fresh one. `.i` agents wrote refusals and get_task lines with no test and listed them as "design calls" (10.2/10.3, 10.5); 10.5's fix round skipped the second date entry point. Refusal wording drifted three ways across tools built in parallel (enum, date). The list_tasks description advertised a nonexistent `tags` filter, written before the tool existed in that worktree. The guard hook blocked repo-scoped `find "E:\…"`. A test `Seed` bug stayed hidden behind a compile-only red | Brief: untested `.i` branches need a test or a NOT COVERED line; Settled texts only, no substring asserts; Bash paths as `/e/…`. Facts: `IAppTool`, Settled tool texts, folder-derived Task location. Plan: 10.8.t description-vs-schema test; exact texts in 13.2.t/14.2.t; 14.2.t both entry points. Scripts: `Check-Diff` untested-texts and `Contains`-only checks; `Audit-Transcript` flags path errors. Hook fixed in 8e29e42 |
 | R7 | #105 | | | |
 | R8 | #120 | | | |
 | R9 | #135 | | | |
