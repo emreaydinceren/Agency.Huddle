@@ -1,0 +1,345 @@
+@*
+    Task detail (Spec §13.6): one component, two sizes. This dispatch (14.1.i) implements only the
+    core state machine and the "simple fields" - Title, Priority, Description - plus the Save/Revert
+    cycle, the wake notice/Save-label table and the Budget banner (corrections-B5 D14 items 1-6, 13).
+    Status, Assignee, Team/Project, Parent, Blocked by, dates and Tags (14.2), the conflict UI (14.3),
+    Expand/Make a copy/Close/Reopen/the Change log/MudExitPrompt (14.4) and the wake toast/AI-reacting
+    chip (14.5) are later dispatches' work - see TaskDetailTests.cs's own remarks for the split.
+
+    TaskDetailDialog passes only Id (or a Draft for create/copy), because MudBlazor freezes a dialog's
+    parameters once it opens (TeammateCard.razor:12-24) - TaskDetail loads the Task itself and
+    subscribes to TaskEvents (Spec §13.6).
+*@
+@using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Services
+@inject TaskStore Store
+@inject TaskEvents Events
+@inject TaskService Service
+@inject TaskTriggerService Triggers
+@inject TaskActivity Activity
+@inject IOptions<TeamOptions> Options
+@implements IDisposable
+
+<div class="task-detail">
+@if (this.deleted)
+{
+    <MudAlert Severity="Severity.Warning" role="status" Class="task-detail-deleted">This Task was deleted</MudAlert>
+    <MudButton Disabled="true">Save</MudButton>
+}
+else if (this.loaded is { } task)
+{
+    TaskItem effective = this.Effective ?? task;
+    WakePreview preview = this.Triggers.Preview(task, effective, TaskActors.Human(this.Options.Value));
+    string? notice = TaskDetail.NoticeText(preview);
+    string saveLabel = TaskDetail.SaveLabel(preview);
+    bool budgetExhausted = this.Activity.Budget(task.Id).Exhausted;
+    int agentWakeBudget = this.Options.Value.Tasks.AgentWakeBudget;
+
+    @if (this.saveError is not null)
+    {
+        <MudAlert Severity="Severity.Error" role="alert" Class="task-detail-save-error">@this.saveError</MudAlert>
+    }
+
+    @if (budgetExhausted)
+    {
+        <MudAlert Severity="Severity.Warning" Class="task-detail-budget-banner">
+            <span class="task-detail-budget-banner-text">@($"Wake-ups for this task are paused after {agentWakeBudget} changes by Teammates.")</span>
+            <MudButton OnClick="this.AllowMore">@($"Allow {agentWakeBudget} more")</MudButton>
+        </MudAlert>
+    }
+
+    @if (this.HasPending)
+    {
+        <MudAlert Severity="Severity.Info" Dense="true" role="status" Class="task-detail-unsaved">
+            <span class="task-detail-unsaved-text">Unsaved edits</span>
+            <MudButton OnClick="this.SaveAsync">@saveLabel</MudButton>
+            <MudButton Variant="Variant.Text" OnClick="this.Revert">Revert</MudButton>
+        </MudAlert>
+    }
+
+    <div class="task-detail-title-row">
+        @if (this.titleEditing)
+        {
+            <MudTextField T="string" Value="@effective.Title" ValueChanged="this.OnTitleChanged" Class="task-detail-title" />
+        }
+        else
+        {
+            <span class="task-detail-title-display">@effective.Id: @effective.Title</span>
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" aria-label="Edit title" OnClick="this.BeginEditTitle" />
+        }
+    </div>
+
+    <MudSelect T="TaskPriority" Value="effective.Priority" ValueChanged="this.OnPriorityChanged" Class="task-detail-priority" Label="Priority">
+        <MudSelectItem T="TaskPriority" Value="TaskPriority.Low">Low</MudSelectItem>
+        <MudSelectItem T="TaskPriority" Value="TaskPriority.Medium">Medium</MudSelectItem>
+        <MudSelectItem T="TaskPriority" Value="TaskPriority.High">High</MudSelectItem>
+        <MudSelectItem T="TaskPriority" Value="TaskPriority.Urgent">Urgent</MudSelectItem>
+    </MudSelect>
+
+    @if (notice is not null)
+    {
+        <div class="task-detail-wake-notice">@notice</div>
+    }
+
+    <div class="task-detail-description">
+        <MudToggleGroup T="DescriptionViewMode" Value="this.descriptionMode" ValueChanged="this.OnDescriptionModeChanged"
+                         SelectionMode="SelectionMode.SingleSelection" Class="task-detail-description-toggle">
+            <MudToggleItem Value="DescriptionViewMode.Edit" Text="Edit" />
+            <MudToggleItem Value="DescriptionViewMode.Preview" Text="Preview" />
+        </MudToggleGroup>
+
+        @if (this.descriptionMode == DescriptionViewMode.Edit)
+        {
+            <MudTextField T="string" Value="@effective.Description" ValueChanged="this.OnDescriptionChanged"
+                          Lines="10" Sizing="InputSizing.Auto" MaxLines="30" Class="task-detail-description" />
+        }
+        else
+        {
+            <div class="task-detail-description-preview">@((MarkupString)MarkdownRenderer.ToHtml(effective.Description))</div>
+        }
+    </div>
+
+    @if (!this.HasPending)
+    {
+        <MudButton OnClick="this.SaveAsync">@saveLabel</MudButton>
+    }
+}
+</div>
+
+@code {
+    /// <summary>Which half of the Description's Edit/Preview toggle (Spec §13.6) is shown.</summary>
+    private enum DescriptionViewMode
+    {
+        /// <summary>A <see cref="MudTextField{T}"/> editing the raw Markdown.</summary>
+        Edit,
+
+        /// <summary>The Markdown rendered to HTML through <see cref="MarkdownRenderer.ToHtml(string)"/>.</summary>
+        Preview,
+    }
+
+    private TaskItem? loaded;
+    private bool deleted;
+    private TaskPatch pending = new();
+    private string? baseVersion;
+    private string? saveError;
+    private bool titleEditing;
+    private DescriptionViewMode descriptionMode = DescriptionViewMode.Edit;
+
+    /// <summary>The Task to show, or <see langword="null"/> when creating or copying (a later dispatch's job).</summary>
+    [Parameter]
+    public TaskId? Id { get; set; }
+
+    /// <summary>A draft for create or copy mode; unused by this dispatch's core state machine.</summary>
+    [Parameter]
+    public TaskDraft? Draft { get; set; }
+
+    /// <summary>Whether this instance is the Panel or the Expanded dialog layout. Only Panel is implemented so far.</summary>
+    [Parameter]
+    public TaskDetailMode Mode { get; set; }
+
+    /// <summary>Raised when the panel or dialog should close. Not wired by this dispatch.</summary>
+    [Parameter]
+    public EventCallback OnClose { get; set; }
+
+    /// <summary>Raised when the Panel's Expand control is used. Not wired by this dispatch (14.4).</summary>
+    [Parameter]
+    public EventCallback OnExpand { get; set; }
+
+    /// <summary>Whether the Human has an unsaved edit pending.</summary>
+    private bool HasPending => !this.pending.IsEmpty;
+
+    /// <summary><see cref="loaded"/> with <see cref="pending"/> applied, or <see langword="null"/> before anything has loaded.</summary>
+    private TaskItem? Effective => this.loaded is { } current ? this.pending.ApplyTo(current) : null;
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.Refresh();
+        this.Events.TaskChanged += this.OnTaskChanged;
+        this.Events.TasksReloaded += this.OnTasksReloaded;
+        this.Activity.Changed += this.OnActivityChanged;
+    }
+
+    /// <summary>Re-reads <see cref="Id"/> from <see cref="Store"/>: updates <see cref="loaded"/>, and advances <see cref="baseVersion"/> only while <see cref="pending"/> is empty (corrections-B5 D14 item 6).</summary>
+    private void Refresh()
+    {
+        if (this.Id is not { } id)
+        {
+            return;
+        }
+
+        TaskItem? current = this.Store.Get(id);
+        if (current is null)
+        {
+            this.deleted = true;
+            this.loaded = null;
+            return;
+        }
+
+        this.deleted = false;
+        this.loaded = current;
+        if (!this.HasPending)
+        {
+            this.baseVersion = current.Version;
+        }
+    }
+
+    private void OnTaskChanged(TaskChange change) => this.DispatchRefresh();
+
+    private void OnTasksReloaded() => this.DispatchRefresh();
+
+    private void OnActivityChanged() => this.DispatchRefresh();
+
+    /// <summary>Marshals a requery back onto the render's synchronisation context (the <c>RoomList.razor</c> pattern), tolerating a disposed component.</summary>
+    private void DispatchRefresh()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.Refresh();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+
+    private void BeginEditTitle() => this.titleEditing = true;
+
+    private void OnTitleChanged(string value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        this.pending = this.pending with { Title = value };
+    }
+
+    private void OnPriorityChanged(TaskPriority value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        this.pending = this.pending with { Priority = value };
+    }
+
+    private void OnDescriptionChanged(string value)
+    {
+        if (this.loaded is null)
+        {
+            return;
+        }
+
+        this.pending = this.pending with { Description = value };
+    }
+
+    private void OnDescriptionModeChanged(DescriptionViewMode value) => this.descriptionMode = value;
+
+    /// <summary>Adds another base budget to the loaded Task's wake budget (corrections-B5 D14 item 4).</summary>
+    private void AllowMore()
+    {
+        if (this.loaded is { } task)
+        {
+            this.Activity.Grant(task.Id);
+        }
+    }
+
+    private void Revert()
+    {
+        this.pending = new TaskPatch();
+        this.saveError = null;
+    }
+
+    /// <summary>
+    /// Saves <see cref="pending"/> through <see cref="TaskService.Update"/> with the panel's own
+    /// <see cref="baseVersion"/> (corrections-B5 D14 item 6) - never <see langword="null"/> or the
+    /// just-refreshed version, so a concurrent edit to the same field is reported as a conflict rather
+    /// than silently overwritten. <see cref="TaskResult.Conflict"/>, <see cref="TaskResult.Refused"/>
+    /// and <see cref="TaskResult.NotFound"/> are left with <see cref="pending"/> untouched - resolving
+    /// them is 14.3's and 14.4's job. An <see cref="IOException"/> from the store (Spec §13.6 "Save
+    /// errors") is shown in <see cref="saveError"/>, following <c>TeammateCard.SaveAsync</c>.
+    /// </summary>
+    private Task SaveAsync()
+    {
+        if (this.loaded is not { } current)
+        {
+            return Task.CompletedTask;
+        }
+
+        this.saveError = null;
+        TaskActor actor = TaskActors.Human(this.Options.Value);
+
+        try
+        {
+            TaskResult result = this.Service.Update(current.Id, this.pending, this.baseVersion, actor);
+            switch (result)
+            {
+                case TaskResult.Saved saved:
+                    this.loaded = saved.Task;
+                    this.baseVersion = saved.Task.Version;
+                    this.pending = new TaskPatch();
+                    break;
+                case TaskResult.Unchanged unchanged:
+                    this.loaded = unchanged.Task;
+                    this.baseVersion = unchanged.Task.Version;
+                    this.pending = new TaskPatch();
+                    break;
+                default:
+                    break;
+            }
+        }
+        catch (IOException ex)
+        {
+            this.saveError = ex.Message;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The Save button's label for <paramref name="preview"/> (Spec §13.6's table): "Save &amp; Notify {name}" only for an Awake or Asleep assignee, plain "Save" otherwise.</summary>
+    /// <param name="preview">The wake preview for the Human's pending edit.</param>
+    private static string SaveLabel(WakePreview preview) =>
+        preview.Block == WakeBlock.None && preview.Presence is PresenceState.Awake or PresenceState.Asleep
+            ? $"Save & Notify {preview.AssigneeName}"
+            : "Save";
+
+    /// <summary>
+    /// The notice shown above the Save button for <paramref name="preview"/> (Spec §13.6's table, and
+    /// corrections-B5 D14 item 5's exact Offline and Disabled wording, which supersedes the Spec's own
+    /// Offline row text). <see cref="WakeBlock.BudgetPaused"/> has no case: <c>TaskDetail</c> always
+    /// calls <see cref="TaskTriggerService.Preview"/> with the Human actor, and that guard only ever
+    /// fires for an Agent actor (corrections-B5 D14 item 4) - the Budget banner, not this notice, is
+    /// what a Human sees instead.
+    /// </summary>
+    /// <param name="preview">The wake preview for the Human's pending edit.</param>
+    private static string? NoticeText(WakePreview preview) => preview switch
+    {
+        { Block: WakeBlock.None, Presence: PresenceState.Awake } => $"{preview.AssigneeName} is awake and will be notified.",
+        { Block: WakeBlock.None, Presence: PresenceState.Asleep } => $"{preview.AssigneeName} is asleep and will be notified.",
+        { Block: WakeBlock.None, Presence: PresenceState.Offline } => $"{preview.AssigneeName} is offline, so this change won't reach them.",
+        { Block: WakeBlock.Disabled } => "Wake-ups are off.",
+        _ => null,
+    };
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        this.Events.TaskChanged -= this.OnTaskChanged;
+        this.Events.TasksReloaded -= this.OnTasksReloaded;
+        this.Activity.Changed -= this.OnActivityChanged;
+    }
+}
