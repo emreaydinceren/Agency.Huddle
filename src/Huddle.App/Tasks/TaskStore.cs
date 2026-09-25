@@ -137,6 +137,9 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// <summary>The absolute path of the Tasks scan root.</summary>
     public string RootDirectory { get; }
 
+    /// <summary>How many times <see cref="RebuildFromWatcher"/> has run, whether or not it found anything different. <c>internal</c> so a test can prove the watcher's filter skips an irrelevant event without inspecting <see cref="IndexChanged"/> timing.</summary>
+    internal int RebuildCount { get; private set; }
+
     /// <summary>Looks up a Task by id. Returns <see langword="null"/>, never throws, when no file carries that id.</summary>
     /// <param name="id">The Task's id.</param>
     public TaskItem? Get(TaskId id) => this.index.ById.GetValueOrDefault(id);
@@ -609,7 +612,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// <param name="e">Describes what changed and how.</param>
     private void OnWatcherEvent(object sender, FileSystemEventArgs e)
     {
-        if (!AffectsATaskFile(e))
+        if (!AffectsATaskFile(this.RootDirectory, e))
         {
             return;
         }
@@ -626,23 +629,22 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     }
 
     /// <summary>
-    /// True for an event this store cares about: a ".md" file, a renamed directory (a Team or Project
-    /// folder renamed in Explorer - its event's <see cref="FileSystemEventArgs.Name"/> is the directory
-    /// itself, never matching ".md"), or a deleted extensionless name (the same folder disappearing
-    /// outright). Copied from <c>PersonaStore.AffectsATeamsFile</c> (traps.md L120).
+    /// True for an event this store cares about: delegates to <see cref="TaskLayout.AffectsTasks"/>,
+    /// the pure path-shape predicate that also drives the migration and the reference resolver, so a
+    /// Team folder, a Project folder, a Task file or its <c>_tasks</c>/<c>_closed</c> folder is never
+    /// judged two different ways. For a <see cref="RenamedEventArgs"/>, the event is relevant when
+    /// either <see cref="FileSystemEventArgs.FullPath"/> or <see cref="RenamedEventArgs.OldFullPath"/>
+    /// affects Tasks - on Windows a cross-folder move raises Deleted+Created, but a same-Team rename
+    /// (a Task file renamed out of <c>_tasks</c> into a sibling notes folder) raises a single Renamed
+    /// event whose new path alone would not affect Tasks. <c>internal</c>, not <c>private</c>, and
+    /// <c>static</c> with an explicit <paramref name="root"/> so a test can call it directly with a
+    /// hand-built event, without a live watcher.
     /// </summary>
+    /// <param name="root">The Tasks root directory to resolve paths against.</param>
     /// <param name="e">The watcher event to classify.</param>
-    private static bool AffectsATaskFile(FileSystemEventArgs e) =>
-        IsMarkdownFile(e.Name)
-        || (e.ChangeType == WatcherChangeTypes.Renamed && Directory.Exists(e.FullPath))
-        || (e.ChangeType == WatcherChangeTypes.Deleted && HasNoExtension(e.Name));
-
-    /// <summary>True when <paramref name="name"/> ends in ".md", compared case-insensitively.</summary>
-    private static bool IsMarkdownFile(string? name) =>
-        name is not null && string.Equals(Path.GetExtension(name), ".md", StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>True when <paramref name="name"/> has no extension at all - the shape a deleted directory's name takes.</summary>
-    private static bool HasNoExtension(string? name) => name is not null && Path.GetExtension(name).Length == 0;
+    internal static bool AffectsATaskFile(string root, FileSystemEventArgs e) =>
+        TaskLayout.AffectsTasks(root, e.FullPath)
+        || (e is RenamedEventArgs renamed && TaskLayout.AffectsTasks(root, renamed.OldFullPath));
 
     /// <summary>
     /// FileSystemWatcher raises this instead of a normal change event when its internal buffer
@@ -697,6 +699,8 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             {
                 return;
             }
+
+            this.RebuildCount++;
 
             bool forceRaise = this.forcedRebuildPending;
             this.forcedRebuildPending = false;

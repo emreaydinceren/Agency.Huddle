@@ -354,4 +354,101 @@ public sealed class TaskStoreWatcherTests
         Assert.NotNull(recorded);
         Assert.Equal("changed outside", recorded.Title);
     }
+
+    /// <summary>A Library note written beside Tasks - "Platform/note.md" or a Project's "research" subfolder - never triggers a rebuild (Spec §8.4): <see cref="TaskStore.RebuildCount"/> only advances for the probe Task write that follows, proving the two notes contributed nothing to it.</summary>
+    [Fact]
+    public async Task Watcher_NoteWritten_DoesNotRebuild()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        Directory.CreateDirectory(Path.Combine(root, "Platform", "_tasks"));
+        Directory.CreateDirectory(Path.Combine(root, "Platform", "P", "research"));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        int baseline = store.RebuildCount;
+
+        await File.WriteAllTextAsync(Path.Combine(root, "Platform", "note.md"), "not a task", ct);
+        await File.WriteAllTextAsync(Path.Combine(root, "Platform", "P", "research", "x.md"), "not a task", ct);
+
+        TaskCompletionSource outsideEditDetected = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        store.OutsideEditDetected += _ => outsideEditDetected.TrySetResult();
+        string probePath = Path.Combine(root, "Platform", "_tasks", "PLAT-0001.md");
+        await File.WriteAllTextAsync(
+            probePath,
+            TaskFileFormat.Compose(TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false))),
+            ct);
+
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        await using CancellationTokenRegistration registration = cts.Token.Register(() => outsideEditDetected.TrySetCanceled());
+        await outsideEditDetected.Task;
+
+        Assert.Equal(baseline + 1, store.RebuildCount);
+    }
+
+    /// <summary>An empty Project folder created directly (e.g. by the Library, not through <see cref="TaskStore.Create"/>) appears in <see cref="TaskStore.Teams"/> once the watcher's debounced rebuild notices it: a directory <see cref="WatcherChangeTypes.Created"/> event, previously dropped by the watcher's filter (Spec §8.4).</summary>
+    [Fact]
+    public async Task Watcher_ProjectFolderCreated_AppearsInTeams()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        Assert.DoesNotContain(store.Teams, team => string.Equals(team.Name, "Platform", StringComparison.Ordinal) && team.Projects.Contains("New"));
+
+        TaskCompletionSource indexChanged = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        store.IndexChanged += () => indexChanged.TrySetResult();
+
+        Directory.CreateDirectory(Path.Combine(root, "Platform", "New"));
+
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        await using CancellationTokenRegistration registration = cts.Token.Register(() => indexChanged.TrySetCanceled());
+        await indexChanged.Task;
+
+        Assert.Contains(store.Teams, team => string.Equals(team.Name, "Platform", StringComparison.Ordinal) && team.Projects.Contains("New"));
+    }
+
+    /// <summary>A Task file written outside Huddle triggers exactly one debounced rebuild: <see cref="TaskStore.RebuildCount"/> advances by one once <see cref="TaskStore.OutsideEditDetected"/> fires for it (Spec §8.4).</summary>
+    [Fact]
+    public async Task Watcher_TaskWrittenOutside_Rebuilds()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        Directory.CreateDirectory(Path.Combine(root, "Platform", "_tasks"));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+        int baseline = store.RebuildCount;
+
+        TaskCompletionSource outsideEditDetected = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        store.OutsideEditDetected += _ => outsideEditDetected.TrySetResult();
+
+        string path = Path.Combine(root, "Platform", "_tasks", "PLAT-0001.md");
+        await File.WriteAllTextAsync(
+            path,
+            TaskFileFormat.Compose(TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false))),
+            ct);
+
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        await using CancellationTokenRegistration registration = cts.Token.Register(() => outsideEditDetected.TrySetCanceled());
+        await outsideEditDetected.Task;
+
+        Assert.Equal(baseline + 1, store.RebuildCount);
+    }
+
+    /// <summary>The watcher's filter accepts a rename event when either path affects Tasks (Spec §8.4): on Windows a cross-folder move raises Deleted+Created, but a same-Team rename - a Task file renamed out of "_tasks" into a sibling notes folder, one <see cref="RenamedEventArgs"/> - raises a single event whose new path alone would not affect Tasks. Hand-built, deterministic, no watcher or disk involved.</summary>
+    [Fact]
+    public void WatcherFilter_RenameOutOfTasks_IsRelevant()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "huddle-watcher-filter-test");
+        RenamedEventArgs renamed = new(
+            WatcherChangeTypes.Renamed,
+            root,
+            Path.Combine("Platform", "notes", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"));
+
+        Assert.True(TaskStore.AffectsATaskFile(root, renamed));
+    }
 }
