@@ -16,9 +16,18 @@
     unsubscribed in Dispose. StartTransaction raises TransactionStarted synchronously, and
     Cancel/CommitTransaction raise TransactionEnded (MudBlazor 9.10). The drop path (ItemDropped),
     the dialogs and the wake caption are Task 12.3's; the column header menu is Task 12.4's.
+
+    Moving a card (Spec §13.4 Dropping and Keyboard; corrections-B5 D12-7, -8, -11, -12): a drop and
+    the card's Move to menu both call MoveAsync. A move to the card's own state does nothing;
+    Duplicate asks DuplicatePickerDialog for the original; Cancelled and Rejected ask ReasonDialog;
+    leaving Duplicate clears DuplicateOf. The save is TaskService.Update with baseVersion null, as the
+    Human. A cancelled dialog, a Refused result or a NotFound result refreshes the container so the
+    card snaps back; the last two also show a Snackbar error. While dragging, a caption with the
+    Preview text (computed once, at drag start) shows under every column but the card's own.
 *@
 
 @using System.Globalization
+@using Microsoft.Extensions.Options
 @using Agency.Huddle.App.Acp
 @using Agency.Huddle.App.Pipes
 @implements IDisposable
@@ -27,6 +36,11 @@
 @inject PersonaHealth Health
 @inject TurnActivity Turns
 @inject TaskActivity Activity
+@inject TaskService Service
+@inject TaskTriggerService Triggers
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject IOptions<TeamOptions> TeamOptions
 
 <div class="task-board">
     @if (this.model.HiddenTaskCount > 0)
@@ -41,12 +55,16 @@
             <div class="task-board-column-header">
                 <span class="task-board-column-label">@column.Label</span>
                 <span class="task-board-column-count">@this.ColumnCount(i).ToString(CultureInfo.InvariantCulture)</span>
+                @if (this.dragging && this.caption is { } text && i != this.draggedColumn)
+                {
+                    <MudText Typo="Typo.caption" Class="task-board-drag-caption">@text</MudText>
+                }
             </div>
         }
     </div>
 
     <MudDropContainer T="TaskItem" @key="@this.View.Id" @ref="this.container" Items="@this.Tasks"
-                      ItemsSelector="@this.IsInZone" CanDrop="@this.CanDrop"
+                      ItemsSelector="@this.IsInZone" CanDrop="@this.CanDrop" ItemDropped="@this.OnDroppedAsync"
                       ApplyDropClassesOnDragStarted="true" CanDropClass="task-zone-can" NoDropClass="task-zone-no"
                       ItemDraggingClass="task-card-dragging">
         <ChildContent>
@@ -89,7 +107,8 @@
         <ItemRenderer>
             <TaskCard Task="@context" Fields="@this.View.Fields" Presence="@this.PresenceOf(context)"
                       LastWake="@this.Activity.LastWake(context.Id)" Busy="@this.IsBusy(context)" Search="@this.Search"
-                      OnOpen="@(() => this.OnOpenTask.InvokeAsync(context.Id))" />
+                      OnOpen="@(() => this.OnOpenTask.InvokeAsync(context.Id))"
+                      OnMoveTo="@(state => this.MoveAsync(context, state))" />
         </ItemRenderer>
     </MudDropContainer>
 </div>
@@ -119,6 +138,8 @@
     private IReadOnlyList<TaskItem>? laidOut;
     private bool refreshPending;
     private bool dragging;
+    private string? caption;
+    private int draggedColumn = -1;
 
     /// <summary>Joins the presence, health, Turn and wake-budget change events, each of which can change a card (D12-4).</summary>
     protected override void OnInitialized()
@@ -268,16 +289,131 @@
     private void OnDragStarted(object? sender, MudDragAndDropItemTransaction<TaskItem> e)
     {
         this.dragging = true;
+        if (e.Item is { } item)
+        {
+            this.caption = this.CaptionFor(item);
+            this.draggedColumn = this.ColumnIndexOf(item.Status);
+        }
+
         _ = this.InvokeAsync(this.StateHasChanged);
     }
 
-    /// <summary><c>TransactionEnded</c>: hide the ghost buckets.</summary>
+    /// <summary><c>TransactionEnded</c>: hide the ghost buckets and the caption.</summary>
     /// <param name="sender">The container.</param>
     /// <param name="e">How the transaction finished.</param>
     private void OnDragEnded(object? sender, MudDragAndDropTransactionFinishedEventArgs<TaskItem> e)
     {
-        this.dragging = false;
+        this.EndDrag();
         _ = this.InvokeAsync(this.StateHasChanged);
+    }
+
+    /// <summary>Clears the drag state: buckets and caption go.</summary>
+    private void EndDrag()
+    {
+        this.dragging = false;
+        this.caption = null;
+        this.draggedColumn = -1;
+    }
+
+    /// <summary>
+    /// The drag caption (D12-11): the <c>Preview</c> for the Human moving <paramref name="item"/> -
+    /// independent of the target, so computed once at drag start - as "{Name} will be notified", or
+    /// none when a guard blocks the wake.
+    /// </summary>
+    /// <param name="item">The dragged Task.</param>
+    private string? CaptionFor(TaskItem item)
+    {
+        WakePreview preview = this.Triggers.Preview(null, item, TaskActors.Human(this.TeamOptions.Value));
+        return preview.Block == WakeBlock.None ? $"{preview.AssigneeName} will be notified" : null;
+    }
+
+    /// <summary>The index, among the visible columns, of the column holding <paramref name="state"/>; -1 when hidden.</summary>
+    /// <param name="state">A Task state.</param>
+    private int ColumnIndexOf(TaskState state)
+    {
+        for (int i = 0; i < this.model.VisibleColumns.Count; i++)
+        {
+            if (this.model.VisibleColumns[i].States.Contains(state))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    /// <summary>
+    /// <c>ItemDropped</c> (Spec §13.4 Dropping; D12-7): clears the drag first, so the buckets are gone
+    /// while a dialog is open, then moves the card to the dropped zone's state. A zone that isn't a
+    /// state zone (a multi-state column's display zone - CommitTransaction doesn't re-check CanDrop)
+    /// moves nothing.
+    /// </summary>
+    /// <param name="info">The drop.</param>
+    private async Task OnDroppedAsync(MudItemDropInfo<TaskItem> info)
+    {
+        this.EndDrag();
+        if (info.Item is not { } item || !BoardLayout.TryParseZone(info.DropzoneIdentifier, out _, out TaskState state))
+        {
+            this.container?.Refresh();
+            return;
+        }
+
+        await this.MoveAsync(item, state);
+    }
+
+    /// <summary>
+    /// Moves <paramref name="item"/> to <paramref name="target"/> - the one path for a drop and for the
+    /// card's Move to menu (Spec §13.4 Keyboard).
+    /// </summary>
+    /// <param name="item">The card's Task.</param>
+    /// <param name="target">The state to move it to.</param>
+    private async Task MoveAsync(TaskItem item, TaskState target)
+    {
+        if (target == item.Status)
+        {
+            return;
+        }
+
+        Optional<TaskId?> duplicateOf = item.Status == TaskState.Duplicate ? Optional<TaskId?>.Set(null) : default;
+        string? reason = null;
+        if (target == TaskState.Duplicate)
+        {
+            DialogParameters<DuplicatePickerDialog> parameters = new() { { dialog => dialog.Excluding, item.Id } };
+            IDialogReference picker = await this.Dialogs.ShowAsync<DuplicatePickerDialog>($"Mark {item.Id} as a duplicate", parameters, DuplicatePickerDialog.Options);
+            if (await picker.Result is not { Canceled: false, Data: TaskId original })
+            {
+                this.container?.Refresh();
+                return;
+            }
+
+            duplicateOf = Optional<TaskId?>.Set(original);
+        }
+        else if (target is TaskState.Cancelled or TaskState.Rejected)
+        {
+            IDialogReference prompt = await this.Dialogs.ShowAsync<ReasonDialog>($"Mark {item.Id} as {target.ToWire()}", ReasonDialog.Options);
+            if (await prompt.Result is not { Canceled: false } answer)
+            {
+                this.container?.Refresh();
+                return;
+            }
+
+            reason = answer.Data as string;
+        }
+
+        TaskPatch patch = new() { Status = target, DuplicateOf = duplicateOf, Reason = reason };
+        TaskResult result = this.Service.Update(item.Id, patch, baseVersion: null, TaskActors.Human(this.TeamOptions.Value));
+        string? error = result switch
+        {
+            TaskResult.Refused refused => $"Could not move {item.Id}: {string.Join(' ', refused.Problems)}",
+            TaskResult.NotFound => $"Could not move {item.Id}: it no longer exists.",
+            _ => null,
+        };
+
+        if (error is not null)
+        {
+            this.Snackbar.Add(error, Severity.Error);
+            this.container?.Refresh();
+        }
     }
 
     /// <summary>Leaves the subscribed container's transaction events, if any.</summary>

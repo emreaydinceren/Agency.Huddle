@@ -1,0 +1,64 @@
+@*
+    Asks which Task the moved Task duplicates (Spec §13.4 Dropping step 2; corrections-B5 D12-12).
+    A strict MudAutocomplete over the Task index, searched with TaskQuery.Suggest minus the Task being
+    moved (a Task can't duplicate itself). Save returns DialogResult.Ok(TaskId) and stays disabled
+    until a Task is chosen; Cancel and the close button cancel the move. The dialog's parameters are
+    frozen once shown, so it takes the moved Task's id, never the TaskItem (TeammateCard.razor:12-24).
+*@
+
+@inject TaskStore Store
+
+<MudDialog>
+    <DialogContent>
+        <MudAutocomplete T="TaskItem" Label="Duplicate of" Strict="true" SearchFunc="@this.SearchAsync"
+                         ToStringFunc="@(task => task is null ? string.Empty : $"{task.Id} {task.Title}")"
+                         Value="@this.selected" ValueChanged="@this.OnSelected" DebounceInterval="100" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="this.Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Disabled="@(this.selected is null)" OnClick="this.Save">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>How the Board shows this dialog: small, full-width, with a close button.</summary>
+    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    /// <summary>The dialog instance, for closing with a result.</summary>
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The Task being marked a duplicate: never offered as its own original.</summary>
+    [Parameter]
+    public TaskId Excluding { get; set; }
+
+    private TaskItem? selected;
+
+    /// <summary>Suggests Tasks from the index matching <paramref name="text"/>, leaving out <see cref="Excluding"/>.</summary>
+    /// <param name="text">What the Human typed.</param>
+    /// <param name="cancellationToken">Unused: the search is in memory.</param>
+    private Task<IEnumerable<TaskItem>> SearchAsync(string? text, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        IEnumerable<TaskItem> found = TaskQuery.Suggest(this.Store.All, text ?? string.Empty)
+            .Where(task => task.Id != this.Excluding)
+            .ToList();
+        return Task.FromResult(found);
+    }
+
+    /// <summary>Remembers the chosen Task.</summary>
+    /// <param name="task">The chosen Task, or <see langword="null"/> when cleared.</param>
+    private void OnSelected(TaskItem? task) => this.selected = task;
+
+    /// <summary>Closes with the chosen Task's id.</summary>
+    private void Save()
+    {
+        if (this.selected is { } task)
+        {
+            this.Dialog?.Close(DialogResult.Ok(task.Id));
+        }
+    }
+
+    /// <summary>Cancels the move.</summary>
+    private void Cancel() => this.Dialog?.Cancel();
+}
