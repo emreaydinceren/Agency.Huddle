@@ -112,7 +112,7 @@ internal sealed class GetHelpTool : IAppTool
     /// <returns>The help text handed back to the model.</returns>
     private string BuildHelp()
     {
-        string[] sections =
+        List<string> sections =
         [
             this.prompts.Render("getHelp.intro", NoValues),
             this.prompts.Render("getHelp.rooms", NoValues),
@@ -120,8 +120,16 @@ internal sealed class GetHelpTool : IAppTool
             this.prompts.Render("getHelp.mentions", NoValues),
             this.prompts.Render("getHelp.replying", NoValues),
             this.prompts.Render("getHelp.budget", NoValues),
-            this.BuildToolsSection(),
         ];
+
+        // Corrections-B4 D10 item 6: no constructor parameter for this - the tool catalog this type
+        // was already handed is itself the signal that Tasks tools are offered (Spec §11.9).
+        if (this.catalog.Any(static entry => string.Equals(entry.Name, "create_task", StringComparison.Ordinal)))
+        {
+            sections.Add(this.prompts.Render("getHelp.tasks", NoValues));
+        }
+
+        sections.Add(this.BuildToolsSection());
 
         return string.Join("\n\n", sections);
     }
