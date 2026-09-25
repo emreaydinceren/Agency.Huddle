@@ -924,26 +924,12 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         List<(TaskItem Task, string Path)> parsed = [];
         List<RejectedTaskFile> rejected = [];
 
-        string[] files;
-        try
-        {
-            files = Directory.GetFiles(this.RootDirectory, "*.md", SearchOption.AllDirectories);
-        }
-        catch (IOException ex)
-        {
-            this.logger.LogWarning(ex, "TaskStore could not enumerate '{Root}'; treating the scan as empty.", this.RootDirectory);
-            files = [];
-        }
+        List<string> files = this.EnumerateTaskFiles();
 
         foreach (string path in files)
         {
-            if (!TaskLayout.TryMap(this.RootDirectory, path, out TaskLocation? location, out string? mapError))
+            if (!TaskLayout.TryMap(this.RootDirectory, path, out TaskLocation? location, out _))
             {
-                if (mapError is not null)
-                {
-                    rejected.Add(new RejectedTaskFile(path, mapError));
-                }
-
                 continue;
             }
 
@@ -1006,6 +992,86 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     }
 
     /// <summary>
+    /// The candidate Task file paths for <see cref="Scan"/>: only <c>{Team}/_tasks</c>,
+    /// <c>{Team}/_tasks/_closed</c>, <c>{Team}/{Project}/_tasks</c> and
+    /// <c>{Team}/{Project}/_tasks/_closed</c> (ADR-0030), each listed with
+    /// <see cref="SearchOption.TopDirectoryOnly"/>. A Project's note tree - however deep - is never
+    /// descended into, so a folder inside it that cannot be listed never raises a warning. Every
+    /// case-variant Team folder is scanned, not only the one <see cref="BuildTeams"/> keeps as
+    /// canonical, so a losing duplicate's own files are still found for rejection.
+    /// </summary>
+    private List<string> EnumerateTaskFiles()
+    {
+        List<string> files = [];
+        foreach (string teamDir in this.RawTeamDirectories())
+        {
+            this.AddTasksFolderFiles(teamDir, files);
+
+            foreach (string projectDir in this.RawSubfolders(teamDir))
+            {
+                this.AddTasksFolderFiles(projectDir, files);
+            }
+        }
+
+        return files;
+    }
+
+    /// <summary>Appends the <c>*.md</c> files directly under <paramref name="containerDir"/>'s
+    /// <c>_tasks</c> folder and that folder's <c>_closed</c> sub-folder to <paramref name="files"/>.</summary>
+    /// <param name="containerDir">The Team or Project folder that may hold a <c>_tasks</c> folder.</param>
+    /// <param name="files">The list to append matching file paths to.</param>
+    private void AddTasksFolderFiles(string containerDir, List<string> files)
+    {
+        string tasksDir = Path.Combine(containerDir, TaskLayout.TasksFolder);
+        this.AddFilesIfExists(tasksDir, files);
+        this.AddFilesIfExists(Path.Combine(tasksDir, TaskLayout.ClosedFolder), files);
+    }
+
+    /// <summary>Appends <paramref name="dir"/>'s <c>*.md</c> files (<see cref="SearchOption.TopDirectoryOnly"/>)
+    /// to <paramref name="files"/> when <paramref name="dir"/> exists, warning and adding none on a
+    /// listing failure.</summary>
+    /// <param name="dir">The folder to list.</param>
+    /// <param name="files">The list to append matching file paths to.</param>
+    private void AddFilesIfExists(string dir, List<string> files)
+    {
+        if (!Directory.Exists(dir))
+        {
+            return;
+        }
+
+        try
+        {
+            files.AddRange(Directory.GetFiles(dir, "*.md", SearchOption.TopDirectoryOnly));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            this.logger.LogWarning(ex, "TaskStore could not enumerate '{Dir}'; treating it as empty.", dir);
+        }
+    }
+
+    /// <summary>The full paths of <paramref name="parent"/>'s non-reserved (<see cref="TaskLayout.IsReservedFolderName"/>)
+    /// direct sub-folders, every case variant included.</summary>
+    /// <param name="parent">The folder to list.</param>
+    private List<string> RawSubfolders(string parent)
+    {
+        try
+        {
+            return Directory.GetDirectories(parent)
+                .Where(dir => !TaskLayout.IsReservedFolderName(Path.GetFileName(dir) ?? string.Empty))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            this.logger.LogWarning(ex, "TaskStore could not list folders under '{Parent}'.", parent);
+            return [];
+        }
+    }
+
+    /// <summary>The full paths of <see cref="RootDirectory"/>'s non-reserved Team folders, every case
+    /// variant included (unlike <see cref="BuildTeams"/>'s de-duplicated <see cref="TeamFolder"/> list).</summary>
+    private List<string> RawTeamDirectories() => this.RawSubfolders(this.RootDirectory);
+
+    /// <summary>
     /// Enumerates Team folders directly under <see cref="RootDirectory"/> with their Project
     /// sub-folders (<see cref="Directory.GetDirectories(string)"/>, two levels - empty folders
     /// count, Spec §8.2 / Settled corrections-B2 D5 item 14). Folders differing only by case fold
@@ -1014,20 +1080,9 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// </summary>
     private (List<TeamFolder> Teams, Dictionary<string, string> AliasToCanonical) BuildTeams()
     {
-        string[] teamDirs;
-        try
-        {
-            teamDirs = Directory.GetDirectories(this.RootDirectory);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            this.logger.LogWarning(ex, "TaskStore could not list Team folders under '{Root}'.", this.RootDirectory);
-            teamDirs = [];
-        }
-
-        List<IGrouping<string, string>> groups = teamDirs
+        List<IGrouping<string, string>> groups = this.RawTeamDirectories()
             .Select(Path.GetFileName)
-            .Where(name => name is { Length: > 0 } && !(name.StartsWith('_') && !string.Equals(name, TaskLayout.ClosedFolder, StringComparison.Ordinal)))
+            .Where(name => name is { Length: > 0 })
             .Select(name => name!)
             .GroupBy(name => name, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -1050,29 +1105,15 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         return (teams, aliasToCanonical);
     }
 
-    /// <summary>The names of <paramref name="teamPath"/>'s Project sub-folders, excluding <c>_closed</c>.</summary>
-    private List<string> ListProjects(string teamPath)
-    {
-        try
-        {
-            List<string> projects = [];
-            foreach (string projectDir in Directory.GetDirectories(teamPath))
-            {
-                string? projectName = Path.GetFileName(projectDir);
-                if (projectName is { Length: > 0 } && !string.Equals(projectName, TaskLayout.ClosedFolder, StringComparison.Ordinal))
-                {
-                    projects.Add(projectName);
-                }
-            }
-
-            return projects;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            this.logger.LogWarning(ex, "TaskStore could not list Project folders under '{TeamPath}'.", teamPath);
-            return [];
-        }
-    }
+    /// <summary>The names of <paramref name="teamPath"/>'s Project sub-folders, excluding any reserved
+    /// name (<see cref="TaskLayout.IsReservedFolderName"/>) - so the Team's own <c>_tasks</c> and
+    /// <c>_closed</c> folders are never listed as Projects.</summary>
+    private List<string> ListProjects(string teamPath) =>
+        this.RawSubfolders(teamPath)
+            .Select(Path.GetFileName)
+            .Where(name => name is { Length: > 0 })
+            .Select(name => name!)
+            .ToList();
 
     /// <summary>
     /// Resolves <paramref name="location"/>'s Team, and Project when it has one, to an existing Team or

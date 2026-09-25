@@ -1,6 +1,8 @@
+using System.Diagnostics;
 using System.Globalization;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace Agency.Huddle.Tests.Tasks;
 
@@ -729,6 +731,197 @@ public sealed class TaskStoreTests
         Assert.Equal("renamed 1", store.Get(first)?.Title);
         Assert.Equal("renamed 2", store.Get(second)?.Title);
         Assert.Equal("renamed 3", store.Get(third)?.Title);
+    }
+
+    // ADR-0030: the Team/Project scan is targeted (only `_tasks`/`_closed`), so notes beside Tasks
+    // are never enumerated, and reserved folders never become Teams or Projects (Task G1.3).
+
+    /// <summary>A note at the Team root, one inside a Project's own note tree, one under a dot folder
+    /// and one under a non-<c>_tasks</c> underscore folder are all ignored: neither indexed as a Task
+    /// nor rejected.</summary>
+    [Fact]
+    public void Scan_NotesAtEveryLevel_AreNeitherTasksNorRejected()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        _ = WriteRawFile(root, Path.Combine("Marketing", "notes.md"), "team note");
+        _ = WriteRawFile(root, Path.Combine("Marketing", "Launch Q4", "research", "d.md"), "project note");
+        _ = WriteRawFile(root, Path.Combine("Marketing", ".obsidian", "cache.md"), "obsidian cache");
+        _ = WriteRawFile(root, Path.Combine("Marketing", "_x", "stuff.md"), "underscore note");
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        Assert.Empty(store.All);
+        Assert.Empty(store.RejectedFiles);
+    }
+
+    /// <summary>Every non-reserved sub-folder of a Team is a Project, whether or not it holds a
+    /// <c>_tasks</c> folder: a Project holding only notes, and an empty one.</summary>
+    [Fact]
+    public void Teams_EveryNonReservedSubfolder_IsAProject()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        _ = WriteRawFile(root, Path.Combine("Marketing", "Launch Q4", "plan.md"), "plan");
+        Directory.CreateDirectory(Path.Combine(root, "Marketing", "Ideas"));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        TeamFolder marketing = Assert.Single(store.Teams, team => string.Equals(team.Name, "Marketing", StringComparison.Ordinal));
+        Assert.Contains("Launch Q4", marketing.Projects);
+        Assert.Contains("Ideas", marketing.Projects);
+    }
+
+    /// <summary>A Team's own <c>_tasks</c> and <c>_closed</c> folders are never listed as Projects.</summary>
+    [Fact]
+    public void Teams_TasksAndClosedFolders_AreNotProjects()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        TestTaskStore.WriteTask(root, Path.Combine("Marketing", "_tasks", "MKT-0001.md"), TestTasks.Make(id: "MKT-0001", location: new("Marketing", null, false)));
+        Directory.CreateDirectory(Path.Combine(root, "Marketing", "_tasks", "_closed"));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        TeamFolder marketing = Assert.Single(store.Teams, team => string.Equals(team.Name, "Marketing", StringComparison.Ordinal));
+        Assert.DoesNotContain(TaskLayout.TasksFolder, marketing.Projects);
+        Assert.DoesNotContain(TaskLayout.ClosedFolder, marketing.Projects);
+    }
+
+    /// <summary>A dot folder and underscore folders at the scan root - including one literally named
+    /// <c>_closed</c> - never become Teams; only the ordinary folder beside them does.</summary>
+    [Fact]
+    public void Teams_DotAndUnderscoreFoldersAtRoot_AreNotTeams()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        Directory.CreateDirectory(Path.Combine(root, ".obsidian"));
+        Directory.CreateDirectory(Path.Combine(root, "_closed"));
+        Directory.CreateDirectory(Path.Combine(root, "_x"));
+        Directory.CreateDirectory(Path.Combine(root, "Marketing"));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        TeamFolder marketing = Assert.Single(store.Teams);
+        Assert.Equal("Marketing", marketing.Name);
+    }
+
+    /// <summary>A Project's note tree, however deep, is never enumerated by the scan: a Task under
+    /// its <c>_tasks</c> folder is still found, a deeply nested note is ignored, and a folder inside
+    /// the note tree that the scan could not list raises no warning, because the targeted scan never
+    /// reaches it. On Linux the CI container runs as root, which ignores <see cref="DenyListing"/>'s
+    /// Unix file mode, so there the assertions hold trivially rather than proving the denial worked.</summary>
+    [Fact]
+    public void Scan_DeepNoteTree_IsNotEnumerated()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        TestTaskStore.WriteTask(root, Path.Combine("Marketing", "Launch Q4", "_tasks", "MKT-0001.md"), TestTasks.Make(id: "MKT-0001", location: new("Marketing", "Launch Q4", false)));
+        _ = WriteRawFile(root, Path.Combine("Marketing", "Launch Q4", "research", "a", "b", "c.md"), "deep note");
+        string locked = Path.Combine(root, "Marketing", "Launch Q4", "research", "locked");
+        Directory.CreateDirectory(locked);
+        DenyListing(locked);
+        try
+        {
+            RecordingLogger<TaskStore> logger = new();
+            using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+            using TaskStore store = new(dir.Options(), personas, TimeProvider.System, logger);
+
+            Assert.Single(store.All);
+            Assert.Empty(store.RejectedFiles);
+            Assert.DoesNotContain(logger.Entries, entry => entry.Level == LogLevel.Warning);
+        }
+        finally
+        {
+            GrantListing(locked);
+        }
+    }
+
+    /// <summary>Denies the current user the right to list <paramref name="path"/>'s contents: <c>icacls</c>
+    /// on Windows (no ACL package is referenced by this solution), or <see cref="UnixFileMode.None"/> via
+    /// <see cref="File.SetUnixFileMode(string, UnixFileMode)"/> on Linux/macOS. Running as root - the CI
+    /// container's user - ignores the Unix mode entirely, so on that platform the test still passes but
+    /// proves less.</summary>
+    /// <param name="path">The folder to lock.</param>
+    private static void DenyListing(string path)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            RunIcacls(path, "/inheritance:r", "/deny", $"{Environment.UserName}:(RD)");
+        }
+        else
+        {
+            File.SetUnixFileMode(path, UnixFileMode.None);
+        }
+    }
+
+    /// <summary>Reverses <see cref="DenyListing"/> so <see cref="TempDataDir.Dispose"/> can clean up.</summary>
+    /// <param name="path">The folder to unlock.</param>
+    private static void GrantListing(string path)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            RunIcacls(path, "/reset");
+        }
+        else
+        {
+            File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+    }
+
+    /// <summary>Runs <c>icacls</c> with the given arguments and waits for it to exit.</summary>
+    /// <param name="arguments">The command-line arguments, passed unquoted via <see cref="ProcessStartInfo.ArgumentList"/>.</param>
+    private static void RunIcacls(params string[] arguments)
+    {
+        ProcessStartInfo info = new("icacls") { UseShellExecute = false, CreateNoWindow = true };
+        foreach (string argument in arguments)
+        {
+            info.ArgumentList.Add(argument);
+        }
+
+        using Process process = Process.Start(info) ?? throw new InvalidOperationException("icacls failed to start.");
+        process.WaitForExit();
+    }
+
+    /// <summary>An <see cref="ILogger{TCategoryName}"/> that records every call made to it, for
+    /// asserting that a code path under test does, or does not, log.</summary>
+    /// <typeparam name="T">The logger's category type.</typeparam>
+    private sealed class RecordingLogger<T> : ILogger<T>
+    {
+        private readonly List<(LogLevel Level, string Message, Exception? Exception)> entries = [];
+
+        /// <summary>Every call made so far, in call order.</summary>
+        public IReadOnlyList<(LogLevel Level, string Message, Exception? Exception)> Entries => this.entries;
+
+        /// <summary>Scoping is irrelevant to this fake, so this returns no scope.</summary>
+        /// <typeparam name="TState">The scope state type.</typeparam>
+        /// <param name="state">The scope state.</param>
+        /// <returns><see langword="null"/>.</returns>
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        /// <summary>Always enabled, so every call is recorded.</summary>
+        /// <param name="logLevel">The level being checked.</param>
+        /// <returns><see langword="true"/>.</returns>
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        /// <summary>Records one call's level, formatted message and exception.</summary>
+        /// <typeparam name="TState">The state type.</typeparam>
+        /// <param name="logLevel">The call's severity.</param>
+        /// <param name="eventId">Unused.</param>
+        /// <param name="state">The call's structured state.</param>
+        /// <param name="exception">The call's exception, if any.</param>
+        /// <param name="formatter">Formats <paramref name="state"/> and <paramref name="exception"/>.</param>
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            ArgumentNullException.ThrowIfNull(formatter);
+            this.entries.Add((logLevel, formatter(state, exception), exception));
+        }
     }
 
     /// <summary>Writes arbitrary raw text - valid or deliberately unparsable - under <paramref name="root"/>, for fixtures that don't need a real Task.</summary>
