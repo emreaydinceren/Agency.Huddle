@@ -53,10 +53,35 @@ public sealed class TeammateLayoutStartupTests
         Assert.NotNull(current);
     }
 
+    /// <summary>
+    /// An old Tasks/ root seeded before the host starts is migrated into
+    /// <c>Teams/&lt;Team&gt;/_tasks/</c> by the same start-up step, before anything resolves, so the
+    /// Task already sits at its new path once the host is up.
+    /// </summary>
+    [Fact]
+    public void Startup_OldTasks_LoadFromTeams()
+    {
+        using TeamWebApplicationFactory factory = new();
+        WriteTasksFile(factory.DataDirPath, Path.Combine("Platform", "PLAT-1.md"), "flat");
+
+        PersonaStore personaStore = factory.Services.GetRequiredService<PersonaStore>();
+
+        Assert.NotNull(personaStore);
+        Assert.True(File.Exists(Path.Combine(factory.DataDirPath, "Teams", "Platform", "_tasks", "PLAT-1.md")));
+    }
+
     /// <summary>Writes a file under the old <c>{DataDir}/Teams/</c> layout, creating parent folders as needed.</summary>
     private static void WriteTeamsFile(string dataDir, string relativePath, string text)
     {
         string path = Path.Combine(dataDir, "Teams", relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, text);
+    }
+
+    /// <summary>Writes a file under the old <c>{DataDir}/Tasks/</c> layout, creating parent folders as needed.</summary>
+    private static void WriteTasksFile(string dataDir, string relativePath, string text)
+    {
+        string path = Path.Combine(dataDir, "Tasks", relativePath);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path, text);
     }

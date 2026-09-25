@@ -337,6 +337,131 @@ public sealed class TeammateLayoutMigrationTests
         Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "CustomTeams")));
     }
 
+    /// <summary>Step 4 moves every location the old Tasks layout allowed: Team/file, Team/_closed/file, Team/Project/file and Team/Project/_closed/file.</summary>
+    [Fact]
+    public void Run_Tasks_MoveIntoTasksFolders()
+    {
+        using TempDataDir dataDir = new();
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "PLAT-1.md"), "flat");
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "_closed", "PLAT-2.md"), "closed");
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "Auth", "PLAT-3.md"), "project");
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "Auth", "_closed", "PLAT-4.md"), "project-closed");
+        RecordingLogger<TeammateLayoutMigrationTests> logger = new();
+
+        TeammateLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.Equal("flat", File.ReadAllText(Path.Combine(dataDir.Path, "Teams", "Platform", "_tasks", "PLAT-1.md")));
+        Assert.Equal("closed", File.ReadAllText(Path.Combine(dataDir.Path, "Teams", "Platform", "_tasks", "_closed", "PLAT-2.md")));
+        Assert.Equal("project", File.ReadAllText(Path.Combine(dataDir.Path, "Teams", "Platform", "Auth", "_tasks", "PLAT-3.md")));
+        Assert.Equal("project-closed", File.ReadAllText(Path.Combine(dataDir.Path, "Teams", "Platform", "Auth", "_tasks", "_closed", "PLAT-4.md")));
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Tasks")));
+    }
+
+    /// <summary>Step 4 runs after step 3's cleanup: an organisational Teams/ sub-folder left by step 3 is still removed once empty, and step 4 still creates a fresh Team folder for a Task that names a different Team.</summary>
+    [Fact]
+    public void Run_TasksAfterPersonas_OrgFolderRemovedThenTeamFolderCreated()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, Path.Combine("Marketing", "Ada.md"), PersonaText("Ada"));
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "PLAT-1.md"), "flat");
+        RecordingLogger<TeammateLayoutMigrationTests> logger = new();
+
+        TeammateLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Teams", "Marketing")));
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teams", "Platform", "_tasks", "PLAT-1.md")));
+    }
+
+    /// <summary>Files the old rules ignore - a root file, a reserved sub-folder, and one nested too deep - are left in place under Tasks/, which survives rather than being removed, and each is logged.</summary>
+    [Fact]
+    public void Run_TasksNonTaskFiles_LeftAndLogged()
+    {
+        using TempDataDir dataDir = new();
+        WriteTasksFile(dataDir.Path, "x.md", "stray");
+        WriteTasksFile(dataDir.Path, Path.Combine("_drafts", "y.md"), "draft");
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "Auth", "Sub", "PLAT-9.md"), "too-deep");
+        RecordingLogger<TeammateLayoutMigrationTests> logger = new();
+
+        TeammateLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Tasks", "x.md")));
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Tasks", "_drafts", "y.md")));
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Tasks", "Platform", "Auth", "Sub", "PLAT-9.md")));
+        Assert.True(Directory.Exists(Path.Combine(dataDir.Path, "Tasks")));
+        Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Warning);
+    }
+
+    /// <summary>Once every Task file under Tasks/ has moved, the now-empty Tasks/ root itself is removed.</summary>
+    [Fact]
+    public void Run_TasksEmpty_RootRemoved()
+    {
+        using TempDataDir dataDir = new();
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "PLAT-1.md"), "flat");
+        RecordingLogger<TeammateLayoutMigrationTests> logger = new();
+
+        TeammateLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Tasks")));
+    }
+
+    /// <summary>No Tasks/ root at all is a no-op for step 4: no exception, nothing created.</summary>
+    [Fact]
+    public void Run_TasksAbsent_NoOp()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, "Nova.md", PersonaText("Nova"));
+        RecordingLogger<TeammateLayoutMigrationTests> logger = new();
+
+        TeammateLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Tasks")));
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teammates", "Nova", "Nova.md")));
+    }
+
+    /// <summary>A Task move whose target already exists, and is not byte-identical, throws naming the path - the same throw-on-first-failure rule as steps 1-3.</summary>
+    [Fact]
+    public void Run_TasksTargetExists_Throws()
+    {
+        using TempDataDir dataDir = new();
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "PLAT-1.md"), "new content");
+        string target = Path.Combine(dataDir.Path, "Teams", "Platform", "_tasks", "PLAT-1.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        File.WriteAllText(target, "different content");
+        RecordingLogger<TeammateLayoutMigrationTests> logger = new();
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => TeammateLayoutMigration.Run(dataDir.Options(), logger));
+
+        Assert.Contains("PLAT-1.md", exception.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>Settled: step 4 is gated by its own source (Tasks/), not by the completion marker - an install that ran a D3-era build already carries the marker but still holds an old Tasks/ root, and that root is still migrated.</summary>
+    [Fact]
+    public void Run_MarkerPresent_OldTasksRootStillMigrated()
+    {
+        using TempDataDir dataDir = new();
+        string markerPath = Path.Combine(dataDir.Path, "Teammates", ".layout-migrated");
+        Directory.CreateDirectory(Path.GetDirectoryName(markerPath)!);
+        using (FileStream _ = File.Create(markerPath))
+        {
+        }
+
+        WriteTasksFile(dataDir.Path, Path.Combine("Platform", "PLAT-1.md"), "flat");
+        RecordingLogger<TeammateLayoutMigrationTests> logger = new();
+
+        TeammateLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teams", "Platform", "_tasks", "PLAT-1.md")));
+    }
+
+    /// <summary>Writes a file under the old <c>{DataDir}/Tasks/</c> layout, creating parent folders as needed.</summary>
+    private static void WriteTasksFile(string dataDir, string relativePath, string text)
+    {
+        string path = Path.Combine(dataDir, "Tasks", relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, text);
+    }
+
     /// <summary>Writes a file under the old <c>{DataDir}/Teams/</c> layout, creating parent folders as needed.</summary>
     private static void WriteTeamsFile(string dataDir, string relativePath, string text)
     {

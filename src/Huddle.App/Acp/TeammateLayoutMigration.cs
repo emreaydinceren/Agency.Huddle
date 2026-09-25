@@ -1,4 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App.Acp;
@@ -9,14 +11,18 @@ namespace Agency.Huddle.App.Acp;
 /// Teammate now owns: <c>{DataDir}/{Acp:TeammatesDir}/&lt;Name&gt;/&lt;Name&gt;.md</c> plus its
 /// Work Dir underneath. It must run before <see cref="PersonaStore"/>, so it is a plain static
 /// call from <c>Program.cs</c>, not a hosted service - <see cref="PersonaStore"/> scans its
-/// folder in its own constructor. Step 4 (moving <c>Tasks/</c>) is the Tasks effort's job and is
-/// not implemented here (Gate G1).
+/// folder in its own constructor. Step 4 moves the retired <c>{DataDir}/Tasks/</c> layout
+/// (<c>&lt;Team&gt;/[&lt;Project&gt;/][_closed/]*.md</c>) into <c>{DataDir}/{Teams:Dir}/&lt;Team&gt;/
+/// [&lt;Project&gt;/]_tasks/[_closed/]</c>; it is gated by that source existing, not by
+/// <see cref="MarkerFileName"/> - an install whose marker already exists from a build before Step 4
+/// still migrates a leftover Tasks/ root.
 /// </summary>
 internal static class TeammateLayoutMigration
 {
     private const string UnsortedFolderName = "_unsorted";
     private const string OldTeamsFolderName = "Teams";
     private const string OldWorkFolderName = "work";
+    private const string OldTasksFolderName = "Tasks";
     private const string MarkerFileName = ".layout-migrated";
 
     /// <summary>
@@ -42,28 +48,49 @@ internal static class TeammateLayoutMigration
             return;
         }
 
-        string teamsRoot = Path.Combine(dataDir, OldTeamsFolderName);
+        string oldTeamsRoot = Path.Combine(dataDir, OldTeamsFolderName);
         string workRoot = Path.Combine(dataDir, OldWorkFolderName);
+        string oldTasksRoot = Path.Combine(dataDir, OldTasksFolderName);
+        string newTasksTeamsRoot = Path.Combine(dataDir, options.Value.Teams.Dir);
         TeammatePaths paths = new(options);
 
         string markerPath = Path.Combine(paths.DefinitionsRoot, MarkerFileName);
-        if (File.Exists(markerPath))
+        bool markerPresent = File.Exists(markerPath);
+
+        List<PlannedMove> moves = [];
+        if (!markerPresent)
         {
-            return;
+            moves.AddRange(ResolveAlreadyDoneMoves(PlanMoves(oldTeamsRoot, workRoot, paths)));
         }
 
-        List<PlannedMove> moves = ResolveAlreadyDoneMoves(PlanMoves(teamsRoot, workRoot, paths));
+        if (Directory.Exists(oldTasksRoot))
+        {
+            moves.AddRange(ResolveAlreadyDoneMoves(PlanTaskMoves(oldTasksRoot, newTasksTeamsRoot, logger)));
+        }
+
         if (moves.Count == 0)
         {
-            logger.LogInformation("Teammate layout migration: nothing to migrate.");
-            WriteMarker(paths.DefinitionsRoot, markerPath);
+            if (!markerPresent)
+            {
+                logger.LogInformation("Teammate layout migration: nothing to migrate.");
+                WriteMarker(paths.DefinitionsRoot, markerPath);
+            }
+
             return;
         }
 
         CheckTargetsAreClear(moves);
         ExecuteMoves(moves, logger);
-        RemoveEmptyOldFolders(teamsRoot, workRoot);
-        WriteMarker(paths.DefinitionsRoot, markerPath);
+        RemoveEmptyOldFolders(oldTeamsRoot, workRoot);
+        if (Directory.Exists(oldTasksRoot))
+        {
+            RemoveIfEmptyRecursively(oldTasksRoot);
+        }
+
+        if (!markerPresent)
+        {
+            WriteMarker(paths.DefinitionsRoot, markerPath);
+        }
     }
 
     /// <summary>
@@ -182,6 +209,30 @@ internal static class TeammateLayoutMigration
         return moves;
     }
 
+    /// <summary>
+    /// Plans a move for every file under <paramref name="oldTasksRoot"/> that matches the retired
+    /// <c>&lt;Team&gt;/[&lt;Project&gt;/][_closed/]*.md</c> Tasks layout (<see cref="LegacyTaskPath"/>),
+    /// targeting <paramref name="newTasksTeamsRoot"/>'s <see cref="TaskLayout.TasksFolder"/> layout. A
+    /// file the old rules do not recognise is left in place and logged as a warning.
+    /// </summary>
+    private static List<PlannedMove> PlanTaskMoves(string oldTasksRoot, string newTasksTeamsRoot, ILogger logger)
+    {
+        List<PlannedMove> moves = [];
+        foreach (string file in Directory.EnumerateFiles(oldTasksRoot, "*", SearchOption.AllDirectories))
+        {
+            if (LegacyTaskPath.TryMap(oldTasksRoot, file, out string? relativeTarget))
+            {
+                moves.Add(new PlannedMove(file, Path.Combine(newTasksTeamsRoot, relativeTarget), IsDirectory: false));
+            }
+            else
+            {
+                logger.LogWarning("Teammate layout migration: '{Path}' under the old Tasks folder does not match the Task layout and was left in place.", file);
+            }
+        }
+
+        return moves;
+    }
+
     /// <summary>Confirms every planned target is clear before any move executes.</summary>
     private static void CheckTargetsAreClear(IReadOnlyList<PlannedMove> moves)
     {
@@ -264,4 +315,70 @@ internal static class TeammateLayoutMigration
 
     /// <summary>One planned move: a source path to a target path, either a single file or a whole directory subtree.</summary>
     private sealed record PlannedMove(string Source, string Target, bool IsDirectory);
+
+    /// <summary>
+    /// A copy of the retired Tasks layout's own path rules, kept inside this migration rather than
+    /// shared with <see cref="TaskLayout"/> (whose <c>TryMap</c> parses the current, not the retired,
+    /// layout). Recognises <c>&lt;Team&gt;/*.md</c>, <c>&lt;Team&gt;/_closed/*.md</c>,
+    /// <c>&lt;Team&gt;/&lt;Project&gt;/*.md</c> and <c>&lt;Team&gt;/&lt;Project&gt;/_closed/*.md</c>, all
+    /// relative to the old <c>Tasks/</c> root, and maps each to its path relative to the new Tasks
+    /// root, built from <see cref="TaskLayout"/>'s folder-name constants.
+    /// </summary>
+    private static class LegacyTaskPath
+    {
+        /// <summary>
+        /// Maps <paramref name="fullPath"/> (a file under <paramref name="oldTasksRoot"/>) to its
+        /// target path, relative to the new Tasks root. Returns <see langword="false"/>, with
+        /// <paramref name="relativeTarget"/> <see langword="null"/>, when the old layout's rules do
+        /// not recognise the path - it is not rejected, only left where it is.
+        /// </summary>
+        internal static bool TryMap(string oldTasksRoot, string fullPath, [NotNullWhen(true)] out string? relativeTarget)
+        {
+            string relativePath = Path.GetRelativePath(oldTasksRoot, fullPath);
+            string[] parts = relativePath.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]);
+
+            relativeTarget = null;
+            if (parts.Length < 2 || TaskLayout.IsReservedFolderName(parts[0]))
+            {
+                return false;
+            }
+
+            string team = parts[0];
+            string fileName = parts[^1];
+
+            if (parts.Length == 2)
+            {
+                relativeTarget = Path.Combine(team, TaskLayout.TasksFolder, fileName);
+                return true;
+            }
+
+            if (parts.Length == 3)
+            {
+                if (IsClosedFolder(parts[1]))
+                {
+                    relativeTarget = Path.Combine(team, TaskLayout.TasksFolder, TaskLayout.ClosedFolder, fileName);
+                    return true;
+                }
+
+                if (!TaskLayout.IsReservedFolderName(parts[1]))
+                {
+                    relativeTarget = Path.Combine(team, parts[1], TaskLayout.TasksFolder, fileName);
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (parts.Length == 4 && !TaskLayout.IsReservedFolderName(parts[1]) && IsClosedFolder(parts[2]))
+            {
+                relativeTarget = Path.Combine(team, parts[1], TaskLayout.TasksFolder, TaskLayout.ClosedFolder, fileName);
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>True when <paramref name="name"/> is the retired layout's closed-tasks folder name.</summary>
+        private static bool IsClosedFolder(string name) => FolderSnapshot.PathComparer.Equals(name, TaskLayout.ClosedFolder);
+    }
 }
