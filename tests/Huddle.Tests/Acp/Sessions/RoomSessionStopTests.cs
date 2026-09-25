@@ -184,9 +184,9 @@ public sealed class RoomSessionStopTests
         var persona = new Persona("nova", "You are Nova.");
         var roomA = HumanRoom("room-a");
 
-        List<PersonaStatus> statuses = [];
+        StatusRecorder statuses = new();
         await using var runner = CreateRunner(server, persona, factory, new AcpOptions { MaxConcurrentTurns = 1 });
-        runner.StatusChanged += statuses.Add;
+        runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, [roomA], ct);
 
         factory.Host!.Sessions[0].EnqueueDelayedReply(TimeSpan.FromSeconds(10), "a reply");
@@ -199,8 +199,9 @@ public sealed class RoomSessionStopTests
         // Give a misbehaving report every chance to arrive anyway.
         await Task.Delay(200, ct);
 
-        Assert.DoesNotContain(statuses, status => status.State == PersonaState.Degraded);
-        Assert.DoesNotContain(statuses, status => status.State == PersonaState.Offline);
+        var seen = statuses.Snapshot();
+        Assert.DoesNotContain(seen, status => status.State == PersonaState.Degraded);
+        Assert.DoesNotContain(seen, status => status.State == PersonaState.Offline);
     }
 
     /// <summary>Stopping a Room that never had a session opened for it is a no-op, not a throw.</summary>

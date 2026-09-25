@@ -37,13 +37,13 @@ public sealed class RoomSessionHealthTests
     public void ReportTurnFailure_Once_NamesTheRoom()
     {
         PersonaRunner runner = CreateBareRunner();
-        List<PersonaStatus> statuses = [];
-        runner.StatusChanged += statuses.Add;
+        StatusRecorder statuses = new();
+        runner.StatusChanged += statuses.Record;
         IRoomSessionOwner owner = runner;
 
         owner.ReportTurnFailure("Porto trip", "the adapter said no");
 
-        var status = Assert.Single(statuses);
+        var status = Assert.Single(statuses.Snapshot());
         Assert.Equal(PersonaState.Degraded, status.State);
         Assert.Equal("A Turn in Room 'Porto trip' failed — the adapter said no", status.Reason);
     }
@@ -53,14 +53,15 @@ public sealed class RoomSessionHealthTests
     public void ReportTurnFailure_Third_Escalates_NamingTheLastRoomAndReason()
     {
         PersonaRunner runner = CreateBareRunner();
-        List<PersonaStatus> statuses = [];
-        runner.StatusChanged += statuses.Add;
+        StatusRecorder recorder = new();
+        runner.StatusChanged += recorder.Record;
         IRoomSessionOwner owner = runner;
 
         owner.ReportTurnFailure("Room A", "one");
         owner.ReportTurnFailure("Room A", "two");
         owner.ReportTurnFailure("Porto trip", "three");
 
+        var statuses = recorder.Snapshot();
         Assert.Equal(3, statuses.Count);
         Assert.Equal(
             "3 consecutive Turns have failed; this is unlikely to be transient — the last, in Room 'Porto trip': three",
@@ -72,14 +73,15 @@ public sealed class RoomSessionHealthTests
     public void ReportTurnFailure_AcrossTwoRooms_OneStreak_ThirdEscalates()
     {
         PersonaRunner runner = CreateBareRunner();
-        List<PersonaStatus> statuses = [];
-        runner.StatusChanged += statuses.Add;
+        StatusRecorder recorder = new();
+        runner.StatusChanged += recorder.Record;
         IRoomSessionOwner owner = runner;
 
         owner.ReportTurnFailure("Room A", "boom a1");
         owner.ReportTurnFailure("Room B", "boom b1");
         owner.ReportTurnFailure("Room A", "boom a2");
 
+        var statuses = recorder.Snapshot();
         Assert.Equal(3, statuses.Count);
         Assert.DoesNotContain("consecutive Turns have failed", statuses[0].Reason);
         Assert.DoesNotContain("consecutive Turns have failed", statuses[1].Reason);
@@ -91,8 +93,8 @@ public sealed class RoomSessionHealthTests
     public void ReportTurnCompleted_ResetsStreak()
     {
         PersonaRunner runner = CreateBareRunner();
-        List<PersonaStatus> statuses = [];
-        runner.StatusChanged += statuses.Add;
+        StatusRecorder statuses = new();
+        runner.StatusChanged += statuses.Record;
         IRoomSessionOwner owner = runner;
 
         owner.ReportTurnFailure("Room A", "one");
@@ -100,7 +102,9 @@ public sealed class RoomSessionHealthTests
         owner.ReportTurnCompleted();
         owner.ReportTurnFailure("Room A", "three");
 
-        var lastFailure = Assert.Single(statuses, s => s.State == PersonaState.Degraded && s.Reason!.Contains("three", StringComparison.Ordinal));
+        var lastFailure = Assert.Single(
+            statuses.Snapshot(),
+            s => s.State == PersonaState.Degraded && s.Reason is not null && s.Reason.Contains("three", StringComparison.Ordinal));
         Assert.Equal("A Turn in Room 'Room A' failed — three", lastFailure.Reason);
     }
 
