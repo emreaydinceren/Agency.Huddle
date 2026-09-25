@@ -3,11 +3,12 @@ using System.Globalization;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.App.Tasks;
 
 /// <summary>
-/// Owns every file under <c>{DataDir}/{Tasks.Dir}</c>: scans it into an in-memory index by
+/// Owns every file under <c>{DataDir}/{Teams.Dir}</c>: scans it into an in-memory index by
 /// <see cref="TaskId"/>, keeps the list of rejected files, lists every Team folder together with
 /// its Projects and orphan status (Spec §8.1-§8.2), and is the only class that writes or moves a
 /// Task file (Spec §8.3), watches for edits made outside Huddle (Spec §8.4), and reconciles any
@@ -61,10 +62,12 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     private bool forcedRebuildPending;
 
     /// <summary>
-    /// Validates that <see cref="TasksOptions.Dir"/> does not resolve equal to, inside, or as a
-    /// parent of <see cref="AcpOptions.TeammatesDir"/>, creates the Tasks root, then scans it.
+    /// Validates the Teams/Teammates layout with <see cref="LayoutGuard.ValidateTeamsAndTeammates"/>
+    /// (kept here, alongside the host's own <c>PostConfigure</c> call, for a host that constructs a
+    /// <see cref="TaskStore"/> without going through <c>AddTeamServices</c>), creates the Tasks root
+    /// under <see cref="TeamsOptions.Dir"/>, then scans it.
     /// </summary>
-    /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>, <see cref="TasksOptions.Dir"/> and <see cref="AcpOptions.TeammatesDir"/>.</param>
+    /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/> and <see cref="TeamsOptions.Dir"/>.</param>
     /// <param name="personas">Supplies the Team labels a Team folder is checked against for §8.2's orphan flag, and its <see cref="PersonaStore.PersonasChanged"/> event.</param>
     /// <param name="clock">Supplies the timestamp for any startup-reconciliation Change log entry (Spec §8.5); the watcher's own debounce timer runs on real time, not this clock.</param>
     /// <param name="logger">Used to warn when a directory can't be enumerated or a file can't be read during the scan.</param>
@@ -78,9 +81,9 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         this.personas = personas;
         this.logger = logger;
 
-        string tasksRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Tasks.Dir));
-        string teamsRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Acp.TeammatesDir));
-        ThrowIfNested(tasksRoot, teamsRoot);
+        LayoutGuard.ValidateTeamsAndTeammates(options.Value);
+
+        string tasksRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Teams.Dir));
 
         this.RootDirectory = tasksRoot;
         Directory.CreateDirectory(tasksRoot);
@@ -767,31 +770,6 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
 
         return (edits, anyRemoved);
     }
-
-    /// <summary>
-    /// Throws when <paramref name="tasksRoot"/> and <paramref name="teamsRoot"/> are the same
-    /// directory, or either contains the other, comparing with <see cref="FolderSnapshot.PathComparer"/>
-    /// on separator-terminated prefixes (Settled corrections-B2 D5 item 12).
-    /// </summary>
-    private static void ThrowIfNested(string tasksRoot, string teamsRoot)
-    {
-        string tasksPrefix = tasksRoot.EndsWith(Path.DirectorySeparatorChar) ? tasksRoot : tasksRoot + Path.DirectorySeparatorChar;
-        string teamsPrefix = teamsRoot.EndsWith(Path.DirectorySeparatorChar) ? teamsRoot : teamsRoot + Path.DirectorySeparatorChar;
-
-        bool equal = FolderSnapshot.PathComparer.Equals(tasksRoot, teamsRoot);
-        bool tasksInsideTeams = HasPrefix(tasksPrefix, teamsPrefix);
-        bool teamsInsideTasks = HasPrefix(teamsPrefix, tasksPrefix);
-
-        if (equal || tasksInsideTeams || teamsInsideTasks)
-        {
-            throw new InvalidOperationException(
-                $"Team:Tasks:Dir ('{tasksRoot}') must not equal or nest with Team:Acp:TeammatesDir ('{teamsRoot}').");
-        }
-    }
-
-    /// <summary>True when <paramref name="value"/> starts with <paramref name="prefix"/>, compared with <see cref="FolderSnapshot.PathComparer"/>.</summary>
-    private static bool HasPrefix(string value, string prefix) =>
-        value.Length >= prefix.Length && FolderSnapshot.PathComparer.Equals(value[..prefix.Length], prefix);
 
     /// <summary>
     /// Records <paramref name="task"/> as the latest version seen at its path, and pushes it onto its

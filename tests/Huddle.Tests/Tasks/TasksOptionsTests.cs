@@ -14,7 +14,6 @@ public sealed class TasksOptionsTests
         TasksOptions options = new();
 
         Assert.True(options.Enabled);
-        Assert.Equal("Tasks", options.Dir);
         Assert.True(options.WakeEnabled);
         Assert.Equal(5, options.WakeCoalesceSeconds);
         Assert.Equal(10, options.AgentWakeBudget);
@@ -37,7 +36,6 @@ public sealed class TasksOptionsTests
         TeamOptions options = new();
         configuration.GetSection("Team").Bind(options);
 
-        Assert.Equal("Work", options.Tasks.Dir);
         Assert.Equal(3, options.Tasks.AgentWakeBudget);
         // Check that unspecified options keep their defaults
         Assert.True(options.Tasks.Enabled);

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Tasks;
 
 namespace Agency.Huddle.App.Acp;
 
@@ -130,7 +131,13 @@ internal static class TeammateLayoutMigration
     /// </summary>
     private static List<PlannedMove> PlanDefinitionMoves(string teamsRoot, TeammatePaths paths)
     {
-        List<string> files = [.. Directory.EnumerateFiles(teamsRoot, "*.md", SearchOption.AllDirectories)];
+        // Since Library Task G1.2, Teams/ also doubles as the Tasks scan root
+        // ({Team}/_tasks/*.md, {Team}/{Project}/_tasks/*.md): a reserved-name segment there is a
+        // Task file, not a stray legacy Persona definition, so it is excluded here rather than fed
+        // to PersonaIndex.Build, which would otherwise reject it and sweep it into _unsorted.
+        List<string> files = [..
+            Directory.EnumerateFiles(teamsRoot, "*.md", SearchOption.AllDirectories)
+                .Where(file => !HasReservedSegment(Path.GetRelativePath(teamsRoot, file)))];
         if (files.Count == 0)
         {
             return [];
@@ -154,6 +161,10 @@ internal static class TeammateLayoutMigration
 
         return moves;
     }
+
+    /// <summary>True when any path segment of <paramref name="relativePath"/> is reserved (<see cref="TaskLayout.IsReservedFolderName"/>) - a Tasks folder, not a legacy Persona definition.</summary>
+    private static bool HasReservedSegment(string relativePath) =>
+        relativePath.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar]).Any(TaskLayout.IsReservedFolderName);
 
     /// <summary>
     /// Plans one directory move per Teammate under <paramref name="workRoot"/>, moving its whole

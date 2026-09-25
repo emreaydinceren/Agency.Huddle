@@ -51,6 +51,18 @@ public static class ServiceCollectionExtensions
                 "(environment variable, user secret, etc.) - there is no automatic fallback.");
         }
 
+        // Team:Tasks:Dir retired with no fallback (Library Task G1.2, ADR-0030): the Tasks scan
+        // root is now Team:Teams:Dir, the same folder each Team's _tasks/ lives under. A value
+        // left behind would otherwise bind to nothing and TaskStore would quietly scan the
+        // default "Teams" folder - the same silent-degradation shape as the guards above.
+        if (configuration[$"{TeamOptions.SectionName}:Tasks:Dir"] is not null)
+        {
+            throw new InvalidOperationException(
+                $"Configuration key '{TeamOptions.SectionName}:Tasks:Dir' was replaced by " +
+                $"'{TeamOptions.SectionName}:Teams:Dir'. Tasks now live in each Team folder's _tasks/ folder; " +
+                "remove the key (the start-up migration reads {DataDir}/Tasks). There is no automatic fallback.");
+        }
+
         services.Configure<TeamOptions>(configuration.GetSection(TeamOptions.SectionName));
         services.PostConfigure<TeamOptions>(options =>
         {

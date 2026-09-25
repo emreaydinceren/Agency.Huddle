@@ -1,7 +1,4 @@
 using System.Globalization;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
 
@@ -191,48 +188,6 @@ public sealed class TaskStoreTests
         await Task.Delay(TimeSpan.FromMilliseconds(900), ct);
 
         Assert.Equal(0, indexChangedCount);
-    }
-
-    /// <summary>
-    /// Configuring the Tasks folder to resolve equal to, inside, or as a parent of the Teams folder
-    /// is rejected at startup either way (Settled corrections-B2 D5 item 12: "throw on equality and
-    /// on either containing the other").
-    /// </summary>
-    /// <param name="scenario">Which of the three relationships to configure.</param>
-    [Theory]
-    [InlineData("equal")]
-    [InlineData("tasksInsideTeams")]
-    [InlineData("teamsInsideTasks")]
-    public void Constructor_TasksDirInsideTeamsDir_Throws(string scenario)
-    {
-        using TempDataDir dir = new();
-        IOptions<TeamOptions> options = dir.Options();
-        switch (scenario)
-        {
-            case "equal":
-                options.Value.Tasks.Dir = options.Value.Acp.TeammatesDir;
-                break;
-            case "tasksInsideTeams":
-                options.Value.Tasks.Dir = Path.Combine(options.Value.Acp.TeammatesDir, "Sub");
-                break;
-            case "teamsInsideTasks":
-                options.Value.Acp.TeammatesDir = Path.Combine(options.Value.Tasks.Dir, "Sub");
-                break;
-            default:
-                throw new ArgumentOutOfRangeException(nameof(scenario), scenario, "unknown scenario");
-        }
-
-        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
-
-        string expectedTasksRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Tasks.Dir));
-        string expectedTeamsRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Acp.TeammatesDir));
-
-        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
-            () => new TaskStore(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance));
-
-        Assert.Equal(
-            $"Team:Tasks:Dir ('{expectedTasksRoot}') must not equal or nest with Team:Acp:TeammatesDir ('{expectedTeamsRoot}').",
-            exception.Message);
     }
 
     /// <summary>

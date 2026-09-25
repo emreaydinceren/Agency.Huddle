@@ -15,7 +15,7 @@ internal static class TestTaskStore
 {
     /// <summary>Returns the Tasks scan root under a temporary data directory.</summary>
     /// <param name="dir">The temporary data directory a Task store under test scans.</param>
-    public static string Root(TempDataDir dir) => Path.Combine(dir.Path, "Tasks");
+    public static string Root(TempDataDir dir) => Path.Combine(dir.Path, "Teams");
 
     /// <summary>Returns a Task file's path, relative to <see cref="Root"/>, in today's on-disk layout.</summary>
     /// <param name="team">The owning Team's label.</param>
