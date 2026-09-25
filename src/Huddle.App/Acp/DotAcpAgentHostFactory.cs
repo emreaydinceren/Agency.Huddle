@@ -41,6 +41,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     private readonly IAgentProcessLauncher launcher;
     private readonly SkillStore skills;
     private readonly TeammatePaths teammatePaths;
+    private readonly TeammateFolderMoves folderMoves;
 
     /// <summary>Initializes a new instance of the <see cref="DotAcpAgentHostFactory"/> class.</summary>
     /// <param name="options">The bound <see cref="TeamOptions"/>.</param>
@@ -65,6 +66,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// second time, only for the Degraded warnings it reports before ever calling this factory.
     /// </param>
     /// <param name="teammatePaths">Locates each Persona's Work Dir.</param>
+    /// <param name="folderMoves">Awaited before creating a Persona's Work Dir, so a rename's Teammate-folder move never races this factory creating a stale copy of it - corrections-B2 item 20.</param>
     public DotAcpAgentHostFactory(
         IOptions<TeamOptions> options,
         IServiceProvider serviceProvider,
@@ -72,7 +74,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         AdapterProfileResolver resolver,
         IAgentProcessLauncher launcher,
         SkillStore skills,
-        TeammatePaths teammatePaths)
+        TeammatePaths teammatePaths,
+        TeammateFolderMoves folderMoves)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(serviceProvider);
@@ -81,6 +84,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         ArgumentNullException.ThrowIfNull(launcher);
         ArgumentNullException.ThrowIfNull(skills);
         ArgumentNullException.ThrowIfNull(teammatePaths);
+        ArgumentNullException.ThrowIfNull(folderMoves);
 
         this.options = options.Value;
         this.serviceProvider = serviceProvider;
@@ -90,6 +94,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         this.launcher = launcher;
         this.skills = skills;
         this.teammatePaths = teammatePaths;
+        this.folderMoves = folderMoves;
     }
 
     public async Task<IPersonaHost> StartAsync(Persona persona, string agentId, CancellationToken cancellationToken)
@@ -103,6 +108,13 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             this.logger.LogWarning(
                 "Persona '{PersonaName}' Adapter resolution warning: {Warning}", persona.Name, warning);
         }
+
+        // corrections-B2 item 20: a rename's Teammate-folder move can still be in flight (retrying
+        // against a not-yet-exited old process) when the runner it raced against restarts under the
+        // new Name and this factory starts it - wait for that move to settle first, or this would
+        // create a fresh, empty folder at the new Name while the move still holds the real one under
+        // the old Name, then have the move either collide with it or silently strand it.
+        await this.folderMoves.WhenSettledAsync(persona.Name, cancellationToken).ConfigureAwait(false);
 
         var workDir = this.teammatePaths.WorkDir(persona.Name);
         Directory.CreateDirectory(workDir);

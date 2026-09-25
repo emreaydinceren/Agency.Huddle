@@ -9,6 +9,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Tasks;
 
 namespace Agency.Huddle.Tests.Acp;
@@ -81,7 +82,7 @@ public sealed class PersonaRenameCascadeTests
         CreateWorkDir(dir, "echo");
 
         harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null);
-        await WaitForWorkDirMoveAsync(dir, "echoprime", ct);
+        await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
 
         var updated = await harness.TeamDirectory.GetRoomAsync(room.Id, ct);
         Assert.NotNull(updated);
@@ -103,7 +104,7 @@ public sealed class PersonaRenameCascadeTests
         CreateWorkDir(dir, "echo");
 
         harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null);
-        await WaitForWorkDirMoveAsync(dir, "echoprime", ct);
+        await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
 
         var updated = await harness.TeamDirectory.GetRoomAsync(room.Id, ct);
         Assert.NotNull(updated);
@@ -177,7 +178,7 @@ public sealed class PersonaRenameCascadeTests
         await File.WriteAllTextAsync(Path.Combine(oldWorkDir, "CLAUDE.md"), "notes to self", ct);
 
         harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null);
-        await WaitForWorkDirMoveAsync(dir, "echoprime", ct);
+        await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
 
         Assert.False(Directory.Exists(oldWorkDir));
         var newWorkDir = new TeammatePaths(dir.Options()).WorkDir("echoprime");
@@ -231,15 +232,15 @@ public sealed class PersonaRenameCascadeTests
 
         // Forward: echo -> echoprime.
         harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null);
-        await WaitForWorkDirMoveAsync(dir, "echoprime", ct);
+        await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
 
         // Back: echoprime -> echo.
         harness.PersonaStore.Update("echoprime", PersonaText("echo", "You answer support questions."), model: null, effort: null);
-        await WaitForWorkDirMoveAsync(dir, "echo", ct);
+        await harness.FolderMoves.WhenSettledAsync("echo", ct);
 
         // Forward again: the exact same (echo -> echoprime) transition as the first step.
         harness.PersonaStore.Update("echo", PersonaText("echoprime", "You answer support questions."), model: null, effort: null);
-        await WaitForWorkDirMoveAsync(dir, "echoprime", ct);
+        await harness.FolderMoves.WhenSettledAsync("echoprime", ct);
 
         var renamed = harness.TeamDirectory.FindUserByName("echoprime");
         Assert.NotNull(renamed);
@@ -500,8 +501,173 @@ public sealed class PersonaRenameCascadeTests
         Assert.Equal(["novaprime"], updated.Filter.Assignees);
     }
 
+    /// <summary>Spec §6.15: a rename moves the whole Teammate folder to the new Name and renames the definition inside it, so the moved Work Dir's contents survive under the new folder.</summary>
+    [Fact]
+    public async Task Rename_MovesTeammateFolderAndRenamesDefinition()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("Old"), "You help.");
+        var paths = new TeammatePaths(dir.Options());
+        Directory.CreateDirectory(Path.Combine(paths.WorkDir("Old"), "memory"));
+        await File.WriteAllTextAsync(Path.Combine(paths.WorkDir("Old"), "memory", "x.md"), "notes", ct);
+
+        harness.PersonaStore.Update("Old", PersonaText("New", "You help."), model: null, effort: null);
+        await harness.FolderMoves.WhenSettledAsync("New", ct);
+
+        Assert.True(File.Exists(paths.DefinitionFile("New")));
+        Assert.True(File.Exists(Path.Combine(paths.WorkDir("New"), "memory", "x.md")));
+        Assert.False(Directory.Exists(paths.TeammateFolder("Old")));
+    }
+
+    /// <summary>corrections-B2 item 21: the definition is moved exactly once - the moved folder holds only the new definition file, never a leftover <c>Old.md</c> alongside it.</summary>
+    [Fact]
+    public async Task Rename_MovesTheDefinitionFileExactlyOnce()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("Old"), "You help.");
+        var paths = new TeammatePaths(dir.Options());
+
+        harness.PersonaStore.Update("Old", PersonaText("New", "You help."), model: null, effort: null);
+        await harness.FolderMoves.WhenSettledAsync("New", ct);
+
+        var topLevelFiles = Directory.GetFiles(paths.TeammateFolder("New")).Select(Path.GetFileName).ToList();
+        Assert.Equal(["New.md"], topLevelFiles);
+    }
+
+    /// <summary>When the target Teammate folder already exists, nothing moves: both folders and their definitions are left exactly as they were, and the existing *target exists* warning is logged.</summary>
+    [Fact]
+    public async Task Rename_TargetFolderExists_LeavesBoth()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var recordingLogger = new RecordingLogger<PersonaRenameCascade>();
+        using var harness = await CreateHarnessAsync(dir, ct, recordingLogger);
+        harness.PersonaStore.Add(Identity("Old"), "You help.");
+        var echo = await harness.TeamDirectory.UpsertAgentUserAsync("Old", null, ct);
+        Assert.NotNull(echo);
+        var paths = new TeammatePaths(dir.Options());
+        Directory.CreateDirectory(paths.TeammateFolder("New"));
+
+        harness.PersonaStore.Update("Old", PersonaText("New", "You help."), model: null, effort: null);
+        await WaitForAgentRenameToSettleAsync(harness.TeamDirectory, "New", ct);
+
+        Assert.True(Directory.Exists(paths.TeammateFolder("Old")));
+        Assert.True(File.Exists(paths.DefinitionFile("Old")));
+        Assert.Contains(recordingLogger.Entries, e => e.Level == LogLevel.Warning);
+    }
+
+    /// <summary>When the old Teammate folder is held open by another process, the cascade gives up after several retries and leaves both folders in place, logging the *after several attempts* warning. Windows-only: mandatory file locking via <see cref="FileShare.None"/> is not enforced on Linux.</summary>
+    [Fact]
+    public async Task Rename_FolderHeld_GivesUpAfterRetries()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Linux does not mandatory-lock files opened with FileShare.None");
+            return;
+        }
+
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var recordingLogger = new RecordingLogger<PersonaRenameCascade>();
+        var timeProvider = new FiringTimeProvider();
+        using var harness = await CreateHarnessAsync(dir, ct, recordingLogger, timeProvider);
+        harness.PersonaStore.Add(Identity("Old"), "You help.");
+        var echo = await harness.TeamDirectory.UpsertAgentUserAsync("Old", null, ct);
+        Assert.NotNull(echo);
+        var paths = new TeammatePaths(dir.Options());
+        Directory.CreateDirectory(paths.WorkDir("Old"));
+        var heldFile = Path.Combine(paths.TeammateFolder("Old"), "held.txt");
+        await File.WriteAllTextAsync(heldFile, "locked", ct);
+        using var lockHandle = new FileStream(heldFile, FileMode.Open, FileAccess.Read, FileShare.None);
+
+        harness.PersonaStore.Update("Old", PersonaText("New", "You help."), model: null, effort: null);
+        await AdvanceUntilAsync(timeProvider, () => recordingLogger.Entries.Exists(e => e.Level == LogLevel.Warning), TimeSpan.FromMilliseconds(250), ct);
+
+        Assert.True(Directory.Exists(paths.TeammateFolder("Old")));
+        Assert.False(Directory.Exists(paths.TeammateFolder("New")));
+    }
+
+    /// <summary>corrections-B2 item 18: the Teammate-folder move sits ABOVE the "no Agent row" early return, so it still runs for a Persona whose Agent has never registered - the normal case since <c>Acp:Enabled</c> defaults to <see langword="false"/>.</summary>
+    [Fact]
+    public async Task Rename_NoAgentRow_StillMovesTeammateFolder()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("ghost"), "Nobody has ever started this one.");
+        var paths = new TeammatePaths(dir.Options());
+
+        harness.PersonaStore.Update("ghost", PersonaText("ghostprime", "Nobody has ever started this one."), model: null, effort: null);
+        await harness.FolderMoves.WhenSettledAsync("ghostprime", ct);
+
+        Assert.True(Directory.Exists(paths.TeammateFolder("ghostprime")));
+        Assert.False(Directory.Exists(paths.TeammateFolder("ghost")));
+    }
+
+    /// <summary>corrections-B2 item 22: a case-only rename (<c>Nova</c> -&gt; <c>NOVA</c>) still moves the folder - on a case-insensitive file system the target must be routed through a temporary sibling name rather than mistaken for an existing collision. Runs on both operating systems.</summary>
+    [Fact]
+    public async Task Rename_CaseOnlyChange_MovesTheFolder()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("Nova"), "You are Nova.");
+        var paths = new TeammatePaths(dir.Options());
+        Directory.CreateDirectory(Path.Combine(paths.WorkDir("Nova"), "memory"));
+
+        harness.PersonaStore.Update("Nova", PersonaText("NOVA", "You are Nova."), model: null, effort: null);
+        await WaitForExactCasingAsync(paths.DefinitionsRoot, "NOVA", ct);
+
+        Assert.True(File.Exists(paths.DefinitionFile("NOVA")));
+        Assert.True(Directory.Exists(Path.Combine(paths.WorkDir("NOVA"), "memory")));
+        var entries = Directory.GetDirectories(paths.DefinitionsRoot).Select(Path.GetFileName).ToList();
+        Assert.Equal(["NOVA"], entries);
+    }
+
+    /// <summary>corrections-B2 item 20: a host starting mid-move awaits <see cref="TeammateFolderMoves.WhenSettledAsync"/> rather than racing the folder move - the wait is still pending immediately after the rename while the old folder is held open, and completes, with the folder already at its new location, once the move finally succeeds. Gate-driven via <see cref="FiringTimeProvider"/> and a held file handle, never a sleep. Windows-only: mandatory file locking via <see cref="FileShare.None"/> is not enforced on Linux.</summary>
+    [Fact]
+    public async Task Rename_HostStartsDuringMove_WaitsThenUsesMovedFolder()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Linux does not mandatory-lock files opened with FileShare.None");
+            return;
+        }
+
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var timeProvider = new FiringTimeProvider();
+        using var harness = await CreateHarnessAsync(dir, ct, timeProvider: timeProvider);
+        harness.PersonaStore.Add(Identity("Old"), "You help.");
+        var echo = await harness.TeamDirectory.UpsertAgentUserAsync("Old", null, ct);
+        Assert.NotNull(echo);
+        var paths = new TeammatePaths(dir.Options());
+        Directory.CreateDirectory(paths.WorkDir("Old"));
+        var heldFile = Path.Combine(paths.TeammateFolder("Old"), "held.txt");
+        await File.WriteAllTextAsync(heldFile, "locked", ct);
+        using var lockHandle = new FileStream(heldFile, FileMode.Open, FileAccess.Read, FileShare.None);
+
+        harness.PersonaStore.Update("Old", PersonaText("New", "You help."), model: null, effort: null);
+        var settled = harness.FolderMoves.WhenSettledAsync("New", ct);
+        Assert.False(settled.IsCompleted);
+
+        lockHandle.Dispose();
+        await AdvanceUntilAsync(timeProvider, () => settled.IsCompleted, TimeSpan.FromMilliseconds(250), ct);
+        await settled;
+
+        Assert.True(Directory.Exists(paths.TeammateFolder("New")));
+    }
+
     /// <summary>Builds a real <see cref="ITeamDirectory"/>, <see cref="PersonaStore"/>, <see cref="AvatarStore"/> and started <see cref="PersonaRenameCascade"/> over <paramref name="dir"/>, seeding the Human.</summary>
-    private static async Task<Harness> CreateHarnessAsync(TempDataDir dir, CancellationToken ct, ILogger<PersonaRenameCascade>? cascadeLogger = null)
+    /// <param name="dir">The temp <c>DataDir</c> every store in the harness is built over.</param>
+    /// <param name="ct">Cancels the Human seed and Team Directory initialisation.</param>
+    /// <param name="cascadeLogger">A logger to observe the cascade's warnings, or <see langword="null"/> for a no-op logger.</param>
+    /// <param name="timeProvider">Drives the Teammate folder move's retry backoff, or <see langword="null"/> for <see cref="TimeProvider.System"/>.</param>
+    private static async Task<Harness> CreateHarnessAsync(TempDataDir dir, CancellationToken ct, ILogger<PersonaRenameCascade>? cascadeLogger = null, TimeProvider? timeProvider = null)
     {
         var teamDirectory = new SqliteTeamDirectory(dir.Options());
         await teamDirectory.InitializeAsync("You", ct);
@@ -525,6 +691,7 @@ public sealed class PersonaRenameCascadeTests
             TimeProvider.System,
             NullLogger<TaskService>.Instance);
         var viewStore = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
+        var folderMoves = new TeammateFolderMoves();
         var cascade = new PersonaRenameCascade(
             teamDirectory,
             personaStore,
@@ -533,10 +700,11 @@ public sealed class PersonaRenameCascadeTests
             fileState,
             roomSessions,
             new(dir.Options()),
-            TimeProvider.System,
+            timeProvider ?? TimeProvider.System,
             cascadeLogger ?? NullLogger<PersonaRenameCascade>.Instance,
             tasks: taskService,
-            views: viewStore);
+            views: viewStore,
+            folderMoves: folderMoves);
 
         await cascade.StartAsync(ct);
 
@@ -552,6 +720,7 @@ public sealed class PersonaRenameCascadeTests
             TaskService = taskService,
             ViewStore = viewStore,
             Cascade = cascade,
+            FolderMoves = folderMoves,
         };
     }
 
@@ -561,24 +730,6 @@ public sealed class PersonaRenameCascadeTests
         var path = new TeammatePaths(dir.Options()).WorkDir(name);
         Directory.CreateDirectory(path);
         return path;
-    }
-
-    /// <summary>
-    /// Polls until the Work Dir folder for <paramref name="newName"/> exists, which - because
-    /// <see cref="PersonaRenameCascade"/> moves the Work Dir last, after re-deriving Rooms - is a
-    /// reliable barrier proving the whole detached half of the cascade has finished.
-    /// </summary>
-    private static async Task WaitForWorkDirMoveAsync(TempDataDir dir, string newName, CancellationToken ct)
-    {
-        var target = new TeammatePaths(dir.Options()).WorkDir(newName);
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
-
-        while (!Directory.Exists(target))
-        {
-            linked.Token.ThrowIfCancellationRequested();
-            await Task.Delay(20, linked.Token);
-        }
     }
 
     /// <summary>
@@ -603,6 +754,46 @@ public sealed class PersonaRenameCascadeTests
         // which runs the Room step before the Work Dir step this test's scenario skips - room to
         // finish before the assertions run.
         await Task.Delay(250, linked.Token);
+    }
+
+    /// <summary>
+    /// Repeatedly advances <paramref name="timeProvider"/> by <paramref name="step"/>, firing every
+    /// due retry-backoff timer, until <paramref name="condition"/> is satisfied - the gate-driven
+    /// replacement for a real wall-clock sleep when a test must drive a
+    /// <see cref="PersonaRenameCascade"/> retry loop to completion under a <see cref="FiringTimeProvider"/>.
+    /// </summary>
+    private static async Task AdvanceUntilAsync(FiringTimeProvider timeProvider, Func<bool> condition, TimeSpan step, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(timeProvider);
+        ArgumentNullException.ThrowIfNull(condition);
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
+
+        while (!condition())
+        {
+            timeProvider.Advance(step);
+            linked.Token.ThrowIfCancellationRequested();
+            await Task.Delay(20, linked.Token);
+        }
+    }
+
+    /// <summary>
+    /// Polls until <paramref name="parentDir"/> holds a sub-directory whose ON-DISK name is exactly
+    /// <paramref name="expectedName"/> (ordinal, case-sensitive comparison) - unlike
+    /// <see cref="Directory.Exists"/>, which a case-only rename target would already satisfy on a
+    /// case-insensitive file system before the rename has actually happened.
+    /// </summary>
+    private static async Task WaitForExactCasingAsync(string parentDir, string expectedName, CancellationToken ct)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
+
+        while (!Directory.Exists(parentDir) || !Directory.GetDirectories(parentDir).Select(Path.GetFileName).Contains(expectedName, StringComparer.Ordinal))
+        {
+            linked.Token.ThrowIfCancellationRequested();
+            await Task.Delay(20, linked.Token);
+        }
     }
 
     /// <summary>A valid <see cref="PersonaIdentity"/> for <paramref name="name"/>, with Title and Alias defaulting to <paramref name="name"/>.</summary>
@@ -633,6 +824,9 @@ public sealed class PersonaRenameCascadeTests
         public required ViewStore ViewStore { get; init; }
 
         public required PersonaRenameCascade Cascade { get; init; }
+
+        /// <summary>The <see cref="TeammateFolderMoves"/> gate the cascade signals around a Teammate folder move, so a test can await <see cref="TeammateFolderMoves.WhenSettledAsync"/> the same way a host starting mid-rename would.</summary>
+        public required TeammateFolderMoves FolderMoves { get; init; }
 
         /// <summary>Disposes the cascade (unsubscribing it from <see cref="PersonaStore.PersonaRenamed"/> and <see cref="PersonaStore.PersonaRemoved"/>), then TaskService, TaskStore and ViewStore (Settled corrections-B2 D6 item 11), then the Avatar store, then the Persona store.</summary>
         public void Dispose()

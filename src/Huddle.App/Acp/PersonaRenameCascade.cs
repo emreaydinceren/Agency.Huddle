@@ -53,6 +53,7 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="logger">Records a rejected rename, a Work Dir that could not be moved, a file state move that failed, a Room Session move that failed, and any failure in the detached half of the cascade.</param>
 /// <param name="tasks">Rewrites <c>creator:</c>/<c>assignee:</c> in a renamed Persona's Task files — Spec §9.6.</param>
 /// <param name="views">Rewrites a renamed Persona's assignee filter in every saved View — Spec §9.6.</param>
+/// <param name="folderMoves">Signals a Teammate-folder move as pending before it starts and settled once it finishes, so <c>DotAcpAgentHostFactory</c> can wait for it instead of racing it — corrections-B2 item 20.</param>
 internal sealed partial class PersonaRenameCascade(
     ITeamDirectory teamDirectory,
     PersonaStore personaStore,
@@ -64,7 +65,8 @@ internal sealed partial class PersonaRenameCascade(
     TimeProvider timeProvider,
     ILogger<PersonaRenameCascade> logger,
     TaskService tasks,
-    ViewStore views) : IHostedService, IDisposable
+    ViewStore views,
+    TeammateFolderMoves folderMoves) : IHostedService, IDisposable
 {
     // The runner it raced against restarts within milliseconds and inherits the Work Dir as its cwd,
     // so a handful of short retries covers the ordinary case (the old process has not yet exited)
@@ -181,19 +183,31 @@ internal sealed partial class PersonaRenameCascade(
             LogViewRenameFailed(logger, renamed.OldName, renamed.NewName, ex);
         }
 
+        // corrections-B2 item 18: ABOVE the "no Agent row" early return below, same reasoning as the
+        // Avatar/file-state/Room-Session/Task/View moves above it - the Teammate folder exists (once
+        // any Work Dir has ever been created inside it, or a definition file placed there) whether or
+        // not an Agent has ever registered, so gating the move on the Team Directory row would leave
+        // a stock installation (Acp:Enabled false by default) never moving it at all.
+        //
+        // Begun synchronously, here, rather than inside the detached task below: corrections-B2 item
+        // 20 needs the pending state visible to a concurrent DotAcpAgentHostFactory.StartAsync the
+        // instant this method returns, not after the detached task has had a chance to run.
+        var folderMoveHandle = folderMoves.Begin(renamed.NewName);
+        _ = this.MoveTeammateFolderDetachedAsync(folderMoveHandle, renamed.OldName, renamed.NewName);
+
         var user = teamDirectory.FindUserByName(renamed.OldName);
         if (user is null || user.Kind != UserKind.Agent)
         {
             // No Agent has ever registered under the old Name - the normal case when Acp:Enabled is
-            // false, or when this Persona has simply never connected. There is nothing to cascade.
+            // false, or when this Persona has simply never connected. There is nothing left to cascade.
             return;
         }
 
         if (!teamDirectory.RenameUser(user.Id, renamed.NewName))
         {
             // The likeliest cause is that the new Name is already held by a different Agent. A
-            // partial cascade (Rooms and Work Dir moved under a Name the users row never took) is
-            // worse than none, so stop here.
+            // partial cascade (a Room renamed under a Name the users row never took) is worse than
+            // none, so stop here - the Teammate folder still moves above, independently.
             LogRenameRejected(logger, renamed.OldName, renamed.NewName);
             return;
         }
@@ -236,16 +250,14 @@ internal sealed partial class PersonaRenameCascade(
     }
 
     /// <summary>
-    /// The half of the cascade that races nothing: re-deriving auto-named Rooms and moving the Work
-    /// Dir. Fire-and-forget from <see cref="OnPersonaRenamed"/>, so any failure has no caller left to
-    /// observe it.
+    /// The half of the cascade that races nothing: re-deriving auto-named Rooms. Fire-and-forget from
+    /// <see cref="OnPersonaRenamed"/>, so any failure has no caller left to observe it.
     /// </summary>
     private async Task CascadeDetachedAsync(string userId, string oldName, string newName)
     {
         try
         {
             await this.RenameAutoNamedRoomsAsync(userId, oldName).ConfigureAwait(false);
-            await this.MoveWorkDirAsync(oldName, newName).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
@@ -254,10 +266,33 @@ internal sealed partial class PersonaRenameCascade(
             // an exception escaping this detached task would go to the process' unobserved-exception
             // handler, not back to any caller. Logging and swallowing is the least-bad outcome - a
             // partially-applied cascade here is recoverable (the Team Directory rename already
-            // committed; a Room name or a Work Dir left behind is a cosmetic gap, not data loss) -
-            // whereas the alternative, an unhandled exception on a background task, risks tearing
-            // down the process for a cosmetic failure.
+            // committed; a Room name left behind is a cosmetic gap, not data loss) - whereas the
+            // alternative, an unhandled exception on a background task, risks tearing down the
+            // process for a cosmetic failure.
             LogCascadeFailed(logger, oldName, newName, ex);
+        }
+    }
+
+    /// <summary>
+    /// Moves the Teammate folder, then releases <paramref name="handle"/> so any
+    /// <see cref="TeammateFolderMoves.WhenSettledAsync"/> waiter proceeds - whether the move
+    /// succeeded, was skipped, or gave up. Fire-and-forget from <see cref="OnPersonaRenamed"/>, so any
+    /// failure has no caller left to observe it - the same reasoning <see cref="CascadeDetachedAsync"/>
+    /// gives for its own catch.
+    /// </summary>
+    private async Task MoveTeammateFolderDetachedAsync(TaskCompletionSource handle, string oldName, string newName)
+    {
+        try
+        {
+            await this.MoveTeammateFolderAsync(oldName, newName).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            LogCascadeFailed(logger, oldName, newName, ex);
+        }
+        finally
+        {
+            folderMoves.Complete(handle);
         }
     }
 
@@ -300,41 +335,58 @@ internal sealed partial class PersonaRenameCascade(
     }
 
     /// <summary>
-    /// Moves the renamed Agent's Work Dir from <c>{oldName}</c> to <c>{newName}</c>. The Work Dir is
-    /// the agent process' <c>cwd</c>, not a jail, and the Adapter auto-loads <c>CLAUDE.md</c> and
-    /// <c>.claude/settings.json</c> from it - leaving it behind would silently discard whatever the
-    /// Teammate had written for itself.
+    /// Moves the renamed Agent's whole Teammate folder from <c>{oldName}</c> to <c>{newName}</c>, then
+    /// renames the definition file the move carried along unchanged (<c>{oldName}.md</c>) to
+    /// <c>{newName}.md</c> - corrections-B2 item 21: <see cref="PersonaStore.Update"/> already wrote
+    /// the new content to the OLD path before <see cref="PersonaStore.PersonaRenamed"/> was raised, so
+    /// this is the only place that ever renames the file itself, and it happens exactly once. The
+    /// folder holds the Work Dir - the agent process' <c>cwd</c>, not a jail, from which the Adapter
+    /// auto-loads <c>CLAUDE.md</c> and <c>.claude/settings.json</c> - so leaving it behind would
+    /// silently discard whatever the Teammate had written for itself.
     /// </summary>
-    private async Task MoveWorkDirAsync(string oldName, string newName)
+    private async Task MoveTeammateFolderAsync(string oldName, string newName)
     {
-        var source = teammatePaths.WorkDir(oldName);
-        var target = teammatePaths.WorkDir(newName);
+        var source = teammatePaths.TeammateFolder(oldName);
+        var target = teammatePaths.TeammateFolder(newName);
 
         if (!Directory.Exists(source))
         {
-            // Normal: the Work Dir is created on first start, and this Persona may never have run.
+            // Normal: the folder is created on first Add/first start, and this Persona may never
+            // have had either happen.
             return;
         }
 
-        if (Directory.Exists(target))
+        // corrections-B2 item 22: on a case-insensitive file system (Windows), a case-only rename such
+        // as Nova -> NOVA makes Directory.Exists(target) true even though target IS source - the
+        // "never merge" check below would wrongly treat this as a collision with someone else's
+        // folder. Route a case-only rename through a temporary sibling name instead, on every OS, so
+        // the same code path is exercised everywhere rather than only under Windows' case-folding.
+        var caseOnlyChange = !string.Equals(oldName, newName, StringComparison.Ordinal)
+            && string.Equals(oldName, newName, StringComparison.OrdinalIgnoreCase);
+
+        if (!caseOnlyChange && Directory.Exists(target))
         {
             // Never merge - the target may belong to an unrelated Persona of that Name already.
             LogWorkDirTargetExists(logger, oldName, newName);
             return;
         }
 
-        // The new Name's own Teammate folder may not exist yet (it is normally created alongside
-        // the moved definition file elsewhere in the cascade) - Directory.Move throws
-        // DirectoryNotFoundException (an IOException) when the target's PARENT is missing, which the
-        // retry loop below would retry on the injected clock without ever succeeding.
-        Directory.CreateDirectory(teammatePaths.TeammateFolder(newName));
-
         for (var attempt = 1; attempt <= MaxWorkDirMoveAttempts; attempt++)
         {
             try
             {
-                Directory.Move(source, target);
-                return;
+                if (caseOnlyChange)
+                {
+                    var sibling = source + ".renaming-" + Guid.NewGuid().ToString("N");
+                    Directory.Move(source, sibling);
+                    Directory.Move(sibling, target);
+                }
+                else
+                {
+                    Directory.Move(source, target);
+                }
+
+                break;
             }
             catch (IOException) when (attempt < MaxWorkDirMoveAttempts)
             {
@@ -349,22 +401,42 @@ internal sealed partial class PersonaRenameCascade(
                 return;
             }
         }
+
+        // The definition file travelled inside the folder still named for the OLD Name - rename it
+        // now, exactly once, only if PersonaStore.Update actually left it there under that name.
+        var movedDefinition = Path.Combine(target, $"{oldName}.md");
+        if (File.Exists(movedDefinition))
+        {
+            File.Move(movedDefinition, teammatePaths.DefinitionFile(newName));
+        }
+
+        // Always present after a completed move, whether or not the old folder ever had one - the
+        // same "always created" guarantee DotAcpAgentHostFactory.StartAsync gives a freshly started
+        // Persona (FC §6.15), now also given to a renamed one that has never started, so a File
+        // Changes watch or a later start finds it ready either way.
+        Directory.CreateDirectory(teammatePaths.WorkDir(newName));
+
+        // This store's own cached index still points at the pre-move path the instant the code
+        // above returns - see RefreshIndexAndNotify's remarks. Rescan now rather than leave a
+        // subsequent Update (a Teammate renamed again right away) to fail writing to a folder this
+        // move already renamed away, or wait out the file system watcher's own debounce.
+        personaStore.RescanNow();
     }
 
     /// <summary>Logs that a Team Directory rename was rejected, most likely because the new Name is already held by another Agent.</summary>
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not rename Agent '{OldName}' to '{NewName}' in the Team Directory - the new Name may already be held by another Agent. The cascade stopped here; no Room or Work Dir was touched.")]
     private static partial void LogRenameRejected(ILogger logger, string oldName, string newName);
 
-    /// <summary>Logs that the detached half of a rename cascade (Rooms, Work Dir) failed.</summary>
+    /// <summary>Logs that the detached half of a rename cascade (Rooms, Teammate folder) failed.</summary>
     [LoggerMessage(Level = LogLevel.Warning, Message = "The rename cascade for '{OldName}' -> '{NewName}' failed after the Team Directory rename had already committed.")]
     private static partial void LogCascadeFailed(ILogger logger, string oldName, string newName, Exception exception);
 
-    /// <summary>Logs that a Work Dir move was skipped because the target directory already exists.</summary>
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Did not move the Work Dir for '{OldName}' to '{NewName}': a directory already exists at the target. Both were left in place.")]
+    /// <summary>Logs that a Teammate folder move was skipped because the target directory already exists.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Did not move the Teammate folder for '{OldName}' to '{NewName}': a directory already exists at the target. Both were left in place.")]
     private static partial void LogWorkDirTargetExists(ILogger logger, string oldName, string newName);
 
-    /// <summary>Logs that a Work Dir move failed after every retry.</summary>
-    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not move the Work Dir for '{OldName}' to '{NewName}' after several attempts.")]
+    /// <summary>Logs that a Teammate folder move failed after every retry.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Could not move the Teammate folder for '{OldName}' to '{NewName}' after several attempts.")]
     private static partial void LogWorkDirMoveFailed(ILogger logger, string oldName, string newName, Exception exception);
 
     /// <summary>Logs that moving a renamed Persona's File Changes state failed. The Team Directory rename proceeds regardless.</summary>

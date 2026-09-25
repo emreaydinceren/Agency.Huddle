@@ -1491,6 +1491,31 @@ public sealed class PersonaStoreTests
         Assert.True(File.Exists(expectedPath));
     }
 
+    /// <summary>
+    /// corrections-B2 item 19: a Persona whose folder moved externally - a Path change with an
+    /// unchanged frontmatter Name - must not read as a removal. Drives the scenario through a
+    /// bare <see cref="PersonaStore"/> with no <see cref="PersonaRenameCascade"/> attached, moving
+    /// the folder and renaming the file by hand exactly as an external actor would, then forcing a
+    /// rescan directly rather than waiting on the watcher's debounce.
+    /// </summary>
+    [Fact]
+    public void Rescan_PathChangedNameSame_DoesNotRaisePersonaRemoved()
+    {
+        using var dir = new TempDataDir();
+        var paths = new TeammatePaths(dir.Options());
+        TestPersonaFiles.Write(paths, "Nova", PersonaText("Nova", "You are Nova."));
+        using var store = CreateStore(dir);
+        List<string> removedNames = [];
+        store.PersonaRemoved += removed => removedNames.Add(removed.Name);
+
+        Directory.Move(paths.TeammateFolder("Nova"), paths.TeammateFolder("Nova2"));
+        File.Move(Path.Combine(paths.TeammateFolder("Nova2"), "Nova.md"), Path.Combine(paths.TeammateFolder("Nova2"), "Nova2.md"));
+        store.RescanNow();
+
+        Assert.Empty(removedNames);
+        Assert.Contains("Nova", store.ListNames());
+    }
+
     private static PersonaStore CreateStore(TempDataDir dir)
     {
         return new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);

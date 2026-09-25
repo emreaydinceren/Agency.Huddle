@@ -821,9 +821,23 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// other, and a delete never collides with anything the way a colliding Name or Alias can.
     /// <see cref="Add"/> and <see cref="Update"/> instead call <see cref="PublishFreshIndex"/>
     /// themselves, synchronously, before releasing <see cref="writeGate"/>, and call
-    /// <see cref="NotifyChanged"/> only after releasing it.
+    /// <see cref="NotifyChanged"/> only after releasing it. Also called directly, as
+    /// <see cref="RescanNow"/>, by <see cref="PersonaRenameCascade"/> right after it moves a
+    /// Teammate folder on disk - without that call, this store's cached index would keep pointing
+    /// a subsequent <see cref="Update"/> at the pre-move path until the file system watcher's own
+    /// <see cref="WatcherDebounceMilliseconds"/>-later rescan caught up, and a rename applied again
+    /// before then would fail writing to a folder the move had already renamed away.
     /// </summary>
     private void RefreshIndexAndNotify() => this.NotifyChanged(this.PublishFreshIndex());
+
+    /// <summary>
+    /// Rescans disk and republishes the index immediately, exactly as the debounced file system
+    /// watcher eventually would on its own. Exposed for <see cref="PersonaRenameCascade"/> to call
+    /// right after it moves a Teammate folder out from under this store's cached index - see
+    /// <see cref="RefreshIndexAndNotify"/>'s remarks for why waiting for the watcher's own debounce
+    /// is not good enough there.
+    /// </summary>
+    internal void RescanNow() => this.RefreshIndexAndNotify();
 
     /// <summary>
     /// Diffs <paramref name="previous"/> against <paramref name="updated"/>, keyed by
@@ -891,11 +905,14 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
 
     /// <summary>
     /// Diffs <paramref name="previous"/> against <paramref name="updated"/>, keyed by
-    /// <see cref="PersonaEntry.Path"/> exactly as <see cref="RaiseRenames"/> does, and publishes
-    /// <see cref="PersonaRemoved"/> once for every path present in <paramref name="previous"/> with no
-    /// matching path in <paramref name="updated"/>. Because a rename keeps its path, a renamed Persona
-    /// is never mistaken for a removed one, and there is no ordering hazard between this diff and
-    /// <see cref="RaiseRenames"/>'s.
+    /// <see cref="PersonaEntry.Name"/> (case-insensitive), and publishes <see cref="PersonaRemoved"/>
+    /// once for every Name present in <paramref name="previous"/> with no matching Name in
+    /// <paramref name="updated"/>. Keyed by Name rather than by <see cref="PersonaEntry.Path"/>
+    /// (corrections-B2 item 19): a Teammate-folder move changes a Persona's Path without changing its
+    /// Name, and a Path-keyed diff would misread that move as the old Path disappearing - raising a
+    /// false <see cref="PersonaRemoved"/> for the Persona <see cref="PersonaRenameCascade"/> had just
+    /// renamed, which <see cref="PersonaRenameCascade.OnPersonaRemoved"/> would then react to by
+    /// deleting the just-renamed Avatar, File Changes state and Room Session it exists to preserve.
     /// </summary>
     /// <param name="previous">The index in effect before this refresh.</param>
     /// <param name="updated">The freshly rebuilt index about to become current.</param>
@@ -906,11 +923,11 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
             return;
         }
 
-        var updatedPaths = updated.Entries.Select(entry => entry.Path).ToHashSet(StringComparer.Ordinal);
+        var updatedNames = updated.Entries.Select(entry => entry.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var before in previous.Entries)
         {
-            if (updatedPaths.Contains(before.Path))
+            if (updatedNames.Contains(before.Name))
             {
                 continue;
             }

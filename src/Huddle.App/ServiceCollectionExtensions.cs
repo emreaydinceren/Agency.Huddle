@@ -105,6 +105,11 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<TeammatePaths>();
 
+        // Shared between PersonaRenameCascade (signals around a Teammate-folder move) and
+        // DotAcpAgentHostFactory (waits on it before creating a Persona's Work Dir) - corrections-B2
+        // item 20.
+        services.AddSingleton<TeammateFolderMoves>();
+
         // Unconditional: this is what lets the /teammates page be built and tested with no agent
         // process and no tokens, regardless of whether Team:Acp:Enabled is set.
         services.AddSingleton<PersonaStore>();

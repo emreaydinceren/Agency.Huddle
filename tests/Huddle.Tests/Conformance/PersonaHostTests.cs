@@ -36,6 +36,34 @@ public sealed class PersonaHostTests
         Assert.DoesNotContain(fixture.Agent.Received, message => (string?)message["method"] == "session/new");
     }
 
+    /// <summary>
+    /// Manager's review of 3.4.i: nothing in 3.4.t proves <see cref="DotAcpAgentHostFactory"/> itself
+    /// waits on a pending Teammate-folder move (corrections-B2 item 20) - only that
+    /// <see cref="TeammateFolderMoves.WhenSettledAsync"/> behaves correctly in isolation. A pending
+    /// <see cref="TeammateFolderMoves.Begin"/> for the Persona's Name holds
+    /// <see cref="IAgentHostFactory.StartAsync"/> from creating its Work Dir until
+    /// <see cref="TeammateFolderMoves.Complete"/> releases it - gate-driven via the pending Task, no
+    /// sleeps.
+    /// </summary>
+    [Fact]
+    public async Task Start_FolderMovePending_WaitsBeforeCreatingWorkDir()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+        TaskCompletionSource handle = fixture.Moves.Begin(fixture.Persona.Name);
+        string workDir = Path.Combine(fixture.DataDir, "Teammates", fixture.Persona.Name, "work");
+
+        Task<IPersonaHost> starting = fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        Assert.False(starting.IsCompleted);
+        Assert.False(Directory.Exists(workDir));
+
+        fixture.Moves.Complete(handle);
+        await using IPersonaHost host = await starting;
+
+        Assert.True(Directory.Exists(workDir));
+    }
+
     /// <summary>Two <see cref="IPersonaHost.OpenAsync"/> calls mint two distinct session ids, over the one Adapter process <see cref="IAgentHostFactory.StartAsync"/> launched.</summary>
     [Fact]
     public async Task Open_Twice_TwoDistinctSessionIds_OneAdapterProcess()
@@ -195,6 +223,9 @@ public sealed class PersonaHostTests
         internal string DataDir => this.dataDir.Path;
 
         internal IAgentHostFactory Factory => this.host.Services.GetRequiredService<IAgentHostFactory>();
+
+        /// <summary>The same <see cref="TeammateFolderMoves"/> singleton <see cref="Factory"/> awaits before creating a Persona's Work Dir.</summary>
+        internal TeammateFolderMoves Moves => this.host.Services.GetRequiredService<TeammateFolderMoves>();
 
         internal static async Task<Fixture> StartAsync(CancellationToken cancellationToken)
         {
