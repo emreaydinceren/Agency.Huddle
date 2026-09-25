@@ -269,11 +269,11 @@ public sealed partial class TaskBoardColumnMenuTests
     [InlineData("parent", "PLAT-0009")]
     [InlineData("blocked_by", "PLAT-0007, PLAT-0008")]
     [InlineData("tags", "auth, sso")]
-    [InlineData("start_date", "01/02/2030")]
-    [InlineData("due_date", "01/03/2030")]
-    [InlineData("created", "09/20/2026")]
-    [InlineData("updated", "09/24/2026")]
-    [InlineData("closed", "09/25/2026")]
+    [InlineData("start_date", "2030-01-02")]
+    [InlineData("due_date", "2030-01-03")]
+    [InlineData("created", "2026-09-20")]
+    [InlineData("updated", "2026-09-24")]
+    [InlineData("closed", "2026-09-25")]
     [InlineData("origin", "room-1")]
     public async Task Card_ShowsEveryViewField(string key, string expected)
     {

@@ -6,6 +6,7 @@ using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
+using MudBlazor.Extensions;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Data;
@@ -315,6 +316,24 @@ public sealed class TaskDetailFieldsTests
         await cut.InvokeAsync(() => picker.Instance.DateChanged.InvokeAsync(picked));
 
         Assert.Equal(picked, cut.FindComponents<MudDatePicker>().Single(m => string.Equals(m.Instance.Class, cssClass, StringComparison.Ordinal)).Instance.Date);
+    }
+
+    /// <summary>Start and Due each display through their picker's own <c>yyyy-MM-dd</c> format (Settled J53, one date format across the Tasks UI).</summary>
+    /// <param name="mode">Both entry points.</param>
+    /// <param name="which">"start" or "due".</param>
+    [Theory]
+    [MemberData(nameof(BothModesTimesDateFields))]
+    public async Task Dates_StartAndDue_UseTheInvariantYmdPickerFormat(TaskDetailMode mode, string which)
+    {
+        using TaskToolHarness harness = new();
+        TaskItem task = CreateTask(harness);
+        await using MudBunitContext ctx = NewContext(harness);
+        var cut = RenderDetail(ctx, task.Id, mode);
+        string cssClass = which == "start" ? "task-detail-start-date" : "task-detail-due-date";
+
+        IRenderedComponent<MudDatePicker> picker = cut.FindComponents<MudDatePicker>().Single(m => string.Equals(m.Instance.Class, cssClass, StringComparison.Ordinal));
+
+        Assert.Equal("yyyy-MM-dd", picker.Instance.GetState(x => x.DateFormat));
     }
 
     /// <summary>A past Due date on a non-terminal Task gets the <c>task-overdue</c> class and a warning adornment (Spec §13.6).</summary>

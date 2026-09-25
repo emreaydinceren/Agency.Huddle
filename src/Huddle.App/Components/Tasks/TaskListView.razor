@@ -115,7 +115,10 @@
                     </TemplateColumn>
                     break;
                 case "start_date":
-                    <PropertyColumn @key="key" T="TaskItem" TProperty="DateOnly?" Property="t => t.StartDate" Title="Start date" Hidden="@(!this.Shows("start_date"))" />
+                    <TemplateColumn @key="key" T="TaskItem" Title="Start date" Hidden="@(!this.Shows("start_date"))" Sortable="true"
+                                     SortBy="@(t => (object?)t.StartDate)">
+                        <CellTemplate>@TaskDates.Display(context.Item.StartDate)</CellTemplate>
+                    </TemplateColumn>
                     break;
                 case "due_date":
                     <TemplateColumn @key="key" T="TaskItem" Title="Due date" Hidden="@(!this.Shows("due_date"))" Sortable="true"
@@ -125,18 +128,27 @@
                             {
                                 <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" aria-label="Overdue" />
                             }
-                            @this.FormatDate(context.Item.DueDate)
+                            @TaskDates.Display(context.Item.DueDate)
                         </CellTemplate>
                     </TemplateColumn>
                     break;
                 case "created":
-                    <PropertyColumn @key="key" T="TaskItem" TProperty="DateTimeOffset?" Property="t => t.Created" Title="Created" Hidden="@(!this.Shows("created"))" />
+                    <TemplateColumn @key="key" T="TaskItem" Title="Created" Hidden="@(!this.Shows("created"))" Sortable="true"
+                                     SortBy="@(t => (object?)t.Created)">
+                        <CellTemplate>@TaskDates.Display(context.Item.Created)</CellTemplate>
+                    </TemplateColumn>
                     break;
                 case "updated":
-                    <PropertyColumn @key="key" T="TaskItem" TProperty="DateTimeOffset?" Property="t => t.Updated" Title="Updated" Hidden="@(!this.Shows("updated"))" />
+                    <TemplateColumn @key="key" T="TaskItem" Title="Updated" Hidden="@(!this.Shows("updated"))" Sortable="true"
+                                     SortBy="@(t => (object?)t.Updated)">
+                        <CellTemplate>@TaskDates.Display(context.Item.Updated)</CellTemplate>
+                    </TemplateColumn>
                     break;
                 case "closed":
-                    <PropertyColumn @key="key" T="TaskItem" TProperty="DateTimeOffset?" Property="t => t.ClosedAt" Title="Closed" Hidden="@(!this.Shows("closed"))" />
+                    <TemplateColumn @key="key" T="TaskItem" Title="Closed" Hidden="@(!this.Shows("closed"))" Sortable="true"
+                                     SortBy="@(t => (object?)t.ClosedAt)">
+                        <CellTemplate>@TaskDates.Display(context.Item.ClosedAt)</CellTemplate>
+                    </TemplateColumn>
                     break;
                 case "origin":
                     <TemplateColumn @key="key" T="TaskItem" Title="Origin" Hidden="@(!this.Shows("origin"))">
@@ -298,9 +310,6 @@
 
     /// <summary>The CSS class for a row: <c>task-overdue</c> when overdue, nothing otherwise. The row index is unused; the shape is fixed by RowClassFunc.</summary>
     private string RowClass(TaskItem task, int _) => this.IsOverdue(task) ? "task-overdue" : string.Empty;
-
-    /// <summary>Formats an optional due date for the cell, or an empty string when unset.</summary>
-    private string FormatDate(DateOnly? date) => date?.ToString("d", CultureInfo.InvariantCulture) ?? "";
 
     /// <summary>Raises <see cref="OnOpenTask"/> with the clicked row's id.</summary>
     private Task OnRowClickAsync(DataGridRowClickEventArgs<TaskItem> args) => this.OnOpenTask.InvokeAsync(args.Item.Id);

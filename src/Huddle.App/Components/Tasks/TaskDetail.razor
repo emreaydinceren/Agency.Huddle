@@ -280,18 +280,20 @@ else if (this.loaded is { } task)
                           OnKeyDown="this.OnTagKeyDown" Label="Add tag" Class="task-detail-tags-add" />
 
             <MudDatePicker Date="@(effective.StartDate is { } startDate ? startDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
-                           DateChanged="this.OnStartDateChanged" Label="Start date" Class="task-detail-start-date" />
+                           DateChanged="this.OnStartDateChanged" Label="Start date" Class="task-detail-start-date"
+                           DateFormat="@TaskDates.Format" />
             <MudDatePicker Date="@(effective.DueDate is { } dueDate ? dueDate.ToDateTime(TimeOnly.MinValue) : (DateTime?)null)"
                            DateChanged="this.OnDueDateChanged" Label="Due date"
                            Class="@($"task-detail-due-date{(this.IsOverdue(effective) ? " task-overdue" : string.Empty)}")"
                            Adornment="@(this.IsOverdue(effective) ? Adornment.Start : Adornment.None)"
-                           AdornmentIcon="@(this.IsOverdue(effective) ? Icons.Material.Filled.Warning : null)" />
+                           AdornmentIcon="@(this.IsOverdue(effective) ? Icons.Material.Filled.Warning : null)"
+                           DateFormat="@TaskDates.Format" />
 
-            <span class="task-detail-created">@(task.Created?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))</span>
-            <span class="task-detail-updated">@(task.Updated?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))</span>
+            <span class="task-detail-created">@TaskDates.Display(task.Created)</span>
+            <span class="task-detail-updated">@TaskDates.Display(task.Updated)</span>
             @if (task.ClosedAt is { } closedAt)
             {
-                <span class="task-detail-closed">@closedAt.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)</span>
+                <span class="task-detail-closed">@TaskDates.Display(closedAt)</span>
             }
         </text>;
 
