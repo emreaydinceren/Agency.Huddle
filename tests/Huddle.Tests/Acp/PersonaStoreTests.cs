@@ -707,23 +707,29 @@ public sealed class PersonaStoreTests
         Assert.Null(recreated.Effort);
     }
 
+    /// <summary>
+    /// Supersedes Update_OnANestedPersona_WritesBackToTheNestedPath (ADR-0031 retired organisational
+    /// Team sub-folders): a definition whose folder name differs from its front-matter Name
+    /// (<see cref="Scan_FolderNameDiffersFromName_LoadsWithWarning"/>) still loads, and
+    /// <see cref="PersonaStore.Update"/> must write back to that exact file in place rather than
+    /// relocate it to a folder matching the Name.
+    /// </summary>
     [Fact]
-    public async Task Update_OnANestedPersona_WritesBackToTheNestedPath()
+    public async Task Update_DefinitionInAFolderNamedDifferently_WritesBackInPlace()
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        var businessDir = Path.Combine(dir.Path, "Teammates", "Business");
-        Directory.CreateDirectory(businessDir);
-        var nestedPath = Path.Combine(businessDir, "coo.md");
-        await File.WriteAllTextAsync(nestedPath, PersonaText("coo", "You are the Chief of Staff."), ct);
+        var paths = new TeammatePaths(dir.Options());
+        Directory.CreateDirectory(paths.TeammateFolder("Old"));
+        var definitionPath = Path.Combine(paths.TeammateFolder("Old"), "Old.md");
+        await File.WriteAllTextAsync(definitionPath, PersonaText("coo", "You are the Chief of Staff."), ct);
         using var store = CreateStore(dir);
         Assert.Equal("coo", Assert.Single(store.ListNames()));
 
         store.Update("coo", PersonaText("coo", "You are the revised Chief of Staff."), model: null, effort: null);
 
-        Assert.Equal(PersonaText("coo", "You are the revised Chief of Staff."), await File.ReadAllTextAsync(nestedPath, ct));
-        Assert.False(File.Exists(Path.Combine(dir.Path, "Teammates", "coo.md")));
-        Assert.Equal(nestedPath, store.PathFor("coo"));
+        Assert.Equal(PersonaText("coo", "You are the revised Chief of Staff."), await File.ReadAllTextAsync(definitionPath, ct));
+        Assert.Equal(definitionPath, store.PathFor("coo"));
     }
 
     [Fact]
@@ -865,41 +871,22 @@ public sealed class PersonaStoreTests
     }
 
     /// <summary>
-    /// A Persona nested under a Team sub-folder is exactly as much a Persona as one at the top
-    /// level of the Teams directory: Team sub-folders are purely organisational, so recursive
-    /// discovery must surface it under its front-matter Name with no other change in behaviour.
+    /// Supersedes TwoPersonaFilesWithTheSameNameInDifferentTeamSubFolders_AreBothRejectedAsACollision
+    /// (ADR-0031 retired organisational Team sub-folders): with real front-matter identity, two
+    /// definitions in DIFFERENT teammate folders that resolve to the same Name are a collision, not
+    /// a coincidence to fold away by picking a winner. BOTH are rejected.
     /// </summary>
     [Fact]
-    public void ListNames_IncludesAPersonaNestedInATeamSubFolder()
+    public void TwoDefinitionsInDifferentTeammateFoldersWithTheSameName_AreBothRejectedAsACollision()
     {
         using var dir = new TempDataDir();
-        var teamsDir = Path.Combine(dir.Path, "Teammates", "Business");
-        Directory.CreateDirectory(teamsDir);
-        File.WriteAllText(Path.Combine(teamsDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff."));
-        using var store = CreateStore(dir);
-
-        var names = store.ListNames();
-
-        Assert.Contains("coo", names);
-    }
-
-    /// <summary>
-    /// Supersedes Phase 2a's ListNames_FoldsDuplicateFilenamesAcrossTeamSubFoldersToOneEntry: with
-    /// real front-matter identity, two files that resolve to the same Name are a collision, not a
-    /// coincidence to fold away by picking a winner. Picking a winner by enumeration order is
-    /// exactly the "I edited the file and nothing happened" failure this phase's collision rules
-    /// exist to prevent, so BOTH files are now rejected instead.
-    /// </summary>
-    [Fact]
-    public void TwoPersonaFilesWithTheSameNameInDifferentTeamSubFolders_AreBothRejectedAsACollision()
-    {
-        using var dir = new TempDataDir();
-        var teamA = Path.Combine(dir.Path, "Teammates", "Business");
-        var teamB = Path.Combine(dir.Path, "Teammates", "Engineering");
-        Directory.CreateDirectory(teamA);
-        Directory.CreateDirectory(teamB);
-        File.WriteAllText(Path.Combine(teamA, "coo.md"), PersonaText("coo", "Business flavour."));
-        File.WriteAllText(Path.Combine(teamB, "coo.md"), PersonaText("coo", "Engineering flavour."));
+        var paths = new TeammatePaths(dir.Options());
+        Directory.CreateDirectory(paths.TeammateFolder("Business"));
+        Directory.CreateDirectory(paths.TeammateFolder("Engineering"));
+        var pathA = Path.Combine(paths.TeammateFolder("Business"), "Business.md");
+        var pathB = Path.Combine(paths.TeammateFolder("Engineering"), "Engineering.md");
+        File.WriteAllText(pathA, PersonaText("coo", "Business flavour."));
+        File.WriteAllText(pathB, PersonaText("coo", "Engineering flavour."));
         using var store = CreateStore(dir);
 
         Assert.DoesNotContain("coo", store.ListNames());
@@ -919,60 +906,6 @@ public sealed class PersonaStoreTests
 
         Assert.Contains("Jarvis", names);
         Assert.DoesNotContain("zzz", names);
-    }
-
-    /// <summary>
-    /// The single most important behaviour this phase adds: Team sub-folders are organisational
-    /// only, so moving a file between them must be a complete no-op - same Name, same Model, same
-    /// Effort, reachable at its new path.
-    /// </summary>
-    [Fact]
-    public async Task PersonaMovedBetweenTeamSubFolders_KeepsItsNameModelAndEffort()
-    {
-        using var dir = new TempDataDir();
-        using var store = CreateStore(dir);
-        store.Add(Identity("coo"), "You are the Chief of Staff.", "claude-opus-4", "high");
-        var oldPath = store.PathFor("coo");
-        var before = store.Get("coo");
-
-        var businessDir = Path.Combine(dir.Path, "Teammates", "Business");
-        Directory.CreateDirectory(businessDir);
-        var newPath = Path.Combine(businessDir, Path.GetFileName(oldPath));
-
-        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        store.PersonasChanged += () => tcs.TrySetResult();
-
-        File.Move(oldPath, newPath);
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());
-        await tcs.Task;
-
-        var after = store.Get("coo");
-        Assert.NotNull(after);
-        Assert.Equal(before!.Name, after.Name);
-        Assert.Equal(before.Text, after.Text);
-        Assert.Equal(before.Model, after.Model);
-        Assert.Equal(before.Effort, after.Effort);
-        Assert.Equal(newPath, store.PathFor("coo"));
-    }
-
-    /// <summary>The Phase 2a ghost-row bug, pinned: a Persona discovered only under a Team sub-folder must be reachable through Get and PathFor, not just listed.</summary>
-    [Fact]
-    public void NestedPersona_IsFullyReachableThroughGetAndPathFor()
-    {
-        using var dir = new TempDataDir();
-        var teamsDir = Path.Combine(dir.Path, "Teammates", "Business");
-        Directory.CreateDirectory(teamsDir);
-        var path = Path.Combine(teamsDir, "coo.md");
-        File.WriteAllText(path, PersonaText("coo", "You are the Chief of Staff."));
-        using var store = CreateStore(dir);
-
-        Assert.Contains("coo", store.ListNames());
-        var persona = store.Get("coo");
-        Assert.NotNull(persona);
-        Assert.Equal(PersonaText("coo", "You are the Chief of Staff."), persona.Text);
-        Assert.Equal(path, store.PathFor("coo"));
     }
 
     [Fact]
@@ -1014,55 +947,6 @@ public sealed class PersonaStoreTests
         Assert.Equal("coo", resolved.Name);
     }
 
-    [Fact]
-    public async Task ExternalFileChange_InATeamSubFolder_IsNoticedThroughPersonasChanged()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        using var dir = new TempDataDir();
-        var teamsDir = Path.Combine(dir.Path, "Teammates", "Business");
-        Directory.CreateDirectory(teamsDir);
-        var path = Path.Combine(teamsDir, "coo.md");
-        File.WriteAllText(path, PersonaText("coo", "You are the Chief of Staff."));
-        using var store = CreateStore(dir);
-
-        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        store.PersonasChanged += () => tcs.TrySetResult();
-
-        await File.WriteAllTextAsync(path, PersonaText("coo", "You are the Chief of Staff, revised."), ct);
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());
-        await tcs.Task;
-
-        Assert.Contains("coo", store.ListNames());
-    }
-
-    /// <summary>
-    /// A Team sub-folder created after the store (and its watcher) already started must still be
-    /// picked up: <see cref="FileSystemWatcher.IncludeSubdirectories"/> recurses into directories
-    /// that appear later, not only ones present at construction time.
-    /// </summary>
-    [Fact]
-    public async Task ExternalFileCreated_InANewlyCreatedTeamSubFolder_IsNoticedThroughPersonasChanged()
-    {
-        var ct = TestContext.Current.CancellationToken;
-        using var dir = new TempDataDir();
-        using var store = CreateStore(dir);
-        var newTeamDir = Path.Combine(dir.Path, "Teammates", "NewTeam");
-
-        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        store.PersonasChanged += () => tcs.TrySetResult();
-
-        Directory.CreateDirectory(newTeamDir);
-        await File.WriteAllTextAsync(Path.Combine(newTeamDir, "cto.md"), PersonaText("cto", "You are the CTO."), ct);
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());
-        await tcs.Task;
-
-        Assert.Contains("cto", store.ListNames());
-    }
-
     /// <summary>
     /// The watcher's filter was widened from "*.md" to "*" so a directory rename is not silently
     /// dropped (see the constructor), which means the handler itself is now what keeps a stray
@@ -1079,15 +963,7 @@ public sealed class PersonaStoreTests
         using var store = CreateStore(dir);
         var teamsDir = Path.Combine(dir.Path, "Teammates");
 
-        var raised = false;
-        store.PersonasChanged += () => raised = true;
-
-        await File.WriteAllTextAsync(Path.Combine(teamsDir, "notes.txt"), "not a persona", ct);
-        await Task.Delay(TimeSpan.FromMilliseconds(750), ct);
-
-        // The real assertion: a ".txt" alone, given a full debounce window and then some to
-        // settle, raised nothing.
-        Assert.False(raised);
+        await AssertRaisesNoPersonasChangedAsync(store, token => File.WriteAllTextAsync(Path.Combine(teamsDir, "notes.txt"), "not a persona", token), ct);
 
         // Proves the watcher was alive and listening the whole time (rather than this test just
         // never having given it a chance to fire): a genuine Persona file written right after
@@ -1102,60 +978,23 @@ public sealed class PersonaStoreTests
     }
 
     /// <summary>
-    /// The other half of widening the watcher's filter to "*": a directory rename raises a
-    /// Renamed event whose Name is the directory itself, never ".md", so the handler's directory
-    /// branch (rather than its markdown-extension check) is what has to catch this or every
-    /// Persona path nested under the renamed folder would go stale with nothing to notice.
+    /// Runs <paramref name="action"/> and waits a bounded grace period (750&#160;ms - a full
+    /// debounce window and then some) to prove it raised no <see cref="PersonaStore.PersonasChanged"/>
+    /// event. Shared by <see cref="ExternalNonMarkdownFileChange_DoesNotRaisePersonasChanged"/> and
+    /// <see cref="Watcher_WriteUnderWork_DoesNotRaisePersonasChanged"/> (corrections-B2 item 17).
     /// </summary>
-    [Fact]
-    public async Task TeamSubFolderRename_IsNoticedThroughPersonasChanged()
+    /// <param name="store">The store whose <see cref="PersonaStore.PersonasChanged"/> event must stay silent.</param>
+    /// <param name="action">The filesystem change to make before waiting.</param>
+    /// <param name="ct">Bounds the delay.</param>
+    private static async Task AssertRaisesNoPersonasChangedAsync(PersonaStore store, Func<CancellationToken, Task> action, CancellationToken ct)
     {
-        using var dir = new TempDataDir();
-        var oldTeamDir = Path.Combine(dir.Path, "Teammates", "Business");
-        Directory.CreateDirectory(oldTeamDir);
-        File.WriteAllText(Path.Combine(oldTeamDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff."));
-        using var store = CreateStore(dir);
+        var raised = false;
+        store.PersonasChanged += () => raised = true;
 
-        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        store.PersonasChanged += () => tcs.TrySetResult();
+        await action(ct);
+        await Task.Delay(TimeSpan.FromMilliseconds(750), ct);
 
-        Directory.Move(oldTeamDir, Path.Combine(dir.Path, "Teammates", "BusinessOps"));
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());
-        await tcs.Task;
-
-        Assert.Contains("coo", store.ListNames());
-    }
-
-    /// <summary>
-    /// The other half of the Deleted-event fix: removing a whole Team sub-folder outright (not
-    /// renaming it away) raises a Deleted event whose Name is the directory itself, never ".md" -
-    /// and unlike a rename, Directory.Exists(e.FullPath) is false by the time the handler runs, so
-    /// AffectsATeamsFile must recognise the directory shape (no extension) instead. Now that the
-    /// index caches each file's text, missing this would mean PersonaStore keeps serving the
-    /// removed Persona's stale text forever, rather than merely a stale listing.
-    /// </summary>
-    [Fact]
-    public async Task TeamSubFolderDeleted_IsNoticedThroughPersonasChanged()
-    {
-        using var dir = new TempDataDir();
-        var teamDir = Path.Combine(dir.Path, "Teammates", "Business");
-        Directory.CreateDirectory(teamDir);
-        File.WriteAllText(Path.Combine(teamDir, "coo.md"), PersonaText("coo", "You are the Chief of Staff."));
-        using var store = CreateStore(dir);
-        Assert.Contains("coo", store.ListNames());
-
-        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        store.PersonasChanged += () => tcs.TrySetResult();
-
-        Directory.Delete(teamDir, recursive: true);
-
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
-        await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());
-        await tcs.Task;
-
-        Assert.DoesNotContain("coo", store.ListNames());
+        Assert.False(raised);
     }
 
     /// <summary>
@@ -1355,6 +1194,301 @@ public sealed class PersonaStoreTests
         var exception = Record.Exception(() => store.OnWatcherError(store, new ErrorEventArgs(new IOException("simulated buffer overflow"))));
 
         Assert.Null(exception);
+    }
+
+    // ADR-0031 layout
+
+    /// <summary>A definition file directly inside its own teammate folder (Spec §6.15) loads normally.</summary>
+    [Fact]
+    public void Scan_DefinitionInTeammateFolder_Loads()
+    {
+        using var dir = new TempDataDir();
+        var paths = new TeammatePaths(dir.Options());
+        TestPersonaFiles.Write(paths, "Nova", PersonaText("Nova", "You are Nova."));
+
+        using var store = CreateStore(dir);
+
+        Assert.Equal(["Nova"], store.ListNames());
+    }
+
+    /// <summary>
+    /// Spec §6.15's one-level scan: markdown nested under a teammate's <c>work/</c> sub-folder is
+    /// neither a Persona nor a rejected file - it is never scanned at all, however deep it sits.
+    /// </summary>
+    [Fact]
+    public void Scan_MarkdownUnderWork_IsIgnored()
+    {
+        using var dir = new TempDataDir();
+        var paths = new TeammatePaths(dir.Options());
+        TestPersonaFiles.Write(paths, "Nova", PersonaText("Nova", "You are Nova."));
+        var workDir = paths.WorkDir("Nova");
+        Directory.CreateDirectory(Path.Combine(workDir, "memory"));
+        File.WriteAllText(Path.Combine(workDir, "memory", "fact.md"), "Some remembered fact.");
+        File.WriteAllText(Path.Combine(workDir, "draft.md"), "A draft.");
+
+        using var store = CreateStore(dir);
+
+        Assert.Equal(["Nova"], store.ListNames());
+        Assert.Empty(store.RejectedFiles);
+    }
+
+    /// <summary>A definition file must sit inside its own teammate folder - one directly under the Teammates root is rejected, never loaded.</summary>
+    [Fact]
+    public void Scan_FileDirectlyInRoot_IsRejected()
+    {
+        using var dir = new TempDataDir();
+        var paths = new TeammatePaths(dir.Options());
+        Directory.CreateDirectory(paths.DefinitionsRoot);
+        var strayPath = Path.Combine(paths.DefinitionsRoot, "stray.md");
+        File.WriteAllText(strayPath, PersonaText("Stray", "You are Stray."));
+
+        using var store = CreateStore(dir);
+
+        Assert.Empty(store.ListNames());
+        var rejection = Assert.Single(store.RejectedFiles);
+        Assert.Equal(strayPath, rejection.Path);
+        Assert.Equal("A definition must be inside its teammate's folder.", rejection.Reason);
+    }
+
+    /// <summary>
+    /// corrections-B2 item 14: a second ".md" beside a teammate's own definition is rejected, as a
+    /// duplicate is today, but the folder's own definition - the file whose stem matches the folder
+    /// Name - keeps loading rather than being pulled down with it.
+    /// </summary>
+    [Fact]
+    public void Scan_SecondMarkdownInTeammateFolder_IsRejected()
+    {
+        using var dir = new TempDataDir();
+        var paths = new TeammatePaths(dir.Options());
+        TestPersonaFiles.Write(paths, "Nova", PersonaText("Nova", "You are Nova."));
+        var notesPath = Path.Combine(paths.TeammateFolder("Nova"), "notes.md");
+        File.WriteAllText(notesPath, PersonaText("NovaNotes", "Some other notes."));
+
+        using var store = CreateStore(dir);
+
+        Assert.Equal(["Nova"], store.ListNames());
+        var rejection = Assert.Single(store.RejectedFiles);
+        Assert.Equal(notesPath, rejection.Path);
+        Assert.Equal("A teammate folder holds only its definition; use work/.", rejection.Reason);
+    }
+
+    /// <summary>
+    /// corrections-B2 item 12: a definition still loads under its front-matter Name even when its
+    /// folder is named differently, but it now shows up in <see cref="PersonaStore.FolderWarnings"/>
+    /// so the mismatch can be surfaced.
+    /// </summary>
+    [Fact]
+    public void Scan_FolderNameDiffersFromName_LoadsWithWarning()
+    {
+        using var dir = new TempDataDir();
+        var paths = new TeammatePaths(dir.Options());
+        Directory.CreateDirectory(paths.TeammateFolder("Old"));
+        var definitionPath = Path.Combine(paths.TeammateFolder("Old"), "Old.md");
+        File.WriteAllText(definitionPath, PersonaText("Nova", "You are Nova."));
+
+        using var store = CreateStore(dir);
+
+        Assert.Equal(["Nova"], store.ListNames());
+        var warning = Assert.Single(store.FolderWarnings);
+        Assert.Equal(definitionPath, warning.Path);
+        Assert.Equal("Its folder is named 'Old', not 'Nova'.", warning.Reason);
+    }
+
+    /// <summary>Spec §6.15: the watcher must not react to a change made inside a teammate's own <c>work/</c> folder.</summary>
+    [Fact]
+    public async Task Watcher_WriteUnderWork_DoesNotRaisePersonasChanged()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var paths = new TeammatePaths(dir.Options());
+        TestPersonaFiles.Write(paths, "Nova", PersonaText("Nova", "You are Nova."));
+        using var store = CreateStore(dir);
+        var workFile = Path.Combine(paths.WorkDir("Nova"), "a.md");
+        Directory.CreateDirectory(paths.WorkDir("Nova"));
+
+        await AssertRaisesNoPersonasChangedAsync(store, token => File.WriteAllTextAsync(workFile, "Not a persona.", token), ct);
+    }
+
+    /// <summary>
+    /// Manager's review of part (a): <see cref="PersonaStore"/>'s watcher filter checked only
+    /// <see cref="FileSystemEventArgs.FullPath"/>, so a <see cref="RenamedEventArgs"/> whose
+    /// <see cref="RenamedEventArgs.OldFullPath"/> is the teammate's definition (at most 2 segments
+    /// below <c>DefinitionsRoot</c>) but whose new path is 3 or more segments deep - moved into
+    /// <c>work/</c> - was silently ignored. That left the teammate still "loaded" from a file that
+    /// no longer exists.
+    /// </summary>
+    [Fact]
+    public async Task Watcher_DefinitionMovedIntoWork_RaisesPersonasChanged()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var paths = new TeammatePaths(dir.Options());
+        TestPersonaFiles.Write(paths, "Nova", PersonaText("Nova", "You are Nova."));
+        using var store = CreateStore(dir);
+        Directory.CreateDirectory(paths.WorkDir("Nova"));
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        store.PersonasChanged += () => tcs.TrySetResult();
+
+        File.Move(paths.DefinitionFile("Nova"), Path.Combine(paths.WorkDir("Nova"), "Nova.md"));
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());
+        await tcs.Task;
+
+        // The rescan the event triggers proves it fired: Nova's folder now holds no definition, so
+        // the moved-away teammate is gone rather than served stale from a file that no longer exists.
+        Assert.DoesNotContain("Nova", store.ListNames());
+    }
+
+    /// <summary>
+    /// AffectsATeamsFile detects a rename from the definition file into the work directory: the old
+    /// path (at most 2 segments) qualifies even though the new path is deeper.
+    /// </summary>
+    [Fact]
+    public void AffectsATeamsFile_RenameFromDefinitionIntoWork_IsTrue()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "T");
+        string novaFolder = Path.Combine(root, "Nova");
+        string workFolder = Path.Combine(novaFolder, "work");
+        string oldPath = Path.Combine(novaFolder, "Nova.md");
+        string newPath = Path.Combine(workFolder, "Nova.md");
+        RenamedEventArgs args = new(WatcherChangeTypes.Renamed, root, Path.Combine("Nova", "work", "Nova.md"), Path.Combine("Nova", "Nova.md"));
+
+        Assert.Equal(oldPath, args.OldFullPath);
+        Assert.Equal(newPath, args.FullPath);
+
+        bool result = PersonaStore.AffectsATeamsFile(root, args);
+
+        Assert.True(result);
+    }
+
+    /// <summary>
+    /// AffectsATeamsFile returns false for a rename within the work directory (both old and new paths
+    /// are deeper than 2 segments).
+    /// </summary>
+    [Fact]
+    public void AffectsATeamsFile_RenameDeepToDeep_IsFalse()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "T");
+        string oldPath = Path.Combine(root, "Nova", "work", "a.md");
+        string newPath = Path.Combine(root, "Nova", "work", "b.md");
+        RenamedEventArgs args = new(WatcherChangeTypes.Renamed, newPath, "b.md", oldPath);
+
+        bool result = PersonaStore.AffectsATeamsFile(root, args);
+
+        Assert.False(result);
+    }
+
+    /// <summary>
+    /// corrections-B2 item 15: every file under <c>Teammates/_unsorted/</c> is a rejected file with
+    /// this fixed reason, recursively - the migration only moved it there; the scan is what decides
+    /// what it is, and it never becomes a Persona regardless of how deep it sits.
+    /// </summary>
+    [Fact]
+    public void Scan_UnsortedFolder_EveryFileRejectedRecursively()
+    {
+        using var dir = new TempDataDir();
+        var paths = new TeammatePaths(dir.Options());
+        var unsortedDir = Path.Combine(paths.DefinitionsRoot, "_unsorted");
+        Directory.CreateDirectory(Path.Combine(unsortedDir, "deep"));
+        var shallowPath = Path.Combine(unsortedDir, "Nova.md");
+        var deepPath = Path.Combine(unsortedDir, "deep", "x.md");
+        File.WriteAllText(shallowPath, PersonaText("Nova", "You are Nova."));
+        File.WriteAllText(deepPath, "Some other text.");
+
+        using var store = CreateStore(dir);
+
+        Assert.Empty(store.ListNames());
+        List<(string Path, string Reason)> expected =
+        [
+            (shallowPath, "Moved here by the layout migration."),
+            (deepPath, "Moved here by the layout migration."),
+        ];
+        Assert.Equal(
+            expected.OrderBy(pair => pair.Path, StringComparer.Ordinal),
+            store.RejectedFiles.Select(file => (file.Path, file.Reason)).OrderBy(pair => pair.Path, StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// corrections-B2 item 15: an underscore- or dot-prefixed folder OTHER than <c>_unsorted</c> -
+    /// an organisational <c>_drafts</c>, or an adapter's own <c>.claude</c> - is skipped entirely by
+    /// the scan: no Persona, no rejected file.
+    /// </summary>
+    [Fact]
+    public void Scan_UnderscoreAndDotFolders_Skipped()
+    {
+        using var dir = new TempDataDir();
+        var paths = new TeammatePaths(dir.Options());
+        var draftsNovaDir = Path.Combine(paths.DefinitionsRoot, "_drafts", "Nova");
+        var claudeDir = Path.Combine(paths.DefinitionsRoot, ".claude");
+        Directory.CreateDirectory(draftsNovaDir);
+        Directory.CreateDirectory(claudeDir);
+        File.WriteAllText(Path.Combine(draftsNovaDir, "Nova.md"), PersonaText("Nova", "You are Nova."));
+        File.WriteAllText(Path.Combine(claudeDir, "x.md"), "Adapter housekeeping.");
+
+        using var store = CreateStore(dir);
+
+        Assert.Empty(store.ListNames());
+        Assert.Empty(store.RejectedFiles);
+    }
+
+    /// <summary>
+    /// corrections-B2 item 13: the watcher's "at most 2 segments" rule, not "ignore segments equal
+    /// to <c>work</c>" - a teammate genuinely named "work" must still load, since the plan's original
+    /// wording would have hidden it.
+    /// </summary>
+    [Fact]
+    public void Scan_TeammateNamedWork_Loads()
+    {
+        using var dir = new TempDataDir();
+        var paths = new TeammatePaths(dir.Options());
+        TestPersonaFiles.Write(paths, "work", PersonaText("work", "You are named work."));
+
+        using var store = CreateStore(dir);
+
+        Assert.Equal(["work"], store.ListNames());
+    }
+
+    /// <summary>
+    /// corrections-B2 item 13's distinguishing case for the watcher: a teammate folder named "work"
+    /// is exactly 2 segments deep (<c>work/work.md</c>), so it must still raise
+    /// <see cref="PersonaStore.PersonasChanged"/> when edited, unlike a real <c>&lt;Name&gt;/work/*</c>
+    /// path 3 segments deep.
+    /// </summary>
+    [Fact]
+    public async Task Watcher_DefinitionOfTeammateNamedWork_RaisesPersonasChanged()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var paths = new TeammatePaths(dir.Options());
+        TestPersonaFiles.Write(paths, "work", PersonaText("work", "You are named work."));
+        using var store = CreateStore(dir);
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        store.PersonasChanged += () => tcs.TrySetResult();
+
+        await File.WriteAllTextAsync(paths.DefinitionFile("work"), PersonaText("work", "You are named work, revised."), ct);
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());
+        await tcs.Task;
+
+        Assert.Contains("work", store.ListNames());
+    }
+
+    /// <summary>Spec §6.15: <see cref="PersonaStore.Add"/> writes a brand-new Persona into its own teammate folder, never flat at the Teammates root.</summary>
+    [Fact]
+    public void Add_WritesIntoTeammateFolder()
+    {
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+
+        store.Add(Identity("Nova"), "You are Nova.");
+
+        var expectedPath = Path.Combine(dir.Path, "Teammates", "Nova", "Nova.md");
+        Assert.Equal(expectedPath, store.PathFor("Nova"));
+        Assert.True(File.Exists(expectedPath));
     }
 
     private static PersonaStore CreateStore(TempDataDir dir)

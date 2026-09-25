@@ -240,10 +240,13 @@ public sealed class TeammatesPageTests
 
         await using var factory = new TeamWebApplicationFactory();
 
-        var nestedDir = Path.Combine(factory.TeammatesDirPath, "Household");
-        Directory.CreateDirectory(nestedDir);
+        // ADR-0031: the folder holds only its own definition, so this pins the mismatch case
+        // (Scan_FolderNameDiffersFromName_LoadsWithWarning) rather than organisational nesting -
+        // the folder is still named differently from the teammate ("Household" vs "Jarvis").
+        var folder = Path.Combine(factory.TeammatesDirPath, "Household");
+        Directory.CreateDirectory(folder);
         await File.WriteAllTextAsync(
-            Path.Combine(nestedDir, "jarvis.md"),
+            Path.Combine(folder, "Household.md"),
             "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\nTeams: Business\n---\nYou are Jarvis.",
             ct);
 

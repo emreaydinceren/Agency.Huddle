@@ -1594,10 +1594,12 @@ public sealed class TeammateCardTests
     private static async Task SeedPersonaAsync(TeamWebApplicationFactory factory, string name, string body) =>
         await factory.WriteDefinitionAsync(SanitizeFileName(name), $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}", CancellationToken.None);
 
+    /// <summary>ADR-0031: a definition lives inside its own teammate folder, so this creates <c>Teammates/coo/</c> and returns <c>coo.md</c> inside it.</summary>
     private static string EnsureTeamsDir(TeamWebApplicationFactory factory)
     {
-        Directory.CreateDirectory(factory.TeammatesDirPath);
-        return Path.Combine(factory.TeammatesDirPath, "coo.md");
+        var teammateFolder = Path.Combine(factory.TeammatesDirPath, "coo");
+        Directory.CreateDirectory(teammateFolder);
+        return Path.Combine(teammateFolder, "coo.md");
     }
 
     private static string SanitizeFileName(string name) => name.Replace(' ', '_');
