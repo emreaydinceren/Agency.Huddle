@@ -1,0 +1,147 @@
+@*
+    The Board's card (Spec §13.4 Cards; corrections-B5 D12-1/D12-2). The root is a
+    <div class="task-card"> - NOT the button the Spec's own sketch shows - because the ⋮ MudMenu's
+    activator and the Awake MudLink must sit outside the clickable "open the detail panel" control:
+    nesting either inside that <button> would give the button two different meanings for the same
+    click, and a MudMenu's popover portals elsewhere anyway (see MudBunitContext), so nesting its
+    activator inside the open button buys nothing. TaskCardTests.cs pins this structure.
+
+    The ⋮ menu is flat: a "Move to" heading, then every TaskState as its own MudMenuItem in
+    declaration order, then a divider, then "Copy id" - never a submenu, so choosing a state takes
+    exactly one click after the ⋮ (corrections-B5 D12-2).
+*@
+
+@using System.Globalization
+@using Agency.Huddle.App.Avatars
+@inject AvatarStore AvatarStore
+@inject TimeProvider Clock
+
+<div class="@this.RootClass">
+    <button type="button" class="task-card-open" aria-label="@($"Open {this.Task.Id}")" @onclick="() => this.OnOpen.InvokeAsync()">
+        <div class="task-card-header">
+            <span class="task-card-id">@this.Task.Id.ToString()</span>
+            <MudChip T="string" Size="Size.Small" Color="@TaskColors.For(this.Task.Priority)" Icon="@TaskColors.Icon(this.Task.Priority)">
+                @this.Task.Priority.ToWire()
+            </MudChip>
+        </div>
+
+        <div class="task-card-title">
+            <MudHighlighter Text="@this.Task.Title" HighlightedText="@this.Search" />
+        </div>
+
+        @if (this.IsOverdue)
+        {
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" aria-label="Overdue" />
+        }
+
+        @if (this.Task.Assignee is { } assignee)
+        {
+            @if (this.Presence is { } presence)
+            {
+                <MudBadge Dot="true" Overlap="true" Color="@TaskColors.For(presence)"
+                          BadgeAriaLabel="@string.Create(CultureInfo.InvariantCulture, $"{assignee} is {presence}")">
+                    <TeammateAvatar Name="@assignee" Avatar="this.AvatarStore.Get(assignee)" Size="Size.Small" />
+                </MudBadge>
+            }
+            else
+            {
+                <TeammateAvatar Name="@assignee" Avatar="this.AvatarStore.Get(assignee)" Size="Size.Small" />
+            }
+        }
+
+        @if (this.DueDateField is { } dueDate)
+        {
+            <span class="task-card-field-due-date">@dueDate.ToString("d", CultureInfo.InvariantCulture)</span>
+        }
+    </button>
+
+    @if (this.Busy && this.LastWake is { } lastWake)
+    {
+        <MudChip T="string" Size="Size.Small" Color="Color.Success">Awake</MudChip>
+        <MudLink Href="@($"/rooms/{lastWake.RoomId}")" Class="task-card-awake-link">active in Room @lastWake.RoomName</MudLink>
+    }
+
+    <MudMenu Class="task-card-menu">
+        <ActivatorContent Context="menuContext">
+            <MudTooltip Text="Move to another state">
+                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                               aria-label="@($"Move {this.Task.Id}")" OnClick="menuContext.ToggleAsync" />
+            </MudTooltip>
+        </ActivatorContent>
+        <ChildContent>
+            <MudText Typo="Typo.overline" Class="px-4 pt-2 pb-1 mud-text-secondary">Move to</MudText>
+            @foreach (TaskState state in TaskStates.All)
+            {
+                <MudMenuItem OnClick="@(() => this.OnMoveTo.InvokeAsync(state))">@state.ToWire()</MudMenuItem>
+            }
+            <MudDivider />
+            <MudMenuItem OnClick="@(() => this.OnCopyId.InvokeAsync())">Copy id</MudMenuItem>
+        </ChildContent>
+    </MudMenu>
+</div>
+
+@code {
+    /// <summary>The Task this card shows.</summary>
+    [Parameter, EditorRequired]
+    public required TaskItem Task { get; set; }
+
+    /// <summary>The View's field keys, so far only consulted for <c>"due_date"</c> - the one extra field this card shows beyond its always-visible id, title and priority.</summary>
+    [Parameter, EditorRequired]
+    public required IReadOnlyList<string> Fields { get; set; }
+
+    /// <summary>The assignee's presence, or <see langword="null"/> when there is no assignee or its presence could not be resolved.</summary>
+    [Parameter]
+    public PresenceState? Presence { get; set; }
+
+    /// <summary>The Task's most recent wake, or <see langword="null"/> if it has never been woken.</summary>
+    [Parameter]
+    public WakeRecord? LastWake { get; set; }
+
+    /// <summary>Whether <see cref="LastWake"/>'s Room has a Turn running right now (<c>TurnActivity.IsBusyIn</c>), computed by the caller.</summary>
+    [Parameter]
+    public bool Busy { get; set; }
+
+    /// <summary>The active search term, highlighted in the title by <c>MudHighlighter</c>.</summary>
+    [Parameter]
+    public string? Search { get; set; }
+
+    /// <summary>Raised with the chosen state when the ⋮ menu's "Move to" list is used.</summary>
+    [Parameter]
+    public EventCallback<TaskState> OnMoveTo { get; set; }
+
+    /// <summary>Raised when the open control is clicked, to show the detail panel.</summary>
+    [Parameter]
+    public EventCallback OnOpen { get; set; }
+
+    /// <summary>Raised when "Copy id" is chosen from the ⋮ menu.</summary>
+    [Parameter]
+    public EventCallback OnCopyId { get; set; }
+
+    /// <summary>The root <c>class</c>: <c>task-card</c>, plus <c>task-col-edge-{colour}</c> (Spec §13.10) and <c>task-overdue</c> when it applies.</summary>
+    private string RootClass
+    {
+        get
+        {
+            string edge = string.Create(CultureInfo.InvariantCulture, $"task-col-edge-{TaskColors.For(this.Task.Status).ToString().ToLowerInvariant()}");
+            return this.IsOverdue ? $"task-card {edge} task-overdue" : $"task-card {edge}";
+        }
+    }
+
+    /// <summary>Whether <see cref="Task"/> is overdue: it has a due date in the past and isn't in a terminal state (the same rule <c>TaskListView</c> uses).</summary>
+    private bool IsOverdue
+    {
+        get
+        {
+            if (this.Task.DueDate is not { } due || this.Task.Status.IsTerminal())
+            {
+                return false;
+            }
+
+            DateOnly today = DateOnly.FromDateTime(this.Clock.GetUtcNow().UtcDateTime);
+            return due < today;
+        }
+    }
+
+    /// <summary>The Task's due date, when the View names <c>"due_date"</c> among <see cref="Fields"/> and one is set.</summary>
+    private DateOnly? DueDateField => this.Fields.Contains("due_date", StringComparer.Ordinal) ? this.Task.DueDate : null;
+}
