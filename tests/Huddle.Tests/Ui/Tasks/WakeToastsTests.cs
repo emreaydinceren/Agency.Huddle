@@ -38,7 +38,9 @@ public sealed class WakeToastsTests
             cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
             Snackbar shown = snackbar.ShownSnackbars.Single();
             Assert.Equal(Severity.Info, shown.Severity);
-            cut.WaitForAssertion(() => Assert.Contains("Nova woken for PLAT-0042 in Room: SAML Integration", cut.Markup, StringComparison.Ordinal));
+            // The Woken toast's content is a RenderFragment (it also carries Task and Room links),
+            // so Snackbar.Message is null; the text lives in the toast's own .wake-toast-text span.
+            cut.WaitForAssertion(() => Assert.Equal("Nova woken for PLAT-0042 in Room: SAML Integration", cut.Find(".wake-toast-text").TextContent.Trim()));
         }
     }
 
@@ -71,8 +73,11 @@ public sealed class WakeToastsTests
             activity.Record(new WakeRecord(id, "Nova", "room-1", "SAML", WakeOutcome.BudgetSpent, DateTimeOffset.UtcNow));
 
             cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
-            Assert.Equal(Severity.Warning, snackbar.ShownSnackbars.Single().Severity);
-            cut.WaitForAssertion(() => Assert.Contains("Couldn't wake Nova: Room SAML is paused. Open the Room to continue", cut.Markup, StringComparison.Ordinal));
+            Snackbar shown = snackbar.ShownSnackbars.Single();
+            Assert.Equal(Severity.Warning, shown.Severity);
+            // BudgetSpent always carries a Room link, so its content is a RenderFragment and
+            // Snackbar.Message is null - read the text from the toast's own .wake-toast-text span.
+            cut.WaitForAssertion(() => Assert.Equal("Couldn't wake Nova: Room SAML is paused. Open the Room to continue", cut.Find(".wake-toast-text").TextContent.Trim()));
         }
     }
 
@@ -153,10 +158,15 @@ public sealed class WakeToastsTests
             activity.Record(new WakeRecord(id, "Nova", "room-1", "SAML", WakeOutcome.Failed, DateTimeOffset.UtcNow));
 
             cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
-            Assert.Equal(Severity.Warning, snackbar.ShownSnackbars.Single().Severity);
-            cut.WaitForAssertion(() => Assert.Contains("Couldn't wake Nova; see the log for details.", cut.Markup, StringComparison.Ordinal));
-            Assert.Contains("wake-toast-room-link", cut.Markup, StringComparison.Ordinal);
-            Assert.Contains("/rooms/room-1", cut.Markup, StringComparison.Ordinal);
+            Snackbar shown = snackbar.ShownSnackbars.Single();
+            Assert.Equal(Severity.Warning, shown.Severity);
+            // A Room was chosen, so this toast's content is a RenderFragment (text plus the Room
+            // link) and Snackbar.Message is null - read the text from .wake-toast-text.
+            cut.WaitForAssertion(() => Assert.Equal("Couldn't wake Nova; see the log for details.", cut.Find(".wake-toast-text").TextContent.Trim()));
+            cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".wake-toast-room-link")));
+            IElement roomLink = cut.Find(".wake-toast-room-link");
+            Assert.Equal("SAML", roomLink.TextContent.Trim());
+            Assert.Equal("/rooms/room-1", roomLink.GetAttribute("href"));
         }
     }
 

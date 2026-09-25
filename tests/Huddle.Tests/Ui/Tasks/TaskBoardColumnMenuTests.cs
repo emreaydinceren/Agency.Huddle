@@ -429,8 +429,8 @@ public sealed partial class TaskBoardColumnMenuTests
         Assert.Empty(cut.FindAll(".tasks-empty"));
         Assert.Null(cut.FindComponent<TaskToolbar>().Instance.Search);
         Assert.Empty(cut.FindComponent<TaskToolbar>().Instance.EffectiveView.Filter.States);
-        // contains-ok: the Task's id in the List's markup is the "shows again" being asserted.
-        Assert.Contains(task.Id.ToString(), cut.FindComponent<TaskListView>().Markup, StringComparison.Ordinal);
+        var idCells = cut.FindComponent<TaskListView>().FindAll("td").Where(td => string.Equals(td.TextContent.Trim(), task.Id.ToString(), StringComparison.Ordinal));
+        Assert.Single(idCells);
     }
 
     /// <summary>corrections-B7 12.4 item 1: a search matching nothing shows "No tasks match '{text}'." with no action button.</summary>

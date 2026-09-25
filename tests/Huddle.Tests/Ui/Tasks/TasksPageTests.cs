@@ -1,4 +1,9 @@
+using System.Globalization;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using AngleSharp.Dom;
+using AngleSharp.Html.Parser;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
@@ -37,8 +42,10 @@ public sealed class TasksPageTests
         using var client = factory.CreateClient();
 
         var html = await client.GetStringAsync("/tasks", ct);
+        IDocument document = new HtmlParser().ParseDocument(html);
+        IElement heading = document.QuerySelector(".tasks-header h1") ?? throw new InvalidOperationException("No .tasks-header h1 in the response.");
 
-        Assert.Contains("All Tasks", html, StringComparison.Ordinal);
+        Assert.Equal("Tasks: All Tasks", NormalizeWhitespace(heading.TextContent));
     }
 
     /// <summary>A ViewId naming no known View - built-in, valid or invalid - shows the "no longer exists" warning, with <c>role="status"</c>.</summary>
@@ -52,9 +59,11 @@ public sealed class TasksPageTests
         using var client = factory.CreateClient();
 
         var html = await client.GetStringAsync("/tasks/does-not-exist", ct);
+        IDocument document = new HtmlParser().ParseDocument(html);
+        IElement alert = document.QuerySelector(".tasks-view-not-found-alert") ?? throw new InvalidOperationException("No .tasks-view-not-found-alert in the response.");
 
-        Assert.Contains("That View no longer exists.", html, StringComparison.Ordinal);
-        Assert.Contains("role=\"status\"", html, StringComparison.Ordinal);
+        Assert.Equal("status", alert.GetAttribute("role"));
+        Assert.Equal("That View no longer exists. All Tasks", NormalizeWhitespace(alert.TextContent));
     }
 
     /// <summary>A Task file the store could not parse is surfaced as "Tasks that didn't load", with <c>role="status"</c> (Spec §13.12, traps.md L22-27's precedent gap).</summary>
@@ -72,11 +81,14 @@ public sealed class TasksPageTests
 
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/tasks", ct);
+        IDocument document = new HtmlParser().ParseDocument(html);
+        IElement alert = document.QuerySelector(".tasks-rejected-alert") ?? throw new InvalidOperationException("No .tasks-rejected-alert in the response.");
+        IElement heading = document.QuerySelector(".tasks-rejected-heading") ?? throw new InvalidOperationException("No .tasks-rejected-heading in the response.");
 
-        // Razor HTML-encodes the apostrophe as &#x27; - the same encoding TeammatesPageTests'
-        // "didn't load" precedent would hit too, if it ever asserted on this exact text.
-        Assert.Contains("Tasks that didn&#x27;t load", html, StringComparison.Ordinal);
-        Assert.Contains("role=\"status\"", html, StringComparison.Ordinal);
+        // AngleSharp decodes the apostrophe entity back to "'" - the same text Razor's own
+        // HTML-encoding (&#x27;) renders on the wire.
+        Assert.Equal("status", alert.GetAttribute("role"));
+        Assert.Equal("Tasks that didn't load", heading.TextContent.Trim());
     }
 
     /// <summary>A malformed <c>views.json</c> is surfaced as <see cref="ViewLoadError"/>, with <c>role="alert"</c> and the exact wording Spec §13.12 gives (message, then the "read-only until fixed" reassurance).</summary>
@@ -89,14 +101,37 @@ public sealed class TasksPageTests
         await using var factory = new TeamWebApplicationFactory();
         var dataDirPath = Path.GetDirectoryName(factory.TasksDirPath) ?? throw new InvalidOperationException("TasksDirPath has no parent.");
         Directory.CreateDirectory(dataDirPath);
-        await File.WriteAllTextAsync(Path.Combine(dataDirPath, "views.json"), "{ not json", ct);
+        const string malformed = "{ not json";
+        string viewsJsonPath = Path.Combine(dataDirPath, "views.json");
+        await File.WriteAllTextAsync(viewsJsonPath, malformed, ct);
+
+        // Line/column and message computed independently here from JsonNode.Parse's own JsonException,
+        // the same technique ViewStoreTests.MalformedFile_LoadErrorWithLineAndColumn_SaveRefused_FileByteIdentical
+        // uses, rather than re-deriving ViewStore's own arithmetic.
+        JsonException? parseError = null;
+        try
+        {
+            JsonNode.Parse(malformed);
+        }
+        catch (JsonException ex)
+        {
+            parseError = ex;
+        }
+
+        Assert.NotNull(parseError);
+        long line = (parseError.LineNumber ?? 0) + 1;
+        long column = (parseError.BytePositionInLine ?? 0) + 1;
+        string expected = string.Create(
+            CultureInfo.InvariantCulture,
+            $"views.json could not be read (line {line}, column {column}): '{viewsJsonPath}' could not be parsed: {parseError.Message}. Views are read-only until the file is fixed; nothing has been lost.");
 
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/tasks", ct);
+        IDocument document = new HtmlParser().ParseDocument(html);
+        IElement alert = document.QuerySelector(".tasks-views-load-error-alert") ?? throw new InvalidOperationException("No .tasks-views-load-error-alert in the response.");
 
-        Assert.Contains("could not be read (line", html, StringComparison.Ordinal);
-        Assert.Contains("Views are read-only until the file is fixed; nothing has been lost.", html, StringComparison.Ordinal);
-        Assert.Contains("role=\"alert\"", html, StringComparison.Ordinal);
+        Assert.Equal("alert", alert.GetAttribute("role"));
+        Assert.Equal(expected, NormalizeWhitespace(alert.TextContent));
     }
 
     /// <summary>With Tasks turned off, <c>/tasks</c> shows only the "turned off" notice (corrections-B4 D11 item 13), never the toolbar or list.</summary>
@@ -111,9 +146,11 @@ public sealed class TasksPageTests
         using var client = disabled.CreateClient();
 
         var html = await client.GetStringAsync("/tasks", ct);
+        IDocument document = new HtmlParser().ParseDocument(html);
+        IElement alert = document.QuerySelector(".tasks-disabled-alert") ?? throw new InvalidOperationException("No .tasks-disabled-alert in the response.");
 
-        Assert.Contains("Tasks are turned off.", html, StringComparison.Ordinal);
-        Assert.Contains("role=\"status\"", html, StringComparison.Ordinal);
+        Assert.Equal("status", alert.GetAttribute("role"));
+        Assert.Equal("Tasks are turned off.", alert.TextContent.Trim());
     }
 
     /// <summary>
@@ -140,7 +177,7 @@ public sealed class TasksPageTests
             TestTasks.Make(id: "PLAT-0001", title: "Freshly written on disk"));
         harness.Store.RebuildFromWatcher();
 
-        cut.WaitForAssertion(() => Assert.Contains("Freshly written on disk", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Equal("Freshly written on disk", cut.Find(".task-list-title").TextContent.Trim()));
     }
 
     /// <summary>
@@ -165,7 +202,7 @@ public sealed class TasksPageTests
             new TaskDraft("Freshly created via TaskService", "Platform", null),
             TaskActors.Human(harness.Options.Value));
 
-        cut.WaitForAssertion(() => Assert.Contains("Freshly created via TaskService", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Equal("Freshly created via TaskService", cut.Find(".task-list-title").TextContent.Trim()));
     }
 
     /// <summary>Saving a rename through <see cref="ViewStore"/> raises <see cref="ViewStore.ViewsChanged"/>, and the page must re-read the effective View's own name from the store rather than the one it first rendered with.</summary>
@@ -182,11 +219,11 @@ public sealed class TasksPageTests
             builder.AddAttribute(1, nameof(TasksPage.ViewId), "custom-view");
             builder.CloseComponent();
         });
-        cut.WaitForAssertion(() => Assert.Contains("Sprint Board", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Equal("Tasks: Sprint Board", cut.Find(".tasks-header h1").TextContent.Trim()));
 
         Assert.True(harness.Views.Save(new TaskView { Id = "custom-view", Name = "Sprint Board Renamed", Kind = ViewKind.List }).Saved);
 
-        cut.WaitForAssertion(() => Assert.Contains("Sprint Board Renamed", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Equal("Tasks: Sprint Board Renamed", cut.Find(".tasks-header h1").TextContent.Trim()));
     }
 
     /// <summary>
@@ -323,6 +360,11 @@ public sealed class TasksPageTests
         Assert.Equal(0, SubscriberCount(harness.Events, nameof(TaskEvents.TaskChanged)));
         Assert.Equal(0, SubscriberCount(harness.Views, nameof(ViewStore.ViewsChanged)));
     }
+
+    /// <summary>Collapses <paramref name="text"/>'s runs of whitespace (the newlines and indentation Razor's literal HTML/text carries between an alert's own text and a nested link) into single spaces, then trims the ends.</summary>
+    /// <param name="text">The raw <c>TextContent</c> to normalise.</param>
+    private static string NormalizeWhitespace(string text) =>
+        string.Join(' ', text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
     /// <summary>Registers the harness's services - exactly what the page and its children <c>@inject</c> - into a fresh <see cref="MudBunitContext"/>.</summary>
     /// <param name="harness">The Tasks stack to wire in.</param>

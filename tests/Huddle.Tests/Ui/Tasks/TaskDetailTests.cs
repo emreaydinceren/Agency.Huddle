@@ -74,7 +74,7 @@ public sealed class TaskDetailTests
         var cut = RenderPanel(ctx, task.Id);
         IRenderedComponent<MudSelect<TaskPriority>> prioritySelect = cut.FindComponents<MudSelect<TaskPriority>>().Single();
         await cut.InvokeAsync(() => prioritySelect.Instance.ValueChanged.InvokeAsync(TaskPriority.Urgent));
-        Assert.Contains("Unsaved edits", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Unsaved edits", TextOf(cut, ".task-detail-unsaved-text"));
 
         FindButton(cut, "Revert").Click();
 
@@ -223,7 +223,7 @@ public sealed class TaskDetailTests
             TaskActors.Human(harness.Options.Value));
         Assert.IsType<TaskResult.Saved>(outsideEdit);
 
-        cut.WaitForAssertion(() => Assert.Contains("Retitled by someone else", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Equal($"{task.Id}: Retitled by someone else", TextOf(cut, ".task-detail-title-display")));
         Assert.Equal(TaskPriority.Urgent, cut.FindComponents<MudSelect<TaskPriority>>().Single().Instance.GetState(x => x.Value));
     }
 
@@ -252,11 +252,11 @@ public sealed class TaskDetailTests
             baseVersion: null,
             TaskActors.Human(harness.Options.Value));
         Assert.IsType<TaskResult.Saved>(outsideEdit);
-        cut.WaitForAssertion(() => Assert.Contains("Unsaved edits", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Equal("Unsaved edits", TextOf(cut, ".task-detail-unsaved-text")));
 
         FindButton(cut, "Save").Click();
 
-        Assert.Contains("Unsaved edits", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Unsaved edits", TextOf(cut, ".task-detail-unsaved-text"));
         Assert.Equal(TaskPriority.Low, harness.Store.Get(task.Id)?.Priority);
     }
 

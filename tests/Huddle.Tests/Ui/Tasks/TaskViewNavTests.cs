@@ -28,10 +28,11 @@ public sealed class TaskViewNavTests
         using var ctx = NewContext(store, tasksEnabled: true);
         var cut = ctx.Render<TaskViewNav>();
 
-        Assert.Contains(cut.FindAll("a"), a => string.Equals(a.GetAttribute("href"), "/tasks/all-tasks", StringComparison.Ordinal));
-        Assert.Contains(cut.FindAll("a"), a => string.Equals(a.GetAttribute("href"), "/tasks/my-tasks", StringComparison.Ordinal));
-        Assert.Contains(cut.FindAll("a"), a => string.Equals(a.GetAttribute("href"), "/tasks/custom1", StringComparison.Ordinal));
-        Assert.Contains("Sprint Board", cut.Markup, StringComparison.Ordinal);
+        List<string?> hrefs = [.. cut.FindAll("a").Select(a => a.GetAttribute("href"))];
+        Assert.Equal(["/tasks/all-tasks", "/tasks/my-tasks", "/tasks/custom1", "/tasks/new"], hrefs);
+
+        var customLink = cut.FindAll("a").Single(a => string.Equals(a.GetAttribute("href"), "/tasks/custom1", StringComparison.Ordinal));
+        Assert.Equal("Sprint Board", customLink.TextContent.Trim());
     }
 
     /// <summary>A <c>+ New View</c> link, pointing at <c>/tasks/new</c>, is always offered.</summary>
@@ -45,7 +46,7 @@ public sealed class TaskViewNavTests
         var cut = ctx.Render<TaskViewNav>();
 
         var link = cut.FindAll("a").Single(a => string.Equals(a.GetAttribute("href"), "/tasks/new", StringComparison.Ordinal));
-        Assert.Contains("New View", link.TextContent, StringComparison.Ordinal);
+        Assert.Equal("+ New View", link.TextContent.Trim());
     }
 
     /// <summary>An invalid View entry that still carries an id is shown as a link, marked with a warning icon.</summary>
@@ -79,7 +80,7 @@ public sealed class TaskViewNavTests
         var cut = ctx.Render<TaskViewNav>();
 
         Assert.DoesNotContain(cut.FindAll("a"), a => string.Equals(a.TextContent.Trim(), "No Id View", StringComparison.Ordinal));
-        Assert.Contains("No Id View", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("No Id View", cut.Find(".task-view-nav-invalid-item").TextContent.Trim());
         Assert.NotNull(cut.Find(".mud-icon-root"));
     }
 
@@ -96,7 +97,11 @@ public sealed class TaskViewNavTests
 
         _ = store.Save(new TaskView { Id = "custom2", Name = "Sprint Board", Kind = ViewKind.List });
 
-        cut.WaitForAssertion(() => Assert.Contains("Sprint Board", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() =>
+        {
+            var link = cut.FindAll("a").Single(a => string.Equals(a.GetAttribute("href"), "/tasks/custom2", StringComparison.Ordinal));
+            Assert.Equal("Sprint Board", link.TextContent.Trim());
+        });
     }
 
     /// <summary>With <see cref="TasksOptions.Enabled"/> off, the component renders nothing at all.</summary>

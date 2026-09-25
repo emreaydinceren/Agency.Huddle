@@ -54,7 +54,7 @@ public sealed class TaskRouteAndCopyTests
             builder.CloseComponent();
         });
 
-        cut.WaitForAssertion(() => Assert.Contains("Tasks: All Tasks", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Equal("Tasks: All Tasks", cut.Find(".tasks-header h1").TextContent.Trim()));
         Assert.Equal(task.Id, cut.FindComponent<TaskDetail>().Instance.Id);
     }
 

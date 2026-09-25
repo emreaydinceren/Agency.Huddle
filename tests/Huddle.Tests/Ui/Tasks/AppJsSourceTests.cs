@@ -13,8 +13,11 @@ public sealed class AppJsSourceTests
     {
         string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
 
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
         Assert.Contains("window.huddleStorage", text, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
         Assert.Contains("localStorage.getItem", text, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
         Assert.Contains("catch", text, StringComparison.Ordinal);
     }
 
@@ -24,8 +27,11 @@ public sealed class AppJsSourceTests
     {
         string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
 
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
         Assert.Contains("window.huddleClipboard", text, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
         Assert.Contains("isSecureContext", text, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
         Assert.Contains("execCommand(\"copy\")", text, StringComparison.Ordinal);
     }
 
@@ -35,7 +41,9 @@ public sealed class AppJsSourceTests
     {
         string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "app.js"));
 
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
         Assert.Contains("window.teamComposer", text, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - app.js's own text is what's pinned.
         Assert.Contains("window.teamScroll", text, StringComparison.Ordinal);
     }
 

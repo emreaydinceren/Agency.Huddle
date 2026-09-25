@@ -295,10 +295,11 @@ public sealed class ViewEditorDrawerTests
         IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
         IRenderedComponent<ViewEditorDrawer> drawer = root.FindComponent<ViewEditorDrawer>();
 
-        Assert.Contains(root.FindAll(".view-editor-filter-assignee-chip"), el => string.Equals(el.TextContent.Trim(), "Ghost", StringComparison.Ordinal));
+        Assert.Equal(["Ghost"], root.FindAll(".view-editor-filter-assignee-chip").Select(el => el.TextContent.Trim()));
 
         await OpenSelectAsync(root, drawer, ".view-editor-filter-assignee");
-        Assert.Contains(root.FindAll(".view-editor-filter-assignee-option"), el => string.Equals(el.TextContent.Trim(), "Ghost (missing)", StringComparison.Ordinal));
+        List<string> options = [.. root.FindAll(".view-editor-filter-assignee-option").Select(el => el.TextContent.Trim())];
+        Assert.Contains("Ghost (missing)", options);
     }
 
     /// <summary>Two selected values in a filter row are joined by an "OR" label between their chips.</summary>

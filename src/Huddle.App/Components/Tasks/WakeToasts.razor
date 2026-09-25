@@ -95,7 +95,7 @@
     /// <param name="record">The successful wake to describe.</param>
     private RenderFragment WokenMessage(WakeRecord record) =>
         @<text>
-            <span>@($"{record.Assignee} woken for {record.TaskId} in Room: {record.RoomName}")</span>
+            <span class="wake-toast-text">@($"{record.Assignee} woken for {record.TaskId} in Room: {record.RoomName}")</span>
             <a class="wake-toast-task-link" href="@($"/tasks/item/{record.TaskId}")" @onclick="() => this.OnOpenTask.InvokeAsync(record.TaskId)" @onclick:preventDefault="true">@record.TaskId.ToString()</a>
             @if (record.RoomId is not null)
             {
@@ -108,7 +108,7 @@
     /// <param name="record">Carries the Room to link to; its <c>RoomId</c> must not be <see langword="null"/>.</param>
     private RenderFragment TextWithRoomLink(string text, WakeRecord record) =>
         @<text>
-            <span>@text</span>
+            <span class="wake-toast-text">@text</span>
             <a class="wake-toast-room-link" href="@($"/rooms/{record.RoomId}")">@record.RoomName</a>
         </text>;
 

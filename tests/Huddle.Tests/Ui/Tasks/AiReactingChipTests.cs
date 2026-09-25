@@ -43,7 +43,7 @@ public sealed class AiReactingChipTests
 
         harness.TurnActivity.Begin(novaId, "room-1");
 
-        cut.WaitForAssertion(() => Assert.Contains("ai-reacting-chip", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".ai-reacting-chip")));
     }
 
     /// <summary>The Turn ending hides the chip again, live, without a manual re-render.</summary>
@@ -58,11 +58,11 @@ public sealed class AiReactingChipTests
 
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderChip(ctx, harness, [taskId]);
-        cut.WaitForAssertion(() => Assert.Contains("ai-reacting-chip", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".ai-reacting-chip")));
 
         harness.TurnActivity.End(novaId, "room-1");
 
-        cut.WaitForAssertion(() => Assert.DoesNotContain("ai-reacting-chip", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".ai-reacting-chip")));
     }
 
     /// <summary>Only one of several watched Tasks needs a busy Room for the chip to show.</summary>
@@ -81,7 +81,7 @@ public sealed class AiReactingChipTests
 
         harness.TurnActivity.Begin(novaId, "room-2");
 
-        cut.WaitForAssertion(() => Assert.Contains("ai-reacting-chip", cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".ai-reacting-chip")));
     }
 
     /// <summary>A watched Task with no recorded wake at all does not throw and shows no chip.</summary>

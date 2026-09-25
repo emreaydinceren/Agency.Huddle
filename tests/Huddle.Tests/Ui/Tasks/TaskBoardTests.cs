@@ -171,8 +171,7 @@ public sealed class TaskBoardTests
         IRenderedComponent<TaskBoard> cut = RenderBoard(ctx, harness, BoardView(grouping: [TaskGroupField.Assignee]), [nova, kai]);
 
         IRenderedComponent<MudDropZone<TaskItem>> novaZone = Zone(cut, BoardLayout.ZoneId("Nova", TaskState.InProgress));
-        Assert.Contains("PLAT-0001", novaZone.Markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("PLAT-0002", novaZone.Markup, StringComparison.Ordinal);
+        Assert.Equal(["PLAT-0001"], CardIds(novaZone));
         Assert.Single(cut.FindComponents<MudDropZone<TaskItem>>(), z => string.Equals(z.Instance.Identifier, BoardLayout.ZoneId("Kai", TaskState.InProgress), StringComparison.Ordinal));
     }
 
@@ -204,9 +203,7 @@ public sealed class TaskBoardTests
         IRenderedComponent<TaskBoard> cut = RenderBoard(ctx, harness, BoardView(), [duplicate, cancelled, toDo]);
 
         IRenderedComponent<MudDropZone<TaskItem>> display = Zone(cut, "lane:|col:5");
-        Assert.Contains("PLAT-0001", display.Markup, StringComparison.Ordinal);
-        Assert.Contains("PLAT-0002", display.Markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("PLAT-0003", display.Markup, StringComparison.Ordinal);
+        Assert.Equal(["PLAT-0001", "PLAT-0002"], CardIds(display));
         Func<TaskItem, string, bool> canDrop = CanDrop(cut);
         Assert.False(canDrop(toDo, "lane:|col:5"));
         Assert.False(canDrop(duplicate, "lane:|col:5"));
@@ -278,7 +275,7 @@ public sealed class TaskBoardTests
         cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll(".task-ghost-bucket").Count));
         IRenderedComponent<MudDropZone<TaskItem>> bucket = Zone(cut, BoardLayout.ZoneId(NoLane, state));
         Assert.Equal(name, bucket.Find(".task-ghost-bucket-label").TextContent.Trim());
-        Assert.Contains(bucket.FindComponents<MudIcon>(), i => string.Equals(i.Instance.Icon, icon, StringComparison.Ordinal));
+        Assert.Equal(icon, Assert.Single(bucket.FindComponents<MudIcon>()).Instance.Icon);
     }
 
     /// <summary>12.2.i: a bucket for a state the Spec gives no icon for (here Review, in a custom Review + Done column) still shows its name, with the fallback icon <c>Outlined.Label</c>.</summary>
@@ -304,7 +301,7 @@ public sealed class TaskBoardTests
         cut.WaitForAssertion(() => Assert.Equal(5, cut.FindAll(".task-ghost-bucket").Count));
         IRenderedComponent<MudDropZone<TaskItem>> bucket = Zone(cut, BoardLayout.ZoneId(NoLane, TaskState.Review));
         Assert.Equal("Review", bucket.Find(".task-ghost-bucket-label").TextContent.Trim());
-        Assert.Contains(bucket.FindComponents<MudIcon>(), i => string.Equals(i.Instance.Icon, Icons.Material.Outlined.Label, StringComparison.Ordinal));
+        Assert.Equal(Icons.Material.Outlined.Label, Assert.Single(bucket.FindComponents<MudIcon>()).Instance.Icon);
     }
 
     /// <summary>12.2.i: an unassigned Task's card has no presence badge.</summary>
@@ -318,7 +315,7 @@ public sealed class TaskBoardTests
         IRenderedComponent<TaskBoard> cut = RenderBoard(ctx, harness, BoardView(), [TestTasks.Make(id: "PLAT-0001", assignee: null)]);
 
         Assert.Empty(cut.FindComponents<MudBadge>());
-        Assert.Contains("PLAT-0001", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal(["PLAT-0001"], CardIds(cut));
     }
 
     /// <summary>Spec §13.4: <c>TransactionEnded</c> (raised by <c>CancelTransaction</c>) clears the drag, and the buckets disappear again.</summary>
@@ -441,8 +438,7 @@ public sealed class TaskBoardTests
         Func<TaskItem, string, bool> selector = ItemsSelector(cut);
         Assert.All(ZoneIds(cut), zone => Assert.False(selector(done, zone)));
         Assert.False(selector(done, BoardLayout.ZoneId(NoLane, TaskState.Done)));
-        Assert.DoesNotContain("PLAT-0009", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("PLAT-0001", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal(["PLAT-0001"], CardIds(cut));
     }
 
     /// <summary>Plan 12.2.t / Spec §13.4 "cards can't move between lanes": <c>CanDrop</c> refuses a zone in another lane.</summary>
@@ -565,7 +561,7 @@ public sealed class TaskBoardTests
         IRenderedComponent<TaskBoard> cut = RenderBoard(ctx, harness, BoardView(columns: WithDoneHidden()), [TestTasks.Make(id: "PLAT-0001", status: TaskState.ToDo)]);
 
         Assert.Empty(cut.FindAll(".task-board-hidden-count"));
-        Assert.Contains("PLAT-0001", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal(["PLAT-0001"], CardIds(cut));
     }
 
     /// <summary>Spec §13.4 "subscribe in OnAfterRender(firstRender)": the Board subscribes to the container's <c>TransactionStarted</c> and <c>TransactionEnded</c> exactly once, however often it re-renders.</summary>
@@ -636,8 +632,8 @@ public sealed class TaskBoardTests
         IRenderedComponent<TaskBoard> cut = RenderBoard(ctx, harness, BoardView(), [before]);
         cut.Render(p => p.Add(b => b.Tasks, (IReadOnlyList<TaskItem>)[after]));
 
-        cut.WaitForAssertion(() => Assert.Contains("PLAT-0001", Zone(cut, BoardLayout.ZoneId(NoLane, TaskState.InProgress)).Markup, StringComparison.Ordinal));
-        Assert.DoesNotContain("PLAT-0001", Zone(cut, BoardLayout.ZoneId(NoLane, TaskState.ToDo)).Markup, StringComparison.Ordinal);
+        cut.WaitForAssertion(() => Assert.Equal(["PLAT-0001"], CardIds(Zone(cut, BoardLayout.ZoneId(NoLane, TaskState.InProgress)))));
+        Assert.Empty(CardIds(Zone(cut, BoardLayout.ZoneId(NoLane, TaskState.ToDo))));
     }
 
     /// <summary>
@@ -797,7 +793,7 @@ public sealed class TaskBoardTests
         IRenderedComponent<TaskBoard> cut = RenderBoard(ctx, harness, BoardView(fields: ["due_date"]), [task], search: "Alpha");
 
         Assert.Single(cut.FindAll(".task-card-field-due-date"));
-        Assert.Contains("<mark>Alpha</mark>", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Alpha", cut.Find(".task-card-title mark").TextContent.Trim());
     }
 
     /// <summary>Spec §13.4 "Clicking a card opens the detail panel": the card's open button raises <c>OnOpenTask</c> with that Task's id.</summary>
@@ -892,6 +888,13 @@ public sealed class TaskBoardTests
     /// <returns>The zone.</returns>
     private static IRenderedComponent<MudDropZone<TaskItem>> Zone(IRenderedComponent<TaskBoard> cut, string id) =>
         Assert.Single(cut.FindComponents<MudDropZone<TaskItem>>(), z => string.Equals(z.Instance.Identifier, id, StringComparison.Ordinal));
+
+    /// <summary>The ids of every card rendered inside <paramref name="fragment"/>, in render order - the whole list, so an extra or missing card is caught the way membership Contains/DoesNotContain checks cannot.</summary>
+    /// <typeparam name="T">The rendered component's type.</typeparam>
+    /// <param name="fragment">The zone (or the Board itself) to read cards from.</param>
+    private static string[] CardIds<T>(IRenderedComponent<T> fragment)
+        where T : Microsoft.AspNetCore.Components.IComponent =>
+        [.. fragment.FindAll(".task-card-id").Select(e => e.TextContent.Trim())];
 
     /// <summary>The container's <c>CanDrop</c>, which must be set.</summary>
     /// <param name="cut">The rendered Board.</param>

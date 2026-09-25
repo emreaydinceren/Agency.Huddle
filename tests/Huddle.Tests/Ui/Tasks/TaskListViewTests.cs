@@ -50,11 +50,8 @@ public sealed class TaskListViewTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = Render(ctx, view, [task]);
 
-        Assert.Contains("ID", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Title", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Status", cut.Markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Priority", cut.Markup, StringComparison.Ordinal);
-        Assert.DoesNotContain("Creator", cut.Markup, StringComparison.Ordinal);
+        List<string> headers = [.. cut.FindAll("span.sortable-column-header").Select(header => header.TextContent.Trim())];
+        Assert.Equal(["ID", "Title", "Status"], headers);
     }
 
     /// <summary>Two-level grouping (Team, then Assignee) nests in that order, labels come from <see cref="TaskQuery.GroupLabel"/>, and the null Assignee group ("Unassigned") sorts last within its Team.</summary>
@@ -117,8 +114,9 @@ public sealed class TaskListViewTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = Render(ctx, view, [overdue, doneOnTime]);
 
-        Assert.Contains("task-overdue", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Overdue", cut.Markup, StringComparison.Ordinal);
+        IElement overdueRow = cut.FindAll("tr").First(row => row.TextContent.Contains("Still open", StringComparison.Ordinal));
+        Assert.Contains("task-overdue", (overdueRow.ClassName ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries), StringComparer.Ordinal);
+        Assert.NotNull(overdueRow.QuerySelector("[aria-label='Overdue']"));
 
         IElement doneRow = cut.FindAll("tr").First(row => row.TextContent.Contains("Finished", StringComparison.Ordinal));
         Assert.DoesNotContain("task-overdue", doneRow.ClassName, StringComparison.Ordinal);
@@ -153,7 +151,7 @@ public sealed class TaskListViewTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = Render(ctx, view, [task], search: "Alpha");
 
-        Assert.Contains("<mark>Alpha</mark>", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Alpha", cut.Find(".task-list-title mark").TextContent.Trim());
     }
 
     /// <summary>Column order follows <see cref="TaskView.Fields"/>, with ID and Title always first regardless of Fields.</summary>
@@ -188,8 +186,10 @@ public sealed class TaskListViewTests : IDisposable
             .Select(header => header.TextContent.Trim())
             .ToList();
 
-        Assert.Contains("Alpha", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Bravo", cut.Markup, StringComparison.Ordinal);
+        List<string> groupLabels = [.. cut.FindAll("tr")
+            .Select(row => row.TextContent.Trim())
+            .Where(text => text is "Alpha (1)" or "Bravo (1)")];
+        Assert.Equal(["Alpha (1)", "Bravo (1)"], groupLabels);
         Assert.DoesNotContain("Team", headers);
     }
 

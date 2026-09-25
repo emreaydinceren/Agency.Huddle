@@ -57,6 +57,10 @@ public sealed class TaskCardTests : IDisposable
         Assert.Contains("task-card", (card.ClassName ?? string.Empty).Split(' '), StringComparer.Ordinal);
     }
 
+    /// <summary>Splits <paramref name="element"/>'s rendered <c>class</c> attribute into its individual tokens, so a class check is exact membership rather than a substring match.</summary>
+    /// <param name="element">The element whose class list to split.</param>
+    private static string[] ClassTokens(IElement element) => (element.ClassName ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
     /// <summary>The open control - the element that raises <see cref="TaskCard.OnOpen"/> - is a plain <c>&lt;button type="button"&gt;</c>, per corrections-B5 D12-1 and the Spec's keyboard-focus rationale (<c>Teammates.razor:85-90</c>).</summary>
     [Fact]
     public async Task OpenControl_IsAButtonTypeButton()
@@ -101,8 +105,8 @@ public sealed class TaskCardTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task);
 
-        Assert.Contains("PLAT-0042", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("Refactor the widget", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("PLAT-0042", cut.Find(".task-card-id").TextContent.Trim());
+        Assert.Equal("Refactor the widget", cut.Find(".task-card-title").TextContent.Trim());
     }
 
     /// <summary>Plan 12.1.t bullet 2 and Spec §13.10: the priority chip's <c>Color</c> and <c>Icon</c> follow <see cref="TaskColors"/>, for every <see cref="TaskPriority"/>.</summary>
@@ -121,7 +125,7 @@ public sealed class TaskCardTests : IDisposable
         IRenderedComponent<MudChip<string>> chip = cut.FindComponent<MudChip<string>>();
         Assert.Equal(TaskColors.For(priority), chip.Instance.Color);
         Assert.Equal(TaskColors.Icon(priority), chip.Instance.Icon);
-        Assert.Contains(priority.ToWire(), cut.Markup, StringComparison.Ordinal);
+        Assert.Equal(priority.ToWire(), cut.Find(".task-card-header .mud-chip").TextContent.Trim());
     }
 
     /// <summary>Spec §13.4 Cards: the title is wrapped by <c>MudHighlighter</c> while a search term is active.</summary>
@@ -133,7 +137,7 @@ public sealed class TaskCardTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task, search: "Alpha");
 
-        Assert.Contains("<mark>Alpha</mark>", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Alpha", cut.Find(".task-card-title mark").TextContent.Trim());
     }
 
     /// <summary>Plan 12.1.t bullet 3 and Spec §13.10: the presence badge's colour and its words (via <see cref="MudBadge.BadgeAriaLabel"/> - a <c>MudTooltip</c>'s hover text is invisible to bUnit's static markup) follow the assignee's <see cref="PresenceState"/>.</summary>
@@ -152,10 +156,8 @@ public sealed class TaskCardTests : IDisposable
         Assert.Equal(TaskColors.For(presence), badge.Instance.Color);
         Assert.True(badge.Instance.Dot);
         Assert.True(badge.Instance.Overlap);
-        Assert.NotNull(badge.Instance.BadgeAriaLabel);
-        Assert.Contains("Nova", badge.Instance.BadgeAriaLabel, StringComparison.Ordinal);
-        Assert.Contains(presence.ToString(), badge.Instance.BadgeAriaLabel, StringComparison.Ordinal);
-        Assert.Contains("mud-avatar", badge.Markup, StringComparison.Ordinal);
+        Assert.Equal($"Nova is {presence}", badge.Instance.BadgeAriaLabel);
+        Assert.NotEmpty(badge.FindAll(".mud-avatar"));
     }
 
     /// <summary>A Task with no assignee (or an assignee whose <see cref="PresenceState"/> could not be resolved) shows no presence badge at all - there is no one to show presence for.</summary>
@@ -181,9 +183,9 @@ public sealed class TaskCardTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task, presence: PresenceState.Awake, lastWake: lastWake, busy: true);
 
-        Assert.Contains("Awake", cut.Markup, StringComparison.Ordinal);
-        Assert.Contains("active in Room General", cut.Markup, StringComparison.Ordinal);
+        Assert.Equal("Awake", cut.Find(".task-card-awake-chip").TextContent.Trim());
         IElement link = cut.Find("a.task-card-awake-link");
+        Assert.Equal("active in Room General", link.TextContent.Trim());
         Assert.Equal("/rooms/room-42", link.GetAttribute("href"));
     }
 
@@ -213,7 +215,7 @@ public sealed class TaskCardTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task);
 
         IElement card = cut.Find("div.task-card");
-        Assert.Contains("task-overdue", card.ClassName, StringComparison.Ordinal);
+        Assert.Contains("task-overdue", ClassTokens(card), StringComparer.Ordinal);
         Assert.NotEmpty(cut.FindAll("[aria-label='Overdue']"));
     }
 
@@ -242,7 +244,7 @@ public sealed class TaskCardTests : IDisposable
 
         IElement card = cut.Find("div.task-card");
         string expected = string.Create(CultureInfo.InvariantCulture, $"task-col-edge-{TaskColors.For(TaskState.InProgress).ToString().ToLowerInvariant()}");
-        Assert.Contains(expected, card.ClassName, StringComparison.Ordinal);
+        Assert.Contains(expected, ClassTokens(card), StringComparer.Ordinal);
     }
 
     /// <summary>Spec §13.4 Cards ("The View's extra fields"): a field named in <see cref="TaskCard.Fields"/> shows its value, formatted the same way every Tasks surface formats a date (<c>yyyy-MM-dd</c>, invariant; Settled J53).</summary>

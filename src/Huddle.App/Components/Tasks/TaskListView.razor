@@ -38,7 +38,7 @@
                 case "title":
                     <TemplateColumn @key="key" T="TaskItem" Title="Title" Sortable="true" SortBy="@(t => (object)t.Title)">
                         <CellTemplate>
-                            <MudHighlighter Text="@context.Item.Title" HighlightedText="@this.Search" />
+                            <span class="task-list-title"><MudHighlighter Text="@context.Item.Title" HighlightedText="@this.Search" /></span>
                         </CellTemplate>
                     </TemplateColumn>
                     break;
