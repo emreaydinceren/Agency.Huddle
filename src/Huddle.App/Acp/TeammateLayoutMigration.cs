@@ -16,6 +16,7 @@ internal static class TeammateLayoutMigration
     private const string UnsortedFolderName = "_unsorted";
     private const string OldTeamsFolderName = "Teams";
     private const string OldWorkFolderName = "work";
+    private const string MarkerFileName = ".layout-migrated";
 
     /// <summary>
     /// Runs the migration against <paramref name="options"/>'s configured <c>DataDir</c>, logging
@@ -44,24 +45,36 @@ internal static class TeammateLayoutMigration
         string workRoot = Path.Combine(dataDir, OldWorkFolderName);
         TeammatePaths paths = new(options);
 
-        List<PlannedMove> moves = PlanMoves(teamsRoot, workRoot, paths);
+        string markerPath = Path.Combine(paths.DefinitionsRoot, MarkerFileName);
+        if (File.Exists(markerPath))
+        {
+            return;
+        }
+
+        List<PlannedMove> moves = ResolveAlreadyDoneMoves(PlanMoves(teamsRoot, workRoot, paths));
         if (moves.Count == 0)
         {
             logger.LogInformation("Teammate layout migration: nothing to migrate.");
+            WriteMarker(paths.DefinitionsRoot, markerPath);
             return;
         }
 
         CheckTargetsAreClear(moves);
         ExecuteMoves(moves, logger);
         RemoveEmptyOldFolders(teamsRoot, workRoot);
+        WriteMarker(paths.DefinitionsRoot, markerPath);
     }
 
-    /// <summary>Plans every move: Persona definitions first (unless <c>Teammates/</c> is already populated), then Work Dirs.</summary>
+    /// <summary>
+    /// Plans every move: Persona definitions (whenever <c>Teams/</c> exists - the marker check
+    /// already guards against re-scanning after a completed run, corrections-B2 addendum 3.5.f/F2),
+    /// then Work Dirs.
+    /// </summary>
     private static List<PlannedMove> PlanMoves(string teamsRoot, string workRoot, TeammatePaths paths)
     {
         List<PlannedMove> moves = [];
 
-        if (!IsTeammatesRootPopulated(paths.DefinitionsRoot) && Directory.Exists(teamsRoot))
+        if (Directory.Exists(teamsRoot))
         {
             moves.AddRange(PlanDefinitionMoves(teamsRoot, paths));
         }
@@ -75,11 +88,39 @@ internal static class TeammateLayoutMigration
     }
 
     /// <summary>
-    /// True once <c>Teammates/</c> holds any folder at all - once it does, this migration never
-    /// scans <c>Teams/</c> for Personas again (corrections-B2 item 24).
+    /// Drops any planned move that is already done (addendum 3.5.f/F3): a file move whose target
+    /// already exists with byte-identical content is complete, and its leftover source is removed
+    /// so old-folder cleanup still proceeds. Any other existing target is left for
+    /// <see cref="CheckTargetsAreClear"/> to refuse.
     /// </summary>
-    private static bool IsTeammatesRootPopulated(string teammatesRoot) =>
-        Directory.Exists(teammatesRoot) && Directory.EnumerateDirectories(teammatesRoot).Any();
+    private static List<PlannedMove> ResolveAlreadyDoneMoves(List<PlannedMove> moves)
+    {
+        List<PlannedMove> remaining = [];
+        foreach (PlannedMove move in moves)
+        {
+            if (!move.IsDirectory && File.Exists(move.Target) && File.Exists(move.Source)
+                && FilesAreByteIdentical(move.Source, move.Target))
+            {
+                File.Delete(move.Source);
+                continue;
+            }
+
+            remaining.Add(move);
+        }
+
+        return remaining;
+    }
+
+    /// <summary>Compares two files' contents byte for byte.</summary>
+    private static bool FilesAreByteIdentical(string first, string second) =>
+        File.ReadAllBytes(first).AsSpan().SequenceEqual(File.ReadAllBytes(second));
+
+    /// <summary>Writes the empty completion marker, creating the Teammates root first if nothing was migrated into it.</summary>
+    private static void WriteMarker(string definitionsRoot, string markerPath)
+    {
+        Directory.CreateDirectory(definitionsRoot);
+        using FileStream _ = File.Create(markerPath);
+    }
 
     /// <summary>
     /// Plans a move for every <c>.md</c> file under <paramref name="teamsRoot"/>: a valid Persona

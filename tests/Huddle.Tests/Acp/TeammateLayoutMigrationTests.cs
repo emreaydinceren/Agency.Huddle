@@ -121,7 +121,85 @@ public sealed class TeammateLayoutMigrationTests
         TeammateLayoutMigration.Run(dataDir.Options(), secondLogger);
 
         Assert.Equal(beforeSecondRun, File.ReadAllText(target));
-        Assert.Contains(secondLogger.Entries, entry => entry.Message.Contains("nothing to migrate", StringComparison.Ordinal));
+        Assert.Empty(secondLogger.Entries);
+    }
+
+    /// <summary>A fully successful run writes the completion marker under <c>Teammates/</c>.</summary>
+    [Fact]
+    public void Run_Success_WritesMarker()
+    {
+        using TempDataDir dataDir = new();
+        WriteTeamsFile(dataDir.Path, "Nova.md", PersonaText("Nova"));
+        RecordingLogger<TeammateLayoutMigrationTests> logger = new();
+
+        TeammateLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teammates", ".layout-migrated")));
+    }
+
+    /// <summary>A run that finds nothing to migrate still writes the marker: a new install counts as already migrated.</summary>
+    [Fact]
+    public void Run_NothingToMigrate_WritesMarker()
+    {
+        using TempDataDir dataDir = new();
+        RecordingLogger<TeammateLayoutMigrationTests> logger = new();
+
+        TeammateLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teammates", ".layout-migrated")));
+        Assert.Contains(logger.Entries, entry => entry.Message.Contains("nothing to migrate", StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// A move that fails part-way leaves no marker, and the old layout is still readable. Once the
+    /// block on the source is released, the next run finishes the migration and writes the marker.
+    /// </summary>
+    [Fact]
+    public void Run_FailureMidway_NoMarker_ResumesOnNextRun()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("Windows-only: File.Move of an already-open file fails on Windows, not on POSIX.");
+        }
+
+        using TempDataDir dataDir = new();
+        string source = Path.Combine(dataDir.Path, "Teams", "Nova.md");
+        WriteTeamsFile(dataDir.Path, "Nova.md", PersonaText("Nova"));
+        string markerPath = Path.Combine(dataDir.Path, "Teammates", ".layout-migrated");
+        RecordingLogger<TeammateLayoutMigrationTests> firstLogger = new();
+
+        using (FileStream blocker = new(source, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            _ = Assert.Throws<InvalidOperationException>(() => TeammateLayoutMigration.Run(dataDir.Options(), firstLogger));
+            Assert.False(File.Exists(markerPath));
+        }
+
+        RecordingLogger<TeammateLayoutMigrationTests> secondLogger = new();
+        TeammateLayoutMigration.Run(dataDir.Options(), secondLogger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teammates", "Nova", "Nova.md")));
+        Assert.True(File.Exists(markerPath));
+    }
+
+    /// <summary>
+    /// A planned move whose target already exists with byte-identical content counts as already
+    /// done: it is skipped without error, and the leftover source is cleaned up.
+    /// </summary>
+    [Fact]
+    public void Run_TargetIdenticalExists_Skipped()
+    {
+        using TempDataDir dataDir = new();
+        string content = PersonaText("Nova");
+        WriteTeamsFile(dataDir.Path, "Nova.md", content);
+        string target = Path.Combine(dataDir.Path, "Teammates", "Nova", "Nova.md");
+        Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+        File.WriteAllText(target, content);
+        RecordingLogger<TeammateLayoutMigrationTests> logger = new();
+
+        TeammateLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.Equal(content, File.ReadAllText(target));
+        Assert.False(File.Exists(Path.Combine(dataDir.Path, "Teams", "Nova.md")));
     }
 
     /// <summary>When only <c>Teammates/</c> already exists (no <c>Teams/</c>, no <c>work/</c>), the migration makes no change.</summary>
@@ -193,14 +271,14 @@ public sealed class TeammateLayoutMigrationTests
         Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Teammates", "Nova")));
     }
 
-    /// <summary>Once <c>Teammates/</c> already holds a folder, the migration never scans <c>Teams/</c> for Personas again, so a Persona-like note left there is untouched.</summary>
+    /// <summary>Once the completion marker exists, the migration does nothing at all: a Persona-like note later added to <c>Teams/</c> is left untouched.</summary>
     [Fact]
-    public void Run_TeammatesPopulated_LeavesPersonaLikeNoteInTeams()
+    public void Run_MarkerPresent_LeavesTeamsUntouched()
     {
         using TempDataDir dataDir = new();
-        string existing = Path.Combine(dataDir.Path, "Teammates", "Existing", "Existing.md");
-        Directory.CreateDirectory(Path.GetDirectoryName(existing)!);
-        File.WriteAllText(existing, PersonaText("Existing"));
+        string markerPath = Path.Combine(dataDir.Path, "Teammates", ".layout-migrated");
+        Directory.CreateDirectory(Path.GetDirectoryName(markerPath)!);
+        File.WriteAllText(markerPath, string.Empty);
         WriteTeamsFile(dataDir.Path, "Nova.md", PersonaText("Nova"));
         RecordingLogger<TeammateLayoutMigrationTests> logger = new();
 
@@ -208,6 +286,23 @@ public sealed class TeammateLayoutMigrationTests
 
         Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teams", "Nova.md")));
         Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Teammates", "Nova")));
+    }
+
+    /// <summary>Marker present, and every Teammate folder since deleted: the migration still does not rescan <c>Teams/</c>, so a note left there stays put.</summary>
+    [Fact]
+    public void Run_AllTeammatesDeleted_DoesNotRescanTeams()
+    {
+        using TempDataDir dataDir = new();
+        string markerPath = Path.Combine(dataDir.Path, "Teammates", ".layout-migrated");
+        Directory.CreateDirectory(Path.GetDirectoryName(markerPath)!);
+        File.WriteAllText(markerPath, string.Empty);
+        WriteTeamsFile(dataDir.Path, Path.Combine("Marketing", "Ada.md"), PersonaText("Ada"));
+        RecordingLogger<TeammateLayoutMigrationTests> logger = new();
+
+        TeammateLayoutMigration.Run(dataDir.Options(), logger);
+
+        Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teams", "Marketing", "Ada.md")));
+        Assert.False(Directory.Exists(Path.Combine(dataDir.Path, "Teammates", "Ada")));
     }
 
     /// <summary>A missing <c>DataDir</c> is a no-op: the migration does not create it.</summary>
