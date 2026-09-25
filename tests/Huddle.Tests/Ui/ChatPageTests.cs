@@ -843,6 +843,11 @@ public sealed class ChatPageTests
         await using MudBunitContext ctx = new();
         ctx.Services.AddSingleton(chat);
 
+        // Composer now injects these for the # picker (Task 15.3) - needed even though this test
+        // never opens it.
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<TaskStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
+
         var cut = ctx.Render<Composer>(parameters => parameters.Add(p => p.RoomId, roomAlphaEcho.Id));
 
         // Same command the manual repro uses: inviting a real, uninvited agent into the current Room
@@ -941,6 +946,10 @@ public sealed class ChatPageTests
         // Chat.razor's MessageList child now injects ITaskReferenceResolver (Task 15.1) to link Task
         // ids - needed even though these tests never resolve one.
         ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
+
+        // Chat.razor's Composer child now injects TaskStore for the # picker (Task 15.3) - needed
+        // even though these tests never open it. IOptions<TeamOptions> is already copied above.
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<TaskStore>());
         return ctx;
     }
 

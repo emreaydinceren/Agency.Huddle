@@ -1,8 +1,12 @@
+@using System.Globalization
+@using Microsoft.Extensions.Options
 @implements IDisposable
 @inject ChatService Chat
 @inject IJSRuntime JS
+@inject TaskStore Tasks
+@inject IOptions<TeamOptions> TeamOptions
 
-<div class="composer">
+<div class="composer" style="position: relative;">
     @if (this.errorText is not null)
     {
         <div class="composer-error">@this.errorText</div>
@@ -11,7 +15,36 @@
     {
         <div class="composer-info">@this.infoText</div>
     }
-    <textarea @ref="this.textarea" class="composer-input" placeholder="Message… (/invite @@agent)"></textarea>
+    <textarea @ref="this.textarea" class="composer-input" placeholder="Message… (/invite @@agent)"
+              aria-expanded="@(this.pickerOpen ? "true" : "false")"
+              aria-controls="@(this.pickerOpen ? this.listboxId : null)"
+              aria-activedescendant="@(this.pickerOpen ? this.HighlightedItemId() : null)"></textarea>
+    @if (this.pickerOpen)
+    {
+        <div class="composer-picker" @onmousedown:preventDefault="true">
+            <div role="listbox" id="@this.listboxId" class="composer-picker-list">
+                @if (this.matches.Count == 0)
+                {
+                    <div role="option" class="composer-picker-empty" aria-disabled="true">No task matches '#@this.query'</div>
+                }
+                else
+                {
+                    @foreach (var (task, index) in this.matches.Select((match, i) => (match, i)))
+                    {
+                        <div role="option"
+                             id="@this.OptionId(index)"
+                             aria-selected="@(index == this.highlightIndex ? "true" : "false")"
+                             class="composer-picker-item"
+                             @onclick="() => this.OnPickClickAsync(task.Id.ToString())">
+                            <span class="composer-picker-id">@task.Id</span>
+                            <span class="composer-picker-title"><MudHighlighter Text="@task.Title" HighlightedText="@this.query" /></span>
+                            <span class="composer-picker-status"><MudChip T="string" Color="@TaskColors.For(task.Status)" Size="Size.Small">@TaskStates.ToWire(task.Status)</MudChip></span>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
 </div>
 
 @code {
@@ -23,6 +56,24 @@
     private string? loadedRoomId;
     private string? errorText;
     private string? infoText;
+
+    /// <summary>The picker's stable list id, unique per Composer instance, that the textarea's <c>aria-controls</c> and each row's <c>id</c> reference (Spec §13.13.4 "Accessibility").</summary>
+    private readonly string listboxId = $"composer-picker-{Guid.NewGuid():N}";
+
+    /// <summary>Whether the <c>#</c> picker is open (Spec §13.13.4).</summary>
+    private bool pickerOpen;
+
+    /// <summary>The query the picker was last opened or updated with, with no leading <c>#</c>.</summary>
+    private string query = "";
+
+    /// <summary>The index into <see cref="matches"/> the keyboard or the default has highlighted.</summary>
+    private int highlightIndex;
+
+    /// <summary>The current search results, in <c>TaskQuery.Suggest</c> order.</summary>
+    private IReadOnlyList<TaskItem> matches = [];
+
+    /// <summary>Whether Tasks are enabled at all - when not, the picker never opens (Spec §14, corrections-B6 "D15.1" item 9).</summary>
+    private bool TasksEnabled => this.TeamOptions.Value.Tasks.Enabled;
 
     protected override Task OnParametersSetAsync()
     {
@@ -73,6 +124,83 @@
         }
 
         this.StateHasChanged();
+    }
+
+    /// <summary>
+    /// Runs the <c>#</c> picker's search and re-renders the popover (Spec §13.13.4). <see langword="null"/>
+    /// closes it; an empty string returns the most recently updated Active Tasks. Never opens when
+    /// <see cref="TasksEnabled"/> is <see langword="false"/> (corrections-B6 "D15.1" item 9).
+    /// </summary>
+    /// <param name="query">The typed query, with no leading <c>#</c>, or <see langword="null"/> to close the picker.</param>
+    [JSInvokable]
+    public Task TaskQueryAsync(string? query)
+    {
+        if (query is null || !this.TasksEnabled)
+        {
+            this.ClosePicker();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        }
+
+        this.query = query;
+        this.matches = TaskQuery.Suggest(this.Tasks.All, query);
+        this.pickerOpen = true;
+        this.highlightIndex = 0;
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Moves the picker's highlight by <paramref name="delta"/>, wrapping around at either end (Spec §13.13.4).</summary>
+    /// <param name="delta">The number of rows to move: -1 for <c>ArrowUp</c>, +1 for <c>ArrowDown</c>.</param>
+    [JSInvokable]
+    public Task MoveAsync(int delta)
+    {
+        if (!this.pickerOpen || this.matches.Count == 0)
+        {
+            return Task.CompletedTask;
+        }
+
+        int count = this.matches.Count;
+        this.highlightIndex = (((this.highlightIndex + delta) % count) + count) % count;
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Returns the highlighted row's id and closes the picker (Spec §13.13.4), re-rendering before
+    /// returning (corrections-B6 "D15.3" item 4) so a stray Enter never sends against stale markup.
+    /// </summary>
+    /// <returns>The highlighted Task's id, or <see langword="null"/> when there are no matches.</returns>
+    [JSInvokable]
+    public Task<string?> PickAsync()
+    {
+        string? picked = this.matches.Count > 0 ? this.matches[this.highlightIndex].Id.ToString() : null;
+        this.ClosePicker();
+        this.StateHasChanged();
+        return Task.FromResult(picked);
+    }
+
+    /// <summary>Handles a mouse click on a row: closes the picker and asks JavaScript to insert the clicked Task's id (Spec §13.13.4 "A mouse click").</summary>
+    /// <param name="id">The clicked row's Task id.</param>
+    private async Task OnPickClickAsync(string id)
+    {
+        this.ClosePicker();
+        await this.JS.InvokeVoidAsync("teamComposer.insertTask", this.textarea, id);
+    }
+
+    /// <summary>The id of the currently highlighted row, or <see langword="null"/> with no matches, for the textarea's <c>aria-activedescendant</c>.</summary>
+    private string? HighlightedItemId() => this.matches.Count > 0 ? this.OptionId(this.highlightIndex) : null;
+
+    /// <summary>The stable <c>id</c> attribute for the row at <paramref name="index"/>, scoped to this Composer instance's <see cref="listboxId"/>.</summary>
+    private string OptionId(int index) => string.Create(CultureInfo.InvariantCulture, $"{this.listboxId}-{index}");
+
+    /// <summary>Resets every picker field to its closed state.</summary>
+    private void ClosePicker()
+    {
+        this.pickerOpen = false;
+        this.matches = [];
+        this.query = "";
+        this.highlightIndex = 0;
     }
 
     public void Dispose()
