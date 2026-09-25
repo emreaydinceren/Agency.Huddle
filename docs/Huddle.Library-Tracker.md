@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 30 of 143 tasks Done · 2 of 8 retrospectives done · last updated 2026-09-25.
+**Status:** 32 of 143 tasks Done · 2 of 8 retrospectives done · last updated 2026-09-25.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -50,8 +50,8 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 3.6.t Test: the migration runs at start-up, first · #29 · Sonnet | | | ✔ |
 | 3.6.i Run the migration at start-up · #30 · Sonnet | | | ✔ |
 | 🔁 R2 — Opus retrospective after #30, and plan update | | | ✔ |
-| 3.7.t Test: the Chief of Staff is seeded into its folder · #31 · Sonnet | ✔ | | |
-| 3.7.i Seeder follow-through · #32 · Sonnet | ✔ | | |
+| 3.7.t Test: the Chief of Staff is seeded into its folder · #31 · Sonnet | | | ✔ |
+| 3.7.i Seeder follow-through · #32 · Sonnet | | | ✔ |
 | 3.8.t Test: `Teams/` and `Teammates/` must not overlap · #33 · Haiku | ✔ | | |
 | 3.8.i Implement `LayoutGuard` · #34 · Haiku | ✔ | | |
 | 3.9 `run.ps1 -Clean` for the new layout · #35 · Sonnet | ✔ | | |

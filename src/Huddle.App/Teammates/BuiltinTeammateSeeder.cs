@@ -90,9 +90,9 @@ internal sealed class BuiltinTeammateSeeder(PersonaStore personas, ILogger<Built
     /// Finds the first free <c>(Name, Alias)</c> pair from Spec §8.6's search:
     /// <c>Chief of Staff</c> / <c>cos</c>, then <c>Chief of Staff 2</c> / <c>cos2</c>, and so on. A
     /// pair is free when neither half equals any loaded Persona's Name or Alias - compared the way
-    /// <see cref="PersonaIndex"/> itself compares them, case-insensitively - and no
-    /// <c>{Name}.md</c> file already sits on disk, checked through <see cref="PersonaStore.Paths"/>
-    /// rather than recomputing the Teams path.
+    /// <see cref="PersonaIndex"/> itself compares them, case-insensitively - and the candidate's
+    /// Teammate folder holds no Markdown file at all, checked through
+    /// <see cref="PersonaStore.Paths"/> rather than recomputing the Teams path.
     /// </summary>
     /// <param name="name">The first free Name, when this returns <see langword="true"/>; otherwise <see cref="string.Empty"/>.</param>
     /// <param name="alias">The matching free Alias, when this returns <see langword="true"/>; otherwise <see cref="string.Empty"/>.</param>
@@ -110,7 +110,7 @@ internal sealed class BuiltinTeammateSeeder(PersonaStore personas, ILogger<Built
                 || string.Equals(entry.Name, candidateAlias, StringComparison.OrdinalIgnoreCase)
                 || string.Equals(entry.Alias, candidateAlias, StringComparison.OrdinalIgnoreCase));
 
-            if (!taken && !File.Exists(personas.Paths.DefinitionFile(candidateName)))
+            if (!taken && !HasAnyMarkdownFile(personas.Paths.TeammateFolder(candidateName)))
             {
                 name = candidateName;
                 alias = candidateAlias;
@@ -122,4 +122,15 @@ internal sealed class BuiltinTeammateSeeder(PersonaStore personas, ILogger<Built
         alias = string.Empty;
         return false;
     }
+
+    /// <summary>
+    /// Whether a candidate's Teammate folder already holds any Markdown file - not necessarily one
+    /// named exactly <c>{Name}.md</c> - so that a folder someone else already wrote into (under a
+    /// different file name) is still treated as taken, not as free for a colliding write
+    /// (corrections-B2 #31).
+    /// </summary>
+    /// <param name="teammateFolder">The candidate's Teammate folder, from <see cref="Acp.TeammatePaths.TeammateFolder"/>.</param>
+    /// <returns><see langword="true"/> if the folder exists and contains at least one <c>.md</c> file.</returns>
+    private static bool HasAnyMarkdownFile(string teammateFolder) =>
+        Directory.Exists(teammateFolder) && Directory.EnumerateFiles(teammateFolder, "*.md").Any();
 }
