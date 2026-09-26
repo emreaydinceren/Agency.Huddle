@@ -17,6 +17,15 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
     /// <summary>Folder names hidden everywhere in the Library tree (Spec §6.4), beyond <see cref="FileChangesOptions.EffectiveIgnore"/>.</summary>
     private static readonly string[] AlwaysHiddenFolders = [".obsidian", ".trash", ".git"];
 
+    /// <summary>The most of a file read up front to detect its kind (Spec §6.4).</summary>
+    private const int DetectionHeadBytes = 8192;
+
+    /// <summary>Settled text (corrections-B4 item 11) for a text file over <see cref="LibraryOptions.MaxEditableBytes"/>.</summary>
+    private const string TooLargeToEditReason = "This file is too large to edit here.";
+
+    /// <summary>Settled text for content that fails to decode as text (Spec §10 E-5).</summary>
+    private const string UnsupportedTextFormatReason = "Unsupported text format";
+
     private readonly LibraryPathResolver resolver = resolver;
     private readonly IRecycleBin recycleBin = recycleBin;
     private readonly IOptions<TeamOptions> options = options;
@@ -77,6 +86,80 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
 
         entries.Sort(CompareEntries);
         return Task.FromResult<IReadOnlyList<LibraryEntry>>(entries);
+    }
+
+    /// <summary>
+    /// Reads <paramref name="file"/> (Spec §6.4 <c>ReadTextAsync</c>): decodes text kinds with
+    /// <see cref="TextFileCodec"/>, records the length and last-write time from the open handle
+    /// before reading any content (§6.8), and refuses to read a text file in full above
+    /// <see cref="LibraryOptions.MaxEditableBytes"/>.
+    /// </summary>
+    /// <param name="file">The file to read; re-resolved against the current tree before use (corrections-B4 item 12).</param>
+    /// <param name="ct">Cancels the read.</param>
+    /// <returns>The document's content, kind and editability.</returns>
+    /// <exception cref="FileNotFoundException">The file, or a parent folder, no longer exists (Spec §10 E-3).</exception>
+    internal async Task<LibraryDocumentContent> ReadAsync(LibraryPath file, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        ct.ThrowIfCancellationRequested();
+
+        if (!this.resolver.TryResolve(file.Root.Id, file.RelativePath, out LibraryPath? fresh, out string? resolveError))
+        {
+            throw new FileNotFoundException(resolveError, file.FullPath);
+        }
+
+        FileStream stream;
+        try
+        {
+            stream = new FileStream(fresh.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        }
+        catch (DirectoryNotFoundException ex)
+        {
+            throw new FileNotFoundException(ex.Message, fresh.FullPath, ex);
+        }
+
+        await using (stream)
+        {
+            long length = stream.Length;
+            DateTimeOffset lastWriteUtc = new(File.GetLastWriteTimeUtc(stream.SafeFileHandle), TimeSpan.Zero);
+
+            int headLength = (int)Math.Min(DetectionHeadBytes, length);
+            byte[] head = new byte[headLength];
+            await stream.ReadExactlyAsync(head, ct);
+
+            string fileName = Path.GetFileName(fresh.FullPath);
+            LibraryFileKind kind = LibraryFileKinds.Detect(fileName, head);
+
+            if (kind is LibraryFileKind.Image or LibraryFileKind.Other)
+            {
+                return new LibraryDocumentContent(fresh, kind, null, null, false, null, length, lastWriteUtc);
+            }
+
+            if (length > this.options.Value.Library.MaxEditableBytes)
+            {
+                return new LibraryDocumentContent(fresh, kind, null, null, false, TooLargeToEditReason, length, lastWriteUtc);
+            }
+
+            byte[] content;
+            if (length == headLength)
+            {
+                content = head;
+            }
+            else
+            {
+                content = new byte[length];
+                Array.Copy(head, content, headLength);
+                await stream.ReadExactlyAsync(content.AsMemory(headLength), ct);
+            }
+
+            if (!TextFileCodec.TryDecode(content, LineEnding.CrLf, out string? text, out TextFileFormat? format))
+            {
+                return new LibraryDocumentContent(fresh, kind, null, null, false, UnsupportedTextFormatReason, length, lastWriteUtc);
+            }
+
+            bool editable = kind == LibraryFileKind.Markdown;
+            return new LibraryDocumentContent(fresh, kind, text, format, editable, null, length, lastWriteUtc);
+        }
     }
 
     /// <summary>Folders before files, then <see cref="StringComparer.OrdinalIgnoreCase"/> by name.</summary>
