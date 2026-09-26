@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 57 of 143 tasks Done · 3 of 8 retrospectives done · last updated 2026-09-25.
+**Status:** 61 of 143 tasks Done · 3 of 8 retrospectives done · last updated 2026-09-25.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -82,10 +82,10 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 5.2.i Implement `LibraryFileKinds` · #45 · Haiku | | | ✔ |
 | 🔁 R3 — Opus retrospective after #45, and plan update | | | ✔ |
 | **D6. `LibraryFileService`** | | | |
-| 6.1.t Test: `LibraryNames.Validate` · #46 · Haiku | ✔ | | |
-| 6.1.i Implement `LibraryNames.Validate` · #47 · Haiku | ✔ | | |
-| 6.2.t Test: `LibraryProtection.For` · #48 · Haiku | ✔ | | |
-| 6.2.i Implement `LibraryProtection.For` · #49 · Haiku | ✔ | | |
+| 6.1.t Test: `LibraryNames.Validate` · #46 · Haiku | | | ✔ |
+| 6.1.i Implement `LibraryNames.Validate` · #47 · Haiku | | | ✔ |
+| 6.2.t Test: `LibraryProtection.For` · #48 · Haiku | | | ✔ |
+| 6.2.i Implement `LibraryProtection.For` · #49 · Haiku | | | ✔ |
 | 6.3.t Test: `ListAsync` · #50 · Sonnet | ✔ | | |
 | 6.3.i Implement `LibraryFileService.ListAsync` · #51 · Sonnet | ✔ | | |
 | 6.4.t Test: `ReadAsync` · #52 · Sonnet | ✔ | | |
