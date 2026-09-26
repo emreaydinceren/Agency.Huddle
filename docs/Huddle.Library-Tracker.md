@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 51 of 143 tasks Done · 2 of 8 retrospectives done · last updated 2026-09-25.
+**Status:** 53 of 143 tasks Done · 2 of 8 retrospectives done · last updated 2026-09-25.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -73,8 +73,8 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 4.1.i Implement `LibraryRootStore` · #37 · Sonnet | | | ✔ |
 | 4.2.t Test: `LibraryPathResolver.TryResolve` (the boundary table) · #38 · Sonnet | | | ✔ |
 | 4.2.i Implement `LibraryPathResolver.TryResolve` · #39 · Sonnet | | | ✔ |
-| 4.3.t Test: `TryResolveAbsolute` and `TryResolveScope` · #40 · Sonnet | ✔ | | |
-| 4.3.i Implement the absolute and scope entry points · #41 · Sonnet | ✔ | | |
+| 4.3.t Test: `TryResolveAbsolute` and `TryResolveScope` · #40 · Sonnet | | | ✔ |
+| 4.3.i Implement the absolute and scope entry points · #41 · Sonnet | | | ✔ |
 | **D5. `TextFileCodec` and file kinds** | | | |
 | 5.1.t Test: decode and encode round trips · #42 · Sonnet | ✔ | | |
 | 5.1.i Implement `TextFileCodec` · #43 · Sonnet | ✔ | | |

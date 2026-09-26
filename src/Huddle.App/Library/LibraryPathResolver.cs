@@ -14,13 +14,16 @@ namespace Agency.Huddle.App.Library;
 /// </summary>
 /// <param name="roots">Every configured Library Root, including the two built-ins.</param>
 /// <param name="options">The bound <see cref="TeamOptions"/>, for <see cref="TeamOptions.DataDir"/>.</param>
-internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamOptions> options)
+/// <param name="logger">Logs the boundary reason behind a <see cref="TryResolveScope"/> refusal (item 33).</param>
+internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamOptions> options, ILogger<LibraryPathResolver> logger)
 {
     private const string OutsideLibraryError = "That path isn't inside the Library.";
     private const string ReservedFolderError = "That folder is reserved.";
+    private const string ScopeUnavailableError = "This folder isn't available in the Library.";
 
     private readonly LibraryRootStore roots = roots;
     private readonly IOptions<TeamOptions> options = options;
+    private readonly ILogger<LibraryPathResolver> logger = logger;
 
     /// <summary>
     /// Resolves <paramref name="relativePath"/> against the root named <paramref name="rootId"/>,
@@ -129,6 +132,105 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
 
         string relativePath = parent.RelativePath.Length == 0 ? name : $"{parent.RelativePath}/{name}";
         path = new LibraryPath(parent.Root, relativePath, current, role);
+        return true;
+    }
+
+    /// <summary>
+    /// Resolves an absolute Windows path or a <c>file:</c> URL (Spec §6.6) written in a chat Message.
+    /// Only text starting <c>file:</c> (case-insensitive) is parsed as a URI first (item 32); the
+    /// candidate must then satisfy <see cref="Path.IsPathFullyQualified(string)"/> BEFORE
+    /// <see cref="Path.GetFullPath(string)"/> canonicalises it, so relative text and a Windows-shaped
+    /// path on a platform that doesn't root it are refused without ever reaching a root. The winning
+    /// root is whichever configured <see cref="LibraryRoot.FullPath"/> is the longest
+    /// separator-terminated prefix of the canonical path; a tie goes to the first root in
+    /// <see cref="LibraryRootStore.Roots"/> order (built-ins first). There is no fallback to a
+    /// shorter root when the winner's own <see cref="TryResolve"/> call refuses.
+    /// </summary>
+    /// <param name="absolutePathOrFileUrl">An absolute path or <c>file:</c> URL.</param>
+    /// <param name="path">The resolved path, when this returns <see langword="true"/>.</param>
+    /// <returns><see langword="true"/> when the path resolves inside a Library Root.</returns>
+    internal bool TryResolveAbsolute(string absolutePathOrFileUrl, [NotNullWhen(true)] out LibraryPath? path)
+    {
+        ArgumentNullException.ThrowIfNull(absolutePathOrFileUrl);
+        path = null;
+
+        string candidate = absolutePathOrFileUrl;
+        if (candidate.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!Uri.TryCreate(candidate, UriKind.Absolute, out Uri? uri) || !uri.IsFile)
+            {
+                return false;
+            }
+
+            candidate = uri.LocalPath;
+        }
+
+        if (!Path.IsPathFullyQualified(candidate))
+        {
+            return false;
+        }
+
+        string fullPath = Path.GetFullPath(candidate);
+
+        LibraryRoot? winner = null;
+        foreach (LibraryRoot candidateRoot in this.roots.Roots)
+        {
+            bool matches = PathEquals(fullPath, candidateRoot.FullPath) || HasPrefix(fullPath, candidateRoot.FullPath + Path.DirectorySeparatorChar);
+            if (matches && (winner is null || candidateRoot.FullPath.Length > winner.FullPath.Length))
+            {
+                winner = candidateRoot;
+            }
+        }
+
+        if (winner is null)
+        {
+            return false;
+        }
+
+        string relative = PathEquals(fullPath, winner.FullPath) ? string.Empty : fullPath[(winner.FullPath.Length + 1)..];
+        return this.TryResolve(winner.Id, relative, out path, out _);
+    }
+
+    /// <summary>
+    /// Resolves a Library Explorer scope (Spec §6.16): the scope is a location, never a path, so it
+    /// goes through <see cref="TryResolve"/> like any other, and an existing file is refused since a
+    /// scope must be a folder (item 33). Every failure returns the same host-facing text; the actual
+    /// boundary reason is logged, not shown.
+    /// </summary>
+    /// <param name="scope">The root id and folder path the host wants to show.</param>
+    /// <param name="folder">The resolved folder, when this returns <see langword="true"/>.</param>
+    /// <param name="error">The host-facing refusal text, when this returns <see langword="false"/>.</param>
+    /// <returns><see langword="true"/> when the scope resolves to a folder inside the Library.</returns>
+    internal bool TryResolveScope(LibraryLocation scope, [NotNullWhen(true)] out LibraryPath? folder, [NotNullWhen(false)] out string? error)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+
+        if (!this.TryResolve(scope.RootId, scope.FolderPath, out LibraryPath? resolved, out string? reason))
+        {
+            if (this.logger.IsEnabled(LogLevel.Debug))
+            {
+                this.logger.LogDebug("Library scope '{RootId}/{FolderPath}' refused: {Reason}", scope.RootId, scope.FolderPath, reason);
+            }
+
+            folder = null;
+            error = ScopeUnavailableError;
+            return false;
+        }
+
+        if (resolved.Role == LibraryNodeRole.File)
+        {
+            if (this.logger.IsEnabled(LogLevel.Debug))
+            {
+                this.logger.LogDebug("Library scope '{RootId}/{FolderPath}' is a file, not a folder.", scope.RootId, scope.FolderPath);
+            }
+
+            folder = null;
+            error = ScopeUnavailableError;
+            return false;
+        }
+
+        folder = resolved;
+        error = null;
         return true;
     }
 

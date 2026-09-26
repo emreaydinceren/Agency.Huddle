@@ -380,6 +380,237 @@ public sealed class LibraryPathResolverTests
         Assert.Equal("Unknown Library root 'nope'.", error);
     }
 
+    /// <summary>Spec §6.6: a chat path inside a root resolves to its <see cref="LibraryRoot"/> and relative path.</summary>
+    [Fact]
+    public void TryResolveAbsolute_InsideRoot_ReturnsPath()
+    {
+        using Fixture fixture = BuildFixture();
+        string fullPath = Path.Combine(fixture.DataDir, "Teams", "Marketing", "Launch Q4", "plan.md");
+
+        bool resolved = fixture.Resolver.TryResolveAbsolute(fullPath, out LibraryPath? path);
+
+        Assert.True(resolved);
+        Assert.NotNull(path);
+        Assert.Equal("teams", path.Root.Id);
+        Assert.Equal("Marketing/Launch Q4/plan.md", path.RelativePath);
+    }
+
+    /// <summary>Spec §6.6: a <c>file:</c> URL (with its path percent-encoded, item 29) resolves the same as the plain path.</summary>
+    [Fact]
+    public void TryResolveAbsolute_FileUrl_Resolves()
+    {
+        using Fixture fixture = BuildFixture();
+        string fullPath = Path.Combine(fixture.DataDir, "Teams", "Marketing", "Launch Q4", "plan.md");
+        string fileUrl = new Uri(fullPath).AbsoluteUri;
+
+        bool resolved = fixture.Resolver.TryResolveAbsolute(fileUrl, out LibraryPath? path);
+
+        Assert.True(resolved);
+        Assert.NotNull(path);
+        Assert.Equal("teams", path.Root.Id);
+        Assert.Equal("Marketing/Launch Q4/plan.md", path.RelativePath);
+    }
+
+    /// <summary>A path under no configured root is refused.</summary>
+    [Fact]
+    public void TryResolveAbsolute_Outside_ReturnsFalse()
+    {
+        using Fixture fixture = BuildFixture();
+        string fullPath = Path.Combine(fixture.Outside, "x.md");
+
+        bool resolved = fixture.Resolver.TryResolveAbsolute(fullPath, out LibraryPath? path);
+
+        Assert.False(resolved);
+        Assert.Null(path);
+    }
+
+    /// <summary>A reserved top-level folder under <c>DataDir</c>, reached through a pinned root above it, is refused (Spec §6.1 step 5).</summary>
+    [Fact]
+    public void TryResolveAbsolute_Reserved_ReturnsFalse()
+    {
+        using Fixture fixture = BuildFixture(new PinnedRootOption { Name = "Parent", Path = "PLACEHOLDER" });
+        fixture.SetParentRootPath();
+        string fullPath = Path.Combine(fixture.DataDir, "rooms", "r.jsonl");
+
+        bool resolved = fixture.Resolver.TryResolveAbsolute(fullPath, out LibraryPath? path);
+
+        Assert.False(resolved);
+        Assert.Null(path);
+    }
+
+    /// <summary>A Team's <c>_tasks</c> folder, reached as an absolute path under the Teams root, is refused (Spec §6.1 step 6).</summary>
+    [Fact]
+    public void TryResolveAbsolute_TasksFolder_ReturnsFalse()
+    {
+        using Fixture fixture = BuildFixture();
+        string fullPath = Path.Combine(fixture.DataDir, "Teams", "Marketing", "_tasks", "MKT-0001.md");
+
+        bool resolved = fixture.Resolver.TryResolveAbsolute(fullPath, out LibraryPath? path);
+
+        Assert.False(resolved);
+        Assert.Null(path);
+    }
+
+    /// <summary>A pinned root nested inside the Teams root is the longer, and thus winning, prefix (item 32).</summary>
+    [Fact]
+    public void TryResolveAbsolute_OverlappingPinnedRoots_PrefersLongestRoot()
+    {
+        using Fixture fixture = BuildFixture(new PinnedRootOption { Name = "Marketing", Path = "PLACEHOLDER" });
+        fixture.SetPinnedRootPath("Marketing", Path.Combine(fixture.DataDir, "Teams", "Marketing"));
+        string fullPath = Path.Combine(fixture.DataDir, "Teams", "Marketing", "Launch Q4", "plan.md");
+
+        bool resolved = fixture.Resolver.TryResolveAbsolute(fullPath, out LibraryPath? path);
+
+        Assert.True(resolved);
+        Assert.NotNull(path);
+        Assert.Equal("marketing", path.Root.Id);
+        Assert.Equal("Launch Q4/plan.md", path.RelativePath);
+    }
+
+    /// <summary>Item 22/30: a sibling folder whose name merely starts with a pinned root's name is not inside it (no separator-terminated prefix match).</summary>
+    [Fact]
+    public void TryResolveAbsolute_SiblingWithRootPrefix_ReturnsFalse()
+    {
+        using Fixture fixture = BuildFixture();
+        string fullPath = Path.Combine(fixture.Temp.Path, "Vault-evil", "secret.md");
+
+        bool resolved = fixture.Resolver.TryResolveAbsolute(fullPath, out LibraryPath? path);
+
+        Assert.False(resolved);
+        Assert.Null(path);
+    }
+
+    /// <summary>Item 30: relative text is never fully qualified, so it is refused before any root is even looked up.</summary>
+    [Fact]
+    public void TryResolveAbsolute_RelativeText_ReturnsFalse()
+    {
+        using Fixture fixture = BuildFixture();
+
+        bool resolved = fixture.Resolver.TryResolveAbsolute("Marketing/Launch Q4/plan.md", out LibraryPath? path);
+
+        Assert.False(resolved);
+        Assert.Null(path);
+    }
+
+    /// <summary>Item 30: a Windows-shaped drive path is refused - on Linux it is not fully qualified, and on Windows it names an unrelated drive outside every root.</summary>
+    [Fact]
+    public void TryResolveAbsolute_WindowsPathOnLinux_ReturnsFalse()
+    {
+        using Fixture fixture = BuildFixture();
+
+        bool resolved = fixture.Resolver.TryResolveAbsolute(@"C:\Users\someone\Documents\plan.md", out LibraryPath? path);
+
+        Assert.False(resolved);
+        Assert.Null(path);
+    }
+
+    /// <summary>Item 30, Windows only: a lowercase drive letter and forward slashes still resolve, and the relative part keeps the input's casing.</summary>
+    [Fact]
+    public void TryResolveAbsolute_LowercaseDriveAndForwardSlashes_Resolves()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        using Fixture fixture = BuildFixture();
+        string fullPath = Path.Combine(fixture.DataDir, "Teams", "Marketing", "Launch Q4", "plan.md");
+        string lowered = char.ToLowerInvariant(fullPath[0]) + fullPath[1..].Replace('\\', '/');
+
+        bool resolved = fixture.Resolver.TryResolveAbsolute(lowered, out LibraryPath? path);
+
+        Assert.True(resolved);
+        Assert.NotNull(path);
+        Assert.Equal("teams", path.Root.Id);
+        Assert.Equal("Marketing/Launch Q4/plan.md", path.RelativePath);
+    }
+
+    /// <summary>Item 30: two roots with an identical resolved path tie on length, and the built-in (earlier in <c>Roots</c> order) wins.</summary>
+    [Fact]
+    public void TryResolveAbsolute_TiedRoots_BuiltInWins()
+    {
+        using Fixture fixture = BuildFixture(new PinnedRootOption { Name = "TeamsAlias", Path = "PLACEHOLDER" });
+        fixture.SetPinnedRootPath("TeamsAlias", Path.Combine(fixture.DataDir, "Teams"));
+        string fullPath = Path.Combine(fixture.DataDir, "Teams", "Marketing", "Launch Q4", "plan.md");
+
+        bool resolved = fixture.Resolver.TryResolveAbsolute(fullPath, out LibraryPath? path);
+
+        Assert.True(resolved);
+        Assert.NotNull(path);
+        Assert.Equal("teams", path.Root.Id);
+    }
+
+    /// <summary>Item 30: an extended-length <c>\\?\</c> prefix never matches a configured root's own (unprefixed) full path.</summary>
+    [Fact]
+    public void TryResolveAbsolute_ExtendedPrefix_ReturnsFalse()
+    {
+        using Fixture fixture = BuildFixture();
+        string fullPath = @"\\?\" + Path.Combine(fixture.DataDir, "Teams", "Marketing", "Launch Q4", "plan.md");
+
+        bool resolved = fixture.Resolver.TryResolveAbsolute(fullPath, out LibraryPath? path);
+
+        Assert.False(resolved);
+        Assert.Null(path);
+    }
+
+    /// <summary>Spec §6.16: a Project folder scope resolves to its <see cref="LibraryPath"/>.</summary>
+    [Fact]
+    public void TryResolveScope_ProjectFolder_Resolves()
+    {
+        using Fixture fixture = BuildFixture();
+        LibraryLocation scope = new("teams", "Marketing/Launch Q4");
+
+        bool resolved = fixture.Resolver.TryResolveScope(scope, out LibraryPath? folder, out string? error);
+
+        Assert.True(resolved);
+        Assert.NotNull(folder);
+        Assert.Null(error);
+        Assert.Equal(LibraryNodeRole.ProjectFolder, folder.Role);
+    }
+
+    /// <summary>Item 33: every failure - here an unknown root - gives the same host-facing text.</summary>
+    [Fact]
+    public void TryResolveScope_UnknownRoot_ReturnsFalse()
+    {
+        using Fixture fixture = BuildFixture();
+        LibraryLocation scope = new("nope", "x");
+
+        bool resolved = fixture.Resolver.TryResolveScope(scope, out LibraryPath? folder, out string? error);
+
+        Assert.False(resolved);
+        Assert.Null(folder);
+        Assert.Equal("This folder isn't available in the Library.", error);
+    }
+
+    /// <summary>Item 33: an existing file is not a folder, so it is refused even though it resolves.</summary>
+    [Fact]
+    public void TryResolveScope_NotAFolder_ReturnsFalse()
+    {
+        using Fixture fixture = BuildFixture();
+        LibraryLocation scope = new("teams", "Marketing/Launch Q4/plan.md");
+
+        bool resolved = fixture.Resolver.TryResolveScope(scope, out LibraryPath? folder, out string? error);
+
+        Assert.False(resolved);
+        Assert.Null(folder);
+        Assert.Equal("This folder isn't available in the Library.", error);
+    }
+
+    /// <summary>Spec §6.16: a Team folder that doesn't exist yet still resolves, so the explorer shows an empty tree.</summary>
+    [Fact]
+    public void TryResolveScope_MissingTeamFolder_ResolvesAsEmpty()
+    {
+        using Fixture fixture = BuildFixture();
+        LibraryLocation scope = new("teams", "Newteam");
+
+        bool resolved = fixture.Resolver.TryResolveScope(scope, out LibraryPath? folder, out string? error);
+
+        Assert.True(resolved);
+        Assert.NotNull(folder);
+        Assert.Null(error);
+        Assert.Equal(LibraryNodeRole.TeamFolder, folder.Role);
+    }
+
     /// <summary>Creates a link at <paramref name="link"/> pointing to <paramref name="target"/>: a junction on Windows (the only unelevated way, per Task 0.2), a symbolic link elsewhere.</summary>
     private static void CreateLink(string link, string target)
     {
@@ -424,7 +655,7 @@ public sealed class LibraryPathResolverTests
             this.teamOptions = teamOptions;
             TeammatePaths paths = new(Options.Create(teamOptions));
             this.RootStore = new LibraryRootStore(Options.Create(teamOptions), paths, NullLogger<LibraryRootStore>.Instance);
-            this.Resolver = new LibraryPathResolver(this.RootStore, Options.Create(teamOptions));
+            this.Resolver = new LibraryPathResolver(this.RootStore, Options.Create(teamOptions), NullLogger<LibraryPathResolver>.Instance);
         }
 
         public TempDataDir Temp { get; }
@@ -454,7 +685,7 @@ public sealed class LibraryPathResolverTests
             this.teamOptions.Library.Roots = roots;
             TeammatePaths paths = new(Options.Create(this.teamOptions));
             this.RootStore = new LibraryRootStore(Options.Create(this.teamOptions), paths, NullLogger<LibraryRootStore>.Instance);
-            this.Resolver = new LibraryPathResolver(this.RootStore, Options.Create(this.teamOptions));
+            this.Resolver = new LibraryPathResolver(this.RootStore, Options.Create(this.teamOptions), NullLogger<LibraryPathResolver>.Instance);
         }
 
         public void Dispose() => this.Temp.Dispose();
