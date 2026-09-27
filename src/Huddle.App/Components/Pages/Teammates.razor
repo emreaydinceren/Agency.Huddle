@@ -17,17 +17,34 @@
 <div class="teammates-page">
     <header class="teammates-header">
         <h1>Teammates</h1>
-        <MudTooltip Text="New teammate">
-            <MudIconButton Icon="@Icons.Material.Filled.PersonAddAlt1" Variant="Variant.Filled" Color="Color.Primary" Class="teammates-new" aria-label="New teammate" OnClick="this.BeginCreate" />
-        </MudTooltip>
     </header>
 
-    <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+    <MudText Typo="Typo.body2" Class="mud-text-secondary">
         A Persona is a Markdown file describing how one teammate should behave, plus the model it
         thinks with. Add one and that teammate comes online with a chat of its own. Editing the file,
         or changing its model, restarts it, which clears what it remembers. Removing the file only
         takes it offline — its chats and their history stay.
     </MudText>
+
+    @* The same toolbar shape as the Tasks page: the create action leads, the narrowing controls follow. *@
+    <MudToolBar Dense="true" Class="teammates-toolbar">
+        <MudButton StartIcon="@Icons.Material.Outlined.Add" Color="Color.Primary" OnClick="this.BeginCreate" Class="teammates-new">New teammate</MudButton>
+
+        @if (this.entries.Count > 0)
+        {
+            @* @bind-Value, not @oninput: MudSelect raises ValueChanged on selection, the same "change"
+               semantics the old <select>'s @onchange comment called out. Never touches ModelCatalog or
+               PersonaStore's write path - selecting a team is pure display narrowing over state already
+               loaded, the same "never probes" guarantee a plain page load has. *@
+            <MudSelect T="string" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="teammates-filter">
+                <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
+                @foreach (var team in this.teams)
+                {
+                    <MudSelectItem T="string" Value="@team">@team</MudSelectItem>
+                }
+            </MudSelect>
+        }
+    </MudToolBar>
 
     @* Above the list on purpose: a required-field decision only pays off if the file that fails to
        load is impossible to miss, rather than just silently absent from the directory below. *@
@@ -53,18 +70,6 @@
     }
     else
     {
-        @* @bind-Value, not @oninput: MudSelect raises ValueChanged on selection, the same "change"
-           semantics the old <select>'s @onchange comment called out. Never touches ModelCatalog or
-           PersonaStore's write path - selecting a team is pure display narrowing over state already
-           loaded, the same "never probes" guarantee a plain page load has. *@
-        <MudSelect T="string" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Class="teammates-filter mb-4">
-            <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
-            @foreach (var team in this.teams)
-            {
-                <MudSelectItem T="string" Value="@team">@team</MudSelectItem>
-            }
-        </MudSelect>
-
         var groups = TeammateGrouping.Group(this.entries, this.teams, this.selectedTeam);
 
         if (groups.Count == 0)

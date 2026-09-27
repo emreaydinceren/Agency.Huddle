@@ -201,19 +201,13 @@ else if (this.loaded is { } task)
                 }
             </div>
 
-            <MudToggleGroup T="TaskState" Value="effective.Status" ValueChanged="this.OnStatusChanged"
-                             SelectionMode="SelectionMode.SingleSelection" Class="task-detail-status">
-                <MudToggleItem Value="TaskState.Backlog" Text="@TaskState.Backlog.ToWire()" />
-                <MudToggleItem Value="TaskState.ToDo" Text="@TaskState.ToDo.ToWire()" />
-                <MudToggleItem Value="TaskState.InProgress" Text="@TaskState.InProgress.ToWire()" />
-                <MudToggleItem Value="TaskState.Review" Text="@TaskState.Review.ToWire()" />
-                <MudToggleItem Value="TaskState.Done" Text="@TaskState.Done.ToWire()" />
-            </MudToggleGroup>
-            <MudMenu AriaLabel="Won't do" Label="@(effective.Status.IsWontDo() ? effective.Status.ToWire() : "Won't do")">
-                <MudMenuItem OnClick="@(() => this.OnStatusChanged(TaskState.Cancelled))">@TaskState.Cancelled.ToWire()</MudMenuItem>
-                <MudMenuItem OnClick="@(() => this.OnStatusChanged(TaskState.Duplicate))">@TaskState.Duplicate.ToWire()</MudMenuItem>
-                <MudMenuItem OnClick="@(() => this.OnStatusChanged(TaskState.Rejected))">@TaskState.Rejected.ToWire()</MudMenuItem>
-            </MudMenu>
+            <MudSelect T="TaskState" Value="effective.Status" ValueChanged="this.OnStatusChanged"
+                       Label="Status" Class="task-detail-status">
+                @foreach (TaskState state in TaskStates.All)
+                {
+                    <MudSelectItem T="TaskState" Value="state">@state.ToWire()</MudSelectItem>
+                }
+            </MudSelect>
 
             @if (effective.Status == TaskState.Duplicate)
             {
@@ -244,16 +238,24 @@ else if (this.loaded is { } task)
                               Value="@(effective.Assignee is { } assigneeName ? new AssigneeOption(assigneeName, string.Empty, null) : null)"
                               ValueChanged="this.OnAssigneeChanged" Class="task-detail-assignee" Label="Assignee">
                 <ItemTemplate Context="option">
-                    <MudBadge Dot="true" Overlap="true" Color="@(option.Presence is { } p ? TaskColors.For(p) : Color.Error)"
-                              BadgeAriaLabel="@($"{option.Name} is {(option.Presence?.ToString() ?? "Offline")}")">
-                        <TeammateAvatar Name="@option.Name" Avatar="this.Avatars.Get(option.Name)" Size="Size.Small" />
-                    </MudBadge>
-                    <span class="task-detail-assignee-option-name">@option.Name</span>
-                    @if (!string.IsNullOrEmpty(option.Title))
+                    @if (option.IsHuman)
                     {
-                        <MudChip T="string" Size="Size.Small">@option.Title</MudChip>
+                        <TeammateAvatar Name="@option.Name" Avatar="this.Avatars.Get(option.Name)" Size="Size.Small" />
+                        <span class="task-detail-assignee-option-name">@option.Name</span>
                     }
-                    <span>@(option.Presence?.ToString() ?? "Offline")</span>
+                    else
+                    {
+                        <MudBadge Dot="true" Overlap="true" Color="@(option.Presence is { } p ? TaskColors.For(p) : Color.Error)"
+                                  BadgeAriaLabel="@($"{option.Name} is {(option.Presence?.ToString() ?? "Offline")}")">
+                            <TeammateAvatar Name="@option.Name" Avatar="this.Avatars.Get(option.Name)" Size="Size.Small" />
+                        </MudBadge>
+                        <span class="task-detail-assignee-option-name">@option.Name</span>
+                        @if (!string.IsNullOrEmpty(option.Title))
+                        {
+                            <MudChip T="string" Size="Size.Small">@option.Title</MudChip>
+                        }
+                        <span>@(option.Presence?.ToString() ?? "Offline")</span>
+                    }
                 </ItemTemplate>
             </MudAutocomplete>
             @if (this.Activity.LastWake(task.Id) is { RoomId: { } wokenRoomId, RoomName: { } wokenRoomName })
@@ -726,15 +728,23 @@ else if (this.loaded is { } task)
         this.SetPending(this.pending with { Assignee = Optional<string?>.Set(value.Name) });
     }
 
-    /// <summary>Searches known Personas by Name for the Assignee autocomplete, resolving each one's presence (Spec §13.6).</summary>
+    /// <summary>
+    /// Searches candidates for the Assignee autocomplete: the Human (<see cref="TeamOptions.HumanName"/>,
+    /// hardcoded first so the Human can always assign a Task to themselves) followed by every known Persona
+    /// by Name, resolving each one's presence (Spec §13.6). The Human's option carries no presence - the item
+    /// template skips the badge for <see cref="AssigneeOption.IsHuman"/>, since Awake/Asleep/Offline describes
+    /// a Persona's Agent process and would be nonsensical for the person using the tool right now.
+    /// </summary>
     /// <param name="query">The typed text, or <see langword="null"/> for no filter.</param>
     /// <param name="cancellationToken">Unused: the search is synchronous over in-memory data.</param>
     private Task<IEnumerable<AssigneeOption>> SearchAssignees(string? query, CancellationToken cancellationToken)
     {
         _ = cancellationToken;
-        IEnumerable<AssigneeOption> options = this.Personas.Entries
-            .Where(entry => query is null || entry.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+        AssigneeOption human = new(this.Options.Value.HumanName, string.Empty, null, IsHuman: true);
+        IEnumerable<AssigneeOption> personas = this.Personas.Entries
             .Select(entry => new AssigneeOption(entry.Name, entry.Title, TaskPresence.For(entry.Name, this.Directory, this.Gateway, this.Health, this.Turns)));
+        IEnumerable<AssigneeOption> options = new[] { human }.Concat(personas)
+            .Where(option => query is null || option.Name.Contains(query, StringComparison.OrdinalIgnoreCase));
         return Task.FromResult(options);
     }
 

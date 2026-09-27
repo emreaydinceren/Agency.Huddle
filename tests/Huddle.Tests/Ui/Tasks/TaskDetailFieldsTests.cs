@@ -15,8 +15,8 @@ using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Tasks;
 
 /// <summary>
-/// Pins Spec §13.6's remaining fields (14.2.t, RED-only): Status (the five toggles, the Won't do menu,
-/// duplicate_of and Reason), Blocked by, Tags, Start/Due dates, and - per retro R7's scope addendum
+/// Pins Spec §13.6's remaining fields (14.2.t, RED-only): Status (the <c>MudSelect</c>, duplicate_of
+/// and Reason), Blocked by, Tags, Start/Due dates, and - per retro R7's scope addendum
 /// (settled by the delivery manager) - every other §13.6 row no earlier task claims: Priority's icon
 /// (corrections-B7 "14.2"), Assignee, Team/Project, Parent, Origin, and Created/Updated/Closed. Every
 /// rule is tested at both of <c>TaskDetail</c>'s entry points - <see cref="TaskDetailMode.Panel"/> and
@@ -54,41 +54,33 @@ public sealed class TaskDetailFieldsTests
     }
 
     // ---------------------------------------------------------------------------------------------
-    // Status: the five toggles, the Won't do menu, duplicate_of, Reason (Spec §13.6, corrections D14 item 8).
+    // Status: one MudSelect over all eight states, duplicate_of, Reason (Spec §13.6, corrections D14 item 8).
     // ---------------------------------------------------------------------------------------------
 
-    /// <summary>The five <c>MudToggleItem</c>s show <see cref="TaskStates.ToWire(TaskState)"/>'s exact wire names, in order (Spec §13.6).</summary>
+    /// <summary>
+    /// The Status <c>MudSelect</c> offers all eight <see cref="TaskState"/>s, as <see cref="MudSelectItem{T}"/>
+    /// components in <see cref="TaskStates.All"/>'s declaration order (Spec §13.6; R7: a collection is
+    /// asserted whole, never by membership). Each item's own rendered text is <c>state.ToWire()</c> -
+    /// TaskDetail.razor's fixed template for every item alike, pinned separately by
+    /// <see cref="Agency.Huddle.Tests.Tasks.TaskStatesTests"/> - so pinning the Values in order
+    /// already pins what shows.
+    /// </summary>
     /// <param name="mode">Both entry points.</param>
     [Theory]
     [MemberData(nameof(BothModesData))]
-    public async Task StatusRow_FiveToggleItems_ShowExactWireNamesInOrder(TaskDetailMode mode)
+    public async Task StatusRow_MudSelect_OffersAllEightStatesInOrder(TaskDetailMode mode)
     {
         using TaskToolHarness harness = new();
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
 
-        IReadOnlyList<TaskState> shown = [TaskState.Backlog, TaskState.ToDo, TaskState.InProgress, TaskState.Review, TaskState.Done];
-        string[] expected = [.. shown.Select(s => s.ToWire())];
-        string[] actual = [.. cut.Find(".task-detail-status").QuerySelectorAll("button").Select(b => b.TextContent.Trim())];
+        // MudSelectItem<T> components exist even while the select is closed (BlazorTesting.md), so
+        // this needs no popover interaction - the same reasoning ViewEditorDrawerTests relies on.
+        IRenderedComponent<MudSelect<TaskState>> select = cut.FindComponents<MudSelect<TaskState>>().Single(m => string.Equals(m.Instance.Class, "task-detail-status", StringComparison.Ordinal));
+        TaskState[] actual = [.. select.FindComponents<MudSelectItem<TaskState>>().Select(i => i.Instance.Value)];
 
-        Assert.Equal(expected, actual);
-    }
-
-    /// <summary>The Won't do menu offers exactly Cancelled, Duplicate and Rejected, as a whole list (R7: a collection is asserted whole, never by membership).</summary>
-    /// <param name="mode">Both entry points.</param>
-    [Theory]
-    [MemberData(nameof(BothModesData))]
-    public async Task StatusRow_WontDoMenu_OffersExactlyCancelledDuplicateRejected(TaskDetailMode mode)
-    {
-        using TaskToolHarness harness = new();
-        TaskItem task = CreateTask(harness);
-        await using MudBunitContext ctx = NewContext(harness);
-        var cut = RenderDetail(ctx, task.Id, mode);
-
-        IReadOnlyList<string> items = OpenWontDoMenu(cut);
-
-        Assert.Equal([TaskState.Cancelled.ToWire(), TaskState.Duplicate.ToWire(), TaskState.Rejected.ToWire()], items);
+        Assert.Equal(TaskStates.All, actual);
     }
 
     /// <summary>Choosing Duplicate reveals a required <c>duplicate_of</c> picker: Save is disabled until a target is chosen, then enabled (Spec §13.6).</summary>
@@ -104,7 +96,7 @@ public sealed class TaskDetailFieldsTests
         var cut = RenderDetail(ctx, task.Id, mode);
         Assert.Empty(cut.FindAll(".task-detail-duplicate-of"));
 
-        await ClickWontDoItem(cut, TaskState.Duplicate.ToWire());
+        await SetStatusAsync(cut, TaskState.Duplicate);
 
         IRenderedComponent<MudAutocomplete<TaskItem>> duplicateOf = cut.FindComponents<MudAutocomplete<TaskItem>>().Single(m => string.Equals(m.Instance.Class, "task-detail-duplicate-of", StringComparison.Ordinal));
         Assert.True(FindButton(cut, "Save").HasAttribute("disabled"));
@@ -128,7 +120,7 @@ public sealed class TaskDetailFieldsTests
         var cut = RenderDetail(ctx, task.Id, mode);
         Assert.Empty(cut.FindAll(".task-detail-reason"));
 
-        await ClickWontDoItem(cut, wontDo.ToWire());
+        await SetStatusAsync(cut, wontDo);
 
         IRenderedComponent<MudTextField<string>> reason = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-reason", StringComparison.Ordinal));
         Assert.Equal("Reason (optional)", reason.Instance.Label);
@@ -149,11 +141,11 @@ public sealed class TaskDetailFieldsTests
         TaskItem other = CreateTask(harness, title: "Other task");
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
-        await ClickWontDoItem(cut, TaskState.Duplicate.ToWire());
+        await SetStatusAsync(cut, TaskState.Duplicate);
         IRenderedComponent<MudAutocomplete<TaskItem>> duplicateOf = cut.FindComponents<MudAutocomplete<TaskItem>>().Single(m => string.Equals(m.Instance.Class, "task-detail-duplicate-of", StringComparison.Ordinal));
         _ = await SearchAndPickFirst(cut, duplicateOf, "Other");
 
-        ClickStatusToggle(cut, TaskState.Done);
+        await SetStatusAsync(cut, TaskState.Done);
         FindButton(cut, "Save").Click();
 
         TaskItem? saved = harness.Store.Get(task.Id);
@@ -181,11 +173,11 @@ public sealed class TaskDetailFieldsTests
         TaskItem task = CreateTask(harness);
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderDetail(ctx, task.Id, mode);
-        await ClickWontDoItem(cut, TaskState.Rejected.ToWire());
+        await SetStatusAsync(cut, TaskState.Rejected);
         IRenderedComponent<MudTextField<string>> reason = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-reason", StringComparison.Ordinal));
         await cut.InvokeAsync(() => reason.Instance.ValueChanged.InvokeAsync("no longer needed"));
 
-        ClickStatusToggle(cut, TaskState.Done);
+        await SetStatusAsync(cut, TaskState.Done);
         FindButton(cut, "Save").Click();
 
         TaskItem? saved = harness.Store.Get(task.Id);
@@ -463,6 +455,73 @@ public sealed class TaskDetailFieldsTests
         FindButton(cut, "Save & Notify Nova").Click();
 
         Assert.Equal("Nova", harness.Store.Get(task.Id)?.Assignee);
+    }
+
+    /// <summary>
+    /// The Human is a hardcoded candidate in the Assignee autocomplete's own <c>SearchFunc</c>, ahead of
+    /// every Persona, so the Human can assign a Task to themselves - there was previously no way to.
+    /// Selecting it sets the pending Assignee to <see cref="Agency.Huddle.App.TeamOptions.HumanName"/> itself (the value
+    /// <c>TaskService.ResolveAssignee</c> compares against and stores, not a "Me" sentinel), proven by
+    /// saving it. <see cref="WakeBlock.AssigneeIsHuman"/> also means the button reads plain "Save".
+    /// </summary>
+    [Fact]
+    public async Task Assignee_HumanIsAlwaysAnOption_SelectingItSetsAssigneeToHumanName_ProvenBySaving()
+    {
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        TaskItem task = CreateTask(harness);
+        await using MudBunitContext ctx = NewContext(harness);
+        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<MudAutocomplete<AssigneeOption>> assignee = cut.FindComponents<MudAutocomplete<AssigneeOption>>().Single(m => string.Equals(m.Instance.Class, "task-detail-assignee", StringComparison.Ordinal));
+        Func<string?, CancellationToken, Task<IEnumerable<AssigneeOption>>?> search = assignee.Instance.SearchFunc
+            ?? throw new InvalidOperationException("Assignee autocomplete has no SearchFunc.");
+        Task<IEnumerable<AssigneeOption>>? searchTask = search(null, Xunit.TestContext.Current.CancellationToken);
+        if (searchTask is null)
+        {
+            throw new InvalidOperationException("SearchFunc returned null.");
+        }
+
+        string humanName = harness.Options.Value.HumanName;
+        AssigneeOption human = (await searchTask).Single(option => string.Equals(option.Name, humanName, StringComparison.Ordinal));
+
+        await cut.InvokeAsync(() => assignee.Instance.ValueChanged.InvokeAsync(human));
+        FindButton(cut, "Save").Click();
+
+        Assert.Equal(humanName, harness.Store.Get(task.Id)?.Assignee);
+    }
+
+    /// <summary>
+    /// The Human's Assignee option renders with no presence badge at all - unlike a Persona's, whose
+    /// <c>ItemTemplate</c> branch always draws a <c>MudBadge</c> even when presence can't be resolved
+    /// (Spec §13.6's null fallback to an Offline-styled badge). Awake/Asleep/Offline describes a
+    /// Persona's Agent process; showing it for the Human, who is by definition using the tool right now,
+    /// was reported as nonsensical and confirmed fixed here.
+    /// </summary>
+    [Fact]
+    public async Task Assignee_HumanOptionTemplate_ShowsNoPresenceBadge()
+    {
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(Xunit.TestContext.Current.CancellationToken);
+        TaskItem task = CreateTask(harness);
+        await using MudBunitContext ctx = NewContext(harness);
+        var cut = RenderDetail(ctx, task.Id, TaskDetailMode.Panel);
+        IRenderedComponent<MudAutocomplete<AssigneeOption>> assignee = cut.FindComponents<MudAutocomplete<AssigneeOption>>().Single(m => string.Equals(m.Instance.Class, "task-detail-assignee", StringComparison.Ordinal));
+        Func<string?, CancellationToken, Task<IEnumerable<AssigneeOption>>?> search = assignee.Instance.SearchFunc
+            ?? throw new InvalidOperationException("Assignee autocomplete has no SearchFunc.");
+        Task<IEnumerable<AssigneeOption>>? searchTask = search(null, Xunit.TestContext.Current.CancellationToken);
+        if (searchTask is null)
+        {
+            throw new InvalidOperationException("SearchFunc returned null.");
+        }
+
+        string humanName = harness.Options.Value.HumanName;
+        AssigneeOption human = (await searchTask).Single(option => string.Equals(option.Name, humanName, StringComparison.Ordinal));
+        RenderFragment<AssigneeOption>? itemTemplate = assignee.Instance.ItemTemplate;
+        Assert.NotNull(itemTemplate);
+
+        var itemCut = ctx.Render(itemTemplate!(human));
+
+        Assert.Empty(itemCut.FindComponents<MudBadge>());
+        Assert.Equal(humanName, itemCut.FindComponent<TeammateAvatar>().Instance.Name);
+        Assert.Equal(humanName, TextOf(itemCut, ".task-detail-assignee-option-name"));
     }
 
     /// <summary>When the Task has a <c>LastWake</c>, a line underneath the Assignee reads exactly "Woken in Room: {name}" (Spec §13.6) and links to the Room.</summary>
@@ -743,31 +802,16 @@ public sealed class TaskDetailFieldsTests
     private static string TextOf(IRenderedComponent<ContainerFragment> cut, string cssSelector) =>
         cut.Find(cssSelector).TextContent.Trim();
 
-    /// <summary>Opens the Won't-do <c>MudMenu</c> (activator <c>button[aria-label="Won't do"]</c>, the <c>RoomListTests</c> pattern) and returns its items' trimmed texts, in order.</summary>
-    private static IReadOnlyList<string> OpenWontDoMenu(IRenderedComponent<ContainerFragment> cut)
-    {
-        cut.Find("button[aria-label=\"Won't do\"]").Click();
-        return [.. cut.FindAll("div.mud-menu-item").Select(i => i.TextContent.Trim())];
-    }
-
     /// <summary>
-    /// Opens the Won't-do menu and clicks the item whose text is <paramref name="wireName"/>. Each
-    /// Find+Click is its own <c>InvokeAsync</c> (the <c>TaskDetailConflictTests.ClickSaveAsync</c>
-    /// pattern) - found by 14.3 under parallel test-exe load: a fire-and-forget dispatched re-render
-    /// (<c>TaskDetail.DispatchRefresh</c>) can land between the plain synchronous <c>Find</c> and
-    /// <c>Click</c> that opens the menu and the one that picks an item, detaching the element bUnit
-    /// found and throwing <c>UnknownEventHandlerIdException</c> on the second click.
+    /// Raises the Status <c>MudSelect</c>'s <c>ValueChanged</c> for <paramref name="state"/> - the
+    /// <c>TaskDetailConflictTests.EditTeamAsync</c> pattern (invoke the component's own callback
+    /// directly rather than driving the popover's DOM), which now covers every <see cref="TaskState"/>
+    /// alike since Status stopped being a toggle group plus a separate Won't-do menu.
     /// </summary>
-    private static async Task ClickWontDoItem(IRenderedComponent<ContainerFragment> cut, string wireName)
+    private static async Task SetStatusAsync(IRenderedComponent<ContainerFragment> cut, TaskState state)
     {
-        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Won't do\"]").Click());
-        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), wireName, StringComparison.Ordinal)).Click());
-    }
-
-    /// <summary>Clicks the Status toggle item for <paramref name="state"/> (one of the five ordinary states, not a Won't-do one).</summary>
-    private static void ClickStatusToggle(IRenderedComponent<ContainerFragment> cut, TaskState state)
-    {
-        cut.Find(".task-detail-status").QuerySelectorAll("button").Single(b => string.Equals(b.TextContent.Trim(), state.ToWire(), StringComparison.Ordinal)).Click();
+        IRenderedComponent<MudSelect<TaskState>> select = cut.FindComponents<MudSelect<TaskState>>().Single(m => string.Equals(m.Instance.Class, "task-detail-status", StringComparison.Ordinal));
+        await cut.InvokeAsync(() => select.Instance.ValueChanged.InvokeAsync(state));
     }
 
     /// <summary>

@@ -19,9 +19,10 @@
     above applies immediately - rather than buffering until a Save the way TeammateCard's editor does.
     There is no Cancel to protect here, so there is no reason to hold an upload's bytes back either.
 
-    "Appearance" does not widen to cover this. appearance.json still holds only the selected Theme
-    id and nothing else; the Human's Avatar is edited on this tab but stored in avatars.json, a
-    different file with a different owner (AvatarStore, not AppearanceStore).
+    "Appearance" does not widen to cover this. appearance.json holds the selected Theme id and the
+    Human's own accent colour (AccentColorHex, for the two "Custom Accent" entries) and nothing
+    else; the Human's Avatar is edited on this tab but stored in avatars.json, a different file with
+    a different owner (AvatarStore, not AppearanceStore).
 
     A MudList rather than a MudSelect: MudBlazor 9 has no MudSelectItemGroup, so a MudSelect cannot
     render the Light / Dark / High contrast headings this picker is grouped by. The list also shows
@@ -75,11 +76,24 @@
     }
 </MudList>
 
+@if (this.IsCustomAccentSelected)
+{
+    @* THE TRAP applies here exactly as it does to the avatar's MudColorPicker below: bind Text, never
+       Value - Value is a non-null MudColor, so binding it would materialise a hard-coded hex colour
+       the instant this tab first renders a Custom Accent selection with no colour chosen yet. Shows
+       the colour exactly as picked; AccentTheme.BuildTheme is what clamps it for contrast when it
+       renders, so what MainLayout paints can differ slightly from what is shown here - by design, see
+       AccentPalette's own remarks. *@
+    <MudColorPicker Label="Accent colour" ColorPickerMode="ColorPickerMode.HEX" ShowAlpha="false"
+                     Text="@this.AccentColorText" TextChanged="this.OnAccentColorTextChanged"
+                     Class="mt-2 theme-picker-accent-colour" />
+}
+
 <p class="settings-theme-credit">
-    Every theme except Huddle Light and Huddle Dark is one of the colour themes
-    bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and
-    its default themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and
-    Monokai is Wimer Hazenberg's.
+    Custom Accent lets you pick your own accent colour, adjusted if needed so it stays readable.
+    Every other theme except Huddle Light and Huddle Dark is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default
+    themes are Microsoft's, under the MIT licence; Solarized is Ethan Schoonover's and Monokai is
+    Wimer Hazenberg's.
 </p>
 
 <p class="settings-prompts-file-path">
@@ -160,6 +174,14 @@
 @code {
     /// <summary>The theme id shown selected: the store's current selection, or the catalog's default when nothing is selected yet.</summary>
     private string SelectedThemeId => this.AppearanceStore.Current.ThemeId ?? ThemeCatalog.BuiltIn[0].Id;
+
+    /// <summary>Whether the colour picker should show at all: only when one of the two <see cref="AccentTheme"/> entries is selected, since every other theme ignores <see cref="AppearanceSettings.AccentColorHex"/> entirely.</summary>
+    private bool IsCustomAccentSelected =>
+        string.Equals(this.SelectedThemeId, AccentTheme.LightDescriptor.Id, StringComparison.Ordinal) ||
+        string.Equals(this.SelectedThemeId, AccentTheme.DarkDescriptor.Id, StringComparison.Ordinal);
+
+    /// <summary>The accent colour shown in the picker: the store's own value, read straight through with no local buffer - mirrors <see cref="SelectedThemeId"/>'s own shape, since there is only one value here and nothing to seed across a mode switch the way the avatar editor's fields need.</summary>
+    private string? AccentColorText => this.AppearanceStore.Current.AccentColorHex;
 
     // Editor-only working state for the Human's avatar editor - the same three fields
     // TeammateCard.SeedAvatarEditorState seeds, minus the pending-upload buffer that editor needs and
@@ -380,6 +402,18 @@
     {
         this.AppearanceStore.Save(themeId);
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Saves the newly picked accent colour, mirroring <see cref="OnThemeChangedAsync"/> one key over.
+    /// Blank input (the picker's Clear action, or a Human who deletes the hex text) maps to
+    /// <see langword="null"/>, meaning "no accent colour chosen" - the same convention
+    /// <c>OnAvatarBackgroundTextChanged</c> uses for the avatar's own colour picker below.
+    /// </summary>
+    /// <param name="value">The colour picker's newly typed or picked text, or <see langword="null"/>/blank.</param>
+    private void OnAccentColorTextChanged(string? value)
+    {
+        this.AppearanceStore.SaveAccentColor(string.IsNullOrWhiteSpace(value) ? null : value);
     }
 
     private void OnAppearanceChanged()

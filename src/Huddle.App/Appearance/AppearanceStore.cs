@@ -24,7 +24,8 @@ namespace Agency.Huddle.App.Appearance;
 /// single <see langword="volatile"/> field, one <see cref="Lock"/> around writes, a debounced
 /// <see cref="FileSystemWatcher"/>, and an event raised after both the write and the rebuild —
 /// never before, or an observer reading this store from inside its own handler would see stale
-/// state. <see cref="Save"/> is the only writer.
+/// state. <see cref="Save"/> and <see cref="SaveAccentColor"/> are the only writers, and both share
+/// the same read-modify-one-key-write shape so neither can clobber the other's key.
 /// </para>
 /// <para>
 /// <b>Deliberately synchronous</b>, for the same reason <see cref="Prompts.PromptStore"/> gives: this is
@@ -173,9 +174,43 @@ internal sealed partial class AppearanceStore : IDisposable
         this.AppearanceChanged?.Invoke();
     }
 
+    /// <summary>
+    /// Selects (or clears) the Human's own accent colour for <see cref="Themes.AccentTheme"/>, under
+    /// the write lock: re-reads the file so a concurrent hand-edit is not lost, sets <c>accentColor</c>
+    /// while leaving every other key - including <c>theme</c> - exactly as found, writes, rebuilds the
+    /// resolved snapshot, releases the lock, and only then raises <see cref="AppearanceChanged"/>.
+    /// Mirrors <see cref="Save"/> exactly, one key over.
+    /// </summary>
+    /// <param name="accentColorHex">The accent colour to store, as <c>#rrggbb</c>, or <see langword="null"/> to clear it and remove the <c>accentColor</c> key entirely.</param>
+    public void SaveAccentColor(string? accentColorHex)
+    {
+        lock (this.writeGate)
+        {
+            var document = this.ReadDocumentFromDisk();
+
+            if (accentColorHex is null)
+            {
+                document.Remove("accentColor");
+            }
+            else
+            {
+                document["accentColor"] = accentColorHex;
+            }
+
+            this.WriteDocumentToDisk(document);
+            this.current = this.BuildSettings(document);
+        }
+
+        this.AppearanceChanged?.Invoke();
+    }
+
     /// <summary>A valid theme id: lowercase letters, digits and hyphens, 1-64 characters. The same shape a filename built from it must be safe to use as (see <c>rules.md</c>'s Name path-traversal reasoning).</summary>
     [GeneratedRegex(@"\A[a-z0-9-]{1,64}\z", RegexOptions.CultureInvariant)]
     private static partial Regex ThemeIdPattern();
+
+    /// <summary>A valid accent colour: <c>#</c> followed by exactly six hex digits - <c>MudColorPicker</c>'s own HEX mode output, and what <see cref="Themes.AccentTheme.BuildTheme"/> expects.</summary>
+    [GeneratedRegex(@"\A#[0-9a-fA-F]{6}\z", RegexOptions.CultureInvariant)]
+    private static partial Regex AccentColorPattern();
 
     /// <summary>Whether <paramref name="candidate"/> is a well-formed id naming an entry in <see cref="ThemeCatalog.BuiltIn"/>.</summary>
     /// <param name="candidate">The raw <c>theme</c> value read from the file.</param>
@@ -199,8 +234,8 @@ internal sealed partial class AppearanceStore : IDisposable
 
     /// <summary>
     /// Builds the resolved <see cref="AppearanceSettings"/> for <paramref name="document"/>,
-    /// validating <c>theme</c> against <see cref="ThemeCatalog"/> and logging one warning if it is
-    /// rejected.
+    /// validating <c>theme</c> against <see cref="ThemeCatalog"/> and <c>accentColor</c> against
+    /// <see cref="AccentColorPattern"/>, logging one warning for each if it is rejected.
     /// </summary>
     /// <param name="document">The parsed <c>appearance.json</c> object, just read from (or about to be written to) disk.</param>
     private AppearanceSettings BuildSettings(JsonObject document)
@@ -227,7 +262,29 @@ internal sealed partial class AppearanceStore : IDisposable
             }
         }
 
-        return new AppearanceSettings(themeId);
+        string? accentColorHex = null;
+
+        if (document.TryGetPropertyValue("accentColor", out var accentColorNode) && accentColorNode is not null)
+        {
+            var candidate = accentColorNode is JsonValue accentColorValue && accentColorValue.TryGetValue<string>(out var accentColorText)
+                ? accentColorText
+                : null;
+
+            if (candidate is not null && AccentColorPattern().IsMatch(candidate))
+            {
+                accentColorHex = candidate;
+            }
+            else
+            {
+                var shown = candidate ?? accentColorNode.ToJsonString();
+                this.logger.LogWarning(
+                    "Appearance file '{Path}' sets accentColor '{AccentColor}', which is not a valid #rrggbb colour; no accent colour is used instead and the file is left unchanged.",
+                    this.path,
+                    shown);
+            }
+        }
+
+        return new AppearanceSettings(themeId, accentColorHex);
     }
 
     /// <summary>

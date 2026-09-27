@@ -2,24 +2,18 @@
     Spec §13.3: the page's toolbar. It owns none of the persisted state itself - EffectiveView is
     the saved View with whatever overrides the controls below have applied for this session - and
     writes to ViewStore only when "Save to View" is clicked, never as a side effect of a filter,
-    group, sort or kind change. "Save to View" itself is computed by comparing the serialised
+    group or sort change. "Save to View" itself is computed by comparing the serialised
     effective View against the serialised saved one (ViewJson.Options, never record ==, per D13
     corrections item 1, which the same brief applies to this toolbar's own visibility rule too),
-    with Scope masked out first: Active/Closed changes the page's own state and is never something
-    "Save to View" offers to persist (Spec §13.3's own wording for that control).
+    with Scope masked out first. Active/Closed and List/Board are no longer toolbar controls - Scope
+    and Kind are set in the View editor - and "+ New task" leads the toolbar rather than sitting at its far end.
 *@
 
 @using System.Text.Json
 @inject ViewStore ViewStore
 
 <MudToolBar Dense="true" Class="task-toolbar">
-    <MudTooltip Text="A Board always shows Active tasks.">
-        <MudToggleGroup T="ViewScope" Value="this.EffectiveView.Scope" ValueChanged="this.OnScopeChangedAsync"
-                         Disabled="this.IsBoard" SelectionMode="SelectionMode.SingleSelection" Class="task-toolbar-scope">
-            <MudToggleItem Value="ViewScope.Active" Text="Active" />
-            <MudToggleItem Value="ViewScope.Closed" Text="Closed" />
-        </MudToggleGroup>
-    </MudTooltip>
+    <MudButton StartIcon="@Icons.Material.Outlined.Add" Color="Color.Primary" OnClick="this.OnNewTaskClickedAsync" Class="task-toolbar-new-task">New task</MudButton>
 
     <MudMenu Label="Filter" Class="task-toolbar-filter">
         <MudChipSet T="string" ReadOnly="false" OnClose="this.OnRemoveTeamFilterAsync" Class="task-toolbar-filter-chips">
@@ -47,21 +41,10 @@
                    DebounceInterval="200" Clearable="true" Adornment="Adornment.Start"
                    AdornmentIcon="@Icons.Material.Filled.Search" Placeholder="Search" Class="task-toolbar-search" />
 
-    <MudToggleGroup T="ViewKind" Value="this.EffectiveView.Kind" ValueChanged="this.OnKindChangedAsync"
-                     SelectionMode="SelectionMode.SingleSelection" Class="task-toolbar-kind">
-        <MudToggleItem Value="ViewKind.List" Text="List" />
-        <MudToggleItem Value="ViewKind.Board" Text="Board" />
-    </MudToggleGroup>
-
     @if (this.ShowSaveToView)
     {
-        <MudButton Variant="Variant.Text" OnClick="this.SaveToViewAsync" Class="task-toolbar-save">Save to View</MudButton>
+        <MudButton Variant="Variant.Text" OnClick="this.SaveToViewAsync" Class="task-toolbar-save">Save to view</MudButton>
     }
-
-    <MudSpacer />
-
-    <MudButton Variant="Variant.Text" OnClick="this.OnEditViewClickedAsync" Class="task-toolbar-edit-view">Edit View</MudButton>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.OnNewTaskClickedAsync" Class="task-toolbar-new-task">+ New task</MudButton>
 </MudToolBar>
 
 @code {
@@ -76,10 +59,6 @@
     [Parameter]
     public EventCallback<TaskView> EffectiveViewChanged { get; set; }
 
-    /// <summary>Raised when "Edit View" is clicked, to open the View editor drawer (§13.5).</summary>
-    [Parameter]
-    public EventCallback OnEditView { get; set; }
-
     /// <summary>Raised when "+ New task" is clicked, carrying the Team/Project defaults the current filter names.</summary>
     [Parameter]
     public EventCallback<NewTaskDefaults> OnNewTask { get; set; }
@@ -91,8 +70,6 @@
     /// <summary>Raised, debounced, as the search text changes.</summary>
     [Parameter]
     public EventCallback<string?> SearchChanged { get; set; }
-
-    private bool IsBoard => this.EffectiveView.Kind == ViewKind.Board;
 
     private TaskGroupField? PrimaryGrouping => this.EffectiveView.Grouping.Count > 0 ? this.EffectiveView.Grouping[0] : null;
 
@@ -117,18 +94,6 @@
             string savedJson = JsonSerializer.Serialize(saved, ViewJson.Options);
             return !string.Equals(effectiveJson, savedJson, StringComparison.Ordinal);
         }
-    }
-
-    private Task OnScopeChangedAsync(ViewScope scope) =>
-        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Scope = scope });
-
-    private Task OnKindChangedAsync(ViewKind kind)
-    {
-        // corrections-B7 12.4 item 2: a View with no Columns shown as a Board gets the default columns.
-        TaskView updated = kind == ViewKind.Board && this.EffectiveView.Columns.Count == 0
-            ? this.EffectiveView with { Kind = kind, Columns = BoardLayout.DefaultColumns }
-            : this.EffectiveView with { Kind = kind };
-        return this.EffectiveViewChanged.InvokeAsync(updated);
     }
 
     private void OnTeamFilterInputChanged(string value) => this.teamFilterInput = value;
@@ -167,8 +132,6 @@
     }
 
     private Task OnSearchChangedAsync(string? value) => this.SearchChanged.InvokeAsync(value);
-
-    private Task OnEditViewClickedAsync() => this.OnEditView.InvokeAsync();
 
     private Task SaveToViewAsync()
     {

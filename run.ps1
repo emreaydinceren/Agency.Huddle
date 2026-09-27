@@ -11,6 +11,13 @@
     one node process per Persona before you type anything. Pass -NoAcp to open
     the app without them.
 
+    On a fresh clone, that requires the ACP adapter installed under
+    tools/acp/node_modules. This script checks for it (the same check
+    DotAcpAgentHostFactory makes at Persona startup) and, when it is missing,
+    runs tools/acp/install.ps1 automatically before building - so a blank
+    checkout needs nothing but this script and node on PATH. Pass -NoAcp to
+    skip that check entirely.
+
     See docs/AgencyTeam.md ("Build, test, run") for the commands this wraps.
 
 .PARAMETER Port
@@ -67,6 +74,14 @@ $dataDir = Join-Path $appProject 'App_Data'
 $teamsDir = Join-Path $dataDir 'Teams'
 $dbPath = Join-Path $dataDir 'team.db'
 
+# Mirrors AdapterLocator.RelativeAdapterPath (src/Huddle.App/Acp/AdapterLocator.cs): the file
+# DotAcpAgentHostFactory itself checks for before it will start a Persona. Checking the same path
+# here, rather than merely "does tools/acp/node_modules exist", is what lets this script and the
+# app agree on whether setup is done.
+$acpToolsDir = Join-Path $scriptDir 'tools/acp'
+$acpInstallScript = Join-Path $acpToolsDir 'install.ps1'
+$acpAdapterEntryPoint = Join-Path $acpToolsDir 'node_modules/@agentclientprotocol/claude-agent-acp/dist/index.js'
+
 if (-not (Test-Path $solution)) {
     Write-Host "Huddle.slnx not found at $solution." -ForegroundColor Yellow
     Write-Host "   Run this script from the repository root." -ForegroundColor Gray
@@ -81,6 +96,11 @@ if (-not $NoAcp -and -not (Get-Command node -ErrorAction SilentlyContinue)) {
     Write-Host "   Install node, or run without them: ./run.ps1 -NoAcp" -ForegroundColor Gray
     exit 1
 }
+
+# A blank clone has no tools/acp/node_modules, so the first Persona to start throws the
+# InvalidOperationException this check exists to pre-empt. -NoAcp needs none of this: no Persona
+# starts, so there is nothing to install.
+$needsAcpSetup = -not $NoAcp -and -not (Test-Path $acpAdapterEntryPoint)
 
 # -NoBuild runs whatever is compiled, so it needs something to be compiled.
 $appAssembly = Join-Path $appProject 'bin/Debug/net10.0/Huddle.App.dll'
@@ -103,6 +123,9 @@ if ($DryRun) {
     }
     if ($NoAcp) {
         Write-Host '   Env   : Team__Acp__Enabled=false (no node process per Persona)' -ForegroundColor Gray
+    }
+    if ($needsAcpSetup) {
+        Write-Host "   Setup : $acpInstallScript (ACP adapter not installed)" -ForegroundColor Gray
     }
     if ($Clean) {
         Write-Host "   Clean : delete $dbPath (+ -wal/-shm) and $teamsDir" -ForegroundColor Gray
@@ -136,6 +159,33 @@ if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) {
         Write-Host "   Or use another : ./run.ps1 -Port $($Port + 1)" -ForegroundColor Gray
         exit 1
     }
+}
+
+# -- Setup ----------------------------------------------------------------------
+
+if ($needsAcpSetup) {
+    Write-Host ''
+    Write-Host 'ACP adapter not installed - running tools/acp/install.ps1...' -ForegroundColor Cyan
+
+    # install.ps1 throws (rather than just setting $LASTEXITCODE) when npm install fails, so
+    # that is the failure this script needs to catch here, not a nonzero exit code.
+    try {
+        & $acpInstallScript
+    } catch {
+        Write-Host ''
+        Write-Host "tools/acp/install.ps1 failed: $_" -ForegroundColor Yellow
+        Write-Host '   See the npm output above for details.' -ForegroundColor Gray
+        exit 1
+    }
+
+    if (-not (Test-Path $acpAdapterEntryPoint)) {
+        Write-Host ''
+        Write-Host "tools/acp/install.ps1 completed, but $acpAdapterEntryPoint still does not exist." -ForegroundColor Yellow
+        Write-Host '   Check the npm output above for errors, or run without ACP: ./run.ps1 -NoAcp' -ForegroundColor Gray
+        exit 1
+    }
+
+    Write-Host 'ACP adapter installed.' -ForegroundColor Green
 }
 
 # -- Clean --------------------------------------------------------------------
