@@ -42,10 +42,10 @@ internal static class HuddleTheme
     /// </remarks>
     public static PaletteLight Light() => new()
     {
-        Background = "#fbfbfa",
-        Surface = "#ffffff",
-        DrawerBackground = "#f5f5f3",
-        BackgroundGray = "#f3f3f1",
+        Background = "#f2f0ed",
+        Surface = "#fbfaf8",
+        DrawerBackground = "#f5f4f2",
+        BackgroundGray = "#e5e2e0",
         TableHover = "#efefed",
         Divider = "#e5e5e4",
         DividerLight = "#ededec",

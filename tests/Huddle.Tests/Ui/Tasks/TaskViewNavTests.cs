@@ -14,7 +14,7 @@ using TestContext = Xunit.TestContext;
 
 /// <summary>
 /// Pins Spec §13.1: the nav lists the built-in Views then the file's own Views as
-/// <c>/tasks/{id}</c> links, offers <c>+ New View</c>, flags an invalid View with a warning icon,
+/// <c>/tasks/{id}</c> links, offers <c>New View</c>, flags an invalid View with a warning icon,
 /// re-renders on <see cref="ViewStore.ViewsChanged"/>, and renders nothing when
 /// <see cref="TasksOptions.Enabled"/> is <see langword="false"/>. Also pins the row's own "..." menu
 /// (TaskViewNav.razor's own file header, RoomList.razor's precedent): Edit View for any row, Delete
@@ -41,7 +41,7 @@ public sealed class TaskViewNavTests
         Assert.Equal("Sprint Board", customLink.TextContent.Trim());
     }
 
-    /// <summary>A <c>+ New View</c> link, pointing at <c>/tasks/new</c>, is always offered.</summary>
+    /// <summary>A <c>New View</c> link, pointing at <c>/tasks/new</c>, is always offered.</summary>
     [Fact]
     public async Task TaskViewNav_ShowsNewViewLink_ToTasksNew()
     {
@@ -52,7 +52,7 @@ public sealed class TaskViewNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         var link = cut.FindAll("a").Single(a => string.Equals(a.GetAttribute("href"), "/tasks/new", StringComparison.Ordinal));
-        Assert.Equal("+ New View", link.TextContent.Trim());
+        Assert.Equal("New view", link.TextContent.Trim());
     }
 
     /// <summary>An invalid View entry that still carries an id is shown as a link, marked with a warning icon.</summary>
@@ -141,12 +141,12 @@ public sealed class TaskViewNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         OpenRowMenu(cut, "All Tasks");
-        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Edit View", StringComparison.Ordinal));
-        Assert.DoesNotContain(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete View", StringComparison.Ordinal));
+        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Edit view", StringComparison.Ordinal));
+        Assert.DoesNotContain(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
 
         OpenRowMenu(cut, "Sprint Board");
-        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Edit View", StringComparison.Ordinal));
-        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete View", StringComparison.Ordinal));
+        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Edit view", StringComparison.Ordinal));
+        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
     }
 
     /// <summary>Right-clicking a row is the second door onto its own menu, mirroring <c>RoomList</c>'s own precedent.</summary>
@@ -162,8 +162,8 @@ public sealed class TaskViewNavTests
 
         RowFor(cut, "Sprint Board").ContextMenu();
 
-        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Edit View", StringComparison.Ordinal));
-        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete View", StringComparison.Ordinal));
+        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Edit view", StringComparison.Ordinal));
+        Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
     }
 
     /// <summary>Clicking Edit View opens this component's own <see cref="ViewEditorDrawer"/> for that row's View.</summary>
@@ -178,7 +178,7 @@ public sealed class TaskViewNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         OpenRowMenu(cut, "Sprint Board");
-        ClickMenuItem(cut, "Edit View");
+        ClickMenuItem(cut, "Edit view");
 
         var drawer = cut.FindComponent<ViewEditorDrawer>();
         Assert.True(drawer.Instance.Open);
@@ -197,7 +197,7 @@ public sealed class TaskViewNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         OpenRowMenu(cut, "Sprint Board");
-        _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete View"));
+        _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete view"));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
 
         Assert.Equal("Delete View", cut.Find(".mud-dialog-title").TextContent.Trim());
@@ -220,7 +220,7 @@ public sealed class TaskViewNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         OpenRowMenu(cut, "Sprint Board");
-        _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete View"));
+        _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete view"));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).Click());
 
@@ -242,7 +242,7 @@ public sealed class TaskViewNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         OpenRowMenu(cut, "Sprint Board");
-        _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete View"));
+        _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete view"));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).Click());
 
@@ -264,7 +264,7 @@ public sealed class TaskViewNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
         OpenRowMenu(cut, "Sprint Board");
-        _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete View"));
+        _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete view"));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).Click());
 

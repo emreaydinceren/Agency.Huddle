@@ -53,10 +53,10 @@
                             </MudTooltip>
                         </ActivatorContent>
                         <ChildContent>
-                            <MudMenuItem OnClick="@(() => this.OpenEditor(view.Id))">Edit View</MudMenuItem>
+                            <MudMenuItem OnClick="@(() => this.OpenEditor(view.Id))">Edit view</MudMenuItem>
                             @if (!view.BuiltIn)
                             {
-                                <MudMenuItem OnClick="@(() => this.DeleteViewAsync(view))">Delete View</MudMenuItem>
+                                <MudMenuItem OnClick="@(() => this.DeleteViewAsync(view))">Delete view</MudMenuItem>
                             }
                         </ChildContent>
                     </MudMenu>
@@ -79,7 +79,7 @@
                     </div>
                 }
             }
-            <MudNavLink Href="/tasks/new" Icon="@Icons.Material.Filled.Add">+ New View</MudNavLink>
+            <MudNavLink Href="/tasks/new" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="task-view-nav-new">New view</MudNavLink>
         </MudNavGroup>
     </MudNavMenu>
 

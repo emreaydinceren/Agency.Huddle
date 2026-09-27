@@ -13,7 +13,7 @@ namespace Agency.Huddle.Tests.Ui;
 public sealed class AccentPaletteTests
 {
     private static readonly MudColor White = new("#ffffff");
-    private static readonly MudColor NearWhiteSurface = new("#fbfbfa");
+    private static readonly MudColor NearWhiteSurface = new("#f2f0ed");
     private static readonly MudColor Black = new("#1c1c1b");
     private static readonly MudColor NearBlackSurface = new("#262625");
 

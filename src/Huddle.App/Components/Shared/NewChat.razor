@@ -11,29 +11,34 @@
 @inject AvatarStore Avatars
 
 <div class="new-chat">
-    <MudButton Variant="Variant.Text" FullWidth="true" OnClick="this.TogglePanel">New chat</MudButton>
+    <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" OnClick="this.TogglePanel" Class="new-chat-link">New chat</MudNavLink>
     <MudCollapse Expanded="@this.isOpen">
-        @if (this.agents.Count == 0)
+        @if (this.isOpen)
         {
-            <MudText Typo="Typo.body2" Class="empty-state">No agents have connected yet. Start one with <code>tools/echo-bot.ps1</code>, or enable the demo agent in <code>appsettings.json</code>.</MudText>
-        }
-        else
-        {
-            <div class="new-chat-agents">
-                @foreach (var agent in this.agents)
+            <div class="new-chat-panel">
+                @if (this.agents.Count == 0)
                 {
-                    var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(agent.Id), this.Health.Get(agent.Name));
-                    var agentId = agent.Id;
-                    <div>
-                        <MudCheckBox T="bool" Value="@this.selectedAgentIds.Contains(agentId)" ValueChanged="@((bool isChecked) => this.ToggleAgent(agentId, isChecked))">
-                            <StatusDot State="status.State" />
-                            <TeammateAvatar Name="@agent.Name" Avatar="this.Avatars.Get(agent.Name)" Size="Size.Small" />
-                            @agent.Name
-                        </MudCheckBox>
+                    <MudText Typo="Typo.body2" Class="empty-state">No agents have connected yet. Start one with <code>tools/echo-bot.ps1</code>, or enable the demo agent in <code>appsettings.json</code>.</MudText>
+                }
+                else
+                {
+                    <div class="new-chat-agents">
+                        @foreach (var agent in this.agents)
+                        {
+                            var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(agent.Id), this.Health.Get(agent.Name));
+                            var agentId = agent.Id;
+                            <div>
+                                <MudCheckBox T="bool" Value="@this.selectedAgentIds.Contains(agentId)" ValueChanged="@((bool isChecked) => this.ToggleAgent(agentId, isChecked))">
+                                    <StatusDot State="status.State" />
+                                    <TeammateAvatar Name="@agent.Name" Avatar="this.Avatars.Get(agent.Name)" Size="Size.Small" />
+                                    @agent.Name
+                                </MudCheckBox>
+                            </div>
+                        }
                     </div>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Disabled="@(this.selectedAgentIds.Count == 0)" OnClick="this.StartChatAsync">Start chat</MudButton>
                 }
             </div>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Disabled="@(this.selectedAgentIds.Count == 0)" OnClick="this.StartChatAsync">Start chat</MudButton>
         }
     </MudCollapse>
 </div>

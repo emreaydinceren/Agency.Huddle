@@ -68,6 +68,9 @@ public sealed class AccentThemeTests
         Assert.Equal(ThemeMode.Light, AccentTheme.LightDescriptor.Mode);
         Assert.Equal(ThemeGroup.Light, AccentTheme.LightDescriptor.Group);
         Assert.Equal(HuddleTheme.Light().Primary, AccentTheme.LightDescriptor.Theme.PaletteLight.Primary);
+        Assert.Equal(HuddleTheme.Light().Background, AccentTheme.LightDescriptor.Theme.PaletteLight.Background);
+        Assert.Equal(HuddleTheme.Light().Surface, AccentTheme.LightDescriptor.Theme.PaletteLight.Surface);
+        Assert.Equal(HuddleTheme.Light().DrawerBackground, AccentTheme.LightDescriptor.Theme.PaletteLight.DrawerBackground);
     }
 
     /// <summary>Custom Accent Dark's descriptor carries Huddle Dark's own Primary as its placeholder.</summary>

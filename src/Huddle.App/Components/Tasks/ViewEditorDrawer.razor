@@ -230,7 +230,7 @@
         }
 
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.Save"
-                   Disabled="@(problems.Count > 0 || this.ControlsDisabled)" Class="view-editor-save">Save View</MudButton>
+                   Disabled="@(problems.Count > 0 || this.ControlsDisabled)" Class="view-editor-save">Save view</MudButton>
         @if (!this.loadedView.BuiltIn)
         {
             <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="this.DeleteAsync"

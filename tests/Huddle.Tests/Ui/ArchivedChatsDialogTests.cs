@@ -7,8 +7,11 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using MudBlazor;
 using Agency.Huddle.App;
+using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 
@@ -155,12 +158,15 @@ public sealed class ArchivedChatsDialogTests
         return new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
     }
 
-    private static MudBunitContext NewContext(ITeamDirectory directory, ChatService chat, RoomEvents events)
+    private static MudBunitContext NewContext(ITeamDirectory directory, ChatService chat, RoomEvents events, TempDataDir? dir = null)
     {
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton(directory);
         ctx.Services.AddSingleton(chat);
         ctx.Services.AddSingleton(events);
+        ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
+        ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
+        ctx.Services.AddSingleton(new AvatarStore(dir?.Options() ?? Options.Create(new TeamOptions()), NullLogger<AvatarStore>.Instance));
         return ctx;
     }
 

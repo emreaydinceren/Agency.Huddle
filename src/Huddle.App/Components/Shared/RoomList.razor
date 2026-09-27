@@ -1,10 +1,12 @@
 @*
-    The sidebar's list of Rooms. Archiving is a display filter only (Room.Archived) - the Room stays
-    fully live and this list is the one place that decision is enforced, by excluding it from
-    LoadAsync's result. Each row offers Archive and Delete through a MudMenu reachable two ways: a
-    keyboard-focusable "..." MudIconButton (revealed on hover/focus via app.css) and a right-click on
-    the row itself, which opens the SAME MudMenu instance programmatically through an @ref - right-click
-    alone would not be reachable by keyboard, which is why the button is not optional.
+    The sidebar's list of Rooms, grouped under a collapsible MudNavGroup titled "Chats" (matching
+    TaskViewNav.razor's "Tasks" group shape). Archiving is a display filter only (Room.Archived) -
+    the Room stays fully live and this list is the one place that decision is enforced, by excluding
+    it from LoadAsync's result. Each row offers Archive and Delete through a MudMenu reachable two
+    ways: a keyboard-focusable "..." MudIconButton (revealed on hover/focus via app.css) and a
+    right-click on the row itself, which opens the SAME MudMenu instance programmatically through
+    an @ref - right-click alone would not be reachable by keyboard, which is why the button is not
+    optional.
 
     Delete's confirmation is an inline row swap, never a nested MudDialog and never a JS confirm() -
     the same reasoning TeammateCard.razor's Remove button and ResetAllControl.razor both give: a
@@ -24,56 +26,60 @@
         <MudAlert Severity="Severity.Error" Dense="true" role="alert">@this.error</MudAlert>
     }
 
-    @if (this.rooms.Count == 0)
-    {
-        <MudText Typo="Typo.body2" Class="empty-state">No rooms yet. Start an agent to create one.</MudText>
-    }
-    else
-    {
-        <MudNavMenu>
-            @foreach (var room in this.rooms)
+    <MudNavMenu>
+        <MudNavGroup Title="Chats" Icon="@Icons.Material.Filled.Chat" @bind-Expanded="this.expanded">
+            @if (this.rooms.Count == 0)
             {
-                <div class="room-list-row"
-                     @oncontextmenu="@(e => this.OnRowContextMenuAsync(room.Id, e))"
-                     @oncontextmenu:preventDefault="true">
-                    @if (string.Equals(this.confirmingDeleteRoomId, room.Id, StringComparison.Ordinal))
-                    {
-                        <div class="room-list-confirm">
-                            <MudText Typo="Typo.body2" Class="room-list-confirm-text">Delete "@room.Name"?</MudText>
-                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
-                                       Disabled="this.busy" OnClick="@(() => this.ConfirmDeleteAsync(room.Id))">Confirm</MudButton>
-                            <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="this.CancelDelete">Cancel</MudButton>
-                        </div>
-                    }
-                    else
-                    {
-                        <MudNavLink Href="@($"/rooms/{room.Id}")" Icon="@Icons.Material.Filled.Chat" Class="room-list-link">@room.Name</MudNavLink>
-                        <MudMenu @ref="@this.menuRefs[room.Id]" Class="room-list-menu">
-                            @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
-                               MudMenu does not wire a click listener around it automatically - the
-                               supplied MenuContext.ToggleAsync is how custom activator content opens
-                               the menu, which is why the button's OnClick calls it explicitly rather
-                               than relying on MudMenu's default ActivationEvent handling. *@
-                            <ActivatorContent Context="menuContext">
-                                <MudTooltip Text="Room actions">
-                                    <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                                   aria-label="Room actions" Class="room-list-menu-button"
-                                                   OnClick="menuContext.ToggleAsync" />
-                                </MudTooltip>
-                            </ActivatorContent>
-                            <ChildContent>
-                                <MudMenuItem Disabled="this.busy" OnClick="@(() => this.ArchiveAsync(room.Id))">Archive</MudMenuItem>
-                                <MudMenuItem Disabled="this.busy" OnClick="@(() => this.BeginDelete(room.Id))">Delete</MudMenuItem>
-                            </ChildContent>
-                        </MudMenu>
-                    }
-                </div>
+                <MudText Typo="Typo.body2" Class="empty-state">No rooms yet. Start an agent to create one.</MudText>
             }
-        </MudNavMenu>
-    }
+            else
+            {
+                @foreach (var room in this.rooms)
+                {
+                    <div class="room-list-row"
+                         @oncontextmenu="@(e => this.OnRowContextMenuAsync(room.Id, e))"
+                         @oncontextmenu:preventDefault="true">
+                        @if (string.Equals(this.confirmingDeleteRoomId, room.Id, StringComparison.Ordinal))
+                        {
+                            <div class="room-list-confirm">
+                                <MudText Typo="Typo.body2" Class="room-list-confirm-text">Delete "@room.Name"?</MudText>
+                                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
+                                           Disabled="this.busy" OnClick="@(() => this.ConfirmDeleteAsync(room.Id))">Confirm</MudButton>
+                                <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="this.CancelDelete">Cancel</MudButton>
+                            </div>
+                        }
+                        else
+                        {
+                            <MudNavLink Href="@($"/rooms/{room.Id}")" Class="room-list-link">@room.Name</MudNavLink>
+                            <MudMenu @ref="@this.menuRefs[room.Id]" Class="room-list-menu">
+                                @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
+                                   MudMenu does not wire a click listener around it automatically - the
+                                   supplied MenuContext.ToggleAsync is how custom activator content opens
+                                   the menu, which is why the button's OnClick calls it explicitly rather
+                                   than relying on MudMenu's default ActivationEvent handling. *@
+                                <ActivatorContent Context="menuContext">
+                                    <MudTooltip Text="Room actions">
+                                        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                                       aria-label="Room actions" Class="room-list-menu-button"
+                                                       OnClick="menuContext.ToggleAsync" />
+                                    </MudTooltip>
+                                </ActivatorContent>
+                                <ChildContent>
+                                    <MudMenuItem Disabled="this.busy" OnClick="@(() => this.ArchiveAsync(room.Id))">Archive</MudMenuItem>
+                                    <MudMenuItem Disabled="this.busy" OnClick="@(() => this.BeginDelete(room.Id))">Delete</MudMenuItem>
+                                </ChildContent>
+                            </MudMenu>
+                        }
+                    </div>
+                }
+            }
+            <NewChat />
+        </MudNavGroup>
+    </MudNavMenu>
 </div>
 
 @code {
+    private bool expanded = true;
     private IReadOnlyList<Room> rooms = [];
     private readonly Dictionary<string, MudMenu> menuRefs = new(StringComparer.Ordinal);
     private string? confirmingDeleteRoomId;

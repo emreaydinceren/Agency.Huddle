@@ -7,8 +7,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App;
+using Agency.Huddle.App.Acp;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
 
@@ -185,6 +188,50 @@ public sealed class RoomListTests
         Assert.True((await directory.GetRoomAsync(room.Id, ct))?.Archived);
     }
 
+    /// <summary>Chats are grouped under a collapsible "Chats" MudNavGroup, and individual room links carry no icons.</summary>
+    [Fact]
+    public async Task Chats_AreGroupedUnderCollapsibleChatsNavGroup_WithoutIndividualIcons()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var agent = await directory.UpsertAgentUserAsync("coo", null, ct);
+        Assert.NotNull(agent);
+        var chat = CreateChatService(dir, directory, events);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = RenderRoomList(ctx);
+
+        var groupHeader = cut.Find(".mud-nav-group .mud-nav-link-text");
+        Assert.Equal("Chats", groupHeader.TextContent.Trim());
+
+        var roomLink = cut.Find(".room-list-link");
+        Assert.Equal(room.Name, roomLink.TextContent.Trim());
+        Assert.Empty(roomLink.QuerySelectorAll(".mud-nav-link-icon"));
+    }
+
+    /// <summary>When there are no rooms, the collapsible "Chats" group is still present and displays the empty state inside it.</summary>
+    [Fact]
+    public async Task Chats_WhenEmpty_RendersChatsNavGroupWithEmptyState()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var chat = CreateChatService(dir, directory, events);
+
+        await using var ctx = NewContext(directory, chat, events);
+        var cut = RenderRoomList(ctx);
+
+        var groupHeader = cut.Find(".mud-nav-group .mud-nav-link-text");
+        Assert.Equal("Chats", groupHeader.TextContent.Trim());
+        Assert.Contains("No rooms yet", cut.Find(".mud-nav-group").TextContent, StringComparison.Ordinal);
+    }
+
     private static ChatService CreateChatService(TempDataDir dir, ITeamDirectory directory, RoomEvents events)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
@@ -192,12 +239,33 @@ public sealed class RoomListTests
         return new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
     }
 
-    private static MudBunitContext NewContext(ITeamDirectory directory, ChatService chat, RoomEvents events)
+    /// <summary>When there are rooms, the collapsible "Chats" group also offers the "New chat" control inside it.</summary>
+    [Fact]
+    public async Task Chats_OffersNewChatControlInsideNavGroup()
+    {
+        var ct = Xunit.TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var chat = CreateChatService(dir, directory, events);
+
+        await using var ctx = NewContext(directory, chat, events, dir);
+        var cut = RenderRoomList(ctx);
+
+        var group = cut.Find(".mud-nav-group");
+        Assert.Contains("New chat", group.TextContent, StringComparison.Ordinal);
+    }
+
+    private static MudBunitContext NewContext(ITeamDirectory directory, ChatService chat, RoomEvents events, TempDataDir? dir = null)
     {
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton(directory);
         ctx.Services.AddSingleton(chat);
         ctx.Services.AddSingleton(events);
+        ctx.Services.AddSingleton<IAgentGateway>(new FakeAgentGateway());
+        ctx.Services.AddSingleton(new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance));
+        ctx.Services.AddSingleton(new AvatarStore(dir?.Options() ?? Options.Create(new TeamOptions()), NullLogger<AvatarStore>.Instance));
         return ctx;
     }
 

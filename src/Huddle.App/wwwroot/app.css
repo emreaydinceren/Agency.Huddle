@@ -48,9 +48,8 @@ button:focus-visible {
     outline-offset: 2px;
 }
 
-.new-chat {
-    border-bottom: 1px solid var(--mud-palette-divider);
-    padding: 1rem;
+.new-chat-panel {
+    padding: 0.5rem 1rem 0.75rem 2rem;
 }
 
 .new-chat-agents {
@@ -198,10 +197,10 @@ button:focus-visible {
 }
 
 /* ---- Left menu: a top-level MudNavLink vs. a MudNavGroup and everything inside it ------------
-   A top-level left-menu row (a Room, Teammates, Settings) is a MudNavLink with no MudNavGroup
-   ancestor, rendering its label inside a ".mud-nav-link-text" element. The drawer's one
-   MudNavGroup ("Tasks") renders its own title the exact same way, because a MudNavGroup's header
-   is itself a MudNavLink - and every view link nested inside it (All Tasks, My Tasks, ...) is a
+   A top-level left-menu row (Teammates, Settings) is a MudNavLink with no MudNavGroup
+   ancestor, rendering its label inside a ".mud-nav-link-text" element. The drawer's
+   MudNavGroups ("Chats" and "Tasks") render their own titles the exact same way, because a MudNavGroup's header
+   is itself a MudNavLink - and every room or view link nested inside them is a
    plain MudNavLink too. So "belongs to the group" is what sets 14px, at (0,2,0) via the
    ".mud-nav-group" ancestor - naturally beating the 15px default's (0,1,0) regardless of source
    order - and only the group's own header additionally gets the 600 weight, via the more specific
@@ -219,22 +218,67 @@ button:focus-visible {
     color: var(--mud-palette-text-secondary);
 }
 
+/* Child links inside a MudNavGroup that have no leading icon (room names, task view names)
+   must align their text with sibling links that DO have a leading icon (e.g. "New chat", "New view"),
+   while clearly indenting under the group header text. */
+.mud-nav-group .mud-collapse-container .mud-nav-link > .mud-nav-link-text:first-child {
+    margin-left: 26px;
+    margin-inline-start: 26px;
+}
+
+/* Action links inside left nav groups ("New chat", "New view"): tighten the gap between the
+   "+" icon and text label so the plus feels directly attached to the label, and use the
+   accent color consistent with "New task" and "New teammate". */
+.new-chat .mud-nav-link,
+.task-view-nav-new .mud-nav-link,
+.new-chat .mud-nav-link .mud-nav-link-text,
+.task-view-nav-new .mud-nav-link-text {
+    color: var(--mud-palette-primary);
+}
+
+.new-chat .mud-nav-link .mud-nav-link-icon,
+.task-view-nav-new .mud-nav-link-icon {
+    color: var(--mud-palette-primary);
+}
+
+.new-chat .mud-nav-link .mud-nav-link-text,
+.task-view-nav-new .mud-nav-link-text {
+    margin-left: 2px;
+    margin-inline-start: 2px;
+}
+
+/* Page toolbars: tighten the gap between the "+" icon and label on "New teammate" and "New task". */
+.teammates-new .mud-button-icon-start,
+.task-toolbar-new-task .mud-button-icon-start {
+    margin-right: 2px;
+    margin-inline-end: 2px;
+}
+
 /* ---- Room list: the hover/focus-revealed row actions menu ------------------------------------
    .room-list already existed as a markup prompt with no rule behind it. Each row is a flex box so
-   the NavLink can grow and the "..." button sits fixed-width beside it; the button stays in the
+   the NavLink can grow and the "..." button sits absolutely on the right; the button stays in the
    DOM (and in the Tab order) at all times, so it is reachable by keyboard even before it is
    visible - only its opacity is gated on :hover/:focus-within, matching .teammate-tile's own
    interactive-surface shape below. */
 
 .room-list-row {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
 }
 
 .room-list-row .room-list-link {
     flex: 1 1 auto;
     min-width: 0;
+}
+
+.room-list-row .room-list-link .mud-nav-link {
+    padding-right: 2.25rem;
+}
+
+.room-list-row .room-list-menu {
+    position: absolute;
+    right: 0.25rem;
 }
 
 .room-list-row .room-list-menu-button {
@@ -266,14 +310,23 @@ button:focus-visible {
 /* ---- Task view nav: the same hover/focus-revealed row actions menu as the Room list above ----- */
 
 .task-view-nav-row {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
 }
 
 .task-view-nav-row .task-view-nav-link {
     flex: 1 1 auto;
     min-width: 0;
+}
+
+.task-view-nav-row .task-view-nav-link .mud-nav-link {
+    padding-right: 2.25rem;
+}
+
+.task-view-nav-row .task-view-nav-menu {
+    position: absolute;
+    right: 0.25rem;
 }
 
 .task-view-nav-row .task-view-nav-menu-button {

@@ -68,7 +68,9 @@ public sealed class ThemeCatalogTests
 
         Assert.Equal(ThemeMode.Light, light.Mode);
         Assert.Equal("#007C85", Hex(light.Theme.PaletteLight.Primary), ignoreCase: true);
-        Assert.Equal("#FBFBFA", Hex(light.Theme.PaletteLight.Background), ignoreCase: true);
+        Assert.Equal("#F2F0ED", Hex(light.Theme.PaletteLight.Background), ignoreCase: true);
+        Assert.Equal("#FBFAF8", Hex(light.Theme.PaletteLight.Surface), ignoreCase: true);
+        Assert.Equal("#f5f4f2", Hex(light.Theme.PaletteLight.DrawerBackground), ignoreCase: true);
 
         Assert.Equal(ThemeMode.Dark, dark.Mode);
         Assert.Equal("#C07BC3", Hex(dark.Theme.PaletteDark.Primary), ignoreCase: true);

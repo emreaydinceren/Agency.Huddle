@@ -72,7 +72,7 @@
         <MudAlert Severity="Severity.Warning" role="status" Class="tasks-invalid-view-alert">
             This View is invalid: @string.Join(" ", invalid.Problems)
         </MudAlert>
-        <MudButton OnClick="@(() => this.OpenEditorFor(invalid.Id ?? this.ViewId ?? string.Empty))" Class="tasks-invalid-view-edit">Edit View</MudButton>
+        <MudButton OnClick="@(() => this.OpenEditorFor(invalid.Id ?? this.ViewId ?? string.Empty))" Class="tasks-invalid-view-edit">Edit view</MudButton>
     }
     else if (this.viewNotFound)
     {
