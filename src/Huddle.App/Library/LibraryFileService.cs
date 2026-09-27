@@ -1,4 +1,7 @@
+using System.Globalization;
+using System.Text;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
 
 namespace Agency.Huddle.App.Library;
@@ -25,6 +28,19 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
 
     /// <summary>Settled text for content that fails to decode as text (Spec §10 E-5).</summary>
     private const string UnsupportedTextFormatReason = "Unsupported text format";
+
+    /// <summary>Settled text (Plan 6.5.i; corrections-B4 item 13) for a write re-check that finds the file no
+    /// longer editable: not Markdown, or grown past <see cref="LibraryOptions.MaxEditableBytes"/> since it was
+    /// opened for editing.</summary>
+    private const string ViewOnlyWriteRefusalReason = "This file can't be edited here.";
+
+    /// <summary>Settled text (corrections-B4 item 15) for an atomic write whose final <see cref="File.Move(string, string, bool)"/>
+    /// failed: the target was held open without <see cref="FileShare.Delete"/>, or is read-only.</summary>
+    private static readonly CompositeFormat SaveFailedReasonFormat = CompositeFormat.Parse("Couldn't save {0}: it's in use or read-only.");
+
+    /// <summary>Settled text (Spec §6.12; corrections-B4 item 18): a Teammate definition's frontmatter Name
+    /// changed, and the Teammates page is the only rename path.</summary>
+    private const string RenameOnTeammatesPageReason = "Rename teammates on the Teammates page.";
 
     private readonly LibraryPathResolver resolver = resolver;
     private readonly IRecycleBin recycleBin = recycleBin;
@@ -123,12 +139,8 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
             long length = stream.Length;
             DateTimeOffset lastWriteUtc = new(File.GetLastWriteTimeUtc(stream.SafeFileHandle), TimeSpan.Zero);
 
-            int headLength = (int)Math.Min(DetectionHeadBytes, length);
-            byte[] head = new byte[headLength];
-            await stream.ReadExactlyAsync(head, ct);
-
             string fileName = Path.GetFileName(fresh.FullPath);
-            LibraryFileKind kind = LibraryFileKinds.Detect(fileName, head);
+            (byte[] head, LibraryFileKind kind) = await DetectKindAsync(stream, fileName, length, ct);
 
             if (kind is LibraryFileKind.Image or LibraryFileKind.Other)
             {
@@ -141,15 +153,15 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
             }
 
             byte[] content;
-            if (length == headLength)
+            if (length == head.Length)
             {
                 content = head;
             }
             else
             {
                 content = new byte[length];
-                Array.Copy(head, content, headLength);
-                await stream.ReadExactlyAsync(content.AsMemory(headLength), ct);
+                Array.Copy(head, content, head.Length);
+                await stream.ReadExactlyAsync(content.AsMemory(head.Length), ct);
             }
 
             if (!TextFileCodec.TryDecode(content, LineEnding.CrLf, out string? text, out TextFileFormat? format))
@@ -160,6 +172,150 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
             bool editable = kind == LibraryFileKind.Markdown;
             return new LibraryDocumentContent(fresh, kind, text, format, editable, null, length, lastWriteUtc);
         }
+    }
+
+    /// <summary>
+    /// Writes <paramref name="editorText"/> to <paramref name="file"/> (Spec §6.4 <c>WriteTextAsync</c>;
+    /// ADR-0028): re-resolves the path first (corrections-B4 item 12, never trusting the caller's
+    /// <c>FullPath</c>), re-checks editability at write time (item 13), refuses a Teammate definition's
+    /// frontmatter Name change (Spec §6.12, item 18), then writes atomically through
+    /// <see cref="AtomicFile"/> (item 15). A missing parent folder is created lazily only when it resolves as
+    /// a Team or Project folder (Spec §6.2; item 17).
+    /// </summary>
+    /// <param name="file">The file to write; re-resolved against the current tree before use.</param>
+    /// <param name="editorText">The editor's text, with <c>\n</c>-only newlines.</param>
+    /// <param name="format">The recorded encoding, BOM and line ending from <see cref="ReadAsync"/>.</param>
+    /// <param name="ct">Cancels the write.</param>
+    /// <returns>The fresh <see cref="LibraryEntry"/> (item 14) on success, or a refusal reason.</returns>
+    /// <exception cref="FileNotFoundException">A missing parent folder is not a Team or Project folder.</exception>
+    internal async Task<LibraryResult<LibraryEntry>> WriteTextAsync(LibraryPath file, string editorText, TextFileFormat format, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        ArgumentNullException.ThrowIfNull(editorText);
+        ArgumentNullException.ThrowIfNull(format);
+        ct.ThrowIfCancellationRequested();
+
+        if (!this.resolver.TryResolve(file.Root.Id, file.RelativePath, out LibraryPath? fresh, out string? resolveError))
+        {
+            return new LibraryResult<LibraryEntry>(null, resolveError);
+        }
+
+        string fileName = Path.GetFileName(fresh.FullPath);
+
+        if (!File.Exists(fresh.FullPath))
+        {
+            this.EnsureParentFolderCreated(fresh);
+        }
+        else
+        {
+            LibraryFileKind kind;
+            long currentLength;
+            using (FileStream probe = new(fresh.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            {
+                currentLength = probe.Length;
+                (_, kind) = await DetectKindAsync(probe, fileName, currentLength, ct);
+            }
+
+            bool editable = kind == LibraryFileKind.Markdown;
+            if (!editable || currentLength > this.options.Value.Library.MaxEditableBytes)
+            {
+                return new LibraryResult<LibraryEntry>(null, ViewOnlyWriteRefusalReason);
+            }
+
+            if (fresh.Role == LibraryNodeRole.TeammateDefinition)
+            {
+                string oldText = await File.ReadAllTextAsync(fresh.FullPath, ct);
+                if (TeammateNameChanged(oldText, editorText))
+                {
+                    return new LibraryResult<LibraryEntry>(null, RenameOnTeammatesPageReason);
+                }
+            }
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = TextFileCodec.Encode(editorText, format);
+        }
+        catch (NotSupportedException ex)
+        {
+            return new LibraryResult<LibraryEntry>(null, ex.Message);
+        }
+
+        bool saved = await AtomicFile.TryWriteAsync(fresh.FullPath, bytes, ct);
+        if (!saved)
+        {
+            return new LibraryResult<LibraryEntry>(null, string.Format(CultureInfo.InvariantCulture, SaveFailedReasonFormat, fileName));
+        }
+
+        DateTimeOffset lastWriteUtc = new(File.GetLastWriteTimeUtc(fresh.FullPath), TimeSpan.Zero);
+        LibraryEntry entry = new(fresh, false, bytes.Length, lastWriteUtc);
+        return new LibraryResult<LibraryEntry>(entry, null);
+    }
+
+    /// <summary>Reads the first <see cref="DetectionHeadBytes"/> of <paramref name="stream"/> (already
+    /// positioned at its start) and detects its <see cref="LibraryFileKind"/>. Shared by <see cref="ReadAsync"/>
+    /// and <see cref="WriteTextAsync"/>'s write-time re-check, so the two never duplicate the sniff.</summary>
+    private static async Task<(byte[] Head, LibraryFileKind Kind)> DetectKindAsync(FileStream stream, string fileName, long length, CancellationToken ct)
+    {
+        int headLength = (int)Math.Min(DetectionHeadBytes, length);
+        byte[] head = new byte[headLength];
+        await stream.ReadExactlyAsync(head, ct);
+        LibraryFileKind kind = LibraryFileKinds.Detect(fileName, head);
+        return (head, kind);
+    }
+
+    /// <summary>
+    /// Creates <paramref name="file"/>'s parent folder lazily, but only when the parent itself resolves as a
+    /// <see cref="LibraryNodeRole.TeamFolder"/> or <see cref="LibraryNodeRole.ProjectFolder"/> (corrections-B4
+    /// item 17: the parent's role, resolved fresh, decides this - never the caller's).
+    /// </summary>
+    /// <param name="file">The file whose parent folder is checked and, if eligible, created.</param>
+    /// <exception cref="FileNotFoundException">The parent does not resolve, or is not a Team or Project folder.</exception>
+    private void EnsureParentFolderCreated(LibraryPath file)
+    {
+        string parentRelativePath = ParentRelativePath(file.RelativePath);
+        if (!this.resolver.TryResolve(file.Root.Id, parentRelativePath, out LibraryPath? parent, out string? parentError))
+        {
+            throw new FileNotFoundException(parentError, file.FullPath);
+        }
+
+        if (Directory.Exists(parent.FullPath))
+        {
+            return;
+        }
+
+        if (parent.Role is not (LibraryNodeRole.TeamFolder or LibraryNodeRole.ProjectFolder))
+        {
+            throw new FileNotFoundException($"'{parent.FullPath}' does not exist.", file.FullPath);
+        }
+
+        Directory.CreateDirectory(parent.FullPath);
+    }
+
+    /// <summary>The relative path one folder up from <paramref name="relativePath"/>, or the root
+    /// (<see cref="string.Empty"/>) when <paramref name="relativePath"/> names a direct child of the root.</summary>
+    private static string ParentRelativePath(string relativePath)
+    {
+        int lastSeparator = relativePath.LastIndexOf('/');
+        return lastSeparator < 0 ? string.Empty : relativePath[..lastSeparator];
+    }
+
+    /// <summary>
+    /// Whether a Teammate definition's frontmatter Name differs between its current on-disk text and the text
+    /// about to be saved, compared <see cref="StringComparison.Ordinal"/> (corrections-B4 item 18). Either text
+    /// failing to parse an identity is not treated as a change here; <see cref="TextFileCodec"/> and the caller
+    /// have already accepted the bytes as text.
+    /// </summary>
+    private static bool TeammateNameChanged(string oldText, string newText)
+    {
+        if (!PersonaFrontmatter.TryReadIdentity(oldText, out PersonaIdentity? oldIdentity, out _)
+            || !PersonaFrontmatter.TryReadIdentity(newText, out PersonaIdentity? newIdentity, out _))
+        {
+            return false;
+        }
+
+        return !string.Equals(oldIdentity.Name, newIdentity.Name, StringComparison.Ordinal);
     }
 
     /// <summary>Folders before files, then <see cref="StringComparer.OrdinalIgnoreCase"/> by name.</summary>
