@@ -320,45 +320,6 @@ public sealed partial class TaskBoardColumnMenuTests
         Assert.Equal("Nova is Awake", tooltip.FindComponent<MudBadge>().Instance.BadgeAriaLabel);
     }
 
-    /// <summary>corrections-B7 12.4 item 2: switching the toolbar to Board on a View with no Columns applies the default columns.</summary>
-    [Fact]
-    public async Task Toolbar_SwitchToBoard_NoColumns_AppliesDefaultColumns()
-    {
-        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
-        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView list = harness.Views.Get(ViewStore.AllTasksId) ?? throw new InvalidOperationException("All Tasks is missing.");
-        List<TaskView> changed = [];
-
-        await using MudBunitContext ctx = new();
-        IRenderedComponent<TaskToolbar> toolbar = RenderToolbar(ctx, harness, list, changed.Add);
-        IRenderedComponent<MudToggleGroup<ViewKind>> kind = toolbar.FindComponent<MudToggleGroup<ViewKind>>();
-        await toolbar.InvokeAsync(() => kind.Instance.ValueChanged.InvokeAsync(ViewKind.Board));
-
-        TaskView raised = Assert.Single(changed);
-        Assert.Equal(ViewKind.Board, raised.Kind);
-        Assert.Equal(DefaultLabels, raised.Columns.Select(c => c.Label));
-        Assert.Equal(DefaultColumns.Select(c => string.Join(",", c.States)), raised.Columns.Select(c => string.Join(",", c.States)));
-    }
-
-    /// <summary>corrections-B7 12.4 item 2, the permissive side: a View that already has Columns keeps them when switched to Board.</summary>
-    [Fact]
-    public async Task Toolbar_SwitchToBoard_ExistingColumns_Kept()
-    {
-        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
-        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        IReadOnlyList<BoardColumn> custom = [.. DefaultColumns.Select(c => string.Equals(c.Label, "Review", StringComparison.Ordinal) ? c with { Label = "QA" } : c)];
-        TaskView list = new() { Id = "list", Name = "List", Kind = ViewKind.List, Columns = custom };
-        List<TaskView> changed = [];
-
-        await using MudBunitContext ctx = new();
-        IRenderedComponent<TaskToolbar> toolbar = RenderToolbar(ctx, harness, list, changed.Add);
-        IRenderedComponent<MudToggleGroup<ViewKind>> kind = toolbar.FindComponent<MudToggleGroup<ViewKind>>();
-        await toolbar.InvokeAsync(() => kind.Instance.ValueChanged.InvokeAsync(ViewKind.Board));
-
-        string[] expected = ["Backlog", "To Do", "In Progress", "QA", "Done", "Won't do"];
-        Assert.Equal(expected, Assert.Single(changed).Columns.Select(c => c.Label));
-    }
-
     /// <summary>corrections-B7 12.4 item 6: <c>app.css</c> styles the ghost bucket by its real class <c>.task-ghost-bucket</c>; no bare <c>.ghost-bucket</c> selector is left.</summary>
     [Fact]
     public void AppCss_GhostBucketSelector_MatchesTheMarkup()
@@ -379,7 +340,7 @@ public sealed partial class TaskBoardColumnMenuTests
         Assert.DoesNotMatch(CardDivFocusSelector(), text);
     }
 
-    /// <summary>corrections-B7 12.4 item 1 and Spec §13.12: with no Tasks at all the page shows "No tasks yet." with a <b>+ New task</b> button, once.</summary>
+    /// <summary>corrections-B7 12.4 item 1 and Spec §13.12: with no Tasks at all the page shows "No tasks yet." once, with no button of its own (the toolbar's <b>+ New task</b> is right above it).</summary>
     [Fact]
     public async Task Page_NoTasksAtAll_ShowsNoTasksYet()
     {
@@ -391,7 +352,7 @@ public sealed partial class TaskBoardColumnMenuTests
 
         IElement empty = Assert.Single(cut.FindAll(".tasks-empty"));
         Assert.Equal("No tasks yet.", empty.QuerySelector(".tasks-empty-message")?.TextContent.Trim());
-        Assert.Equal("+ New task", empty.QuerySelector(".tasks-empty-action")?.TextContent.Trim());
+        Assert.Null(empty.QuerySelector(".tasks-empty-action"));
     }
 
     /// <summary>corrections-B7 12.4 item 1: Tasks exist but the effective filter matches none - "No tasks match this View." with <b>Reset filters</b>.</summary>
@@ -451,9 +412,9 @@ public sealed partial class TaskBoardColumnMenuTests
         Assert.Null(empty.QuerySelector(".tasks-empty-action"));
     }
 
-    /// <summary>corrections-B7 12.4 item 1: the empty state is one rendering above both views - on a Board View it shows once, above the Board.</summary>
+    /// <summary>corrections-B7 12.4 item 1: the empty state is one rendering below both views - on a Board View it shows once, below the Board.</summary>
     [Fact]
-    public async Task Page_EmptyStateOnBoard_ShownOnceAboveTheBoard()
+    public async Task Page_EmptyStateOnBoard_ShownOnceBelowTheBoard()
     {
         CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
@@ -465,6 +426,8 @@ public sealed partial class TaskBoardColumnMenuTests
         IElement empty = Assert.Single(cut.FindAll(".tasks-empty"));
         Assert.Equal("No tasks yet.", empty.QuerySelector(".tasks-empty-message")?.TextContent.Trim());
         Assert.Single(cut.FindComponents<TaskBoard>());
+        IElement board = cut.Find(".task-board");
+        Assert.True(board.CompareDocumentPosition(empty).HasFlag(AngleSharp.Dom.DocumentPositions.Following));
     }
 
     /// <summary>corrections-B7 12.4 item 8 and 14.5.i item 4: a Board View renders <see cref="TaskBoard"/> in the page, and opening a card puts a real <see cref="TaskDetail"/> (Panel mode) in the detail drawer for that Task - the 14.5.i replacement for the placeholder this test used to pin.</summary>
@@ -532,9 +495,7 @@ public sealed partial class TaskBoardColumnMenuTests
 
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, harness, viewId: null);
-        IRenderedComponent<TaskToolbar> toolbar = cut.FindComponent<TaskToolbar>();
-        IRenderedComponent<MudToggleGroup<ViewKind>> kind = toolbar.FindComponent<MudToggleGroup<ViewKind>>();
-        await cut.InvokeAsync(() => kind.Instance.ValueChanged.InvokeAsync(ViewKind.Board));
+        await OverrideAsync(cut, view => view with { Kind = ViewKind.Board, Columns = DefaultColumns });
         Assert.Equal(DefaultLabels, cut.FindAll("div.task-board-column-header .task-board-column-label").Select(e => e.TextContent.Trim()));
         ClickHeaderItem(cut, "Done", "Hide");
 
@@ -586,23 +547,6 @@ public sealed partial class TaskBoardColumnMenuTests
         string[] expected = ["Backlog", "To Do", "Doing", "Review", "Done", "Won't do"];
         cut.WaitForAssertion(() => Assert.Equal(expected, cut.FindAll("div.task-board-column-header .task-board-column-label").Select(e => e.TextContent.Trim())));
         Assert.Empty(cut.FindAll(".task-board-column-rename"));
-    }
-
-    /// <summary>12.4.i: Edit View opens the editor at its General section even after <i>Edit columns…</i> had opened it at Columns.</summary>
-    [Fact]
-    public async Task Page_EditViewAfterEditColumns_OpensAtGeneral()
-    {
-        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
-        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        _ = SaveBoard(harness);
-
-        await using MudBunitContext ctx = new();
-        IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, harness, viewId: BoardId);
-        ClickHeaderItem(cut, "Review", "Edit columns…");
-        Assert.Equal(ViewEditorSection.Columns, cut.FindComponent<ViewEditorDrawer>().Instance.Section);
-        await cut.InvokeAsync(() => cut.Find(".task-toolbar-edit-view").Click());
-
-        Assert.Equal(ViewEditorSection.General, cut.FindComponent<ViewEditorDrawer>().Instance.Section);
     }
 
     /// <summary>Saves a Board View <see cref="BoardId"/> with the given columns (the defaults when null).</summary>
@@ -746,25 +690,6 @@ public sealed partial class TaskBoardColumnMenuTests
             builder.AddAttribute(3, nameof(TaskCard.Presence), presence);
             builder.CloseComponent();
         });
-    }
-
-    /// <summary>Renders the toolbar over <paramref name="view"/>.</summary>
-    /// <param name="ctx">The bUnit context.</param>
-    /// <param name="harness">Supplies the toolbar's services.</param>
-    /// <param name="view">The effective View.</param>
-    /// <param name="changed">Receives <c>EffectiveViewChanged</c>.</param>
-    /// <returns>The toolbar.</returns>
-    private static IRenderedComponent<TaskToolbar> RenderToolbar(MudBunitContext ctx, TaskToolHarness harness, TaskView view, Action<TaskView> changed)
-    {
-        harness.AddTo(ctx.Services);
-        IRenderedComponent<ContainerFragment> root = ctx.RenderWithPopovers(builder =>
-        {
-            builder.OpenComponent<TaskToolbar>(0);
-            builder.AddAttribute(1, nameof(TaskToolbar.EffectiveView), view);
-            builder.AddAttribute(2, nameof(TaskToolbar.EffectiveViewChanged), EventCallback.Factory.Create(changed, changed));
-            builder.CloseComponent();
-        });
-        return root.FindComponent<TaskToolbar>();
     }
 
     /// <summary>Renders the Tasks page at <paramref name="viewId"/>.</summary>

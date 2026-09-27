@@ -15,8 +15,9 @@ public sealed class AppearanceRenderingTests
     // The exact CSS custom property MudThemeProvider.GenerateTheme emits for Palette.Primary, in
     // MudColor's default (rgba) string form - see ThemeCatalogTests for the same value read back
     // through the C# API instead. Present in the response only when the "Huddle Light" theme's
-    // palette actually rendered.
-    private const string LightPrimaryVariable = "--mud-palette-primary: rgba(74,21,75,1);";
+    // palette actually rendered. #007c85: HuddleTheme.Light's own remarks walk through why this is a
+    // darkened cyan rather than the requested #00b7c3 verbatim.
+    private const string LightPrimaryVariable = "--mud-palette-primary: rgba(0,124,133,1);";
 
     // The counterpart for "Huddle Dark", present only when IsDarkMode resolved to true before the
     // response was written.
@@ -106,6 +107,44 @@ public sealed class AppearanceRenderingTests
 
         await using TeamWebApplicationFactory factory = new();
         File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"nonsense\"}");
+        using HttpClient client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/", ct);
+
+        Assert.Contains(LightPrimaryVariable, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Selecting "Custom Accent Light" with a chosen accent colour renders that colour, not the
+    /// placeholder Huddle Light Primary - and it does so from a plain HTTP GET, with no browser
+    /// JavaScript involved. Unlike the browser-detection approach this replaced, the accent colour is
+    /// a Human-picked, server-persisted value known synchronously on the very first render.
+    /// </summary>
+    [Fact]
+    public async Task AppShell_WithCustomAccentAndAColourChosen_RendersThatColourNotThePlaceholder()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"custom-accent\",\"accentColor\":\"#00b294\"}");
+        using HttpClient client = factory.CreateClient();
+
+        var html = await client.GetStringAsync("/", ct);
+
+        Assert.Contains("--mud-palette-primary:", html, StringComparison.Ordinal);
+        Assert.DoesNotContain(LightPrimaryVariable, html, StringComparison.Ordinal);
+    }
+
+    /// <summary>Selecting "Custom Accent Light" with no colour chosen yet renders the placeholder - plain Huddle Light's own Primary - rather than an error or a blank palette.</summary>
+    [Fact]
+    public async Task AppShell_WithCustomAccentAndNoColourChosen_RendersThePlaceholder()
+    {
+        using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
+        CancellationToken ct = cts.Token;
+
+        await using TeamWebApplicationFactory factory = new();
+        File.WriteAllText(factory.AppearanceJsonPath, "{\"theme\":\"custom-accent\"}");
         using HttpClient client = factory.CreateClient();
 
         var html = await client.GetStringAsync("/", ct);

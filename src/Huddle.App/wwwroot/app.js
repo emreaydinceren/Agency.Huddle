@@ -112,6 +112,57 @@ window.huddleStorage = {
   set: function (key, value) { try { window.localStorage.setItem(key, value); } catch { } }
 };
 
+window.huddleResize = {
+  // Drag-to-resize for the Task detail panel's End-anchored MudDrawer. Writes straight to the
+  // drawer's own "--mud-drawer-width" instance variable on every pointermove - the same one
+  // MudBlazor's compiled CSS already falls back to var(--mud-drawer-width-right) for - so dragging
+  // never round-trips to the server; only the width huddleStorage remembers does, on release.
+  attachDrawer(handle, storageKey, minPx, maxPx, defaultPx) {
+    const clamp = (px) => Math.min(maxPx, Math.max(minPx, px));
+    const drawer = handle.closest(".mud-drawer");
+    if (!drawer) {
+      return;
+    }
+
+    const stored = window.huddleStorage.get(storageKey);
+    const restored = stored ? parseInt(stored, 10) : NaN;
+    drawer.style.setProperty("--mud-drawer-width", clamp(Number.isFinite(restored) ? restored : defaultPx) + "px");
+
+    let dragging = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    handle.addEventListener("pointerdown", (e) => {
+      dragging = true;
+      startX = e.clientX;
+      startWidth = drawer.getBoundingClientRect().width;
+      handle.setPointerCapture(e.pointerId);
+      e.preventDefault();
+    });
+
+    handle.addEventListener("pointermove", (e) => {
+      if (!dragging) {
+        return;
+      }
+      // Anchor.End puts the drawer on the right, so dragging the handle left (clientX decreasing,
+      // startX - e.clientX growing) is what should grow it.
+      drawer.style.setProperty("--mud-drawer-width", clamp(startWidth + (startX - e.clientX)) + "px");
+    });
+
+    const endDrag = (e) => {
+      if (!dragging) {
+        return;
+      }
+      dragging = false;
+      handle.releasePointerCapture(e.pointerId);
+      window.huddleStorage.set(storageKey, String(Math.round(drawer.getBoundingClientRect().width)));
+    };
+
+    handle.addEventListener("pointerup", endDrag);
+    handle.addEventListener("pointercancel", endDrag);
+  },
+};
+
 window.huddleClipboard = {
   // Returns true only when the text really reached the clipboard.
   copy: async function (text) {

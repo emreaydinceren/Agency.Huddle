@@ -136,6 +136,76 @@ public sealed class AppearanceStoreTests
         Assert.True(raised);
     }
 
+    /// <summary>A well-formed <c>#rrggbb</c> accent colour resolves - the one extra value this store carries alongside the theme id.</summary>
+    [Fact]
+    public void Current_WithAValidAccentColor_ResolvesIt()
+    {
+        using var dataDir = new TempDataDir();
+        var path = Path.Combine(dataDir.Path, "appearance.json");
+        File.WriteAllText(path, "{\"theme\":\"custom-accent\",\"accentColor\":\"#00b294\"}");
+
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+
+        Assert.Equal("custom-accent", store.Current.ThemeId);
+        Assert.Equal("#00b294", store.Current.AccentColorHex);
+    }
+
+    /// <summary>A malformed accent colour is a warning, never a failure: no colour is used (so the placeholder theme applies) and the file is left exactly as it was, the same tolerance an unknown theme id gets.</summary>
+    [Fact]
+    public void Current_WithAMalformedAccentColor_ResolvesNullAndLeavesTheFileUnchanged()
+    {
+        using var dataDir = new TempDataDir();
+        var path = Path.Combine(dataDir.Path, "appearance.json");
+        File.WriteAllText(path, "{\"accentColor\":\"not-a-colour\"}");
+
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+
+        Assert.Null(store.Current.AccentColorHex);
+        Assert.Contains("not-a-colour", File.ReadAllText(path), StringComparison.Ordinal);
+    }
+
+    /// <summary><see cref="AppearanceStore.SaveAccentColor"/> writes its own key and leaves the theme id - saved separately by <see cref="AppearanceStore.Save"/> - untouched, proving the two writers cannot clobber each other.</summary>
+    [Fact]
+    public void SaveAccentColor_WritesTheAccentColorAndLeavesTheThemeUntouched()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+        store.Save("custom-accent");
+
+        store.SaveAccentColor("#00b294");
+
+        Assert.Equal("custom-accent", store.Current.ThemeId);
+        Assert.Equal("#00b294", store.Current.AccentColorHex);
+    }
+
+    /// <summary><see cref="AppearanceStore.SaveAccentColor"/> with <see langword="null"/> clears a previously chosen colour, removing the key entirely rather than leaving an empty string behind.</summary>
+    [Fact]
+    public void SaveAccentColor_WithNull_ClearsAPreviouslyChosenColour()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+        store.SaveAccentColor("#00b294");
+
+        store.SaveAccentColor(null);
+
+        Assert.Null(store.Current.AccentColorHex);
+        Assert.DoesNotContain("accentColor", File.ReadAllText(Path.Combine(dataDir.Path, "appearance.json")), StringComparison.Ordinal);
+    }
+
+    /// <summary>Saving an accent colour raises <see cref="AppearanceStore.AppearanceChanged"/> after the write and the rebuild, mirroring <see cref="Save_RaisesAppearanceChanged"/>.</summary>
+    [Fact]
+    public void SaveAccentColor_RaisesAppearanceChanged()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+        var raised = false;
+        store.AppearanceChanged += () => raised = true;
+
+        store.SaveAccentColor("#00b294");
+
+        Assert.True(raised);
+    }
+
     /// <summary>
     /// Polls <paramref name="condition"/> until it is true or a generous timeout elapses, for
     /// asserting on a <see cref="FileSystemWatcher"/>-driven, timing-dependent side effect without a

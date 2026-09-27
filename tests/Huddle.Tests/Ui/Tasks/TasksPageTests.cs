@@ -45,7 +45,7 @@ public sealed class TasksPageTests
         IDocument document = new HtmlParser().ParseDocument(html);
         IElement heading = document.QuerySelector(".tasks-header h1") ?? throw new InvalidOperationException("No .tasks-header h1 in the response.");
 
-        Assert.Equal("Tasks: All Tasks", NormalizeWhitespace(heading.TextContent));
+        Assert.Equal("All Tasks", NormalizeWhitespace(heading.TextContent));
     }
 
     /// <summary>A ViewId naming no known View - built-in, valid or invalid - shows the "no longer exists" warning, with <c>role="status"</c>.</summary>
@@ -221,11 +221,11 @@ public sealed class TasksPageTests
             builder.AddAttribute(1, nameof(TasksPage.ViewId), "custom-view");
             builder.CloseComponent();
         });
-        cut.WaitForAssertion(() => Assert.Equal("Tasks: Sprint Board", cut.Find(".tasks-header h1").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("Sprint Board", cut.Find(".tasks-header h1").TextContent.Trim()));
 
         Assert.True(harness.Views.Save(new TaskView { Id = "custom-view", Name = "Sprint Board Renamed", Kind = ViewKind.List }).Saved);
 
-        cut.WaitForAssertion(() => Assert.Equal("Tasks: Sprint Board Renamed", cut.Find(".tasks-header h1").TextContent.Trim()));
+        cut.WaitForAssertion(() => Assert.Equal("Sprint Board Renamed", cut.Find(".tasks-header h1").TextContent.Trim()));
     }
 
     /// <summary>
@@ -289,26 +289,6 @@ public sealed class TasksPageTests
         var drawer = cut.FindComponent<ViewEditorDrawer>();
         Assert.True(drawer.Instance.Open);
         Assert.Equal("bad-view", drawer.Instance.Id);
-    }
-
-    /// <summary>Clicking Edit View opens <see cref="ViewEditorDrawer"/> for the currently effective View (corrections-B5 D13 item 7: hosting moves here from 13.1.i).</summary>
-    [Fact]
-    public async Task TasksPage_EditViewClicked_OpensTheViewEditorDrawer()
-    {
-        using TaskToolHarness harness = new();
-        await using MudBunitContext ctx = NewContext(harness);
-
-        var cut = ctx.RenderWithPopovers(builder =>
-        {
-            builder.OpenComponent<TasksPage>(0);
-            builder.CloseComponent();
-        });
-
-        await cut.InvokeAsync(() => cut.Find(".task-toolbar-edit-view").Click());
-
-        var drawer = cut.FindComponent<ViewEditorDrawer>();
-        Assert.True(drawer.Instance.Open);
-        Assert.Equal(ViewStore.AllTasksId, drawer.Instance.Id);
     }
 
     /// <summary><c>/tasks/new</c> opens <see cref="ViewEditorDrawer"/> for a new View (<c>Id</c> null), rather than falling through to All Tasks.</summary>

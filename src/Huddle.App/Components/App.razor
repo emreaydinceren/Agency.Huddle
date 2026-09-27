@@ -6,6 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     <ResourcePreloader />
+    @* Inter is the application's UI font (see ThemeDefaults.UiFontFamily); preconnect first so the
+       DNS/TLS handshake to Google's font hosts overlaps with the rest of the head parsing instead
+       of stalling behind it, then load the variable-weight family itself. *@
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet" />
     @* MudBlazor.min.css is linked first, before every app stylesheet, so its bare-element reset
        rules (e.g. "body{...}") lose the source-order tie against app.css's own bare "html, body"
        selector - both are specificity (0,0,1), so whichever loads last wins. A library reset

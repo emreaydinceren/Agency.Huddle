@@ -23,16 +23,29 @@ internal static class HuddleTheme
     /// </summary>
     /// <returns>A new <see cref="PaletteLight"/> carrying today's light palette values.</returns>
     /// <remarks>
+    /// <para>
     /// The neutrals are warm, low-contrast greys sampled from the Claude desktop app's light
     /// surface: an off-white ground with white inputs raised on it, and hairline borders a shade
-    /// darker than the ground rather than mid-grey rules. The brand colours are unchanged.
+    /// darker than the ground rather than mid-grey rules.
+    /// </para>
+    /// <para>
+    /// <c>Primary</c> was rebranded from the original burgundy (<c>#4a154b</c>), first to a seafoam
+    /// green and then, on request, to a cyan. The requested shade, <c>#00B7C3</c>, measures only
+    /// 2.4:1 against this palette's own Background and Surface - under the WCAG 1.4.3 4.5:1 floor
+    /// <c>ThemeCatalogTests</c> holds every built-in theme's Primary to, and would read as
+    /// low-contrast text or a hard-to-read active nav link. <c>#007c85</c> keeps that same hue (184
+    /// degrees) and saturation (full), darkened until it clears the floor - 4.80:1 against
+    /// Background, 4.97:1 against Surface - the identical move <see cref="Dark"/>'s own <c>Primary</c>
+    /// already made for the original burgundy brand hue, and the one <c>AccentPalette.ClampForContrast</c>
+    /// automates for a Human's own accent colour choice.
+    /// </para>
     /// </remarks>
     public static PaletteLight Light() => new()
     {
-        Background = "#fbfbfa",
-        Surface = "#ffffff",
-        DrawerBackground = "#f5f5f3",
-        BackgroundGray = "#f3f3f1",
+        Background = "#f2f0ed",
+        Surface = "#fbfaf8",
+        DrawerBackground = "#f5f4f2",
+        BackgroundGray = "#e5e2e0",
         TableHover = "#efefed",
         Divider = "#e5e5e4",
         DividerLight = "#ededec",
@@ -41,8 +54,8 @@ internal static class HuddleTheme
         TextPrimary = "#141413",
         TextSecondary = "#52514e",
         TextDisabled = "#8a8882",
-        Primary = "#4a154b",
-        PrimaryDarken = "#611f69",
+        Primary = "#007c85",
+        PrimaryDarken = "#00565c",
         PrimaryContrastText = "#ffffff",
         Secondary = "#3a6fd8",
         Success = "#2e9e44",
