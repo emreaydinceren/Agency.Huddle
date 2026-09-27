@@ -1,10 +1,5 @@
 using System.Reflection;
 using System.Text;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
-using Agency.Huddle.App;
-using Agency.Huddle.App.Acp;
-using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.Tests.Library;
@@ -42,7 +37,7 @@ public sealed class LibraryFileServiceWriteTests
     public async Task Write_Unchanged_IsByteIdentical(byte[] originalBytes)
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string vault = fixture.CreatePinnedRoot("Vault");
         string filePath = Path.Combine(vault, "note.md");
         File.WriteAllBytes(filePath, originalBytes);
@@ -64,7 +59,7 @@ public sealed class LibraryFileServiceWriteTests
     public async Task Write_Atomic_LeavesNoTempFile()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string vault = fixture.CreatePinnedRoot("Vault");
         string filePath = Path.Combine(vault, "note.md");
         File.WriteAllText(filePath, "hello");
@@ -84,7 +79,7 @@ public sealed class LibraryFileServiceWriteTests
     public async Task Write_ViewOnlyDocument_Refused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string vault = fixture.CreatePinnedRoot("Vault");
         string filePath = Path.Combine(vault, "data.json");
         File.WriteAllText(filePath, "{}");
@@ -106,7 +101,7 @@ public sealed class LibraryFileServiceWriteTests
     public async Task Write_MarkdownGrewNulBytesOnDisk_Refused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string vault = fixture.CreatePinnedRoot("Vault");
         string filePath = Path.Combine(vault, "note.md");
         File.WriteAllText(filePath, "hello");
@@ -131,7 +126,7 @@ public sealed class LibraryFileServiceWriteTests
     public async Task Write_MarkdownGrewPastCap_Refused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build(teamOptions => teamOptions.Library.MaxEditableBytes = 16);
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build(teamOptions => teamOptions.Library.MaxEditableBytes = 16);
         string vault = fixture.CreatePinnedRoot("Vault");
         string filePath = Path.Combine(vault, "note.md");
         File.WriteAllText(filePath, "short");
@@ -155,7 +150,7 @@ public sealed class LibraryFileServiceWriteTests
     public async Task Write_UnknownEncoding_RefusedNotThrown()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string vault = fixture.CreatePinnedRoot("Vault");
         string filePath = Path.Combine(vault, "note.md");
         File.WriteAllText(filePath, "hello");
@@ -203,7 +198,7 @@ public sealed class LibraryFileServiceWriteTests
     public async Task Write_MissingProjectFolder_CreatesIt()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string teamsRoot = Path.Combine(fixture.DataDir, "Teams");
         string marketing = Path.Combine(teamsRoot, "Marketing");
         Directory.CreateDirectory(marketing);
@@ -228,7 +223,7 @@ public sealed class LibraryFileServiceWriteTests
     public async Task Write_MissingParent_NotTeamOrProjectFolder_Throws()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string vault = fixture.CreatePinnedRoot("Vault");
         LibraryFileService service = fixture.CreateService();
         LibraryPath vaultRoot = fixture.Resolve(vault, string.Empty);
@@ -247,7 +242,7 @@ public sealed class LibraryFileServiceWriteTests
     public async Task Write_MissingTeamFolder_CreatesIt()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string teamsRoot = Path.Combine(fixture.DataDir, "Teams");
         LibraryFileService service = fixture.CreateService();
         LibraryPath teamsRootPath = fixture.ResolveTeams(string.Empty);
@@ -269,7 +264,7 @@ public sealed class LibraryFileServiceWriteTests
     public async Task Write_TamperedPath_Refused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string vault = fixture.CreatePinnedRoot("Vault");
         File.WriteAllText(Path.Combine(vault, "note.md"), "hello");
         LibraryFileService service = fixture.CreateService();
@@ -290,7 +285,7 @@ public sealed class LibraryFileServiceWriteTests
     public async Task Write_TamperedFullPath_ValidRelative_UsesReResolvedFullPath()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string vault = fixture.CreatePinnedRoot("Vault");
         File.WriteAllText(Path.Combine(vault, "note.md"), "hello");
         LibraryFileService service = fixture.CreateService();
@@ -311,7 +306,7 @@ public sealed class LibraryFileServiceWriteTests
     public async Task Write_Result_CarriesFreshLengthAndLastWriteUtc()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string vault = fixture.CreatePinnedRoot("Vault");
         string filePath = Path.Combine(vault, "note.md");
         File.WriteAllText(filePath, "hi");
@@ -339,7 +334,7 @@ public sealed class LibraryFileServiceWriteTests
         }
 
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string vault = fixture.CreatePinnedRoot("Vault");
         string filePath = Path.Combine(vault, "note.md");
         File.WriteAllText(filePath, "hi");
@@ -364,7 +359,7 @@ public sealed class LibraryFileServiceWriteTests
     public async Task Write_TeammateDefinitionNameChanged_Refused()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string originalText = fixture.CreateTeammate("ada", "Ada", "ada");
         LibraryFileService service = fixture.CreateService();
         LibraryPath path = fixture.ResolveTeammates("ada");
@@ -384,7 +379,7 @@ public sealed class LibraryFileServiceWriteTests
     public async Task Write_TeammateDefinitionNameUnchanged_Succeeds()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        using Fixture fixture = Fixture.Build();
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         _ = fixture.CreateTeammate("ada", "Ada", "ada");
         LibraryFileService service = fixture.CreateService();
         LibraryPath path = fixture.ResolveTeammates("ada");
@@ -398,126 +393,4 @@ public sealed class LibraryFileServiceWriteTests
         Assert.Equal(sameNameText, File.ReadAllText(path.FullPath));
     }
 
-    /// <summary>A minimal <see cref="IRecycleBin"/> fake: this task never calls it, only satisfies the constructor.</summary>
-    private sealed class RecordingRecycleBin : IRecycleBin
-    {
-        /// <summary>Every path passed to <see cref="TrySend"/> so far, in call order.</summary>
-        public List<string> Sent { get; } = [];
-
-        /// <summary>Records <paramref name="fullPath"/> and always succeeds.</summary>
-        /// <param name="fullPath">The path this fake records.</param>
-        /// <param name="error">Always <see langword="null"/>.</param>
-        /// <returns><see langword="true"/>, always.</returns>
-        public bool TrySend(string fullPath, [System.Diagnostics.CodeAnalysis.NotNullWhen(false)] out string? error)
-        {
-            this.Sent.Add(fullPath);
-            error = null;
-            return true;
-        }
-    }
-
-    /// <summary>An isolated fixture: a real <see cref="LibraryRootStore"/> and <see cref="LibraryPathResolver"/> over a temp <c>DataDir</c>, plus the <see cref="RecordingRecycleBin"/> fake.</summary>
-    private sealed class Fixture : IDisposable
-    {
-        private readonly TempDataDir temp;
-        private readonly TeamOptions teamOptions;
-
-        private Fixture(TempDataDir temp, TeamOptions teamOptions)
-        {
-            this.temp = temp;
-            this.teamOptions = teamOptions;
-            this.DataDir = teamOptions.DataDir;
-            TeammatePaths paths = new(Options.Create(teamOptions));
-            this.RootStore = new LibraryRootStore(Options.Create(teamOptions), paths, NullLogger<LibraryRootStore>.Instance);
-            this.Resolver = new LibraryPathResolver(this.RootStore, Options.Create(teamOptions), NullLogger<LibraryPathResolver>.Instance);
-        }
-
-        public string DataDir { get; }
-
-        public LibraryRootStore RootStore { get; private set; }
-
-        public LibraryPathResolver Resolver { get; private set; }
-
-        /// <summary>Builds a fixture with the standard Teams/Teammates layout, optionally customising <see cref="TeamOptions"/> first.</summary>
-        public static Fixture Build(Action<TeamOptions>? configure = null)
-        {
-            TempDataDir temp = new();
-            Directory.CreateDirectory(Path.Combine(temp.Path, "Teams"));
-            Directory.CreateDirectory(Path.Combine(temp.Path, "Teammates"));
-
-            TeamOptions teamOptions = new() { DataDir = temp.Path };
-            configure?.Invoke(teamOptions);
-
-            return new Fixture(temp, teamOptions);
-        }
-
-        /// <summary>Creates a pinned root folder named <paramref name="name"/> under the temp root and reloads the store and resolver.</summary>
-        public string CreatePinnedRoot(string name)
-        {
-            string path = Path.Combine(this.temp.Path, name);
-            Directory.CreateDirectory(path);
-
-            List<PinnedRootOption> roots = [.. this.teamOptions.Library.Roots ?? [], new PinnedRootOption { Name = name, Path = path }];
-            this.teamOptions.Library.Roots = roots;
-            this.Reload();
-            return path;
-        }
-
-        /// <summary>Writes a minimal, valid Teammate definition under the Teammates root and reloads the store
-        /// and resolver. Returns the written text.</summary>
-        public string CreateTeammate(string stem, string name, string alias)
-        {
-            TeammatePaths paths = new(Options.Create(this.teamOptions));
-            string text = $"---\nName: {name}\nTitle: Chief of Staff\nAlias: {alias}\n_builtin: chief-of-staff\n---\nbody";
-            Directory.CreateDirectory(paths.TeammateFolder(stem));
-            File.WriteAllText(paths.DefinitionFile(stem), text);
-            this.Reload();
-            return text;
-        }
-
-        /// <summary>Constructs the service under test, wired to this fixture's resolver and a fresh <see cref="RecordingRecycleBin"/>.</summary>
-        public LibraryFileService CreateService() => new(this.Resolver, new RecordingRecycleBin(), Options.Create(this.teamOptions), NullLogger<LibraryFileService>.Instance);
-
-        /// <summary>Resolves <paramref name="relativePath"/> inside the pinned root at <paramref name="rootPath"/>.</summary>
-        public LibraryPath Resolve(string rootPath, string relativePath)
-        {
-            foreach (LibraryRoot candidate in this.RootStore.Roots)
-            {
-                if (FolderSnapshot.PathComparer.Equals(candidate.FullPath, rootPath))
-                {
-                    Assert.True(this.Resolver.TryResolve(candidate.Id, relativePath, out LibraryPath? resolved, out _));
-                    Assert.NotNull(resolved);
-                    return resolved;
-                }
-            }
-
-            throw new InvalidOperationException($"No pinned root at '{rootPath}'.");
-        }
-
-        /// <summary>Resolves <paramref name="relativePath"/> inside the Teams root.</summary>
-        public LibraryPath ResolveTeams(string relativePath)
-        {
-            Assert.True(this.Resolver.TryResolve("teams", relativePath, out LibraryPath? resolved, out _));
-            Assert.NotNull(resolved);
-            return resolved;
-        }
-
-        /// <summary>Resolves the definition file for the Teammate with stem <paramref name="stem"/>.</summary>
-        public LibraryPath ResolveTeammates(string stem)
-        {
-            Assert.True(this.Resolver.TryResolve("teammates", $"{stem}/{stem}.md", out LibraryPath? resolved, out _));
-            Assert.NotNull(resolved);
-            return resolved;
-        }
-
-        /// <summary>Reloads the root store and resolver, picking up on-disk changes made since construction.</summary>
-        public void Reload()
-        {
-            TeammatePaths paths = new(Options.Create(this.teamOptions));
-            this.RootStore = new LibraryRootStore(Options.Create(this.teamOptions), paths, NullLogger<LibraryRootStore>.Instance);
-            this.Resolver = new LibraryPathResolver(this.RootStore, Options.Create(this.teamOptions), NullLogger<LibraryPathResolver>.Instance);
-        }
-
-        public void Dispose() => this.temp.Dispose();
-    }
 }

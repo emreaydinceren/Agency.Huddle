@@ -42,6 +42,23 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
     /// changed, and the Teammates page is the only rename path.</summary>
     private const string RenameOnTeammatesPageReason = "Rename teammates on the Teammates page.";
 
+    /// <summary>Settled text (corrections-B4 item 19) when a create target's name is already taken by a file
+    /// or a folder.</summary>
+    private static readonly CompositeFormat AlreadyExistsReasonFormat = CompositeFormat.Parse("\"{0}\" already exists here.");
+
+    /// <summary>Settled text (corrections-B4 item 19) for a create failure that is not an existence clash.</summary>
+    private static readonly CompositeFormat CouldNotCreateReasonFormat = CompositeFormat.Parse("Couldn't create {0}.");
+
+    /// <summary>Settled text (corrections-B4 item 21) refusing a create directly at the Teammates root.</summary>
+    private const string CreateAtTeammatesRootReason = "Add teammates on the Teammates page.";
+
+    /// <summary>Settled text (corrections-B4 item 21) refusing a <c>.md</c> file created directly in a
+    /// Teammate folder.</summary>
+    private const string CreateMdInTeammateFolderReason = "A teammate folder holds only its definition; use work/.";
+
+    /// <summary>The default extension for a new note whose name has no known Spec §6.11 extension (corrections-B4 item 23).</summary>
+    private const string DefaultNoteExtension = ".md";
+
     private readonly LibraryPathResolver resolver = resolver;
     private readonly IRecycleBin recycleBin = recycleBin;
     private readonly IOptions<TeamOptions> options = options;
@@ -251,6 +268,162 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
         DateTimeOffset lastWriteUtc = new(File.GetLastWriteTimeUtc(fresh.FullPath), TimeSpan.Zero);
         LibraryEntry entry = new(fresh, false, bytes.Length, lastWriteUtc);
         return new LibraryResult<LibraryEntry>(entry, null);
+    }
+
+    /// <summary>
+    /// Creates a new note under <paramref name="folder"/> (Spec §6.4 create row): a name with no known
+    /// Spec §6.11 extension gets <c>.md</c> appended (corrections-B4 item 23), otherwise it is kept as-is.
+    /// Validated with <see cref="LibraryNames.Validate"/>, refused directly at the Teammates root or for a
+    /// <c>.md</c> file directly in a Teammate folder (item 21). Uses <see cref="FileMode.CreateNew"/> so a
+    /// race becomes an <see cref="IOException"/>, resolved to the settled exists text (item 19). The returned
+    /// path is re-resolved after creation (item 22).
+    /// </summary>
+    /// <param name="folder">The already-resolved folder to create the file in; re-resolved before use.</param>
+    /// <param name="name">The new file's name, without regard to its final extension.</param>
+    /// <param name="ct">Cancels the create.</param>
+    /// <returns>The fresh <see cref="LibraryPath"/> on success, or a refusal reason.</returns>
+    internal async Task<LibraryResult<LibraryPath>> CreateFileAsync(LibraryPath folder, string name, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+        ArgumentNullException.ThrowIfNull(name);
+        ct.ThrowIfCancellationRequested();
+
+        string? nameError = LibraryNames.Validate(name);
+        if (nameError is not null)
+        {
+            return new LibraryResult<LibraryPath>(null, nameError);
+        }
+
+        if (!this.resolver.TryResolve(folder.Root.Id, folder.RelativePath, out LibraryPath? fresh, out string? resolveError))
+        {
+            return new LibraryResult<LibraryPath>(null, resolveError);
+        }
+
+        if (fresh.Root.Kind == LibraryRootKind.Teammates && fresh.RelativePath.Length == 0)
+        {
+            return new LibraryResult<LibraryPath>(null, CreateAtTeammatesRootReason);
+        }
+
+        string finalName = LibraryFileKinds.HasKnownExtension(name) ? name : name + DefaultNoteExtension;
+
+        if (fresh.Role == LibraryNodeRole.TeammateFolder && string.Equals(Path.GetExtension(finalName), ".md", StringComparison.OrdinalIgnoreCase))
+        {
+            return new LibraryResult<LibraryPath>(null, CreateMdInTeammateFolderReason);
+        }
+
+        if (!this.TryResolveCreateTarget(fresh, finalName, out LibraryPath? target, out string? targetError))
+        {
+            return new LibraryResult<LibraryPath>(null, targetError);
+        }
+
+        try
+        {
+            using FileStream stream = new(target.FullPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+            await stream.FlushAsync(ct);
+        }
+        catch (IOException)
+        {
+            return new LibraryResult<LibraryPath>(null, CreateFailureReason(finalName, target.FullPath));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return new LibraryResult<LibraryPath>(null, CreateFailureReason(finalName, target.FullPath));
+        }
+
+        return this.ReResolveCreated(fresh, finalName);
+    }
+
+    /// <summary>
+    /// Creates a new folder under <paramref name="folder"/> (Spec §6.4 create row). Existence is checked
+    /// BEFORE <see cref="Directory.CreateDirectory(string)"/> (corrections-B4 item 20: it is idempotent and
+    /// can't signal "exists" on its own). Refused directly at the Teammates root (item 21). The returned path
+    /// is re-resolved after creation (item 22).
+    /// </summary>
+    /// <param name="folder">The already-resolved folder to create the new folder in; re-resolved before use.</param>
+    /// <param name="name">The new folder's name.</param>
+    /// <param name="ct">Cancels the create.</param>
+    /// <returns>The fresh <see cref="LibraryPath"/> on success, or a refusal reason.</returns>
+    internal Task<LibraryResult<LibraryPath>> CreateFolderAsync(LibraryPath folder, string name, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+        ArgumentNullException.ThrowIfNull(name);
+        ct.ThrowIfCancellationRequested();
+
+        string? nameError = LibraryNames.Validate(name);
+        if (nameError is not null)
+        {
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, nameError));
+        }
+
+        if (!this.resolver.TryResolve(folder.Root.Id, folder.RelativePath, out LibraryPath? fresh, out string? resolveError))
+        {
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, resolveError));
+        }
+
+        if (fresh.Root.Kind == LibraryRootKind.Teammates && fresh.RelativePath.Length == 0)
+        {
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, CreateAtTeammatesRootReason));
+        }
+
+        if (!this.TryResolveCreateTarget(fresh, name, out LibraryPath? target, out string? targetError))
+        {
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, targetError));
+        }
+
+        if (Directory.Exists(target.FullPath) || File.Exists(target.FullPath))
+        {
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, string.Format(CultureInfo.InvariantCulture, AlreadyExistsReasonFormat, name)));
+        }
+
+        try
+        {
+            Directory.CreateDirectory(target.FullPath);
+        }
+        catch (IOException)
+        {
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, string.Format(CultureInfo.InvariantCulture, CouldNotCreateReasonFormat, name)));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, string.Format(CultureInfo.InvariantCulture, CouldNotCreateReasonFormat, name)));
+        }
+
+        return Task.FromResult(this.ReResolveCreated(fresh, name));
+    }
+
+    /// <summary>Resolves the not-yet-existing child <paramref name="finalName"/> of <paramref name="fresh"/>,
+    /// without trusting the caller's <see cref="LibraryPath.FullPath"/> (shares the resolver boundary with
+    /// <see cref="ReadAsync"/> and <see cref="WriteTextAsync"/>).</summary>
+    private bool TryResolveCreateTarget(LibraryPath fresh, string finalName, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out LibraryPath? target, [System.Diagnostics.CodeAnalysis.NotNullWhen(false)] out string? error)
+    {
+        string childRelativePath = fresh.RelativePath.Length == 0 ? finalName : $"{fresh.RelativePath}/{finalName}";
+        return this.resolver.TryResolve(fresh.Root.Id, childRelativePath, out target, out error);
+    }
+
+    /// <summary>Re-resolves the just-created child so its <see cref="LibraryPath.Role"/> reflects the disk,
+    /// not a missing-path depth guess (corrections-B4 item 22). Shares <see cref="TryResolveCreateTarget"/>'s
+    /// child-path computation rather than recomputing it.</summary>
+    private LibraryResult<LibraryPath> ReResolveCreated(LibraryPath fresh, string finalName)
+    {
+        if (!this.TryResolveCreateTarget(fresh, finalName, out LibraryPath? reResolved, out string? error))
+        {
+            return new LibraryResult<LibraryPath>(null, error);
+        }
+
+        return new LibraryResult<LibraryPath>(reResolved, null);
+    }
+
+    /// <summary>Maps a <see cref="FileMode.CreateNew"/> failure to the settled create-failure text
+    /// (corrections-B4 item 19): an existence clash decides the exists text, anything else the generic
+    /// "couldn't create" text.</summary>
+    private static string CreateFailureReason(string name, string fullPath)
+    {
+        if (File.Exists(fullPath) || Directory.Exists(fullPath))
+        {
+            return string.Format(CultureInfo.InvariantCulture, AlreadyExistsReasonFormat, name);
+        }
+
+        return string.Format(CultureInfo.InvariantCulture, CouldNotCreateReasonFormat, name);
     }
 
     /// <summary>Reads the first <see cref="DetectionHeadBytes"/> of <paramref name="stream"/> (already

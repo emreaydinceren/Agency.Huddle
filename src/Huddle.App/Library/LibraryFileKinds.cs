@@ -13,7 +13,40 @@ internal static class LibraryFileKinds
         ".txt", ".json", ".yaml", ".yml", ".cs", ".js", ".ts", ".css", ".xml", ".ps1", ".csv", ".log"
     );
 
+    /// <summary>The Spec §6.11 Markdown extensions, shared by <see cref="HasKnownExtension"/> and <see cref="Detect"/>.</summary>
+    private static readonly FrozenSet<string> MarkdownExtensions = FrozenSet.Create(
+        StringComparer.OrdinalIgnoreCase,
+        ".md", ".markdown"
+    );
+
+    /// <summary>The Spec §6.11 SVG extension, shared by <see cref="HasKnownExtension"/> and <see cref="Detect"/>.</summary>
+    private const string SvgExtension = ".svg";
+
     private static ReadOnlySpan<byte> PngSignature => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
+    /// <summary>
+    /// Whether <paramref name="fileName"/> already carries a Spec §6.11 known extension (Markdown, text/code
+    /// or image), so <see cref="LibraryFileService.CreateFileAsync"/> keeps it as-is rather than appending
+    /// <c>.md</c> (corrections-B4 item 23). Shares the same extension lists as <see cref="Detect"/> so the two
+    /// can never drift.
+    /// </summary>
+    /// <param name="fileName">The candidate file name.</param>
+    /// <returns><see langword="true"/> when the extension is one Spec §6.11 already names.</returns>
+    internal static bool HasKnownExtension(string fileName)
+    {
+        ArgumentNullException.ThrowIfNull(fileName);
+
+        string extension = Path.GetExtension(fileName);
+        if (extension.Length == 0)
+        {
+            return false;
+        }
+
+        return MarkdownExtensions.Contains(extension)
+            || extension.Equals(SvgExtension, StringComparison.OrdinalIgnoreCase)
+            || IsImageExtension(extension)
+            || TextExtensions.Contains(extension);
+    }
 
     /// <summary>Detects the kind of file based on its name and content head.</summary>
     /// <param name="fileName">The name of the file.</param>
@@ -26,7 +59,7 @@ internal static class LibraryFileKinds
         string extension = Path.GetExtension(fileName);
 
         // Check for SVG first
-        if (extension.Equals(".svg", StringComparison.OrdinalIgnoreCase))
+        if (extension.Equals(SvgExtension, StringComparison.OrdinalIgnoreCase))
         {
             return LibraryFileKind.Svg;
         }
@@ -46,8 +79,7 @@ internal static class LibraryFileKinds
         }
 
         // Check for Markdown extensions
-        bool isMarkdown = extension.Equals(".md", StringComparison.OrdinalIgnoreCase) ||
-                          extension.Equals(".markdown", StringComparison.OrdinalIgnoreCase);
+        bool isMarkdown = MarkdownExtensions.Contains(extension);
 
         // Sniff content to determine if it's valid text
         LibraryFileKind sniffedKind = SniffFileKind(head);
