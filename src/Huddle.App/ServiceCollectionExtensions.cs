@@ -230,6 +230,13 @@ public static class ServiceCollectionExtensions
         // constructor dependency once the rewrite hooks land (8.5.i-a).
         services.AddSingleton<WikiLinkIndex>();
 
+        // The real resolver behind ILibraryReferenceResolver/ILibraryNoteResolver (Task 9.3.i):
+        // one singleton, forwarded to both interfaces with the same idiom as ITaskReferenceResolver
+        // above, so MarkdownRenderer and Library note rendering share one instance.
+        services.AddSingleton<LibraryReferenceResolver>();
+        services.AddSingleton<ILibraryReferenceResolver>(sp => sp.GetRequiredService<LibraryReferenceResolver>());
+        services.AddSingleton<ILibraryNoteResolver>(sp => sp.GetRequiredService<LibraryReferenceResolver>());
+
         // Registered right after LibraryPathResolver (corrections-B4 item 7): it depends on the
         // resolver above and on IRecycleBin, registered just above.
         services.AddSingleton<LibraryFileService>();
