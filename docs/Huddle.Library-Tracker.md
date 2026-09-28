@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 75 of 143 tasks Done · 4 of 8 retrospectives done · last updated 2026-09-27.
+**Status:** 77 of 143 tasks Done · 4 of 8 retrospectives done · last updated 2026-09-27.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -102,8 +102,8 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 6.9.t Test: `WindowsRecycleBin` · #62 · Sonnet | | | ✔ |
 | 6.9.i Implement `WindowsRecycleBin` · #63 · Sonnet | | | ✔ |
 | **D7. Team folders (the Library side of ADR-0030)** | | | |
-| 7.1.t Test: `TeamFolderCatalog.List` · #64 · Sonnet | ✔ | | |
-| 7.1.i Implement `TeamFolderCatalog` · #65 · Sonnet | ✔ | | |
+| 7.1.t Test: `TeamFolderCatalog.List` · #64 · Sonnet | | | ✔ |
+| 7.1.i Implement `TeamFolderCatalog` · #65 · Sonnet | | | ✔ |
 | 7.2.t Test: `TeamFolderProvisioner` · #66 · Sonnet | ✔ | | |
 | 7.2.i Implement `TeamFolderProvisioner` · #67 · Sonnet | ✔ | | |
 | 7.3.t Test: the Team folder is a Watched Folder · #68 · Sonnet | ✔ | | |

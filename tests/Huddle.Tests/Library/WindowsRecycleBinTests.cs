@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.Versioning;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -121,7 +120,7 @@ public sealed class WindowsRecycleBinTests
         File.WriteAllText(filePath, "hello");
         string linkDir = Path.Combine(dir.Path, "link");
 
-        if (!TryCreateLink(linkDir, targetDir))
+        if (!TestLinks.TryCreateLink(linkDir, targetDir))
         {
             Assert.Skip("Could not create a directory link on this machine.");
             return;
@@ -137,7 +136,7 @@ public sealed class WindowsRecycleBinTests
         }
         finally
         {
-            RemoveLink(linkDir);
+            TestLinks.RemoveLink(linkDir);
         }
     }
 
@@ -244,46 +243,4 @@ public sealed class WindowsRecycleBinTests
         Assert.Equal("Couldn't delete note.md.", refusal);
     }
 
-    /// <summary>Creates a directory link at <paramref name="link"/> pointing to <paramref name="target"/>:
-    /// a junction on Windows (the only unelevated way, per Task 0.2), a symbolic link elsewhere. Returns
-    /// <see langword="false"/> when the link could not be created (e.g. no privilege).</summary>
-    private static bool TryCreateLink(string link, string target)
-    {
-        try
-        {
-            if (OperatingSystem.IsWindows())
-            {
-                ProcessStartInfo startInfo = new("cmd")
-                {
-                    ArgumentList = { "/c", "mklink", "/J", link, target },
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                };
-                using Process process = Process.Start(startInfo) ?? throw new InvalidOperationException("mklink did not start.");
-                process.WaitForExit();
-                return process.ExitCode == 0;
-            }
-
-            Directory.CreateSymbolicLink(link, target);
-            return true;
-        }
-        catch (IOException)
-        {
-            return false;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
-        }
-    }
-
-    /// <summary>Removes a link created by <see cref="TryCreateLink"/>, before the owning
-    /// <see cref="TempDataDir"/> disposes (its cleanup cannot recurse through a reparse point).</summary>
-    private static void RemoveLink(string link)
-    {
-        if (Directory.Exists(link))
-        {
-            Directory.Delete(link, recursive: false);
-        }
-    }
 }
