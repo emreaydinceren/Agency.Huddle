@@ -239,7 +239,12 @@ public sealed class LibraryFileServiceReadTests
         }
 
         /// <summary>Constructs the service under test, wired to this fixture's resolver and a fresh <see cref="RecordingRecycleBin"/>.</summary>
-        public LibraryFileService CreateService() => new(this.Resolver, new RecordingRecycleBin(), Options.Create(this.teamOptions), NullLogger<LibraryFileService>.Instance);
+        public LibraryFileService CreateService() => new(
+            this.Resolver,
+            new RecordingRecycleBin(),
+            new WikiLinkIndex(this.RootStore, this.Resolver, Options.Create(this.teamOptions)),
+            Options.Create(this.teamOptions),
+            NullLogger<LibraryFileService>.Instance);
 
         /// <summary>Resolves <paramref name="relativePath"/> inside the pinned root at <paramref name="rootPath"/>.</summary>
         public LibraryPath Resolve(string rootPath, string relativePath)

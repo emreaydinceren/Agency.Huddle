@@ -172,7 +172,7 @@ public sealed class LibraryFileServiceWriteTests
     {
         MethodInfo[] methods = [.. typeof(LibraryFileService)
             .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-            .Where(m => !m.IsSpecialName)];
+            .Where(m => !m.IsSpecialName && !(m.Name == nameof(IDisposable.Dispose) && m.GetParameters().Length == 0))];
 
         Assert.NotEmpty(methods);
 

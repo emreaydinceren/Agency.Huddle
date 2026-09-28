@@ -44,6 +44,7 @@ internal sealed class LibraryFileServiceFixture : IDisposable
 {
     private readonly TempDataDir? temp;
     private readonly TeamOptions teamOptions;
+    private readonly List<LibraryFileService> createdServices = [];
 
     private LibraryFileServiceFixture(TempDataDir? temp, TeamOptions teamOptions)
     {
@@ -53,6 +54,7 @@ internal sealed class LibraryFileServiceFixture : IDisposable
         TeammatePaths paths = new(Options.Create(teamOptions));
         this.RootStore = new LibraryRootStore(Options.Create(teamOptions), paths, NullLogger<LibraryRootStore>.Instance);
         this.Resolver = new LibraryPathResolver(this.RootStore, Options.Create(teamOptions), NullLogger<LibraryPathResolver>.Instance);
+        this.Index = new WikiLinkIndex(this.RootStore, this.Resolver, Options.Create(teamOptions));
     }
 
     /// <summary>The temp <c>DataDir</c> this fixture's roots live under.</summary>
@@ -63,6 +65,11 @@ internal sealed class LibraryFileServiceFixture : IDisposable
 
     /// <summary>The current <see cref="LibraryPathResolver"/>, rebuilt by <see cref="Reload"/>.</summary>
     public LibraryPathResolver Resolver { get; private set; }
+
+    /// <summary>The <see cref="WikiLinkIndex"/> most recently wired up by <see cref="CreateService()"/> (D8):
+    /// built over this fixture's current <see cref="RootStore"/> and <see cref="Resolver"/>, so tests can
+    /// query <c>LinksTo</c>/<c>Backlinks</c>/<c>IsAvailable</c> or call <c>Invalidate</c> after an operation.</summary>
+    public WikiLinkIndex Index { get; private set; }
 
     /// <summary>Builds a fixture with the standard Teams/Teammates layout, optionally customising <see cref="TeamOptions"/> first.</summary>
     /// <param name="configure">An optional callback to customise the bound <see cref="TeamOptions"/> before use.</param>
@@ -126,20 +133,39 @@ internal sealed class LibraryFileServiceFixture : IDisposable
         return text;
     }
 
-    /// <summary>The <see cref="RecordingRecycleBin"/> most recently wired up by <see cref="CreateService"/>.</summary>
+    /// <summary>The <see cref="RecordingRecycleBin"/> most recently wired up by <see cref="CreateService()"/>.</summary>
     public RecordingRecycleBin RecycleBin { get; private set; } = new();
 
     /// <summary>Constructs the service under test, wired to this fixture's resolver and a fresh <see cref="RecordingRecycleBin"/>
     /// (available afterwards as <see cref="RecycleBin"/>).</summary>
-    public LibraryFileService CreateService()
+    public LibraryFileService CreateService() => this.CreateService(beforeRewriteWriteForTests: null);
+
+    /// <summary>Constructs the service under test, wired to this fixture's resolver, its <see cref="Index"/>, a
+    /// fresh <see cref="RecordingRecycleBin"/> (available afterwards as <see cref="RecycleBin"/>), and the D8
+    /// rewrite-loop test seam <paramref name="beforeRewriteWriteForTests"/>: called after a linking note is
+    /// read and rewritten, before it is written back, so a test can mutate the note on disk to prove the
+    /// "changed during the rename" path without a race.</summary>
+    /// <param name="beforeRewriteWriteForTests">Runs after a note's rewritten text is computed and before it
+    /// is written; <see langword="null"/> for the ordinary path.</param>
+    public LibraryFileService CreateService(Func<LibraryPath, Task>? beforeRewriteWriteForTests)
     {
         this.RecycleBin = new RecordingRecycleBin();
-        return new LibraryFileService(this.Resolver, this.RecycleBin, Options.Create(this.teamOptions), NullLogger<LibraryFileService>.Instance);
+        LibraryFileService service = new(
+            this.Resolver,
+            this.RecycleBin,
+            index: this.Index,
+            options: Options.Create(this.teamOptions),
+            logger: NullLogger<LibraryFileService>.Instance,
+            beforeRewriteWriteForTests: beforeRewriteWriteForTests);
+        this.createdServices.Add(service);
+        return service;
     }
 
-    /// <summary>Resolves <paramref name="relativePath"/> inside the pinned root at <paramref name="rootPath"/>.</summary>
-    /// <param name="rootPath">The pinned root's absolute path, as returned by <see cref="CreatePinnedRoot"/>.</param>
-    /// <param name="relativePath">The path to resolve, relative to the pinned root.</param>
+    /// <summary>Resolves <paramref name="relativePath"/> inside whichever configured root's full path equals
+    /// <paramref name="rootPath"/> or contains it (so a caller can pass a folder several levels under a root,
+    /// e.g. a Teammate's work folder, and not just a pinned root's own path).</summary>
+    /// <param name="rootPath">A configured root's absolute path, or a folder underneath one.</param>
+    /// <param name="relativePath">The path to resolve, relative to <paramref name="rootPath"/>.</param>
     public LibraryPath Resolve(string rootPath, string relativePath)
     {
         foreach (LibraryRoot candidate in this.RootStore.Roots)
@@ -150,9 +176,19 @@ internal sealed class LibraryFileServiceFixture : IDisposable
                 Assert.NotNull(resolved);
                 return resolved;
             }
+
+            string prefix = candidate.FullPath + Path.DirectorySeparatorChar;
+            if (rootPath.Length > prefix.Length && FolderSnapshot.PathComparer.Equals(rootPath[..prefix.Length], prefix))
+            {
+                string underRoot = rootPath[prefix.Length..].Replace(Path.DirectorySeparatorChar, '/');
+                string combined = relativePath.Length == 0 ? underRoot : $"{underRoot}/{relativePath}";
+                Assert.True(this.Resolver.TryResolve(candidate.Id, combined, out LibraryPath? resolved, out _));
+                Assert.NotNull(resolved);
+                return resolved;
+            }
         }
 
-        throw new InvalidOperationException($"No pinned root at '{rootPath}'.");
+        throw new InvalidOperationException($"No configured root at or above '{rootPath}'.");
     }
 
     /// <summary>Resolves <paramref name="relativePath"/> inside the Teams root.</summary>
@@ -186,10 +222,21 @@ internal sealed class LibraryFileServiceFixture : IDisposable
     public void Reload()
     {
         TeammatePaths paths = new(Options.Create(this.teamOptions));
+        this.Index.Dispose();
         this.RootStore = new LibraryRootStore(Options.Create(this.teamOptions), paths, NullLogger<LibraryRootStore>.Instance);
         this.Resolver = new LibraryPathResolver(this.RootStore, Options.Create(this.teamOptions), NullLogger<LibraryPathResolver>.Instance);
+        this.Index = new WikiLinkIndex(this.RootStore, this.Resolver, Options.Create(this.teamOptions));
     }
 
     /// <summary>Disposes the temp <c>DataDir</c>, when this fixture owns one (see <see cref="Attach"/>).</summary>
-    public void Dispose() => this.temp?.Dispose();
+    public void Dispose()
+    {
+        foreach (LibraryFileService service in this.createdServices)
+        {
+            service.Dispose();
+        }
+
+        this.Index.Dispose();
+        this.temp?.Dispose();
+    }
 }

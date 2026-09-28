@@ -142,6 +142,35 @@ internal sealed class WikiLinkIndex : IDisposable
         return results;
     }
 
+    /// <summary>Every file's root-relative path strictly under <paramref name="relativeFolderPath"/>, at any
+    /// depth (corrections-B5 D8 item 8, folder link preview): reuses this index's already-built file list
+    /// rather than a second disk walk. Empty when the root's index isn't available.</summary>
+    /// <param name="rootId">The Library Root id.</param>
+    /// <param name="relativeFolderPath">The folder's root-relative path, no trailing separator.</param>
+    internal IReadOnlyList<string> FilesUnder(string rootId, string relativeFolderPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rootId);
+        ArgumentNullException.ThrowIfNull(relativeFolderPath);
+
+        RootIndex? index = this.GetOrBuild(rootId);
+        if (index is not { Available: true })
+        {
+            return [];
+        }
+
+        string prefix = relativeFolderPath.Length == 0 ? string.Empty : relativeFolderPath + "/";
+        List<string> results = [];
+        foreach (string file in index.AllFiles)
+        {
+            if (file.Length > prefix.Length && FolderSnapshot.PathComparer.Equals(file[..prefix.Length], prefix))
+            {
+                results.Add(file);
+            }
+        }
+
+        return results;
+    }
+
     /// <summary>Resolves <paramref name="link"/> as written inside <paramref name="from"/>, against every file
     /// currently indexed in <paramref name="from"/>'s root. Unlike <see cref="Backlinks"/>/<see cref="LinksTo"/>,
     /// which filter the resolution each link was built with, this always re-resolves: <paramref name="link"/>

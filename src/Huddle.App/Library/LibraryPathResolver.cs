@@ -25,6 +25,10 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
     private readonly IOptions<TeamOptions> options = options;
     private readonly ILogger<LibraryPathResolver> logger = logger;
 
+    /// <summary>Every configured Library Root, including the two built-ins (corrections-B5 D8 item 7):
+    /// used to invalidate every root whose <see cref="LibraryRoot.FullPath"/> overlaps a changed path.</summary>
+    internal IReadOnlyList<LibraryRoot> AllRoots => this.roots.Roots;
+
     /// <summary>
     /// Resolves <paramref name="relativePath"/> against the root named <paramref name="rootId"/>,
     /// following Spec §6.1 steps 1-7. Step 2's per-segment check is

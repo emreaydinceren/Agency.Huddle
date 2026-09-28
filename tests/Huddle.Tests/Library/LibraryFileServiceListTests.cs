@@ -202,7 +202,12 @@ public sealed class LibraryFileServiceListTests
         }
 
         /// <summary>Constructs the service under test, wired to this fixture's resolver and a fresh <see cref="RecordingRecycleBin"/>.</summary>
-        public LibraryFileService CreateService() => new(this.Resolver, new RecordingRecycleBin(), Options.Create(this.teamOptions), NullLogger<LibraryFileService>.Instance);
+        public LibraryFileService CreateService() => new(
+            this.Resolver,
+            new RecordingRecycleBin(),
+            new WikiLinkIndex(this.RootStore, this.Resolver, Options.Create(this.teamOptions)),
+            Options.Create(this.teamOptions),
+            NullLogger<LibraryFileService>.Instance);
 
         /// <summary>Resolves a pinned root by name.</summary>
         public LibraryPath ResolveRoot(string pinnedRootName)
