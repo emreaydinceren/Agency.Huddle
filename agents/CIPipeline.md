@@ -84,8 +84,8 @@ Two of those steps exist for reasons specific to this repo:
   them on by accident. Expect all eight to report as skipped in every run.
 - **No retry loop.** The sibling Agency repo wraps its test steps in three attempts because
   its functional suite talks to a live model. Nothing here talks to anything, so every test
-  gets exactly one attempt and a failure is a failure. The two known races that would
-  otherwise justify retries are quarantined by name instead (below), which keeps the rest of
+  gets exactly one attempt and a failure is a failure. The known race that would otherwise
+  justify retries is quarantined by name instead (below), which keeps the rest of
   the suite strict — a blanket retry would also have masked a genuine regression.
 - **No `actions/checkout`, and no other JavaScript action.** Actions of that kind need Node
   in the container, and Node only arrives partway through `validate`. Both jobs clone by hand
@@ -94,9 +94,9 @@ Two of those steps exist for reasons specific to this repo:
 
 ### Quarantined tests
 
-Three tests are excluded by name in the test step. They are **quarantined, not fixed**, and
-both underlying races are recorded in
-[known-limits.md](../docs/agencyteam/known-limits.md) as pre-existing and undiagnosed.
+Two tests are excluded by name in the test step. They are **quarantined, not fixed**, and
+the underlying race is recorded in
+[known-limits.md](../docs/agencyteam/known-limits.md) as pre-existing.
 
 > [!IMPORTANT]
 > **A fourth test shows the same race and is not quarantined.** On 2026-09-15, run 607 failed on
@@ -110,12 +110,41 @@ both underlying races are recorded in
 
 | Test | Rate | Race |
 | --- | --- | --- |
-| `PersonaSupervisorTests.Shutdown_DisposesEveryHost` | ~1 run in 4 | Its 10-second token races `WaitUntilAsync`. A timing bug in the test, not in `PersonaSupervisor`. |
 | `DotAcpAgentSessionTests.PromptAsync_StreamsChunksInOrder_ThenTurnCompleted` | ~1 run in 5 | Event ordering over the fake transport. Passes on rerun. |
 | `DotAcpAgentSessionTests.PromptAsync_ThoughtAndToolCallEvents_ArePublished` | seen once | Same class, same fake transport. Run 582 received `TurnCompleted` where `ToolCallStarted` was expected — the two tool-call notifications never arrived. |
 
-Left unquarantined, those two rates compound to roughly **40% of runs red** for reasons
+Left unquarantined, a rate like that turns a meaningful share of runs red for reasons
 unrelated to the change under test, which is how a team learns to ignore CI.
+
+> [!NOTE]
+> **Lifted 2026-09-27: `PersonaSupervisorTests.Shutdown_DisposesEveryHost`.** It was recorded as
+> "its 10-second token races `WaitUntilAsync`". That was the wrong diagnosis: every failure in
+> that class spent the *whole* budget, whatever the budget was — raised to 30 s, the same runs
+> still failed, 30 s later. The condition never arrived, because on Linux `PersonaStore`'s
+> watcher can miss a Persona file written into a just-created sub-folder (see
+> [traps.md](../docs/agencyteam/traps.md)). Fixed in `PersonaStore.AffectsATeamsFile`. On current
+> `main`, the test ran 80 times under 1-CPU, 8-process load in the CI container with no failure.
+
+### Reproducing a flake: load, not loops
+
+A sequential loop is the wrong tool. `PersonaSupervisorTests` passed 10 out of 10 isolated runs, and
+3 concurrent full-suite runs, on both branches, while under load the same class failed 9 out of 16
+runs. Cap the container's CPU and run the **built test executable** in parallel processes:
+
+```bash
+docker run --rm --cpus=1 -v "$PWD:/repo:ro" -v huddle-nuget:/root/.nuget/packages \
+  -w /repo mcr.microsoft.com/dotnet/sdk:10.0.401 bash -c '
+    cp -r /repo /src && cd /src && rm -rf */*/bin */*/obj
+    dotnet build tests/Huddle.Tests/Huddle.Tests.csproj -c Release -v q
+    for p in $(seq 8); do
+      ( for i in 1 2; do tests/Huddle.Tests/bin/Release/net10.0/Huddle.Tests \
+          -class Agency.Huddle.Tests.Acp.PersonaSupervisorTests | grep "Total:"; done ) &
+    done; wait'
+```
+
+Copying to `/src` keeps the Linux `bin`/`obj` out of your Windows checkout. A failure that costs
+exactly the full timeout on every run is an event that never came, not a slow run. Raising the
+budget only makes those failures slower.
 
 Delete a `--filter-not-method` line as its race is diagnosed. Do not add one without a
 matching `known-limits.md` entry — the filter is where flakes go to be forgotten, and the
@@ -142,14 +171,13 @@ docker run --rm -v "$PWD:/work" -v huddle-nuget:/root/.nuget/packages \
     dotnet restore Huddle.slnx
     dotnet build   Huddle.slnx --configuration Release --no-restore
     dotnet test    Huddle.slnx --configuration Release --no-build -- \
-      --filter-not-method "*.Shutdown_DisposesEveryHost" \
       --filter-not-method "*.PromptAsync_StreamsChunksInOrder_ThenTurnCompleted" \
       --filter-not-method "*.PromptAsync_ThoughtAndToolCallEvents_ArePublished"
     pwsh -NoProfile -NonInteractive -File ./test-health.ps1 -Configuration Release -TimeoutSeconds 120
   '
 ```
 
-Drop the three `--filter-not-method` lines to run the full 1332 including the quarantined
+Drop the two `--filter-not-method` lines to run the full suite including the quarantined
 tests — worth doing when you are trying to reproduce one of the races on purpose.
 
 ```text

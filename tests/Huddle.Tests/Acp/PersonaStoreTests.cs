@@ -1058,8 +1058,12 @@ public sealed class PersonaStoreTests
 
     /// <summary>
     /// A Team sub-folder created after the store (and its watcher) already started must still be
-    /// picked up: <see cref="FileSystemWatcher.IncludeSubdirectories"/> recurses into directories
-    /// that appear later, not only ones present at construction time.
+    /// picked up. <see cref="FileSystemWatcher.IncludeSubdirectories"/> alone does not guarantee it:
+    /// on Linux the watch on the new folder is added only after its Created event is read, so a file
+    /// written straight into it can raise nothing. This test was red about one run in six under
+    /// parallel load in the Linux CI container until the folder's own Created event scheduled a
+    /// rescan - see <see cref="AffectsATeamsFile_ANewSubFolder_SchedulesARescan"/> for the
+    /// deterministic half.
     /// </summary>
     [Fact]
     public async Task ExternalFileCreated_InANewlyCreatedTeamSubFolder_IsNoticedThroughPersonasChanged()
@@ -1080,6 +1084,22 @@ public sealed class PersonaStoreTests
         await tcs.Task;
 
         Assert.Contains("cto", store.ListNames());
+    }
+
+    /// <summary>
+    /// The folder's own Created event is the one signal a new Team sub-folder is guaranteed to
+    /// raise on every platform, so it alone must schedule a rescan - whatever was written inside it
+    /// before the watcher caught up is found from disk.
+    /// </summary>
+    [Fact]
+    public void AffectsATeamsFile_ANewSubFolder_SchedulesARescan()
+    {
+        using var dir = new TempDataDir();
+        var teamsDir = Path.Combine(dir.Path, "Teams");
+        Directory.CreateDirectory(Path.Combine(teamsDir, "NewTeam"));
+        FileSystemEventArgs created = new(WatcherChangeTypes.Created, teamsDir, "NewTeam");
+
+        Assert.True(PersonaStore.AffectsATeamsFile(created));
     }
 
     /// <summary>
