@@ -70,6 +70,10 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
     /// folder into live Tasks at the wrong depth.</summary>
     private const string MoveTasksSubtreeReason = "Folders that hold tasks can't be moved here.";
 
+    /// <summary>Settled text (Spec §10 E-8) for a recycle refused because <see cref="IRecycleBin.TrySend"/>
+    /// failed, whatever its own error: callers only need the fixed, user-facing reason.</summary>
+    private const string RecycleUnavailableReason = "Couldn't delete: the Recycle Bin isn't available here.";
+
     /// <summary>Settled text (corrections-B4 item 27) for a rename or move whose final
     /// <see cref="File.Move(string, string)"/>/<see cref="Directory.Move(string, string)"/> failed because
     /// something inside the source was held open without <see cref="FileShare.Delete"/>.</summary>
@@ -97,8 +101,6 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
     {
         ArgumentNullException.ThrowIfNull(folder);
         ct.ThrowIfCancellationRequested();
-
-        _ = this.recycleBin;
 
         IReadOnlyList<string> ignoredFolders = this.options.Value.FileChanges.EffectiveIgnore;
         bool hideUnderscoreFolders = folder.Root.Kind == LibraryRootKind.Teams;
@@ -595,6 +597,40 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
         }
 
         return Task.FromResult(this.ReResolveMoved(freshTarget, name));
+    }
+
+    /// <summary>
+    /// Sends <paramref name="item"/> to the OS recycle bin (Spec §6.4 recycle row, §10 E-8). Checked in
+    /// order: re-resolve, <see cref="LibraryProtection.For"/>, then <see cref="IRecycleBin.TrySend"/>. The
+    /// service never deletes anything itself; a refusal from the bin (including "no bin available", E-8)
+    /// always surfaces as the fixed settled text, not the bin's own error, since callers only ever need to
+    /// know delete didn't happen and why in user terms.
+    /// </summary>
+    /// <param name="item">The already-resolved item to recycle; re-resolved before use.</param>
+    /// <param name="ct">Cancels the recycle.</param>
+    /// <returns>The resolved path that was sent to the bin, or a refusal reason.</returns>
+    internal Task<LibraryResult<LibraryPath>> RecycleAsync(LibraryPath item, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        ct.ThrowIfCancellationRequested();
+
+        if (!this.resolver.TryResolve(item.Root.Id, item.RelativePath, out LibraryPath? fresh, out string? resolveError))
+        {
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, resolveError));
+        }
+
+        LibraryProtection protection = LibraryProtection.For(fresh);
+        if (!protection.CanDelete)
+        {
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, protection.Reason));
+        }
+
+        if (!this.recycleBin.TrySend(fresh.FullPath, out _))
+        {
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, RecycleUnavailableReason));
+        }
+
+        return Task.FromResult(new LibraryResult<LibraryPath>(fresh, null));
     }
 
     /// <summary>The Teammates destination rules (corrections-B4 item 21, applied to rename/move destinations

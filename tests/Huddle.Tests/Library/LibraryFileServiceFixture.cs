@@ -8,20 +8,29 @@ using Agency.Huddle.App.Library;
 namespace Agency.Huddle.Tests.Library;
 
 /// <summary>
-/// A minimal <see cref="IRecycleBin"/> fake shared by <see cref="LibraryFileServiceFixture"/>: no
-/// task in this pair calls it, it only satisfies the <see cref="LibraryFileService"/> constructor.
+/// A minimal <see cref="IRecycleBin"/> fake shared by <see cref="LibraryFileServiceFixture"/>: it
+/// records every path sent to it, and can be set to fail the next (and every subsequent) call.
 /// </summary>
 internal sealed class RecordingRecycleBin : IRecycleBin
 {
-    /// <summary>Every path passed to <see cref="TrySend"/> so far, in call order.</summary>
+    /// <summary>Every path passed to <see cref="TrySend"/> that succeeded, in call order.</summary>
     public List<string> Sent { get; } = [];
 
-    /// <summary>Records <paramref name="fullPath"/> and always succeeds.</summary>
+    /// <summary>When set, <see cref="TrySend"/> refuses with this error instead of recording the path.</summary>
+    public string? FailureError { get; set; }
+
+    /// <summary>Records <paramref name="fullPath"/> and succeeds, unless <see cref="FailureError"/> is set.</summary>
     /// <param name="fullPath">The path this fake records.</param>
-    /// <param name="error">Always <see langword="null"/>.</param>
-    /// <returns><see langword="true"/>, always.</returns>
+    /// <param name="error"><see cref="FailureError"/> when set; otherwise <see langword="null"/>.</param>
+    /// <returns><see langword="false"/> when <see cref="FailureError"/> is set; otherwise <see langword="true"/>.</returns>
     public bool TrySend(string fullPath, [System.Diagnostics.CodeAnalysis.NotNullWhen(false)] out string? error)
     {
+        if (this.FailureError is not null)
+        {
+            error = this.FailureError;
+            return false;
+        }
+
         this.Sent.Add(fullPath);
         error = null;
         return true;
@@ -98,8 +107,16 @@ internal sealed class LibraryFileServiceFixture : IDisposable
         return text;
     }
 
-    /// <summary>Constructs the service under test, wired to this fixture's resolver and a fresh <see cref="RecordingRecycleBin"/>.</summary>
-    public LibraryFileService CreateService() => new(this.Resolver, new RecordingRecycleBin(), Options.Create(this.teamOptions), NullLogger<LibraryFileService>.Instance);
+    /// <summary>The <see cref="RecordingRecycleBin"/> most recently wired up by <see cref="CreateService"/>.</summary>
+    public RecordingRecycleBin RecycleBin { get; private set; } = new();
+
+    /// <summary>Constructs the service under test, wired to this fixture's resolver and a fresh <see cref="RecordingRecycleBin"/>
+    /// (available afterwards as <see cref="RecycleBin"/>).</summary>
+    public LibraryFileService CreateService()
+    {
+        this.RecycleBin = new RecordingRecycleBin();
+        return new LibraryFileService(this.Resolver, this.RecycleBin, Options.Create(this.teamOptions), NullLogger<LibraryFileService>.Instance);
+    }
 
     /// <summary>Resolves <paramref name="relativePath"/> inside the pinned root at <paramref name="rootPath"/>.</summary>
     /// <param name="rootPath">The pinned root's absolute path, as returned by <see cref="CreatePinnedRoot"/>.</param>
