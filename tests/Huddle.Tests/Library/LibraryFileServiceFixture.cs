@@ -42,10 +42,10 @@ internal sealed class RecordingRecycleBin : IRecycleBin
 /// <see cref="LibraryFileServiceWriteTests"/> and <see cref="LibraryFileServiceCreateTests"/>.</summary>
 internal sealed class LibraryFileServiceFixture : IDisposable
 {
-    private readonly TempDataDir temp;
+    private readonly TempDataDir? temp;
     private readonly TeamOptions teamOptions;
 
-    private LibraryFileServiceFixture(TempDataDir temp, TeamOptions teamOptions)
+    private LibraryFileServiceFixture(TempDataDir? temp, TeamOptions teamOptions)
     {
         this.temp = temp;
         this.teamOptions = teamOptions;
@@ -78,12 +78,31 @@ internal sealed class LibraryFileServiceFixture : IDisposable
         return new LibraryFileServiceFixture(temp, teamOptions);
     }
 
+    /// <summary>
+    /// Builds a fixture over an existing <paramref name="dataDir"/> (e.g. a
+    /// <see cref="Agency.Huddle.Tests.Acp.Tools.TaskToolHarness"/>'s <c>TempDataDir</c>), so a Library
+    /// test and a Tasks stack see the same on-disk Team folders (Task 7.4.t). Ensures <c>Teams/</c> and
+    /// <c>Teammates/</c> exist under it but does not own or dispose <paramref name="dataDir"/> itself.
+    /// </summary>
+    /// <param name="dataDir">The already-existing data directory to attach to.</param>
+    /// <param name="configure">An optional callback to customise the bound <see cref="TeamOptions"/> before use.</param>
+    public static LibraryFileServiceFixture Attach(string dataDir, Action<TeamOptions>? configure = null)
+    {
+        Directory.CreateDirectory(Path.Combine(dataDir, "Teams"));
+        Directory.CreateDirectory(Path.Combine(dataDir, "Teammates"));
+
+        TeamOptions teamOptions = new() { DataDir = dataDir };
+        configure?.Invoke(teamOptions);
+
+        return new LibraryFileServiceFixture(null, teamOptions);
+    }
+
     /// <summary>Creates a pinned root folder named <paramref name="name"/> under the temp root and reloads the store and resolver.</summary>
     /// <param name="name">The pinned root's display name and folder name.</param>
     /// <returns>The pinned root's absolute path.</returns>
     public string CreatePinnedRoot(string name)
     {
-        string path = Path.Combine(this.temp.Path, name);
+        string path = Path.Combine(this.DataDir, name);
         Directory.CreateDirectory(path);
 
         List<PinnedRootOption> rootsOption = [.. this.teamOptions.Library.Roots ?? [], new PinnedRootOption { Name = name, Path = path }];
@@ -171,6 +190,6 @@ internal sealed class LibraryFileServiceFixture : IDisposable
         this.Resolver = new LibraryPathResolver(this.RootStore, Options.Create(this.teamOptions), NullLogger<LibraryPathResolver>.Instance);
     }
 
-    /// <summary>Disposes the temp <c>DataDir</c>.</summary>
-    public void Dispose() => this.temp.Dispose();
+    /// <summary>Disposes the temp <c>DataDir</c>, when this fixture owns one (see <see cref="Attach"/>).</summary>
+    public void Dispose() => this.temp?.Dispose();
 }

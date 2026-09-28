@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 81 of 143 tasks Done · 4 of 8 retrospectives done · last updated 2026-09-27.
+**Status:** 83 of 143 tasks Done · 4 of 8 retrospectives done · last updated 2026-09-27.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -108,8 +108,8 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 7.2.i Implement `TeamFolderProvisioner` · #67 · Sonnet | | | ✔ |
 | 7.3.t Test: the Team folder is a Watched Folder · #68 · Sonnet | | | ✔ |
 | 7.3.i Implement the implicit Team watch · #69 · Sonnet | | | ✔ |
-| 7.4.t [Gate G1] Test: Tasks and the Library share `Teams/` · #70 · Sonnet | ✔ | | |
-| 7.4.i [Gate G1] Close the hand-off gaps · #71 · Sonnet | ✔ | | |
+| 7.4.t [Gate G1] Test: Tasks and the Library share `Teams/` · #70 · Sonnet | | | ✔ |
+| 7.4.i [Gate G1] Close the hand-off gaps · #71 · Sonnet | | | ✔ |
 | **D8. Wikilinks, backlinks and rename rewriting** | | | |
 | 8.1.t Test: `WikiLinkParser.Parse` · #72 · Sonnet | ✔ | | |
 | 8.1.i Implement `WikiLinkParser` · #73 · Sonnet | ✔ | | |
