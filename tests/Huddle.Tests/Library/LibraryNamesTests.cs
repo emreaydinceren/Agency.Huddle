@@ -49,4 +49,19 @@ public sealed class LibraryNamesTests
         string? error = LibraryNames.Validate(name);
         Assert.NotNull(error);
     }
+
+    /// <summary>Windows-only: an 8.3 alias-shaped name (e.g. <c>PROGRA~1</c>) gets the alias-specific refusal text (corrections-B3 item 23).</summary>
+    [Fact]
+    public void Validate_EightDotThreeAlias_RefusedOnWindowsOnly()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Skip("8.3-alias refusal is Windows-only (corrections-B3 item 23).");
+            return;
+        }
+
+        string? error = LibraryNames.Validate("PROGRA~1");
+
+        Assert.Equal("A name can't use an 8.3 alias pattern.", error);
+    }
 }

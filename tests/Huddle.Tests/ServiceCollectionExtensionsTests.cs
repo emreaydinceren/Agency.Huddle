@@ -40,8 +40,11 @@ public sealed class ServiceCollectionExtensionsTests
 
         var ex = Assert.Throws<InvalidOperationException>(() => services.AddTeamServices(configuration));
 
-        Assert.Contains("Team:Acp:PersonaDir", ex.Message, StringComparison.Ordinal);
-        Assert.Contains("Team:Acp:TeammatesDir", ex.Message, StringComparison.Ordinal);
+        Assert.Equal(
+            "Configuration key 'Team:Acp:PersonaDir' was renamed to 'Team:Acp:TeammatesDir'. " +
+            "Update the configuration source that sets it (environment variable, user secret, etc.) - " +
+            "there is no automatic fallback.",
+            ex.Message);
     }
 
     /// <summary>
@@ -68,7 +71,9 @@ public sealed class ServiceCollectionExtensionsTests
         var ex = Assert.Throws<InvalidOperationException>(
             () => provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<TeamOptions>>().Value);
 
-        Assert.Contains("must not overlap", ex.Message, StringComparison.Ordinal);
+        string dataDir = Path.GetFullPath("App_Data");
+        string teammatesRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(dataDir, "Teammates")));
+        Assert.Equal($"'Team:Teams:Dir' ({teammatesRoot}) and 'Team:Acp:TeammatesDir' ({teammatesRoot}) must not overlap.", ex.Message);
     }
 
     /// <summary>

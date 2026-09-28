@@ -330,7 +330,7 @@ public sealed class TeammateCardTests
         string oldFolderPath = Path.Combine(factory.TeammatesDirPath, "coo");
         Assert.False(Directory.Exists(oldFolderPath));
 
-        cut.WaitForAssertion(() => Assert.Contains(expectedPath, cut.Markup, StringComparison.Ordinal));
+        cut.WaitForAssertion(() => Assert.Equal(expectedPath, cut.Find(".teammate-card-path").TextContent.Trim()));
     }
 
     [Fact]

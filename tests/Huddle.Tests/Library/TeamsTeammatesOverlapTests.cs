@@ -22,9 +22,9 @@ public sealed class TeamsTeammatesOverlapTests
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
             () => Agency.Huddle.App.Library.LayoutGuard.ValidateTeamsAndTeammates(options));
 
-        Assert.Contains("Team:Teams:Dir", ex.Message, StringComparison.Ordinal);
-        Assert.Contains("Team:Acp:TeammatesDir", ex.Message, StringComparison.Ordinal);
-        Assert.Contains("must not overlap", ex.Message, StringComparison.Ordinal);
+        string teamsRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(options.DataDir, options.Teams.Dir)));
+        string teammatesRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(options.DataDir, options.Acp.TeammatesDir)));
+        Assert.Equal($"'Team:Teams:Dir' ({teamsRoot}) and 'Team:Acp:TeammatesDir' ({teammatesRoot}) must not overlap.", ex.Message);
     }
 
     /// <summary>Teammates nested inside Teams throws.</summary>
@@ -41,9 +41,9 @@ public sealed class TeamsTeammatesOverlapTests
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
             () => Agency.Huddle.App.Library.LayoutGuard.ValidateTeamsAndTeammates(options));
 
-        Assert.Contains("Team:Teams:Dir", ex.Message, StringComparison.Ordinal);
-        Assert.Contains("Team:Acp:TeammatesDir", ex.Message, StringComparison.Ordinal);
-        Assert.Contains("must not overlap", ex.Message, StringComparison.Ordinal);
+        string teamsRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(options.DataDir, options.Teams.Dir)));
+        string teammatesRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(options.DataDir, options.Acp.TeammatesDir)));
+        Assert.Equal($"'Team:Teams:Dir' ({teamsRoot}) and 'Team:Acp:TeammatesDir' ({teammatesRoot}) must not overlap.", ex.Message);
     }
 
     /// <summary>The same folder for both throws.</summary>
@@ -60,7 +60,9 @@ public sealed class TeamsTeammatesOverlapTests
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
             () => Agency.Huddle.App.Library.LayoutGuard.ValidateTeamsAndTeammates(options));
 
-        Assert.Contains("must not overlap", ex.Message, StringComparison.Ordinal);
+        string teamsRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(options.DataDir, options.Teams.Dir)));
+        string teammatesRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(options.DataDir, options.Acp.TeammatesDir)));
+        Assert.Equal($"'Team:Teams:Dir' ({teamsRoot}) and 'Team:Acp:TeammatesDir' ({teammatesRoot}) must not overlap.", ex.Message);
     }
 
     /// <summary>Sibling folders under DataDir pass without throwing.</summary>
@@ -91,7 +93,9 @@ public sealed class TeamsTeammatesOverlapTests
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
             () => Agency.Huddle.App.Library.LayoutGuard.ValidateTeamsAndTeammates(options));
 
-        Assert.Contains("must not overlap", ex.Message, StringComparison.Ordinal);
+        string teamsRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(options.DataDir, options.Teams.Dir)));
+        string teammatesRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(options.DataDir, options.Acp.TeammatesDir)));
+        Assert.Equal($"'Team:Teams:Dir' ({teamsRoot}) and 'Team:Acp:TeammatesDir' ({teammatesRoot}) must not overlap.", ex.Message);
     }
 
     /// <summary>A `..` segment that lands inside Teammates must not escape the nesting check.</summary>
@@ -108,6 +112,8 @@ public sealed class TeamsTeammatesOverlapTests
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
             () => Agency.Huddle.App.Library.LayoutGuard.ValidateTeamsAndTeammates(options));
 
-        Assert.Contains("must not overlap", ex.Message, StringComparison.Ordinal);
+        string teamsRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(options.DataDir, options.Teams.Dir)));
+        string teammatesRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(options.DataDir, options.Acp.TeammatesDir)));
+        Assert.Equal($"'Team:Teams:Dir' ({teamsRoot}) and 'Team:Acp:TeammatesDir' ({teammatesRoot}) must not overlap.", ex.Message);
     }
 }

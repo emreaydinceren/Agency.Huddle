@@ -407,6 +407,7 @@ public sealed class TaskStoreWatcherTests
         await using CancellationTokenRegistration registration = cts.Token.Register(() => indexChanged.TrySetCanceled());
         await indexChanged.Task;
 
+        // contains-ok: collection-membership predicate over TaskStore.Teams, not a markup/string haystack.
         Assert.Contains(store.Teams, team => string.Equals(team.Name, "Platform", StringComparison.Ordinal) && team.Projects.Contains("New"));
     }
 

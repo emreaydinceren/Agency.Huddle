@@ -147,6 +147,7 @@ public sealed class TeammateLayoutMigrationTests
         TeammateLayoutMigration.Run(dataDir.Options(), logger);
 
         Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teammates", ".layout-migrated")));
+        // contains-ok: collection-membership predicate over log entries; the entry's full message is not the assertion's concern here.
         Assert.Contains(logger.Entries, entry => entry.Message.Contains("nothing to migrate", StringComparison.Ordinal));
     }
 
@@ -231,7 +232,10 @@ public sealed class TeammateLayoutMigrationTests
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => TeammateLayoutMigration.Run(dataDir.Options(), logger));
 
-        Assert.Contains("Nova", exception.Message, StringComparison.Ordinal);
+        string source = Path.Combine(dataDir.Path, "Teams", "Nova.md");
+        string target = Path.Combine(dataDir.Path, "Teammates", "Nova", "Nova.md");
+        // contains-ok: the message's tail is the framework IOException.Message from Directory.CreateDirectory, which is OS/culture-dependent; only the prefix naming source and target is ours to pin.
+        Assert.StartsWith($"Could not migrate '{source}' to '{target}': ", exception.Message, StringComparison.Ordinal);
         Assert.True(File.Exists(Path.Combine(dataDir.Path, "Teams", "Nova.md")));
     }
 
@@ -251,6 +255,7 @@ public sealed class TeammateLayoutMigrationTests
         string adaSource = Path.Combine(dataDir.Path, "Teams", "Ada.md");
         string adaTarget = Path.Combine(dataDir.Path, "Teammates", "Ada", "Ada.md");
         Assert.Equal(2, logger.Entries.Count);
+        // contains-ok: collection-membership predicate over log entries containing paths; each entry's exact wording is not the assertion's concern.
         Assert.Contains(logger.Entries, entry => entry.Message.Contains(novaSource, StringComparison.Ordinal) && entry.Message.Contains(novaTarget, StringComparison.Ordinal));
         Assert.Contains(logger.Entries, entry => entry.Message.Contains(adaSource, StringComparison.Ordinal) && entry.Message.Contains(adaTarget, StringComparison.Ordinal));
     }
@@ -432,7 +437,8 @@ public sealed class TeammateLayoutMigrationTests
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => TeammateLayoutMigration.Run(dataDir.Options(), logger));
 
-        Assert.Contains("PLAT-1.md", exception.Message, StringComparison.Ordinal);
+        string source = Path.Combine(dataDir.Path, "Tasks", "Platform", "PLAT-1.md");
+        Assert.Equal($"Could not migrate '{source}' to '{target}': the target already exists.", exception.Message);
     }
 
     /// <summary>Settled: step 4 is gated by its own source (Tasks/), not by the completion marker - an install that ran a D3-era build already carries the marker but still holds an old Tasks/ root, and that root is still migrated.</summary>

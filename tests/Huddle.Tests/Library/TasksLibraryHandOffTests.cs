@@ -37,6 +37,7 @@ public sealed class TasksLibraryHandOffTests
         IReadOnlyList<LibraryEntry> entries = await service.ListAsync(teamFolder, ct);
 
         Assert.DoesNotContain(entries, entry => string.Equals(Path.GetFileName(entry.Path.FullPath), "_tasks", StringComparison.Ordinal));
+        // contains-ok: collection-membership predicate over LibraryEntry results, not a markup/string haystack.
         Assert.Contains(entries, entry => string.Equals(Path.GetFileName(entry.Path.FullPath), "notes.md", StringComparison.Ordinal));
     }
 
@@ -70,6 +71,7 @@ public sealed class TasksLibraryHandOffTests
 
         await WaitForIndexChangedAsync(projectReady);
 
+        // contains-ok: collection-membership predicate over TaskStore.Teams, not a markup/string haystack.
         Assert.Contains(harness.Store.Teams, team => string.Equals(team.Name, "Platform", StringComparison.Ordinal) && team.Projects.Contains("Auth v2"));
     }
 
@@ -140,8 +142,10 @@ public sealed class TasksLibraryHandOffTests
         IReadOnlyList<LibraryEntry> projectEntries = await service.ListAsync(fixture.ResolveTeams("Platform/Auth v2"), ct);
 
         Assert.DoesNotContain(teamEntries, entry => string.Equals(Path.GetFileName(entry.Path.FullPath), "_tasks", StringComparison.Ordinal));
+        // contains-ok: collection-membership predicate over LibraryEntry results, not a markup/string haystack.
         Assert.Contains(teamEntries, entry => string.Equals(Path.GetFileName(entry.Path.FullPath), "x_tasks", StringComparison.Ordinal));
         Assert.DoesNotContain(projectEntries, entry => string.Equals(Path.GetFileName(entry.Path.FullPath), "_tasks", StringComparison.Ordinal));
+        // contains-ok: collection-membership predicate over LibraryEntry results, not a markup/string haystack.
         Assert.Contains(projectEntries, entry => string.Equals(Path.GetFileName(entry.Path.FullPath), "x_tasks", StringComparison.Ordinal));
     }
 }

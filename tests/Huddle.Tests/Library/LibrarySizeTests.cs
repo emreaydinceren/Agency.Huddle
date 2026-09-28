@@ -39,7 +39,7 @@ public sealed class LibrarySizeTests
     {
         string result = LibrarySize.Format(long.MaxValue);
 
-        Assert.EndsWith(" MB", result, StringComparison.Ordinal);
+        Assert.Equal("8796093022208 MB", result);
     }
 
     /// <summary>Format is culture-invariant; de-DE uses the same format as invariant.</summary>

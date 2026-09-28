@@ -323,6 +323,7 @@ public sealed class SettingsPageTests
 
         var html = await client.GetStringAsync("/settings/personas", ct);
 
+        // contains-ok: the haystack is the whole rendered page's HTML; only the presence of the path matters here, not the surrounding markup.
         Assert.Contains(factory.TeammatesDirPath, html, StringComparison.Ordinal);
         Assert.Contains(factory.DbPath, html, StringComparison.Ordinal);
     }
