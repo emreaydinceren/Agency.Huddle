@@ -3,8 +3,9 @@ using Agency.Huddle.App.FileChanges;
 namespace Agency.Huddle.Tests.FileChanges;
 
 /// <summary>
-/// Pins <see cref="FolderScanner.Scan(string, FileChangesOptions)"/>: pruning of ignored
-/// directories, the file cap, missing-folder handling and reparse-point skipping, per FC §6.4.
+/// Pins <see cref="FolderScanner.Scan(string, FileChangesOptions, bool)"/>: pruning of ignored
+/// directories, the file cap, missing-folder handling, reparse-point skipping and Spec §6.13's
+/// <c>pruneUnderscore</c> flag.
 /// </summary>
 public sealed class FolderScannerTests
 {
@@ -188,5 +189,60 @@ public sealed class FolderScannerTests
         ScanResult result = FolderScanner.Scan(folder, new FileChangesOptions());
 
         Assert.True(result.Snapshot.Files.ContainsKey("a.md"));
+    }
+
+    /// <summary>With <c>pruneUnderscore: true</c>, a top-level <c>_</c>-prefixed folder is skipped, per Spec §6.13.</summary>
+    [Fact]
+    public void Scan_PruneUnderscore_SkipsUnderscoreFolders()
+    {
+        using TempDataDir dataDir = new();
+        string folder = Path.Combine(dataDir.Path, "folder");
+        Directory.CreateDirectory(Path.Combine(folder, "_tasks"));
+        File.WriteAllText(Path.Combine(folder, "_tasks", "MKT-0001.md"), "task");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "brief.md"), "brief");
+
+        ScanResult result = FolderScanner.Scan(folder, new FileChangesOptions(), pruneUnderscore: true);
+
+        Assert.Equal(ScanOutcome.Scanned, result.Outcome);
+        Assert.Equal(["brief.md"], result.Snapshot.Files.Keys);
+    }
+
+    /// <summary>With the default (<c>pruneUnderscore: false</c>), a <c>_</c>-prefixed folder is still walked.</summary>
+    [Fact]
+    public void Scan_Default_KeepsUnderscoreFolders()
+    {
+        using TempDataDir dataDir = new();
+        string folder = Path.Combine(dataDir.Path, "folder");
+        Directory.CreateDirectory(Path.Combine(folder, "_tasks"));
+        File.WriteAllText(Path.Combine(folder, "_tasks", "MKT-0001.md"), "task");
+        File.WriteAllText(Path.Combine(folder, "brief.md"), "brief");
+
+        ScanResult result = FolderScanner.Scan(folder, new FileChangesOptions());
+
+        Assert.Equal(ScanOutcome.Scanned, result.Outcome);
+        Assert.Equal(
+            new[] { "brief.md", Path.Combine("_tasks", "MKT-0001.md") }.OrderBy(key => key, StringComparer.Ordinal),
+            result.Snapshot.Files.Keys.OrderBy(key => key, StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// <c>pruneUnderscore</c> prunes an underscore-prefixed folder at any depth, but a folder whose
+    /// name merely contains an underscore (not a prefix) is kept.
+    /// </summary>
+    [Fact]
+    public void Scan_PruneUnderscore_PrunesNestedUnderscoreFolderKeepsUnderscoreInName()
+    {
+        using TempDataDir dataDir = new();
+        string folder = Path.Combine(dataDir.Path, "folder");
+        Directory.CreateDirectory(Path.Combine(folder, "a", "_b"));
+        File.WriteAllText(Path.Combine(folder, "a", "_b", "c.md"), "c");
+        Directory.CreateDirectory(Path.Combine(folder, "a_b"));
+        File.WriteAllText(Path.Combine(folder, "a_b", "c.md"), "c");
+
+        ScanResult result = FolderScanner.Scan(folder, new FileChangesOptions(), pruneUnderscore: true);
+
+        Assert.Equal(ScanOutcome.Scanned, result.Outcome);
+        Assert.Equal([Path.Combine("a_b", "c.md")], result.Snapshot.Files.Keys);
     }
 }

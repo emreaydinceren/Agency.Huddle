@@ -445,6 +445,217 @@ public sealed class FileChangeTrackerTests
         Assert.Equal("Nova", folder.Entry);
     }
 
+    /// <summary>Spec §6.13: a Persona on Team "Marketing" implicitly watches its Team folder, entry <c>team:Marketing</c>.</summary>
+    [Fact]
+    public async Task Collect_PersonaInTeam_WatchesTeamFolder()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct, teams: "Marketing");
+        string roomA = await CreateRoomAsync(fixture, "RoomA", ct);
+        string teamDir = Path.Combine(fixture.DataDir.Path, "Teams", "Marketing");
+        Directory.CreateDirectory(teamDir);
+
+        await fixture.Tracker.CommitAsync("Nova", roomA, await fixture.Tracker.CollectAsync("Nova", roomA, [], ct), [], ct);
+
+        string briefPath = Path.Combine(teamDir, "brief.md");
+        File.WriteAllText(briefPath, "brief");
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", roomA, [], ct);
+
+        WatchedFolder teamFolder = Assert.Single(collected.Folders, folder => folder.Entry == "team:Marketing");
+        Assert.Equal(Path.GetFullPath(teamDir), teamFolder.FullPath);
+        FileChange change = Assert.Single(collected.Report.Changes);
+        Assert.Equal(FileChangeKind.Added, change.Kind);
+        Assert.Equal(briefPath, change.FullPath);
+    }
+
+    /// <summary>
+    /// Spec §6.13: files under a Team's <c>_tasks</c> or <c>_drafts</c> folder never appear, but a
+    /// project folder (no underscore prefix) still does.
+    /// </summary>
+    [Fact]
+    public async Task Collect_TaskFileUnderTeam_NotListed()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct, teams: "Marketing");
+        string roomA = await CreateRoomAsync(fixture, "RoomA", ct);
+        string teamDir = Path.Combine(fixture.DataDir.Path, "Teams", "Marketing");
+        Directory.CreateDirectory(Path.Combine(teamDir, "_tasks"));
+        Directory.CreateDirectory(Path.Combine(teamDir, "_drafts"));
+        Directory.CreateDirectory(Path.Combine(teamDir, "Launch Q4"));
+
+        await fixture.Tracker.CommitAsync("Nova", roomA, await fixture.Tracker.CollectAsync("Nova", roomA, [], ct), [], ct);
+
+        File.WriteAllText(Path.Combine(teamDir, "_tasks", "MKT-0001.md"), "task");
+        File.WriteAllText(Path.Combine(teamDir, "_drafts", "x.md"), "draft");
+        string briefPath = Path.Combine(teamDir, "Launch Q4", "brief.md");
+        File.WriteAllText(briefPath, "brief");
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", roomA, [], ct);
+
+        FileChange change = Assert.Single(collected.Report.Changes);
+        Assert.Equal(briefPath, change.FullPath);
+    }
+
+    /// <summary>A Persona on two Teams implicitly watches both Team folders.</summary>
+    [Fact]
+    public async Task Collect_TwoTeams_WatchesBoth()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct, teams: "Marketing, Sales");
+        Directory.CreateDirectory(Path.Combine(fixture.DataDir.Path, "Teams", "Marketing"));
+        Directory.CreateDirectory(Path.Combine(fixture.DataDir.Path, "Teams", "Sales"));
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", "some-room", [], ct);
+
+        Assert.Equal(
+            ["Nova", "team:Marketing", "team:Sales"],
+            collected.Folders.Select(folder => folder.Entry));
+    }
+
+    /// <summary>A Persona with no Team label gets no implicit Team folder.</summary>
+    [Fact]
+    public async Task Collect_NoTeam_NoTeamFolder()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", "some-room", [], ct);
+
+        Assert.DoesNotContain(collected.Folders, folder => folder.Entry.StartsWith("team:", StringComparison.Ordinal));
+    }
+
+    /// <summary>A Team label whose folder doesn't exist on disk is skipped without error.</summary>
+    [Fact]
+    public async Task Collect_TeamFolderMissing_NoError()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct, teams: "Marketing");
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", "some-room", [], ct);
+
+        Assert.DoesNotContain(collected.Folders, folder => folder.Entry == "team:Marketing");
+    }
+
+    /// <summary>
+    /// Corrections-B4 item 38: a Persona whose declared Watched Folders also lists the Team folder
+    /// watches it once, under the <c>team:</c> entry, because the implicit Team folder is inserted
+    /// before declared entries and dedupe keeps the first.
+    /// </summary>
+    [Fact]
+    public async Task Collect_DeclaredTeamFolderAndTeamLabel_WatchedOnceUnderTeamEntry()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct, teams: "Marketing");
+        string teamDir = Path.Combine(fixture.DataDir.Path, "Teams", "Marketing");
+        Directory.CreateDirectory(teamDir);
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", "some-room", ["Teams/Marketing"], ct);
+
+        Assert.Equal(2, collected.Folders.Count);
+        Assert.Equal("Nova", collected.Folders[0].Entry);
+        Assert.Equal("team:Marketing", collected.Folders[1].Entry);
+        Assert.Equal(Path.GetFullPath(teamDir), collected.Folders[1].FullPath);
+    }
+
+    /// <summary>
+    /// Corrections-B4 item 39: <c>PruneUnderscore</c> applies to any Watched Folder inside the Teams
+    /// root, so a declared (not implicit) <c>Teams/…</c> entry still hides its <c>_tasks</c> folder,
+    /// even without the matching Team label.
+    /// </summary>
+    [Fact]
+    public async Task Collect_DeclaredTeamsFolderWithoutLabel_StillPrunesUnderscore()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string teamDir = Path.Combine(fixture.DataDir.Path, "Teams", "Marketing");
+        Directory.CreateDirectory(teamDir);
+
+        await fixture.Tracker.CommitAsync(
+            "Nova", "some-room", await fixture.Tracker.CollectAsync("Nova", "some-room", ["Teams/Marketing"], ct), [], ct);
+
+        Directory.CreateDirectory(Path.Combine(teamDir, "_tasks"));
+        File.WriteAllText(Path.Combine(teamDir, "_tasks", "MKT-0001.md"), "task");
+        string briefPath = Path.Combine(teamDir, "brief.md");
+        File.WriteAllText(briefPath, "brief");
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", "some-room", ["Teams/Marketing"], ct);
+
+        FileChange change = Assert.Single(collected.Report.Changes);
+        Assert.Equal(briefPath, change.FullPath);
+    }
+
+    /// <summary>A declared folder outside the Teams root keeps its own <c>_</c>-prefixed neighbour: pruning is Teams-root-only.</summary>
+    [Fact]
+    public async Task Collect_DeclaredFolderOutsideTeams_KeepsUnderscoreNeighbour()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string sharedDir = Path.Combine(fixture.DataDir.Path, "Shared");
+        Directory.CreateDirectory(sharedDir);
+
+        await fixture.Tracker.CommitAsync(
+            "Nova", "some-room", await fixture.Tracker.CollectAsync("Nova", "some-room", ["Shared"], ct), [], ct);
+
+        Directory.CreateDirectory(Path.Combine(sharedDir, "_notes"));
+        string notePath = Path.Combine(sharedDir, "_notes", "note.md");
+        File.WriteAllText(notePath, "note");
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", "some-room", ["Shared"], ct);
+
+        FileChange change = Assert.Single(collected.Report.Changes);
+        Assert.Equal(notePath, change.FullPath);
+    }
+
+    /// <summary>
+    /// A baseline saved before <c>PruneUnderscore</c> existed (still holding a <c>_tasks</c> file
+    /// entry for a Teams-root folder) must not report that file as deleted once pruning applies:
+    /// the committed snapshot is filtered through the same rule the live scan uses.
+    /// </summary>
+    [Fact]
+    public async Task Collect_PreexistingBaselineWithTaskFile_NotReportedDeleted()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct);
+        string teamDir = Path.Combine(fixture.DataDir.Path, "Teams", "Marketing");
+        Directory.CreateDirectory(teamDir);
+        File.WriteAllText(Path.Combine(teamDir, "brief.md"), "brief");
+
+        Dictionary<string, FileEntry> preexistingFiles = new(FolderSnapshot.PathComparer)
+        {
+            ["brief.md"] = new FileEntry(5, DateTimeOffset.UtcNow),
+            [Path.Combine("_tasks", "MKT-0001.md")] = new FileEntry(4, DateTimeOffset.UtcNow),
+        };
+        Dictionary<string, RoomBaseline> rooms = new(StringComparer.Ordinal)
+        {
+            ["some-room"] = new RoomBaseline(new Dictionary<string, FolderSnapshot>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Teams/Marketing"] = new FolderSnapshot(preexistingFiles),
+            }),
+        };
+        fixture.Store.Save("Nova", new FileState([], rooms, new Dictionary<string, IReadOnlyDictionary<string, FileWriter>>(StringComparer.OrdinalIgnoreCase)));
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", "some-room", ["Teams/Marketing"], ct);
+
+        Assert.DoesNotContain(collected.Report.Changes, change => change.Kind == FileChangeKind.Deleted);
+    }
+
+    /// <summary>
+    /// Corrections-B4 item 40: a Team label the Library's name validation refuses (here, <c>..</c>)
+    /// is skipped with no error, and nothing outside <c>Teams/</c> gets watched because of it.
+    /// </summary>
+    [Fact]
+    public async Task Collect_InvalidTeamLabel_SkippedNoError()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct, teams: "..");
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", "some-room", [], ct);
+
+        WatchedFolder folder = Assert.Single(collected.Folders);
+        Assert.Equal("Nova", folder.Entry);
+    }
+
     /// <summary>A new subscription is saved and returns the "Now watching" text.</summary>
     [Fact]
     public async Task Subscribe_New_SavesAndReturnsNowWatching()
@@ -616,7 +827,8 @@ public sealed class FileChangeTrackerTests
     private static async Task<Fixture> CreateFixtureAsync(
         CancellationToken ct,
         Action<FileChangesOptions>? configureFileChanges = null,
-        string? watches = null)
+        string? watches = null,
+        string? teams = null)
     {
         TempDataDir dataDir = new();
         IOptions<TeamOptions> options = dataDir.Options();
@@ -624,7 +836,8 @@ public sealed class FileChangeTrackerTests
 
         TeammatePaths teammatePaths = new(options);
         string watchesLine = watches is null ? string.Empty : $"\nwatches: [{watches}]";
-        TestPersonaFiles.Write(teammatePaths, "nova", $"---\nName: Nova\nTitle: Nova\nAlias: Nova{watchesLine}\n---\nYou are Nova.");
+        string teamsLine = teams is null ? string.Empty : $"\nTeams: [{teams}]";
+        TestPersonaFiles.Write(teammatePaths, "nova", $"---\nName: Nova\nTitle: Nova\nAlias: Nova{teamsLine}{watchesLine}\n---\nYou are Nova.");
 
         SqliteTeamDirectory directory = new(options);
         await directory.InitializeAsync("You", ct);

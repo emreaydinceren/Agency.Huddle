@@ -13,7 +13,7 @@ internal enum ScanOutcome
     TooLarge,
 }
 
-/// <summary>The result of one <see cref="FolderScanner.Scan(string, FileChangesOptions)"/> call.</summary>
+/// <summary>The result of one <see cref="FolderScanner.Scan(string, FileChangesOptions, bool)"/> call.</summary>
 /// <param name="Outcome">Whether the folder was scanned, is missing, or is too large.</param>
 /// <param name="Snapshot"><see cref="FolderSnapshot.Empty"/> for <see cref="ScanOutcome.Missing"/> and <see cref="ScanOutcome.TooLarge"/>.</param>
 internal sealed record ScanResult(ScanOutcome Outcome, FolderSnapshot Snapshot);
@@ -44,7 +44,11 @@ internal static class FolderScanner
     /// </summary>
     /// <param name="fullPath">The folder's full path.</param>
     /// <param name="options">Supplies <see cref="FileChangesOptions.EffectiveIgnore"/> and <see cref="FileChangesOptions.MaxFilesPerFolder"/>.</param>
-    internal static ScanResult Scan(string fullPath, FileChangesOptions options)
+    /// <param name="pruneUnderscore">
+    /// When <see langword="true"/>, per Spec §6.13, any <c>_</c>-prefixed sub-folder (at any depth)
+    /// is pruned before its contents are enumerated, alongside <see cref="FileChangesOptions.EffectiveIgnore"/>.
+    /// </param>
+    internal static ScanResult Scan(string fullPath, FileChangesOptions options, bool pruneUnderscore = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(fullPath);
         ArgumentNullException.ThrowIfNull(options);
@@ -56,7 +60,7 @@ internal static class FolderScanner
 
         Dictionary<string, FileEntry> files = new(FolderSnapshot.PathComparer);
 
-        if (!Walk(fullPath, fullPath, options, files))
+        if (!Walk(fullPath, fullPath, options, pruneUnderscore, files))
         {
             return new ScanResult(ScanOutcome.TooLarge, FolderSnapshot.Empty);
         }
@@ -69,7 +73,7 @@ internal static class FolderScanner
     /// <paramref name="files"/> and recursing into every non-ignored subdirectory.
     /// </summary>
     /// <returns><see langword="false"/> once <paramref name="files"/> exceeds the cap, to unwind the recursion.</returns>
-    private static bool Walk(string root, string directory, FileChangesOptions options, Dictionary<string, FileEntry> files)
+    private static bool Walk(string root, string directory, FileChangesOptions options, bool pruneUnderscore, Dictionary<string, FileEntry> files)
     {
         foreach (string file in Directory.EnumerateFiles(directory, "*", EnumerationOptions))
         {
@@ -91,7 +95,12 @@ internal static class FolderScanner
                 continue;
             }
 
-            if (!Walk(root, subdirectory, options, files))
+            if (pruneUnderscore && name.StartsWith('_'))
+            {
+                continue;
+            }
+
+            if (!Walk(root, subdirectory, options, pruneUnderscore, files))
             {
                 return false;
             }

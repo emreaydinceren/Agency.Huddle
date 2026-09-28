@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.App.FileChanges;
 
@@ -57,7 +58,7 @@ internal sealed class FileChangeTracker(
         Dictionary<string, ScanResult> scans = new(StringComparer.OrdinalIgnoreCase);
         foreach (WatchedFolder folder in folders)
         {
-            ScanResult scan = await Task.Run(() => FolderScanner.Scan(folder.FullPath, options.Value.FileChanges), cancellationToken).ConfigureAwait(false);
+            ScanResult scan = await Task.Run(() => FolderScanner.Scan(folder.FullPath, options.Value.FileChanges, folder.PruneUnderscore), cancellationToken).ConfigureAwait(false);
             scans[folder.Entry] = scan;
         }
 
@@ -82,6 +83,10 @@ internal sealed class FileChangeTracker(
 
             if (roomBaseline.Folders.TryGetValue(folder.Entry, out FolderSnapshot? previousSnapshot))
             {
+                // A baseline saved before this folder's PruneUnderscore applied (or before Spec §6.13
+                // existed at all) can still hold a _tasks/_drafts entry the live scan now omits; filtering
+                // it here keeps that entry from showing up as spuriously "deleted".
+                previousSnapshot = FileChangeTracker.PruneSnapshot(previousSnapshot, folder.PruneUnderscore);
                 foreach (FileChange change in FileStateDiff.Compare(previousSnapshot, scan.Snapshot, folder.FullPath))
                 {
                     string? byYouRoomName = await this.DetermineByYouRoomNameAsync(
@@ -418,7 +423,13 @@ internal sealed class FileChangeTracker(
         return false;
     }
 
-    /// <summary>Resolves this Agent's Watched Folders: own Work Dir, then declared, then subscribed, deduplicated by full path (finding kept the first entry).</summary>
+    /// <summary>
+    /// Resolves this Agent's Watched Folders: own Work Dir, then one implicit <c>team:</c> folder per
+    /// Team label on the Agent's <see cref="PersonaEntry.Teams"/> (Spec §6.13), then declared, then
+    /// subscribed - deduplicated by full path (finding kept the first entry, corrections-B4 item 38).
+    /// Every resulting folder inside the Teams root, whichever step added it, is then flagged
+    /// <see cref="WatchedFolder.PruneUnderscore"/> (corrections-B4 item 39).
+    /// </summary>
     private List<WatchedFolder> ResolveFolders(string agentName, IReadOnlyList<string> declared)
     {
         List<WatchedFolder> folders = [];
@@ -428,12 +439,37 @@ internal sealed class FileChangeTracker(
         folders.Add(own);
         seenFullPaths.Add(own.FullPath);
 
-        IReadOnlyList<string> subscribed = store.Load(agentName)?.Subscribed ?? [];
-        foreach (string entry in declared.Concat(subscribed))
+        string teamsRoot = FileChangeTracker.ResolveTeamsRoot(options.Value);
+        PersonaEntry? entry = personas.Entries.FirstOrDefault(candidate => string.Equals(candidate.Name, agentName, StringComparison.Ordinal));
+        if (entry is not null)
         {
-            if (!resolver.TryResolve(entry, personas.ListNames(), out WatchedFolder? folder, out string? reason))
+            foreach (string label in entry.Teams)
             {
-                logger.LogWarning("Watched Folder entry '{Entry}' for Agent '{AgentName}' could not be resolved: {Reason}", entry, agentName, reason);
+                if (LibraryNames.Validate(label) is not null)
+                {
+                    continue;
+                }
+
+                string teamFullPath = Path.GetFullPath(Path.Combine(teamsRoot, label));
+                if (!Directory.Exists(teamFullPath))
+                {
+                    continue;
+                }
+
+                WatchedFolder teamFolder = new($"team:{label}", teamFullPath);
+                if (seenFullPaths.Add(teamFolder.FullPath))
+                {
+                    folders.Add(teamFolder);
+                }
+            }
+        }
+
+        IReadOnlyList<string> subscribed = store.Load(agentName)?.Subscribed ?? [];
+        foreach (string declaredEntry in declared.Concat(subscribed))
+        {
+            if (!resolver.TryResolve(declaredEntry, personas.ListNames(), out WatchedFolder? folder, out string? reason))
+            {
+                logger.LogWarning("Watched Folder entry '{Entry}' for Agent '{AgentName}' could not be resolved: {Reason}", declaredEntry, agentName, reason);
                 continue;
             }
 
@@ -443,7 +479,60 @@ internal sealed class FileChangeTracker(
             }
         }
 
+        string teamsRootPrefix = teamsRoot + Path.DirectorySeparatorChar;
+        for (int index = 0; index < folders.Count; index++)
+        {
+            if (!folders[index].PruneUnderscore && FileChangeTracker.IsUnderTeamsRoot(folders[index].FullPath, teamsRoot, teamsRootPrefix))
+            {
+                folders[index] = folders[index] with { PruneUnderscore = true };
+            }
+        }
+
         return folders;
+    }
+
+    /// <summary>
+    /// The Teams root, resolved the same way as <see cref="Agency.Huddle.App.Tasks.TaskStore"/>'s own
+    /// <c>tasksRoot</c> (<c>TaskStore.cs:86</c>): <see cref="TeamOptions.DataDir"/> combined with
+    /// <see cref="TeamsOptions.Dir"/>, normalised to a full path.
+    /// </summary>
+    private static string ResolveTeamsRoot(TeamOptions options) =>
+        Path.GetFullPath(Path.Combine(options.DataDir, options.Teams.Dir));
+
+    /// <summary>
+    /// True when <paramref name="fullPath"/> is the Teams root itself or lies inside it, compared
+    /// with <see cref="FolderSnapshot.PathComparer"/> on a separator-terminated prefix, matching
+    /// <see cref="Agency.Huddle.App.Library.LayoutGuard"/>'s own prefix check.
+    /// </summary>
+    private static bool IsUnderTeamsRoot(string fullPath, string teamsRoot, string teamsRootPrefix) =>
+        FolderSnapshot.PathComparer.Equals(fullPath, teamsRoot)
+        || (fullPath.Length > teamsRootPrefix.Length && FolderSnapshot.PathComparer.Equals(fullPath[..teamsRootPrefix.Length], teamsRootPrefix));
+
+    /// <summary>
+    /// Removes any entry under a <c>_</c>-prefixed path segment from <paramref name="snapshot"/>,
+    /// matching <see cref="FolderScanner"/>'s own pruning: a saved baseline can predate
+    /// <paramref name="pruneUnderscore"/> applying to this folder, and would otherwise show that
+    /// entry as spuriously deleted the first time it does.
+    /// </summary>
+    private static FolderSnapshot PruneSnapshot(FolderSnapshot snapshot, bool pruneUnderscore)
+    {
+        if (!pruneUnderscore)
+        {
+            return snapshot;
+        }
+
+        Dictionary<string, FileEntry> filtered = new(FolderSnapshot.PathComparer);
+        foreach ((string relativePath, FileEntry fileEntry) in snapshot.Files)
+        {
+            if (relativePath.Split(Path.DirectorySeparatorChar).Any(segment => segment.StartsWith('_')))
+            {
+                continue;
+            }
+
+            filtered[relativePath] = fileEntry;
+        }
+
+        return new FolderSnapshot(filtered);
     }
 
     /// <summary>Builds this Agent's new saved state for <see cref="CommitAsync"/>, run inside <see cref="FileStateStore.Update"/>.</summary>
