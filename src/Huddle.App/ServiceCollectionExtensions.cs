@@ -241,6 +241,11 @@ public static class ServiceCollectionExtensions
         // resolver above and on IRecycleBin, registered just above.
         services.AddSingleton<LibraryFileService>();
 
+        // Registered right after LibraryFileService (Task 10.2.i): collects the Library documents
+        // mentioned in a Turn's messages. No Library.Enabled gate here (corrections-B6 item 8) -
+        // PersonaSupervisor passes a null collector when the Library is disabled.
+        services.AddSingleton<LibraryDocumentCollector>();
+
         // Same instance as the hosted service, the same singleton-plus-factory idiom as
         // PersonaSupervisor/TaskTriggerService above (corrections-B4 item 33): the Library Pane's
         // "New Project" trigger needs to call EnsureProject on the very instance the host is running.
