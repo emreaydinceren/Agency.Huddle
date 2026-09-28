@@ -1,0 +1,90 @@
+@*
+    The move dialog for a Library item (Task 12.5, Spec §6.4, §8): LibraryFileOps passes a snapshot of the
+    folders the item may move into - within one root only, and inside Scope when the explorer is scoped
+    (corrections-B6 item 26) - and this dialog calls LibraryFileService.MoveAsync itself once a folder is
+    picked, checking BeforeChangeAsync right before the write (corrections-B6 item 21).
+*@
+@using Agency.Huddle.App.Library
+
+@inject LibraryFileService FileService
+
+<MudDialog>
+    <DialogContent>
+        @foreach (var folder in this.Folders)
+        {
+            <div class="library-file-ops-move-folder" data-path="@folder.Path.RelativePath" @onclick="@(() => this.OnFolderSelected(folder.Path.RelativePath))">@folder.DisplayName</div>
+        }
+        @if (this.error is not null)
+        {
+            <p class="library-file-ops-error" role="alert">@this.error</p>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="this.ConfirmAsync">Move</MudButton>
+        <MudButton OnClick="this.Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>How LibraryFileOps shows this dialog: small, full-width, with a close button that cancels.</summary>
+    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The already-resolved item to move.</summary>
+    [Parameter]
+    public required LibraryPath Item { get; set; }
+
+    /// <summary>The candidate destination folders, within one root and within Scope when set (item 26).</summary>
+    [Parameter]
+    public IReadOnlyList<(LibraryPath Path, string DisplayName)> Folders { get; set; } = [];
+
+    /// <summary>Asked right before the write; a <see langword="false"/> answer aborts silently (corrections-B6 item 21).</summary>
+    [Parameter]
+    public Func<LibraryPath, Task<bool>>? BeforeChangeAsync { get; set; }
+
+    private string? selectedRelativePath;
+    private string? error;
+
+    private void OnFolderSelected(string relativePath) => this.selectedRelativePath = relativePath;
+
+    /// <summary>Checks <see cref="BeforeChangeAsync"/>, then moves the item into the selected folder through
+    /// the real service; a refusal shows inline and leaves the dialog open, and success closes it with the
+    /// move result.</summary>
+    private async Task ConfirmAsync()
+    {
+        this.error = null;
+
+        if (this.selectedRelativePath is null)
+        {
+            return;
+        }
+
+        LibraryPath? destination = this.Folders
+            .Where(f => string.Equals(f.Path.RelativePath, this.selectedRelativePath, StringComparison.Ordinal))
+            .Select(f => f.Path)
+            .FirstOrDefault();
+        if (destination is null)
+        {
+            return;
+        }
+
+        if (this.BeforeChangeAsync is not null && !await this.BeforeChangeAsync(this.Item))
+        {
+            this.Dialog?.Close(DialogResult.Ok<LibraryResult<LibraryMoveResult>?>(null));
+            return;
+        }
+
+        LibraryResult<LibraryMoveResult> result = await this.FileService.MoveAsync(this.Item, destination, CancellationToken.None);
+        if (result.Value is null)
+        {
+            this.error = result.Error;
+            return;
+        }
+
+        this.Dialog?.Close(DialogResult.Ok<LibraryResult<LibraryMoveResult>?>(result));
+    }
+
+    private void Cancel() => this.Dialog?.Cancel();
+}

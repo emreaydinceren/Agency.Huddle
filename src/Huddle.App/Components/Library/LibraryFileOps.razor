@@ -1,0 +1,251 @@
+@*
+    Owns the Library file-operation dialogs (Task 12.5): rename, move (part a); delete, New note, New
+    folder and New Project (part b, corrections-B6 item 31). A host (the explorer or a scoped pane) drives
+    every action through HandleAsync and never opens RenameDialog/MoveDialog itself, so the dialogs always
+    see a frozen snapshot of the preview counts (mudblazor.md, "An open dialog's parameters are frozen").
+    BeforeChangeAsync lets the host protect the open document (corrections-B6 item 21): Rename and Move
+    check it right before the write, inside the dialog, so previewing never disturbs the open document -
+    only confirming does.
+*@
+@using System.Globalization
+@using Agency.Huddle.App.Library
+
+@inject LibraryFileService FileService
+@inject LibraryPathResolver Resolver
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+
+@if (this.failedNotes.Count > 0)
+{
+    <div class="library-file-ops-partial-failure">
+        <p class="library-file-ops-partial-failure-heading">@this.PartialFailureHeading</p>
+        @foreach (string relativePath in this.failedNotes)
+        {
+            <p class="library-file-ops-partial-failure-item">@relativePath</p>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The already-resolved scope folder, when this instance drives a scoped explorer; Move then
+    /// lists only folders inside it (corrections-B6 item 26).</summary>
+    [Parameter]
+    public LibraryPath? Scope { get; set; }
+
+    /// <summary>Raised after a create, rename, move or delete completes, so the host can re-point or
+    /// refresh the open document (corrections-B6 item 21).</summary>
+    [Parameter]
+    public EventCallback<LibraryChange> OnChanged { get; set; }
+
+    /// <summary>Asked before the write of a Rename, Move or Delete; a <see langword="false"/> answer stops
+    /// the action with nothing touched (corrections-B6 item 21).</summary>
+    [Parameter]
+    public Func<LibraryPath, Task<bool>>? BeforeChangeAsync { get; set; }
+
+    private IReadOnlyList<string> failedNotes = [];
+    private string actionVerb = string.Empty;
+
+    private string PartialFailureHeading => string.Create(
+        CultureInfo.InvariantCulture,
+        $"{this.actionVerb}. {this.failedNotes.Count} notes couldn't be updated:");
+
+    /// <summary>Dispatches a <see cref="LibraryTreeAction"/> raised by a tree row's menu to the matching
+    /// dialog flow. Rename and Move are implemented here (Task 12.5.i part a); the rest are 12.5b's job.</summary>
+    /// <param name="action">The action the row's menu raised.</param>
+    public async Task HandleAsync(LibraryTreeAction action)
+    {
+        ArgumentNullException.ThrowIfNull(action);
+
+        switch (action.Kind)
+        {
+            case LibraryTreeActionKind.Rename:
+                await this.HandleRenameAsync(action.Path);
+                return;
+            case LibraryTreeActionKind.Move:
+                await this.HandleMoveAsync(action.Path);
+                return;
+            case LibraryTreeActionKind.Delete:
+                await this.HandleDeleteAsync(action.Path);
+                return;
+            case LibraryTreeActionKind.NewNote:
+            case LibraryTreeActionKind.NewFolder:
+            case LibraryTreeActionKind.NewProject:
+                await this.HandleCreateAsync(action.Kind, action.Path, action.Name);
+                return;
+            case LibraryTreeActionKind.CopyPath:
+            case LibraryTreeActionKind.OpenInDefaultApp:
+                throw new NotSupportedException("12.5b");
+            default:
+                throw new NotSupportedException("12.5b");
+        }
+    }
+
+    /// <summary>Asks <see cref="BeforeChangeAsync"/>, then the settled Delete confirm text through
+    /// <see cref="IDialogService.ShowMessageBoxAsync(string, string, string, string?, string?, DialogOptions?)"/>;
+    /// confirming sends the item to the Recycle Bin, a refusal shows through <see cref="ISnackbar"/>, and
+    /// success raises <see cref="OnChanged"/> with only <see cref="LibraryChange.OldPath"/> set.</summary>
+    private async Task HandleDeleteAsync(LibraryPath item)
+    {
+        if (this.BeforeChangeAsync is not null && !await this.BeforeChangeAsync(item))
+        {
+            return;
+        }
+
+        string fileName = Path.GetFileName(item.FullPath);
+        bool? confirmed = await this.Dialogs.ShowMessageBoxAsync(
+            string.Create(CultureInfo.InvariantCulture, $"Delete {fileName}?"),
+            "It goes to the Recycle Bin.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        LibraryResult<LibraryPath> result = await this.FileService.RecycleAsync(item, CancellationToken.None);
+        if (result.Value is null)
+        {
+            this.Snackbar.Add(result.Error ?? string.Empty, Severity.Error);
+            return;
+        }
+
+        _ = this.OnChanged.InvokeAsync(new LibraryChange(item, null, []));
+    }
+
+    /// <summary>New note/folder/Project (corrections-B6 item 31): a New note action carrying a
+    /// <paramref name="name"/> already (from a missing wikilink) skips the prompt and creates that name
+    /// directly; otherwise opens the settled name prompt and creates on confirm.</summary>
+    private async Task HandleCreateAsync(LibraryTreeActionKind kind, LibraryPath folder, string? name)
+    {
+        if (kind == LibraryTreeActionKind.NewNote && name is not null)
+        {
+            LibraryResult<LibraryPath> direct = await this.FileService.CreateFileAsync(folder, name, CancellationToken.None);
+            if (direct.Value is null)
+            {
+                this.Snackbar.Add(direct.Error ?? string.Empty, Severity.Error);
+                return;
+            }
+
+            _ = this.OnChanged.InvokeAsync(new LibraryChange(null, direct.Value, []));
+            return;
+        }
+
+        DialogParameters<NamePromptDialog> parameters = new()
+        {
+            { dialog => dialog.Folder, folder },
+            { dialog => dialog.Kind, kind },
+        };
+
+        string title = kind switch
+        {
+            LibraryTreeActionKind.NewNote => "New note",
+            LibraryTreeActionKind.NewFolder => "New folder",
+            LibraryTreeActionKind.NewProject => "New project",
+            _ => throw new NotSupportedException("HandleCreateAsync only drives create actions."),
+        };
+
+        IDialogReference reference = await this.Dialogs.ShowAsync<NamePromptDialog>(title, parameters, NamePromptDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is null || result.Canceled || result.Data is not LibraryResult<LibraryPath> { Value: { } created })
+        {
+            return;
+        }
+
+        _ = this.OnChanged.InvokeAsync(new LibraryChange(null, created, []));
+    }
+
+    private async Task HandleRenameAsync(LibraryPath item)
+    {
+        this.failedNotes = [];
+        LibraryLinkPreview preview = await this.FileService.PreviewLinkChangesAsync(item, item, CancellationToken.None);
+
+        DialogParameters<RenameDialog> parameters = new()
+        {
+            { dialog => dialog.Item, item },
+            { dialog => dialog.LinkCount, preview.Links },
+            { dialog => dialog.NoteCount, preview.Notes },
+            { dialog => dialog.IndexAvailable, preview.IndexAvailable },
+            { dialog => dialog.BeforeChangeAsync, this.BeforeChangeAsync },
+        };
+
+        string title = item.Role == LibraryNodeRole.File ? "Rename note" : "Rename folder";
+        IDialogReference reference = await this.Dialogs.ShowAsync<RenameDialog>(title, parameters, RenameDialog.Options);
+        DialogResult? result = await reference.Result;
+        this.ApplyMoveResult(result, item, "Renamed");
+    }
+
+    private async Task HandleMoveAsync(LibraryPath item)
+    {
+        this.failedNotes = [];
+        IReadOnlyList<(LibraryPath Path, string DisplayName)> folders = await this.ListDestinationFoldersAsync(item, CancellationToken.None);
+
+        DialogParameters<MoveDialog> parameters = new()
+        {
+            { dialog => dialog.Item, item },
+            { dialog => dialog.Folders, folders },
+            { dialog => dialog.BeforeChangeAsync, this.BeforeChangeAsync },
+        };
+
+        string title = string.Create(CultureInfo.InvariantCulture, $"Move {Path.GetFileName(item.FullPath)}");
+        IDialogReference reference = await this.Dialogs.ShowAsync<MoveDialog>(title, parameters, MoveDialog.Options);
+        DialogResult? result = await reference.Result;
+        this.ApplyMoveResult(result, item, "Moved");
+    }
+
+    /// <summary>Interprets a rename/move dialog's <see cref="DialogResult"/>: cancelled or an aborted
+    /// <see cref="BeforeChangeAsync"/> answer (a successful close with no data) leave nothing touched and
+    /// raise no <see cref="OnChanged"/>; a move result raises it and records any partial-failure list.</summary>
+    private void ApplyMoveResult(DialogResult? result, LibraryPath oldPath, string verb)
+    {
+        if (result is null || result.Canceled)
+        {
+            return;
+        }
+
+        if (result.Data is not LibraryResult<LibraryMoveResult> { Value: { } moveResult })
+        {
+            return;
+        }
+
+        this.actionVerb = verb;
+        this.failedNotes = [.. moveResult.FailedNotes.Select(failure => failure.RelativePath)];
+        this.StateHasChanged();
+        _ = this.OnChanged.InvokeAsync(new LibraryChange(oldPath, moveResult.NewPath, moveResult.RewrittenNotes));
+    }
+
+    /// <summary>Lists every folder an item may move into: the item's own root (or, in a scoped explorer,
+    /// only folders inside <see cref="Scope"/> - corrections-B6 item 26), walked depth-first so a folder
+    /// always appears before its children.</summary>
+    private async Task<IReadOnlyList<(LibraryPath Path, string DisplayName)>> ListDestinationFoldersAsync(LibraryPath item, CancellationToken ct)
+    {
+        LibraryPath? start = this.Scope;
+        if (start is null && !this.Resolver.TryResolve(item.Root.Id, string.Empty, out start, out _))
+        {
+            return [];
+        }
+
+        string startName = this.Scope is null ? start.Root.DisplayName : LastSegment(start.RelativePath);
+        List<(LibraryPath Path, string DisplayName)> folders = [];
+        await this.CollectFoldersAsync(start, startName, folders, ct);
+        return folders;
+    }
+
+    private async Task CollectFoldersAsync(LibraryPath folder, string displayName, List<(LibraryPath Path, string DisplayName)> folders, CancellationToken ct)
+    {
+        folders.Add((folder, displayName));
+        IReadOnlyList<LibraryEntry> entries = await this.FileService.ListAsync(folder, ct);
+        foreach (LibraryEntry entry in entries)
+        {
+            if (entry.IsFolder)
+            {
+                await this.CollectFoldersAsync(entry.Path, LastSegment(entry.Path.RelativePath), folders, ct);
+            }
+        }
+    }
+
+    private static string LastSegment(string relativePath)
+    {
+        int slash = relativePath.LastIndexOf('/');
+        return slash < 0 ? relativePath : relativePath[(slash + 1)..];
+    }
+}

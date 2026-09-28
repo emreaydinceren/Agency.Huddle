@@ -1,0 +1,108 @@
+@*
+    The rename dialog for a Library item (Task 12.5, Spec §6.5, §8): opened by LibraryFileOps with a
+    snapshot of the preview counts (never a live LibraryLinkPreview), calls LibraryFileService.RenameAsync
+    itself so an invalid-name refusal shows inline and the dialog stays open (item 21/26), and checks
+    BeforeChangeAsync right before the write so previewing a rename never disturbs the open document, only
+    confirming one does (corrections-B6 item 21).
+*@
+@using System.Globalization
+@using Agency.Huddle.App.Library
+
+@inject LibraryFileService FileService
+
+<MudDialog>
+    <DialogContent>
+        <div class="library-file-ops-name-field">
+            <MudTextField T="string" Label="Name" @bind-Value="this.name" />
+        </div>
+        @if (!this.IndexAvailable)
+        {
+            <p class="library-file-ops-links-not-updated">@LinksNotUpdatedText</p>
+        }
+        else if (this.LinkCount > 0)
+        {
+            <p class="library-file-ops-link-count">@this.LinkCountText</p>
+        }
+        @if (this.error is not null)
+        {
+            <p class="library-file-ops-error" role="alert">@this.error</p>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="this.ConfirmAsync">@this.PrimaryText</MudButton>
+        <MudButton OnClick="this.Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>The settled text shown when the root's index is unavailable (corrections-B5 item 8).</summary>
+    internal const string LinksNotUpdatedText = "Links weren't updated: this root has too many files to index.";
+
+    /// <summary>How LibraryFileOps shows this dialog: small, full-width, with a close button that cancels.</summary>
+    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The already-resolved item to rename.</summary>
+    [Parameter]
+    public required LibraryPath Item { get; set; }
+
+    /// <summary>The number of wikilinks that point here, from <see cref="LibraryFileService.PreviewLinkChangesAsync"/>.</summary>
+    [Parameter]
+    public int LinkCount { get; set; }
+
+    /// <summary>The number of distinct notes those links live in.</summary>
+    [Parameter]
+    public int NoteCount { get; set; }
+
+    /// <summary>Whether the item's root's wikilink index is available to preview and rewrite links.</summary>
+    [Parameter]
+    public bool IndexAvailable { get; set; } = true;
+
+    /// <summary>Asked right before the write; a <see langword="false"/> answer aborts silently (corrections-B6 item 21).</summary>
+    [Parameter]
+    public Func<LibraryPath, Task<bool>>? BeforeChangeAsync { get; set; }
+
+    private string name = string.Empty;
+    private string? error;
+
+    /// <summary>Prefills the name field with the item's current file name, once.</summary>
+    protected override void OnParametersSet()
+    {
+        if (this.name.Length == 0)
+        {
+            this.name = Path.GetFileName(this.Item.FullPath);
+        }
+    }
+
+    private string PrimaryText => this.IndexAvailable && this.LinkCount > 0 ? "Rename and update" : "Rename";
+
+    private string LinkCountText => string.Create(
+        CultureInfo.InvariantCulture,
+        $"{this.LinkCount} links in {this.NoteCount} notes point here and will be updated.");
+
+    /// <summary>Checks <see cref="BeforeChangeAsync"/>, then renames through the real service; an invalid name
+    /// shows inline and leaves the dialog open, and success closes it with the move result.</summary>
+    private async Task ConfirmAsync()
+    {
+        this.error = null;
+
+        if (this.BeforeChangeAsync is not null && !await this.BeforeChangeAsync(this.Item))
+        {
+            this.Dialog?.Close(DialogResult.Ok<LibraryResult<LibraryMoveResult>?>(null));
+            return;
+        }
+
+        LibraryResult<LibraryMoveResult> result = await this.FileService.RenameAsync(this.Item, this.name, CancellationToken.None);
+        if (result.Value is null)
+        {
+            this.error = result.Error;
+            return;
+        }
+
+        this.Dialog?.Close(DialogResult.Ok<LibraryResult<LibraryMoveResult>?>(result));
+    }
+
+    private void Cancel() => this.Dialog?.Cancel();
+}
