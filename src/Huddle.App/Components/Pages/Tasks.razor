@@ -58,7 +58,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 
-<div class="tasks-page">
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
     <WakeToasts OnOpenTask="this.OnOpenTaskAsync" />
     @if (!this.Options.Value.Tasks.Enabled)
     {
@@ -83,8 +83,8 @@
     }
     else
     {
-        <header class="tasks-header">
-            <h1>@this.effectiveView.Name</h1>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Class="tasks-header mb-4">
+            <MudText HtmlTag="h1" Typo="Typo.h5" Class="mb-0">@this.effectiveView.Name</MudText>
             @if (!string.IsNullOrEmpty(this.effectiveView.Description))
             {
                 <MudText Typo="Typo.body2" Class="mud-text-secondary tasks-description">@this.effectiveView.Description</MudText>
@@ -93,8 +93,9 @@
             {
                 <MudLink OnClick="this.ResetOverrides" Class="tasks-reset">Reset</MudLink>
             }
+            <MudSpacer />
             <AiReactingChip Watched="this.WatchedTaskIds" />
-        </header>
+        </MudStack>
 
         @if (this.Views.LoadError is { } loadError)
         {
@@ -140,21 +141,21 @@
         {
             @* Spec §13.12 empty states, one rendering below the List and the Board (corrections-B7 12.4 item 1).
                "No tasks yet." carries no button of its own: the toolbar's "+ New task" is right above it. *@
-            <div class="tasks-empty">
+            <MudStack AlignItems="AlignItems.Center" Class="tasks-empty pa-8">
                 @if (this.Store.All.Count == 0)
                 {
-                    <MudText Typo="Typo.body1" Class="tasks-empty-message">No tasks yet.</MudText>
+                    <MudText Typo="Typo.body1" Class="tasks-empty-message mud-text-secondary">No tasks yet.</MudText>
                 }
                 else if (!string.IsNullOrWhiteSpace(this.search) && this.FilteredTasks(null).Count > 0)
                 {
-                    <MudText Typo="Typo.body1" Class="tasks-empty-message">No tasks match '@this.search'.</MudText>
+                    <MudText Typo="Typo.body1" Class="tasks-empty-message mud-text-secondary">No tasks match '@this.search'.</MudText>
                 }
                 else
                 {
-                    <MudText Typo="Typo.body1" Class="tasks-empty-message">No tasks match this View.</MudText>
+                    <MudText Typo="Typo.body1" Class="tasks-empty-message mud-text-secondary">No tasks match this View.</MudText>
                     <MudButton Variant="Variant.Text" OnClick="this.ResetOverrides" Class="tasks-empty-action">Reset filters</MudButton>
                 }
-            </div>
+            </MudStack>
         }
 
         @if (this.itemNotFoundText is not null)
@@ -175,7 +176,7 @@
     }
 
     <ViewEditorDrawer Open="this.editorOpen" OpenChanged="this.OnEditorOpenChanged" Id="@this.editorViewId" Section="this.editorSection" />
-</div>
+</MudContainer>
 
 @code {
     /// <summary>The route's View id segment - null for the bare <c>/tasks</c> and <c>/tasks/new</c> routes.</summary>

@@ -17,15 +17,15 @@
     exactly as before.
 *@
 
-<div class="settings-page">
-    <header class="settings-header">
-        <h1>Settings</h1>
+<MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+        <MudText HtmlTag="h1" Typo="Typo.h5" Class="mb-0">Settings</MudText>
         <ResetAllControl AnyModified="this.AnyModified"
                           Confirming="this.confirmingResetAll"
                           OnBeginReset="this.BeginResetAll"
                           OnConfirm="this.ConfirmResetAll"
                           OnCancel="this.CancelResetAll" />
-    </header>
+    </MudStack>
 
     @if (this.error is not null)
     {
@@ -72,7 +72,7 @@
             <LibraryPanel />
         </MudTabPanel>
     </MudTabs>
-</div>
+</MudContainer>
 
 @code {
     // The parent owns all state, the same split Teammates.razor uses with TeammateCard: PromptsPanel
