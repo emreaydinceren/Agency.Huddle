@@ -28,10 +28,19 @@ internal static partial class WikiLinkParser
         List<(int Start, int EndExclusive)> excluded = WikiLinkParser.CollectExcludedRanges(document);
 
         List<WikiLink> links = [];
+        int cursorIndex = 0;
+        int cursorLine = 1;
         foreach (Match match in WikiLinkParser.WikiLinkRegex().Matches(markdown))
         {
             int start = match.Index;
             int endExclusive = start + match.Length;
+
+            // Matches.Matches() yields matches in ascending Index order, so the line count between
+            // the previous match and this one is never re-walked from the start of the text
+            // (avoiding the quadratic cost of calling LineOf(markdown, start) per link).
+            cursorLine += WikiLinkParser.CountLineBreaks(markdown, cursorIndex, start);
+            cursorIndex = start;
+
             if (WikiLinkParser.Overlaps(excluded, start, endExclusive))
             {
                 continue;
@@ -49,7 +58,7 @@ internal static partial class WikiLinkParser
                 continue;
             }
 
-            links.Add(new WikiLink(target, heading, alias, isEmbed, WikiLinkParser.LineOf(markdown, start), start, match.Length));
+            links.Add(new WikiLink(target, heading, alias, isEmbed, cursorLine, start, match.Length));
         }
 
         return links;
@@ -105,24 +114,26 @@ internal static partial class WikiLinkParser
         return backslashCount % 2 == 1;
     }
 
-    /// <summary>The 1-based line of <paramref name="index"/> in <paramref name="text"/>, counting a lone <c>\r</c> as a line break in addition to <c>\n</c>.</summary>
-    private static int LineOf(string text, int index)
+    /// <summary>The number of line breaks in <c>text[fromIndexInclusive..toIndexExclusive]</c>, counting a lone
+    /// <c>\r</c> as a line break in addition to <c>\n</c> (the same rule <see cref="Parse"/> used to apply from
+    /// index 0 on every call; called here over one bounded slice per match instead).</summary>
+    private static int CountLineBreaks(string text, int fromIndexInclusive, int toIndexExclusive)
     {
-        int line = 1;
-        for (int i = 0; i < index; i++)
+        int count = 0;
+        for (int i = fromIndexInclusive; i < toIndexExclusive; i++)
         {
             char c = text[i];
             if (c == '\n')
             {
-                line++;
+                count++;
             }
             else if (c == '\r' && (i + 1 >= text.Length || text[i + 1] != '\n'))
             {
-                line++;
+                count++;
             }
         }
 
-        return line;
+        return count;
     }
 
     /// <summary>

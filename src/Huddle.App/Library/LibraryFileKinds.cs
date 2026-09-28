@@ -25,6 +25,18 @@ internal static class LibraryFileKinds
     private static ReadOnlySpan<byte> PngSignature => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
     /// <summary>
+    /// Whether <paramref name="fileName"/> has a Markdown extension (<c>.md</c> or <c>.markdown</c>).
+    /// Shares <see cref="MarkdownExtensions"/> with <see cref="Detect"/> and <see cref="HasKnownExtension"/>
+    /// so the set lives once; used by <see cref="WikiLinkIndex"/> to decide which files it parses for links.
+    /// </summary>
+    /// <param name="fileName">The candidate file name.</param>
+    internal static bool IsMarkdown(string fileName)
+    {
+        ArgumentNullException.ThrowIfNull(fileName);
+        return MarkdownExtensions.Contains(Path.GetExtension(fileName));
+    }
+
+    /// <summary>
     /// Whether <paramref name="fileName"/> already carries a Spec §6.11 known extension (Markdown, text/code
     /// or image), so <see cref="LibraryFileService.CreateFileAsync"/> keeps it as-is rather than appending
     /// <c>.md</c> (corrections-B4 item 23). Shares the same extension lists as <see cref="Detect"/> so the two

@@ -17,9 +17,6 @@ namespace Agency.Huddle.App.Library;
 /// <param name="logger">Logs unexpected failures.</param>
 internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleBin recycleBin, IOptions<TeamOptions> options, ILogger<LibraryFileService> logger)
 {
-    /// <summary>Folder names hidden everywhere in the Library tree (Spec §6.4), beyond <see cref="FileChangesOptions.EffectiveIgnore"/>.</summary>
-    private static readonly string[] AlwaysHiddenFolders = [".obsidian", ".trash", ".git"];
-
     /// <summary>The most of a file read up front to detect its kind (Spec §6.4).</summary>
     private const int DetectionHeadBytes = 8192;
 
@@ -117,7 +114,7 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
         foreach (FileSystemInfo child in children)
         {
             bool isFolder = child is DirectoryInfo;
-            if (isFolder && IsHiddenFolder(child.Name, ignoredFolders, hideUnderscoreFolders))
+            if (isFolder && LibraryHiddenFolders.IsHidden(child.Name, ignoredFolders, hideUnderscoreFolders))
             {
                 continue;
             }
@@ -821,28 +818,4 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
     }
 
     private static string EntryName(LibraryEntry entry) => Path.GetFileName(entry.Path.FullPath);
-
-    /// <summary>Whether a folder name is hidden: always-hidden, in the effective ignore list, or (Teams root only) underscore-prefixed.</summary>
-    private static bool IsHiddenFolder(string name, IReadOnlyList<string> ignoredFolders, bool hideUnderscoreFolders)
-    {
-        if (Array.Exists(AlwaysHiddenFolders, hidden => string.Equals(hidden, name, StringComparison.OrdinalIgnoreCase)))
-        {
-            return true;
-        }
-
-        if (hideUnderscoreFolders && name.StartsWith('_'))
-        {
-            return true;
-        }
-
-        foreach (string ignored in ignoredFolders)
-        {
-            if (string.Equals(ignored, name, StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }

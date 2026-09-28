@@ -225,6 +225,11 @@ public static class ServiceCollectionExtensions
         // every recycle so nothing is ever silently, permanently deleted.
         services.AddSingleton<IRecycleBin>(_ => OperatingSystem.IsWindows() ? new WindowsRecycleBin() : new NotAvailableRecycleBin());
 
+        // No interface, same reasoning as AvatarStore above: nothing needs to substitute this.
+        // Registered right before LibraryFileService (Task 8.4.i), which will take it as a
+        // constructor dependency once the rewrite hooks land (8.5.i-a).
+        services.AddSingleton<WikiLinkIndex>();
+
         // Registered right after LibraryPathResolver (corrections-B4 item 7): it depends on the
         // resolver above and on IRecycleBin, registered just above.
         services.AddSingleton<LibraryFileService>();
