@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 127 of 143 tasks Done · 6 of 8 retrospectives done (R7, R8 skipped) · last updated 2026-09-27.
+**Status:** 129 of 143 tasks Done · 6 of 8 retrospectives done (R7, R8 skipped) · last updated 2026-09-27.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -162,8 +162,8 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 12.6.i Implement Copy and freshness · #113 · Sonnet | | | ✔ |
 | 12.7.t Test: `LibraryExplorer` and scopes · #114 · Sonnet | | | ✔ |
 | 12.7.i Implement `LibraryExplorer` · #115 · Sonnet | | | ✔ |
-| 12.8.t Test: the `/library-files` image endpoint · #116 · Sonnet | ✔ | | |
-| 12.8.i Implement the image endpoint · #117 · Sonnet | ✔ | | |
+| 12.8.t Test: the `/library-files` image endpoint · #116 · Sonnet | | | ✔ |
+| 12.8.i Implement the image endpoint · #117 · Sonnet | | | ✔ |
 | **D13. Hosts: the pane, the page and Settings** | | | |
 | 13.1.t Test: the Library Pane side setting · #118 · Haiku | ✔ | | |
 | 13.1.i Implement the side setting · #119 · Haiku | ✔ | | |
