@@ -178,7 +178,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
     private bool TryResolveExistingFile(string candidateText, [NotNullWhen(true)] out LibraryPath? path)
     {
         if (this.resolver.TryResolveAbsolute(candidateText, out path)
-            && path.Role is LibraryNodeRole.File or LibraryNodeRole.TeammateDefinition
+            && path.IsFile
             && File.Exists(path.FullPath))
         {
             return true;

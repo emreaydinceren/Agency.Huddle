@@ -553,7 +553,7 @@
 
         context.PreventNavigation();
 
-        if (target.Role == LibraryNodeRole.File)
+        if (target.IsFile)
         {
             await this.OnNavigate.InvokeAsync(target);
             return;
