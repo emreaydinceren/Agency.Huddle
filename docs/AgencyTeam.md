@@ -55,7 +55,7 @@ question is yours; the cost column is roughly what it will spend.
 | [Skills project plan](Huddle.Skills-ProjectPlan.md) | **Start here to build Skills.** 90 atomic, test-first tasks in 17 deliverables, each written for an agent with no context | ~13k |
 | [Questions design](Huddle.Questions-Specifications.md) | Before work on `ask_human`, the Question card, or anything an Agent asks the Human to choose. Proposed, not built; the Proposal card it copies shipped with Skills | ~8k |
 | [File Changes design](Huddle.FileChanges-Specifications.md) | Before work on Watched Folders, `watch_folder`, `watches` frontmatter, `file-state/`, an Agent's `memory/` folder, or anything that tells an Agent a file changed or what it remembers. Replaced roadmap item 11's delivery plan. **Delivered (code) 2026-09-23**; the isolation it depends on for Memory is unverified live — see [Known limits](agencyteam/known-limits.md) and [manual-tests/file-changes.md](agencyteam/manual-tests/file-changes.md) | ~14k |
-| [Library design](Huddle.Library-Specifications.md) | Before work on the Library pane, Library Roots, Team folders (`Teams/<Team>/[<Project>/]`), the `Teammates/<Name>/` layout that replaces `Teams/*.md` and `work/`, the Markdown editor, wikilinks, or links from chat to files. Proposed, not built; the Team folders part waits on the Tasks effort accepting ADR-0030 | ~14k |
+| [Library design](Huddle.Library-Specifications.md) | Before work on the Library pane, Library Roots, Team folders (`Teams/<Team>/[<Project>/]`), the `Teammates/<Name>/` layout that replaces `Teams/*.md` and `work/`, the Markdown editor, wikilinks, or links from chat to files. Delivered (code) 2026-09-28 | ~14k |
 | [Library project plan](Huddle.Library-ProjectPlan.md) | **Start here to build the Library.** 131 atomic, test-first tasks in 15 deliverables (45 sized for Haiku), each written for an agent with no context, with a retrospective every 15 tasks | ~36k |
 | [Library tracker](Huddle.Library-Tracker.md) | To see or record where each of the plan's 131 tasks and 8 retrospectives stands | ~4k |
 | [Room Sessions design](Huddle.RoomSessions-Specifications.md) | Before work on per-Room sessions, `IAgentHostFactory`, session resume, `ReadTranscript`, or what Stop applies to. Roadmap item 18. Proposed, not built; build it after File Changes and Memory | ~14k |
@@ -257,8 +257,8 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `Acp:Command` | `node` | |
 | `Acp:AdapterPath` | `null` | Otherwise located by probing upward. |
 | `Acp:Args` | `null` | |
-| `Acp:TeamsDir` | `Teams` | Relative to `DataDir`. Scanned recursively — sub-folders are organisational only; Team membership comes from each Persona's `teams` frontmatter field, not its location. Setting the old `Acp:PersonaDir` key throws at startup rather than silently scanning nothing. |
-| `Acp:WorkDir` | `work` | One subdirectory per Persona, named after it. Relative to `DataDir`. **It is a Teammate's durable memory**: Keepers and Specialists with a library store their notes there, so the app never deletes it, `-Clean` leaves it alone, and a removed Persona's folder is orphaned rather than deleted. Keep it that way. See [What a team is for](#what-a-team-is-for). |
+| `Acp:TeammatesDir` | `Teammates` | Relative to `DataDir`. One definition file per Teammate folder, scanned one level; the old `Acp:TeamsDir` key throws at startup rather than silently scanning nothing. |
+| `Acp:WorkDir` | `work` | The Work Dir sub-folder inside each Teammate folder. **It is a Teammate's durable memory**: Keepers and Specialists with a library store their notes there, so the app never deletes it, `-Clean` leaves it alone, and a removed Persona's folder is orphaned rather than deleted. Keep it that way. See [What a team is for](#what-a-team-is-for). |
 | `Acp:SkillsDir` | `Skills` | Relative to `DataDir`. Holds Skill folders: an override of a shipped Skill, file by file, or a Skill written by hand. Created at startup. See [ADR-0021](adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md). |
 | `Acp:MaxTeammates` | `8` | The most Personas the library may hold before `propose_teammates` refuses a Proposal and Approve creates nothing. Counts every loaded Persona, not only proposed ones; rejected files do not count. Checked when an Agent proposes and again at Approve, never on the Teammate card. Zero or less disables it. Exists because every Teammate is a process. |
 | `Acp:TraceWire` | `false` | **Dumps the bearer token.** Debugging only. |
@@ -280,10 +280,16 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `FileChanges:MaxListed` | `50` | The most File Changes lines listed per Turn, across every Watched Folder. |
 | `FileChanges:MaxMemoryEntries` | `100` | The most Memory lines shown in a new session's system prompt; the rest are counted rather than listed. |
 | `Tasks:Enabled` | `true` | `false` hides the UI, offers no tools and wakes no one. The Task files stay where they are. |
-| `Tasks:Dir` | `Tasks` | Relative to `DataDir`. Startup throws if it resolves inside `Acp:TeamsDir`. |
+| `Teams:Dir` | `Teams` | Team folders, relative to `DataDir`. Shared with Tasks, and replaces `Tasks:Dir`. |
 | `Tasks:WakeEnabled` | `true` | `false` keeps Tasks but never wakes anyone. |
 | `Tasks:WakeCoalesceSeconds` | `5` | How long a Task's changes are coalesced before one wake-up is sent. `0` wakes on every change. |
 | `Tasks:AgentWakeBudget` | `10` | The most Agent-made wakes one Task allows before pausing. `0` or less disables the per-Task budget. |
+| `Library:Enabled` | `true` | `false` hides the pane, the page, the sidebar link and chat links. |
+| `Library:Roots` | `[]` | Pinned roots: `[{ "Name": "Huddle docs", "Path": "E:\\Repos\\Huddle\\docs" }]`. |
+| `Library:MaxEditableBytes` | `2097152` | Above this, a text file opens read-only. |
+| `Library:MaxIndexedFiles` | `5000` | Above this, a root's wikilink index is not built and backlinks say so. |
+| `Library:MaxReferencedDocuments` | `10` | The most Library documents listed in one Turn's prompt; the rest are counted. |
+| `Library:MaxInlineBytes` | `16384` | Per document, the most text inlined for an Adapter without file tools. |
 
 An installation running `agency-acp`, unverified for resume or for several sessions per process
 (RS Appendix B V-5), sets that Adapter's `SessionPerRoom` to `false` until V-5 passes:

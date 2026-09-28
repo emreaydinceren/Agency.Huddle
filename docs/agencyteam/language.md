@@ -83,9 +83,11 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   it groups and filters the Teammates page and the invite dialog, and nothing
   more. It is never a permission: every Agent still sees every other Agent
   through `mcp__team__list_agents`, and any Agent can be invited to any Room.
-: A Team is emphatically **not a folder**. Sub-folders under the Teams directory
-  are organisational only, and moving a file between them changes nothing at all.
-: **In Tasks, the opposite holds, and on purpose.** Under the Tasks directory, a
+: A Persona's Team is **not a folder**: its Team membership is its frontmatter
+  alone, and where the Persona's Teammate folder sits changes nothing.
+  On disk, a Team has a folder under `Teams/` (ADR-0030) for its notes, Projects
+  and Tasks; that folder never decides who is in the Team.
+: **In Tasks, the opposite holds, and on purpose.** Under `Teams/`, a
   Task's top-level folder *is* its Team, and it names a Team label by convention.
   That rule applies to Tasks only and never to Personas; see
   [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md).
@@ -339,7 +341,7 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 
 **Work Dir**
 : The per-Persona working directory handed to the agent process as its `cwd`,
-  under `{DataDir}/{Acp:WorkDir}`.
+  under `{DataDir}/{Acp:TeammatesDir}/<Name>/work/`.
 : *Avoid*: sandbox — it is not a jail, and the old name implied one.
 
 **Room Session**
@@ -358,6 +360,30 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   passes for `agency-acp`. Paid checks proving this live have not yet been run —
   see [Known limits](known-limits.md).
 : *Avoid*: conversation, thread, agent session, instance.
+
+## Library
+
+**Library**
+: The explorer, viewer and editor as a whole.
+
+**Library Root**
+: One top-level folder the Library may reach, with an id: `teams`, `teammates`,
+  or a pinned root's slug.
+
+**Library Pane**
+: The docked panel: the tree above, the open document below or beside it.
+
+**Team folder**
+: `{DataDir}/Teams/<Team>/`, a Team's folder of notes, Projects and Tasks.
+
+**Project**
+: A direct sub-folder of a Team folder; the same Project Tasks files into.
+
+**Teammate folder**
+: `{DataDir}/Teammates/<Name>/`: the Teammate's definition and its `work/` Work Dir.
+
+**Pinned root**
+: A Library Root the Human added in configuration or Settings.
 
 ## Tasks
 

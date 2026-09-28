@@ -101,6 +101,7 @@ the per-area tables below.
 | [Reply Gate, Mentions and Room Budget](reply-gate-budget.md) | 36 | 6 | [below](#reply-gate-budget) |
 | [Teammates page: tiles, Teams grouping, filter and rejected files](teammates-library.md) | 40 | 1 | [below](#teammates-library) |
 | [Teammate card: view, edit, create, delete](teammate-card.md) | 50 | 1 | [below](#teammate-card) |
+| [Library explorer and editor](library.md) | 19 | 1 | [below](#library) |
 | [Model and Effort pickers, catalog probe and runner restart](model-effort.md) | 27 | 1 | [below](#model-effort) |
 | [Creating Rooms, inviting Agents, Room naming](invite-rooms.md) | 32 | 4 | [below](#invite-rooms) |
 | [Settings: the 24 Prompts, editing, per-field reset and Save](prompts-settings.md) | 40 | 3 | [below](#prompts-settings) |
@@ -413,6 +414,32 @@ Teammate card: view, edit, create, delete — [area file](teammate-card.md)
 | [TEAMMATECARD-49](teammate-card.md#teammatecard-49-delete-then-recreate-under-the-same-name-fresh-settings-old-room) |  | Active | |  |
 | [TEAMMATECARD-50](teammate-card.md#teammatecard-50-editing-a-teammate-really-does-lose-its-conversation-memory-costs-money) | 💰 | Active | |  |
 | [TEAMMATECARD-51](teammate-card.md#teammatecard-51-the-edit-cards-name-title-and-alias-boxes-write-into-the-frontmatter-and-preserve-every-other-field) |  | Active | |  |
+
+## library
+
+Library explorer and editor — [area file](library.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [L0](library.md#l0--chat-message-with-absolute-path-becomes-a-library-link-and-opens-the-pane) |  | Active | | |
+| [L1](library.md#l1--human-edits-a-file-in-the-library-and-saves-it-other-rooms-see-changed--on-the-agents-next-turn) |  | Active | | |
+| [L2](library.md#l2--human-creates-a-project-folder-in-the-library-from-the-team-node) |  | Active | | |
+| [L3](library.md#l3--a-persona-gains-a-team-label-the-team-folder-is-created-on-the-next-reload) |  | Active | | |
+| [L4](library.md#l4--wikilinks-are-rewritten-when-a-file-is-renamed-the-rename-dialog-reports-the-link-count) |  | Active | | |
+| [L5](library.md#l5--editing-a-persona-definition-file-shows-a-save-time-warning) |  | Active | | |
+| [L6](library.md#l6--team-and-project-folders-are-protected-rename-and-delete-are-not-offered) |  | Active | | |
+| [L7](library.md#l7--crafted-paths-like--windows-are-refused-by-the-resolver) |  | Active | | |
+| [L8](library.md#l8--deleting-a-file-sends-it-to-the-windows-recycle-bin-with-a-confirm-dialog) |  | Active | | |
+| [L9](library.md#l9--when-a-file-is-rewritten-by-an-agent-with-no-unsaved-edits-the-new-text-is-shown-on-focus) |  | Active | | |
+| [L10](library.md#l10--when-a-file-is-rewritten-by-an-agent-while-the-human-has-unsaved-edits-and-the-human-saves-the-humans-text-wins) |  | Active | | |
+| [L11](library.md#l11--opening-different-file-types-images-preview-json-displays-read-only-powerpoint-offers-open-in-default-app) |  | Active | | |
+| [L12](library.md#l12--copy-a-document-and-paste-it-into-a-chat-agents-receive-the-library-document-block) | 💰 | Active | | |
+| [L13](library.md#l13--pasting-a-library-path-outside-huddle-eg-in-claude-code-is-an-ordinary-absolute-path) |  | Active | | |
+| [L14](library.md#l14--library-pane-side-setting-persists-and-divider-position-is-remembered-across-sessions) |  | Active | | |
+| [L15](library.md#l15--clicking-the-pop-out-button-opens-the-library-page-at-full-width-with-tree-and-document-side-by-side) |  | Active | | |
+| [L16](library.md#l16--old-teamsmd--work-install-is-migrated-to-teammates-folder-layout-on-startup) |  | Active | | |
+| [L17](library.md#l17--a-real-obsidian-vault-is-pinned-as-a-library-root-and-can-be-edited-without-reformatting) |  | Active | | |
+| [L18](library.md#l18--runps1--clean-keeps-teams-and-work-folders-intact) |  | Active | | |
 
 ## model-effort
 

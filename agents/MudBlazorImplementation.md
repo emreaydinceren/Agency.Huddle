@@ -33,6 +33,9 @@ styles and tests the component, which the MudBlazor example does not.
 | `MudToggleGroup`, `MudTimeline`, `MudExitPrompt` | [`TaskDetail.razor`](../src/Huddle.App/Components/Tasks/TaskDetail.razor) |
 | `MudBadge` | [`TaskCard.razor`](../src/Huddle.App/Components/Tasks/TaskCard.razor) |
 | `MudNavGroup` | [`TaskViewNav.razor`](../src/Huddle.App/Components/Tasks/TaskViewNav.razor) |
+| `MudSplitPanel`, divider saved through `GetDividerPositionAsync` | [`LibraryPaneHost.razor`](../src/Huddle.App/Components/Library/LibraryPaneHost.razor), [`LibraryExplorer.razor`](../src/Huddle.App/Components/Library/LibraryExplorer.razor) |
+| `MudTreeView<T>` with `ServerData`, item text in `BodyContent` | [`LibraryTree.razor`](../src/Huddle.App/Components/Library/LibraryTree.razor) |
+| `MudExitPrompt`, `MudBreadcrumbs`, `MudToolBar` | [`LibraryDocument.razor`](../src/Huddle.App/Components/Library/LibraryDocument.razor) |
 
 To refresh this list, search `src/Huddle.App` for `<Mud`.
 

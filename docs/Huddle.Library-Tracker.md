@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 137 of 143 tasks Done · 6 of 8 retrospectives done (R7, R8 skipped) · last updated 2026-09-27.
+**Status:** 141 of 143 tasks Done (14.5, the manual tests, deferred to UAT) · 6 of 8 retrospectives done (R7, R8 skipped) · last updated 2026-09-28.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -175,9 +175,9 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 13.4.t Test: Settings → Library panel · #124 · Sonnet | | | ✔ |
 | 13.4.i Implement the Settings panel · #125 · Sonnet | | | ✔ |
 | **D14. Docs and verification** | | | |
-| 14.1 `language.md`: the Library section · #126 · Haiku | ✔ | | |
-| 14.2 `AgencyTeam.md`: configuration and map · #127 · Haiku | ✔ | | |
-| 14.3 `mudblazor.md` and `code-map.md` · #128 · Haiku | ✔ | | |
-| 14.4 Manual test script · #129 · Haiku | ✔ | | |
-| 14.5 Run the manual tests · #130 · Sonnet | ✔ | | |
-| 14.6 Close out: ADRs, roadmap and CI · #131 · Sonnet | ✔ | | |
+| 14.1 `language.md`: the Library section · #126 · Haiku | | | ✔ |
+| 14.2 `AgencyTeam.md`: configuration and map · #127 · Haiku | | | ✔ |
+| 14.3 `mudblazor.md` and `code-map.md` · #128 · Haiku | | | ✔ |
+| 14.4 Manual test script · #129 · Haiku | | | ✔ |
+| 14.5 Run the manual tests · #130 · Sonnet — deferred to UAT with the Human (2026-09-28); the script is `docs/agencyteam/manual-tests/library.md` | ✔ | | |
+| 14.6 Close out: ADRs, roadmap and CI · #131 · Sonnet | | ✔ | |
