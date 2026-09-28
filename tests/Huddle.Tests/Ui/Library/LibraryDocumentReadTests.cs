@@ -38,6 +38,23 @@ public sealed class LibraryDocumentReadTests : IDisposable
         cut.WaitForAssertion(() => Assert.Equal("Hello", cut.Find(".library-rendered h1").TextContent.Trim()));
     }
 
+    /// <summary>A leading YAML frontmatter block is shown as a metadata list and never folded into a heading by the closing <c>---</c>.</summary>
+    [Fact]
+    public async Task Markdown_ReadMode_FrontmatterIsMetadataNotHeading()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        File.WriteAllText(Path.Combine(root, "cos.md"), "---\r\nname: 'Chief of Staff'\r\nalias: 'cos'\r\n---\r\n\r\n# Body heading\r\n\r\nText.");
+        LibraryPath path = this.fixture.LibraryFixture.Resolve(root, "cos.md");
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
+
+        cut.WaitForAssertion(() => Assert.Equal("Body heading", cut.Find(".library-rendered h1").TextContent.Trim()));
+        Assert.Empty(cut.FindAll(".library-rendered h2"));
+        Assert.Equal(["name", "alias"], cut.FindAll(".library-frontmatter dt").Select(dt => dt.TextContent.Trim()));
+        Assert.Equal(["Chief of Staff", "cos"], cut.FindAll(".library-frontmatter dd").Select(dd => dd.TextContent.Trim()));
+    }
+
     /// <summary>[12.2a] The breadcrumbs show the root's display name, then each folder on the way to the file, in order (Spec §8).</summary>
     [Fact]
     public async Task Header_BreadcrumbsRootThenFolders()
