@@ -14,6 +14,7 @@
 @inject LibraryPathResolver Resolver
 @inject IDialogService Dialogs
 @inject ISnackbar Snackbar
+@inject IJSRuntime JS
 
 @if (this.failedNotes.Count > 0)
 {
@@ -73,6 +74,8 @@
                 await this.HandleCreateAsync(action.Kind, action.Path, action.Name);
                 return;
             case LibraryTreeActionKind.CopyPath:
+                await LibraryClipboard.CopyPathAsync(this.JS, this.Snackbar, action.Path.FullPath);
+                return;
             case LibraryTreeActionKind.OpenInDefaultApp:
                 throw new NotSupportedException("12.5b");
             default:

@@ -19,7 +19,7 @@
         <MudExpansionPanel Text="@this.HeaderText">
             @foreach (var backlink in this.Backlinks)
             {
-                <div class="backlink-row">
+                <div class="backlink-row backlinks-panel-row">
                     <button class="backlink-button" @onclick="_ => this.OnNavigate.InvokeAsync(backlink.Note)">
                         <span class="backlink-path">@backlink.Note.RelativePath</span>
                     </button>

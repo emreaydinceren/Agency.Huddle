@@ -178,3 +178,25 @@ window.huddleClipboard = {
     return ok;
   }
 };
+
+/* Library */
+window.huddleLibrary = {
+  // Registers a visibilitychange listener that calls the given .NET reference's OnVisible method
+  // whenever the page becomes visible again, so an open document can refresh itself.
+  onVisible: function (dotNetRef) {
+    const handler = () => {
+      if (document.visibilityState === "visible") {
+        dotNetRef.invokeMethodAsync("OnVisible");
+      }
+    };
+    dotNetRef._huddleLibraryVisibilityHandler = handler;
+    document.addEventListener("visibilitychange", handler);
+  },
+  offVisible: function (dotNetRef) {
+    const handler = dotNetRef._huddleLibraryVisibilityHandler;
+    if (handler) {
+      document.removeEventListener("visibilitychange", handler);
+      delete dotNetRef._huddleLibraryVisibilityHandler;
+    }
+  },
+};
