@@ -507,14 +507,119 @@ public sealed class MarkdownRendererTests
         Assert.Equal("https://e", anchor.GetAttribute("href"));
     }
 
-    /// <summary>An image link stays "#" until the /library-files/ route exists (corrections-B5 item 21).</summary>
+    /// <summary>A relative image link the resolver resolves points at the <c>/library-files/</c> endpoint (12.8),
+    /// each path segment individually percent-encoded, superseding corrections-B5 item 21's "stays # until the
+    /// route exists" (corrections-B6 item 30). The alt text is kept.</summary>
     [Fact]
-    public void Note_ImageLink_HrefStaysHash()
+    public void Note_RelativeImage_Resolved_PointsAtLibraryFiles()
+    {
+        FakeLibraryNoteResolver library = new(resolveRelative: (from, url) =>
+            string.Equals(url, "img/x.png", StringComparison.Ordinal)
+                ? new LibraryReference("teams", "Marketing/Launch Q4/img/x.png", Exists: true)
+                : null);
+
+        var html = MarkdownRenderer.ToHtml("![alt](img/x.png)", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+        var image = document.QuerySelector("img");
+
+        Assert.NotNull(image);
+        Assert.Equal("/library-files/teams/Marketing/Launch%20Q4/img/x.png", image.GetAttribute("src"));
+        Assert.Equal("alt", image.GetAttribute("alt"));
+    }
+
+    /// <summary>An image link the resolver does not recognise (an unresolved relative file link) stays "#".</summary>
+    [Fact]
+    public void Note_RelativeImage_Unresolved_StaysHash()
+    {
+        FakeLibraryNoteResolver library = new(resolveRelative: (from, url) => null);
+
+        var html = MarkdownRenderer.ToHtml("![](img/x.png)", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+        var image = document.QuerySelector("img");
+
+        Assert.NotNull(image);
+        Assert.Equal("#", image.GetAttribute("src"));
+    }
+
+    /// <summary>An image wikilink embed still renders as a plain link, never an <c>&lt;img&gt;</c> (Spec §6.5: embeds
+    /// render as links in v1) - unchanged by this task.</summary>
+    [Fact]
+    public void Note_ImageWikiEmbed_RendersAsLink()
+    {
+        FakeLibraryNoteResolver library = new(resolveWikiLink: (_, link) =>
+            new LibraryReference("teams", "Marketing/diagram.png", Exists: true));
+
+        var html = MarkdownRenderer.ToHtml("See ![[diagram.png]].", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+
+        Assert.Null(document.QuerySelector("img"));
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, "diagram.png");
+        Assert.Equal("?library=teams/Marketing/diagram.png", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>An absolute https image is not a relative Library link - the resolver declines it - and keeps
+    /// its own src unchanged, exactly as an https anchor link does.</summary>
+    [Fact]
+    public void Note_ExternalImage_KeepsHttpsSrc()
+    {
+        FakeLibraryNoteResolver library = new();
+
+        var html = MarkdownRenderer.ToHtml("![](https://e/y.png)", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+        var image = document.QuerySelector("img");
+
+        Assert.NotNull(image);
+        Assert.Equal("https://e/y.png", image.GetAttribute("src"));
+    }
+
+    /// <summary>A resolved <c>/library-files/</c> URL is accepted as an <c>img</c> src, but the identical URL text
+    /// written as a plain <c>a href</c> is still neutralised to "#" - <c>IsSafe</c> admits the route for images
+    /// only (corrections-B6 item 30).</summary>
+    [Fact]
+    public void IsSafe_LibraryFilesHref_ImageOnly()
+    {
+        FakeLibraryNoteResolver library = new(resolveRelative: (from, url) =>
+            string.Equals(url, "img/x.png", StringComparison.Ordinal)
+                ? new LibraryReference("teams", "Marketing/Launch Q4/img/x.png", Exists: true)
+                : null);
+
+        var html = MarkdownRenderer.ToHtml(
+            "![](img/x.png)\n\n[text](/library-files/teams/Marketing/Launch%20Q4/img/x.png)",
+            tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+        var image = document.QuerySelector("img");
+        var anchor = document.QuerySelector("a");
+
+        Assert.NotNull(image);
+        Assert.Equal("/library-files/teams/Marketing/Launch%20Q4/img/x.png", image.GetAttribute("src"));
+        Assert.NotNull(anchor);
+        Assert.Equal("#", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>A traversal attempt in the resolved relative path is refused even for an image src.</summary>
+    [Fact]
+    public void IsSafe_LibraryFilesHref_TraversalStaysHash()
+    {
+        FakeLibraryNoteResolver library = new(resolveRelative: (from, url) =>
+            new LibraryReference("teams", "../x", Exists: true));
+
+        var html = MarkdownRenderer.ToHtml("![](img/x.png)", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+        var image = document.QuerySelector("img");
+
+        Assert.NotNull(image);
+        Assert.Equal("#", image.GetAttribute("src"));
+    }
+
+    /// <summary>Chat rendering (no note <c>from</c>) never rewrites an image link, even when the library resolver
+    /// would otherwise resolve it: images are only rewritten inside a note.</summary>
+    [Fact]
+    public void ToHtml_Chat_ImageLink_NeverRewritten()
     {
         FakeLibraryNoteResolver library = new(resolveRelative: (from, url) =>
             new LibraryReference("teams", "Marketing/img/x.png", Exists: true));
 
-        var html = MarkdownRenderer.ToHtml("![](img/x.png)", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var html = MarkdownRenderer.ToHtml("![](img/x.png)", tasks: null, library: (ILibraryReferenceResolver)library);
         var document = new HtmlParser().ParseDocument(html);
         var image = document.QuerySelector("img");
 

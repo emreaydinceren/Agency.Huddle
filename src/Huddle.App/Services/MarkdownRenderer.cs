@@ -82,10 +82,15 @@ public static partial class MarkdownRenderer
     /// <param name="from">The Library note <paramref name="markdown"/> was read from, or <see langword="null"/> outside a note.</param>
     private static string Render(string markdown, ITaskReferenceResolver? tasks, ILibraryReferenceResolver? library, ILibraryNoteResolver? noteLibrary, LibraryPath? from)
     {
+        // An unguessable per-render marker, not something a note's own authored text could ever contain: only
+        // an image href this call itself resolved through RewriteRelativeLinks carries it, so IsSafe can trust
+        // the /library-files/ route for exactly that href and refuse the identical text written as a plain
+        // "a href" (corrections-B6 item 30).
+        string trustToken = Guid.NewGuid().ToString("N");
         using var writer = new StringWriter();
         var renderer = new Markdig.Renderers.HtmlRenderer(writer)
         {
-            LinkRewriter = url => MarkdownRenderer.IsSafe(url) ? url : "#",
+            LinkRewriter = url => MarkdownRenderer.RewriteUrl(url, trustToken),
         };
         Pipeline.Setup(renderer);
 
@@ -98,7 +103,7 @@ public static partial class MarkdownRenderer
 
         if (noteLibrary is not null && from is not null)
         {
-            MarkdownRenderer.RewriteRelativeLinks(document, noteLibrary, from);
+            MarkdownRenderer.RewriteRelativeLinks(document, noteLibrary, from, trustToken);
             MarkdownRenderer.LinkWikiLinks(document, noteLibrary, from, markdown);
         }
 
@@ -287,19 +292,23 @@ public static partial class MarkdownRenderer
     /// <summary>
     /// Rewrites a relative Markdown link (<c>[x](../plan.md)</c>) written in a Library note into a
     /// <c>?library=</c> href, in place, when <see cref="ILibraryNoteResolver.ResolveRelative"/> resolves it
-    /// (Spec §6.6). An image link (<see cref="LinkInline.IsImage"/>) is left untouched - it stays whatever it
-    /// was authored as, which fails <see cref="IsSafe"/> and renders <c>#</c> until the <c>/library-files/</c>
-    /// route exists (corrections-B5 item 21) - and a link the resolver does not recognise as a relative file
-    /// link (an absolute URL, <c>mailto:</c>, a bare heading anchor) is left as today.
+    /// (Spec §6.6). An image link (<see cref="LinkInline.IsImage"/>) is instead rewritten into a
+    /// <c>/library-files/</c> href (Task 12.8's endpoint; corrections-B6 item 30, superseding B5 item 21's
+    /// "stays #"), prefixed with <paramref name="trustToken"/> so <see cref="RewriteUrl"/> can recognise it as
+    /// generated for an image by this render call and strip the marker back off - the identical URL text
+    /// authored as a plain <c>a href</c> never carries the marker and still renders <c>#</c>. A link the
+    /// resolver does not recognise as a relative file link (an absolute URL, <c>mailto:</c>, a bare heading
+    /// anchor) is left as today.
     /// </summary>
     /// <param name="document">The parsed Markdown document, mutated in place.</param>
     /// <param name="library">The resolver for relative links.</param>
     /// <param name="from">The Library note the links were written in.</param>
-    private static void RewriteRelativeLinks(MarkdownDocument document, ILibraryNoteResolver library, LibraryPath from)
+    /// <param name="trustToken">This render call's marker; see <see cref="RewriteUrl"/>.</param>
+    private static void RewriteRelativeLinks(MarkdownDocument document, ILibraryNoteResolver library, LibraryPath from, string trustToken)
     {
         foreach (LinkInline link in document.Descendants<LinkInline>().ToList())
         {
-            if (link.IsImage || link.Url is null)
+            if (link.Url is null)
             {
                 continue;
             }
@@ -307,6 +316,12 @@ public static partial class MarkdownRenderer
             LibraryReference? reference = library.ResolveRelative(from, link.Url);
             if (reference is null)
             {
+                continue;
+            }
+
+            if (link.IsImage)
+            {
+                link.Url = string.Concat(trustToken, MarkdownRenderer.BuildLibraryFilesHref(reference.RootId, reference.RelativePath));
                 continue;
             }
 
@@ -696,14 +711,60 @@ public static partial class MarkdownRenderer
     /// <param name="rootId">The Library root id.</param>
     /// <param name="relativePath">The forward-slash relative path from the root.</param>
     private static string BuildLibraryHref(string rootId, string relativePath) =>
-        string.Concat("?library=", rootId, "/", string.Join('/', relativePath.Split('/').Select(Uri.EscapeDataString)));
+        MarkdownRenderer.BuildRootRelativeHref("?library=", rootId, relativePath);
+
+    /// <summary>Builds a <c>/library-files/</c> href (Task 12.8's endpoint) for an image: the root id, then the
+    /// relative path with each <c>/</c>-separated segment individually percent-encoded.</summary>
+    /// <param name="rootId">The Library root id.</param>
+    /// <param name="relativePath">The forward-slash relative path from the root.</param>
+    private static string BuildLibraryFilesHref(string rootId, string relativePath) =>
+        MarkdownRenderer.BuildRootRelativeHref("/library-files/", rootId, relativePath);
+
+    /// <summary>Shared by <see cref="BuildLibraryHref"/> and <see cref="BuildLibraryFilesHref"/>: <paramref name="prefix"/>,
+    /// then the root id, then the relative path with each segment individually percent-encoded.</summary>
+    /// <param name="prefix">The href prefix, including any trailing separator or <c>=</c>.</param>
+    /// <param name="rootId">The Library root id.</param>
+    /// <param name="relativePath">The forward-slash relative path from the root.</param>
+    private static string BuildRootRelativeHref(string prefix, string rootId, string relativePath) =>
+        string.Concat(prefix, rootId, "/", string.Join('/', relativePath.Split('/').Select(Uri.EscapeDataString)));
+
+    /// <summary>
+    /// The prefix marking a <c>/library-files/</c> href this render resolved for an image, stripped by
+    /// <see cref="RewriteUrl"/> before it reaches the page; see <see cref="RewriteRelativeLinks"/>.
+    /// </summary>
+    private const string LibraryFilesPrefix = "/library-files/";
+
+    /// <summary>
+    /// Resolves <see cref="Markdig.Renderers.HtmlRenderer.LinkRewriter"/> for one URL: a
+    /// <paramref name="trustToken"/>-marked href (an image this render resolved through
+    /// <see cref="RewriteRelativeLinks"/>) is admitted for the <c>/library-files/</c> route - after
+    /// stripping the marker and a syntactic re-check (corrections-B6 item 30) - and anything else falls
+    /// through to <see cref="IsSafe"/>, which never admits that route: the identical URL text written as
+    /// a plain <c>a href</c> carries no marker and still renders <c>#</c>.
+    /// </summary>
+    /// <param name="url">The candidate link target, as written by <see cref="Markdig.Renderers.HtmlRenderer"/>.</param>
+    /// <param name="trustToken">This render call's marker.</param>
+    private static string RewriteUrl(string? url, string trustToken)
+    {
+        if (url is not null && url.StartsWith(trustToken, StringComparison.Ordinal))
+        {
+            string href = url[trustToken.Length..];
+            return href.StartsWith(MarkdownRenderer.LibraryFilesPrefix, StringComparison.Ordinal) &&
+                MarkdownRenderer.IsSafeLibraryFilesHref(href[MarkdownRenderer.LibraryFilesPrefix.Length..])
+                    ? href
+                    : "#";
+        }
+
+        return MarkdownRenderer.IsSafe(url) ? url! : "#";
+    }
 
     /// <summary>
     /// Whether <paramref name="url"/> may reach the rendered page unchanged: an <c>http:</c>,
     /// <c>https:</c> or <c>mailto:</c> link, or a bare Task reference - <c>/tasks/item/</c> followed
     /// by exactly a valid <see cref="TaskId"/>'s canonical text and nothing else (Spec §13.13.2
-    /// warning). Anything else, including a path-traversal attempt dressed up as one, is rewritten
-    /// to <c>#</c>.
+    /// warning). The <c>/library-files/</c> route is never admitted here - only <see cref="RewriteUrl"/>'s
+    /// marker check admits it, for an image (corrections-B6 item 30). Anything else, including a
+    /// path-traversal attempt dressed up as one, is rewritten to <c>#</c>.
     /// </summary>
     /// <param name="url">The candidate link target.</param>
     private static bool IsSafe(string? url)
@@ -759,6 +820,28 @@ public static partial class MarkdownRenderer
             return false;
         }
 
+        return MarkdownRenderer.IsSafeRootRelativeValue(encodedValue);
+    }
+
+    /// <summary>
+    /// Whether the text after <c>/library-files/</c> is exactly the admitted shape (corrections-B6 item 30): a
+    /// syntactic mirror of <see cref="IsSafeLibraryHref"/> for the image-only route - decode first, then
+    /// <c>rootId/relative</c> with the root id matching <see cref="LibraryRootIdRegex"/> and no <c>.</c>,
+    /// <c>..</c>, empty or backslash-bearing segment. Called only when <paramref name="encodedValue"/>'s full
+    /// href is already known to be one this render generated for an image (<see cref="IsSafe"/>'s set check).
+    /// </summary>
+    /// <param name="encodedValue">The text of the URL after <c>/library-files/</c>.</param>
+    private static bool IsSafeLibraryFilesHref(string encodedValue) =>
+        MarkdownRenderer.IsSafeRootRelativeValue(encodedValue);
+
+    /// <summary>Shared by <see cref="IsSafeLibraryHref"/> and <see cref="IsSafeLibraryFilesHref"/>: decodes
+    /// <paramref name="encodedValue"/> and checks it is <c>rootId/relative</c> with the root id matching
+    /// <see cref="LibraryRootIdRegex"/> and no <c>.</c>, <c>..</c>, empty or backslash-bearing segment. This
+    /// check stays syntactic - the click handler (or the <c>/library-files/</c> endpoint itself) re-resolves the
+    /// path for real - so it never touches the disk.</summary>
+    /// <param name="encodedValue">The text of the URL after its <c>?library=</c> or <c>/library-files/</c> prefix.</param>
+    private static bool IsSafeRootRelativeValue(string encodedValue)
+    {
         string decoded = Uri.UnescapeDataString(encodedValue);
         if (decoded.Contains('\\', StringComparison.Ordinal))
         {
