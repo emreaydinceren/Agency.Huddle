@@ -293,6 +293,39 @@ public sealed class TaskStoreWatcherTests
         Assert.Empty(store.All);
     }
 
+    /// <summary>
+    /// The folder's own Created event is the one signal a new Team or Project sub-folder is
+    /// guaranteed to raise on every platform, so it alone must be recognised as affecting a Task
+    /// file: on Linux the inotify watch for a new sub-folder is only added after that folder's
+    /// Created event is read, so a Task file written straight into it in that gap raises nothing at
+    /// all, and only the folder's own Created event survives to schedule the rescan that finds it
+    /// from disk (traps.md, "On Linux, IncludeSubdirectories = true still misses a file written into
+    /// a sub-folder that was just created"). No integration test exercises this end-to-end for
+    /// <see cref="TaskStore"/> - unlike <c>PersonaStoreTests</c>'s
+    /// <c>ExternalFileCreated_InANewlyCreatedTeamSubFolder_IsNoticedThroughPersonasChanged</c>, every
+    /// other test in this class deliberately pre-creates the Team folder before constructing the
+    /// store (see the class summary, item 18) specifically to avoid this gap, so this unit test is
+    /// the only coverage of the clause. On this branch the path-shape predicate
+    /// <see cref="TaskLayout.AffectsTasks"/> covers it for every folder a Task can sit under: a
+    /// Team, a Project, and their <c>_tasks</c> folders.
+    /// </summary>
+    /// <param name="relativeFolder">The newly created folder, relative to the Tasks root.</param>
+    [Theory]
+    [InlineData("Platform")]
+    [InlineData("Platform/Auth v2")]
+    [InlineData("Platform/_tasks")]
+    [InlineData("Platform/Auth v2/_tasks")]
+    public void AffectsATaskFile_ANewSubFolder_SchedulesARescan(string relativeFolder)
+    {
+        using TempDataDir dir = new();
+        string root = Path.Combine(dir.Path, "Tasks");
+        string name = relativeFolder.Replace('/', Path.DirectorySeparatorChar);
+        Directory.CreateDirectory(Path.Combine(root, name));
+        FileSystemEventArgs created = new(WatcherChangeTypes.Created, root, name);
+
+        Assert.True(TaskStore.AffectsATaskFile(root, created));
+    }
+
     /// <summary>Calling the internal <see cref="TaskStore.OnWatcherError"/> directly - as the real <see cref="System.IO.FileSystemWatcher.Error"/> event does on a dropped-event buffer overflow - schedules a full rebuild that raises <see cref="TaskStore.IndexChanged"/>, even though nothing on disk actually changed (Settled corrections-B2 D5 item 7).</summary>
     [Fact]
     public async Task WatcherError_TriggersFullRebuild()

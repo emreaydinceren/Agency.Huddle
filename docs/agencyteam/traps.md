@@ -135,13 +135,14 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
 - **On Linux, `IncludeSubdirectories = true` still misses a file written into a
   sub-folder that was just created.** Linux has no recursive inotify, so .NET
   adds a watch for a new folder only after it reads that folder's Created event.
-  A file written in the gap (mkdir, then write; a copied or unzipped Team
-  folder) raises nothing. It is Linux-only and load-dependent, so it passes on
-  every Windows box and fails about one CI run in six. `PersonaStore` treats the
-  folder's own Created event as "rescan from disk". Any watcher that
-  only reacts to file events inherits the gap. And a test waiting on such an
-  event fails at *exactly* its timeout, however long that is — raising the
-  budget from 10 s to 30 s changed nothing but how long the failure took.
+  A file written in the gap (mkdir, then write; a copied or unzipped Team or
+  Project folder) raises nothing. It is Linux-only and load-dependent, so it
+  passes on every Windows box and fails about one CI run in six. `PersonaStore`
+  and `TaskStore` both treat the folder's own Created event as "rescan from
+  disk". Any watcher that only reacts to file events inherits the gap. And a
+  test waiting on such an event fails at *exactly* its timeout, however long
+  that is — raising the budget from 10 s to 30 s changed nothing but how long
+  the failure took.
 - **Extra flags before the trailing `--` make `dotnet test` report "Zero tests
   ran".** The documented `dotnet test Huddle.slnx --` is exact. Adding
   `--nologo` or `-v minimal` ahead of the `--` exits 5 having run nothing, which
