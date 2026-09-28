@@ -131,45 +131,113 @@ internal static partial class WikiLinkParser
     /// here rather than by the regex. An empty target with no heading is not a link.
     /// </summary>
     private static bool TryParseInner(string inner, out string target, out string? heading, out string? alias)
+        => WikiLinkParser.TryParseInner(inner, out target, out heading, out alias, out _, out _);
+
+    /// <summary>
+    /// The same grammar as the other <see cref="TryParseInner(string, out string, out string?, out string?)"/>
+    /// overload, additionally reporting the offset and length of the trimmed target text within
+    /// <paramref name="inner"/>. The one place this grammar is implemented; <see cref="TryGetTargetSpan"/>
+    /// reuses it rather than re-deriving the rules.
+    /// </summary>
+    private static bool TryParseInner(string inner, out string target, out string? heading, out string? alias, out int targetStart, out int targetLength)
     {
         target = string.Empty;
         heading = null;
         alias = null;
+        targetStart = 0;
+        targetLength = 0;
 
         if (WikiLinkParser.IsEscapedAt(inner, inner.Length))
         {
             return false;
         }
 
-        string beforeAlias = inner;
+        int beforeAliasLength = inner.Length;
         int pipeIndex = inner.IndexOf('|', StringComparison.Ordinal);
         if (pipeIndex >= 0)
         {
-            beforeAlias = inner[..pipeIndex];
-            if (beforeAlias.EndsWith('\\'))
+            beforeAliasLength = pipeIndex;
+            if (pipeIndex > 0 && inner[pipeIndex - 1] == '\\')
             {
-                beforeAlias = beforeAlias[..^1];
+                beforeAliasLength--;
             }
 
             alias = inner[(pipeIndex + 1)..].Trim();
         }
 
+        string beforeAlias = inner[..beforeAliasLength];
+
         int hashIndex = beforeAlias.IndexOf('#', StringComparison.Ordinal);
+        string rawTarget = hashIndex >= 0 ? beforeAlias[..hashIndex] : beforeAlias;
         if (hashIndex >= 0)
         {
-            target = beforeAlias[..hashIndex].Trim();
             heading = beforeAlias[(hashIndex + 1)..].Trim();
         }
-        else
-        {
-            target = beforeAlias.Trim();
-        }
+
+        target = rawTarget.Trim();
 
         if (target.Length == 0 && string.IsNullOrEmpty(heading))
         {
             return false;
         }
 
+        int leadingWhitespace = rawTarget.Length - rawTarget.TrimStart().Length;
+        targetStart = leadingWhitespace;
+        targetLength = target.Length;
+
+        return true;
+    }
+
+    /// <summary>
+    /// The offset and length, relative to <paramref name="markdown"/>, of the writable target
+    /// text inside <paramref name="link"/>'s token (Spec §6.5 step 2: only the target changes,
+    /// alias/heading/<c>!</c> are kept). Used by the rename/move link rewrite to replace only
+    /// the target. Returns <see langword="false"/> when the token at <c>link.Start</c>/<c>link.Length</c>
+    /// no longer matches what <paramref name="link"/> records - a stale position from before an
+    /// earlier edit or another writer's change.
+    /// </summary>
+    internal static bool TryGetTargetSpan(string markdown, WikiLink link, out int start, out int length)
+    {
+        ArgumentNullException.ThrowIfNull(markdown);
+        ArgumentNullException.ThrowIfNull(link);
+
+        start = 0;
+        length = 0;
+
+        if (link.Start < 0 || link.Length < 0 || link.Start + link.Length > markdown.Length)
+        {
+            return false;
+        }
+
+        string token = markdown.Substring(link.Start, link.Length);
+        int prefixLength = link.IsEmbed ? 3 : 2;
+        int suffixLength = 2;
+        if (token.Length < prefixLength + suffixLength)
+        {
+            return false;
+        }
+
+        string expectedPrefix = link.IsEmbed ? "![[" : "[[";
+        if (!token.StartsWith(expectedPrefix, StringComparison.Ordinal) || !token.EndsWith("]]", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        string inner = token[prefixLength..^suffixLength];
+        if (!WikiLinkParser.TryParseInner(inner, out string target, out string? heading, out string? alias, out int targetStart, out int targetLength))
+        {
+            return false;
+        }
+
+        if (!string.Equals(target, link.Target, StringComparison.Ordinal)
+            || !string.Equals(heading, link.Heading, StringComparison.Ordinal)
+            || !string.Equals(alias, link.Alias, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        start = link.Start + prefixLength + targetStart;
+        length = targetLength;
         return true;
     }
 }
