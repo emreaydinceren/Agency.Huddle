@@ -1,0 +1,308 @@
+@*
+    The Library's document pane (Task 12.2.i): a MudToolBar (breadcrumbs, mode toggle, Copy/Pop
+    out/Close) over the file's body, by kind, plus link navigation (corrections-B6 item 19):
+    resolved <c>library-ref</c> links raise OnNavigate, missing ones offer to create the note
+    (item 20). Interception is via NavigationManager.RegisterLocationChangingHandler - no
+    container preventDefault, no JS.
+*@
+@implements IDisposable
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.FileChanges
+@using Agency.Huddle.App.Library
+@inject LibraryFileService FileService
+@inject ITaskReferenceResolver Tasks
+@inject ILibraryNoteResolver NoteResolver
+@inject LibraryPathResolver PathResolver
+@inject NavigationManager Navigation
+
+<div class="library-document">
+    <MudToolBar Dense="true" Class="library-document-toolbar">
+        <MudBreadcrumbs Items="@this.BreadcrumbItems()" Class="library-document-breadcrumbs" />
+        <MudSpacer />
+        @if (this.ShowModeToggle())
+        {
+            <MudToggleGroup T="LibraryMode" Value="LibraryMode.Read" SelectionMode="SelectionMode.SingleSelection"
+                             Class="library-document-mode-toggle">
+                <MudToggleItem Value="LibraryMode.Read" Text="Read" />
+                <MudToggleItem Value="LibraryMode.Edit" Text="Edit" />
+                <MudToggleItem Value="LibraryMode.Split" Text="Split" />
+            </MudToggleGroup>
+        }
+        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" aria-label="Copy" Class="library-document-copy" />
+        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" aria-label="Pop out" Class="library-document-pop-out" />
+        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Close" Class="library-document-close" />
+    </MudToolBar>
+
+    @if (this.outsideScope)
+    {
+        <div class="library-document-outside-scope">Outside this view</div>
+        <MudButton Class="library-document-open-in-library" OnClick="@this.RaiseOpenInLibraryAsync">Open in Library</MudButton>
+    }
+    else if (this.missing)
+    {
+        <div class="library-document-banner">This file was moved or deleted.</div>
+    }
+    else if (this.content is not null)
+    {
+        @if (this.definitionName is not null)
+        {
+            <div class="library-document-banner">This is @(this.definitionName)'s definition.</div>
+        }
+        @if (this.content.ViewOnlyReason is not null)
+        {
+            <div class="library-document-banner">@this.content.ViewOnlyReason</div>
+        }
+        else if (this.content.Kind == LibraryFileKind.Markdown)
+        {
+            <div class="library-rendered">@((MarkupString)MarkdownRenderer.ToHtml(this.content.Text ?? string.Empty, this.Tasks, this.NoteResolver, this.Path))</div>
+        }
+        else if (this.content.Kind == LibraryFileKind.Image)
+        {
+            <img class="library-document-image" src="@this.ImageSrc()" alt="@this.FileName()" />
+        }
+        else if (this.content.Kind == LibraryFileKind.Svg)
+        {
+            <LibraryEditor Text="@(this.content.Text ?? string.Empty)" ReadOnly="true" LanguageId="xml" />
+        }
+        else if (this.content.Kind == LibraryFileKind.Text)
+        {
+            <LibraryEditor Text="@(this.content.Text ?? string.Empty)" ReadOnly="true" LanguageId="@this.LanguageId()" />
+        }
+        else
+        {
+            <div class="library-document-other">
+                <div class="library-document-other-name">@this.FileName()</div>
+                <div class="library-document-other-size">@FormatSize(this.content.Length)</div>
+                <MudButton Class="library-document-open-default">Open in default app</MudButton>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>The document's path inside a Library Root.</summary>
+    [Parameter, EditorRequired]
+    public required LibraryPath Path { get; set; }
+
+    /// <summary>The pane's scope: a document outside it shows the "Outside this view" hint instead of its content (Spec §6.16, §8).</summary>
+    [Parameter]
+    public LibraryPath? Scope { get; set; }
+
+    /// <summary>Raised when a resolved link inside the rendered document is clicked (Task 12.2.i-b).</summary>
+    [Parameter]
+    public EventCallback<LibraryPath> OnNavigate { get; set; }
+
+    /// <summary>Raised when the human asks to open an out-of-scope document in the full Library.</summary>
+    [Parameter]
+    public EventCallback<LibraryPath> OnOpenInLibrary { get; set; }
+
+    /// <summary>Raised for a tree-style action originating from this document (e.g. offering to create a missing wikilink target, Task 12.2.i-b).</summary>
+    [Parameter]
+    public EventCallback<LibraryTreeAction> OnAction { get; set; }
+
+    private LibraryDocumentContent? content;
+    private bool missing;
+    private bool outsideScope;
+    private string? definitionName;
+    private LibraryPath? loadedPath;
+    private IDisposable? locationChangingRegistration;
+
+    /// <inheritdoc />
+    protected override void OnInitialized() =>
+        this.locationChangingRegistration = this.Navigation.RegisterLocationChangingHandler(this.OnLocationChangingAsync);
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        if (LibraryPathComparer.Instance.Equals(this.loadedPath, this.Path))
+        {
+            return;
+        }
+
+        this.loadedPath = this.Path;
+        this.content = null;
+        this.missing = false;
+        this.definitionName = null;
+
+        this.outsideScope = this.Scope is not null && !IsWithinScope(this.Path, this.Scope);
+        if (this.outsideScope)
+        {
+            return;
+        }
+
+        try
+        {
+            this.content = await this.FileService.ReadAsync(this.Path, CancellationToken.None);
+        }
+        catch (FileNotFoundException)
+        {
+            this.missing = true;
+            return;
+        }
+
+        if (this.Path.Role == LibraryNodeRole.TeammateDefinition
+            && this.content.Text is not null
+            && PersonaFrontmatter.TryReadIdentity(this.content.Text, out PersonaIdentity? identity, out _))
+        {
+            this.definitionName = identity.Name;
+        }
+    }
+
+    /// <summary>Whether the header's Read/Edit/Split toggle shows: only for an editable Markdown document (Spec §8).</summary>
+    private bool ShowModeToggle() => !this.outsideScope && !this.missing
+        && this.content is { Kind: LibraryFileKind.Markdown, Editable: true };
+
+    /// <summary>The root's display name, then each folder on the way to the document, in order (Spec §8).</summary>
+    private List<BreadcrumbItem> BreadcrumbItems()
+    {
+        List<BreadcrumbItem> items = [new(this.Path.Root.DisplayName, href: null, disabled: true)];
+        string[] segments = this.Path.RelativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < segments.Length - 1; i++)
+        {
+            items.Add(new BreadcrumbItem(segments[i], href: null, disabled: true));
+        }
+
+        return items;
+    }
+
+    /// <summary>The document's file name, from its relative path.</summary>
+    private string FileName() => System.IO.Path.GetFileName(this.Path.RelativePath);
+
+    /// <summary>The <c>/library-files/{rootId}/…</c> image source, each path segment escaped on its own (Spec §6.11).</summary>
+    private string ImageSrc()
+    {
+        string[] segments = this.Path.RelativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        string escaped = string.Join('/', segments.Select(Uri.EscapeDataString));
+        return $"/library-files/{Uri.EscapeDataString(this.Path.Root.Id)}/{escaped}";
+    }
+
+    /// <summary>The CodeMirror language mode id for a read-only text file, by extension.</summary>
+    private string LanguageId() => System.IO.Path.GetExtension(this.Path.RelativePath).ToUpperInvariant() switch
+    {
+        ".JSON" => "json",
+        ".YAML" or ".YML" => "yaml",
+        ".CS" => "csharp",
+        ".JS" or ".TS" => "javascript",
+        ".CSS" => "css",
+        ".XML" => "xml",
+        ".PS1" => "powershell",
+        _ => "plain",
+    };
+
+    /// <summary>A binary file's size, in whole kilobytes above 1 KB, otherwise bytes (Spec §8's Other card).</summary>
+    private static string FormatSize(long bytes) => bytes < 1024
+        ? $"{bytes} B"
+        : $"{(long)Math.Round(bytes / 1024.0, MidpointRounding.AwayFromZero)} KB";
+
+    /// <summary>Whether <paramref name="candidate"/> is <paramref name="scope"/> itself or lies under it, comparing resolved full paths with <see cref="FolderSnapshot.PathComparer"/>.</summary>
+    private static bool IsWithinScope(LibraryPath candidate, LibraryPath scope)
+    {
+        if (FolderSnapshot.PathComparer.Equals(candidate.FullPath, scope.FullPath))
+        {
+            return true;
+        }
+
+        string prefix = scope.FullPath + System.IO.Path.DirectorySeparatorChar;
+        return candidate.FullPath.Length > prefix.Length
+            && FolderSnapshot.PathComparer.Equals(candidate.FullPath[..prefix.Length], prefix);
+    }
+
+    /// <summary>Raises <see cref="OnOpenInLibrary"/> for this document's path.</summary>
+    private async Task RaiseOpenInLibraryAsync() => await this.OnOpenInLibrary.InvokeAsync(this.Path);
+
+    /// <summary>
+    /// Intercepts a <c>?library=</c> navigation (corrections-B6 item 19): a resolved, existing file
+    /// raises <see cref="OnNavigate"/>; a resolved target that does not yet exist offers to create it
+    /// via <see cref="OnAction"/> (item 20); anything else, or a target outside this document's own
+    /// <see cref="Scope"/> when a scoped explorer is on the same page (judgement 45), is left alone.
+    /// </summary>
+    /// <param name="context">The pending navigation.</param>
+    private async ValueTask OnLocationChangingAsync(LocationChangingContext context)
+    {
+        string? libraryValue = ExtractLibraryValue(context.TargetLocation);
+        if (libraryValue is null)
+        {
+            return;
+        }
+
+        (string rootId, string relativePath) = SplitLibraryValue(libraryValue);
+
+        if (!this.PathResolver.TryResolve(rootId, relativePath, out LibraryPath? target, out _))
+        {
+            context.PreventNavigation();
+            return;
+        }
+
+        if (this.Scope is not null && !IsWithinScope(target, this.Scope))
+        {
+            return;
+        }
+
+        context.PreventNavigation();
+
+        if (target.Role == LibraryNodeRole.File)
+        {
+            await this.OnNavigate.InvokeAsync(target);
+            return;
+        }
+
+        if (this.PathResolver.TryResolve(rootId, ParentRelativePath(relativePath), out LibraryPath? parent, out _))
+        {
+            string name = System.IO.Path.GetFileNameWithoutExtension(relativePath);
+            await this.OnAction.InvokeAsync(new LibraryTreeAction(LibraryTreeActionKind.NewNote, parent, name));
+        }
+    }
+
+    /// <summary>The decoded value of a <c>library=</c> query parameter in <paramref name="targetLocation"/>, or <see langword="null"/> when there is none.</summary>
+    /// <param name="targetLocation">The pending navigation's target URI.</param>
+    private static string? ExtractLibraryValue(string targetLocation)
+    {
+        int queryStart = targetLocation.IndexOf('?', StringComparison.Ordinal);
+        if (queryStart < 0)
+        {
+            return null;
+        }
+
+        string query = targetLocation[(queryStart + 1)..];
+        int fragmentStart = query.IndexOf('#', StringComparison.Ordinal);
+        if (fragmentStart >= 0)
+        {
+            query = query[..fragmentStart];
+        }
+
+        foreach (string pair in query.Split('&'))
+        {
+            int equals = pair.IndexOf('=', StringComparison.Ordinal);
+            if (equals < 0)
+            {
+                continue;
+            }
+
+            if (string.Equals(pair[..equals], "library", StringComparison.Ordinal))
+            {
+                return Uri.UnescapeDataString(pair[(equals + 1)..]);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Splits a decoded <c>library=</c> value into its root id and root-relative path.</summary>
+    /// <param name="value">The decoded query value.</param>
+    private static (string RootId, string RelativePath) SplitLibraryValue(string value)
+    {
+        int slash = value.IndexOf('/', StringComparison.Ordinal);
+        return slash < 0 ? (value, string.Empty) : (value[..slash], value[(slash + 1)..]);
+    }
+
+    /// <summary>The parent folder's root-relative path for <paramref name="relativePath"/>, or an empty string at the root.</summary>
+    /// <param name="relativePath">A root-relative path.</param>
+    private static string ParentRelativePath(string relativePath)
+    {
+        int slash = relativePath.LastIndexOf('/');
+        return slash < 0 ? string.Empty : relativePath[..slash];
+    }
+
+    /// <inheritdoc />
+    public void Dispose() => this.locationChangingRegistration?.Dispose();
+}

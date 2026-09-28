@@ -226,7 +226,8 @@ internal sealed class LibraryFileService(
             string fileName = Path.GetFileName(fresh.FullPath);
             (byte[] head, LibraryFileKind kind) = await DetectKindAsync(stream, fileName, length, ct);
 
-            if (kind is LibraryFileKind.Image or LibraryFileKind.Other)
+            if (kind == LibraryFileKind.Image
+                || (kind == LibraryFileKind.Other && !LibraryFileKinds.IsTextExtension(fileName)))
             {
                 return new LibraryDocumentContent(fresh, kind, null, null, false, null, length, lastWriteUtc);
             }

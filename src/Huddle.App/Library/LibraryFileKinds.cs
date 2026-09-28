@@ -37,6 +37,19 @@ internal static class LibraryFileKinds
     }
 
     /// <summary>
+    /// Whether <paramref name="fileName"/> carries one of the Spec §6.11 text/code extensions (Task 12.2.i-a):
+    /// shared with <see cref="Detect"/> so <see cref="LibraryFileService.ReadAsync"/> can still offer the
+    /// settled unsupported-encoding reason (Spec §10 E-5) for a file whose extension names it as text even
+    /// though its content sniffs as <see cref="LibraryFileKind.Other"/>.
+    /// </summary>
+    /// <param name="fileName">The candidate file name.</param>
+    internal static bool IsTextExtension(string fileName)
+    {
+        ArgumentNullException.ThrowIfNull(fileName);
+        return TextExtensions.Contains(Path.GetExtension(fileName));
+    }
+
+    /// <summary>
     /// Whether <paramref name="fileName"/> already carries a Spec §6.11 known extension (Markdown, text/code
     /// or image), so <see cref="LibraryFileService.CreateFileAsync"/> keeps it as-is rather than appending
     /// <c>.md</c> (corrections-B4 item 23). Shares the same extension lists as <see cref="Detect"/> so the two
