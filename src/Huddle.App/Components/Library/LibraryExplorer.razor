@@ -11,6 +11,36 @@
     This part (12.7a) wires Scopes/Title/Layout/InitialFile, the MudSplitPanel and LibraryFileOps'
     Scope. State persistence (StateKey), TryLeaveAsync/BeforeChangeAsync wiring, the focusin refresh
     and ?library= precedence between nested explorers are 12.7b's job.
+
+    MudSplitPanel's own Horizontal parameter names the DIVIDER's orientation, not the panels' layout
+    direction: Horizontal="true" gives a horizontal dividing LINE, which separates panels stacked
+    top/bottom, and sizes the first panel by HEIGHT; Horizontal="false" gives a vertical line
+    separating panels left/right, sized by WIDTH (read from MudBlazor 9.10.0's own split-panel.js:
+    _setPanelSizes sets firstPanel.style.height when this.horizontal, .width when it isn't). That is
+    the opposite of what the name suggests, and the line below used to get it backwards -
+    Horizontal="@(Layout == SideBySide)" - so SideBySide (the /library page) rendered top/bottom and
+    Stacked (the Library Pane) rendered left/right, both inverted, for as long as this component has
+    existed. No existing test caught it: LibraryPageTests' own layout assertion checks for a
+    "mud-split-panel-vertical" class this MudBlazor version never emits, so it passed either way, and
+    bUnit's DOM comparison never runs real CSS layout regardless.
+
+    The inversion is also why FirstPanelInitialSize matters here where MudBlazor examples often omit
+    it: without one, resetSizes() never calls _setPanelSizes at all, leaving the size axis to
+    flex-grow's own even split - fine for two roughly-equal panes, but a tree wants to start narrower
+    (width) or shorter (height) than the document view next to or below it. LibraryPaneHost's own
+    outer split panel sets one (FirstPanelInitialSize="420") for the same reason, on the correct axis
+    because Horizontal is left at its default (false: side-by-side, pane beside the page body) there.
+
+    MudSplitPanel sizes BOTH panels in fixed pixels, measured once against the container at init or
+    on SetDividerPositionAsync, and never re-measures - no resize observer, no clamping of a restored
+    position. Two consequences, both seen live: a window resized after load leaves the panels at
+    stale widths that overflow or starve each other, and a remembered divider position is replayed
+    verbatim even when it was measured on the other axis. The inverted era above stored the tree's
+    HEIGHT under the same key the fixed layout now reads as a WIDTH, so a remembered 40px (one tree
+    row tall) came back as a 40px-wide tree column with every name wrapped to nothing. So the
+    divider key carries the layout (DividerKey), which also retires every value stored before the
+    fix, and app.css (".library-explorer-split-side-by-side" / "-stacked") lets the second panel
+    flex into whatever is left and bounds the first, whatever pixel size the JS wrote inline.
 *@
 @using System.Globalization
 @using Microsoft.AspNetCore.Components
@@ -23,17 +53,21 @@
 @inject IJSRuntime JS
 
 <div class="library-explorer" @onfocusin="@this.OnFocusInAsync" @onmouseup="@this.OnDividerMouseUpAsync">
-    <div class="library-explorer-title">@this.ResolvedTitle()</div>
+    @if (this.ShowScopeRoot)
+    {
+        <div class="library-explorer-title">@this.ResolvedTitle()</div>
+    }
     @if (this.unavailable)
     {
         <MudAlert Severity="Severity.Warning" role="status" Class="library-explorer-unavailable">@this.unavailableReason</MudAlert>
     }
     else
     {
-        <MudSplitPanel @ref="this.splitPanel" Horizontal="@(this.Layout == LibraryExplorerLayout.SideBySide)" Class="library-explorer-split">
+        <MudSplitPanel @ref="this.splitPanel" Horizontal="@(this.Layout == LibraryExplorerLayout.Stacked)"
+                       FirstPanelInitialSize="@(this.Layout == LibraryExplorerLayout.SideBySide ? 300 : 240)" Class="@this.SplitClass()">
             <FirstPanel>
                 <div class="library-tree">
-                    <LibraryTree @ref="this.tree" Scopes="@this.resolvedScopes" OnOpenFile="@this.OnOpenFileAsync" OnAction="@this.OnTreeActionAsync" />
+                    <LibraryTree @ref="this.tree" Scopes="@this.resolvedScopes" ShowScopeRoot="@this.ShowScopeRoot" OnOpenFile="@this.OnOpenFileAsync" OnAction="@this.OnTreeActionAsync" />
                 </div>
             </FirstPanel>
             <SecondPanel>
@@ -65,6 +99,19 @@
     /// <summary>The explorer's header label. Defaults to the single scope's folder name, or "Library".</summary>
     [Parameter]
     public string? Title { get; set; }
+
+    /// <summary>
+    /// Whether this explorer announces the single folder it shows: <see cref="ResolvedTitle"/> above
+    /// the tree, and (forwarded to <see cref="LibraryTree.ShowScopeRoot"/>) that scope's own row as
+    /// the tree's top node at all. Defaults to <see langword="true"/> - every host names the folder
+    /// nowhere else, EXCEPT <see cref="LibraryPane"/>'s per-root sidebar rows, which pass
+    /// <see langword="false"/> because the sidebar's own selected row already names it: the title
+    /// would repeat that name, and the scope's own top node (Spec §6.16 "Inside a scope") would be a
+    /// folder row that exists only to be expanded, so <see cref="LibraryTree"/> flattens it away and
+    /// shows that scope's own children as its top-level items instead.
+    /// </summary>
+    [Parameter]
+    public bool ShowScopeRoot { get; set; } = true;
 
     /// <summary>Whether the tree and document sit side by side or stacked.</summary>
     [Parameter]
@@ -125,7 +172,7 @@
 
             if (this.splitPanel is not null)
             {
-                string? storedDivider = await this.JS.InvokeAsync<string?>("huddleStorage.get", DividerKey(this.StateKey));
+                string? storedDivider = await this.JS.InvokeAsync<string?>("huddleStorage.get", DividerKey(this.StateKey, this.Layout));
                 if (int.TryParse(storedDivider, NumberStyles.Integer, CultureInfo.InvariantCulture, out int position))
                 {
                     await this.splitPanel.SetDividerPositionAsync(position);
@@ -158,7 +205,21 @@
 
     private static string OpenKey(string stateKey) => string.Create(CultureInfo.InvariantCulture, $"library:{stateKey}:open");
 
-    private static string DividerKey(string stateKey) => string.Create(CultureInfo.InvariantCulture, $"library:{stateKey}:divider");
+    /// <summary>The remembered divider position's key. It carries <paramref name="layout"/> because the
+    /// stored number is a width side by side and a height stacked; replaying one as the other gave a
+    /// tree column one row wide (see the header comment).</summary>
+    internal static string DividerKey(string stateKey, LibraryExplorerLayout layout) => string.Create(
+        CultureInfo.InvariantCulture,
+        $"library:{stateKey}:{LayoutSlug(layout)}:divider");
+
+    /// <summary>The split's classes: the orientation class is what app.css bounds the panels by.</summary>
+    private string SplitClass() => string.Create(
+        CultureInfo.InvariantCulture,
+        $"library-explorer-split library-explorer-split-{LayoutSlug(this.Layout)}");
+
+    /// <summary>The layout as it appears in storage keys and CSS class names.</summary>
+    private static string LayoutSlug(LibraryExplorerLayout layout) =>
+        layout == LibraryExplorerLayout.SideBySide ? "side-by-side" : "stacked";
 
     private void ResolveScopes()
     {
@@ -398,7 +459,7 @@
         {
             int position = await this.splitPanel.GetDividerPositionAsync();
             await this.JS.InvokeVoidAsync(
-                "huddleStorage.set", DividerKey(this.StateKey), position.ToString(CultureInfo.InvariantCulture));
+                "huddleStorage.set", DividerKey(this.StateKey, this.Layout), position.ToString(CultureInfo.InvariantCulture));
         }
         catch (JSDisconnectedException)
         {

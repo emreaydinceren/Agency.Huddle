@@ -5,6 +5,17 @@
     close. A resolvable ?library= navigation the pane's own inner LibraryDocument doesn't already
     intercept (judgement 45) opens the pane on that file and strips the query with replace: true;
     the Library disabled leaves ?library= alone entirely.
+
+    <LibraryPane /> carries @key="this.State.Scope": neither occurrence below references any
+    instance state, so without it the Razor compiler's "static render fragment" optimisation caches
+    <FirstPanel>/<SecondPanel> as a delegate with nothing captured, and the renderer's diff then
+    treats that whole region as unchanged on every subsequent LibraryPaneHost render and never walks
+    into it again - LibraryPane mounts once on open and then never re-renders, however many times
+    LibraryPaneState.Scope changes afterwards while the pane stays open (confirmed live: this file's
+    own State.Scope read correctly follows every click, but LibraryPane's did not, until this key was
+    added). The key doubles as the fix: a differing Scope also tears down and remounts LibraryPane,
+    so its own LibraryExplorer resolves the new Scopes fresh from OnInitialized rather than needing
+    its own key.
 *@
 @using Microsoft.Extensions.Options
 @using Microsoft.AspNetCore.Components.Routing
@@ -22,7 +33,7 @@
 @if (this.Enabled && this.State.IsOpen && this.Appearance.LibraryPaneSide == LibraryPaneSide.Left)
 {
     <MudSplitPanel @ref="this.splitPanel" Class="library-pane-split" FirstPanelInitialSize="420" MinPanelSize="240">
-        <FirstPanel><LibraryPane /></FirstPanel>
+        <FirstPanel><LibraryPane @key="@this.State.Scope" /></FirstPanel>
         <SecondPanel>@this.ChildContent</SecondPanel>
     </MudSplitPanel>
 }
@@ -30,7 +41,7 @@ else if (this.Enabled && this.State.IsOpen)
 {
     <MudSplitPanel @ref="this.splitPanel" Class="library-pane-split" FirstPanelInitialSize="420" MinPanelSize="240">
         <FirstPanel>@this.ChildContent</FirstPanel>
-        <SecondPanel><LibraryPane /></SecondPanel>
+        <SecondPanel><LibraryPane @key="@this.State.Scope" /></SecondPanel>
     </MudSplitPanel>
 }
 else

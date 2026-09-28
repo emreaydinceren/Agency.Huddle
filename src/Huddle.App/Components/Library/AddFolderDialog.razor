@@ -1,0 +1,65 @@
+@*
+    The sidebar's "Add Folder" dialog (LibraryNavLink's own trailing row): the same pin flow
+    Settings > Library's own Add row drives (LibraryPanel.razor's AddAsync) - Name/Path fields, the
+    same "doesn't exist" refusal shown inline (LibraryRootStore.Save does not check this itself,
+    same as the Settings panel), the same trust warning, and LibraryRootStore.Save on success.
+    LibraryNavLink does not need this dialog's own result: it already listens to
+    LibraryRootStore.RootsChanged and repaints its root list from that, the same "no local snapshot"
+    shape LibraryPanel itself uses.
+*@
+@using Agency.Huddle.App.Library
+
+@inject LibraryRootStore Roots
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudTextField T="string" Label="Name" @bind-Value="this.name" Class="add-folder-dialog-name-field" />
+            <MudTextField T="string" Label="Path" @bind-Value="this.path" Class="add-folder-dialog-path-field" />
+            <MudText Typo="Typo.body2" Class="add-folder-dialog-trust-warning">Anything in this folder can be read and changed from Huddle.</MudText>
+            @if (this.error is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" role="alert" Class="add-folder-dialog-error">@this.error</MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" Class="add-folder-dialog-add-button" OnClick="this.AddAsync">Add</MudButton>
+        <MudButton OnClick="this.Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>How <see cref="Components.Library.LibraryNavLink"/> shows this dialog: small, full-width, with a close button that cancels.</summary>
+    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    private string name = string.Empty;
+    private string path = string.Empty;
+    private string? error;
+
+    /// <summary>
+    /// Pins <see cref="name"/>/<see cref="path"/> through <see cref="LibraryRootStore.Save(IReadOnlyList{PinnedRootEntry})"/>,
+    /// refusing inline with the Spec's settled text when <see cref="path"/> is not an existing
+    /// folder - mirrors <c>LibraryPanel.AddAsync</c> exactly, since <see cref="LibraryRootStore"/>
+    /// itself does not check this.
+    /// </summary>
+    private Task AddAsync()
+    {
+        this.error = null;
+        if (!Directory.Exists(this.path))
+        {
+            this.error = "That folder doesn't exist.";
+            return Task.CompletedTask;
+        }
+
+        List<PinnedRootEntry> pinned = [.. this.Roots.Pinned, new PinnedRootEntry(this.name, this.path)];
+        this.Roots.Save(pinned);
+        this.Dialog?.Close();
+        return Task.CompletedTask;
+    }
+
+    private void Cancel() => this.Dialog?.Cancel();
+}

@@ -20,9 +20,10 @@ namespace Agency.Huddle.Tests.Ui.Library;
 /// <summary>
 /// Pins the Library pane's host (Task 13.2, Spec §6.9, §6.6): <see cref="LibraryPaneHost"/> wraps the
 /// page body in a <see cref="MudSplitPanel"/> only while the pane is open, panel order follows
-/// <see cref="AppearanceStore.LibraryPaneSide"/>, a <c>?library=</c> navigation the pane's own inner
-/// document doesn't intercept opens the pane and strips the query, and <see cref="LibraryNavLink"/>
-/// toggles the shared <see cref="LibraryPaneState"/>. The precedence rule (judgement 45,
+/// <see cref="AppearanceStore.LibraryPaneSide"/>, and a <c>?library=</c> navigation the pane's own
+/// inner document doesn't intercept opens the pane and strips the query. <see cref="LibraryNavLink"/>'s
+/// own root-list and Add Folder behaviour is pinned separately in <c>LibraryNavLinkTests</c>; this
+/// file exercises it only through <see cref="LibraryPaneState"/> directly. The precedence rule (judgement 45,
 /// corrections-B6 item 19): the pane's inner <see cref="LibraryExplorer"/> has no <c>Scopes</c>, so
 /// its <see cref="LibraryDocument"/>'s own <c>NavigationManager.RegisterLocationChangingHandler</c>
 /// intercepts and prevents every resolvable <c>?library=</c> navigation while a document is open in
@@ -50,21 +51,53 @@ public sealed class MainLayoutLibraryTests : IDisposable
         Assert.NotEmpty(cut.FindAll(".pane-host-body-placeholder"));
     }
 
-    /// <summary>The sidebar's Library link text is exactly "Library", and clicking it opens the pane (toggles <see cref="LibraryPaneState"/>).</summary>
+    /// <summary>The sidebar's Library group is titled "Library"; <see cref="LibraryNavLink"/>'s own root rows and Add Folder row are pinned in <c>LibraryNavLinkTests</c>.</summary>
     [Fact]
-    public async Task SidebarLibraryLink_TogglesPane()
+    public async Task SidebarLibraryGroup_IsTitledLibrary()
     {
         await using MudBunitContext ctx = this.fixture.NewContext();
-        LibraryPaneState state = ctx.Services.GetRequiredService<LibraryPaneState>();
         IRenderedComponent<LibraryNavLink> cut = ctx.Render<LibraryNavLink>();
 
-        // A MudNavLink with no Href renders a clickable div.mud-nav-link, not an <a>.
-        Assert.Equal("Library", cut.Find(".mud-nav-link").TextContent.Trim());
-        Assert.False(state.IsOpen);
+        // MudNavGroup renders its own title as the first ".mud-nav-link" inside ".mud-nav-group";
+        // the root and Add Folder rows nest further inside the same outer <nav> once expanded.
+        Assert.Equal("Library", cut.Find(".mud-nav-group .mud-nav-link").TextContent.Trim());
+    }
 
-        cut.Find(".mud-nav-link").Click();
+    /// <summary>
+    /// Clicking a second root row while the pane is already open actually re-renders the visible
+    /// pane - not just <see cref="LibraryPaneState.Scope"/> underneath it. Neither
+    /// <c>&lt;FirstPanel&gt;&lt;LibraryPane /&gt;&lt;/FirstPanel&gt;</c> nor its <c>SecondPanel</c>
+    /// counterpart in <see cref="LibraryPaneHost"/> reference any instance state, so without
+    /// <c>@key="State.Scope"</c> on <see cref="LibraryPane"/> the Razor compiler's static-render-
+    /// fragment caching lets the renderer skip that whole region on every subsequent
+    /// <see cref="LibraryPaneHost"/> render: the pane opened correctly on the first root clicked and
+    /// then never visibly changed again, however many different roots were clicked afterwards -
+    /// confirmed live in the browser before this test was added, since every prior test in this
+    /// file only ever opens the pane once per case.
+    /// </summary>
+    [Fact]
+    public async Task OpeningASecondRootRow_WhilePaneAlreadyOpen_UpdatesTheVisiblePane()
+    {
+        Directory.CreateDirectory(Path.Combine(this.fixture.LibraryFixture.DataDir, "Teams", "Engineering"));
+        this.fixture.LibraryFixture.CreateTeammate("jarvis", "Jarvis", "jar");
 
-        Assert.True(state.IsOpen);
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        LibraryPaneState state = ctx.Services.GetRequiredService<LibraryPaneState>();
+        IRenderedComponent<ContainerFragment> cut = RenderHost(ctx);
+
+        // Scoped from the sidebar, the tree flattens straight to the root's own children
+        // (ShowScopeRoot=false, LibraryTreeTests.ShowScopeRootFalse_FlattensToTheScopesOwnChildren),
+        // so this checks which children are visible rather than a wrapper row's own name.
+        _ = cut.InvokeAsync(() => state.OpenRoot(new LibraryLocation("teams", string.Empty)));
+        cut.WaitForAssertion(() => Assert.Equal(
+            ["Engineering"],
+            cut.FindAll(".library-tree-node-name").Select(e => e.TextContent.Trim())));
+
+        _ = cut.InvokeAsync(() => state.OpenRoot(new LibraryLocation("teammates", string.Empty)));
+
+        cut.WaitForAssertion(() => Assert.Equal(
+            ["jarvis"],
+            cut.FindAll(".library-tree-node-name").Select(e => e.TextContent.Trim())));
     }
 
     /// <summary>With the side set to Right (default), the split panel's first panel is the body and the second is the pane.</summary>

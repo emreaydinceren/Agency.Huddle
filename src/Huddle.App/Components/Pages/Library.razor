@@ -7,6 +7,24 @@
     (Spec §6.16) - a single, not the pair, leaves the page unscoped. When the Library is disabled
     the page shows the settled refusal instead of ever constructing an explorer.
 
+    ShowScopeRoot is false exactly when scoped: the only producer of ScopeRoot/ScopePath today is
+    LibraryNavLink.razor's own sidebar rows, each already highlighted/selected while this page is
+    open, so neither the title above the tree nor a folder row that exists only to be expanded
+    (Spec §6.16's scope top node) earns its place - LibraryTree flattens straight to that root's own
+    children instead. Unscoped (the whole Library, every root), ShowScopeRoot stays true since names
+    are the only way to tell those roots apart. LibraryPane.razor makes the identical call for its
+    own per-root sidebar rows, for the identical reason.
+
+    <LibraryExplorer /> carries @key="this.QueryKey()": a same-page navigation (the sidebar's own
+    per-root rows, LibraryNavLink.razor, each linking here with a different ?scopeRoot=) changes
+    only this routable page's query parameters, so the Router reuses the existing page instance and
+    calls SetParametersAsync again rather than remounting it - LibraryExplorer's own Scopes are only
+    ever resolved once, from OnInitialized, so without this key a second root's link would update
+    Scopes but go on showing the first root's already-resolved tree. The key doubles as the fix: a
+    differing query also tears down and remounts LibraryExplorer, so it resolves the new Scopes/
+    InitialFile fresh (LibraryPaneHost.razor keys LibraryPane on State.Scope for the identical
+    reason).
+
     Named "Library" in Agency.Huddle.App.Components.Pages: distinct from the Agency.Huddle.App.Library
     namespace (no type there is named Library), so no @namespace override is needed - only fully
     qualifying is ever ambiguous, and this file never needs to.
@@ -22,7 +40,8 @@
 }
 else
 {
-    <LibraryExplorer Layout="LibraryExplorerLayout.SideBySide" StateKey="page" Scopes="@this.Scopes()" InitialFile="@this.InitialFile()" />
+    <LibraryExplorer @key="@this.QueryKey()" Layout="LibraryExplorerLayout.SideBySide" StateKey="page"
+                      Scopes="@this.Scopes()" ShowScopeRoot="@(this.Scopes() is null)" InitialFile="@this.InitialFile()" />
 }
 
 @code {
@@ -50,4 +69,9 @@ else
             : null;
 
     private string? InitialFile() => this.Root is not null && this.Path is not null ? this.Path : null;
+
+    /// <summary>Every query parameter that changes what <see cref="LibraryExplorer"/> shows, joined so a differing value forces the <c>@key</c> remount described above.</summary>
+    private string QueryKey() => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"{this.Root}|{this.Path}|{this.ScopeRoot}|{this.ScopePath}");
 }

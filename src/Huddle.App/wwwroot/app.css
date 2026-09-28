@@ -1241,3 +1241,35 @@ button:focus-visible {
     color: var(--mud-palette-text-disabled);
 }
 
+/* ---- Library: explorer split bounds -------------------------------------------------------------
+   MudSplitPanel writes a fixed pixel size inline on BOTH panels, measured once, and never
+   re-measures: resize the window after load, or restore a remembered divider position, and the
+   panels keep sizes that no longer fit (LibraryExplorer.razor's header has the live failure). So
+   the second panel ignores its inline size and flexes into whatever is left, and the first keeps
+   the size the divider gave it but is bounded on both sides, so neither can be squeezed to
+   nothing. !important is the only way past an inline style. */
+
+.library-explorer-split-side-by-side > .child-panel:first-child {
+    flex: 0 0 auto;
+    min-width: 15rem;
+    max-width: calc(100% - 16rem);
+}
+
+.library-explorer-split-side-by-side > .child-panel:last-child {
+    flex: 1 1 0;
+    width: auto !important;
+    min-width: 0;
+}
+
+.library-explorer-split-stacked > .child-panel:first-child {
+    flex: 0 0 auto;
+    min-height: 6rem;
+    max-height: calc(100% - 8rem);
+}
+
+.library-explorer-split-stacked > .child-panel:last-child {
+    flex: 1 1 0;
+    height: auto !important;
+    min-height: 0;
+}
+

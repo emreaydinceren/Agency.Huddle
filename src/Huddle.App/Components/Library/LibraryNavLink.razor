@@ -1,17 +1,86 @@
 @using Microsoft.Extensions.Options
 @using Agency.Huddle.App.Library
-@inject LibraryPaneState State
+@implements IDisposable
+@inject LibraryRootStore Roots
 @inject IOptions<TeamOptions> Options
+@inject IDialogService DialogService
 
-@* The sidebar's Library link (Task 13.2, Spec §6.9): toggles the shared LibraryPaneState. A plain
-   wrapper rather than a MudNavLink subclass, so it never writes MudNavLink's [Parameter]s from
-   inside the component (BL0005). With no Href, MudNavLink renders a clickable div, not an <a>. *@
+@* The sidebar's Library group (Task 13.2, Spec §6.9, extended to list roots in the sidebar):
+   mirrors TaskViewNav's own shape - a MudNavGroup titled "Library" holding one row per visible
+   Library Root (LibraryRootStore.VisibleRoots, "no local snapshot", SkillsPanel's own precedent)
+   and a trailing "Add Folder" row, the same position TaskViewNav's own "New view" row holds. A row
+   carries an Href to the full /library page (Spec §6.9 "Pop out"), scoped to that root through
+   ?scopeRoot=&scopePath= - the same TaskViewNav-style route link Teammates and Settings use for
+   their own sidebar entries, so Library opens as its own primary panel rather than splitting next
+   to whatever page the Human was already on. The docked LibraryPaneState pane and its own
+   OpenRoot/Scope narrowing are unchanged and still reachable through their other entry points
+   (wikilinks, chat's ?library= links) - only this sidebar row stopped driving them, and
+   MainLayoutLibraryTests pins that pane behaviour directly against LibraryPaneState now that this
+   component no longer exercises it. Add Folder opens AddFolderDialog, the same pin flow
+   Settings > Library's own Add row drives; this component repaints on LibraryRootStore.RootsChanged
+   rather than waiting for a manual refresh, so a folder pinned here or in Settings shows up in both
+   places live. *@
 @if (this.Options.Value.Library.Enabled)
 {
-    <MudNavLink Icon="@Icons.Material.Filled.MenuBook" OnClick="@this.Toggle">Library</MudNavLink>
+    <MudNavMenu Class="library-nav">
+        <MudNavGroup Title="Library" Icon="@Icons.Material.Filled.MenuBook" @bind-Expanded="this.expanded">
+            @foreach (LibraryRoot root in this.Roots.VisibleRoots)
+            {
+                <MudNavLink Href="@BuildRootHref(root)" Class="library-nav-root-link">@root.DisplayName</MudNavLink>
+            }
+            <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="library-nav-add-folder" OnClick="this.OpenAddFolderAsync">Add Folder</MudNavLink>
+        </MudNavGroup>
+    </MudNavMenu>
 }
 
 @code {
-    /// <summary>Opens or closes the Library pane.</summary>
-    private void Toggle() => this.State.Toggle();
+    private bool expanded = true;
+
+    /// <summary>Subscribes to <see cref="LibraryRootStore.RootsChanged"/> so the root list follows every pin, remove, hide or reset - from this dialog, from Settings, or from a reset.</summary>
+    protected override void OnInitialized()
+    {
+        this.Roots.RootsChanged += this.OnRootsChanged;
+    }
+
+    /// <summary>Unsubscribes from <see cref="LibraryRootStore.RootsChanged"/>.</summary>
+    public void Dispose()
+    {
+        this.Roots.RootsChanged -= this.OnRootsChanged;
+    }
+
+    /// <summary>Builds the full <c>/library</c> page URL, scoped to <paramref name="root"/>'s own top level (Spec §6.9), the same query shape <see cref="Agency.Huddle.App.Components.Pages.Library"/> reads.</summary>
+    /// <param name="root">The row's own resolved root.</param>
+    private static string BuildRootHref(LibraryRoot root) => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"/library?scopeRoot={Uri.EscapeDataString(root.Id)}&scopePath=");
+
+    /// <summary>Opens <see cref="AddFolderDialog"/> - it reads and saves <see cref="LibraryRootStore"/> itself, so no parameters are built here.</summary>
+    private async Task OpenAddFolderAsync()
+    {
+        await this.DialogService.ShowAsync<AddFolderDialog>("Add folder", AddFolderDialog.Options);
+    }
+
+    /// <summary>Repaints the root list when <see cref="LibraryRootStore.RootsChanged"/> fires, the same dispatch <c>TaskViewNav</c> uses for its own subscription.</summary>
+    private void OnRootsChanged() => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a store event racing component teardown can throw (rules.md).</summary>
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to render.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
+    }
 }

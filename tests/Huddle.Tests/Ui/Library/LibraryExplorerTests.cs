@@ -186,8 +186,35 @@ public sealed class LibraryExplorerTests : IDisposable
         Assert.Equal("Library", cut.Find(".library-explorer-title").TextContent.Trim());
     }
 
-    /// <summary>[12.7a] <c>Layout.Stacked</c> renders the <see cref="MudSplitPanel"/> vertically
-    /// (<c>Horizontal="false"</c>, mudblazor.md "Facts already checked").</summary>
+    /// <summary>
+    /// <c>ShowScopeRoot="false"</c> (LibraryPane's own scoped rows): no header at all, and the
+    /// tree skips the scope's own wrapper row too - its own "..." menu button never exists at all -
+    /// showing that folder's children directly as the tree's top-level nodes instead
+    /// (LibraryTreeTests pins the tree's own end of this).
+    /// </summary>
+    [Fact]
+    public async Task ShowScopeRootFalse_OmitsHeaderAndFlattensTheTree()
+    {
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(root, "Sub"));
+        LibraryPath scopePath = this.fixture.LibraryFixture.Resolve(root, string.Empty);
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderExplorer(
+            ctx, scopes: [new LibraryLocation(scopePath.Root.Id, string.Empty)], showScopeRoot: false);
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button[aria-label='Actions for Sub']")));
+        Assert.Empty(cut.FindAll(".library-explorer-title"));
+        Assert.Empty(cut.FindAll("button[aria-label='Actions for Notes']"));
+    }
+
+    /// <summary>
+    /// [12.7a] <c>Layout.Stacked</c> renders the <see cref="MudSplitPanel"/> with <c>Horizontal="true"</c>.
+    /// Confirmed against 9.10.0's own split-panel.js (mudblazor.md "Facts already checked"):
+    /// <c>Horizontal</c> names the DIVIDER's orientation, not the panels' - a horizontal dividing line
+    /// separates panels stacked top/bottom (sized by height), so Stacked needs <c>Horizontal="true"</c>,
+    /// the opposite of what the parameter's name suggests.
+    /// </summary>
     [Fact]
     public async Task Layout_Stacked_IsVertical()
     {
@@ -195,10 +222,14 @@ public sealed class LibraryExplorerTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderExplorer(ctx, scopes: null, layout: LibraryExplorerLayout.Stacked);
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<MudSplitPanel>()));
-        Assert.False(cut.FindComponent<MudSplitPanel>().Instance.Horizontal);
+        Assert.True(cut.FindComponent<MudSplitPanel>().Instance.Horizontal);
     }
 
-    /// <summary>[12.7a] <c>Layout.SideBySide</c> renders the <see cref="MudSplitPanel"/> horizontally.</summary>
+    /// <summary>
+    /// [12.7a] <c>Layout.SideBySide</c> renders the <see cref="MudSplitPanel"/> with <c>Horizontal="false"</c>:
+    /// a vertical dividing line separates panels left/right (sized by width) - see
+    /// <see cref="Layout_Stacked_IsVertical"/> for why this reads backwards from the parameter's name.
+    /// </summary>
     [Fact]
     public async Task Layout_SideBySide_IsHorizontal()
     {
@@ -206,7 +237,7 @@ public sealed class LibraryExplorerTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderExplorer(ctx, scopes: null, layout: LibraryExplorerLayout.SideBySide);
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<MudSplitPanel>()));
-        Assert.True(cut.FindComponent<MudSplitPanel>().Instance.Horizontal);
+        Assert.False(cut.FindComponent<MudSplitPanel>().Instance.Horizontal);
     }
 
     /// <summary>[12.7b] <c>StateKey</c> keys the remembered expanded folders, open file and divider
@@ -233,6 +264,29 @@ public sealed class LibraryExplorerTests : IDisposable
         Assert.Contains(
             ctx.JSInterop.Invocations["huddleStorage.set"],
             invocation => Equals(invocation.Arguments[0], "library:pane-a:open"));
+    }
+
+    /// <summary>
+    /// The remembered divider position is read under a key carrying the layout, never the old
+    /// layout-less <c>library:{StateKey}:divider</c>: the number is a width side by side and a height
+    /// stacked, and values stored while <c>Horizontal</c> was inverted were heights that came back as
+    /// a tree column one row wide.
+    /// </summary>
+    [Theory]
+    [InlineData(LibraryExplorerLayout.SideBySide, "library:k:side-by-side:divider")]
+    [InlineData(LibraryExplorerLayout.Stacked, "library:k:stacked:divider")]
+    public async Task RestoreState_ReadsTheLayoutSpecificDividerKey(LibraryExplorerLayout layout, string expectedKey)
+    {
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        ctx.JSInterop.Setup<string?>("huddleStorage.get", _ => true).SetResult(null);
+        IRenderedComponent<ContainerFragment> cut = RenderExplorer(ctx, scopes: null, layout: layout, stateKey: "k");
+
+        cut.WaitForAssertion(() => Assert.Contains(
+            ctx.JSInterop.Invocations["huddleStorage.get"],
+            invocation => Equals(invocation.Arguments[0], expectedKey)));
+        Assert.DoesNotContain(
+            ctx.JSInterop.Invocations["huddleStorage.get"],
+            invocation => Equals(invocation.Arguments[0], "library:k:divider"));
     }
 
     /// <summary>[12.7b] Switching to a different document asks the currently open one to
@@ -411,7 +465,8 @@ public sealed class LibraryExplorerTests : IDisposable
         LibraryExplorerLayout layout = LibraryExplorerLayout.Stacked,
         string? initialFile = null,
         string stateKey = "test",
-        EventCallback<LibraryPath> onOpenInLibrary = default) => ctx.RenderWithPopovers(builder =>
+        EventCallback<LibraryPath> onOpenInLibrary = default,
+        bool showScopeRoot = true) => ctx.RenderWithPopovers(builder =>
     {
         builder.OpenComponent<LibraryExplorer>(0);
         builder.AddAttribute(1, nameof(LibraryExplorer.Scopes), scopes);
@@ -420,6 +475,7 @@ public sealed class LibraryExplorerTests : IDisposable
         builder.AddAttribute(4, nameof(LibraryExplorer.InitialFile), initialFile);
         builder.AddAttribute(5, nameof(LibraryExplorer.StateKey), stateKey);
         builder.AddAttribute(6, nameof(LibraryExplorer.OnOpenInLibrary), onOpenInLibrary);
+        builder.AddAttribute(7, nameof(LibraryExplorer.ShowScopeRoot), showScopeRoot);
         builder.CloseComponent();
     });
 
