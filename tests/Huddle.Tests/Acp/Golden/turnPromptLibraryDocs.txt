@@ -1,0 +1,5 @@
+Library documents mentioned in these messages:
+- E:\Data\Teams\Marketing\Launch Q4\plan.md (Team Marketing, Project Launch Q4, 3 KB)
+- E:\Repos\Huddle\docs\Huddle.Library-Specifications.md (pinned root "Huddle docs", 41 KB)
+
+[Room: Nova & You (id: room-1)] You: hello there

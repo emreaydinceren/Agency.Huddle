@@ -1,4 +1,5 @@
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Acp.Sessions;
@@ -38,6 +39,10 @@ internal enum WorkItemKind
 /// <c>TakeCatchUp</c>. <see langword="null"/> when nothing was recorded. Dropped by the Room Session
 /// when <see cref="Transcript"/> is set on this Turn: that range already holds those posts.
 /// </param>
+/// <param name="LibraryDocuments">
+/// The absolute Library document paths mentioned in this Turn's Message and Catch-up (Spec §6.14), or
+/// <see langword="null"/> when none were found or the Library is off.
+/// </param>
 internal sealed record WorkItem(
     string RoomId,
     string RoomName,
@@ -48,7 +53,8 @@ internal sealed record WorkItem(
     FileChangesReport? FileChanges = null,
     string? TriggerMessageId = null,
     TranscriptCatchUp? Transcript = null,
-    IReadOnlyList<string>? OwnPostLines = null);
+    IReadOnlyList<string>? OwnPostLines = null,
+    LibraryDocumentsReport? LibraryDocuments = null);
 
 /// <summary>One earlier Message the Agent was not Mentioned in, carried as catch-up context only.</summary>
 /// <param name="SenderName">Who sent it.</param>

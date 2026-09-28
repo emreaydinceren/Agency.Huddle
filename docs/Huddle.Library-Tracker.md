@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 105 of 143 tasks Done · 6 of 8 retrospectives done · last updated 2026-09-27.
+**Status:** 107 of 143 tasks Done · 6 of 8 retrospectives done · last updated 2026-09-27.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -137,8 +137,8 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 10.1.i Add the prompts · #91 · Haiku | | | ✔ |
 | 10.2.t Test: `LibraryDocumentCollector` · #92 · Sonnet | | | ✔ |
 | 10.2.i Implement `LibraryDocumentCollector` · #93 · Sonnet | | | ✔ |
-| 10.3.t Test: the prompt block · #94 · Sonnet | ✔ | | |
-| 10.3.i Implement the prompt block · #95 · Sonnet | ✔ | | |
+| 10.3.t Test: the prompt block · #94 · Sonnet | | | ✔ |
+| 10.3.i Implement the prompt block · #95 · Sonnet | | | ✔ |
 | 10.4.t Test: the collector reaches every Turn · #96 · Sonnet | ✔ | | |
 | 10.4.i Plumb the collector and `readsFiles` · #97 · Sonnet | ✔ | | |
 | **D11. The editor and styles** | | | |

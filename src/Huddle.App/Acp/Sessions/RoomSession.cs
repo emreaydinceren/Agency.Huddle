@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -1430,6 +1431,7 @@ internal sealed class RoomSession : IAsyncDisposable
 
         var builder = new StringBuilder();
         RoomSession.AppendFileChangesBlock(builder, item.FileChanges, prompts);
+        RoomSession.AppendLibraryDocumentsBlock(builder, item.LibraryDocuments, prompts);
 
         // RS §6.5: the Transcript block replaces the catch-up buffer on this Turn only, and only
         // when it actually holds Messages — an empty Transcript (the read was refused, timed out, or
@@ -1561,6 +1563,110 @@ internal sealed class RoomSession : IAsyncDisposable
         }
 
         builder.Append('\n');
+    }
+
+    /// <summary>
+    /// Spec §6.14: with a non-empty <paramref name="report"/>, writes the Library documents block
+    /// directly after File Changes — the header, one line per document (a too-large document's line
+    /// replaces the ordinary one), the document's text fenced and truncation-noted when inlined, an
+    /// "…and N more documents." line when the cap left some out, then a blank line. Writes nothing for
+    /// a <see langword="null"/> or empty report: "absent means unchanged", as for File Changes.
+    /// </summary>
+    private static void AppendLibraryDocumentsBlock(StringBuilder builder, LibraryDocumentsReport? report, IPromptSource prompts)
+    {
+        if (report is null || report.IsEmpty)
+        {
+            return;
+        }
+
+        builder.Append(prompts.Render("turn.libraryDocsHeader", new Dictionary<string, string>()));
+        builder.Append('\n');
+
+        foreach (var item in report.Items)
+        {
+            if (item.TooLarge)
+            {
+                var sizeKb = (item.Length + 1023) / 1024;
+                builder.Append(prompts.Render(
+                    "turn.libraryDocTooLarge",
+                    new Dictionary<string, string>
+                    {
+                        ["{{label}}"] = item.Location,
+                        ["{{path}}"] = item.FullPath,
+                        ["{{sizeKb}}"] = sizeKb.ToString(CultureInfo.InvariantCulture),
+                    }));
+                builder.Append('\n');
+                continue;
+            }
+
+            builder.Append(prompts.Render(
+                "turn.libraryDoc",
+                new Dictionary<string, string>
+                {
+                    ["{{path}}"] = item.FullPath,
+                    ["{{location}}"] = item.Location,
+                    ["{{size}}"] = item.Size,
+                }));
+            builder.Append('\n');
+
+            if (item.Text is not null)
+            {
+                var fence = RoomSession.ChooseFence(item.Text);
+                builder.Append(prompts.Render(
+                    "turn.libraryDocInline",
+                    new Dictionary<string, string> { ["{{fence}}"] = fence, ["{{text}}"] = item.Text }));
+                builder.Append('\n');
+
+                if (item.Truncated)
+                {
+                    builder.Append(prompts.Render(
+                        "turn.libraryDocTruncated",
+                        new Dictionary<string, string>
+                        {
+                            ["{{max}}"] = report.MaxInlineBytes.ToString(CultureInfo.InvariantCulture),
+                            ["{{size}}"] = item.Size,
+                        }));
+                    builder.Append('\n');
+                }
+            }
+        }
+
+        if (report.NotListed > 0)
+        {
+            builder.Append(prompts.Render(
+                "turn.libraryDocsMore",
+                new Dictionary<string, string> { ["{{count}}"] = report.NotListed.ToString(CultureInfo.InvariantCulture) }));
+            builder.Append('\n');
+        }
+
+        builder.Append('\n');
+    }
+
+    /// <summary>
+    /// Corrections-B5 item 32: the fence for an inlined document's text is the longest run of
+    /// backticks already in that text, plus one, never shorter than three — so the fence can never be
+    /// closed early by a backtick run the text itself contains.
+    /// </summary>
+    /// <param name="text">The document's text about to be fenced.</param>
+    /// <returns>A run of backticks safe to wrap <paramref name="text"/> in.</returns>
+    private static string ChooseFence(string text)
+    {
+        var longestRun = 0;
+        var currentRun = 0;
+        foreach (var c in text)
+        {
+            if (c == '`')
+            {
+                currentRun++;
+                longestRun = Math.Max(longestRun, currentRun);
+            }
+            else
+            {
+                currentRun = 0;
+            }
+        }
+
+        return new string('`', Math.Max(3, longestRun + 1));
     }
 
     /// <summary>Builds the bracketed Room label that opens every line of a prompt.</summary>
