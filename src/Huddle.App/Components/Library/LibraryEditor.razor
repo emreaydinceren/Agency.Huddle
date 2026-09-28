@@ -36,8 +36,16 @@
     private IJSObjectReference? module;
     private IJSObjectReference? handle;
     private DotNetObjectReference<LibraryEditor>? selfReference;
+    private bool disposed;
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Imports the JS module and creates the CodeMirror view. Two awaits sit between entry and the
+    /// field assignments below, and <see cref="DisposeAsync"/> can run at any point during either of
+    /// them (corrections-B6 D11 item 13's own warning, and Microsoft's: disposal isn't ordered against
+    /// a still-running lifecycle method). Each await is followed by a <see cref="disposed"/> check so a
+    /// module or handle that finishes arriving after disposal is released immediately instead of being
+    /// assigned to an already-disposed instance and leaked.
+    /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -45,10 +53,25 @@
             return;
         }
 
-        this.module = await this.JS.InvokeAsync<IJSObjectReference>("import", "./library-editor.js");
+        IJSObjectReference createdModule = await this.JS.InvokeAsync<IJSObjectReference>("import", "./library-editor.js");
+        if (this.disposed)
+        {
+            await createdModule.DisposeAsync();
+            return;
+        }
+
+        this.module = createdModule;
         this.selfReference = DotNetObjectReference.Create(this);
-        this.handle = await this.module.InvokeAsync<IJSObjectReference>(
+        IJSObjectReference createdHandle = await this.module.InvokeAsync<IJSObjectReference>(
             "create", this.editorElement, this.Text, this.ReadOnly, this.LanguageId, this.selfReference, this.PreviewMode);
+        if (this.disposed)
+        {
+            await createdHandle.InvokeVoidAsync("dispose");
+            await createdHandle.DisposeAsync();
+            return;
+        }
+
+        this.handle = createdHandle;
     }
 
     /// <summary>Reads the editor's current text. Text crosses the circuit only on demand, never per keystroke.</summary>
@@ -87,20 +110,31 @@
     [JSInvokable]
     public async Task OnPreviewText(string text) => await this.PreviewTextChanged.InvokeAsync(text);
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Releases the CodeMirror view and the JS module. <see cref="disposed"/> is set first so a
+    /// concurrently-running <see cref="OnAfterRenderAsync"/> releases whatever it was mid-creating
+    /// instead of assigning it to this now-disposed instance; <see cref="handle"/> and
+    /// <see cref="module"/> are nulled after release so a second call - Blazor's own docs note
+    /// disposal timing isn't guaranteed exactly-once - finds nothing left to dispose rather than
+    /// re-invoking a JS reference the client no longer has, which throws instead of no-op'ing.
+    /// </summary>
     public async ValueTask DisposeAsync()
     {
+        this.disposed = true;
+
         try
         {
             if (this.handle is not null)
             {
                 await this.handle.InvokeVoidAsync("dispose");
                 await this.handle.DisposeAsync();
+                this.handle = null;
             }
 
             if (this.module is not null)
             {
                 await this.module.DisposeAsync();
+                this.module = null;
             }
         }
         catch (JSDisconnectedException)

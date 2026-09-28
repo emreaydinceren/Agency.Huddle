@@ -1,5 +1,6 @@
 using Agency.Huddle.App.Components.Library;
 using Bunit;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.JSInterop;
 
 namespace Agency.Huddle.Tests.Ui.Library;
@@ -185,5 +186,132 @@ public sealed class LibraryEditorTests
 
         Assert.Single(module.Invocations);
         Assert.Empty(handle.Invocations);
+    }
+
+    /// <summary>
+    /// Reproduces the race behind the production crash (an <c>Unhandled exception in circuit</c>
+    /// from <c>JSException: The value 'dispose' is not a function</c>): Microsoft's own
+    /// component-disposal guidance is that <see cref="LibraryEditor.DisposeAsync"/> can run while
+    /// <c>OnAfterRenderAsync</c>'s own <c>create</c> call is still awaiting a result. The handle that
+    /// arrives afterwards must be released on its own - not assigned to the already-disposed
+    /// instance, where nothing would ever dispose it.
+    /// </summary>
+    [Fact]
+    public async Task DisposeAsync_WhileCreateIsPending_ReleasesLateArrivingHandle()
+    {
+        // bUnit's own JSInterop mock resolves every IJSObjectReference-returning call eagerly (it
+        // refuses a deferred Setup<IJSObjectReference> outright), so the one call whose timing this
+        // test controls - `create` - is served by a hand-written IJSRuntime instead, replacing
+        // bUnit's default registration for this test only.
+        DeferredCreateModule module = new();
+        using MudBunitContext context = new();
+        context.Services.AddSingleton<IJSRuntime>(new SingleModuleJSRuntime(module));
+
+        IRenderedComponent<LibraryEditor> rendered = context.Render<LibraryEditor>(parameters => parameters
+            .Add(p => p.Text, "hello")
+            .Add(p => p.LanguageId, "markdown"));
+
+        // The component is disposed before its own `create` call has returned.
+        Exception? disposedWhilePending = await Record.ExceptionAsync(() => rendered.Instance.DisposeAsync().AsTask());
+        Assert.Null(disposedWhilePending);
+
+        // `create` now resolves, handing the component a handle after it was already disposed. The
+        // continuation that reacts to it runs on the renderer's own dispatcher, not this thread, so
+        // the test awaits the handle's own dispose signal rather than assuming it has run by now.
+        RecordingJSObjectReference lateHandle = new();
+        module.CompleteCreate(lateHandle);
+        await lateHandle.Disposed.WaitAsync(TimeSpan.FromSeconds(2), Xunit.TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, lateHandle.DisposeInvocationCount);
+    }
+
+    /// <summary>A minimal <see cref="IJSRuntime"/> whose only handled call is <c>import</c>, returning the given module.</summary>
+    private sealed class SingleModuleJSRuntime(IJSObjectReference module) : IJSRuntime
+    {
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+            this.InvokeAsync<TValue>(identifier, CancellationToken.None, args);
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args) =>
+            string.Equals(identifier, "import", StringComparison.Ordinal)
+                ? new ValueTask<TValue>((TValue)module)
+                : throw new NotSupportedException($"Unexpected interop call '{identifier}'.");
+    }
+
+    /// <summary>
+    /// Stands in for the imported <c>library-editor.js</c> module. Its <c>create</c> call does not
+    /// complete until <see cref="CompleteCreate"/> is called, so a test can dispose the component
+    /// while that call is still in flight.
+    /// </summary>
+    private sealed class DeferredCreateModule : IJSObjectReference
+    {
+        private readonly TaskCompletionSource<IJSObjectReference> createResult = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public void CompleteCreate(IJSObjectReference handle) => this.createResult.SetResult(handle);
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+            this.InvokeAsync<TValue>(identifier, CancellationToken.None, args);
+
+        public async ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+        {
+            if (!string.Equals(identifier, "create", StringComparison.Ordinal))
+            {
+                throw new NotSupportedException($"Unexpected interop call '{identifier}'.");
+            }
+
+            IJSObjectReference handle = await this.createResult.Task.WaitAsync(cancellationToken);
+            return (TValue)handle;
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    /// <summary>A minimal <see cref="IJSObjectReference"/> the test completes and inspects directly, standing in for the CodeMirror handle a late-arriving <c>create</c> call would hand back.</summary>
+    private sealed class RecordingJSObjectReference : IJSObjectReference
+    {
+        private readonly TaskCompletionSource disposedSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public int DisposeInvocationCount { get; private set; }
+
+        /// <summary>Completes once <c>dispose</c> has been invoked, so a test can await the effect of a fire-and-forget continuation instead of racing it.</summary>
+        public Task Disposed => this.disposedSignal.Task;
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, object?[]? args) =>
+            this.InvokeAsync<TValue>(identifier, CancellationToken.None, args);
+
+        public ValueTask<TValue> InvokeAsync<TValue>(string identifier, CancellationToken cancellationToken, object?[]? args)
+        {
+            if (string.Equals(identifier, "dispose", StringComparison.Ordinal))
+            {
+                this.DisposeInvocationCount++;
+                this.disposedSignal.TrySetResult();
+            }
+
+            return ValueTask.FromResult(default(TValue)!);
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+    }
+
+    /// <summary>
+    /// A second <see cref="LibraryEditor.DisposeAsync"/> call - Microsoft's own component-disposal
+    /// docs note disposal timing isn't guaranteed exactly-once - must find nothing left to release
+    /// rather than re-invoking <c>dispose</c> on a handle the client has already dropped, which is
+    /// what actually threw <c>JSException: The value 'dispose' is not a function</c> in production.
+    /// </summary>
+    [Fact]
+    public async Task DisposeAsync_CalledTwice_SecondCallDoesNotReinvokeDispose()
+    {
+        using MudBunitContext context = new();
+        (IRenderedComponent<LibraryEditor> rendered, _, BunitJSModuleInterop handle) = RenderEditor(context);
+
+        await rendered.Instance.DisposeAsync();
+
+        // A second `dispose` call on a handle the client has already released throws client-side -
+        // exactly the production symptom - so the mock is set to fail if it is ever reached again.
+        handle.SetupVoid("dispose", _ => true).SetException(new JSException("The value 'dispose' is not a function."));
+        Exception? thrown = await Record.ExceptionAsync(() => rendered.Instance.DisposeAsync().AsTask());
+
+        Assert.Null(thrown);
+        Assert.Single(handle.Invocations, i => i.Identifier == "dispose");
     }
 }
