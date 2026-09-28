@@ -1,0 +1,53 @@
+@*
+    Spec §6.9 "Pop out": the full /library page. Holds the Library at full width in
+    LibraryExplorerLayout.SideBySide, StateKey "page" (its own remembered open file/divider,
+    separate from the pane's "pane" key). Four query parameters, all optional: Root/Path open a
+    specific file (the same pair LibraryPane.BuildPopOutUri builds); ScopeRoot/ScopePath, when
+    BOTH are given, scope the whole page to that folder exactly like a scoped explorer elsewhere
+    (Spec §6.16) - a single, not the pair, leaves the page unscoped. When the Library is disabled
+    the page shows the settled refusal instead of ever constructing an explorer.
+
+    Named "Library" in Agency.Huddle.App.Components.Pages: distinct from the Agency.Huddle.App.Library
+    namespace (no type there is named Library), so no @namespace override is needed - only fully
+    qualifying is ever ambiguous, and this file never needs to.
+*@
+@page "/library"
+@using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Library
+@inject IOptions<TeamOptions> Options
+
+@if (!this.Enabled)
+{
+    <MudAlert Severity="Severity.Info" role="status" Class="library-disabled-alert">The Library is turned off.</MudAlert>
+}
+else
+{
+    <LibraryExplorer Layout="LibraryExplorerLayout.SideBySide" StateKey="page" Scopes="@this.Scopes()" InitialFile="@this.InitialFile()" />
+}
+
+@code {
+    private bool Enabled => this.Options.Value.Library.Enabled;
+
+    /// <summary>The pinned root id of the file to open, from <c>?root=</c>.</summary>
+    [Parameter, SupplyParameterFromQuery]
+    public string? Root { get; set; }
+
+    /// <summary>The file's path relative to <see cref="Root"/>, from <c>?path=</c>.</summary>
+    [Parameter, SupplyParameterFromQuery]
+    public string? Path { get; set; }
+
+    /// <summary>The scope's root id, from <c>?scopeRoot=</c>. Only takes effect together with <see cref="ScopePath"/>.</summary>
+    [Parameter, SupplyParameterFromQuery]
+    public string? ScopeRoot { get; set; }
+
+    /// <summary>The scope's path relative to <see cref="ScopeRoot"/>, from <c>?scopePath=</c>. Only takes effect together with <see cref="ScopeRoot"/>.</summary>
+    [Parameter, SupplyParameterFromQuery]
+    public string? ScopePath { get; set; }
+
+    private IReadOnlyList<LibraryLocation>? Scopes() =>
+        this.ScopeRoot is not null && this.ScopePath is not null
+            ? [new LibraryLocation(this.ScopeRoot, this.ScopePath)]
+            : null;
+
+    private string? InitialFile() => this.Root is not null && this.Path is not null ? this.Path : null;
+}

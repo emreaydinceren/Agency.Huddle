@@ -16,7 +16,13 @@
 </div>
 
 @code {
-    /// <summary>Navigates to the full <c>/library</c> page on the pane's current file, escaping the root id and relative path.</summary>
+    /// <summary>Builds the full <c>/library</c> page URL for the given file, escaping the root id and relative
+    /// path (Spec §6.9 "Pop out"). Internal so the page's round-trip can be tested against this exact code.</summary>
+    internal static string BuildPopOutUri(LibraryPath file) => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"/library?root={Uri.EscapeDataString(file.Root.Id)}&path={Uri.EscapeDataString(file.RelativePath)}");
+
+    /// <summary>Navigates to the full <c>/library</c> page on the pane's current file.</summary>
     private void PopOut()
     {
         LibraryPath? file = this.State.CurrentFile;
@@ -25,9 +31,6 @@
             return;
         }
 
-        string uri = string.Create(
-            System.Globalization.CultureInfo.InvariantCulture,
-            $"/library?root={Uri.EscapeDataString(file.Root.Id)}&path={Uri.EscapeDataString(file.RelativePath)}");
-        this.Navigation.NavigateTo(uri);
+        this.Navigation.NavigateTo(BuildPopOutUri(file));
     }
 }
