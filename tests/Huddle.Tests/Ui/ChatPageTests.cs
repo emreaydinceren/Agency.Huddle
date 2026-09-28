@@ -10,11 +10,13 @@ using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Library;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -946,6 +948,10 @@ public sealed class ChatPageTests
         // Chat.razor's MessageList child now injects ITaskReferenceResolver (Task 15.1) to link Task
         // ids - needed even though these tests never resolve one.
         ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
+
+        // Chat.razor's MessageList child now injects ILibraryReferenceResolver (Task 9.4) to link
+        // Library paths - needed even though these tests never resolve one.
+        ctx.Services.AddSingleton<ILibraryReferenceResolver>(new FakeLibraryNoteResolver());
 
         // Chat.razor's Composer child now injects TaskStore for the # picker (Task 15.3) - needed
         // even though these tests never open it. IOptions<TeamOptions> is already copied above.

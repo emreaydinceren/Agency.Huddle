@@ -1,0 +1,73 @@
+@*
+    The shared "name" prompt for the Library's create actions (Task 12.5b, Spec §6.2, §6.4;
+    corrections-B6 item 31): New note, New folder and New Project share one title/label/button shape,
+    differing only in which service call Kind selects. A refusal (an invalid name, an existing file, a
+    missing Team folder) shows inline and leaves the dialog open, matching RenameDialog/MoveDialog's house
+    pattern of calling the service itself rather than taking a delegate.
+*@
+@using Agency.Huddle.App.Library
+
+@inject LibraryFileService FileService
+@inject TeamFolderProvisioner Provisioner
+
+<MudDialog>
+    <DialogContent>
+        <div class="library-file-ops-name-field">
+            <MudTextField T="string" Label="Name" @bind-Value="this.name" />
+        </div>
+        @if (this.error is not null)
+        {
+            <p class="library-file-ops-error" role="alert">@this.error</p>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="this.ConfirmAsync">Create</MudButton>
+        <MudButton OnClick="this.Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>How LibraryFileOps shows this dialog: small, full-width, with a close button that cancels.</summary>
+    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>The already-resolved folder to create in, or - for <see cref="LibraryTreeActionKind.NewProject"/>
+    /// - the Team folder to create the Project folder under.</summary>
+    [Parameter]
+    public required LibraryPath Folder { get; set; }
+
+    /// <summary>Which create action this prompt drives: <see cref="LibraryTreeActionKind.NewNote"/>,
+    /// <see cref="LibraryTreeActionKind.NewFolder"/> or <see cref="LibraryTreeActionKind.NewProject"/>.</summary>
+    [Parameter]
+    public required LibraryTreeActionKind Kind { get; set; }
+
+    private string name = string.Empty;
+    private string? error;
+
+    /// <summary>Creates through the matching service call; a refusal shows inline and leaves the dialog
+    /// open, and success closes it with the fresh <see cref="LibraryPath"/>.</summary>
+    private async Task ConfirmAsync()
+    {
+        this.error = null;
+
+        LibraryResult<LibraryPath> result = this.Kind switch
+        {
+            LibraryTreeActionKind.NewNote => await this.FileService.CreateFileAsync(this.Folder, this.name, CancellationToken.None),
+            LibraryTreeActionKind.NewFolder => await this.FileService.CreateFolderAsync(this.Folder, this.name, CancellationToken.None),
+            LibraryTreeActionKind.NewProject => this.Provisioner.EnsureProject(this.Folder, this.name),
+            _ => throw new NotSupportedException("NamePromptDialog only drives create actions."),
+        };
+
+        if (result.Value is null)
+        {
+            this.error = result.Error;
+            return;
+        }
+
+        this.Dialog?.Close(DialogResult.Ok<LibraryResult<LibraryPath>?>(result));
+    }
+
+    private void Cancel() => this.Dialog?.Cancel();
+}

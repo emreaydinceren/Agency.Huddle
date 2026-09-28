@@ -1,0 +1,36 @@
+@*
+    The Library Pane's own content (Task 13.2, Spec §6.9): a whole-Library LibraryExplorer (no
+    Scopes) stacked, plus the pane's own toolbar - a Close button and a Pop out button that opens
+    the same file at the full /library page.
+*@
+@using Agency.Huddle.App.Library
+@inject NavigationManager Navigation
+@inject LibraryPaneState State
+
+<div class="library-pane">
+    <div class="library-pane-toolbar">
+        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="library-pane-popout" OnClick="@this.PopOut" aria-label="Pop out" />
+        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Class="library-pane-close" OnClick="@this.State.Close" aria-label="Close" />
+    </div>
+    <LibraryExplorer Layout="LibraryExplorerLayout.Stacked" StateKey="pane" InitialFile="@this.State.CurrentFile?.RelativePath" />
+</div>
+
+@code {
+    /// <summary>Builds the full <c>/library</c> page URL for the given file, escaping the root id and relative
+    /// path (Spec §6.9 "Pop out"). Internal so the page's round-trip can be tested against this exact code.</summary>
+    internal static string BuildPopOutUri(LibraryPath file) => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture,
+        $"/library?root={Uri.EscapeDataString(file.Root.Id)}&path={Uri.EscapeDataString(file.RelativePath)}");
+
+    /// <summary>Navigates to the full <c>/library</c> page on the pane's current file.</summary>
+    private void PopOut()
+    {
+        LibraryPath? file = this.State.CurrentFile;
+        if (file is null)
+        {
+            return;
+        }
+
+        this.Navigation.NavigateTo(BuildPopOutUri(file));
+    }
+}

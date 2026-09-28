@@ -20,6 +20,7 @@
             <MudNavLink Href="/teammates" Icon="@Icons.Material.Filled.Group">Teammates</MudNavLink>
         </MudNavMenu>
         <TaskViewNav />
+        <LibraryNavLink />
         <MudNavMenu Class="nav-settings">
             <ArchivedChats />
             <MudTooltip Text="Settings">
@@ -28,7 +29,9 @@
         </MudNavMenu>
     </MudDrawer>
     <MudMainContent Class="main-column">
-        @Body
+        <LibraryPaneHost>
+            @Body
+        </LibraryPaneHost>
     </MudMainContent>
 </MudLayout>
 

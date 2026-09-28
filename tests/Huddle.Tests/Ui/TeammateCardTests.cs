@@ -71,9 +71,8 @@ public sealed class TeammateCardTests
     public async Task ViewMode_ShowsTitleAliasAndTeams()
     {
         await using var factory = new TeamWebApplicationFactory();
-        Directory.CreateDirectory(factory.TeamsDirPath);
-        await File.WriteAllTextAsync(
-            Path.Combine(factory.TeamsDirPath, "jarvis.md"),
+        await factory.WriteDefinitionAsync(
+            "jarvis",
             "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\nTeams: Business, Household\n---\nYou are Jarvis.",
             Xunit.TestContext.Current.CancellationToken);
         await using var ctx = NewContext(factory);
@@ -299,10 +298,9 @@ public sealed class TeammateCardTests
     }
 
     /// <summary>
-    /// Step 4's fix: after renaming through the Name box and Saving, the card lands on the NEW
-    /// Persona - the displayed Name and file path both follow the rename - rather than looking up the
-    /// stale OLD name <see cref="PersonaStore.Update"/> was originally called with, which no longer
-    /// exists once the rename has taken effect.
+    /// After renaming through the Name box and Saving, the rename moves the whole Teammate folder
+    /// and renames the definition file, and the card lands on the NEW Persona - the displayed Name
+    /// and file path both follow the move - rather than looking up the stale OLD name.
     /// </summary>
     [Fact]
     public async Task SaveAsync_AfterARename_LandsOnTheNewPersona()
@@ -321,11 +319,18 @@ public sealed class TeammateCardTests
         Assert.Null(factory.Services.GetRequiredService<PersonaStore>().Get("coo"));
         Assert.NotNull(factory.Services.GetRequiredService<PersonaStore>().Get("newcoo"));
 
-        // PersonaStore.Update rewrites the SAME file in place - identity is frontmatter, never the
-        // filename (rules.md) - so the file path a rename lands on is still the original "coo.md".
-        var expectedPath = Path.Combine(factory.TeamsDirPath, "coo.md");
+        // A rename moves the whole Teammate folder and renames the definition file. Completion is
+        // signalled by TeammateFolderMoves.WhenSettledAsync; the card re-renders on PersonasChanged.
+        TeammateFolderMoves folderMoves = factory.Services.GetRequiredService<TeammateFolderMoves>();
+        await folderMoves.WhenSettledAsync("newcoo", Xunit.TestContext.Current.CancellationToken);
+
+        string expectedPath = Path.Combine(factory.TeammatesDirPath, "newcoo", "newcoo.md");
         Assert.True(File.Exists(expectedPath));
-        Assert.Contains(expectedPath, cut.Markup, StringComparison.Ordinal);
+
+        string oldFolderPath = Path.Combine(factory.TeammatesDirPath, "coo");
+        Assert.False(Directory.Exists(oldFolderPath));
+
+        cut.WaitForAssertion(() => Assert.Equal(expectedPath, cut.Find(".teammate-card-path").TextContent.Trim()));
     }
 
     [Fact]
@@ -1590,17 +1595,16 @@ public sealed class TeammateCardTests
         return cut;
     }
 
-    /// <summary>Writes a minimally-valid Persona file (Name, Title and Alias all <paramref name="name"/>) and ensures the factory's Teams directory exists.</summary>
-    private static async Task SeedPersonaAsync(TeamWebApplicationFactory factory, string name, string body)
-    {
-        Directory.CreateDirectory(factory.TeamsDirPath);
-        await File.WriteAllTextAsync(Path.Combine(factory.TeamsDirPath, $"{SanitizeFileName(name)}.md"), $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}");
-    }
+    /// <summary>Writes a minimally-valid Persona file (Name, Title and Alias all <paramref name="name"/>), creating the factory's Teammates directory first.</summary>
+    private static async Task SeedPersonaAsync(TeamWebApplicationFactory factory, string name, string body) =>
+        await factory.WriteDefinitionAsync(SanitizeFileName(name), $"---\nName: {name}\nTitle: {name}\nAlias: {name}\n---\n{body}", CancellationToken.None);
 
+    /// <summary>ADR-0031: a definition lives inside its own teammate folder, so this creates <c>Teammates/coo/</c> and returns <c>coo.md</c> inside it.</summary>
     private static string EnsureTeamsDir(TeamWebApplicationFactory factory)
     {
-        Directory.CreateDirectory(factory.TeamsDirPath);
-        return Path.Combine(factory.TeamsDirPath, "coo.md");
+        var teammateFolder = Path.Combine(factory.TeammatesDirPath, "coo");
+        Directory.CreateDirectory(teammateFolder);
+        return Path.Combine(teammateFolder, "coo.md");
     }
 
     private static string SanitizeFileName(string name) => name.Replace(' ', '_');

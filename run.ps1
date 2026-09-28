@@ -30,15 +30,28 @@
 .PARAMETER NoBuild
     Skip the build and run whatever is already compiled.
 
+.PARAMETER DataDir
+    Overrides the data directory (default: App_Data under src/Huddle.App).
+    $env:Team__DataDir is honoured when -DataDir is not passed; -DataDir wins
+    over the environment variable. Relative values are resolved against
+    src/Huddle.App, matching TeamOptions.DataDir's own default resolution.
+
 .PARAMETER Clean
     Delete the previous run's SQLite database (Team:DataDir/team.db, plus its -wal/-shm
-    sidecar files) and every Persona file (Team:DataDir/Team:Acp:TeamsDir, i.e. App_Data/Teams)
-    before building and starting the app. Opt-in and irreversible - there is no prompt, so only
-    pass it when you mean to start from an empty team. Other App_Data content (prompts,
-    appearance, avatars, rooms, logs, per-Persona work directories) is left alone.
+    sidecar files) and every Teammate definition file
+    (Team:DataDir/Teammates/<Folder>/<Folder>.md, matched case-insensitively) before
+    building and starting the app. Opt-in and irreversible - there is no prompt, so only
+    pass it when you mean to start from an empty roster. Every work/ directory and all of
+    Teams/ (Team folders and Library notes) are left alone, as is
+    Teammates/_unsorted and the Teammates/.layout-migrated marker. Other App_Data
+    content (prompts, appearance, avatars, rooms, logs) is left alone too.
+
+.PARAMETER CleanOnly
+    Run -Clean's deletion, then exit without building or starting anything. Implies -Clean.
 
 .PARAMETER DryRun
-    Print what would run, then exit without building or starting anything.
+    Print what would run, then exit without building or starting anything. With -Clean
+    (or -CleanOnly), lists the actual files that would be deleted.
 
 .EXAMPLE
     ./run.ps1
@@ -46,6 +59,7 @@
     ./run.ps1 -NoAcp
     ./run.ps1 -NoBuild
     ./run.ps1 -Clean
+    ./run.ps1 -CleanOnly -DataDir C:\temp\scratch-data
     ./run.ps1 -DryRun
 #>
 [CmdletBinding()]
@@ -53,26 +67,59 @@ param(
     [int]$Port = 5100,
     [switch]$NoAcp,
     [switch]$NoBuild,
+    [string]$DataDir,
     [switch]$Clean,
+    [switch]$CleanOnly,
     [switch]$DryRun
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ($CleanOnly) {
+    $Clean = $true
+}
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $solution = Join-Path $scriptDir 'Huddle.slnx'
 $appProject = Join-Path $scriptDir 'src/Huddle.App'
 $url = "http://localhost:$Port"
 
-# Matches TeamOptions.DataDir's default ("App_Data", resolved relative to src/Huddle.App - see
-# launchSettings.json, which sets no workingDirectory) and AcpOptions.TeamsDir's default
-# ("Teams"), and SqliteTeamDirectory's hardcoded "team.db". Not read from configuration: this
-# script has no config binder, and every appsettings*.json in the repo leaves both defaults
-# unchanged, so hardcoding the same defaults here is exactly as safe as the rest of this script's
+# TeamOptions.DataDir defaults to "App_Data" (resolved relative to src/Huddle.App - see
+# launchSettings.json, which sets no workingDirectory), honouring the Team__DataDir
+# environment variable and, here, an explicit -DataDir override (which wins over the
+# environment variable). AcpOptions.TeammatesDir's default ("Teammates") and
+# SqliteTeamDirectory's hardcoded "team.db" are not read from configuration: this script
+# has no config binder, and every appsettings*.json in the repo leaves both defaults
+# unchanged, so hardcoding them here is exactly as safe as the rest of this script's
 # assumptions about a stock dev setup.
-$dataDir = Join-Path $appProject 'App_Data'
-$teamsDir = Join-Path $dataDir 'Teams'
+$dataDirInput = if ($DataDir) { $DataDir } elseif ($env:Team__DataDir) { $env:Team__DataDir } else { 'App_Data' }
+$dataDir = if ([System.IO.Path]::IsPathRooted($dataDirInput)) { $dataDirInput } else { Join-Path $appProject $dataDirInput }
+$teammatesDir = Join-Path $dataDir 'Teammates'
 $dbPath = Join-Path $dataDir 'team.db'
+
+# The definition file inside a Teammate folder is the one whose base name matches the
+# folder name, case-insensitively (FolderSnapshot.PathComparer's own rule). _unsorted is
+# migration overflow, never a Teammate, and is skipped; work/ subdirectories and the
+# .layout-migrated marker are never touched.
+function Get-DefinitionFilesToClean {
+    param([string]$TeammatesDir)
+
+    $result = [System.Collections.Generic.List[string]]::new()
+    if (-not (Test-Path -LiteralPath $TeammatesDir)) {
+        return $result
+    }
+
+    Get-ChildItem -LiteralPath $TeammatesDir -Directory | Where-Object {
+        -not $_.Name.Equals('_unsorted', [System.StringComparison]::OrdinalIgnoreCase)
+    } | ForEach-Object {
+        $folder = $_
+        Get-ChildItem -LiteralPath $folder.FullName -File -Filter '*.md' -ErrorAction SilentlyContinue |
+            Where-Object { $_.BaseName.Equals($folder.Name, [System.StringComparison]::OrdinalIgnoreCase) } |
+            ForEach-Object { $result.Add($_.FullName) }
+    }
+
+    return $result
+}
 
 # Mirrors AdapterLocator.RelativeAdapterPath (src/Huddle.App/Acp/AdapterLocator.cs): the file
 # DotAcpAgentHostFactory itself checks for before it will start a Persona. Checking the same path
@@ -86,6 +133,41 @@ if (-not (Test-Path $solution)) {
     Write-Host "Huddle.slnx not found at $solution." -ForegroundColor Yellow
     Write-Host "   Run this script from the repository root." -ForegroundColor Gray
     exit 1
+}
+
+# -- Clean-only: skip every other check, delete, exit -------------------------
+
+if ($CleanOnly) {
+    $dbFiles = @($dbPath, "$dbPath-wal", "$dbPath-shm") | Where-Object { Test-Path -LiteralPath $_ }
+    $definitionFiles = Get-DefinitionFilesToClean -TeammatesDir $teammatesDir
+    $toDelete = @($dbFiles) + @($definitionFiles)
+
+    if ($DryRun) {
+        Write-Host ''
+        Write-Host 'Dry run - files that would be deleted' -ForegroundColor Cyan
+        if ($toDelete.Count -eq 0) {
+            Write-Host '   Nothing to delete.' -ForegroundColor Gray
+        } else {
+            foreach ($file in $toDelete) {
+                Write-Host "   $file" -ForegroundColor Gray
+            }
+        }
+        Write-Host ''
+        Write-Host 'Dry run complete. Nothing was deleted.' -ForegroundColor Green
+        exit 0
+    }
+
+    Write-Host ''
+    Write-Host 'Cleaning previous database and Teammate definitions...' -ForegroundColor Cyan
+    if ($toDelete.Count -eq 0) {
+        Write-Host '   Nothing to delete.' -ForegroundColor Gray
+    } else {
+        foreach ($file in $toDelete) {
+            Remove-Item -LiteralPath $file -Force
+            Write-Host "   Deleted $file" -ForegroundColor Gray
+        }
+    }
+    exit 0
 }
 
 # Acp:Enabled is on in Development and spawns one node process per Persona, so a
@@ -128,7 +210,18 @@ if ($DryRun) {
         Write-Host "   Setup : $acpInstallScript (ACP adapter not installed)" -ForegroundColor Gray
     }
     if ($Clean) {
-        Write-Host "   Clean : delete $dbPath (+ -wal/-shm) and $teamsDir" -ForegroundColor Gray
+        $dbFiles = @($dbPath, "$dbPath-wal", "$dbPath-shm") | Where-Object { Test-Path -LiteralPath $_ }
+        $definitionFiles = Get-DefinitionFilesToClean -TeammatesDir $teammatesDir
+        $toDelete = @($dbFiles) + @($definitionFiles)
+
+        Write-Host '   Clean : delete the following files' -ForegroundColor Gray
+        if ($toDelete.Count -eq 0) {
+            Write-Host '      Nothing to delete.' -ForegroundColor Gray
+        } else {
+            foreach ($file in $toDelete) {
+                Write-Host "      $file" -ForegroundColor Gray
+            }
+        }
     }
     Write-Host "   Run   : $runCommand" -ForegroundColor Gray
     Write-Host "   URL   : $url" -ForegroundColor Gray
@@ -192,21 +285,21 @@ if ($needsAcpSetup) {
 
 if ($Clean) {
     Write-Host ''
-    Write-Host 'Cleaning previous database and Persona files...' -ForegroundColor Cyan
+    Write-Host 'Cleaning previous database and Teammate definitions...' -ForegroundColor Cyan
 
-    $dbFiles = @($dbPath, "$dbPath-wal", "$dbPath-shm") | Where-Object { Test-Path $_ }
+    $dbFiles = @($dbPath, "$dbPath-wal", "$dbPath-shm") | Where-Object { Test-Path -LiteralPath $_ }
     foreach ($dbFile in $dbFiles) {
         Remove-Item -LiteralPath $dbFile -Force
         Write-Host "   Deleted $dbFile" -ForegroundColor Gray
     }
 
-    $teamsDirExisted = Test-Path $teamsDir
-    if ($teamsDirExisted) {
-        Remove-Item -LiteralPath $teamsDir -Recurse -Force
-        Write-Host "   Deleted $teamsDir" -ForegroundColor Gray
+    $definitionFiles = Get-DefinitionFilesToClean -TeammatesDir $teammatesDir
+    foreach ($definitionFile in $definitionFiles) {
+        Remove-Item -LiteralPath $definitionFile -Force
+        Write-Host "   Deleted $definitionFile" -ForegroundColor Gray
     }
 
-    if (-not $dbFiles -and -not $teamsDirExisted) {
+    if (-not $dbFiles -and $definitionFiles.Count -eq 0) {
         Write-Host '   Nothing to delete.' -ForegroundColor Gray
     }
 }

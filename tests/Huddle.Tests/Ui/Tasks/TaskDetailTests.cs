@@ -529,7 +529,7 @@ public sealed class TaskDetailTests
             this.options = Options.Create(new TeamOptions { DataDir = this.dir.Path, Tasks = new TasksOptions { WakeEnabled = false } });
 
             this.personas = new PersonaStore(
-                this.options,
+                new TeammatePaths(this.options),
                 new PersonaModelStore(this.options),
                 new PersonaEffortStore(this.options),
                 NullLogger<PersonaStore>.Instance);

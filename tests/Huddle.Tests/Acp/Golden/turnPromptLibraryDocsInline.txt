@@ -1,0 +1,12 @@
+Library documents mentioned in these messages:
+- E:\Data\Teams\Marketing\Launch Q4\notes.md (Team Marketing, Project Launch Q4, 120 B)
+```
+Meeting notes: ship by Friday.
+```
+- E:\Repos\Huddle\docs\Huddle.Library-Specifications.md (pinned root "Huddle docs", 41 KB)
+```
+# Spec begins here.
+```
+(cut at 20 bytes; the file is 41 KB.)
+
+[Room: Nova & You (id: room-1)] You: hello there

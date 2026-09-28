@@ -27,7 +27,7 @@ public sealed partial class PromptCatalogTests
     [Fact]
     public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(57, PromptCatalog.All.Count);
+        Assert.Equal(63, PromptCatalog.All.Count);
     }
 
     /// <summary>
@@ -167,6 +167,24 @@ public sealed partial class PromptCatalogTests
         AssertFileChangesPrompt("turn.fileDeleted", ["{{path}}"], ["{{path}}"]);
         AssertFileChangesPrompt("turn.fileChangesMore", ["{{count}}"], ["{{count}}"]);
         AssertFileChangesPrompt("turn.folderUnchecked", ["{{path}}", "{{max}}"], ["{{path}}"]);
+    }
+
+    /// <summary>The six Library Turn prompts Spec §6.14 defines all exist, are Live, and have their exact defaults and required placeholders.</summary>
+    [Theory]
+    [InlineData("turn.libraryDocsHeader", "Library documents mentioned in these messages:", new object[] { }, new object[] { })]
+    [InlineData("turn.libraryDoc", "- {{path}} ({{location}}, {{size}})", new object[] { "{{path}}", "{{location}}", "{{size}}" }, new object[] { "{{path}}", "{{location}}", "{{size}}" })]
+    [InlineData("turn.libraryDocInline", "{{fence}}\n{{text}}\n{{fence}}", new object[] { "{{fence}}", "{{text}}" }, new object[] { "{{fence}}", "{{text}}" })]
+    [InlineData("turn.libraryDocTruncated", "(cut at {{max}} bytes; the file is {{size}}.)", new object[] { "{{max}}", "{{size}}" }, new object[] { "{{max}}", "{{size}}" })]
+    [InlineData("turn.libraryDocsMore", "…and {{count}} more documents.", new object[] { "{{count}}" }, new object[] { "{{count}}" })]
+    [InlineData("turn.libraryDocTooLarge", "- {{label}}: {{path}} (too large to include: {{sizeKb}} KB; open it with your file tools)", new object[] { "{{label}}", "{{path}}", "{{sizeKb}}" }, new object[] { "{{label}}", "{{path}}", "{{sizeKb}}" })]
+    public void LibraryPrompts_HaveSpecDefaultsAndPlaceholders(string key, string expectedDefault, object?[] expectedPlaceholders, object?[] expectedRequired)
+    {
+        var prompt = PromptCatalog.Get(key);
+
+        Assert.Equal(PromptTiming.Live, prompt.Timing);
+        Assert.Equal(expectedDefault, prompt.Default);
+        Assert.Equal(expectedPlaceholders.Cast<string>().ToList(), prompt.Placeholders);
+        Assert.Equal(expectedRequired.Cast<string>().ToList(), prompt.RequiredPlaceholders);
     }
 
     /// <summary>The two <c>watch_folder</c>/<c>unwatch_folder</c> tool descriptions exist, are <see cref="PromptTiming.NextSession"/> like every other <c>tool.*.description</c>, declare no placeholders, and carry no <c>mcp__team__</c> literal — FC §6.9, §6.13.</summary>

@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Fakes;
+using Agency.Huddle.Tests.Tasks;
 
 namespace Agency.Huddle.Tests.Acp.Tools;
 
@@ -131,9 +132,10 @@ public sealed class ReopenTaskToolTests
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
         TaskItem task = CloseTask(harness, CreateTask(harness));
-        string activeDir = Path.Combine(harness.TasksDirPath, "Platform");
+        string activePath = Path.Combine(harness.TasksDirPath, TestTaskStore.RelativePath("Platform", null, closed: false, $"{task.Id}.md"));
+        string activeDir = Path.GetDirectoryName(activePath) ?? throw new InvalidOperationException("Expected a parent directory.");
         Directory.CreateDirectory(activeDir);
-        File.WriteAllText(Path.Combine(activeDir, $"{task.Id}.md"), "racing file");
+        File.WriteAllText(activePath, "racing file");
         harness.Store.RebuildFromWatcher();
         ReopenTaskTool tool = CreateTool(harness, RequireNovaId(harness));
         JsonObject arguments = new() { ["taskId"] = task.Id.ToString() };

@@ -1203,3 +1203,41 @@ button:focus-visible {
     background-color: var(--mud-palette-primary);
 }
 
+/* ---- Library: CodeMirror editor theme and reference styles -----------------------------------
+   The editor surface, text content, active-line highlight and selection background are scoped
+   under .library-editor .cm-editor to override CodeMirror's generated theme, which is more
+   specific than bare .cm-* rules. Reference links in chat (.library-ref) and missing references
+   (.library-ref-missing) reuse the chat-message link style. The explorer's spacing rules arrive
+   with its components (D12). */
+
+.library-editor .cm-editor {
+    background-color: var(--mud-palette-surface);
+    color: var(--mud-palette-text-primary);
+}
+
+.library-editor .cm-content {
+    font-family: var(--font-mono);
+}
+
+.library-editor .cm-activeLine {
+    background-color: var(--mud-palette-action-default-hover);
+}
+
+/* Selection must stay visible on the active line, so it uses the translucent primary, not the
+   active line's hover colour. The focused selector matches CodeMirror's own
+   (.cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground) plus the
+   .library-editor prefix, so it wins on specificity. */
+.library-editor .cm-editor .cm-selectionLayer .cm-selectionBackground,
+.library-editor .cm-editor.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground {
+    background-color: var(--mud-palette-primary-hover);
+}
+
+.library-ref {
+    color: var(--mud-palette-primary);
+    text-decoration: underline dotted;
+}
+
+.library-ref-missing {
+    color: var(--mud-palette-text-disabled);
+}
+

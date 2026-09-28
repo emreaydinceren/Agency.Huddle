@@ -50,8 +50,7 @@ change it, Humans organise it into Views, and every change reaches the AI Teamma
 Task.
 
 1. **A Task is a markdown file** that people can read and edit in any text editor. It lives at
-   `{DataDir}/Tasks/<Team>/[<Project>/]<ID>.md`, and a Closed Task lives in the `_closed/` folder
-   next to it.
+   `{DataDir}/{Team:Teams:Dir}/<Team>/[<Project>/]_tasks/[_closed/]<ID>.md`.
 2. **The same rules apply to every change.** The UI, the App Tools and hand edits in a text
    editor all go through `TaskService`, which validates the change, writes the file, appends to
    the Change log and raises one event.
@@ -156,7 +155,7 @@ Agent takes a single action.
                    validate · merge/conflict · compose · log entry                     │
                                    │                                                   │
                                    ▼                                                   │
-                              TaskStore ── files: {DataDir}/Tasks/<Team>/[<Project>/][_closed/]<ID>.md
+                              TaskStore ── files: {DataDir}/{Team:Teams:Dir}/<Team>/[<Project>/]_tasks/[_closed/]<ID>.md
                    index by ID · rejected files · watcher · atomic write · TaskIdAllocator(team.db)
                                    │
                            TaskEvents.TaskChanged(TaskChange)
@@ -519,28 +518,30 @@ public sealed record OutsideEdit(TaskItem? Before, TaskItem After);
 ### 8.1 Folder layout and scan
 
 ```text
-{DataDir}/Tasks/
+{DataDir}/{Team:Teams:Dir}/
   <Team>/                   Team folder. Its name must match a Team label, case-insensitive (§8.2)
-    <ID>.md                 Active Task, no Project
-    _closed/<ID>.md         Closed Task, no Project
-    <Project>/<ID>.md       Active Task in a Project
-    <Project>/_closed/<ID>.md
+    _tasks/<ID>.md          Active Task, no Project
+    _tasks/_closed/<ID>.md  Closed Task, no Project
+    <Project>/_tasks/<ID>.md       Active Task in a Project
+    <Project>/_tasks/_closed/<ID>.md
 ```
 
-- **Scan:** `Directory.GetFiles(root, "*.md", SearchOption.AllDirectories)`, which is the
-  `PersonaStore` precedent (`PersonaStore.cs:635-649`). Wrap each read in `try/catch (IOException)`,
-  so that one locked file becomes a rejected file rather than a failed scan.
+- **Scan:** Search within each Team folder for `_tasks/` and `_tasks/_closed/`, one level each.
+  Ignore other folders, including those starting with `_` or `.` (reserved). The precedent is
+  `TaskLayout.IsReservedFolderName` and `TaskLayout.AffectsTasks`. Wrap each file read in
+  `try/catch (IOException)`, so that one locked file becomes a rejected file rather than a failed scan.
 - **Mapping a relative path to a `TaskLocation`:**
 
 | Relative path | Location |
 | --- | --- |
-| `T/x.md` | `(T, null, false)` |
-| `T/_closed/x.md` | `(T, null, true)` |
-| `T/P/x.md` | `(T, P, false)` |
-| `T/P/_closed/x.md` | `(T, P, true)` |
-| `x.md` (at the root) | rejected: *"is not inside a Team folder"* |
-| deeper than the above, or `_closed/_closed` | rejected: *"is nested too deeply; Tasks live at Team/[Project/][_closed/]"* |
-| any folder segment other than `_closed` that starts with `_` | ignored, and not scanned (reserved) |
+| `T/_tasks/x.md` | `(T, null, false)` |
+| `T/_tasks/_closed/x.md` | `(T, null, true)` |
+| `T/P/_tasks/x.md` | `(T, P, false)` |
+| `T/P/_tasks/_closed/x.md` | `(T, P, true)` |
+| `T/x.md` (at the Team root) | ignored, and not scanned (reserved layout) |
+| `x.md` (at the root) | ignored; no Teams scanned |
+| deeper than the above | ignored; no nested `_tasks` are scanned |
+| any folder segment other than `_tasks` that starts with `_` or `.` | ignored, and not scanned (reserved) |
 
 - **Duplicate `id`:** reject **every** file that carries the same id, with a reason naming the
   other paths. This is the Persona rule (rules.md L21).
@@ -553,7 +554,7 @@ public sealed record OutsideEdit(TaskItem? Before, TaskItem After);
 ### 8.2 Teams and orphans
 
 - `Teams` lists every Team folder together with its Project folders, which are the sub-folders
-  other than `_closed`.
+  other than `_closed` and `_tasks`.
 - A folder is an **orphan** when no entry in `PersonaStore.Teams` (`PersonaStore.cs:228`) matches
   its name case-insensitively.
 - Subscribe to `PersonaStore.PersonasChanged` and recompute `IsOrphan` when it fires. This
@@ -2020,10 +2021,17 @@ inner textarea. That goes to Appendix B.
 | Key | Default | Meaning |
 | --- | --- | --- |
 | `Team:Tasks:Enabled` | `true` | `false` hides the UI, offers no tools and wakes no one. The files stay where they are |
-| `Team:Tasks:Dir` | `Tasks` | Relative to `DataDir`. Startup throws if it resolves inside `Acp:TeamsDir` |
 | `Team:Tasks:WakeEnabled` | `true` | `false` keeps Tasks but never wakes anyone |
 | `Team:Tasks:WakeCoalesceSeconds` | `5` | §10.3. `0` wakes on every change |
 | `Team:Tasks:AgentWakeBudget` | `10` | §10.6. `0` or less disables the per-Task budget |
+
+**Retired.** `Team:Tasks:Dir` was replaced by `Team:Teams:Dir`. Tasks now live in each Team
+folder's `_tasks/` folder, under `{DataDir}/{Team:Teams:Dir}/<Team>/[<Project>/]_tasks/[_closed/]`.
+If the configuration still carries `Team:Tasks:Dir`, startup fails with: *"Configuration key
+'Team:Tasks:Dir' was replaced by 'Team:Teams:Dir'. Tasks now live in each Team folder's _tasks/
+folder; remove the key (the start-up migration reads {DataDir}/Tasks). There is no automatic
+fallback."* A start-up migration moves `{DataDir}/Tasks` into the Team folders if that folder
+exists; see ADR-0030.
 
 **Registration**, in `ServiceCollectionExtensions.AddTeamServices`:
 

@@ -121,7 +121,7 @@ public sealed class AvatarEndpointTests
     /// <summary>
     /// The isolated <see cref="TeamOptions.DataDir"/> <paramref name="factory"/> composed its app
     /// with - resolved from the running host rather than duplicated, since <see cref="TeamWebApplicationFactory"/>
-    /// exposes its temp directory only indirectly (via <see cref="TeamWebApplicationFactory.TeamsDirPath"/>
+    /// exposes its temp directory only indirectly (via <see cref="TeamWebApplicationFactory.TeammatesDirPath"/>
     /// and friends), never as a raw path of its own.
     /// </summary>
     /// <param name="factory">The factory whose composed <see cref="TeamOptions"/> to read.</param>

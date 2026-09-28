@@ -3,11 +3,12 @@ using System.Globalization;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 
 namespace Agency.Huddle.App.Tasks;
 
 /// <summary>
-/// Owns every file under <c>{DataDir}/{Tasks.Dir}</c>: scans it into an in-memory index by
+/// Owns every file under <c>{DataDir}/{Teams.Dir}</c>: scans it into an in-memory index by
 /// <see cref="TaskId"/>, keeps the list of rejected files, lists every Team folder together with
 /// its Projects and orphan status (Spec §8.1-§8.2), and is the only class that writes or moves a
 /// Task file (Spec §8.3), watches for edits made outside Huddle (Spec §8.4), and reconciles any
@@ -61,10 +62,12 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     private bool forcedRebuildPending;
 
     /// <summary>
-    /// Validates that <see cref="TasksOptions.Dir"/> does not resolve equal to, inside, or as a
-    /// parent of <see cref="AcpOptions.TeamsDir"/>, creates the Tasks root, then scans it.
+    /// Validates the Teams/Teammates layout with <see cref="LayoutGuard.ValidateTeamsAndTeammates"/>
+    /// (kept here, alongside the host's own <c>PostConfigure</c> call, for a host that constructs a
+    /// <see cref="TaskStore"/> without going through <c>AddTeamServices</c>), creates the Tasks root
+    /// under <see cref="TeamsOptions.Dir"/>, then scans it.
     /// </summary>
-    /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/>, <see cref="TasksOptions.Dir"/> and <see cref="AcpOptions.TeamsDir"/>.</param>
+    /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/> and <see cref="TeamsOptions.Dir"/>.</param>
     /// <param name="personas">Supplies the Team labels a Team folder is checked against for §8.2's orphan flag, and its <see cref="PersonaStore.PersonasChanged"/> event.</param>
     /// <param name="clock">Supplies the timestamp for any startup-reconciliation Change log entry (Spec §8.5); the watcher's own debounce timer runs on real time, not this clock.</param>
     /// <param name="logger">Used to warn when a directory can't be enumerated or a file can't be read during the scan.</param>
@@ -78,9 +81,9 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         this.personas = personas;
         this.logger = logger;
 
-        string tasksRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Tasks.Dir));
-        string teamsRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Acp.TeamsDir));
-        ThrowIfNested(tasksRoot, teamsRoot);
+        LayoutGuard.ValidateTeamsAndTeammates(options.Value);
+
+        string tasksRoot = Path.GetFullPath(Path.Combine(options.Value.DataDir, options.Value.Teams.Dir));
 
         this.RootDirectory = tasksRoot;
         Directory.CreateDirectory(tasksRoot);
@@ -133,6 +136,9 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
 
     /// <summary>The absolute path of the Tasks scan root.</summary>
     public string RootDirectory { get; }
+
+    /// <summary>How many times <see cref="RebuildFromWatcher"/> has run, whether or not it found anything different. <c>internal</c> so a test can prove the watcher's filter skips an irrelevant event without inspecting <see cref="IndexChanged"/> timing.</summary>
+    internal int RebuildCount { get; private set; }
 
     /// <summary>Looks up a Task by id. Returns <see langword="null"/>, never throws, when no file carries that id.</summary>
     /// <param name="id">The Task's id.</param>
@@ -606,7 +612,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// <param name="e">Describes what changed and how.</param>
     private void OnWatcherEvent(object sender, FileSystemEventArgs e)
     {
-        if (!AffectsATaskFile(e))
+        if (!AffectsATaskFile(this.RootDirectory, e))
         {
             return;
         }
@@ -623,30 +629,22 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     }
 
     /// <summary>
-    /// True for an event this store cares about: a ".md" file, a created directory (on Linux,
-    /// IncludeSubdirectories is emulated - the watcher adds an inotify watch for a new sub-folder only
-    /// after it reads that folder's own Created event, so a Task file written into the folder in that
-    /// gap raises nothing at all; the folder's Created event is the one signal guaranteed to fire, and
-    /// the debounced refresh rescans from disk, so it finds whatever landed inside - traps.md, "On
-    /// Linux, IncludeSubdirectories = true still misses a file written into a sub-folder that was just
-    /// created"), a renamed directory (a Team or Project folder renamed in Explorer - its event's
-    /// <see cref="FileSystemEventArgs.Name"/> is the directory itself, never matching ".md"), or a
-    /// deleted extensionless name (the same folder disappearing outright). Copied from
-    /// <c>PersonaStore.AffectsATeamsFile</c> (traps.md L120).
+    /// True for an event this store cares about: delegates to <see cref="TaskLayout.AffectsTasks"/>,
+    /// the pure path-shape predicate that also drives the migration and the reference resolver, so a
+    /// Team folder, a Project folder, a Task file or its <c>_tasks</c>/<c>_closed</c> folder is never
+    /// judged two different ways. For a <see cref="RenamedEventArgs"/>, the event is relevant when
+    /// either <see cref="FileSystemEventArgs.FullPath"/> or <see cref="RenamedEventArgs.OldFullPath"/>
+    /// affects Tasks - on Windows a cross-folder move raises Deleted+Created, but a same-Team rename
+    /// (a Task file renamed out of <c>_tasks</c> into a sibling notes folder) raises a single Renamed
+    /// event whose new path alone would not affect Tasks. <c>internal</c>, not <c>private</c>, and
+    /// <c>static</c> with an explicit <paramref name="root"/> so a test can call it directly with a
+    /// hand-built event, without a live watcher.
     /// </summary>
+    /// <param name="root">The Tasks root directory to resolve paths against.</param>
     /// <param name="e">The watcher event to classify.</param>
-    internal static bool AffectsATaskFile(FileSystemEventArgs e) =>
-        IsMarkdownFile(e.Name)
-        || (e.ChangeType == WatcherChangeTypes.Created && Directory.Exists(e.FullPath))
-        || (e.ChangeType == WatcherChangeTypes.Renamed && Directory.Exists(e.FullPath))
-        || (e.ChangeType == WatcherChangeTypes.Deleted && HasNoExtension(e.Name));
-
-    /// <summary>True when <paramref name="name"/> ends in ".md", compared case-insensitively.</summary>
-    private static bool IsMarkdownFile(string? name) =>
-        name is not null && string.Equals(Path.GetExtension(name), ".md", StringComparison.OrdinalIgnoreCase);
-
-    /// <summary>True when <paramref name="name"/> has no extension at all - the shape a deleted directory's name takes.</summary>
-    private static bool HasNoExtension(string? name) => name is not null && Path.GetExtension(name).Length == 0;
+    internal static bool AffectsATaskFile(string root, FileSystemEventArgs e) =>
+        TaskLayout.AffectsTasks(root, e.FullPath)
+        || (e is RenamedEventArgs renamed && TaskLayout.AffectsTasks(root, renamed.OldFullPath));
 
     /// <summary>
     /// FileSystemWatcher raises this instead of a normal change event when its internal buffer
@@ -701,6 +699,8 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
             {
                 return;
             }
+
+            this.RebuildCount++;
 
             bool forceRaise = this.forcedRebuildPending;
             this.forcedRebuildPending = false;
@@ -774,31 +774,6 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
 
         return (edits, anyRemoved);
     }
-
-    /// <summary>
-    /// Throws when <paramref name="tasksRoot"/> and <paramref name="teamsRoot"/> are the same
-    /// directory, or either contains the other, comparing with <see cref="FolderSnapshot.PathComparer"/>
-    /// on separator-terminated prefixes (Settled corrections-B2 D5 item 12).
-    /// </summary>
-    private static void ThrowIfNested(string tasksRoot, string teamsRoot)
-    {
-        string tasksPrefix = tasksRoot.EndsWith(Path.DirectorySeparatorChar) ? tasksRoot : tasksRoot + Path.DirectorySeparatorChar;
-        string teamsPrefix = teamsRoot.EndsWith(Path.DirectorySeparatorChar) ? teamsRoot : teamsRoot + Path.DirectorySeparatorChar;
-
-        bool equal = FolderSnapshot.PathComparer.Equals(tasksRoot, teamsRoot);
-        bool tasksInsideTeams = HasPrefix(tasksPrefix, teamsPrefix);
-        bool teamsInsideTasks = HasPrefix(teamsPrefix, tasksPrefix);
-
-        if (equal || tasksInsideTeams || teamsInsideTasks)
-        {
-            throw new InvalidOperationException(
-                $"Team:Tasks:Dir ('{tasksRoot}') must not equal or nest with Team:Acp:TeamsDir ('{teamsRoot}').");
-        }
-    }
-
-    /// <summary>True when <paramref name="value"/> starts with <paramref name="prefix"/>, compared with <see cref="FolderSnapshot.PathComparer"/>.</summary>
-    private static bool HasPrefix(string value, string prefix) =>
-        value.Length >= prefix.Length && FolderSnapshot.PathComparer.Equals(value[..prefix.Length], prefix);
 
     /// <summary>
     /// Records <paramref name="task"/> as the latest version seen at its path, and pushes it onto its
@@ -953,26 +928,12 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         List<(TaskItem Task, string Path)> parsed = [];
         List<RejectedTaskFile> rejected = [];
 
-        string[] files;
-        try
-        {
-            files = Directory.GetFiles(this.RootDirectory, "*.md", SearchOption.AllDirectories);
-        }
-        catch (IOException ex)
-        {
-            this.logger.LogWarning(ex, "TaskStore could not enumerate '{Root}'; treating the scan as empty.", this.RootDirectory);
-            files = [];
-        }
+        List<string> files = this.EnumerateTaskFiles();
 
         foreach (string path in files)
         {
-            if (!TaskLayout.TryMap(this.RootDirectory, path, out TaskLocation? location, out string? mapError))
+            if (!TaskLayout.TryMap(this.RootDirectory, path, out TaskLocation? location, out _))
             {
-                if (mapError is not null)
-                {
-                    rejected.Add(new RejectedTaskFile(path, mapError));
-                }
-
                 continue;
             }
 
@@ -1035,6 +996,86 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     }
 
     /// <summary>
+    /// The candidate Task file paths for <see cref="Scan"/>: only <c>{Team}/_tasks</c>,
+    /// <c>{Team}/_tasks/_closed</c>, <c>{Team}/{Project}/_tasks</c> and
+    /// <c>{Team}/{Project}/_tasks/_closed</c> (ADR-0030), each listed with
+    /// <see cref="SearchOption.TopDirectoryOnly"/>. A Project's note tree - however deep - is never
+    /// descended into, so a folder inside it that cannot be listed never raises a warning. Every
+    /// case-variant Team folder is scanned, not only the one <see cref="BuildTeams"/> keeps as
+    /// canonical, so a losing duplicate's own files are still found for rejection.
+    /// </summary>
+    private List<string> EnumerateTaskFiles()
+    {
+        List<string> files = [];
+        foreach (string teamDir in this.RawTeamDirectories())
+        {
+            this.AddTasksFolderFiles(teamDir, files);
+
+            foreach (string projectDir in this.RawSubfolders(teamDir))
+            {
+                this.AddTasksFolderFiles(projectDir, files);
+            }
+        }
+
+        return files;
+    }
+
+    /// <summary>Appends the <c>*.md</c> files directly under <paramref name="containerDir"/>'s
+    /// <c>_tasks</c> folder and that folder's <c>_closed</c> sub-folder to <paramref name="files"/>.</summary>
+    /// <param name="containerDir">The Team or Project folder that may hold a <c>_tasks</c> folder.</param>
+    /// <param name="files">The list to append matching file paths to.</param>
+    private void AddTasksFolderFiles(string containerDir, List<string> files)
+    {
+        string tasksDir = Path.Combine(containerDir, TaskLayout.TasksFolder);
+        this.AddFilesIfExists(tasksDir, files);
+        this.AddFilesIfExists(Path.Combine(tasksDir, TaskLayout.ClosedFolder), files);
+    }
+
+    /// <summary>Appends <paramref name="dir"/>'s <c>*.md</c> files (<see cref="SearchOption.TopDirectoryOnly"/>)
+    /// to <paramref name="files"/> when <paramref name="dir"/> exists, warning and adding none on a
+    /// listing failure.</summary>
+    /// <param name="dir">The folder to list.</param>
+    /// <param name="files">The list to append matching file paths to.</param>
+    private void AddFilesIfExists(string dir, List<string> files)
+    {
+        if (!Directory.Exists(dir))
+        {
+            return;
+        }
+
+        try
+        {
+            files.AddRange(Directory.GetFiles(dir, "*.md", SearchOption.TopDirectoryOnly));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            this.logger.LogWarning(ex, "TaskStore could not enumerate '{Dir}'; treating it as empty.", dir);
+        }
+    }
+
+    /// <summary>The full paths of <paramref name="parent"/>'s non-reserved (<see cref="TaskLayout.IsReservedFolderName"/>)
+    /// direct sub-folders, every case variant included.</summary>
+    /// <param name="parent">The folder to list.</param>
+    private List<string> RawSubfolders(string parent)
+    {
+        try
+        {
+            return Directory.GetDirectories(parent)
+                .Where(dir => !TaskLayout.IsReservedFolderName(Path.GetFileName(dir) ?? string.Empty))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            this.logger.LogWarning(ex, "TaskStore could not list folders under '{Parent}'.", parent);
+            return [];
+        }
+    }
+
+    /// <summary>The full paths of <see cref="RootDirectory"/>'s non-reserved Team folders, every case
+    /// variant included (unlike <see cref="BuildTeams"/>'s de-duplicated <see cref="TeamFolder"/> list).</summary>
+    private List<string> RawTeamDirectories() => this.RawSubfolders(this.RootDirectory);
+
+    /// <summary>
     /// Enumerates Team folders directly under <see cref="RootDirectory"/> with their Project
     /// sub-folders (<see cref="Directory.GetDirectories(string)"/>, two levels - empty folders
     /// count, Spec §8.2 / Settled corrections-B2 D5 item 14). Folders differing only by case fold
@@ -1043,20 +1084,9 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     /// </summary>
     private (List<TeamFolder> Teams, Dictionary<string, string> AliasToCanonical) BuildTeams()
     {
-        string[] teamDirs;
-        try
-        {
-            teamDirs = Directory.GetDirectories(this.RootDirectory);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            this.logger.LogWarning(ex, "TaskStore could not list Team folders under '{Root}'.", this.RootDirectory);
-            teamDirs = [];
-        }
-
-        List<IGrouping<string, string>> groups = teamDirs
+        List<IGrouping<string, string>> groups = this.RawTeamDirectories()
             .Select(Path.GetFileName)
-            .Where(name => name is { Length: > 0 } && !(name.StartsWith('_') && !string.Equals(name, TaskLayout.ClosedFolder, StringComparison.Ordinal)))
+            .Where(name => name is { Length: > 0 })
             .Select(name => name!)
             .GroupBy(name => name, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -1079,29 +1109,15 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         return (teams, aliasToCanonical);
     }
 
-    /// <summary>The names of <paramref name="teamPath"/>'s Project sub-folders, excluding <c>_closed</c>.</summary>
-    private List<string> ListProjects(string teamPath)
-    {
-        try
-        {
-            List<string> projects = [];
-            foreach (string projectDir in Directory.GetDirectories(teamPath))
-            {
-                string? projectName = Path.GetFileName(projectDir);
-                if (projectName is { Length: > 0 } && !string.Equals(projectName, TaskLayout.ClosedFolder, StringComparison.Ordinal))
-                {
-                    projects.Add(projectName);
-                }
-            }
-
-            return projects;
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            this.logger.LogWarning(ex, "TaskStore could not list Project folders under '{TeamPath}'.", teamPath);
-            return [];
-        }
-    }
+    /// <summary>The names of <paramref name="teamPath"/>'s Project sub-folders, excluding any reserved
+    /// name (<see cref="TaskLayout.IsReservedFolderName"/>) - so the Team's own <c>_tasks</c> and
+    /// <c>_closed</c> folders are never listed as Projects.</summary>
+    private List<string> ListProjects(string teamPath) =>
+        this.RawSubfolders(teamPath)
+            .Select(Path.GetFileName)
+            .Where(name => name is { Length: > 0 })
+            .Select(name => name!)
+            .ToList();
 
     /// <summary>
     /// Resolves <paramref name="location"/>'s Team, and Project when it has one, to an existing Team or

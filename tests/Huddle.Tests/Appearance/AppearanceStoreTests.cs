@@ -206,6 +206,95 @@ public sealed class AppearanceStoreTests
         Assert.True(raised);
     }
 
+    /// <summary>The default library pane side is Right, when no file exists or the key is absent.</summary>
+    [Fact]
+    public void LibraryPaneSide_Default_IsRight()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+
+        Assert.Equal(LibraryPaneSide.Right, store.Current.LibraryPaneSide);
+    }
+
+    /// <summary>Saving the library pane side to Left persists it, and a new store reads it back as Left from appearance.json.</summary>
+    [Fact]
+    public void SaveLibraryPaneSide_Left_PersistsAndReloads()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+
+        store.SaveLibraryPaneSide(LibraryPaneSide.Left);
+
+        Assert.Equal(LibraryPaneSide.Left, store.Current.LibraryPaneSide);
+
+        // Create a new store to verify it reads from disk
+        using var store2 = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+
+        Assert.Equal(LibraryPaneSide.Left, store2.Current.LibraryPaneSide);
+    }
+
+    /// <summary>
+    /// Saving the library pane side preserves the theme and accent color - the side writer must not
+    /// clobber unrelated keys, just like <see cref="AppearanceStore.Save"/> and <see cref="AppearanceStore.SaveAccentColor"/> do not.
+    /// </summary>
+    [Fact]
+    public void SaveLibraryPaneSide_KeepsTheme()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+        store.Save("huddle-dark");
+        store.SaveAccentColor("#00b294");
+
+        store.SaveLibraryPaneSide(LibraryPaneSide.Left);
+
+        Assert.Equal("huddle-dark", store.Current.ThemeId);
+        Assert.Equal("#00b294", store.Current.AccentColorHex);
+        Assert.Equal(LibraryPaneSide.Left, store.Current.LibraryPaneSide);
+    }
+
+    /// <summary>Saving the library pane side raises <see cref="AppearanceStore.AppearanceChanged"/> after the write and the rebuild, mirroring the theme and accent color save behavior.</summary>
+    [Fact]
+    public void SaveLibraryPaneSide_RaisesAppearanceChanged()
+    {
+        using var dataDir = new TempDataDir();
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+        var raised = false;
+        store.AppearanceChanged += () => raised = true;
+
+        store.SaveLibraryPaneSide(LibraryPaneSide.Left);
+
+        Assert.True(raised);
+    }
+
+    /// <summary>An appearance.json from before the library pane side feature existed has no libraryPaneSide key, and loads as the default Right without throwing.</summary>
+    [Fact]
+    public void Current_WithNoLibraryPaneSideKey_DefaultsToRight()
+    {
+        using var dataDir = new TempDataDir();
+        var path = Path.Combine(dataDir.Path, "appearance.json");
+        File.WriteAllText(path, "{\"theme\":\"huddle-dark\",\"accentColor\":\"#00b294\"}");
+
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+
+        Assert.Equal(LibraryPaneSide.Right, store.Current.LibraryPaneSide);
+        Assert.Equal("huddle-dark", store.Current.ThemeId);
+        Assert.Equal("#00b294", store.Current.AccentColorHex);
+    }
+
+    /// <summary>An unknown libraryPaneSide value (e.g. "up") loads as the default Right without throwing, and the file is left unchanged.</summary>
+    [Fact]
+    public void Current_WithAnUnknownLibraryPaneSideValue_DefaultsToRightAndLeavesTheFileUnchanged()
+    {
+        using var dataDir = new TempDataDir();
+        var path = Path.Combine(dataDir.Path, "appearance.json");
+        File.WriteAllText(path, "{\"libraryPaneSide\":\"up\"}");
+
+        using var store = new AppearanceStore(dataDir.Options(), NullLogger<AppearanceStore>.Instance);
+
+        Assert.Equal(LibraryPaneSide.Right, store.Current.LibraryPaneSide);
+        Assert.Equal("{\"libraryPaneSide\":\"up\"}", File.ReadAllText(path));
+    }
+
     /// <summary>
     /// Polls <paramref name="condition"/> until it is true or a generous timeout elapses, for
     /// asserting on a <see cref="FileSystemWatcher"/>-driven, timing-dependent side effect without a

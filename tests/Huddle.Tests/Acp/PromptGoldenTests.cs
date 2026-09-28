@@ -10,6 +10,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
@@ -619,6 +620,149 @@ public sealed class PromptGoldenTests
         AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(withNull, new FakePromptSource()));
     }
 
+    /// <summary>Pins <see cref="RoomSession.BuildPrompt"/>'s Library documents block (Spec §6.14) for two documents with no inlined text, matching the Spec's own sample.</summary>
+    [Fact]
+    public void BuildPrompt_LibraryDocuments_MatchesGolden()
+    {
+        LibraryDocumentsReport report = new(
+            [
+                new LibraryDocumentItem(@"E:\Data\Teams\Marketing\Launch Q4\plan.md", "Team Marketing, Project Launch Q4", "3 KB", null, false, 3072, false),
+                new LibraryDocumentItem(@"E:\Repos\Huddle\docs\Huddle.Library-Specifications.md", "pinned root \"Huddle docs\"", "41 KB", null, false, 41984, false),
+            ],
+            NotListed: 0,
+            MaxInlineBytes: 16384);
+        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = report };
+
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+
+        AssertMatchesGolden("turnPromptLibraryDocs.txt", actual);
+    }
+
+    /// <summary>Pins <see cref="RoomSession.BuildPrompt"/>'s Library documents block when a document's text is inlined (Spec §6.14): one document with its full text fenced, one truncated with the cut note appended.</summary>
+    [Fact]
+    public void BuildPrompt_LibraryDocumentsInlined_MatchesGolden()
+    {
+        LibraryDocumentsReport report = new(
+            [
+                new LibraryDocumentItem(@"E:\Data\Teams\Marketing\Launch Q4\notes.md", "Team Marketing, Project Launch Q4", "120 B", "Meeting notes: ship by Friday.", false, 120, false),
+                new LibraryDocumentItem(@"E:\Repos\Huddle\docs\Huddle.Library-Specifications.md", "pinned root \"Huddle docs\"", "41 KB", "# Spec begins here.", true, 41984, false),
+            ],
+            NotListed: 0,
+            MaxInlineBytes: 20);
+        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = report };
+
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+
+        AssertMatchesGolden("turnPromptLibraryDocsInline.txt", actual);
+    }
+
+    /// <summary>RS §8.2 extended by Spec §6.14: the File Changes block, then the Library documents block, then the Catch-up (Transcript) block, then the triggering Message, each ascending in the built text.</summary>
+    [Fact]
+    public void BuildPrompt_FileChangesThenLibraryThenCatchUp()
+    {
+        FileChangesReport fileChanges = new(
+            [new FileChange(FileChangeKind.Changed, @"E:\Huddle\App_Data\work\Nova\memory\launch-date.md")],
+            NotListed: 0,
+            Unchecked: []);
+        LibraryDocumentsReport library = new(
+            [new LibraryDocumentItem(@"E:\Data\Teams\Marketing\Launch Q4\plan.md", "Team Marketing, Project Launch Q4", "3 KB", null, false, 3072, false)],
+            NotListed: 0,
+            MaxInlineBytes: 16384);
+        TranscriptCatchUp transcript = new(
+            Resumed: false,
+            Messages: [new ChatMessage("m1", DateTimeOffset.UtcNow, "hu-1", "Human", "earlier text")],
+            Omitted: 0);
+        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", [])
+            with
+        { FileChanges = fileChanges, LibraryDocuments = library, Transcript = transcript };
+
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+
+        var fileChangesIndex = actual.IndexOf("Since your last Turn", StringComparison.Ordinal);
+        var libraryIndex = actual.IndexOf("Library documents mentioned", StringComparison.Ordinal);
+        var transcriptIndex = actual.IndexOf("This is a new session", StringComparison.Ordinal);
+        var messageIndex = actual.IndexOf("hello there", StringComparison.Ordinal);
+        Assert.True(fileChangesIndex >= 0 && libraryIndex > fileChangesIndex && transcriptIndex > libraryIndex && messageIndex > transcriptIndex);
+    }
+
+    /// <summary>An empty (or absent) <see cref="WorkItem.LibraryDocuments"/> leaves <c>turnPromptPlain.txt</c> byte-identical to today's output: "absent means unchanged" (Spec §6.14, mirroring FC §6.8).</summary>
+    [Fact]
+    public void BuildPrompt_EmptyLibraryReport_NoBlock()
+    {
+        LibraryDocumentsReport empty = new([], 0, 16384);
+        var withEmpty = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = empty };
+        AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(withEmpty, new FakePromptSource()));
+
+        var withNull = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = null };
+        AssertMatchesGolden("turnPromptPlain.txt", RoomSession.BuildPrompt(withNull, new FakePromptSource()));
+    }
+
+    /// <summary>When more documents were mentioned than the cap kept, the closing line reuses <c>turn.libraryDocsMore</c> (corrections-B6 item 1), not <c>turn.fileChangesMore</c>.</summary>
+    [Fact]
+    public void BuildPrompt_MoreThanCap_ShowsCount()
+    {
+        LibraryDocumentsReport report = new(
+            [new LibraryDocumentItem(@"E:\Data\Teams\Marketing\Launch Q4\plan.md", "Team Marketing, Project Launch Q4", "3 KB", null, false, 3072, false)],
+            NotListed: 5,
+            MaxInlineBytes: 16384);
+        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = report };
+
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+
+        Assert.Contains("\u2026and 5 more documents.", actual, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+    }
+
+    /// <summary>Spec §6.14 + corrections-B5 item 32: the inline fence is the longest run of backticks already in the text, plus one, so a document containing a fenced triple-backtick sample cannot close the block early.</summary>
+    [Fact]
+    public void BuildPrompt_LibraryDocumentInline_TextWithTripleBackticks_UsesLongerFence()
+    {
+        const string text = "line one\n```\nline two\n```\nline three";
+        LibraryDocumentsReport report = new(
+            [new LibraryDocumentItem(@"E:\Data\Teams\Marketing\Launch Q4\notes.md", "Team Marketing, Project Launch Q4", "40 B", text, false, 40, false)],
+            NotListed: 0,
+            MaxInlineBytes: 16384);
+        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = report };
+
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+
+        Assert.Contains("````\nline one\n```\nline two\n```\nline three\n````", actual, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+    }
+
+    /// <summary>Corrections-B6 item 3: a document over <c>Library:MaxEditableBytes</c> renders <c>turn.libraryDocTooLarge</c> instead of being inlined, with the item's Location as the label, its path, and its Length in KB rounded up.</summary>
+    [Fact]
+    public void BuildPrompt_LibraryDocumentTooLarge_UsesTooLargeLine()
+    {
+        LibraryDocumentsReport report = new(
+            [new LibraryDocumentItem(@"E:\Data\Teams\Marketing\Launch Q4\huge.zip", "Team Marketing, Project Launch Q4", "1465 KB", null, false, 1_500_000, true)],
+            NotListed: 0,
+            MaxInlineBytes: 16384);
+        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = report };
+
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+
+        // contains-ok: prompt text, not markup
+        Assert.Contains(
+            @"- Team Marketing, Project Launch Q4: E:\Data\Teams\Marketing\Launch Q4\huge.zip (too large to include: 1465 KB; open it with your file tools)",
+            actual,
+            StringComparison.Ordinal);
+    }
+
+    /// <summary>A document's inlined text is written verbatim: placeholder-looking syntax inside it is never expanded by <see cref="RoomSession.BuildPrompt"/>'s own rendering.</summary>
+    [Fact]
+    public void BuildPrompt_LibraryDocumentText_WithPlaceholderSyntax_IsNotExpanded()
+    {
+        const string text = "See {{path}} for details.";
+        LibraryDocumentsReport report = new(
+            [new LibraryDocumentItem(@"E:\Data\Teams\Marketing\Launch Q4\notes.md", "Team Marketing, Project Launch Q4", "30 B", text, false, 30, false)],
+            NotListed: 0,
+            MaxInlineBytes: 16384);
+        var item = new WorkItem("room-1", "Nova & You", "You", "hello there", []) with { LibraryDocuments = report };
+
+        var actual = RoomSession.BuildPrompt(item, new FakePromptSource());
+
+        Assert.Contains("See {{path}} for details.", actual, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+    }
+
     /// <summary>
     /// Builds <see cref="GetHelpTool"/> together with the six real chat tools it reports, using the
     /// same narrow construction <c>GetHelpToolTests</c> uses: each tool's <see cref="IAppTool.Description"/>
@@ -632,7 +776,7 @@ public sealed class PromptGoldenTests
         using var dir = new TempDataDir();
         var directory = new SqliteTeamDirectory(dir.Options());
         await directory.InitializeAsync("You", ct);
-        using var personaStore = new PersonaStore(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        using var personaStore = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var aliasSource = new FakeMentionAliasSource();

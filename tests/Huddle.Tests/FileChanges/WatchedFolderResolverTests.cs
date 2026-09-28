@@ -13,7 +13,7 @@ public sealed class WatchedFolderResolverTests
     public void TryResolve_TeammateName_IsTheirWorkDir()
     {
         using TempDataDir dataDir = new();
-        WatchedFolderResolver resolver = new(dataDir.Options());
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
 
         bool resolved = resolver.TryResolve("nova", ["Nova"], out WatchedFolder? folder, out string? reason);
 
@@ -21,7 +21,7 @@ public sealed class WatchedFolderResolverTests
         Assert.Null(reason);
         Assert.NotNull(folder);
         Assert.Equal("nova", folder.Entry);
-        Assert.Equal(Path.Combine(dataDir.Path, "work", "Nova"), folder.FullPath);
+        Assert.Equal(Path.Combine(dataDir.Path, "Teammates", "Nova", "work"), folder.FullPath);
     }
 
     /// <summary>A Teammate Name wins over a same-named folder directly under <c>DataDir</c>.</summary>
@@ -30,14 +30,14 @@ public sealed class WatchedFolderResolverTests
     {
         using TempDataDir dataDir = new();
         Directory.CreateDirectory(Path.Combine(dataDir.Path, "Nova"));
-        WatchedFolderResolver resolver = new(dataDir.Options());
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
 
         bool resolved = resolver.TryResolve("Nova", ["Nova"], out WatchedFolder? folder, out string? reason);
 
         Assert.True(resolved);
         Assert.Null(reason);
         Assert.NotNull(folder);
-        Assert.Equal(Path.Combine(dataDir.Path, "work", "Nova"), folder.FullPath);
+        Assert.Equal(Path.Combine(dataDir.Path, "Teammates", "Nova", "work"), folder.FullPath);
     }
 
     /// <summary>A leading <c>./</c> or <c>.\</c> means the folder under <c>DataDir</c>, overriding a Teammate Name match.</summary>
@@ -47,7 +47,7 @@ public sealed class WatchedFolderResolverTests
     public void TryResolve_DotSlashPrefix_MeansTheFolder(string entry)
     {
         using TempDataDir dataDir = new();
-        WatchedFolderResolver resolver = new(dataDir.Options());
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
 
         bool resolved = resolver.TryResolve(entry, ["Nova"], out WatchedFolder? folder, out string? reason);
 
@@ -64,7 +64,7 @@ public sealed class WatchedFolderResolverTests
     public void TryResolve_RelativePath_BothSeparators(string entry)
     {
         using TempDataDir dataDir = new();
-        WatchedFolderResolver resolver = new(dataDir.Options());
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
 
         bool resolved = resolver.TryResolve(entry, [], out WatchedFolder? folder, out string? reason);
 
@@ -80,7 +80,7 @@ public sealed class WatchedFolderResolverTests
     {
         using TempDataDir dataDir = new();
         string fullPath = Path.Combine(dataDir.Path, "Shared", "pricing");
-        WatchedFolderResolver resolver = new(dataDir.Options());
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
 
         bool resolved = resolver.TryResolve(fullPath, [], out WatchedFolder? folder, out string? reason);
 
@@ -95,7 +95,7 @@ public sealed class WatchedFolderResolverTests
     public void TryResolve_FullPathOutside_Refused()
     {
         using TempDataDir dataDir = new();
-        WatchedFolderResolver resolver = new(dataDir.Options());
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
         string outside = Path.Combine(Path.GetTempPath(), "team-tests-outside");
 
         bool resolved = resolver.TryResolve(outside, [], out WatchedFolder? folder, out string? reason);
@@ -111,7 +111,7 @@ public sealed class WatchedFolderResolverTests
     public void TryResolve_DotDotEscape_Refused()
     {
         using TempDataDir dataDir = new();
-        WatchedFolderResolver resolver = new(dataDir.Options());
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
 
         bool resolved = resolver.TryResolve("Shared/../../x", [], out WatchedFolder? folder, out string? reason);
 
@@ -127,7 +127,7 @@ public sealed class WatchedFolderResolverTests
     public void TryResolve_DataDirItself_Refused(string entry)
     {
         using TempDataDir dataDir = new();
-        WatchedFolderResolver resolver = new(dataDir.Options());
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
 
         bool resolved = resolver.TryResolve(entry, [], out WatchedFolder? folder, out string? reason);
 
@@ -141,7 +141,7 @@ public sealed class WatchedFolderResolverTests
     public void TryResolve_DataDirItselfAsFullPath_Refused()
     {
         using TempDataDir dataDir = new();
-        WatchedFolderResolver resolver = new(dataDir.Options());
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
 
         bool resolved = resolver.TryResolve(dataDir.Path, [], out WatchedFolder? folder, out string? reason);
 
@@ -161,7 +161,7 @@ public sealed class WatchedFolderResolverTests
     public void TryResolve_ReservedFolder_Refused(string entry)
     {
         using TempDataDir dataDir = new();
-        WatchedFolderResolver resolver = new(dataDir.Options());
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
 
         bool resolved = resolver.TryResolve(entry, [], out WatchedFolder? folder, out string? reason);
 
@@ -175,7 +175,7 @@ public sealed class WatchedFolderResolverTests
     public void TryResolve_SubfolderOfReserved_Refused()
     {
         using TempDataDir dataDir = new();
-        WatchedFolderResolver resolver = new(dataDir.Options());
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
 
         bool resolved = resolver.TryResolve("file-state/x", [], out WatchedFolder? folder, out string? reason);
 
@@ -191,7 +191,7 @@ public sealed class WatchedFolderResolverTests
     public void TryResolve_Blank_Refused(string entry)
     {
         using TempDataDir dataDir = new();
-        WatchedFolderResolver resolver = new(dataDir.Options());
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
 
         bool resolved = resolver.TryResolve(entry, [], out WatchedFolder? folder, out string? reason);
 
@@ -205,7 +205,7 @@ public sealed class WatchedFolderResolverTests
     public void TryResolve_FolderDoesNotExist_StillResolves()
     {
         using TempDataDir dataDir = new();
-        WatchedFolderResolver resolver = new(dataDir.Options());
+        WatchedFolderResolver resolver = new(dataDir.Options(), new(dataDir.Options()));
 
         bool resolved = resolver.TryResolve("Shared/not-there-yet", [], out WatchedFolder? folder, out string? reason);
 

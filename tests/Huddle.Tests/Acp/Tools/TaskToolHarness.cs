@@ -61,7 +61,7 @@ internal sealed class TaskToolHarness : IDisposable
         this.Clock = clock ?? TimeProvider.System;
 
         this.Personas = new PersonaStore(
-            this.Options,
+            new TeammatePaths(this.Options),
             new PersonaModelStore(this.Options),
             new PersonaEffortStore(this.Options),
             NullLogger<PersonaStore>.Instance);

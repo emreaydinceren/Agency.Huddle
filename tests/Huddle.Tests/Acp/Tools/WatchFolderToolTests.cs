@@ -65,7 +65,7 @@ public sealed class WatchFolderToolTests
         var ct = TestContext.Current.CancellationToken;
         using var fixture = await Fixture.CreateAsync(ct);
         var tool = new WatchFolderTool(fixture.Tracker, "Nova", new FakePromptSource());
-        var ownFullPath = Path.Combine(fixture.Options.Value.DataDir, fixture.Options.Value.Acp.WorkDir, "Nova");
+        var ownFullPath = new TeammatePaths(fixture.Options).WorkDir("Nova");
 
         var result = await tool.InvokeAsync(new JsonObject { ["folder"] = "Nova" }, ct);
 
@@ -134,14 +134,15 @@ public sealed class WatchFolderToolTests
             SqliteTeamDirectory directory = new(options);
             await directory.InitializeAsync("You", ct);
 
+            TeammatePaths teammatePaths = new(options);
             PersonaStore personas = new(
-                options,
+                teammatePaths,
                 new PersonaModelStore(options),
                 new PersonaEffortStore(options),
                 NullLogger<PersonaStore>.Instance);
             FileStateStore store = new(options, NullLogger<FileStateStore>.Instance);
-            WatchedFolderResolver resolver = new(options);
-            FileChangeTracker tracker = new(store, personas, directory, resolver, options, NullLogger<FileChangeTracker>.Instance);
+            WatchedFolderResolver resolver = new(options, teammatePaths);
+            FileChangeTracker tracker = new(store, personas, directory, resolver, options, teammatePaths, NullLogger<FileChangeTracker>.Instance);
 
             // Registered so "Nova" resolves via the Teammate-Name rule (FC §6.3) to its own Work Dir,
             // matching the caller Name every tool test below binds at construction.

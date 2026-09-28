@@ -1,5 +1,7 @@
 using Agency.Huddle.App;
+using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Logging;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.FileProviders;
@@ -31,6 +33,14 @@ builder.Services.AddTeamServices(builder.Configuration);
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+
+// Right after Build() and before anything resolves PersonaStore: a hosted service is too late,
+// because PersonaStore scans Teammates/ in its own constructor and all hosted services are
+// resolved before the first StartAsync (Spec §6.15, corrections-B2 #29). ILogger<TeammateLayoutMigration>
+// does not compile for a static class (CS0718), hence the named-category logger (#28).
+TeammateLayoutMigration.Run(
+    app.Services.GetRequiredService<IOptions<TeamOptions>>(),
+    app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Agency.Huddle.App.Acp.TeammateLayoutMigration"));
 
 app.UseAntiforgery();
 
@@ -73,6 +83,11 @@ app.UseStaticFiles(new StaticFileOptions
         context.Context.Response.Headers.XContentTypeOptions = "nosniff";
     },
 });
+
+// Not UseStaticFiles: see LibraryFilesEndpoint's summary for why a pinned Library root (which can
+// point anywhere on disk, and can change while the app is running) rules out a single
+// PhysicalFileProvider the way the avatars mount above uses one.
+app.MapGet("/library-files/{rootId}/{**path}", LibraryFilesEndpoint.HandleAsync);
 
 // Before the components only for readability - routing prefers the literal "/health" over any
 // component route whatever the order, and no component declares a catch-all route.

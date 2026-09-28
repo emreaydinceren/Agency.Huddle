@@ -115,14 +115,15 @@ public sealed class UnwatchFolderToolTests
             SqliteTeamDirectory directory = new(options);
             await directory.InitializeAsync("You", ct);
 
+            TeammatePaths teammatePaths = new(options);
             PersonaStore personas = new(
-                options,
+                teammatePaths,
                 new PersonaModelStore(options),
                 new PersonaEffortStore(options),
                 NullLogger<PersonaStore>.Instance);
             FileStateStore store = new(options, NullLogger<FileStateStore>.Instance);
-            WatchedFolderResolver resolver = new(options);
-            FileChangeTracker tracker = new(store, personas, directory, resolver, options, NullLogger<FileChangeTracker>.Instance);
+            WatchedFolderResolver resolver = new(options, teammatePaths);
+            FileChangeTracker tracker = new(store, personas, directory, resolver, options, teammatePaths, NullLogger<FileChangeTracker>.Instance);
 
             // Registered so "Nova" resolves via the Teammate-Name rule (FC §6.3) to its own Work Dir,
             // matching the caller Name every tool test below binds at construction.

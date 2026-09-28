@@ -1340,3 +1340,40 @@ How the sessions are run:
   Transcript,** through a new additive Envelope, so the session is never blank.
 - **Turns stay serial per Persona by default.**
 - **Stop becomes per Room.**
+
+## 19. The Library — DELIVERED (code) 2026-09-28
+
+> **Delivered as code on 2026-09-28.** The design is
+> [Huddle.Library-Specifications.md](../Huddle.Library-Specifications.md), recorded in
+> [ADR-0027](../adr/0027-the-library-sees-only-configured-roots.md),
+> [ADR-0028](../adr/0028-the-library-edits-markdown-as-source-and-never-rewrites-it.md) and
+> [ADR-0029](../adr/0029-between-the-human-and-an-agent-the-last-write-wins.md), now **Accepted**,
+> and [ADR-0031](../adr/0031-teammates-and-teams-are-sibling-folders.md), also **Accepted**.
+> [ADR-0030](../adr/0030-a-team-folder-is-its-library-and-holds-its-tasks.md) stays **Proposed**
+> until the Tasks effort agrees on the Team folder holding its Tasks.
+>
+> What shipped:
+> - **Teammate folders.** Personas moved to `Teammates/<Name>/`, with their Work Dir inside, and a
+>   one-time migration of the old `Teams/*.md` + `work/` layout.
+> - **Team folders under `Teams/`.** They are provisioned and watched as a Library Root.
+> - **Explorer and editor.** A file explorer and a CodeMirror source editor (vendored under
+>   `tools/codemirror`) that never reformats Markdown.
+> - **Wikilinks and Backlinks.** Wikilinks are parsed, resolved and rewritten on rename, and a
+>   Backlinks panel lists the notes that link to the open one.
+> - **File operations.** Create, rename, move, copy and Recycle-Bin delete, all behind path
+>   containment.
+> - **Library paths in chat.** They render as links that open the Library Pane, beside the
+>   chat, on either side.
+> - **The `/library` pop-out page and the Settings → Library panel.**
+> - **The prompt block.** It hands an Agent the Library documents a Message references.
+> - **Images inside notes.** They are served by `/library-files/` behind a per-render trust
+>   token.
+>
+> **What is not yet verified.** The Recycle Bin dialog, note images, the editor's freshness notice
+> and every other UI behaviour in the running app. The manual tests are written in
+> [manual-tests/library.md](manual-tests/library.md) and have not been run; they are deferred to
+> the Human's own user acceptance testing. Known limits:
+> - every rename reads each note in its Root;
+> - an editor save can overwrite a link that a rename just rewrote (the freshness notice and the
+>   save confirm mitigate this);
+> - an Agent's edits reach Backlinks only after a refresh.

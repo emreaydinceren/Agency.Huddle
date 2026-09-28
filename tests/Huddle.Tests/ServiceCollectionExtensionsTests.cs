@@ -18,13 +18,13 @@ namespace Agency.Huddle.Tests;
 public sealed class ServiceCollectionExtensionsTests
 {
     /// <summary>
-    /// Renaming <c>Acp.PersonaDir</c> to <c>Acp.TeamsDir</c> (the Teams rename) has no fallback:
-    /// nothing in appsettings*.json sets the old key today, so keeping one would be dead weight.
-    /// But a value left behind in a user secret or an environment variable would otherwise bind to
-    /// nothing, leaving <see cref="Agency.Huddle.App.Acp.PersonaStore"/> to scan an empty default
-    /// "Teams" folder - zero teammates, no exception, no log anywhere. That silent-degradation
-    /// shape is exactly what docs/agencyteam/traps.md exists to catch, so this must fail loudly at
-    /// startup instead, naming the new key.
+    /// Renaming <c>Acp.PersonaDir</c> to <c>Acp.TeammatesDir</c> (the Teammates rename) has no
+    /// fallback: nothing in appsettings*.json sets the old key today, so keeping one would be dead
+    /// weight. But a value left behind in a user secret or an environment variable would otherwise
+    /// bind to nothing, leaving <see cref="Agency.Huddle.App.Acp.PersonaStore"/> to scan an empty
+    /// default "Teammates" folder - zero teammates, no exception, no log anywhere. That
+    /// silent-degradation shape is exactly what docs/agencyteam/traps.md exists to catch, so this
+    /// must fail loudly at startup instead, naming the new key.
     /// </summary>
     [Fact]
     public void AddTeamServices_WithTheOldPersonaDirKey_ThrowsNamingTheNewKey()
@@ -40,8 +40,40 @@ public sealed class ServiceCollectionExtensionsTests
 
         var ex = Assert.Throws<InvalidOperationException>(() => services.AddTeamServices(configuration));
 
-        Assert.Contains("Team:Acp:PersonaDir", ex.Message, StringComparison.Ordinal);
-        Assert.Contains("Team:Acp:TeamsDir", ex.Message, StringComparison.Ordinal);
+        Assert.Equal(
+            "Configuration key 'Team:Acp:PersonaDir' was renamed to 'Team:Acp:TeammatesDir'. " +
+            "Update the configuration source that sets it (environment variable, user secret, etc.) - " +
+            "there is no automatic fallback.",
+            ex.Message);
+    }
+
+    /// <summary>
+    /// <see cref="Agency.Huddle.App.Library.LayoutGuard.ValidateTeamsAndTeammates"/> runs from the same
+    /// <c>PostConfigure</c> that normalises <c>DataDir</c>, so an overlapping <c>Team:Teams:Dir</c> and
+    /// <c>Team:Acp:TeammatesDir</c> must fail loudly the moment <see cref="TeamOptions"/> is resolved,
+    /// rather than silently scanning one folder as both roots.
+    /// </summary>
+    [Fact]
+    public void AddTeamServices_WithOverlappingTeamsAndTeammatesDirs_ThrowsOnOptionsResolution()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:Teams:Dir"] = "Teammates",
+                ["Team:Acp:TeammatesDir"] = "Teammates",
+            })
+            .Build();
+
+        var services = new ServiceCollection();
+        services.AddTeamServices(configuration);
+        using var provider = services.BuildServiceProvider();
+
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<TeamOptions>>().Value);
+
+        string dataDir = Path.GetFullPath("App_Data");
+        string teammatesRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(Path.Combine(dataDir, "Teammates")));
+        Assert.Equal($"'Team:Teams:Dir' ({teammatesRoot}) and 'Team:Acp:TeammatesDir' ({teammatesRoot}) must not overlap.", ex.Message);
     }
 
     /// <summary>

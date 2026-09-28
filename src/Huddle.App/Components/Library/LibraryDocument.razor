@@ -1,0 +1,641 @@
+@*
+    The Library's document pane (Task 12.2.i): a MudToolBar (breadcrumbs, mode toggle, Copy/Pop
+    out/Close) over the file's body, by kind, plus link navigation (corrections-B6 item 19):
+    resolved <c>library-ref</c> links raise OnNavigate, missing ones offer to create the note
+    (item 20). Interception is via NavigationManager.RegisterLocationChangingHandler - no
+    container preventDefault, no JS.
+*@
+@implements IAsyncDisposable
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.FileChanges
+@using Agency.Huddle.App.Library
+@inject LibraryFileService FileService
+@inject ITaskReferenceResolver Tasks
+@inject ILibraryNoteResolver NoteResolver
+@inject LibraryPathResolver PathResolver
+@inject WikiLinkIndex WikiLinks
+@inject NavigationManager Navigation
+@inject IDialogService Dialogs
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+<div class="library-document">
+    <MudExitPrompt Title="Discard changes?" Text="Your unsaved edits to this file will be lost." Disabled="@(!this.dirty)" Class="library-document-exit-prompt" />
+    <MudToolBar Dense="true" Class="library-document-toolbar">
+        <MudBreadcrumbs Items="@this.BreadcrumbItems()" Class="library-document-breadcrumbs" />
+        <div class="library-document-title">@this.TitleText()</div>
+        <MudSpacer />
+        @if (this.ShowModeToggle())
+        {
+            <MudToggleGroup T="LibraryMode" Value="@this.mode" ValueChanged="@this.OnModeChangedAsync" SelectionMode="SelectionMode.SingleSelection"
+                             Class="library-document-mode-toggle">
+                <MudToggleItem Value="LibraryMode.Read" Text="Read" />
+                <MudToggleItem Value="LibraryMode.Edit" Text="Edit" />
+                <MudToggleItem Value="LibraryMode.Split" Text="Split" />
+            </MudToggleGroup>
+        }
+        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" aria-label="Copy" Class="library-document-copy" OnClick="@this.OnCopyAsync" />
+        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" aria-label="Pop out" Class="library-document-pop-out" />
+        <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Close" Class="library-document-close" />
+    </MudToolBar>
+
+    @if (this.outsideScope)
+    {
+        <div class="library-document-outside-scope">Outside this view</div>
+        <MudButton Class="library-document-open-in-library" OnClick="@this.RaiseOpenInLibraryAsync">Open in Library</MudButton>
+    }
+    else if (this.missing)
+    {
+        <div class="library-document-banner">This file was moved or deleted.</div>
+    }
+    else if (this.content is not null)
+    {
+        @if (this.freshnessNoticeVisible)
+        {
+            @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
+               so role="alert" is added explicitly to keep the notice announced, per rules.md. The
+               notice text and the button row carry the SAME class so both are reachable through
+               ".library-document-freshness-notice", while the outer MudAlert itself does not, keeping
+               the text element's own TextContent free of the button labels. *@
+            <MudAlert Severity="Severity.Warning" Class="library-document-freshness" role="alert">
+                <p class="library-document-freshness-notice">This file changed on disk since you opened it.</p>
+                <MudStack Row="true" Class="library-document-freshness-notice" Spacing="2">
+                    <MudButton OnClick="@this.OnReloadFreshnessAsync">Reload</MudButton>
+                    <MudButton OnClick="@this.OnKeepMine">Keep mine</MudButton>
+                </MudStack>
+            </MudAlert>
+        }
+        @if (this.saveError is not null)
+        {
+            <div class="library-document-save-error">@this.saveError</div>
+        }
+        @if (this.definitionName is not null)
+        {
+            <div class="library-document-banner">This is @(this.definitionName)'s definition.</div>
+        }
+        @if (this.content.ViewOnlyReason is not null)
+        {
+            <div class="library-document-banner">@this.content.ViewOnlyReason</div>
+        }
+        else if (this.mode == LibraryMode.Edit && this.content.Kind == LibraryFileKind.Markdown && this.content.Editable)
+        {
+            <LibraryEditor @ref="this.editorRef" Text="@(this.content.Text ?? string.Empty)" ReadOnly="false" LanguageId="markdown"
+                           DirtyChanged="@this.OnDirtyChangedAsync" SaveRequested="@this.OnSaveRequestedAsync" />
+        }
+        else if (this.mode == LibraryMode.Split && this.content.Kind == LibraryFileKind.Markdown && this.content.Editable)
+        {
+            <div class="library-document-split">
+                <LibraryEditor @ref="this.editorRef" Text="@(this.content.Text ?? string.Empty)" ReadOnly="false" LanguageId="markdown"
+                               DirtyChanged="@this.OnDirtyChangedAsync" SaveRequested="@this.OnSaveRequestedAsync"
+                               PreviewMode="true" PreviewTextChanged="@this.OnPreviewTextChangedAsync" />
+                <div class="library-rendered">@((MarkupString)MarkdownRenderer.ToHtml(this.previewText ?? this.content.Text ?? string.Empty, this.Tasks, this.NoteResolver, this.Path))</div>
+            </div>
+        }
+        else if (this.content.Kind == LibraryFileKind.Markdown)
+        {
+            <div class="library-rendered">@((MarkupString)MarkdownRenderer.ToHtml(this.content.Text ?? string.Empty, this.Tasks, this.NoteResolver, this.Path))</div>
+            @if (this.backlinksRows is not null)
+            {
+                <BacklinksPanel Backlinks="@this.backlinksRows" IsAvailable="@this.backlinkIndexAvailable" OnNavigate="@this.OnNavigate" />
+            }
+        }
+        else if (this.content.Kind == LibraryFileKind.Image)
+        {
+            <img class="library-document-image" src="@this.ImageSrc()" alt="@this.FileName()" />
+        }
+        else if (this.content.Kind == LibraryFileKind.Svg)
+        {
+            <LibraryEditor Text="@(this.content.Text ?? string.Empty)" ReadOnly="true" LanguageId="xml" />
+        }
+        else if (this.content.Kind == LibraryFileKind.Text)
+        {
+            <LibraryEditor Text="@(this.content.Text ?? string.Empty)" ReadOnly="true" LanguageId="@this.LanguageId()" />
+        }
+        else
+        {
+            <div class="library-document-other">
+                <div class="library-document-other-name">@this.FileName()</div>
+                <div class="library-document-other-size">@FormatSize(this.content.Length)</div>
+                <MudButton Class="library-document-open-default">Open in default app</MudButton>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    /// <summary>The document's path inside a Library Root.</summary>
+    [Parameter, EditorRequired]
+    public required LibraryPath Path { get; set; }
+
+    /// <summary>The pane's scope: a document outside it shows the "Outside this view" hint instead of its content (Spec §6.16, §8).</summary>
+    [Parameter]
+    public LibraryPath? Scope { get; set; }
+
+    /// <summary>Raised when a resolved link inside the rendered document is clicked (Task 12.2.i-b).</summary>
+    [Parameter]
+    public EventCallback<LibraryPath> OnNavigate { get; set; }
+
+    /// <summary>Raised when the human asks to open an out-of-scope document in the full Library.</summary>
+    [Parameter]
+    public EventCallback<LibraryPath> OnOpenInLibrary { get; set; }
+
+    /// <summary>Raised for a tree-style action originating from this document (e.g. offering to create a missing wikilink target, Task 12.2.i-b).</summary>
+    [Parameter]
+    public EventCallback<LibraryTreeAction> OnAction { get; set; }
+
+    private LibraryDocumentContent? content;
+    private bool missing;
+    private bool outsideScope;
+    private string? definitionName;
+    private LibraryPath? loadedPath;
+    private IDisposable? locationChangingRegistration;
+    private LibraryMode mode = LibraryMode.Read;
+    private bool dirty;
+    private string? saveError;
+    private string? previewText;
+    private LibraryEditor? editorRef;
+    private IReadOnlyList<LibraryBacklinkRow>? backlinksRows;
+    private bool backlinkIndexAvailable;
+    private bool freshnessNoticeVisible;
+    private DotNetObjectReference<LibraryDocument>? selfReference;
+
+    /// <inheritdoc />
+    protected override void OnInitialized() =>
+        this.locationChangingRegistration = this.Navigation.RegisterLocationChangingHandler(this.OnLocationChangingAsync);
+
+    /// <summary>Registers <see cref="OnVisible"/> with <c>huddleLibrary.onVisible</c> (Task 12.6.i) so the
+    /// page's <c>visibilitychange</c> listener can trigger a refresh when the human switches back to this
+    /// tab.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        this.selfReference = DotNetObjectReference.Create(this);
+        await this.JS.InvokeVoidAsync("huddleLibrary.onVisible", this.selfReference);
+    }
+
+    /// <inheritdoc />
+    protected override async Task OnParametersSetAsync()
+    {
+        if (LibraryPathComparer.Instance.Equals(this.loadedPath, this.Path))
+        {
+            return;
+        }
+
+        this.loadedPath = this.Path;
+        this.content = null;
+        this.missing = false;
+        this.definitionName = null;
+        this.mode = LibraryMode.Read;
+        this.dirty = false;
+        this.saveError = null;
+        this.previewText = null;
+        this.editorRef = null;
+
+        this.outsideScope = this.Scope is not null && !IsWithinScope(this.Path, this.Scope);
+        if (this.outsideScope)
+        {
+            return;
+        }
+
+        try
+        {
+            this.content = await this.FileService.ReadAsync(this.Path, CancellationToken.None);
+        }
+        catch (FileNotFoundException)
+        {
+            this.missing = true;
+            return;
+        }
+
+        this.previewText = this.content.Text;
+
+        if (this.Path.Role == LibraryNodeRole.TeammateDefinition
+            && this.content.Text is not null
+            && PersonaFrontmatter.TryReadIdentity(this.content.Text, out PersonaIdentity? identity, out _))
+        {
+            this.definitionName = identity.Name;
+        }
+
+        this.BuildBacklinks();
+    }
+
+    /// <summary>Builds the backlinks list from the WikiLinkIndex, resolving each back-link path through the resolver.</summary>
+    private void BuildBacklinks()
+    {
+        this.backlinksRows = null;
+        this.backlinkIndexAvailable = false;
+
+        if (this.content?.Kind != LibraryFileKind.Markdown)
+        {
+            return;
+        }
+
+        this.backlinkIndexAvailable = this.WikiLinks.IsAvailable(this.Path.Root.Id);
+
+        var backlinks = this.WikiLinks.Backlinks(this.Path);
+        var rows = new List<LibraryBacklinkRow>();
+
+        foreach (var backlink in backlinks)
+        {
+            if (this.PathResolver.TryResolve(this.Path.Root.Id, backlink.NotePath, out LibraryPath? resolvedPath, out _))
+            {
+                rows.Add(new LibraryBacklinkRow(resolvedPath, backlink.Line, backlink.LineText));
+            }
+        }
+
+        this.backlinksRows = rows;
+    }
+
+    /// <summary>Switches between Read, Edit and Split (Spec §6.7's mode toggle); no unsaved-edit guard - the toggle only changes how the SAME loaded text is shown.</summary>
+    private Task OnModeChangedAsync(LibraryMode newMode)
+    {
+        this.mode = newMode;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Forwards the editor's dirty flip (Spec §6.7's <c>●</c> and the <see cref="MudExitPrompt"/> guard).</summary>
+    private Task OnDirtyChangedAsync(bool value)
+    {
+        this.dirty = value;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Updates the Split preview 300 ms after the last keystroke (corrections-B6 item 15; no .NET timer, the debounce lives in <c>library-editor.js</c>).</summary>
+    /// <param name="text">The editor's current text.</param>
+    private Task OnPreviewTextChangedAsync(string text)
+    {
+        this.previewText = text;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The document title with a trailing <c>●</c> while dirty (Spec §6.7).</summary>
+    private string TitleText() => this.dirty ? $"{this.FileName()} ●" : this.FileName();
+
+    /// <summary>
+    /// The save sequence (Spec §6.4, §6.12; corrections-B6 items 11, 15, 21; judgement 44):
+    /// stat the file first and refuse without writing if it is gone; ask to overwrite if it
+    /// changed since it was loaded; ask the Teammate-definition confirm; write through
+    /// <see cref="LibraryFileService.WriteTextAsync"/> and show any refusal reason; on success,
+    /// refresh the loaded stamp and clear the dirty marker.
+    /// </summary>
+    private async Task OnSaveRequestedAsync()
+    {
+        if (this.content is null || this.editorRef is null)
+        {
+            return;
+        }
+
+        this.saveError = null;
+
+        LibraryEntry? current = await this.FileService.StatAsync(this.Path, CancellationToken.None);
+        if (current is null)
+        {
+            this.saveError = "This file was moved or deleted.";
+            return;
+        }
+
+        if (current.Length != this.content.Length || current.LastWriteUtc != this.content.LastWriteUtc)
+        {
+            bool? overwrite = await this.Dialogs.ShowMessageBoxAsync(
+                "Overwrite changes on disk?",
+                "This file changed since you opened it. Saving replaces those changes.",
+                yesText: "Overwrite",
+                cancelText: "Cancel");
+            if (overwrite != true)
+            {
+                return;
+            }
+        }
+
+        if (this.definitionName is not null)
+        {
+            bool? confirmed = await this.Dialogs.ShowMessageBoxAsync(
+                "Save this definition?",
+                $"Saving restarts {this.definitionName} and clears its conversation memory.",
+                yesText: "Save",
+                cancelText: "Cancel");
+            if (confirmed != true)
+            {
+                return;
+            }
+        }
+
+        if (this.content.Format is not TextFileFormat format)
+        {
+            return;
+        }
+
+        string editorText = await this.editorRef.GetTextAsync();
+        LibraryResult<LibraryEntry> result = await this.FileService.WriteTextAsync(this.Path, editorText, format, CancellationToken.None);
+        if (result.Error is not null)
+        {
+            this.saveError = result.Error;
+            return;
+        }
+
+        if (result.Value is not null)
+        {
+            this.content = this.content with { Length = result.Value.Length, LastWriteUtc = result.Value.LastWriteUtc };
+        }
+
+        this.dirty = false;
+    }
+
+    /// <summary>
+    /// Guards leaving this document with unsaved edits (the plan's public <c>TryLeaveAsync</c>;
+    /// used by the explorer before switching documents). Clean returns <see langword="true"/> with
+    /// no dialog. Dirty asks Save/Discard/Cancel: Save runs <see cref="OnSaveRequestedAsync"/> and
+    /// only reports success if it actually cleared the dirty flag (an inner cancel or refusal keeps
+    /// it dirty); Discard clears the flag without writing; Cancel keeps the document.
+    /// </summary>
+    public async Task<bool> TryLeaveAsync()
+    {
+        if (!this.dirty)
+        {
+            return true;
+        }
+
+        bool? choice = await this.Dialogs.ShowMessageBoxAsync(
+            "Save changes?",
+            "This file has unsaved edits.",
+            yesText: "Save",
+            noText: "Discard",
+            cancelText: "Cancel");
+
+        if (choice is null)
+        {
+            return false;
+        }
+
+        if (choice == false)
+        {
+            this.dirty = false;
+            return true;
+        }
+
+        await this.OnSaveRequestedAsync();
+        return !this.dirty;
+    }
+
+    /// <summary>
+    /// The Copy button (Spec §6.14): copies this document's absolute path through the shared
+    /// <see cref="LibraryClipboard"/> helper, so the same texts show here and from the tree's CopyPath
+    /// action (corrections-B6 item 28).
+    /// </summary>
+    private async Task OnCopyAsync() => await LibraryClipboard.CopyPathAsync(this.JS, this.Snackbar, this.Path.FullPath);
+
+    /// <summary>
+    /// Compares the open file's current <see cref="LibraryEntry.Length"/> and
+    /// <see cref="LibraryEntry.LastWriteUtc"/> with those at load (Spec §6.8; ADR-0029; corrections-B6
+    /// items 11, 23, 28; judgements 44, 46). A missing file shows the moved/deleted banner; an
+    /// unchanged stamp does nothing (no re-read); a changed stamp re-reads when the document is clean,
+    /// invalidating the root's <see cref="WikiLinkIndex"/>; a changed stamp on a dirty document never
+    /// reloads on its own - it shows the freshness notice instead, still invalidating the index so a
+    /// later Backlinks query reflects the disk change.
+    /// </summary>
+    public async Task RefreshAsync()
+    {
+        if (this.content is null || this.missing || this.outsideScope)
+        {
+            return;
+        }
+
+        LibraryEntry? current = await this.FileService.StatAsync(this.Path, CancellationToken.None);
+        if (current is null)
+        {
+            this.missing = true;
+            this.content = null;
+            this.freshnessNoticeVisible = false;
+            this.StateHasChanged();
+            return;
+        }
+
+        if (current.Length == this.content.Length && current.LastWriteUtc == this.content.LastWriteUtc)
+        {
+            return;
+        }
+
+        this.WikiLinks.Invalidate(this.Path.Root.Id);
+
+        if (this.dirty)
+        {
+            this.freshnessNoticeVisible = true;
+            this.StateHasChanged();
+            return;
+        }
+
+        await this.ReloadFromDiskAsync();
+        this.StateHasChanged();
+    }
+
+    /// <summary>Re-reads the open file from disk, clears the dirty marker and hides the freshness
+    /// notice: used by a clean <see cref="RefreshAsync"/> and by the notice's own Reload button.</summary>
+    private async Task ReloadFromDiskAsync()
+    {
+        this.content = await this.FileService.ReadAsync(this.Path, CancellationToken.None);
+        this.previewText = this.content.Text;
+        this.dirty = false;
+        this.freshnessNoticeVisible = false;
+        this.BuildBacklinks();
+    }
+
+    /// <summary>The freshness notice's Reload button: re-reads the file and clears the dirty marker,
+    /// discarding the human's unsaved edits in favour of the disk content.</summary>
+    private async Task OnReloadFreshnessAsync()
+    {
+        await this.ReloadFromDiskAsync();
+        this.StateHasChanged();
+    }
+
+    /// <summary>The freshness notice's Keep mine button: hides the notice and updates nothing else, so
+    /// the human's edits stay and the save-time overwrite confirm still fires later (corrections-B6
+    /// item 11).</summary>
+    private void OnKeepMine() => this.freshnessNoticeVisible = false;
+
+    /// <summary>Called from JS (<c>huddleLibrary.onVisible</c>) when the page becomes visible again
+    /// (Task 12.6.i): runs the same refresh as a manual <see cref="RefreshAsync"/>.</summary>
+    [JSInvokable]
+    public async Task OnVisible() => await this.RefreshAsync();
+
+    /// <summary>Whether the header's Read/Edit/Split toggle shows: only for an editable Markdown document (Spec §8).</summary>
+    private bool ShowModeToggle() => !this.outsideScope && !this.missing
+        && this.content is { Kind: LibraryFileKind.Markdown, Editable: true };
+
+    /// <summary>The root's display name, then each folder on the way to the document, in order (Spec §8).</summary>
+    private List<BreadcrumbItem> BreadcrumbItems()
+    {
+        List<BreadcrumbItem> items = [new(this.Path.Root.DisplayName, href: null, disabled: true)];
+        string[] segments = this.Path.RelativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < segments.Length - 1; i++)
+        {
+            items.Add(new BreadcrumbItem(segments[i], href: null, disabled: true));
+        }
+
+        return items;
+    }
+
+    /// <summary>The document's file name, from its relative path.</summary>
+    private string FileName() => System.IO.Path.GetFileName(this.Path.RelativePath);
+
+    /// <summary>The <c>/library-files/{rootId}/…</c> image source, each path segment escaped on its own (Spec §6.11).</summary>
+    private string ImageSrc()
+    {
+        string[] segments = this.Path.RelativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        string escaped = string.Join('/', segments.Select(Uri.EscapeDataString));
+        return $"/library-files/{Uri.EscapeDataString(this.Path.Root.Id)}/{escaped}";
+    }
+
+    /// <summary>The CodeMirror language mode id for a read-only text file, by extension.</summary>
+    private string LanguageId() => System.IO.Path.GetExtension(this.Path.RelativePath).ToUpperInvariant() switch
+    {
+        ".JSON" => "json",
+        ".YAML" or ".YML" => "yaml",
+        ".CS" => "csharp",
+        ".JS" or ".TS" => "javascript",
+        ".CSS" => "css",
+        ".XML" => "xml",
+        ".PS1" => "powershell",
+        _ => "plain",
+    };
+
+    /// <summary>A binary file's size, in whole kilobytes above 1 KB, otherwise bytes (Spec §8's Other card).</summary>
+    private static string FormatSize(long bytes) => bytes < 1024
+        ? $"{bytes} B"
+        : $"{(long)Math.Round(bytes / 1024.0, MidpointRounding.AwayFromZero)} KB";
+
+    /// <summary>Whether <paramref name="candidate"/> is <paramref name="scope"/> itself or lies under it, comparing resolved full paths with <see cref="FolderSnapshot.PathComparer"/>.</summary>
+    private static bool IsWithinScope(LibraryPath candidate, LibraryPath scope)
+    {
+        if (FolderSnapshot.PathComparer.Equals(candidate.FullPath, scope.FullPath))
+        {
+            return true;
+        }
+
+        string prefix = scope.FullPath + System.IO.Path.DirectorySeparatorChar;
+        return candidate.FullPath.Length > prefix.Length
+            && FolderSnapshot.PathComparer.Equals(candidate.FullPath[..prefix.Length], prefix);
+    }
+
+    /// <summary>Raises <see cref="OnOpenInLibrary"/> for this document's path.</summary>
+    private async Task RaiseOpenInLibraryAsync() => await this.OnOpenInLibrary.InvokeAsync(this.Path);
+
+    /// <summary>
+    /// Intercepts a <c>?library=</c> navigation (corrections-B6 item 19): a resolved, existing file
+    /// raises <see cref="OnNavigate"/>; a resolved target that does not yet exist offers to create it
+    /// via <see cref="OnAction"/> (item 20); anything else, or a target outside this document's own
+    /// <see cref="Scope"/> when a scoped explorer is on the same page (judgement 45), is left alone.
+    /// </summary>
+    /// <param name="context">The pending navigation.</param>
+    private async ValueTask OnLocationChangingAsync(LocationChangingContext context)
+    {
+        string? libraryValue = ExtractLibraryValue(context.TargetLocation);
+        if (libraryValue is null)
+        {
+            return;
+        }
+
+        (string rootId, string relativePath) = SplitLibraryValue(libraryValue);
+
+        if (!this.PathResolver.TryResolve(rootId, relativePath, out LibraryPath? target, out _))
+        {
+            context.PreventNavigation();
+            return;
+        }
+
+        if (this.Scope is not null && !IsWithinScope(target, this.Scope))
+        {
+            return;
+        }
+
+        context.PreventNavigation();
+
+        if (target.Role == LibraryNodeRole.File)
+        {
+            await this.OnNavigate.InvokeAsync(target);
+            return;
+        }
+
+        if (this.PathResolver.TryResolve(rootId, ParentRelativePath(relativePath), out LibraryPath? parent, out _))
+        {
+            string name = System.IO.Path.GetFileNameWithoutExtension(relativePath);
+            await this.OnAction.InvokeAsync(new LibraryTreeAction(LibraryTreeActionKind.NewNote, parent, name));
+        }
+    }
+
+    /// <summary>The decoded value of a <c>library=</c> query parameter in <paramref name="targetLocation"/>, or <see langword="null"/> when there is none.</summary>
+    /// <param name="targetLocation">The pending navigation's target URI.</param>
+    private static string? ExtractLibraryValue(string targetLocation)
+    {
+        int queryStart = targetLocation.IndexOf('?', StringComparison.Ordinal);
+        if (queryStart < 0)
+        {
+            return null;
+        }
+
+        string query = targetLocation[(queryStart + 1)..];
+        int fragmentStart = query.IndexOf('#', StringComparison.Ordinal);
+        if (fragmentStart >= 0)
+        {
+            query = query[..fragmentStart];
+        }
+
+        foreach (string pair in query.Split('&'))
+        {
+            int equals = pair.IndexOf('=', StringComparison.Ordinal);
+            if (equals < 0)
+            {
+                continue;
+            }
+
+            if (string.Equals(pair[..equals], "library", StringComparison.Ordinal))
+            {
+                return Uri.UnescapeDataString(pair[(equals + 1)..]);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Splits a decoded <c>library=</c> value into its root id and root-relative path.</summary>
+    /// <param name="value">The decoded query value.</param>
+    private static (string RootId, string RelativePath) SplitLibraryValue(string value)
+    {
+        int slash = value.IndexOf('/', StringComparison.Ordinal);
+        return slash < 0 ? (value, string.Empty) : (value[..slash], value[(slash + 1)..]);
+    }
+
+    /// <summary>The parent folder's root-relative path for <paramref name="relativePath"/>, or an empty string at the root.</summary>
+    /// <param name="relativePath">A root-relative path.</param>
+    private static string ParentRelativePath(string relativePath)
+    {
+        int slash = relativePath.LastIndexOf('/');
+        return slash < 0 ? string.Empty : relativePath[..slash];
+    }
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        this.locationChangingRegistration?.Dispose();
+
+        try
+        {
+            if (this.selfReference is not null)
+            {
+                await this.JS.InvokeVoidAsync("huddleLibrary.offVisible", this.selfReference);
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit can already be gone by the time this component disposes (a browser tab
+            // closed, a reconnect that failed); there is nothing left to unregister client-side.
+        }
+        finally
+        {
+            this.selfReference?.Dispose();
+        }
+    }
+}

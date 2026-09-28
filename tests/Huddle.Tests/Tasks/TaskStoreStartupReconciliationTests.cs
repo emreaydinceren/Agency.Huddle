@@ -19,12 +19,12 @@ public sealed class TaskStoreStartupReconciliationTests
     public void Startup_FileNewerThanLastEntry_AppendsOneOutsideEntry_NoEvent()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         TaskItem task = TestTasks.Make(
             id: "PLAT-0001",
             location: new("Platform", null, false),
             changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "Human", "created")]);
-        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), task);
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), task);
         File.SetLastWriteTimeUtc(path, DateTime.UtcNow);
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         ManualTimeProvider clock = new() { UtcNow = new DateTimeOffset(2026, 1, 15, 9, 0, 0, TimeSpan.Zero) };
@@ -51,12 +51,12 @@ public sealed class TaskStoreStartupReconciliationTests
     public void Startup_FileNotNewer_Unchanged()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         TaskItem task = TestTasks.Make(
             id: "PLAT-0001",
             location: new("Platform", null, false),
             changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "Human", "created")]);
-        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "PLAT-0001.md"), task);
+        string path = TestTaskStore.WriteTask(root, Path.Combine("Platform", "_tasks", "PLAT-0001.md"), task);
         File.SetLastWriteTimeUtc(path, new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc));
         string originalText = File.ReadAllText(path);
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
@@ -75,10 +75,10 @@ public sealed class TaskStoreStartupReconciliationTests
     public void Startup_NoEntries_AppendsEntry()
     {
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         ManualTimeProvider clock = new() { UtcNow = new DateTimeOffset(2025, 6, 15, 8, 30, 0, TimeSpan.Zero) };
@@ -102,10 +102,10 @@ public sealed class TaskStoreStartupReconciliationTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         string path = TestTaskStore.WriteTask(
             root,
-            Path.Combine("Platform", "PLAT-0001.md"),
+            Path.Combine("Platform", "_tasks", "PLAT-0001.md"),
             TestTasks.Make(id: "PLAT-0001", location: new("Platform", null, false)));
         File.SetLastWriteTimeUtc(path, DateTime.UtcNow);
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);

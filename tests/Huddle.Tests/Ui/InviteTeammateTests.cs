@@ -118,11 +118,10 @@ public sealed class InviteTeammateTests
     {
         var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
-        Directory.CreateDirectory(Path.Combine(dir.Path, "Teams"));
-        await File.WriteAllTextAsync(
-            Path.Combine(dir.Path, "Teams", "coo.md"),
-            "---\nName: coo\nTitle: Chief of Staff\nAlias: coo\nTeams: Business\n---\nbody",
-            ct);
+        Agency.Huddle.Tests.Acp.TestPersonaFiles.Write(
+            new TeammatePaths(dir.Options()),
+            "coo",
+            "---\nName: coo\nTitle: Chief of Staff\nAlias: coo\nTeams: Business\n---\nbody");
         var directory = new SqliteTeamDirectory(dir.Options());
         await directory.InitializeAsync("You", ct);
         var member = await directory.UpsertAgentUserAsync("member", null, ct);
@@ -185,7 +184,7 @@ public sealed class InviteTeammateTests
         // The panel's own team filter needs a PersonaStore; created and disposed within this one
         // render so its FileSystemWatcher never outlives the test.
         using var personas = new PersonaStore(
-            dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+            new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         services.AddSingleton(personas);
 
         // The panel now renders a TeammateAvatar beside each candidate; created and disposed within

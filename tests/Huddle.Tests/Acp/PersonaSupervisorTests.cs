@@ -31,10 +31,10 @@ public sealed class PersonaSupervisorTests
 
         using var dataDir = new TempDataDir();
         var options = dataDir.Options();
-        WritePersonaFile(options.Value, "nova");
+        WritePersonaFile(options, "nova");
 
         using var personaStore = new PersonaStore(
-            options,
+            new TeammatePaths(options),
             new Agency.Huddle.App.Data.PersonaModelStore(options),
             new Agency.Huddle.App.Data.PersonaEffortStore(options),
             NullLogger<PersonaStore>.Instance);
@@ -60,8 +60,8 @@ public sealed class PersonaSupervisorTests
         await using var fixture = await PipeHostFixture.StartAsync(
             new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        WritePersonaFile(options.Value, "nova");
-        WritePersonaFile(options.Value, "zeta");
+        WritePersonaFile(options, "nova");
+        WritePersonaFile(options, "zeta");
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var factory = new FakeAgentHostFactory();
@@ -171,7 +171,7 @@ public sealed class PersonaSupervisorTests
         await using var fixture = await PipeHostFixture.StartAsync(
             new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        WritePersonaFile(options.Value, "nova");
+        WritePersonaFile(options, "nova");
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var directory = fixture.Services.GetRequiredService<Agency.Huddle.App.Data.ITeamDirectory>();
@@ -201,8 +201,8 @@ public sealed class PersonaSupervisorTests
         await using var fixture = await PipeHostFixture.StartAsync(
             new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        WritePersonaFile(options.Value, "bad");
-        WritePersonaFile(options.Value, "good");
+        WritePersonaFile(options, "bad");
+        WritePersonaFile(options, "good");
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var inner = new FakeAgentHostFactory();
@@ -342,7 +342,7 @@ public sealed class PersonaSupervisorTests
             new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
-        WritePersonaFile(options.Value, "zeta");
+        WritePersonaFile(options, "zeta");
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
         using var skillStore = NewSkillStore(options);
@@ -499,9 +499,8 @@ public sealed class PersonaSupervisorTests
             new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
-        var teamsDir = Path.Combine(options.Value.DataDir, options.Value.Acp.TeamsDir);
-        Directory.CreateDirectory(teamsDir);
-        File.WriteAllText(Path.Combine(teamsDir, "zeta.md"), SkillsPersonaText("zeta"));
+        var paths = new TeammatePaths(options);
+        TestPersonaFiles.Write(paths, "zeta", SkillsPersonaText("zeta"));
         var factory = new FakeAgentHostFactory();
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
         using var skillStore = NewSkillStore(options);
@@ -515,8 +514,7 @@ public sealed class PersonaSupervisorTests
 
         // A different Persona file - missing the required "Name" field, so it is rejected rather
         // than started. Only the debounced watcher event matters here, not a second host.
-        await File.WriteAllTextAsync(
-            Path.Combine(teamsDir, "malformed.md"), "---\nTitle: Malformed\nAlias: mal\n---\nbody", ct);
+        TestPersonaFiles.Write(paths, "malformed", "---\nTitle: Malformed\nAlias: mal\n---\nbody");
 
         using var waitCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         await using var registration = waitCts.Token.Register(() => personasChanged.TrySetCanceled());
@@ -774,7 +772,7 @@ public sealed class PersonaSupervisorTests
         await using var fixture = await PipeHostFixture.StartAsync(
             new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        WritePersonaFile(options.Value, "nova");
+        WritePersonaFile(options, "nova");
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var exception = new InvalidOperationException(
@@ -806,7 +804,7 @@ public sealed class PersonaSupervisorTests
         await using var fixture = await PipeHostFixture.StartAsync(
             new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        WritePersonaFile(options.Value, "nova");
+        WritePersonaFile(options, "nova");
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var exception = new AgentAuthenticationRequiredException([new AuthMethodInfo("oauth", "OAuth", null)]);
@@ -836,7 +834,7 @@ public sealed class PersonaSupervisorTests
         await using var fixture = await PipeHostFixture.StartAsync(
             new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        WritePersonaFile(options.Value, "nova");
+        WritePersonaFile(options, "nova");
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var exception = new AgentProcessStartException("Failed to start 'node'.", new IOException("No such file or directory"));
@@ -866,7 +864,7 @@ public sealed class PersonaSupervisorTests
         await using var fixture = await PipeHostFixture.StartAsync(
             new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        WritePersonaFile(options.Value, "nova");
+        WritePersonaFile(options, "nova");
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var exception = new AgentException("session/new failed: the adapter rejected the request.");
@@ -896,7 +894,7 @@ public sealed class PersonaSupervisorTests
         await using var fixture = await PipeHostFixture.StartAsync(
             new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        WritePersonaFile(options.Value, "nova");
+        WritePersonaFile(options, "nova");
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var exception = new FormatException("weird format.");
@@ -960,7 +958,7 @@ public sealed class PersonaSupervisorTests
         await using var fixture = await PipeHostFixture.StartAsync(
             new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        WritePersonaFile(options.Value, "nova");
+        WritePersonaFile(options, "nova");
 
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
         var inner = new FakeAgentHostFactory();
@@ -1238,11 +1236,9 @@ public sealed class PersonaSupervisorTests
     /// <param name="options">Supplies the <c>DataDir</c> the returned store watches and resolves Skills against.</param>
     private static SkillStore NewSkillStore(IOptions<TeamOptions> options) => new(options, NullLogger<SkillStore>.Instance);
 
-    private static void WritePersonaFile(TeamOptions options, string name, string body = "You are a persona.")
+    private static void WritePersonaFile(IOptions<TeamOptions> options, string name, string body = "You are a persona.")
     {
-        var teamsDir = Path.Combine(options.DataDir, options.Acp.TeamsDir);
-        Directory.CreateDirectory(teamsDir);
-        File.WriteAllText(Path.Combine(teamsDir, $"{name}.md"), PersonaText(name, body));
+        TestPersonaFiles.Write(new TeammatePaths(options), name, PersonaText(name, body));
     }
 
     /// <summary>Minimal valid Persona frontmatter (Name, Title and Alias all <paramref name="name"/>) wrapped around <paramref name="body"/> - identity is front-matter driven from this phase on, so every seeded Persona needs one to be discoverable at all.</summary>

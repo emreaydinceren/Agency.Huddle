@@ -111,7 +111,7 @@ public sealed class ValidateTeammateToolTests
         await directory.InitializeAsync("You", ct);
 
         var personas = new PersonaStore(
-            dataDir.Options(), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+            new TeammatePaths(dataDir.Options()), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
         var gateway = new FakeAgentGateway();
         var checker = new CandidateChecker(personas, directory, gateway);
 

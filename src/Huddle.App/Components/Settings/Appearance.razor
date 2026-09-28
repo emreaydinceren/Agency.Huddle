@@ -89,6 +89,12 @@
                      Class="mt-2 theme-picker-accent-colour" />
 }
 
+<p class="mt-4">Library pane</p>
+<MudRadioGroup T="LibraryPaneSide" Value="this.LibraryPaneSide" ValueChanged="this.OnLibraryPaneSideChanged">
+    <MudRadio T="LibraryPaneSide" Value="LibraryPaneSide.Right">Right</MudRadio>
+    <MudRadio T="LibraryPaneSide" Value="LibraryPaneSide.Left">Left</MudRadio>
+</MudRadioGroup>
+
 <p class="settings-theme-credit">
     Custom Accent lets you pick your own accent colour, adjusted if needed so it stays readable.
     Every other theme except Huddle Light and Huddle Dark is one of the colour themes bundled with Visual Studio Code, mapped onto this application's palette. Visual Studio Code and its default
@@ -182,6 +188,9 @@
 
     /// <summary>The accent colour shown in the picker: the store's own value, read straight through with no local buffer - mirrors <see cref="SelectedThemeId"/>'s own shape, since there is only one value here and nothing to seed across a mode switch the way the avatar editor's fields need.</summary>
     private string? AccentColorText => this.AppearanceStore.Current.AccentColorHex;
+
+    /// <summary>The library pane side shown selected: the store's current selection.</summary>
+    private LibraryPaneSide LibraryPaneSide => this.AppearanceStore.Current.LibraryPaneSide;
 
     // Editor-only working state for the Human's avatar editor - the same three fields
     // TeammateCard.SeedAvatarEditorState seeds, minus the pending-upload buffer that editor needs and
@@ -414,6 +423,13 @@
     private void OnAccentColorTextChanged(string? value)
     {
         this.AppearanceStore.SaveAccentColor(string.IsNullOrWhiteSpace(value) ? null : value);
+    }
+
+    /// <summary>Saves the newly picked library pane side, mirroring <see cref="OnThemeChangedAsync"/>.</summary>
+    /// <param name="side">The library pane side the Human just picked.</param>
+    private void OnLibraryPaneSideChanged(LibraryPaneSide side)
+    {
+        this.AppearanceStore.SaveLibraryPaneSide(side);
     }
 
     private void OnAppearanceChanged()

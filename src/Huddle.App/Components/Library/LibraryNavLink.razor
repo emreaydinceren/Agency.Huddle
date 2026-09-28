@@ -1,0 +1,17 @@
+@using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Library
+@inject LibraryPaneState State
+@inject IOptions<TeamOptions> Options
+
+@* The sidebar's Library link (Task 13.2, Spec §6.9): toggles the shared LibraryPaneState. A plain
+   wrapper rather than a MudNavLink subclass, so it never writes MudNavLink's [Parameter]s from
+   inside the component (BL0005). With no Href, MudNavLink renders a clickable div, not an <a>. *@
+@if (this.Options.Value.Library.Enabled)
+{
+    <MudNavLink Icon="@Icons.Material.Filled.MenuBook" OnClick="@this.Toggle">Library</MudNavLink>
+}
+
+@code {
+    /// <summary>Opens or closes the Library pane.</summary>
+    private void Toggle() => this.State.Toggle();
+}

@@ -83,7 +83,7 @@ public sealed class TaskToolTextTests
     {
         using TaskToolHarness harness = new();
         TaskItem task = TestTasks.Make(id: "PLAT-0001", title: "Existing");
-        TestTaskStore.WriteTask(harness.TasksDirPath, "Platform/existing.md", task);
+        TestTaskStore.WriteTask(harness.TasksDirPath, TestTaskStore.RelativePath("Platform", null, closed: false, "existing.md"), task);
         harness.Store.RebuildFromWatcher();
 
         bool resolved = TaskToolText.TryResolve(harness.Store, "PLAT-0001", out TaskItem? found, out string refusal);

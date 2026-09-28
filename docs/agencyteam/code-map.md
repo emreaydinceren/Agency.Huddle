@@ -234,6 +234,36 @@ order decides per Token, independently.
 | `DotAcp/EffortConfigOptions.cs` | `ModelConfigOptions`'s sibling over the `thought_level` category. Materially different class doc: here, an absent entry is the NORMAL case ("this model offers no effort choice"), not "unknown" — see [Traps](traps.md). |
 | `Tools/AppToolServer.cs` | Loopback Kestrel serving MCP. **It builds its own DI container**, so `IAppTool` instances must be created by Huddle.App's provider and passed in. Its 401 carries a **bare** `WWW-Authenticate: Bearer` — no `resource_metadata`, deliberately, because that parameter is what keys MCP's OAuth discovery path and neither side has designed one. |
 
+The Library — the explorer, viewer and editor, Spec §6. Paths are relative to `src/Huddle.App`:
+
+| Path | Responsibility |
+| --- | --- |
+| `Library/LibraryOptions.cs` | Configuration bound from `Team:Library`. |
+| `Library/LibraryRoot.cs`, `Library/LibraryPath.cs` | Records for a Library Root and a path resolved inside one. |
+| `Library/LibraryRootStore.cs` | The Library Roots: `teams`, `teammates` and the pinned roots, saved from Settings. |
+| `Library/LibraryPathResolver.cs` | The only code that turns input into a path; every path operation goes through it. |
+| `Library/LibraryFileService.cs`, `Library/AtomicFile.cs` | List, read, write, create, rename, move and recycle; every write is atomic. |
+| `Library/TextFileCodec.cs` | Detects and restores encoding, BOM and line ending. |
+| `Library/WikiLinkParser.cs`, `WikiLinkResolver.cs`, `WikiLinkRewriter.cs`, `WikiLinkIndex.cs` | Parse, resolve (case-insensitive), rewrite on rename, and the per-root Backlinks index. |
+| `Library/LibraryReferenceResolver.cs`, `Library/LibraryPathPatterns.cs` | Turn a Library path in a chat Message or note into a link. |
+| `Library/LibraryDocumentCollector.cs` | The Library documents a Turn's prompt block hands an Agent. |
+| `Library/TeamFolderCatalog.cs`, `Library/TeamFolderProvisioner.cs` | List and create Team and Project folders. |
+| `Library/IRecycleBin.cs`, `Library/WindowsRecycleBin.cs` | Delete to the Recycle Bin; `NotAvailableRecycleBin.cs` off Windows. |
+| `Library/LayoutGuard.cs` | Validates that `Teams:Dir` and `Acp:TeammatesDir` do not overlap. |
+| `Library/LibraryLocation.cs` | The public record a host passes to say which folder the explorer starts from. |
+| `Library/LibraryPaneState.cs` | Whether the pane is open and which file it shows; shared by the nav link, the host and chat links. |
+| `Components/Library/LibraryExplorer.razor` | The reusable control: tree + document, scoped by its `Scopes` parameter. |
+| `Components/Library/LibraryTree.razor`, `LibraryDocument.razor`, `LibraryEditor.razor`, `BacklinksPanel.razor`, `LibraryFileOps.razor` | The explorer's parts; file operations open `RenameDialog`, `MoveDialog` and `NamePromptDialog`. |
+| `Components/Library/LibraryNavLink.razor` | The sidebar's Library link. |
+| `Components/Library/LibraryPane.razor` | The docked pane: one host of `LibraryExplorer`, with every root. |
+| `Components/Library/LibraryPaneHost.razor` | The `MudSplitPanel` wrapper around the Library pane and chat side by side. |
+| `Components/Pages/Library.razor` | The `/library` pop-out page. |
+| `Components/Settings/LibraryPanel.razor` | Pinned roots editor. |
+| `Library/LibraryFilesEndpoint.cs` | HTTP endpoint serving `/library-files/…` for images inside notes. |
+| `Acp/TeammatePaths.cs` | Definition file, Teammate folder and Work Dir for a Name. |
+| `Acp/TeammateLayoutMigration.cs` | The one-time move from `Teams/` + `work/` to `Teammates/`. |
+| `wwwroot/library-editor.js` | CodeMirror 6 interop module. |
+
 `src/Huddle.MockAdapter` — an Adapter this solution builds, assembly `mock-acp`:
 
 Test infrastructure, not a stand-in. It exists so every Huddle-side path has an automated test

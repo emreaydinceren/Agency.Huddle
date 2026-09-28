@@ -26,7 +26,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Create(new TaskDraft("Ship it", "Platform", "Auth v2"), HumanActor);
 
         TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
-        string expectedPath = Path.Combine(store.RootDirectory, "Platform", "Auth v2", "PLAT-0001.md");
+        string expectedPath = Path.Combine(store.RootDirectory, TestTaskStore.RelativePath("Platform", "Auth v2", closed: false, "PLAT-0001.md"));
         Assert.Equal(expectedPath, saved.Task.Path);
         ChangeLogEntry entry = Assert.Single(saved.Task.ChangeLog);
         Assert.Equal("created", entry.Summary);
@@ -360,7 +360,7 @@ public sealed class TaskServiceTests
     {
         using TempDataDir dir = new();
         using PersonaStore personas = CreatePersonaStore(dir);
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         Directory.CreateDirectory(Path.Combine(root, "Platform"));
         using TaskStore store = CreateTaskStore(dir, personas);
         TaskService service = CreateTaskService(dir, store, personas);
@@ -369,7 +369,7 @@ public sealed class TaskServiceTests
 
         TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
         Assert.Equal("Platform", saved.Task.Location.Team);
-        Assert.Equal(Path.Combine(root, "Platform", "PLAT-0001.md"), saved.Task.Path);
+        Assert.Equal(Path.Combine(root, "Platform", "_tasks", "PLAT-0001.md"), saved.Task.Path);
     }
 
     /// <summary>Updating a Task's status logs a "status: ..." summary and raises exactly one TaskChanged.</summary>
@@ -419,7 +419,7 @@ public sealed class TaskServiceTests
     {
         using TempDataDir dir = new();
         using PersonaStore personas = CreatePersonaStore(dir);
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         Directory.CreateDirectory(Path.Combine(root, "Marketing"));
         using TaskStore store = CreateTaskStore(dir, personas);
         TaskService service = CreateTaskService(dir, store, personas);
@@ -448,7 +448,7 @@ public sealed class TaskServiceTests
 
         TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
         Assert.Null(saved.Task.Location.Project);
-        Assert.Equal(Path.Combine(store.RootDirectory, "Platform", $"{task.Id}.md"), saved.Task.Path);
+        Assert.Equal(Path.Combine(store.RootDirectory, TestTaskStore.RelativePath("Platform", null, closed: false, $"{task.Id}.md")), saved.Task.Path);
     }
 
     /// <summary>A reason given alongside a move to Cancelled is appended to the Change log summary.</summary>
@@ -622,7 +622,7 @@ public sealed class TaskServiceTests
         using PersonaStore personas = CreatePersonaStore(dir);
         using TaskStore store = CreateTaskStore(dir, personas);
         TaskService service = CreateTaskService(dir, store, personas);
-        string existingPath = Path.Combine(store.RootDirectory, "Platform", "PLAT-0001.md");
+        string existingPath = Path.Combine(store.RootDirectory, TestTaskStore.RelativePath("Platform", null, closed: false, "PLAT-0001.md"));
         Directory.CreateDirectory(Path.GetDirectoryName(existingPath) ?? throw new InvalidOperationException("Expected a parent directory."));
         File.WriteAllText(existingPath, "not a task file");
 
@@ -637,9 +637,9 @@ public sealed class TaskServiceTests
     {
         using TempDataDir dir = new();
         using PersonaStore personas = CreatePersonaStore(dir);
-        string teamRoot = Path.Combine(dir.Path, "Tasks", "Platform");
-        Directory.CreateDirectory(teamRoot);
-        File.WriteAllText(Path.Combine(teamRoot, "PLAT-0005.md"), "not a real task file");
+        string tasksDir = Path.Combine(TestTaskStore.Root(dir), "Platform", "_tasks");
+        Directory.CreateDirectory(tasksDir);
+        File.WriteAllText(Path.Combine(tasksDir, "PLAT-0005.md"), "not a real task file");
         using TaskStore store = CreateTaskStore(dir, personas);
         TaskService service = CreateTaskService(dir, store, personas);
 
@@ -672,7 +672,7 @@ public sealed class TaskServiceTests
     {
         using TempDataDir dir = new();
         using PersonaStore personas = CreatePersonaStore(dir);
-        string root = Path.Combine(dir.Path, "Tasks");
+        string root = TestTaskStore.Root(dir);
         Directory.CreateDirectory(Path.Combine(root, "Marketing"));
         using TaskStore store = CreateTaskStore(dir, personas);
         TaskService service = CreateTaskService(dir, store, personas);
@@ -941,7 +941,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Close(task.Id, HumanActor);
 
         TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
-        string expectedPath = Path.Combine(store.RootDirectory, "Platform", "_closed", $"{task.Id}.md");
+        string expectedPath = Path.Combine(store.RootDirectory, TestTaskStore.RelativePath("Platform", null, closed: true, $"{task.Id}.md"));
         Assert.Equal(expectedPath, saved.Task.Path);
         Assert.True(saved.Task.Location.Closed);
         Assert.Equal("closed", Assert.Single(saved.Task.ChangeLog, entry => entry.Summary == "closed").Summary);
@@ -961,7 +961,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Close(task.Id, HumanActor);
 
         TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
-        string expectedPath = Path.Combine(store.RootDirectory, "Platform", "Auth v2", "_closed", $"{task.Id}.md");
+        string expectedPath = Path.Combine(store.RootDirectory, TestTaskStore.RelativePath("Platform", "Auth v2", closed: true, $"{task.Id}.md"));
         Assert.Equal(expectedPath, saved.Task.Path);
     }
 
@@ -1083,7 +1083,7 @@ public sealed class TaskServiceTests
         TaskResult result = service.Reopen(closed.Id, HumanActor);
 
         TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
-        string expectedPath = Path.Combine(store.RootDirectory, "Platform", "Auth v2", $"{task.Id}.md");
+        string expectedPath = Path.Combine(store.RootDirectory, TestTaskStore.RelativePath("Platform", "Auth v2", closed: false, $"{task.Id}.md"));
         Assert.Equal(expectedPath, saved.Task.Path);
         Assert.False(saved.Task.Location.Closed);
         Assert.Equal("reopened", Assert.Single(saved.Task.ChangeLog, entry => entry.Summary == "reopened").Summary);
@@ -1164,7 +1164,7 @@ public sealed class TaskServiceTests
         TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
         Assert.True(saved.Task.Location.Closed);
         Assert.Equal("Marketing", saved.Task.Location.Team);
-        string expectedPath = Path.Combine(store.RootDirectory, "Marketing", "_closed", $"{task.Id}.md");
+        string expectedPath = Path.Combine(store.RootDirectory, TestTaskStore.RelativePath("Marketing", null, closed: true, $"{task.Id}.md"));
         Assert.Equal(expectedPath, saved.Task.Path);
     }
 
@@ -1212,7 +1212,7 @@ public sealed class TaskServiceTests
     /// <summary>Constructs a real <see cref="PersonaStore"/> with Nova (alias "nova") and Kai (alias "kai") in Team Platform, over the same <see cref="TempDataDir"/> the Task store under test also reads from.</summary>
     private static PersonaStore CreatePersonaStore(TempDataDir dir)
     {
-        PersonaStore personas = new(dir.Options(), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        PersonaStore personas = new(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         _ = personas.Add(new PersonaIdentity("Nova", "Nova", "nova", ["Platform"]), "You are Nova.");
         _ = personas.Add(new PersonaIdentity("Kai", "Kai", "kai", ["Platform"]), "You are Kai.");
         return personas;

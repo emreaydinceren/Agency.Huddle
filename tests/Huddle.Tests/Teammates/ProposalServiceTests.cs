@@ -46,9 +46,9 @@ public sealed class ProposalServiceTests
         var outcome = await fixture.Service.ApproveAsync(room.Id, proposal.Id, ct);
 
         Assert.Equal(ProposalOutcomeKind.Created, outcome.Kind);
-        Assert.True(File.Exists(Path.Combine(fixture.Personas.TeamsDirectory, "Vera.md")));
-        Assert.True(File.Exists(Path.Combine(fixture.Personas.TeamsDirectory, "Quill.md")));
-        Assert.True(File.Exists(Path.Combine(fixture.Personas.TeamsDirectory, "Iris.md")));
+        Assert.True(File.Exists(fixture.Personas.Paths.DefinitionFile("Vera")));
+        Assert.True(File.Exists(fixture.Personas.Paths.DefinitionFile("Quill")));
+        Assert.True(File.Exists(fixture.Personas.Paths.DefinitionFile("Iris")));
 
         var human = await fixture.Directory.GetHumanAsync(ct);
         var history = await fixture.Store.ReadAllAsync(room.Id, ct);
@@ -96,12 +96,12 @@ public sealed class ProposalServiceTests
         Assert.Equal("Iris", failure.Name);
         CandidateCheckerTests.AssertProblemsAreModelFacing([failure.Reason]);
         Assert.Equal(
-            "Approved. Created Vera and Quill. Could not create Iris: Persona Alias 'scout' is also used by 'Teams/Rowan.md'. @Chief of Staff",
+            "Approved. Created Vera and Quill. Could not create Iris: Persona Alias 'scout' is also used by 'Teammates/Rowan/Rowan.md'. @Chief of Staff",
             outcome.PostedText);
 
-        Assert.True(File.Exists(Path.Combine(fixture.Personas.TeamsDirectory, "Vera.md")));
-        Assert.True(File.Exists(Path.Combine(fixture.Personas.TeamsDirectory, "Quill.md")));
-        Assert.False(File.Exists(Path.Combine(fixture.Personas.TeamsDirectory, "Iris.md")));
+        Assert.True(File.Exists(fixture.Personas.Paths.DefinitionFile("Vera")));
+        Assert.True(File.Exists(fixture.Personas.Paths.DefinitionFile("Quill")));
+        Assert.False(File.Exists(fixture.Personas.Paths.DefinitionFile("Iris")));
     }
 
     /// <summary>
@@ -141,9 +141,9 @@ public sealed class ProposalServiceTests
             "Approved, but nothing was created: 7 Teammates exist, the limit is 8, and this Proposal adds 3. @Chief of Staff",
             outcome.PostedText);
 
-        Assert.False(File.Exists(Path.Combine(fixture.Personas.TeamsDirectory, "Vera.md")));
-        Assert.False(File.Exists(Path.Combine(fixture.Personas.TeamsDirectory, "Quill.md")));
-        Assert.False(File.Exists(Path.Combine(fixture.Personas.TeamsDirectory, "Iris.md")));
+        Assert.False(File.Exists(fixture.Personas.Paths.DefinitionFile("Vera")));
+        Assert.False(File.Exists(fixture.Personas.Paths.DefinitionFile("Quill")));
+        Assert.False(File.Exists(fixture.Personas.Paths.DefinitionFile("Iris")));
     }
 
     /// <summary>
@@ -264,7 +264,7 @@ public sealed class ProposalServiceTests
 
         Assert.Equal(ProposalOutcomeKind.Created, outcome.Kind);
         Assert.Equal("Approved. Created Vera. @Chief of Staff go ahead.", outcome.PostedText);
-        Assert.True(File.Exists(Path.Combine(fixture.Personas.TeamsDirectory, "Vera.md")));
+        Assert.True(File.Exists(fixture.Personas.Paths.DefinitionFile("Vera")));
     }
 
     /// <summary>
@@ -299,8 +299,8 @@ public sealed class ProposalServiceTests
         Assert.Empty(outcome.Failed);
         Assert.Equal("Declined the proposed Teammates: Vera, Quill. @Chief of Staff", outcome.PostedText);
 
-        Assert.False(File.Exists(Path.Combine(fixture.Personas.TeamsDirectory, "Vera.md")));
-        Assert.False(File.Exists(Path.Combine(fixture.Personas.TeamsDirectory, "Quill.md")));
+        Assert.False(File.Exists(fixture.Personas.Paths.DefinitionFile("Vera")));
+        Assert.False(File.Exists(fixture.Personas.Paths.DefinitionFile("Quill")));
         Assert.Empty(fixture.Personas.Entries);
 
         Assert.Null(fixture.Proposals.Get(room.Id));
@@ -419,7 +419,7 @@ public sealed class ProposalServiceTests
             await directory.InitializeAsync("You", ct);
 
             var personas = new PersonaStore(
-                options, new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
+                new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
             var gateway = new FakeAgentGateway();
             var checker = new CandidateChecker(personas, directory, gateway);
             var events = new RoomEvents(NullLogger<RoomEvents>.Instance);

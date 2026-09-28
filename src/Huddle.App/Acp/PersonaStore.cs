@@ -1,4 +1,3 @@
-using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -23,7 +22,7 @@ public sealed record PersonaRemoved(string Name);
 
 /// <summary>
 /// A Persona is a markdown file whose body becomes a Claude agent's system prompt. Files live under
-/// <c>{DataDir}/{Acp.TeamsDir}/</c>, optionally nested under Team sub-folders that are purely
+/// <see cref="TeammatePaths.DefinitionsRoot"/>, optionally nested under Team sub-folders that are purely
 /// organisational - <c>Teams/Business/coo.md</c> is exactly as much a Persona as <c>Teams/coo.md</c>,
 /// and which sub-folder (if any) a file sits under plays no part in its identity or its Team
 /// membership.
@@ -59,7 +58,7 @@ public sealed record PersonaRemoved(string Name);
 /// registers an Agent over the pipe.
 /// </para>
 /// </remarks>
-public sealed class PersonaStore : IDisposable, IMentionAliasSource
+internal sealed class PersonaStore : IDisposable, IMentionAliasSource
 {
     // Editors commonly fire several filesystem events per save (a temp-file write plus a rename,
     // or several partial writes), so raising PersonasChanged straight off FileSystemWatcher would
@@ -74,7 +73,14 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     // overflow far rarer, though OnWatcherError below is the real backstop.
     private const int WatcherInternalBufferSize = 64 * 1024;
 
-    private readonly string teamsDir;
+    // A definition file can be locked (an editor saving, antivirus, a rename's folder move) at the
+    // exact instant the debounce timer fires. Skipping it would publish an index WITHOUT that
+    // Persona and raise PersonaRemoved, cascading into an avatar/file-state/Room Session delete for
+    // a Persona that never actually went away - so the debounced rebuild aborts instead and retries
+    // on the same debounce interval, capped here so a permanently-locked file cannot retry forever.
+    private const int MaxConsecutiveLockRetries = 10;
+
+    private readonly TeammatePaths teammatePaths;
     private readonly PersonaModelStore models;
     private readonly PersonaEffortStore efforts;
     private readonly ILogger<PersonaStore> logger;
@@ -100,32 +106,48 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     // publish of an immutable snapshot needs, and PersonaIndex never mutates once built.
     private volatile PersonaIndex index;
 
+    // Computed alongside `index` by RebuildIndexFromDisk, and swapped in at the same three call
+    // sites (the constructor, PublishFreshIndex and OnDebounceElapsed) - never on its own, so a
+    // reader never sees warnings for a stale index or vice versa.
+    private volatile IReadOnlyList<RejectedPersonaFile> folderWarnings = [];
+
+    // Guarded by watchGate. Counts consecutive debounced rebuilds aborted by a locked file; reset
+    // to 0 by a successful rebuild or by OnWatcherEvent scheduling a fresh debounce for a new
+    // external change, so a permanently-locked file gives up after MaxConsecutiveLockRetries rather
+    // than retrying forever, but a later, unrelated change gets its own full retry budget.
+    private int consecutiveLockRetries;
+
     /// <summary>Scans the Teams directory and starts watching it for changes.</summary>
-    /// <param name="options">Supplies <see cref="TeamOptions.DataDir"/> and <see cref="AcpOptions.TeamsDir"/>, which together locate the Teams directory.</param>
+    /// <param name="teammatePaths">Locates the Teams directory that this store scans and watches.</param>
     /// <param name="models">The SQLite-backed store for each Persona's chosen Model.</param>
     /// <param name="efforts">The SQLite-backed store for each Persona's chosen Effort.</param>
     /// <param name="logger">Used to warn if the filesystem watcher reports a dropped-event buffer overflow.</param>
     public PersonaStore(
-        IOptions<TeamOptions> options,
+        TeammatePaths teammatePaths,
         PersonaModelStore models,
         PersonaEffortStore efforts,
         ILogger<PersonaStore> logger)
     {
-        ArgumentNullException.ThrowIfNull(options);
+        ArgumentNullException.ThrowIfNull(teammatePaths);
         ArgumentNullException.ThrowIfNull(models);
         ArgumentNullException.ThrowIfNull(efforts);
         ArgumentNullException.ThrowIfNull(logger);
 
+        this.teammatePaths = teammatePaths;
         this.models = models;
         this.efforts = efforts;
         this.logger = logger;
-        this.teamsDir = Path.Combine(options.Value.DataDir, options.Value.Acp.TeamsDir);
 
         // Created eagerly (rather than lazily on first Add) so the watcher below has a directory
         // to watch from the moment the app starts, even before any Persona has been added.
-        Directory.CreateDirectory(this.teamsDir);
+        Directory.CreateDirectory(this.Paths.DefinitionsRoot);
 
-        this.index = this.RebuildIndexFromDisk();
+        // The initial scan never aborts: there is no previous index to protect from a stray
+        // PersonaRemoved, so a locked file is simply treated as a rejected file (isInitialScan:
+        // true never returns null - the `??` below is unreachable, kept only so the compiler can
+        // prove `index` is assigned without a null-forgiving operator).
+        var initialScan = this.RebuildIndexFromDisk(isInitialScan: true);
+        (this.index, this.folderWarnings) = initialScan ?? (PersonaIndex.Build([]), []);
 
         this.debounceTimer = new Timer(this.OnDebounceElapsed, null, Timeout.Infinite, Timeout.Infinite);
 
@@ -138,7 +160,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
         // edit again - no error, no log, nothing, exactly the shape docs/agencyteam/traps.md warns
         // about. NotifyFilters.DirectoryName is what makes a directory rename raise an event at
         // all.
-        this.watcher = new FileSystemWatcher(this.teamsDir, "*")
+        this.watcher = new FileSystemWatcher(this.Paths.DefinitionsRoot, "*")
         {
             IncludeSubdirectories = true,
             InternalBufferSize = WatcherInternalBufferSize,
@@ -224,8 +246,22 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// </summary>
     public IReadOnlyList<RejectedPersonaFile> RejectedFiles => this.index.Rejected;
 
+    /// <summary>
+    /// Every Persona that loaded cleanly even though its own file's folder is named differently
+    /// from its frontmatter Name (corrections-B2 item 12) - loaded, not rejected, but flagged so
+    /// the mismatch can be surfaced to the user.
+    /// </summary>
+    internal IReadOnlyList<RejectedPersonaFile> FolderWarnings => this.folderWarnings;
+
     /// <summary>The distinct Team names named by any valid Persona's frontmatter, sorted (ordinal).</summary>
     public IReadOnlyList<string> Teams => this.index.Teams;
+
+    /// <summary>
+    /// The <see cref="TeammatePaths"/> this store resolves every Persona-file path through -
+    /// exposed so <c>BuiltinTeammateSeeder</c> can resolve a candidate's definition path itself
+    /// without this store taking a dependency on the seeder.
+    /// </summary>
+    internal TeammatePaths Paths => this.teammatePaths;
 
     /// <summary>
     /// The absolute path of the Teams directory this store reads and writes Persona files under.
@@ -233,7 +269,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <see cref="Check"/> rejection message into one relative to it (Spec §6.8), without this
     /// store's own layout leaking any further than that one call site.
     /// </summary>
-    internal string TeamsDirectory => this.teamsDir;
+    internal string TeamsDirectory => this.Paths.DefinitionsRoot;
 
     /// <summary>
     /// Every valid Persona's Alias, paired with its Name. Implements <see cref="IMentionAliasSource"/>
@@ -321,7 +357,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
         // a colliding file before this Add's write is ever visible to it.
         lock (this.writeGate)
         {
-            var path = Path.Combine(this.teamsDir, $"{identity.Name}.md");
+            var path = this.Paths.DefinitionFile(identity.Name);
             if (File.Exists(path))
             {
                 throw new ChatException(ErrorCodes.BadMessage, $"Persona '{identity.Name}' already exists.");
@@ -331,7 +367,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
 
             entry = this.ValidateCandidate(path, text, excludingPath: null);
 
-            Directory.CreateDirectory(this.teamsDir);
+            Directory.CreateDirectory(this.Paths.TeammateFolder(identity.Name));
             File.WriteAllText(path, text);
             this.models.Set(entry.Name, model);
             this.efforts.Set(entry.Name, effort);
@@ -452,7 +488,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <param name="name">The Name to check a file does not already exist for.</param>
     internal void EnsureNoFileExistsFor(string name)
     {
-        var path = Path.Combine(this.teamsDir, $"{name}.md");
+        var path = this.Paths.DefinitionFile(name);
         if (File.Exists(path))
         {
             throw new ChatException(ErrorCodes.BadMessage, $"Persona '{name}' already exists.");
@@ -537,7 +573,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
         {
             if (!PersonaFrontmatter.TryReadIdentity(texts[index], out var identity, out _))
             {
-                paths.Add(Path.Combine(this.teamsDir, $"__check-{index}.md"));
+                paths.Add(Path.Combine(this.Paths.DefinitionsRoot, $"__check-{index}.md"));
                 continue;
             }
 
@@ -555,15 +591,15 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
             occurrencesByName[identity.Name] = occurrence + 1;
 
             paths.Add(occurrence == 0
-                ? Path.Combine(this.teamsDir, $"{identity.Name}.md")
-                : Path.Combine(this.teamsDir, $"{identity.Name}~{occurrence}.md"));
+                ? this.Paths.DefinitionFile(identity.Name)
+                : Path.Combine(this.Paths.TeammateFolder(identity.Name), $"{identity.Name}~{occurrence}.md"));
         }
 
         return paths;
     }
 
     /// <summary>
-    /// Whether <c>{teamsDir}/{name}.md</c> - the plain synthetic path <see cref="SyntheticPathsFor"/>
+    /// Whether <see cref="TeammatePaths.DefinitionFile(string)"/>'s path for <paramref name="name"/> - the plain synthetic path <see cref="SyntheticPathsFor"/>
     /// would otherwise give the FIRST text proposing <paramref name="name"/> - is already a real
     /// file's own path: a loaded Persona entry's <see cref="PersonaEntry.Path"/>, or a file on disk
     /// that never became one (a rejected file, or one written outside this process).
@@ -571,7 +607,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <param name="name">The Name to check.</param>
     private bool PlainPathIsTaken(string name)
     {
-        var plainPath = Path.Combine(this.teamsDir, $"{name}.md");
+        var plainPath = this.Paths.DefinitionFile(name);
         return this.index.Entries.Any(entry => string.Equals(entry.Path, plainPath, StringComparison.Ordinal)) || File.Exists(plainPath);
     }
 
@@ -628,24 +664,132 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     }
 
     /// <summary>
-    /// Scans the Teams directory recursively and parses every ".md" file into a fresh
-    /// <see cref="PersonaIndex"/>. The only place this class touches the filesystem to build the
-    /// index - <see cref="ValidateCandidate"/>, and <see cref="PersonaIndex"/> itself, are pure.
+    /// Scans the Teammates directory with ADR-0031's one-level layout (Spec §6.15) and parses every
+    /// admissible ".md" file into a fresh <see cref="PersonaIndex"/>. The only place this class
+    /// touches the filesystem to build the index - <see cref="ValidateCandidate"/>, and
+    /// <see cref="PersonaIndex"/> itself, are pure.
     /// </summary>
-    private PersonaIndex RebuildIndexFromDisk()
+    /// <remarks>
+    /// A file directly under <see cref="TeammatePaths.DefinitionsRoot"/> is rejected outright (a
+    /// definition must live inside its own teammate folder). Inside each teammate folder, only the
+    /// top-level ".md" whose stem matches the folder Name (case-insensitively) is a candidate
+    /// definition - <c>work/</c> and any other sub-folder are never descended into. Every OTHER
+    /// top-level ".md" in that folder is rejected (corrections-B2 item 14). A folder named
+    /// <c>_unsorted</c> is scanned recursively and every file inside it rejected with a fixed
+    /// migration reason (item 15); any other <c>_</c>- or <c>.</c>-prefixed folder is skipped
+    /// entirely - no Persona, no rejection.
+    /// </remarks>
+    /// <returns>
+    /// The fresh index, and the folder-name-mismatch warnings (corrections-B2 item 12) for every
+    /// entry it loaded whose own folder is named differently from its frontmatter Name.
+    /// </returns>
+    /// <param name="isInitialScan">
+    /// <see langword="true"/> only for the constructor's first scan, which has no previous index to
+    /// protect: a locked definition file is recorded as a rejected file (never <see langword="null"/>).
+    /// <see langword="false"/> for every rescan that follows (the debounced watcher path and
+    /// <see cref="RescanNow"/>/<see cref="PublishFreshIndex"/>): a locked file there aborts the whole
+    /// rebuild and returns <see langword="null"/>, so the caller keeps its current index rather than
+    /// publish one missing that Persona and raising a spurious <see cref="PersonaRemoved"/>.
+    /// </param>
+    private (PersonaIndex Index, IReadOnlyList<RejectedPersonaFile> FolderWarnings)? RebuildIndexFromDisk(bool isInitialScan)
     {
-        if (!Directory.Exists(this.teamsDir))
+        if (!Directory.Exists(this.Paths.DefinitionsRoot))
         {
-            return PersonaIndex.Build([]);
+            return (PersonaIndex.Build([]), []);
         }
 
-        // SearchOption.AllDirectories: Team sub-folders are purely organisational, so a Persona
-        // nested under one is exactly as much a Persona as one at the top level.
-        var files = Directory.GetFiles(this.teamsDir, "*.md", SearchOption.AllDirectories)
-            .Select(path => (Path: path, Text: File.ReadAllText(path)))
+        var candidates = new List<(string Path, string Text)>();
+        var preRejected = new List<RejectedPersonaFile>();
+
+        foreach (var rootFile in Directory.GetFiles(this.Paths.DefinitionsRoot, "*.md", SearchOption.TopDirectoryOnly))
+        {
+            preRejected.Add(new RejectedPersonaFile(rootFile, "A definition must be inside its teammate's folder."));
+        }
+
+        foreach (var folder in Directory.GetDirectories(this.Paths.DefinitionsRoot))
+        {
+            var folderName = Path.GetFileName(folder);
+
+            if (string.Equals(folderName, "_unsorted", StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var strayFile in Directory.GetFiles(folder, "*", SearchOption.AllDirectories))
+                {
+                    preRejected.Add(new RejectedPersonaFile(strayFile, "Moved here by the layout migration."));
+                }
+
+                continue;
+            }
+
+            if (folderName.StartsWith('_') || folderName.StartsWith('.'))
+            {
+                continue;
+            }
+
+            var markdownFiles = Directory.GetFiles(folder, "*.md", SearchOption.TopDirectoryOnly);
+            var ownDefinition = markdownFiles.FirstOrDefault(file =>
+                string.Equals(Path.GetFileNameWithoutExtension(file), folderName, StringComparison.OrdinalIgnoreCase));
+
+            foreach (var file in markdownFiles)
+            {
+                if (string.Equals(file, ownDefinition, StringComparison.Ordinal))
+                {
+                    string text;
+                    try
+                    {
+                        text = File.ReadAllText(file);
+                    }
+                    catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                    {
+                        if (isInitialScan)
+                        {
+                            preRejected.Add(new RejectedPersonaFile(file, "Couldn't read this file; it's in use."));
+                            continue;
+                        }
+
+                        this.logger.LogWarning(
+                            ex,
+                            "PersonaStore couldn't read '{Path}' while rebuilding the index; it's in use, so the current index is kept and the rebuild will retry.",
+                            file);
+                        return null;
+                    }
+
+                    candidates.Add((file, text));
+                }
+                else
+                {
+                    preRejected.Add(new RejectedPersonaFile(file, "A teammate folder holds only its definition; use work/."));
+                }
+            }
+        }
+
+        var built = PersonaIndex.Build(candidates);
+        var rejected = preRejected
+            .Concat(built.Rejected)
+            .OrderBy(file => file.Path, StringComparer.Ordinal)
             .ToList();
 
-        return PersonaIndex.Build(files);
+        return (new PersonaIndex(built.Entries, rejected, built.Teams), FolderWarningsFor(built.Entries));
+    }
+
+    /// <summary>
+    /// Every entry (corrections-B2 item 12) whose own file's folder is named differently from its
+    /// frontmatter Name - loaded, not rejected, but flagged so the mismatch can be surfaced.
+    /// </summary>
+    /// <param name="entries">The entries <see cref="PersonaIndex.Build"/> just produced.</param>
+    private static List<RejectedPersonaFile> FolderWarningsFor(IReadOnlyList<PersonaEntry> entries)
+    {
+        var warnings = new List<RejectedPersonaFile>();
+
+        foreach (var entry in entries)
+        {
+            var folderName = Path.GetFileName(Path.GetDirectoryName(entry.Path));
+            if (!string.Equals(folderName, entry.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                warnings.Add(new RejectedPersonaFile(entry.Path, $"Its folder is named '{folderName}', not '{entry.Name}'."));
+            }
+        }
+
+        return warnings.OrderBy(file => file.Path, StringComparer.Ordinal).ToList();
     }
 
     /// <summary>
@@ -677,8 +821,19 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
                 return null;
             }
 
+            var rebuilt = this.RebuildIndexFromDisk(isInitialScan: false);
+            if (rebuilt is not { } fresh)
+            {
+                // A locked file aborted the rebuild: nothing to publish, same as the disposed
+                // case above - RescanNow (PersonaRenameCascade's caller) must not throw here, and
+                // Add/Update still wrote their own file successfully even though this republish
+                // of the WHOLE index did not happen this time.
+                return null;
+            }
+
+            this.consecutiveLockRetries = 0;
             var previous = this.index;
-            this.index = this.RebuildIndexFromDisk();
+            (this.index, this.folderWarnings) = fresh;
             return (previous, this.index);
         }
     }
@@ -723,9 +878,23 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// other, and a delete never collides with anything the way a colliding Name or Alias can.
     /// <see cref="Add"/> and <see cref="Update"/> instead call <see cref="PublishFreshIndex"/>
     /// themselves, synchronously, before releasing <see cref="writeGate"/>, and call
-    /// <see cref="NotifyChanged"/> only after releasing it.
+    /// <see cref="NotifyChanged"/> only after releasing it. Also called directly, as
+    /// <see cref="RescanNow"/>, by <see cref="PersonaRenameCascade"/> right after it moves a
+    /// Teammate folder on disk - without that call, this store's cached index would keep pointing
+    /// a subsequent <see cref="Update"/> at the pre-move path until the file system watcher's own
+    /// <see cref="WatcherDebounceMilliseconds"/>-later rescan caught up, and a rename applied again
+    /// before then would fail writing to a folder the move had already renamed away.
     /// </summary>
     private void RefreshIndexAndNotify() => this.NotifyChanged(this.PublishFreshIndex());
+
+    /// <summary>
+    /// Rescans disk and republishes the index immediately, exactly as the debounced file system
+    /// watcher eventually would on its own. Exposed for <see cref="PersonaRenameCascade"/> to call
+    /// right after it moves a Teammate folder out from under this store's cached index - see
+    /// <see cref="RefreshIndexAndNotify"/>'s remarks for why waiting for the watcher's own debounce
+    /// is not good enough there.
+    /// </summary>
+    internal void RescanNow() => this.RefreshIndexAndNotify();
 
     /// <summary>
     /// Diffs <paramref name="previous"/> against <paramref name="updated"/>, keyed by
@@ -793,11 +962,14 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
 
     /// <summary>
     /// Diffs <paramref name="previous"/> against <paramref name="updated"/>, keyed by
-    /// <see cref="PersonaEntry.Path"/> exactly as <see cref="RaiseRenames"/> does, and publishes
-    /// <see cref="PersonaRemoved"/> once for every path present in <paramref name="previous"/> with no
-    /// matching path in <paramref name="updated"/>. Because a rename keeps its path, a renamed Persona
-    /// is never mistaken for a removed one, and there is no ordering hazard between this diff and
-    /// <see cref="RaiseRenames"/>'s.
+    /// <see cref="PersonaEntry.Name"/> (case-insensitive), and publishes <see cref="PersonaRemoved"/>
+    /// once for every Name present in <paramref name="previous"/> with no matching Name in
+    /// <paramref name="updated"/>. Keyed by Name rather than by <see cref="PersonaEntry.Path"/>
+    /// (corrections-B2 item 19): a Teammate-folder move changes a Persona's Path without changing its
+    /// Name, and a Path-keyed diff would misread that move as the old Path disappearing - raising a
+    /// false <see cref="PersonaRemoved"/> for the Persona <see cref="PersonaRenameCascade"/> had just
+    /// renamed, which <see cref="PersonaRenameCascade.OnPersonaRemoved"/> would then react to by
+    /// deleting the just-renamed Avatar, File Changes state and Room Session it exists to preserve.
     /// </summary>
     /// <param name="previous">The index in effect before this refresh.</param>
     /// <param name="updated">The freshly rebuilt index about to become current.</param>
@@ -808,11 +980,11 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
             return;
         }
 
-        var updatedPaths = updated.Entries.Select(entry => entry.Path).ToHashSet(StringComparer.Ordinal);
+        var updatedNames = updated.Entries.Select(entry => entry.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         foreach (var before in previous.Entries)
         {
-            if (updatedPaths.Contains(before.Path))
+            if (updatedNames.Contains(before.Name))
             {
                 continue;
             }
@@ -849,7 +1021,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
 
     private void OnWatcherEvent(object sender, FileSystemEventArgs e)
     {
-        if (!AffectsATeamsFile(e))
+        if (!AffectsATeamsFile(this.Paths.DefinitionsRoot, e))
         {
             return;
         }
@@ -861,6 +1033,9 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
                 return;
             }
 
+            // A genuine new external change gets its own full retry budget, even if the previous
+            // burst had exhausted MaxConsecutiveLockRetries against a file that was locked then.
+            this.consecutiveLockRetries = 0;
             this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
         }
     }
@@ -871,7 +1046,7 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     //   - A directory appearing: on Linux, IncludeSubdirectories is emulated - the watcher adds an
     //     inotify watch for a new sub-folder only after it reads that folder's own Created event,
     //     so a Persona file written into the folder in that gap raises nothing at all (mkdir then
-    //     write, a copied or unzipped Team folder). The folder's Created event is the one signal
+    //     write: every new Teammates/<Name>/ folder, or a copied or unzipped one). The folder's Created event is the one signal
     //     that is guaranteed, and the debounced refresh rescans from disk, so it finds whatever
     //     landed inside. Missing this left the Persona unloaded until some unrelated change
     //     happened to trigger a rescan - under CI load, roughly one new folder in six.
@@ -889,11 +1064,39 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     //     Missing this used to just mean a stale ListNames() entry; now that the index CACHES each
     //     file's text, missing it means PersonaSupervisor and the razor card keep serving stale
     //     prompt text for every Persona that was nested under the removed folder, forever.
-    internal static bool AffectsATeamsFile(FileSystemEventArgs e) =>
-        IsMarkdownFile(e.Name)
-        || (e.ChangeType == WatcherChangeTypes.Created && Directory.Exists(e.FullPath))
-        || (e.ChangeType == WatcherChangeTypes.Renamed && Directory.Exists(e.FullPath))
-        || (e.ChangeType == WatcherChangeTypes.Deleted && HasNoExtension(e.Name));
+    //
+    // corrections-B2 item 13: on top of that, an event matters only when its path relative to
+    // DefinitionsRoot has AT MOST 2 SEGMENTS ("<Folder>" or "<Folder>/<file>") - never "ignore a
+    // segment equal to Acp.WorkDir", which would also hide a teammate genuinely named "work". This
+    // is what keeps a write under a teammate's own work/ folder from restarting it. The
+    // directory-Created rescan above is narrower still: only a folder ONE segment deep (a new
+    // Teammates/<Name>/) can hold a definition, so creating <Name>/work/ or anything below it never
+    // triggers one (Watcher_WriteUnderWork_DoesNotRaisePersonasChanged).
+    //
+    // Manager's review of part (a): a RenamedEventArgs also matters when its OLD path (not just its
+    // new one) was a definition. Windows' FileSystemWatcher reports a cross-directory move as
+    // separate Deleted/Created events (so this never manifests there - the Deleted-at-old-path event
+    // already qualifies through IsMarkdownFile below), but a platform whose watcher correlates a
+    // cross-directory move into one Renamed event (this solution's CI runs on Linux) would otherwise
+    // ignore it entirely on the strength of the new, deeper path alone: moving
+    // Teammates/Nova/Nova.md into Teammates/Nova/work/Nova.md must still be noticed, or Nova keeps
+    // loading from a file that no longer exists.
+    internal static bool AffectsATeamsFile(string definitionsRoot, FileSystemEventArgs e) =>
+        (HasAtMostTwoSegments(definitionsRoot, e.FullPath)
+            || (e is RenamedEventArgs renamed && HasAtMostTwoSegments(definitionsRoot, renamed.OldFullPath)))
+        && (IsMarkdownFile(e.Name)
+            || (e.ChangeType == WatcherChangeTypes.Created && SegmentCount(definitionsRoot, e.FullPath) == 1 && Directory.Exists(e.FullPath))
+            || (e.ChangeType == WatcherChangeTypes.Renamed && Directory.Exists(e.FullPath))
+            || (e.ChangeType == WatcherChangeTypes.Deleted && HasNoExtension(e.Name)));
+
+    private static bool HasAtMostTwoSegments(string definitionsRoot, string fullPath) =>
+        SegmentCount(definitionsRoot, fullPath) <= 2;
+
+    private static int SegmentCount(string definitionsRoot, string fullPath)
+    {
+        var relative = Path.GetRelativePath(definitionsRoot, fullPath);
+        return relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries).Length;
+    }
 
     private static bool IsMarkdownFile(string? name) =>
         name is not null && string.Equals(Path.GetExtension(name), ".md", StringComparison.OrdinalIgnoreCase);
@@ -957,8 +1160,31 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
             // reading this store from inside its own PersonasChanged handler (PersonaSupervisor
             // does exactly this) must see the state the filesystem change just produced, not
             // whatever was true before it.
+            var rebuilt = this.RebuildIndexFromDisk(isInitialScan: false);
+            if (rebuilt is not { } fresh)
+            {
+                // Aborted by a locked file: keep the current index, raise nothing (skipping the
+                // file would raise a spurious PersonaRemoved and cascade-delete its state - see
+                // RebuildIndexFromDisk's remarks), and re-arm the debounce to retry, capped so a
+                // permanently-locked file does not retry forever.
+                this.consecutiveLockRetries++;
+                if (this.consecutiveLockRetries <= MaxConsecutiveLockRetries)
+                {
+                    this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
+                }
+                else
+                {
+                    this.logger.LogError(
+                        "PersonaStore gave up retrying a locked Persona file after {Retries} consecutive attempts; it will try again on the next change.",
+                        this.consecutiveLockRetries);
+                }
+
+                return;
+            }
+
+            this.consecutiveLockRetries = 0;
             previous = this.index;
-            updated = this.RebuildIndexFromDisk();
+            (updated, this.folderWarnings) = fresh;
             this.index = updated;
             changed = this.PersonasChanged;
         }

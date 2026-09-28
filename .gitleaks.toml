@@ -95,4 +95,7 @@ paths = [
   '''\.mcp\.json$''',
   # Dotenv example/template files — placeholders only, safe to commit.
   '''(^|/)\.env\.(example|sample|template)$''',
+  # Vendored, pre-built CodeMirror 6 bundle (Library task 11.1): minified third-party JS, not
+  # source we wrote, and dense enough to false-positive the generic secret regexes.
+  '''(^|/)src/Huddle\.App/wwwroot/lib/codemirror/.*''',
 ]

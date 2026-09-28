@@ -6,6 +6,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.Contracts;
@@ -297,6 +298,107 @@ public sealed class PersonaSupervisorFileChangesTests
 
         await supervisor.StopAsync(ct);
     }
+
+    /// <summary>
+    /// Corrections-B6 item 8: with <c>Team:Library:Enabled</c> false, the supervisor passes no
+    /// <see cref="LibraryDocumentCollector"/> to the runner even though a real one is passed to this
+    /// supervisor's own constructor - a Turn on a path that would otherwise be collected carries no
+    /// Library documents block at all.
+    /// </summary>
+    [Fact]
+    public async Task Supervisor_LibraryDisabled_PassesNoCollector()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true", ["Team:Library:Enabled"] = "false" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        var libraryDocs = fixture.Services.GetRequiredService<LibraryDocumentCollector>();
+        using var skillStore = new SkillStore(options, NullLogger<SkillStore>.Instance);
+        using var supervisor = new PersonaSupervisor(
+            options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, libraryDocs: libraryDocs);
+
+        personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []), "You are Nova.");
+        await supervisor.StartAsync(ct);
+
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var workDir = OwnWorkDir(options.Value, "nova");
+        Directory.CreateDirectory(workDir);
+        var filePath = Path.Combine(workDir, "a.md");
+        File.WriteAllText(filePath, "content");
+        var uri = new Uri(filePath).AbsoluteUri;
+
+        factory.Session.EnqueueReply("ok");
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        var store = fixture.Services.GetRequiredService<IChatStore>();
+        await chat.PostAsync(roomId, KnownIds.Human, $"see {uri}", ct: ct);
+        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+
+        await supervisor.StopAsync(ct);
+
+        var header = new FakePromptSource().Render("turn.libraryDocsHeader", new Dictionary<string, string>());
+        Assert.Single(factory.Session.Prompts);
+        Assert.DoesNotContain(header, factory.Session.Prompts[0], StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// FC §6.11's Library counterpart: with the resolved Adapter Profile's <c>ReadsFiles</c> false, the
+    /// runner's Turn inlines the kept document's own text, even though <c>Team:Library:Enabled</c> is
+    /// left at its default (true).
+    /// </summary>
+    [Fact]
+    public async Task Supervisor_ReadsFilesFalse_ReachesTurn()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?>
+            {
+                ["Team:Acp:Enabled"] = "true",
+                ["Team:Acp:Adapters:0:Id"] = "agency",
+                ["Team:Acp:Adapters:0:Command"] = "agency-acp",
+                ["Team:Acp:Adapters:0:ReadsFiles"] = "false",
+            },
+            ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        var libraryDocs = fixture.Services.GetRequiredService<LibraryDocumentCollector>();
+        using var skillStore = new SkillStore(options, NullLogger<SkillStore>.Instance);
+        using var supervisor = new PersonaSupervisor(
+            options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore, libraryDocs: libraryDocs);
+
+        personaStore.Add(new PersonaIdentity("nova", "nova", "nova", []) { Adapter = "agency" }, "You are Nova.");
+        await supervisor.StartAsync(ct);
+
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var workDir = OwnWorkDir(options.Value, "nova");
+        Directory.CreateDirectory(workDir);
+        var filePath = Path.Combine(workDir, "a.md");
+        File.WriteAllText(filePath, "inlined because this Adapter cannot read files");
+        var uri = new Uri(filePath).AbsoluteUri;
+
+        factory.Session.EnqueueReply("ok");
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        var store = fixture.Services.GetRequiredService<IChatStore>();
+        await chat.PostAsync(roomId, KnownIds.Human, $"see {uri}", ct: ct);
+        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+
+        await supervisor.StopAsync(ct);
+
+        Assert.Single(factory.Session.Prompts);
+        Assert.Contains("inlined because this Adapter cannot read files", factory.Session.Prompts[0], StringComparison.Ordinal); // contains-ok: prompt text, not markup
+    }
+
+    /// <summary><paramref name="agentName"/>'s own Work Dir, always the first Watched Folder (FC §6.7 step 1).</summary>
+    private static string OwnWorkDir(TeamOptions options, string agentName) =>
+        new TeammatePaths(Options.Create(options)).WorkDir(agentName);
 
     /// <summary>Builds a fresh <see cref="PersonaHealth"/> against the real clock.</summary>
     private static PersonaHealth NewHealth() => new(TimeProvider.System, NullLogger<PersonaHealth>.Instance);

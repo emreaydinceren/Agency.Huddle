@@ -1,0 +1,351 @@
+@*
+    The Library's tree (Task 12.1): one top-level MudTreeViewItem per Scope, lazily loading children
+    through LibraryFileService.ListAsync via MudTreeView's ServerData. Bound as
+    MudTreeView<LibraryPath> with LibraryPathComparer (Root.Id + RelativePath), never LibraryEntry or
+    LibraryPath's own record equality, so a refresh that changes a file's size/timestamp - or a pinned
+    root rename - never drops selection or expansion (corrections-B6 item 22).
+
+    Each row's own "..." MudIconButton and a right-click on the row both open the SAME MudMenu, the
+    same two-door pattern RoomList.razor uses for its own row menu. The menu lists every
+    LibraryTreeActionKind; Rename/Move/Delete are disabled by LibraryProtection.For, with a settled,
+    locally-owned reason text as the item's SECONDARY text (never tooltip-only, item 26) - the wording
+    is duplicated here on purpose rather than read from LibraryProtection.Reason, per item 26.
+
+    Orphan Team folders come from TeamFolderCatalog.List over TaskStore.Teams (item 25), the same
+    source the board itself uses, so the two surfaces can never disagree about which folders are
+    orphans.
+*@
+@implements IDisposable
+@using Agency.Huddle.App.FileChanges
+@using Agency.Huddle.App.Library
+@inject LibraryFileService FileService
+@inject LibraryPathResolver Resolver
+@inject LibraryRootStore RootStore
+@inject TaskStore Tasks
+
+<MudTreeView T="LibraryPath" Items="@this.topItems" Comparer="LibraryPathComparer.Instance"
+             ServerData="@this.LoadChildrenAsync"
+             SelectedValue="@this.SelectedPath" SelectedValueChanged="@this.OnSelectedValueChangedAsync"
+             Class="library-tree">
+    <ItemTemplate Context="item">
+        @if (item.Value is LibraryPath value)
+        {
+            MudMenu? rowMenu = null;
+            bool missing = IsMissingPinnedRoot(value);
+            <MudTreeViewItem T="LibraryPath" Value="@value" @bind-Items="item.Children" @bind-Expanded="item.Expanded"
+                              @bind-Selected="item.Selected" CanExpand="@item.Expandable" Icon="@item.Icon" Text="@item.Text">
+                <BodyContent>
+                    <div class="library-tree-node"
+                         @oncontextmenu="@(e => this.OnRowContextMenuAsync(rowMenu, e))"
+                         @oncontextmenu:preventDefault="true">
+                        <span class="library-tree-node-name" @onclick="@(() => this.OnNameClickAsync(value))">@item.Text</span>
+                        @if (this.orphanFlags.TryGetValue(value, out bool isOrphan) && isOrphan)
+                        {
+                            <span class="library-tree-orphan" aria-label="@OrphanReason(item.Text ?? string.Empty)">
+                                <MudIcon Icon="@Icons.Material.Outlined.Warning" Size="Size.Small" Color="Color.Warning" />
+                            </span>
+                        }
+                        <MudMenu @ref="rowMenu" PositionAtCursor="true" Class="library-tree-menu">
+                            <ActivatorContent Context="menuContext">
+                                <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                               aria-label="@($"Actions for {item.Text}")"
+                                               Class="library-tree-actions-button"
+                                               OnClick="menuContext.ToggleAsync" />
+                            </ActivatorContent>
+                            <ChildContent>
+                                @foreach (MenuAction action in MenuActionsFor(value, this.ScopeFor(value)))
+                                {
+                                    <MudMenuItem Disabled="@action.Disabled" OnClick="@(() => this.RaiseActionAsync(action.Kind, value))">
+                                        <div class="library-tree-menu-label">@action.Label</div>
+                                        @if (action.Reason is not null)
+                                        {
+                                            <div class="library-tree-menu-reason">@action.Reason</div>
+                                        }
+                                    </MudMenuItem>
+                                }
+                            </ChildContent>
+                        </MudMenu>
+                    </div>
+                    @if (missing)
+                    {
+                        <div class="library-tree-missing">Folder not found</div>
+                    }
+                    else if (item.Expandable && item.Expanded)
+                    {
+                        @if (item.Children is null)
+                        {
+                            <span class="library-tree-loading" aria-label="Loading">
+                                <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                            </span>
+                        }
+                        else if (item.Children.Count == 0)
+                        {
+                            <div class="library-tree-empty">
+                                <span class="library-tree-empty-text">No notes here yet.</span>
+                                <MudButton Class="library-tree-empty-new-note" Size="Size.Small"
+                                           OnClick="@(() => this.RaiseActionAsync(LibraryTreeActionKind.NewNote, value))">New note</MudButton>
+                            </div>
+                        }
+                    }
+                </BodyContent>
+            </MudTreeViewItem>
+        }
+    </ItemTemplate>
+</MudTreeView>
+
+@code {
+    private const string TeamProtectedReason = "Team and Project folders can't be renamed, moved or deleted here.";
+    private const string TeammateProtectedReason = "Teammate folders can't be renamed, moved or deleted here.";
+    private const string RootProtectedReason = "A Library root can't be renamed, moved or deleted.";
+
+    private readonly Dictionary<LibraryPath, bool> orphanFlags = new(LibraryPathComparer.Instance);
+    private IReadOnlyList<TreeItemData<LibraryPath>> topItems = [];
+
+    /// <summary>The Library scopes shown as top-level nodes, in order.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<LibraryPath> Scopes { get; set; } = [];
+
+    /// <summary>The currently selected node, if any.</summary>
+    [Parameter]
+    public LibraryPath? SelectedPath { get; set; }
+
+    /// <summary>Raised when the selection changes.</summary>
+    [Parameter]
+    public EventCallback<LibraryPath?> SelectedPathChanged { get; set; }
+
+    /// <summary>Raised when a file node is clicked, so a host can open it.</summary>
+    [Parameter]
+    public EventCallback<LibraryPath> OnOpenFile { get; set; }
+
+    /// <summary>Raised when a row's menu (or the empty state's "New note" button) chooses an action.</summary>
+    [Parameter]
+    public EventCallback<LibraryTreeAction> OnAction { get; set; }
+
+    /// <inheritdoc/>
+    protected override void OnInitialized()
+    {
+        this.topItems = [.. this.Scopes.Select(this.BuildScopeItem)];
+        this.RootStore.RootsChanged += this.OnRootsChanged;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose() => this.RootStore.RootsChanged -= this.OnRootsChanged;
+
+    /// <summary>
+    /// Rebuilds the top-level nodes (picking up a renamed pinned root, item 22) and reloads the
+    /// children of every currently expanded folder, so a Refresh never silently goes stale.
+    /// </summary>
+    public async Task RefreshAsync()
+    {
+        List<TreeItemData<LibraryPath>> rebuilt = [];
+        foreach (LibraryPath scope in this.Scopes)
+        {
+            TreeItemData<LibraryPath> item = this.BuildScopeItem(scope);
+            TreeItemData<LibraryPath>? previous = this.topItems.FirstOrDefault(
+                candidate => LibraryPathComparer.Instance.Equals(candidate.Value, scope));
+            if (previous is { Expanded: true })
+            {
+                item.Expanded = true;
+                item.Children = await this.LoadChildrenAsync(scope);
+                await this.ReloadExpandedChildrenAsync(item);
+            }
+
+            rebuilt.Add(item);
+        }
+
+        this.topItems = rebuilt;
+        this.StateHasChanged();
+    }
+
+    /// <summary>Recursively reloads the children of every still-expanded descendant of <paramref name="item"/>.</summary>
+    /// <param name="item">A node whose <see cref="TreeItemData{T}.Children"/> was just (re)loaded.</param>
+    private async Task ReloadExpandedChildrenAsync(TreeItemData<LibraryPath> item)
+    {
+        if (item.Children is null)
+        {
+            return;
+        }
+
+        List<ITreeItemData<LibraryPath>> reloaded = [];
+        foreach (ITreeItemData<LibraryPath> child in item.Children)
+        {
+            if (child is TreeItemData<LibraryPath> { Expanded: true, Value: LibraryPath childValue } expandedChild)
+            {
+                expandedChild.Children = await this.LoadChildrenAsync(childValue);
+                await this.ReloadExpandedChildrenAsync(expandedChild);
+            }
+
+            reloaded.Add(child);
+        }
+
+        item.Children = reloaded;
+    }
+
+    private void OnRootsChanged() => _ = this.DispatchAsync(this.RefreshAsync);
+
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+
+    private async Task OnSelectedValueChangedAsync(LibraryPath value) => await this.SelectedPathChanged.InvokeAsync(value);
+
+    private async Task OnNameClickAsync(LibraryPath path)
+    {
+        if (path.Role == LibraryNodeRole.File)
+        {
+            await this.OnOpenFile.InvokeAsync(path);
+        }
+    }
+
+    private async Task RaiseActionAsync(LibraryTreeActionKind kind, LibraryPath path) =>
+        await this.OnAction.InvokeAsync(new LibraryTreeAction(kind, path, null));
+
+    /// <summary>Opens the row's own <see cref="MudMenu"/> at the pointer, so a right-click reaches the same menu the "..." button does.</summary>
+    /// <param name="menu">The row's menu, or <see langword="null"/> if it has not rendered yet.</param>
+    /// <param name="e">The right-click's mouse event args.</param>
+    private async Task OnRowContextMenuAsync(MudMenu? menu, MouseEventArgs e)
+    {
+        if (menu is not null)
+        {
+            await menu.OpenMenuAsync(e);
+        }
+    }
+
+    private TreeItemData<LibraryPath> BuildScopeItem(LibraryPath scope)
+    {
+        bool exists = Directory.Exists(scope.FullPath);
+        return new TreeItemData<LibraryPath>
+        {
+            Value = scope,
+            Text = this.ScopeDisplayName(scope),
+            Icon = IconFor(scope.Role, isFolder: true),
+            Expandable = exists,
+            Selected = LibraryPathComparer.Instance.Equals(scope, this.SelectedPath),
+        };
+    }
+
+    /// <summary>The scope's current display name: for a whole root, read live from <see cref="RootStore"/>
+    /// so a pinned-root rename (item 22) shows up without losing this node's identity; for a folder scope
+    /// (Spec §6.16 "Inside a scope"), the folder's own name.</summary>
+    private string ScopeDisplayName(LibraryPath scope)
+    {
+        if (scope.RelativePath.Length > 0)
+        {
+            int lastSlash = scope.RelativePath.LastIndexOf('/');
+            return lastSlash < 0 ? scope.RelativePath : scope.RelativePath[(lastSlash + 1)..];
+        }
+
+        LibraryRoot? current = this.RootStore.Roots.FirstOrDefault(
+            root => FolderSnapshot.PathComparer.Equals(root.FullPath, scope.Root.FullPath));
+        return current?.DisplayName ?? scope.Root.DisplayName;
+    }
+
+    /// <summary>Lists a folder's children (Spec §6.4) and marks orphan Team folders (item 25).</summary>
+    /// <param name="parent">The already-resolved, already-expanded folder.</param>
+    private async Task<IReadOnlyCollection<TreeItemData<LibraryPath>>> LoadChildrenAsync(LibraryPath parent)
+    {
+        IReadOnlyList<LibraryEntry> entries = await this.FileService.ListAsync(parent, CancellationToken.None);
+
+        HashSet<string>? orphanNames = null;
+        if (parent.Root.Kind == LibraryRootKind.Teams && parent.RelativePath.Length == 0)
+        {
+            orphanNames = new HashSet<string>(
+                TeamFolderCatalog.List(this.Resolver, parent, this.Tasks.Teams).Where(folder => folder.IsOrphan).Select(folder => folder.Name),
+                StringComparer.Ordinal);
+        }
+
+        List<TreeItemData<LibraryPath>> items = [];
+        foreach (LibraryEntry entry in entries)
+        {
+            string leafName = GetLeafName(entry.Path.RelativePath);
+            this.orphanFlags[entry.Path] = orphanNames is not null && orphanNames.Contains(leafName);
+
+            items.Add(new TreeItemData<LibraryPath>
+            {
+                Value = entry.Path,
+                Text = leafName,
+                Icon = IconFor(entry.Path.Role, entry.IsFolder),
+                Expandable = entry.IsFolder,
+                Selected = LibraryPathComparer.Instance.Equals(entry.Path, this.SelectedPath),
+            });
+        }
+
+        return items;
+    }
+
+    private static bool IsMissingPinnedRoot(LibraryPath path) =>
+        path.Root.Kind == LibraryRootKind.Pinned
+        && path.RelativePath.Length == 0
+        && !Directory.Exists(path.FullPath);
+
+    private static string GetLeafName(string relativePath)
+    {
+        int lastSeparator = relativePath.LastIndexOfAny(['\\', '/']);
+        return lastSeparator < 0 ? relativePath : relativePath[(lastSeparator + 1)..];
+    }
+
+    private static string IconFor(LibraryNodeRole role, bool isFolder) => role switch
+    {
+        LibraryNodeRole.TeamFolder => Icons.Material.Outlined.Groups,
+        LibraryNodeRole.ProjectFolder => Icons.Material.Outlined.FolderSpecial,
+        LibraryNodeRole.TeammateFolder => Icons.Material.Outlined.Person,
+        _ => isFolder ? Icons.Material.Outlined.Folder : Icons.Material.Outlined.InsertDriveFile,
+    };
+
+    private static string OrphanReason(string teamName) => $"No teammate has the Team label \"{teamName}\".";
+
+    private static string? ReasonFor(LibraryNodeRole role) => role switch
+    {
+        LibraryNodeRole.Root => RootProtectedReason,
+        LibraryNodeRole.TeamFolder or LibraryNodeRole.ProjectFolder => TeamProtectedReason,
+        LibraryNodeRole.TeammateFolder or LibraryNodeRole.TeammateDefinition or LibraryNodeRole.WorkDir => TeammateProtectedReason,
+        _ => null,
+    };
+
+    /// <summary>The scope (from <see cref="Scopes"/>) that <paramref name="path"/> IS, so its menu is
+    /// protected like a root (Spec §6.16 "Inside a scope"); <see langword="null"/> for any other node.</summary>
+    private LibraryPath? ScopeFor(LibraryPath path) =>
+        this.Scopes.Contains(path, LibraryPathComparer.Instance) ? path : null;
+
+    private static IReadOnlyList<MenuAction> MenuActionsFor(LibraryPath path, LibraryPath? scope)
+    {
+        LibraryProtection protection = LibraryProtection.For(path, scope);
+        string? reason = ReasonFor(path.Role);
+
+        List<MenuAction> actions =
+        [
+            new(LibraryTreeActionKind.NewNote, "New note", false, null),
+            new(LibraryTreeActionKind.NewFolder, "New folder", false, null),
+        ];
+
+        if (path.Role == LibraryNodeRole.TeamFolder)
+        {
+            actions.Add(new MenuAction(LibraryTreeActionKind.NewProject, "New Project", false, null));
+        }
+
+        actions.Add(new MenuAction(LibraryTreeActionKind.Rename, "Rename", !protection.CanRename, protection.CanRename ? null : reason));
+        actions.Add(new MenuAction(LibraryTreeActionKind.Move, "Move", !protection.CanMove, protection.CanMove ? null : reason));
+        actions.Add(new MenuAction(LibraryTreeActionKind.CopyPath, "Copy path", false, null));
+        actions.Add(new MenuAction(LibraryTreeActionKind.OpenInDefaultApp, "Open in default app", false, null));
+        actions.Add(new MenuAction(LibraryTreeActionKind.Delete, "Delete", !protection.CanDelete, protection.CanDelete ? null : reason));
+
+        return actions;
+    }
+
+    /// <summary>One row of a node's context menu.</summary>
+    /// <param name="Kind">Which action this row raises.</param>
+    /// <param name="Label">The visible menu text.</param>
+    /// <param name="Disabled">Whether the action is disabled for this node.</param>
+    /// <param name="Reason">When disabled, the settled reason shown as secondary text.</param>
+    private readonly record struct MenuAction(LibraryTreeActionKind Kind, string Label, bool Disabled, string? Reason);
+}

@@ -18,7 +18,7 @@ namespace Agency.Huddle.App.Teammates;
 /// which cannot tell a Candidate colliding with a sibling Candidate apart from one colliding with
 /// the library - both produce the same rejection text, quoting an absolute filesystem path.
 /// <see cref="RewriteCollisionMessage"/> is what tells them apart afterwards: a quoted path that
-/// really exists is rewritten relative to the Teams directory; a quoted path that does not exist
+/// really exists is rewritten relative to the data directory; a quoted path that does not exist
 /// is <see cref="PersonaStore.Check"/>'s own synthetic stand-in for a sibling Candidate (Spec
 /// §6.8's "Each text gets a synthetic path"), rewritten to name that Candidate instead. Neither a
 /// synthetic path nor an absolute one is ever model-facing text on its own.
@@ -188,7 +188,7 @@ internal sealed partial class CandidateChecker(PersonaStore personas, ITeamDirec
     /// <summary>
     /// Rewrites every quoted <c>.md</c> path in one <see cref="PersonaStore.Check"/> rejection
     /// message so nothing filesystem-shaped reaches the model: a path that really exists under the
-    /// Teams directory becomes a relative <c>Teams/…</c> path with forward slashes; a path that
+    /// data directory becomes a relative <c>Teammates/…</c> path with forward slashes; a path that
     /// does not exist is one of <see cref="PersonaStore.Check"/>'s own synthetic stand-ins for a
     /// sibling Candidate, rewritten to name that Candidate instead. A message naming several paths
     /// (Spec §8.3's "joined multi-sentence messages") is rewritten sentence by sentence, in place.
@@ -200,11 +200,11 @@ internal sealed partial class CandidateChecker(PersonaStore personas, ITeamDirec
             var path = match.Groups[1].Value;
             if (File.Exists(path))
             {
-                // GetRelativePath is relative to the Teams directory ITSELF, so "Jarvis.md" - the
-                // "Teams/" prefix that makes it a path a Human can actually follow from the repo or
-                // DataDir root is added back here, not carried in that value.
-                var relative = Path.GetRelativePath(personas.TeamsDirectory, path).Replace('\\', '/');
-                return $"'Teams/{relative}'";
+                // GetRelativePath is relative to DataDir, so the result already carries the
+                // Teammates/<Name>/<Name>.md path a Human can follow from the DataDir root -
+                // no prefix needs adding back here, unlike the old flat Teams/ layout.
+                var relative = Path.GetRelativePath(personas.Paths.DataDir, path).Replace('\\', '/');
+                return $"'{relative}'";
             }
 
             return $"Candidate '{CandidateNameFromSyntheticPath(path)}'";

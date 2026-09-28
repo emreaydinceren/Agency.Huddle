@@ -30,8 +30,11 @@ namespace Agency.Huddle.App.Appearance;
 /// <see cref="Themes.AccentTheme.DarkDescriptor"/> ever read it; every other <see cref="ThemeId"/>
 /// ignores it.
 /// </param>
-internal sealed record AppearanceSettings(string? ThemeId, string? AccentColorHex)
+/// <param name="LibraryPaneSide">
+/// The Human's choice of which side the Library Pane appears on (left or right), defaulting to right.
+/// </param>
+internal sealed record AppearanceSettings(string? ThemeId, string? AccentColorHex, LibraryPaneSide LibraryPaneSide)
 {
-    /// <summary>The state when no <c>appearance.json</c> exists, or nothing in it is valid: no theme selected and no accent colour chosen, so the catalog's default applies.</summary>
-    public static AppearanceSettings Empty { get; } = new((string?)null, (string?)null);
+    /// <summary>The state when no <c>appearance.json</c> exists, or nothing in it is valid: no theme selected and no accent colour chosen, and the library pane defaults to right.</summary>
+    public static AppearanceSettings Empty { get; } = new((string?)null, (string?)null, LibraryPaneSide.Right);
 }

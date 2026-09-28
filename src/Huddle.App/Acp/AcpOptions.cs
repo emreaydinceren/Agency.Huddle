@@ -28,13 +28,11 @@ public sealed class AcpOptions
     public IReadOnlyList<AdapterProfileOptions>? Adapters { get; set; }
 
     /// <summary>
-    /// The Team Library directory, relative to <see cref="TeamOptions.DataDir"/>, that
-    /// <see cref="PersonaStore"/> scans recursively for Persona markdown files. Team sub-folders
-    /// under it are purely organisational — <c>Teams/Business/coo.md</c> is exactly as much a
-    /// Persona as <c>Teams/coo.md</c> — because team membership is a front-matter field a later
-    /// phase adds, not a filesystem convention this phase gives meaning to.
+    /// The Teammate folders directory, relative to <see cref="TeamOptions.DataDir"/>, that
+    /// <see cref="PersonaStore"/> scans one level deep for Teammate definition files (Spec §6.15,
+    /// §7). Replaces the retired old key, which now throws at start-up naming this one.
     /// </summary>
-    public string TeamsDir { get; set; } = "Teams";
+    public string TeammatesDir { get; set; } = "Teammates";
 
     /// <summary>
     /// The Skill Library directory, relative to <see cref="TeamOptions.DataDir"/>, that

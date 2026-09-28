@@ -5,17 +5,20 @@
     this tab shows facts, it does not change them - so, unlike Appearance, it has no local state,
     no store subscription and no save path.
 
-    Both paths are computed the same way SqliteTeamDirectory and PersonaStore's own constructors
-    compute them (Path.Combine off TeamOptions.DataDir, which ServiceCollectionExtensions'
-    PostConfigure<TeamOptions> has already resolved to an absolute path by the time any IOptions
-    consumer - this component included - sees it), rather than exposed as a public property on
-    either class: PersonaStore.teamsDir and SqliteTeamDirectory's connection string are both
-    private, and adding a public accessor to either for one read-only settings paragraph is more
-    surface than this needs.
+    The Persona path is resolved through TeammatePaths, the same helper PersonaStore's own
+    constructor uses, rather than a public property on PersonaStore itself. The database path is
+    computed the same way SqliteTeamDirectory's own constructor computes it (Path.Combine off
+    TeamOptions.DataDir, which ServiceCollectionExtensions' PostConfigure<TeamOptions> has already
+    resolved to an absolute path by the time any IOptions consumer - this component included -
+    sees it), rather than exposed as a public property: SqliteTeamDirectory's connection string is
+    private, and adding a public accessor for one read-only settings paragraph is more surface
+    than this needs.
 *@
 
 @using Microsoft.Extensions.Options
+@using Agency.Huddle.App.Acp
 @inject IOptions<TeamOptions> Options
+@inject TeammatePaths TeammatePaths
 
 <p class="teammates-intro">
     Persona files and the room database live in plain folders and files on disk, so you can back
@@ -35,10 +38,10 @@
 @code {
     /// <summary>
     /// Where <see cref="Agency.Huddle.App.Acp.PersonaStore"/> scans for and watches Persona
-    /// Markdown files - the same <c>Path.Combine(DataDir, Acp.TeamsDir)</c> its own constructor
-    /// computes.
+    /// Markdown files - <see cref="TeammatePaths.DefinitionsRoot"/>, the same helper its own
+    /// constructor uses.
     /// </summary>
-    private string TeamsDirPath => Path.Combine(this.Options.Value.DataDir, this.Options.Value.Acp.TeamsDir);
+    private string TeamsDirPath => this.TeammatePaths.DefinitionsRoot;
 
     /// <summary>
     /// Where <see cref="Agency.Huddle.App.Data.SqliteTeamDirectory"/> opens the room database -

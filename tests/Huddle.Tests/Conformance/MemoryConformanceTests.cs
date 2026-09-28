@@ -23,7 +23,7 @@ public sealed class MemoryConformanceTests
         await using MockAdapterFixture fixture = await MockAdapterFixture.StartAsync(persona, cancellationToken: ct);
 
         IOptions<TeamOptions> options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        string workDir = Path.Combine(options.Value.DataDir, options.Value.Acp.WorkDir, persona.Name);
+        string workDir = new TeammatePaths(options).WorkDir(persona.Name);
         string memoryDir = Path.Combine(workDir, "memory");
 
         Assert.True(Directory.Exists(memoryDir));

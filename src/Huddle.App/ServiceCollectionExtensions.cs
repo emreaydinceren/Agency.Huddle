@@ -7,6 +7,7 @@ using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
@@ -24,25 +25,50 @@ public static class ServiceCollectionExtensions
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(configuration);
 
-        // Acp.PersonaDir was renamed to Acp.TeamsDir (the "Teams" rename) with no back-compat
-        // fallback: nothing in appsettings*.json still sets the old key, so a fallback would be
-        // dead weight. But a value left behind in a user secret or an environment variable would
-        // otherwise bind to nothing, and PersonaStore would quietly scan an empty default "Teams"
-        // folder - zero teammates, no exception, no log anywhere. That silent-degradation shape is
-        // exactly what docs/agencyteam/traps.md exists to catch, so fail loudly at startup instead,
-        // naming the new key. This runs ahead of Configure<TeamOptions> below, in the one place
-        // both this app's Program.cs and every test that composes it (TeamWebApplicationFactory)
-        // are guaranteed to pass through.
+        // Acp.PersonaDir was renamed to Acp.TeamsDir (the "Teams" rename), and Acp.TeamsDir was in
+        // turn renamed to Acp.TeammatesDir (Spec §6.15, the Teammates-beside-Teams layout), with no
+        // back-compat fallback either time: nothing in appsettings*.json still sets either old key,
+        // so a fallback would be dead weight. But a value left behind in a user secret or an
+        // environment variable would otherwise bind to nothing, and PersonaStore would quietly scan
+        // an empty default "Teammates" folder - zero teammates, no exception, no log anywhere. That
+        // silent-degradation shape is exactly what docs/agencyteam/traps.md exists to catch, so fail
+        // loudly at startup instead, naming the new key. This runs ahead of Configure<TeamOptions>
+        // below, in the one place both this app's Program.cs and every test that composes it
+        // (TeamWebApplicationFactory) are guaranteed to pass through.
         if (configuration[$"{TeamOptions.SectionName}:Acp:PersonaDir"] is not null)
         {
             throw new InvalidOperationException(
                 $"Configuration key '{TeamOptions.SectionName}:Acp:PersonaDir' was renamed to " +
-                $"'{TeamOptions.SectionName}:Acp:TeamsDir'. Update the configuration source that sets it " +
+                $"'{TeamOptions.SectionName}:Acp:TeammatesDir'. Update the configuration source that sets it " +
                 "(environment variable, user secret, etc.) - there is no automatic fallback.");
         }
 
+        if (configuration[$"{TeamOptions.SectionName}:Acp:TeamsDir"] is not null)
+        {
+            throw new InvalidOperationException(
+                $"Configuration key '{TeamOptions.SectionName}:Acp:TeamsDir' was renamed to " +
+                $"'{TeamOptions.SectionName}:Acp:TeammatesDir'. Update the configuration source that sets it " +
+                "(environment variable, user secret, etc.) - there is no automatic fallback.");
+        }
+
+        // Team:Tasks:Dir retired with no fallback (Library Task G1.2, ADR-0030): the Tasks scan
+        // root is now Team:Teams:Dir, the same folder each Team's _tasks/ lives under. A value
+        // left behind would otherwise bind to nothing and TaskStore would quietly scan the
+        // default "Teams" folder - the same silent-degradation shape as the guards above.
+        if (configuration[$"{TeamOptions.SectionName}:Tasks:Dir"] is not null)
+        {
+            throw new InvalidOperationException(
+                $"Configuration key '{TeamOptions.SectionName}:Tasks:Dir' was replaced by " +
+                $"'{TeamOptions.SectionName}:Teams:Dir'. Tasks now live in each Team folder's _tasks/ folder; " +
+                "remove the key (the start-up migration reads {DataDir}/Tasks). There is no automatic fallback.");
+        }
+
         services.Configure<TeamOptions>(configuration.GetSection(TeamOptions.SectionName));
-        services.PostConfigure<TeamOptions>(options => options.DataDir = Path.GetFullPath(options.DataDir));
+        services.PostConfigure<TeamOptions>(options =>
+        {
+            options.DataDir = Path.GetFullPath(options.DataDir);
+            LayoutGuard.ValidateTeamsAndTeammates(options);
+        });
 
         services.AddSingleton<RoomEvents>();
 
@@ -93,6 +119,13 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<AgentGateway>();
         services.AddSingleton<IAgentGateway>(sp => sp.GetRequiredService<AgentGateway>());
+
+        services.AddSingleton<TeammatePaths>();
+
+        // Shared between PersonaRenameCascade (signals around a Teammate-folder move) and
+        // DotAcpAgentHostFactory (waits on it before creating a Persona's Work Dir) - corrections-B2
+        // item 20.
+        services.AddSingleton<TeammateFolderMoves>();
 
         // Unconditional: this is what lets the /teammates page be built and tested with no agent
         // process and no tokens, regardless of whether Team:Acp:Enabled is set.
@@ -178,8 +211,55 @@ public static class ServiceCollectionExtensions
 
         // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
         // this, and a plain registration cannot produce the two-watchers-on-one-path hazard the
+        // aliased registrations elsewhere in this file exist to avoid. Registered unconditionally
+        // (Team:Library:Enabled only gates the UI, per corrections-B3 4.1.i item 13); the
+        // constructor never throws on bad configuration.
+        services.AddSingleton<LibraryRootStore>();
+
+        // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
+        // this. Registered right after LibraryRootStore (corrections-B3 4.2.i item 28): it depends
+        // on nothing else, and the constructor never throws on bad configuration either.
+        services.AddSingleton<LibraryPathResolver>();
+
+        // The real recycle bin on Windows (Task 6.9.i); everywhere else, a placeholder that refuses
+        // every recycle so nothing is ever silently, permanently deleted.
+        services.AddSingleton<IRecycleBin>(_ => OperatingSystem.IsWindows() ? new WindowsRecycleBin() : new NotAvailableRecycleBin());
+
+        // No interface, same reasoning as AvatarStore above: nothing needs to substitute this.
+        // Registered right before LibraryFileService (Task 8.4.i), which will take it as a
+        // constructor dependency once the rewrite hooks land (8.5.i-a).
+        services.AddSingleton<WikiLinkIndex>();
+
+        // The real resolver behind ILibraryReferenceResolver/ILibraryNoteResolver (Task 9.3.i):
+        // one singleton, forwarded to both interfaces with the same idiom as ITaskReferenceResolver
+        // above, so MarkdownRenderer and Library note rendering share one instance.
+        services.AddSingleton<LibraryReferenceResolver>();
+        services.AddSingleton<ILibraryReferenceResolver>(sp => sp.GetRequiredService<LibraryReferenceResolver>());
+        services.AddSingleton<ILibraryNoteResolver>(sp => sp.GetRequiredService<LibraryReferenceResolver>());
+
+        // Registered right after LibraryPathResolver (corrections-B4 item 7): it depends on the
+        // resolver above and on IRecycleBin, registered just above.
+        services.AddSingleton<LibraryFileService>();
+
+        // Registered right after LibraryFileService (Task 10.2.i): collects the Library documents
+        // mentioned in a Turn's messages. No Library.Enabled gate here (corrections-B6 item 8) -
+        // PersonaSupervisor passes a null collector when the Library is disabled.
+        services.AddSingleton<LibraryDocumentCollector>();
+
+        // Same instance as the hosted service, the same singleton-plus-factory idiom as
+        // PersonaSupervisor/TaskTriggerService above (corrections-B4 item 33): the Library Pane's
+        // "New Project" trigger needs to call EnsureProject on the very instance the host is running.
+        services.AddSingleton<TeamFolderProvisioner>();
+        services.AddHostedService(sp => sp.GetRequiredService<TeamFolderProvisioner>());
+
+        // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
+        // this, and a plain registration cannot produce the two-watchers-on-one-path hazard the
         // aliased registrations elsewhere in this file exist to avoid.
         services.AddSingleton<ViewStore>();
+
+        // Scoped (Task 13.2.i): one Library Pane open/closed state per circuit, shared by
+        // LibraryNavLink, LibraryPaneHost and any ?library= navigation.
+        services.AddScoped<LibraryPaneState>();
 
         // Unconditional too, and for the same reason: the probe spends nothing on its own (it never
         // calls PromptAsync), so registering it costs nothing when Team:Acp:Enabled is off. What

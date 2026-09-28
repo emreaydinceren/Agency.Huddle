@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.Contracts;
@@ -73,6 +74,12 @@ internal sealed class RoomSession : IAsyncDisposable
     // "AI reacting" badge. Both null for a caller that predates it, the same "absent means off"
     // reasoning as ownPosts just above.
     private readonly TurnActivity? turnActivity;
+
+    // Spec §6.14: collects the Library documents mentioned in a Turn's Message and Catch-up. Null
+    // means the Library is off (PersonaSupervisor is the only place that gate is applied) or this
+    // caller predates it.
+    private readonly LibraryDocumentCollector? libraryDocs;
+    private readonly bool readsFiles;
 
     // Guards every field below: the queue, the state machine, the Stop marks, activeTurn and
     // pendingStopCancel - one lock, exactly as turnLock was on PersonaRunner, for the same reason:
@@ -148,6 +155,8 @@ internal sealed class RoomSession : IAsyncDisposable
     /// <param name="ownPosts">Marks this session's Room Busy for a Turn's own duration (D27, RS §6.7). <see langword="null"/> disables it, like every pre-D27 caller.</param>
     /// <param name="agentId">This session's owning Agent's id, passed to <paramref name="ownPosts"/> and <paramref name="turnActivity"/>. <see langword="null"/> disables it, like every pre-D27 caller.</param>
     /// <param name="turnActivity">Records which Room this Agent has a Turn running in (Spec §10.8). <see langword="null"/> disables it, like every caller that predates it.</param>
+    /// <param name="libraryDocs">Collects the Library documents mentioned in a Turn (Spec §6.14). <see langword="null"/> when the Library is off, like every caller that predates it.</param>
+    /// <param name="readsFiles">Whether the resolved Adapter Profile can read files (FC §6.11's Library counterpart): <see langword="false"/> inlines a kept document's own text instead of just its path.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -165,7 +174,9 @@ internal sealed class RoomSession : IAsyncDisposable
         IPersonaHost? host = null,
         OwnPosts? ownPosts = null,
         string? agentId = null,
-        TurnActivity? turnActivity = null)
+        TurnActivity? turnActivity = null,
+        LibraryDocumentCollector? libraryDocs = null,
+        bool readsFiles = true)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
@@ -193,6 +204,8 @@ internal sealed class RoomSession : IAsyncDisposable
         this.ownPosts = ownPosts;
         this.agentId = agentId;
         this.turnActivity = turnActivity;
+        this.libraryDocs = libraryDocs;
+        this.readsFiles = readsFiles;
 
         this.consumerTask = this.RunConsumerAsync(runToken);
     }
@@ -832,6 +845,33 @@ internal sealed class RoomSession : IAsyncDisposable
             }
         }
 
+        // Spec §6.14, corrections-B6 item 7 / B5 item 28: collected after the Transcript Catch-up
+        // read above and before the locked check-and-publish below, so a slow scan is never counted
+        // as Adapter silence, the same reasoning the File Changes collect above already relies on.
+        // Scans the triggering Message's own text, the catch-up buffer and, when this Turn set one,
+        // the Transcript Catch-up - never OwnPostLines (this Agent's own earlier posts, not new
+        // documents to fetch) and never a Greeting's empty text (the Kind check below). A scan or
+        // file-read failure must not kill the consumer loop, which nothing else drains.
+        if (this.libraryDocs is not null && item.Kind == WorkItemKind.Message)
+        {
+            try
+            {
+                IReadOnlyList<string> texts =
+                [
+                    item.Text,
+                    .. item.MissedMessages.Select(missed => missed.Text),
+                    .. item.Transcript?.Messages.Select(message => message.Text) ?? [],
+                ];
+                var report = await this.libraryDocs.CollectAsync(texts, this.readsFiles, ct);
+                item = item with { LibraryDocuments = report };
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                this.logger.LogWarning(
+                    ex, "Persona '{PersonaName}' failed to collect Library documents for room {RoomId}.", this.owner.PersonaName, item.RoomId);
+            }
+        }
+
         // Exactly one session serves every Room the Agent is in (there is one session per Persona in
         // shared mode), so a failed turn must log and continue rather than end the loop: a dying
         // agent process must not silently deafen the Agent for every other Room.
@@ -1430,6 +1470,7 @@ internal sealed class RoomSession : IAsyncDisposable
 
         var builder = new StringBuilder();
         RoomSession.AppendFileChangesBlock(builder, item.FileChanges, prompts);
+        RoomSession.AppendLibraryDocumentsBlock(builder, item.LibraryDocuments, prompts);
 
         // RS §6.5: the Transcript block replaces the catch-up buffer on this Turn only, and only
         // when it actually holds Messages — an empty Transcript (the read was refused, timed out, or
@@ -1561,6 +1602,110 @@ internal sealed class RoomSession : IAsyncDisposable
         }
 
         builder.Append('\n');
+    }
+
+    /// <summary>
+    /// Spec §6.14: with a non-empty <paramref name="report"/>, writes the Library documents block
+    /// directly after File Changes — the header, one line per document (a too-large document's line
+    /// replaces the ordinary one), the document's text fenced and truncation-noted when inlined, an
+    /// "…and N more documents." line when the cap left some out, then a blank line. Writes nothing for
+    /// a <see langword="null"/> or empty report: "absent means unchanged", as for File Changes.
+    /// </summary>
+    private static void AppendLibraryDocumentsBlock(StringBuilder builder, LibraryDocumentsReport? report, IPromptSource prompts)
+    {
+        if (report is null || report.IsEmpty)
+        {
+            return;
+        }
+
+        builder.Append(prompts.Render("turn.libraryDocsHeader", new Dictionary<string, string>()));
+        builder.Append('\n');
+
+        foreach (var item in report.Items)
+        {
+            if (item.TooLarge)
+            {
+                var sizeKb = (item.Length + 1023) / 1024;
+                builder.Append(prompts.Render(
+                    "turn.libraryDocTooLarge",
+                    new Dictionary<string, string>
+                    {
+                        ["{{label}}"] = item.Location,
+                        ["{{path}}"] = item.FullPath,
+                        ["{{sizeKb}}"] = sizeKb.ToString(CultureInfo.InvariantCulture),
+                    }));
+                builder.Append('\n');
+                continue;
+            }
+
+            builder.Append(prompts.Render(
+                "turn.libraryDoc",
+                new Dictionary<string, string>
+                {
+                    ["{{path}}"] = item.FullPath,
+                    ["{{location}}"] = item.Location,
+                    ["{{size}}"] = item.Size,
+                }));
+            builder.Append('\n');
+
+            if (item.Text is not null)
+            {
+                var fence = RoomSession.ChooseFence(item.Text);
+                builder.Append(prompts.Render(
+                    "turn.libraryDocInline",
+                    new Dictionary<string, string> { ["{{fence}}"] = fence, ["{{text}}"] = item.Text }));
+                builder.Append('\n');
+
+                if (item.Truncated)
+                {
+                    builder.Append(prompts.Render(
+                        "turn.libraryDocTruncated",
+                        new Dictionary<string, string>
+                        {
+                            ["{{max}}"] = report.MaxInlineBytes.ToString(CultureInfo.InvariantCulture),
+                            ["{{size}}"] = item.Size,
+                        }));
+                    builder.Append('\n');
+                }
+            }
+        }
+
+        if (report.NotListed > 0)
+        {
+            builder.Append(prompts.Render(
+                "turn.libraryDocsMore",
+                new Dictionary<string, string> { ["{{count}}"] = report.NotListed.ToString(CultureInfo.InvariantCulture) }));
+            builder.Append('\n');
+        }
+
+        builder.Append('\n');
+    }
+
+    /// <summary>
+    /// Corrections-B5 item 32: the fence for an inlined document's text is the longest run of
+    /// backticks already in that text, plus one, never shorter than three — so the fence can never be
+    /// closed early by a backtick run the text itself contains.
+    /// </summary>
+    /// <param name="text">The document's text about to be fenced.</param>
+    /// <returns>A run of backticks safe to wrap <paramref name="text"/> in.</returns>
+    private static string ChooseFence(string text)
+    {
+        var longestRun = 0;
+        var currentRun = 0;
+        foreach (var c in text)
+        {
+            if (c == '`')
+            {
+                currentRun++;
+                longestRun = Math.Max(longestRun, currentRun);
+            }
+            else
+            {
+                currentRun = 0;
+            }
+        }
+
+        return new string('`', Math.Max(3, longestRun + 1));
     }
 
     /// <summary>Builds the bracketed Room label that opens every line of a prompt.</summary>

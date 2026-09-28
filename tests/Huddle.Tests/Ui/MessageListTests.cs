@@ -5,9 +5,11 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Contracts;
+using Agency.Huddle.Tests.Library;
 
 namespace Agency.Huddle.Tests.Ui;
 
@@ -170,15 +172,109 @@ public sealed class MessageListTests
 
     /// <summary>Registers this factory's real <see cref="AvatarStore"/> into a fresh <see cref="MudBunitContext"/> - the same pattern <c>AppearanceAvatarTests.NewContext</c> and <c>TeammateCardTests.NewContext</c> use.</summary>
     /// <param name="factory">The factory whose composed <see cref="AvatarStore"/> singleton to reuse.</param>
-    private static MudBunitContext NewContext(TeamWebApplicationFactory factory)
+    /// <param name="library">The <see cref="ILibraryReferenceResolver"/> to register, or a fake that resolves nothing when omitted.</param>
+    /// <param name="options">The <see cref="IOptions{TOptions}"/> of <see cref="TeamOptions"/> to register, or the factory's own when omitted.</param>
+    /// <param name="tasks">The <see cref="ITaskReferenceResolver"/> to register, or a fake that resolves nothing when omitted.</param>
+    private static MudBunitContext NewContext(TeamWebApplicationFactory factory, ILibraryReferenceResolver? library = null, IOptions<TeamOptions>? options = null, ITaskReferenceResolver? tasks = null)
     {
         MudBunitContext ctx = new();
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<AvatarStore>());
 
         // MessageList now injects ITaskReferenceResolver and IOptions<TeamOptions> (Task 15.1) to
         // decide whether to link Task ids - needed even though these tests never resolve one.
-        ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
-        ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
+        ctx.Services.AddSingleton(tasks ?? new FakeTaskReferenceResolver());
+        ctx.Services.AddSingleton(options ?? factory.Services.GetRequiredService<IOptions<TeamOptions>>());
+
+        // MessageList now injects ILibraryReferenceResolver (Task 9.4) to decide whether to link
+        // absolute paths - needed even though most of these tests never resolve one.
+        ctx.Services.AddSingleton(library ?? new FakeLibraryNoteResolver());
         return ctx;
+    }
+
+    /// <summary>Builds a settled Message with <paramref name="text"/>, with an id and timestamp that carry no meaning of their own.</summary>
+    /// <param name="senderId">The Message's <see cref="ChatMessage.SenderId"/>.</param>
+    /// <param name="text">The Message's <see cref="ChatMessage.Text"/>.</param>
+    private static ChatMessage MessageWithText(string senderId, string text) =>
+        new("m-1", DateTimeOffset.UnixEpoch, senderId, "echo", text);
+
+    /// <summary>Builds a fake resolving exactly <paramref name="path"/> to <paramref name="rootId"/>/<paramref name="relativePath"/>.</summary>
+    /// <param name="path">The absolute path the fake resolves.</param>
+    /// <param name="rootId">The Library root id the resolved reference carries.</param>
+    /// <param name="relativePath">The forward-slash relative path the resolved reference carries.</param>
+    private static FakeLibraryNoteResolver LibraryResolverFor(string path, string rootId, string relativePath) =>
+        new(resolvePath: candidate => string.Equals(candidate, path, StringComparison.Ordinal)
+            ? new LibraryReference(rootId, relativePath, Exists: true)
+            : null);
+
+    /// <summary>An Agent Message containing an absolute path resolved by <see cref="ILibraryReferenceResolver"/> renders a <c>library-ref</c> link with the exact expected href (Spec §6.6).</summary>
+    [Fact]
+    public async Task Render_AgentMessageWithLibraryPath_HasLibraryRef()
+    {
+        const string PlanPath = @"E:\Data\Teams\Marketing\plan.md";
+        await using var factory = new TeamWebApplicationFactory();
+        FakeLibraryNoteResolver library = MessageListTests.LibraryResolverFor(PlanPath, "teams", "Marketing/plan.md");
+        await using var ctx = MessageListTests.NewContext(factory, library);
+        var message = MessageListTests.MessageWithText("u-1", string.Concat("See ", PlanPath));
+
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Messages, [message]));
+
+        var anchor = cut.Find("a.library-ref");
+        Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>With <c>Team:Library:Enabled</c> false, an absolute path in a Message is not linked, and the path text still renders (Spec §13.13.2's Library counterpart, correction B5 item 24).</summary>
+    [Fact]
+    public async Task Render_LibraryDisabled_NoLibraryRef()
+    {
+        const string PlanPath = @"E:\Data\Teams\Marketing\plan.md";
+        await using var factory = new TeamWebApplicationFactory();
+        FakeLibraryNoteResolver library = MessageListTests.LibraryResolverFor(PlanPath, "teams", "Marketing/plan.md");
+        IOptions<TeamOptions> options = Options.Create(new TeamOptions { Library = new LibraryOptions { Enabled = false } });
+        await using var ctx = MessageListTests.NewContext(factory, library, options);
+        var message = MessageListTests.MessageWithText("u-1", string.Concat("See ", PlanPath));
+
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Messages, [message]));
+
+        Assert.Empty(cut.FindAll("a.library-ref"));
+        Assert.Equal(string.Concat("See ", PlanPath), cut.Find(".message-body").TextContent.Trim());
+    }
+
+    /// <summary>The Human's own Message is rendered through the same <c>ToHtml</c> call as an Agent's, so an absolute path it contains is linked too - Spec §6.6 names "chat Messages" without distinguishing sender.</summary>
+    [Fact]
+    public async Task Render_HumanMessageWithLibraryPath_HasLibraryRef()
+    {
+        const string PlanPath = @"E:\Data\Teams\Marketing\plan.md";
+        await using var factory = new TeamWebApplicationFactory();
+        FakeLibraryNoteResolver library = MessageListTests.LibraryResolverFor(PlanPath, "teams", "Marketing/plan.md");
+        await using var ctx = MessageListTests.NewContext(factory, library);
+        var message = MessageListTests.MessageWithText(KnownIds.Human, string.Concat("See ", PlanPath));
+
+        var cut = ctx.Render<MessageList>(parameters => parameters
+            .Add(p => p.Messages, [message])
+            .Add(p => p.HumanIds, new[] { KnownIds.Human }));
+
+        var anchor = cut.Find("a.library-ref");
+        Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>A Message naming both a Task id and an absolute path renders both a <c>task-ref</c> and a <c>library-ref</c> link, unchanged from each other.</summary>
+    [Fact]
+    public async Task Render_MessageWithTaskIdAndLibraryPath_HasBothLinks()
+    {
+        const string PlanPath = @"E:\Data\Teams\Marketing\plan.md";
+        await using var factory = new TeamWebApplicationFactory();
+        FakeTaskReferenceResolver tasks = new();
+        FakeLibraryNoteResolver library = MessageListTests.LibraryResolverFor(PlanPath, "teams", "Marketing/plan.md");
+        await using var ctx = MessageListTests.NewContext(factory, library, tasks: tasks);
+        var taskId = new TaskId("HUD", 1);
+        tasks.Add(new TaskReference(taskId, "Write the plan", Closed: false));
+        var message = MessageListTests.MessageWithText("u-1", string.Concat("HUD-0001 see ", PlanPath));
+
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Messages, [message]));
+
+        var taskAnchor = cut.Find("a.task-ref");
+        Assert.Equal("/tasks/item/HUD-0001", taskAnchor.GetAttribute("href"));
+        var libraryAnchor = cut.Find("a.library-ref");
+        Assert.Equal("?library=teams/Marketing/plan.md", libraryAnchor.GetAttribute("href"));
     }
 }

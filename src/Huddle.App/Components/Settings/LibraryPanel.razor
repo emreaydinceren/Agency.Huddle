@@ -1,0 +1,167 @@
+@*
+    The Settings page's Library tab (Spec §6.10): the two built-in Library Roots (Teams,
+    Teammates) plus any pinned root, drawn straight off LibraryRootStore.Roots - never re-derived
+    here, the same "no local snapshot" shape SkillsPanel uses for SkillStore.All. A built-in root
+    can be hidden but never removed (a MudSwitch, no Remove button); a pinned root can be removed
+    but never hidden. Adding a folder requires it to exist on disk (LibraryRootStore.Save does not
+    check this itself - the panel does, before ever calling Save) and always shows the Spec's
+    trust warning. Reset asks through a real ShowMessageBoxAsync before calling
+    LibraryRootStore.Reset, which deletes library-roots.json.
+*@
+
+@using Agency.Huddle.App.Library
+@implements IDisposable
+
+@inject LibraryRootStore Roots
+@inject IDialogService DialogService
+
+<p class="teammates-intro">
+    A Library Root is a folder the Library can read and change. Teams and Teammates are always
+    here; pin any other folder to add it.
+</p>
+
+<MudSimpleTable Hover="true" Dense="true" Class="library-panel-roots-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Path</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var root in this.Roots.Roots)
+        {
+            <tr class="library-panel-root-row" data-root-id="@root.Id">
+                <td>@root.DisplayName</td>
+                <td>@root.FullPath</td>
+                <td>
+                    @if (root.Kind == LibraryRootKind.Pinned)
+                    {
+                        <MudButton Variant="Variant.Outlined" Size="Size.Small" Class="library-panel-remove-button" OnClick="@(() => this.RemoveAsync(root))">Remove</MudButton>
+                    }
+                    else
+                    {
+                        <MudSwitch T="bool" Value="@this.IsHidden(root.Id)" ValueChanged="@((bool hidden) => this.ToggleHiddenAsync(root.Id, hidden))" Class="library-panel-hide-switch" Label="Hide">Hide</MudSwitch>
+                    }
+                </td>
+            </tr>
+        }
+    </tbody>
+</MudSimpleTable>
+
+<MudText Typo="Typo.body2" Class="library-panel-trust-warning mt-2">Anything in this folder can be read and changed from Huddle.</MudText>
+
+@if (this.addError is not null)
+{
+    <MudAlert Severity="Severity.Error" Dense="true" Class="library-panel-add-error">@this.addError</MudAlert>
+}
+
+<MudStack Row="true" Spacing="2" Class="mt-2 library-panel-add-row">
+    <MudTextField T="string" Label="Name" @bind-Value="this.name" Class="library-panel-name-field" />
+    <MudTextField T="string" Label="Path" @bind-Value="this.path" Class="library-panel-path-field" />
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="library-panel-add-button" OnClick="this.AddAsync">Add</MudButton>
+</MudStack>
+
+<MudButton Variant="Variant.Outlined" Class="library-panel-reset-button mt-4" OnClick="this.ResetAsync">Reset pinned folders</MudButton>
+
+@code {
+    private string name = string.Empty;
+    private string path = string.Empty;
+    private string? addError;
+
+    /// <summary>Subscribes to <see cref="LibraryRootStore.RootsChanged"/> so this tab repaints when a Root is pinned, removed, hidden or reset from elsewhere.</summary>
+    protected override void OnInitialized()
+    {
+        this.Roots.RootsChanged += this.OnRootsChanged;
+    }
+
+    /// <summary>Unsubscribes from <see cref="LibraryRootStore.RootsChanged"/>.</summary>
+    public void Dispose()
+    {
+        this.Roots.RootsChanged -= this.OnRootsChanged;
+    }
+
+    /// <summary>Whether the built-in root <paramref name="id"/> is currently hidden.</summary>
+    /// <param name="id">A built-in root's id.</param>
+    private bool IsHidden(string id) => !this.Roots.VisibleRoots.Any(r => string.Equals(r.Id, id, StringComparison.Ordinal));
+
+    /// <summary>Hides or shows a built-in root through <see cref="LibraryRootStore.SetHidden(string, bool)"/>.</summary>
+    /// <param name="id">The built-in root's id.</param>
+    /// <param name="hidden">Whether it should be hidden.</param>
+    private Task ToggleHiddenAsync(string id, bool hidden)
+    {
+        this.Roots.SetHidden(id, hidden);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Adds <see cref="name"/>/<see cref="path"/> as a new pinned root, refusing with the Spec's
+    /// settled text when <see cref="path"/> is not an existing folder - <see cref="LibraryRootStore.Save"/>
+    /// itself does not check this, so the panel must before ever calling it.
+    /// </summary>
+    private Task AddAsync()
+    {
+        this.addError = null;
+        if (!Directory.Exists(this.path))
+        {
+            this.addError = "That folder doesn't exist.";
+            return Task.CompletedTask;
+        }
+
+        List<PinnedRootEntry> pinned = [.. this.Roots.Pinned, new PinnedRootEntry(this.name, this.path)];
+        this.Roots.Save(pinned);
+        this.name = string.Empty;
+        this.path = string.Empty;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Removes one pinned root (matched by its display name, which round-trips exactly through <see cref="PinnedRootEntry.Name"/>) and saves the rest.</summary>
+    /// <param name="root">The pinned root's own resolved <see cref="LibraryRoot"/>.</param>
+    private Task RemoveAsync(LibraryRoot root)
+    {
+        List<PinnedRootEntry> pinned = [.. this.Roots.Pinned.Where(p => !string.Equals(p.Name, root.DisplayName, StringComparison.Ordinal))];
+        this.Roots.Save(pinned);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Confirms through a real <see cref="MudDialog"/> (Spec §6.10, settled texts), then deletes <c>library-roots.json</c> via <see cref="LibraryRootStore.Reset"/>.</summary>
+    private async Task ResetAsync()
+    {
+        var confirmed = await this.DialogService.ShowMessageBoxAsync(
+            "Reset pinned folders?",
+            "Pinned folders go back to the configured list.",
+            yesText: "Reset",
+            cancelText: "Cancel");
+
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        this.Roots.Reset();
+    }
+
+    /// <summary>Repaints this tab when <see cref="LibraryRootStore.RootsChanged"/> fires, the same dispatch <c>SkillsPanel</c> uses for its own subscription.</summary>
+    private void OnRootsChanged()
+    {
+        _ = this.DispatchAsync(() =>
+        {
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+}

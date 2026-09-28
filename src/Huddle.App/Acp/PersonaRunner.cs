@@ -5,6 +5,7 @@ using System.IO.Pipes;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Teammates;
@@ -91,6 +92,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private readonly RoomSessionStore? roomSessions;
     private readonly OwnPosts? ownPosts;
     private readonly TurnActivity? turnActivity;
+    private readonly LibraryDocumentCollector? libraryDocs;
+    private readonly bool readsFiles;
 
     private RoomSessionPool? pool;
     private JsonLineStream? stream;
@@ -124,7 +127,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         TimeProvider? timeProvider = null,
         RoomSessionStore? roomSessions = null,
         OwnPosts? ownPosts = null,
-        TurnActivity? turnActivity = null)
+        TurnActivity? turnActivity = null,
+        LibraryDocumentCollector? libraryDocs = null,
+        bool readsFiles = true)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
@@ -144,6 +149,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.roomSessions = roomSessions;
         this.ownPosts = ownPosts;
         this.turnActivity = turnActivity;
+        this.libraryDocs = libraryDocs;
+        this.readsFiles = readsFiles;
         this.declaredWatches = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)
             ? identity.Watches ?? []
             : [];
@@ -388,7 +395,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             this.roomSessions,
             this.ownPosts,
             this.agentId,
-            this.turnActivity);
+            this.turnActivity,
+            this.libraryDocs,
+            this.readsFiles);
 
         // Per-Room mode opens the Room with exactly two Members, one of them the Human - the same
         // predicate as the Greeting's below, without IsEmpty: unlike the Greeting, this open must

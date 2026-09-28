@@ -1,0 +1,445 @@
+@*
+    The reusable Library control (Task 12.7, Spec §6.16): a tree and a document viewer scoped by
+    Scopes, hosted by the Library Pane, the /library page and, later, Project/Team/Teammate pages.
+
+    A LibraryLocation is never a path: every scope goes through LibraryPathResolver.TryResolveScope
+    just like any other Library path, so a scoped explorer can never show more than the full Library
+    could. An unresolvable scope shows the settled MudAlert instead of the tree; a scope resolving to
+    a Team/Project folder that doesn't exist yet shows an empty tree (the folder is created on first
+    save).
+
+    This part (12.7a) wires Scopes/Title/Layout/InitialFile, the MudSplitPanel and LibraryFileOps'
+    Scope. State persistence (StateKey), TryLeaveAsync/BeforeChangeAsync wiring, the focusin refresh
+    and ?library= precedence between nested explorers are 12.7b's job.
+*@
+@using System.Globalization
+@using Microsoft.AspNetCore.Components
+@using Agency.Huddle.App.FileChanges
+@using Agency.Huddle.App.Library
+@implements IDisposable
+
+@inject LibraryPathResolver Resolver
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<div class="library-explorer" @onfocusin="@this.OnFocusInAsync" @onmouseup="@this.OnDividerMouseUpAsync">
+    <div class="library-explorer-title">@this.ResolvedTitle()</div>
+    @if (this.unavailable)
+    {
+        <MudAlert Severity="Severity.Warning" role="status" Class="library-explorer-unavailable">@this.unavailableReason</MudAlert>
+    }
+    else
+    {
+        <MudSplitPanel @ref="this.splitPanel" Horizontal="@(this.Layout == LibraryExplorerLayout.SideBySide)" Class="library-explorer-split">
+            <FirstPanel>
+                <div class="library-tree">
+                    <LibraryTree @ref="this.tree" Scopes="@this.resolvedScopes" OnOpenFile="@this.OnOpenFileAsync" OnAction="@this.OnTreeActionAsync" />
+                </div>
+            </FirstPanel>
+            <SecondPanel>
+                @if (this.currentPath is not null)
+                {
+                    <LibraryDocument @ref="this.document" Path="@this.currentPath" Scope="@this.SingleScope()" OnOpenInLibrary="@this.OnOpenInLibrary" OnNavigate="@this.OnOpenFileAsync" />
+                }
+                <LibraryFileOps @ref="this.fileOps" Scope="@this.SingleScope()" OnChanged="@this.OnFileOpsChangedAsync" BeforeChangeAsync="@this.BeforeChangeAsync" />
+            </SecondPanel>
+        </MudSplitPanel>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<LibraryPath> resolvedScopes = [];
+    private LibraryPath? currentPath;
+    private bool unavailable;
+    private string unavailableReason = string.Empty;
+    private LibraryFileOps? fileOps;
+    private LibraryTree? tree;
+    private LibraryDocument? document;
+    private MudSplitPanel? splitPanel;
+
+    /// <summary>The folders shown as the tree's top nodes. <see langword="null"/> means every Library
+    /// Root: the full Library (Spec §6.16).</summary>
+    [Parameter]
+    public IReadOnlyList<LibraryLocation>? Scopes { get; set; }
+
+    /// <summary>The explorer's header label. Defaults to the single scope's folder name, or "Library".</summary>
+    [Parameter]
+    public string? Title { get; set; }
+
+    /// <summary>Whether the tree and document sit side by side or stacked.</summary>
+    [Parameter]
+    public LibraryExplorerLayout Layout { get; set; } = LibraryExplorerLayout.Stacked;
+
+    /// <summary>A file, relative to the first scope, to open on first render.</summary>
+    [Parameter]
+    public string? InitialFile { get; set; }
+
+    /// <summary>Keys the remembered expanded folders, open file and divider position in
+    /// <c>window.huddleStorage</c> (Task 12.7b).</summary>
+    [Parameter]
+    public string StateKey { get; set; } = string.Empty;
+
+    /// <summary>Raised by the document's outside-scope hint's "Open in Library" action.</summary>
+    [Parameter]
+    public EventCallback<LibraryPath> OnOpenInLibrary { get; set; }
+
+    /// <inheritdoc/>
+    protected override void OnInitialized()
+    {
+        this.ResolveScopes();
+        this.Navigation.LocationChanged += this.OnLocationChanged;
+    }
+
+    /// <inheritdoc/>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await this.TryOpenInitialFileAsync();
+            this.TryOpenFromQuery(this.Navigation.Uri);
+            await this.RestoreStateAsync();
+        }
+    }
+
+    /// <summary>[12.7b] Restores the remembered open file and divider position under <see cref="StateKey"/>
+    /// (corrections-B6 item 28), when neither <see cref="InitialFile"/> nor a <c>?library=</c> query
+    /// already opened something. A disconnected circuit is a normal race on teardown, not a failure.</summary>
+    private async Task RestoreStateAsync()
+    {
+        if (string.IsNullOrEmpty(this.StateKey))
+        {
+            return;
+        }
+
+        try
+        {
+            if (this.currentPath is null)
+            {
+                string? storedOpen = await this.JS.InvokeAsync<string?>("huddleStorage.get", OpenKey(this.StateKey));
+                if (TryResolveStoredPath(storedOpen, out LibraryPath? resolved))
+                {
+                    this.currentPath = resolved;
+                    this.StateHasChanged();
+                }
+            }
+
+            if (this.splitPanel is not null)
+            {
+                string? storedDivider = await this.JS.InvokeAsync<string?>("huddleStorage.get", DividerKey(this.StateKey));
+                if (int.TryParse(storedDivider, NumberStyles.Integer, CultureInfo.InvariantCulture, out int position))
+                {
+                    await this.splitPanel.SetDividerPositionAsync(position);
+                }
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone before the restore finished; nothing left to restore into.
+        }
+    }
+
+    private bool TryResolveStoredPath(string? stored, out LibraryPath? resolved)
+    {
+        resolved = null;
+        if (string.IsNullOrEmpty(stored))
+        {
+            return false;
+        }
+
+        int slash = stored.IndexOf('/', StringComparison.Ordinal);
+        if (slash <= 0 || !this.Resolver.TryResolve(stored[..slash], stored[(slash + 1)..], out LibraryPath? path, out _))
+        {
+            return false;
+        }
+
+        resolved = path;
+        return true;
+    }
+
+    private static string OpenKey(string stateKey) => string.Create(CultureInfo.InvariantCulture, $"library:{stateKey}:open");
+
+    private static string DividerKey(string stateKey) => string.Create(CultureInfo.InvariantCulture, $"library:{stateKey}:divider");
+
+    private void ResolveScopes()
+    {
+        IReadOnlyList<LibraryLocation> locations = this.Scopes
+            ?? [.. this.Resolver.AllRoots.Select(root => new LibraryLocation(root.Id, string.Empty))];
+
+        List<LibraryPath> resolved = [];
+        foreach (LibraryLocation location in locations)
+        {
+            if (!this.Resolver.TryResolveScope(location, out LibraryPath? folder, out string? error))
+            {
+                this.unavailable = true;
+                this.unavailableReason = error;
+                this.resolvedScopes = [];
+                return;
+            }
+
+            resolved.Add(folder);
+        }
+
+        this.unavailable = false;
+        this.resolvedScopes = resolved;
+    }
+
+    private LibraryPath? PrimaryScope() => this.resolvedScopes.Count > 0 ? this.resolvedScopes[0] : null;
+
+    /// <summary>The explorer's one boundary scope, when it has exactly one (Spec §6.16 "Inside a
+    /// scope"); <see langword="null"/> for the whole Library or more than one scope, so
+    /// <see cref="LibraryDocument"/> never treats an arbitrary first root as a boundary.</summary>
+    private LibraryPath? SingleScope() => this.Scopes is { Count: 1 } && this.resolvedScopes.Count == 1
+        ? this.resolvedScopes[0]
+        : null;
+
+    private string ResolvedTitle()
+    {
+        if (!string.IsNullOrEmpty(this.Title))
+        {
+            return this.Title;
+        }
+
+        if (this.Scopes is { Count: 1 } && this.resolvedScopes.Count == 1)
+        {
+            return ScopeName(this.resolvedScopes[0]);
+        }
+
+        return "Library";
+    }
+
+    private static string ScopeName(LibraryPath scope)
+    {
+        if (scope.RelativePath.Length == 0)
+        {
+            return scope.Root.DisplayName;
+        }
+
+        int lastSlash = scope.RelativePath.LastIndexOf('/');
+        return lastSlash < 0 ? scope.RelativePath : scope.RelativePath[(lastSlash + 1)..];
+    }
+
+    private Task TryOpenInitialFileAsync()
+    {
+        if (string.IsNullOrEmpty(this.InitialFile))
+        {
+            return Task.CompletedTask;
+        }
+
+        foreach (LibraryPath scope in this.resolvedScopes)
+        {
+            string relative = scope.RelativePath.Length == 0
+                ? this.InitialFile
+                : string.Create(CultureInfo.InvariantCulture, $"{scope.RelativePath}/{this.InitialFile}");
+
+            if (this.Resolver.TryResolve(scope.Root.Id, relative, out LibraryPath? resolved, out _)
+                && (File.Exists(resolved.FullPath) || Directory.Exists(resolved.FullPath)))
+            {
+                this.currentPath = resolved;
+                return this.InvokeAsync(this.StateHasChanged);
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e) =>
+        _ = this.InvokeAsync(() =>
+        {
+            this.TryOpenFromQuery(e.Location);
+            this.StateHasChanged();
+        });
+
+    private void TryOpenFromQuery(string uri)
+    {
+        Uri absolute = new(uri);
+        string query = absolute.Query;
+        if (query.Length == 0)
+        {
+            return;
+        }
+
+        Dictionary<string, Microsoft.Extensions.Primitives.StringValues> parsed =
+            Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(query);
+        if (!parsed.TryGetValue("library", out Microsoft.Extensions.Primitives.StringValues values) || values.Count == 0)
+        {
+            return;
+        }
+
+        string? target = values[0];
+        if (string.IsNullOrEmpty(target))
+        {
+            return;
+        }
+
+        int slash = target.IndexOf('/', StringComparison.Ordinal);
+        if (slash < 0)
+        {
+            return;
+        }
+
+        string rootId = target[..slash];
+        string relative = target[(slash + 1)..];
+        if (this.Resolver.TryResolve(rootId, relative, out LibraryPath? resolved, out _))
+        {
+            this.currentPath = resolved;
+        }
+    }
+
+    /// <summary>[12.7b] Switches the open document, asking the currently open one to leave first
+    /// (corrections-B6 item 21); a refusal keeps the old document open. Also the target of a
+    /// resolved in-scope <c>?library=</c> navigation (<see cref="LibraryDocument.OnNavigate"/>,
+    /// H5 judgement 45), so both doors go through the same guard.</summary>
+    private async Task OnOpenFileAsync(LibraryPath path)
+    {
+        if (this.document is not null && !await this.document.TryLeaveAsync())
+        {
+            return;
+        }
+
+        this.currentPath = path;
+        await this.SaveOpenStateAsync(path);
+    }
+
+    /// <summary>[12.7b] Remembers the open file under <see cref="StateKey"/> (corrections-B6 item 28).</summary>
+    private async Task SaveOpenStateAsync(LibraryPath path)
+    {
+        if (string.IsNullOrEmpty(this.StateKey))
+        {
+            return;
+        }
+
+        string value = string.Create(CultureInfo.InvariantCulture, $"{path.Root.Id}/{path.RelativePath}");
+        try
+        {
+            await this.JS.InvokeVoidAsync("huddleStorage.set", OpenKey(this.StateKey), value);
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone before the write finished; nothing left to persist to.
+        }
+    }
+
+    private async Task OnTreeActionAsync(LibraryTreeAction action)
+    {
+        if (this.fileOps is not null)
+        {
+            await this.fileOps.HandleAsync(action);
+        }
+    }
+
+    /// <summary>[12.7b] Asked by <see cref="LibraryFileOps"/> right before a rename, move or delete
+    /// writes (corrections-B6 item 21): when the item being changed is the open document, or a folder
+    /// containing it, this asks the document to leave first; anything else is unaffected.</summary>
+    private async Task<bool> BeforeChangeAsync(LibraryPath item)
+    {
+        if (this.currentPath is null || !ContainsOrEquals(item, this.currentPath))
+        {
+            return true;
+        }
+
+        return this.document is null || await this.document.TryLeaveAsync();
+    }
+
+    /// <summary>[12.7b] Re-points or refreshes the open document after a create, rename, move or delete
+    /// (corrections-B6 item 21), invalidates nothing itself (the file service and
+    /// <see cref="LibraryDocument.RefreshAsync"/> already do), and refreshes the tree.</summary>
+    private async Task OnFileOpsChangedAsync(LibraryChange change)
+    {
+        bool documentNeedsRefresh = false;
+
+        if (this.currentPath is not null && change.OldPath is not null && ContainsOrEquals(change.OldPath, this.currentPath))
+        {
+            this.currentPath = change.NewPath is null
+                ? null
+                : this.RepointPath(change.OldPath, change.NewPath, this.currentPath);
+        }
+        else if (this.currentPath is not null
+            && change.RewrittenNotes.Contains(this.currentPath.RelativePath, StringComparer.Ordinal))
+        {
+            documentNeedsRefresh = true;
+        }
+
+        if (this.tree is not null)
+        {
+            await this.tree.RefreshAsync();
+        }
+
+        if (documentNeedsRefresh && this.document is not null)
+        {
+            await this.document.RefreshAsync();
+        }
+    }
+
+    /// <summary>[12.7b] A <c>focusin</c> anywhere in the explorer refreshes both the tree and the open
+    /// document (corrections-B6 item 28), the same as the visibility-change refresh (item 23/12.6).</summary>
+    private async Task OnFocusInAsync()
+    {
+        if (this.tree is not null)
+        {
+            await this.tree.RefreshAsync();
+        }
+
+        if (this.document is not null)
+        {
+            await this.document.RefreshAsync();
+        }
+    }
+
+    /// <summary>[12.7b] Persists the divider position on release, since <see cref="MudSplitPanel"/> raises
+    /// no change callback while dragging (corrections-B6 item 28).</summary>
+    private async Task OnDividerMouseUpAsync()
+    {
+        if (string.IsNullOrEmpty(this.StateKey) || this.splitPanel is null)
+        {
+            return;
+        }
+
+        try
+        {
+            int position = await this.splitPanel.GetDividerPositionAsync();
+            await this.JS.InvokeVoidAsync(
+                "huddleStorage.set", DividerKey(this.StateKey), position.ToString(CultureInfo.InvariantCulture));
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone before the write finished; nothing left to persist to.
+        }
+    }
+
+    /// <summary>Whether <paramref name="candidate"/> is <paramref name="folder"/> itself or lies under it,
+    /// comparing resolved full paths with <see cref="FolderSnapshot.PathComparer"/> (R3: normalise before
+    /// comparing paths).</summary>
+    private static bool ContainsOrEquals(LibraryPath folder, LibraryPath candidate)
+    {
+        if (FolderSnapshot.PathComparer.Equals(candidate.FullPath, folder.FullPath))
+        {
+            return true;
+        }
+
+        string prefix = folder.FullPath + Path.DirectorySeparatorChar;
+        return candidate.FullPath.Length > prefix.Length
+            && FolderSnapshot.PathComparer.Equals(candidate.FullPath[..prefix.Length], prefix);
+    }
+
+    /// <summary>Re-points <paramref name="current"/> after <paramref name="oldPath"/> moved to
+    /// <paramref name="newPath"/>: a direct hit repoints to <paramref name="newPath"/>; a hit inside a
+    /// moved folder keeps the remaining relative part and re-resolves it under the new folder.</summary>
+    private LibraryPath? RepointPath(LibraryPath oldPath, LibraryPath newPath, LibraryPath current)
+    {
+        if (FolderSnapshot.PathComparer.Equals(current.FullPath, oldPath.FullPath))
+        {
+            return newPath;
+        }
+
+        string oldPrefix = oldPath.FullPath + Path.DirectorySeparatorChar;
+        string remainder = current.FullPath[oldPrefix.Length..].Replace(Path.DirectorySeparatorChar, '/');
+        string newRelative = newPath.RelativePath.Length == 0
+            ? remainder
+            : string.Create(CultureInfo.InvariantCulture, $"{newPath.RelativePath}/{remainder}");
+
+        return this.Resolver.TryResolve(newPath.Root.Id, newRelative, out LibraryPath? resolved, out _) ? resolved : null;
+    }
+
+    /// <inheritdoc/>
+    public void Dispose() => this.Navigation.LocationChanged -= this.OnLocationChanged;
+}

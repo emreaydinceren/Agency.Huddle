@@ -31,8 +31,7 @@ public sealed class TeammatesPageTests
 
         await using var factory = new TeamWebApplicationFactory();
 
-        Directory.CreateDirectory(factory.TeamsDirPath);
-        await File.WriteAllTextAsync(Path.Combine(factory.TeamsDirPath, "coo.md"), PersonaText("coo", "You are the Chief of Staff."), ct);
+        await factory.WriteDefinitionAsync("coo", PersonaText("coo", "You are the Chief of Staff."), ct);
 
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/teammates", ct);
@@ -129,7 +128,7 @@ public sealed class TeammatesPageTests
     public async Task TeammatesPage_OpeningTheCreateCard_RendersWithoutThrowing()
     {
         await using var factory = new TeamWebApplicationFactory();
-        Directory.CreateDirectory(factory.TeamsDirPath);
+        Directory.CreateDirectory(factory.TeammatesDirPath);
 
         await using var ctx = NewContext(factory);
         var cut = RenderPage(ctx);
@@ -154,7 +153,7 @@ public sealed class TeammatesPageTests
     public async Task TeammatesPage_OpeningTheCreateCard_ProbesForModelsEvenWithAcpDisabled()
     {
         await using var factory = new TeamWebApplicationFactory();
-        Directory.CreateDirectory(factory.TeamsDirPath);
+        Directory.CreateDirectory(factory.TeammatesDirPath);
 
         await using var ctx = NewContext(factory);
         var cut = RenderPage(ctx);
@@ -174,8 +173,7 @@ public sealed class TeammatesPageTests
 
         await using var factory = new TeamWebApplicationFactory();
 
-        Directory.CreateDirectory(factory.TeamsDirPath);
-        await File.WriteAllTextAsync(Path.Combine(factory.TeamsDirPath, "coo.md"), PersonaText("coo", "You are the Chief of Staff."), ct);
+        await factory.WriteDefinitionAsync("coo", PersonaText("coo", "You are the Chief of Staff."), ct);
 
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/teammates", ct);
@@ -196,8 +194,7 @@ public sealed class TeammatesPageTests
 
         await using var factory = new TeamWebApplicationFactory();
 
-        Directory.CreateDirectory(factory.TeamsDirPath);
-        await File.WriteAllTextAsync(Path.Combine(factory.TeamsDirPath, "coo.md"), PersonaText("coo", "You are the Chief of Staff."), ct);
+        await factory.WriteDefinitionAsync("coo", PersonaText("coo", "You are the Chief of Staff."), ct);
 
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/teammates", ct);
@@ -218,9 +215,8 @@ public sealed class TeammatesPageTests
     public async Task TeammatesPage_ShowsANameThatContainsSpaces()
     {
         await using var factory = new TeamWebApplicationFactory();
-        Directory.CreateDirectory(factory.TeamsDirPath);
-        await File.WriteAllTextAsync(
-            Path.Combine(factory.TeamsDirPath, "zzz.md"),
+        await factory.WriteDefinitionAsync(
+            "zzz",
             "---\nName: 'Chief of Staff'\nTitle: Chief of Staff\nAlias: coo\n---\nYou keep the team honest.",
             Xunit.TestContext.Current.CancellationToken);
 
@@ -244,10 +240,13 @@ public sealed class TeammatesPageTests
 
         await using var factory = new TeamWebApplicationFactory();
 
-        var nestedDir = Path.Combine(factory.TeamsDirPath, "Household");
-        Directory.CreateDirectory(nestedDir);
+        // ADR-0031: the folder holds only its own definition, so this pins the mismatch case
+        // (Scan_FolderNameDiffersFromName_LoadsWithWarning) rather than organisational nesting -
+        // the folder is still named differently from the teammate ("Household" vs "Jarvis").
+        var folder = Path.Combine(factory.TeammatesDirPath, "Household");
+        Directory.CreateDirectory(folder);
         await File.WriteAllTextAsync(
-            Path.Combine(nestedDir, "jarvis.md"),
+            Path.Combine(folder, "Household.md"),
             "---\nName: Jarvis\nTitle: Chief of Staff\nAlias: jar\nTeams: Business\n---\nYou are Jarvis.",
             ct);
 
@@ -269,9 +268,8 @@ public sealed class TeammatesPageTests
 
         await using var factory = new TeamWebApplicationFactory();
 
-        Directory.CreateDirectory(factory.TeamsDirPath);
-        await File.WriteAllTextAsync(
-            Path.Combine(factory.TeamsDirPath, "amy.md"),
+        await factory.WriteDefinitionAsync(
+            "amy",
             "---\nName: Amy\nTitle: Router\nAlias: amy\nTeams: Business, Household\n---\nbody",
             ct);
 
@@ -294,8 +292,7 @@ public sealed class TeammatesPageTests
 
         await using var factory = new TeamWebApplicationFactory();
 
-        Directory.CreateDirectory(factory.TeamsDirPath);
-        await File.WriteAllTextAsync(Path.Combine(factory.TeamsDirPath, "coo.md"), PersonaText("coo", "You are the Chief of Staff."), ct);
+        await factory.WriteDefinitionAsync("coo", PersonaText("coo", "You are the Chief of Staff."), ct);
 
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/teammates", ct);
@@ -319,9 +316,8 @@ public sealed class TeammatesPageTests
 
         await using var factory = new TeamWebApplicationFactory();
 
-        Directory.CreateDirectory(factory.TeamsDirPath);
-        var path = Path.Combine(factory.TeamsDirPath, "broken.md");
-        await File.WriteAllTextAsync(path, "---\nName: coo\nTitle: Chief of Staff\n---\nYou are the Chief of Staff.", ct);
+        var path = Path.Combine(factory.TeammatesDirPath, "broken", "broken.md");
+        await factory.WriteDefinitionAsync("broken", "---\nName: coo\nTitle: Chief of Staff\n---\nYou are the Chief of Staff.", ct);
 
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/teammates", ct);
@@ -344,9 +340,8 @@ public sealed class TeammatesPageTests
     public async Task TeammatesPage_OffersATeamFilter_ListingAllTeams()
     {
         await using var factory = new TeamWebApplicationFactory();
-        Directory.CreateDirectory(factory.TeamsDirPath);
-        await File.WriteAllTextAsync(
-            Path.Combine(factory.TeamsDirPath, "coo.md"),
+        await factory.WriteDefinitionAsync(
+            "coo",
             "---\nName: coo\nTitle: Chief of Staff\nAlias: coo\nTeams: Business, Household\n---\nbody",
             Xunit.TestContext.Current.CancellationToken);
 
@@ -375,8 +370,7 @@ public sealed class TeammatesPageTests
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var ct = cts.Token;
         using var dataDir = new TempDataDir();
-        Directory.CreateDirectory(Path.Combine(dataDir.Path, "Teams"));
-        await File.WriteAllTextAsync(Path.Combine(dataDir.Path, "Teams", "coo.md"), PersonaText("coo", "You are the Chief of Staff."), ct);
+        Agency.Huddle.Tests.Acp.TestPersonaFiles.Write(new TeammatePaths(dataDir.Options()), "coo", PersonaText("coo", "You are the Chief of Staff."));
 
         var directory = new SqliteTeamDirectory(dataDir.Options());
         await directory.InitializeAsync("You", ct);
@@ -389,7 +383,7 @@ public sealed class TeammatesPageTests
         var health = new PersonaHealth(TimeProvider.System, NullLogger<PersonaHealth>.Instance);
 
         using var personas = new PersonaStore(
-            dataDir.Options(), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+            new TeammatePaths(dataDir.Options()), new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
 
         // Never started - Teammates.razor only needs a PersonaSupervisor it can inject, for the
         // Restart button this test does not exercise.

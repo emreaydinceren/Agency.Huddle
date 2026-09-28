@@ -338,6 +338,86 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
 
         new PromptDefinition(
+            Key: "turn.libraryDocsHeader",
+            Label: "Library documents header",
+            HelperText:
+                "The line introducing the Library documents block, shown once above it, listing the documents mentioned in the conversation.",
+            Default:
+                """
+                Library documents mentioned in these messages:
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.libraryDoc",
+            Label: "Library document line",
+            HelperText:
+                "One line of the Library documents block, repeated once per document mentioned. {{path}}, {{location}}, and {{size}} are all required.",
+            Default:
+                """
+                - {{path}} ({{location}}, {{size}})
+                """,
+            Placeholders: ["{{path}}", "{{location}}", "{{size}}"],
+            RequiredPlaceholders: ["{{path}}", "{{location}}", "{{size}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.libraryDocInline",
+            Label: "Library document text",
+            HelperText:
+                "A document's text when inlined. {{fence}} is the fence chosen at runtime (minimum 3 backticks, or longer if needed to escape the text), and {{text}} is the document's text.",
+            Default:
+                """
+                {{fence}}
+                {{text}}
+                {{fence}}
+                """,
+            Placeholders: ["{{fence}}", "{{text}}"],
+            RequiredPlaceholders: ["{{fence}}", "{{text}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.libraryDocTruncated",
+            Label: "Library document cut",
+            HelperText:
+                "The note shown when a document is inlined but truncated to its head. {{max}} and {{size}} are both required.",
+            Default:
+                """
+                (cut at {{max}} bytes; the file is {{size}}.)
+                """,
+            Placeholders: ["{{max}}", "{{size}}"],
+            RequiredPlaceholders: ["{{max}}", "{{size}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.libraryDocsMore",
+            Label: "Library documents more",
+            HelperText:
+                "The closing line of the Library documents block when more documents exist than were listed. {{count}} is required: without it the line does not say how many were left out.",
+            Default:
+                """
+                …and {{count}} more documents.
+                """,
+            Placeholders: ["{{count}}"],
+            RequiredPlaceholders: ["{{count}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.libraryDocTooLarge",
+            Label: "Library document too large",
+            HelperText:
+                "One line shown when a document is too large to include inline. {{label}}, {{path}}, and {{sizeKb}} are all required.",
+            Default:
+                """
+                - {{label}}: {{path}} (too large to include: {{sizeKb}} KB; open it with your file tools)
+                """,
+            Placeholders: ["{{label}}", "{{path}}", "{{sizeKb}}"],
+            RequiredPlaceholders: ["{{label}}", "{{path}}", "{{sizeKb}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
             Key: "turn.greeting",
             Label: "Greeting",
             HelperText:
