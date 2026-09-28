@@ -13,6 +13,7 @@
 @inject ITaskReferenceResolver Tasks
 @inject ILibraryNoteResolver NoteResolver
 @inject LibraryPathResolver PathResolver
+@inject WikiLinkIndex WikiLinks
 @inject NavigationManager Navigation
 @inject IDialogService Dialogs
 
@@ -76,6 +77,10 @@
         else if (this.content.Kind == LibraryFileKind.Markdown)
         {
             <div class="library-rendered">@((MarkupString)MarkdownRenderer.ToHtml(this.content.Text ?? string.Empty, this.Tasks, this.NoteResolver, this.Path))</div>
+            @if (this.backlinksRows is not null)
+            {
+                <BacklinksPanel Backlinks="@this.backlinksRows" IsAvailable="@this.backlinkIndexAvailable" OnNavigate="@this.OnNavigate" />
+            }
         }
         else if (this.content.Kind == LibraryFileKind.Image)
         {
@@ -132,6 +137,8 @@
     private string? saveError;
     private string? previewText;
     private LibraryEditor? editorRef;
+    private IReadOnlyList<LibraryBacklinkRow>? backlinksRows;
+    private bool backlinkIndexAvailable;
 
     /// <inheritdoc />
     protected override void OnInitialized() =>
@@ -179,6 +186,35 @@
         {
             this.definitionName = identity.Name;
         }
+
+        this.BuildBacklinks();
+    }
+
+    /// <summary>Builds the backlinks list from the WikiLinkIndex, resolving each back-link path through the resolver.</summary>
+    private void BuildBacklinks()
+    {
+        this.backlinksRows = null;
+        this.backlinkIndexAvailable = false;
+
+        if (this.content?.Kind != LibraryFileKind.Markdown)
+        {
+            return;
+        }
+
+        this.backlinkIndexAvailable = this.WikiLinks.IsAvailable(this.Path.Root.Id);
+
+        var backlinks = this.WikiLinks.Backlinks(this.Path);
+        var rows = new List<LibraryBacklinkRow>();
+
+        foreach (var backlink in backlinks)
+        {
+            if (this.PathResolver.TryResolve(this.Path.Root.Id, backlink.NotePath, out LibraryPath? resolvedPath, out _))
+            {
+                rows.Add(new LibraryBacklinkRow(resolvedPath, backlink.Line, backlink.LineText));
+            }
+        }
+
+        this.backlinksRows = rows;
     }
 
     /// <summary>Switches between Read, Edit and Split (Spec §6.7's mode toggle); no unsaved-edit guard - the toggle only changes how the SAME loaded text is shown.</summary>

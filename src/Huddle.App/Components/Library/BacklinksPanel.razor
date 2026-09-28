@@ -1,0 +1,75 @@
+@using System.Collections.Generic
+@using Agency.Huddle.App.Library
+
+<MudExpansionPanels>
+    @if (!this.IsAvailable)
+    {
+        <MudExpansionPanel Text="@this.HeaderText">
+            <p>@UnavailableText</p>
+        </MudExpansionPanel>
+    }
+    else if (this.Backlinks.Count == 0)
+    {
+        <MudExpansionPanel Text="@this.HeaderText">
+            <p></p>
+        </MudExpansionPanel>
+    }
+    else
+    {
+        <MudExpansionPanel Text="@this.HeaderText">
+            @foreach (var backlink in this.Backlinks)
+            {
+                <div class="backlink-row">
+                    <button class="backlink-button" @onclick="_ => this.OnNavigate.InvokeAsync(backlink.Note)">
+                        <span class="backlink-path">@backlink.Note.RelativePath</span>
+                    </button>
+                    <span class="backlink-line-text">@backlink.LineText</span>
+                </div>
+            }
+        </MudExpansionPanel>
+    }
+</MudExpansionPanels>
+
+@code {
+    /// <summary>The backlinks to display in the panel.</summary>
+    [Parameter]
+    public IReadOnlyList<LibraryBacklinkRow> Backlinks { get; set; } = [];
+
+    /// <summary>Whether the backlink index is available for this root.</summary>
+    [Parameter]
+    public bool IsAvailable { get; set; }
+
+    /// <summary>Fired when a backlink row is clicked, passing the note's path.</summary>
+    [Parameter]
+    public EventCallback<LibraryPath> OnNavigate { get; set; }
+
+    /// <summary>The text shown when the index is not available.</summary>
+    private const string UnavailableText = "Backlinks aren't available for this folder: it has too many files.";
+
+    /// <summary>The panel header text: "Linked from n notes" or "No notes link here".</summary>
+    private string HeaderText
+    {
+        get
+        {
+            if (!this.IsAvailable)
+            {
+                return "Backlinks";
+            }
+
+            if (this.Backlinks.Count == 0)
+            {
+                return NoNotesText;
+            }
+
+            var distinctNotes = this.Backlinks
+                .Select(b => b.Note)
+                .Distinct(LibraryPathComparer.Instance)
+                .Count();
+
+            return distinctNotes == 1 ? OneNoteText : $"Linked from {distinctNotes} notes";
+        }
+    }
+
+    private const string OneNoteText = "Linked from 1 note";
+    private const string NoNotesText = "No notes link here";
+}

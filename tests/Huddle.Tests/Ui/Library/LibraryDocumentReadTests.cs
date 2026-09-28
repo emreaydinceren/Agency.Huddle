@@ -449,6 +449,7 @@ public sealed class LibraryDocumentReadTests : IDisposable
             ctx.Services.AddSingleton(this.LibraryFixture.Resolver);
             ctx.Services.AddSingleton(this.LibraryFixture.RootStore);
             ctx.Services.AddSingleton(this.LibraryFixture.CreateService());
+            ctx.Services.AddSingleton(this.LibraryFixture.Index);
             ctx.Services.AddSingleton<ILibraryNoteResolver>(noteResolver ?? new FakeLibraryNoteResolver());
             ctx.Services.AddSingleton<Agency.Huddle.App.Tasks.ITaskReferenceResolver>(new FakeTaskReferenceResolver());
             return ctx;
