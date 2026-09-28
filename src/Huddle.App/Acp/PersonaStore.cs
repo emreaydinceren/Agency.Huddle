@@ -1042,7 +1042,14 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
 
     // The watcher's filter is "*" (widened from "*.md" in the constructor), so this is now the
     // only thing keeping a stray non-Persona file (a ".txt", a lock file) from churning the
-    // debounce and restarting every online Persona for no reason. Two deliberate exceptions:
+    // debounce and restarting every online Persona for no reason. Three deliberate exceptions:
+    //   - A directory appearing: on Linux, IncludeSubdirectories is emulated - the watcher adds an
+    //     inotify watch for a new sub-folder only after it reads that folder's own Created event,
+    //     so a Persona file written into the folder in that gap raises nothing at all (mkdir then
+    //     write: every new Teammates/<Name>/ folder, or a copied or unzipped one). The folder's Created event is the one signal
+    //     that is guaranteed, and the debounced refresh rescans from disk, so it finds whatever
+    //     landed inside. Missing this left the Persona unloaded until some unrelated change
+    //     happened to trigger a rescan - under CI load, roughly one new folder in six.
     //   - A directory rename: Teams/Business becoming Teams/BusinessOps raises a Renamed event
     //     whose Name is the directory itself, which never matches ".md", yet every Persona path
     //     nested under it just went stale. Directory.Exists(e.FullPath) is safe to call here
@@ -1061,7 +1068,10 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     // corrections-B2 item 13: on top of that, an event matters only when its path relative to
     // DefinitionsRoot has AT MOST 2 SEGMENTS ("<Folder>" or "<Folder>/<file>") - never "ignore a
     // segment equal to Acp.WorkDir", which would also hide a teammate genuinely named "work". This
-    // is what keeps a write under a teammate's own work/ folder from restarting it.
+    // is what keeps a write under a teammate's own work/ folder from restarting it. The
+    // directory-Created rescan above is narrower still: only a folder ONE segment deep (a new
+    // Teammates/<Name>/) can hold a definition, so creating <Name>/work/ or anything below it never
+    // triggers one (Watcher_WriteUnderWork_DoesNotRaisePersonasChanged).
     //
     // Manager's review of part (a): a RenamedEventArgs also matters when its OLD path (not just its
     // new one) was a definition. Windows' FileSystemWatcher reports a cross-directory move as
@@ -1075,14 +1085,17 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         (HasAtMostTwoSegments(definitionsRoot, e.FullPath)
             || (e is RenamedEventArgs renamed && HasAtMostTwoSegments(definitionsRoot, renamed.OldFullPath)))
         && (IsMarkdownFile(e.Name)
+            || (e.ChangeType == WatcherChangeTypes.Created && SegmentCount(definitionsRoot, e.FullPath) == 1 && Directory.Exists(e.FullPath))
             || (e.ChangeType == WatcherChangeTypes.Renamed && Directory.Exists(e.FullPath))
             || (e.ChangeType == WatcherChangeTypes.Deleted && HasNoExtension(e.Name)));
 
-    private static bool HasAtMostTwoSegments(string definitionsRoot, string fullPath)
+    private static bool HasAtMostTwoSegments(string definitionsRoot, string fullPath) =>
+        SegmentCount(definitionsRoot, fullPath) <= 2;
+
+    private static int SegmentCount(string definitionsRoot, string fullPath)
     {
         var relative = Path.GetRelativePath(definitionsRoot, fullPath);
-        var segments = relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries);
-        return segments.Length <= 2;
+        return relative.Split([Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar], StringSplitOptions.RemoveEmptyEntries).Length;
     }
 
     private static bool IsMarkdownFile(string? name) =>

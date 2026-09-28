@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -1264,11 +1265,28 @@ public sealed class PersonaSupervisorTests
         }
     }
 
-    private static async Task WaitUntilAsync(Func<bool> condition, CancellationToken ct)
+    /// <summary>
+    /// Polls <paramref name="condition"/> every 50 ms until it holds, and fails naming it when
+    /// <paramref name="ct"/> fires first. A bare <see cref="TaskCanceledException"/> from inside this
+    /// helper hid which wait never arrived, and read as "the run was slow" - when the actual cause was a
+    /// file-system event lost for good, which no budget outlasts.
+    /// </summary>
+    /// <param name="condition">The state the test needs before it can go on.</param>
+    /// <param name="ct">The test's own deadline.</param>
+    /// <param name="conditionText">The source text of <paramref name="condition"/>, supplied by the compiler.</param>
+    private static async Task WaitUntilAsync(
+        Func<bool> condition, CancellationToken ct, [CallerArgumentExpression(nameof(condition))] string conditionText = "")
     {
         while (!condition())
         {
-            await Task.Delay(50, ct);
+            try
+            {
+                await Task.Delay(50, ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                Assert.Fail($"Timed out waiting for: {conditionText}");
+            }
         }
     }
 

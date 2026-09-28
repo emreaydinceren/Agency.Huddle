@@ -856,6 +856,10 @@ public sealed class PersonaStoreTests
     {
         // Proves the FileSystemWatcher (not just calls through PersonaStore itself) drives
         // PersonasChanged: this writes a .md file directly to disk, bypassing the store entirely.
+        // TestPersonaFiles.Write creates Teammates/external/ and then writes into it, which is the
+        // Linux watcher gap: the new folder's own Created event must schedule the rescan (see
+        // AffectsATeamsFile_ANewTeammateFolder_SchedulesARescan). Before that, this was red about one
+        // Linux run in six under load.
         using var dir = new TempDataDir();
         using var store = CreateStore(dir);
 
@@ -946,6 +950,45 @@ public sealed class PersonaStoreTests
 
         Assert.NotNull(resolved);
         Assert.Equal("coo", resolved.Name);
+    }
+
+    /// <summary>
+    /// The folder's own Created event is the one signal a new Teammate folder is guaranteed to
+    /// raise on every platform (on Linux the watch on it is added only after that event is read), so
+    /// it alone must schedule a rescan - whatever was written inside it before the watcher caught up
+    /// is found from disk.
+    /// </summary>
+    [Fact]
+    public void AffectsATeamsFile_ANewTeammateFolder_SchedulesARescan()
+    {
+        using var dir = new TempDataDir();
+        string teammatesDir = Path.Combine(dir.Path, "Teammates");
+        Directory.CreateDirectory(Path.Combine(teammatesDir, "Nova"));
+        FileSystemEventArgs created = new(WatcherChangeTypes.Created, teammatesDir, "Nova");
+
+        Assert.True(PersonaStore.AffectsATeamsFile(teammatesDir, created));
+    }
+
+    /// <summary>
+    /// Only a folder one segment deep (a new Teammate folder) can hold a definition, so creating a
+    /// teammate's work/ folder, or any folder inside it, is the teammate's own work and must not
+    /// restart it (corrections-B2 item 13; found by the #83 merge through
+    /// Watcher_WriteUnderWork_DoesNotRaisePersonasChanged).
+    /// </summary>
+    /// <param name="relativeFolder">The created folder, relative to the Teammates root.</param>
+    [Theory]
+    [InlineData("Nova/work")]
+    [InlineData("Nova/work/drafts")]
+    public void AffectsATeamsFile_ANewFolderBelowATeammateFolder_IsFalse(string relativeFolder)
+    {
+        ArgumentNullException.ThrowIfNull(relativeFolder);
+        using var dir = new TempDataDir();
+        string teammatesDir = Path.Combine(dir.Path, "Teammates");
+        string relative = relativeFolder.Replace('/', Path.DirectorySeparatorChar);
+        Directory.CreateDirectory(Path.Combine(teammatesDir, relative));
+        FileSystemEventArgs created = new(WatcherChangeTypes.Created, teammatesDir, relative);
+
+        Assert.False(PersonaStore.AffectsATeamsFile(teammatesDir, created));
     }
 
     /// <summary>
