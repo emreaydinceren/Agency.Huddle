@@ -5,6 +5,14 @@
     LibraryPath's own record equality, so a refresh that changes a file's size/timestamp - or a pinned
     root rename - never drops selection or expansion (corrections-B6 item 22).
 
+    ShowScopeRoot=false (LibraryPane's own scoped sidebar rows, where the scope is already named
+    outside this tree) skips the scope's own wrapper row entirely rather than merely blanking its
+    name: with only one Scope and nothing else in the tree, a collapsed folder row that exists only
+    to be expanded adds nothing a Human would act on, so topItems becomes that scope's own children,
+    loaded eagerly instead of lazily. This only ever applies with exactly one Scope; the whole-Library
+    tree and any future multi-scope host keep every scope as its own named top node, since names are
+    the only way to tell those roots apart.
+
     Each row's own "..." MudIconButton and a right-click on the row both open the SAME MudMenu, the
     same two-door pattern RoomList.razor uses for its own row menu. The menu lists every
     LibraryTreeActionKind; Rename/Move/Delete are disabled by LibraryProtection.For, with a settled,
@@ -105,6 +113,21 @@
     [Parameter, EditorRequired]
     public IReadOnlyList<LibraryPath> Scopes { get; set; } = [];
 
+    /// <summary>
+    /// Whether a lone scope shows as its own top-level node at all. Defaults to
+    /// <see langword="true"/>. A caller sets this <see langword="false"/> only when it has exactly
+    /// one <see cref="Scopes"/> entry and already names that folder somewhere else outside this tree
+    /// (<see cref="LibraryPane"/>'s per-root sidebar rows, whose own selected row already names it):
+    /// <see cref="topItems"/> then becomes that scope's own children directly, loaded eagerly rather
+    /// than through a row someone has to expand first. Losing the wrapper also loses reaching New
+    /// note/New folder AT the scope's own root through this tree - a deliberate, accepted trade for a
+    /// folder row that would otherwise exist only to be expanded. With more than one
+    /// <see cref="Scopes"/> entry this is a no-op: their names are the only way to tell the roots
+    /// apart, so this can only ever flatten a single, unambiguous scope.
+    /// </summary>
+    [Parameter]
+    public bool ShowScopeRoot { get; set; } = true;
+
     /// <summary>The currently selected node, if any.</summary>
     [Parameter]
     public LibraryPath? SelectedPath { get; set; }
@@ -121,11 +144,16 @@
     [Parameter]
     public EventCallback<LibraryTreeAction> OnAction { get; set; }
 
+    /// <summary>Whether <see cref="ShowScopeRoot"/> actually flattens: only ever with exactly one <see cref="Scopes"/> entry.</summary>
+    private bool Flattened => !this.ShowScopeRoot && this.Scopes.Count == 1;
+
     /// <inheritdoc/>
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        this.topItems = [.. this.Scopes.Select(this.BuildScopeItem)];
         this.RootStore.RootsChanged += this.OnRootsChanged;
+        this.topItems = this.Flattened
+            ? [.. await this.LoadChildrenAsync(this.Scopes[0])]
+            : [.. this.Scopes.Select(this.BuildScopeItem)];
     }
 
     /// <inheritdoc/>
@@ -134,8 +162,18 @@
     /// <summary>
     /// Rebuilds the top-level nodes (picking up a renamed pinned root, item 22) and reloads the
     /// children of every currently expanded folder, so a Refresh never silently goes stale.
+    /// Flattened (<see cref="Flattened"/>), the "top-level nodes" are the sole scope's own children,
+    /// reloaded the same way a normal top node's children are once it's expanded.
     /// </summary>
     public async Task RefreshAsync()
+    {
+        this.topItems = this.Flattened
+            ? await this.RebuildFlattenedTopItemsAsync()
+            : await this.RebuildScopeTopItemsAsync();
+        this.StateHasChanged();
+    }
+
+    private async Task<List<TreeItemData<LibraryPath>>> RebuildScopeTopItemsAsync()
     {
         List<TreeItemData<LibraryPath>> rebuilt = [];
         foreach (LibraryPath scope in this.Scopes)
@@ -153,8 +191,25 @@
             rebuilt.Add(item);
         }
 
-        this.topItems = rebuilt;
-        this.StateHasChanged();
+        return rebuilt;
+    }
+
+    private async Task<List<TreeItemData<LibraryPath>>> RebuildFlattenedTopItemsAsync()
+    {
+        List<TreeItemData<LibraryPath>> rebuilt = [.. await this.LoadChildrenAsync(this.Scopes[0])];
+        foreach (TreeItemData<LibraryPath> item in rebuilt)
+        {
+            TreeItemData<LibraryPath>? previous = this.topItems.FirstOrDefault(
+                candidate => LibraryPathComparer.Instance.Equals(candidate.Value, item.Value));
+            if (previous is { Expanded: true } && item.Value is LibraryPath itemPath)
+            {
+                item.Expanded = true;
+                item.Children = await this.LoadChildrenAsync(itemPath);
+                await this.ReloadExpandedChildrenAsync(item);
+            }
+        }
+
+        return rebuilt;
     }
 
     /// <summary>Recursively reloads the children of every still-expanded descendant of <paramref name="item"/>.</summary>

@@ -2,6 +2,7 @@ using Bunit;
 using Bunit.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using MudBlazor;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Library;
@@ -25,7 +26,12 @@ public sealed class LibraryPageTests : IDisposable
     /// <summary>Disposes the underlying temp <c>DataDir</c> and stores.</summary>
     public void Dispose() => this.fixture.Dispose();
 
-    /// <summary>The page renders the <c>LibraryExplorer</c> with <c>Layout</c> SideBySide and <c>StateKey</c> "page".</summary>
+    /// <summary>
+    /// The page renders the <c>LibraryExplorer</c> with <c>Layout</c> SideBySide and <c>StateKey</c> "page",
+    /// which passes the underlying <see cref="MudSplitPanel"/> <c>Horizontal="false"</c> - a vertical
+    /// dividing line, panels left/right (see <c>LibraryExplorerTests.Layout_SideBySide_IsHorizontal</c>
+    /// for why that reads backwards from the parameter's name).
+    /// </summary>
     [Fact]
     public async Task Page_RendersSideBySideExplorer()
     {
@@ -34,11 +40,8 @@ public sealed class LibraryPageTests : IDisposable
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, root: null, path: null, scopeRoot: null, scopePath: null);
 
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-explorer")));
-        IReadOnlyList<AngleSharp.Dom.IElement> panels = cut.FindAll(".mud-split-panel");
-        Assert.NotEmpty(panels);
-        AngleSharp.Dom.IElement splitPanel = panels[0];
-        Assert.False(splitPanel.ClassList.Contains("mud-split-panel-vertical"), "SideBySide layout means horizontal split (not vertical)");
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindComponents<MudSplitPanel>()));
+        Assert.False(cut.FindComponent<MudSplitPanel>().Instance.Horizontal);
     }
 
     /// <summary><c>?root=…&amp;path=…</c> query parameters open that file on the page.</summary>
@@ -94,18 +97,27 @@ public sealed class LibraryPageTests : IDisposable
         Assert.Empty(cut.FindAll(".library-rendered"));
     }
 
-    /// <summary><c>?scopeRoot=teams&amp;scopePath=Marketing</c> keeps the scope and opens the explorer scoped to that folder.</summary>
+    /// <summary>
+    /// <c>?scopeRoot=teams&amp;scopePath=Marketing</c> keeps the scope and, since the only current
+    /// producer of that query (<c>LibraryNavLink</c>'s own sidebar rows) already names the folder
+    /// there, the page passes <c>ShowScopeRoot=false</c>: no redundant title above the tree, and
+    /// <see cref="LibraryTree"/> flattens straight to the scoped folder's own children instead of a
+    /// wrapper row that exists only to be expanded.
+    /// </summary>
     [Fact]
-    public async Task Page_ScopeQuery_KeepsScope()
+    public async Task Page_ScopeQuery_FlattensToTheScopesOwnChildren()
     {
+        Directory.CreateDirectory(Path.Combine(this.fixture.LibraryFixture.DataDir, "Teams", "Marketing", "Campaigns"));
+
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderPage(
             ctx, root: null, path: null, scopeRoot: "teams", scopePath: "Marketing");
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-explorer")));
-        IReadOnlyList<AngleSharp.Dom.IElement> titles = cut.FindAll(".library-explorer-title");
-        Assert.NotEmpty(titles);
-        Assert.Equal("Marketing", titles[0].TextContent.Trim());
+        Assert.Empty(cut.FindAll(".library-explorer-title"));
+        cut.WaitForAssertion(() => Assert.Equal(
+            ["Campaigns"],
+            cut.FindAll(".library-tree-node-name").Select(e => e.TextContent.Trim())));
     }
 
     /// <summary>An unresolvable scope shows the explorer's unavailable alert.</summary>

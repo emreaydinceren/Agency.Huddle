@@ -41,6 +41,52 @@ public sealed class LibraryTreeTests : IDisposable
             cut.FindAll("span.library-tree-node-name").Select(e => e.TextContent.Trim()));
     }
 
+    /// <summary>
+    /// <c>ShowScopeRoot="false"</c> with exactly one Scope skips that scope's own wrapper row
+    /// entirely: its children render as the top-level nodes directly, with no "Actions for {scope's
+    /// name}" row anywhere in the tree.
+    /// </summary>
+    [Fact]
+    public async Task ShowScopeRootFalse_FlattensToTheScopesOwnChildren()
+    {
+        string notesPath = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(notesPath, "Sub"));
+        File.WriteAllText(Path.Combine(notesPath, "a.md"), "hello");
+        LibraryPath notesScope = this.fixture.LibraryFixture.Resolve(notesPath, string.Empty);
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [notesScope], showScopeRoot: false);
+
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
+        Assert.Equal(
+            ["Sub", "a.md"],
+            cut.FindAll("span.library-tree-node-name").Select(e => e.TextContent.Trim()));
+        Assert.Empty(cut.FindAll($"button[aria-label='Actions for {notesScope.Root.DisplayName}']"));
+    }
+
+    /// <summary>Flattened, a Refresh (RootsChanged) reloads the scope's own children as the new top-level nodes and keeps a still-expanded child's own children loaded.</summary>
+    [Fact]
+    public async Task ShowScopeRootFalse_Refresh_ReloadsChildrenAndKeepsExpansion()
+    {
+        string notesPath = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(notesPath, "Sub"));
+        File.WriteAllText(Path.Combine(notesPath, "Sub", "a.md"), "hello");
+        LibraryPath notesScope = this.fixture.LibraryFixture.Resolve(notesPath, string.Empty);
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [notesScope], showScopeRoot: false);
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll("span.library-tree-node-name")));
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
+
+        File.WriteAllText(Path.Combine(notesPath, "b.md"), "hello");
+        await cut.InvokeAsync(() => cut.FindComponent<Agency.Huddle.App.Components.Library.LibraryTree>().Instance.RefreshAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal(
+            ["Sub", "a.md", "b.md"],
+            cut.FindAll("span.library-tree-node-name").Select(e => e.TextContent.Trim())));
+    }
+
     /// <summary>A folder's children are not in the DOM until its node is expanded, and appear after (Spec §6.4, ServerData).</summary>
     [Fact]
     public async Task Expand_LoadsChildrenLazily()
@@ -380,7 +426,8 @@ public sealed class LibraryTreeTests : IDisposable
         LibraryPath? selectedPath = null,
         EventCallback<LibraryPath?> selectedPathChanged = default,
         EventCallback<LibraryPath> onOpenFile = default,
-        EventCallback<LibraryTreeAction> onAction = default) => ctx.RenderWithPopovers(builder =>
+        EventCallback<LibraryTreeAction> onAction = default,
+        bool showScopeRoot = true) => ctx.RenderWithPopovers(builder =>
     {
         builder.OpenComponent<Agency.Huddle.App.Components.Library.LibraryTree>(0);
         builder.AddAttribute(1, nameof(Agency.Huddle.App.Components.Library.LibraryTree.Scopes), scopes);
@@ -388,6 +435,7 @@ public sealed class LibraryTreeTests : IDisposable
         builder.AddAttribute(3, nameof(Agency.Huddle.App.Components.Library.LibraryTree.SelectedPathChanged), selectedPathChanged);
         builder.AddAttribute(4, nameof(Agency.Huddle.App.Components.Library.LibraryTree.OnOpenFile), onOpenFile);
         builder.AddAttribute(5, nameof(Agency.Huddle.App.Components.Library.LibraryTree.OnAction), onAction);
+        builder.AddAttribute(6, nameof(Agency.Huddle.App.Components.Library.LibraryTree.ShowScopeRoot), showScopeRoot);
         builder.CloseComponent();
     });
 

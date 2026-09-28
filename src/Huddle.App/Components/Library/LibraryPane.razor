@@ -1,7 +1,17 @@
 @*
-    The Library Pane's own content (Task 13.2, Spec §6.9): a whole-Library LibraryExplorer (no
-    Scopes) stacked, plus the pane's own toolbar - a Close button and a Pop out button that opens
-    the same file at the full /library page.
+    The Library Pane's own content (Task 13.2, Spec §6.9): a LibraryExplorer stacked, plus the
+    pane's own toolbar - a Close button and a Pop out button that opens the same file at the full
+    /library page. Whole-Library (every root, Scopes null) unless LibraryPaneState.Scope narrows it
+    to one root - the sidebar's per-root rows set that through LibraryPaneState.OpenRoot, and
+    LibraryPaneState.OpenFile always clears it back to the whole Library. StateKey folds the scope's
+    root id in too, so the pane's own remembered open file/divider (window.huddleStorage) does not
+    bleed a Teams-scoped file into a later Teammates-scoped open of the same pane. LibraryPaneHost
+    keys its own <LibraryPane> on State.Scope, so a scope change always remounts this whole
+    component fresh - LibraryExplorer below needs no key of its own, its OnInitialized always sees
+    the current Scopes/StateKey on first (and only) render of a given instance. ShowScopeRoot is
+    false exactly when scoped: the sidebar's own selected row already names the root, so neither the
+    title above the tree nor a folder row that exists only to be expanded (Spec §6.16's scope top
+    node) earns its place - LibraryTree flattens straight to that root's own children instead.
 *@
 @using Agency.Huddle.App.Library
 @inject NavigationManager Navigation
@@ -12,7 +22,8 @@
         <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Class="library-pane-popout" OnClick="@this.PopOut" aria-label="Pop out" />
         <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Class="library-pane-close" OnClick="@this.State.Close" aria-label="Close" />
     </div>
-    <LibraryExplorer Layout="LibraryExplorerLayout.Stacked" StateKey="pane" InitialFile="@this.State.CurrentFile?.RelativePath" />
+    <LibraryExplorer Layout="LibraryExplorerLayout.Stacked" StateKey="@this.PaneStateKey()" Scopes="@this.PaneScopes()"
+                      ShowScopeRoot="@(this.State.Scope is null)" InitialFile="@this.State.CurrentFile?.RelativePath" />
 </div>
 
 @code {
@@ -33,4 +44,17 @@
 
         this.Navigation.NavigateTo(BuildPopOutUri(file));
     }
+
+    /// <summary>
+    /// The <c>window.huddleStorage</c> key <see cref="LibraryExplorer"/> remembers its own open
+    /// file/divider under: <c>"pane"</c> for the whole Library, <c>"pane:{rootId}"</c> once
+    /// <see cref="LibraryPaneState.Scope"/> narrows it - so the pane's remembered file for Teams
+    /// never bleeds into a later Teammates-scoped open of the same pane.
+    /// </summary>
+    private string PaneStateKey() => this.State.Scope is { } scope
+        ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"pane:{scope.RootId}")
+        : "pane";
+
+    /// <summary>The pane's tree scope: the single root <see cref="LibraryPaneState.Scope"/> names, or <see langword="null"/> for the whole Library.</summary>
+    private IReadOnlyList<LibraryLocation>? PaneScopes() => this.State.Scope is { } scope ? [scope] : null;
 }
