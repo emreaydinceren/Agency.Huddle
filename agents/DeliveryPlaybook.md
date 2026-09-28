@@ -16,12 +16,16 @@ below exists because its absence cost a fix round, a bug, or an hour.
    shared scripts and notes resolve from every worktree.
 2. **A common brief** every agent reads first: commands, hard rules (below), the red-first
    procedure, and a fixed report shape that includes a **Coverage** table (each plan bullet,
-   Spec clause and correction → a test name, or `NOT COVERED` with the task that owns it).
+   Spec clause and correction → a test name, or `NOT COVERED` with the task that owns it). The
+   agent writes that report to a file under `Conversation\` and returns at most ten lines: status,
+   red-file path, the verbatim test summary line, files touched, deviations, the report path.
 3. **A living facts file** that only the manager edits: exact commands, API locations,
    helpers and their traps, settled decisions. Agents re-deriving the same facts was the largest
    avoidable cost.
-4. **An architect review per batch** (a read-only Opus Plan agent against the live code), written
-   up as a corrections file marked "settled — implement, do not re-litigate". It overrides the plan.
+4. **An architect review per risky batch** (a read-only Opus Plan agent against the live code),
+   written up as a corrections file marked "settled — implement, do not re-litigate". It overrides
+   the plan. Give the reviewer the plan line ranges, Spec sections and source folders the batch
+   touches, and a word cap. Batches of pure records, enums and options skip it.
 5. **A row-ownership map before a UI batch.** Map every Spec clause (every table row, every
    empty state, every notice) to exactly **one** task, and pin its user-facing text, date format
    and markup contract at the same time. Without it, fields nobody owned surfaced at review, and
@@ -41,12 +45,48 @@ below exists because its absence cost a fix round, a bug, or an hour.
 - **Choose resumed vs fresh agents deliberately.** Resuming within the same component chain costs
   2–6 tool calls to reorient versus 45–56 for a fresh agent, but a long-lived context grows to
   3–4× the cost per turn. Resume for the next task on the same files; start fresh, with a precise
-  prompt, for a new area.
-- **Pick the model by risk.** Every Haiku result in this delivery needed a fix; Sonnet is the
-  default; Opus for concurrency, drag-and-drop, architecture review and retrospectives.
+  prompt, for a new area. Retire an agent at about 150K context: it writes a hand-off note, and a
+  fresh agent starts from that note. Agents cannot see their context size, so the prompt sets a
+  **tool-call budget** instead (60 calls ≈ 150K for Sonnet here), counted across resumes; at the
+  budget the agent finishes its step, writes the hand-off note and stops. Without it, agents were
+  retired only after the fact, at 206K, 225K and 279K.
+- **Pick the model by the plan's Risk tag.** In the Tasks delivery every Haiku result needed a
+  fix, so Sonnet does `logic` and `boundary` work. Haiku still does `data` tasks (records, enums,
+  options): in the Library delivery those came in at ~2M tokens a task against ~8M for Sonnet
+  refactors. Opus for concurrency, drag-and-drop, architecture review and retrospectives.
 - **Keep verification lean in prompts:** the touched test classes once, fix, once more; the checks;
   the full suite once. A fix-resume runs only the touched classes. The machine allows one test run
   at a time, so extra full runs queue every other agent.
+
+## Keeping the token cost down
+
+Every API call re-reads the caller's whole context, so an agent costs about *calls × context
+size*. The Library delivery measured about 52M tokens re-read in its first 30 minutes:
+
+| Where | Tokens re-read | Lesson |
+| --- | --- | --- |
+| Manager (Opus), context 119K → 310K | 19M | Its context is the most expensive in the run |
+| Three architect reviews (Opus), up to 234K | 15M | They read whole documents |
+| An implementer's first task (Haiku), context 49K → 123K | 3.6M | Orientation: 38 calls, mostly reading |
+| Each later task, resumed in the same agent | 0.85–2.4M | Resuming was cheaper than starting fresh |
+| A Sonnet refactor agent kept to 279K (150 calls) | 28.5M | The cap needs a call budget agents can count |
+
+- **The manager stays compactable.** Keep `delivery-state.md` current after every commit, compact
+  at each batch boundary, and grep large files rather than reading them. Never paste agent reports
+  into your own turn; open the report file only when the ten-line summary looks wrong.
+- **Point at sections, never whole documents.** Prompts, the brief and review prompts name Spec
+  sections and plan line ranges. Agents read those with `offset`/`limit` or `grep`. That is what
+  makes a fresh agent's orientation cheap.
+- **Keep command output small; it is most of an implementer's context.** Search in two steps
+  (`grep -l`/`-c`, then `grep -n … | head -40`), with no `-A`/`-B` over 10 and no loops that print
+  whole files. Read files over ~300 lines with `offset`/`limit` around the hit; one full read of
+  `PersonaStore.cs` was 15K tokens. Unbounded greps over `tests/` cost 22–31K per agent.
+- **The facts file opens with a short Core section** (under ~150 lines) and an index. Agents read
+  Core and grep the rest by heading; the whole file read was 10K tokens for every fresh agent.
+- **Disable MCP servers the delivery doesn't need** before starting. Each agent inherits their tool
+  definitions, and every agent here started at 38–50K before its first read.
+- **Measure at each retrospective** with the tally in the `/Execute-Project-Plan` command's
+  Appendix D: calls, first and last context, and tokens re-read per agent.
 
 ## Spelling out the hard rules
 
@@ -74,8 +114,9 @@ Two PreToolUse hooks in `.claude/settings.json` enforce the worst of these: one 
    `git diff --stat -- src/` was empty when it was recorded.
 3. **Check the Coverage table.** Every `NOT COVERED` row must cite the task that owns the item; a
    gap nobody owns is assigned now, not after the batch.
-4. **Read the load-bearing diff**, then run the build and full suite yourself — two or three
-   times for concurrency or UI work.
+4. **Read the load-bearing diff**, then run the build and the touched test classes yourself. Run
+   the full suite at each batch boundary and before a push, and two or three times for concurrency
+   or UI work.
 5. **Demand mutation proof** for any test that arrived green.
 6. **Treat any new flaky test as a bug** to root-cause before commit. In this delivery that rule
    found a harness trap and three real store bugs.
@@ -84,9 +125,9 @@ Two PreToolUse hooks in `.claude/settings.json` enforce the worst of these: one 
 
 ## Holding retrospectives
 
-Every ~15 completed tasks, give a read-only Opus agent the transcripts since the last
-retrospective and ask for: what to keep, what went wrong with evidence and root cause, cost
-hot-spots, and concrete changes labelled FACT, BRIEF, PLAN and SCRIPT. Apply them before the next
+Every ~15 completed tasks, give a read-only Opus agent the token tally and the paths of the
+transcripts since the last retrospective. It should grep them, not read them end to end. Ask for:
+what to keep, what went wrong with evidence and root cause, cost hot-spots, and concrete changes labelled FACT, BRIEF, PLAN and SCRIPT. Apply them before the next
 dispatch. The same few findings recurred across all eight — plan for them from the start:
 
 - behaviour implemented without a test, reported as a "design call";

@@ -1,0 +1,547 @@
+# Huddle.Questions — Design Specification
+
+**Date:** 2026-09-22 · **Status:** Proposed · **Decision record:**
+[ADR-0022](adr/0022-an-agent-asks-the-human-with-a-question.md) · **Vocabulary:**
+[language.md](agencyteam/language.md) (**Question**)
+
+This is the design for `ask_human`, an App Tool that lets an Agent put one to three
+multiple-choice Questions to the Human. They appear on a card in the Room as options to tap,
+and the Human's answer is posted as a Message from the Human, which wakes the Agent. It is
+Huddle's own version of the option-picker Claude's apps offer, built on the same machinery as
+the Skills spec's Proposal.
+
+It is written for the engineers or agents building it, with no memory of the conversation that
+produced it. Read §5 for the shape, §6 for the subsystems, and Appendix A for the ordered,
+test-first task list. Every design decision is recorded in §11 with the alternative it beat.
+
+> [!IMPORTANT]
+> Two pages are binding before any code in this spec is written:
+> [rules.md](agencyteam/rules.md) before editing `src/Huddle.App`, and
+> [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) for every C# file. Nothing here
+> overrides either.
+
+> [!NOTE]
+> **Sequencing.** This shares four files with the Skills work (S2): the tool list in
+> `DotAcpAgentHostFactory`, `PromptCatalog`, `ChatService` and `Chat.razor`. Build it after S2's
+> `ProposalCard` lands, and copy that card's patterns rather than inventing parallel ones. The
+> Proposal is referred to throughout as the precedent; see
+> [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.md) §6.9–§6.11.
+
+---
+
+## 1. Goal
+
+When an Agent needs the Human's preferences before it can help, let it ask with options the
+Human taps, rather than with a list of questions the Human has to answer in prose.
+
+Concretely:
+
+1. **`ask_human` asks only the Human.** It takes no recipient. An Agent that wants something
+   from another Teammate Mentions them in an ordinary Message, as today.
+2. **The answer is an ordinary Message from the Human.** It quotes each Question and its
+   answer, and Mentions the Agent that asked, so the Reply Gate wakes it in any Room. Nothing
+   new crosses the pipe.
+3. **The tool returns at once, and the asker ends its Turn.** The answer arrives later, as
+   the Human's next Message in that Room, not as the tool's result.
+4. **Tapping beats typing.** A single Question with a single answer is sent by one tap.
+
+**Why this matters.** Interviewing is most of what the Chief of Staff does before it proposes
+a team: one-off or recurring, how involved, practice or real work, how much to spend. Today
+each answer costs the Human a typed sentence and costs the Agent a guess at what the sentence
+meant. Fixed options make both cheap, and make the answer unambiguous.
+
+---
+
+## 2. Example use cases
+
+| # | Situation | What must happen |
+| --- | --- | --- |
+| Q1 | The Human writes *"Help me plan a workout routine"* to Coach | Coach replies with one framing sentence and calls `ask_human` with a goal Question (Strength / Cardio / Weight loss) and a time Question. A card appears above the composer |
+| Q2 | The Human taps Strength and 3 days, then **Send** | A Message from the Human is posted, quoting both Questions with the answers, ending `@Coach`. Coach wakes and writes the routine |
+| Q3 | The card holds one `single_select` Question | One tap on an option posts the answer. There is no Send button |
+| Q4 | The Human types *"Actually I have a bad knee"* instead of tapping | That Message is posted as usual and the card disappears. Coach reads the Message as the answer |
+| Q5 | The Human clicks **Dismiss** | The card disappears and nothing is posted. Coach is not woken |
+| Q6 | Coach calls `ask_human` again while its card waits | The new Questions **replace** the waiting ones |
+| Q7 | Nova calls `ask_human` in a Room where Coach's card waits | Refused: *"Questions from Coach are already waiting in this Room. Wait for the Human to answer them."* |
+| Q8 | An option reads `@Coder go ahead` | Refused. The answer is posted as the Human, so a Mention in it would speak for the Human |
+| Q9 | The Room has spent its Budget | Refused, worded as terminal, like `post_message`'s Budget refusal |
+| Q10 | A `rank_priorities` Question: Cost / Speed / Quality | The card lists the three with up and down buttons; **Send** posts `1. Speed · 2. Cost · 3. Quality` |
+| Q11 | The Human taps an option while Coach's Turn is still streaming | The options are disabled until Coach's Turn ends, so Coach's framing Message is posted before the answer |
+| Q12 | Two browser tabs answer the same card | The first wins. The second finds nothing, posts nothing, and its card disappears |
+| Q13 | The app restarts with a card waiting | The card is lost. Coach is not told; the Human types the answer instead |
+
+---
+
+## 3. Non-goals
+
+| Not in scope | Why |
+| --- | --- |
+| **Asking another Agent** | Agents already read Messages. Options exist to save a person typing; an Agent gains nothing from them |
+| **A free-text "Other" option on the card** | The composer is the Other. Typing a Message is always available and drops the card (Q4) |
+| **Persisting a card across restarts** | In memory, like a Proposal or a Budget. A restart losing it is acceptable because the Human can type the answer |
+| **Changing an answer after sending it** | The answer is a Message, and a Transcript is append-only (ADR-0002). The Human sends a correction as another Message |
+| **Expiring a card after a period** | V1 keeps it until it is answered, dismissed, replaced or dropped |
+| **Images, descriptions or icons on an option** | Short labels only. The Agent's framing Message carries any explanation |
+| **Drag-and-drop ranking** | Up and down buttons work with a keyboard and a screen reader, and need no JavaScript. V2 may add drag |
+| **A new Envelope or a `ProtocolVersion` bump** | The card never crosses the pipe (`traps.md`, the closed polymorphism rule) |
+
+---
+
+## 4. Design principles
+
+1. **Everything an Agent knows arrives through a tool or a Message.** The answer is a
+   Message; the Agent reads it like any other. No new Envelope, no privileged path, no
+   ambient "current Room".
+2. **Text never guards; code does.** The tool description asks for restraint, but the refusals
+   that matter are in C#: no `@`, no paused Room, no second asker, and limits on counts and
+   lengths.
+3. **Words posted as the Human are the Human's words.** The Agent writes the options, but only
+   the Human's tap posts them. That is why no option may Mention anyone, and why nothing is
+   posted on Dismiss.
+4. **Copy the Proposal, do not generalise it.** A Question card and a Proposal card look alike,
+   but have different lifetimes: a typed Message drops a Question but deliberately leaves a
+   Proposal waiting for revision. Two small stores are simpler than one store with a mode.
+5. **Simple over complete.** No abstraction a current feature does not need.
+
+---
+
+## 5. Architecture overview
+
+```text
+ Agent's Turn
+   │  framing text ─────────────────────────────────────────▶ posted at Turn end (as the Agent)
+   │  ask_human(roomId, questions)
+   ▼
+ AskHumanTool ── checks ──▶ QuestionStore.TryPut ──▶ RoomEvents.QuestionsChanged(roomId)
+   │  returns "Asked… end your Turn now"                          │
+                                                                  ▼
+                                               Chat.razor ── QuestionCard (options, Send, Dismiss)
+                                                                  │  disabled while the asker
+                                                                  │  has a Draft in this Room
+                                                    Send / tap    ▼
+                                               QuestionService.AnswerAsync
+                                                 ├─ QuestionStore.TryTake   (first tap wins)
+                                                 └─ ChatService.PostAsync   (as the Human)
+                                                        │  "> …\nStrength\n\n@Coach"
+                                                        ▼
+                                               MessagePosted ─▶ Reply Gate ─▶ wakes the asker
+
+ Any other Human Message in the Room ─▶ ChatService.PostAsync ─▶ QuestionStore.Drop(roomId)
+ Archive or delete the Room          ─▶ QuestionStore.Drop(roomId)
+```
+
+| Component | Kind | New or changed |
+| --- | --- | --- |
+| `Questions/Question.cs` | Records: `Question`, `QuestionKind`, `PendingQuestions` | New |
+| `Questions/QuestionStore.cs` | Singleton, in memory | New |
+| `Questions/QuestionService.cs` | Scoped or singleton service | New |
+| `Acp/Tools/AskHumanTool.cs` | `IAppTool`, one per Persona | New |
+| `Components/Shared/QuestionCard.razor` | Component | New |
+| `RoomEvents.cs` | Gains `QuestionsChanged` | Changed |
+| `ChatService.cs` | Drops a waiting card on a Human post, on archive and on delete | Changed |
+| `DotAcpAgentHostFactory.cs` | Adds `ask_human` to every Persona's tools | Changed |
+| `PromptCatalog.cs`, `prompts.default.json` | Gains `tool.askHuman.description` | Changed |
+| `Chat.razor` | Renders `QuestionCard` and subscribes to `QuestionsChanged` | Changed |
+
+---
+
+## 6. Components
+
+### 6.1 The records
+
+```csharp
+public enum QuestionKind { SingleSelect, MultiSelect, RankPriorities }
+
+/// <summary>One multiple-choice Question an Agent puts to the Human.</summary>
+public sealed record Question(string Text, IReadOnlyList<string> Options, QuestionKind Kind);
+
+/// <summary>The one to three Questions waiting on one card in one Room.</summary>
+public sealed record PendingQuestions(
+    string Id,                       // Guid "N"; identifies this card, so a stale tap finds nothing
+    string RoomId,
+    string AskerAgentId,
+    string AskerName,                // at ask time; the posted Mention re-resolves it (§6.4)
+    IReadOnlyList<Question> Questions,
+    DateTimeOffset AskedAt);         // from the injected TimeProvider
+
+/// <summary>The Human's answer to one Question: option indexes, in the order that matters.</summary>
+public sealed record QuestionAnswer(IReadOnlyList<int> Chosen);
+```
+
+`QuestionKind` is an enum rather than a string (the "make illegal states unrepresentable"
+principle). The wire values `single_select`, `multi_select` and `rank_priorities` are parsed into
+it once, in the tool.
+
+### 6.2 `ask_human` — the App Tool
+
+**Arguments.**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "roomId": { "type": "string" },
+    "questions": {
+      "type": "array", "minItems": 1, "maxItems": 3,
+      "items": {
+        "type": "object",
+        "properties": {
+          "question": { "type": "string" },
+          "options":  { "type": "array", "minItems": 2, "maxItems": 4, "items": { "type": "string" } },
+          "type":     { "type": "string", "enum": ["single_select", "multi_select", "rank_priorities"] }
+        },
+        "required": ["question", "options"]
+      }
+    }
+  },
+  "required": ["roomId", "questions"]
+}
+```
+
+`type` defaults to `single_select`. The schema's limits are advisory for the model; the checks
+below are the rule.
+
+**Checks, in order.** Every check returns a string, and none throws for an expected failure:
+
+```text
+ roomId, questions present?             no  → "Both 'roomId' and 'questions' are required arguments."
+ Room exists?                           no  → "Unknown room 'x'."
+ caller is a Member?                    no  → "You are not a Member of that Room."
+ Room Archived?                         yes → "That Room is Archived."
+ Room's Budget spent?                   yes → "That Room is paused: its Budget is spent. Do not retry;
+                                               nothing can be asked there until the Human speaks."
+ 1 to 3 questions?                      no  → "Ask 1 to 3 questions; you asked 5."
+ each question, each option             bad → one line per problem (below), all reported at once
+ QuestionStore.TryPut
+     Refused(existing)                  → "Questions from Nova are already waiting in this Room.
+                                            Wait for the Human to answer them."
+     Stored | Replaced                  → QuestionsChanged(roomId) → the success text
+```
+
+Problems, one line each, prefixed with their position (`Question 2:`, `Question 2, option 3:`):
+
+| Rule | Problem text |
+| --- | --- |
+| Question text is 1 to 200 characters after trimming | `is empty.` / `is 240 characters; the limit is 200.` |
+| Options: 2 to 4 | `give 2 to 4 options; it has 5.` |
+| Each option is 1 to 60 characters after trimming | `is empty.` / `is 75 characters; keep options short, the limit is 60.` |
+| Options are distinct, ignoring case | `repeats option 1.` |
+| No line break in a question or an option | `must be one line.` |
+| **No `@` in a question or an option** | `must not contain '@'. The answer is posted as the Human, so a Mention in it would speak for them.` |
+| `type` is one of the three | `type must be single_select, multi_select or rank_priorities.` |
+
+**Success text.**
+
+```text
+Asked the Human 2 questions in Room 'Workout' (id 01H...). End your Turn now, and do not guess
+the answers. The answer will arrive later as a Message from the Human in that Room, quoting each
+question. If they write their own reply instead, that reply is the answer.
+```
+
+A replacement starts `Replaced your waiting questions.` and continues the same way.
+
+**Implementation notes.**
+- Constructed per Persona with the caller's Agent id, exactly like `PostMessageTool`.
+- The Budget check reads `ChatService.GetBudget(roomId).Exhausted`. It is advisory, not
+  check-then-act critical: a Room that pauses after the check still cannot be answered without
+  a Human tap, which is the Human speaking.
+- The refusal texts are tool results, not Prompts, and live as constants in the tool, matching
+  `PostMessageTool`. Only the description is a Prompt (§6.6).
+
+### 6.3 `QuestionStore`
+
+**Purpose.** Hold at most one waiting card per Room.
+
+```csharp
+internal sealed class QuestionStore(RoomEvents events)
+{
+    internal PendingQuestions? Get(string roomId);
+    internal QuestionPut TryPut(PendingQuestions pending);      // Stored | Replaced | Refused(existing)
+    internal PendingQuestions? TryTake(string roomId, string id);   // first tap wins
+    internal bool Drop(string roomId);                          // Human Message, Dismiss, archive, delete
+}
+```
+
+- A `Dictionary<string, PendingQuestions>` under a `private readonly Lock gate`, keyed by Room
+  id with `StringComparer.Ordinal`. All operations are O(1).
+- **Replacement** (§8.1): the same `AskerAgentId` replaces; any other asker is refused.
+- `TryTake` matches the card `Id` as well as the Room, so a tap on a card that was replaced in
+  the meantime finds nothing instead of answering the new Questions with the old indexes.
+- `QuestionsChanged(roomId)` is raised **outside** the lock, after every change, including a
+  `Drop` that removed something. A `Drop` that found nothing raises nothing.
+- A leaf singleton: it depends only on `RoomEvents`, so `ChatService` can call it without a
+  cycle, as it will call `ProposalStore`.
+
+### 6.4 `QuestionService` — Answer and Dismiss
+
+```csharp
+internal sealed class QuestionService(
+    QuestionStore questions, ChatService chat, ITeamDirectory directory, ILogger<QuestionService> logger)
+{
+    internal Task<string?> AnswerAsync(string roomId, string id, IReadOnlyList<QuestionAnswer> answers, CancellationToken ct);
+    internal void Dismiss(string roomId, string id);
+}
+```
+
+**Answer.**
+
+```text
+ p = questions.TryTake(roomId, id)            null → return null; post nothing (another tab won)
+ answers match p?                             no  → throw InvalidOperationException (a UI bug:
+                                                     the card builds them, the Human cannot)
+ asker = directory's Agent by p.AskerAgentId  gone → no Mention
+ text  = Compose(p, answers, asker?.Name)
+ await chat.PostAsync(roomId, human.Id, text, ct)  → MessagePosted → Reply Gate wakes the asker
+ return text
+```
+
+`TryTake` runs **before** `PostAsync`, so the Human-post hook in §6.5 finds nothing to drop and
+raises nothing twice.
+
+"Answers match" means one `QuestionAnswer` per Question, and:
+
+| Kind | `Chosen` must be |
+| --- | --- |
+| `SingleSelect` | exactly one valid index |
+| `MultiSelect` | one or more distinct valid indexes, in option order |
+| `RankPriorities` | every index exactly once, most important first |
+
+**The posted text.** The answer is Human-authored, so it is **interface copy, not a Prompt**,
+and lives as a constant format in `QuestionService`, as the Proposal outcomes do. Each Question
+is quoted, then answered, then the asker is Mentioned on the last line:
+
+```markdown
+> What is your main goal?
+Strength
+
+> Which days can you train?
+Monday, Wednesday, Friday
+
+> Rank what matters most
+1. Speed · 2. Cost · 3. Quality
+
+@Coach
+```
+
+- Multiple choices are joined with `, `; a ranking is `1. … · 2. …` on one line, so the
+  Markdown renderer does not turn it into a list that loses the numbers' meaning.
+- The Mention uses the asker's **current** Name, resolved from `AskerAgentId` at post time,
+  so an asker renamed while its card waited is still woken. An asker that no longer exists
+  gets no Mention, and the line is omitted.
+- The Mention is there even in a Room of two, where it is not needed to wake anyone. That keeps
+  the text the same in every Room, and says in the Transcript who asked.
+- Posting as the Human resets the Room's Budget (ADR-0006). That is correct: the Human just
+  spoke. The `@` refusal in §6.2 is what stops this post speaking for the Human to anyone else.
+
+**Dismiss.** `questions.TryTake(roomId, id)`, and nothing else. Nothing is posted and the asker
+is not woken. The Human can still type.
+
+**Failure.** If `PostAsync` throws a `ChatException`, for example because the Room was deleted
+mid-tap, log it and return `null`. The card is already gone, which is right: the Room it
+belonged to may be too.
+
+### 6.5 Lifetime: what drops a waiting card
+
+| Event | Where | Effect |
+| --- | --- | --- |
+| Answered | `QuestionService.AnswerAsync` | Taken, then the answer is posted |
+| Dismissed | `QuestionService.Dismiss` | Taken; nothing posted |
+| Replaced | `QuestionStore.TryPut`, same asker | The new card replaces the old |
+| **Any other Human Message in the Room** | `ChatService.PostAsync`, after the Message is appended, when the sender is the Human | `QuestionStore.Drop(roomId)` |
+| Room Archived or deleted | `ChatService.SetRoomArchivedAsync(…, true)`, `DeleteRoomAsync` | `QuestionStore.Drop(roomId)` |
+| App restart | — | Lost, by design |
+
+**A typed Human Message drops the card** because it *is* the answer the asker will act on: in a
+Room of two it wakes the asker at once. A card left on screen afterwards invites a second,
+contradicting answer. The cost is accepted: a Human who types *"what does rank mean?"* loses the
+card, and the Agent asks again (§11, D-4).
+
+An Agent's Message does **not** drop the card. The asker's own framing Message arrives at the
+end of its Turn, after the card appears, and must not remove it.
+
+### 6.6 The tool description — `tool.askHuman.description`
+
+A Prompt, `Timing: NextSession` like every other tool description, editable on Settings ›
+Prompts. It carries the whole of when to use the tool, because a model decides whether to call
+a tool from its description alone:
+
+```text
+Asks the Human one to three multiple-choice questions, shown in a Room as options they tap. Use it when you need their preferences, constraints or goals before you can help, such as which days, what budget, or which of these matters most, and you were about to write your questions out as a list. Do not use it when the answer is already in the conversation or can be inferred, for a fact you can look up, when they want your own recommendation or opinion, when they are venting, or when they have already given you detailed constraints. It asks only the Human: to ask another Teammate something, Mention them in an ordinary Message. Prefer one question, and write each so it makes sense on its own. Each has 2 to 4 short options that do not overlap, and a type: single_select (the default), multi_select, or rank_priorities. Always say in your reply why you are asking. After calling it, end your Turn: the answer arrives later, as a Message from the Human in that Room.
+```
+
+It names no tool, so it needs no placeholder and cannot break the `mcp__team__` rule in
+`rules.md`. `PromptValidator` needs no new check.
+
+### 6.7 `QuestionCard` in the Room
+
+**Placement.** Between the Transcript and the composer, with the Budget prompt and the
+`ProposalCard`, and for the same reason: it is about the exchange just above it. A separate
+component in `Components/Shared/`, so `Chat.razor` gains only a tag and a subscription.
+
+**Header.** *"Coach is asking"*, using the asker's current Name, with **Dismiss** at the right.
+Each Question's text is shown as written, with its options below it.
+
+| Kind | Control | Rule |
+| --- | --- | --- |
+| `SingleSelect` | A row of chips; choosing one clears the others | — |
+| `MultiSelect` | A row of chips that toggle | A caption: *"Choose any."* |
+| `RankPriorities` | An ordered list; each row has up and down buttons | Starts in the Agent's order. A caption: *"Most important first."* |
+
+- **One tap sends** when the card holds exactly one `SingleSelect` Question. There is no Send
+  button in that case.
+- Otherwise **Send** is enabled once every `SingleSelect` has a choice and every `MultiSelect`
+  has at least one. A ranking is always complete, because it starts in a valid order.
+- **Options are disabled while the asker has a Draft in this Room**, with the caption *"Coach
+  is still writing…"*. `Drafts.ForRoom(roomId)` carries each Draft's `AgentId`, and
+  `DraftChanged` already reaches the Room view. This is what makes the asker's framing Message
+  land in the Transcript *before* the answer (Q11). An asker that called `ask_human` from a Turn
+  in a different Room has no Draft here, so its card is enabled at once.
+- Busy while `AnswerAsync` runs. The outcome is the posted Message, not card state; the card
+  disappears on `QuestionsChanged`.
+- Chips are at least 44 pixels tall and wrap, so the card works at phone width.
+- Not rendered for an Archived Room.
+- `role="group"` with an `aria-label` of the Question text for each Question. Chips expose
+  `aria-pressed`, and the rank buttons read *"Move Speed up"*.
+
+**Internal flow.** It mirrors the Proposal card and the Budget prompt:
+
+```text
+ OnInitialized     → pending = questions.Get(roomId); subscribe QuestionsChanged, DraftChanged
+ QuestionsChanged  → InvokeAsync: pending = questions.Get(roomId); reset choices; StateHasChanged
+ DraftChanged      → InvokeAsync: recompute askerIsWriting; StateHasChanged
+ Send / tap        → busy = true → QuestionService.AnswerAsync(roomId, pending.Id, answers, ct)
+ Dismiss           → QuestionService.Dismiss(roomId, pending.Id)
+ Dispose           → unsubscribe both (rules.md: every RoomEvents subscriber unsubscribes)
+```
+
+The `[Parameter]` types are `public`, per `rules.md`; `QuestionKind` and the records are
+public for that reason.
+
+---
+
+## 7. Storage
+
+| State | Where | Survives restart |
+| --- | --- | --- |
+| A waiting card | `QuestionStore`, memory | No |
+| The answer | The Room's Transcript, as a Message | Yes |
+| The framing | The Room's Transcript, as the asker's Message | Yes |
+| The tool description | `PromptCatalog`, overridable in `prompts.json` | Yes |
+
+No table, no file and no column. The Questions themselves reach the Transcript only inside the
+answer, so a card that was dismissed or lost leaves no trace but the framing Message. That is
+accepted.
+
+---
+
+## 8. Core rules
+
+### 8.1 Replacement
+
+| A card waits in the Room | Caller | Result |
+| --- | --- | --- |
+| None | Anyone | Stored |
+| The caller's own | The same Agent | Replaced |
+| Another Agent's | Anyone else | Refused, naming the asker |
+
+The same as a Proposal (Skills spec D-6). A queue would put several cards in front of the Human
+at once, which is what the three-Question limit exists to prevent.
+
+### 8.2 A Proposal and a Question in the same Room
+
+They are independent: both cards can wait at once, and both render. Answering the Question
+posts a Human Message, which drops no Proposal, because a Proposal survives typed Messages by
+design. No rule refuses one while the other waits. A Skill that uses both should ask first and
+propose after the answer.
+
+---
+
+## 9. Edge cases
+
+| # | Case | Behaviour |
+| --- | --- | --- |
+| E-1 | Two tabs tap at once | `TryTake` lets exactly one through. The other gets `null`; its card disappears on `QuestionsChanged` |
+| E-2 | Tap on a card that was replaced meanwhile | The `Id` does not match, so `TryTake` finds nothing. The new card renders |
+| E-3 | The asker's Persona restarts while its card waits | No effect. The card is keyed by Room and the asker by Agent id; the answer still wakes it |
+| E-4 | The asker is renamed while its card waits | The header and the Mention use the current Name |
+| E-5 | The asker is deleted while its card waits | The card stays and can be answered; the answer carries no Mention. Dismiss is the likely choice |
+| E-6 | The Room pauses after the card appears | The card still works. Answering is the Human speaking, which resets the Budget |
+| E-7 | The asker calls `ask_human` and keeps writing, guessing the answer | Nothing in code prevents it; the success text forbids it. Manual test QM-2 |
+| E-8 | The asker asks in a Room other than the one its Turn is in | Allowed. There is no framing Message there, so the card must stand on its own. The tool description asks for self-contained questions |
+| E-9 | `PostAsync` fails after the take | Logged; the card is gone; the Human types |
+| E-10 | An Adapter whose MCP client mishandles a nested array schema | Shared with `propose_teammates`. Manual test QM-4 on `agency-acp` |
+
+---
+
+## 10. Testing
+
+Every automated test uses fakes and costs nothing. What only a real model can show is in the
+manual tests.
+
+**Golden files change.** Adding a tool changes the roster in the system prompt, so
+`systemPrompt.txt`, `systemPrompt.unprefixed.txt` and any `get_help` golden are regenerated in
+the task that registers the tool, and the diff is reviewed to be exactly one new tool.
+
+**Manual tests**, to add to [manual-tests.md](agencyteam/manual-tests.md):
+
+| Id | Steps | Pass |
+| --- | --- | --- |
+| QM-1 | Ask a Persona *"Help me plan a workout routine"* | It frames the ask in one or two sentences and calls `ask_human` with one to three Questions |
+| QM-2 | Same | Its Turn ends without guessing an answer; the framing Message appears before you can tap |
+| QM-3 | Ask *"What is the capital of France?"* and *"Should I learn Python or JavaScript?"* | It answers directly both times and does not call `ask_human` |
+| QM-4 | QM-1 on a Persona on `agency-acp` | Same as QM-1, or the failure is recorded in the Adapters live findings |
+| QM-5 | In a Room of three, answer a card | Only the asker wakes; the other Agent reads the answer as Catch-up next time it is Mentioned |
+
+---
+
+## 11. Decisions
+
+| # | Decision | Rejected | Why |
+| --- | --- | --- | --- |
+| D-1 | **Only the Human is asked; no recipient argument** | Letting an Agent ask another Agent | Options save a person typing; an Agent reads prose as easily. Agent-to-Agent questions stay plain Mentions. Decided by the repo owner |
+| D-2 | **The answer is a Message from the Human** | A tool result the asker waits for; a new Envelope | A blocking tool would hold a Turn open for as long as the Human takes, against the idle timeout. An Envelope means a `ProtocolVersion` bump. A Message reuses the Reply Gate, the Budget and the Transcript unchanged |
+| D-3 | **No `@` in a question or an option** | Escaping `@` when composing; allowing it | The answer is posted as the Human. An escaped `@` is still the Agent putting words in the Human's mouth; refusing is simpler, and costs only an e-mail address in an option |
+| D-4 | **Any typed Human Message drops the card** | Keeping it until answered, as a Proposal is kept | The typed Message is the answer the asker acts on. A card left behind invites a second, contradicting one. A Proposal is kept because revising it through prose is its normal path; a Question has no such path |
+| D-5 | **Refused in a paused Room** | Allowed, since only a Human tap can answer | A tap resets the Budget. A Human deciding whether to let a runaway Room continue should see the Continue prompt, not a card that makes the decision for them as a side effect |
+| D-6 | **One card per Room; the same asker replaces** | A queue; last writer wins | Same as the Proposal's D-6 |
+| D-7 | **Separate store from `ProposalStore`** | One "pending card" store for both | Different lifetimes (D-4). A shared store would need a mode flag at every call site |
+| D-8 | **Options disabled while the asker is still writing** | Enabled at once | Keeps the Transcript in the order it happened: the framing, then the answer |
+| D-9 | **Up and down buttons to rank** | Drag and drop | Keyboard and screen-reader access, and no JavaScript |
+| D-10 | **Every Agent gets the tool** | Granting it through a Skill | Asking costs nothing and creates nothing. `propose_teammates` is granted by a Skill because each Teammate is a billed process; `ask_human` is not |
+| D-11 | **The full decision guidance lives in the tool description** | A `get_help` section; a Skill | A model decides to call a tool from its description; guidance elsewhere is read too late or not at all |
+| D-12 | **`rank_priorities` ships in V1** | V2 | It is the one kind a typed answer is worst at, and up and down buttons keep it small |
+
+---
+
+## Appendix A — Test-first task plan
+
+Each `.t` task ends red for the right reason; each `.i` task ends with `dotnet test Huddle.slnx
+--` green. Test names follow `Method_Scenario_Expectation`.
+
+| # | Kind | Task | Done when |
+| --- | --- | --- | --- |
+| Q-T1 | Unit | `QuestionStoreTests`: Stored; same asker Replaced; other asker Refused; `TryTake` once; `TryTake` with a stale id finds nothing; `Drop`; `QuestionsChanged` raised outside the lock, and not by a `Drop` that found nothing | Fails |
+| Q-I1 | Impl | `Question.cs`, `QuestionStore`, `RoomEvents.QuestionsChanged` | T1 green |
+| Q-T2 | Unit | `AskHumanToolTests`: each refusal in §6.2, in order; every problem in one result; `@` refused; `type` defaults to single; success and replacement texts | Fails |
+| Q-I2 | Impl | `AskHumanTool` | T2 green |
+| Q-T3 | Functional | `QuestionServiceTests.Answer_ThreeKinds_PostsQuotedAnswersAsHumanMentioningAsker` (real `ChatService`, `TempDataDir`) + `…_SecondAnswer_PostsNothing` + `…_AskerRenamed_MentionsNewName` + `…_AskerDeleted_OmitsMention` + `Dismiss_PostsNothing` | Fails |
+| Q-I3 | Impl | `QuestionService` | T3 green |
+| Q-T4 | Functional | `QuestionServiceTests.Answer_InGroupRoom_ReplyGateWakesOnlyAsker` (a fake gateway records `Mentioned`) | Fails |
+| Q-I4 | Impl | Whatever T4 shows is missing | T4 green |
+| Q-T5 | Functional | `ChatServiceTests.PostAsync_HumanMessage_DropsWaitingQuestions` + `…_AgentMessage_KeepsThem` + `SetRoomArchived_WithQuestions_Drops` + `DeleteRoom_WithQuestions_Drops` | Fails |
+| Q-I5 | Impl | `ChatService` → `QuestionStore.Drop` | T5 green |
+| Q-T6 | Unit | `PromptCatalogTests`: `tool.askHuman.description` exists, `NextSession`, contains no `mcp__team__`; `prompts.default.json` drift test | Fails |
+| Q-I6 | Impl | The Prompt, and regenerate `prompts.default.json` | T6 green |
+| Q-T7 | Functional | The factory offers `ask_human` to every Persona; goldens regenerated and reviewed | Fails |
+| Q-I7 | Impl | `DotAcpAgentHostFactory` registration | T7 green |
+| Q-T8 | bUnit | `QuestionCardTests`: one single Question sends on tap; Send disabled until complete; multi toggles; rank up/down reorders and sends `1. … · 2. …`; disabled while the asker has a Draft; Dismiss posts nothing; a second tab hides on `QuestionsChanged`; hidden when Archived | Fails |
+| Q-I8 | Impl | `QuestionCard.razor`, `Chat.razor` wiring | T8 green |
+| Q-D | Docs | `language.md` Question drops "Proposed, not built"; `known-limits.md` gains "a waiting Question is lost on restart"; `manual-tests.md` gains QM-1 to QM-5; ADR-0022 to Accepted | Reviewed |
+
+## Appendix B — Follow-ups outside this spec
+
+- **The `team-building` Skill's step 1 interview** is the obvious first user: *"One-off or
+  recurring"*, *"How involved"* and *"Practice or real work"* are each a `single_select`. The
+  Greeting's menu of 31 teams is **not**: it is far past four options, and it stays prose. Edit
+  the Skill once this tool exists, not before, so the Skill never names a tool its Teammate
+  cannot call.
