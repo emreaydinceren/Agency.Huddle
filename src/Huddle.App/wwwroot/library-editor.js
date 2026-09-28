@@ -48,11 +48,14 @@ function languageExtension(languageId) {
  * Builds a CodeMirror 6 `EditorView` inside `element` and returns a handle object exposing
  * `getText`, `setText` and `dispose`. Text crosses the .NET/JS boundary only on save and on
  * mode switch, never per keystroke: `OnDirtyChanged` fires only when the dirty state flips, and
- * `OnSaveRequested` fires only on the `Mod-s` keymap.
+ * `OnSaveRequested` fires only on the `Mod-s` keymap. When `previewMode` is set (Split mode,
+ * corrections-B6 item 15), `OnPreviewText` fires 300 ms after the last keystroke - the debounce
+ * timer lives here, never as a .NET `Timer`, and is cleared by `dispose`.
  */
-export function create(element, text, readOnly, languageId, dotNetRef) {
+export function create(element, text, readOnly, languageId, dotNetRef, previewMode) {
   let savedText = text;
   let dirty = false;
+  let previewTimer = null;
 
   const updateListener = EditorView.updateListener.of((update) => {
     if (!update.docChanged) {
@@ -66,6 +69,17 @@ export function create(element, text, readOnly, languageId, dotNetRef) {
     if (nowDirty !== dirty) {
       dirty = nowDirty;
       dotNetRef.invokeMethodAsync("OnDirtyChanged", dirty);
+    }
+
+    if (previewMode) {
+      if (previewTimer !== null) {
+        clearTimeout(previewTimer);
+      }
+
+      previewTimer = setTimeout(() => {
+        previewTimer = null;
+        dotNetRef.invokeMethodAsync("OnPreviewText", doc.toString());
+      }, 300);
     }
   });
 
@@ -112,7 +126,13 @@ export function create(element, text, readOnly, languageId, dotNetRef) {
         dotNetRef.invokeMethodAsync("OnDirtyChanged", false);
       }
     },
-    dispose: () => view.destroy(),
+    dispose: () => {
+      if (previewTimer !== null) {
+        clearTimeout(previewTimer);
+        previewTimer = null;
+      }
+      view.destroy();
+    },
   };
 
   return DotNet.createJSObjectReference(handle);

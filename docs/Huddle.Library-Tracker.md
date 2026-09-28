@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 117 of 143 tasks Done · 6 of 8 retrospectives done (R7, R8 skipped) · last updated 2026-09-27.
+**Status:** 119 of 143 tasks Done · 6 of 8 retrospectives done (R7, R8 skipped) · last updated 2026-09-27.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -152,8 +152,8 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 12.2.t Test: `LibraryDocument` reading states · #104 · Sonnet | | | ✔ |
 | 12.2.i Implement `LibraryDocument` reading · #105 · Sonnet | | | ✔ |
 | 🔁 R7 — Opus retrospective after #105, and plan update — skipped by the Human (2026-09-27, to save tokens) | | | ✔ |
-| 12.3.t Test: editing, saving and unsaved edits · #106 · Sonnet | ✔ | | |
-| 12.3.i Implement editing · #107 · Sonnet | ✔ | | |
+| 12.3.t Test: editing, saving and unsaved edits · #106 · Sonnet | | | ✔ |
+| 12.3.i Implement editing · #107 · Sonnet | | | ✔ |
 | 12.4.t Test: `BacklinksPanel` · #108 · Haiku | ✔ | | |
 | 12.4.i Implement `BacklinksPanel` · #109 · Haiku | ✔ | | |
 | 12.5.t Test: rename, move, delete and New Project dialogs · #110 · Sonnet | ✔ | | |

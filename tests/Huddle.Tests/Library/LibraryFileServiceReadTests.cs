@@ -173,6 +173,39 @@ public sealed class LibraryFileServiceReadTests
         await Assert.ThrowsAsync<FileNotFoundException>(() => service.ReadAsync(path, ct));
     }
 
+    /// <summary>An existing file's <see cref="LibraryFileService.StatAsync"/> returns its current entry (corrections-B6 item 11).</summary>
+    [Fact]
+    public async Task Stat_ExistingFile_ReturnsEntry()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = Fixture.Build();
+        string vault = fixture.CreatePinnedRoot("Vault");
+        string filePath = Path.Combine(vault, "note.md");
+        File.WriteAllText(filePath, "hello world");
+        LibraryFileService service = fixture.CreateService();
+        LibraryPath path = fixture.Resolve(vault, "note.md");
+
+        LibraryEntry? entry = await service.StatAsync(path, ct);
+
+        Assert.NotNull(entry);
+        Assert.Equal("hello world".Length, entry.Length);
+    }
+
+    /// <summary>A missing file's <see cref="LibraryFileService.StatAsync"/> returns <see langword="null"/> rather than throwing (corrections-B6 item 11).</summary>
+    [Fact]
+    public async Task Stat_MissingFile_ReturnsNull()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = Fixture.Build();
+        string vault = fixture.CreatePinnedRoot("Vault");
+        LibraryFileService service = fixture.CreateService();
+        LibraryPath path = fixture.Resolve(vault, "ghost.md");
+
+        LibraryEntry? entry = await service.StatAsync(path, ct);
+
+        Assert.Null(entry);
+    }
+
     /// <summary>A minimal <see cref="IRecycleBin"/> fake: this task never calls it, only satisfies the constructor.</summary>
     private sealed class RecordingRecycleBin : IRecycleBin
     {

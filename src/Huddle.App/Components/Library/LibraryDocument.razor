@@ -14,14 +14,17 @@
 @inject ILibraryNoteResolver NoteResolver
 @inject LibraryPathResolver PathResolver
 @inject NavigationManager Navigation
+@inject IDialogService Dialogs
 
 <div class="library-document">
+    <MudExitPrompt Title="Discard changes?" Text="Your unsaved edits to this file will be lost." Disabled="@(!this.dirty)" Class="library-document-exit-prompt" />
     <MudToolBar Dense="true" Class="library-document-toolbar">
         <MudBreadcrumbs Items="@this.BreadcrumbItems()" Class="library-document-breadcrumbs" />
+        <div class="library-document-title">@this.TitleText()</div>
         <MudSpacer />
         @if (this.ShowModeToggle())
         {
-            <MudToggleGroup T="LibraryMode" Value="LibraryMode.Read" SelectionMode="SelectionMode.SingleSelection"
+            <MudToggleGroup T="LibraryMode" Value="@this.mode" ValueChanged="@this.OnModeChangedAsync" SelectionMode="SelectionMode.SingleSelection"
                              Class="library-document-mode-toggle">
                 <MudToggleItem Value="LibraryMode.Read" Text="Read" />
                 <MudToggleItem Value="LibraryMode.Edit" Text="Edit" />
@@ -44,6 +47,10 @@
     }
     else if (this.content is not null)
     {
+        @if (this.saveError is not null)
+        {
+            <div class="library-document-save-error">@this.saveError</div>
+        }
         @if (this.definitionName is not null)
         {
             <div class="library-document-banner">This is @(this.definitionName)'s definition.</div>
@@ -51,6 +58,20 @@
         @if (this.content.ViewOnlyReason is not null)
         {
             <div class="library-document-banner">@this.content.ViewOnlyReason</div>
+        }
+        else if (this.mode == LibraryMode.Edit && this.content.Kind == LibraryFileKind.Markdown && this.content.Editable)
+        {
+            <LibraryEditor @ref="this.editorRef" Text="@(this.content.Text ?? string.Empty)" ReadOnly="false" LanguageId="markdown"
+                           DirtyChanged="@this.OnDirtyChangedAsync" SaveRequested="@this.OnSaveRequestedAsync" />
+        }
+        else if (this.mode == LibraryMode.Split && this.content.Kind == LibraryFileKind.Markdown && this.content.Editable)
+        {
+            <div class="library-document-split">
+                <LibraryEditor @ref="this.editorRef" Text="@(this.content.Text ?? string.Empty)" ReadOnly="false" LanguageId="markdown"
+                               DirtyChanged="@this.OnDirtyChangedAsync" SaveRequested="@this.OnSaveRequestedAsync"
+                               PreviewMode="true" PreviewTextChanged="@this.OnPreviewTextChangedAsync" />
+                <div class="library-rendered">@((MarkupString)MarkdownRenderer.ToHtml(this.previewText ?? this.content.Text ?? string.Empty, this.Tasks, this.NoteResolver, this.Path))</div>
+            </div>
         }
         else if (this.content.Kind == LibraryFileKind.Markdown)
         {
@@ -106,6 +127,11 @@
     private string? definitionName;
     private LibraryPath? loadedPath;
     private IDisposable? locationChangingRegistration;
+    private LibraryMode mode = LibraryMode.Read;
+    private bool dirty;
+    private string? saveError;
+    private string? previewText;
+    private LibraryEditor? editorRef;
 
     /// <inheritdoc />
     protected override void OnInitialized() =>
@@ -123,6 +149,11 @@
         this.content = null;
         this.missing = false;
         this.definitionName = null;
+        this.mode = LibraryMode.Read;
+        this.dirty = false;
+        this.saveError = null;
+        this.previewText = null;
+        this.editorRef = null;
 
         this.outsideScope = this.Scope is not null && !IsWithinScope(this.Path, this.Scope);
         if (this.outsideScope)
@@ -140,12 +171,145 @@
             return;
         }
 
+        this.previewText = this.content.Text;
+
         if (this.Path.Role == LibraryNodeRole.TeammateDefinition
             && this.content.Text is not null
             && PersonaFrontmatter.TryReadIdentity(this.content.Text, out PersonaIdentity? identity, out _))
         {
             this.definitionName = identity.Name;
         }
+    }
+
+    /// <summary>Switches between Read, Edit and Split (Spec §6.7's mode toggle); no unsaved-edit guard - the toggle only changes how the SAME loaded text is shown.</summary>
+    private Task OnModeChangedAsync(LibraryMode newMode)
+    {
+        this.mode = newMode;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Forwards the editor's dirty flip (Spec §6.7's <c>●</c> and the <see cref="MudExitPrompt"/> guard).</summary>
+    private Task OnDirtyChangedAsync(bool value)
+    {
+        this.dirty = value;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Updates the Split preview 300 ms after the last keystroke (corrections-B6 item 15; no .NET timer, the debounce lives in <c>library-editor.js</c>).</summary>
+    /// <param name="text">The editor's current text.</param>
+    private Task OnPreviewTextChangedAsync(string text)
+    {
+        this.previewText = text;
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The document title with a trailing <c>●</c> while dirty (Spec §6.7).</summary>
+    private string TitleText() => this.dirty ? $"{this.FileName()} ●" : this.FileName();
+
+    /// <summary>
+    /// The save sequence (Spec §6.4, §6.12; corrections-B6 items 11, 15, 21; judgement 44):
+    /// stat the file first and refuse without writing if it is gone; ask to overwrite if it
+    /// changed since it was loaded; ask the Teammate-definition confirm; write through
+    /// <see cref="LibraryFileService.WriteTextAsync"/> and show any refusal reason; on success,
+    /// refresh the loaded stamp and clear the dirty marker.
+    /// </summary>
+    private async Task OnSaveRequestedAsync()
+    {
+        if (this.content is null || this.editorRef is null)
+        {
+            return;
+        }
+
+        this.saveError = null;
+
+        LibraryEntry? current = await this.FileService.StatAsync(this.Path, CancellationToken.None);
+        if (current is null)
+        {
+            this.saveError = "This file was moved or deleted.";
+            return;
+        }
+
+        if (current.Length != this.content.Length || current.LastWriteUtc != this.content.LastWriteUtc)
+        {
+            bool? overwrite = await this.Dialogs.ShowMessageBoxAsync(
+                "Overwrite changes on disk?",
+                "This file changed since you opened it. Saving replaces those changes.",
+                yesText: "Overwrite",
+                cancelText: "Cancel");
+            if (overwrite != true)
+            {
+                return;
+            }
+        }
+
+        if (this.definitionName is not null)
+        {
+            bool? confirmed = await this.Dialogs.ShowMessageBoxAsync(
+                "Save this definition?",
+                $"Saving restarts {this.definitionName} and clears its conversation memory.",
+                yesText: "Save",
+                cancelText: "Cancel");
+            if (confirmed != true)
+            {
+                return;
+            }
+        }
+
+        if (this.content.Format is not TextFileFormat format)
+        {
+            return;
+        }
+
+        string editorText = await this.editorRef.GetTextAsync();
+        LibraryResult<LibraryEntry> result = await this.FileService.WriteTextAsync(this.Path, editorText, format, CancellationToken.None);
+        if (result.Error is not null)
+        {
+            this.saveError = result.Error;
+            return;
+        }
+
+        if (result.Value is not null)
+        {
+            this.content = this.content with { Length = result.Value.Length, LastWriteUtc = result.Value.LastWriteUtc };
+        }
+
+        this.dirty = false;
+    }
+
+    /// <summary>
+    /// Guards leaving this document with unsaved edits (the plan's public <c>TryLeaveAsync</c>;
+    /// used by the explorer before switching documents). Clean returns <see langword="true"/> with
+    /// no dialog. Dirty asks Save/Discard/Cancel: Save runs <see cref="OnSaveRequestedAsync"/> and
+    /// only reports success if it actually cleared the dirty flag (an inner cancel or refusal keeps
+    /// it dirty); Discard clears the flag without writing; Cancel keeps the document.
+    /// </summary>
+    public async Task<bool> TryLeaveAsync()
+    {
+        if (!this.dirty)
+        {
+            return true;
+        }
+
+        bool? choice = await this.Dialogs.ShowMessageBoxAsync(
+            "Save changes?",
+            "This file has unsaved edits.",
+            yesText: "Save",
+            noText: "Discard",
+            cancelText: "Cancel");
+
+        if (choice is null)
+        {
+            return false;
+        }
+
+        if (choice == false)
+        {
+            this.dirty = false;
+            return true;
+        }
+
+        await this.OnSaveRequestedAsync();
+        return !this.dirty;
     }
 
     /// <summary>Whether the header's Read/Edit/Split toggle shows: only for an editable Markdown document (Spec §8).</summary>

@@ -189,6 +189,46 @@ internal sealed class LibraryFileService(
     }
 
     /// <summary>
+    /// Stats <paramref name="path"/> without reading its content (corrections-B6 item 11: the
+    /// save-time freshness check). Re-resolves the path first, never trusting the caller's
+    /// <c>FullPath</c>; a missing file, or an <see cref="IOException"/>/<see cref="UnauthorizedAccessException"/>
+    /// while stating it, both report as "not there" rather than throwing.
+    /// </summary>
+    /// <param name="path">The file to stat; re-resolved against the current tree before use.</param>
+    /// <param name="ct">Cancels the stat.</param>
+    /// <returns>The file's current entry, or <see langword="null"/> when it cannot be stated.</returns>
+    internal Task<LibraryEntry?> StatAsync(LibraryPath path, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        ct.ThrowIfCancellationRequested();
+
+        if (!this.resolver.TryResolve(path.Root.Id, path.RelativePath, out LibraryPath? fresh, out _))
+        {
+            return Task.FromResult<LibraryEntry?>(null);
+        }
+
+        try
+        {
+            FileInfo file = new(fresh.FullPath);
+            if (!file.Exists)
+            {
+                return Task.FromResult<LibraryEntry?>(null);
+            }
+
+            LibraryEntry entry = new(fresh, false, file.Length, new DateTimeOffset(file.LastWriteTimeUtc, TimeSpan.Zero));
+            return Task.FromResult<LibraryEntry?>(entry);
+        }
+        catch (IOException)
+        {
+            return Task.FromResult<LibraryEntry?>(null);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Task.FromResult<LibraryEntry?>(null);
+        }
+    }
+
+    /// <summary>
     /// Reads <paramref name="file"/> (Spec §6.4 <c>ReadTextAsync</c>): decodes text kinds with
     /// <see cref="TextFileCodec"/>, records the length and last-write time from the open handle
     /// before reading any content (§6.8), and refuses to read a text file in full above

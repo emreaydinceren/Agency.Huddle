@@ -24,6 +24,14 @@
     [Parameter]
     public EventCallback SaveRequested { get; set; }
 
+    /// <summary>Whether the JS side debounces text at 300 ms and calls <see cref="OnPreviewText"/> (Split mode, corrections-B6 item 15). There is no .NET timer: the debounce lives entirely in <c>library-editor.js</c>.</summary>
+    [Parameter]
+    public bool PreviewMode { get; set; }
+
+    /// <summary>Raised 300 ms after the last keystroke while <see cref="PreviewMode"/> is set.</summary>
+    [Parameter]
+    public EventCallback<string> PreviewTextChanged { get; set; }
+
     private ElementReference editorElement;
     private IJSObjectReference? module;
     private IJSObjectReference? handle;
@@ -40,7 +48,7 @@
         this.module = await this.JS.InvokeAsync<IJSObjectReference>("import", "./library-editor.js");
         this.selfReference = DotNetObjectReference.Create(this);
         this.handle = await this.module.InvokeAsync<IJSObjectReference>(
-            "create", this.editorElement, this.Text, this.ReadOnly, this.LanguageId, this.selfReference);
+            "create", this.editorElement, this.Text, this.ReadOnly, this.LanguageId, this.selfReference, this.PreviewMode);
     }
 
     /// <summary>Reads the editor's current text. Text crosses the circuit only on demand, never per keystroke.</summary>
@@ -73,6 +81,11 @@
     /// <summary>Called from JS when the <c>Mod-s</c> keymap fires.</summary>
     [JSInvokable]
     public async Task OnSaveRequested() => await this.SaveRequested.InvokeAsync();
+
+    /// <summary>Called from JS 300 ms after the last keystroke while <see cref="PreviewMode"/> is set - see <see cref="PreviewTextChanged"/>.</summary>
+    /// <param name="text">The editor's current text.</param>
+    [JSInvokable]
+    public async Task OnPreviewText(string text) => await this.PreviewTextChanged.InvokeAsync(text);
 
     /// <inheritdoc />
     public async ValueTask DisposeAsync()
