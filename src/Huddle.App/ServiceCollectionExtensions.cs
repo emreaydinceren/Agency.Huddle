@@ -221,12 +221,12 @@ public static class ServiceCollectionExtensions
         // on nothing else, and the constructor never throws on bad configuration either.
         services.AddSingleton<LibraryPathResolver>();
 
-        // Placeholder until Task 6.8.i's real Windows implementation lands: refuses every recycle,
-        // so LibraryFileService below resolves without a partially built dependency.
-        services.AddSingleton<IRecycleBin, NotAvailableRecycleBin>();
+        // The real recycle bin on Windows (Task 6.9.i); everywhere else, a placeholder that refuses
+        // every recycle so nothing is ever silently, permanently deleted.
+        services.AddSingleton<IRecycleBin>(_ => OperatingSystem.IsWindows() ? new WindowsRecycleBin() : new NotAvailableRecycleBin());
 
         // Registered right after LibraryPathResolver (corrections-B4 item 7): it depends on the
-        // resolver above and on IRecycleBin, whose real Windows implementation lands in 6.8.i.
+        // resolver above and on IRecycleBin, registered just above.
         services.AddSingleton<LibraryFileService>();
 
         // No interface, same reasoning as AvatarStore just above: nothing needs to substitute

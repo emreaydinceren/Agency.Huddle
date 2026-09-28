@@ -112,9 +112,9 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
         }
 
         string current = Path.Combine(parent.FullPath, name);
-        string? rootResolvedTarget = ResolveIfLink(parent.Root.FullPath);
+        string? rootResolvedTarget = LinkPaths.ResolveIfLink(parent.Root.FullPath);
 
-        if (child.Attributes.HasFlag(FileAttributes.ReparsePoint) && ResolveLinkTarget(child) is string target)
+        if (child.Attributes.HasFlag(FileAttributes.ReparsePoint) && LinkPaths.ResolveLinkTarget(child) is string target)
         {
             if (!IsWithinRoot(target, parent.Root.FullPath, rootResolvedTarget))
             {
@@ -257,7 +257,7 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
     {
         current = root.FullPath;
         error = null;
-        string? rootResolvedTarget = ResolveIfLink(root.FullPath);
+        string? rootResolvedTarget = LinkPaths.ResolveIfLink(root.FullPath);
 
         foreach (string segment in segments)
         {
@@ -271,7 +271,7 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
 
             current = canonical;
 
-            if (ResolveIfLink(current) is string target)
+            if (LinkPaths.ResolveIfLink(current) is string target)
             {
                 if (!IsWithinRoot(target, root.FullPath, rootResolvedTarget))
                 {
@@ -395,34 +395,6 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
 
         return isFile ? LibraryNodeRole.File : LibraryNodeRole.Folder;
     }
-
-    /// <summary>
-    /// When <paramref name="path"/> exists and is a reparse point with a non-null <c>LinkTarget</c>,
-    /// resolves its final target; a reparse point with a <see langword="null"/> <c>LinkTarget</c>
-    /// (a OneDrive placeholder, a dedup entry) is an ordinary entry (item 26).
-    /// </summary>
-    private static string? ResolveIfLink(string path)
-    {
-        if (Directory.Exists(path))
-        {
-            DirectoryInfo info = new(path);
-            return info.Attributes.HasFlag(FileAttributes.ReparsePoint) ? ResolveLinkTarget(info) : null;
-        }
-
-        if (File.Exists(path))
-        {
-            FileInfo info = new(path);
-            return info.Attributes.HasFlag(FileAttributes.ReparsePoint) ? ResolveLinkTarget(info) : null;
-        }
-
-        return null;
-    }
-
-    /// <summary>Resolves <paramref name="entry"/>'s final link target, or <see langword="null"/> when its <c>LinkTarget</c> is itself null (item 26).</summary>
-    private static string? ResolveLinkTarget(FileSystemInfo entry) =>
-        entry.LinkTarget is not null && entry.ResolveLinkTarget(returnFinalTarget: true) is FileSystemInfo resolved
-            ? resolved.FullName
-            : null;
 
     /// <summary>Containment (step 3, item 26): equal to or under the root's lexical path, or - when the root is itself a link - equal to or under the root's own resolved target.</summary>
     private static bool IsWithinRoot(string candidate, string rootLexical, string? rootResolvedTarget)

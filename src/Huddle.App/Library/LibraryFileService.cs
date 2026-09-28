@@ -70,10 +70,6 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
     /// folder into live Tasks at the wrong depth.</summary>
     private const string MoveTasksSubtreeReason = "Folders that hold tasks can't be moved here.";
 
-    /// <summary>Settled text (Spec §10 E-8) for a recycle refused because <see cref="IRecycleBin.TrySend"/>
-    /// failed, whatever its own error: callers only need the fixed, user-facing reason.</summary>
-    private const string RecycleUnavailableReason = "Couldn't delete: the Recycle Bin isn't available here.";
-
     /// <summary>Settled text (corrections-B4 item 27) for a rename or move whose final
     /// <see cref="File.Move(string, string)"/>/<see cref="Directory.Move(string, string)"/> failed because
     /// something inside the source was held open without <see cref="FileShare.Delete"/>.</summary>
@@ -602,9 +598,9 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
     /// <summary>
     /// Sends <paramref name="item"/> to the OS recycle bin (Spec §6.4 recycle row, §10 E-8). Checked in
     /// order: re-resolve, <see cref="LibraryProtection.For"/>, then <see cref="IRecycleBin.TrySend"/>. The
-    /// service never deletes anything itself; a refusal from the bin (including "no bin available", E-8)
-    /// always surfaces as the fixed settled text, not the bin's own error, since callers only ever need to
-    /// know delete didn't happen and why in user terms.
+    /// service never deletes anything itself; a refusal from the bin passes its <c>error</c> through
+    /// unchanged, since <see cref="IRecycleBin"/> implementations already return the settled,
+    /// user-facing text for each of their own refusal reasons.
     /// </summary>
     /// <param name="item">The already-resolved item to recycle; re-resolved before use.</param>
     /// <param name="ct">Cancels the recycle.</param>
@@ -625,9 +621,9 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
             return Task.FromResult(new LibraryResult<LibraryPath>(null, protection.Reason));
         }
 
-        if (!this.recycleBin.TrySend(fresh.FullPath, out _))
+        if (!this.recycleBin.TrySend(fresh.FullPath, out string? recycleError))
         {
-            return Task.FromResult(new LibraryResult<LibraryPath>(null, RecycleUnavailableReason));
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, recycleError));
         }
 
         return Task.FromResult(new LibraryResult<LibraryPath>(fresh, null));

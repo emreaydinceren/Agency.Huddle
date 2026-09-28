@@ -112,7 +112,7 @@ public sealed class LibraryFileServiceRecycleTests
         LibraryResult<LibraryPath> result = await service.RecycleAsync(file, ct);
 
         Assert.Null(result.Value);
-        Assert.Equal("Couldn't delete: the Recycle Bin isn't available here.", result.Error);
+        Assert.Equal("no recycle bin on this drive", result.Error);
         Assert.True(File.Exists(filePath));
     }
 
