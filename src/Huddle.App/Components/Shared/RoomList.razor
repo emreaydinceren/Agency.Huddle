@@ -36,13 +36,13 @@
             {
                 @foreach (var room in this.rooms)
                 {
-                    <div class="room-list-row"
+                    <div class="hover-reveal-row"
                          @oncontextmenu="@(e => this.OnRowContextMenuAsync(room.Id, e))"
                          @oncontextmenu:preventDefault="true">
                         @if (string.Equals(this.confirmingDeleteRoomId, room.Id, StringComparison.Ordinal))
                         {
                             <div class="room-list-confirm">
-                                <MudText Typo="Typo.body2" Class="room-list-confirm-text">Delete "@room.Name"?</MudText>
+                                <MudText Typo="Typo.body2" Class="flex-1-truncate">Delete "@room.Name"?</MudText>
                                 <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
                                            Disabled="this.busy" OnClick="@(() => this.ConfirmDeleteAsync(room.Id))">Confirm</MudButton>
                                 <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="this.CancelDelete">Cancel</MudButton>
@@ -50,8 +50,8 @@
                         }
                         else
                         {
-                            <MudNavLink Href="@($"/rooms/{room.Id}")" Class="room-list-link">@room.Name</MudNavLink>
-                            <MudMenu @ref="@this.menuRefs[room.Id]" Class="room-list-menu">
+                            <MudNavLink Href="@($"/rooms/{room.Id}")" Class="hover-reveal-link">@room.Name</MudNavLink>
+                            <MudMenu @ref="@this.menuRefs[room.Id]" Class="hover-reveal-menu">
                                 @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
                                    MudMenu does not wire a click listener around it automatically - the
                                    supplied MenuContext.ToggleAsync is how custom activator content opens
@@ -60,7 +60,7 @@
                                 <ActivatorContent Context="menuContext">
                                     <MudTooltip Text="Room actions">
                                         <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                                       aria-label="Room actions" Class="room-list-menu-button"
+                                                       aria-label="Room actions" Class="hover-reveal-menu-button"
                                                        OnClick="menuContext.ToggleAsync" />
                                     </MudTooltip>
                                 </ActivatorContent>

@@ -11,7 +11,7 @@
 @inject AvatarStore Avatars
 
 <div class="new-chat">
-    <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" OnClick="this.TogglePanel" Class="new-chat-link">New chat</MudNavLink>
+    <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" OnClick="this.TogglePanel" Class="nav-action-link">New chat</MudNavLink>
     <MudCollapse Expanded="@this.isOpen">
         @if (this.isOpen)
         {

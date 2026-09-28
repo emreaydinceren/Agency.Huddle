@@ -158,30 +158,25 @@ button:focus-visible {
     margin-inline-start: 26px;
 }
 
-/* Action links inside left nav groups ("New chat", "New view"): tighten the gap between the
+/* Action links inside left nav groups ("New chat", "New view", "Add Folder"): tighten the gap between the
    "+" icon and text label so the plus feels directly attached to the label, and use the
    accent color consistent with "New task" and "New teammate". */
-.new-chat .mud-nav-link,
-.task-view-nav-new .mud-nav-link,
-.new-chat .mud-nav-link .mud-nav-link-text,
-.task-view-nav-new .mud-nav-link-text {
+.nav-action-link,
+.nav-action-link .mud-nav-link-text {
     color: var(--mud-palette-primary);
 }
 
-.new-chat .mud-nav-link .mud-nav-link-icon,
-.task-view-nav-new .mud-nav-link-icon {
+.nav-action-link .mud-nav-link-icon {
     color: var(--mud-palette-primary);
 }
 
-.new-chat .mud-nav-link .mud-nav-link-text,
-.task-view-nav-new .mud-nav-link-text {
+.nav-action-link .mud-nav-link-text {
     margin-left: 2px;
     margin-inline-start: 2px;
 }
 
-/* Page toolbars: tighten the gap between the "+" icon and label on "New teammate" and "New task". */
-.teammates-new .mud-button-icon-start,
-.task-toolbar-new-task .mud-button-icon-start {
+/* Page toolbars: tighten the gap between the "+" icon and label on action buttons. */
+.btn-action-tight .mud-button-icon-start {
     margin-right: 2px;
     margin-inline-end: 2px;
 }
@@ -193,34 +188,34 @@ button:focus-visible {
    visible - only its opacity is gated on :hover/:focus-within, matching .teammate-tile's own
    interactive-surface shape below. */
 
-.room-list-row {
+.hover-reveal-row {
     position: relative;
     display: flex;
     align-items: center;
 }
 
-.room-list-row .room-list-link {
+.hover-reveal-row .hover-reveal-link {
     flex: 1 1 auto;
     min-width: 0;
 }
 
-.room-list-row .room-list-link .mud-nav-link {
+.hover-reveal-row .hover-reveal-link .mud-nav-link {
     padding-right: 2.25rem;
 }
 
-.room-list-row .room-list-menu {
+.hover-reveal-row .hover-reveal-menu {
     position: absolute;
     right: 0.25rem;
 }
 
-.room-list-row .room-list-menu-button {
+.hover-reveal-row .hover-reveal-menu-button {
     opacity: 0;
     border-radius: var(--mud-default-borderradius);
     transition: opacity 120ms ease;
 }
 
-.room-list-row:hover .room-list-menu-button,
-.room-list-row:focus-within .room-list-menu-button {
+.hover-reveal-row:hover .hover-reveal-menu-button,
+.hover-reveal-row:focus-within .hover-reveal-menu-button {
     opacity: 1;
 }
 
@@ -231,7 +226,7 @@ button:focus-visible {
     padding: 0 1rem;
 }
 
-.room-list-confirm-text {
+.flex-1-truncate {
     flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
@@ -239,38 +234,7 @@ button:focus-visible {
     white-space: nowrap;
 }
 
-/* ---- Task view nav: the same hover/focus-revealed row actions menu as the Room list above ----- */
 
-.task-view-nav-row {
-    position: relative;
-    display: flex;
-    align-items: center;
-}
-
-.task-view-nav-row .task-view-nav-link {
-    flex: 1 1 auto;
-    min-width: 0;
-}
-
-.task-view-nav-row .task-view-nav-link .mud-nav-link {
-    padding-right: 2.25rem;
-}
-
-.task-view-nav-row .task-view-nav-menu {
-    position: absolute;
-    right: 0.25rem;
-}
-
-.task-view-nav-row .task-view-nav-menu-button {
-    opacity: 0;
-    border-radius: var(--mud-default-borderradius);
-    transition: opacity 120ms ease;
-}
-
-.task-view-nav-row:hover .task-view-nav-menu-button,
-.task-view-nav-row:focus-within .task-view-nav-menu-button {
-    opacity: 1;
-}
 
 /* ---- Archived chats dialog: one row per archived Room ---------------------------------------- */
 
@@ -286,14 +250,7 @@ button:focus-visible {
     border-bottom: none;
 }
 
-.archived-chats-name,
-.archived-chats-confirm-text {
-    flex: 1 1 auto;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+
 
 /* ---- Inviting a teammate into the open room ----------------------------- */
 
@@ -614,15 +571,7 @@ button:focus-visible {
 
 /* ---- Teammates: directory tiles and the profile card -------------------- */
 
-.teammates-header h1 {
-    margin: 0;
-}
 
-/* Sits between the description and the directory, like .task-toolbar on the Tasks page. */
-.teammates-toolbar {
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
 
 /* A responsive grid of people, like Slack's Directories. auto-fill with a
    minimum tile width means the column count follows the window with no media
@@ -1178,3 +1127,8 @@ button:focus-visible {
     min-height: 0;
 }
 
+
+/* The scoped explorer header: the root's full path, which can be long, so it wraps anywhere rather than widening the page. */
+.library-explorer-root-path {
+    overflow-wrap: anywhere;
+}

@@ -54,7 +54,7 @@ public sealed class TeammatesPageTests
         // plain GET. What the page owes a first-time visitor is the way in - a real <button>'s own
         // prerendered accessible name, which is its own visible text now that it leads the page's
         // toolbar as a labelled button. TeammateCardTests covers what the card then shows.
-        Assert.Contains("teammates-new", html, StringComparison.Ordinal);
+        Assert.Contains("btn-action-tight", html, StringComparison.Ordinal);
         Assert.Contains("New teammate", html, StringComparison.Ordinal);
     }
 
@@ -450,7 +450,7 @@ public sealed class TeammatesPageTests
     /// compiles to, shared by the two bUnit tests that click it through the real render pipeline
     /// rather than invoking <c>Teammates.BeginCreate</c> directly.
     /// </summary>
-    private const string NewTeammateSelector = "button.teammates-new";
+    private const string NewTeammateSelector = "button.btn-action-tight";
 
     /// <summary>Counts non-overlapping occurrences of <paramref name="needle"/> in <paramref name="haystack"/>.</summary>
     private static int CountOccurrences(string haystack, string needle)

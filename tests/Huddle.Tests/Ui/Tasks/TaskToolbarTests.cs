@@ -82,7 +82,7 @@ public sealed class TaskToolbarTests
         Assert.Empty(toolbar.FindComponents<MudToggleGroup<ViewScope>>());
         Assert.Empty(toolbar.FindComponents<MudToggleGroup<ViewKind>>());
         var firstControl = toolbar.Find(".task-toolbar").Children[0];
-        Assert.Contains("task-toolbar-new-task", firstControl.ClassList);
+        Assert.Contains("btn-action-tight", firstControl.ClassList);
     }
 
     /// <summary><c>+ New task</c> defaults the Team from the filter when it names exactly one, and leaves it unset otherwise.</summary>
@@ -99,13 +99,13 @@ public sealed class TaskToolbarTests
         NewTaskDefaults? oneTeamDefaults = null;
         await using var oneTeamCtx = NewContext(store);
         var (_, oneTeamToolbar) = RenderToolbar(oneTeamCtx, oneTeam, onNewTask: EventCallback.Factory.Create<NewTaskDefaults>(this, v => oneTeamDefaults = v));
-        await oneTeamToolbar.InvokeAsync(() => oneTeamToolbar.Find(".task-toolbar-new-task").Click());
+        await oneTeamToolbar.InvokeAsync(() => oneTeamToolbar.Find(".btn-action-tight").Click());
         Assert.Equal("Atlas", oneTeamDefaults?.Team);
 
         NewTaskDefaults? twoTeamsDefaults = null;
         await using var twoTeamsCtx = NewContext(store);
         var (_, twoTeamsToolbar) = RenderToolbar(twoTeamsCtx, twoTeams, onNewTask: EventCallback.Factory.Create<NewTaskDefaults>(this, v => twoTeamsDefaults = v));
-        await twoTeamsToolbar.InvokeAsync(() => twoTeamsToolbar.Find(".task-toolbar-new-task").Click());
+        await twoTeamsToolbar.InvokeAsync(() => twoTeamsToolbar.Find(".btn-action-tight").Click());
         Assert.Null(twoTeamsDefaults?.Team);
     }
 

@@ -13,7 +13,7 @@
 @inject ViewStore ViewStore
 
 <MudToolBar Dense="true" Class="task-toolbar">
-    <MudButton StartIcon="@Icons.Material.Outlined.Add" Color="Color.Primary" OnClick="this.OnNewTaskClickedAsync" Class="task-toolbar-new-task">New task</MudButton>
+    <MudButton StartIcon="@Icons.Material.Outlined.Add" Color="Color.Primary" OnClick="this.OnNewTaskClickedAsync" Class="btn-action-tight">New task</MudButton>
 
     <MudMenu Label="Filter" Class="task-toolbar-filter">
         <MudChipSet T="string" ReadOnly="false" OnClose="this.OnRemoveTeamFilterAsync" Class="task-toolbar-filter-chips">

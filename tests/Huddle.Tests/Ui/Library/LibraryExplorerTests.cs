@@ -187,13 +187,13 @@ public sealed class LibraryExplorerTests : IDisposable
     }
 
     /// <summary>
-    /// <c>ShowScopeRoot="false"</c> (LibraryPane's own scoped rows): no header at all, and the
-    /// tree skips the scope's own wrapper row too - its own "..." menu button never exists at all -
-    /// showing that folder's children directly as the tree's top-level nodes instead
-    /// (LibraryTreeTests pins the tree's own end of this).
+    /// <c>ShowScopeRoot="false"</c> (LibraryPane's own scoped rows): no folder-name title, but a
+    /// header showing the root's full path, and the tree skips the scope's own wrapper row too - its
+    /// own "..." menu button never exists at all - showing that folder's children directly as the
+    /// tree's top-level nodes instead (LibraryTreeTests pins the tree's own end of this).
     /// </summary>
     [Fact]
-    public async Task ShowScopeRootFalse_OmitsHeaderAndFlattensTheTree()
+    public async Task ShowScopeRootFalse_ShowsRootPathHeaderAndFlattensTheTree()
     {
         string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
         Directory.CreateDirectory(Path.Combine(root, "Sub"));
@@ -205,6 +205,7 @@ public sealed class LibraryExplorerTests : IDisposable
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button[aria-label='Actions for Sub']")));
         Assert.Empty(cut.FindAll(".library-explorer-title"));
+        Assert.Equal(scopePath.FullPath, cut.Find(".library-explorer-root-path").TextContent.Trim());
         Assert.Empty(cut.FindAll("button[aria-label='Actions for Notes']"));
     }
 

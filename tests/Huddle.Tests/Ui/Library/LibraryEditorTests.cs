@@ -314,4 +314,24 @@ public sealed class LibraryEditorTests
         Assert.Null(thrown);
         Assert.Single(handle.Invocations, i => i.Identifier == "dispose");
     }
+
+    /// <summary>
+    /// The real cause of <c>JSException: The value 'dispose' is not a function</c> (which the two
+    /// tests above only ever guarded the edges of): the .NET side asks <c>create</c> for an
+    /// <see cref="IJSObjectReference"/>, so Blazor wraps whatever it returns. Returning
+    /// <c>DotNet.createJSObjectReference(handle)</c> wrapped it a second time, so the .NET reference
+    /// pointed at the <c>{ __jsObjectId }</c> wrapper - which has no <c>getText</c>, <c>setText</c> or
+    /// <c>dispose</c> - and navigating away from an open editor killed the circuit. bUnit mocks the
+    /// handle, so only the module's own source can pin this; the repo has no JavaScript test runner.
+    /// </summary>
+    [Fact]
+    public void LibraryEditorJs_CreateReturnsTheHandleItself_NotAWrappedReference()
+    {
+        string text = File.ReadAllText(CssSource.RepoPath("src", "Huddle.App", "wwwroot", "library-editor.js"));
+
+        // contains-ok: source-fact test, no JS runner - library-editor.js's own text is what's pinned.
+        Assert.Contains("return handle;", text, StringComparison.Ordinal);
+        // contains-ok: source-fact test, no JS runner - library-editor.js's own text is what's pinned.
+        Assert.DoesNotContain("createJSObjectReference(handle)", text, StringComparison.Ordinal);
+    }
 }

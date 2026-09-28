@@ -77,7 +77,7 @@ public sealed class LibraryNavLinkTests
         await using MudBunitContext ctx = fixture.NewContext();
         var cut = ctx.RenderWithPopovers(RenderNav);
 
-        _ = cut.InvokeAsync(() => cut.Find(".library-nav-add-folder .mud-nav-link").Click());
+        _ = cut.InvokeAsync(() => cut.Find(".nav-action-link .mud-nav-link").Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
         Assert.Equal("Add folder", cut.Find(".mud-dialog-title").TextContent.Trim());
 
@@ -101,7 +101,7 @@ public sealed class LibraryNavLinkTests
         await using MudBunitContext ctx = fixture.NewContext();
         var cut = ctx.RenderWithPopovers(RenderNav);
 
-        _ = cut.InvokeAsync(() => cut.Find(".library-nav-add-folder .mud-nav-link").Click());
+        _ = cut.InvokeAsync(() => cut.Find(".nav-action-link .mud-nav-link").Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
         await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-name-field input").Change("Ghost"));
