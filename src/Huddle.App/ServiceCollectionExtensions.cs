@@ -229,6 +229,12 @@ public static class ServiceCollectionExtensions
         // resolver above and on IRecycleBin, registered just above.
         services.AddSingleton<LibraryFileService>();
 
+        // Same instance as the hosted service, the same singleton-plus-factory idiom as
+        // PersonaSupervisor/TaskTriggerService above (corrections-B4 item 33): the Library Pane's
+        // "New Project" trigger needs to call EnsureProject on the very instance the host is running.
+        services.AddSingleton<TeamFolderProvisioner>();
+        services.AddHostedService(sp => sp.GetRequiredService<TeamFolderProvisioner>());
+
         // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
         // this, and a plain registration cannot produce the two-watchers-on-one-path hazard the
         // aliased registrations elsewhere in this file exist to avoid.

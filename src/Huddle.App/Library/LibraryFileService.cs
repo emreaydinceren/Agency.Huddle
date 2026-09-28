@@ -46,8 +46,10 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
     /// or a folder.</summary>
     private static readonly CompositeFormat AlreadyExistsReasonFormat = CompositeFormat.Parse("\"{0}\" already exists here.");
 
-    /// <summary>Settled text (corrections-B4 item 19) for a create failure that is not an existence clash.</summary>
-    private static readonly CompositeFormat CouldNotCreateReasonFormat = CompositeFormat.Parse("Couldn't create {0}.");
+    /// <summary>Settled text (corrections-B4 item 19) for a create failure that is not an existence clash.
+    /// Internal, not private: <see cref="TeamFolderProvisioner.EnsureProject"/> reuses this single
+    /// definition rather than a copy.</summary>
+    internal static readonly CompositeFormat CouldNotCreateReasonFormat = CompositeFormat.Parse("Couldn't create {0}.");
 
     /// <summary>Settled text (corrections-B4 item 21) refusing a create directly at the Teammates root.</summary>
     private const string CreateAtTeammatesRootReason = "Add teammates on the Teammates page.";
