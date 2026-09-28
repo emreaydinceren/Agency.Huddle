@@ -15,7 +15,7 @@ namespace Agency.Huddle.App.Library;
 /// </summary>
 internal static partial class WikiLinkParser
 {
-    private static readonly MarkdownPipeline Pipeline = MarkdownRenderer.CreateBuilder().UsePreciseSourceLocation().Build();
+    private static readonly MarkdownPipeline Pipeline = MarkdownRenderer.CreateBuilder().Build();
 
     [GeneratedRegex(@"(!?)\[\[([^\[\]\r\n]+?)\]\]", RegexOptions.CultureInvariant)]
     private static partial Regex WikiLinkRegex();

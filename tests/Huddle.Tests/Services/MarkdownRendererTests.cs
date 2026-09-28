@@ -673,4 +673,252 @@ public sealed class MarkdownRendererTests
         Assert.DoesNotContain("<a", html, StringComparison.Ordinal);
         Assert.Equal("See [[plan]].", document.Body?.TextContent.Trim());
     }
+
+    // Library links
+
+    private const string PlanPath = @"E:\Data\Teams\Marketing\plan.md";
+    private const string SpacedPath = @"E:\Data\Teams\Marketing\Launch Q4\plan.md";
+
+    /// <summary>Builds a resolver that answers <paramref name="path"/> with a resolved reference and every other path with <see langword="null"/>.</summary>
+    private static FakeLibraryNoteResolver ResolverFor(string path, string rootId, string relativePath, bool exists = true) =>
+        new(resolvePath: candidate => string.Equals(candidate, path, StringComparison.Ordinal)
+            ? new LibraryReference(rootId, relativePath, exists)
+            : null);
+
+    /// <summary>An absolute Windows path inside a Library Root becomes a <c>library-ref</c> link, with the path as written as its text.</summary>
+    [Fact]
+    public void ToHtml_AbsolutePathInRoot_IsLibraryLink()
+    {
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.PlanPath, "teams", "Marketing/plan.md");
+
+        var html = MarkdownRenderer.ToHtml(MarkdownRendererTests.PlanPath, null, (ILibraryReferenceResolver)library);
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, MarkdownRendererTests.PlanPath);
+
+        Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
+        Assert.Contains("library-ref", anchor.ClassList, StringComparer.Ordinal);
+    }
+
+    /// <summary>A path with spaces inside a code span is linked, its href URL-encoded (H5's permitted case).</summary>
+    [Fact]
+    public void ToHtml_PathWithSpacesInCodeSpan_IsLinkedAndEncoded()
+    {
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.SpacedPath, "teams", "Marketing/Launch Q4/plan.md");
+
+        var html = MarkdownRenderer.ToHtml(string.Concat('`', MarkdownRendererTests.SpacedPath, '`'), null, (ILibraryReferenceResolver)library);
+        var document = new HtmlParser().ParseDocument(html);
+        var anchor = document.QuerySelector("a");
+
+        Assert.NotNull(anchor);
+        Assert.Equal("?library=teams/Marketing/Launch%20Q4/plan.md", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>The same path with spaces, written in plain text rather than a code span, is never linked (correction B5 item 18 / judgement 33, H5): it stays plain text, unchanged.</summary>
+    [Fact]
+    public void ToHtml_PathWithSpacesInPlainText_StaysText()
+    {
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.SpacedPath, "teams", "Marketing/Launch Q4/plan.md");
+
+        var html = MarkdownRenderer.ToHtml(MarkdownRendererTests.SpacedPath, null, (ILibraryReferenceResolver)library);
+        var document = new HtmlParser().ParseDocument(html);
+
+        Assert.DoesNotContain("<a", html, StringComparison.Ordinal);
+        Assert.Equal(MarkdownRendererTests.SpacedPath, document.Body?.TextContent.Trim());
+    }
+
+    /// <summary>A whole code span whose content is exactly one path becomes a <c>library-ref</c> link that wraps the <c>&lt;code&gt;</c> element, with no backticks in the visible text.</summary>
+    [Fact]
+    public void ToHtml_PathInCodeSpan_IsLinked()
+    {
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.PlanPath, "teams", "Marketing/plan.md");
+
+        var html = MarkdownRenderer.ToHtml(string.Concat('`', MarkdownRendererTests.PlanPath, '`'), null, (ILibraryReferenceResolver)library);
+        var document = new HtmlParser().ParseDocument(html);
+        var anchor = document.QuerySelector("a.library-ref");
+
+        Assert.NotNull(anchor);
+        var code = anchor.QuerySelector("code");
+        Assert.NotNull(code);
+        Assert.Equal(MarkdownRendererTests.PlanPath, code.TextContent);
+        Assert.DoesNotContain('`', anchor.TextContent);
+    }
+
+    /// <summary>A path the resolver does not recognise as inside any root stays plain text.</summary>
+    [Fact]
+    public void ToHtml_PathOutsideRoots_StaysText()
+    {
+        FakeLibraryNoteResolver library = new();
+
+        var html = MarkdownRenderer.ToHtml(@"E:\Other\file.md", null, (ILibraryReferenceResolver)library);
+        var document = new HtmlParser().ParseDocument(html);
+
+        Assert.DoesNotContain("<a", html, StringComparison.Ordinal);
+        Assert.Equal(@"E:\Other\file.md", document.Body?.TextContent.Trim());
+    }
+
+    /// <summary>A path that resolves to a file that no longer exists on disk still links, dimmed via the missing class.</summary>
+    [Fact]
+    public void ToHtml_MissingFile_HasMissingClass()
+    {
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.PlanPath, "teams", "Marketing/plan.md", exists: false);
+
+        var html = MarkdownRenderer.ToHtml(MarkdownRendererTests.PlanPath, null, (ILibraryReferenceResolver)library);
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, MarkdownRendererTests.PlanPath);
+
+        Assert.Equal("library-ref library-ref-missing", anchor.GetAttribute("class"));
+    }
+
+    /// <summary>A <c>file:</c> URL resolved inside a root is linked exactly as an absolute Windows path is.</summary>
+    [Fact]
+    public void ToHtml_FileUrl_IsLinked()
+    {
+        const string FileUrl = "file:///E:/Data/Teams/Marketing/plan.md";
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(FileUrl, "teams", "Marketing/plan.md");
+
+        var html = MarkdownRenderer.ToHtml(FileUrl, null, (ILibraryReferenceResolver)library);
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, FileUrl);
+
+        Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>Trailing punctuation after a path is trimmed from the link and kept as plain text after it.</summary>
+    [Theory]
+    [InlineData(@"See E:\Data\Teams\Marketing\plan.md. Done.", "See ", ". Done.")]
+    [InlineData(@"See E:\Data\Teams\Marketing\plan.md, then stop.", "See ", ", then stop.")]
+    public void ToHtml_TrailingPunctuation_ExcludedFromHrefAndKeptAsText(string markdown, string before, string after)
+    {
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.PlanPath, "teams", "Marketing/plan.md");
+
+        var html = MarkdownRenderer.ToHtml(markdown, null, (ILibraryReferenceResolver)library);
+        var document = new HtmlParser().ParseDocument(html);
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, MarkdownRendererTests.PlanPath);
+
+        Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
+        Assert.Equal(string.Concat(before, MarkdownRendererTests.PlanPath, after), document.Body?.TextContent.Trim());
+    }
+
+    /// <summary>A path parenthesised in prose has the trailing <c>)</c> trimmed from the link.</summary>
+    [Fact]
+    public void ToHtml_TrailingCloseParen_ExcludedFromHref()
+    {
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.PlanPath, "teams", "Marketing/plan.md");
+
+        var html = MarkdownRenderer.ToHtml(string.Concat("See it (", MarkdownRendererTests.PlanPath, ")."), null, (ILibraryReferenceResolver)library);
+        var document = new HtmlParser().ParseDocument(html);
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, MarkdownRendererTests.PlanPath);
+
+        Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
+        Assert.Equal(string.Concat("See it (", MarkdownRendererTests.PlanPath, ")."), document.Body?.TextContent.Trim());
+    }
+
+    /// <summary>A path whose segments Markdig would otherwise treat as emphasis or list-item delimiters
+    /// (<c>_</c>, <c>[1]</c>) is scanned from the raw source slice and linked whole (B5 item 19).</summary>
+    [Theory]
+    [InlineData(@"E:\x\_draft.md")]
+    [InlineData(@"E:\x\[1]\a.md")]
+    [InlineData(@"E:\x\~y\a.md")]
+    public void ToHtml_PathWithDelimiterLikeSegments_IsLinkedWhole(string path)
+    {
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(path, "teams", "x/a.md");
+
+        var html = MarkdownRenderer.ToHtml(path, null, (ILibraryReferenceResolver)library);
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, path);
+
+        Assert.Equal("?library=teams/x/a.md", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>With no Library resolver, an absolute path that would otherwise resolve stays plain text.</summary>
+    [Fact]
+    public void ToHtml_NullLibraryResolver_NoLinks()
+    {
+        var html = MarkdownRenderer.ToHtml(MarkdownRendererTests.PlanPath, null, (ILibraryReferenceResolver?)null);
+        var document = new HtmlParser().ParseDocument(html);
+
+        Assert.DoesNotContain("<a", html, StringComparison.Ordinal);
+        Assert.Equal(MarkdownRendererTests.PlanPath, document.Body?.TextContent.Trim());
+    }
+
+    /// <summary>A Task id and an absolute Library path in the same message both link, each with its own class.</summary>
+    [Fact]
+    public void ToHtml_TaskIdAndPathInOneMessage_BothLinked()
+    {
+        TaskId id = MarkdownRendererTests.MakeId("PLAT-0042");
+        FakeTaskReferenceResolver tasks = new(new TaskReference(id, "Ship the thing", Closed: false));
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.PlanPath, "teams", "Marketing/plan.md");
+
+        var html = MarkdownRenderer.ToHtml(string.Concat("See PLAT-0042 and ", MarkdownRendererTests.PlanPath, "."), tasks, (ILibraryReferenceResolver)library);
+        var document = new HtmlParser().ParseDocument(html);
+        var anchors = document.QuerySelectorAll("a");
+
+        List<(string Text, string Class)> actual = [.. anchors.Select(a => (a.TextContent, a.GetAttribute("class") ?? string.Empty))];
+        List<(string Text, string Class)> expected =
+        [
+            ("PLAT-0042", "task-ref"),
+            (MarkdownRendererTests.PlanPath, "library-ref"),
+        ];
+        Assert.Equal(expected, actual);
+    }
+
+    /// <summary>A Task id beside an escaped character leaves a literal whose Span doesn't match its content; the
+    /// path and wikilink passes must skip such a run rather than throw, so one odd message never breaks the chat.
+    /// The Task id still links.</summary>
+    [Fact]
+    public void ToHtml_TaskIdNextToEscapedCharacterAndPath_DoesNotThrow()
+    {
+        TaskId id = MarkdownRendererTests.MakeId("PLAT-0042");
+        FakeTaskReferenceResolver tasks = new(new TaskReference(id, "Ship the thing", Closed: false));
+        FakeLibraryNoteResolver library = MarkdownRendererTests.ResolverFor(MarkdownRendererTests.PlanPath, "teams", "Marketing/plan.md");
+
+        var html = MarkdownRenderer.ToHtml(string.Concat(@"\*PLAT-0042 and ", MarkdownRendererTests.PlanPath, "."), tasks, (ILibraryReferenceResolver)library);
+        var document = new HtmlParser().ParseDocument(html);
+
+        var taskAnchor = document.QuerySelector("a.task-ref");
+        Assert.NotNull(taskAnchor);
+        Assert.Equal("PLAT-0042", taskAnchor.TextContent);
+    }
+
+    /// <summary>A forged <c>?library=</c> href is neutralised to "#", whatever shape the forgery takes: an
+    /// escaping root, an encoded traversal, an upper-case root id, a second query parameter, a fragment, or a
+    /// backslash segment (corrections-B5 item 23 / judgement 33).</summary>
+    [Theory]
+    [InlineData("[x](?library=../secret)")]
+    [InlineData("[x](?library=teams/../../x)")]
+    [InlineData("[x](?library=teams%2F..%2F..%2Fx)")]
+    [InlineData("[x](?library=teams%2F%2E%2E%2F%2E%2E%2Fx)")]
+    [InlineData("[x](?library=teams/%2E%2E/%2E%2E/x)")]
+    [InlineData("[x](?library=Teams/x)")]
+    [InlineData("[x](?library=teams/x&y=1)")]
+    [InlineData("[x](?library=teams/x#h)")]
+    [InlineData(@"[x](?library=teams/a\b)")]
+    public void ToHtml_ForgedLibraryHref_IsNeutralised(string markdown)
+    {
+        var html = MarkdownRenderer.ToHtml(markdown);
+        var document = new HtmlParser().ParseDocument(html);
+        var anchor = document.QuerySelector("a");
+
+        Assert.NotNull(anchor);
+        Assert.Equal("#", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>A well-formed <c>?library=</c> href naming an allowed neighbour keeps its href unchanged.</summary>
+    [Fact]
+    public void ToHtml_ValidLibraryHref_KeepsHref()
+    {
+        var html = MarkdownRenderer.ToHtml("[x](?library=teams/Marketing/plan.md)");
+        var document = new HtmlParser().ParseDocument(html);
+        var anchor = document.QuerySelector("a");
+
+        Assert.NotNull(anchor);
+        Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>The existing one- and two-argument chat overloads never link an absolute path: no Library pass runs without a resolver.</summary>
+    [Fact]
+    public void ToHtml_ExistingChatOverloads_NeverLinkPaths()
+    {
+        var htmlNoArgs = MarkdownRenderer.ToHtml(MarkdownRendererTests.PlanPath);
+        var htmlWithTasks = MarkdownRenderer.ToHtml(MarkdownRendererTests.PlanPath, new FakeTaskReferenceResolver());
+
+        Assert.DoesNotContain("<a", htmlNoArgs, StringComparison.Ordinal);
+        Assert.DoesNotContain("<a", htmlWithTasks, StringComparison.Ordinal);
+    }
 }

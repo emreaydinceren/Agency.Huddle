@@ -29,6 +29,7 @@ public static partial class MarkdownRenderer
         .UseEmphasisExtras()
         .UseAutoLinks()
         .UseTaskLists()
+        .UsePreciseSourceLocation()
         .DisableHtml();
 
     /// <summary>Renders <paramref name="markdown"/> to HTML with no Task id linking. Unchanged behaviour.</summary>
@@ -45,7 +46,20 @@ public static partial class MarkdownRenderer
     /// <param name="markdown">The Markdown text to render.</param>
     /// <param name="tasks">The resolver for candidate Task ids, or <see langword="null"/> to link none.</param>
     public static string ToHtml(string markdown, ITaskReferenceResolver? tasks) =>
-        MarkdownRenderer.ToHtml(markdown, tasks, library: null, from: null);
+        MarkdownRenderer.ToHtml(markdown, tasks, library: null);
+
+    /// <summary>
+    /// Renders <paramref name="markdown"/> to HTML as the two-argument overload does, additionally linking
+    /// absolute file paths and <c>file:</c> URLs written in chat text into <c>library-ref</c> links (Spec §6.6)
+    /// when <paramref name="library"/> resolves them. With <paramref name="library"/> <see langword="null"/> -
+    /// the default while the Library is disabled - behaviour is identical to
+    /// <see cref="ToHtml(string, ITaskReferenceResolver?)"/>.
+    /// </summary>
+    /// <param name="markdown">The Markdown text to render.</param>
+    /// <param name="tasks">The resolver for candidate Task ids, or <see langword="null"/> to link none.</param>
+    /// <param name="library">The resolver for chat-text paths, or <see langword="null"/> to link none.</param>
+    public static string ToHtml(string markdown, ITaskReferenceResolver? tasks, ILibraryReferenceResolver? library) =>
+        MarkdownRenderer.Render(markdown, tasks, library, noteLibrary: null, from: null);
 
     /// <summary>
     /// Renders <paramref name="markdown"/> to HTML as the two-argument overload does, additionally linking
@@ -57,7 +71,16 @@ public static partial class MarkdownRenderer
     /// <param name="tasks">The resolver for candidate Task ids, or <see langword="null"/> to link none.</param>
     /// <param name="library">The resolver for wikilinks and relative links, or <see langword="null"/> to link none.</param>
     /// <param name="from">The Library note <paramref name="markdown"/> was read from, or <see langword="null"/> outside a note.</param>
-    internal static string ToHtml(string markdown, ITaskReferenceResolver? tasks, ILibraryNoteResolver? library, LibraryPath? from)
+    internal static string ToHtml(string markdown, ITaskReferenceResolver? tasks, ILibraryNoteResolver? library, LibraryPath? from) =>
+        MarkdownRenderer.Render(markdown, tasks, library: null, noteLibrary: library, from: from);
+
+    /// <summary>The single render path shared by every public and internal <see cref="ToHtml(string)"/> overload.</summary>
+    /// <param name="markdown">The Markdown text to render.</param>
+    /// <param name="tasks">The resolver for candidate Task ids, or <see langword="null"/> to link none.</param>
+    /// <param name="library">The resolver for chat-text paths, or <see langword="null"/> to link none.</param>
+    /// <param name="noteLibrary">The resolver for wikilinks and relative links, or <see langword="null"/> outside a note.</param>
+    /// <param name="from">The Library note <paramref name="markdown"/> was read from, or <see langword="null"/> outside a note.</param>
+    private static string Render(string markdown, ITaskReferenceResolver? tasks, ILibraryReferenceResolver? library, ILibraryNoteResolver? noteLibrary, LibraryPath? from)
     {
         using var writer = new StringWriter();
         var renderer = new Markdig.Renderers.HtmlRenderer(writer)
@@ -73,10 +96,15 @@ public static partial class MarkdownRenderer
             MarkdownRenderer.LinkTaskReferences(document, tasks);
         }
 
-        if (library is not null && from is not null)
+        if (noteLibrary is not null && from is not null)
         {
-            MarkdownRenderer.RewriteRelativeLinks(document, library, from);
-            MarkdownRenderer.LinkWikiLinks(document, library, from, markdown);
+            MarkdownRenderer.RewriteRelativeLinks(document, noteLibrary, from);
+            MarkdownRenderer.LinkWikiLinks(document, noteLibrary, from, markdown);
+        }
+
+        if (library is not null)
+        {
+            MarkdownRenderer.LinkLibraryPaths(document, library, markdown);
         }
 
         renderer.Render(document);
@@ -189,7 +217,7 @@ public static partial class MarkdownRenderer
 
             if (match.Index > consumed)
             {
-                replacements.Add(new LiteralInline(text[consumed..match.Index]));
+                replacements.Add(MarkdownRenderer.CreatePositionedLiteral(literal, text, consumed, match.Index));
             }
 
             replacements.Add(MarkdownRenderer.CreateLink(reference, match.Value));
@@ -203,7 +231,7 @@ public static partial class MarkdownRenderer
 
         if (consumed < text.Length)
         {
-            replacements.Add(new LiteralInline(text[consumed..]));
+            replacements.Add(MarkdownRenderer.CreatePositionedLiteral(literal, text, consumed, text.Length));
         }
 
         Inline previous = literal;
@@ -214,6 +242,30 @@ public static partial class MarkdownRenderer
         }
 
         literal.Remove();
+    }
+
+    /// <summary>
+    /// Builds a replacement <see cref="LiteralInline"/> for <paramref name="original"/>'s <c>[start, end)</c>
+    /// content slice, carrying over a proportional <c>Span</c> when <paramref name="original"/>'s own
+    /// <c>Span</c> is set and covers exactly its <see cref="LiteralInline.Content"/> (no escape shrank the raw
+    /// source relative to the unescaped text) - so a literal-run scan run later (wikilinks, Library paths) still
+    /// sees a correct raw-source position for text <see cref="RewriteLiteral"/> split around a Task reference.
+    /// When the proportional mapping cannot be trusted, the new literal is left with no <c>Span</c>, same as
+    /// before this method existed.
+    /// </summary>
+    /// <param name="original">The literal being split.</param>
+    /// <param name="text">The literal's own <see cref="LiteralInline.Content"/>, as a string.</param>
+    /// <param name="start">The slice's start offset into <paramref name="text"/>, inclusive.</param>
+    /// <param name="end">The slice's end offset into <paramref name="text"/>, exclusive.</param>
+    private static LiteralInline CreatePositionedLiteral(LiteralInline original, string text, int start, int end)
+    {
+        LiteralInline result = new(text[start..end]);
+        if (original.Span.End >= original.Span.Start && original.Span.Length == text.Length)
+        {
+            result.Span = new SourceSpan(original.Span.Start + start, original.Span.Start + end - 1);
+        }
+
+        return result;
     }
 
     /// <summary>Builds the <c>task-ref</c> link for a resolved Task reference (Spec §13.13.2 step 5).</summary>
@@ -279,7 +331,19 @@ public static partial class MarkdownRenderer
     /// <param name="library">The resolver for wikilinks.</param>
     /// <param name="from">The Library note the wikilinks were written in.</param>
     /// <param name="markdown">The original raw Markdown text <paramref name="document"/> was parsed from - each inline's <c>Span</c> positions are offsets into this exact string.</param>
-    private static void LinkWikiLinks(MarkdownDocument document, ILibraryNoteResolver library, LibraryPath from, string markdown)
+    private static void LinkWikiLinks(MarkdownDocument document, ILibraryNoteResolver library, LibraryPath from, string markdown) =>
+        MarkdownRenderer.ForEachLiteralRun(document, run => MarkdownRenderer.LinkWikiLinksInRun(run, library, from, markdown));
+
+    /// <summary>
+    /// Finds every run of consecutive sibling <see cref="LiteralInline"/>s reachable from <paramref name="document"/>
+    /// - stopping at any other inline or a run already inside a <see cref="LinkInline"/>, which breaks or excludes
+    /// the run - and invokes <paramref name="handler"/> once per run (possibly empty). Shared by
+    /// <see cref="LinkWikiLinks"/> and <see cref="LinkLibraryPaths"/>, since both scan the raw source slice of a
+    /// literal run rather than each literal's own text (corrections-B5 item 19).
+    /// </summary>
+    /// <param name="document">The parsed Markdown document.</param>
+    /// <param name="handler">Invoked once per run of consecutive sibling literals within one container.</param>
+    private static void ForEachLiteralRun(MarkdownDocument document, Action<List<LiteralInline>> handler)
     {
         List<ContainerInline> containers = document.Descendants<LiteralInline>()
             .Select(literal => literal.Parent)
@@ -289,47 +353,36 @@ public static partial class MarkdownRenderer
 
         foreach (ContainerInline container in containers)
         {
-            MarkdownRenderer.LinkWikiLinksInContainer(container, library, from, markdown);
-        }
-    }
-
-    /// <summary>Groups <paramref name="container"/>'s children into runs of consecutive sibling <see cref="LiteralInline"/>s
-    /// - stopping at any other inline, which breaks the run - and links wikilinks in each run.</summary>
-    /// <param name="container">A container whose descendants include at least one <see cref="LiteralInline"/>.</param>
-    /// <param name="library">The resolver for wikilinks.</param>
-    /// <param name="from">The Library note the wikilinks were written in.</param>
-    /// <param name="markdown">The original raw Markdown text.</param>
-    private static void LinkWikiLinksInContainer(ContainerInline container, ILibraryNoteResolver library, LibraryPath from, string markdown)
-    {
-        if (container is LinkInline || container.ContainsParentOfType<LinkInline>())
-        {
-            // Text already inside a link (a Task reference just linked, or an explicit Markdown link) never
-            // gets a nested link.
-            return;
-        }
-
-        List<LiteralInline> run = [];
-        for (Inline? child = container.FirstChild; child is not null; child = child.NextSibling)
-        {
-            if (child is LiteralInline literal)
+            if (container is LinkInline || container.ContainsParentOfType<LinkInline>())
             {
-                run.Add(literal);
+                // Text already inside a link (a Task reference just linked, or an explicit Markdown link) never
+                // gets a nested link.
                 continue;
             }
 
-            MarkdownRenderer.LinkWikiLinksInRun(run, library, from, markdown);
-            run = [];
-        }
+            List<LiteralInline> run = [];
+            for (Inline? child = container.FirstChild; child is not null; child = child.NextSibling)
+            {
+                if (child is LiteralInline literal)
+                {
+                    run.Add(literal);
+                    continue;
+                }
 
-        MarkdownRenderer.LinkWikiLinksInRun(run, library, from, markdown);
+                handler(run);
+                run = [];
+            }
+
+            handler(run);
+        }
     }
 
     /// <summary>
     /// Scans one run's raw source slice (the first literal's <c>Span</c> start to the last's end)
     /// for wikilinks via <see cref="WikiLinkParser.ParseSlice"/>, and - only when at least one is found - splices
-    /// a <see cref="LinkInline"/> in for each, keeping the original <see cref="LiteralInline"/> objects (or
-    /// <see cref="StringSlice"/> sub-ranges of them, when a link boundary falls inside one) for every kept
-    /// portion in between.
+    /// a <see cref="LinkInline"/> in for each via <see cref="SpliceRunMatches"/>, keeping the original
+    /// <see cref="LiteralInline"/> objects (or <see cref="StringSlice"/> sub-ranges of them, when a link boundary
+    /// falls inside one) for every kept portion in between.
     /// </summary>
     /// <param name="run">Consecutive sibling literals to scan; left untouched when empty or no wikilink is found.</param>
     /// <param name="library">The resolver for wikilinks.</param>
@@ -337,31 +390,54 @@ public static partial class MarkdownRenderer
     /// <param name="markdown">The original raw Markdown text.</param>
     private static void LinkWikiLinksInRun(List<LiteralInline> run, ILibraryNoteResolver library, LibraryPath from, string markdown)
     {
-        if (run.Count == 0)
+        if (!MarkdownRenderer.HasUsableSpans(run, markdown))
         {
             return;
         }
 
-        List<(LiteralInline Literal, int Start, int EndExclusive)> positions = MarkdownRenderer.ComputeLiteralPositions(run);
-        int runStart = positions[0].Start;
-        int runEndExclusive = positions[^1].EndExclusive;
+        int runStart = run[0].Span.Start;
+        int runEndExclusive = run[^1].Span.End + 1;
         IReadOnlyList<WikiLink> links = WikiLinkParser.ParseSlice(markdown.Substring(runStart, runEndExclusive - runStart));
         if (links.Count == 0)
         {
             return;
         }
 
+        List<(int Start, int Length, Func<string, Inline> Build)> matches = [.. links.Select(link =>
+            (runStart + link.Start, link.Length, (Func<string, Inline>)(rawToken => MarkdownRenderer.CreateWikiLinkInline(library, from, link, rawToken))))];
+        MarkdownRenderer.SpliceRunMatches(run, matches, markdown);
+    }
+
+    /// <summary>
+    /// Splices <paramref name="run"/> around each of <paramref name="matches"/> (given as raw-source offsets, in
+    /// ascending order), replacing each match's span with the <see cref="Inline"/> its own builder produces and
+    /// keeping every portion in between as the original <see cref="LiteralInline"/> content (or a
+    /// <see cref="StringSlice"/> sub-range of it, via <see cref="AppendKeptRange"/>). Shared by
+    /// <see cref="LinkWikiLinksInRun"/> and the Library path pass, so the raw-slice scanning and splicing logic
+    /// exists exactly once.
+    /// </summary>
+    /// <param name="run">Consecutive sibling literals to splice; left untouched when empty.</param>
+    /// <param name="matches">Non-overlapping matches in ascending <c>Start</c> order, each with its own replacement builder.</param>
+    /// <param name="markdown">The original raw Markdown text.</param>
+    private static void SpliceRunMatches(List<LiteralInline> run, List<(int Start, int Length, Func<string, Inline> Build)> matches, string markdown)
+    {
+        if (run.Count == 0 || matches.Count == 0)
+        {
+            return;
+        }
+
+        List<(LiteralInline Literal, int Start, int EndExclusive)> positions = [.. run.Select(literal => (literal, literal.Span.Start, literal.Span.End + 1))];
+        int runStart = positions[0].Start;
+        int runEndExclusive = positions[^1].EndExclusive;
+
         List<Inline> replacements = [];
         int cursor = runStart;
         int literalIndex = 0;
-        foreach (WikiLink link in links)
+        foreach ((int start, int length, Func<string, Inline> build) in matches)
         {
-            int absoluteStart = runStart + link.Start;
-            int absoluteEndExclusive = absoluteStart + link.Length;
-
-            MarkdownRenderer.AppendKeptRange(replacements, positions, ref literalIndex, cursor, absoluteStart);
-            replacements.Add(MarkdownRenderer.CreateWikiLinkInline(library, from, link, markdown[absoluteStart..absoluteEndExclusive]));
-            cursor = absoluteEndExclusive;
+            MarkdownRenderer.AppendKeptRange(replacements, positions, ref literalIndex, cursor, start);
+            replacements.Add(build(markdown.Substring(start, length)));
+            cursor = start + length;
         }
 
         MarkdownRenderer.AppendKeptRange(replacements, positions, ref literalIndex, cursor, runEndExclusive);
@@ -380,30 +456,135 @@ public static partial class MarkdownRenderer
     }
 
     /// <summary>
-    /// Computes each literal's absolute <c>[Start, EndExclusive)</c> in raw-source coordinates, trusting its own
-    /// <c>Span</c> when Markdig set one (<c>Span.End &gt;= Span.Start</c>) and otherwise treating it as
-    /// contiguous with the previous literal's computed end, spanning its <see cref="LiteralInline.Content"/>'s
-    /// length. Without <c>UsePreciseSourceLocation()</c> - which this pipeline does not enable (rules.md: never
-    /// <c>UseAdvancedExtensions()</c>, and this task changes no pipeline setting either) - Markdig does not
-    /// guarantee a <c>Span</c> on every literal a failed link/wikilink delimiter attempt leaves behind; the ones
-    /// it does set are still correct and are trusted first.
+    /// Finds absolute file paths, <c>file:</c> URLs and UNC paths in <paramref name="document"/> and links each
+    /// one into a <c>library-ref</c> <see cref="LinkInline"/> when <paramref name="library"/> resolves it (Spec
+    /// §6.6): a whole <see cref="CodeInline"/> whose content is exactly one such path (spaces allowed), and every
+    /// space-free occurrence in plain literal-run text (correction B5 item 18, H5).
     /// </summary>
-    /// <param name="run">Consecutive sibling literals, in document order.</param>
-    private static List<(LiteralInline Literal, int Start, int EndExclusive)> ComputeLiteralPositions(List<LiteralInline> run)
+    /// <param name="document">The parsed Markdown document, mutated in place.</param>
+    /// <param name="library">The resolver for chat-text paths.</param>
+    /// <param name="markdown">The original raw Markdown text.</param>
+    private static void LinkLibraryPaths(MarkdownDocument document, ILibraryReferenceResolver library, string markdown)
     {
-        List<(LiteralInline, int, int)> positions = new(run.Count);
-        int cursor = 0;
-        foreach (LiteralInline literal in run)
+        MarkdownRenderer.LinkCodeSpanLibraryPaths(document, library);
+        MarkdownRenderer.ForEachLiteralRun(document, run => MarkdownRenderer.LinkLibraryPathsInRun(run, library, markdown));
+    }
+
+    /// <summary>
+    /// Wraps a whole <see cref="CodeInline"/> in a <c>library-ref</c> <see cref="LinkInline"/> when its entire
+    /// content, spaces included, is exactly one path <see cref="LibraryPathPatterns.TryMatchWhole"/> recognises
+    /// and <paramref name="library"/> resolves. The code element itself is kept as the link's only child, so no
+    /// backtick ever appears in the rendered text.
+    /// </summary>
+    /// <param name="document">The parsed Markdown document, mutated in place.</param>
+    /// <param name="library">The resolver for chat-text paths.</param>
+    private static void LinkCodeSpanLibraryPaths(MarkdownDocument document, ILibraryReferenceResolver library)
+    {
+        foreach (CodeInline code in document.Descendants<CodeInline>().ToList())
         {
-            bool hasSpan = literal.Span.End >= literal.Span.Start;
-            int start = hasSpan ? literal.Span.Start : cursor;
-            int length = hasSpan ? literal.Span.End - literal.Span.Start + 1 : literal.Content.Length;
-            int endExclusive = start + length;
-            positions.Add((literal, start, endExclusive));
-            cursor = endExclusive;
+            if (code.ContainsParentOfType<LinkInline>())
+            {
+                continue;
+            }
+
+            if (!LibraryPathPatterns.TryMatchWhole(code.Content, out string? path))
+            {
+                continue;
+            }
+
+            LibraryReference? reference = library.ResolvePath(path);
+            if (reference is null)
+            {
+                continue;
+            }
+
+            LinkInline link = new(MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath), string.Empty);
+            link.GetAttributes().AddClass("library-ref");
+            if (!reference.Exists)
+            {
+                link.GetAttributes().AddClass("library-ref-missing");
+            }
+
+            code.InsertBefore(link);
+            code.Remove();
+            link.AppendChild(code);
+        }
+    }
+
+    /// <summary>
+    /// Whether <paramref name="run"/> can be mapped back to raw source: non-empty, and every literal's Span set,
+    /// in order and inside <paramref name="markdown"/>. Every literal should have one under the precise-location
+    /// pipeline (judgement 40), but a run that doesn't is skipped (left unlinked) rather than allowed to throw
+    /// out of a chat render.
+    /// </summary>
+    private static bool HasUsableSpans(List<LiteralInline> run, string markdown)
+    {
+        if (run.Count == 0)
+        {
+            return false;
         }
 
-        return positions;
+        int previousEnd = -1;
+        foreach (LiteralInline literal in run)
+        {
+            if (literal.Span.Start < 0 || literal.Span.End < literal.Span.Start || literal.Span.End >= markdown.Length || literal.Span.Start <= previousEnd)
+            {
+                return false;
+            }
+
+            previousEnd = literal.Span.End;
+        }
+
+        return true;
+    }
+
+    /// <summary>Scans one literal run's raw source slice for space-free paths via <see cref="LibraryPathPatterns.Find"/>
+    /// and splices in a <c>library-ref</c> link for each one <paramref name="library"/> resolves, via <see cref="SpliceRunMatches"/>.</summary>
+    /// <param name="run">Consecutive sibling literals to scan; left untouched when empty or no path is found.</param>
+    /// <param name="library">The resolver for chat-text paths.</param>
+    /// <param name="markdown">The original raw Markdown text.</param>
+    private static void LinkLibraryPathsInRun(List<LiteralInline> run, ILibraryReferenceResolver library, string markdown)
+    {
+        if (!MarkdownRenderer.HasUsableSpans(run, markdown))
+        {
+            return;
+        }
+
+        int runStart = run[0].Span.Start;
+        int runEndExclusive = run[^1].Span.End + 1;
+        IReadOnlyList<(int Index, int Length, string Path)> found = LibraryPathPatterns.Find(markdown.Substring(runStart, runEndExclusive - runStart));
+        if (found.Count == 0)
+        {
+            return;
+        }
+
+        List<(int Start, int Length, Func<string, Inline> Build)> matches = [.. found.Select(m =>
+            (runStart + m.Index, m.Length, (Func<string, Inline>)(rawToken => MarkdownRenderer.CreateLibraryPathLink(library, rawToken))))];
+        MarkdownRenderer.SpliceRunMatches(run, matches, markdown);
+    }
+
+    /// <summary>Resolves <paramref name="path"/> through <paramref name="library"/>: a <c>library-ref</c>
+    /// <see cref="LinkInline"/> when it resolves (dimmed via <c>library-ref-missing</c> when the file no longer
+    /// exists), or a plain literal holding <paramref name="path"/> exactly as written when it does not.</summary>
+    /// <param name="library">The resolver for chat-text paths.</param>
+    /// <param name="path">The matched path text, exactly as it appears in the source.</param>
+    private static Inline CreateLibraryPathLink(ILibraryReferenceResolver library, string path)
+    {
+        LibraryReference? reference = library.ResolvePath(path);
+        if (reference is null)
+        {
+            return new LiteralInline(path);
+        }
+
+        LinkInline link = new(MarkdownRenderer.BuildLibraryHref(reference.RootId, reference.RelativePath), string.Empty);
+        link.AppendChild(new LiteralInline(path));
+        link.GetAttributes().AddClass("library-ref");
+        if (!reference.Exists)
+        {
+            link.GetAttributes().AddClass("library-ref-missing");
+        }
+
+        return link;
     }
 
     /// <summary>
