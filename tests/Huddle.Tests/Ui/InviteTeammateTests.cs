@@ -1,11 +1,10 @@
 namespace Agency.Huddle.Tests.Ui;
 
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
+using Bunit;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using TestContext = Xunit.TestContext;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Avatars;
@@ -134,7 +133,7 @@ public sealed class InviteTeammateTests
         // invite candidate - the whole point of this test.
         var room = await chat.EnsureRoomForAsync(member, ct);
 
-        var html = await RenderAsync(dir, directory, chat, room.Id);
+        var html = await RenderAsync(dir, directory, chat, room.Id, openTeamFilter: true);
 
         Assert.Contains("All teams", html, StringComparison.Ordinal);
         Assert.Contains("Business", html, StringComparison.Ordinal);
@@ -169,10 +168,21 @@ public sealed class InviteTeammateTests
         return new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
     }
 
+    /// <summary>
+    /// Renders the panel under bUnit rather than a bare <c>HtmlRenderer</c>: its team filter is a
+    /// <c>MudSelect</c>, which needs MudBlazor's services, a popover provider and a JS runtime.
+    /// </summary>
+    /// <param name="dir">The data directory the services read from.</param>
+    /// <param name="directory">The team directory the panel lists candidates from.</param>
+    /// <param name="chat">The chat service the panel invites through.</param>
+    /// <param name="roomId">The room the panel is rendered for.</param>
+    /// <param name="openTeamFilter">Whether to open the team filter first, since a <c>MudSelect</c> renders its options only while open.</param>
+    /// <returns>The rendered markup, popover provider included.</returns>
     private static async Task<string> RenderAsync(
-        TempDataDir dir, ITeamDirectory directory, ChatService chat, string roomId)
+        TempDataDir dir, ITeamDirectory directory, ChatService chat, string roomId, bool openTeamFilter = false)
     {
-        var services = new ServiceCollection();
+        await using MudBunitContext context = new();
+        IServiceCollection services = context.Services;
         services.AddLogging();
         services.AddSingleton(dir.Options());
         services.AddSingleton(directory);
@@ -192,16 +202,19 @@ public sealed class InviteTeammateTests
         // never outlives the test either.
         using var avatars = new AvatarStore(dir.Options(), NullLogger<AvatarStore>.Instance);
         services.AddSingleton(avatars);
-        await using var provider = services.BuildServiceProvider();
 
-        await using var renderer = new HtmlRenderer(provider, provider.GetRequiredService<ILoggerFactory>());
-
-        return await renderer.Dispatcher.InvokeAsync(async () =>
+        var cut = context.RenderWithPopovers(builder =>
         {
-            var output = await renderer.RenderComponentAsync<InviteTeammate>(
-                ParameterView.FromDictionary(new Dictionary<string, object?> { ["RoomId"] = roomId }));
-
-            return output.ToHtmlString();
+            builder.OpenComponent<InviteTeammate>(0);
+            builder.AddAttribute(1, nameof(InviteTeammate.RoomId), roomId);
+            builder.CloseComponent();
         });
+
+        if (openTeamFilter)
+        {
+            cut.Find("div.mud-input-control").MouseDown();
+        }
+
+        return cut.Markup;
     }
 }

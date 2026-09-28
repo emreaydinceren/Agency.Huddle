@@ -14,10 +14,8 @@
 @inject IDialogService DialogService
 @inject AvatarStore Avatars
 
-<div class="teammates-page">
-    <header class="teammates-header">
-        <h1>Teammates</h1>
-    </header>
+<MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
+    <MudText HtmlTag="h1" Typo="Typo.h5" Class="mb-4">Teammates</MudText>
 
     <MudText Typo="Typo.body2" Class="mud-text-secondary">
         A Persona is a Markdown file describing how one teammate should behave, plus the model it
@@ -113,7 +111,7 @@
             }
         }
     }
-</div>
+</MudContainer>
 
 @code {
     // The whole discovered state of the Teams directory, refreshed together in LoadAsync so a

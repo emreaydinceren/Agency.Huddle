@@ -13,7 +13,7 @@
 <div class="invite-teammate">
     <MudButton Variant="Variant.Text" OnClick="this.TogglePanel">Add teammate</MudButton>
     <MudCollapse Expanded="@this.isOpen">
-        <div class="invite-panel">
+        <MudStack Class="invite-panel pa-2 border-l-2 mud-border-lines-default" Spacing="2">
             @if (this.errorText is not null)
             {
                 <MudAlert Severity="Severity.Error" Dense="true">@this.errorText</MudAlert>
@@ -32,16 +32,13 @@
                 @* An Agent with no Persona behind it (a raw pipe client, or the echo/alpha demo agents)
                    has no Teams at all, so it only ever shows up under "All teams" - narrowing this
                    filter to a real Team simply never matches it, with no special case needed. *@
-                <label class="teammates-field invite-filter">
-                    Team
-                    <select value="@this.selectedTeam" @onchange="this.OnTeamFilterChanged">
-                        <option value="">All teams</option>
-                        @foreach (var team in this.Personas.Teams)
-                        {
-                            <option value="@team">@team</option>
-                        }
-                    </select>
-                </label>
+                <MudSelect T="string" Label="Team" Value="@this.selectedTeam" ValueChanged="this.OnTeamFilterChanged" Dense="true" Class="mb-4">
+                    <MudSelectItem T="string" Value="@string.Empty">All teams</MudSelectItem>
+                    @foreach (var team in this.Personas.Teams)
+                    {
+                        <MudSelectItem T="string" Value="@team">@team</MudSelectItem>
+                    }
+                </MudSelect>
 
                 var filtered = this.FilteredCandidates();
 
@@ -51,7 +48,7 @@
                 }
                 else
                 {
-                    <div class="invite-agents">
+                    <MudStack Spacing="1" Class="invite-agents">
                         @foreach (var agent in filtered)
                         {
                             var status = PersonaStatusResolver.Resolve(this.Gateway.IsOnline(agent.Id), this.Health.Get(agent.Name));
@@ -62,10 +59,10 @@
                                 @name
                             </MudButton>
                         }
-                    </div>
+                    </MudStack>
                 }
             }
-        </div>
+        </MudStack>
     </MudCollapse>
 </div>
 
@@ -156,9 +153,9 @@
 
     // Never touches PersonaStore's write path or ModelCatalog - selecting a team is pure display
     // narrowing over candidates already loaded.
-    private void OnTeamFilterChanged(ChangeEventArgs e)
+    private void OnTeamFilterChanged(string value)
     {
-        this.selectedTeam = e.Value?.ToString() ?? string.Empty;
+        this.selectedTeam = value ?? string.Empty;
     }
 
     /// <summary>

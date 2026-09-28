@@ -85,48 +85,7 @@ button:focus-visible {
     color: var(--mud-palette-text-secondary);
 }
 
-.teammates-page {
-    padding: 1rem;
-    max-width: 56rem;
-}
 
-.teammates-intro {
-    color: var(--mud-palette-text-secondary);
-}
-
-.teammates-list {
-    list-style: none;
-    margin: 0 0 1rem 0;
-    padding: 0;
-}
-
-
-
-.teammates-item-name {
-    flex: 1 1 auto;
-}
-
-.teammates-field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    font-size: 0.85rem;
-    color: var(--mud-palette-text-secondary);
-}
-
-.teammates-field input,
-.teammates-field select,
-.teammates-field textarea {
-    font: inherit;
-    padding: 0.5rem;
-    border: 1px solid var(--mud-palette-lines-inputs);
-    border-radius: var(--mud-default-borderradius);
-}
-
-.teammates-field textarea {
-    min-height: 6rem;
-    resize: vertical;
-}
 
 /* MudMainContent reserves padding-top for a MudAppBar; this layout has none, so that reservation
    was only ever a blank band above every page. The doubled class outranks MudBlazor's own
@@ -142,34 +101,7 @@ button:focus-visible {
     overflow: hidden;
 }
 
-.chat-page {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
 
-.chat-header {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--mud-palette-divider);
-}
-
-.chat-header h1 {
-    margin: 0 0 0.25rem 0;
-    font-size: 1.1rem;
-}
-
-.chat-members {
-    margin: 0;
-    color: var(--mud-palette-text-secondary);
-    font-size: 0.85rem;
-}
-
-.chat-header-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-}
 
 /* ---- The drawer, and pinning Settings to the bottom of it ------------------------------------
    The drawer's children - NewChat, RoomList and the two MudNavMenus - are a plain vertical flow
@@ -843,34 +775,7 @@ button:focus-visible {
 
 /* ---- Settings: page shell and the Prompts panel's field layout (tab rail and status badges are MudBlazor) -- */
 
-.settings-page {
-    padding: 1rem;
-    max-width: 56rem;
-}
 
-.settings-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-
-.settings-header h1 {
-    margin: 0 0 0.5rem 0;
-}
-
-.settings-prompts-file-path {
-    font-size: 0.8rem;
-    color: var(--mud-palette-text-secondary);
-    margin: 0.5rem 0 0.75rem 0;
-}
-
-.settings-theme-credit {
-    font-size: 0.8rem;
-    color: var(--mud-palette-text-secondary);
-    margin: 0.5rem 0 0.75rem 0;
-}
 
 /* The Appearance tab's theme picker. A bordered, scrollable box rather than a bare list, so the
    nineteen themes read as one control the way the select they replaced did, and so a long catalog
