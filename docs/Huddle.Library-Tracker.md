@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 87 of 143 tasks Done · 4 of 8 retrospectives done · last updated 2026-09-27.
+**Status:** 87 of 143 tasks Done · 5 of 8 retrospectives done · last updated 2026-09-27.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -115,7 +115,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 8.1.i Implement `WikiLinkParser` · #73 · Sonnet | | | ✔ |
 | 8.2.t Test: `WikiLinkResolver` · #74 · Haiku | | | ✔ |
 | 8.2.i Implement `WikiLinkResolver` · #75 · Haiku | | | ✔ |
-| 🔁 R5 — Opus retrospective after #75, and plan update | ✔ | | |
+| 🔁 R5 — Opus retrospective after #75, and plan update | | | ✔ |
 | 8.3.t Test: `WikiLinkRewriter.Rewrite` · #76 · Sonnet | ✔ | | |
 | 8.3.i Implement `WikiLinkRewriter` · #77 · Sonnet | ✔ | | |
 | 8.4.t Test: `WikiLinkIndex` · #78 · Sonnet | ✔ | | |
