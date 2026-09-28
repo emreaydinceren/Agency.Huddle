@@ -1,0 +1,104 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<div class="library-editor" @ref="this.editorElement"></div>
+
+@code {
+    /// <summary>The document's text as loaded. Only read on create; later changes cross the interop boundary through <see cref="SetTextAsync"/>, never a re-render.</summary>
+    [Parameter, EditorRequired]
+    public string Text { get; set; } = "";
+
+    /// <summary>Whether the editor opens read-only (a non-Markdown file kind, Spec §6.7).</summary>
+    [Parameter]
+    public bool ReadOnly { get; set; }
+
+    /// <summary>The CodeMirror language mode id: <c>markdown</c>, <c>json</c>, <c>yaml</c>, <c>csharp</c>, <c>javascript</c>, <c>css</c>, <c>xml</c>, <c>powershell</c> or <c>plain</c>.</summary>
+    [Parameter, EditorRequired]
+    public string LanguageId { get; set; } = "plain";
+
+    /// <summary>Raised each time the JS side's dirty flag flips (Spec §6.7's <c>updateListener</c>). Forwarded as received: the flip check already happened in JS, so this never re-derives it.</summary>
+    [Parameter]
+    public EventCallback<bool> DirtyChanged { get; set; }
+
+    /// <summary>Raised when the <c>Mod-s</c> keymap fires inside the editor.</summary>
+    [Parameter]
+    public EventCallback SaveRequested { get; set; }
+
+    private ElementReference editorElement;
+    private IJSObjectReference? module;
+    private IJSObjectReference? handle;
+    private DotNetObjectReference<LibraryEditor>? selfReference;
+
+    /// <inheritdoc />
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        this.module = await this.JS.InvokeAsync<IJSObjectReference>("import", "./library-editor.js");
+        this.selfReference = DotNetObjectReference.Create(this);
+        this.handle = await this.module.InvokeAsync<IJSObjectReference>(
+            "create", this.editorElement, this.Text, this.ReadOnly, this.LanguageId, this.selfReference);
+    }
+
+    /// <summary>Reads the editor's current text. Text crosses the circuit only on demand, never per keystroke.</summary>
+    public async Task<string> GetTextAsync()
+    {
+        if (this.handle is null)
+        {
+            throw new InvalidOperationException("The editor has not been created yet.");
+        }
+
+        return await this.handle.InvokeAsync<string>("getText");
+    }
+
+    /// <summary>Replaces the editor's text and resets its dirty flag.</summary>
+    public async Task SetTextAsync(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        if (this.handle is null)
+        {
+            throw new InvalidOperationException("The editor has not been created yet.");
+        }
+
+        await this.handle.InvokeVoidAsync("setText", text);
+    }
+
+    /// <summary>Called from JS each time the dirty state flips. Forwards the value unchanged - see <see cref="DirtyChanged"/>.</summary>
+    [JSInvokable]
+    public async Task OnDirtyChanged(bool dirty) => await this.DirtyChanged.InvokeAsync(dirty);
+
+    /// <summary>Called from JS when the <c>Mod-s</c> keymap fires.</summary>
+    [JSInvokable]
+    public async Task OnSaveRequested() => await this.SaveRequested.InvokeAsync();
+
+    /// <inheritdoc />
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (this.handle is not null)
+            {
+                await this.handle.InvokeVoidAsync("dispose");
+                await this.handle.DisposeAsync();
+            }
+
+            if (this.module is not null)
+            {
+                await this.module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The first IJSObjectReference module in this repo: the circuit can already be gone
+            // by the time a component disposes (a browser tab closed, a reconnect that failed),
+            // and there is nothing left to release client-side (corrections-B6 D11 item 13).
+        }
+        finally
+        {
+            this.selfReference?.Dispose();
+        }
+    }
+}
