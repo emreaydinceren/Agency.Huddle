@@ -26,11 +26,32 @@ internal static partial class WikiLinkParser
     {
         MarkdownDocument document = Markdig.Markdown.Parse(markdown, WikiLinkParser.Pipeline);
         List<(int Start, int EndExclusive)> excluded = WikiLinkParser.CollectExcludedRanges(document);
+        return WikiLinkParser.ParseMatches(markdown, excluded);
+    }
 
+    /// <summary>
+    /// Parses wikilinks in a raw slice of Markdown source that is already known to contain no code spans - e.g.
+    /// the concatenated raw text of a run of sibling <see cref="Markdig.Syntax.Inlines.LiteralInline"/>s - so no
+    /// document-level parse or exclusion pass runs. Positions in the returned <see cref="WikiLink"/>s are
+    /// relative to <paramref name="slice"/>, not any larger document (<see cref="Agency.Huddle.App.Services.MarkdownRenderer"/>,
+    /// Task 9.2.i, corrections-B5 item 19).
+    /// </summary>
+    /// <param name="slice">The raw Markdown text slice to scan.</param>
+    internal static IReadOnlyList<WikiLink> ParseSlice(string slice)
+    {
+        ArgumentNullException.ThrowIfNull(slice);
+        return WikiLinkParser.ParseMatches(slice, []);
+    }
+
+    /// <summary>The regex-matching loop shared by <see cref="Parse"/> and <see cref="ParseSlice"/>.</summary>
+    /// <param name="text">The raw Markdown text to scan.</param>
+    /// <param name="excluded">Source ranges (end-exclusive) to skip - code spans and code blocks; empty for a slice already known to hold none.</param>
+    private static List<WikiLink> ParseMatches(string text, List<(int Start, int EndExclusive)> excluded)
+    {
         List<WikiLink> links = [];
         int cursorIndex = 0;
         int cursorLine = 1;
-        foreach (Match match in WikiLinkParser.WikiLinkRegex().Matches(markdown))
+        foreach (Match match in WikiLinkParser.WikiLinkRegex().Matches(text))
         {
             int start = match.Index;
             int endExclusive = start + match.Length;
@@ -38,7 +59,7 @@ internal static partial class WikiLinkParser
             // Matches.Matches() yields matches in ascending Index order, so the line count between
             // the previous match and this one is never re-walked from the start of the text
             // (avoiding the quadratic cost of calling LineOf(markdown, start) per link).
-            cursorLine += WikiLinkParser.CountLineBreaks(markdown, cursorIndex, start);
+            cursorLine += WikiLinkParser.CountLineBreaks(text, cursorIndex, start);
             cursorIndex = start;
 
             if (WikiLinkParser.Overlaps(excluded, start, endExclusive))
@@ -46,7 +67,7 @@ internal static partial class WikiLinkParser
                 continue;
             }
 
-            if (WikiLinkParser.IsEscapedAt(markdown, start))
+            if (WikiLinkParser.IsEscapedAt(text, start))
             {
                 continue;
             }

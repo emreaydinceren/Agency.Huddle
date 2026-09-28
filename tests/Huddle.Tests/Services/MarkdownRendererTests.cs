@@ -1,8 +1,10 @@
 using System.Collections.Frozen;
 using AngleSharp.Dom;
 using AngleSharp.Html.Parser;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.Tests.Library;
 
 namespace Agency.Huddle.Tests.Services;
 
@@ -367,5 +369,308 @@ public sealed class MarkdownRendererTests
 
         /// <inheritdoc />
         public TaskReference? Resolve(TaskId id) => this.tasks.TryGetValue(id, out TaskReference? task) ? task : null;
+    }
+
+    // Library notes
+
+    private static readonly LibraryRoot NoteRoot = new("teams", "Teams", "E:\\Teams", LibraryRootKind.Teams);
+    private static readonly LibraryPath NotePath = new(
+        MarkdownRendererTests.NoteRoot, "Marketing/Launch Q4/a.md", "E:\\Teams\\Marketing\\Launch Q4\\a.md", LibraryNodeRole.File);
+
+    /// <summary>A wikilink the resolver resolves becomes a <c>library-ref</c> link, with the target as its text.</summary>
+    [Fact]
+    public void Note_WikiLink_Resolved_IsLibraryLink()
+    {
+        FakeLibraryNoteResolver library = new(resolveWikiLink: (_, link) =>
+            new LibraryReference("teams", "Marketing/plan.md", Exists: true));
+
+        var html = MarkdownRenderer.ToHtml("See [[plan]] for details.", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, "plan");
+
+        Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
+        Assert.Contains("library-ref", anchor.ClassList, StringComparer.Ordinal);
+    }
+
+    /// <summary>An alias replaces the target as the link's text.</summary>
+    [Fact]
+    public void Note_WikiLinkWithAlias_TextIsAlias()
+    {
+        FakeLibraryNoteResolver library = new(resolveWikiLink: (_, link) =>
+            new LibraryReference("teams", "Marketing/plan.md", Exists: true));
+
+        var html = MarkdownRenderer.ToHtml("See [[plan|the plan]].", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, "the plan");
+
+        Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>A heading in the wikilink target is not carried into the href, since v1 links to the file only.</summary>
+    [Fact]
+    public void Note_WikiLinkWithHeading_LinksToFile()
+    {
+        FakeLibraryNoteResolver library = new(resolveWikiLink: (_, link) =>
+            new LibraryReference("teams", "Marketing/plan.md", Exists: true));
+
+        var html = MarkdownRenderer.ToHtml("See [[plan#Dates]].", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, "plan#Dates");
+
+        Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>An unresolved wikilink still links (offering "Create note"), dimmed via the missing class, with an exact title.</summary>
+    [Fact]
+    public void Note_WikiLink_Unresolved_HasMissingClassAndTitle()
+    {
+        FakeLibraryNoteResolver library = new(resolveWikiLink: (_, link) =>
+            new LibraryReference("teams", link.Target, Exists: false));
+
+        var html = MarkdownRenderer.ToHtml("See [[plan]].", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, "plan");
+
+        Assert.Contains("library-ref-missing", anchor.ClassList, StringComparer.Ordinal);
+        Assert.Equal("No note named \"plan\". Click to create it.", anchor.GetAttribute("title"));
+    }
+
+    /// <summary>Several notes tying for a wikilink target show an ambiguity title instead of the missing one.</summary>
+    [Fact]
+    public void Note_WikiLink_Ambiguous_HasTitle()
+    {
+        FakeLibraryNoteResolver library = new(resolveWikiLink: (_, link) =>
+            new LibraryReference("teams", "Marketing/plan.md", Exists: true, IsAmbiguous: true));
+
+        var html = MarkdownRenderer.ToHtml("See [[plan]].", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, "plan");
+
+        Assert.Equal("Several notes match \"plan\"; showing the closest.", anchor.GetAttribute("title"));
+    }
+
+    /// <summary>An embed token is recognised as a link for rewriting purposes, but never rendered as an embed (Spec §6.5).</summary>
+    [Fact]
+    public void Note_EmbedToken_RendersAsLink()
+    {
+        FakeLibraryNoteResolver library = new(resolveWikiLink: (_, link) =>
+            new LibraryReference("teams", "Marketing/plan.md", Exists: true));
+
+        var html = MarkdownRenderer.ToHtml("See ![[plan]].", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+
+        Assert.Null(document.QuerySelector("img"));
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, "plan");
+        Assert.Contains("library-ref", anchor.ClassList, StringComparer.Ordinal);
+    }
+
+    /// <summary>A relative Markdown link is resolved from the note's own location.</summary>
+    [Fact]
+    public void Note_RelativeMarkdownLink_Resolved()
+    {
+        FakeLibraryNoteResolver library = new(resolveRelative: (from, url) =>
+            string.Equals(url, "../plan.md", StringComparison.Ordinal)
+                ? new LibraryReference("teams", "Marketing/plan.md", Exists: true)
+                : null);
+
+        var html = MarkdownRenderer.ToHtml("[x](../plan.md)", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+        var anchor = document.QuerySelector("a");
+
+        Assert.NotNull(anchor);
+        Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>A relative Markdown link carrying a heading fragment still resolves: the resolver strips the fragment (9.3).</summary>
+    [Fact]
+    public void Note_RelativeLinkWithHeadingFragment_ResolvesStrippingFragment()
+    {
+        FakeLibraryNoteResolver library = new(resolveRelative: (from, url) =>
+            string.Equals(url, "../plan.md#Dates", StringComparison.Ordinal)
+                ? new LibraryReference("teams", "Marketing/plan.md", Exists: true)
+                : null);
+
+        var html = MarkdownRenderer.ToHtml("[x](../plan.md#Dates)", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+        var anchor = document.QuerySelector("a");
+
+        Assert.NotNull(anchor);
+        Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>An absolute https link is not a Library link and keeps its own href unchanged.</summary>
+    [Fact]
+    public void Note_AbsoluteHttpsLink_KeepsHref()
+    {
+        FakeLibraryNoteResolver library = new();
+
+        var html = MarkdownRenderer.ToHtml("[x](https://e)", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+        var anchor = document.QuerySelector("a");
+
+        Assert.NotNull(anchor);
+        Assert.Equal("https://e", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>An image link stays "#" until the /library-files/ route exists (corrections-B5 item 21).</summary>
+    [Fact]
+    public void Note_ImageLink_HrefStaysHash()
+    {
+        FakeLibraryNoteResolver library = new(resolveRelative: (from, url) =>
+            new LibraryReference("teams", "Marketing/img/x.png", Exists: true));
+
+        var html = MarkdownRenderer.ToHtml("![](img/x.png)", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+        var image = document.QuerySelector("img");
+
+        Assert.NotNull(image);
+        Assert.Equal("#", image.GetAttribute("src"));
+    }
+
+    /// <summary>A wikilink inside a code span is left untouched, never linked.</summary>
+    [Fact]
+    public void Note_WikiLinkInCode_Untouched()
+    {
+        FakeLibraryNoteResolver library = new(resolveWikiLink: (_, link) =>
+            new LibraryReference("teams", "Marketing/plan.md", Exists: true));
+
+        var html = MarkdownRenderer.ToHtml("Run `[[plan]]` locally.", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+        var code = document.QuerySelector("code");
+
+        Assert.DoesNotContain("<a", html, StringComparison.Ordinal);
+        Assert.NotNull(code);
+        Assert.Equal("[[plan]]", code.TextContent);
+    }
+
+    /// <summary>An Obsidian callout and highlight markup are not given special rendering: the callout stays a
+    /// plain blockquote holding the literal marker text, and "==x==" still renders "&lt;mark&gt;" exactly as it
+    /// does today, since <c>UseEmphasisExtras</c> already enables it and the pipeline builder is unchanged
+    /// (corrections-B5 item 20 overrides the plan's "renders literally").</summary>
+    [Fact]
+    public void Note_CalloutAndHighlight_RenderAsPlainMarkdown()
+    {
+        FakeLibraryNoteResolver library = new();
+
+        var calloutHtml = MarkdownRenderer.ToHtml("> [!note]", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var calloutDocument = new HtmlParser().ParseDocument(calloutHtml);
+        var blockquote = calloutDocument.QuerySelector("blockquote");
+
+        Assert.NotNull(blockquote);
+        Assert.Equal("[!note]", blockquote.TextContent.Trim());
+
+        var highlightHtml = MarkdownRenderer.ToHtml("==x==", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var highlightDocument = new HtmlParser().ParseDocument(highlightHtml);
+        var mark = highlightDocument.QuerySelector("mark");
+
+        Assert.NotNull(mark);
+        Assert.Equal("x", mark.TextContent);
+    }
+
+    /// <summary>A wikilink written inside emphasis still links, and the italics around it render exactly as
+    /// without a Library resolver.</summary>
+    [Fact]
+    public void Note_WikiLinkInsideEmphasis_LinksAndKeepsEmphasis()
+    {
+        const string Markdown = "*see [[plan]]*";
+        FakeLibraryNoteResolver library = new(resolveWikiLink: (_, link) =>
+            new LibraryReference("teams", "Marketing/plan.md", Exists: true));
+
+        var html = MarkdownRenderer.ToHtml(Markdown, tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+        var emphasis = document.QuerySelector("em");
+        var withoutLibraryDocument = new HtmlParser().ParseDocument(MarkdownRenderer.ToHtml(Markdown, tasks: null, library: null, from: null));
+
+        Assert.NotNull(emphasis);
+        var anchor = emphasis.QuerySelector("a.library-ref");
+        Assert.NotNull(anchor);
+        string? expected = withoutLibraryDocument.Body?.TextContent.Replace("[[plan]]", "plan", StringComparison.Ordinal);
+        Assert.Equal(expected, document.Body?.TextContent);
+    }
+
+    /// <summary>Text escaping the wikilink markers next to it renders exactly as it does with no Library resolver,
+    /// once the wikilink token itself is swapped for its link text - the surrounding escaped asterisks are
+    /// untouched, so the body reads literally "*plan*", not italicised.</summary>
+    [Fact]
+    public void Note_WikiLinkNextToEscapedAsterisks_RendersLikeWithoutLibrary()
+    {
+        const string Markdown = @"\*[[plan]]\*";
+        FakeLibraryNoteResolver library = new(resolveWikiLink: (_, link) =>
+            new LibraryReference("teams", "Marketing/plan.md", Exists: true));
+
+        var html = MarkdownRenderer.ToHtml(Markdown, tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+        var withoutLibraryDocument = new HtmlParser().ParseDocument(MarkdownRenderer.ToHtml(Markdown, tasks: null, library: null, from: null));
+        var anchor = document.QuerySelector("a.library-ref");
+
+        string? expected = withoutLibraryDocument.Body?.TextContent.Replace("[[plan]]", "plan", StringComparison.Ordinal);
+        Assert.Equal(expected, document.Body?.TextContent);
+        Assert.NotNull(anchor);
+        Assert.Equal("plan", anchor.TextContent);
+        Assert.Equal("*plan*", document.Body?.TextContent.Trim());
+    }
+
+    /// <summary>An escaped opening bracket breaks the wikilink token, so it is never linked and renders exactly
+    /// as it does with no Library resolver at all.</summary>
+    [Fact]
+    public void Note_EscapedWikiLinkOpener_NotLinked()
+    {
+        const string Markdown = @"\[[plan]]";
+        FakeLibraryNoteResolver library = new(resolveWikiLink: (_, link) =>
+            new LibraryReference("teams", "Marketing/plan.md", Exists: true));
+
+        var html = MarkdownRenderer.ToHtml(Markdown, tasks: null, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+        var withoutLibraryDocument = new HtmlParser().ParseDocument(MarkdownRenderer.ToHtml(Markdown, tasks: null, library: null, from: null));
+
+        Assert.DoesNotContain("<a", html, StringComparison.Ordinal);
+        Assert.Equal(withoutLibraryDocument.Body?.TextContent, document.Body?.TextContent);
+    }
+
+    /// <summary>Two wikilinks in one paragraph, plus a Task id beside them, are all linked.</summary>
+    [Fact]
+    public void Note_TwoWikiLinksAndTaskIdInOneParagraph_AllLinked()
+    {
+        TaskId id = MarkdownRendererTests.MakeId("PLAT-0042");
+        FakeTaskReferenceResolver tasks = new(new TaskReference(id, "Ship the thing", Closed: false));
+        FakeLibraryNoteResolver library = new(resolveWikiLink: (_, link) =>
+            new LibraryReference("teams", string.Concat("Marketing/", link.Target, ".md"), Exists: true));
+
+        var html = MarkdownRenderer.ToHtml(
+            "See [[plan]] and [[budget]], tracked as PLAT-0042.", tasks: tasks, library, from: MarkdownRendererTests.NotePath);
+        var document = new HtmlParser().ParseDocument(html);
+        var anchors = document.QuerySelectorAll("a");
+
+        List<(string Text, string Class)> actual = [.. anchors.Select(a => (a.TextContent, a.GetAttribute("class") ?? string.Empty))];
+        List<(string Text, string Class)> expected =
+        [
+            ("plan", "library-ref"),
+            ("budget", "library-ref"),
+            ("PLAT-0042", "task-ref"),
+        ];
+        Assert.Equal(expected, actual);
+    }
+
+    /// <summary>The <c>?library=</c> href URL-encodes a relative path containing spaces.</summary>
+    [Fact]
+    public void Note_LibraryHref_IsUrlEncoded()
+    {
+        FakeLibraryNoteResolver library = new(resolveWikiLink: (_, link) =>
+            new LibraryReference("teams", "Marketing/Launch Q4/plan.md", Exists: true));
+
+        var html = MarkdownRenderer.ToHtml("See [[plan]].", tasks: null, library, from: MarkdownRendererTests.NotePath);
+        IElement anchor = MarkdownRendererTests.FindAnchor(html, "plan");
+
+        Assert.Equal("?library=teams/Marketing/Launch%20Q4/plan.md", anchor.GetAttribute("href"));
+    }
+
+    /// <summary>With <c>from</c> null, no wikilink pass runs at all: the existing chat behaviour, where a
+    /// wikilink is just plain text.</summary>
+    [Fact]
+    public void Note_FromNull_NoWikiLinkLinks()
+    {
+        FakeLibraryNoteResolver library = new(resolveWikiLink: (_, link) =>
+            new LibraryReference("teams", "Marketing/plan.md", Exists: true));
+
+        var html = MarkdownRenderer.ToHtml("See [[plan]].", tasks: null, library, from: null);
+        var document = new HtmlParser().ParseDocument(html);
+
+        Assert.DoesNotContain("<a", html, StringComparison.Ordinal);
+        Assert.Equal("See [[plan]].", document.Body?.TextContent.Trim());
     }
 }
