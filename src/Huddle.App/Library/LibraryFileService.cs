@@ -59,6 +59,25 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
     /// <summary>The default extension for a new note whose name has no known Spec §6.11 extension (corrections-B4 item 23).</summary>
     private const string DefaultNoteExtension = ".md";
 
+    /// <summary>Settled text (Spec §6.4, settled here) refusing a move across Library roots.</summary>
+    private const string MoveAcrossRootsReason = "Items can't be moved between Library roots.";
+
+    /// <summary>Settled text (Spec §6.4, settled here; corrections-B4 item 25) refusing a folder moved into
+    /// its own subtree, including into itself.</summary>
+    private const string MoveIntoOwnSubfolderReason = "A folder can't be moved into itself.";
+
+    /// <summary>Settled text (corrections-B4 item 28) refusing a move that would turn a subtree's <c>_tasks</c>
+    /// folder into live Tasks at the wrong depth.</summary>
+    private const string MoveTasksSubtreeReason = "Folders that hold tasks can't be moved here.";
+
+    /// <summary>Settled text (corrections-B4 item 27) for a rename or move whose final
+    /// <see cref="File.Move(string, string)"/>/<see cref="Directory.Move(string, string)"/> failed because
+    /// something inside the source was held open without <see cref="FileShare.Delete"/>.</summary>
+    private static readonly CompositeFormat CouldNotMoveReasonFormat = CompositeFormat.Parse("Couldn't move {0}: something inside it is in use.");
+
+    /// <summary>The reserved folder name that marks a Team or Project folder's Tasks subtree (corrections-B4 item 28).</summary>
+    private const string TasksFolderName = "_tasks";
+
     private readonly LibraryPathResolver resolver = resolver;
     private readonly IRecycleBin recycleBin = recycleBin;
     private readonly IOptions<TeamOptions> options = options;
@@ -299,16 +318,12 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
             return new LibraryResult<LibraryPath>(null, resolveError);
         }
 
-        if (fresh.Root.Kind == LibraryRootKind.Teammates && fresh.RelativePath.Length == 0)
-        {
-            return new LibraryResult<LibraryPath>(null, CreateAtTeammatesRootReason);
-        }
-
         string finalName = LibraryFileKinds.HasKnownExtension(name) ? name : name + DefaultNoteExtension;
 
-        if (fresh.Role == LibraryNodeRole.TeammateFolder && string.Equals(Path.GetExtension(finalName), ".md", StringComparison.OrdinalIgnoreCase))
+        string? teammatesError = TeammatesDestinationRefusal(fresh, finalName);
+        if (teammatesError is not null)
         {
-            return new LibraryResult<LibraryPath>(null, CreateMdInTeammateFolderReason);
+            return new LibraryResult<LibraryPath>(null, teammatesError);
         }
 
         if (!this.TryResolveCreateTarget(fresh, finalName, out LibraryPath? target, out string? targetError))
@@ -360,9 +375,10 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
             return Task.FromResult(new LibraryResult<LibraryPath>(null, resolveError));
         }
 
-        if (fresh.Root.Kind == LibraryRootKind.Teammates && fresh.RelativePath.Length == 0)
+        string? teammatesError = TeammatesDestinationRefusal(fresh, null);
+        if (teammatesError is not null)
         {
-            return Task.FromResult(new LibraryResult<LibraryPath>(null, CreateAtTeammatesRootReason));
+            return Task.FromResult(new LibraryResult<LibraryPath>(null, teammatesError));
         }
 
         if (!this.TryResolveCreateTarget(fresh, name, out LibraryPath? target, out string? targetError))
@@ -389,6 +405,274 @@ internal sealed class LibraryFileService(LibraryPathResolver resolver, IRecycleB
         }
 
         return Task.FromResult(this.ReResolveCreated(fresh, name));
+    }
+
+    /// <summary>
+    /// Renames <paramref name="item"/> within its own folder (Spec §6.4 rename/move row, minus the link
+    /// rewrite (D8)). Checked in order: re-resolve, <see cref="LibraryNames.Validate"/>,
+    /// <see cref="LibraryProtection.For"/>, the Teammates destination rules (item 21/26, shared with
+    /// <see cref="CreateFileAsync"/>), then existence. A rename that only changes case
+    /// (<see cref="FolderSnapshot.PathComparer"/> treats old and new as equal, item 24) routes through a
+    /// temporary sibling so the platform's case-insensitive filesystem doesn't treat it as a no-op; the
+    /// rename back out of the temporary sibling is itself guarded so a failure there leaves a known state.
+    /// </summary>
+    /// <param name="item">The already-resolved item to rename; re-resolved before use.</param>
+    /// <param name="newName">The item's new name, in the same folder.</param>
+    /// <param name="ct">Cancels the rename.</param>
+    /// <returns>The move result (D8 fills its lists) on success, or a refusal reason.</returns>
+    internal Task<LibraryResult<LibraryMoveResult>> RenameAsync(LibraryPath item, string newName, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(newName);
+        ct.ThrowIfCancellationRequested();
+
+        if (!this.resolver.TryResolve(item.Root.Id, item.RelativePath, out LibraryPath? fresh, out string? resolveError))
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, resolveError));
+        }
+
+        string parentRelativePath = ParentRelativePath(fresh.RelativePath);
+        if (!this.resolver.TryResolve(fresh.Root.Id, parentRelativePath, out LibraryPath? parent, out string? parentError))
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, parentError));
+        }
+
+        string? nameError = LibraryNames.Validate(newName);
+        if (nameError is not null)
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, nameError));
+        }
+
+        LibraryProtection protection = LibraryProtection.For(fresh);
+        if (!protection.CanRename)
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, protection.Reason));
+        }
+
+        string? teammatesError = TeammatesDestinationRefusal(parent, newName);
+        if (teammatesError is not null)
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, teammatesError));
+        }
+
+        if (!this.TryResolveCreateTarget(parent, newName, out LibraryPath? target, out string? targetError))
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, targetError));
+        }
+
+        bool caseOnly = !string.Equals(fresh.FullPath, target.FullPath, StringComparison.Ordinal)
+            && FolderSnapshot.PathComparer.Equals(fresh.FullPath, target.FullPath);
+
+        if (!caseOnly && (Directory.Exists(target.FullPath) || File.Exists(target.FullPath)))
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, string.Format(CultureInfo.InvariantCulture, AlreadyExistsReasonFormat, newName)));
+        }
+
+        bool isFolder = fresh.Role != LibraryNodeRole.File;
+        string name = Path.GetFileName(fresh.FullPath);
+
+        try
+        {
+            if (caseOnly)
+            {
+                string tempPath = fresh.FullPath + ".renaming-" + Guid.NewGuid().ToString("N");
+                MoveEntry(fresh.FullPath, tempPath, isFolder);
+                try
+                {
+                    MoveEntry(tempPath, target.FullPath, isFolder);
+                }
+                catch (IOException)
+                {
+                    MoveEntry(tempPath, fresh.FullPath, isFolder);
+                    throw;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    MoveEntry(tempPath, fresh.FullPath, isFolder);
+                    throw;
+                }
+            }
+            else
+            {
+                MoveEntry(fresh.FullPath, target.FullPath, isFolder);
+            }
+        }
+        catch (IOException)
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, string.Format(CultureInfo.InvariantCulture, CouldNotMoveReasonFormat, name)));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, string.Format(CultureInfo.InvariantCulture, CouldNotMoveReasonFormat, name)));
+        }
+
+        return Task.FromResult(this.ReResolveMoved(parent, newName));
+    }
+
+    /// <summary>
+    /// Moves <paramref name="item"/> into <paramref name="targetFolder"/> (Spec §6.4 rename/move row, minus
+    /// the link rewrite (D8)). Checked in order: re-resolve both paths, <see cref="LibraryProtection.For"/>,
+    /// same root (settled here), into its own subtree (settled here; corrections-B4 item 25, compared on
+    /// resolved full paths with <see cref="FolderSnapshot.PathComparer"/>), the Teammates destination rules
+    /// (item 21/26, shared with <see cref="CreateFileAsync"/>), the <c>_tasks</c> subtree rule under the Teams
+    /// root (item 28), then existence.
+    /// </summary>
+    /// <param name="item">The already-resolved item to move; re-resolved before use.</param>
+    /// <param name="targetFolder">The already-resolved destination folder; re-resolved before use.</param>
+    /// <param name="ct">Cancels the move.</param>
+    /// <returns>The move result (D8 fills its lists) on success, or a refusal reason.</returns>
+    internal Task<LibraryResult<LibraryMoveResult>> MoveAsync(LibraryPath item, LibraryPath targetFolder, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        ArgumentNullException.ThrowIfNull(targetFolder);
+        ct.ThrowIfCancellationRequested();
+
+        if (!this.resolver.TryResolve(item.Root.Id, item.RelativePath, out LibraryPath? fresh, out string? resolveError))
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, resolveError));
+        }
+
+        if (!this.resolver.TryResolve(targetFolder.Root.Id, targetFolder.RelativePath, out LibraryPath? freshTarget, out string? targetResolveError))
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, targetResolveError));
+        }
+
+        LibraryProtection protection = LibraryProtection.For(fresh);
+        if (!protection.CanMove)
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, protection.Reason));
+        }
+
+        if (!string.Equals(fresh.Root.Id, freshTarget.Root.Id, StringComparison.Ordinal))
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, MoveAcrossRootsReason));
+        }
+
+        string itemFullPath = Path.TrimEndingDirectorySeparator(fresh.FullPath);
+        string targetFullPath = Path.TrimEndingDirectorySeparator(freshTarget.FullPath);
+
+        if (fresh.Role == LibraryNodeRole.Folder && IsSameOrWithin(targetFullPath, itemFullPath))
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, MoveIntoOwnSubfolderReason));
+        }
+
+        string name = Path.GetFileName(itemFullPath);
+
+        string? teammatesError = TeammatesDestinationRefusal(freshTarget, name);
+        if (teammatesError is not null)
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, teammatesError));
+        }
+
+        if (fresh.Role == LibraryNodeRole.Folder && fresh.Root.Kind == LibraryRootKind.Teams && ContainsTasksSubtree(itemFullPath))
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, MoveTasksSubtreeReason));
+        }
+
+        if (!this.TryResolveCreateTarget(freshTarget, name, out LibraryPath? target, out string? targetError))
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, targetError));
+        }
+
+        if (Directory.Exists(target.FullPath) || File.Exists(target.FullPath))
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, string.Format(CultureInfo.InvariantCulture, AlreadyExistsReasonFormat, name)));
+        }
+
+        bool isFolder = fresh.Role != LibraryNodeRole.File;
+
+        try
+        {
+            MoveEntry(fresh.FullPath, target.FullPath, isFolder);
+        }
+        catch (IOException)
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, string.Format(CultureInfo.InvariantCulture, CouldNotMoveReasonFormat, name)));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Task.FromResult(new LibraryResult<LibraryMoveResult>(null, string.Format(CultureInfo.InvariantCulture, CouldNotMoveReasonFormat, name)));
+        }
+
+        return Task.FromResult(this.ReResolveMoved(freshTarget, name));
+    }
+
+    /// <summary>The Teammates destination rules (corrections-B4 item 21, applied to rename/move destinations
+    /// too by item 26): refuses a destination directly at the Teammates root, and a <c>.md</c>
+    /// <paramref name="finalName"/> landing directly in a Teammate folder. Shared by
+    /// <see cref="CreateFileAsync"/>, <see cref="CreateFolderAsync"/>, <see cref="RenameAsync"/> and
+    /// <see cref="MoveAsync"/> so the rule lives in one place.</summary>
+    /// <param name="destinationFolder">The already-resolved destination folder.</param>
+    /// <param name="finalName">The final file name being placed in <paramref name="destinationFolder"/>, or
+    /// <see langword="null"/> when creating a folder (the <c>.md</c> check does not apply).</param>
+    private static string? TeammatesDestinationRefusal(LibraryPath destinationFolder, string? finalName)
+    {
+        if (destinationFolder.Root.Kind == LibraryRootKind.Teammates && destinationFolder.RelativePath.Length == 0)
+        {
+            return CreateAtTeammatesRootReason;
+        }
+
+        if (finalName is not null
+            && destinationFolder.Role == LibraryNodeRole.TeammateFolder
+            && string.Equals(Path.GetExtension(finalName), ".md", StringComparison.OrdinalIgnoreCase))
+        {
+            return CreateMdInTeammateFolderReason;
+        }
+
+        return null;
+    }
+
+    /// <summary>Whether <paramref name="candidate"/> equals <paramref name="folder"/> or lies under it
+    /// (corrections-B4 item 25: a separator-terminated prefix, not a raw <see cref="string.StartsWith(string)"/>),
+    /// compared with <see cref="FolderSnapshot.PathComparer"/> on already-trimmed, resolved full paths.</summary>
+    private static bool IsSameOrWithin(string candidate, string folder)
+    {
+        if (FolderSnapshot.PathComparer.Equals(candidate, folder))
+        {
+            return true;
+        }
+
+        string prefix = folder + Path.DirectorySeparatorChar;
+        return candidate.Length > prefix.Length && FolderSnapshot.PathComparer.Equals(candidate[..prefix.Length], prefix);
+    }
+
+    /// <summary>Whether <paramref name="folderFullPath"/>'s subtree holds a <c>_tasks</c> folder at any depth
+    /// (corrections-B4 item 28).</summary>
+    private static bool ContainsTasksSubtree(string folderFullPath)
+    {
+        if (!Directory.Exists(folderFullPath))
+        {
+            return false;
+        }
+
+        return Directory.EnumerateDirectories(folderFullPath, TasksFolderName, SearchOption.AllDirectories).Any();
+    }
+
+    /// <summary>Moves a file or folder without overwrite, dispatching to <see cref="File.Move(string, string)"/>
+    /// or <see cref="Directory.Move(string, string)"/> by <paramref name="isFolder"/>.</summary>
+    private static void MoveEntry(string sourcePath, string destinationPath, bool isFolder)
+    {
+        if (isFolder)
+        {
+            Directory.Move(sourcePath, destinationPath);
+        }
+        else
+        {
+            File.Move(sourcePath, destinationPath, overwrite: false);
+        }
+    }
+
+    /// <summary>Re-resolves a just-moved or just-renamed item so its <see cref="LibraryPath.Role"/> reflects
+    /// the disk (corrections-B4 item 22), wrapped in a <see cref="LibraryMoveResult"/> with empty lists (D8
+    /// fills them).</summary>
+    private LibraryResult<LibraryMoveResult> ReResolveMoved(LibraryPath parent, string finalName)
+    {
+        if (!this.TryResolveCreateTarget(parent, finalName, out LibraryPath? reResolved, out string? error))
+        {
+            return new LibraryResult<LibraryMoveResult>(null, error);
+        }
+
+        return new LibraryResult<LibraryMoveResult>(new LibraryMoveResult(reResolved, [], []), null);
     }
 
     /// <summary>Resolves the not-yet-existing child <paramref name="finalName"/> of <paramref name="fresh"/>,
