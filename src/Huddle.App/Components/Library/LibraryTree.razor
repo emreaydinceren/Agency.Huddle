@@ -53,7 +53,7 @@
                                                OnClick="menuContext.ToggleAsync" />
                             </ActivatorContent>
                             <ChildContent>
-                                @foreach (MenuAction action in MenuActionsFor(value))
+                                @foreach (MenuAction action in MenuActionsFor(value, this.ScopeFor(value)))
                                 {
                                     <MudMenuItem Disabled="@action.Disabled" OnClick="@(() => this.RaiseActionAsync(action.Kind, value))">
                                         <div class="library-tree-menu-label">@action.Label</div>
@@ -234,9 +234,17 @@
         };
     }
 
-    /// <summary>The scope's current display name, read live from <see cref="RootStore"/> so a pinned-root rename (item 22) shows up without losing this node's identity.</summary>
+    /// <summary>The scope's current display name: for a whole root, read live from <see cref="RootStore"/>
+    /// so a pinned-root rename (item 22) shows up without losing this node's identity; for a folder scope
+    /// (Spec §6.16 "Inside a scope"), the folder's own name.</summary>
     private string ScopeDisplayName(LibraryPath scope)
     {
+        if (scope.RelativePath.Length > 0)
+        {
+            int lastSlash = scope.RelativePath.LastIndexOf('/');
+            return lastSlash < 0 ? scope.RelativePath : scope.RelativePath[(lastSlash + 1)..];
+        }
+
         LibraryRoot? current = this.RootStore.Roots.FirstOrDefault(
             root => FolderSnapshot.PathComparer.Equals(root.FullPath, scope.Root.FullPath));
         return current?.DisplayName ?? scope.Root.DisplayName;
@@ -304,9 +312,14 @@
         _ => null,
     };
 
-    private static IReadOnlyList<MenuAction> MenuActionsFor(LibraryPath path)
+    /// <summary>The scope (from <see cref="Scopes"/>) that <paramref name="path"/> IS, so its menu is
+    /// protected like a root (Spec §6.16 "Inside a scope"); <see langword="null"/> for any other node.</summary>
+    private LibraryPath? ScopeFor(LibraryPath path) =>
+        this.Scopes.Contains(path, LibraryPathComparer.Instance) ? path : null;
+
+    private static IReadOnlyList<MenuAction> MenuActionsFor(LibraryPath path, LibraryPath? scope)
     {
-        LibraryProtection protection = LibraryProtection.For(path);
+        LibraryProtection protection = LibraryProtection.For(path, scope);
         string? reason = ReasonFor(path.Role);
 
         List<MenuAction> actions =
