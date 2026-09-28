@@ -867,7 +867,14 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
 
     // The watcher's filter is "*" (widened from "*.md" in the constructor), so this is now the
     // only thing keeping a stray non-Persona file (a ".txt", a lock file) from churning the
-    // debounce and restarting every online Persona for no reason. Two deliberate exceptions:
+    // debounce and restarting every online Persona for no reason. Three deliberate exceptions:
+    //   - A directory appearing: on Linux, IncludeSubdirectories is emulated - the watcher adds an
+    //     inotify watch for a new sub-folder only after it reads that folder's own Created event,
+    //     so a Persona file written into the folder in that gap raises nothing at all (mkdir then
+    //     write, a copied or unzipped Team folder). The folder's Created event is the one signal
+    //     that is guaranteed, and the debounced refresh rescans from disk, so it finds whatever
+    //     landed inside. Missing this left the Persona unloaded until some unrelated change
+    //     happened to trigger a rescan - under CI load, roughly one new folder in six.
     //   - A directory rename: Teams/Business becoming Teams/BusinessOps raises a Renamed event
     //     whose Name is the directory itself, which never matches ".md", yet every Persona path
     //     nested under it just went stale. Directory.Exists(e.FullPath) is safe to call here
@@ -882,8 +889,9 @@ public sealed class PersonaStore : IDisposable, IMentionAliasSource
     //     Missing this used to just mean a stale ListNames() entry; now that the index CACHES each
     //     file's text, missing it means PersonaSupervisor and the razor card keep serving stale
     //     prompt text for every Persona that was nested under the removed folder, forever.
-    private static bool AffectsATeamsFile(FileSystemEventArgs e) =>
+    internal static bool AffectsATeamsFile(FileSystemEventArgs e) =>
         IsMarkdownFile(e.Name)
+        || (e.ChangeType == WatcherChangeTypes.Created && Directory.Exists(e.FullPath))
         || (e.ChangeType == WatcherChangeTypes.Renamed && Directory.Exists(e.FullPath))
         || (e.ChangeType == WatcherChangeTypes.Deleted && HasNoExtension(e.Name));
 

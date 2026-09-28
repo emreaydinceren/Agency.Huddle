@@ -386,9 +386,17 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   ([ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md)); nothing here
   edits or removes an individual Message, and a Transcript is still never
   rewritten in place.
-- **Known flake, pre-existing:** `PersonaSupervisorTests.Shutdown_DisposesEveryHost`
-  fails roughly one run in four, always on a slow run — its 10-second token races
-  `WaitUntilAsync`. It is a timing bug in the test, not in `PersonaSupervisor`.
+- **Former flake, FIXED 2026-09-27 — and it was a product bug, not the test's timing.**
+  `PersonaSupervisorTests.Shutdown_DisposesEveryHost` (quarantined in CI), and on
+  `feat/library` most of the rest of that class, timed out in `WaitUntilAsync` on Linux.
+  The recorded cause, "its 10-second token races `WaitUntilAsync`", was wrong: with the
+  budget raised to 30 s, the same runs failed 30 s later. On Linux, `PersonaStore`'s
+  `FileSystemWatcher` watches a new sub-folder only after it reads that folder's Created event.
+  A Persona file written into the folder first raised nothing, and `AffectsATeamsFile` dropped
+  the folder event. So a Team folder created and filled from outside the app could stay
+  unloaded until some unrelated edit happened to trigger a rescan. The folder's Created event
+  now schedules the rescan. `PersonaStoreTests.ExternalFileCreated_InANewlyCreatedTeamSubFolder_…`
+  failed 12 of 80 runs under load before the fix. The quarantine is lifted.
 - **Second known flake, pre-existing — DIAGNOSED 2026-09-16, and it is not only a
   flake.** A timing race in event ordering over the fake transport in
   `Huddle.Acp.Tests`, roughly one run in five, passing on rerun. **Three tests were
