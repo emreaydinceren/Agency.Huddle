@@ -14,13 +14,18 @@ namespace Agency.Huddle.App.Services;
 /// </summary>
 public static partial class MarkdownRenderer
 {
-    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
+    private static readonly MarkdownPipeline Pipeline = MarkdownRenderer.CreateBuilder().Build();
+
+    /// <summary>
+    /// Builds the pipeline shared by <see cref="MarkdownRenderer"/> and
+    /// <see cref="Agency.Huddle.App.Library.WikiLinkParser"/>, so both parse Markdown the same way.
+    /// </summary>
+    internal static MarkdownPipelineBuilder CreateBuilder() => new MarkdownPipelineBuilder()
         .UsePipeTables()
         .UseEmphasisExtras()
         .UseAutoLinks()
         .UseTaskLists()
-        .DisableHtml()
-        .Build();
+        .DisableHtml();
 
     /// <summary>Renders <paramref name="markdown"/> to HTML with no Task id linking. Unchanged behaviour.</summary>
     /// <param name="markdown">The Markdown text to render.</param>
