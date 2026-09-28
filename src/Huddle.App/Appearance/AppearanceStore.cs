@@ -212,6 +212,29 @@ internal sealed partial class AppearanceStore : IDisposable
     [GeneratedRegex(@"\A#[0-9a-fA-F]{6}\z", RegexOptions.CultureInvariant)]
     private static partial Regex AccentColorPattern();
 
+    /// <summary>
+    /// Selects the Library Pane side, under the write lock: re-reads the file so a concurrent
+    /// hand-edit is not lost, sets <c>libraryPaneSide</c> while leaving every other key - including
+    /// <c>theme</c> and <c>accentColor</c> - exactly as found, writes, rebuilds the resolved snapshot,
+    /// releases the lock, and only then raises <see cref="AppearanceChanged"/>. Mirrors
+    /// <see cref="Save"/> and <see cref="SaveAccentColor"/> exactly, one key over.
+    /// </summary>
+    /// <param name="side">The library pane side to store (left or right).</param>
+    public void SaveLibraryPaneSide(LibraryPaneSide side)
+    {
+        lock (this.writeGate)
+        {
+            var document = this.ReadDocumentFromDisk();
+
+            document["libraryPaneSide"] = side.ToString().ToLowerInvariant();
+
+            this.WriteDocumentToDisk(document);
+            this.current = this.BuildSettings(document);
+        }
+
+        this.AppearanceChanged?.Invoke();
+    }
+
     /// <summary>Whether <paramref name="candidate"/> is a well-formed id naming an entry in <see cref="ThemeCatalog.BuiltIn"/>.</summary>
     /// <param name="candidate">The raw <c>theme</c> value read from the file.</param>
     private static bool IsKnownTheme(string candidate)
@@ -284,7 +307,28 @@ internal sealed partial class AppearanceStore : IDisposable
             }
         }
 
-        return new AppearanceSettings(themeId, accentColorHex);
+        var libraryPaneSide = LibraryPaneSide.Right;
+
+        if (document.TryGetPropertyValue("libraryPaneSide", out var libraryPaneSideNode) && libraryPaneSideNode is not null)
+        {
+            var candidate = libraryPaneSideNode is JsonValue libraryPaneSideValue && libraryPaneSideValue.TryGetValue<string>(out var libraryPaneSideText)
+                ? libraryPaneSideText
+                : null;
+
+            if (candidate is not null && Enum.TryParse<LibraryPaneSide>(candidate, ignoreCase: true, out var parsedValue))
+            {
+                libraryPaneSide = parsedValue;
+            }
+            else if (candidate is not null)
+            {
+                this.logger.LogWarning(
+                    "Appearance file '{Path}' sets libraryPaneSide '{LibraryPaneSide}', which is not a valid side value (left or right); the default (right) is used instead and the file is left unchanged.",
+                    this.path,
+                    candidate);
+            }
+        }
+
+        return new AppearanceSettings(themeId, accentColorHex, libraryPaneSide);
     }
 
     /// <summary>

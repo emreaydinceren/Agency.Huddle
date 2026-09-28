@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 129 of 143 tasks Done · 6 of 8 retrospectives done (R7, R8 skipped) · last updated 2026-09-27.
+**Status:** 131 of 143 tasks Done · 6 of 8 retrospectives done (R7, R8 skipped) · last updated 2026-09-27.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -165,8 +165,8 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 12.8.t Test: the `/library-files` image endpoint · #116 · Sonnet | | | ✔ |
 | 12.8.i Implement the image endpoint · #117 · Sonnet | | | ✔ |
 | **D13. Hosts: the pane, the page and Settings** | | | |
-| 13.1.t Test: the Library Pane side setting · #118 · Haiku | ✔ | | |
-| 13.1.i Implement the side setting · #119 · Haiku | ✔ | | |
+| 13.1.t Test: the Library Pane side setting · #118 · Haiku | | | ✔ |
+| 13.1.i Implement the side setting · #119 · Haiku | | | ✔ |
 | 13.2.t Test: `MainLayout` hosts the pane · #120 · Sonnet | ✔ | | |
 | 🔁 R8 — Opus retrospective after #120, and plan update — skipped by the Human (2026-09-27, to save tokens) | | | ✔ |
 | 13.2.i Implement the pane in `MainLayout` · #121 · Sonnet | ✔ | | |
