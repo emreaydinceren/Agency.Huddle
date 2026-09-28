@@ -317,6 +317,7 @@ public sealed class TaskStoreWatcherTests
     [InlineData("Platform/Auth v2/_tasks")]
     public void AffectsATaskFile_ANewSubFolder_SchedulesARescan(string relativeFolder)
     {
+        ArgumentException.ThrowIfNullOrEmpty(relativeFolder);
         using TempDataDir dir = new();
         string root = Path.Combine(dir.Path, "Tasks");
         string name = relativeFolder.Replace('/', Path.DirectorySeparatorChar);
