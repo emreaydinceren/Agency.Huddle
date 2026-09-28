@@ -623,14 +623,21 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
     }
 
     /// <summary>
-    /// True for an event this store cares about: a ".md" file, a renamed directory (a Team or Project
-    /// folder renamed in Explorer - its event's <see cref="FileSystemEventArgs.Name"/> is the directory
-    /// itself, never matching ".md"), or a deleted extensionless name (the same folder disappearing
-    /// outright). Copied from <c>PersonaStore.AffectsATeamsFile</c> (traps.md L120).
+    /// True for an event this store cares about: a ".md" file, a created directory (on Linux,
+    /// IncludeSubdirectories is emulated - the watcher adds an inotify watch for a new sub-folder only
+    /// after it reads that folder's own Created event, so a Task file written into the folder in that
+    /// gap raises nothing at all; the folder's Created event is the one signal guaranteed to fire, and
+    /// the debounced refresh rescans from disk, so it finds whatever landed inside - traps.md, "On
+    /// Linux, IncludeSubdirectories = true still misses a file written into a sub-folder that was just
+    /// created"), a renamed directory (a Team or Project folder renamed in Explorer - its event's
+    /// <see cref="FileSystemEventArgs.Name"/> is the directory itself, never matching ".md"), or a
+    /// deleted extensionless name (the same folder disappearing outright). Copied from
+    /// <c>PersonaStore.AffectsATeamsFile</c> (traps.md L120).
     /// </summary>
     /// <param name="e">The watcher event to classify.</param>
-    private static bool AffectsATaskFile(FileSystemEventArgs e) =>
+    internal static bool AffectsATaskFile(FileSystemEventArgs e) =>
         IsMarkdownFile(e.Name)
+        || (e.ChangeType == WatcherChangeTypes.Created && Directory.Exists(e.FullPath))
         || (e.ChangeType == WatcherChangeTypes.Renamed && Directory.Exists(e.FullPath))
         || (e.ChangeType == WatcherChangeTypes.Deleted && HasNoExtension(e.Name));
 
