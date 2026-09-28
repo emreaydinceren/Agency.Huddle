@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 109 of 143 tasks Done · 6 of 8 retrospectives done (R7, R8 skipped) · last updated 2026-09-27.
+**Status:** 110 of 143 tasks Done · 6 of 8 retrospectives done (R7, R8 skipped) · last updated 2026-09-27.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -142,7 +142,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 10.4.t Test: the collector reaches every Turn · #96 · Sonnet | | | ✔ |
 | 10.4.i Plumb the collector and `readsFiles` · #97 · Sonnet | | | ✔ |
 | **D11. The editor and styles** | | | |
-| 11.1 Vendor CodeMirror 6 · #98 · Sonnet | ✔ | | |
+| 11.1 Vendor CodeMirror 6 · #98 · Sonnet | | | ✔ |
 | 11.2.t Test: `LibraryEditor` and its interop · #99 · Sonnet | ✔ | | |
 | 11.2.i Implement `library-editor.js` and `LibraryEditor.razor` · #100 · Sonnet | ✔ | | |
 | 11.3 The Library styles · #101 · Haiku | ✔ | | |
