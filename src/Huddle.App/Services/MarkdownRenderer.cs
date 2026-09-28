@@ -813,7 +813,9 @@ public static partial class MarkdownRenderer
     /// check stays syntactic - the click handler re-resolves the path for real - so it never touches the disk.
     /// </summary>
     /// <param name="encodedValue">The text of the query string after <c>?library=</c>.</param>
-    private static bool IsSafeLibraryHref(string encodedValue)
+    /// <remarks>Internal (not <see langword="private"/>) so <c>LibraryPaneHost</c> reuses this exact
+    /// syntactic check for its own <c>?library=</c> handling instead of copying it (Task 13.2).</remarks>
+    internal static bool IsSafeLibraryHref(string encodedValue)
     {
         if (encodedValue.IndexOfAny(['&', '#']) >= 0)
         {

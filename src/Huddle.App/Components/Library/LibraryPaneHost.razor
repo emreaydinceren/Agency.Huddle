@@ -1,0 +1,273 @@
+@*
+    Wraps the page body in the Library Pane's split view (Task 13.2, Spec §6.9, §6.6). Closed, it
+    renders only ChildContent. Open, a MudSplitPanel orders the body and the pane by
+    AppearanceStore.LibraryPaneSide, the pane opens at 420 px, and its own divider is saved on
+    close. A resolvable ?library= navigation the pane's own inner LibraryDocument doesn't already
+    intercept (judgement 45) opens the pane on that file and strips the query with replace: true;
+    the Library disabled leaves ?library= alone entirely.
+*@
+@using Microsoft.Extensions.Options
+@using Microsoft.AspNetCore.Components.Routing
+@using Agency.Huddle.App.Appearance
+@using Agency.Huddle.App.Library
+@using Agency.Huddle.App.Services
+@implements IDisposable
+@inject LibraryPaneState State
+@inject AppearanceStore Appearance
+@inject IOptions<TeamOptions> Options
+@inject NavigationManager Navigation
+@inject LibraryPathResolver Resolver
+@inject IJSRuntime JS
+
+@if (this.Enabled && this.State.IsOpen && this.Appearance.LibraryPaneSide == LibraryPaneSide.Left)
+{
+    <MudSplitPanel @ref="this.splitPanel" Class="library-pane-split" FirstPanelInitialSize="420" MinPanelSize="240">
+        <FirstPanel><LibraryPane /></FirstPanel>
+        <SecondPanel>@this.ChildContent</SecondPanel>
+    </MudSplitPanel>
+}
+else if (this.Enabled && this.State.IsOpen)
+{
+    <MudSplitPanel @ref="this.splitPanel" Class="library-pane-split" FirstPanelInitialSize="420" MinPanelSize="240">
+        <FirstPanel>@this.ChildContent</FirstPanel>
+        <SecondPanel><LibraryPane /></SecondPanel>
+    </MudSplitPanel>
+}
+else
+{
+    @this.ChildContent
+}
+
+@code {
+    private MudSplitPanel? splitPanel;
+    private bool wasOpen;
+    private bool handlingLibraryQuery;
+
+    /// <summary>The page body this host wraps.</summary>
+    [Parameter, EditorRequired]
+    public required RenderFragment ChildContent { get; set; }
+
+    private bool Enabled => this.Options.Value.Library.Enabled;
+
+    /// <summary>Subscribes to the pane state, the appearance store and, when the Library is enabled, navigation.</summary>
+    protected override void OnInitialized()
+    {
+        this.wasOpen = this.State.IsOpen;
+        this.State.Changed += this.OnPaneStateChanged;
+        this.Appearance.AppearanceChanged += this.OnAppearanceChanged;
+        if (this.Enabled)
+        {
+            this.Navigation.LocationChanged += this.OnLocationChanged;
+        }
+    }
+
+    /// <summary>Re-renders on every pane state change; a transition from open to closed also saves the outer split's divider position first.</summary>
+    private void OnPaneStateChanged()
+    {
+        bool closing = this.wasOpen && !this.State.IsOpen;
+        this.wasOpen = this.State.IsOpen;
+        _ = this.DispatchAsync(async () =>
+        {
+            if (closing)
+            {
+                await this.SaveDividerAsync();
+            }
+
+            this.StateHasChanged();
+        });
+    }
+
+    /// <summary>Saves the outer split panel's current divider position under <c>library:pane:divider</c>.</summary>
+    private async Task SaveDividerAsync()
+    {
+        if (this.splitPanel is null)
+        {
+            return;
+        }
+
+        try
+        {
+            int position = await this.splitPanel.GetDividerPositionAsync();
+            await this.JS.InvokeVoidAsync(
+                "huddleStorage.set", "library:pane:divider", position.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone before the write finished; nothing left to persist to.
+        }
+    }
+
+    /// <summary>Re-renders on an appearance change (side flip).</summary>
+    private void OnAppearanceChanged() => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>
+    /// A navigation this host actually sees (never prevented by the pane's own inner document -
+    /// judgement 45): parses <c>library</c>, checks it with the same syntactic rule as
+    /// <see cref="MarkdownRenderer.IsSafeLibraryHref(string)"/>, resolves it and opens the pane on
+    /// the file when it resolves. The query is stripped with <c>replace: true</c> either way, so a
+    /// refused or forged value never lingers in the address bar.
+    /// </summary>
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        // Re-entrancy guard: the NavigateTo below re-raises LocationChanged (synchronously in
+        // bUnit's test navigation manager). Without this guard, that nested event re-enters this
+        // handler, and since the URI it carries still round-trips through this same code path, the
+        // nesting never terminates on its own (STATUS_STACK_OVERFLOW in QueryLibrary_OpensPaneOnFile_AndStripsQuery).
+        if (this.handlingLibraryQuery)
+        {
+            return;
+        }
+
+        string? rawValue = ExtractRawLibraryValue(e.Location);
+        if (rawValue is null)
+        {
+            return;
+        }
+
+        this.handlingLibraryQuery = true;
+        _ = this.DispatchAsync(() =>
+        {
+            try
+            {
+                this.HandleLibraryQuery(rawValue);
+            }
+            finally
+            {
+                this.handlingLibraryQuery = false;
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
+    private void HandleLibraryQuery(string rawValue)
+    {
+        LibraryPath? resolved = null;
+        if (MarkdownRenderer.IsSafeLibraryHref(rawValue))
+        {
+            string decoded = Uri.UnescapeDataString(rawValue);
+            int slash = decoded.IndexOf('/', StringComparison.Ordinal);
+            if (slash > 0)
+            {
+                _ = this.Resolver.TryResolve(decoded[..slash], decoded[(slash + 1)..], out resolved, out _);
+            }
+        }
+
+        // Strip the query BEFORE opening the file: opening the file mounts the pane's own
+        // LibraryExplorer for the first time, and its OnAfterRenderAsync also reads
+        // Navigation.Uri for a ?library= value to open. Stripping first means that read finds
+        // nothing, instead of both this handler and the freshly-mounted explorer racing to
+        // handle - and each NavigateTo - the same query.
+        string stripped = StripLibraryQuery(this.Navigation.Uri);
+        System.Diagnostics.Debug.Assert(
+            !stripped.Contains("library=", StringComparison.Ordinal),
+            "StripLibraryQuery must remove the library parameter.");
+        this.Navigation.NavigateTo(stripped, replace: true);
+
+        if (resolved is not null)
+        {
+            this.State.OpenFile(resolved);
+        }
+    }
+
+    /// <summary>The raw (still percent-encoded) value of a <c>library=</c> query parameter in <paramref name="location"/>, or <see langword="null"/> when there is none.</summary>
+    /// <param name="location">The navigated-to location.</param>
+    private static string? ExtractRawLibraryValue(string location)
+    {
+        int queryStart = location.IndexOf('?', StringComparison.Ordinal);
+        if (queryStart < 0)
+        {
+            return null;
+        }
+
+        string query = location[(queryStart + 1)..];
+        int fragmentStart = query.IndexOf('#', StringComparison.Ordinal);
+        if (fragmentStart >= 0)
+        {
+            query = query[..fragmentStart];
+        }
+
+        foreach (string pair in query.Split('&'))
+        {
+            int equals = pair.IndexOf('=', StringComparison.Ordinal);
+            if (equals < 0)
+            {
+                continue;
+            }
+
+            if (string.Equals(pair[..equals], "library", StringComparison.Ordinal))
+            {
+                return pair[(equals + 1)..];
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Removes the <c>library</c> query parameter from <paramref name="uri"/>, keeping every other parameter and the fragment.</summary>
+    /// <param name="uri">The current, absolute navigation URI.</param>
+    private static string StripLibraryQuery(string uri)
+    {
+        int queryStart = uri.IndexOf('?', StringComparison.Ordinal);
+        if (queryStart < 0)
+        {
+            return uri;
+        }
+
+        string baseUri = uri[..queryStart];
+        string rest = uri[(queryStart + 1)..];
+        int fragmentStart = rest.IndexOf('#', StringComparison.Ordinal);
+        string fragment = fragmentStart >= 0 ? rest[fragmentStart..] : string.Empty;
+        string query = fragmentStart >= 0 ? rest[..fragmentStart] : rest;
+
+        List<string> kept = [];
+        foreach (string pair in query.Split('&'))
+        {
+            if (pair.Length == 0)
+            {
+                continue;
+            }
+
+            int equals = pair.IndexOf('=', StringComparison.Ordinal);
+            string key = equals < 0 ? pair : pair[..equals];
+            if (!string.Equals(key, "library", StringComparison.Ordinal))
+            {
+                kept.Add(pair);
+            }
+        }
+
+        string newQuery = kept.Count > 0 ? "?" + string.Join('&', kept) : string.Empty;
+        return baseUri + newQuery + fragment;
+    }
+
+    // Mirrors MainLayout.razor's DispatchAsync exactly: an event can still fire while this
+    // component's circuit is winding down, and both exceptions mean there is nothing left to repaint.
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+
+    /// <summary>Unsubscribes from the pane state, the appearance store and navigation.</summary>
+    public void Dispose()
+    {
+        this.State.Changed -= this.OnPaneStateChanged;
+        this.Appearance.AppearanceChanged -= this.OnAppearanceChanged;
+        if (this.Enabled)
+        {
+            this.Navigation.LocationChanged -= this.OnLocationChanged;
+        }
+    }
+}

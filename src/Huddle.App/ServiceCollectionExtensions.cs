@@ -257,6 +257,10 @@ public static class ServiceCollectionExtensions
         // aliased registrations elsewhere in this file exist to avoid.
         services.AddSingleton<ViewStore>();
 
+        // Scoped (Task 13.2.i): one Library Pane open/closed state per circuit, shared by
+        // LibraryNavLink, LibraryPaneHost and any ?library= navigation.
+        services.AddScoped<LibraryPaneState>();
+
         // Unconditional too, and for the same reason: the probe spends nothing on its own (it never
         // calls PromptAsync), so registering it costs nothing when Team:Acp:Enabled is off. What
         // keeps it honest is WHEN it runs — the /teammates page only calls it on card-open, never on

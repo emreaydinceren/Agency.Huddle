@@ -145,6 +145,9 @@ internal sealed partial class AppearanceStore : IDisposable
     /// <summary>The current resolved theme id. No lock: reads the published <see langword="volatile"/> snapshot.</summary>
     public AppearanceSettings Current => this.current;
 
+    /// <summary>The current Library Pane side (Task 13.2), shorthand for <see cref="Current"/>'s own value.</summary>
+    public LibraryPaneSide LibraryPaneSide => this.current.LibraryPaneSide;
+
     /// <summary>
     /// Selects (or clears) the theme id, under the write lock: re-reads the file so a concurrent
     /// hand-edit is not lost, sets <c>theme</c> while leaving every other key exactly as found,
