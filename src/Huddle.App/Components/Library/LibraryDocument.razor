@@ -88,12 +88,12 @@
                 <LibraryEditor @ref="this.editorRef" Text="@(this.content.Text ?? string.Empty)" ReadOnly="false" LanguageId="markdown"
                                DirtyChanged="@this.OnDirtyChangedAsync" SaveRequested="@this.OnSaveRequestedAsync"
                                PreviewMode="true" PreviewTextChanged="@this.OnPreviewTextChangedAsync" />
-                <div class="library-rendered">@((MarkupString)MarkdownRenderer.ToHtml(this.previewText ?? this.content.Text ?? string.Empty, this.Tasks, this.NoteResolver, this.Path))</div>
+                @this.RenderMarkdown(this.previewText ?? this.content.Text ?? string.Empty)
             </div>
         }
         else if (this.content.Kind == LibraryFileKind.Markdown)
         {
-            <div class="library-rendered">@((MarkupString)MarkdownRenderer.ToHtml(this.content.Text ?? string.Empty, this.Tasks, this.NoteResolver, this.Path))</div>
+            @this.RenderMarkdown(this.content.Text ?? string.Empty)
             @if (this.backlinksRows is not null)
             {
                 <BacklinksPanel Backlinks="@this.backlinksRows" IsAvailable="@this.backlinkIndexAvailable" OnNavigate="@this.OnNavigate" />
@@ -123,6 +123,39 @@
 </div>
 
 @code {
+    /// <summary>
+    /// Renders <paramref name="text"/> as the Library's rendered Markdown. A leading YAML frontmatter block
+    /// (a Teammate definition's <c>name:</c>/<c>title:</c>/<c>skills:</c> header) is split off with
+    /// <see cref="PersonaFrontmatter.Parse(string)"/> and shown as a small metadata list, because left in the
+    /// body the closing <c>---</c> reads as a setext underline and folds the whole block into one heading.
+    /// </summary>
+    /// <param name="text">The document's raw Markdown, frontmatter included.</param>
+    private RenderFragment RenderMarkdown(string text) => builder =>
+    {
+        (IReadOnlyList<PersonaFrontmatterField> fields, string body) = PersonaFrontmatter.Parse(text);
+        builder.OpenElement(0, "div");
+        builder.AddAttribute(1, "class", "library-rendered");
+        if (fields.Count > 0)
+        {
+            builder.OpenElement(2, "dl");
+            builder.AddAttribute(3, "class", "library-frontmatter mud-typography-caption mb-4");
+            foreach (PersonaFrontmatterField field in fields)
+            {
+                builder.OpenElement(4, "dt");
+                builder.AddContent(5, field.Key);
+                builder.CloseElement();
+                builder.OpenElement(6, "dd");
+                builder.AddContent(7, field.Value);
+                builder.CloseElement();
+            }
+
+            builder.CloseElement();
+        }
+
+        builder.AddContent(8, (MarkupString)MarkdownRenderer.ToHtml(body, this.Tasks, this.NoteResolver, this.Path));
+        builder.CloseElement();
+    };
+
     /// <summary>The document's path inside a Library Root.</summary>
     [Parameter, EditorRequired]
     public required LibraryPath Path { get; set; }
