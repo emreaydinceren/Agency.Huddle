@@ -34,11 +34,11 @@
         <MudNavGroup Title="Tasks" Icon="@Icons.Material.Outlined.TaskAlt" @bind-Expanded="this.expanded">
             @foreach (TaskView view in this.ViewStore.Views)
             {
-                <div class="task-view-nav-row"
+                <div class="hover-reveal-row"
                      @oncontextmenu="@(e => this.OnRowContextMenuAsync(view.Id, e))"
                      @oncontextmenu:preventDefault="true">
-                    <MudNavLink Href="@($"/tasks/{view.Id}")" Class="task-view-nav-link">@view.Name</MudNavLink>
-                    <MudMenu @ref="@this.menuRefs[view.Id]" Class="task-view-nav-menu">
+                    <MudNavLink Href="@($"/tasks/{view.Id}")" Class="hover-reveal-link">@view.Name</MudNavLink>
+                    <MudMenu @ref="@this.menuRefs[view.Id]" Class="hover-reveal-menu">
                         @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
                            MudMenu does not wire a click listener around it automatically - the
                            supplied MenuContext.ToggleAsync is how custom activator content opens
@@ -48,7 +48,7 @@
                         <ActivatorContent Context="menuContext">
                             <MudTooltip Text="View actions">
                                 <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
-                                               aria-label="View actions" Class="task-view-nav-menu-button"
+                                               aria-label="View actions" Class="hover-reveal-menu-button"
                                                OnClick="menuContext.ToggleAsync" />
                             </MudTooltip>
                         </ActivatorContent>
@@ -79,7 +79,7 @@
                     </div>
                 }
             }
-            <MudNavLink Href="/tasks/new" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="task-view-nav-new">New view</MudNavLink>
+            <MudNavLink Href="/tasks/new" Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link">New view</MudNavLink>
         </MudNavGroup>
     </MudNavMenu>
 

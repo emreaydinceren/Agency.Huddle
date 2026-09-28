@@ -34,15 +34,17 @@
 @using Agency.Huddle.App.Library
 @inject IOptions<TeamOptions> Options
 
-@if (!this.Enabled)
-{
-    <MudAlert Severity="Severity.Info" role="status" Class="library-disabled-alert">The Library is turned off.</MudAlert>
-}
-else
-{
-    <LibraryExplorer @key="@this.QueryKey()" Layout="LibraryExplorerLayout.SideBySide" StateKey="page"
-                      Scopes="@this.Scopes()" ShowScopeRoot="@(this.Scopes() is null)" InitialFile="@this.InitialFile()" />
-}
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+    @if (!this.Enabled)
+    {
+        <MudAlert Severity="Severity.Info" role="status" Class="library-disabled-alert">The Library is turned off.</MudAlert>
+    }
+    else
+    {
+        <LibraryExplorer @key="@this.QueryKey()" Layout="LibraryExplorerLayout.SideBySide" StateKey="page"
+                          Scopes="@this.Scopes()" ShowScopeRoot="@(this.Scopes() is null)" InitialFile="@this.InitialFile()" />
+    }
+</MudContainer>
 
 @code {
     private bool Enabled => this.Options.Value.Library.Enabled;

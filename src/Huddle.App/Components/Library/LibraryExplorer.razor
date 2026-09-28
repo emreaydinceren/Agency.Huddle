@@ -57,6 +57,13 @@
     {
         <div class="library-explorer-title">@this.ResolvedTitle()</div>
     }
+    else if (this.SingleScope() is { } scopeRoot)
+    {
+        @* The sidebar row already names the folder, so the header names WHERE it is instead: the
+           root's full path, in the Tasks page header's own type (h5). h2, not h1, because the
+           Library Pane also hosts this control beside a page that has its own h1. *@
+        <MudText HtmlTag="h2" Typo="Typo.h5" Class="library-explorer-root-path mb-4" title="@scopeRoot.FullPath">@scopeRoot.FullPath</MudText>
+    }
     @if (this.unavailable)
     {
         <MudAlert Severity="Severity.Warning" role="status" Class="library-explorer-unavailable">@this.unavailableReason</MudAlert>

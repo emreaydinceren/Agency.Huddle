@@ -1,7 +1,7 @@
 // The Library editor's JS half (Spec §6.7). Vendored CodeMirror 6 is imported here by RELATIVE
 // URL (corrections-B6 D11 item 13), never by bare specifier, so no bundler or import map is
-// needed at runtime. The exported `create` returns a handle object (via
-// DotNet.createJSObjectReference) rather than mutating any module-level state, so several
+// needed at runtime. The exported `create` returns a handle object (Blazor turns it into the
+// caller's IJSObjectReference) rather than mutating any module-level state, so several
 // editors can exist on one page at once.
 import {
   EditorState,
@@ -135,5 +135,8 @@ export function create(element, text, readOnly, languageId, dotNetRef, previewMo
     },
   };
 
-  return DotNet.createJSObjectReference(handle);
+  // Returned as is: the .NET caller asks for an IJSObjectReference, so Blazor wraps this return
+  // value itself. Wrapping it here too (DotNet.createJSObjectReference) made the .NET reference
+  // point at the wrapper `{ __jsObjectId }`, which has no getText/setText/dispose.
+  return handle;
 }

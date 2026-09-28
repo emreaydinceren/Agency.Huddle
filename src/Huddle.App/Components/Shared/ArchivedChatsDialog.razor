@@ -45,14 +45,14 @@
                 <div class="archived-chats-row">
                     @if (string.Equals(this.confirmingDeleteRoomId, room.Id, StringComparison.Ordinal))
                     {
-                        <MudText Typo="Typo.body2" Class="archived-chats-confirm-text">Delete "@room.Name"?</MudText>
+                        <MudText Typo="Typo.body2" Class="flex-1-truncate">Delete "@room.Name"?</MudText>
                         <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error"
                                    Disabled="this.busy" OnClick="@(() => this.ConfirmDeleteAsync(room.Id))">Confirm</MudButton>
                         <MudButton Size="Size.Small" Variant="Variant.Outlined" OnClick="this.CancelDelete">Cancel</MudButton>
                     }
                     else
                     {
-                        <MudText Typo="Typo.body1" Class="archived-chats-name">@room.Name</MudText>
+                        <MudText Typo="Typo.body1" Class="flex-1-truncate">@room.Name</MudText>
                         <MudButton Size="Size.Small" Variant="Variant.Outlined" Disabled="this.busy" OnClick="@(() => this.UnarchiveAsync(room.Id))">Unarchive</MudButton>
                         <MudTooltip Text="Delete">
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small"

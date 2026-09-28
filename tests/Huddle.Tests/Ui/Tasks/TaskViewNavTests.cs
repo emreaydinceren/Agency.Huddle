@@ -296,9 +296,9 @@ public sealed class TaskViewNavTests
             builder.CloseComponent();
         });
 
-    /// <summary>The row <c>div.task-view-nav-row</c> whose link text is <paramref name="viewName"/>.</summary>
+    /// <summary>The row <c>div.hover-reveal-row</c> whose link text is <paramref name="viewName"/>.</summary>
     private static AngleSharp.Dom.IElement RowFor(IRenderedComponent<ContainerFragment> cut, string viewName) =>
-        cut.FindAll("div.task-view-nav-row").Single(row => string.Equals(row.QuerySelector("a")?.TextContent.Trim(), viewName, StringComparison.Ordinal));
+        cut.FindAll("div.hover-reveal-row").Single(row => string.Equals(row.QuerySelector("a")?.TextContent.Trim(), viewName, StringComparison.Ordinal));
 
     /// <summary>Clicks the row's "..." button for <paramref name="viewName"/>, opening its <c>MudMenu</c> popover - a real click on a real <c>button</c>, so this doubles as proof the trigger is keyboard-reachable rather than right-click-only.</summary>
     private static void OpenRowMenu(IRenderedComponent<ContainerFragment> cut, string viewName)

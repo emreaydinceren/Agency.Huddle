@@ -91,7 +91,7 @@ public sealed class RoomListTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = RenderRoomList(ctx);
-        cut.Find("div.room-list-row").ContextMenu();
+        cut.Find("div.hover-reveal-row").ContextMenu();
 
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Archive", StringComparison.Ordinal));
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete", StringComparison.Ordinal));
@@ -208,7 +208,7 @@ public sealed class RoomListTests
         var groupHeader = cut.Find(".mud-nav-group .mud-nav-link-text");
         Assert.Equal("Chats", groupHeader.TextContent.Trim());
 
-        var roomLink = cut.Find(".room-list-link");
+        var roomLink = cut.Find(".hover-reveal-link");
         Assert.Equal(room.Name, roomLink.TextContent.Trim());
         Assert.Empty(roomLink.QuerySelectorAll(".mud-nav-link-icon"));
     }

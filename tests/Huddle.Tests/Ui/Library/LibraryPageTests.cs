@@ -100,7 +100,8 @@ public sealed class LibraryPageTests : IDisposable
     /// <summary>
     /// <c>?scopeRoot=teams&amp;scopePath=Marketing</c> keeps the scope and, since the only current
     /// producer of that query (<c>LibraryNavLink</c>'s own sidebar rows) already names the folder
-    /// there, the page passes <c>ShowScopeRoot=false</c>: no redundant title above the tree, and
+    /// there, the page passes <c>ShowScopeRoot=false</c>: no redundant title above the tree (just the
+    /// root's full path as a header), and
     /// <see cref="LibraryTree"/> flattens straight to the scoped folder's own children instead of a
     /// wrapper row that exists only to be expanded.
     /// </summary>
@@ -115,6 +116,9 @@ public sealed class LibraryPageTests : IDisposable
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-explorer")));
         Assert.Empty(cut.FindAll(".library-explorer-title"));
+        Assert.Equal(
+            Path.Combine(this.fixture.LibraryFixture.DataDir, "Teams", "Marketing"),
+            cut.Find(".library-explorer-root-path").TextContent.Trim());
         cut.WaitForAssertion(() => Assert.Equal(
             ["Campaigns"],
             cut.FindAll(".library-tree-node-name").Select(e => e.TextContent.Trim())));
