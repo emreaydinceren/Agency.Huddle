@@ -425,7 +425,7 @@ All files are shown in the tree.
 ### 6.12 Teammate definitions
 
 A Teammate's definition, `Teammates/<Name>/<Name>.md`, is one click from its memory in the
-Teammates root. It opens in Read mode with a banner: *This is Ada's definition.* Saving it shows
+Teammates root. It opens in Read mode with a banner (`MudAlert`, §8): *This is Ada's definition.* Saving it shows
 *Saving restarts Ada and clears its conversation memory* first
 ([rules.md](agencyteam/rules.md), *Editing a Persona … restarts its session*). The Teammates page
 stays the main place to edit a Teammate, and the only place to rename one.
@@ -569,8 +569,8 @@ that doesn't exist yet shows an empty tree, and the folder is created on the fir
   the scope's entire Library Root, not just the scope. A Project note's `[[brand-voice]]` still
   finds the Team note above it.
 - **Opening a file outside the scope** (from a wikilink, a backlink or a chat link) shows it in the
-  document area with its full breadcrumb and an *Outside this view* hint with **Open in Library**,
-  which opens the pane on that file. The tree does not expand beyond the scope.
+  document area with its full breadcrumb and an *Outside this view* hint (`MudAlert`, §8) with
+  **Open in Library**, which opens the pane on that file. The tree does not expand beyond the scope.
 - Copy, the file-type rules, the persona-save warning and every protection work the same in every
   host.
 
@@ -630,10 +630,11 @@ are added to that page's *Facts already checked*.
 | Explain each icon button | [Tooltip](https://mudblazor.com/components/tooltip) | `Chat.razor` | Every `MudIconButton` |
 | *Path copied* | [Snackbar](https://mudblazor.com/components/snackbar) `ISnackbar` | `SkillsPanel.razor` | `key: "library-copy"` so repeated copies collapse |
 | Confirm Delete, a Persona save, unsaved edits on switch | [Message Box](https://mudblazor.com/components/messagebox) `ShowMessageBoxAsync` | `SkillsPanel.razor` | |
-| Rename or move, with the link count | [Dialog](https://mudblazor.com/components/dialog#passing-data) via `IDialogService` | `ArchivedChatsDialog.razor` | Pass a snapshot: an open dialog's parameters are frozen ([mudblazor.md](agencyteam/mudblazor.md) traps) |
+| Rename, move (with the link count), New note/folder/Project | [Dialog](https://mudblazor.com/components/dialog#passing-data) via `IDialogService` | `ArchivedChatsDialog.razor` | Pass a snapshot: an open dialog's parameters are frozen ([mudblazor.md](agencyteam/mudblazor.md) traps). The name field validates against §6.4's rules |
 | Unsaved edits when leaving the page | [Exit Prompt](https://mudblazor.com/components/exitprompt) `MudExitPrompt` | — | ✔ `Title`, `Text`, `Disabled`, `UseNativePrompt` |
 | Backlinks | [Expansion Panels](https://mudblazor.com/components/expansionpanels) | `ProposalCard.razor` | One panel, collapsed by default, count in the title |
 | Orphan Team, missing pinned root | `MudIcon` + [Tooltip](https://mudblazor.com/components/tooltip); `MudAlert` in the pane | — | `Color="Color.Warning"`. A `MudAlert` needs `role="status"` added by hand |
+| Document-level banner (Persona save warning §6.12, unsupported encoding E-5, file moved or deleted E-3, mixed line endings E-4, outside-this-view hint §6.16) | [Alert](https://mudblazor.com/components/alert) `MudAlert` | — | Same component as the row above. The outside-this-view hint adds an inline `MudButton` action for *Open in Library* |
 | Loading a folder or a document | [Progress](https://mudblazor.com/components/progress#circular-progress) | — | `MudProgressCircular Indeterminate="true" Size="Size.Small"` |
 | Pinned roots in Settings | `MudSimpleTable` + `MudTextField` + `MudButton` | `SkillsPanel.razor` | A small hand-written table |
 
@@ -671,9 +672,9 @@ are added to that page's *Facts already checked*.
 | --- | --- | --- |
 | E-1 | A pinned root is deleted or unplugged | Shown greyed with *Folder not found*. Nothing else is affected |
 | E-2 | Two pinned roots overlap | Allowed. Each is its own root with its own link index |
-| E-3 | A file is renamed outside Huddle while open | The next focus re-read fails; the document shows *This file was moved or deleted* and keeps the unsaved text for copying |
-| E-4 | A note has mixed CRLF and LF | The dominant ending is used on save; a note in the status bar says the file had mixed endings |
-| E-5 | A non-UTF-8 legacy file (for example Windows-1252) | Opened read-only with *Unsupported encoding*. Never re-encoded |
+| E-3 | A file is renamed outside Huddle while open | The next focus re-read fails; the document shows *This file was moved or deleted* (`MudAlert`, §8) and keeps the unsaved text for copying |
+| E-4 | A note has mixed CRLF and LF | The dominant ending is used on save; a status-bar note (`MudAlert`, §8) says the file had mixed endings |
+| E-5 | A non-UTF-8 legacy file (for example Windows-1252) | Opened read-only with *Unsupported encoding* (`MudAlert`, §8). Never re-encoded |
 | E-6 | A wikilink target matches two files at equal distance | The first in ordinal path order, and the link's tooltip says it is ambiguous |
 | E-7 | A rename would rewrite links in a file over `MaxEditableBytes` | That file is skipped and listed in the result dialog |
 | E-8 | Recycle Bin unavailable (a network drive, or a non-Windows host) | Delete is refused with the reason. There is no silent permanent delete |
