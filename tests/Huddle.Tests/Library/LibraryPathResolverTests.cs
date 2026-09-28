@@ -61,6 +61,12 @@ public sealed class LibraryPathResolverTests
     [Fact]
     public void TryResolve_CaseInsensitiveSegments_ResolvesWithGivenCasingAndFileRole()
     {
+        if (!Agency.Huddle.App.FileChanges.FolderSnapshot.PathComparer.Equals("a", "A"))
+        {
+            Assert.Skip("On a case-sensitive file system, a differently cased path names a different (missing) file.");
+            return;
+        }
+
         using Fixture fixture = BuildFixture();
 
         bool resolved = fixture.Resolver.TryResolve("teams", "marketing/launch q4/PLAN.md", out LibraryPath? path, out string? error);
@@ -201,13 +207,18 @@ public sealed class LibraryPathResolverTests
         Assert.Equal(LibraryNodeRole.Folder, path.Role);
     }
 
-    /// <summary>Item 20: the Teammate definition match is case-insensitive on both the folder and file name.</summary>
+    /// <summary>Item 20: the definition file's name matches its Teammate folder's name case-insensitively
+    /// (<c>vega/VEGA.md</c>). Both exist on disk exactly as spelled, so this holds on case-sensitive file
+    /// systems too.</summary>
     [Fact]
     public void TryResolve_TeammatesCaseInsensitiveDefinition_IsTeammateDefinition()
     {
         using Fixture fixture = BuildFixture();
+        string vega = Path.Combine(fixture.DataDir, "Teammates", "vega");
+        Directory.CreateDirectory(vega);
+        File.WriteAllText(Path.Combine(vega, "VEGA.md"), "---\nname: vega\n---\n");
 
-        bool resolved = fixture.Resolver.TryResolve("teammates", "nova/NOVA.md", out LibraryPath? path, out string? error);
+        bool resolved = fixture.Resolver.TryResolve("teammates", "vega/VEGA.md", out LibraryPath? path, out string? error);
 
         Assert.True(resolved);
         Assert.NotNull(path);
