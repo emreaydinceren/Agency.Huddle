@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 107 of 143 tasks Done · 6 of 8 retrospectives done · last updated 2026-09-27.
+**Status:** 109 of 143 tasks Done · 6 of 8 retrospectives done (R7, R8 skipped) · last updated 2026-09-27.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -139,8 +139,8 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 10.2.i Implement `LibraryDocumentCollector` · #93 · Sonnet | | | ✔ |
 | 10.3.t Test: the prompt block · #94 · Sonnet | | | ✔ |
 | 10.3.i Implement the prompt block · #95 · Sonnet | | | ✔ |
-| 10.4.t Test: the collector reaches every Turn · #96 · Sonnet | ✔ | | |
-| 10.4.i Plumb the collector and `readsFiles` · #97 · Sonnet | ✔ | | |
+| 10.4.t Test: the collector reaches every Turn · #96 · Sonnet | | | ✔ |
+| 10.4.i Plumb the collector and `readsFiles` · #97 · Sonnet | | | ✔ |
 | **D11. The editor and styles** | | | |
 | 11.1 Vendor CodeMirror 6 · #98 · Sonnet | ✔ | | |
 | 11.2.t Test: `LibraryEditor` and its interop · #99 · Sonnet | ✔ | | |
@@ -151,7 +151,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 12.1.i Implement `LibraryTree` · #103 · Sonnet | ✔ | | |
 | 12.2.t Test: `LibraryDocument` reading states · #104 · Sonnet | ✔ | | |
 | 12.2.i Implement `LibraryDocument` reading · #105 · Sonnet | ✔ | | |
-| 🔁 R7 — Opus retrospective after #105, and plan update | ✔ | | |
+| 🔁 R7 — Opus retrospective after #105, and plan update — skipped by the Human (2026-09-27, to save tokens) | | | ✔ |
 | 12.3.t Test: editing, saving and unsaved edits · #106 · Sonnet | ✔ | | |
 | 12.3.i Implement editing · #107 · Sonnet | ✔ | | |
 | 12.4.t Test: `BacklinksPanel` · #108 · Haiku | ✔ | | |
@@ -168,7 +168,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 13.1.t Test: the Library Pane side setting · #118 · Haiku | ✔ | | |
 | 13.1.i Implement the side setting · #119 · Haiku | ✔ | | |
 | 13.2.t Test: `MainLayout` hosts the pane · #120 · Sonnet | ✔ | | |
-| 🔁 R8 — Opus retrospective after #120, and plan update | ✔ | | |
+| 🔁 R8 — Opus retrospective after #120, and plan update — skipped by the Human (2026-09-27, to save tokens) | | | ✔ |
 | 13.2.i Implement the pane in `MainLayout` · #121 · Sonnet | ✔ | | |
 | 13.3.t Test: the `/library` page · #122 · Haiku | ✔ | | |
 | 13.3.i Implement the `/library` page · #123 · Haiku | ✔ | | |

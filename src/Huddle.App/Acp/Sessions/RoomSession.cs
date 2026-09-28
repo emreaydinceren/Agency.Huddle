@@ -75,6 +75,12 @@ internal sealed class RoomSession : IAsyncDisposable
     // reasoning as ownPosts just above.
     private readonly TurnActivity? turnActivity;
 
+    // Spec §6.14: collects the Library documents mentioned in a Turn's Message and Catch-up. Null
+    // means the Library is off (PersonaSupervisor is the only place that gate is applied) or this
+    // caller predates it.
+    private readonly LibraryDocumentCollector? libraryDocs;
+    private readonly bool readsFiles;
+
     // Guards every field below: the queue, the state machine, the Stop marks, activeTurn and
     // pendingStopCancel - one lock, exactly as turnLock was on PersonaRunner, for the same reason:
     // the Stop path must publish its mark and read activeTurn as one atomic step against the
@@ -149,6 +155,8 @@ internal sealed class RoomSession : IAsyncDisposable
     /// <param name="ownPosts">Marks this session's Room Busy for a Turn's own duration (D27, RS §6.7). <see langword="null"/> disables it, like every pre-D27 caller.</param>
     /// <param name="agentId">This session's owning Agent's id, passed to <paramref name="ownPosts"/> and <paramref name="turnActivity"/>. <see langword="null"/> disables it, like every pre-D27 caller.</param>
     /// <param name="turnActivity">Records which Room this Agent has a Turn running in (Spec §10.8). <see langword="null"/> disables it, like every caller that predates it.</param>
+    /// <param name="libraryDocs">Collects the Library documents mentioned in a Turn (Spec §6.14). <see langword="null"/> when the Library is off, like every caller that predates it.</param>
+    /// <param name="readsFiles">Whether the resolved Adapter Profile can read files (FC §6.11's Library counterpart): <see langword="false"/> inlines a kept document's own text instead of just its path.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -166,7 +174,9 @@ internal sealed class RoomSession : IAsyncDisposable
         IPersonaHost? host = null,
         OwnPosts? ownPosts = null,
         string? agentId = null,
-        TurnActivity? turnActivity = null)
+        TurnActivity? turnActivity = null,
+        LibraryDocumentCollector? libraryDocs = null,
+        bool readsFiles = true)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
@@ -194,6 +204,8 @@ internal sealed class RoomSession : IAsyncDisposable
         this.ownPosts = ownPosts;
         this.agentId = agentId;
         this.turnActivity = turnActivity;
+        this.libraryDocs = libraryDocs;
+        this.readsFiles = readsFiles;
 
         this.consumerTask = this.RunConsumerAsync(runToken);
     }
@@ -830,6 +842,33 @@ internal sealed class RoomSession : IAsyncDisposable
                         OwnPostLines = null,
                     };
                 }
+            }
+        }
+
+        // Spec §6.14, corrections-B6 item 7 / B5 item 28: collected after the Transcript Catch-up
+        // read above and before the locked check-and-publish below, so a slow scan is never counted
+        // as Adapter silence, the same reasoning the File Changes collect above already relies on.
+        // Scans the triggering Message's own text, the catch-up buffer and, when this Turn set one,
+        // the Transcript Catch-up - never OwnPostLines (this Agent's own earlier posts, not new
+        // documents to fetch) and never a Greeting's empty text (the Kind check below). A scan or
+        // file-read failure must not kill the consumer loop, which nothing else drains.
+        if (this.libraryDocs is not null && item.Kind == WorkItemKind.Message)
+        {
+            try
+            {
+                IReadOnlyList<string> texts =
+                [
+                    item.Text,
+                    .. item.MissedMessages.Select(missed => missed.Text),
+                    .. item.Transcript?.Messages.Select(message => message.Text) ?? [],
+                ];
+                var report = await this.libraryDocs.CollectAsync(texts, this.readsFiles, ct);
+                item = item with { LibraryDocuments = report };
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                this.logger.LogWarning(
+                    ex, "Persona '{PersonaName}' failed to collect Library documents for room {RoomId}.", this.owner.PersonaName, item.RoomId);
             }
         }
 

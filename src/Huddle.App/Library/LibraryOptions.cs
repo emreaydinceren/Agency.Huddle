@@ -3,7 +3,7 @@ namespace Agency.Huddle.App.Library;
 /// <summary>Bound from <c>Team:Library</c>, per Spec §7.</summary>
 public sealed class LibraryOptions
 {
-    /// <summary>Whether the Library pane, page, sidebar link and chat links show. <see langword="false"/> hides all Library UI.</summary>
+    /// <summary>Whether the Library shows in the UI and agent context. <see langword="false"/> hides all Library UI and passes no <see cref="LibraryDocumentCollector"/> to a Turn.</summary>
     public bool Enabled { get; set; } = true;
 
     /// <summary>

@@ -1,5 +1,6 @@
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 
@@ -30,6 +31,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     private readonly OwnPosts? ownPosts;
     private readonly string? agentId;
     private readonly TurnActivity? turnActivity;
+    private readonly LibraryDocumentCollector? libraryDocs;
+    private readonly bool readsFiles;
     private readonly bool sessionPerRoom;
     private readonly TurnGate gate;
     private readonly int effectiveMaxLiveSessions;
@@ -62,6 +65,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <param name="ownPosts">Marks each Room Session's Room Busy for a Turn's own duration (D27, RS §6.7). <see langword="null"/> disables it, like every pre-D27 caller.</param>
     /// <param name="agentId">This Persona's Agent id, passed to <paramref name="ownPosts"/> and <paramref name="turnActivity"/>. <see langword="null"/> disables it, like every pre-D27 caller.</param>
     /// <param name="turnActivity">Records which Room each Room Session's Agent has a Turn running in (Spec §10.8). <see langword="null"/> disables it, like every caller that predates it.</param>
+    /// <param name="libraryDocs">Collects the Library documents mentioned in a Turn (Spec §6.14), passed to every Room Session this pool creates. <see langword="null"/> when the Library is off, like every caller that predates it.</param>
+    /// <param name="readsFiles">Whether the resolved Adapter Profile can read files (FC §6.11's Library counterpart), passed to every Room Session this pool creates.</param>
     public RoomSessionPool(
         IPersonaHost host,
         IRoomSessionOwner owner,
@@ -76,7 +81,9 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         RoomSessionStore? roomSessions = null,
         OwnPosts? ownPosts = null,
         string? agentId = null,
-        TurnActivity? turnActivity = null)
+        TurnActivity? turnActivity = null,
+        LibraryDocumentCollector? libraryDocs = null,
+        bool readsFiles = true)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(owner);
@@ -101,6 +108,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         this.ownPosts = ownPosts;
         this.agentId = agentId;
         this.turnActivity = turnActivity;
+        this.libraryDocs = libraryDocs;
+        this.readsFiles = readsFiles;
         this.sessionPerRoom = host.Profile.SessionPerRoom;
 
         var configuredConcurrency = Math.Max(1, options.MaxConcurrentTurns);
@@ -334,7 +343,9 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             host: this.host,
             ownPosts: this.ownPosts,
             agentId: this.agentId,
-            turnActivity: this.turnActivity);
+            turnActivity: this.turnActivity,
+            libraryDocs: this.libraryDocs,
+            readsFiles: this.readsFiles);
 
     private RoomSession GetOrCreateSession(string roomId)
     {

@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
@@ -38,6 +39,7 @@ internal sealed class PersonaSupervisor : BackgroundService
     private readonly RoomSessionStore? roomSessions;
     private readonly OwnPosts? ownPosts;
     private readonly TurnActivity? turnActivity;
+    private readonly LibraryDocumentCollector? libraryDocs;
 
     private readonly Lock gate = new();
     private readonly Dictionary<string, PersonaRunner> hosts = new(StringComparer.Ordinal);
@@ -77,7 +79,8 @@ internal sealed class PersonaSupervisor : BackgroundService
         FileChangeTracker? fileChanges = null,
         RoomSessionStore? roomSessions = null,
         OwnPosts? ownPosts = null,
-        TurnActivity? turnActivity = null)
+        TurnActivity? turnActivity = null,
+        LibraryDocumentCollector? libraryDocs = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
@@ -104,6 +107,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         this.roomSessions = roomSessions;
         this.ownPosts = ownPosts;
         this.turnActivity = turnActivity;
+        this.libraryDocs = libraryDocs;
     }
 
     /// <summary>The number of Personas with a currently running host. Test seam only.</summary>
@@ -500,8 +504,12 @@ internal sealed class PersonaSupervisor : BackgroundService
                 true => tracker is not null ? tracker.CheckDeclared(declaredWatches) : [],
             };
 
+            // Spec §6.14, corrections-B6 item 8: the Library.Enabled gate lives in exactly this one
+            // place - the collector itself carries no IOptions gate of its own - so a disabled
+            // Library reaches every runner as a null collector, the same "absent means off" shape
+            // File Changes and every other optional collaborator here already use.
             var host = new PersonaRunner(
-                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity);
+                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity, libraryDocs: this.options.Library.Enabled ? this.libraryDocs : null, readsFiles: profile.ReadsFiles);
 
             // Forwards every health signal the runner itself observes (T4.3) - a session/Turn
             // fact, arriving over the wire - into the one table every UI surface reads.
