@@ -288,6 +288,34 @@ public sealed class LibraryTreeTests : IDisposable
         Assert.Equal("a.md", opened.RelativePath);
     }
 
+    /// <summary>
+    /// Clicking a Teammate's own <c>&lt;Name&gt;.md</c> raises <c>OnOpenFile</c> too. The resolver
+    /// gives that file the <see cref="LibraryNodeRole.TeammateDefinition"/> role, not
+    /// <see cref="LibraryNodeRole.File"/>, and a check on <c>File</c> alone left every definition
+    /// unopenable, with no document panel and no Read/Edit/Split toggle.
+    /// </summary>
+    [Fact]
+    public async Task Click_TeammateDefinition_RaisesOnOpenFile()
+    {
+        this.fixture.LibraryFixture.CreateTeammate("Jarvis", "Jarvis", "jar");
+        LibraryPath teammateFolder = this.fixture.LibraryFixture.ResolveTeammatesFolder("Jarvis");
+        LibraryPath? opened = null;
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderTree(
+            ctx,
+            [teammateFolder],
+            onOpenFile: EventCallback.Factory.Create<LibraryPath>(this, p => opened = p));
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
+
+        await cut.InvokeAsync(() => cut.FindAll("span.library-tree-node-name").Single(node => node.TextContent.Trim() == "Jarvis.md").Click());
+
+        Assert.NotNull(opened);
+        Assert.Equal(LibraryNodeRole.TeammateDefinition, opened.Role);
+        Assert.Equal("Jarvis/Jarvis.md", opened.RelativePath);
+    }
+
     /// <summary>The "..." actions button is always in the DOM, not revealed only on hover, and carries the settled <c>aria-label</c> (item 27).</summary>
     [Fact]
     public async Task Render_ActionsButton_AlwaysVisible_WithAriaLabel()

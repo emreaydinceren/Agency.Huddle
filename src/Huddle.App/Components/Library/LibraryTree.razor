@@ -256,7 +256,7 @@
 
     private async Task OnNameClickAsync(LibraryPath path)
     {
-        if (path.Role == LibraryNodeRole.File)
+        if (path.IsFile)
         {
             await this.OnOpenFile.InvokeAsync(path);
         }
