@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. The two **[Gate G1]** tasks stay Active until the Tasks effort has moved Tasks into `Teams/<Team>/…/_tasks/`. Only the manager updates this file, with `Conversation/scripts/Set-Tracker.ps1 -Path docs/Huddle.Library-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 103 of 143 tasks Done · 5 of 8 retrospectives done · last updated 2026-09-27.
+**Status:** 103 of 143 tasks Done · 6 of 8 retrospectives done · last updated 2026-09-27.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -133,7 +133,7 @@ This is the Kanban status of every task in [Huddle.Library-ProjectPlan.md](Huddl
 | 9.4.i Wire `MessageList` · #89 · Sonnet | | | ✔ |
 | **D10. Agents are told about pasted documents** | | | |
 | 10.1.t Test: the four `turn.library*` prompts · #90 · Haiku | | | ✔ |
-| 🔁 R6 — Opus retrospective after #90, and plan update | ✔ | | |
+| 🔁 R6 — Opus retrospective after #90, and plan update | | | ✔ |
 | 10.1.i Add the prompts · #91 · Haiku | | | ✔ |
 | 10.2.t Test: `LibraryDocumentCollector` · #92 · Sonnet | ✔ | | |
 | 10.2.i Implement `LibraryDocumentCollector` · #93 · Sonnet | ✔ | | |
