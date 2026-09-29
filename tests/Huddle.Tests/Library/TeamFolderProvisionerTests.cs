@@ -154,6 +154,84 @@ public sealed class TeamFolderProvisionerTests
         Assert.False(Directory.Exists(Path.Combine(fixture.TeamsRoot, "Marketing", "_tasks")));
     }
 
+    /// <summary>Spec §6.3: a Project named <c>memory</c> (any case) is refused with the reserved-Memory text and nothing at all is created under the Team folder.</summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("MEMORY")]
+    public void EnsureProject_Memory_RefusedAndNothingCreated(string project)
+    {
+        using ProvisionerFixture fixture = new();
+        string teamDir = Path.Combine(fixture.TeamsRoot, "Marketing");
+        Directory.CreateDirectory(teamDir);
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+        Assert.True(fixture.Resolver.TryResolve("teams", "Marketing", out LibraryPath? teamFolder, out _));
+
+        LibraryResult<LibraryPath> result = provisioner.EnsureProject(teamFolder!, project);
+
+        Assert.Null(result.Value);
+        Assert.Equal("\"memory\" is reserved for the Team's shared Memory.", result.Error);
+        Assert.Empty(Directory.GetFileSystemEntries(teamDir));
+    }
+
+    /// <summary>Guard (passes today, corrections-D3 item 9): <c>_x</c> keeps the resolver's own refusal text, not the memory text, and nothing is created.</summary>
+    [Fact]
+    public void EnsureProject_UnderscoreX_StillRefusedAsReserved()
+    {
+        using ProvisionerFixture fixture = new();
+        string teamDir = Path.Combine(fixture.TeamsRoot, "Marketing");
+        Directory.CreateDirectory(teamDir);
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+        Assert.True(fixture.Resolver.TryResolve("teams", "Marketing", out LibraryPath? teamFolder, out _));
+
+        LibraryResult<LibraryPath> result = provisioner.EnsureProject(teamFolder!, "_x");
+
+        Assert.Null(result.Value);
+        Assert.Equal("That folder is reserved.", result.Error);
+        Assert.Empty(Directory.GetFileSystemEntries(teamDir));
+    }
+
+    /// <summary>Guard (passes today): <c>memory-notes</c> is a legal Project name and its folder is created.</summary>
+    [Fact]
+    public void EnsureProject_MemoryNotes_Creates()
+    {
+        using ProvisionerFixture fixture = new();
+        Directory.CreateDirectory(Path.Combine(fixture.TeamsRoot, "Marketing"));
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+        Assert.True(fixture.Resolver.TryResolve("teams", "Marketing", out LibraryPath? teamFolder, out _));
+
+        LibraryResult<LibraryPath> result = provisioner.EnsureProject(teamFolder!, "memory-notes");
+
+        Assert.NotNull(result.Value);
+        Assert.Null(result.Error);
+        Assert.True(Directory.Exists(Path.Combine(fixture.TeamsRoot, "Marketing", "memory-notes")));
+    }
+
+    /// <summary>Guard (passes today): a Persona Team LABEL <c>memory</c> still gets its <c>Teams/memory/</c> folder on start, because a Team named memory is legal (Spec §6.3 restricts Projects only).</summary>
+    [Fact]
+    public async Task Start_LabelMemory_StillCreatesTeamFolder()
+    {
+        using ProvisionerFixture fixture = new();
+        fixture.Personas.Add(new PersonaIdentity("Nova", "Nova", "Nova", ["memory"]), "body");
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+
+        await provisioner.StartAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(Path.Combine(fixture.TeamsRoot, "memory"), Assert.Single(Directory.GetDirectories(fixture.TeamsRoot)));
+    }
+
+    /// <summary>Guard (passes today): a Persona added AFTER start with label <c>memory</c> also gets its Team folder (the <see cref="PersonaStore.PersonasChanged"/> path into the same sync).</summary>
+    [Fact]
+    public async Task PersonasChanged_LabelMemory_StillCreatesTeamFolder()
+    {
+        using ProvisionerFixture fixture = new();
+        using TeamFolderProvisioner provisioner = fixture.CreateProvisioner();
+        await provisioner.StartAsync(TestContext.Current.CancellationToken);
+
+        fixture.Personas.Add(new PersonaIdentity("Nova", "Nova", "Nova", ["memory"]), "body");
+
+        Assert.Equal(Path.Combine(fixture.TeamsRoot, "memory"), Assert.Single(Directory.GetDirectories(fixture.TeamsRoot)));
+    }
+
     /// <summary>Calling <see cref="TeamFolderProvisioner.EnsureProject"/> twice for the same name is
     /// idempotent: both calls succeed and only one folder exists.</summary>
     [Fact]

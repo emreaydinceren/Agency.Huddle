@@ -1,6 +1,7 @@
 using System.Globalization;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Library;
 
@@ -78,6 +79,11 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable
         if (projectNameError is not null)
         {
             return new LibraryResult<LibraryPath>(null, projectNameError);
+        }
+
+        if (string.Equals(project, TeamNames.MemoryFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            return new LibraryResult<LibraryPath>(null, TeamNames.MemoryReservedProblem);
         }
 
         if (!this.resolver.TryResolve(teamFolder.Root.Id, teamFolder.RelativePath, out LibraryPath? freshTeamFolder, out string? teamResolveError) ||

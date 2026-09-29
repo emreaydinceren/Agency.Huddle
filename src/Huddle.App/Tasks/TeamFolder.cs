@@ -8,7 +8,7 @@ namespace Agency.Huddle.App.Tasks;
 /// Ordinal winning.
 /// </summary>
 /// <param name="Name">The folder's name, exactly as it appears on disk.</param>
-/// <param name="Projects">The names of its Project sub-folders, excluding <c>_closed</c>.</param>
+/// <param name="Projects">The names of its Project sub-folders, excluding <c>_closed</c> and the Team's <c>memory</c> folder.</param>
 /// <param name="IsOrphan">
 /// <see langword="true"/> when no Persona's <c>teams</c> field names this folder, compared
 /// case-insensitively. Recomputed whenever <see cref="Acp.PersonaStore.PersonasChanged"/> fires,

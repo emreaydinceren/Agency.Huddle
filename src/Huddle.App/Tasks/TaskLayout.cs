@@ -1,4 +1,5 @@
 using Agency.Huddle.App.FileChanges;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Tasks;
 
@@ -37,7 +38,7 @@ internal static class TaskLayout
         }
 
         string project = parts[1];
-        if (!IsReservedFolderName(project) && parts.Length >= 4 && IsTasksFolder(parts[2]))
+        if (!TeamNames.IsReservedProjectName(project) && parts.Length >= 4 && IsTasksFolder(parts[2]))
         {
             return TryMapUnderTasksFolder(parts, 3, team, project, out location);
         }

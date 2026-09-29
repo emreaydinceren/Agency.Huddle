@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. Tasks 5.7.t and 8.1.t are green on arrival and have no `.i`: they are Done once their mutation proofs are reported CAUGHT. Only the manager updates this file, with `agents/scripts/Set-Tracker.ps1 -TrackerPath docs/Huddle.TeamPages-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 15 of 79 tasks Done · 0 of 5 retrospectives done · last updated 2026-09-28.
+**Status:** 17 of 79 tasks Done · 1 of 5 retrospectives done · last updated 2026-09-28.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -33,9 +33,9 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 | 3.1.i Route `ListProjects` and `TryMap` through `TeamNames` · #13 · Sonnet | | | ✔ |
 | 3.2.t Test: Project validation refuses `memory` · #14 · Sonnet | | | ✔ |
 | 3.2.i Refuse `memory` at both entry points · #15 · Sonnet | | | ✔ |
-| 🔁 R1 — Opus retrospective after #15, and plan update | | | |
-| 3.3.t Test: the start-up warning for stranded `memory/_tasks/` · #16 · Sonnet | ✔ | | |
-| 3.3.i Log the stranded Tasks · #17 · Sonnet | | | |
+| 🔁 R1 — Opus retrospective after #15, and plan update | | | ✔ |
+| 3.3.t Test: the start-up warning for stranded `memory/_tasks/` · #16 · Sonnet | | | ✔ |
+| 3.3.i Log the stranded Tasks · #17 · Sonnet | | | ✔ |
 | **D4. Membership** | | | |
 | 4.1.t Test: `TeamLabels` · #18 · Haiku | | | |
 | 4.1.i Implement `TeamLabels` · #19 · Haiku | | | |

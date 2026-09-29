@@ -791,6 +791,100 @@ public sealed class TaskStoreTests
         Assert.DoesNotContain(TaskLayout.ClosedFolder, marketing.Projects);
     }
 
+    /// <summary>A Team's <c>memory</c> folder (any case) and its <c>_x</c> folder are never Projects
+    /// (ADR-0032, Spec §6.3): only <c>Launch</c> is listed. Where the file system is case-insensitive
+    /// the two case variants are one folder.</summary>
+    [Fact]
+    public void Teams_MemoryFolder_IsNotAProject()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        Directory.CreateDirectory(Path.Combine(root, "Business", "memory"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "Memory"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "Launch"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "_x"));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        TeamFolder business = Assert.Single(store.Teams, team => string.Equals(team.Name, "Business", StringComparison.Ordinal));
+        List<string> projects = business.Projects.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
+        Assert.Equal(["Launch"], projects);
+    }
+
+    /// <summary>The allowed neighbours of <c>memory</c> - <c>memory-notes</c> and <c>memories</c> -
+    /// are still Projects beside <c>Marketing</c>; the <c>memory</c> folder itself is not.</summary>
+    [Fact]
+    public void Teams_MemoryNeighbours_AreStillProjects()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        Directory.CreateDirectory(Path.Combine(root, "Business", "memory"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "Memory-Notes"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "memories"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "Marketing"));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        TeamFolder business = Assert.Single(store.Teams, team => string.Equals(team.Name, "Business", StringComparison.Ordinal));
+        List<string> projects = business.Projects.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
+        Assert.Equal(["Marketing", "memories", "Memory-Notes"], projects);
+    }
+
+    /// <summary>A Team folder named <c>memory</c> is still a Team: the reserved name applies to
+    /// Projects only.</summary>
+    [Fact]
+    public void Teams_TeamNamedMemory_IsStillATeam()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        Directory.CreateDirectory(Path.Combine(root, "memory", "Marketing"));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        TeamFolder memory = Assert.Single(store.Teams, team => string.Equals(team.Name, "memory", StringComparison.Ordinal));
+        Assert.Equal(["Marketing"], memory.Projects);
+    }
+
+    /// <summary>A Task file under <c>Business/memory/_tasks</c> is neither indexed nor rejected: the
+    /// <c>memory</c> folder is not a Project, so the path is outside the Tasks layout.</summary>
+    [Fact]
+    public void Scan_TaskFileUnderMemoryFolder_IsNotIndexedNorRejected()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        TestTaskStore.WriteTask(root, Path.Combine("Business", "memory", "_tasks", "BUS-0001.md"), TestTasks.Make(id: "BUS-0001", location: new("Business", "memory", false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        Assert.Empty(store.All);
+        Assert.Empty(store.RejectedFiles);
+    }
+
+    /// <summary>Scanning a Team that has a <c>memory</c> folder creates nothing and deletes nothing
+    /// under it: the file set is the same before and after the store starts.</summary>
+    [Fact]
+    public void Scan_MemoryFolder_IsLeftUntouched()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        string memory = Path.Combine(root, "Business", "memory");
+        _ = WriteRawFile(root, Path.Combine("Business", "memory", "note.md"), "a note");
+        _ = WriteRawFile(root, Path.Combine("Business", "memory", "_tasks", "BUS-0001.md"), "not a task");
+        string[] before = Directory.GetFileSystemEntries(memory, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToArray();
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        string[] after = Directory.GetFileSystemEntries(memory, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToArray();
+        Assert.Equal(before, after);
+        Assert.Equal("a note", File.ReadAllText(Path.Combine(memory, "note.md")));
+        Assert.Empty(store.All);
+    }
+
     /// <summary>A dot folder and underscore folders at the scan root - including one literally named
     /// <c>_closed</c> - never become Teams; only the ordinary folder beside them does.</summary>
     [Fact]

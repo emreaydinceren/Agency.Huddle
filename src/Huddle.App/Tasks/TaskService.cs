@@ -3,6 +3,7 @@ using System.Globalization;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Tasks;
 
@@ -788,6 +789,10 @@ internal sealed class TaskService : IDisposable
             problems.Add(string.Create(
                 CultureInfo.InvariantCulture,
                 $"The Project name '{project}' cannot be a folder name on this computer (it starts with '_')."));
+        }
+        else if (string.Equals(project, TeamNames.MemoryFolder, StringComparison.OrdinalIgnoreCase))
+        {
+            problems.Add(TeamNames.MemoryReservedProblem);
         }
         else if (TryGetIllegalFolderNameProblem("Project", project, out string? projectProblem))
         {

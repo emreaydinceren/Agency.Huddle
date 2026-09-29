@@ -88,6 +88,11 @@ public sealed class TaskLayoutTests
     [InlineData("_x/_tasks/X.md")]
     [InlineData(".obsidian/_tasks/X.md")]
     [InlineData("T/_drafts/_tasks/X.md")]
+    [InlineData("Business/memory/_tasks/X.md")]
+    [InlineData("Business/Memory/_tasks/X.md")]
+    [InlineData("Business/MEMORY/_tasks/X.md")]
+    [InlineData("Business/memory/_tasks/_closed/X.md")]
+    [InlineData("Business/MEMORY/_tasks/_closed/X.md")]
     public void TryMap_NotATaskPath_IsIgnored(string relativePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
@@ -98,6 +103,34 @@ public sealed class TaskLayoutTests
 
         Assert.False(result);
         Assert.Null(location);
+        Assert.Null(error);
+    }
+
+    /// <summary>A Project named <c>memory</c> in any case is never a Project (ADR-0032, Spec §6.3), so
+    /// its <c>_tasks</c> is not mapped on any OS; the neighbours <c>memory-notes</c> and
+    /// <c>memories</c> stay valid Projects, and a Team folder named <c>memory</c> is still a Team.</summary>
+    [Theory]
+    [InlineData("Business/memory-notes/_tasks/X.md", "Business", "memory-notes", false)]
+    [InlineData("Business/memory-notes/_tasks/_closed/X.md", "Business", "memory-notes", true)]
+    [InlineData("Business/memories/_tasks/X.md", "Business", "memories", false)]
+    [InlineData("Business/Marketing/_tasks/X.md", "Business", "Marketing", false)]
+    [InlineData("Business/_tasks/X.md", "Business", null, false)]
+    [InlineData("memory/_tasks/X.md", "memory", null, false)]
+    [InlineData("memory/_tasks/_closed/X.md", "memory", null, true)]
+    [InlineData("memory/Marketing/_tasks/X.md", "memory", "Marketing", false)]
+    public void TryMap_MemoryNeighboursAndTeamLevel_StillMap(string relativePath, string team, string? project, bool closed)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(relativePath);
+        string root = Path.Combine("root");
+        string fullPath = Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar));
+
+        bool result = TaskLayout.TryMap(root, fullPath, out TaskLocation? location, out string? error);
+
+        Assert.True(result);
+        Assert.NotNull(location);
+        Assert.Equal(team, location.Team);
+        Assert.Equal(project, location.Project);
+        Assert.Equal(closed, location.Closed);
         Assert.Null(error);
     }
 

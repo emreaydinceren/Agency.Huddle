@@ -41,19 +41,19 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$runTestsArgs = @(
-    '-FilterClass', $FilterClass,
-    '-Label', $Task,
-    '-RedTask', $Task,
-    '-RedDir', 'Conversation/teampages/red'
-)
+$runTestsArgs = @{
+    FilterClass = $FilterClass
+    Label = $Task
+    RedTask = $Task
+    RedDir = 'Conversation/teampages/red'
+}
 
 if ($NewNames) {
-    $runTestsArgs += '-NewNames', $NewNames
+    $runTestsArgs['NewNames'] = $NewNames
 }
 
 if ($AllowCodes) {
-    $runTestsArgs += '-AllowCodes', $AllowCodes
+    $runTestsArgs['AllowCodes'] = $AllowCodes
 }
 
 $scriptPath = Join-Path $PSScriptRoot 'Run-Tests.ps1'
