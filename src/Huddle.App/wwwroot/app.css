@@ -1183,3 +1183,37 @@ button:focus-visible {
 .task-toolbar-kind .mud-toggle-item {
     min-width: 4.5rem;
 }
+
+
+/* A Library document's rendered Markdown. The global reset zeroes block margins, so without these the paragraphs of a Teammate definition run together. */
+.library-rendered {
+    overflow-wrap: anywhere;
+}
+
+.library-rendered p,
+.library-rendered ul,
+.library-rendered ol,
+.library-rendered pre,
+.library-rendered blockquote,
+.library-rendered table {
+    margin: 0 0 0.75rem;
+}
+
+/* The leading YAML frontmatter, shown as a small key/value card instead of folding into a heading (LibraryDocument.RenderMarkdown). */
+.library-frontmatter {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.125rem 1rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--mud-palette-background-gray);
+    border-radius: var(--mud-default-borderradius);
+    color: var(--mud-palette-text-secondary);
+}
+
+.library-frontmatter dt {
+    font-weight: 600;
+}
+
+.library-frontmatter dd {
+    margin: 0;
+}
