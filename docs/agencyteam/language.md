@@ -83,6 +83,7 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   it groups and filters the Teammates page and the invite dialog, and nothing
   more. It is never a permission: every Agent still sees every other Agent
   through `mcp__team__list_agents`, and any Agent can be invited to any Room.
+  A Team has a page at `/teams/<Team>` with Members, Files and Tasks tabs.
 : A Persona's Team is **not a folder**: its Team membership is its frontmatter
   alone, and where the Persona's Teammate folder sits changes nothing.
   On disk, a Team has a folder under `Teams/` (ADR-0030) for its notes, Projects
@@ -286,7 +287,7 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   fact, the fact on the first line, in `Teams/<Team>/memory/` for the whole Team or
   `Teams/<Team>/<Project>/memory/` for one Project. Every member's new session
   starts with an index of it after its own Memory; later edits arrive as File
-  Changes. **Proposed** — see
+  Changes. **Delivered 2026-09-29** — see
   [ADR-0032](../adr/0032-a-team-and-each-project-share-a-memory-folder.md).
 : Never just *Memory*, which stays the Agent's own.
 : *Avoid*: shared memory, project memory, team notes.

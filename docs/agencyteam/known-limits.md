@@ -482,6 +482,10 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   deterministically. The same investigation found and fixed a sixth, unrecorded one of the first
   kind: `RoomSessionResumeTests` read the Room Session store right after the reply was posted,
   though the store entry is only written at Turn end.
+- **Sixth known flake, new in Team Pages delivery — UNDIAGNOSED.** `PersonaRenameCascadeTests.Rename_RenamesTheAgentRow_AndKeepsItsId` passes when run alone, consistently fails under full-suite parallel load. Recorded and deferred to UAT for diagnosis and potential fix.
+- **Seventh known flake, pre-existing, surfaced in this delivery's full run — UNDIAGNOSED.** `RoomListTests.Archive_RemovesTheRoomFromTheSidebarList` failed once in a full run with a UI state mismatch, passes 5/5 when run alone. `git diff main` shows no change to its code path (J10). Recorded and deferred to UAT for diagnosis.
+- **Full-run shutdown line, new in this delivery — BENIGN.** The test host reports `[FATAL ERROR] Foreground threads were left running` at the very end of a full run, with `failed: 0` immediately before. No test failure is associated; the line is a host teardown artifact, and the run is green. Deferred to UAT for diagnosis and potential cleanup.
+- **Team member row menu, new in this delivery — UNVERIFIED IN A BROWSER.** The sidebar `stopPropagation` wrapper around a Team member row menu in `Components/Teams/TeamMembers.razor` (opened by a context menu right-click) has no bUnit test that can fail without it — the test suite does not exercise a real browser context menu. Verified in code review; behaviour unverified in a live browser. Deferred to UAT's manual test.
 - **Known bug, pre-existing:** `Data/SqliteTeamDirectory.cs` is not
   `IDisposable`, and SQLite connection pooling keeps a handle on `team.db`, so
   tests leave about 83 temp directories behind per run. `TempDataDir.Dispose`

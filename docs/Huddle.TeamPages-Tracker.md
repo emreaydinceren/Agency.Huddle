@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. Tasks 5.7.t and 8.1.t are green on arrival and have no `.i`: they are Done once their mutation proofs are reported CAUGHT. Only the manager updates this file, with `agents/scripts/Set-Tracker.ps1 -TrackerPath docs/Huddle.TeamPages-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 76 of 81 tasks Done · 4 of 5 retrospectives done · last updated 2026-09-29.
+**Status:** 81 of 81 tasks Done · 5 of 5 retrospectives done · last updated 2026-09-29.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -103,9 +103,9 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 | 7.13.t Test: `TeamPage` · #71 · Sonnet | | | ✔ |
 | 7.13.i Implement `TeamPage` · #72 · Sonnet | | | ✔ |
 | **D8. Docs and verification** | | | |
-| 8.1.t Characterisation: Team pages end to end · #73 · Sonnet | | | |
-| 8.2 Reconcile the Spec with corrections S1–S11 · #74 · Sonnet | | | |
-| 8.3 Docs pass: glossary, hub, ADR, code map · #75 · Haiku | | | |
-| 🔁 R5 — Opus retrospective after #75, and plan update | | | |
-| 8.4 Manual test script · #76 · Haiku | | | |
-| 8.5 Full verification · #77 · Sonnet | | | |
+| 8.1.t Characterisation: Team pages end to end · #73 · Sonnet | | | ✔ |
+| 8.2 Reconcile the Spec with corrections S1–S11 · #74 · Sonnet | | | ✔ |
+| 8.3 Docs pass: glossary, hub, ADR, code map · #75 · Haiku | | | ✔ |
+| 🔁 R5 — Opus retrospective after #75, and plan update | | | ✔ |
+| 8.4 Manual test script · #76 · Haiku | | | ✔ |
+| 8.5 Full verification · #77 · Sonnet | | | ✔ |

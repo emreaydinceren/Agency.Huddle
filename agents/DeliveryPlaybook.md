@@ -54,6 +54,14 @@ below exists because its absence cost a fix round, a bug, or an hour.
   fix, so Sonnet does `logic` and `boundary` work. Haiku still does `data` tasks (records, enums,
   options): in the Library delivery those came in at ~2M tokens a task against ~8M for Sonnet
   refactors. Opus for concurrency, drag-and-drop, architecture review and retrospectives.
+- **Size a pair to the budget.** One component plus one test class of 20 rows or fewer, with the
+  signatures in the prompt, fits 60 tool calls. A new fixture or a third-party probe is its own step.
+- **Stop Razor and dialog pairs at red and resume them with SendMessage.** Chain a pair straight
+  into its `.i` only for `data` and pure-logic work; UI arrange defects hide behind a compile red.
+- **Split the corrections file per pair** (`corrections-<pair>.md`). One 16K file read whole by every
+  agent held call-5 context at 46-61K although the facts Core was under 6K.
+- **Regenerate every line range with `grep -n` when you write the prompt.** Ranges copied from a
+  review written earlier were stale by the time the pair started.
 - **Keep verification lean in prompts:** the touched test classes once, fix, once more; the checks;
   the full suite once. A fix-resume runs only the touched classes. The machine allows one test run
   at a time, so extra full runs queue every other agent.
@@ -71,6 +79,18 @@ size*. The Library delivery measured about 52M tokens re-read in its first 30 mi
 | Each later task, resumed in the same agent | 0.85–2.4M | Resuming was cheaper than starting fresh |
 | A Sonnet refactor agent kept to 279K (150 calls) | 28.5M | The cap needs a call budget agents can count |
 
+The Team Pages delivery (whole run, 320M re-read) put the same lesson in one table:
+
+| Where | Tokens re-read | Lesson |
+| --- | --- | --- |
+| Manager | 135.4M (42%) | One session per stage never happened; the manager carried its whole history through every stage |
+| Sonnet implementers | 88.3M (28%) | The bulk of the useful work; cost tracks calls before the first write |
+| Opus reviews + retrospectives | 61.0M (19%) | Worth it for `logic`/UI stages, not for every stage |
+| Haiku implementers | 21.0M (7%) | `data` pairs only |
+| Haiku verifiers | 3.5M (1%) | Cheap because they read neither brief nor facts |
+
+- **End the manager session at every stage boundary.** Commit, write the <=5K state file and stop
+  with the resume line for the Human; a continued session started D7b at 237K and cost 286K per call.
 - **The manager stays compactable.** Keep `delivery-state.md` current after every commit, compact
   at each batch boundary, and grep large files rather than reading them. Never paste agent reports
   into your own turn; open the report file only when the ten-line summary looks wrong.
@@ -111,7 +131,11 @@ Two PreToolUse hooks in `.claude/settings.json` enforce the worst of these: one 
 
 1. **Audit the transcript** for the forbidden commands, main-checkout writes and heredocs.
 2. **Check the red**: it fails only on the new types or members, with no analyzer noise, and
-   `git diff --stat -- src/` was empty when it was recorded.
+   `git diff --stat -- src/` was empty when it was recorded. Read each failing row's first failure
+   line. A row failing on a DI or bUnit exception, a seeded value or a missing service is a `.t`
+   arrange defect: send it back before the `.i`. Know the test-host defaults: the host seeds a
+   built-in Chief of Staff Teammate, bUnit services are resolved after `Render`, and a class
+   context registers a default fake for every service the `.i` will inject.
 3. **Check the Coverage table.** Every `NOT COVERED` row must cite the task that owns the item; a
    gap nobody owns is assigned now, not after the batch.
 4. **Read the load-bearing diff**, then run the build and the touched test classes yourself. Run
@@ -128,7 +152,9 @@ Two PreToolUse hooks in `.claude/settings.json` enforce the worst of these: one 
 Every ~15 completed tasks, give a read-only Opus agent the token tally and the paths of the
 transcripts since the last retrospective. It should grep them, not read them end to end. Ask for:
 what to keep, what went wrong with evidence and root cause, cost hot-spots, and concrete changes labelled FACT, BRIEF, PLAN and SCRIPT. Apply them before the next
-dispatch. The same few findings recurred across all eight — plan for them from the start:
+dispatch. Use one tally unit for the whole run (input + cache_read + cache_creation), detect MAIN
+by exact path, and window MAIN from the previous retro commit. The same few findings recurred
+across all eight — plan for them from the start:
 
 - behaviour implemented without a test, reported as a "design call";
 - the same rule tested at one entry point only;

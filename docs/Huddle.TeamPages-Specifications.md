@@ -1,6 +1,9 @@
 # Huddle.TeamPages — Design Specification
 
-**Date:** 2026-09-28 · **Status:** Proposed · **Decision record:**
+**Date:** 2026-09-28 · **Status:** Delivered (code) 2026-09-29 ·
+**Plan:** [Huddle.TeamPages-ProjectPlan.md](Huddle.TeamPages-ProjectPlan.md) (the task list, spec
+corrections S1–S17 and the retrospectives; this Spec now describes what was built) ·
+**Decision record:**
 [ADR-0032](adr/0032-a-team-and-each-project-share-a-memory-folder.md) (Team Memory) ·
 **Vocabulary:** [language.md](agencyteam/language.md) (**Team**, **Team folder**, **Project**,
 **Memory**, **Team Memory**, **Watched Folder**) · **Depends on:** the
@@ -232,31 +235,46 @@ The new code goes in folder `src/Huddle.App/Teams/`, namespace `Agency.Huddle.Ap
 
 | File | Role | § |
 | --- | --- | --- |
-| `Teams/TeamCatalog.cs` | The list of Teams, their Projects and members; raises `Changed` | §6.1 |
+| `Teams/ITeamCatalog.cs` | `internal interface ITeamCatalog`: `Teams`, `Find`, `ProjectExists`, `Changed`. The pages and the provisioner depend on it, so UI tests use a fake | §6.1 |
+| `Teams/TeamCatalog.cs` | `TeamCatalog : ITeamCatalog`, the list of Teams, their Projects and members; raises `Changed` | §6.1 |
 | `Teams/TeamSummary.cs` | `public sealed record TeamSummary(...)`, the page's view of one Team | §7.2 |
 | `Teams/TeamNames.cs` | `IsReservedProjectName`, `ValidateTeamName`, `ValidateProjectName`: the one home of the naming rules | §6.3 |
-| `Teams/TeamMembership.cs` | Adds or removes a Team label in one Persona's frontmatter | §6.2 |
+| `Teams/ITeamMembership.cs`, `Teams/TeamMembership.cs` | Adds or removes a Team label in one Persona's frontmatter (`ITeamMembership` lets the page tests fake it) | §6.2 |
+| `Teams/MembershipOutcome.cs`, `Teams/MembershipResult.cs` | The closed outcome set and the result record | §7.2 |
 | `Teams/TeamLabels.cs` | Pure list operations on a `teams` list, ignoring case | §6.2 |
-| `Teams/TeamMemoryIndex.cs` | Builds the Team Memory snapshot for one Persona | §6.4 |
+| `Teams/TeamMemoryIndex.cs`, `TeamMemoryGroup.cs`, `TeamMemorySnapshot.cs` | Builds the Team Memory snapshot for one Persona | §6.4 |
+| `Teams/TeamPageTab.cs`, `TeamPageFeatures.cs`, `TeamPageTabs.cs` | `public enum TeamPageTab { Members, Files, Tasks }`, the feature flags, and `TeamPageTabs` (`Available`, `Resolve`, `Segment`) | §6.6 |
+| `Library/ITeamFolders.cs` | `internal interface ITeamFolders` (`EnsureTeam`, `EnsureProjectIn`), implemented by `TeamFolderProvisioner`; `TeamsNav` creates Teams and Projects through it | §6.5 |
+| `Library/LibrarySearchResult.cs` | `internal sealed record LibrarySearchResult(Hits, Truncated)` | §6.8 |
 | `Components/Teams/TeamsNav.razor` | The sidebar group | §6.5 |
-| `Components/Pages/TeamPage.razor` | Both routes, the tab strip, the action and search row | §6.6 |
+| `Components/Pages/TeamPage.razor` | Both routes, the breadcrumbs, the tab strip, and each tab's search text | §6.6 |
+| `Components/Teams/TeamTabToolbar.razor` | The action button and the search field, used by each tab component. It owns no state | §6.6 |
 | `Components/Teams/TeamMembers.razor` | Members tab | §6.7 |
 | `Components/Teams/AddMemberDialog.razor` | Pick a Teammate, show the restart warning | §6.7 |
-| `Components/Teams/NewTeamDialog.razor` | Name a new Team or Project, validated inline | §6.5 |
-| `Components/Teams/TeamPageTab.cs` | `public enum TeamPageTab { Members, Files, Tasks }` | §6.6 |
+| `Components/Teams/TeammateChoice.cs` | `public sealed record TeammateChoice(Name, Title, Alias)`, one row of the picker | §6.7 |
+| `Components/Teams/TeamFilesTab.razor` | Files tab: the toolbar and a scoped `LibraryExplorer` | §6.8 |
+| `Components/Teams/TeamTasksTab.razor` | Tasks tab: the toolbar and a `TaskBoard` over an in-memory `TaskView` | §6.9 |
+| `Components/Teams/NewTeamDialog.razor`, `NewTeamDialogMode.cs` | Name a new Team or Project, validated inline; `public enum NewTeamDialogMode { Team, Project }` | §6.5 |
 
 ### 5.2 Changed code
 
 | File | Change | § |
 | --- | --- | --- |
 | `Components/Layout/MainLayout.razor` | `<TeamsNav />` between `<RoomList />` and the Teammates link | §6.5 |
-| `Components/Library/LibraryExplorer.razor` | New optional `Filter` parameter and public `NewNoteAsync` method | §6.8 |
+| `Components/Library/LibraryExplorer.razor` | New optional two-way `Filter` / `FilterChanged` parameters and a public parameterless `NewNoteAsync()` method | §6.8 |
+| `Components/Library/LibraryFileOps.razor` | New public `NewNoteAsync(LibraryPath folder)`: opens the New note prompt in that folder and returns the created path (or `null`); it raises no `OnChanged`, so the explorer refreshes itself | §6.8 |
+| `Components/Library/LibraryTree.razor` | New public `RevealAsync(LibraryPath folder)` (a folder hit expands its ancestors and selects it), and a reload that keeps the expanded folders | §6.8 |
 | `Library/LibraryFileService.cs` | New `FindAsync(LibraryPath scope, string term, int max, CancellationToken ct)` | §6.8 |
-| `Library/TeamFolderProvisioner.cs` | New `EnsureTeam(string name)`. `EnsureProject` and `SyncFolders` call `TeamNames` | §6.3, §6.5 |
-| `Tasks/TaskStore.cs` (`ListProjects`), `Tasks/TaskLayout.cs` (`TryMap`), `Tasks/TaskService.cs` (`AddTeamAndProjectProblems`) | Treat `memory` as reserved at the Project level through `TeamNames.IsReservedProjectName` | §6.3 |
+| `Library/LibraryPathResolver.cs` | `TryClassifyUnderTeams` gives `Teams/<Team>/memory` the role `Folder` (through `TeamNames.IsReservedProjectName`), not `ProjectFolder`, so it has no Project icon and is not rename-protected as a Project | §6.3 |
+| `Library/TeamFolderProvisioner.cs` | Implements `ITeamFolders`: new `EnsureTeam(string name)` and `EnsureProjectIn(string team, string project)` (it takes an `ITeamCatalog`). `EnsureProject` refuses `memory` with `TeamNames.MemoryReservedProblem`; `SyncFolders` is unchanged | §6.3, §6.5 |
+| `Tasks/TaskStore.cs` (`ListProjects`), `Tasks/TaskLayout.cs` (`TryMap`) | Treat `memory` as reserved at the Project level through `TeamNames.IsReservedProjectName`. `TaskStore` also logs the E-2 Warning once at start-up | §6.3 |
+| `Tasks/TaskService.cs` (`AddTeamAndProjectProblems`) | Refuses a Project named `memory` (ignoring case) with `TeamNames.MemoryReservedProblem`. It does **not** call `IsReservedProjectName`, which would also refuse `.x`, a name it accepts today | §6.3 |
+| `TeamsOptions.cs` | New `MaxMemoryEntries` (default 50), bound at `Team:Teams:MaxMemoryEntries` | §7.3 |
+| `ServiceCollectionExtensions.cs` | Registers `TeamCatalog` (also as `ITeamCatalog`), `ITeamMembership` and `ITeamFolders` | §6.1 |
 | `FileChanges/MemoryIndex.cs` | No change. Reused per `memory/` folder | §6.4 |
-| `Acp/DotAcpPersonaHost.cs` | Builds a `TeamMemorySnapshot` beside the personal one, under the same `readsMemory` condition | §6.4 |
-| `Acp/SystemPromptComposer.cs` | New `TeamMemorySnapshot?` argument, and a Team Memory block after the Memory block | §6.4 |
+| `Acp/DotAcpAgentHostFactory.cs` | Reads the Persona's Teams with `PersonaFrontmatter.TryReadIdentity(persona.Text, …)` (as it does for Skills), takes an `ITeamCatalog`, and passes the labels, the catalog, the Teams root and the cap to the host | §6.4 |
+| `Acp/DotAcpPersonaHost.cs` | Four new constructor parameters (Team labels, `ITeamCatalog`, Teams root, cap). `BuildOptions` builds a `TeamMemorySnapshot` beside the personal one, under the same `readsMemory` condition, on each open and resume | §6.4 |
+| `Acp/SystemPromptComposer.cs` | New optional **last** parameter `TeamMemorySnapshot? teamMemory = null`, and a Team Memory block after the Memory block | §6.4 |
 | `Prompts/PromptCatalog` + `prompts.default.json` | Four new Prompts (§7.4) | §6.4 |
 | `docs/agencyteam/language.md`, `docs/AgencyTeam.md` | *Team Memory* term, `memory` reserved in *Project*, map row, config row | Appendix A |
 
@@ -285,16 +303,22 @@ Today three places each compute part of it: `TaskService.KnownTeamNames()` (priv
 
 | In | Out |
 | --- | --- |
-| `PersonaStore.Teams`, `PersonaStore` entries (`PersonaEntry.Teams`), `PersonasChanged` | `IReadOnlyList<TeamSummary> Teams` sorted `StringComparer.OrdinalIgnoreCase` |
-| `TaskStore.Teams` (`IReadOnlyList<TeamFolder>`), TaskStore's change notification | `TeamSummary? Find(string team)` and `ProjectExists(string team, string project)`, both ignoring case |
+| `PersonaStore.Teams`, `PersonaStore.Entries` (each `PersonaEntry`'s Name and `Teams`), `PersonasChanged` | `IReadOnlyList<TeamSummary> Teams` sorted `StringComparer.OrdinalIgnoreCase` |
+| `TaskStore.Teams` (`IReadOnlyList<TeamFolder>`), `TaskStore.IndexChanged` | `TeamSummary? Find(string team)` and `ProjectExists(string team, string project)`, both ignoring case |
 | — | `event Action? Changed` |
+
+The pages and the provisioner depend on the `internal interface ITeamCatalog` (`Teams`, `Find`,
+`ProjectExists`, `Changed`), which `TeamCatalog` implements, so a UI test uses a fake.
 
 **Internal flow.**
 
 1. On construction, and on each source event, call the pure function
-   `TeamCatalog.Build(IReadOnlyList<string> labels, IReadOnlyList<PersonaEntry> personas,
-   IReadOnlyList<TeamFolder> folders)`.
-2. `Build` groups everything by name with `StringComparer.OrdinalIgnoreCase`.
+   `TeamCatalog.Build(IReadOnlyList<string> labels, IReadOnlyList<(string Persona,
+   IReadOnlyList<string> Teams)> members, IReadOnlyList<TeamFolder> folders)`. It takes each
+   Persona as a `(Name, Teams)` pair rather than a `PersonaEntry`, which is costly to construct in
+   a pure test.
+2. `Build` groups everything by name with `StringComparer.OrdinalIgnoreCase`. A label that a
+   Persona carries but `labels` lacks still gets a Team, so a stale `labels` cannot hide one.
 3. It picks the display name:
    - the **folder's** spelling when a folder exists, because that is the spelling the path, the
      Library and Tasks already show;
@@ -306,9 +330,10 @@ Today three places each compute part of it: `TaskService.KnownTeamNames()` (priv
 - Register it as a singleton, the way `PersonaStore` and `TaskStore` are registered.
 - `Build` is `internal static` and pure, so the union, folding and sorting rules are
   unit-tested without a file system (TP-T1).
-- **Pre-flight (TP-0):** confirm the name of TaskStore's change event before coding. The Library
-  tree already refreshes on Task folder changes, so one exists. This spec doesn't name it without
-  checking.
+- **TaskStore's change event** is `TaskStore.IndexChanged` (`event Action?`, no arguments; TP-0
+  answer). It fires after every Task write and, about 500 ms after a folder is created on disk,
+  when the watcher's rebuild finds the Team or Project list changed. So a folder made by
+  `EnsureTeam` reaches the catalog only after that delay (see §6.5, *Creation*).
 - `TeamCatalog` does not replace `TaskService.KnownTeamNames()` in this delivery. Moving Tasks
   onto the catalog is a V2 refactor (§14 D-12).
 
@@ -360,9 +385,16 @@ nothing in Huddle deletes a Team folder.
 - `TeamLabels` is `internal static` and pure: `Add` and `Remove` over
   `IReadOnlyList<string>`, ignoring case. Its unit tests pin case folding, duplicate removal and
   order preservation (TP-T3).
-- The built-in Chief of Staff can be a member like any other Persona. **Pre-flight (TP-0):**
-  confirm whether `PersonaStore.Update` accepts an edit to a Persona carrying `builtin`. If it
-  doesn't, the picker lists it disabled, with the reason as a tooltip.
+- The built-in Chief of Staff can be a member like any other Persona (TP-0 answer). The built-in
+  marker is the frontmatter key `_builtin`, and `PersonaStore.Update` never reads it, so an edit is
+  accepted. The picker lists the Chief of Staff like any other Teammate: there is no disabled row.
+- `ITeamMembership` (`Add`, `Remove`) is the `internal` interface the Members tab and the dialog
+  depend on; `TeamMembership` implements it over `PersonaStore` and `ITeamCatalog`.
+- `Add` returns `Rejected` without writing when the Team's display spelling cannot survive a
+  round trip through the `teams` line (a `,` or `;`, a control character, or leading or trailing
+  space). `Update` throws `ChatException` for text that will not load or a Persona that vanished,
+  and the file write can throw `IOException` or `UnauthorizedAccessException`; each becomes
+  `Rejected` with the exception's message.
 - The Persona's model and effort pass through unchanged, taken from the entry, so an
   `Update` never resets them.
 
@@ -371,9 +403,15 @@ nothing in Huddle deletes a Team folder.
 - One save per click. There is no bulk add in V1: each add is a restart, and the dialog makes
   each one explicit.
 - Concurrency: `PersonaStore.Update` is last-write-wins on the file, exactly as the Teammate card
-  is. An add racing a card edit on the same Persona is possible but benign, because both paths
-  re-read the text before writing. Neither can resurrect an older `teams` list, since each
-  computes it from the text it just read.
+  is. `TeamMembership` serialises its own read-modify-write under a private lock, because
+  `Update`'s gate covers only validate-and-write: two concurrent adds would otherwise read the same
+  text and the second would drop the first label.
+- **Known limit: a Teammate card left open while a member is added silently drops that
+  membership on save.** The card reads its text once when editing begins
+  (`TeammateCard.BeginEditAsync`), never refreshes on `PersonasChanged`, and saves that text
+  unconditionally. So an add (or remove) made while a card is open is undone by the card's next
+  save. This was first written here as benign; it is not. It is accepted as last-write-wins, with
+  no code change (correction S17).
 
 **V1 / V2.** V2 may batch several adds into one dialog. Each Persona is still written once, so it
 restarts once.
@@ -413,16 +451,29 @@ internal static class TeamNames
 
 - `IsReservedProjectName(name)` is `TaskLayout.IsReservedFolderName(name) ||
   string.Equals(name, MemoryFolder, StringComparison.OrdinalIgnoreCase)`.
-- `TaskStore.ListProjects`, `TaskLayout.TryMap`, `TaskService.AddTeamAndProjectProblems` and
-  `TeamFolderProvisioner.EnsureProject` call it instead of the prefix-only check.
+- `TaskStore.ListProjects`, `TaskLayout.TryMap` and `LibraryPathResolver` (the role of
+  `Teams/<Team>/memory`) call it instead of the prefix-only check. `TaskService.AddTeamAndProjectProblems`
+  and `TeamFolderProvisioner.EnsureProject` refuse `memory` (equals `TeamNames.MemoryFolder`,
+  ignoring case) with `TeamNames.MemoryReservedProblem`, **without** calling
+  `IsReservedProjectName`: that would also refuse a Project named `.x`, which
+  `AddTeamAndProjectProblems` accepts today. In `EnsureProject` the check sits right after
+  `LibraryNames.Validate`, before the resolver; in `AddTeamAndProjectProblems` it is an `else if`,
+  so one Project problem shows.
 - **At the Team level `memory` is not reserved.** A Team called *Memory* is legal:
   `Teams/Memory/memory/` is unambiguous. The provisioner keeps using `IsReservedFolderName` for
   labels.
-- The validators run `LibraryNames.Validate` first, then the reserved check, then the uniqueness
-  check (ignoring case). They return the first problem as copy fit for the dialog:
-  - *"memory" is reserved for the Team's shared Memory.*
-  - *A Team named "Business" already exists.*
+- **A Team name also rejects `,` `;` `[` `]` and any control character** (`char.IsControl`, for
+  example a newline). A label is stored in a comma-separated `teams` list, so `Sales, EMEA` would
+  become two Teams, and `,`, `;`, `\n` and `\r` do not round-trip through `WriteListField`. The
+  brackets do round-trip; rejecting them is conservative and stays. The rule is in
+  `ValidateTeamName` only: a Project name is not a list entry.
+- The validators run `LibraryNames.Validate` first, then the reserved check, then the character
+  check (Team only), then the uniqueness check (ignoring case). They return the first problem as
+  copy fit for the dialog:
+  - *"memory" is reserved for the Team's shared Memory.* (a Project)
+  - *A Team named "Business" already exists.* / *A Project named "Marketing" already exists in Business.*
   - *Names starting with "_" or "." are reserved.*
+  - *A Team name can't contain commas, semicolons or square brackets.*
 
 **Effect on `TaskLayout.TryMap`.** A file at `Teams/<Team>/memory/_tasks/X.md` is ignored, not
 mapped as Project `memory`. It is a filing mistake, not a Task.
@@ -457,9 +508,17 @@ per folder unchanged.
 
 - **At session start,** for each of the Persona's Team labels that has a folder:
   1. Build the Team-wide index.
-  2. Build each Project's index, in `TeamSummary.Projects` order. A Project with no `memory/`
-     gets an empty snapshot; the composer decides whether to list it (see *Implementation notes*).
+  2. Build each Project's index, in `TeamSummary.Projects` order. **Every** Project gets a
+     snapshot: a Project with no `memory/` gets an empty one, and the composer decides whether to
+     list it (see *Implementation notes*).
   3. Hand the result to `SystemPromptComposer` as a `TeamMemorySnapshot` (§7.2).
+- **Who reads the Teams.** `Persona` carries no Teams and `DotAcpPersonaHost` took none.
+  `DotAcpAgentHostFactory.StartAsync` reads them with
+  `PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)` (`identity.Teams`,
+  the parse it already does for Skills) and passes the labels, the `ITeamCatalog`, the Teams root
+  and the cap to the host through new constructor parameters. The host builds the snapshot in
+  `BuildOptions`, on each open and resume, from one read of the catalog's snapshot. It passes
+  `null` when the Persona has no Teams or no label has a Team folder.
 - **Afterwards,** nothing new. The Team folder is already an implicit Watched Folder for every
   member (`FileChangeTracker.ResolveFolders`, `:446-462`), and `memory/` does not start with `_`,
   so `FolderScanner` does not prune it. A new or changed Team Memory file reaches every member's
@@ -491,8 +550,7 @@ out a Teammate's own Memory.
 
 ```text
 ## Team Memory
-Your Teams keep shared Memory. Write a fact here, one file per fact with the fact on the first
-line, when it matters to the whole Team or Project rather than only to you:
+Your Teams keep shared Memory. Write a fact here, one file per fact with the fact on the first line, when it matters to the whole Team or Project rather than only to you:
 - Business, whole Team: E:\…\Teams\Business\memory\
 - Business, one Project: E:\…\Teams\Business\<Project>\memory\
 Keep private preferences in your own Memory.
@@ -518,9 +576,16 @@ Nothing yet.
   them directly.
 - Prompts are configuration ([ADR-0007](adr/0007-model-facing-text-is-configuration.md)). The
   four new keys go in `PromptCatalog`, and `prompts.default.json` is regenerated (§7.4).
-- `SystemPromptComposer.Compose` gains the parameter `TeamMemorySnapshot? teamMemory` **before**
-  `SessionScope scope`. Every existing call site passes `null` or the new snapshot. Tests that pin
-  the composed prompt get a Team-free golden unchanged, plus one new golden (TP-T9).
+- `SystemPromptComposer.Compose` gains a new **optional last** parameter,
+  `TeamMemorySnapshot? teamMemory = null`, after `SessionScope scope`, so no existing call site
+  changes. Only `DotAcpPersonaHost` passes a snapshot. Tests that pin the composed prompt get a
+  Team-free golden unchanged, plus one new golden (TP-T9).
+- The instruction paragraph in `systemPrompt.teamMemory` is one line, not wrapped as the block
+  above shows it: the Prompt is one string.
+- `TeamMemoryIndex.Build` has no logger, so it treats an `IOException` or
+  `UnauthorizedAccessException` reading a `memory/` folder as an empty folder (§8.5). It also
+  skips a Team folder, Project folder or `memory` folder that is a reparse point, or a `memory`
+  that is a file.
 
 **Constraints.**
 
@@ -550,19 +615,29 @@ depends on the Room scope that §3 defers.
 `Href`, but the design needs the Team name to navigate. A link plus a separate chevron gives both,
 and keeps each keyboard-reachable.
 
-**Expansion state** is kept per Team in `window.huddleStorage` under `teamsNav:expanded`, a JSON
-array of lower-cased names. Missing or unreadable storage means every Team starts expanded. The
-Team of the current route is always expanded, so the active Project is never hidden.
+**Expansion state** is kept in `window.huddleStorage` under `teamsNav:collapsed`, a JSON array of
+the lower-cased names of the Teams the Human **collapsed**. Absent means every Team is expanded, so
+that rule also holds for a Team created later. Missing, unreadable or malformed storage means the
+same. The Team of the current route is expanded even when it is in the set, so the active Project
+is never hidden; the chevron collapses it again after the next navigation.
 
-**Creation.**
+**Creation.** `TeamsNav` creates through `ITeamFolders` (`Agency.Huddle.App.Library`), which
+`TeamFolderProvisioner` implements. It never touches the disk itself.
 
-- *New team* opens `NewTeamDialog` in Team mode. On OK it calls
-  `TeamFolderProvisioner.EnsureTeam(name)`, which creates `Teams/<name>/` after `TeamNames`
-  validation, then navigates to `/teams/<name>`. The Team has no members yet (T9), which is
-  expected, not an error.
-- *New project* opens the same dialog in Project mode, calls the existing
-  `EnsureProject(teamFolder, name)` (refused when the Team folder is missing, so the dialog first
-  calls `EnsureTeam` for a label-only Team), then navigates to the Project page.
+- *New team* opens `NewTeamDialog` in Team mode. On OK it calls `ITeamFolders.EnsureTeam(name)`,
+  which validates with `TeamNames.ValidateTeamName`, refuses a name that already exists on disk
+  ignoring case, and creates `Teams/<name>/`. It then navigates to `/teams/<name>`. The Team has
+  no members yet (T9), which is expected, not an error.
+- *New project* opens the same dialog in Project mode and calls
+  `ITeamFolders.EnsureProjectIn(team, name)`. That validates with `TeamNames.ValidateProjectName`,
+  creates the Team folder first when the Team exists only as a Persona label, then calls the
+  existing `EnsureProject(teamFolder, name)`. It then navigates to the Project page.
+- **The navigation waits on the catalog.** A folder made here reaches `ITeamCatalog` only after
+  the Task store's rebuild, about 500 ms later, and navigating sooner would flash *There is no
+  Team named …*. `TeamsNav` subscribes to `ITeamCatalog.Changed` **before** it creates, and
+  navigates when the catalog lists the new Team (or Project). It waits at most 2 s and then
+  navigates anyway, because the page has its own unknown-Team text. A refusal shows a snackbar and
+  never navigates.
 - The dialog validates as the Human types (`MudTextField` `Validation` func calling `TeamNames`),
   so OK is disabled while the name is invalid. The dialog receives a snapshot of the catalog
   ([mudblazor.md](agencyteam/mudblazor.md): an open dialog's parameters are frozen).
@@ -595,7 +670,11 @@ route matching prefers the more specific template, so `/teams/X/projects/Y` neve
 `/teams/{Team}/{Tab}`.
 
 **Tab resolution** is a pure function, `TeamPageTabs.Resolve(bool isProject, string? tab,
-TeamPageFeatures features) → TeamPageTab`, which is unit-tested (TP-T5):
+TeamPageFeatures features) → TeamPageTab`, which is unit-tested (TP-T5). Beside it,
+`TeamPageTabs.Available(isProject, features)` lists the tabs in order, and
+`TeamPageTabs.Segment(tab)` gives the URL segment (`members`, `files`, `tasks`). `Resolve` matches
+the `{Tab}` segment, ignoring case, against the `Segment` of each **available** tab; it does not
+parse the enum, so `1` or `2` is not a tab.
 
 | Page | Tabs, in order | Default |
 | --- | --- | --- |
@@ -621,6 +700,10 @@ shows a `MudAlert Severity.Info` *Files and Tasks are turned off in this install
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
+- The action button and the search field are one component, `TeamTabToolbar`, which **each tab
+  component renders** (`TeamMembers`, `TeamFilesTab`, `TeamTasksTab`), so a tab can be built and
+  tested before the page. It owns no state: the tab passes the search text in and receives the
+  debounced text back, with blank reported as `null`.
 - The action button is a `MudButton Variant="Variant.Text" Color="Color.Primary"
   StartIcon="@Icons.Material.Filled.Add"`, labelled *Add member*, *New note* or *New task* for
   the active tab. MudBlazor renders button text upper-case, which matches the mock-ups.
@@ -628,20 +711,27 @@ shows a `MudAlert Severity.Info` *Files and Tasks are turned off in this install
   `Clearable="true"`, `Immediate="true"` and `DebounceInterval="250"`. Its placeholder names the
   tab (*Search members*, *Search files*, *Search tasks*).
 - **Each tab keeps its own search text.** Switching tabs does not carry `brief` from Files into
-  Members. The text lives in the page's component state, keyed by tab, and is lost on
-  navigation. It is not in the URL (§14 D-8).
+  Members. The **page** owns the text, in its component state keyed by tab (each tab component
+  takes `Search` and raises `SearchChanged`), and clears it when the route moves to another Team
+  or Project. It is not in the URL (§14 D-8).
 - `MudTabs ActivePanelIndex` is computed from the route. `ActivePanelIndexChanged` calls
   `NavigationManager.NavigateTo(...)`. The page never flips a local field (the `Settings.razor`
-  rule).
+  rule). The tab headers have no `href`: the route drives the tab, and a click only navigates.
+- **Breadcrumbs.** A `MudBreadcrumbs` with the separator ` › `. On a Team page it holds one
+  disabled item, the Team's name. On a Project page it holds the Team's name as a link to
+  `/teams/<Team>`, then the Project's name as a disabled item. Both use the catalog's spelling,
+  never the route's. There is no *Teams* root item.
 - `KeepPanelsAlive` is **off**. Only the active tab is rendered, so a Team with 5,000 files
   doesn't build its tree while the Human reads Members.
 
 **Unknown Team.** When `TeamCatalog.Find(Team)` is null, the page shows
 `MudAlert Severity.Warning` *There is no Team named "X".*, with a link to the Teammates page.
-An unknown Project shows the same pattern with a link to its Team. Neither page creates anything
-on a stray URL.
+An unknown Project shows the same pattern, *There is no Project named "X" in Team "Business".*,
+with a link to its Team. Both alerts carry `role="alert"`. Neither page creates anything on a
+stray URL.
 
-**Title.** `<PageTitle>` is `Business — Huddle` or `Marketing Project · Business — Huddle`.
+**Title.** `<PageTitle>` is `Business — Huddle` or `Marketing Project · Business — Huddle`, and
+plain `Huddle` for an unknown Team or Project.
 
 ### 6.7 Members tab
 
@@ -665,7 +755,10 @@ Rows are sorted by Name, `StringComparer.OrdinalIgnoreCase`. Clicking a row open
 `RoomList.razor` swaps a row for its delete confirm:
 *Remove Ada from Business? Ada restarts and loses its conversation memory.*
 **Confirm** · **Cancel**. While the save runs, the row shows a `MudProgressCircular`. The list
-refreshes on `TeamCatalog.Changed`, not optimistically.
+refreshes on `TeamCatalog.Changed`, not optimistically. `ITeamMembership.Remove` is synchronous
+and restarts the Persona, so `TeamMembers` runs it in `Task.Run` to keep the circuit thread free,
+then shows a snackbar (*Ada removed from Business.*) or, for any other outcome, an error snackbar
+naming why nothing was removed.
 
 **+ Add member** opens `AddMemberDialog`:
 
@@ -676,9 +769,13 @@ refreshes on `TeamCatalog.Changed`, not optimistically.
   *Adding Kim restarts it and clears its conversation memory.*;
 - **Add** (disabled until a Teammate is picked) and **Cancel**.
 
-On **Add** the dialog calls `TeamMembership.Add`. On `Added` it closes and shows a
-`Snackbar` *Kim added to Business.* On any other result it stays open with the reason, as a
-`MudAlert Severity.Error` with `role="alert"` (rules.md: `MudAlert` renders no role by default).
+On **Add** the dialog calls `ITeamMembership.Add` itself, synchronously. On `Added` it closes with
+the Teammate's Name as its result (`DialogResult.Ok(name)`), and `TeamMembers`, which opened it,
+shows the `Snackbar` *Kim added to Business.* On any other result the dialog stays open with the
+reason, as a `MudAlert Severity.Error` with `role="alert"` (rules.md: `MudAlert` renders no role by
+default). The reason is *Kim is already in Business.* for `AlreadyMember`, *Kim no longer exists.*
+for `NotFound`, and the result's `Problem` otherwise. The dialog receives the candidates as
+`TeammateChoice` records (Name, Title, Alias), a snapshot taken when it opens.
 
 **Search** filters the loaded rows in memory: Name, Alias or Title contains the text, ignoring
 case (`StringComparison.OrdinalIgnoreCase`). No match shows *No members match "zz".* With no
@@ -694,13 +791,18 @@ V2, once a third caller exists.
 **Purpose.** The Team's or Project's Library, in place.
 
 ```razor
-<LibraryExplorer @ref="this.explorer"
+<LibraryExplorer @key="this.ScopePath" @ref="this.explorer"
                  Scopes="@([new LibraryLocation("teams", this.ScopePath)])"
-                 Title="@this.ScopeTitle"
                  Layout="LibraryExplorerLayout.SideBySide"
-                 Filter="@this.search[TeamPageTab.Files]"
+                 Filter="@this.Search" FilterChanged="this.SearchChanged"
                  StateKey="@($"team:{this.ScopePath}")" />
 ```
+
+This markup is in `TeamFilesTab` (the tab also renders `TeamTabToolbar` above it, and passes no
+`Title`). `Search` is the page's text for the Files tab, and `SearchChanged` reports both the
+toolbar's typing and the explorer's clearing. The explorer resolves `Scopes` only once, so the tab
+keys it with `@key="this.ScopePath"`: a page that moves from a Team to one of its Projects gets a
+new explorer, not a stale tree.
 
 `ScopePath` is `<Team>` or `<Team>/<Project>`, using the catalog's display spelling. The scope
 rules are the Library's (§6.16 there):
@@ -714,8 +816,8 @@ rules are the Library's (§6.16 there):
 
 | Addition | Contract |
 | --- | --- |
-| `[Parameter] public string? Filter { get; set; }` | Null or blank: the tree, unchanged. Otherwise the tree is replaced by a result list: `FindAsync(scope, Filter, 200)` over each scope, each hit shown as an icon, its name and its folder path relative to the scope. Clicking a file opens it in the document area. Clicking a folder clears the filter and reveals that folder in the tree. The explorer does not debounce: the page's text field already does |
-| `public Task NewNoteAsync(CancellationToken ct)` | Opens the existing *New note* dialog (`LibraryFileOps`) targeting the folder selected in the tree if it lies inside the first scope, else the first scope's folder. When it lands, the new note is opened in the editor. Returns when the dialog closes |
+| `[Parameter] public string? Filter { get; set; }` and `[Parameter] public EventCallback<string?> FilterChanged { get; set; }` | The filter is two-way. Null or blank: the tree, unchanged. Otherwise a result list is shown and the tree is hidden, not unmounted: `FindAsync(scope, Filter, …)` over each scope in order for at most 200 hits in total, each hit shown as an icon, its name and its folder path relative to the scope. No hit shows *No files match "term".*; a truncated search shows *Showing the first 200 matches — refine the search.* Clicking a file opens it in the document area. Clicking a folder clears the filter, **raising `FilterChanged` with `null` so the page's search text clears too**, and reveals that folder in the tree (`LibraryTree.RevealAsync`). The explorer does not debounce: the page's text field already does |
+| `public Task NewNoteAsync()` | Parameterless: the dialog owns its own token. Opens the existing *New note* dialog through `LibraryFileOps.NewNoteAsync(LibraryPath folder)`, targeting the folder selected in the tree (a selected file counts as its parent folder) if it lies inside the first scope, else the first scope's folder. When it lands, the tree is refreshed and the new note is opened in the editor. Returns when the dialog closes; cancelling creates and opens nothing |
 
 **`LibraryFileService.FindAsync`.**
 
@@ -735,7 +837,7 @@ internal Task<LibrarySearchResult> FindAsync(LibraryPath scope, string term, int
 - It honours `ct` between directories. The page cancels the previous search when the text
   changes.
 
-**+ New note** calls `this.explorer.NewNoteAsync(ct)`. The Library's own New note in the row menu
+**+ New note** calls `this.explorer.NewNoteAsync()`. The Library's own New note in the row menu
 keeps working. The button exists so the most common action doesn't need a right-click.
 
 ### 6.9 Tasks tab
@@ -746,28 +848,32 @@ The page builds an in-memory `TaskView` on each render:
 
 | Page | `TaskView` |
 | --- | --- |
-| Team | `Kind = ViewKind.Board`, `Filter = new() { Teams = [team] }`, swimlanes grouped by `TaskGroupField.Project` |
-| Project | `Kind = ViewKind.Board`, `Filter = new() { Teams = [team], Projects = [new ProjectRef(team, project)] }`, no swimlanes |
+| Team | `Name = team`, `Kind = ViewKind.Board`, `Filter = new() { Teams = [team] }`, `Grouping = [TaskGroupField.Project]` (one swimlane per Project), `Columns = BoardLayout.DefaultColumns` |
+| Project | `Name = project`, `Kind = ViewKind.Board`, `Filter = new() { Teams = [team], Projects = [new ProjectRef(team, project)] }`, `Grouping = []` (no swimlanes), `Columns = BoardLayout.DefaultColumns` |
 
-It passes `TaskQuery.Sort(TaskQuery.Filter(store.All, ViewScope.All, view.Filter, search,
-humanName), view.Sort)` as `Tasks`. The Id is a fixed, non-persisted
-`team:<Team>[/<Project>]`, so `TaskBoard`'s per-view UI state has a stable key.
+It passes `TaskQuery.Sort(TaskQuery.Filter(store.All, view.Scope, view.Filter, search,
+humanName), view.Sort)` as `Tasks`. There is no `ViewScope.All`: `view.Scope` is the `TaskView`
+default, `ViewScope.Active`, as on the Tasks page. The Id is a fixed, non-persisted
+`team:<Team>[/<Project>]`, so `TaskBoard`'s per-view UI state has a stable key. The Tasks are
+requeried on `TaskEvents.TasksReloaded` and `TaskChanged`.
 
 **Traps the code check found, and how this spec handles them.**
 
 - **`NewTaskDefaults` derives the Project from `Filter.Projects` only when `Filter.Teams` has
   exactly one entry** (`TaskToolbar.razor:142-146`). A filter holding only `Projects` gives
   `Team = null`. The Project filter above therefore sets **both** `Teams` and `Projects`. The
-  page builds `NewTaskDefaults(team, project)` itself rather than reusing the toolbar.
+  tab builds the create draft itself, `new TaskDraft(string.Empty, team, project)` (`project` is
+  `null` on a Team page), rather than reusing the toolbar's `NewTaskDefaults`.
 - **Column edits.** `TaskBoard.OnEditColumns` and `ViewChanged` exist for saved Views. The Tasks
   tab passes no handler, so the Board's column editing is inert here. A Human who wants custom
   columns saves a View on the Tasks page.
-- **Empty `Columns`.** **Pre-flight (TP-0):** confirm that `TaskBoard` falls back to the
-  default state columns when `TaskView.Columns` is empty. If it doesn't, the page supplies the
-  default column list from the same source the Tasks page's *All Tasks* view uses
-  (`Tasks.razor:190`).
-- **Swimlanes.** **Pre-flight (TP-0):** confirm the property name that sets Board swimlanes on a
-  `TaskView` (the Tasks spec names `TaskGroupField` with *Board: State is invalid*).
+- **Empty `Columns`.** A `TaskView` with empty `Columns` renders **no columns and no text**
+  (`BoardLayout.Build` gives no visible columns; TP-0 answer). So `TeamTasksTab` sets
+  `Columns = BoardLayout.DefaultColumns` (`Tasks/Views/BoardLayout.cs`, `internal static`, six
+  columns), the same seed `ViewEditorDrawer` uses. Spec §6.9 first said a Board with no `Columns`
+  shows its empty state; it does not.
+- **Swimlanes.** The property is `TaskView.Grouping`, an `IReadOnlyList<TaskGroupField>` (`Team`,
+  `Project`, `Assignee`, `State`; `State` is invalid on a Board). Empty means one lane.
 
 **+ New task** opens `TaskDetailDialog` in create mode with those defaults. The existing
 drag-to-move on the Board saves through `TaskService.Update`, so a move made here is the same
@@ -841,8 +947,18 @@ public enum TeamPageTab { Members, Files, Tasks }
 public sealed record TeamPageFeatures(bool Library, bool Tasks);
 ```
 
-`TeamSummary`, `TeamPageTab`, `TeamPageFeatures`, `MembershipOutcome` and `MembershipResult` are `public` because they
-cross a `[Parameter]` or dialog boundary (rules.md, CS0053). Everything else is `internal`.
+`TeamSummary`, `TeamPageTab`, `TeamPageFeatures`, `MembershipOutcome`, `MembershipResult`,
+`TeammateChoice` and `NewTeamDialogMode` are `public` because they cross a `[Parameter]` or dialog
+boundary (rules.md, CS0053). Everything else is `internal`: the services, the helpers, and the
+interfaces `ITeamCatalog`, `ITeamMembership` and `ITeamFolders`.
+
+```csharp
+/// <summary>One Teammate the Add member dialog offers.</summary>
+public sealed record TeammateChoice(string Name, string Title, string Alias);   // Components/Teams
+
+/// <summary>What NewTeamDialog is naming.</summary>
+public enum NewTeamDialogMode { Team, Project }                                 // Components/Teams
+```
 
 ### 7.3 Configuration
 
@@ -850,8 +966,8 @@ cross a `[Parameter]` or dialog boundary (rules.md, CS0053). Everything else is 
 | --- | --- | --- |
 | `Team:Teams:MaxMemoryEntries` | `50` | The most Team Memory lines in one session's system prompt, across all of the Persona's Teams and Projects. The rest are counted. Zero or less lists none, but the instruction paragraph still appears |
 
-It binds to the options class that already owns `Team:Teams:Dir` (`TasksOptions` or its
-successor; **pre-flight TP-0**). No other key changes. Library, Tasks and File Changes settings
+It binds to `TeamsOptions` (`src/Huddle.App/TeamsOptions.cs`, reached as `TeamOptions.Teams`),
+which already owned `Team:Teams:Dir` (TP-0 answer). No other key changes. Library, Tasks and File Changes settings
 apply unchanged to their tabs.
 
 ### 7.4 Prompts
@@ -871,7 +987,7 @@ lines here.
 
 | `window.huddleStorage` key | Holds |
 | --- | --- |
-| `teamsNav:expanded` | JSON array of lower-cased Team names whose Projects are shown |
+| `teamsNav:collapsed` | JSON array of lower-cased names of the Teams whose Projects are hidden. Absent means all expanded, also for a Team created later |
 | `library:team:<scope>…` | Set by `LibraryExplorer` from `StateKey` (expanded folders, open file, divider) |
 
 Both follow the Library's rule: failed or missing storage means defaults, never an error.
@@ -901,12 +1017,13 @@ Agent Write → Teams/<Team>/<Project>/memory/x.md ──► FileChangeTracker (
 ### 8.1 Catalog build
 
 ```text
-Build(labels, personas, folders):
+Build(labels, members, folders):       // members: (Persona, Teams) pairs
   byName ← Dictionary(OrdinalIgnoreCase)
   for f in folders:            byName[f.Name] ← (display=f.Name, projects=f.Projects, hasFolder=true)
   for l in labels:             byName.TryAdd(l, (display=l, projects=[], hasFolder=false))
-  for p in personas, t in p.Teams:
-                               byName[t].members.Add(p.Name)        // the entry exists: labels ⊇ p.Teams
+  for (persona, teams) in members, t in teams:
+                               byName.TryAdd(t, (display=t, projects=[], hasFolder=false))  // a stale labels
+                               byName[t].members.Add(persona)
   return byName.Values
            .Select(v → TeamSummary(v.display, v.projects.Where(!IsReservedProjectName).Sorted(),
                                    v.members.Distinct(OrdinalIgnoreCase).Sorted(), v.hasFolder))
@@ -927,12 +1044,17 @@ Add(team, name):
   if labels.Any(l ≈ team) return AlreadyMember
   text'   ← WriteListField(entry.Text, TeamsKey, [..labels, display])
   try   personas.Update(name, text', entry.Model, entry.Effort)
-  catch (PersonaValidationException e) return Rejected(e.Message)   // the store's own validation type; TP-0
+  catch (ChatException | IOException | UnauthorizedAccessException e) return Rejected(e.Message)
   return Added
 ```
 
-The `catch` names the specific type `PersonaStore.Update` throws for invalid text. **Pre-flight
-(TP-0)** confirms that type. There is no general `catch`.
+`Add` and `Remove` are synchronous: `PersonaStore.Update` is, so a `CancellationToken` would be an
+unused parameter (IDE0060) and an `async` method with no `await` is CS1998. The `catch` names the
+specific types: `PersonaStore.Update` throws `ChatException` for text that will not load, a blank
+text or a Persona that no longer exists (TP-0 answer), and the write can throw `IOException` or
+`UnauthorizedAccessException`. There is no general `catch`. Before the write, a Team spelling that
+would not round-trip through the `teams` line returns `Rejected` (§6.2). The whole
+read-modify-write runs under `TeamMembership`'s lock.
 
 ### 8.3 Tab resolution
 
@@ -940,29 +1062,34 @@ The `catch` names the specific type `PersonaStore.Update` throws for invalid tex
 Resolve(isProject, tab, f):
   available ← isProject ? [Files?f.Library, Tasks?f.Tasks]
                         : [Members, Files?f.Library, Tasks?f.Tasks]
-  parsed    ← Enum.TryParse(tab, ignoreCase)
-  return parsed ∈ available ? parsed : available.FirstOrDefault(Members)
+  match     ← first t in available where Segment(t) equals tab, ignoring case
+  return match ?? available.FirstOrDefault(Files)
 ```
 
-A Project page with nothing available returns `Files`. The page shows its *turned off* alert in
-that case (§6.6).
+`Segment` is `members`, `files` or `tasks`. The match is against the **available** tabs' segments,
+not `Enum.TryParse`, so `1` or `2` (which parse as enum values) are not tabs, and a disabled tab
+falls back to the first available one. A blank `tab` returns the first available tab. A page with
+nothing available returns `Files`; only a Project page can be in that state, and it shows its
+*turned off* alert (§6.6).
 
 ### 8.4 Team Memory budget
 
 ```text
 remaining ← max(0, MaxMemoryEntries); notListed ← 0
 for team in persona.Teams (as written):
-  folder ← teams.Find(team) ; if none or not HasFolder: continue
-  teamWide ← MemoryIndex.Build(folder/memory, remaining)       // Build returns NotListed beyond the cap
+  summary ← teams.Find(team) ; if none or not HasFolder: continue   // teams: IReadOnlyList<TeamSummary>
+  teamWide ← MemoryIndex.Build(summary.Name/memory, remaining)     // Build returns NotListed beyond the cap
   remaining -= teamWide.Entries.Count ; notListed += teamWide.NotListed
-  for project in folder.Projects:
-    m ← MemoryIndex.Build(folder/project/memory, remaining)
+  for project in summary.Projects:                                 // EVERY Project gets a snapshot,
+    m ← MemoryIndex.Build(summary.Name/project/memory, remaining)  // empty when memory/ is missing
     remaining -= m.Entries.Count ; notListed += m.NotListed
 ```
 
-`MemoryIndex.Build` with `maxEntries = 0` must list nothing and count everything. **Pre-flight
-(TP-0)** confirms that. If it doesn't, the loop counts the `*.md` files itself once `remaining`
-reaches zero.
+`MemoryIndex.Build` with `maxEntries = 0` lists nothing and counts everything (TP-0 answer: three
+`.md` files and a cap of zero give no entries and `NotListed = 3`; a missing folder gives none and
+`0`), so the loop needs no counting of its own. A **negative** cap would throw, so `remaining` is
+clamped with `Math.Max(0, …)`. The composer needs the empty Projects to apply its five-Project
+rule (§6.4).
 
 ### 8.5 Error handling
 
@@ -970,8 +1097,8 @@ reaches zero.
 | --- | --- |
 | `PersonaStore.Update` rejects the text | `MembershipResult(Rejected, message)`. The dialog shows it. Nothing is written |
 | The Persona is removed while the dialog is open | `NotFound`: *Kim no longer exists.* |
-| `EnsureTeam`/`EnsureProject` refuse (invalid, exists, IO) | The dialog shows the `LibraryResult` problem. It never navigates |
-| An IO error reading a `memory/` folder at session start | `MemoryIndex.Build` treats a missing folder as empty. Any other `IOException` is logged at Warning and that folder is skipped. The session still starts |
+| `EnsureTeam`/`EnsureProjectIn` refuse (invalid, exists, IO) | `TeamsNav` shows the `LibraryResult` problem as an error snackbar. It never navigates. (The dialog has already validated the name inline, so a refusal is a race or an IO error) |
+| An IO error reading a `memory/` folder at session start | `MemoryIndex.Build` treats a missing folder as empty. `TeamMemoryIndex` treats an `IOException` or `UnauthorizedAccessException` on a `memory/` folder as an empty folder, with a comment saying why: `Build` is a pure static and has no logger. The session still starts |
 | `FindAsync` hits an access-denied folder | Skipped, as `ListAsync` does. The results are still returned |
 | Unknown Team or Project in the URL | The page's alert (§6.6). Nothing is created |
 
@@ -997,7 +1124,7 @@ reaches zero.
 | Event | Existing producer | New consumer |
 | --- | --- | --- |
 | `PersonasChanged` | `PersonaStore` (after `Update`, `Add`, `Remove`, a file-watcher reload) | `TeamCatalog` |
-| TaskStore change notification | `TaskStore` (folder scan and watcher) | `TeamCatalog` |
+| `TaskStore.IndexChanged` | `TaskStore` (folder scan and watcher) | `TeamCatalog` |
 | `TeamCatalog.Changed` | new | `TeamsNav`, `TeamPage` (`InvokeAsync(StateHasChanged)`) |
 | Session start | `DotAcpPersonaHost` | `TeamMemoryIndex.Build` (synchronous, bounded) |
 
@@ -1006,8 +1133,10 @@ reaches zero.
 - `TeamCatalog` swaps an immutable list into a `volatile` field. Readers never lock. Two source
   events arriving together each rebuild from current sources, and the last swap wins, which is
   correct because each rebuild reads the latest state.
-- `TeamMembership` does no locking of its own. `PersonaStore.Update` is the serialisation point,
-  as it already is for the Teammate card.
+- `TeamMembership` holds one private lock across each whole read-modify-write, because
+  `PersonaStore.Update`'s own gate covers only validate-and-write. `PersonasChanged` subscribers
+  run while that lock is held, so none of them may call `ITeamMembership`. Against the Teammate
+  card, `Update` is still the only serialisation point, and the last write wins (§6.2).
 - The Files search holds one `CancellationTokenSource` per page. A new term cancels and disposes
   the previous one. Results from a cancelled walk are never rendered.
 - A membership change restarts the Teammate on the supervisor's thread. The page doesn't wait for
@@ -1041,12 +1170,12 @@ negligible next to starting the Adapter process.
 | # | Case | Behaviour |
 | --- | --- | --- |
 | E-1 | A label and a folder differ only by case (`business` vs `Business/`) | One Team, shown with the folder's spelling. An add writes the folder spelling |
-| E-2 | An existing Team already has a Project folder named `memory` holding Tasks | After upgrade it is no longer a Project, and its Tasks in `memory/_tasks/` are ignored and no longer listed. **Mitigation:** at start-up, `TaskStore` logs a Warning for each `<Team>/memory/_tasks/` it finds, naming the files and telling the Human to move them. Huddle never moves them itself |
+| E-2 | An existing Team already has a Project folder named `memory` holding Tasks | After upgrade it is no longer a Project, and its Tasks in `memory/_tasks/` are ignored and no longer listed. **Mitigation:** at start-up, `TaskStore` logs one Warning for each Team folder whose `memory/_tasks/` (a folder named `memory` in any case) holds files, naming the Team and the files and telling the Human to move them. It logs once, from the constructor after the first scan, not on a watcher rebuild. Huddle never moves them itself. **Two limits:** (1) the legacy Teammate-layout migration (`TeammateLayoutMigration.LegacyTaskPath`) can still move legacy `Tasks/<Team>/memory/*.md` files into `Teams/<Team>/memory/_tasks/`; the code is unchanged and this Warning reports those files too. (2) Once stranded, those Tasks leave `All`, so `HighestNumber` no longer sees their numbers; the persisted id counter protects Huddle-created ones, but a hand-copied, higher-numbered file could have its number reused |
 | E-3 | A label is invalid as a folder name (`R&D/Legal`) | The provisioner already skips it. The Team is listed with `HasFolder = false`. The Files tab's scope fails `LibraryPathResolver` and shows the Library's scope `MudAlert`. *New project* is hidden for that Team |
 | E-4 | The Human removes the last member | The Team stays listed with *No members*, because its folder exists. Its Tasks stay, and Tasks marks them orphaned |
 | E-5 | A label is removed from the last Persona and no folder exists | The Team disappears from the sidebar. An open page for it shows *There is no Team named …* |
 | E-6 | The Human edits `teams:` by hand in an editor | `PersonaStore`'s watcher raises `PersonasChanged`, and the page updates exactly as for a UI add |
-| E-7 | Adding a member whose definition has a YAML flow list with comments | `WriteListField` owns the rewrite. Its existing tests cover the list shapes `SplitList` accepts. **Pre-flight (TP-0)** adds a case for a comment line inside the list if missing |
+| E-7 | Adding a member whose definition has a YAML flow list with comments | `WriteListField` owns the rewrite. Its existing tests cover the list shapes `SplitList` accepts. **Known limit (TP-0 answer):** a `#` comment line inside a *block* list is not kept: `WriteListField` consumes only the consecutive `- ` lines after the key, so the comment and every later item stay as stray lines under the new flow list, and a trailing `# c` on a flow line is dropped |
 | E-8 | A member Agent writes Team Memory for a Team it is not in | Allowed: a Team is not a permission. Its members see the change through their Watched Folder |
 | E-9 | Two members write the same memory file at once | The last write wins (ADR-0029). Both see `changed …` |
 | E-10 | A Team Memory file whose first line is blank or very long | `MemoryIndex` skips blank lines and cuts the summary to 200 characters, as it does for personal Memory |
@@ -1055,8 +1184,9 @@ negligible next to starting the Adapter process.
 | E-13 | Both Library and Tasks disabled | A Team page has Members only. A Project page shows the *turned off* alert. Projects are still listed, because folders exist |
 | E-14 | A Persona in 12 Teams | The Team Memory cap applies across all of them. Later Teams are counted, not listed. The Teams are processed in `teams` order, so the Human controls priority by ordering the list |
 | E-15 | The Human navigates away during an add | The save still completes, because `PersonaStore.Update` is synchronous once called. The snackbar may be lost. The next visit shows the member |
-| E-16 | The built-in Chief of Staff is added | It follows the result of pre-flight TP-0 (§6.2) |
+| E-16 | The built-in Chief of Staff is added | It is added like any other Teammate: `PersonaStore.Update` accepts a built-in Persona (marker `_builtin`), and the picker lists it enabled (§6.2) |
 | E-17 | A search term matching over 200 files | The first 200 are listed, with *Showing the first 200 matches — refine the search.* |
+| E-18 | A new Team's name contains `,` `;` `[` `]` or a control character (`Sales, EMEA`, a pasted newline) | `TeamNames.ValidateTeamName` refuses it in the dialog: *A Team name can't contain commas, semicolons or square brackets.* A label is stored in a comma-separated `teams` list, and `,`, `;`, `\n` and `\r` do not round-trip through `WriteListField`; the brackets do, so refusing them is conservative. A label that is already unwritable (a hand-edited or legacy one) makes `TeamMembership.Add` return `Rejected` and write nothing |
 
 ---
 
@@ -1068,12 +1198,12 @@ a decision in Team Memory.
 ```text
  1. Human ─ Teams ▸ Business ⋯ ▸ New project "Marketing Project"
       NewTeamDialog ─TeamNames.ValidateProjectName─► ok
-      TeamFolderProvisioner.EnsureProject ─► mkdir Teams/Business/Marketing Project/
-      TaskStore scan ─► TeamFolder(Business, [Marketing Project, …]) ─► TeamCatalog.Changed
-      NavigateTo /teams/Business/projects/Marketing%20Project        (Files tab, empty tree)
+      ITeamFolders.EnsureProjectIn ─► TeamFolderProvisioner.EnsureProject ─► mkdir Teams/Business/Marketing Project/
+      TaskStore scan (~500 ms) ─► TeamFolder(Business, [Marketing Project, …]) ─► TeamCatalog.Changed
+      TeamsNav waited for that Changed (at most 2 s) ─► NavigateTo /teams/Business/projects/Marketing%20Project   (Files tab, empty tree)
 
  2. Human ─ Business ▸ Members ▸ + Add member ▸ "Kim" ▸ Add
-      TeamMembership.Add ─► WriteListField(teams: [Research, Business]) ─► PersonaStore.Update
+      AddMemberDialog ─► ITeamMembership.Add (synchronous) ─► WriteListField(teams: [Research, Business]) ─► PersonaStore.Update
       PersonasChanged ─► PersonaSupervisor restarts Kim
                       ─► TeamCatalog.Changed ─► Members list shows Kim (status: starting)
       Kim's new session: system prompt ─ personal Memory block
@@ -1126,90 +1256,24 @@ shape that are already in production for personal Memory.
 
 ---
 
-## Appendix A — Task list (test-first)
+## Appendix A — Workstreams
 
-Each implementation task **TP-n** is preceded by its test task **TP-Tn**. Write the test, watch
-it fail for the right reason, then make it pass. Work in vertical slices: one behaviour at a
-time, not all the tests first ([agents/Testing.md](../agents/Testing.md)). Tests live in
-`tests/Huddle.Tests/Teams/` unless stated otherwise.
+The test-first task list that used to be here lives in the delivered plan,
+[Huddle.TeamPages-ProjectPlan.md](Huddle.TeamPages-ProjectPlan.md): one numbered task per
+deliverable D0–D8 (`Task 1.1` … `Task 8.3`), each split into a `.t` test step and an `.i`
+implementation step, with the spec corrections S1–S17 and the retrospectives. Read the plan for
+the tasks; this Spec no longer duplicates them, so the two cannot drift. The workstreams below map
+this Spec's original ids to the plan's deliverables.
 
-### Workstream P0 — Pre-flight
-
-| Id | Type | Task |
-| --- | --- | --- |
-| TP-0 | Investigation | Confirm, and record answers in this spec: (a) TaskStore's change-event name; (b) whether `PersonaStore.Update` accepts a `builtin` Persona; (c) the exception type `Update` throws on invalid text; (d) `TaskBoard` with empty `Columns`; (e) the `TaskView` swimlane property; (f) `MemoryIndex.Build` with `maxEntries = 0`; (g) the options class owning `Team:Teams:Dir`; (h) `WriteListField` coverage of comment lines. No code change |
-
-### Workstream P1 — Names and catalog
-
-| Id | Type | Task | § |
+| Workstream | Scope | Spec § | Plan deliverable |
 | --- | --- | --- | --- |
-| TP-T1 | Unit | `TeamCatalogTests.Build_*`: folds case; folder spelling wins; label-only Team has `HasFolder=false`; members sorted and distinct; reserved Projects excluded; output sorted | §6.1, §8.1 |
-| TP-1 | Impl | `TeamSummary`, `TeamCatalog.Build`, singleton `TeamCatalog` subscribing to both sources, raising `Changed` | §6.1 |
-| TP-T2 | Unit | `TeamNamesTests`: `memory`/`Memory` reserved as Project, not as Team; `_x`, `.x` reserved; `memory-notes` legal; duplicate (case-insensitive) refused with copy; `LibraryNames` problems surfaced first | §6.3 |
-| TP-2 | Impl | `TeamNames`; route `TaskStore.ListProjects`, `TaskLayout.TryMap`, `TaskService.AddTeamAndProjectProblems`, `TeamFolderProvisioner.EnsureProject` through it | §6.3 |
-| TP-T2b | Functional | `TaskStoreTests`: a `Teams/X/memory/` folder is not a Project; `Teams/X/memory/_tasks/A.md` is ignored and logged at Warning (E-2); existing Tasks tests stay green | §6.3, E-2 |
-| TP-2b | Impl | The start-up Warning for `memory/_tasks/` | E-2 |
-
-### Workstream P2 — Membership
-
-| Id | Type | Task | § |
-| --- | --- | --- | --- |
-| TP-T3 | Unit | `TeamLabelsTests`: Add appends the display spelling, is a no-op when present ignoring case; Remove drops all case variants; order preserved | §6.2 |
-| TP-3 | Impl | `TeamLabels` | §6.2 |
-| TP-T4 | Functional | `TeamMembershipTests` on a temp `DataDir` with a real `PersonaStore`: add writes `teams` and only `teams` (byte-compare the rest); `PersonasChanged` raised once; `AlreadyMember`, `NotMember`, `NotFound`, `Rejected` outcomes; model and effort preserved; remove of last label deletes the key | §6.2, §8.2 |
-| TP-4 | Impl | `TeamMembership.Add`/`Remove` | §6.2 |
-
-### Workstream P3 — Team Memory
-
-| Id | Type | Task | § |
-| --- | --- | --- | --- |
-| TP-T5m | Unit | `TeamMemoryIndexTests` on a temp tree: Team-wide then Projects in order; label without folder skipped; cap across Teams; `NotListed` counted; missing `memory/` empty | §6.4, §8.4 |
-| TP-5m | Impl | `TeamMemoryIndex`, `TeamMemoryGroup`, `TeamMemorySnapshot`, `Team:Teams:MaxMemoryEntries` | §6.4, §7.3 |
-| TP-T6 | Unit | `PromptCatalogTests`: the four new keys exist with their placeholders; `prompts.default.json` regenerated matches | §7.4 |
-| TP-6 | Impl | Add Prompts to `PromptCatalog`; regenerate defaults | §6.10 |
-| TP-T7 | Unit | `SystemPromptComposerTests`: null snapshot → prompt byte-identical to today's golden; a snapshot → the Team Memory block after Memory, headings per Team and Project, *more* line; empty-Project rule (≤ 5 listed) | §6.4 |
-| TP-7 | Impl | `SystemPromptComposer` parameter and block | §6.4 |
-| TP-T8 | Functional | `DotAcpPersonaHost` test with the mock adapter: a Persona in Team X with `Teams/X/memory/a.md` gets the block; a `ReadsFiles:false` Adapter does not (T13) | §6.4 |
-| TP-8 | Impl | Build and pass the snapshot at session start | §6.4 |
-| TP-T9 | Functional | `FileChangeTrackerTests` addition: a write to `Teams/X/P/memory/a.md` is listed for a member of X (proves `memory/` is not pruned) | §6.4 |
-
-### Workstream P4 — Library additions
-
-| Id | Type | Task | § |
-| --- | --- | --- | --- |
-| TP-T10 | Functional | `LibraryFileServiceTests.FindAsync_*`: case-insensitive name match; `_tasks/` and hidden folders excluded; `memory/` included; `max` and `MaxIndexedFiles` caps set `Truncated`; junction out of root not followed; cancellation honoured | §6.8 |
-| TP-10 | Impl | `LibraryFileService.FindAsync`, `LibrarySearchResult` | §6.8 |
-| TP-T11 | bUnit | `LibraryExplorerTests`: `Filter` null → tree; `Filter` set → result list; clicking a file opens it; clicking a folder clears the filter and reveals it; `NewNoteAsync` targets the selected folder inside scope, else the scope root | §6.8 |
-| TP-11 | Impl | `Filter` parameter and `NewNoteAsync` | §6.8 |
-| TP-T12 | Functional | `TeamFolderProvisionerTests.EnsureTeam_*`: creates the folder; refuses invalid, reserved-prefix, and existing (ignoring case) names; never renames | §6.5 |
-| TP-12 | Impl | `TeamFolderProvisioner.EnsureTeam` | §6.5 |
-
-### Workstream P5 — UI
-
-| Id | Type | Task | § |
-| --- | --- | --- | --- |
-| TP-T13 | Unit | `TeamPageTabsTests.Resolve_*`: defaults per page; unknown tab falls back; disabled features remove tabs; Project page with nothing enabled | §6.6, §8.3 |
-| TP-13 | Impl | `TeamPageTab`, `TeamPageTabs.Resolve` | §6.6 |
-| TP-T14 | bUnit | `TeamsNavTests`: lists Teams and nested Projects from a fake catalog; name link `href` escaped; chevron toggles and sets `aria-expanded`; current route's Team forced open; *No members* hint; *New team* and *New project* open the dialog; re-renders on `Changed` | §6.5 |
-| TP-14 | Impl | `TeamsNav.razor`, `NewTeamDialog.razor`; add to `MainLayout` | §6.5 |
-| TP-T15 | bUnit | `TeamPageTests`: four routes resolve; tab strip matches `Resolve`; tab change navigates; unknown Team/Project alerts; action button label and placeholder change per tab; search text kept per tab | §6.6 |
-| TP-15 | Impl | `TeamPage.razor` | §6.6 |
-| TP-T16 | bUnit | `TeamMembersTests`: rows sorted with avatar, status, Title · Alias; search filters Name/Alias/Title; empty states; Remove → inline confirm with restart copy → calls membership; row click opens card | §6.7 |
-| TP-16 | Impl | `TeamMembers.razor` | §6.7 |
-| TP-T17 | bUnit | `AddMemberDialogTests`: excludes current members; `Strict` pick; restart warning appears after pick; Add disabled until pick; non-`Added` outcome shown with `role="alert"` | §6.7 |
-| TP-17 | Impl | `AddMemberDialog.razor` | §6.7 |
-| TP-T18 | bUnit | `TeamPageFilesTests`: explorer gets scope `teams/<Team>[/<Project>]`, `StateKey`, `Filter`; *New note* calls `NewNoteAsync` | §6.8 |
-| TP-18 | Impl | Files tab wiring | §6.8 |
-| TP-T19 | bUnit | `TeamPageTasksTests`: Team view filter `Teams=[T]` with Project swimlanes; Project view sets both `Teams` and `Projects`; `NewTaskDefaults(T, P)`; search passed to `TaskQuery` | §6.9 |
-| TP-19 | Impl | Tasks tab wiring | §6.9 |
-
-### Workstream P6 — Docs and verification
-
-| Id | Type | Task |
-| --- | --- | --- |
-| TP-20 | Docs | `language.md`: add **Team Memory**; *Project* excludes `memory`; *Team* notes the Team page. `AgencyTeam.md`: map row for this spec, config row for `Team:Teams:MaxMemoryEntries`. ADR-0032 status → accepted on delivery |
-| TP-T21 | Manual | Add `docs/agencyteam/manual-tests/team-pages.md`: T0–T15 by hand in a browser, including one live Agent writing Team Memory (paid; UAT) |
-| TP-21 | Verify | `dotnet build Huddle.slnx` with zero warnings; `dotnet test Huddle.slnx --` green; `./test-health.ps1` PASS |
+| P0 Pre-flight | Answer the code questions the Spec left open (TP-0 a–h). The answers are recorded in the sections that asked (§6.1, §6.2, §6.9, §7.3, §8.2, §8.4, E-7, E-16) | §6.1, §6.2, §6.9 | D0 (Task 0.2) |
+| P1 Names and catalog | `TeamSummary`, `TeamCatalog`, `TeamNames`, `memory` reserved at the Project level, the start-up Warning (E-2) | §6.1, §6.3 | D1, D2, D3 |
+| P2 Membership | `TeamLabels`, `TeamMembership` (`Add` and `Remove`, synchronous) | §6.2, §8.2 | D4 |
+| P3 Team Memory | `TeamMemoryIndex`, `Team:Teams:MaxMemoryEntries`, the four Prompts, the composer block, the host wiring | §6.4, §6.10, §7.3, §7.4 | D5 |
+| P4 Library additions | `LibraryFileService.FindAsync`, the explorer's `Filter` and `NewNoteAsync`, `EnsureTeam` and `EnsureProjectIn` | §6.5, §6.8 | D6 |
+| P5 UI | `TeamPageTabs`, `TeamsNav`, `NewTeamDialog`, `TeamPage`, the three tabs, `AddMemberDialog` | §6.5–§6.9 | D7 |
+| P6 Docs and verification | `language.md` (**Team Memory**, *Project* excludes `memory`, *Team* notes the page), `AgencyTeam.md` (map row, config row), ADR-0032 status, the manual test page, the full build and test run (TP-20, TP-T21, TP-21) | — | D8 |
 
 **Sequencing.** P0 comes first. P1 comes before everything else, because `TeamNames` and the
 catalog are used everywhere. After that, P2, P3 and P4 are independent and can run in parallel.
