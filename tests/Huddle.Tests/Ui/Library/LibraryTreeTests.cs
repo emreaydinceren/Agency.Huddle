@@ -430,6 +430,32 @@ public sealed class LibraryTreeTests : IDisposable
             e => string.Equals(e.TextContent.Trim(), "new.md", StringComparison.Ordinal)));
     }
 
+    /// <summary>A refresh keeps a NESTED expanded folder expanded: its children stay listed, not only the top item's.</summary>
+    [Fact]
+    public async Task RefreshAsync_KeepsNestedFoldersExpanded()
+    {
+        string notesPath = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        Directory.CreateDirectory(Path.Combine(notesPath, "Inner"));
+        File.WriteAllText(Path.Combine(notesPath, "Inner", "a.md"), "hello");
+        LibraryPath notesScope = this.fixture.LibraryFixture.Resolve(notesPath, string.Empty);
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [notesScope]);
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-treeview-item-arrow button")[1].Click());
+        List<string> namesBefore = [notesScope.Root.DisplayName, "Inner", "a.md"];
+        cut.WaitForAssertion(() => Assert.Equal(
+            namesBefore,
+            cut.FindAll("span.library-tree-node-name").Select(e => e.TextContent.Trim()).ToList()));
+
+        await cut.InvokeAsync(() => cut.FindComponent<LibraryTree>().Instance.RefreshAsync());
+
+        cut.WaitForAssertion(() => Assert.Equal(
+            namesBefore,
+            cut.FindAll("span.library-tree-node-name").Select(e => e.TextContent.Trim()).ToList()));
+    }
+
     /// <summary>A pinned root renamed in Settings (<see cref="LibraryRootStore.RootsChanged"/>, raised off the render thread) re-renders the tree's top-level label.</summary>
     [Fact]
     public async Task RootsChanged_Rerenders()

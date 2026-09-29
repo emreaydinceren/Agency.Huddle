@@ -19,7 +19,7 @@ namespace Agency.Huddle.App.Library;
 /// <see cref="IOException"/> or <see cref="UnauthorizedAccessException"/> creating one label's
 /// folder is caught, logged, and does not stop the remaining labels from being created (item 34).
 /// </remarks>
-internal sealed class TeamFolderProvisioner : IHostedService, IDisposable
+internal sealed class TeamFolderProvisioner : IHostedService, IDisposable, ITeamFolders
 {
     private const string TeamsRootId = "teams";
 
@@ -27,6 +27,7 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable
     private readonly LibraryRootStore roots;
     private readonly LibraryPathResolver resolver;
     private readonly ILogger<TeamFolderProvisioner> logger;
+    private readonly ITeamCatalog catalog;
     private bool subscribed = true;
 
     /// <param name="personas">The source of Team labels (<see cref="PersonaStore.Teams"/>) and the
@@ -36,17 +37,21 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable
     /// <param name="resolver">Validates and resolves every folder this class creates, so a label never
     /// bypasses the Library's path boundary (corrections-B4 item 36).</param>
     /// <param name="logger">Logs a warning for a skipped label or a failed create.</param>
-    public TeamFolderProvisioner(PersonaStore personas, LibraryRootStore roots, LibraryPathResolver resolver, ILogger<TeamFolderProvisioner> logger)
+    /// <param name="catalog">The Teams as the pages see them, read by <see cref="EnsureTeam"/> and
+    /// <see cref="EnsureProjectIn"/>. It lags the disk by the Task store's ~500 ms rebuild.</param>
+    public TeamFolderProvisioner(PersonaStore personas, LibraryRootStore roots, LibraryPathResolver resolver, ILogger<TeamFolderProvisioner> logger, ITeamCatalog catalog)
     {
         ArgumentNullException.ThrowIfNull(personas);
         ArgumentNullException.ThrowIfNull(roots);
         ArgumentNullException.ThrowIfNull(resolver);
         ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(catalog);
 
         this.personas = personas;
         this.roots = roots;
         this.resolver = resolver;
         this.logger = logger;
+        this.catalog = catalog;
         this.personas.PersonasChanged += this.OnPersonasChanged;
     }
 
@@ -122,6 +127,126 @@ internal sealed class TeamFolderProvisioner : IHostedService, IDisposable
         }
 
         if (!this.resolver.TryResolve(freshTeamFolder.Root.Id, projectRelativePath, out LibraryPath? created, out string? reResolveError))
+        {
+            return new LibraryResult<LibraryPath>(null, reResolveError);
+        }
+
+        return new LibraryResult<LibraryPath>(created, null);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>Refused when <see cref="TeamNames.ValidateTeamName"/> refuses the name against the catalog, or
+    /// when a folder already on disk matches ignoring case (the catalog lags the disk by ~500 ms, so a
+    /// second call right after the first must still see the first folder). The new Team reaches the
+    /// catalog only after that lag: callers wait on <c>ITeamCatalog.Find</c> before navigating.</remarks>
+    public LibraryResult<LibraryPath> EnsureTeam(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+
+        string? problem = TeamNames.ValidateTeamName(name, this.catalog.Teams);
+        if (problem is not null)
+        {
+            return new LibraryResult<LibraryPath>(null, problem);
+        }
+
+        if (this.TeamFolderExistsOnDisk(name))
+        {
+            return new LibraryResult<LibraryPath>(null, $"A Team named \"{name}\" already exists.");
+        }
+
+        return this.CreateTeamFolder(name);
+    }
+
+    /// <inheritdoc/>
+    /// <remarks>A Team that exists only as a Persona label first gets its folder, after the same name
+    /// checks the start-up sync applies to a label; then <see cref="EnsureProject"/> creates the Project.</remarks>
+    public LibraryResult<LibraryPath> EnsureProjectIn(string team, string project)
+    {
+        ArgumentNullException.ThrowIfNull(team);
+        ArgumentNullException.ThrowIfNull(project);
+
+        TeamSummary? summary = this.catalog.Find(team);
+        if (summary is null)
+        {
+            return new LibraryResult<LibraryPath>(null, $"There is no Team named \"{team}\".");
+        }
+
+        string? projectProblem = TeamNames.ValidateProjectName(project, summary);
+        if (projectProblem is not null)
+        {
+            return new LibraryResult<LibraryPath>(null, projectProblem);
+        }
+
+        if (!summary.HasFolder)
+        {
+            string? labelProblem = LibraryNames.Validate(summary.Name);
+
+            if (labelProblem is not null)
+            {
+                return new LibraryResult<LibraryPath>(null, labelProblem);
+            }
+        }
+
+        // Idempotent when the folder exists already: also covers a catalog that has not yet noticed a
+        // folder EnsureTeam just created.
+        LibraryResult<LibraryPath> teamFolder = this.CreateTeamFolder(summary.Name);
+        if (teamFolder.Value is null)
+        {
+            return teamFolder;
+        }
+
+        return this.EnsureProject(teamFolder.Value, project);
+    }
+
+    /// <summary>Whether a directory directly under the Teams root already carries <paramref name="name"/>, ignoring case (the <see cref="SyncFolders"/> pattern).</summary>
+    private bool TeamFolderExistsOnDisk(string name)
+    {
+        LibraryRoot? teamsRoot = this.roots.Roots.FirstOrDefault(r => string.Equals(r.Id, TeamsRootId, StringComparison.Ordinal));
+        if (teamsRoot is null || !Directory.Exists(teamsRoot.FullPath))
+        {
+            return false;
+        }
+
+        try
+        {
+            return Directory.EnumerateDirectories(teamsRoot.FullPath)
+                .Any(d => string.Equals(Path.GetFileName(d), name, StringComparison.OrdinalIgnoreCase));
+        }
+        catch (IOException ex)
+        {
+            this.LogSyncFailed(ex);
+            return false;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            this.LogSyncFailed(ex);
+            return false;
+        }
+    }
+
+    /// <summary>Creates <c>Teams/&lt;name&gt;/</c> through the resolver (which must classify it as a Team folder) and re-resolves it; never renames or deletes.</summary>
+    private LibraryResult<LibraryPath> CreateTeamFolder(string name)
+    {
+        if (!this.resolver.TryResolve(TeamsRootId, name, out LibraryPath? teamPath, out string? resolveError) ||
+            teamPath.Role != LibraryNodeRole.TeamFolder)
+        {
+            return new LibraryResult<LibraryPath>(null, resolveError ?? "This folder isn't available in the Library.");
+        }
+
+        try
+        {
+            Directory.CreateDirectory(teamPath.FullPath);
+        }
+        catch (IOException)
+        {
+            return new LibraryResult<LibraryPath>(null, string.Format(CultureInfo.InvariantCulture, LibraryFileService.CouldNotCreateReasonFormat, name));
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return new LibraryResult<LibraryPath>(null, string.Format(CultureInfo.InvariantCulture, LibraryFileService.CouldNotCreateReasonFormat, name));
+        }
+
+        if (!this.resolver.TryResolve(TeamsRootId, name, out LibraryPath? created, out string? reResolveError))
         {
             return new LibraryResult<LibraryPath>(null, reResolveError);
         }

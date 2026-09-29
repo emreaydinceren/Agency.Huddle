@@ -173,6 +173,72 @@
         this.StateHasChanged();
     }
 
+    /// <summary>
+    /// Reveals <paramref name="folder"/>: expands each ancestor from the top (loading its children when they
+    /// are not loaded yet), then selects the folder itself. Works flattened too, where the top items are the
+    /// scope's own children. A folder not under any shown node changes nothing.
+    /// </summary>
+    /// <param name="folder">The folder to reveal.</param>
+    public async Task RevealAsync(LibraryPath folder)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+
+        TreeItemData<LibraryPath>? current = FindAncestorOrSelf(this.topItems, folder);
+        if (current is null)
+        {
+            return;
+        }
+
+        ClearSelection(this.topItems);
+        while (current is { Value: LibraryPath value })
+        {
+            if (LibraryPathComparer.Instance.Equals(value, folder))
+            {
+                current.Selected = true;
+                this.SelectedPath = folder;
+                break;
+            }
+
+            current.Expanded = true;
+            current.Children ??= await this.LoadChildrenAsync(value);
+            current = FindAncestorOrSelf(current.Children, folder);
+        }
+
+        this.StateHasChanged();
+        await this.SelectedPathChanged.InvokeAsync(folder);
+    }
+
+    private static TreeItemData<LibraryPath>? FindAncestorOrSelf(IEnumerable<ITreeItemData<LibraryPath>>? level, LibraryPath folder)
+    {
+        foreach (ITreeItemData<LibraryPath> item in level ?? [])
+        {
+            if (item is TreeItemData<LibraryPath> { Value: LibraryPath value } data && IsAncestorOrSelf(value, folder))
+            {
+                return data;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsAncestorOrSelf(LibraryPath candidate, LibraryPath folder) =>
+        string.Equals(candidate.Root.Id, folder.Root.Id, StringComparison.Ordinal)
+        && (candidate.RelativePath.Length == 0
+            || string.Equals(candidate.RelativePath, folder.RelativePath, StringComparison.Ordinal)
+            || folder.RelativePath.StartsWith(candidate.RelativePath + "/", StringComparison.Ordinal));
+
+    private static void ClearSelection(IEnumerable<ITreeItemData<LibraryPath>>? level)
+    {
+        foreach (ITreeItemData<LibraryPath> item in level ?? [])
+        {
+            if (item is TreeItemData<LibraryPath> data)
+            {
+                data.Selected = false;
+                ClearSelection(data.Children);
+            }
+        }
+    }
+
     private async Task<List<TreeItemData<LibraryPath>>> RebuildScopeTopItemsAsync()
     {
         List<TreeItemData<LibraryPath>> rebuilt = [];
@@ -185,7 +251,7 @@
             {
                 item.Expanded = true;
                 item.Children = await this.LoadChildrenAsync(scope);
-                await this.ReloadExpandedChildrenAsync(item);
+                await this.ReloadExpandedChildrenAsync(item, previous.Children);
             }
 
             rebuilt.Add(item);
@@ -205,35 +271,45 @@
             {
                 item.Expanded = true;
                 item.Children = await this.LoadChildrenAsync(itemPath);
-                await this.ReloadExpandedChildrenAsync(item);
+                await this.ReloadExpandedChildrenAsync(item, previous.Children);
             }
         }
 
         return rebuilt;
     }
 
-    /// <summary>Recursively reloads the children of every still-expanded descendant of <paramref name="item"/>.</summary>
+    /// <summary>Recursively re-expands, and reloads the children of, every descendant of <paramref name="item"/>
+    /// that was expanded in <paramref name="previousChildren"/>: the children were just loaded fresh, so each
+    /// one inherits the expansion state of its previous incarnation, matched by path.</summary>
     /// <param name="item">A node whose <see cref="TreeItemData{T}.Children"/> was just (re)loaded.</param>
-    private async Task ReloadExpandedChildrenAsync(TreeItemData<LibraryPath> item)
+    /// <param name="previousChildren">The children <paramref name="item"/>'s previous incarnation had.</param>
+    private async Task ReloadExpandedChildrenAsync(
+        TreeItemData<LibraryPath> item, IEnumerable<ITreeItemData<LibraryPath>>? previousChildren)
     {
-        if (item.Children is null)
+        if (item.Children is null || previousChildren is null)
         {
             return;
         }
 
-        List<ITreeItemData<LibraryPath>> reloaded = [];
+        List<TreeItemData<LibraryPath>> previousExpanded = [.. previousChildren
+            .OfType<TreeItemData<LibraryPath>>()
+            .Where(static previous => previous is { Expanded: true, Value: not null })];
         foreach (ITreeItemData<LibraryPath> child in item.Children)
         {
-            if (child is TreeItemData<LibraryPath> { Expanded: true, Value: LibraryPath childValue } expandedChild)
+            if (child is not TreeItemData<LibraryPath> { Value: LibraryPath childValue } freshChild)
             {
-                expandedChild.Children = await this.LoadChildrenAsync(childValue);
-                await this.ReloadExpandedChildrenAsync(expandedChild);
+                continue;
             }
 
-            reloaded.Add(child);
+            TreeItemData<LibraryPath>? previousChild = previousExpanded.Find(
+                previous => LibraryPathComparer.Instance.Equals(previous.Value, childValue));
+            if (previousChild is not null)
+            {
+                freshChild.Expanded = true;
+                freshChild.Children = await this.LoadChildrenAsync(childValue);
+                await this.ReloadExpandedChildrenAsync(freshChild, previousChild.Children);
+            }
         }
-
-        item.Children = reloaded;
     }
 
     private void OnRootsChanged() => _ = this.DispatchAsync(this.RefreshAsync);

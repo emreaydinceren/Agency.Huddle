@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Options;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Library;
 
@@ -355,7 +356,7 @@ internal sealed class LibraryPathResolver(LibraryRootStore roots, IOptions<TeamO
             role = relativeSegments.Length switch
             {
                 1 => LibraryNodeRole.TeamFolder,
-                2 => LibraryNodeRole.ProjectFolder,
+                2 => TeamNames.IsReservedProjectName(relativeSegments[1]) ? LibraryNodeRole.Folder : LibraryNodeRole.ProjectFolder,
                 _ => LibraryNodeRole.Folder,
             };
         }

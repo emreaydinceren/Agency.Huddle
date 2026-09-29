@@ -189,6 +189,83 @@ internal sealed class LibraryFileService(
     }
 
     /// <summary>
+    /// Files and folders under <paramref name="scope"/> whose name contains <paramref name="term"/>, ignoring
+    /// case (Spec §6.8). Re-resolves <paramref name="scope"/> first, then walks breadth-first through
+    /// <see cref="ListAsync"/>, so every hiding rule the tree applies applies here too. Stops after
+    /// <paramref name="max"/> hits, or after <see cref="LibraryOptions.MaxIndexedFiles"/> entries are visited.
+    /// </summary>
+    /// <param name="scope">The folder to search under; never itself a hit.</param>
+    /// <param name="term">The text to look for in a name; trimmed, and a blank term finds nothing.</param>
+    /// <param name="max">The most hits to return; zero or less finds nothing.</param>
+    /// <param name="ct">Cancels the search.</param>
+    /// <returns>The hits in walk order, and whether more could have been found.</returns>
+    internal async Task<LibrarySearchResult> FindAsync(LibraryPath scope, string term, int max, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        ArgumentNullException.ThrowIfNull(term);
+
+        string needle = term.Trim();
+        if (needle.Length == 0 || max <= 0 || !this.resolver.TryResolve(scope.Root.Id, scope.RelativePath, out LibraryPath? fresh, out _))
+        {
+            return new LibrarySearchResult([], false);
+        }
+
+        int visitLimit = this.options.Value.Library.MaxIndexedFiles;
+        int visited = 0;
+        List<LibraryEntry> hits = [];
+        Queue<LibraryPath> pending = new();
+        HashSet<string> visitedFolders = new(FolderSnapshot.PathComparer) { fresh.FullPath };
+        pending.Enqueue(fresh);
+        while (pending.TryDequeue(out LibraryPath? folder))
+        {
+            IReadOnlyList<LibraryEntry> children;
+            try
+            {
+                children = await this.ListAsync(folder, ct);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // A folder that cannot be listed (locked, or vanished mid-walk) is skipped so one bad folder does not fail the whole search.
+                continue;
+            }
+
+            foreach (LibraryEntry entry in children)
+            {
+                if (visited >= visitLimit)
+                {
+                    return new LibrarySearchResult(hits, true);
+                }
+
+                visited++;
+                if (IsNameMatch(entry.Path, needle))
+                {
+                    hits.Add(entry);
+                    if (hits.Count > max)
+                    {
+                        return new LibrarySearchResult(hits.GetRange(0, max), true);
+                    }
+                }
+
+                if (entry.IsFolder && visitedFolders.Add(entry.Path.FullPath))
+                {
+                    pending.Enqueue(entry.Path);
+                }
+            }
+        }
+
+        return new LibrarySearchResult(hits, false);
+    }
+
+    /// <summary>Whether the last segment of <paramref name="path"/>'s <c>RelativePath</c> (the name the tree shows, never the link target's <c>FullPath</c>) contains <paramref name="needle"/>, ignoring case.</summary>
+    /// <param name="path">The entry's path.</param>
+    /// <param name="needle">The already-trimmed, non-empty text to look for.</param>
+    private static bool IsNameMatch(LibraryPath path, string needle)
+    {
+        string relative = path.RelativePath;
+        return relative[(relative.LastIndexOf('/') + 1)..].Contains(needle, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
     /// Stats <paramref name="path"/> without reading its content (corrections-B6 item 11: the
     /// save-time freshness check). Re-resolves the path first, never trusting the caller's
     /// <c>FullPath</c>; a missing file, or an <see cref="IOException"/>/<see cref="UnauthorizedAccessException"/>

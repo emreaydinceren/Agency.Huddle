@@ -1128,6 +1128,51 @@ button:focus-visible {
 }
 
 
+/* Explorer filter: the tree is hidden, never unmounted, while name-search results show beside it. */
+.library-tree.hidden {
+    display: none;
+}
+
+.library-search-results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.25rem;
+}
+
+.library-search-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.library-search-hit {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    border: 0;
+    background: transparent;
+    color: var(--mud-palette-text-primary);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.library-search-hit:hover {
+    background: var(--mud-palette-action-default-hover);
+}
+
+.library-search-hit-path {
+    color: var(--mud-palette-text-secondary);
+    overflow-wrap: anywhere;
+}
+
+.library-search-empty {
+    color: var(--mud-palette-text-secondary);
+}
+
 /* The scoped explorer header: the root's full path, which can be long, so it wraps anywhere rather than widening the page. */
 .library-explorer-root-path {
     overflow-wrap: anywhere;

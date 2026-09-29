@@ -236,6 +236,35 @@ public sealed class LibraryFileServiceWriteTests
         Assert.False(Directory.Exists(Path.Combine(vault, "a")));
     }
 
+    /// <summary>A missing <c>memory</c> folder under a Team is a plain Folder, so a write into it is not created
+    /// lazily: it throws and creates nothing, while the neighbour Project <c>Launch</c> is still created lazily
+    /// (corrections-D6 6.0.t).</summary>
+    [Fact]
+    public async Task Write_MissingMemoryFolderUnderTeam_ThrowsAndCreatesNothing_NeighbourProjectStillLazy()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        string marketing = Path.Combine(fixture.DataDir, "Teams", "Marketing");
+        Directory.CreateDirectory(marketing);
+        fixture.Reload();
+        LibraryFileService service = fixture.CreateService();
+        LibraryPath teamsRootPath = fixture.ResolveTeams(string.Empty);
+        Assert.True(fixture.Resolver.TryResolve(teamsRootPath.Root.Id, "Marketing/memory/a.md", out LibraryPath? memoryTarget, out _));
+        Assert.NotNull(memoryTarget);
+        Assert.True(fixture.Resolver.TryResolve(teamsRootPath.Root.Id, "Marketing/Launch/a.md", out LibraryPath? launchTarget, out _));
+        Assert.NotNull(launchTarget);
+        TextFileFormat format = new("utf-8", false, LineEnding.Lf, false);
+
+        await Assert.ThrowsAsync<FileNotFoundException>(() => service.WriteTextAsync(memoryTarget, "content", format, ct));
+
+        Assert.Empty(Directory.EnumerateFileSystemEntries(marketing));
+
+        LibraryResult<LibraryEntry> launchResult = await service.WriteTextAsync(launchTarget, "content", format, ct);
+
+        Assert.NotNull(launchResult.Value);
+        Assert.Equal("content", File.ReadAllText(Path.Combine(marketing, "Launch", "a.md")));
+    }
+
     /// <summary>A missing Team folder is created lazily, its role resolved from the parent (Spec §6.2;
     /// corrections-B4 item 17).</summary>
     [Fact]

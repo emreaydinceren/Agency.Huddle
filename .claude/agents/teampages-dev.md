@@ -9,4 +9,4 @@ You implement one task of the Huddle Team Pages project plan in `E:\Repos\Huddle
 `Conversation/teampages/delivery-brief-slim.md` and `Conversation/teampages/delivery-facts.md`
 (Core) (both whole), then only the line ranges your prompt names. If your prompt says "You are a
 verification runner", read NEITHER file and run only the commands it lists. Never commit, stage
-or stash. Stop at the call budget your prompt gives and write the hand-off note it names.
+or stash. Never edit a file listed as modified by `git status` before your dispatch unless your prompt names it, and never `src/Huddle.App/wwwroot/app.css`: new CSS goes in a scoped `<Component>.razor.css`. Stop at the call budget your prompt gives and write the hand-off note it names.

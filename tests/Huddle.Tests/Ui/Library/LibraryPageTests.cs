@@ -10,6 +10,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Library;
 using Agency.Huddle.Tests.Tasks;
+using Agency.Huddle.Tests.Teams;
 using LibraryPage = Agency.Huddle.App.Components.Pages.Library;
 
 namespace Agency.Huddle.Tests.Ui.Library;
@@ -211,7 +212,7 @@ public sealed class LibraryPageTests : IDisposable
             ctx.Services.AddSingleton<ITaskReferenceResolver>(new FakeTaskReferenceResolver());
             ctx.Services.AddSingleton(this.tasks);
             ctx.Services.AddSingleton(new TeamFolderProvisioner(
-                this.personas, this.LibraryFixture.RootStore, this.LibraryFixture.Resolver, NullLogger<TeamFolderProvisioner>.Instance));
+                this.personas, this.LibraryFixture.RootStore, this.LibraryFixture.Resolver, NullLogger<TeamFolderProvisioner>.Instance, catalog: new FakeTeamCatalog()));
             ctx.Services.AddSingleton(Microsoft.Extensions.Options.Options.Create(new TeamOptions
             {
                 Library = new LibraryOptions { Enabled = libraryEnabled },

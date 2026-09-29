@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. Tasks 5.7.t and 8.1.t are green on arrival and have no `.i`: they are Done once their mutation proofs are reported CAUGHT. Only the manager updates this file, with `agents/scripts/Set-Tracker.ps1 -TrackerPath docs/Huddle.TeamPages-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 34 of 79 tasks Done · 2 of 5 retrospectives done · last updated 2026-09-28.
+**Status:** 50 of 81 tasks Done · 3 of 5 retrospectives done · last updated 2026-09-28.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -57,21 +57,23 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 | 5.6.i Build the snapshot at session start · #33 · Sonnet | | | ✔ |
 | 5.7.t Characterisation: Team Memory reaches members as File Changes · #34 · Sonnet | | | ✔ |
 | **D6. Library additions** | | | |
-| 6.0.t Test: `memory` under a Team is a plain folder in the Library (added by the D6 review, corrections-D6) · unnumbered · Sonnet | | | |
-| 6.0.i Implement the `memory` classification in `LibraryPathResolver` · unnumbered · Sonnet | | | |
-| 6.1.t Test: `LibrarySearchResult` · #35 · Haiku | | | |
-| 6.1.i Implement `LibrarySearchResult` · #36 · Haiku | | | |
-| 6.2.t Test: `FindAsync` matching, hiding and caps · #37 · Sonnet | | | |
-| 6.2.i Implement `FindAsync` · #38 · Sonnet | | | |
-| 6.3.t Test: `FindAsync` safety · #39 · Sonnet | | | |
-| 6.3.i Make `FindAsync` cancellable and safe · #40 · Sonnet | | | |
-| 6.4.t Test: creating Teams and Projects · #41 · Sonnet | | | |
-| 6.4.i Implement `EnsureTeam` and `EnsureProjectIn` · #42 · Sonnet | | | |
-| 6.5.t Test: `LibraryExplorer.Filter` · #43 · Sonnet | | | |
-| 6.5.i Implement `Filter` and `FilterChanged` · #44 · Sonnet | | | |
-| 6.6.t Test: `LibraryExplorer.NewNoteAsync` · #45 · Sonnet | | | |
-| 6.6.i Implement `NewNoteAsync` · #46 · Sonnet | | | |
-| 🔁 R3 — Opus retrospective after #45, and plan update | | | |
+| 6.0.t Test: `memory` under a Team is a plain folder in the Library (added by the D6 review, corrections-D6) · unnumbered · Sonnet | | | ✔ |
+| 6.0.i Implement the `memory` classification in `LibraryPathResolver` · unnumbered · Sonnet | | | ✔ |
+| 6.1.t Test: `LibrarySearchResult` · #35 · Haiku | | | ✔ |
+| 6.1.i Implement `LibrarySearchResult` · #36 · Haiku | | | ✔ |
+| 6.2.t Test: `FindAsync` matching, hiding and caps · #37 · Sonnet | | | ✔ |
+| 6.2.i Implement `FindAsync` · #38 · Sonnet | | | ✔ |
+| 6.3.t Test: `FindAsync` safety · #39 · Sonnet | | | ✔ |
+| 6.3.i Make `FindAsync` cancellable and safe · #40 · Sonnet | | | ✔ |
+| 6.4.t Test: creating Teams and Projects · #41 · Sonnet | | | ✔ |
+| 6.4.i Implement `EnsureTeam` and `EnsureProjectIn` · #42 · Sonnet | | | ✔ |
+| 6.5.t Test: `LibraryExplorer.Filter` · #43 · Sonnet | | | ✔ |
+| 6.5.i Implement `Filter` and `FilterChanged` · #44 · Sonnet | | | ✔ |
+| 6.6.t Test: `LibraryExplorer.NewNoteAsync` · #45 · Sonnet | | | ✔ |
+| 6.6.i Implement `NewNoteAsync` · #46 · Sonnet | | | ✔ |
+| 6.7.t Test: a note created through the explorer appears in the tree (added by retro R3) · unnumbered · Sonnet | | | ✔ |
+| 6.7.i Implement the tree refresh after NewNoteAsync · unnumbered · Sonnet | | | ✔ |
+| 🔁 R3 — Opus retrospective after #45, and plan update | | | ✔ |
 | **D7. UI** | | | |
 | 7.1.t Test: `TeamPageTabs` · #47 · Haiku | | | |
 | 7.1.i Implement `TeamPageTabs` · #48 · Haiku | | | |

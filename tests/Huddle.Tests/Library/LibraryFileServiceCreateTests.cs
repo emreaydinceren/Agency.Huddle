@@ -247,6 +247,37 @@ public sealed class LibraryFileServiceCreateTests
         Assert.True(Directory.Exists(Path.Combine(marketing, "Launch Q4")));
     }
 
+    /// <summary>A folder named <c>memory</c> under a Team is a plain Folder, not a Project: the returned Role is
+    /// <see cref="LibraryNodeRole.Folder"/>, so Library protection allows rename, move and delete on it, and a
+    /// file can be created in it (corrections-D6 6.0.t).</summary>
+    [Fact]
+    public async Task CreateFolder_MemoryUnderTeam_IsPlainFolderThatAcceptsFiles()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
+        string marketing = Path.Combine(fixture.DataDir, "Teams", "Marketing");
+        Directory.CreateDirectory(marketing);
+        fixture.Reload();
+        LibraryFileService service = fixture.CreateService();
+        LibraryPath teamFolder = fixture.ResolveTeams("Marketing");
+
+        LibraryResult<LibraryPath> folderResult = await service.CreateFolderAsync(teamFolder, "memory", ct);
+
+        Assert.NotNull(folderResult.Value);
+        Assert.Equal(LibraryNodeRole.Folder, folderResult.Value.Role);
+        Assert.True(Directory.Exists(Path.Combine(marketing, "memory")));
+        LibraryProtection protection = LibraryProtection.For(folderResult.Value);
+        Assert.True(protection.CanRename);
+        Assert.True(protection.CanMove);
+        Assert.True(protection.CanDelete);
+        Assert.Null(protection.Reason);
+
+        LibraryResult<LibraryPath> fileResult = await service.CreateFileAsync(folderResult.Value, "fact", ct);
+
+        Assert.NotNull(fileResult.Value);
+        Assert.True(File.Exists(Path.Combine(marketing, "memory", "fact.md")));
+    }
+
     /// <summary>Creating anything directly at the Teammates root is refused (corrections-B4 item 21, settled text).</summary>
     [Fact]
     public async Task CreateFolder_AtTeammatesRoot_Refused()

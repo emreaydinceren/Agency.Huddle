@@ -133,6 +133,33 @@
             return;
         }
 
+        LibraryPath? created = kind == LibraryTreeActionKind.NewNote
+            ? await this.NewNoteAsync(folder)
+            : await this.PromptForCreateAsync(kind, folder);
+        if (created is null)
+        {
+            return;
+        }
+
+        _ = this.OnChanged.InvokeAsync(new LibraryChange(null, created, []));
+    }
+
+    /// <summary>Opens the settled New note prompt in <paramref name="folder"/> and creates the note on confirm.
+    /// Raises no <see cref="OnChanged"/>: a caller that opens the note itself (the explorer's
+    /// <c>NewNoteAsync</c>) needs only the path, and <c>HandleAsync</c> raises the change for the menu.</summary>
+    /// <param name="folder">The already-resolved folder to create the note in.</param>
+    /// <returns>The created note's path, or <see langword="null"/> when the prompt was cancelled.</returns>
+    public async Task<LibraryPath?> NewNoteAsync(LibraryPath folder)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+
+        return await this.PromptForCreateAsync(LibraryTreeActionKind.NewNote, folder);
+    }
+
+    /// <summary>Shows the name prompt for a create <paramref name="kind"/> and returns what it created, or
+    /// <see langword="null"/> when it was cancelled.</summary>
+    private async Task<LibraryPath?> PromptForCreateAsync(LibraryTreeActionKind kind, LibraryPath folder)
+    {
         DialogParameters<NamePromptDialog> parameters = new()
         {
             { dialog => dialog.Folder, folder },
@@ -151,10 +178,10 @@
         DialogResult? result = await reference.Result;
         if (result is null || result.Canceled || result.Data is not LibraryResult<LibraryPath> { Value: { } created })
         {
-            return;
+            return null;
         }
 
-        _ = this.OnChanged.InvokeAsync(new LibraryChange(null, created, []));
+        return created;
     }
 
     private async Task HandleRenameAsync(LibraryPath item)

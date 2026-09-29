@@ -1273,6 +1273,9 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
 
 ## D7 — UI
 
+> R3: new CSS goes in scoped `<Component>.razor.css`, never `wwwroot/app.css` (overrides
+> corrections-D7a #9). Every D7 dispatch names its corrections-D7a/D7b items.
+
 ### Task 7.1.t (#47) — Test: `TeamPageTabs` [Haiku]
 
 - **Goal:** Pin which tabs exist and which one a URL selects, **Spec §6.6 (582–645)**, **§8.3
@@ -1606,6 +1609,17 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   row itself.
 - **Acceptance:** 7.10.t green; 7.8.t and 7.9.t green.
 
+### Task 6.7.t / 6.7.i (unnumbered) — a note created through the explorer's NewNoteAsync appears in the tree [Sonnet]
+
+- **Risk:** `logic`.
+- **6.7.t:** in `LibraryExplorerTests.cs` add `NewNoteAsync_CreatedNote_AppearsInTheTree` and
+  `NewNoteAsync_NoSelection_CreatedNoteAppearsAtScopeTop`, asserting with `WaitForAssertion(...)` on
+  the tree's node names; the red is an ASSERTION failure.
+- **6.7.i:** after the create, refresh the tree exactly as the menu path does (call the explorer's
+  `OnFileOpsChangedAsync(new LibraryChange(null, created, []))`, LibraryExplorer.razor
+  ~:439-446/:626-651); mutation: drop that call -> CAUGHT.
+- Found by retro R3: nothing refreshes the tree after `LibraryFileOps.NewNoteAsync`.
+
 ### Task 7.11.t (#67) — Test: `TeamFilesTab` [Sonnet]
 
 - **Goal:** The Files tab hosts the scoped explorer, **Spec §6.8**, **§12 T4–T6**.
@@ -1619,7 +1633,7 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   - The toolbar shows `New note` and the placeholder `Search files`.
   - `Search` is passed to the explorer as `Filter`; when the explorer raises `FilterChanged(null)`
     the tab raises `SearchChanged(null)`.
-  - The `New note` button calls the explorer's `NewNoteAsync()` once.
+  - The + New note button opens the dialog; confirming shows the note in the tree AND opens it.
 - **Acceptance:** Red, `-NewNames "TeamFilesTab"`.
 
 ### Task 7.11.i (#68) — Implement `TeamFilesTab` [Sonnet]
@@ -1636,6 +1650,7 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   `FilterChanged="@SearchChanged"` and the `StateKey` above.
   - R2 (corrections-D6 #34): the explorer resolves `Scopes` only in `OnInitialized`: the Team page
     sets `@key="ScopePath"` on it (read corrections-D6 #34 first).
+  - R3: `TeamFilesTab` sets `@key` on its own LibraryExplorer from Team and Project.
 - **Acceptance:** 7.11.t green.
 
 ### Task 7.12.t (#69) — Test: `TeamTasksTab` [Sonnet]
@@ -1784,6 +1799,9 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   task list by a pointer to this plan (keep the workstream summary). Where the delivered code
   differs from a correction (a retrospective may have changed a name), the **code** wins: edit the
   Spec to match it.
+- **R3:** Spec :718 and :738 say `NewNoteAsync(CancellationToken ct)`; the code is `NewNoteAsync()`;
+  also record `LibraryFileOps.NewNoteAsync(LibraryPath)` and `ITeamFolders`
+  (`Agency.Huddle.App.Library`).
 - **Acceptance:** `grep -n "AddAsync\|teamsNav:expanded\|IReadOnlyList<TeamFolder> folders"` in the
   Spec finds nothing; a read of §6.2, §6.4 and §6.8 matches the *Type map*.
 
@@ -1803,7 +1821,8 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
      from the last full run.
   3. ADR-0032: `status: accepted`.
   4. `code-map.md`: one row per new file under `src/Huddle.App/Teams/` and
-     `Components/Teams/`, plus `TeamPage.razor`, in the table's existing shape.
+     `Components/Teams/`, plus `TeamPage.razor`, in the table's existing shape. R3: also rows for
+     `Library/ITeamFolders.cs` and `Library/LibrarySearchResult.cs`.
   5. R2: the `RoomListTests.Archive_RemovesTheRoomFromTheSidebarList` flake (J10) and the full-run
      `[FATAL ERROR] Foreground threads were left running` line go to
      `docs/agencyteam/known-limits.md` with the Persona-rename flake.
@@ -1835,7 +1854,9 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   `Check-Diff.ps1 -Scope Branch`; `Check-Visibility.ps1`; `Check-Eol.ps1`; the Linux Docker
   repro. Any failure is reported with its output and **not** fixed here: it becomes a fix task.
   **Do not push and do not open a PR.** R2: run the Linux repro with
-  `agents/scripts/Run-LinuxRepro.sh` from the Bash tool.
+  `agents/scripts/Run-LinuxRepro.sh` from the Bash tool. R3: run the Linux repro in the foreground;
+  the final report lists every RetroActions row that is not Verified; dispatch the verification as a
+  Haiku runner.
 - **Acceptance:** Every command exits 0, or each failure is listed with the task that owns it.
   The report ends with the branch's `git log --oneline main..` and the Human's go-ahead
   question.
@@ -1850,6 +1871,6 @@ The manager records each retrospective here, newest last, and commits the plan c
 | --- | --- | --- | --- | --- |
 | R1 | #15 | 2026-09-28 | The brief pointed at stale `Conversation/scripts/` copies (no `-RedDir`/`-AllowCodes`); 3 Haiku agents used `-Force` and reported no deviation; Haiku 2.1.i edited a test's expected value to pass; Haiku pairs cost 44-50 calls / 2.3-3.3M re-read against 22-26 / 1.3-1.9M for Sonnet pairs; four architect reviews = 42% of subagent tokens (19.7M of 46.5M); general-purpose agents start at 49-65K context against 21-25K for `teampages-dev`; missing `using Agency.Huddle.App.Teams;` failed three builds | Brief fixed and given an R1 rules block; 10 fact lines added to the facts Core; 5.4.t/5.4.i retagged Haiku -> Sonnet and 5.4.i no longer edits tests or commits `prompts.default.json`; 4.1.i gets the exact mutation command; 4.2.t creates the shared `FakeTeamCatalog` (7.2.t reuses it, `-NewNames` gains `Teams`); 7.2.i adds `_Imports.razor`; 8.2 covers S1-S17; verifiers run as `teampages-dev`; `Check-All.ps1` and a red wrapper scripted; the D7 review is split into three Opus reviews (<=35 calls each) |
 | R2 | #30 | 2026-09-28 | Run-Red rejects -RedDir; IDE0005 on the Teams using in new reds; CA1062/CA1859 hidden behind compile reds; stale ACL pointer (:846-875 vs :945-985) made 5.3.t copy the helper; corrections-D5 #16/#20 pointers stale; the manager session (418K context, ~360K re-read per call) costs more per pair than the agents; every agent reads ~20K of brief+facts | Facts R2 block (13 lines); brief R1 bullet replaced and an R2 block added; corrections-D5 #16/#20/#26/#27 and corrections-D6 #11/#35-37 fixed or added; 6.0 stub in the plan; 7.4/7.11/7.13/8.3/8.5/6.3.t notes; TestListing.cs and Run-LinuxRepro.sh chores; D7 gets two architect reviews (7.1-7.7 during D6, 7.8-7.13 before R4) |
-| R3 | #45 | | | |
+| R3 | #45 | 2026-09-28 | Prove-Mutation reports a non-building mutant as "caught"; a Haiku .i edited a test while reporting no deviations (6.1); an agent edited the shared wwwroot/app.css (6.5.i); the tree does not refresh after a note is created through the explorer; the manager session is 85% of the cost (418K->565K context, 41M re-read in 84 calls); one agent across two pairs cost more on the second (6.3: 1.99M vs 1.2M fresh); the slim brief and the facts index did not cut calls before first edit | Facts R3 block (13 bullets); protected-file rule in the brief, the agent file and D7; 6.7 pair added; 7.11/8.2/8.3/8.5 edits; corrections-D7a #9 overridden; Prove-Mutation INVALID exit, Check-All summary line and app.css hash guard, Mark-Task.ps1 scripted; RetroActions rows updated; from D7 on use one manager session per stage with a <=5K state file |
 | R4 | #60 | | | |
 | R5 | #75 | | | |

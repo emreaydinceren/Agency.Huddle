@@ -263,6 +263,10 @@ public static class ServiceCollectionExtensions
         // PersonaStore registered earlier and resolves Team spellings from the catalog above.
         services.AddSingleton<ITeamMembership, TeamMembership>();
 
+        // Task 6.4.i: the Team pages create Teams and Projects through this interface; it resolves
+        // to the very provisioner instance the host runs (no cycle: it needs the catalog above).
+        services.AddSingleton<ITeamFolders>(sp => sp.GetRequiredService<TeamFolderProvisioner>());
+
         // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
         // this, and a plain registration cannot produce the two-watchers-on-one-path hazard the
         // aliased registrations elsewhere in this file exist to avoid.
