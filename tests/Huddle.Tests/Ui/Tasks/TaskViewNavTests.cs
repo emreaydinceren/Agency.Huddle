@@ -140,11 +140,11 @@ public sealed class TaskViewNavTests
         await using MudBunitContext ctx = NewContext(harness, tasksEnabled: true);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        OpenRowMenu(cut, "All Tasks");
+        await OpenRowMenuAsync(cut, "All Tasks");
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Edit view", StringComparison.Ordinal));
         Assert.DoesNotContain(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
 
-        OpenRowMenu(cut, "Sprint Board");
+        await OpenRowMenuAsync(cut, "Sprint Board");
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Edit view", StringComparison.Ordinal));
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
     }
@@ -160,7 +160,7 @@ public sealed class TaskViewNavTests
         await using MudBunitContext ctx = NewContext(harness, tasksEnabled: true);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        RowFor(cut, "Sprint Board").ContextMenu();
+        await cut.InvokeAsync(() => RowFor(cut, "Sprint Board").ContextMenuAsync());
 
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Edit view", StringComparison.Ordinal));
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete view", StringComparison.Ordinal));
@@ -177,8 +177,8 @@ public sealed class TaskViewNavTests
         await using MudBunitContext ctx = NewContext(harness, tasksEnabled: true);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        OpenRowMenu(cut, "Sprint Board");
-        ClickMenuItem(cut, "Edit view");
+        await OpenRowMenuAsync(cut, "Sprint Board");
+        await ClickMenuItemAsync(cut, "Edit view");
 
         var drawer = cut.FindComponent<ViewEditorDrawer>();
         Assert.True(drawer.Instance.Open);
@@ -196,7 +196,7 @@ public sealed class TaskViewNavTests
         await using MudBunitContext ctx = NewContext(harness, tasksEnabled: true);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        OpenRowMenu(cut, "Sprint Board");
+        await OpenRowMenuAsync(cut, "Sprint Board");
         _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete view"));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
 
@@ -219,7 +219,7 @@ public sealed class TaskViewNavTests
         await using MudBunitContext ctx = NewContext(harness, tasksEnabled: true);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        OpenRowMenu(cut, "Sprint Board");
+        await OpenRowMenuAsync(cut, "Sprint Board");
         _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete view"));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).Click());
@@ -241,7 +241,7 @@ public sealed class TaskViewNavTests
         string before = navigation.Uri;
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        OpenRowMenu(cut, "Sprint Board");
+        await OpenRowMenuAsync(cut, "Sprint Board");
         _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete view"));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).Click());
@@ -263,7 +263,7 @@ public sealed class TaskViewNavTests
         navigation.NavigateTo("/tasks/custom1");
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        OpenRowMenu(cut, "Sprint Board");
+        await OpenRowMenuAsync(cut, "Sprint Board");
         _ = cut.InvokeAsync(() => ClickMenuItem(cut, "Delete view"));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).Click());
@@ -300,10 +300,18 @@ public sealed class TaskViewNavTests
     private static AngleSharp.Dom.IElement RowFor(IRenderedComponent<ContainerFragment> cut, string viewName) =>
         cut.FindAll("div.hover-reveal-row").Single(row => string.Equals(row.QuerySelector("a")?.TextContent.Trim(), viewName, StringComparison.Ordinal));
 
-    /// <summary>Clicks the row's "..." button for <paramref name="viewName"/>, opening its <c>MudMenu</c> popover - a real click on a real <c>button</c>, so this doubles as proof the trigger is keyboard-reachable rather than right-click-only.</summary>
-    private static void OpenRowMenu(IRenderedComponent<ContainerFragment> cut, string viewName)
+    /// <summary>
+    /// Clicks the row's "..." button for <paramref name="viewName"/>, opening its <c>MudMenu</c> popover - a real click on a real <c>button</c>, so this doubles as proof the trigger is keyboard-reachable rather than right-click-only.
+    /// Awaits the click's own dispatch: bUnit's synchronous <c>Click()</c> discards the dispatch task, so under load a render already holding the renderer dispatcher defers the handler past the return.
+    /// </summary>
+    private static async Task OpenRowMenuAsync(IRenderedComponent<ContainerFragment> cut, string viewName)
     {
-        RowFor(cut, viewName).QuerySelector("button[aria-label='View actions']")!.Click();
+        await cut.InvokeAsync(() =>
+        {
+            AngleSharp.Dom.IElement? button = RowFor(cut, viewName).QuerySelector("button[aria-label='View actions']");
+            Assert.NotNull(button);
+            return button.ClickAsync();
+        });
     }
 
     /// <summary>Every open <c>MudMenu</c> item - rendered with <c>role="menuitem"</c> and class <c>mud-menu-item</c>, not <c>mud-list-item</c> (that class belongs to <c>MudSelect</c>'s own popover).</summary>
@@ -313,5 +321,11 @@ public sealed class TaskViewNavTests
     private static void ClickMenuItem(IRenderedComponent<ContainerFragment> cut, string text)
     {
         MenuItems(cut).First(item => string.Equals(item.TextContent.Trim(), text, StringComparison.Ordinal)).Click();
+    }
+
+    /// <summary>Clicks the open menu's item labelled <paramref name="text"/> and waits for its handler to finish - only for an item whose handler completes on its own (not one that opens a dialog and awaits the answer).</summary>
+    private static async Task ClickMenuItemAsync(IRenderedComponent<ContainerFragment> cut, string text)
+    {
+        await cut.InvokeAsync(() => MenuItems(cut).First(item => string.Equals(item.TextContent.Trim(), text, StringComparison.Ordinal)).ClickAsync());
     }
 }

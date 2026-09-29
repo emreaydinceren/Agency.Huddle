@@ -769,9 +769,20 @@ public sealed class PipeEndToEndTests
 
         Assert.False(gateway.IsOnline(welcome.AgentId));
 
-        var connectionEntries = fixture.LogEntries
-            .Where(e => string.Equals(e.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal))
-            .ToList();
+        // AgentConnection.RunAsync unregisters from the gateway BEFORE it writes the disconnect line, so
+        // "offline" does not yet mean "logged": wait for the line itself rather than reading the log once.
+        List<CapturedLogEntry> connectionEntries = [];
+        while (!connectionEntries.Exists(e => e.Level == LogLevel.Information) && DateTimeOffset.UtcNow < deadline)
+        {
+            connectionEntries = fixture.LogEntries
+                .Where(e => string.Equals(e.Category, typeof(AgentConnection).FullName, StringComparison.Ordinal))
+                .ToList();
+
+            if (!connectionEntries.Exists(e => e.Level == LogLevel.Information))
+            {
+                await Task.Delay(20, ct);
+            }
+        }
 
         var informationEntry = Assert.Single(connectionEntries, e => e.Level == LogLevel.Information);
         Assert.Contains("echo", informationEntry.Message, StringComparison.Ordinal);

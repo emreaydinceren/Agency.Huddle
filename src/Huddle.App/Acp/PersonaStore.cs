@@ -91,10 +91,11 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     // about to invalidate (Spec §14 D-14). Held ONLY across that span; the event raise that follows
     // (NotifyChanged) always runs after this lock is released - see that method's remarks for why.
     // A distinct lock from watchGate on purpose: watchGate guards the index SWAP itself (taken by
-    // the watcher's debounce too, which never writes a file and so never needs writeGate), while
-    // writeGate guards the whole check-then-write-then-publish sequence around a caller's own edit.
-    // Nested only in one direction - writeGate, then watchGate, inside PublishFreshIndex - never the
-    // reverse; see PublishFreshIndex's remarks for the ordering proof.
+    // the watcher's debounce too), while writeGate guards the whole check-then-write-then-publish
+    // sequence around a caller's own edit. The watcher's debounce rescan also takes writeGate (see
+    // OnDebounceElapsed) so it can never publish the index in the middle of an Add or Update.
+    // Nested only in one direction - writeGate, then watchGate, inside PublishFreshIndex and
+    // OnDebounceElapsed - never the reverse; see PublishFreshIndex's remarks for the ordering proof.
     private readonly Lock writeGate = new();
 
     private readonly FileSystemWatcher watcher;
@@ -801,11 +802,15 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// still the single lock that guards <see cref="index"/> against <see cref="Dispose"/> and the
     /// watcher's own debounced swap (<see cref="OnDebounceElapsed"/>). Called from inside
     /// <see cref="writeGate"/> by <see cref="Add"/> and <see cref="Update"/>, so the lock order at
-    /// that call site is always <see cref="writeGate"/> THEN <see cref="watchGate"/>, never the
-    /// reverse - <see cref="OnWatcherEvent"/>, <see cref="OnWatcherError"/>,
-    /// <see cref="OnDebounceElapsed"/> and <see cref="Dispose"/> all take ONLY <see cref="watchGate"/>
-    /// and never attempt <see cref="writeGate"/>, so the two locks can never deadlock against each
-    /// other.
+    /// that call site is always <see cref="writeGate"/> THEN <see cref="watchGate"/>. Ordering proof:
+    /// <see cref="Add"/>, <see cref="Update"/> and <see cref="OnDebounceElapsed"/> take
+    /// <see cref="writeGate"/> THEN <see cref="watchGate"/>; <see cref="Dispose"/>,
+    /// <see cref="OnWatcherEvent"/>, <see cref="OnWatcherError"/> and the unlocked callers of this
+    /// method (<see cref="Remove"/>, <see cref="RescanNow"/>) take ONLY <see cref="watchGate"/>;
+    /// nothing takes <see cref="watchGate"/> and then attempts <see cref="writeGate"/>. With every
+    /// nested acquisition in the same direction there is no cycle, so the two locks cannot deadlock.
+    /// Nothing runs under <see cref="writeGate"/> that waits on the debounce callback either:
+    /// <see cref="Dispose"/> disposes the timer without waiting for a callback in flight.
     /// </summary>
     /// <returns>
     /// The (previous, updated) index pair for <see cref="NotifyChanged"/> to diff, or
@@ -844,7 +849,8 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// from the (previous, updated) pair <see cref="PublishFreshIndex"/> produced, or does nothing if
     /// that pair is <see langword="null"/> (the store was disposed before publishing). <see cref="Add"/>
     /// and <see cref="Update"/> call this only AFTER releasing <see cref="writeGate"/>, and
-    /// <see cref="OnDebounceElapsed"/> only after releasing <see cref="watchGate"/>: invoking
+    /// <see cref="OnDebounceElapsed"/> only after releasing both <see cref="writeGate"/> and
+    /// <see cref="watchGate"/>: invoking
     /// arbitrary subscriber code while holding either lock is exactly the shape that deadlocks the
     /// moment a future subscriber takes a lock of its own - the same reasoning
     /// <see cref="OnDebounceElapsed"/>'s own remarks already gave for <see cref="watchGate"/>, now
@@ -1137,56 +1143,77 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         }
     }
 
-    private void OnDebounceElapsed(object? state)
+    /// <summary>
+    /// The debounce timer's callback: rescans disk, swaps the index and raises the change events.
+    /// <c>internal</c> rather than <c>private</c> only so <c>Huddle.Tests</c> can fire it at an exact
+    /// moment - a debounce that lands in the middle of an <see cref="Update"/> cannot be scheduled
+    /// deterministically through the real timer - see
+    /// <c>PersonaStoreTests.Update_ADebounceRescanDuringTheWrite_DoesNotStealTheRename</c>.
+    /// </summary>
+    /// <param name="state">Unused; required by the <see cref="TimerCallback"/> shape.</param>
+    internal void OnDebounceElapsed(object? state)
     {
         Action? changed;
         PersonaIndex previous;
         PersonaIndex updated;
-        lock (this.watchGate)
+
+        // writeGate FIRST, then watchGate - the same order PublishFreshIndex's callers use. Without
+        // it this rescan could run in the middle of an Add or Update: after that call has written
+        // its file but before it publishes its own index. The debounce would then publish the new
+        // Name first and raise PersonaRenamed / PersonasChanged from THIS timer thread, so the
+        // Update's own publish found nothing to diff, raised nothing, and returned while the
+        // cascade (Team Directory row rename) was still running on another thread - a caller
+        // reading the Team Directory right after Update saw the OLD Name. Taking writeGate makes an
+        // Update's write-and-publish atomic against this rescan. The events below are still raised
+        // outside every lock.
+        lock (this.writeGate)
         {
-            // Checked and captured under the same lock Dispose() takes, so a Dispose() racing
-            // this callback either finishes first (this returns without capturing anything) or
-            // this captures the delegate before Dispose() can flip the flag — never both. The
-            // delegate is invoked OUTSIDE the lock, below: no current subscriber takes watchGate,
-            // but invoking arbitrary subscriber code while holding a lock this class also takes
-            // from Dispose() and every watcher-event handler is exactly the shape that deadlocks
-            // the moment a future subscriber does take a lock of its own.
-            if (this.disposed)
+            lock (this.watchGate)
             {
-                return;
-            }
-
-            // Rebuilt under the same lock, and BEFORE the delegate capture below: an observer
-            // reading this store from inside its own PersonasChanged handler (PersonaSupervisor
-            // does exactly this) must see the state the filesystem change just produced, not
-            // whatever was true before it.
-            var rebuilt = this.RebuildIndexFromDisk(isInitialScan: false);
-            if (rebuilt is not { } fresh)
-            {
-                // Aborted by a locked file: keep the current index, raise nothing (skipping the
-                // file would raise a spurious PersonaRemoved and cascade-delete its state - see
-                // RebuildIndexFromDisk's remarks), and re-arm the debounce to retry, capped so a
-                // permanently-locked file does not retry forever.
-                this.consecutiveLockRetries++;
-                if (this.consecutiveLockRetries <= MaxConsecutiveLockRetries)
+                // Checked and captured under the same lock Dispose() takes, so a Dispose() racing
+                // this callback either finishes first (this returns without capturing anything) or
+                // this captures the delegate before Dispose() can flip the flag — never both. The
+                // delegate is invoked OUTSIDE both locks, below: no current subscriber takes either gate,
+                // but invoking arbitrary subscriber code while holding a lock this class also takes
+                // from Dispose() and every watcher-event handler is exactly the shape that deadlocks
+                // the moment a future subscriber does take a lock of its own.
+                if (this.disposed)
                 {
-                    this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
-                }
-                else
-                {
-                    this.logger.LogError(
-                        "PersonaStore gave up retrying a locked Persona file after {Retries} consecutive attempts; it will try again on the next change.",
-                        this.consecutiveLockRetries);
+                    return;
                 }
 
-                return;
-            }
+                // Rebuilt under the same lock, and BEFORE the delegate capture below: an observer
+                // reading this store from inside its own PersonasChanged handler (PersonaSupervisor
+                // does exactly this) must see the state the filesystem change just produced, not
+                // whatever was true before it.
+                var rebuilt = this.RebuildIndexFromDisk(isInitialScan: false);
+                if (rebuilt is not { } fresh)
+                {
+                    // Aborted by a locked file: keep the current index, raise nothing (skipping the
+                    // file would raise a spurious PersonaRemoved and cascade-delete its state - see
+                    // RebuildIndexFromDisk's remarks), and re-arm the debounce to retry, capped so a
+                    // permanently-locked file does not retry forever.
+                    this.consecutiveLockRetries++;
+                    if (this.consecutiveLockRetries <= MaxConsecutiveLockRetries)
+                    {
+                        this.debounceTimer.Change(WatcherDebounceMilliseconds, Timeout.Infinite);
+                    }
+                    else
+                    {
+                        this.logger.LogError(
+                            "PersonaStore gave up retrying a locked Persona file after {Retries} consecutive attempts; it will try again on the next change.",
+                            this.consecutiveLockRetries);
+                    }
 
-            this.consecutiveLockRetries = 0;
-            previous = this.index;
-            (updated, this.folderWarnings) = fresh;
-            this.index = updated;
-            changed = this.PersonasChanged;
+                    return;
+                }
+
+                this.consecutiveLockRetries = 0;
+                previous = this.index;
+                (updated, this.folderWarnings) = fresh;
+                this.index = updated;
+                changed = this.PersonasChanged;
+            }
         }
 
         // This is the door a hand-edited file (bypassing Update entirely) reaches - the ONLY place
