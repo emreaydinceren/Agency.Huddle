@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. Tasks 5.7.t and 8.1.t are green on arrival and have no `.i`: they are Done once their mutation proofs are reported CAUGHT. Only the manager updates this file, with `agents/scripts/Set-Tracker.ps1 -TrackerPath docs/Huddle.TeamPages-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 3 of 77 tasks Done · 0 of 5 retrospectives done · last updated 2026-09-28.
+**Status:** 7 of 77 tasks Done · 0 of 5 retrospectives done · last updated 2026-09-28.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -19,13 +19,13 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 | 0.2 Preflight: Persona, Tasks and Prompt facts · #2 · Sonnet | | | ✔ |
 | 0.3 Preflight: test infrastructure and UI facts · #3 · Sonnet | | | ✔ |
 | **D1. Records and names** | | | |
-| 1.1.t Test: the shared records and enums · #4 · Haiku | | ✔ | |
-| 1.1.i Implement the shared records and enums · #5 · Haiku | ✔ | | |
-| 1.2.t Test: `TeamNames` · #6 · Haiku | ✔ | | |
-| 1.2.i Implement `TeamNames` · #7 · Haiku | | | |
+| 1.1.t Test: the shared records and enums · #4 · Haiku | | | ✔ |
+| 1.1.i Implement the shared records and enums · #5 · Haiku | | | ✔ |
+| 1.2.t Test: `TeamNames` · #6 · Haiku | | | ✔ |
+| 1.2.i Implement `TeamNames` · #7 · Haiku | | | ✔ |
 | **D2. Team Catalog** | | | |
-| 2.1.t Test: `TeamCatalog.Build` · #8 · Haiku | | | |
-| 2.1.i Implement `TeamCatalog.Build` · #9 · Haiku | | | |
+| 2.1.t Test: `TeamCatalog.Build` · #8 · Haiku | | ✔ | |
+| 2.1.i Implement `TeamCatalog.Build` · #9 · Haiku | ✔ | | |
 | 2.2.t Test: the `TeamCatalog` service · #10 · Sonnet | | | |
 | 2.2.i Implement the `TeamCatalog` service · #11 · Sonnet | | | |
 | **D3. Tasks routing (`memory` is not a Project)** | | | |

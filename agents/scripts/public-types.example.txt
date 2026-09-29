@@ -46,3 +46,8 @@ NewTaskDefaults
 TaskDetailMode
 ConflictChoice
 ViewEditorSection
+TeamSummary
+MembershipOutcome
+MembershipResult
+TeamPageTab
+TeamPageFeatures
