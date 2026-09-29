@@ -56,6 +56,7 @@
 @inject IOptions<TeamOptions> Options
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @inject NavigationManager Navigation
 
 <MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
@@ -85,6 +86,19 @@
     {
         <MudStack Row="true" AlignItems="AlignItems.Center" Class="tasks-header mb-4">
             <MudText HtmlTag="h1" Typo="Typo.h5" Class="mb-0">@this.effectiveView.Name</MudText>
+            @* The View's own actions, next to its title: Edit for every View, Delete only for a
+               non-built-in one (ViewStore.Delete refuses the two built-ins). Both are disabled while
+               views.json cannot be read, since the store refuses every write then. *@
+            <MudFabMenu StartIcon="@Icons.Material.Filled.KeyboardArrowRight" Size="Size.Small" Color="Color.Primary"
+                        Direction="Direction.Bottom" AlignItems="AlignItems.Start" Class="tasks-view-menu" aria-label="Task view actions">
+                <MudFabMenuItem StartIcon="@Icons.Material.Filled.Edit" Label="Edit task view" aria-label="Edit task view" Size="Size.Small"
+                                Disabled="@(this.Views.LoadError is not null)" OnClick="this.OnEditViewClicked" />
+                @if (!this.effectiveView.BuiltIn)
+                {
+                    <MudFabMenuItem StartIcon="@Icons.Material.Filled.Delete" Label="Delete task view" aria-label="Delete task view" Size="Size.Small"
+                                    Color="Color.Error" Disabled="@(this.Views.LoadError is not null)" OnClick="this.DeleteViewAsync" />
+                }
+            </MudFabMenu>
             @if (!string.IsNullOrEmpty(this.effectiveView.Description))
             {
                 <MudText Typo="Typo.body2" Class="mud-text-secondary tasks-description">@this.effectiveView.Description</MudText>
@@ -328,6 +342,32 @@
         this.editorViewId = id;
         this.editorSection = ViewEditorSection.General;
         this.editorOpen = true;
+    }
+
+    /// <summary>The title menu's <i>Edit task view</i>: opens the hosted View editor for the effective View at its General section.</summary>
+    private void OnEditViewClicked() => this.OpenEditorFor(this.effectiveView.Id);
+
+    /// <summary>
+    /// The title menu's <i>Delete task view</i>: confirms with the same wording as
+    /// <see cref="ViewEditorDrawer"/>'s Delete button and <c>TaskViewNav</c>'s row menu, removes the
+    /// effective View through <see cref="ViewStore.Delete(string)"/>, then replaces the URL with
+    /// <c>/tasks</c> - the View just deleted is always the one on screen here.
+    /// </summary>
+    private async Task DeleteViewAsync()
+    {
+        TaskView view = this.effectiveView;
+        bool? confirmed = await this.DialogService.ShowMessageBoxAsync(
+            "Delete View",
+            $"Delete '{view.Name}'? Tasks are not affected.",
+            yesText: "Delete",
+            cancelText: "Cancel");
+        if (confirmed != true)
+        {
+            return;
+        }
+
+        _ = this.Views.Delete(view.Id);
+        this.Navigation.NavigateTo("/tasks");
     }
 
     /// <summary>The Board's <i>Edit columns…</i>: opens the View editor for the effective View at its Columns section (corrections-B7 12.4 item 7).</summary>

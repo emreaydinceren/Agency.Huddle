@@ -19,7 +19,7 @@
     z-index: 1;
 }
 
-.huddle-segmented-group {
+.huddle-segmented-control ::deep .huddle-segmented-group {
     background: transparent !important;
     position: relative;
     z-index: 2;
@@ -38,7 +38,7 @@
     border-radius: 6px;
     border: none !important;
     background: transparent !important;
-    padding: 6px 12px;
+    padding: 2px 12px;
     min-height: unset;
     position: relative;
     z-index: 2;

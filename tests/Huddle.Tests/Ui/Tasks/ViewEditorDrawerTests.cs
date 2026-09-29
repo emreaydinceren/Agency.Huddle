@@ -72,6 +72,30 @@ public sealed class ViewEditorDrawerTests
         Assert.True(scopeToggle.Instance.Disabled);
     }
 
+    /// <summary>The Filters section's All | Blocked | Unblocked control seeds from the saved View, and a change persists on Save.</summary>
+    [Fact]
+    public async Task BlockedFilter_SeedsFromTheView_AndPersistsOnSave()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskView saved = Save(harness, "v1", ViewKind.List);
+
+        await using MudBunitContext ctx = NewContext(harness);
+        IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
+        IRenderedComponent<ViewEditorDrawer> drawer = root.FindComponent<ViewEditorDrawer>();
+
+        var control = root.FindComponent<MudToggleGroup<BlockedFilter>>();
+        Assert.Equal("All", root.Find(".view-editor-filter-blocked .huddle-segmented-active-item").TextContent.Trim());
+
+        await root.InvokeAsync(() => control.Instance.ValueChanged.InvokeAsync(BlockedFilter.Unblocked));
+        await ClickAsync(root, drawer, ".view-editor-save");
+
+        TaskView? persisted = harness.Views.Get(saved.Id);
+        Assert.NotNull(persisted);
+        Assert.Equal(BlockedFilter.Unblocked, persisted.Filter.Blocked);
+        Assert.Equal("Unblocked", root.Find(".view-editor-filter-blocked .huddle-segmented-active-item").TextContent.Trim());
+    }
+
     /// <summary>Dragging a Fields row updates the draft's order (read from <c>ItemDropped</c>'s <c>IndexInZone</c>), persisted on Save.</summary>
     [Fact]
     public async Task Fields_ReorderByDrop_UpdatesOrder()
@@ -618,6 +642,68 @@ public sealed class ViewEditorDrawerTests
         Assert.False(exitPrompt.Instance.Disabled);
     }
 
+    /// <summary>
+    /// Regression test: Cancel throws the unsaved draft away and closes the drawer. Before it existed
+    /// the drawer offered no way to discard an edit, and the edit outlived the drawer closing - so the
+    /// still-armed <c>MudExitPrompt</c> re-asked "Discard changes?" on every later navigation, and its
+    /// own Cancel button (which only means "stay here") never made it stop.
+    /// </summary>
+    [Fact]
+    public async Task Cancel_DiscardsTheDraft_DisarmsTheExitPrompt_AndClosesTheDrawer()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskView saved = Save(harness, "v1", ViewKind.List, name: "Original");
+        bool? openChangedTo = null;
+
+        await using MudBunitContext ctx = NewContext(harness);
+        IRenderedComponent<ContainerFragment> root = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<ViewEditorDrawer>(0);
+            builder.AddAttribute(1, nameof(ViewEditorDrawer.Open), true);
+            builder.AddAttribute(2, nameof(ViewEditorDrawer.Id), saved.Id);
+            builder.AddAttribute(3, nameof(ViewEditorDrawer.OpenChanged), EventCallback.Factory.Create<bool>(this, open => openChangedTo = open));
+            builder.CloseComponent();
+        });
+        IRenderedComponent<ViewEditorDrawer> drawer = root.FindComponent<ViewEditorDrawer>();
+        var name = root.FindComponents<MudTextField<string>>().Single(HasClass("view-editor-name"));
+        await root.InvokeAsync(() => name.Instance.ValueChanged.InvokeAsync("Edited"));
+        Assert.False(root.FindComponent<MudExitPrompt>().Instance.Disabled);
+
+        await ClickAsync(root, drawer, ".view-editor-cancel");
+
+        Assert.Equal("Original", NameInputValue(root));
+        Assert.True(root.FindComponent<MudExitPrompt>().Instance.Disabled);
+        Assert.False(openChangedTo);
+        Assert.Equal("Original", harness.Views.Get(saved.Id)?.Name);
+    }
+
+    /// <summary>
+    /// Regression test: however the drawer ends up closed - Cancel, the backdrop, Escape - an unsaved draft
+    /// does not outlive it. The drawer's content stays mounted while closed, so a draft left dirty would
+    /// keep <c>MudExitPrompt</c> armed for every navigation made with the drawer out of sight.
+    /// </summary>
+    [Fact]
+    public async Task Closing_WithAnUnsavedDraft_DiscardsIt()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskView saved = Save(harness, "v1", ViewKind.List, name: "Original");
+
+        await using MudBunitContext ctx = NewContext(harness);
+        IRenderedComponent<ViewEditorDrawer> drawer = ctx.Render<ViewEditorDrawer>(parameters => parameters
+            .Add(d => d.Open, true)
+            .Add(d => d.Id, saved.Id));
+        var name = drawer.FindComponents<MudTextField<string>>().Single(HasClass("view-editor-name"));
+        await drawer.InvokeAsync(() => name.Instance.ValueChanged.InvokeAsync("Edited"));
+        Assert.False(drawer.FindComponent<MudExitPrompt>().Instance.Disabled);
+
+        drawer.Render(parameters => parameters.Add(d => d.Open, false));
+
+        Assert.True(drawer.FindComponent<MudExitPrompt>().Instance.Disabled);
+        Assert.Equal("Original", drawer.Find(".view-editor-name input").GetAttribute("value"));
+    }
+
     /// <summary>While <see cref="ViewStore.LoadError"/> is set, every control - Name, Save and Delete alike - is disabled.</summary>
     [Fact]
     public async Task LoadError_DisablesEveryControl()
@@ -713,6 +799,37 @@ public sealed class ViewEditorDrawerTests
 
         TaskView saved = Assert.Single(harness.Views.Views, v => string.Equals(v.Name, "Fresh View", StringComparison.Ordinal));
         Assert.False(string.IsNullOrWhiteSpace(saved.Id));
+    }
+
+    /// <summary>
+    /// Regression test: once a new View is saved the drawer is no longer dirty, so the backdrop dismisses
+    /// it (<c>OverlayAutoClose</c>) and <c>MudExitPrompt</c> disarms. The drawer stays open after Save, and
+    /// its dirty baseline used to remain the blank View it was seeded with - so a freshly created View
+    /// could only be dismissed through Cancel, while an untouched existing View closed on any outside click.
+    /// </summary>
+    [Fact]
+    public async Task Save_NewView_ClearsTheDirtyState_SoTheBackdropDismissesIt()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+
+        await using MudBunitContext ctx = NewContext(harness);
+        IRenderedComponent<ContainerFragment> root = ctx.RenderWithPopovers(builder =>
+        {
+            builder.OpenComponent<ViewEditorDrawer>(0);
+            builder.AddAttribute(1, nameof(ViewEditorDrawer.Open), true);
+            builder.CloseComponent();
+        });
+        IRenderedComponent<ViewEditorDrawer> drawer = root.FindComponent<ViewEditorDrawer>();
+        var name = root.FindComponents<MudTextField<string>>().Single(HasClass("view-editor-name"));
+        await root.InvokeAsync(() => name.Instance.ValueChanged.InvokeAsync("Fresh View"));
+        Assert.False(root.FindComponent<MudDrawer>().Instance.OverlayAutoClose);
+
+        await ClickAsync(root, drawer, ".view-editor-save");
+
+        Assert.Single(harness.Views.Views, v => string.Equals(v.Name, "Fresh View", StringComparison.Ordinal));
+        Assert.True(root.FindComponent<MudDrawer>().Instance.OverlayAutoClose);
+        Assert.True(root.FindComponent<MudExitPrompt>().Instance.Disabled);
     }
 
     /// <summary>The columns a Board View needs to pass <c>ViewValidator</c>: every <see cref="TaskState"/> covered exactly once, restated because <c>BoardLayout.DefaultColumns</c> is internal to production code (same restatement as <c>TaskToolbarTests</c>).</summary>
