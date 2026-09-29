@@ -25,9 +25,9 @@ that pin what already works, and each is proved by a mutation.
 
 > [!IMPORTANT]
 > **Where this plan and the Spec differ, this plan wins.** While decomposing the Spec, the
-> architect found eleven places where it is wrong, incomplete or can't be built as written
+> architect found fifteen places where it is wrong, incomplete or can't be built as written
 > (analyzer rules, an unmockable sealed class, an unowned placeholder). They are listed in
-> [Spec corrections](#spec-corrections-s1s11), each with the reason. Task 8.2 reconciles the Spec
+> [Spec corrections](#spec-corrections-s1s15), each with the reason. Task 8.2 reconciles the Spec
 > itself. Until then, every task that touches one says so in its own text.
 
 ---
@@ -358,7 +358,7 @@ and the apostrophe a straight `'`.
 
 Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchanged.
 
-### Spec corrections (S1–S11)
+### Spec corrections (S1–S15)
 
 | # | Spec says | This plan does | Why |
 | --- | --- | --- | --- |
@@ -373,6 +373,10 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
 | S9 | §6.6: the page owns the action button and the search field | A `TeamTabToolbar` component, used by each tab component; the page owns each tab's search text | The three tab components can be built and tested before the page |
 | S10 | §8.5: an IO error reading a `memory/` folder is logged | `TeamMemoryIndex` treats `IOException` and `UnauthorizedAccessException` as an empty folder, with a comment saying why | `Build` is a pure static and has no logger |
 | S11 | §6.4: the instruction paragraph wraps over two lines | One line | The wrap is cosmetic; the Prompt is one string |
+| S12 | §6.2, TP-0: a built-in Persona (`builtin`) may be refused by `PersonaStore.Update`, so the picker lists it disabled | The marker is the frontmatter key `_builtin`, and `Update` accepts a built-in Persona: the Chief of Staff **can** join a Team. No disabled row, no test for one | Task 0.2 item 2 (`PersonaStore.cs:408-447` never reads `Builtin`) |
+| S13 | §6.4: the host reads the Persona's Teams | `Persona` has no Teams and `DotAcpPersonaHost` takes none. `DotAcpAgentHostFactory.StartAsync` reads them with `PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)` (`identity.Teams`, as `:142` does for Skills) and passes the Teams, `ITeamCatalog`, the Teams root and the cap to the host through new constructor parameters. The host builds the snapshot in `BuildOptions` (`:156`), per open and resume | Task 0.2 item 11; `rules.md` forbids adding a member to `Persona` |
+| S14 | §6.3: a Team name is rejected for `, ; [ ]` | Also for any control character (`char.IsControl`, e.g. a newline). `[` `]` `#` `:` `'` `"` round-trip through `WriteListField`, so rejecting the brackets is conservative and stays | Task 0.2 item 4: `,` `;` and `\n` `\r` do not round-trip |
+| S15 | §6.9: a Board with no `Columns` shows its empty state | A `TaskView` with empty `Columns` renders **no columns and no text**. `TeamTasksTab` sets `Columns = BoardLayout.DefaultColumns` (`Tasks/Views/BoardLayout.cs:24`, `internal static`, six columns) | Task 0.2 item 7 |
 
 ### Risk tags
 
@@ -544,8 +548,8 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
     `A Team named "Business" already exists.` (the typed spelling: `business` gives
     `A Team named "business" already exists.`); `_x` and `.x` →
     `Names starting with "_" or "." are reserved.`; `Sales, EMEA`, `A;B`, `[A]` →
-    `A Team name can't contain commas, semicolons or square brackets.`; `a:b` and `""` → a
-    **non-null** problem (assert `NotNull`, not the text: it is the Library's).
+    `A Team name can't contain commas, semicolons or square brackets.`; `a:b`, `""` and `"A\nB"`
+    (S14) → a **non-null** problem (assert `NotNull`, not the text: it may be the Library's).
   - `ValidateProjectName(name, Team("Business", "Marketing Project"))`: `Q4 Launch` → `null`;
     `memory-notes` → `null`; `memory`, `Memory` → `"memory" is reserved for the Team's shared Memory.`;
     `_x` → `Names starting with "_" or "." are reserved.`; `marketing project` →
@@ -564,8 +568,8 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   map* signatures, with `///` docs. Order of checks, first problem wins:
   1. `LibraryNames.Validate(name)`: return its problem text if it reports one.
   2. Team: a `_` or `.` prefix (via `TaskLayout.IsReservedFolderName`) →
-     `Names starting with "_" or "." are reserved.`; then any of `, ; [ ]` (plus any character
-     facts item 4 added) → the *commas, semicolons or square brackets* text.
+     `Names starting with "_" or "." are reserved.`; then any of `, ; [ ]`, or any `char.IsControl`
+     character (S14) → the *commas, semicolons or square brackets* text.
   3. Project: `MemoryFolder` (ignoring case) → `MemoryReservedProblem`; then the `_`/`.` text.
   4. Duplicate, `StringComparison.OrdinalIgnoreCase` against `existing[*].Name` (Team) or
      `team.Projects` (Project), using the **typed** name in the message.
@@ -804,9 +808,11 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   - `Remove_DropsEveryCaseVariant`; `Remove_LastLabel_RemovesTheTeamsKey`;
     `Remove_NotMember_ReturnsNotMemberAndWritesNothing`.
   - `Add_TeamNameWithComma_ReturnsRejectedWithTheUnwritableText` (S7) and writes nothing.
-  - Builtin (facts item 2): if `Update` refuses a builtin Persona, `Add` returns `Rejected` with
-    the store's message; if it allows it, a row proves it round-trips. Rejected via invalid text
-    (facts item 3): a row **if** the facts found a natural trigger, else list under NOT COVERED.
+  - Built-in (S12): `Add_BuiltinPersona_WritesTheLabelAndKeepsTheMarker` (a definition with
+    `_builtin: true`: after `Add`, the text still holds `_builtin: true` and the new label).
+    `Update` throws `ChatException` only for blank text, an unknown name or text that will not
+    load (facts item 3); `Add` and `Remove` cannot produce any of them from a valid definition, so
+    list the `Rejected`-from-`Update` path under NOT COVERED with that reason.
 - **Acceptance:** Red, `-NewNames "ITeamMembership,TeamMembership,Add,Remove"`.
 
 ### Task 4.2.i (#21) — Implement `TeamMembership` [Sonnet]
@@ -822,7 +828,7 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   `TeamLabels.Contains` → `AlreadyMember`; else
   `PersonaFrontmatter.WriteListField(text, PersonaFrontmatter.TeamsKey, TeamLabels.Add(...))` and
   `personas.Update(name, text, model, effort)`; catch **only** the exception type facts item 3
-  names, returning `Rejected(message)`. `Remove` is symmetric (`NotMember` when absent). Register
+  names (`ChatException`, `Agency.Huddle.App.Services`), returning `Rejected(message)`. `Remove` is symmetric (`NotMember` when absent). Register
   `AddSingleton<ITeamMembership, TeamMembership>()`. **No** `CancellationToken` (S1).
 - **Acceptance:** 4.2.t green; full suite once. Mutation: `Add` skips the `Contains` check → the
   `AlreadyMember` row fails; `Remove` removes only the first variant → the case-variant row fails.
@@ -1016,12 +1022,16 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
 - **Goal:** Implement 5.6.t.
 - **Read first:** Task 5.6.t; Pointer P10; facts *Preflight › code* item 11.
 - **Risk:** `boundary`.
-- **Deliverable:** In `DotAcpPersonaHost`, in the branch that builds the personal `MemorySnapshot`
-  (gated by `readsMemory`), also — when the Persona has Teams — call
-  `TeamMemoryIndex.Build(teamsRoot, persona.Teams, teamCatalog.Teams, options.MaxMemoryEntries)`
-  and pass the result to `Compose` **only when `Groups.Count > 0`**, else `null`. Inject
-  `ITeamCatalog`, the Teams root path and the option through the factory's constructor chain the
-  facts describe. Never read the file system on the render path.
+- **Deliverable (S13):** `DotAcpAgentHostFactory.StartAsync` reads the Persona's Teams with
+  `PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)` (`identity.Teams`, as
+  `:142` does for Skills) and passes `identity.Teams`, `ITeamCatalog`, the Teams root path and
+  `Team:Teams:MaxMemoryEntries` to the one `DotAcpPersonaHost` construction site (`:264`) through
+  new constructor parameters. `Persona` gains no member. In `BuildOptions` (`DotAcpPersonaHost.cs`
+  `:156`), in the branch gated by `readsMemory`, when the Teams list is non-empty call
+  `TeamMemoryIndex.Build(teamsRoot, teams, teamCatalog.Teams, maxEntries)` and pass the result to
+  `Compose` **only when `Groups.Count > 0`**, else `null`. Never read the file system on the render
+  path. `ITeamCatalog` is registered by Task 2.2.i; the factory resolves it from its
+  `IServiceProvider`.
 - **Acceptance:** 5.6.t green; the whole `MockAdapter` and Acp host tests green; full suite once.
 
 ### Task 5.7.t (#34) — Characterisation: Team Memory reaches members as File Changes [Sonnet]
@@ -1622,7 +1632,8 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
     `NewTaskDefaults("Business", null)` (Team page) or `("Business","Marketing")` (Project page).
   - A dragged move on the Board goes through `TaskService.Update` (one call) — or, if the harness
     can't drive a drag, NOT COVERED with that reason.
-  - Empty `Columns` renders the default columns (facts item 7).
+  - The `TaskBoard` shows the six default columns even when the Team has no Tasks (S15: the
+    view's `Columns` is `BoardLayout.DefaultColumns`).
 - **Acceptance:** Red, `-NewNames "TeamTasksTab"`.
 
 ### Task 7.12.i (#70) — Implement `TeamTasksTab` [Sonnet]
@@ -1637,8 +1648,8 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   store.All, ViewScope.All, view.Filter, Search, humanName), view.Sort)`, a `TeamTabToolbar` with
   `New task`, and the `TaskBoard`. The button opens `TaskDetailDialog` in create mode with
   `NewTaskDefaults(Team, Project)`; `OnOpenTask` and `OnCopyId` do what `Tasks.razor` does. Pass no
-  `OnEditColumns`/`ViewChanged`. If facts say the Board needs columns, supply the default column
-  list from the source `Tasks.razor:190` uses.
+  `OnEditColumns`/`ViewChanged`. Set the view's `Columns = BoardLayout.DefaultColumns` (S15): an
+  empty list renders no columns at all.
 - **Acceptance:** 7.12.t green.
 
 ### Task 7.13.t (#71) — Test: `TeamPage` [Sonnet]
@@ -1723,10 +1734,10 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   `personas.Update` call (step 2 fails); in `TeamMemoryIndex.Build` skip the Project loop (step 3
   fails).
 
-### Task 8.2 (#74) — Reconcile the Spec with corrections S1–S11 [Sonnet]
+### Task 8.2 (#74) — Reconcile the Spec with corrections S1–S15 [Sonnet]
 
 - **Goal:** The Spec matches what was built, so the next reader is not misled.
-- **Read first:** [Spec corrections](#spec-corrections-s1s11); the Spec by heading, and by grep for
+- **Read first:** [Spec corrections](#spec-corrections-s1s15); the Spec by heading, and by grep for
   each name below; `git diff main -- src/` (stat only, then the touched public signatures).
 - **Risk:** chore.
 - **Deliverable:** Edit `docs/Huddle.TeamPages-Specifications.md` (with `Edit`, never a shell
