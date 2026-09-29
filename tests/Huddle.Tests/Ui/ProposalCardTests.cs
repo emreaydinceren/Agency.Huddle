@@ -90,7 +90,7 @@ public sealed class ProposalCardTests
         fixture.RegisterInto(ctx);
         var cut = RenderCard(ctx, room.Id);
 
-        FindButton(cut, "Approve").Click();
+        await cut.InvokeAsync(() => FindButton(cut, "Approve").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.True(string.IsNullOrWhiteSpace(cut.Markup)));
         Assert.True(File.Exists(fixture.Personas.Paths.DefinitionFile("Vera")));
@@ -180,9 +180,10 @@ public sealed class ProposalCardTests
         TaskCompletionSource gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         fixture.Directory.Gate = gate;
 
-        FindButton(cut, "Approve").Click();
+        // Fire-and-forget: the approve handler parks on the gate, so awaiting ClickAsync would never return.
+        _ = cut.InvokeAsync(() => FindButton(cut, "Approve").ClickAsync());
 
-        Assert.True(FindButton(cut, "Approve").HasAttribute("disabled"));
+        cut.WaitForAssertion(() => Assert.True(FindButton(cut, "Approve").HasAttribute("disabled")));
         Assert.True(FindButton(cut, "Decline").HasAttribute("disabled"));
 
         await cut.InvokeAsync(gate.SetResult);

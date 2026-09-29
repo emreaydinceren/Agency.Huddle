@@ -81,9 +81,9 @@ public sealed class LibraryNavLinkTests
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
         Assert.Equal("Add folder", cut.Find(".mud-dialog-title").TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-name-field input").Change("Notes"));
-        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-path-field input").Change(newPath));
-        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-add-button").Click());
+        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-name-field input").ChangeAsync("Notes"));
+        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-path-field input").ChangeAsync(newPath));
+        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-add-button").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-title")));
         Assert.Equal(["Notes"], fixture.Store.Pinned.Select(p => p.Name));
@@ -104,9 +104,9 @@ public sealed class LibraryNavLinkTests
         _ = cut.InvokeAsync(() => cut.Find(".nav-action-link .mud-nav-link").Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
-        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-name-field input").Change("Ghost"));
-        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-path-field input").Change(missingPath));
-        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-add-button").Click());
+        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-name-field input").ChangeAsync("Ghost"));
+        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-path-field input").ChangeAsync(missingPath));
+        await cut.InvokeAsync(() => cut.Find(".add-folder-dialog-add-button").ClickAsync());
 
         Assert.Equal("That folder doesn't exist.", cut.Find(".add-folder-dialog-error").TextContent.Trim());
         Assert.NotEmpty(cut.FindAll(".mud-dialog-title"));

@@ -208,7 +208,7 @@ public sealed class TeamPageTests
         NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
         IRenderedComponent<TeamPage> cut = RenderPage(ctx, team, project, startTab);
 
-        cut.FindAll(TabHeaderSelector)[headerIndex].Click();
+        await cut.InvokeAsync(() => cut.FindAll(TabHeaderSelector)[headerIndex].ClickAsync());
 
         Assert.Equal($"http://localhost{expectedPath}", nav.Uri);
         Assert.Equal(startTab, cut.Instance.Tab);

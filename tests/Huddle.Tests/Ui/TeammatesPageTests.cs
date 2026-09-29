@@ -276,11 +276,13 @@ public sealed class TeammatesPageTests
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync("/teammates", ct);
 
-        Assert.Contains("Business", html, StringComparison.Ordinal);
-        Assert.Contains("Household", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"teammates-group-heading\">Business<", html, StringComparison.Ordinal);
+        Assert.Contains("class=\"teammates-group-heading\">Household<", html, StringComparison.Ordinal);
 
-        // One tile per heading: Amy's Name has to appear exactly twice, once under each.
-        Assert.Equal(2, CountOccurrences(html, "Amy"));
+        // One tile per heading: Amy's name element has to appear exactly twice, once under each. Count
+        // the element, never the bare name - the page's prerender markers carry random base64, which
+        // contains "Amy" by chance in roughly one run in a hundred.
+        Assert.Equal(2, CountOccurrences(html, "class=\"teammates-item-name\">Amy<"));
     }
 
     /// <summary>A Persona whose frontmatter has no Teams field at all falls under the synthetic "No team" heading.</summary>

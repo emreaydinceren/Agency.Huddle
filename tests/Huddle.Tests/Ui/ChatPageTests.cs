@@ -137,7 +137,7 @@ public sealed class ChatPageTests
 
         Assert.Contains("aria-label=\"Rename room\"", cut.Markup, StringComparison.Ordinal);
 
-        cut.Find("button[aria-label=\"Rename room\"]").Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Rename room\"]").ClickAsync());
 
         var input = ChatPageTests.FindRoomNameInput(cut);
         Assert.Equal(room.Name, input.GetAttribute("value"));
@@ -160,7 +160,7 @@ public sealed class ChatPageTests
         await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
         var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
 
-        cut.Find("button[aria-label=\"Rename room\"]").Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Rename room\"]").ClickAsync());
         var input = ChatPageTests.FindRoomNameInput(cut);
         await input.InputAsync("Pricing follow-up");
         await input.KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
@@ -199,7 +199,7 @@ public sealed class ChatPageTests
         await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
         var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
 
-        cut.Find("button[aria-label=\"Rename room\"]").Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Rename room\"]").ClickAsync());
         var input = ChatPageTests.FindRoomNameInput(cut);
         await input.InputAsync("Something else entirely");
         await input.KeyDownAsync(new KeyboardEventArgs { Key = "Escape" });
@@ -229,7 +229,7 @@ public sealed class ChatPageTests
         await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
         var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
 
-        cut.Find("button[aria-label=\"Rename room\"]").Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Rename room\"]").ClickAsync());
         var input = ChatPageTests.FindRoomNameInput(cut);
 
         // ChatService.RenameRoomAsync rejects a blank name with ErrorCodes.BadMessage - the same
@@ -758,7 +758,7 @@ public sealed class ChatPageTests
         // not there to click until it does.
         await ChatPageTests.WaitForMarkupAsync(cut, "budget-prompt", ct);
 
-        ChatPageTests.FindButtonByText(cut, "Continue").Click();
+        await cut.InvokeAsync(() => ChatPageTests.FindButtonByText(cut, "Continue").ClickAsync());
 
         // ExtendBudgetAsync itself re-reads the Room's history through FileChatStore before it
         // re-delivers anything, so - like the initial load above - the click's own effect lands after
@@ -802,7 +802,7 @@ public sealed class ChatPageTests
 
         Assert.Equal(1, ChatPageTests.CountOccurrences(cut.Markup, replyText));
 
-        ChatPageTests.FindButtonByText(cut, "Continue").Click();
+        await cut.InvokeAsync(() => ChatPageTests.FindButtonByText(cut, "Continue").ClickAsync());
 
         // ExtendBudgetAsync itself re-reads the Room's history through FileChatStore before it
         // re-delivers anything, so - like the initial load above - the click's own effect lands after

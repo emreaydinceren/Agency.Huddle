@@ -73,8 +73,17 @@ folder, invisible until the type existed and four tests failed for the wrong rea
 ## Treating a flaky test
 
 A **new** test that fails intermittently is a bug in the test or the product, never "a known
-flake". Reproduce it by running its class in a loop alone — every flake this delivery reproduced
-2–3 times in 10 isolated runs. Then find the cause; never add a sleep or a retry.
+flake". Reproduce it first. A class looped alone catches some; most need **parallel process
+load** — 12–40 copies of the built exe at once, each running the class a few times:
+
+```bash
+exe=tests/Huddle.Tests/bin/Debug/net10.0/Huddle.Tests.exe; mkdir -p "$TEMP/flake"
+for p in $(seq 16); do ( for i in 1 2 3 4; do timeout 300 $exe -noLogo -class "Agency.Huddle.Tests.Ui.RoomListTests" > "$TEMP/flake/$p-$i.txt" 2>&1; done ) & done; wait
+grep -l "\[FAIL\]" "$TEMP"/flake/*.txt | wc -l
+```
+
+Record the failure rate before changing anything, find the cause (instrument if needed), and
+prove the fix with the same harness and run count. Never add a sleep, a retry, or a longer timeout.
 
 Causes found, all fixed at the root:
 
@@ -85,6 +94,11 @@ Causes found, all fixed at the root:
 | Order-dependent asserts flipping | Seeding a file on disk under a live `TaskService` logged an "outside edit" stamped with the real clock, overwriting `Updated` |
 | `Collection was modified` | A test enumerated a `List<T>` another thread appended to |
 | A test that races on purpose | Rewritten to reach the same branch without the race |
+| A bUnit assert reads the old state after a click | Synchronous `Click()` returned before its handler ran — await `ClickAsync()`; see [BlazorTesting.md](BlazorTesting.md) |
+| A log line or event missing right after the state it follows | The product sets the state first and logs after (`AgentConnection`'s disconnect) — wait for what you assert, not for something that precedes it |
+| A count off by one in server-rendered HTML, ~1 run in 100 | A bare word matched inside the prerender marker's random base64 — count the element |
+| A rename not visible right after `Update` returns | A real product bug: the watcher's debounce rescan ran inside `Update` and raised the rename from its timer thread (`PersonaStore`, fixed by lock order) |
+| The run ends red with `failed: 0` and "Foreground threads were left running" | Pooled SQLite connections kept every temp `team.db` open until exit — `TempDataDir.Dispose` clears them |
 
 A failure in an **unrelated** test: capture its name, rerun it alone five times, and report it —
 don't fix it in passing.

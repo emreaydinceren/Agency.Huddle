@@ -91,7 +91,7 @@ public sealed class RoomListTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = RenderRoomList(ctx);
-        cut.Find("div.hover-reveal-row").ContextMenu();
+        await cut.InvokeAsync(() => cut.Find("div.hover-reveal-row").ContextMenuAsync());
 
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Archive", StringComparison.Ordinal));
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete", StringComparison.Ordinal));
@@ -113,7 +113,7 @@ public sealed class RoomListTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = RenderRoomList(ctx);
-        OpenRowMenu(cut);
+        await OpenRowMenuAsync(cut);
 
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Archive", StringComparison.Ordinal));
         Assert.Contains(MenuItems(cut), item => string.Equals(item.TextContent.Trim(), "Delete", StringComparison.Ordinal));
@@ -135,8 +135,8 @@ public sealed class RoomListTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = RenderRoomList(ctx);
-        OpenRowMenu(cut);
-        ClickMenuItem(cut, "Delete");
+        await OpenRowMenuAsync(cut);
+        await ClickMenuItemAsync(cut, "Delete");
 
         Assert.NotNull(await directory.GetRoomAsync(room.Id, ct));
         Assert.True(HasButton(cut, "Confirm"));
@@ -158,9 +158,9 @@ public sealed class RoomListTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = RenderRoomList(ctx);
-        OpenRowMenu(cut);
-        ClickMenuItem(cut, "Delete");
-        FindButton(cut, "Confirm").Click();
+        await OpenRowMenuAsync(cut);
+        await ClickMenuItemAsync(cut, "Delete");
+        await ClickButtonAsync(cut, "Confirm");
 
         Assert.Null(await directory.GetRoomAsync(room.Id, ct));
     }
@@ -181,8 +181,8 @@ public sealed class RoomListTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = RenderRoomList(ctx);
-        OpenRowMenu(cut);
-        ClickMenuItem(cut, "Archive");
+        await OpenRowMenuAsync(cut);
+        await ClickMenuItemAsync(cut, "Archive");
 
         cut.WaitForAssertion(() => Assert.DoesNotContain(room.Name, cut.Markup, StringComparison.Ordinal));
         Assert.True((await directory.GetRoomAsync(room.Id, ct))?.Archived);
@@ -276,19 +276,29 @@ public sealed class RoomListTests
             builder.CloseComponent();
         });
 
-    /// <summary>Clicks the row's "..." button, opening its MudMenu popover - a real click on a real <c>button</c>, so this doubles as proof the trigger is keyboard-reachable rather than right-click-only.</summary>
-    private static void OpenRowMenu(IRenderedComponent<ContainerFragment> cut)
+    /// <summary>
+    /// Clicks the row's "..." button, opening its MudMenu popover - a real click on a real <c>button</c>, so this doubles as proof the trigger is keyboard-reachable rather than right-click-only.
+    /// Awaits the click's own dispatch: bUnit's synchronous <c>Click()</c> discards the dispatch task, so under load a render already holding the renderer dispatcher defers the handler past the return.
+    /// </summary>
+    private static async Task OpenRowMenuAsync(IRenderedComponent<ContainerFragment> cut)
     {
-        cut.Find("button[aria-label='Room actions']").Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Room actions']").ClickAsync());
     }
 
     /// <summary>Every open <c>MudMenu</c> item - rendered with <c>role="menuitem"</c> and class <c>mud-menu-item</c>, not <c>mud-list-item</c> (that class belongs to <c>MudSelect</c>'s own popover).</summary>
     private static IReadOnlyList<IElement> MenuItems(IRenderedComponent<ContainerFragment> cut) =>
         cut.FindAll("div.mud-menu-item");
 
-    private static void ClickMenuItem(IRenderedComponent<ContainerFragment> cut, string text)
+    /// <summary>Clicks the open menu's item labelled <paramref name="text"/> and waits for its handler to finish, so a handler that awaits the directory has written before the test asserts.</summary>
+    private static async Task ClickMenuItemAsync(IRenderedComponent<ContainerFragment> cut, string text)
     {
-        MenuItems(cut).First(item => string.Equals(item.TextContent.Trim(), text, StringComparison.Ordinal)).Click();
+        await cut.InvokeAsync(() => MenuItems(cut).First(item => string.Equals(item.TextContent.Trim(), text, StringComparison.Ordinal)).ClickAsync());
+    }
+
+    /// <summary>Finds the button labelled <paramref name="text"/> and clicks it in one dispatcher turn, waiting for its handler to finish.</summary>
+    private static async Task ClickButtonAsync(IRenderedComponent<ContainerFragment> cut, string text)
+    {
+        await cut.InvokeAsync(() => FindButton(cut, text).ClickAsync());
     }
 
     private static bool HasButton(IRenderedComponent<ContainerFragment> cut, string text) =>

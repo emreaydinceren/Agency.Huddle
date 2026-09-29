@@ -88,7 +88,7 @@ public sealed class TeamsNavTests
 
         AngleSharp.Dom.IElement button = MenuButton(cut, "Business");
         Assert.Equal("Team actions", button.GetAttribute("aria-label"));
-        button.Click();
+        await cut.InvokeAsync(() => button.ClickAsync());
 
         string[] expected = ["New project"];
         Assert.Equal(expected, MenuItemTexts(cut));
@@ -103,7 +103,7 @@ public sealed class TeamsNavTests
         await using MudBunitContext ctx = NewContext(catalog);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        RowFor(cut, "Business").ContextMenu();
+        await cut.InvokeAsync(() => RowFor(cut, "Business").ContextMenuAsync());
 
         string[] expected = ["New project"];
         Assert.Equal(expected, MenuItemTexts(cut));
@@ -650,7 +650,7 @@ public sealed class TeamsNavTests
         OpenNewTeamDialog(cut);
         await TypeNameAsync(cut, "Research");
 
-        await cut.InvokeAsync(() => cut.Find(".new-team-dialog-cancel-button").Click());
+        await cut.InvokeAsync(() => cut.Find(".new-team-dialog-cancel-button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-title")));
         await Flush(cut);
 
@@ -667,7 +667,7 @@ public sealed class TeamsNavTests
         await using MudBunitContext ctx = NewContext(catalog);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        OpenNewProjectDialog(cut, "Business");
+        await OpenNewProjectDialog(cut, "Business");
         await TypeNameAsync(cut, "marketing");
 
         Assert.Equal("New project", cut.Find(".mud-dialog-title").TextContent.Trim());
@@ -685,7 +685,7 @@ public sealed class TeamsNavTests
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
         NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
 
-        OpenNewProjectDialog(cut, "Business");
+        await OpenNewProjectDialog(cut, "Business");
         catalog.Teams = [Team("Business", projects: ["Marketing", "Q4 Launch"])];
         await SubmitNameAsync(cut, "Q4 Launch");
 
@@ -705,7 +705,7 @@ public sealed class TeamsNavTests
         NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
         string before = nav.Uri;
 
-        OpenNewProjectDialog(cut, "Business");
+        await OpenNewProjectDialog(cut, "Business");
         await SubmitNameAsync(cut, "Q4 Launch");
         string[] expectedCalls = ["EnsureProjectIn:Business/Q4 Launch"];
         cut.WaitForAssertion(() => Assert.Equal(expectedCalls, folders.Calls));
@@ -730,7 +730,7 @@ public sealed class TeamsNavTests
         MudBlazor.ISnackbar snackbar = ctx.Services.GetRequiredService<MudBlazor.ISnackbar>();
         string before = nav.Uri;
 
-        OpenNewProjectDialog(cut, "Business");
+        await OpenNewProjectDialog(cut, "Business");
         await SubmitNameAsync(cut, "Q4 Launch");
 
         cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
@@ -752,10 +752,10 @@ public sealed class TeamsNavTests
         NavigationManager nav = ctx.Services.GetRequiredService<NavigationManager>();
         MudBlazor.ISnackbar snackbar = ctx.Services.GetRequiredService<MudBlazor.ISnackbar>();
         string before = nav.Uri;
-        OpenNewProjectDialog(cut, "Business");
+        await OpenNewProjectDialog(cut, "Business");
         await TypeNameAsync(cut, "Q4 Launch");
 
-        await cut.InvokeAsync(() => cut.Find(".new-team-dialog-cancel-button").Click());
+        await cut.InvokeAsync(() => cut.Find(".new-team-dialog-cancel-button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-title")));
         await Flush(cut);
 
@@ -774,7 +774,7 @@ public sealed class TeamsNavTests
 
         foreach (AngleSharp.Dom.IElement button in cut.FindAll(".hover-reveal-menu-button"))
         {
-            button.Click();
+            await cut.InvokeAsync(() => button.ClickAsync());
         }
 
         Assert.Empty(MenuItemTexts(cut));
@@ -790,7 +790,7 @@ public sealed class TeamsNavTests
         await using MudBunitContext ctx = NewContext(catalog, libraryEnabled: libraryEnabled, tasksEnabled: tasksEnabled);
         IRenderedComponent<ContainerFragment> cut = RenderNav(ctx);
 
-        MenuButton(cut, "Business").Click();
+        await cut.InvokeAsync(() => MenuButton(cut, "Business").ClickAsync());
 
         string[] expected = ["New project"];
         Assert.Equal(expected, MenuItemTexts(cut));
@@ -804,22 +804,22 @@ public sealed class TeamsNavTests
     }
 
     /// <summary>Opens <paramref name="team"/>'s "Team actions" menu, clicks "New project" and waits for the dialog.</summary>
-    private static void OpenNewProjectDialog(IRenderedComponent<ContainerFragment> cut, string team)
+    private static async Task OpenNewProjectDialog(IRenderedComponent<ContainerFragment> cut, string team)
     {
-        MenuButton(cut, team).Click();
+        await cut.InvokeAsync(() => MenuButton(cut, team).ClickAsync());
         _ = cut.InvokeAsync(() => cut.Find("div.mud-menu-item").Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
     }
 
     /// <summary>Types <paramref name="name"/> into the open dialog's name field.</summary>
     private static Task TypeNameAsync(IRenderedComponent<ContainerFragment> cut, string name) =>
-        cut.InvokeAsync(() => cut.Find(".new-team-dialog-name-field input").Input(name));
+        cut.InvokeAsync(() => cut.Find(".new-team-dialog-name-field input").InputAsync(name));
 
     /// <summary>Types <paramref name="name"/> and clicks Create.</summary>
     private static async Task SubmitNameAsync(IRenderedComponent<ContainerFragment> cut, string name)
     {
         await TypeNameAsync(cut, name);
-        await cut.InvokeAsync(() => cut.Find(".new-team-dialog-create-button").Click());
+        await cut.InvokeAsync(() => cut.Find(".new-team-dialog-create-button").ClickAsync());
     }
 
     /// <summary>Runs an empty action on the renderer's synchronization context, so any handler continuation queued before it has finished before the caller asserts an absence.</summary>
@@ -884,7 +884,7 @@ public sealed class TeamsNavTests
 
     /// <summary>Clicks the chevron of <paramref name="team"/>'s row on the renderer's synchronization context.</summary>
     private static Task ClickChevronAsync(IRenderedComponent<ContainerFragment> cut, string team) =>
-        cut.InvokeAsync(() => Chevron(cut, team).Click());
+        cut.InvokeAsync(() => Chevron(cut, team).ClickAsync());
 
     /// <summary>The trimmed text of every Project link, in render order.</summary>
     private static string[] ProjectTexts(IRenderedComponent<ContainerFragment> cut) =>

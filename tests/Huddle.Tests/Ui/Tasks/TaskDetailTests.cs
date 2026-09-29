@@ -76,7 +76,7 @@ public sealed class TaskDetailTests
         await cut.InvokeAsync(() => prioritySelect.Instance.ValueChanged.InvokeAsync(TaskPriority.Urgent));
         Assert.Equal("Unsaved edits", TextOf(cut, ".task-detail-unsaved-text"));
 
-        FindButton(cut, "Revert").Click();
+        await cut.InvokeAsync(() => FindButton(cut, "Revert").ClickAsync());
 
         Assert.DoesNotContain("Unsaved edits", cut.Markup, StringComparison.Ordinal);
         Assert.Equal(TaskPriority.Medium, cut.FindComponents<MudSelect<TaskPriority>>().Single().Instance.GetState(x => x.Value));
@@ -193,7 +193,7 @@ public sealed class TaskDetailTests
         IRenderedComponent<MudSelect<TaskPriority>> prioritySelect = cut.FindComponents<MudSelect<TaskPriority>>().Single();
         await cut.InvokeAsync(() => prioritySelect.Instance.ValueChanged.InvokeAsync(TaskPriority.Urgent));
 
-        FindButton(cut, "Save").Click();
+        await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.DoesNotContain("Unsaved edits", cut.Markup, StringComparison.Ordinal));
         TaskItem? saved = harness.Store.Get(task.Id);
@@ -254,7 +254,7 @@ public sealed class TaskDetailTests
         Assert.IsType<TaskResult.Saved>(outsideEdit);
         cut.WaitForAssertion(() => Assert.Equal("Unsaved edits", TextOf(cut, ".task-detail-unsaved-text")));
 
-        FindButton(cut, "Save").Click();
+        await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
 
         Assert.Equal("Unsaved edits", TextOf(cut, ".task-detail-unsaved-text"));
         Assert.Equal(TaskPriority.Low, harness.Store.Get(task.Id)?.Priority);
@@ -305,7 +305,7 @@ public sealed class TaskDetailTests
 
         using FileStream lockHandle = new(task.Path, FileMode.Open, FileAccess.Read, FileShare.None);
 
-        FindButton(cut, "Save").Click();
+        await cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
 
         // The IOException's own message is OS/locale-dependent (a locked-file wording .NET supplies),
         // so only the alert's role is asserted exactly here; its element existing at all, uniquely,
@@ -328,7 +328,7 @@ public sealed class TaskDetailTests
         var cut = RenderPanel(ctx, task.Id);
         Assert.Empty(cut.FindAll(".task-detail-unsaved"));
 
-        cut.Find("button[aria-label=\"Edit title\"]").Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Edit title\"]").ClickAsync());
         IRenderedComponent<MudTextField<string>> titleField = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-title", StringComparison.Ordinal));
         await cut.InvokeAsync(() => titleField.Instance.ValueChanged.InvokeAsync("Retitled by the Human"));
 
@@ -345,7 +345,7 @@ public sealed class TaskDetailTests
         await using MudBunitContext ctx = NewContext(harness);
         var cut = RenderPanel(ctx, task.Id);
 
-        cut.Find("button[aria-label=\"Edit title\"]").Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Edit title\"]").ClickAsync());
 
         Assert.Equal("Title", cut.Find(".task-detail-title input").GetAttribute("aria-label"));
     }
@@ -389,7 +389,7 @@ public sealed class TaskDetailTests
         IRenderedComponent<MudTextField<string>> descriptionField = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-description", StringComparison.Ordinal));
         await cut.InvokeAsync(() => descriptionField.Instance.ValueChanged.InvokeAsync("Some **bold** plan."));
 
-        FindButton(cut, "Preview").Click();
+        await cut.InvokeAsync(() => FindButton(cut, "Preview").ClickAsync());
 
         Assert.Equal("bold", TextOf(cut, ".task-detail-description-preview strong"));
         Assert.DoesNotContain("**bold**", cut.Markup, StringComparison.Ordinal);
@@ -428,7 +428,7 @@ public sealed class TaskDetailTests
         var cut = RenderPanel(ctx, task.Id);
         Assert.Equal("Wake-ups for this task are paused after 10 changes by Teammates.", TextOf(cut, ".task-detail-budget-banner-text"));
 
-        FindButton(cut, "Allow 10 more").Click();
+        await cut.InvokeAsync(() => FindButton(cut, "Allow 10 more").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".task-detail-budget-banner")));
         Assert.False(harness.TaskActivity.Budget(task.Id).Exhausted);

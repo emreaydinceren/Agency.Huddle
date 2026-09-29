@@ -262,7 +262,7 @@ public sealed class TurnLifecycleTests
     /// only ever serves one <c>Launch()</c> - and proves the thing T-28 actually claims: a session
     /// started under the new Persona (the "new peer") carries the new Adapter's prompt and tool-naming
     /// convention, not the old one's. <c>PersonaSupervisor.NeedsRestart</c> - the trigger that decides
-    /// *when* a restart happens - is exercised by <c>PersonaSupervisorTests</c>; this test's job is the
+    /// *when* a restart happens - is exercised by <c>PersonaSupervisorLifecycleTests</c>; this test's job is the
     /// one only a real host/session/prompt-composer round trip can prove.
     /// </summary>
     [Fact]

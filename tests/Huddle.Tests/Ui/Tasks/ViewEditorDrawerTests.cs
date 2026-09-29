@@ -171,7 +171,7 @@ public sealed class ViewEditorDrawerTests
 
         await OpenMenuAsync(root, drawer, ".view-editor-fields-add");
         var priorityOption = root.FindAll(".view-editor-fields-add-option").Single(el => string.Equals(el.TextContent.Trim(), "priority", StringComparison.Ordinal));
-        await root.InvokeAsync(() => priorityOption.Click());
+        await root.InvokeAsync(() => priorityOption.ClickAsync());
         await ClickAsync(root, drawer, ".view-editor-save");
 
         TaskView? persisted = harness.Views.Get(saved.Id);
@@ -578,7 +578,7 @@ public sealed class ViewEditorDrawerTests
         var buttons = root.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList();
         Assert.Equal(["Cancel", "Delete"], buttons);
 
-        await drawer.InvokeAsync(() => root.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).Click());
+        await drawer.InvokeAsync(() => root.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
     }
 
     /// <summary>Confirming Delete removes the View from <see cref="ViewStore"/> and navigates to <c>/tasks</c>.</summary>
@@ -596,7 +596,7 @@ public sealed class ViewEditorDrawerTests
 
         _ = drawer.InvokeAsync(() => root.Find(".view-editor-delete").Click());
         root.WaitForAssertion(() => Assert.NotEmpty(root.FindAll(".mud-dialog-actions button")));
-        await drawer.InvokeAsync(() => root.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).Click());
+        await drawer.InvokeAsync(() => root.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Null(harness.Views.Get(saved.Id));
         Assert.EndsWith("/tasks", navigation.Uri, StringComparison.Ordinal); // contains-ok: a full URI, whose scheme/host prefix bUnit's FakeNavigationManager owns; only the path is this test's concern.
@@ -616,7 +616,7 @@ public sealed class ViewEditorDrawerTests
 
         _ = drawer.InvokeAsync(() => root.Find(".view-editor-delete").Click());
         root.WaitForAssertion(() => Assert.NotEmpty(root.FindAll(".mud-dialog-actions button")));
-        await drawer.InvokeAsync(() => root.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).Click());
+        await drawer.InvokeAsync(() => root.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
 
         Assert.NotNull(harness.Views.Get(saved.Id));
     }
@@ -886,15 +886,15 @@ public sealed class ViewEditorDrawerTests
 
     /// <summary>Clicks the element matching <paramref name="cssSelector"/> inside <paramref name="root"/>, dispatched through <paramref name="drawer"/>'s render scheduler.</summary>
     private static Task ClickAsync(IRenderedComponent<ContainerFragment> root, IRenderedComponent<ViewEditorDrawer> drawer, string cssSelector) =>
-        drawer.InvokeAsync(() => root.Find(cssSelector).Click());
+        drawer.InvokeAsync(() => root.Find(cssSelector).ClickAsync());
 
     /// <summary>Opens a <c>MudMenu</c> whose root carries <paramref name="cssSelector"/>, by clicking its inner activator button.</summary>
     private static Task OpenMenuAsync(IRenderedComponent<ContainerFragment> root, IRenderedComponent<ViewEditorDrawer> drawer, string cssSelector) =>
-        drawer.InvokeAsync(() => root.Find($"{cssSelector} button").Click());
+        drawer.InvokeAsync(() => root.Find($"{cssSelector} button").ClickAsync());
 
     /// <summary>Opens a <c>MudSelect</c> whose root carries <paramref name="cssSelector"/>: it toggles on <c>mousedown</c>, not <c>click</c>.</summary>
     private static Task OpenSelectAsync(IRenderedComponent<ContainerFragment> root, IRenderedComponent<ViewEditorDrawer> drawer, string cssSelector) =>
-        drawer.InvokeAsync(() => root.Find(cssSelector).MouseDown());
+        drawer.InvokeAsync(() => root.Find(cssSelector).MouseDownAsync());
 
     /// <summary>Clears the states multiselect of the column at <paramref name="reviewColumnIndex"/> (its own <see cref="MudSelect{T}.SelectedValuesChanged"/>, driven directly - no popover interaction needed), leaving whichever states it held unplaced.</summary>
     private static Task ClearColumnStatesAsync(IRenderedComponent<ContainerFragment> root, int reviewColumnIndex)

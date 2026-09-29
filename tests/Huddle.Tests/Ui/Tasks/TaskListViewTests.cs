@@ -94,7 +94,7 @@ public sealed class TaskListViewTests : IDisposable
 
         IElement titleHeader = cut.FindAll("span.sortable-column-header")
             .First(header => header.TextContent.Contains("Title", StringComparison.Ordinal));
-        titleHeader.Click();
+        await cut.InvokeAsync(() => titleHeader.ClickAsync());
 
         int zuluAfter = cut.Markup.IndexOf("Zulu", StringComparison.Ordinal);
         int alfaAfter = cut.Markup.IndexOf("Alfa", StringComparison.Ordinal);
@@ -135,7 +135,7 @@ public sealed class TaskListViewTests : IDisposable
 
         IElement cell = cut.FindAll("td").First(td => td.TextContent.Contains("Click me", StringComparison.Ordinal));
         IElement row = cell.Closest("tr") ?? throw new InvalidOperationException("The clicked cell has no row.");
-        row.Click();
+        await cut.InvokeAsync(() => row.ClickAsync());
 
         Assert.Single(opened);
         Assert.Equal(task.Id, opened[0]);

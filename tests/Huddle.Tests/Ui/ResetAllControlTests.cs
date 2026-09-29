@@ -61,7 +61,7 @@ public sealed class ResetAllControlTests
             .Add(p => p.Confirming, false)
             .Add(p => p.OnBeginReset, () => beginResetRaised = true));
 
-        cut.Find("button").Click();
+        await cut.InvokeAsync(() => cut.Find("button").ClickAsync());
 
         Assert.True(beginResetRaised);
     }
@@ -98,11 +98,11 @@ public sealed class ResetAllControlTests
         var buttons = cut.FindAll("button");
         Assert.Equal(2, buttons.Count);
 
-        buttons[0].Click();
+        await cut.InvokeAsync(() => buttons[0].ClickAsync());
         Assert.True(confirmRaised);
         Assert.False(cancelRaised);
 
-        buttons[1].Click();
+        await cut.InvokeAsync(() => buttons[1].ClickAsync());
         Assert.True(cancelRaised);
     }
 }

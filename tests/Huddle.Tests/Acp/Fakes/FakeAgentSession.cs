@@ -20,6 +20,7 @@ internal sealed class FakeAgentSession : IAgentSession
     private readonly Queue<IReadOnlyList<AgentEvent>> plannedToolEvents = new();
     private readonly List<string> prompts = [];
 
+    private readonly TimeProvider time;
     private bool promptInFlight;
     private int cancelCallCount;
     private bool cancelObservedPromptInFlight;
@@ -34,9 +35,15 @@ internal sealed class FakeAgentSession : IAgentSession
     /// one host and starts another, and the second host's first open must still return a session
     /// whose <see cref="Events"/> reader has not already completed.
     /// </param>
-    public FakeAgentSession(bool completeEventsOnDispose = true)
+    /// <param name="time">
+    /// The clock every planned delay (<see cref="EnqueueDelayedReply"/>, <see cref="EnqueueDripFedReply"/>)
+    /// waits on. Defaults to <see cref="TimeProvider.System"/>; a test that hands the same
+    /// <c>FakeTimeProvider</c> to this session and to the runner under test drives both from one clock.
+    /// </param>
+    public FakeAgentSession(bool completeEventsOnDispose = true, TimeProvider? time = null)
     {
         this.CompleteEventsOnDispose = completeEventsOnDispose;
+        this.time = time ?? TimeProvider.System;
     }
 
     public string SessionId { get; } = Guid.NewGuid().ToString("N");
@@ -288,7 +295,7 @@ internal sealed class FakeAgentSession : IAgentSession
 
             if (plan.Delay > TimeSpan.Zero)
             {
-                await Task.Delay(plan.Delay, ct);
+                await Task.Delay(plan.Delay, this.time, ct);
             }
 
             if (plan.Exception is not null)
@@ -316,7 +323,7 @@ internal sealed class FakeAgentSession : IAgentSession
             {
                 foreach (var chunk in plan.Chunks)
                 {
-                    await Task.Delay(dripGap, ct);
+                    await Task.Delay(dripGap, this.time, ct);
                     this.events.Writer.TryWrite(new MessageChunk(this.SessionId, chunk));
                 }
             }

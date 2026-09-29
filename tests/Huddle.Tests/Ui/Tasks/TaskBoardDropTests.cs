@@ -159,7 +159,7 @@ public sealed class TaskBoardDropTests
         TaskId[] expected = [target.Id];
         Assert.Equal(expected, found);
 
-        rig.Button("Cancel").Click();
+        await rig.ClickButtonAsync("Cancel");
         await move;
     }
 
@@ -180,7 +180,7 @@ public sealed class TaskBoardDropTests
         Rig rig = Render(ctx, harness, [moved]);
         Task move = rig.StartMoveAsync(moved, TaskState.Duplicate, viaMenu);
         _ = rig.WaitForDialog<DuplicatePickerDialog>();
-        rig.Button("Cancel").Click();
+        await rig.ClickButtonAsync("Cancel");
         await move;
 
         Assert.Empty(changes);
@@ -207,7 +207,7 @@ public sealed class TaskBoardDropTests
         _ = rig.WaitForDialog<DuplicatePickerDialog>();
         IRenderedComponent<MudAutocomplete<TaskItem>> picker = rig.Dialogs.FindComponent<MudAutocomplete<TaskItem>>();
         await rig.Dialogs.InvokeAsync(() => picker.Instance.ValueChanged.InvokeAsync(target));
-        rig.Button("Save").Click();
+        await rig.ClickButtonAsync("Save");
         await move;
 
         TaskItem? saved = harness.Store.Get(moved.Id);
@@ -239,7 +239,7 @@ public sealed class TaskBoardDropTests
         _ = rig.WaitForDialog<ReasonDialog>();
         Assert.Equal($"Mark {moved.Id} as {state.ToWire()}", rig.Dialogs.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal("Reason (optional)", rig.Dialogs.FindComponent<MudTextField<string>>().Instance.Label);
-        rig.Button("Skip").Click();
+        await rig.ClickButtonAsync("Skip");
         await move;
 
         TaskItem? saved = harness.Store.Get(moved.Id);
@@ -266,7 +266,7 @@ public sealed class TaskBoardDropTests
         _ = rig.WaitForDialog<ReasonDialog>();
         IRenderedComponent<MudTextField<string>> field = rig.Dialogs.FindComponent<MudTextField<string>>();
         await rig.Dialogs.InvokeAsync(() => field.Instance.ValueChanged.InvokeAsync("Out of scope"));
-        rig.Button("Save").Click();
+        await rig.ClickButtonAsync("Save");
         await move;
 
         TaskItem? saved = harness.Store.Get(moved.Id);
@@ -292,7 +292,7 @@ public sealed class TaskBoardDropTests
         Rig rig = Render(ctx, harness, [moved]);
         Task move = rig.StartMoveAsync(moved, TaskState.Rejected, viaMenu);
         _ = rig.WaitForDialog<ReasonDialog>();
-        rig.Dialogs.Find("button.mud-button-close").Click();
+        await rig.Dialogs.InvokeAsync(() => rig.Dialogs.Find("button.mud-button-close").ClickAsync());
         await move;
 
         Assert.Empty(changes);
@@ -319,7 +319,7 @@ public sealed class TaskBoardDropTests
         _ = rig.WaitForDialog<ReasonDialog>();
         IRenderedComponent<MudTextField<string>> field = rig.Dialogs.FindComponent<MudTextField<string>>();
         await rig.Dialogs.InvokeAsync(() => field.Instance.ValueChanged.InvokeAsync(new string('x', 201)));
-        rig.Button("Save").Click();
+        await rig.ClickButtonAsync("Save");
         await move;
 
         Snackbar shown = Assert.Single(ctx.Services.GetRequiredService<ISnackbar>().ShownSnackbars);
@@ -394,7 +394,7 @@ public sealed class TaskBoardDropTests
         _ = rig.WaitForDialog<ReasonDialog>();
 
         rig.Board.WaitForAssertion(() => Assert.Empty(rig.Board.FindAll(".task-ghost-bucket")));
-        rig.Button("Skip").Click();
+        await rig.ClickButtonAsync("Skip");
         await move;
     }
 
@@ -511,7 +511,7 @@ public sealed class TaskBoardDropTests
 
         Assert.True(rig.Button("Save").HasAttribute("disabled"));
         Assert.False(rig.Button("Cancel").HasAttribute("disabled"));
-        rig.Button("Cancel").Click();
+        await rig.ClickButtonAsync("Cancel");
         await move;
     }
 
@@ -529,7 +529,7 @@ public sealed class TaskBoardDropTests
         _ = rig.WaitForDialog<ReasonDialog>();
         IRenderedComponent<MudTextField<string>> field = rig.Dialogs.FindComponent<MudTextField<string>>();
         await rig.Dialogs.InvokeAsync(() => field.Instance.ValueChanged.InvokeAsync("   "));
-        rig.Button("Save").Click();
+        await rig.ClickButtonAsync("Save");
         await move;
 
         TaskItem? saved = harness.Store.Get(moved.Id);
@@ -617,10 +617,10 @@ public sealed class TaskBoardDropTests
         {
             if (viaMenu)
             {
-                this.Board.Find($"button[aria-label='Move {item.Id}']").Click();
-                IElement menuItem = this.Popovers.FindAll("div.mud-menu-item")
-                    .First(e => string.Equals(e.TextContent.Trim(), state.ToWire(), StringComparison.Ordinal));
-                await menuItem.ClickAsync(new MouseEventArgs());
+                await this.Board.InvokeAsync(() => this.Board.Find($"button[aria-label='Move {item.Id}']").ClickAsync());
+                await this.Board.InvokeAsync(() => this.Popovers.FindAll("div.mud-menu-item")
+                    .First(e => string.Equals(e.TextContent.Trim(), state.ToWire(), StringComparison.Ordinal))
+                    .ClickAsync(new MouseEventArgs()));
                 return;
             }
 
@@ -651,6 +651,12 @@ public sealed class TaskBoardDropTests
             this.Dialogs.WaitForAssertion(() => Assert.NotEmpty(this.Dialogs.FindComponents<TDialog>()));
             return this.Dialogs.FindComponent<TDialog>();
         }
+
+        /// <summary>Clicks the open dialog's button with exactly <paramref name="text"/>, finding and clicking it as one unit on the renderer.</summary>
+        /// <param name="text">The button's text.</param>
+        /// <returns>A task that completes once the click handler has run.</returns>
+        public Task ClickButtonAsync(string text) =>
+            this.Dialogs.InvokeAsync(() => this.Button(text).ClickAsync());
 
         /// <summary>The open dialog's button with exactly <paramref name="text"/>.</summary>
         /// <param name="text">The button's text.</param>

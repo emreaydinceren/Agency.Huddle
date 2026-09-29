@@ -285,7 +285,7 @@ public sealed class TasksPageTests
         var alert = cut.Find(".tasks-invalid-view-alert");
         Assert.Equal("This View is invalid: Name must be 1-60 characters.", alert.TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.Find(".tasks-invalid-view-edit").Click());
+        await cut.InvokeAsync(() => cut.Find(".tasks-invalid-view-edit").ClickAsync());
         var drawer = cut.FindComponent<ViewEditorDrawer>();
         Assert.True(drawer.Instance.Open);
         Assert.Equal("bad-view", drawer.Instance.Id);

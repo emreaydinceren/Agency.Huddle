@@ -225,7 +225,7 @@ public sealed class TeamTasksTabTests
         await using MudBunitContext ctx = new();
         Rig rig = Render(ctx, harness, "Business");
 
-        await rig.Tab.InvokeAsync(() => rig.Tab.Find(ActionButton).Click());
+        await rig.Tab.InvokeAsync(() => rig.Tab.Find(ActionButton).ClickAsync());
 
         IRenderedComponent<TaskDetailDialog> dialog = rig.WaitForDialog<TaskDetailDialog>();
         Assert.Null(dialog.Instance.Id);
@@ -242,7 +242,7 @@ public sealed class TeamTasksTabTests
         await using MudBunitContext ctx = new();
         Rig rig = Render(ctx, harness, "Business", "Marketing");
 
-        await rig.Tab.InvokeAsync(() => rig.Tab.Find(ActionButton).Click());
+        await rig.Tab.InvokeAsync(() => rig.Tab.Find(ActionButton).ClickAsync());
 
         IRenderedComponent<TaskDetailDialog> dialog = rig.WaitForDialog<TaskDetailDialog>();
         Assert.Null(dialog.Instance.Id);
@@ -259,7 +259,7 @@ public sealed class TeamTasksTabTests
         await using MudBunitContext ctx = new();
         Rig rig = Render(ctx, harness, "Business");
 
-        await rig.Tab.InvokeAsync(() => rig.Tab.Find($"button.task-card-open[aria-label='Open {tasks.Taxes.Id}']").Click());
+        await rig.Tab.InvokeAsync(() => rig.Tab.Find($"button.task-card-open[aria-label='Open {tasks.Taxes.Id}']").ClickAsync());
 
         IRenderedComponent<TaskDetailDialog> dialog = rig.WaitForDialog<TaskDetailDialog>();
         Assert.Equal(tasks.Taxes.Id, dialog.Instance.Id);
@@ -460,7 +460,7 @@ public sealed class TeamTasksTabTests
         {
             if (viaMenu)
             {
-                await this.Tab.InvokeAsync(() => this.Tab.Find($"button[aria-label='Move {item.Id}']").Click());
+                await this.Tab.InvokeAsync(() => this.Tab.Find($"button[aria-label='Move {item.Id}']").ClickAsync());
                 await this.ClickMenuItemAsync(state.ToWire());
                 return;
             }
@@ -476,7 +476,7 @@ public sealed class TeamTasksTabTests
         /// <returns>A task that completes when the item was clicked.</returns>
         public async Task ChooseCopyIdAsync(TaskItem item)
         {
-            await this.Tab.InvokeAsync(() => this.Tab.Find($"button[aria-label='Move {item.Id}']").Click());
+            await this.Tab.InvokeAsync(() => this.Tab.Find($"button[aria-label='Move {item.Id}']").ClickAsync());
             await this.ClickMenuItemAsync("Copy id");
         }
 

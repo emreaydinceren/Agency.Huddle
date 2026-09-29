@@ -925,7 +925,7 @@ public sealed class FileChangeTrackerTests
     /// <summary>
     /// Builds a fixture with a real <see cref="SqliteTeamDirectory"/>, a real <see cref="PersonaStore"/>
     /// holding a Persona "Nova" (frontmatter written before the store is constructed, matching
-    /// <c>PersonaSupervisorTests.WritePersonaFile</c>), a real <see cref="FileStateStore"/>, a real
+    /// <c>PersonaSupervisorTestSupport.WritePersonaFile</c>), a real <see cref="FileStateStore"/>, a real
     /// <see cref="WatchedFolderResolver"/>, and the <see cref="FileChangeTracker"/> under test.
     /// </summary>
     private static async Task<Fixture> CreateFixtureAsync(

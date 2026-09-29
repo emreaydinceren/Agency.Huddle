@@ -62,7 +62,7 @@ public sealed class TasksPageViewMenuTests
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "custom1");
         Assert.False(cut.FindComponent<ViewEditorDrawer>().Instance.Open);
 
-        await cut.InvokeAsync(() => ItemFor(cut, EditLabel).Click());
+        await cut.InvokeAsync(() => ItemFor(cut, EditLabel).ClickAsync());
 
         ViewEditorDrawer drawer = cut.FindComponent<ViewEditorDrawer>().Instance;
         Assert.True(drawer.Open);
@@ -87,7 +87,7 @@ public sealed class TasksPageViewMenuTests
         Assert.Equal("Delete 'Sprint Board'? Tasks are not affected.", cut.Find(".mud-dialog-content").TextContent.Trim());
         Assert.Equal(["Cancel", "Delete"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
-        await cut.InvokeAsync(() => DialogButton(cut, "Cancel").Click());
+        await cut.InvokeAsync(() => DialogButton(cut, "Cancel").ClickAsync());
     }
 
     /// <summary>Cancelling the confirm keeps the View in <see cref="ViewStore"/> and leaves the URL alone.</summary>
@@ -105,7 +105,7 @@ public sealed class TasksPageViewMenuTests
 
         _ = cut.InvokeAsync(() => ItemFor(cut, DeleteLabel).Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
-        await cut.InvokeAsync(() => DialogButton(cut, "Cancel").Click());
+        await cut.InvokeAsync(() => DialogButton(cut, "Cancel").ClickAsync());
 
         Assert.NotNull(harness.Views.Get("custom1"));
         Assert.Equal(before, navigation.Uri);
@@ -126,7 +126,7 @@ public sealed class TasksPageViewMenuTests
 
         _ = cut.InvokeAsync(() => ItemFor(cut, DeleteLabel).Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
-        await cut.InvokeAsync(() => DialogButton(cut, "Delete").Click());
+        await cut.InvokeAsync(() => DialogButton(cut, "Delete").ClickAsync());
 
         Assert.Null(harness.Views.Get("custom1"));
         Assert.EndsWith("/tasks", navigation.Uri, StringComparison.Ordinal); // contains-ok: a full URI, whose scheme/host prefix bUnit's FakeNavigationManager owns; only the path is this test's concern.

@@ -269,7 +269,7 @@ public sealed class TaskCardTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task);
 
-        cut.Find($"button[aria-label='Move {task.Id}']").Click();
+        await cut.InvokeAsync(() => cut.Find($"button[aria-label='Move {task.Id}']").ClickAsync());
 
         IReadOnlyList<IElement> items = cut.FindAll("div.mud-menu-item");
         List<string> expected = [.. TaskStates.All.Select(state => state.ToWire()), "Copy id"];
@@ -295,8 +295,8 @@ public sealed class TaskCardTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task, onMoveTo: state => moved.Add(state));
 
-        cut.Find($"button[aria-label='Move {task.Id}']").Click();
-        cut.FindAll("div.mud-menu-item").First(item => string.Equals(item.TextContent.Trim(), "Done", StringComparison.Ordinal)).Click();
+        await cut.InvokeAsync(() => cut.Find($"button[aria-label='Move {task.Id}']").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").First(item => string.Equals(item.TextContent.Trim(), "Done", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Single(moved);
         Assert.Equal(TaskState.Done, moved[0]);
@@ -312,8 +312,8 @@ public sealed class TaskCardTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task, onCopyId: () => copyCount++);
 
-        cut.Find($"button[aria-label='Move {task.Id}']").Click();
-        cut.FindAll("div.mud-menu-item").First(item => string.Equals(item.TextContent.Trim(), "Copy id", StringComparison.Ordinal)).Click();
+        await cut.InvokeAsync(() => cut.Find($"button[aria-label='Move {task.Id}']").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").First(item => string.Equals(item.TextContent.Trim(), "Copy id", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Equal(1, copyCount);
     }
@@ -328,7 +328,7 @@ public sealed class TaskCardTests : IDisposable
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = this.Render(ctx, task, onOpen: () => openCount++);
 
-        cut.Find("div.task-card > button.task-card-open").Click();
+        await cut.InvokeAsync(() => cut.Find("div.task-card > button.task-card-open").ClickAsync());
 
         Assert.Equal(1, openCount);
     }

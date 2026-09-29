@@ -166,7 +166,7 @@ public sealed class BacklinksPanelTests : IDisposable
 
     /// <summary>Clicking a backlink row raises the OnNavigate callback with the note's path.</summary>
     [Fact]
-    public void Click_RaisesOnNavigate()
+    public async Task Click_RaisesOnNavigate()
     {
         string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
         LibraryPath note = this.fixture.LibraryFixture.Resolve(root, "page.md");
@@ -181,7 +181,7 @@ public sealed class BacklinksPanelTests : IDisposable
         var cut = ctx.Render(builder => RenderBacklinksPanel(builder, (IReadOnlyList<LibraryBacklinkRow>)backlinks, true, path => navigatedTo = path));
 
         var button = cut.Find("button.backlink-button");
-        button.Click();
+        await cut.InvokeAsync(() => button.ClickAsync());
 
         Assert.NotNull(navigatedTo);
         Assert.Equal(note, navigatedTo);

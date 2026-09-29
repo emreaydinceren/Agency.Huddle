@@ -212,7 +212,7 @@ public sealed class InviteTeammateTests
 
         if (openTeamFilter)
         {
-            cut.Find("div.mud-input-control").MouseDown();
+            await cut.InvokeAsync(() => cut.Find("div.mud-input-control").MouseDownAsync());
         }
 
         return cut.Markup;

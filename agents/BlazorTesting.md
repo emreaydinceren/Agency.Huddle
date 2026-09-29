@@ -32,7 +32,7 @@ public async Task OpenButtonClick_RaisesOnOpen()
         builder.CloseComponent();
     });
 
-    await cut.InvokeAsync(() => cut.Find("div.task-card > button.task-card-open").Click());
+    await cut.InvokeAsync(() => cut.Find("div.task-card > button.task-card-open").ClickAsync());
 
     Assert.Equal(1, openCount);
 }
@@ -53,17 +53,37 @@ For a component that needs the whole Tasks stack (stores, services, presence), r
 
 ## Clicking without racing a re-render
 
-A component that re-renders on its own (an event handler that requeries with `_ = DispatchAsync(…)`,
-a watcher reload) can land a render between `Find` and `Click`, so the click hits a stale handler
-and throws `UnknownEventHandlerIdException` — only under load. Make the pair atomic:
+Two races, both only under load, and one idiom closes both:
 
 ```csharp
-await cut.InvokeAsync(() => cut.Find("button.save").Click());
+await cut.InvokeAsync(() => cut.Find("button.save").ClickAsync());
 ```
 
-Use it for every click that follows a concurrent change or a fresh render. If a click still races
-**inside** `InvokeAsync`, the component is re-rendering when nothing changed — look for spurious
-events in the product (this found three real store bugs), don't add a wait.
+- **Stale handler.** A component that re-renders on its own (an event handler that requeries with
+  `_ = DispatchAsync(…)`, a watcher reload) can land a render between `Find` and `Click`, so the
+  click hits a stale handler and throws `UnknownEventHandlerIdException`. Wrapping the pair in
+  `InvokeAsync` makes it atomic.
+- **Handler not finished.** bUnit 2.11.3's synchronous `Click()` / `ContextMenu()` discard the
+  dispatch task. When a background render holds the renderer's dispatcher, the handler runs later,
+  on another thread, after `Click()` has returned — measured at 31 ms — and the next assert reads
+  the old state. `await cut.InvokeAsync(() => x.Click())` does **not** fix this; awaiting
+  `ClickAsync()` / `ContextMenuAsync()` does, because that task completes when the handler does.
+  This was the cause of the `RoomListTests` and `TaskViewNavTests` flakes.
+
+Use it for every click whose effect the test asserts next — and the same for `ChangeAsync`,
+`InputAsync`, `KeyDownAsync` and `ContextMenuAsync`. The exception is a handler that awaits
+something the test must drive next: awaiting it would wait for that to finish, and the test hangs.
+Fire those with `_ = cut.InvokeAsync(() => x.Click())` and `WaitForAssertion` on what appears (the
+`TaskViewNavTests` delete-view pattern). The sweep found them in more places than the button that
+opens a dialog: a **menu item** that opens a dialog, a dialog's **confirm** that opens a second
+("leave?") dialog, and a confirm whose call the test is deliberately **holding** to observe the
+in-progress state. A converted click that hangs until the test's timeout is one of these. If a click still races **inside** `InvokeAsync`, the component is
+re-rendering when nothing changed — look for spurious events in the product (this found three real
+store bugs), don't add a wait.
+
+Never count a bare word in server-rendered HTML (`client.GetStringAsync(…)`): the Blazor prerender
+markers carry random base64, which contains a short name like `Amy` by chance about once in a
+hundred runs. Count the element — `class="teammates-item-name">Amy<` — instead.
 
 - A `MudSelect` opens on **`mousedown`**, not `click` (a click throws `MissingEventHandlerException`).
 - A `MudMenu` opens by clicking its activator **button**; read items as `div.mud-menu-item`

@@ -393,11 +393,13 @@ public sealed class SettingsPageTests
             builder.CloseComponent();
         });
 
-        cut.FindAll("button").First(button => button.TextContent.Contains("Restore default", StringComparison.Ordinal)).Click();
+        // Fire-and-forget: the handler awaits the confirm dialog, which this test answers next.
+        Task restore = cut.InvokeAsync(() => cut.FindAll("button").First(button => button.TextContent.Contains("Restore default", StringComparison.Ordinal)).ClickAsync());
 
-        Assert.Contains(overrideFolder, cut.Markup, StringComparison.Ordinal);
+        cut.WaitForAssertion(() => Assert.Contains(overrideFolder, cut.Markup, StringComparison.Ordinal));
 
-        cut.FindAll("button").First(button => button.TextContent.Contains("Yes, restore default", StringComparison.Ordinal)).Click();
+        await cut.InvokeAsync(() => cut.FindAll("button").First(button => button.TextContent.Contains("Yes, restore default", StringComparison.Ordinal)).ClickAsync());
+        await restore;
 
         Assert.False(Directory.Exists(overrideFolder));
         Assert.DoesNotContain(">Overridden<", cut.Markup, StringComparison.Ordinal);

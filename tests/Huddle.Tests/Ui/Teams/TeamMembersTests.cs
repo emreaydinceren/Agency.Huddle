@@ -261,7 +261,7 @@ public sealed class TeamMembersTests
         Assert.Empty(cut.FindComponents<TeammateCard>());
 
         AngleSharp.Dom.IElement row = RowFor(cut, "Nova");
-        await cut.InvokeAsync(() => row.Click());
+        _ = cut.InvokeAsync(() => row.Click());
 
         TeammateCard card = OpenedCard(cut);
         Assert.Equal("Nova", card.Name);
@@ -282,7 +282,7 @@ public sealed class TeamMembersTests
         Assert.Empty(MenuItemTexts(cut));
 
         AngleSharp.Dom.IElement button = MenuButton(cut, "Nova");
-        await cut.InvokeAsync(() => button.Click());
+        await cut.InvokeAsync(() => button.ClickAsync());
 
         string[] expected = ["Open card", "Remove from Team"];
         Assert.Equal(expected, MenuItemTexts(cut));
@@ -297,13 +297,13 @@ public sealed class TeamMembersTests
         await using MudBunitContext ctx = NewContext(factory);
         IRenderedComponent<Host> cut = RenderHost(ctx, Team("Business", "Nova", "Ada", "Kim"));
         cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll(".team-members-row").Count));
-        await cut.InvokeAsync(() => MenuButton(cut, "Kim").Click());
+        await cut.InvokeAsync(() => MenuButton(cut, "Kim").ClickAsync());
         string[] expectedItems = ["Open card", "Remove from Team"];
         Assert.Equal(expectedItems, MenuItemTexts(cut));
         Assert.Empty(cut.FindComponents<TeammateCard>());
 
         AngleSharp.Dom.IElement item = cut.FindAll("div.mud-menu-item").Single(candidate => string.Equals(candidate.TextContent.Trim(), "Open card", StringComparison.Ordinal));
-        await cut.InvokeAsync(() => item.Click());
+        _ = cut.InvokeAsync(() => item.Click());
 
         TeammateCard card = OpenedCard(cut);
         Assert.Equal("Kim", card.Name);
@@ -323,7 +323,7 @@ public sealed class TeamMembersTests
         Assert.Empty(MenuItemTexts(cut));
 
         AngleSharp.Dom.IElement button = MenuButton(cut, "Nova");
-        await cut.InvokeAsync(() => button.Click());
+        await cut.InvokeAsync(() => button.ClickAsync());
 
         string[] expected = ["Open card", "Remove from Team"];
         Assert.Equal(expected, MenuItemTexts(cut));
@@ -420,7 +420,7 @@ public sealed class TeamMembersTests
         _ = await OpenAddMemberAsync(cut);
         await PickAsync(cut, "Kim");
 
-        await cut.InvokeAsync(() => cut.Find(".add-member-dialog-add-button").Click());
+        await cut.InvokeAsync(() => cut.Find(".add-member-dialog-add-button").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
         Snackbar shown = Assert.Single(snackbar.ShownSnackbars);
@@ -444,7 +444,7 @@ public sealed class TeamMembersTests
         _ = await OpenAddMemberAsync(cut);
         await PickAsync(cut, "Kim");
 
-        await cut.InvokeAsync(() => cut.Find(".add-member-dialog-cancel-button").Click());
+        await cut.InvokeAsync(() => cut.Find(".add-member-dialog-cancel-button").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(DialogTitle)));
         Assert.Empty(snackbar.ShownSnackbars);
@@ -516,7 +516,7 @@ public sealed class TeamMembersTests
         await BeginRemovalAsync(cut, "Ada");
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(ConfirmBox)));
 
-        await cut.InvokeAsync(() => cut.Find(ConfirmButton).Click());
+        await cut.InvokeAsync(() => cut.Find(ConfirmButton).ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
         Snackbar shown = Assert.Single(snackbar.ShownSnackbars);
@@ -542,7 +542,7 @@ public sealed class TeamMembersTests
         cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll(".team-members-row").Count));
         await BeginRemovalAsync(cut, "Ada");
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(ConfirmBox)));
-        await cut.InvokeAsync(() => cut.Find(ConfirmButton).Click());
+        await cut.InvokeAsync(() => cut.Find(ConfirmButton).ClickAsync());
         cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(ConfirmBox)));
         string[] rowsBefore = ["Ada", "Kim", "Nova"];
@@ -568,7 +568,7 @@ public sealed class TeamMembersTests
         await BeginRemovalAsync(cut, "Ada");
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(ConfirmBox)));
 
-        await cut.InvokeAsync(() => cut.Find(CancelButton).Click());
+        await cut.InvokeAsync(() => cut.Find(CancelButton).ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(ConfirmBox)));
         string[] rows = ["Ada", "Kim", "Nova"];
@@ -597,7 +597,7 @@ public sealed class TeamMembersTests
         Assert.Empty(cut.FindAll(ConfirmProgress));
         Assert.All(cut.FindAll(ConfirmButtons), button => Assert.False(button.HasAttribute("disabled")));
 
-        await cut.InvokeAsync(() => cut.Find(ConfirmButton).Click());
+        _ = cut.InvokeAsync(() => cut.Find(ConfirmButton).Click());
 
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(ConfirmProgress)));
         Assert.Equal(2, cut.FindAll(ConfirmButtons).Count);
@@ -634,7 +634,7 @@ public sealed class TeamMembersTests
         await BeginRemovalAsync(cut, "Ada");
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(ConfirmBox)));
 
-        await cut.InvokeAsync(() => cut.Find(ConfirmButton).Click());
+        await cut.InvokeAsync(() => cut.Find(ConfirmButton).ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
         Snackbar shown = Assert.Single(snackbar.ShownSnackbars);
@@ -650,9 +650,9 @@ public sealed class TeamMembersTests
     /// <summary>Opens <paramref name="name"/>'s row menu and clicks its "Remove from Team" item.</summary>
     private static async Task BeginRemovalAsync(IRenderedComponent<Host> cut, string name)
     {
-        await cut.InvokeAsync(() => MenuButton(cut, name).Click());
+        await cut.InvokeAsync(() => MenuButton(cut, name).ClickAsync());
         AngleSharp.Dom.IElement item = cut.FindAll("div.mud-menu-item").Single(candidate => string.Equals(candidate.TextContent.Trim(), "Remove from Team", StringComparison.Ordinal));
-        await cut.InvokeAsync(() => item.Click());
+        await cut.InvokeAsync(() => item.ClickAsync());
     }
 
     /// <summary>The trimmed text of each button in the open inline confirm, in render order.</summary>
@@ -670,7 +670,7 @@ public sealed class TeamMembersTests
     /// <summary>Clicks the toolbar's "Add member" button and returns the <see cref="AddMemberDialog"/> once it is on screen.</summary>
     private static async Task<AddMemberDialog> OpenAddMemberAsync(IRenderedComponent<Host> cut)
     {
-        await cut.InvokeAsync(() => cut.Find(AddMemberButton).Click());
+        _ = cut.InvokeAsync(() => cut.Find(AddMemberButton).Click());
         cut.WaitForState(() => cut.FindComponents<AddMemberDialog>().Count == 1);
         return cut.FindComponent<AddMemberDialog>().Instance;
     }

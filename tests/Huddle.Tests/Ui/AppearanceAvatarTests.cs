@@ -69,8 +69,8 @@ public sealed class AppearanceAvatarTests
         var avatars = factory.Services.GetRequiredService<AvatarStore>();
 
         var cut = RenderPage(ctx);
-        SelectAvatarChoice(cut, "A short label");
-        SetImmediateTextValue(cut, "Label", "AB");
+        await SelectAvatarChoiceAsync(cut, "A short label");
+        await SetImmediateTextValueAsync(cut, "Label", "AB");
 
         var saved = avatars.Get("You");
         Assert.Equal("AB", saved.Label);
@@ -88,8 +88,8 @@ public sealed class AppearanceAvatarTests
         await using var ctx = NewContext(factory);
 
         var cut = RenderPage(ctx);
-        SelectAvatarChoice(cut, "A short label");
-        SetImmediateTextValue(cut, "Label", "AB");
+        await SelectAvatarChoiceAsync(cut, "A short label");
+        await SetImmediateTextValueAsync(cut, "Label", "AB");
 
         Assert.Equal("AB", cut.Find(".mud-avatar").TextContent.Trim());
     }
@@ -103,9 +103,9 @@ public sealed class AppearanceAvatarTests
         var appearance = factory.Services.GetRequiredService<AppearanceStore>();
 
         var cut = RenderPage(ctx);
-        cut.FindAll(".theme-picker .mud-list-item")
+        await cut.InvokeAsync(() => cut.FindAll(".theme-picker .mud-list-item")
             .First(item => item.TextContent.Contains("Huddle Dark", StringComparison.Ordinal))
-            .Click();
+            .ClickAsync());
 
         Assert.Equal("huddle-dark", appearance.Current.ThemeId);
     }
@@ -119,7 +119,7 @@ public sealed class AppearanceAvatarTests
         var avatars = factory.Services.GetRequiredService<AvatarStore>();
 
         var cut = RenderPage(ctx);
-        SelectAvatarChoice(cut, "An image");
+        await SelectAvatarChoiceAsync(cut, "An image");
 
         var oversized = new byte[AvatarImage.MaxBytes + 1];
         var inputFile = cut.FindComponent<InputFile>();
@@ -136,21 +136,23 @@ public sealed class AppearanceAvatarTests
     /// </summary>
     /// <param name="cut">The rendered page holding the Appearance tab.</param>
     /// <param name="choiceLabel">The radio's visible text - "Initials of the name", "A short label" or "An image".</param>
-    private static void SelectAvatarChoice(IRenderedComponent<ContainerFragment> cut, string choiceLabel)
-    {
-        var radio = cut.FindAll(".mud-radio").First(element => element.TextContent.Contains(choiceLabel, StringComparison.Ordinal));
-        (radio.QuerySelector("input.mud-radio-input") ?? throw new InvalidOperationException($"No radio input under '{choiceLabel}'.")).Click();
-    }
+    private static Task SelectAvatarChoiceAsync(IRenderedComponent<ContainerFragment> cut, string choiceLabel) =>
+        cut.InvokeAsync(() =>
+        {
+            var radio = cut.FindAll(".mud-radio").First(element => element.TextContent.Contains(choiceLabel, StringComparison.Ordinal));
+            return (radio.QuerySelector("input.mud-radio-input") ?? throw new InvalidOperationException($"No radio input under '{choiceLabel}'.")).ClickAsync();
+        });
 
     /// <summary>Sets an <c>Immediate="true"</c> text field's value by raising <c>@oninput</c> - mirrors <c>TeammateCardTests.SetImmediateTextValue</c>.</summary>
     /// <param name="cut">The rendered page holding the Appearance tab.</param>
     /// <param name="label">The control's label text.</param>
     /// <param name="value">The text to type.</param>
-    private static void SetImmediateTextValue(IRenderedComponent<ContainerFragment> cut, string label, string value)
-    {
-        var control = cut.FindAll("div.mud-input-control")
-            .First(c => c.QuerySelectorAll("label").Any(l => l.TextContent.Contains(label, StringComparison.Ordinal)));
-        var input = control.QuerySelector("input") ?? throw new InvalidOperationException($"No input under '{label}'.");
-        input.Input(value);
-    }
+    private static Task SetImmediateTextValueAsync(IRenderedComponent<ContainerFragment> cut, string label, string value) =>
+        cut.InvokeAsync(() =>
+        {
+            var control = cut.FindAll("div.mud-input-control")
+                .First(c => c.QuerySelectorAll("label").Any(l => l.TextContent.Contains(label, StringComparison.Ordinal)));
+            var input = control.QuerySelector("input") ?? throw new InvalidOperationException($"No input under '{label}'.");
+            return input.InputAsync(value);
+        });
 }

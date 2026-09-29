@@ -655,7 +655,15 @@ public sealed class PersonaStoreTests
         store.PersonaRenamed += renamed => renames.Add(renamed);
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        store.PersonasChanged += () => tcs.TrySetResult();
+        store.PersonasChanged += () =>
+        {
+            // Wait for the condition asserted below, not the first event: the Add above still has a
+            // debounce pending, which can fire before the rename's own rescan.
+            if (renames.Count > 0)
+            {
+                tcs.TrySetResult();
+            }
+        };
 
         await File.WriteAllTextAsync(path, PersonaText("vp", "You are the VP now."), ct);
 
@@ -696,7 +704,15 @@ public sealed class PersonaStoreTests
         // be) and picked up through the watcher, to prove anything about the SQLite rows rather
         // than colliding on the old path.
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        store.PersonasChanged += () => tcs.TrySetResult();
+        store.PersonasChanged += () =>
+        {
+            // Wait for the condition asserted below, not the first event: Update's own file write
+            // still arms a debounce that fires after Update returns and before coo-new is scanned.
+            if (store.Get("coo") is not null)
+            {
+                tcs.TrySetResult();
+            }
+        };
         TestPersonaFiles.Write(new TeammatePaths(dir.Options()), "coo-new", PersonaText("coo", "You are a brand new Chief of Staff."));
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());
@@ -864,7 +880,13 @@ public sealed class PersonaStoreTests
         using var store = CreateStore(dir);
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        store.PersonasChanged += () => tcs.TrySetResult();
+        store.PersonasChanged += () =>
+        {
+            if (store.ListNames().Contains("external"))
+            {
+                tcs.TrySetResult();
+            }
+        };
 
         TestPersonaFiles.Write(new TeammatePaths(dir.Options()), "external", PersonaText("external", "You are External."));
 
@@ -1013,7 +1035,13 @@ public sealed class PersonaStoreTests
         // never having given it a chance to fire): a genuine Persona file written right after
         // still gets noticed.
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        store.PersonasChanged += () => tcs.TrySetResult();
+        store.PersonasChanged += () =>
+        {
+            if (store.Get("coo") is not null)
+            {
+                tcs.TrySetResult();
+            }
+        };
         TestPersonaFiles.Write(new TeammatePaths(dir.Options()), "coo", PersonaText("coo", "You are the Chief of Staff."));
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
@@ -1240,6 +1268,97 @@ public sealed class PersonaStoreTests
         Assert.Null(exception);
     }
 
+    /// <summary>
+    /// A watcher debounce that lands after <see cref="PersonaStore.Update"/> has written its file but
+    /// before it has published must not publish the rename itself. If it does, the rename is raised
+    /// from the timer thread, <c>Update</c> finds nothing to diff and returns, and a caller that reads
+    /// the Team Directory right away (the rename cascade's row rename is what it waits on) still sees
+    /// the OLD Name - the flake recorded against
+    /// <c>PersonaRenameCascadeTests.Rename_RenamesTheAgentRow_AndKeepsItsId</c>. The test holds
+    /// <c>Update</c> inside its write lock by keeping a SQLite write lock on the database that
+    /// <c>Update</c>'s Model bookkeeping needs, fires the debounce callback while it is stuck there,
+    /// and asserts the rename was raised by the thread that called <c>Update</c>.
+    /// </summary>
+    /// <returns>A task that completes when the assertions have run.</returns>
+    [Fact]
+    public async Task Update_ADebounceRescanDuringTheWrite_DoesNotStealTheRename()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var store = CreateStore(dir);
+        store.Add(Identity("coo"), "You are the Chief of Staff.");
+        var path = store.PathFor("coo");
+        var renameThreads = new List<int>();
+        store.PersonaRenamed += _ =>
+        {
+            lock (renameThreads)
+            {
+                renameThreads.Add(Environment.CurrentManagedThreadId);
+            }
+        };
+
+        var updateThreadId = 0;
+        Task updateTask;
+        Task debounceTask;
+        var dbPath = Path.Combine(dir.Options().Value.DataDir, "team.db");
+        using (var blocker = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={dbPath}"))
+        {
+            await blocker.OpenAsync(ct);
+            await using (var begin = blocker.CreateCommand())
+            {
+                begin.CommandText = "BEGIN IMMEDIATE;";
+                await begin.ExecuteNonQueryAsync(ct);
+            }
+
+            updateTask = Task.Run(
+                () =>
+                {
+                    updateThreadId = Environment.CurrentManagedThreadId;
+                    return store.Update("coo", PersonaText("vp", "You are the VP."), "claude-opus-4", null);
+                },
+                ct);
+
+            // Update has written the file (so the disk holds the new Name) and is now stuck moving the
+            // Model row behind the SQLite write lock, still inside its write lock.
+            while (!FileHoldsNewName(path))
+            {
+                await Task.Delay(10, ct);
+            }
+
+            debounceTask = Task.Run(() => store.OnDebounceElapsed(null), ct);
+
+            // Bounded, and only to give an UNFIXED debounce the chance to run to completion here: a
+            // fixed one is parked on the store's write lock and cannot finish until Update is released.
+            _ = await Task.WhenAny(debounceTask, Task.Delay(TimeSpan.FromSeconds(1), ct));
+
+            await using var rollback = blocker.CreateCommand();
+            rollback.CommandText = "ROLLBACK;";
+            await rollback.ExecuteNonQueryAsync(ct);
+        }
+
+        await updateTask;
+        await debounceTask;
+
+        var thread = Assert.Single(renameThreads);
+        Assert.Equal(updateThreadId, thread);
+    }
+
+    /// <summary>Whether the Persona file at <paramref name="path"/> already carries the Name <c>vp</c> - false while <see cref="PersonaStore.Update"/> is still writing it.</summary>
+    /// <param name="path">The Persona file to read.</param>
+    /// <returns><see langword="true"/> once the file's text names <c>vp</c>.</returns>
+    private static bool FileHoldsNewName(string path)
+    {
+        try
+        {
+            return File.ReadAllText(path).Contains("vp", StringComparison.Ordinal);
+        }
+        catch (IOException)
+        {
+            // Update is mid-write and holds the file; the caller polls again.
+            return false;
+        }
+    }
+
     // ADR-0031 layout
 
     /// <summary>A definition file directly inside its own teammate folder (Spec §6.15) loads normally.</summary>
@@ -1372,7 +1491,13 @@ public sealed class PersonaStoreTests
         Directory.CreateDirectory(paths.WorkDir("Nova"));
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        store.PersonasChanged += () => tcs.TrySetResult();
+        store.PersonasChanged += () =>
+        {
+            if (!store.ListNames().Contains("Nova"))
+            {
+                tcs.TrySetResult();
+            }
+        };
 
         File.Move(paths.DefinitionFile("Nova"), Path.Combine(paths.WorkDir("Nova"), "Nova.md"));
 
@@ -1601,7 +1726,13 @@ public sealed class PersonaStoreTests
         }
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        store.PersonasChanged += () => tcs.TrySetResult();
+        store.PersonasChanged += () =>
+        {
+            if (store.ListNames().Contains("Zed"))
+            {
+                tcs.TrySetResult();
+            }
+        };
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         await using var registration = cts.Token.Register(() => tcs.TrySetCanceled());
         await tcs.Task;

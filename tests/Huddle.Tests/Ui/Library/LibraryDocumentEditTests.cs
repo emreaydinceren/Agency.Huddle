@@ -136,7 +136,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
         Assert.Equal(["Cancel", "Save"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")
-            .Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).Click());
+            .Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Equal(before, File.ReadAllBytes(filePath));
     }
@@ -164,7 +164,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
 
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")
-            .Single(b => string.Equals(b.TextContent.Trim(), "Save", StringComparison.Ordinal)).Click());
+            .Single(b => string.Equals(b.TextContent.Trim(), "Save", StringComparison.Ordinal)).ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal(edited, File.ReadAllText(filePath)));
     }
@@ -196,7 +196,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
             cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")
-            .Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).Click());
+            .Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
 
         bool canLeave = await leaving;
 
@@ -228,7 +228,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
 
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")
-            .Single(b => string.Equals(b.TextContent.Trim(), "Discard", StringComparison.Ordinal)).Click());
+            .Single(b => string.Equals(b.TextContent.Trim(), "Discard", StringComparison.Ordinal)).ClickAsync());
 
         bool canLeave = await leaving;
 
@@ -260,7 +260,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
 
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")
-            .Single(b => string.Equals(b.TextContent.Trim(), "Save", StringComparison.Ordinal)).Click());
+            .Single(b => string.Equals(b.TextContent.Trim(), "Save", StringComparison.Ordinal)).ClickAsync());
 
         bool canLeave = await leaving;
 
@@ -336,7 +336,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
         Assert.Equal(["Cancel", "Overwrite"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")
-            .Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).Click());
+            .Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Equal("someone else's content", File.ReadAllText(filePath));
 
@@ -344,7 +344,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
 
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")
-            .Single(b => string.Equals(b.TextContent.Trim(), "Overwrite", StringComparison.Ordinal)).Click());
+            .Single(b => string.Equals(b.TextContent.Trim(), "Overwrite", StringComparison.Ordinal)).ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal("mine", File.ReadAllText(filePath)));
     }
@@ -442,7 +442,7 @@ public sealed class LibraryDocumentEditTests : IDisposable
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")
-            .Single(b => string.Equals(b.TextContent.Trim(), "Save", StringComparison.Ordinal)).Click());
+            .Single(b => string.Equals(b.TextContent.Trim(), "Save", StringComparison.Ordinal)).ClickAsync());
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-save-error")));
         Assert.Equal("Rename teammates on the Teammates page.", cut.Find(".library-document-save-error").TextContent.Trim());

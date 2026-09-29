@@ -76,7 +76,7 @@ public sealed class LibraryTreeTests : IDisposable
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [notesScope], showScopeRoot: false);
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("span.library-tree-node-name")));
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
 
         File.WriteAllText(Path.Combine(notesPath, "b.md"), "hello");
@@ -100,7 +100,7 @@ public sealed class LibraryTreeTests : IDisposable
 
         Assert.Single(cut.FindAll("span.library-tree-node-name"));
 
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
 
         Assert.Equal(
@@ -119,10 +119,10 @@ public sealed class LibraryTreeTests : IDisposable
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [notesScope]);
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
 
-        await cut.InvokeAsync(() => cut.Find($"button.library-tree-actions-button[aria-label='Actions for {filePath.RelativePath}']").Click());
+        await cut.InvokeAsync(() => cut.Find($"button.library-tree-actions-button[aria-label='Actions for {filePath.RelativePath}']").ClickAsync());
 
         Assert.Equal(
             ["New note", "New folder", "Rename", "Move", "Copy path", "Open in default app", "Delete"],
@@ -142,10 +142,10 @@ public sealed class LibraryTreeTests : IDisposable
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [teamsScope]);
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
 
-        await cut.InvokeAsync(() => cut.Find($"button.library-tree-actions-button[aria-label='Actions for {teamFolder.RelativePath}']").Click());
+        await cut.InvokeAsync(() => cut.Find($"button.library-tree-actions-button[aria-label='Actions for {teamFolder.RelativePath}']").ClickAsync());
 
         Assert.Contains(
             cut.FindAll("div.mud-menu-item div.library-tree-menu-label"),
@@ -169,10 +169,10 @@ public sealed class LibraryTreeTests : IDisposable
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [teammatesScope]);
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
 
-        await cut.InvokeAsync(() => cut.Find($"button.library-tree-actions-button[aria-label='Actions for {teammateFolder.RelativePath}']").Click());
+        await cut.InvokeAsync(() => cut.Find($"button.library-tree-actions-button[aria-label='Actions for {teammateFolder.RelativePath}']").ClickAsync());
 
         var renameItem = cut.FindAll("div.mud-menu-item").Single(e =>
             e.QuerySelector("div.library-tree-menu-label")?.TextContent.Trim() == "Rename");
@@ -192,7 +192,7 @@ public sealed class LibraryTreeTests : IDisposable
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [notesScope]);
 
-        await cut.InvokeAsync(() => cut.Find("div.library-tree-node").ContextMenu());
+        await cut.InvokeAsync(() => cut.Find("div.library-tree-node").ContextMenuAsync());
 
         Assert.NotEmpty(cut.FindAll("div.mud-menu-item"));
     }
@@ -208,7 +208,7 @@ public sealed class LibraryTreeTests : IDisposable
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [teamsScope]);
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll("span.library-tree-orphan")));
 
         Assert.Equal(
@@ -225,7 +225,7 @@ public sealed class LibraryTreeTests : IDisposable
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [notesScope]);
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("div.library-tree-empty")));
         Assert.Equal("No notes here yet.", cut.Find("div.library-tree-empty span.library-tree-empty-text").TextContent.Trim());
@@ -277,12 +277,12 @@ public sealed class LibraryTreeTests : IDisposable
             ctx,
             [notesScope],
             onOpenFile: EventCallback.Factory.Create<LibraryPath>(this, p => opened = p));
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
 
         // CSS :last-of-type means "last sibling of its element type", not "last match in the
         // document", so pick the file node by its text.
-        await cut.InvokeAsync(() => cut.FindAll("span.library-tree-node-name").Single(node => node.TextContent.Trim() == "a.md").Click());
+        await cut.InvokeAsync(() => cut.FindAll("span.library-tree-node-name").Single(node => node.TextContent.Trim() == "a.md").ClickAsync());
 
         Assert.NotNull(opened);
         Assert.Equal("a.md", opened.RelativePath);
@@ -306,10 +306,10 @@ public sealed class LibraryTreeTests : IDisposable
             ctx,
             [teammateFolder],
             onOpenFile: EventCallback.Factory.Create<LibraryPath>(this, p => opened = p));
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
 
-        await cut.InvokeAsync(() => cut.FindAll("span.library-tree-node-name").Single(node => node.TextContent.Trim() == "Jarvis.md").Click());
+        await cut.InvokeAsync(() => cut.FindAll("span.library-tree-node-name").Single(node => node.TextContent.Trim() == "Jarvis.md").ClickAsync());
 
         Assert.NotNull(opened);
         Assert.Equal(LibraryNodeRole.TeammateDefinition, opened.Role);
@@ -342,9 +342,9 @@ public sealed class LibraryTreeTests : IDisposable
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [teamsScope]);
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
-        await cut.InvokeAsync(() => cut.Find($"button.library-tree-actions-button[aria-label='Actions for {teamFolder.RelativePath}']").Click());
+        await cut.InvokeAsync(() => cut.Find($"button.library-tree-actions-button[aria-label='Actions for {teamFolder.RelativePath}']").ClickAsync());
 
         foreach (string label in new[] { "Rename", "Move", "Delete" })
         {
@@ -374,7 +374,7 @@ public sealed class LibraryTreeTests : IDisposable
             [notesScope],
             selectedPath: fileNode,
             selectedPathChanged: EventCallback.Factory.Create<LibraryPath?>(this, p => selected = p));
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
 
         File.WriteAllText(filePath, "hello, much longer now");
@@ -400,9 +400,9 @@ public sealed class LibraryTreeTests : IDisposable
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [teamsScope]);
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
-        await cut.InvokeAsync(() => cut.FindAll("div.mud-treeview-item-arrow button")[1].Click());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-treeview-item-arrow button")[1].ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll("span.library-tree-node-name").Count));
         Assert.Equal(
@@ -419,7 +419,7 @@ public sealed class LibraryTreeTests : IDisposable
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [notesScope]);
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("div.library-tree-empty")));
 
         File.WriteAllText(Path.Combine(notesPath, "new.md"), "hello");
@@ -441,9 +441,9 @@ public sealed class LibraryTreeTests : IDisposable
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [notesScope]);
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll("span.library-tree-node-name").Count));
-        await cut.InvokeAsync(() => cut.FindAll("div.mud-treeview-item-arrow button")[1].Click());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-treeview-item-arrow button")[1].ClickAsync());
         List<string> namesBefore = [notesScope.Root.DisplayName, "Inner", "a.md"];
         cut.WaitForAssertion(() => Assert.Equal(
             namesBefore,

@@ -64,7 +64,7 @@ public sealed class LibraryExplorerTests : IDisposable
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".library-tree > ul > li")));
         Assert.Equal("Sub", cut.Find(".library-tree-node-name").TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.Find(".library-tree-actions-button").Click());
+        await cut.InvokeAsync(() => cut.Find(".library-tree-actions-button").ClickAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-menu-item")));
         IReadOnlyList<string> renameLabels = [.. cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim())];
         int renameIndex = renameLabels.ToList().IndexOf("Rename");
@@ -109,14 +109,14 @@ public sealed class LibraryExplorerTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderExplorer(ctx, scopes: [new LibraryLocation(scopePath.Root.Id, "Sub")]);
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".library-tree > ul > li")));
 
-        await cut.InvokeAsync(() => cut.Find(".library-tree-actions-button").Click());
+        await cut.InvokeAsync(() => cut.Find(".library-tree-actions-button").ClickAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-menu-item")));
         int newNoteIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("New note");
-        await cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[newNoteIndex].Click());
+        _ = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[newNoteIndex].Click());
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-file-ops-name-field input")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("Idea"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Idea"));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
 
         cut.WaitForAssertion(() => Assert.True(File.Exists(Path.Combine(root, "Sub", "Idea.md"))), TimeSpan.FromSeconds(5));
         Assert.False(File.Exists(Path.Combine(root, "Idea.md")));
@@ -264,7 +264,7 @@ public sealed class LibraryExplorerTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderExplorer(ctx, scopes: [new LibraryLocation(scopePath.Root.Id, "Sub")]);
         await ExpandFirstNodeAsync(cut);
         await ClickNodeAsync(cut, "Inner");
-        await cut.InvokeAsync(() => cut.FindAll("div.mud-treeview-item-arrow button")[1].Click());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-treeview-item-arrow button")[1].ClickAsync());
         await ClickNodeAsync(cut, "Existing.md");
         List<string> expectedSelected = ["Existing.md"];
         cut.WaitForAssertion(() => Assert.Equal(expectedSelected, SelectedNames(cut)));
@@ -298,8 +298,8 @@ public sealed class LibraryExplorerTests : IDisposable
 
         Task pending = cut.InvokeAsync(() => explorer.NewNoteAsync());
         cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("Idea"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").Click());
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Idea"));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").ClickAsync());
         await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
 
         List<string> after = [.. Directory.GetFileSystemEntries(Path.Combine(root, "Sub")).Order(StringComparer.Ordinal)];
@@ -323,15 +323,15 @@ public sealed class LibraryExplorerTests : IDisposable
 
         Task pending = cut.InvokeAsync(() => explorer.NewNoteAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-file-ops-name-field input")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("Idea"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Idea"));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal("Couldn't create Idea.md.", cut.Find(".library-file-ops-error").TextContent.Trim()));
         Assert.False(pending.IsCompleted);
         Assert.False(Directory.Exists(missing.FullPath));
         Assert.Empty(cut.FindComponents<LibraryDocument>());
 
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").Click());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").ClickAsync());
         await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
         Assert.False(Directory.Exists(missing.FullPath));
         Assert.Empty(cut.FindComponents<LibraryDocument>());
@@ -353,7 +353,7 @@ public sealed class LibraryExplorerTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderExplorer(ctx, scopes: [new LibraryLocation(scopePath.Root.Id, "Sub")]);
         await ExpandFirstNodeAsync(cut);
         await ClickNodeAsync(cut, "Inner");
-        await cut.InvokeAsync(() => cut.FindAll("div.mud-treeview-item-arrow button")[1].Click());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-treeview-item-arrow button")[1].ClickAsync());
         List<string> namesBefore = ["Existing.md", "Inner", "Sub"];
         cut.WaitForAssertion(() => Assert.Equal(namesBefore, SortedNodeNames(cut)));
         LibraryExplorer explorer = cut.FindComponent<LibraryExplorer>().Instance;
@@ -533,9 +533,9 @@ public sealed class LibraryExplorerTests : IDisposable
             ctx, scopes: [new LibraryLocation(one.Root.Id, string.Empty)], stateKey: "pane-a");
 
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".library-tree-node-name")));
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(2, cut.FindAll(".library-tree-node-name").Count));
-        await cut.InvokeAsync(() => cut.FindAll(".library-tree-node-name").Single(node => node.TextContent.Trim() == "One.md").Click());
+        await cut.InvokeAsync(() => cut.FindAll(".library-tree-node-name").Single(node => node.TextContent.Trim() == "One.md").ClickAsync());
 
         ctx.JSInterop.VerifyInvoke("huddleStorage.set");
         Assert.Contains(
@@ -586,11 +586,11 @@ public sealed class LibraryExplorerTests : IDisposable
         await cut.InvokeAsync(() => toggle.ValueChanged.InvokeAsync(LibraryMode.Edit));
         await cut.InvokeAsync(() => cut.FindComponent<LibraryEditor>().Instance.DirtyChanged.InvokeAsync(true));
 
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.Equal(3, cut.FindAll(".library-tree-node-name").Count));
         _ = cut.InvokeAsync(() => cut.FindAll(".library-tree-node-name").First(el => el.TextContent.Trim() == "Second.md").Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").Click());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal("First.md", cut.FindComponent<LibraryDocument>().Instance.Path.RelativePath));
     }
@@ -615,17 +615,17 @@ public sealed class LibraryExplorerTests : IDisposable
         await cut.InvokeAsync(() => toggle.ValueChanged.InvokeAsync(LibraryMode.Edit));
         await cut.InvokeAsync(() => cut.FindComponent<LibraryEditor>().Instance.DirtyChanged.InvokeAsync(true));
 
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.library-tree-actions-button[aria-label='Actions for Old.md']")));
-        await cut.InvokeAsync(() => cut.Find("button.library-tree-actions-button[aria-label='Actions for Old.md']").Click());
+        await cut.InvokeAsync(() => cut.Find("button.library-tree-actions-button[aria-label='Actions for Old.md']").ClickAsync());
         int renameIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("Rename");
-        await cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[renameIndex].Click());
+        _ = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[renameIndex].Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-file-ops-name-field input")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("New"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("New"));
+        _ = cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
 
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").Click());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").ClickAsync());
 
         Assert.False(File.Exists(Path.Combine(root, "New.md")));
         Assert.True(File.Exists(Path.Combine(root, "Old.md")));
@@ -647,13 +647,13 @@ public sealed class LibraryExplorerTests : IDisposable
             ctx, scopes: [new LibraryLocation(sub.Root.Id, string.Empty)], initialFile: "Sub/Inside.md");
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-rendered")));
 
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("button.library-tree-actions-button[aria-label='Actions for Sub']")));
-        await cut.InvokeAsync(() => cut.Find("button.library-tree-actions-button[aria-label='Actions for Sub']").Click());
+        await cut.InvokeAsync(() => cut.Find("button.library-tree-actions-button[aria-label='Actions for Sub']").ClickAsync());
         int deleteIndex = cut.FindAll(".library-tree-menu-label").Select(el => el.TextContent.Trim()).ToList().IndexOf("Delete");
-        await cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[deleteIndex].Click());
+        _ = cut.InvokeAsync(() => cut.FindAll(".mud-menu-item")[deleteIndex].Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Delete").Click());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Delete").ClickAsync());
 
         cut.WaitForAssertion(
             () => Assert.Equal([sub.FullPath], this.fixture.LibraryFixture.RecycleBin.Sent), TimeSpan.FromSeconds(5));
@@ -813,7 +813,7 @@ public sealed class LibraryExplorerTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderHost(ctx, [new LibraryLocation("teams", "Business")], "brief");
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".library-search-hit")));
 
-        await cut.InvokeAsync(() => cut.Find(".library-search-hit[data-path='Business/brief.md']").Click());
+        await cut.InvokeAsync(() => cut.Find(".library-search-hit[data-path='Business/brief.md']").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal("Business/brief.md", cut.FindComponent<LibraryDocument>().Instance.Path.RelativePath));
         cut.WaitForAssertion(() => Assert.Equal("the brief body", cut.Find(".library-rendered").TextContent.Trim()));
@@ -837,7 +837,7 @@ public sealed class LibraryExplorerTests : IDisposable
         FilterHost host = cut.FindComponent<FilterHost>().Instance;
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".library-search-hit[data-path='Business/Plans/Q4']")));
 
-        await cut.InvokeAsync(() => cut.Find(".library-search-hit[data-path='Business/Plans/Q4']").Click());
+        await cut.InvokeAsync(() => cut.Find(".library-search-hit[data-path='Business/Plans/Q4']").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".library-search-results")));
         Assert.Single(host.Changes);
@@ -865,7 +865,7 @@ public sealed class LibraryExplorerTests : IDisposable
             ctx, [new LibraryLocation("teams", "Business")], "Q4", showScopeRoot: false);
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".library-search-hit[data-path='Business/Plans/Q4']")));
 
-        await cut.InvokeAsync(() => cut.Find(".library-search-hit[data-path='Business/Plans/Q4']").Click());
+        await cut.InvokeAsync(() => cut.Find(".library-search-hit[data-path='Business/Plans/Q4']").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".library-search-results")));
         List<string> expectedNames = ["Other", "Plans", "Q4"];
@@ -890,7 +890,7 @@ public sealed class LibraryExplorerTests : IDisposable
         FilterHost host = cut.FindComponent<FilterHost>().Instance;
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".library-search-hit")));
 
-        await cut.InvokeAsync(() => cut.Find(".library-search-hit[data-path='Business/Plans/Q4']").Click());
+        await cut.InvokeAsync(() => cut.Find(".library-search-hit[data-path='Business/Plans/Q4']").ClickAsync());
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".library-search-results")));
         await cut.InvokeAsync(host.RerenderAsync);
 
@@ -1066,7 +1066,7 @@ public sealed class LibraryExplorerTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderHost(ctx, [new LibraryLocation("teams", "Business")], null);
         FilterHost host = cut.FindComponent<FilterHost>().Instance;
         cut.WaitForAssertion(() => Assert.Equal(BusinessOnly, NodeNames(cut)));
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
         List<string> expandedNames = ["Business", "Plans"];
         cut.WaitForAssertion(() => Assert.Equal(expandedNames, NodeNames(cut)));
         LibraryTree treeBefore = cut.FindComponent<LibraryTree>().Instance;
@@ -1227,14 +1227,14 @@ public sealed class LibraryExplorerTests : IDisposable
     private static async Task ExpandFirstNodeAsync(IRenderedComponent<ContainerFragment> cut)
     {
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll("div.mud-treeview-item-arrow button")));
-        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").Click());
+        await cut.InvokeAsync(() => cut.Find("div.mud-treeview-item-arrow button").ClickAsync());
     }
 
     /// <summary>Clicks the tree row named <paramref name="nodeName"/>, selecting it.</summary>
     private static async Task ClickNodeAsync(IRenderedComponent<ContainerFragment> cut, string nodeName)
     {
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".library-tree-node-name"), node => node.TextContent.Trim() == nodeName));
-        await cut.InvokeAsync(() => cut.FindAll(".library-tree-node-name").Single(node => node.TextContent.Trim() == nodeName).Click());
+        await cut.InvokeAsync(() => cut.FindAll(".library-tree-node-name").Single(node => node.TextContent.Trim() == nodeName).ClickAsync());
     }
 
     /// <summary>Waits for the New note dialog, types <paramref name="name"/>, confirms, and waits for
@@ -1243,8 +1243,8 @@ public sealed class LibraryExplorerTests : IDisposable
         IRenderedComponent<ContainerFragment> cut, Task pending, string name, CancellationToken ct)
     {
         cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change(name));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync(name));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
         await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
     }
 

@@ -47,7 +47,7 @@ public sealed class PromptsPanelTests
         var button = cut.Find("button");
         Assert.False(button.HasAttribute("disabled"));
 
-        button.Click();
+        await cut.InvokeAsync(() => button.ClickAsync());
 
         Assert.Equal("turn.roomLabel", requestedKey);
     }

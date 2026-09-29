@@ -69,7 +69,7 @@ public sealed class TasksPageDetailTests
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx);
 
-        await cut.InvokeAsync(() => cut.Find(".btn-action-tight").Click());
+        await cut.InvokeAsync(() => cut.Find(".btn-action-tight").ClickAsync());
 
         TaskDetail detail = cut.FindComponent<TaskDetail>().Instance;
         Assert.Null(detail.Id);
@@ -95,7 +95,7 @@ public sealed class TasksPageDetailTests
         await using MudBunitContext ctx = NewContext(harness);
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, "platform-alpha");
 
-        await cut.InvokeAsync(() => cut.Find(".btn-action-tight").Click());
+        await cut.InvokeAsync(() => cut.Find(".btn-action-tight").ClickAsync());
 
         TaskDraft draft = cut.FindComponent<TaskDetail>().Instance.Draft ?? throw new InvalidOperationException("Draft missing.");
         Assert.Equal("Platform", draft.Team);
@@ -120,7 +120,7 @@ public sealed class TasksPageDetailTests
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
         Assert.Equal("Discard changes?", cut.Find(".mud-dialog-title").TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).Click());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Equal(taskA.Id, cut.FindComponent<TaskDetail>().Instance.Id);
         Assert.True(cut.FindComponent<TaskDetail>().Instance.HasPending);
@@ -143,7 +143,7 @@ public sealed class TasksPageDetailTests
         _ = cut.InvokeAsync(() => FindTaskRow(cut, "Bravo").Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-actions button")));
 
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Discard", StringComparison.Ordinal)).Click());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Discard", StringComparison.Ordinal)).ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal(taskB.Id, cut.FindComponent<TaskDetail>().Instance.Id));
         Assert.False(cut.FindComponent<TaskDetail>().Instance.HasPending);
@@ -251,7 +251,7 @@ public sealed class TasksPageDetailTests
 
     /// <summary>Clicks the List row whose Title cell contains <paramref name="title"/>.</summary>
     private static Task ClickTaskRowAsync(IRenderedComponent<ContainerFragment> cut, string title) =>
-        cut.InvokeAsync(() => FindTaskRow(cut, title).Click());
+        cut.InvokeAsync(() => FindTaskRow(cut, title).ClickAsync());
 
     /// <summary>
     /// Sets the mounted <see cref="TaskDetail"/>'s Priority through its rendered <c>MudSelect</c>,
@@ -273,7 +273,7 @@ public sealed class TasksPageDetailTests
     /// <c>Find(...).Click()</c> can then hit a stale element id.
     /// </summary>
     private static Task ClickRevertAsync(IRenderedComponent<ContainerFragment> cut) =>
-        cut.InvokeAsync(() => cut.FindComponent<TaskDetail>().FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), "Revert", StringComparison.Ordinal)).Click());
+        cut.InvokeAsync(() => cut.FindComponent<TaskDetail>().FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), "Revert", StringComparison.Ordinal)).ClickAsync());
 
     /// <summary>The page's own detail drawer, picked out from <see cref="ViewEditorDrawer"/>'s <c>MudDrawer</c> by its <c>tasks-detail-drawer</c> CSS hook.</summary>
     private static IRenderedComponent<MudDrawer> DetailDrawer(IRenderedComponent<ContainerFragment> cut) =>
