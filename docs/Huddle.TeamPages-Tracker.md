@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. Tasks 5.7.t and 8.1.t are green on arrival and have no `.i`: they are Done once their mutation proofs are reported CAUGHT. Only the manager updates this file, with `agents/scripts/Set-Tracker.ps1 -TrackerPath docs/Huddle.TeamPages-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 50 of 81 tasks Done · 3 of 5 retrospectives done · last updated 2026-09-28.
+**Status:** 64 of 81 tasks Done · 3 of 5 retrospectives done · last updated 2026-09-29.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -75,20 +75,20 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 | 6.7.i Implement the tree refresh after NewNoteAsync · unnumbered · Sonnet | | | ✔ |
 | 🔁 R3 — Opus retrospective after #45, and plan update | | | ✔ |
 | **D7. UI** | | | |
-| 7.1.t Test: `TeamPageTabs` · #47 · Haiku | | | |
-| 7.1.i Implement `TeamPageTabs` · #48 · Haiku | | | |
-| 7.2.t Test: `TeamsNav` lists Teams and Projects · #49 · Sonnet | | | |
-| 7.2.i Implement `TeamsNav` (listing) · #50 · Sonnet | | | |
-| 7.3.t Test: `TeamsNav` expand and collapse · #51 · Sonnet | | | |
-| 7.3.i Implement the expansion state · #52 · Sonnet | | | |
-| 7.4.t Test: `NewTeamDialog` and the create actions · #53 · Sonnet | | | |
-| 7.4.i Implement `NewTeamDialog` and wire the actions · #54 · Sonnet | | | |
-| 7.5.t Test: the sidebar order · #55 · Sonnet | | | |
-| 7.5.i Add `TeamsNav` to `MainLayout` · #56 · Sonnet | | | |
-| 7.6.t Test: `TeamTabToolbar` · #57 · Sonnet | | | |
-| 7.6.i Implement `TeamTabToolbar` · #58 · Sonnet | | | |
-| 7.7.t Test: `AddMemberDialog` · #59 · Sonnet | | | |
-| 7.7.i Implement `AddMemberDialog` · #60 · Sonnet | | | |
+| 7.1.t Test: `TeamPageTabs` · #47 · Haiku | | | ✔ |
+| 7.1.i Implement `TeamPageTabs` · #48 · Haiku | | | ✔ |
+| 7.2.t Test: `TeamsNav` lists Teams and Projects · #49 · Sonnet | | | ✔ |
+| 7.2.i Implement `TeamsNav` (listing) · #50 · Sonnet | | | ✔ |
+| 7.3.t Test: `TeamsNav` expand and collapse · #51 · Sonnet | | | ✔ |
+| 7.3.i Implement the expansion state · #52 · Sonnet | | | ✔ |
+| 7.4.t Test: `NewTeamDialog` and the create actions · #53 · Sonnet | | | ✔ |
+| 7.4.i Implement `NewTeamDialog` and wire the actions · #54 · Sonnet | | | ✔ |
+| 7.5.t Test: the sidebar order · #55 · Sonnet | | | ✔ |
+| 7.5.i Add `TeamsNav` to `MainLayout` · #56 · Sonnet | | | ✔ |
+| 7.6.t Test: `TeamTabToolbar` · #57 · Sonnet | | | ✔ |
+| 7.6.i Implement `TeamTabToolbar` · #58 · Sonnet | | | ✔ |
+| 7.7.t Test: `AddMemberDialog` · #59 · Sonnet | | | ✔ |
+| 7.7.i Implement `AddMemberDialog` · #60 · Sonnet | | | ✔ |
 | 🔁 R4 — Opus retrospective after #60, and plan update | | | |
 | 7.8.t Test: `TeamMembers` list and search · #61 · Sonnet | | | |
 | 7.8.i Implement `TeamMembers` (list and search) · #62 · Sonnet | | | |

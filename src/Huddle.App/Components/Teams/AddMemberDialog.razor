@@ -1,0 +1,116 @@
+@*
+    Spec §6.7 (Add member): the dialog behind the Members tab's Add button. A strict MudAutocomplete over
+    a snapshot of the Teammates not yet in the Team (Components/Tasks/DuplicatePickerDialog.razor is the
+    house shape), searched over Name, Alias and Title ignoring case. CoerceValue=false keeps typed text
+    that matches no Teammate out of the value, so Add stays disabled until a real pick. After a pick a
+    status alert warns that adding restarts the Teammate; a failed Add keeps the dialog open with an
+    alert. MudAlert renders no role of its own, so both roles are written explicitly. The opener passes
+    the title through IDialogService.ShowAsync; Team and Candidates are snapshots, frozen while open.
+*@
+
+@using Agency.Huddle.App.Avatars
+
+@inject ITeamMembership Membership
+@inject AvatarStore Avatars
+
+<MudDialog>
+    <DialogContent>
+        @if (this.Team is not null)
+        {
+            <MudStack Spacing="2">
+                <MudAutocomplete T="TeammateChoice" Label="Teammate" Strict="true" CoerceValue="false"
+                                 SearchFunc="@this.SearchAsync"
+                                 ToStringFunc="@(choice => choice is null ? string.Empty : choice.Name)"
+                                 Value="@this.selected" ValueChanged="@this.OnSelected" DebounceInterval="100"
+                                 Class="add-member-dialog-field">
+                    <ItemTemplate Context="choice">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <TeammateAvatar Name="@choice.Name" Avatar="this.Avatars.Get(choice.Name)" Size="Size.Small" />
+                            <MudText Typo="Typo.body2">@choice.Name</MudText>
+                            <MudText Typo="Typo.caption">@choice.Title</MudText>
+                        </MudStack>
+                    </ItemTemplate>
+                </MudAutocomplete>
+                @if (this.selected is not null)
+                {
+                    <MudAlert Severity="Severity.Warning" role="status" Class="add-member-dialog-warning">Adding @this.selected.Name restarts it and clears its conversation memory.</MudAlert>
+                }
+                @if (this.error is not null)
+                {
+                    <MudAlert Severity="Severity.Error" role="alert" Class="add-member-dialog-error">@this.error</MudAlert>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        @if (this.Team is not null)
+        {
+            <MudButton Color="Color.Primary" Disabled="@(this.selected is null)" Class="add-member-dialog-add-button" OnClick="this.Add">Add</MudButton>
+            <MudButton Class="add-member-dialog-cancel-button" OnClick="this.Cancel">Cancel</MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>A snapshot of the Team the Teammate joins; the dialog renders nothing while it is <see langword="null"/>.</summary>
+    [Parameter]
+    public TeamSummary? Team { get; set; }
+
+    /// <summary>A snapshot of the Teammates that can be added (those not yet in the Team); it does not follow later changes while the dialog is open.</summary>
+    [Parameter]
+    public IReadOnlyList<TeammateChoice> Candidates { get; set; } = [];
+
+    private TeammateChoice? selected;
+    private string? error;
+
+    /// <summary>Suggests the candidates whose Name, Alias or Title contains <paramref name="text"/>, ignoring case; every candidate for a null or empty term.</summary>
+    /// <param name="text">What the Human typed.</param>
+    /// <param name="cancellationToken">Unused: the search is in memory.</param>
+    private Task<IEnumerable<TeammateChoice>> SearchAsync(string? text, CancellationToken cancellationToken)
+    {
+        _ = cancellationToken;
+        IEnumerable<TeammateChoice> found = string.IsNullOrEmpty(text)
+            ? this.Candidates.ToList()
+            : this.Candidates.Where(choice =>
+                choice.Name.Contains(text, StringComparison.OrdinalIgnoreCase)
+                || choice.Alias.Contains(text, StringComparison.OrdinalIgnoreCase)
+                || choice.Title.Contains(text, StringComparison.OrdinalIgnoreCase)).ToList();
+        return Task.FromResult(found);
+    }
+
+    /// <summary>Remembers the chosen Teammate and drops the previous attempt's error.</summary>
+    /// <param name="choice">The chosen Teammate, or <see langword="null"/> when cleared.</param>
+    private void OnSelected(TeammateChoice? choice)
+    {
+        this.selected = choice;
+        this.error = null;
+    }
+
+    /// <summary>Adds the chosen Teammate: closes with its Name on success, otherwise keeps the dialog open with the outcome's text.</summary>
+    private void Add()
+    {
+        if (this.Team is not { } team || this.selected is not { } choice)
+        {
+            return;
+        }
+
+        MembershipResult result = this.Membership.Add(team.Name, choice.Name);
+        if (result.Outcome == MembershipOutcome.Added)
+        {
+            this.Dialog?.Close(DialogResult.Ok(choice.Name));
+            return;
+        }
+
+        this.error = result.Outcome switch
+        {
+            MembershipOutcome.AlreadyMember => $"{choice.Name} is already in {team.Name}.",
+            MembershipOutcome.NotFound => $"{choice.Name} no longer exists.",
+            _ => result.Problem ?? $"{choice.Name} could not be added to {team.Name}.",
+        };
+    }
+
+    private void Cancel() => this.Dialog?.Cancel();
+}
