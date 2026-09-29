@@ -43,17 +43,17 @@
         <MudTextField T="string" Label="Name" Value="@this.name" ValueChanged="@this.OnNameChanged" Disabled="this.ControlsDisabled" Class="view-editor-name" />
         <MudTextField T="string" Label="Description" Value="@this.description" ValueChanged="@this.OnDescriptionChanged" Disabled="this.ControlsDisabled" Class="view-editor-description" />
 
-        <MudToggleGroup T="ViewKind" Value="this.kind" ValueChanged="this.OnKindChanged" Disabled="this.ControlsDisabled"
-                         SelectionMode="SelectionMode.SingleSelection" Class="view-editor-kind">
+        <HuddleSegmentedControl T="ViewKind" Value="this.kind" ValueChanged="this.OnKindChanged" Disabled="this.ControlsDisabled"
+                         Class="view-editor-kind" ItemCount="2">
             <MudToggleItem Value="ViewKind.List" Text="List" />
             <MudToggleItem Value="ViewKind.Board" Text="Board" />
-        </MudToggleGroup>
+        </HuddleSegmentedControl>
 
-        <MudToggleGroup T="ViewScope" Value="this.scope" ValueChanged="this.OnScopeChanged" Disabled="@(this.kind == ViewKind.Board || this.ControlsDisabled)"
-                         SelectionMode="SelectionMode.SingleSelection" Class="view-editor-scope">
+        <HuddleSegmentedControl T="ViewScope" Value="this.scope" ValueChanged="this.OnScopeChanged" Disabled="@(this.kind == ViewKind.Board || this.ControlsDisabled)"
+                         Class="view-editor-scope" ItemCount="2">
             <MudToggleItem Value="ViewScope.Active" Text="Active" />
             <MudToggleItem Value="ViewScope.Closed" Text="Closed" />
-        </MudToggleGroup>
+        </HuddleSegmentedControl>
 
         <MudText Typo="Typo.subtitle2">Fields shown</MudText>
         <MudDropContainer T="string" Items="this.FieldKeys()" ItemsSelector="@((_, _) => true)"

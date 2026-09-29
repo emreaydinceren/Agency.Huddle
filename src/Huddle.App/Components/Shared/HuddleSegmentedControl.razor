@@ -1,0 +1,22 @@
+@typeparam T
+@using MudBlazor
+
+<div class="huddle-segmented-control @Class">
+    <div class="huddle-segmented-indicator" style="width: calc((100% - 8px) / @ItemCount);"></div>
+
+    <MudToggleGroup T="T" Value="@Value" ValueChanged="@ValueChanged" Disabled="@Disabled"
+                     SelectionMode="@SelectionMode" Class="huddle-segmented-group" SelectedClass="huddle-segmented-active-item"
+                     Outlined="false" Delimiters="false" Ripple="false" CheckMark="false" Color="Color.Default">
+        @ChildContent
+    </MudToggleGroup>
+</div>
+
+@code {
+    [Parameter] public T Value { get; set; } = default!;
+    [Parameter] public EventCallback<T> ValueChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public SelectionMode SelectionMode { get; set; } = SelectionMode.SingleSelection;
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public RenderFragment ChildContent { get; set; } = default!;
+    [Parameter] public int ItemCount { get; set; } = 2;
+}

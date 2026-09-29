@@ -1,0 +1,70 @@
+.huddle-segmented-control {
+    position: relative;
+    display: inline-flex;
+    background-color: var(--mud-palette-background-gray);
+    border-radius: 8px;
+    padding: 3px;
+}
+
+.huddle-segmented-indicator {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 3px;
+    background-color: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 6px;
+    box-shadow: var(--mud-elevation-1);
+    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    z-index: 1;
+}
+
+.huddle-segmented-group {
+    background: transparent !important;
+    position: relative;
+    z-index: 2;
+    width: 100%;
+}
+
+::deep .huddle-segmented-active-item {
+    background-color: transparent !important;
+    opacity: 1 !important;
+    font-weight: 500 !important;
+}
+
+::deep .huddle-segmented-group .mud-toggle-item {
+    flex: 1 1 0;
+    text-align: center;
+    border-radius: 6px;
+    border: none !important;
+    background: transparent !important;
+    padding: 6px 12px;
+    min-height: unset;
+    position: relative;
+    z-index: 2;
+    color: var(--mud-palette-text-primary) !important;
+    opacity: 0.5 !important;
+    font-weight: 500 !important;
+    transition: opacity 0.3s ease;
+}
+
+::deep .huddle-segmented-group .mud-toggle-item * {
+    color: inherit !important;
+    font-weight: inherit !important;
+}
+
+.huddle-segmented-control:has(.mud-toggle-item:nth-child(1).huddle-segmented-active-item) .huddle-segmented-indicator {
+    transform: translateX(0%);
+}
+.huddle-segmented-control:has(.mud-toggle-item:nth-child(2).huddle-segmented-active-item) .huddle-segmented-indicator {
+    transform: translateX(100%);
+}
+.huddle-segmented-control:has(.mud-toggle-item:nth-child(3).huddle-segmented-active-item) .huddle-segmented-indicator {
+    transform: translateX(200%);
+}
+.huddle-segmented-control:has(.mud-toggle-item:nth-child(4).huddle-segmented-active-item) .huddle-segmented-indicator {
+    transform: translateX(300%);
+}
+.huddle-segmented-control:has(.mud-toggle-item:nth-child(5).huddle-segmented-active-item) .huddle-segmented-indicator {
+    transform: translateX(400%);
+}

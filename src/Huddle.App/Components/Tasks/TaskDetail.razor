@@ -338,11 +338,11 @@ else if (this.loaded is { } task)
 
         RenderFragment sideContent = @<text>
             <div class="task-detail-description">
-                <MudToggleGroup T="DescriptionViewMode" Value="this.descriptionMode" ValueChanged="this.OnDescriptionModeChanged"
-                                 SelectionMode="SelectionMode.SingleSelection" Class="task-detail-description-toggle">
+                <HuddleSegmentedControl T="DescriptionViewMode" Value="this.descriptionMode" ValueChanged="this.OnDescriptionModeChanged"
+                                 Class="task-detail-description-toggle" ItemCount="2">
                     <MudToggleItem Value="DescriptionViewMode.Edit" Text="Edit" />
                     <MudToggleItem Value="DescriptionViewMode.Preview" Text="Preview" />
-                </MudToggleGroup>
+                </HuddleSegmentedControl>
 
                 @if (this.descriptionMode == DescriptionViewMode.Edit)
                 {

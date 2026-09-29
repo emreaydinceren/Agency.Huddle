@@ -27,12 +27,12 @@
         <MudSpacer />
         @if (this.ShowModeToggle())
         {
-            <MudToggleGroup T="LibraryMode" Value="@this.mode" ValueChanged="@this.OnModeChangedAsync" SelectionMode="SelectionMode.SingleSelection"
-                             Class="library-document-mode-toggle">
+            <HuddleSegmentedControl T="LibraryMode" Value="@this.mode" ValueChanged="@this.OnModeChangedAsync" 
+                             Class="library-document-mode-toggle" ItemCount="3">
                 <MudToggleItem Value="LibraryMode.Read" Text="Read" />
                 <MudToggleItem Value="LibraryMode.Edit" Text="Edit" />
                 <MudToggleItem Value="LibraryMode.Split" Text="Split" />
-            </MudToggleGroup>
+            </HuddleSegmentedControl>
         }
         <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" aria-label="Copy" Class="library-document-copy" OnClick="@this.OnCopyAsync" />
         <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" aria-label="Pop out" Class="library-document-pop-out" />
