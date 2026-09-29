@@ -36,10 +36,11 @@ Status: **Verified** (seen working in a later batch) · **Done** (applied, not y
 | R2-6 | Get-FileHash demanded although `Prove-Mutation` prints RESTORED | Dropped from prompts | Manager | Verified | 5.6.i, 5.7.t prompts |
 | R2-7 | Manager re-reads about 360K per call | Retro edits go to one agent (done for R2); `/compact` | Manager and Human | Partial | `/compact` requested by the Human; check the MAIN row at R3 |
 | R2-8 | D7 has no review | Two architect reviews: 7.1–7.7 (running) and 7.8–7.13 before R4 | Manager | Partial | `corrections-D7a.md` pending; D7b not started |
-| R2-9 | Every agent reads about 20K of brief plus facts | Verifiers skip both; implementers get a brief of 6K or less | Chore agent | **Open** | Edit `.claude/agents/teampages-dev.md` and split the brief; measure at R3 |
-| R2-10 | The facts reference's 15.9K "Repo-wide conventions" block is read whole by agents | Split it by `###` and have prompts name the subsection | Chore agent | **Open** | Measure 4.2-style orientation at R3 |
-| R2-11 | Ten separate `Set-Tracker` calls | Fold into the review call | Manager | Open | Minor |
+| R2-9 | Every agent reads about 20K of brief plus facts | Verifiers skip both; implementers get a brief of 6K or less | Chore agent | Done | 2026-09-28: `delivery-brief-slim.md` (8.3K chars), `teampages-dev.md` reads it plus the Core, and a "verification runner" prompt reads neither. Measure the first-call context of D6 agents and verifiers against 21–25K at R3 |
+| R2-10 | The facts reference's 15.9K "Repo-wide conventions" block is read whole by agents | Split it by `###` and have prompts name the subsection | Chore agent | Done | 2026-09-28: the reference file now has an INDEX and nine `##` headings; Core says to read only the section needed. Measure orientation calls before the first edit at R3 |
+| R2-11 | Ten separate `Set-Tracker` calls | Fold into the review call | Manager | Deferred | Deferred at the D6 gate (2026-09-28): a handful of manager calls, well under 1% of the manager's cost; I batch `Set-Tracker` calls with the review command when it is free to do so |
 | R2-12 | Flake notes for the final docs pass | Written into Task 8.3; Task 8.5 uses the Bash Docker form | Docs agent | Done | Runs at D8 |
+| R2-13 | New at the D5 commit: `core.autocrlf=true` and no `.gitattributes`, so git will rewrite `agents/scripts/Run-LinuxRepro.sh` to CRLF the next time it touches it in a Windows checkout, and bash rejects CRLF | Add `agents/scripts/*.sh text eol=lf` to a root `.gitattributes` (a shared root file: announce it to the Human first) | Manager | **Open** | The script is LF in the working copy now, so it works until a checkout rewrites it; raise in the final report if not done |
 
 ## How a retrospective feeds this register
 
