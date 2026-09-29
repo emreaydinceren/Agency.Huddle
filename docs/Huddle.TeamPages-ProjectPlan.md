@@ -1062,6 +1062,10 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
 > **Architect review before this deliverable.** D6 walks the file system behind the Library's path
 > boundary.
 
+### Task 6.0.t / 6.0.i (unnumbered) — memory is a plain folder in the Library [Sonnet]
+
+- Full text: `Conversation/teampages/corrections-D6.md`, section 'NEW pair'. Risk `boundary`. Runs first in D6.
+
 ### Task 6.1.t (#35) — Test: `LibrarySearchResult` [Haiku]
 
 - **Goal:** Pin the search result shape, **Spec §6.8 (692–740)**, **§7.2**.
@@ -1134,8 +1138,9 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
     folder count large enough to observe it) stops the walk;
   - Windows-only (`Assert.Skip` first on Linux): a junction inside the scope pointing outside the
     root contributes **no** hits and is not followed;
-  - a folder the process cannot list (Windows-only, deny ACL) is skipped and the other hits are
-    still returned — or, if facts item 5 says `ListAsync` throws, a row proving `FindAsync`
+  - a folder the process cannot list (use `tests/Huddle.Tests/TestListing.cs`: `DenyListing`/
+    `GrantListing`/`ListingIsDenied`; Linux CI is root, so probe and skip) is skipped and the other
+    hits are still returned — or, if facts item 5 says `ListAsync` throws, a row proving `FindAsync`
     handles that the same way `ListAsync`'s callers do.
 - **Acceptance:** Red (the cancellation rows), or green with a stated reason for any row that
   already holds; list each on the report. Any row that arrives green gets a mutation proof.
@@ -1388,7 +1393,12 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
     project** on Business → `EnsureProjectIn("Business","Q4 Launch")` and navigates to
     `/teams/Business/projects/Q4%20Launch`; a failing result shows the error in a snackbar
     (`Severity.Error`) and does **not** navigate; a cancelled dialog calls nothing.
-- **Acceptance:** Red, `-NewNames "NewTeamDialog,NewTeamDialogMode,FakeTeamFolders"`.
+  - R2 (corrections-D6 #21): a Team created by the dialog is not in the catalog for about 500 ms:
+    the test uses the `FakeTeamCatalog` so it can `Raise()`, and the navigation waits on
+    `catalog.Find` (poll).
+  - R2 (corrections-D6 #37): `-NewNames` must NOT list `FakeTeamFolders` (the `.t` creates that
+    type itself).
+- **Acceptance:** Red, `-NewNames "NewTeamDialog,NewTeamDialogMode"`.
 
 ### Task 7.4.i (#54) — Implement `NewTeamDialog` and wire the actions [Sonnet]
 
@@ -1405,6 +1415,8 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   `ISnackbar`, `NavigationManager`: `New team` and `New project` open the dialog, then call
   `EnsureTeam` / `EnsureProjectIn`, navigate on success and snackbar the error otherwise. Hide
   `New project` when both `Library:Enabled` and `Tasks:Enabled` are false.
+  - R2 (corrections-D6 #21): a Team created by the dialog is not in the catalog for about 500 ms:
+    wait on `catalog.Find` (poll) before navigating, or the page flashes "There is no Team named".
 - **Acceptance:** 7.4.t green; 7.2.t, 7.3.t green.
 
 ### Task 7.5.t (#55) — Test: the sidebar order [Sonnet]
@@ -1618,6 +1630,8 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   `this.explorer.NewNoteAsync()`) above a `LibraryExplorer @ref="this.explorer"` with
   `Scopes`, `Layout="LibraryExplorerLayout.SideBySide"`, `Filter="@Search"`,
   `FilterChanged="@SearchChanged"` and the `StateKey` above.
+  - R2 (corrections-D6 #34): the explorer resolves `Scopes` only in `OnInitialized`: the Team page
+    sets `@key="ScopePath"` on it (read corrections-D6 #34 first).
 - **Acceptance:** 7.11.t green.
 
 ### Task 7.12.t (#69) — Test: `TeamTasksTab` [Sonnet]
@@ -1707,6 +1721,11 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   `TeamMembers`, `TeamFilesTab` or `TeamTasksTab` for the active tab. `@implements IDisposable`
   for the catalog subscription. The unknown-Team, unknown-Project and both-off `MudAlert`s (add
   `role="alert"` explicitly).
+  - R2 (corrections-D6 #34): the page sets `@key="ScopePath"` on the `LibraryExplorer` (through
+    `TeamFilesTab`), because the explorer resolves `Scopes` only in `OnInitialized`.
+  - R2 (corrections-D6 #21): a Team created by the dialog is not in the catalog for about 500 ms:
+    the page re-renders on the catalog's `Changed`, and a test uses the `FakeTeamCatalog` so it
+    can `Raise()`.
 - **Acceptance:** 7.13.t green; the whole `Ui/Teams` folder green; full suite once.
 
 ---
@@ -1781,6 +1800,9 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   3. ADR-0032: `status: accepted`.
   4. `code-map.md`: one row per new file under `src/Huddle.App/Teams/` and
      `Components/Teams/`, plus `TeamPage.razor`, in the table's existing shape.
+  5. R2: the `RoomListTests.Archive_RemovesTheRoomFromTheSidebarList` flake (J10) and the full-run
+     `[FATAL ERROR] Foreground threads were left running` line go to
+     `docs/agencyteam/known-limits.md` with the Persona-rename flake.
 - **Acceptance:** `markdownlint` clean on the four files if the repo lints docs; each new file in
   `git diff main --stat -- src/` appears in the code map.
 
@@ -1808,7 +1830,8 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   `Run-Tests.ps1` (the whole solution, once); `./test-health.ps1 -Configuration Release`;
   `Check-Diff.ps1 -Scope Branch`; `Check-Visibility.ps1`; `Check-Eol.ps1`; the Linux Docker
   repro. Any failure is reported with its output and **not** fixed here: it becomes a fix task.
-  **Do not push and do not open a PR.**
+  **Do not push and do not open a PR.** R2: run the Linux repro with
+  `agents/scripts/Run-LinuxRepro.sh` from the Bash tool.
 - **Acceptance:** Every command exits 0, or each failure is listed with the task that owns it.
   The report ends with the branch's `git log --oneline main..` and the Human's go-ahead
   question.
@@ -1822,7 +1845,7 @@ The manager records each retrospective here, newest last, and commits the plan c
 | # | After task | Date | Top findings | Plan changes made |
 | --- | --- | --- | --- | --- |
 | R1 | #15 | 2026-09-28 | The brief pointed at stale `Conversation/scripts/` copies (no `-RedDir`/`-AllowCodes`); 3 Haiku agents used `-Force` and reported no deviation; Haiku 2.1.i edited a test's expected value to pass; Haiku pairs cost 44-50 calls / 2.3-3.3M re-read against 22-26 / 1.3-1.9M for Sonnet pairs; four architect reviews = 42% of subagent tokens (19.7M of 46.5M); general-purpose agents start at 49-65K context against 21-25K for `teampages-dev`; missing `using Agency.Huddle.App.Teams;` failed three builds | Brief fixed and given an R1 rules block; 10 fact lines added to the facts Core; 5.4.t/5.4.i retagged Haiku -> Sonnet and 5.4.i no longer edits tests or commits `prompts.default.json`; 4.1.i gets the exact mutation command; 4.2.t creates the shared `FakeTeamCatalog` (7.2.t reuses it, `-NewNames` gains `Teams`); 7.2.i adds `_Imports.razor`; 8.2 covers S1-S17; verifiers run as `teampages-dev`; `Check-All.ps1` and a red wrapper scripted; the D7 review is split into three Opus reviews (<=35 calls each) |
-| R2 | #30 | | | |
+| R2 | #30 | 2026-09-28 | Run-Red rejects -RedDir; IDE0005 on the Teams using in new reds; CA1062/CA1859 hidden behind compile reds; stale ACL pointer (:846-875 vs :945-985) made 5.3.t copy the helper; corrections-D5 #16/#20 pointers stale; the manager session (418K context, ~360K re-read per call) costs more per pair than the agents; every agent reads ~20K of brief+facts | Facts R2 block (13 lines); brief R1 bullet replaced and an R2 block added; corrections-D5 #16/#20/#26/#27 and corrections-D6 #11/#35-37 fixed or added; 6.0 stub in the plan; 7.4/7.11/7.13/8.3/8.5/6.3.t notes; TestListing.cs and Run-LinuxRepro.sh chores; D7 gets two architect reviews (7.1-7.7 during D6, 7.8-7.13 before R4) |
 | R3 | #45 | | | |
 | R4 | #60 | | | |
 | R5 | #75 | | | |
