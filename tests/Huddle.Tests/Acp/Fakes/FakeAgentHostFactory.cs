@@ -13,6 +13,13 @@ internal sealed class FakeAgentHostFactory : IAgentHostFactory
 {
     private Exception? failure;
 
+    /// <summary>Initializes a new instance of the <see cref="FakeAgentHostFactory"/> class.</summary>
+    /// <param name="time">The clock the shared <see cref="Session"/>'s planned delays wait on; defaults to <see cref="TimeProvider.System"/>.</param>
+    public FakeAgentHostFactory(TimeProvider? time = null)
+    {
+        this.Session = new FakeAgentSession(completeEventsOnDispose: false, time);
+    }
+
     /// <summary>
     /// The session every host's first <see cref="IPersonaHost.OpenAsync"/> call returns (RS §6.3
     /// "first-open rule"). Built with <c>completeEventsOnDispose: false</c> (D19 correction 14): a
@@ -20,7 +27,7 @@ internal sealed class FakeAgentHostFactory : IAgentHostFactory
     /// still hand back a session whose <see cref="FakeAgentSession.Events"/> reader has not already
     /// completed.
     /// </summary>
-    public FakeAgentSession Session { get; } = new(completeEventsOnDispose: false);
+    public FakeAgentSession Session { get; }
 
     /// <summary>The last <see cref="FakePersonaHost"/> <see cref="StartAsync"/> returned.</summary>
     public FakePersonaHost? Host { get; private set; }

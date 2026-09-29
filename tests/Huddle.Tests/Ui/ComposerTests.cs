@@ -217,7 +217,7 @@ public sealed class ComposerTests
 
         await cut.InvokeAsync(() => composer.Instance.TaskQueryAsync("sa"));
 
-        cut.Find("[role='option']").Click();
+        await cut.InvokeAsync(() => cut.Find("[role='option']").ClickAsync());
 
         var invocation = ctx.JSInterop.VerifyInvoke("teamComposer.insertTask");
         Assert.Equal("PLAT-0001", invocation.Arguments[1]);

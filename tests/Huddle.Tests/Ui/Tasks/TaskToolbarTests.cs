@@ -31,10 +31,10 @@ public sealed class TaskToolbarTests
 
         Assert.Empty(root.FindAll(".task-toolbar-save"));
 
-        root.FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), "Filter", StringComparison.Ordinal)).Click();
+        await root.InvokeAsync(() => root.FindAll("button").Single(b => string.Equals(b.TextContent.Trim(), "Filter", StringComparison.Ordinal)).ClickAsync());
         var teamInput = root.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-toolbar-filter-input", StringComparison.Ordinal));
         await root.InvokeAsync(() => teamInput.Instance.ValueChanged.InvokeAsync("Atlas"));
-        root.Find(".task-toolbar-filter-add").Click();
+        await root.InvokeAsync(() => root.Find(".task-toolbar-filter-add").ClickAsync());
 
         TaskView updated = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
         Assert.Contains("Atlas", updated.Filter.Teams, StringComparer.Ordinal);
@@ -187,13 +187,13 @@ public sealed class TaskToolbarTests
         NewTaskDefaults? oneTeamDefaults = null;
         await using var oneTeamCtx = NewContext(store);
         var (_, oneTeamToolbar) = RenderToolbar(oneTeamCtx, oneTeam, onNewTask: EventCallback.Factory.Create<NewTaskDefaults>(this, v => oneTeamDefaults = v));
-        await oneTeamToolbar.InvokeAsync(() => oneTeamToolbar.Find(".btn-action-tight").Click());
+        await oneTeamToolbar.InvokeAsync(() => oneTeamToolbar.Find(".btn-action-tight").ClickAsync());
         Assert.Equal("Atlas", oneTeamDefaults?.Team);
 
         NewTaskDefaults? twoTeamsDefaults = null;
         await using var twoTeamsCtx = NewContext(store);
         var (_, twoTeamsToolbar) = RenderToolbar(twoTeamsCtx, twoTeams, onNewTask: EventCallback.Factory.Create<NewTaskDefaults>(this, v => twoTeamsDefaults = v));
-        await twoTeamsToolbar.InvokeAsync(() => twoTeamsToolbar.Find(".btn-action-tight").Click());
+        await twoTeamsToolbar.InvokeAsync(() => twoTeamsToolbar.Find(".btn-action-tight").ClickAsync());
         Assert.Null(twoTeamsDefaults?.Team);
     }
 

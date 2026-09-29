@@ -884,7 +884,7 @@ internal sealed class RoomSession : IAsyncDisposable
         var messageId = Guid.CreateVersion7().ToString("N");
         var completion = new TaskCompletionSource<TurnOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
         var turnCancellation = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var turn = new ActiveTurn(item.RoomId, messageId, new StringBuilder(), completion, turnCancellation);
+        var turn = new ActiveTurn(item.RoomId, messageId, new StringBuilder(), completion, turnCancellation, this.time);
         IAgentSession activeSession;
         lock (this.gate)
         {
@@ -1170,7 +1170,7 @@ internal sealed class RoomSession : IAsyncDisposable
             TimeSpan remaining = idleBound;
             while (remaining > TimeSpan.Zero)
             {
-                await Task.Delay(remaining, watchdogToken);
+                await Task.Delay(remaining, this.time, watchdogToken);
                 remaining = idleBound - turn.IdleFor;
             }
 
@@ -1188,7 +1188,7 @@ internal sealed class RoomSession : IAsyncDisposable
             try
             {
                 // TRAP 2: tell the far side first, before this Turn's own token is cancelled below.
-                await activeSession.CancelAsync(ct).WaitAsync(AdapterCancelGrace, ct);
+                await activeSession.CancelAsync(ct).WaitAsync(AdapterCancelGrace, this.time, ct);
             }
             catch (Exception ex) when (ex is AgentException or IOException or ObjectDisposedException or TimeoutException)
             {
@@ -1774,17 +1774,17 @@ internal sealed class RoomSession : IAsyncDisposable
         string MessageId,
         StringBuilder Text,
         TaskCompletionSource<TurnOutcome> Completion,
-        CancellationTokenSource Cancellation)
+        CancellationTokenSource Cancellation,
+        TimeProvider Time)
     {
-        // lastActivityTicks, stopRequested and timedOut are each written by one thread and read by
-        // another - lastActivityTicks by the event-reader loop, read by the idle-timeout watchdog;
+        // lastActivityTimestamp, stopRequested and timedOut are each written by one thread and read by
+        // another - lastActivityTimestamp by the event-reader loop, read by the idle-timeout watchdog;
         // stopRequested by StopAsync, timedOut by the watchdog, both read by the consumer's catch
         // clauses - so every access goes through Interlocked or Volatile, never a plain read or write.
-        // Environment.TickCount64 (monotonic, unaffected by a wall-clock change) is used rather than an
-        // injected TimeProvider: threading one through here would churn every test's construction, and
-        // this file already reads DateTimeOffset.UtcNow directly elsewhere, so this is consistent with
-        // the existing style rather than a new one.
-        private long lastActivityTicks = Environment.TickCount64;
+        // The stamp is TimeProvider.GetTimestamp (monotonic, unaffected by a wall-clock change) from the
+        // session's own injected TimeProvider, so a test drives the idle clock and the watchdog's delay
+        // from one FakeTimeProvider rather than waiting out real seconds.
+        private long lastActivityTimestamp = Time.GetTimestamp();
         private bool stopRequested;
         private bool timedOut;
         private bool sawActivity;
@@ -1821,7 +1821,7 @@ internal sealed class RoomSession : IAsyncDisposable
 
         /// <summary>How long it has been, as of now, since the last sign of life on this Turn.</summary>
         public TimeSpan IdleFor =>
-            TimeSpan.FromMilliseconds(Environment.TickCount64 - Interlocked.Read(ref this.lastActivityTicks));
+            this.Time.GetElapsedTime(Interlocked.Read(ref this.lastActivityTimestamp));
 
         /// <summary>
         /// Whether the event-reader loop has observed any <see cref="AgentEvent"/> at all for this
@@ -1843,7 +1843,7 @@ internal sealed class RoomSession : IAsyncDisposable
         /// </summary>
         public void MarkActivity()
         {
-            Interlocked.Exchange(ref this.lastActivityTicks, Environment.TickCount64);
+            Interlocked.Exchange(ref this.lastActivityTimestamp, this.Time.GetTimestamp());
             Volatile.Write(ref this.sawActivity, true);
         }
 

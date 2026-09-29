@@ -117,7 +117,7 @@ Left unquarantined, a rate like that turns a meaningful share of runs red for re
 unrelated to the change under test, which is how a team learns to ignore CI.
 
 > [!NOTE]
-> **Lifted 2026-09-27: `PersonaSupervisorTests.Shutdown_DisposesEveryHost`.** It was recorded as
+> **Lifted 2026-09-27: `PersonaSupervisorLifecycleTests.Shutdown_DisposesEveryHost`.** It was recorded as
 > "its 10-second token races `WaitUntilAsync`". That was the wrong diagnosis: every failure in
 > that class spent the *whole* budget, whatever the budget was — raised to 30 s, the same runs
 > still failed, 30 s later. The condition never arrived, because on Linux `PersonaStore`'s
@@ -127,7 +127,7 @@ unrelated to the change under test, which is how a team learns to ignore CI.
 
 ### Reproducing a flake: load, not loops
 
-A sequential loop is the wrong tool. `PersonaSupervisorTests` passed 10 out of 10 isolated runs, and
+A sequential loop is the wrong tool. `PersonaSupervisorTests` (since split into `PersonaSupervisorLifecycleTests`, `PersonaSupervisorHealthTests` and `PersonaSupervisorRestartTests`) passed 10 out of 10 isolated runs, and
 3 concurrent full-suite runs, on both branches, while under load the same class failed 9 out of 16
 runs. Cap the container's CPU and run the **built test executable** in parallel processes:
 
@@ -138,7 +138,7 @@ docker run --rm --cpus=1 -v "$PWD:/repo:ro" -v huddle-nuget:/root/.nuget/package
     dotnet build tests/Huddle.Tests/Huddle.Tests.csproj -c Release -v q
     for p in $(seq 8); do
       ( for i in 1 2; do tests/Huddle.Tests/bin/Release/net10.0/Huddle.Tests \
-          -class Agency.Huddle.Tests.Acp.PersonaSupervisorTests | grep "Total:"; done ) &
+          -class Agency.Huddle.Tests.Acp.PersonaSupervisorLifecycleTests | grep "Total:"; done ) &
     done; wait'
 ```
 

@@ -137,11 +137,15 @@ public sealed class PersonaRunnerTests
 
         await using var runner = CreateHost(fixture, persona, factory);
         await runner.StartAsync(ct);
-        await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+        // A Greeting would be queued by StartAsync itself, ahead of anything that arrives later, so
+        // the probe Message being the first Turn is the whole proof: no sleep needed.
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        await chat.PostAsync(roomId, KnownIds.Human, "probe", ct: ct);
+        var prompts = await WaitForPromptCountAsync(factory.Session, 1, ct);
 
-        Assert.Empty(factory.Session.Prompts);
+        Assert.Contains("probe", Assert.Single(prompts), StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -184,9 +188,12 @@ public sealed class PersonaRunnerTests
         await secondRunner.StartAsync(ct);
         await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+        // A Greeting would be queued by StartAsync itself, ahead of anything that arrives later, so
+        // the probe Message being the first Turn is the whole proof: no sleep needed.
+        await chat.PostAsync(roomId, KnownIds.Human, "probe", ct: ct);
+        var prompts = await WaitForPromptCountAsync(secondFactory.Session, 1, ct);
 
-        Assert.Empty(secondFactory.Session.Prompts);
+        Assert.Contains("probe", Assert.Single(prompts), StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -233,9 +240,12 @@ public sealed class PersonaRunnerTests
         await secondRunner.StartAsync(ct);
         await WaitForDirectRoomAsync(fixture, "Chief of Staff", ct);
 
-        await Task.Delay(TimeSpan.FromMilliseconds(300), ct);
+        // A Greeting would be queued by StartAsync itself, ahead of anything that arrives later, so
+        // the probe Message being the first Turn is the whole proof: no sleep needed.
+        await chat.PostAsync(roomId, KnownIds.Human, "probe", ct: ct);
+        var prompts = await WaitForPromptCountAsync(secondFactory.Session, 1, ct);
 
-        Assert.Empty(secondFactory.Session.Prompts);
+        Assert.Contains("probe", Assert.Single(prompts), StringComparison.Ordinal);
     }
 
     /// <summary>
@@ -413,7 +423,7 @@ public sealed class PersonaRunnerTests
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
-        factory.Session.EnqueueReply("should not appear");
+        factory.Session.EnqueueReply("probe reply");
         var persona = new Persona("nova", "You are Nova.");
 
         await using var agentHost = CreateHost(fixture, persona, factory);
@@ -431,12 +441,16 @@ public sealed class PersonaRunnerTests
 
         await chat.PostAsync(room.Id, KnownIds.Human, "hello group", ct: ct);
 
-        // Bounded wait: give a (misbehaving) unmentioned agent every chance to reply before asserting it
-        // did not (docs/ChatRoom.md records a test that logged 4299 messages in two seconds).
-        await Task.Delay(TimeSpan.FromSeconds(1), ct);
+        // A sentinel proves the negative without sleeping (docs/ChatRoom.md records a test that logged
+        // 4299 messages in two seconds, so a misbehaving agent is a real risk): the mentioned probe is
+        // delivered after "hello group" on the same ordered pipe and answered by the runner's single
+        // consumer, so if the unmentioned message had been taken as a Turn its reply would be the
+        // first Message Nova posts, ahead of the probe's.
+        await chat.PostAsync(room.Id, KnownIds.Human, "@nova probe", ct: ct);
+        var history = await WaitForMessageFromAsync(store, room.Id, novaId, ct);
 
-        var history = await store.ReadAllAsync(room.Id, ct);
-        Assert.Single(history);
+        Assert.Equal(["hello group", "@nova probe", "probe reply"], history.Select(m => m.Text).ToArray());
+        Assert.Contains("@nova probe", Assert.Single(factory.Session.Prompts), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -574,12 +588,13 @@ public sealed class PersonaRunnerTests
         var ct = cts.Token;
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
-        var factory = new FakeAgentHostFactory();
+        TrackedFakeTimeProvider clock = new();
+        var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "first");
         factory.Session.EnqueueDelayedReply(TimeSpan.FromMilliseconds(300), "second");
         var persona = new Persona("nova", "You are Nova.");
 
-        await using var agentHost = CreateHost(fixture, persona, factory);
+        await using var agentHost = CreateHost(fixture, persona, factory, clock: clock);
         await agentHost.StartAsync(ct);
 
         var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
@@ -589,6 +604,13 @@ public sealed class PersonaRunnerTests
         var post1 = chat.PostAsync(roomId, KnownIds.Human, "one", ct: ct);
         var post2 = chat.PostAsync(roomId, KnownIds.Human, "two", ct: ct);
         await Task.WhenAll(post1, post2);
+
+        // Each Turn holds its reply for 300 ms of fake time; the second may not start until the first
+        // has ended, so the clock is moved once per Turn. The watchdog is the second armed timer.
+        await WaitForPromptCountAsync(factory.Session, 1, ct);
+        await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromMilliseconds(300), ct);
+        await WaitForPromptCountAsync(factory.Session, 2, ct);
+        await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromMilliseconds(300), ct);
 
         var history = await WaitForHistoryCountAsync(store, roomId, 4, ct);
 
@@ -899,6 +921,7 @@ public sealed class PersonaRunnerTests
         await using var server = new FakePersonaServer();
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "live reply");
+        factory.Session.EnqueueReply("probe reply");
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
@@ -924,11 +947,16 @@ public sealed class PersonaRunnerTests
         var finalDelta = await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
         Assert.Equal("room-1", finalDelta.RoomId);
 
-        // Bounded grace period for the two discarded, queued turns to (misbehave and) run anyway.
-        await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+        // A sentinel Turn proves the two discarded Turns never ran, without sleeping: Turns run in
+        // arrival order on one consumer, so had either survived it would have called PromptAsync (and
+        // taken the probe's queued reply) before the probe did.
+        await server.SendAsync(NewMessagePosted("room-1", "probe"), ct);
+        var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
 
+        Assert.Equal("probe reply", posted.Text);
         Assert.Equal(1, factory.Session.CancelCallCount);
-        Assert.Single(factory.Session.Prompts);
+        Assert.Equal(2, factory.Session.Prompts.Count);
+        Assert.DoesNotContain(factory.Session.Prompts, prompt => prompt.Contains("message 1", StringComparison.Ordinal) || prompt.Contains("message 2", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -984,6 +1012,7 @@ public sealed class PersonaRunnerTests
         await using var server = new FakePersonaServer();
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "should not be posted");
+        factory.Session.EnqueueReply("probe reply");
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
@@ -1003,11 +1032,13 @@ public sealed class PersonaRunnerTests
         var finalDelta = await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
         Assert.Equal(string.Empty, finalDelta.Text);
 
-        // Bounded grace period for a (misbehaving) stopped turn to post anyway: the read is
-        // expected to time out, proving nothing further ever arrives.
-        using var raceCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        raceCts.CancelAfter(TimeSpan.FromMilliseconds(500));
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => server.ReceiveRawAsync(raceCts.Token));
+        // A sentinel Turn proves the negative without sleeping: the pipe is ordered and Turns run one
+        // at a time, so if the stopped Turn had posted anything it would arrive before the probe's
+        // own reply. The first Message posted is therefore the probe's.
+        await server.SendAsync(NewMessagePosted("room-1", "probe"), ct);
+        var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
+
+        Assert.Equal("probe reply", posted.Text);
     }
 
     /// <summary>
@@ -1070,6 +1101,7 @@ public sealed class PersonaRunnerTests
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "A1 live reply");
         factory.Session.EnqueueReply("B1 reply");
+        factory.Session.EnqueueReply("probe reply");
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
@@ -1100,10 +1132,14 @@ public sealed class PersonaRunnerTests
         Assert.Equal("room-b", posted.RoomId);
         Assert.Equal("B1 reply", posted.Text);
 
-        // Bounded grace period for the discarded A2 turn to (misbehave and) reach PromptAsync anyway.
-        await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+        // A sentinel Turn proves the discarded A2 never reached PromptAsync, without sleeping: Turns
+        // run in arrival order on one consumer, so a surviving A2 would have taken the probe's queued
+        // reply (and been recorded) before the probe itself ran.
+        await server.SendAsync(NewMessagePosted("room-b", "probe"), ct);
+        var probePosted = await ReceiveUntilAsync<PostMessage>(server, ct);
 
-        Assert.Equal(2, factory.Session.Prompts.Count);
+        Assert.Equal("probe reply", probePosted.Text);
+        Assert.Equal(3, factory.Session.Prompts.Count);
         Assert.DoesNotContain(factory.Session.Prompts, prompt => prompt.Contains("a2", StringComparison.Ordinal));
     }
 
@@ -1153,13 +1189,14 @@ public sealed class PersonaRunnerTests
         var ct = cts.Token;
 
         await using var server = new FakePersonaServer();
-        var factory = new FakeAgentHostFactory();
+        TrackedFakeTimeProvider clock = new();
+        var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(5), "B1 live reply");
-        factory.Session.EnqueueReply("A1 should never run");
+        factory.Session.EnqueueReply("probe reply");
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, timeProvider: clock);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-b", "b1"), ct);
@@ -1173,14 +1210,24 @@ public sealed class PersonaRunnerTests
         await server.SendAsync(NewMessagePosted("room-a", "a1"), ct);
         await server.SendAsync(new StopTurn("room-a"), ct);
 
+        // Nothing on the wire says the runner's read loop has handled the Stop, and B1 must not be
+        // released before it has (or the consumer could reach A1 first). A short real pause, then the
+        // fake clock releases B1's five second hold at once instead of waiting it out.
+        await Task.Delay(TimeSpan.FromMilliseconds(100), ct);
+        await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromSeconds(5), ct);
+
         var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
         Assert.Equal("room-b", posted.RoomId);
         Assert.Equal("B1 live reply", posted.Text);
 
-        // Bounded grace period for the discarded A1 turn to (misbehave and) reach PromptAsync anyway.
-        await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+        // A sentinel Turn proves the discarded A1 never reached PromptAsync, without sleeping: a
+        // surviving A1 would have run (and taken the probe's queued reply) before the probe did.
+        await server.SendAsync(NewMessagePosted("room-b", "probe"), ct);
+        var probePosted = await ReceiveUntilAsync<PostMessage>(server, ct);
 
-        Assert.Single(factory.Session.Prompts);
+        Assert.Equal("probe reply", probePosted.Text);
+        Assert.Equal(2, factory.Session.Prompts.Count);
+        Assert.DoesNotContain(factory.Session.Prompts, prompt => prompt.Contains("a1", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -1238,12 +1285,13 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReplyEndingIn(StopReason.Refusal, "I can't help with that.");
+        factory.Session.EnqueueReply("probe reply");
         var persona = new Persona("nova", "You are Nova.");
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
@@ -1257,11 +1305,15 @@ public sealed class PersonaRunnerTests
 
         Assert.Single(factory.Session.Prompts);
 
-        // Bounded grace period for a (misbehaving) refusal to be posted anyway.
-        await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+        // A sentinel Turn proves the negative without sleeping: the probe is answered after the first
+        // Turn on the runner's single consumer, so if the refusal had been posted it would be the
+        // first Message Nova posts, ahead of the probe's reply.
+        await chat.PostAsync(roomId, KnownIds.Human, "probe", ct: ct);
+        var history = await WaitForMessageFromAsync(store, roomId, agentId, ct);
 
-        var history = await store.ReadAllAsync(roomId, ct);
-        Assert.Single(history);
+        Assert.Equal(["hi", "probe", "probe reply"], history.Select(m => m.Text).ToArray());
+        Assert.Equal(2, factory.Session.Prompts.Count);
+        Assert.Contains("probe", factory.Session.Prompts[1], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1273,12 +1325,13 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("   ");
+        factory.Session.EnqueueReply("probe reply");
         var persona = new Persona("nova", "You are Nova.");
 
         await using var agentHost = CreateHost(fixture, persona, factory);
         await agentHost.StartAsync(ct);
 
-        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var (agentId, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
         var chat = fixture.Services.GetRequiredService<ChatService>();
         var store = fixture.Services.GetRequiredService<IChatStore>();
 
@@ -1292,11 +1345,15 @@ public sealed class PersonaRunnerTests
 
         Assert.Single(factory.Session.Prompts);
 
-        // Bounded grace period for a (misbehaving) blank reply to be posted anyway.
-        await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+        // A sentinel Turn proves the negative without sleeping: the probe is answered after the first
+        // Turn on the runner's single consumer, so if the blank reply had been posted it would be the
+        // first Message Nova posts, ahead of the probe's reply.
+        await chat.PostAsync(roomId, KnownIds.Human, "probe", ct: ct);
+        var history = await WaitForMessageFromAsync(store, roomId, agentId, ct);
 
-        var history = await store.ReadAllAsync(roomId, ct);
-        Assert.Single(history);
+        Assert.Equal(["hi", "probe", "probe reply"], history.Select(m => m.Text).ToArray());
+        Assert.Equal(2, factory.Session.Prompts.Count);
+        Assert.Contains("probe", factory.Session.Prompts[1], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1307,6 +1364,7 @@ public sealed class PersonaRunnerTests
 
         await using var fixture = await PipeHostFixture.StartAsync(ct);
         var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReply("probe reply");
         var persona = new Persona("nova", "You are Nova.");
 
         await using var agentHost = CreateHost(fixture, persona, factory);
@@ -1319,17 +1377,21 @@ public sealed class PersonaRunnerTests
         var friendWelcome = Assert.IsType<Welcome>(await friend.ReadAsync(ct));
 
         var chat = fixture.Services.GetRequiredService<ChatService>();
+        var store = fixture.Services.GetRequiredService<IChatStore>();
         var room = await chat.CreateRoomForAsync([novaId, friendWelcome.AgentId], ct);
 
         await chat.PostAsync(room.Id, KnownIds.Human, "unmentioned one", ct: ct);
         await chat.PostAsync(room.Id, KnownIds.Human, "unmentioned two", ct: ct);
         await chat.PostAsync(room.Id, KnownIds.Human, "unmentioned three", ct: ct);
 
-        // Bounded wait: give a (misbehaving) unmentioned agent every chance to reply before asserting it
-        // did not (docs/ChatRoom.md records a test that logged 4299 messages in two seconds).
-        await Task.Delay(TimeSpan.FromSeconds(1), ct);
+        // A mentioned probe follows the three unmentioned Messages on the same ordered pipe. Turns run
+        // one at a time in arrival order, so by the time the probe has been answered every earlier
+        // Message has already had its chance to become a Turn: the probe's must be the only one.
+        await chat.PostAsync(room.Id, KnownIds.Human, "@nova probe", ct: ct);
+        await WaitForMessageFromAsync(store, room.Id, novaId, ct);
 
-        Assert.Empty(factory.Session.Prompts);
+        var prompt = Assert.Single(factory.Session.Prompts);
+        Assert.Contains("@nova probe", prompt, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1582,7 +1644,7 @@ public sealed class PersonaRunnerTests
         await using var fixture = await PipeHostFixture.StartAsync(
             new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
         var factory = new FakeAgentHostFactory();
-        factory.Session.EnqueueReply("should not appear");
+        factory.Session.EnqueueReply("probe reply");
         var persona = new Persona("nova", "You are Nova.");
 
         await using var agentHost = CreateHost(fixture, persona, factory);
@@ -1595,11 +1657,14 @@ public sealed class PersonaRunnerTests
         // the time it reaches Nova the Room is already spent.
         await chat.PostAsync(room.Id, friendId, "@nova hello", ct: ct);
 
-        // Bounded wait: give a misbehaving agent every chance to reply before asserting it did not.
-        await Task.Delay(TimeSpan.FromSeconds(1), ct);
+        // A Human message resets the Room's Budget, so the probe that follows is a Turn Nova does take.
+        // It reaches Nova after the spent Message on the same ordered pipe, and Turns run one at a
+        // time: had the spent Message been taken, its reply would be the first thing Nova posts.
+        await chat.PostAsync(room.Id, KnownIds.Human, "@nova probe", ct: ct);
+        var history = await WaitForMessageFromAsync(store, room.Id, novaId, ct);
 
-        var history = await store.ReadAllAsync(room.Id, ct);
-        Assert.Single(history);
+        Assert.Equal(["@nova hello", "@nova probe", "probe reply"], history.Select(m => m.Text).ToArray());
+        Assert.Contains("@nova probe", Assert.Single(factory.Session.Prompts), StringComparison.Ordinal);
     }
 
     // The payoff of the three-state gate. A Catch-up Message was missed and rides along later; a
@@ -1623,8 +1688,9 @@ public sealed class PersonaRunnerTests
 
         var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
         await chat.PostAsync(room.Id, friendId, "@nova declined for budget", ct: ct);
-        await Task.Delay(TimeSpan.FromSeconds(1), ct);
 
+        // No sleep between the two posts: the pipe is ordered, so the runner sees the declined Message
+        // before the Human's, which is the order this test is about.
         await chat.PostAsync(room.Id, KnownIds.Human, "@nova carry on", ct: ct);
         await WaitForHistoryCountAsync(store, room.Id, 3, ct);
 
@@ -1643,6 +1709,7 @@ public sealed class PersonaRunnerTests
             new Dictionary<string, string?> { ["Team:AgentMessageBudget"] = "1" }, ct);
         var factory = new FakeAgentHostFactory();
         factory.Session.EnqueueReply("resumed");
+        factory.Session.EnqueueReply("probe reply");
         var persona = new Persona("nova", "You are Nova.");
 
         await using var agentHost = CreateHost(fixture, persona, factory);
@@ -1651,8 +1718,6 @@ public sealed class PersonaRunnerTests
 
         var (chat, store, room, friendId) = await CreateGroupWithFriendAsync(fixture, novaId, ct);
         await chat.PostAsync(room.Id, friendId, "@nova hello", ct: ct);
-        await Task.Delay(TimeSpan.FromSeconds(1), ct);
-        Assert.Single(await store.ReadAllAsync(room.Id, ct));
 
         var extended = await chat.ExtendBudgetAsync(room.Id, ct);
 
@@ -1660,6 +1725,17 @@ public sealed class PersonaRunnerTests
         var history = await WaitForHistoryCountAsync(store, room.Id, 2, ct);
         Assert.Equal("resumed", history[^1].Text);
         Assert.Equal(novaId, history[^1].SenderId);
+
+        // Exactly one Turn ran for the spent Message, and only after the extend: a sentinel Turn proves
+        // it without sleeping. Had the spent Message been taken as a Turn when it first arrived, it
+        // would have used "resumed", and the redelivery would have produced a second reply before
+        // the probe's, so the Transcript would differ from the one asserted here.
+        await chat.PostAsync(room.Id, KnownIds.Human, "@nova probe", ct: ct);
+        var settled = await WaitForHistoryCountAsync(store, room.Id, 4, ct);
+
+        Assert.Equal(["@nova hello", "resumed", "@nova probe", "probe reply"], settled.Select(m => m.Text).ToArray());
+        Assert.Equal(2, factory.Session.Prompts.Count);
+        Assert.Contains("@nova probe", factory.Session.Prompts[1], StringComparison.Ordinal);
     }
 
     [Fact]
@@ -1690,12 +1766,17 @@ public sealed class PersonaRunnerTests
         await WaitForHistoryCountAsync(store, room.Id, 2, ct);
 
         await chat.PostAsync(room.Id, friendId, "@nova two", ct: ct);
-        await Task.Delay(TimeSpan.FromSeconds(1), ct);
 
-        // Two posts from the friend and one reply: the second turn never ran.
-        var history = await store.ReadAllAsync(room.Id, ct);
-        Assert.Equal(3, history.Count);
-        Assert.DoesNotContain(history, m => m.Text == "second reply");
+        // A sentinel proves "two" took no Turn without sleeping. A Human Message resets the token
+        // Budget, so the probe that follows on the same ordered pipe is a Turn Nova does take, and it
+        // takes the queued "second reply". Had "two" been taken, "second reply" would sit before the
+        // probe in the Transcript, not after it.
+        await chat.PostAsync(room.Id, KnownIds.Human, "@nova probe", ct: ct);
+        var history = await WaitForHistoryCountAsync(store, room.Id, 5, ct);
+
+        Assert.Equal(["@nova one", "first reply", "@nova two", "@nova probe", "second reply"], history.Select(m => m.Text).ToArray());
+        Assert.Equal(2, factory.Session.Prompts.Count);
+        Assert.Contains("@nova probe", factory.Session.Prompts[1], StringComparison.Ordinal);
     }
 
     // UsageUpdated.Used is a level, so a compaction makes it fall. Levels 100, 150, 20, 60 are 190
@@ -2198,7 +2279,8 @@ public sealed class PersonaRunnerTests
         var ct = cts.Token;
 
         await using var server = new FakePersonaServer();
-        var factory = new FakeAgentHostFactory();
+        TrackedFakeTimeProvider clock = new();
+        var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
         var persona = new Persona("nova", "You are Nova.");
         var logger = new RecordingLogger<PersonaRunner>();
@@ -2209,17 +2291,17 @@ public sealed class PersonaRunnerTests
         });
         StatusRecorder statuses = new();
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger, timeProvider: clock);
         runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
 
-        var promptDeadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < promptDeadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await WaitForPromptCountAsync(factory.Session, 1, ct);
+
+        // Watchdog + the fake session's own delay are the two armed timers. Time moves to just inside
+        // the 5 second bound, so the Stop below really does land inside the window rather than at t=0.
+        await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromSeconds(4), ct);
 
         await server.SendAsync(new StopTurn("room-1"), ct);
         await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
@@ -2251,7 +2333,8 @@ public sealed class PersonaRunnerTests
         var ct = cts.Token;
 
         await using var server = new FakePersonaServer();
-        var factory = new FakeAgentHostFactory();
+        TrackedFakeTimeProvider clock = new();
+        var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions
@@ -2261,11 +2344,15 @@ public sealed class PersonaRunnerTests
         });
         StatusRecorder statuses = new();
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, timeProvider: clock);
         runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        // The Adapter is silent for exactly the one second bound: the fake clock moves that far and no
+        // further, so only the watchdog (never the fake session's 30 second delay) can fire.
+        await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromSeconds(1), ct);
 
         await statuses.AssertContainsEventuallyAsync(
             s => s.State == PersonaState.Degraded && s.Reason!.Contains("for 1 seconds", StringComparison.Ordinal),
@@ -2286,7 +2373,8 @@ public sealed class PersonaRunnerTests
         var ct = cts.Token;
 
         await using var server = new FakePersonaServer();
-        var factory = new FakeAgentHostFactory();
+        TrackedFakeTimeProvider clock = new();
+        var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions
@@ -2295,10 +2383,11 @@ public sealed class PersonaRunnerTests
             Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 },
         });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, timeProvider: clock);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+        await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromSeconds(1), ct);
 
         var deadline = DateTimeOffset.UtcNow.AddSeconds(8);
         while (!factory.Session.CancelObservedPromptInFlight && DateTimeOffset.UtcNow < deadline)
@@ -2317,8 +2406,10 @@ public sealed class PersonaRunnerTests
         var ct = cts.Token;
 
         await using var server = new FakePersonaServer();
-        var factory = new FakeAgentHostFactory();
+        TrackedFakeTimeProvider clock = new();
+        var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
+        factory.Session.EnqueueReply("probe reply");
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions
         {
@@ -2326,19 +2417,22 @@ public sealed class PersonaRunnerTests
             Acp = new AcpOptions { TurnIdleTimeoutSeconds = 1 },
         });
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, timeProvider: clock);
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+        await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromSeconds(1), ct);
 
         var finalDelta = await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
         Assert.Equal(string.Empty, finalDelta.Text);
 
-        // Bounded grace period for a (misbehaving) timed-out turn to post anyway: the read is
-        // expected to time out, proving nothing further ever arrives.
-        using var raceCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        raceCts.CancelAfter(TimeSpan.FromMilliseconds(500));
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => server.ReceiveRawAsync(raceCts.Token));
+        // A sentinel Turn proves the negative deterministically rather than by sleeping: the runner
+        // serialises Turns and the pipe is ordered, so if the timed-out Turn had posted anything it
+        // would arrive before the probe's own reply. The first Message posted is therefore the probe's.
+        await server.SendAsync(NewMessagePosted("room-1", "probe"), ct);
+        var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
+
+        Assert.Equal("probe reply", posted.Text);
     }
 
     /// <summary>Three Turns that each go silent past the bound escalate the Degraded reason, proving the failure streak the watchdog reports through shares <see cref="ThreeConsecutiveFailures_EscalateTheReason"/>'s counter.</summary>
@@ -2349,7 +2443,8 @@ public sealed class PersonaRunnerTests
         var ct = cts.Token;
 
         await using var server = new FakePersonaServer();
-        var factory = new FakeAgentHostFactory();
+        TrackedFakeTimeProvider clock = new();
+        var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "one");
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "two");
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "three");
@@ -2361,17 +2456,23 @@ public sealed class PersonaRunnerTests
         });
         StatusRecorder statuses = new();
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, timeProvider: clock);
         runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "one"), ct);
+        await WaitForPromptCountAsync(factory.Session, 1, ct);
+        await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromSeconds(1), ct);
         await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "two"), ct);
+        await WaitForPromptCountAsync(factory.Session, 2, ct);
+        await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromSeconds(1), ct);
         await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "three"), ct);
+        await WaitForPromptCountAsync(factory.Session, 3, ct);
+        await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromSeconds(1), ct);
         await ReceiveUntilAsync<MessageDelta>(server, delta => delta.IsFinal, ct);
 
         await statuses.AssertContainsEventuallyAsync(
@@ -2393,7 +2494,8 @@ public sealed class PersonaRunnerTests
 
         string[] chunks = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"];
         await using var server = new FakePersonaServer();
-        var factory = new FakeAgentHostFactory();
+        TrackedFakeTimeProvider clock = new();
+        var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDripFedReply(TimeSpan.FromMilliseconds(250), chunks);
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions
@@ -2403,11 +2505,22 @@ public sealed class PersonaRunnerTests
         });
         StatusRecorder statuses = new();
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, timeProvider: clock);
         runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        // Twelve chunks, one every 250 ms of fake time: 3 seconds in all, past the 2 second bound. Each
+        // step waits until the watchdog and the drip delay are both armed, moves time by exactly one
+        // gap, then waits for that chunk's delta to reach the server, so the runner has observed the
+        // sign of life before the next step. A bound that measured the whole Turn, not the silence,
+        // would fire at the eighth step.
+        foreach (var chunk in chunks)
+        {
+            await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromMilliseconds(250), ct);
+            await ReceiveUntilAsync<MessageDelta>(server, delta => string.Equals(delta.Text, chunk, StringComparison.Ordinal), ct);
+        }
 
         var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
 
@@ -2423,7 +2536,8 @@ public sealed class PersonaRunnerTests
         var ct = cts.Token;
 
         await using var server = new FakePersonaServer();
-        var factory = new FakeAgentHostFactory();
+        TrackedFakeTimeProvider clock = new();
+        var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(2), "still here");
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions
@@ -2433,11 +2547,15 @@ public sealed class PersonaRunnerTests
         });
         StatusRecorder statuses = new();
 
-        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, timeProvider: clock);
         runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+
+        // No watchdog is armed, so the fake session's own delay is the only timer. Two fake seconds
+        // pass, well past any bound that could have been left switched on.
+        await clock.AdvanceWhenArmedAsync(1, TimeSpan.FromSeconds(2), ct);
 
         var posted = await ReceiveUntilAsync<PostMessage>(server, ct);
 
@@ -2457,7 +2575,8 @@ public sealed class PersonaRunnerTests
         var ct = cts.Token;
 
         await using var server = new FakePersonaServer();
-        var factory = new FakeAgentHostFactory();
+        TrackedFakeTimeProvider clock = new();
+        var factory = new FakeAgentHostFactory(clock);
         factory.Session.EnqueueDelayedReply(TimeSpan.FromSeconds(30), "should not be posted");
         var persona = new Persona("nova", "You are Nova.");
         var options = Options.Create(new TeamOptions
@@ -2467,17 +2586,14 @@ public sealed class PersonaRunnerTests
         });
         StatusRecorder statuses = new();
 
-        var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance);
+        var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, timeProvider: clock);
         runner.StatusChanged += statuses.Record;
         await server.HandshakeAsync(runner, ct);
 
         await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
 
-        var promptDeadline = DateTimeOffset.UtcNow.AddSeconds(5);
-        while (factory.Session.Prompts.Count < 1 && DateTimeOffset.UtcNow < promptDeadline)
-        {
-            await Task.Delay(20, ct);
-        }
+        await WaitForPromptCountAsync(factory.Session, 1, ct);
+        await clock.AdvanceWhenArmedAsync(2, TimeSpan.FromSeconds(4), ct);
 
         await runner.StopAsync();
 
@@ -2671,10 +2787,10 @@ public sealed class PersonaRunnerTests
     }
 
     private static PersonaRunner CreateHost(
-        PipeHostFixture fixture, Persona persona, FakeAgentHostFactory factory, ILogger<PersonaRunner>? logger = null)
+        PipeHostFixture fixture, Persona persona, FakeAgentHostFactory factory, ILogger<PersonaRunner>? logger = null, TimeProvider? clock = null)
     {
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        return new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger ?? NullLogger<PersonaRunner>.Instance);
+        return new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger ?? NullLogger<PersonaRunner>.Instance, timeProvider: clock);
     }
 
     /// <summary>
@@ -2775,7 +2891,7 @@ public sealed class PersonaRunnerTests
                 }
             }
 
-            await Task.Delay(50, ct);
+            await Task.Delay(5, ct);
         }
     }
 
@@ -2790,7 +2906,34 @@ public sealed class PersonaRunnerTests
                 return history;
             }
 
-            await Task.Delay(50, ct);
+            await Task.Delay(5, ct);
+        }
+    }
+
+    /// <summary>
+    /// Polls <paramref name="store"/> until <paramref name="senderId"/> has posted at least one Message
+    /// into <paramref name="roomId"/>, then returns the whole Transcript. Used by the sentinel Turns
+    /// that prove a negative: the runner serialises Turns and the pipe is ordered, so when the
+    /// sentinel's own reply is the first thing the Agent has said, nothing it was wrongly asked to do
+    /// earlier was ever posted.
+    /// </summary>
+    /// <param name="store">The chat store to read.</param>
+    /// <param name="roomId">The Room to read.</param>
+    /// <param name="senderId">The Agent whose first Message is awaited.</param>
+    /// <param name="ct">Bounds the poll.</param>
+    /// <returns>The Room's Messages once <paramref name="senderId"/> has posted one.</returns>
+    private static async Task<IReadOnlyList<ChatMessage>> WaitForMessageFromAsync(
+        IChatStore store, string roomId, string senderId, CancellationToken ct)
+    {
+        while (true)
+        {
+            var history = await store.ReadAllAsync(roomId, ct);
+            if (history.Any(m => string.Equals(m.SenderId, senderId, StringComparison.Ordinal)))
+            {
+                return history;
+            }
+
+            await Task.Delay(5, ct);
         }
     }
 
@@ -2817,7 +2960,7 @@ public sealed class PersonaRunnerTests
                 return prompts;
             }
 
-            await Task.Delay(50, ct);
+            await Task.Delay(5, ct);
         }
     }
 

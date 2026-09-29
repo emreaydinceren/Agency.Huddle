@@ -807,7 +807,7 @@ public sealed class TaskBoardTests
 
         await using MudBunitContext ctx = new();
         IRenderedComponent<TaskBoard> cut = RenderBoard(ctx, harness, BoardView(), [task], onOpenTask: opened.Add);
-        cut.Find("button[aria-label='Open PLAT-0007']").Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Open PLAT-0007']").ClickAsync());
 
         Assert.Equal("PLAT-0007", Assert.Single(opened).ToString());
     }

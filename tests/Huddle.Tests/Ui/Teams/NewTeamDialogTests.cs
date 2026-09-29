@@ -151,7 +151,7 @@ public sealed class NewTeamDialogTests
         IDialogReference reference = await OpenAsync(ctx, cut, "New team", NewTeamDialogMode.Team, null);
         await TypeAsync(cut, "  Research  ");
 
-        await cut.InvokeAsync(() => cut.Find(CreateButton).Click());
+        await cut.InvokeAsync(() => cut.Find(CreateButton).ClickAsync());
 
         DialogResult? result = await reference.Result.WaitAsync(TimeSpan.FromSeconds(10), ct);
         Assert.NotNull(result);
@@ -169,7 +169,7 @@ public sealed class NewTeamDialogTests
         IDialogReference reference = await OpenAsync(ctx, cut, "New project", NewTeamDialogMode.Project, "Business");
         await TypeAsync(cut, " Q4 Launch ");
 
-        await cut.InvokeAsync(() => cut.Find(CreateButton).Click());
+        await cut.InvokeAsync(() => cut.Find(CreateButton).ClickAsync());
 
         DialogResult? result = await reference.Result.WaitAsync(TimeSpan.FromSeconds(10), ct);
         Assert.NotNull(result);
@@ -187,7 +187,7 @@ public sealed class NewTeamDialogTests
         IDialogReference reference = await OpenAsync(ctx, cut, "New team", NewTeamDialogMode.Team, null);
         await TypeAsync(cut, "Research");
 
-        await cut.InvokeAsync(() => cut.Find(NameInput).KeyDown(new KeyboardEventArgs { Key = "Enter" }));
+        await cut.InvokeAsync(() => cut.Find(NameInput).KeyDownAsync(new KeyboardEventArgs { Key = "Enter" }));
 
         DialogResult? result = await reference.Result.WaitAsync(TimeSpan.FromSeconds(10), ct);
         Assert.NotNull(result);
@@ -204,7 +204,7 @@ public sealed class NewTeamDialogTests
         IDialogReference reference = await OpenAsync(ctx, cut, "New team", NewTeamDialogMode.Team, null);
         await TypeAsync(cut, "Business");
 
-        await cut.InvokeAsync(() => cut.Find(NameInput).KeyDown(new KeyboardEventArgs { Key = "Enter" }));
+        await cut.InvokeAsync(() => cut.Find(NameInput).KeyDownAsync(new KeyboardEventArgs { Key = "Enter" }));
         await cut.InvokeAsync(static () => { });
 
         Assert.False(reference.Result.IsCompleted);
@@ -220,7 +220,7 @@ public sealed class NewTeamDialogTests
         IRenderedComponent<ContainerFragment> cut = ctx.RenderWithPopovers(static _ => { });
         IDialogReference reference = await OpenAsync(ctx, cut, "New team", NewTeamDialogMode.Team, null);
 
-        await cut.InvokeAsync(() => cut.Find(NameInput).KeyDown(new KeyboardEventArgs { Key = "Enter" }));
+        await cut.InvokeAsync(() => cut.Find(NameInput).KeyDownAsync(new KeyboardEventArgs { Key = "Enter" }));
         await cut.InvokeAsync(static () => { });
 
         Assert.False(reference.Result.IsCompleted);
@@ -237,7 +237,7 @@ public sealed class NewTeamDialogTests
         IDialogReference reference = await OpenAsync(ctx, cut, "New team", NewTeamDialogMode.Team, null);
         await TypeAsync(cut, "Research");
 
-        await cut.InvokeAsync(() => cut.Find(".new-team-dialog-cancel-button").Click());
+        await cut.InvokeAsync(() => cut.Find(".new-team-dialog-cancel-button").ClickAsync());
 
         DialogResult? result = await reference.Result.WaitAsync(TimeSpan.FromSeconds(10), ct);
         Assert.NotNull(result);
@@ -262,5 +262,5 @@ public sealed class NewTeamDialogTests
 
     /// <summary>Types <paramref name="text"/> into the name field (an <c>input</c> event, as <c>Immediate</c> listens to).</summary>
     private static Task TypeAsync(IRenderedComponent<ContainerFragment> cut, string text) =>
-        cut.InvokeAsync(() => cut.Find(NameInput).Input(text));
+        cut.InvokeAsync(() => cut.Find(NameInput).InputAsync(text));
 }

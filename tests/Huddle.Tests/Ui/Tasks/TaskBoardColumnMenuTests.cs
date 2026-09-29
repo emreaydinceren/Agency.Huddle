@@ -60,7 +60,7 @@ public sealed partial class TaskBoardColumnMenuTests
 
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderBoard(ctx, harness, view, []);
-        OpenHeaderMenu(cut, "In Progress");
+        await OpenHeaderMenuAsync(cut, "In Progress");
 
         string[] items = [.. cut.FindAll("div.mud-menu-item").Select(i => i.TextContent.Trim())];
         string[] expected = ["Rename", "Hide", "Edit columns…"];
@@ -93,7 +93,7 @@ public sealed partial class TaskBoardColumnMenuTests
 
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderBoard(ctx, harness, view, []);
-        ClickHeaderItem(cut, "In Progress", "Hide");
+        await ClickHeaderItemAsync(cut, "In Progress", "Hide");
 
         bool[] expected = [false, false, true, false, false, false];
         Assert.Equal(expected, SavedHidden(harness));
@@ -109,7 +109,7 @@ public sealed partial class TaskBoardColumnMenuTests
 
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderBoard(ctx, harness, view, []);
-        ClickHeaderItem(cut, "Review", "Hide");
+        await ClickHeaderItemAsync(cut, "Review", "Hide");
 
         bool[] expected = [true, false, false, true, false, false];
         Assert.Equal(expected, SavedHidden(harness));
@@ -126,7 +126,7 @@ public sealed partial class TaskBoardColumnMenuTests
 
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderBoard(ctx, harness, effective, []);
-        ClickHeaderItem(cut, "Done", "Hide");
+        await ClickHeaderItemAsync(cut, "Done", "Hide");
 
         TaskView? after = harness.Views.Get(BoardId);
         Assert.NotNull(after);
@@ -168,7 +168,7 @@ public sealed partial class TaskBoardColumnMenuTests
 
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderBoard(ctx, harness, effective, [], viewChanged: changed.Add);
-        ClickHeaderItem(cut, "Done", "Hide");
+        await ClickHeaderItemAsync(cut, "Done", "Hide");
 
         TaskView raised = Assert.Single(changed);
         bool[] expected = [false, false, false, false, true, false];
@@ -209,7 +209,7 @@ public sealed partial class TaskBoardColumnMenuTests
 
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderBoard(ctx, harness, view, [], onEditColumns: () => raised++);
-        ClickHeaderItem(cut, "Review", "Edit columns…");
+        await ClickHeaderItemAsync(cut, "Review", "Edit columns…");
 
         Assert.Equal(1, raised);
     }
@@ -385,7 +385,7 @@ public sealed partial class TaskBoardColumnMenuTests
         await OverrideAsync(cut, view => view with { Filter = view.Filter with { States = [TaskState.Done] } });
         IRenderedComponent<TaskToolbar> toolbar = cut.FindComponent<TaskToolbar>();
         await cut.InvokeAsync(() => toolbar.Instance.SearchChanged.InvokeAsync("Ship"));
-        await cut.InvokeAsync(() => cut.Find(".tasks-empty-action").Click());
+        await cut.InvokeAsync(() => cut.Find(".tasks-empty-action").ClickAsync());
 
         Assert.Empty(cut.FindAll(".tasks-empty"));
         Assert.Null(cut.FindComponent<TaskToolbar>().Instance.Search);
@@ -442,7 +442,7 @@ public sealed partial class TaskBoardColumnMenuTests
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, harness, viewId: BoardId);
         Assert.Empty(cut.FindComponents<TaskListView>());
-        await cut.InvokeAsync(() => cut.Find($"button[aria-label='Open {task.Id}']").Click());
+        await cut.InvokeAsync(() => cut.Find($"button[aria-label='Open {task.Id}']").ClickAsync());
 
         TaskDetail detail = cut.FindComponent<TaskDetail>().Instance;
         Assert.Equal(task.Id, detail.Id);
@@ -459,7 +459,7 @@ public sealed partial class TaskBoardColumnMenuTests
 
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, harness, viewId: BoardId);
-        ClickHeaderItem(cut, "Review", "Edit columns…");
+        await ClickHeaderItemAsync(cut, "Review", "Edit columns…");
 
         IRenderedComponent<ViewEditorDrawer> drawer = cut.FindComponent<ViewEditorDrawer>();
         Assert.True(drawer.Instance.Open);
@@ -480,7 +480,7 @@ public sealed partial class TaskBoardColumnMenuTests
         await using MudBunitContext ctx = new();
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, harness, viewId: BoardId);
         Assert.Empty(cut.FindAll(".task-board-hidden-count"));
-        ClickHeaderItem(cut, "Done", "Hide");
+        await ClickHeaderItemAsync(cut, "Done", "Hide");
 
         cut.WaitForAssertion(() => Assert.Equal("2 tasks in hidden columns", cut.Find(".task-board-hidden-count").TextContent.Trim()));
     }
@@ -497,7 +497,7 @@ public sealed partial class TaskBoardColumnMenuTests
         IRenderedComponent<ContainerFragment> cut = RenderPage(ctx, harness, viewId: null);
         await OverrideAsync(cut, view => view with { Kind = ViewKind.Board, Columns = DefaultColumns });
         Assert.Equal(DefaultLabels, cut.FindAll("div.task-board-column-header .task-board-column-label").Select(e => e.TextContent.Trim()));
-        ClickHeaderItem(cut, "Done", "Hide");
+        await ClickHeaderItemAsync(cut, "Done", "Hide");
 
         cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".task-toolbar-save")));
         Assert.Equal(ViewKind.List, harness.Views.Get(ViewStore.AllTasksId)?.Kind);
@@ -726,17 +726,17 @@ public sealed partial class TaskBoardColumnMenuTests
     /// <summary>Opens the header menu of the column labelled <paramref name="label"/>.</summary>
     /// <param name="cut">The rendered root.</param>
     /// <param name="label">The column label.</param>
-    private static void OpenHeaderMenu(IRenderedComponent<ContainerFragment> cut, string label) =>
-        cut.Find($"button[aria-label='{label} column menu']").Click();
+    private static Task OpenHeaderMenuAsync(IRenderedComponent<ContainerFragment> cut, string label) =>
+        cut.InvokeAsync(() => cut.Find($"button[aria-label='{label} column menu']").ClickAsync());
 
     /// <summary>Opens the header menu of <paramref name="label"/> and clicks the item <paramref name="item"/>.</summary>
     /// <param name="cut">The rendered root.</param>
     /// <param name="label">The column label.</param>
     /// <param name="item">The menu item's text.</param>
-    private static void ClickHeaderItem(IRenderedComponent<ContainerFragment> cut, string label, string item)
+    private static async Task ClickHeaderItemAsync(IRenderedComponent<ContainerFragment> cut, string label, string item)
     {
-        OpenHeaderMenu(cut, label);
-        cut.FindAll("div.mud-menu-item").First(e => string.Equals(e.TextContent.Trim(), item, StringComparison.Ordinal)).Click();
+        await OpenHeaderMenuAsync(cut, label);
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").First(e => string.Equals(e.TextContent.Trim(), item, StringComparison.Ordinal)).ClickAsync());
     }
 
     /// <summary>Renames the column labelled <paramref name="label"/> through its inline field.</summary>
@@ -746,7 +746,7 @@ public sealed partial class TaskBoardColumnMenuTests
     /// <returns>A task that completes once committed.</returns>
     private static async Task RenameAsync(IRenderedComponent<ContainerFragment> cut, string label, string newLabel)
     {
-        ClickHeaderItem(cut, label, "Rename");
+        await ClickHeaderItemAsync(cut, label, "Rename");
         IRenderedComponent<MudTextField<string>> field = Assert.Single(
             cut.FindComponents<MudTextField<string>>(),
             f => f.Nodes.OfType<IElement>().Any(e => e.ClassList.Contains("task-board-column-rename")));

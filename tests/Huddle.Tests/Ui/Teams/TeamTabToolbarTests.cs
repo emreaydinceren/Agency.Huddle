@@ -31,7 +31,7 @@ public sealed class TeamTabToolbarTests
         Assert.Equal(Color.Primary, button.Color);
         Assert.Equal(Icons.Material.Filled.Add, button.StartIcon);
 
-        await cut.InvokeAsync(() => cut.Find(ActionClass).Click());
+        await cut.InvokeAsync(() => cut.Find(ActionClass).ClickAsync());
 
         Assert.Equal(1, actions);
     }
@@ -91,7 +91,7 @@ public sealed class TeamTabToolbarTests
         IRenderedComponent<TeamTabToolbar> cut = Render(ctx, search: "no", searchChanged: EventCallback.Factory.Create<string?>(this, v => searched.Add(v)));
 
         Assert.Single(cut.FindAll(".mud-input-clear-button"));
-        await cut.InvokeAsync(() => cut.Find(".mud-input-clear-button").Click());
+        await cut.InvokeAsync(() => cut.Find(".mud-input-clear-button").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Equal<string?>([null], searched));
     }

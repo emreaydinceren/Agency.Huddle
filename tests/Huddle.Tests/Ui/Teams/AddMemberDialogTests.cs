@@ -120,7 +120,7 @@ public sealed class AddMemberDialogTests
     {
         await using Harness harness = await Harness.OpenAsync(Business, Candidates);
 
-        await harness.Cut.InvokeAsync(() => harness.Cut.Find(Field + " input").Input("zzz"));
+        await harness.Cut.InvokeAsync(() => harness.Cut.Find(Field + " input").InputAsync("zzz"));
         await harness.Cut.InvokeAsync(static () => { });
 
         Assert.True(harness.Cut.Find(AddButton).HasAttribute("disabled"));
@@ -160,7 +160,7 @@ public sealed class AddMemberDialogTests
         await using Harness harness = await Harness.OpenAsync(Business, Candidates);
         await harness.PickAsync("ki");
 
-        await harness.Cut.InvokeAsync(() => harness.Cut.Find(AddButton).Click());
+        await harness.Cut.InvokeAsync(() => harness.Cut.Find(AddButton).ClickAsync());
 
         DialogResult? result = await harness.Reference.Result.WaitAsync(TimeSpan.FromSeconds(10), ct);
         Assert.NotNull(result);
@@ -180,7 +180,7 @@ public sealed class AddMemberDialogTests
         harness.Membership.MembershipResult = new MembershipResult(outcome, problem);
         await harness.PickAsync("ki");
 
-        await harness.Cut.InvokeAsync(() => harness.Cut.Find(AddButton).Click());
+        await harness.Cut.InvokeAsync(() => harness.Cut.Find(AddButton).ClickAsync());
 
         Assert.Equal(expected, harness.Cut.Find(Error + " .mud-alert-message").TextContent);
         Assert.Equal("alert", harness.Cut.Find(Error).GetAttribute("role"));
@@ -197,7 +197,7 @@ public sealed class AddMemberDialogTests
         await using Harness harness = await Harness.OpenAsync(Business, Candidates);
         await harness.PickAsync("ki");
 
-        await harness.Cut.InvokeAsync(() => harness.Cut.Find(CancelButton).Click());
+        await harness.Cut.InvokeAsync(() => harness.Cut.Find(CancelButton).ClickAsync());
 
         DialogResult? result = await harness.Reference.Result.WaitAsync(TimeSpan.FromSeconds(10), ct);
         Assert.NotNull(result);

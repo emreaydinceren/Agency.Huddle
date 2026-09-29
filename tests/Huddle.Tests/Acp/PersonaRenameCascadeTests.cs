@@ -461,12 +461,16 @@ public sealed class PersonaRenameCascadeTests
         using var dir = new TempDataDir();
         using var harness = await CreateHarnessAsync(dir, ct);
         harness.PersonaStore.Add(Identity("nova"), "You help.");
-        TestTaskStore.WriteTask(
-            harness.TaskStore.RootDirectory,
-            TestTaskStore.RelativePath("Platform", null, closed: false, "PLAT-0001.md"),
-            TestTasks.Make(id: "PLAT-0001", assignee: "nova", location: new("Platform", null, false), changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]));
-        harness.TaskStore.RebuildFromWatcher();
-        _ = TaskId.TryParse("PLAT-0001", out TaskId id);
+
+        // Seeded through TaskStore.Create, not a raw file write: a raw write is an "outside edit", which
+        // TaskService.OnOutsideEdit answers by appending a Change log entry - and when the store's own
+        // debounced watcher (not the test thread) is the one that finds it, that append can land between
+        // RenameTeammate's read and its write, fail the version check and skip the rename.
+        TaskItem seed = TestTasks.Make(id: "PLAT-0001", assignee: "nova", location: new("Platform", null, false), changeLog: [TestTasks.Entry("2026-01-01T00:00:00Z", "You", "created")]);
+        TaskItem toWrite = seed with { Path = TaskLayout.PathFor(harness.TaskStore.RootDirectory, seed.Location, seed.Id) };
+        TaskItem created = harness.TaskStore.Create(toWrite, TaskFileFormat.Compose(toWrite))
+            ?? throw new InvalidOperationException("fixture task already exists");
+        TaskId id = created.Id;
         Assert.NotNull(harness.TaskStore.Get(id));
 
         harness.PersonaStore.Update("nova", PersonaText("novaprime", "You help."), model: null, effort: null);

@@ -18,7 +18,7 @@ namespace Agency.Huddle.Tests.Acp;
 
 /// <summary>
 /// Proves *which* <see cref="FileChangeTracker"/> a <see cref="PersonaSupervisor"/>-started runner
-/// actually got, per FC §6.10 - something a construction-only <see cref="PersonaSupervisorTests"/>
+/// actually got, per FC §6.10 - something a construction-only <see cref="PersonaSupervisorLifecycleTests"/>
 /// test cannot show, because it needs a Turn to run. Built over <see cref="PipeHostFixture"/> (which
 /// removes the hosted <see cref="PersonaSupervisor"/>, see <see cref="PipeHostFixture.RemovePersonaSupervisorHostedService"/>)
 /// with a hand-built <see cref="PersonaSupervisor"/> wired to a <see cref="FakeAgentHostFactory"/>, so

@@ -82,9 +82,9 @@ public sealed class LibraryPanelTests
         await using MudBunitContext ctx = fixture.NewContext();
 
         var cut = ctx.RenderWithPopovers(RenderPanel);
-        await cut.InvokeAsync(() => cut.Find(".library-panel-name-field input").Change("Notes"));
-        await cut.InvokeAsync(() => cut.Find(".library-panel-path-field input").Change(newPath));
-        await cut.InvokeAsync(() => cut.Find(".library-panel-add-button").Click());
+        await cut.InvokeAsync(() => cut.Find(".library-panel-name-field input").ChangeAsync("Notes"));
+        await cut.InvokeAsync(() => cut.Find(".library-panel-path-field input").ChangeAsync(newPath));
+        await cut.InvokeAsync(() => cut.Find(".library-panel-add-button").ClickAsync());
 
         Assert.Equal(["Notes"], fixture.Store.Pinned.Select(p => p.Name));
         cut.WaitForAssertion(() => Assert.Equal(
@@ -101,9 +101,9 @@ public sealed class LibraryPanelTests
         await using MudBunitContext ctx = fixture.NewContext();
 
         var cut = ctx.RenderWithPopovers(RenderPanel);
-        await cut.InvokeAsync(() => cut.Find(".library-panel-name-field input").Change("Ghost"));
-        await cut.InvokeAsync(() => cut.Find(".library-panel-path-field input").Change(missingPath));
-        await cut.InvokeAsync(() => cut.Find(".library-panel-add-button").Click());
+        await cut.InvokeAsync(() => cut.Find(".library-panel-name-field input").ChangeAsync("Ghost"));
+        await cut.InvokeAsync(() => cut.Find(".library-panel-path-field input").ChangeAsync(missingPath));
+        await cut.InvokeAsync(() => cut.Find(".library-panel-add-button").ClickAsync());
 
         Assert.Equal("That folder doesn't exist.", cut.Find(".library-panel-add-error").TextContent.Trim());
         Assert.Empty(fixture.Store.Pinned);
@@ -132,7 +132,7 @@ public sealed class LibraryPanelTests
         await using MudBunitContext ctx = fixture.NewContext();
 
         var cut = ctx.RenderWithPopovers(RenderPanel);
-        await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='docs'] .library-panel-remove-button").Click());
+        await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='docs'] .library-panel-remove-button").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".library-panel-root-row[data-root-id='docs']")));
         Assert.Empty(fixture.Store.Pinned);
@@ -157,7 +157,7 @@ public sealed class LibraryPanelTests
             ["Cancel", "Reset"],
             cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Reset", StringComparison.Ordinal)).Click());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Reset", StringComparison.Ordinal)).ClickAsync());
         cut.WaitForAssertion(() => Assert.False(File.Exists(filePath)), TimeSpan.FromSeconds(5));
     }
 
@@ -174,7 +174,7 @@ public sealed class LibraryPanelTests
         _ = cut.InvokeAsync(() => cut.Find(".library-panel-reset-button").Click());
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
 
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).Click());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Cancel", StringComparison.Ordinal)).ClickAsync());
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".mud-dialog-title")));
 
         Assert.True(File.Exists(filePath));
@@ -189,7 +189,7 @@ public sealed class LibraryPanelTests
         await using MudBunitContext ctx = fixture.NewContext();
 
         var cut = ctx.RenderWithPopovers(RenderPanel);
-        await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='teams'] .library-panel-hide-switch input").Change(true));
+        await cut.InvokeAsync(() => cut.Find(".library-panel-root-row[data-root-id='teams'] .library-panel-hide-switch input").ChangeAsync(true));
 
         LibraryRootStore reloaded = new(fixture.Options, fixture.Paths, NullLogger<LibraryRootStore>.Instance);
         Assert.Equal(["teammates"], reloaded.VisibleRoots.Select(r => r.Id));

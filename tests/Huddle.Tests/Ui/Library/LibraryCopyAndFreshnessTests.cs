@@ -36,7 +36,7 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-copy")));
 
-        await cut.InvokeAsync(() => cut.Find(".library-document-copy").Click());
+        await cut.InvokeAsync(() => cut.Find(".library-document-copy").ClickAsync());
 
         JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke("huddleClipboard.copy");
         Assert.Equal(path.FullPath, Assert.Single(invocation.Arguments));
@@ -59,7 +59,7 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderDoc(ctx, path);
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-copy")));
 
-        await cut.InvokeAsync(() => cut.Find(".library-document-copy").Click());
+        await cut.InvokeAsync(() => cut.Find(".library-document-copy").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
         Assert.Equal("Couldn't copy the path.", snackbar.ShownSnackbars.Single().Message);
@@ -245,7 +245,7 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-freshness-notice")));
 
         await cut.InvokeAsync(() => cut.FindAll(".library-document-freshness-notice button")
-            .Single(b => string.Equals(b.TextContent.Trim(), "Reload", StringComparison.Ordinal)).Click());
+            .Single(b => string.Equals(b.TextContent.Trim(), "Reload", StringComparison.Ordinal)).ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".library-document-freshness-notice")));
         Assert.Equal("someone else's content", cut.FindComponent<LibraryEditor>().Instance.Text);
@@ -278,7 +278,7 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-freshness-notice")));
 
         await cut.InvokeAsync(() => cut.FindAll(".library-document-freshness-notice button")
-            .Single(b => string.Equals(b.TextContent.Trim(), "Keep mine", StringComparison.Ordinal)).Click());
+            .Single(b => string.Equals(b.TextContent.Trim(), "Keep mine", StringComparison.Ordinal)).ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".library-document-freshness-notice")));
         Assert.Equal("hi", cut.FindComponent<LibraryEditor>().Instance.Text);

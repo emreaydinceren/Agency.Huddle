@@ -147,7 +147,7 @@ public sealed class TaskRouteAndCopyTests
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
 
         var cut = RenderPanel(ctx, task.Id);
-        await cut.InvokeAsync(() => cut.Find($"button[aria-label=\"Copy task id {task.Id}\"]").Click());
+        await cut.InvokeAsync(() => cut.Find($"button[aria-label=\"Copy task id {task.Id}\"]").ClickAsync());
 
         JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke("huddleClipboard.copy");
         Assert.Equal(task.Id.ToString(), Assert.Single(invocation.Arguments));
@@ -168,7 +168,7 @@ public sealed class TaskRouteAndCopyTests
         ISnackbar snackbar = ctx.Services.GetRequiredService<ISnackbar>();
 
         var cut = RenderPanel(ctx, task.Id);
-        await cut.InvokeAsync(() => cut.Find($"button[aria-label=\"Copy task id {task.Id}\"]").Click());
+        await cut.InvokeAsync(() => cut.Find($"button[aria-label=\"Copy task id {task.Id}\"]").ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
         Snackbar shown = snackbar.ShownSnackbars.Single();
@@ -188,8 +188,8 @@ public sealed class TaskRouteAndCopyTests
         ctx.JSInterop.Setup<bool>("huddleClipboard.copy", expected).SetResult(true);
 
         var cut = RenderPanel(ctx, task.Id);
-        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Copy options\"]").Click());
-        await cut.InvokeAsync(() => cut.Find(".task-detail-copy-link").Click());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Copy options\"]").ClickAsync());
+        await cut.InvokeAsync(() => cut.Find(".task-detail-copy-link").ClickAsync());
 
         JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke("huddleClipboard.copy");
         Assert.Equal(expected, Assert.Single(invocation.Arguments));
@@ -216,8 +216,8 @@ public sealed class TaskRouteAndCopyTests
             builder.CloseComponent();
         });
 
-        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Move PLAT-0001\"]").Click());
-        await cut.InvokeAsync(() => cut.FindAll(".mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), "Copy id", StringComparison.Ordinal)).Click());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Move PLAT-0001\"]").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), "Copy id", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Equal(task.Id, copied);
     }
@@ -245,8 +245,8 @@ public sealed class TaskRouteAndCopyTests
             builder.CloseComponent();
         });
 
-        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Actions for PLAT-0001\"]").Click());
-        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), "Copy id", StringComparison.Ordinal)).Click());
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Actions for PLAT-0001\"]").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), "Copy id", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Equal(task.Id, copied);
         personas.Dispose();
@@ -268,8 +268,8 @@ public sealed class TaskRouteAndCopyTests
             builder.CloseComponent();
         });
 
-        await cut.InvokeAsync(() => cut.Find($"button[aria-label=\"Actions for {task.Id}\"]").Click());
-        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), "Copy id", StringComparison.Ordinal)).Click());
+        await cut.InvokeAsync(() => cut.Find($"button[aria-label=\"Actions for {task.Id}\"]").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll("div.mud-menu-item").Single(i => string.Equals(i.TextContent.Trim(), "Copy id", StringComparison.Ordinal)).ClickAsync());
 
         JSRuntimeInvocation invocation = ctx.JSInterop.VerifyInvoke("huddleClipboard.copy");
         Assert.Equal(task.Id.ToString(), Assert.Single(invocation.Arguments));

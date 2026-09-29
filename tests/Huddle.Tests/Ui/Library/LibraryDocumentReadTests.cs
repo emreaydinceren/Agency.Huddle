@@ -244,7 +244,7 @@ public sealed class LibraryDocumentReadTests : IDisposable
             ctx, path, scope: scope, onOpenInLibrary: EventCallback.Factory.Create<LibraryPath>(this, p => openInLibraryCount++));
 
         cut.WaitForAssertion(() => Assert.Equal("Outside this view", cut.Find(".library-document-outside-scope").TextContent.Trim()));
-        await cut.InvokeAsync(() => cut.Find("button.library-document-open-in-library").Click());
+        await cut.InvokeAsync(() => cut.Find("button.library-document-open-in-library").ClickAsync());
         Assert.Equal(1, openInLibraryCount);
     }
 

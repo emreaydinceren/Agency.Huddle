@@ -387,7 +387,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   edits or removes an individual Message, and a Transcript is still never
   rewritten in place.
 - **Former flake, FIXED 2026-09-27 — and it was a product bug, not the test's timing.**
-  `PersonaSupervisorTests.Shutdown_DisposesEveryHost` (quarantined in CI), and on
+  `PersonaSupervisorLifecycleTests.Shutdown_DisposesEveryHost` (quarantined in CI), and on
   `feat/library` most of the rest of that class, timed out in `WaitUntilAsync` on Linux.
   The recorded cause, "its 10-second token races `WaitUntilAsync`", was wrong: with the
   budget raised to 30 s, the same runs failed 30 s later. On Linux, `PersonaStore`'s
@@ -475,7 +475,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   failing under 40-process load before, 0/200 after.
 - **A fifth flake, seen during the Room Sessions build — DIAGNOSED and fixed 2026-09-24.**
   Three tests failed intermittently under full-suite load. Two were tests asserting before
-  async work landed: `TeammateCardTests.ViewMode_ShowsTheChosenModel` (a find-then-click racing
+  async work landed: `TeammateCardModelEffortTests.ViewMode_ShowsTheChosenModel` (a find-then-click racing
   the page's SQLite-backed completion render) and `RoomSessionTests.IdleTimeout_CancelsFarSideFirst`
   (reading the Turn-failure report straight after the far-side cancel, which precedes it).
   The third, `RoomSessionPoolTests.Max2_ConcurrentOpens_NeverExceedCap`, was **a real defect**,
@@ -496,16 +496,38 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   directories behind — measured at 1,843 per `Huddle.Tests` run, not the 83 once recorded here
   (about 983,000 had built up under `%TEMP%\team-tests`, ~50 GB). Fixed with the shutdown line
   above; a run now leaves none.
-- **Still flaky under heavy parallel load, not diagnosed — seen 2026-09-29.** With several full
-  suites running at once on one machine: `PersonaStoreTests.Update_ChangingTheName_MovesTheModelAndEffortRowsRatherThanLeavingThemBehind`
-  (2-3 of 12 runs; it awaits the first `PersonasChanged`, which may be the debounce from its own
-  write rather than the rename), `PersonaRenameCascadeTests.PersonaRenameCascade_RenamesTaskAssignee`,
-  `TeamPagesEndToEndTests.CatalogFlags_FolderWithoutMembers_AndLabelWithoutFolder`,
-  `LibraryDocumentEditTests`, `TaskServiceTests` and `TaskDetailTests.Save_IOExceptionFromLockedFile_…`.
-  `RoomSessionConformanceTests.TwoRooms_TwoSessionNewCalls_OneProcess` failed once with a
-  `TimeoutException` and did not reproduce in ~700 loaded runs; if it recurs, capture whether the
-  `session/prompt` response and `MessagePosted` arrived — `DotAcpAgentSession.WaitForQuietDispatchAsync`'s
-  100 ms quiet window is the suspect.
+- **Flaky under heavy parallel load — seen 2026-09-29, mostly fixed the same day.** With several
+  full suites running at once on one machine, these failed:
+  - `PersonaStoreTests.Update_ChangingTheName_…` and five tests of the same shape — **fixed**: they
+    awaited the first `PersonasChanged` rather than the condition they assert.
+  - `PersonaRenameCascadeTests.PersonaRenameCascade_RenamesTaskAssignee` — **fixed**: it seeded its
+    Task with a raw file write, an outside edit that `TaskService.OnOutsideEdit` answers with a
+    Change log append; when the store's own watcher found it, that append could land between
+    `RenameTeammateCore`'s read and write, fail the version check and skip the rename. It now seeds
+    through `TaskStore.Create`.
+  - `TeamPagesEndToEndTests.CatalogFlags_FolderWithoutMembers_AndLabelWithoutFolder` — **fixed**
+    (11/16 loaded runs failing): `TeamFolderProvisioner` creates a folder for every valid Team label,
+    so "a label with no folder" was only ever transient. The test now uses a label the provisioner
+    refuses on every OS (`Ops?`).
+  - `LibraryDocumentEditTests` — its dialog clicks moved to `ClickAsync()`; the cause was not proven.
+  - **`TaskServiceTests` — still open.** The likely pair is `Close_DiskVersionChangedSinceRead_Conflict`
+    and `Reopen_DiskVersionChangedSinceRead_Conflict`: they write an outside edit straight to disk and
+    expect a Conflict, but if the store's 500 ms watcher rebuild runs first, `OnOutsideEdit`
+    refreshes the index and the call succeeds. A deterministic fix needs a way to hold the debounce
+    — a `src/` seam, not yet added.
+  - `RoomSessionConformanceTests.TwoRooms_TwoSessionNewCalls_OneProcess` failed once with a
+    `TimeoutException` and did not reproduce in ~700 loaded runs; if it recurs, capture whether the
+    `session/prompt` response and `MessagePosted` arrived — `DotAcpAgentSession.WaitForQuietDispatchAsync`'s
+    100 ms quiet window is the suspect.
+- **`PersonaRunnerTests` runs on a fake clock since 2026-09-29, with two deliberate gaps.**
+  `RoomSession`'s idle watchdog and activity stamps now read the session's injected `TimeProvider`,
+  so the idle-timeout tests advance a `FakeTimeProvider` instead of waiting out real seconds, and
+  "nothing happens" windows became a follow-up probe message whose reply proves no earlier Turn
+  ran. `BudgetExhausted_DoesNotBufferAsCatchUp` relies on pipe order for that proof, and
+  `AgentGateway` sends fire-and-forget, so a reorder could let it pass wrongly — never fail
+  wrongly. `Stop_InRoomA_WhileBTurnRuns_ClearsOnlyAsQueue` keeps a real 100 ms pause after the
+  Stop, because nothing on the wire says the runner has handled it; it is the one timing test here
+  that could still flake under load.
 - **Tasks is built, and here is what it does not cover.** A Task is a Markdown file the Human
   and Agents share, and a change to one wakes its assignee — see
   [the Tasks spec](../Huddle.Tasks-Specifications.md),
@@ -547,7 +569,7 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
     see [manual-tests/tasks.md](manual-tests/tasks.md). Deferred to the Human's own user
     acceptance testing, the same way File Changes' and Room Sessions' paid checks are.
   - **Tests seen flaky under full-suite load during this delivery.** `TeammateCardTests.EditMode_TitleWrittenAsABlockScalar_LocksTheTitleBoxReadOnly`
-    and `TeammateCardTests.ViewMode_ShowsTheChosenModel` are the fifth flake above, fixed
+    and `TeammateCardModelEffortTests.ViewMode_ShowsTheChosenModel` (both then in `TeammateCardTests`) are the fifth flake above, fixed
     2026-09-24. `RoomSessionPoolTests.Max2_ConcurrentOpens_NeverExceedCap` and
     `RoomSessionResumeTests.TurnStoppedAfterActivity_StillStoresEntry` are the same fix, watched
     rather than re-diagnosed. `PipeEndToEndTests.Disconnect_CleanClose_LogsExactlyOneInformationLine`

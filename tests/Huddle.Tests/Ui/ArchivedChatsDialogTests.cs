@@ -99,7 +99,7 @@ public sealed class ArchivedChatsDialogTests
         var dialogService = ctx.Services.GetRequiredService<IDialogService>();
         await cut.InvokeAsync(() => dialogService.ShowAsync<ArchivedChatsDialog>("Archived chats", ArchivedChatsDialog.Options));
 
-        cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), "Unarchive", StringComparison.Ordinal)).Click();
+        await cut.InvokeAsync(() => cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), "Unarchive", StringComparison.Ordinal)).ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Contains(room.Name, cut.Find("div.room-list").InnerHtml, StringComparison.Ordinal));
         Assert.False((await directory.GetRoomAsync(room.Id, ct))?.Archived);
@@ -122,7 +122,7 @@ public sealed class ArchivedChatsDialogTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = await OpenDialogAsync(ctx);
-        cut.Find("button[aria-label='Delete']").Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Delete']").ClickAsync());
 
         Assert.NotNull(await directory.GetRoomAsync(room.Id, ct));
         Assert.Contains(cut.FindAll("button"), button => string.Equals(button.TextContent.Trim(), "Confirm", StringComparison.Ordinal));
@@ -145,8 +145,8 @@ public sealed class ArchivedChatsDialogTests
 
         await using var ctx = NewContext(directory, chat, events);
         var cut = await OpenDialogAsync(ctx);
-        cut.Find("button[aria-label='Delete']").Click();
-        cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), "Confirm", StringComparison.Ordinal)).Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label='Delete']").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll("button").First(button => string.Equals(button.TextContent.Trim(), "Confirm", StringComparison.Ordinal)).ClickAsync());
 
         Assert.Null(await directory.GetRoomAsync(room.Id, ct));
     }

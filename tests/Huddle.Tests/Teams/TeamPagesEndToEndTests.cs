@@ -28,6 +28,9 @@ public sealed class TeamPagesEndToEndTests
 
     private const string KimText = "---\nName: Kim\nTitle: Kim\nAlias: kim\n---\nYou are Kim.";
 
+    /// <summary>A Team label <c>TeamFolderProvisioner</c> refuses (a name may not contain a question mark), so it never gets a folder. The provisioner creates one for every ordinary label at host start and on every Personas change, so an ordinary label's "no folder" state is only ever transient.</summary>
+    private const string OpsLabel = "Ops?";
+
     private const string LaunchLine = "The campaign launches on 3 November.";
 
     private static readonly IReadOnlyList<string> ToolNames = ["mcp__team__get_help"];
@@ -174,21 +177,21 @@ public sealed class TeamPagesEndToEndTests
         Assert.Equal("/teams/Business", projectPage.QuerySelector(".team-page-breadcrumbs a[href]")?.GetAttribute("href"));
     }
 
-    /// <summary>Step 6 (T14, T15): a folder <c>Legal</c> nobody carries has no members; a label <c>Ops</c> with no folder has no folder.</summary>
+    /// <summary>Step 6 (T14, T15): a folder <c>Legal</c> nobody carries has no members; a label the folder provisioner cannot turn into a folder has no folder.</summary>
     [Fact]
     public async Task CatalogFlags_FolderWithoutMembers_AndLabelWithoutFolder()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
-        const string opsNova = "---\nName: Nova\nTitle: Nova\nAlias: nova\nTeams: Ops\n---\nYou are Nova.";
+        const string opsNova = "---\nName: Nova\nTitle: Nova\nAlias: nova\nTeams: " + OpsLabel + "\n---\nYou are Nova.";
         await using TeamWebApplicationFactory factory = new();
         Directory.CreateDirectory(Path.Combine(factory.TasksDirPath, "Legal"));
         using HttpClient client = await StartAsync(factory, opsNova, KimText, ct);
         ITeamCatalog catalog = factory.Services.GetRequiredService<ITeamCatalog>();
 
-        await WaitForAsync(() => catalog.Find("Legal") is not null && catalog.Find("Ops") is not null, ct);
+        await WaitForAsync(() => catalog.Find("Legal") is not null && catalog.Find(OpsLabel) is not null, ct);
 
         TeamSummary? legal = catalog.Find("Legal");
-        TeamSummary? ops = catalog.Find("Ops");
+        TeamSummary? ops = catalog.Find(OpsLabel);
         Assert.NotNull(legal);
         Assert.NotNull(ops);
         Assert.True(legal.HasFolder);
@@ -197,7 +200,7 @@ public sealed class TeamPagesEndToEndTests
         Assert.False(ops.HasFolder);
         Assert.True(ops.HasMembers);
         Assert.Equal(["Nova"], ops.Members);
-        Assert.Equal(["Legal", "Ops"], catalog.Teams.Select(static team => team.Name).ToList());
+        Assert.Equal(["Legal", OpsLabel], catalog.Teams.Select(static team => team.Name).ToList());
     }
 
     /// <summary>Seeds the two Personas, starts the host and waits until the Personas are loaded.</summary>

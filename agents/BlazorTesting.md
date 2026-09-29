@@ -70,10 +70,14 @@ await cut.InvokeAsync(() => cut.Find("button.save").ClickAsync());
   `ClickAsync()` / `ContextMenuAsync()` does, because that task completes when the handler does.
   This was the cause of the `RoomListTests` and `TaskViewNavTests` flakes.
 
-Use it for every click whose effect the test asserts next. The exception is a handler that awaits
-a dialog the test must then drive: awaiting it would wait for the dialog to close, so fire it with
-`_ = cut.InvokeAsync(() => x.Click())` and `WaitForAssertion` on the dialog (the `TaskViewNavTests`
-delete-view pattern). If a click still races **inside** `InvokeAsync`, the component is
+Use it for every click whose effect the test asserts next — and the same for `ChangeAsync`,
+`InputAsync`, `KeyDownAsync` and `ContextMenuAsync`. The exception is a handler that awaits
+something the test must drive next: awaiting it would wait for that to finish, and the test hangs.
+Fire those with `_ = cut.InvokeAsync(() => x.Click())` and `WaitForAssertion` on what appears (the
+`TaskViewNavTests` delete-view pattern). The sweep found them in more places than the button that
+opens a dialog: a **menu item** that opens a dialog, a dialog's **confirm** that opens a second
+("leave?") dialog, and a confirm whose call the test is deliberately **holding** to observe the
+in-progress state. A converted click that hangs until the test's timeout is one of these. If a click still races **inside** `InvokeAsync`, the component is
 re-rendering when nothing changed — look for spurious events in the product (this found three real
 store bugs), don't add a wait.
 

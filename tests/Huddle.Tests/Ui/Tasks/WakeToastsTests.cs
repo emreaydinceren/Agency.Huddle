@@ -229,7 +229,7 @@ public sealed class WakeToastsTests
             activity.Record(new WakeRecord(expected, "Nova", "room-1", "SAML Integration", WakeOutcome.Woken, DateTimeOffset.UtcNow));
             cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
 
-            cut.Find(".wake-toast-task-link").Click();
+            await cut.InvokeAsync(() => cut.Find(".wake-toast-task-link").ClickAsync());
 
             Assert.Equal(expected, opened);
         }

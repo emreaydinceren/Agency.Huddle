@@ -134,7 +134,7 @@ public sealed class TaskDetailConflictTests
 
         IElement keepMineInput = cut.FindAll(".task-detail-conflict-stacked label.mud-radio").Single(l => l.TextContent.Contains("Keep mine", StringComparison.Ordinal)).QuerySelector("input[type=\"radio\"]")
             ?? throw new InvalidOperationException("Keep mine radio input not found.");
-        await cut.InvokeAsync(() => keepMineInput.Click());
+        await cut.InvokeAsync(() => keepMineInput.ClickAsync());
 
         Assert.True(cut.Find(".task-detail-conflict-stacked input[type=\"radio\"]").HasAttribute("checked"));
         Assert.False(FindButton(cut, "Save").HasAttribute("disabled"));
@@ -577,7 +577,7 @@ public sealed class TaskDetailConflictTests
     /// <summary>Opens the Title editor and raises its <c>ValueChanged</c>, adding it to <c>pending</c> (Spec §13.6 Title row).</summary>
     private static async Task EditTitleAsync(IRenderedComponent<ContainerFragment> cut, string value)
     {
-        cut.Find("button[aria-label=\"Edit title\"]").Click();
+        await cut.InvokeAsync(() => cut.Find("button[aria-label=\"Edit title\"]").ClickAsync());
         IRenderedComponent<MudTextField<string>> titleField = cut.FindComponents<MudTextField<string>>().Single(m => string.Equals(m.Instance.Class, "task-detail-title", StringComparison.Ordinal));
         await cut.InvokeAsync(() => titleField.Instance.ValueChanged.InvokeAsync(value));
     }
@@ -705,7 +705,7 @@ public sealed class TaskDetailConflictTests
     /// <c>SaveAsync</c> at all - bUnit's own exception message names this exact fix.
     /// </summary>
     private static Task ClickSaveAsync(IRenderedComponent<ContainerFragment> cut) =>
-        cut.InvokeAsync(() => FindButton(cut, "Save").Click());
+        cut.InvokeAsync(() => FindButton(cut, "Save").ClickAsync());
 
     /// <summary>The trimmed text content of the one element matching <paramref name="cssSelector"/> - mirrors <c>TaskDetailTests.TextOf</c>.</summary>
     private static string TextOf(IRenderedComponent<ContainerFragment> cut, string cssSelector) =>

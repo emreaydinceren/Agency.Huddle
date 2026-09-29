@@ -96,8 +96,8 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, target, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("Renamed.md"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Renamed.md"));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
         cut.WaitForAssertion(() => Assert.Single(changes), TimeSpan.FromSeconds(5));
 
         Assert.False(File.Exists(Path.Combine(root, "Target.md")));
@@ -124,8 +124,8 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, target, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("CON.md"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("CON.md"));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
 
         Assert.Equal("\"CON.md\" is reserved by Windows.", cut.Find(".library-file-ops-error").TextContent.Trim());
         Assert.NotEmpty(cut.FindAll(".mud-dialog-title"));
@@ -149,11 +149,11 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, target, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("Renamed.md"));
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Renamed.md"));
 
         using (FileStream hold = new(Path.Combine(root, "Locked.md"), FileMode.Open, FileAccess.Read, FileShare.None))
         {
-            await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+            await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
             cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-file-ops-partial-failure")), TimeSpan.FromSeconds(5));
         }
 
@@ -260,8 +260,8 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Rename, target, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("Renamed.md"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Renamed.md"));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
 
         Assert.True(File.Exists(Path.Combine(root, "Target.md")));
         Assert.False(File.Exists(Path.Combine(root, "Renamed.md")));
@@ -289,8 +289,8 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Move, item, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
-        await cut.InvokeAsync(() => cut.Find($".library-file-ops-move-folder[data-path='{destination.RelativePath}']").Click());
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+        await cut.InvokeAsync(() => cut.Find($".library-file-ops-move-folder[data-path='{destination.RelativePath}']").ClickAsync());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
 
         Assert.True(File.Exists(Path.Combine(root, "A.md")));
         Assert.False(File.Exists(Path.Combine(root, "Sub", "A.md")));
@@ -319,7 +319,7 @@ public sealed class LibraryFileOpsTests : IDisposable
             ["Cancel", "Delete"],
             cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).Click());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
         cut.WaitForAssertion(() => Assert.NotEmpty(this.fixture.LibraryFixture.RecycleBin.Sent), TimeSpan.FromSeconds(5));
         Assert.Equal([item.FullPath], this.fixture.LibraryFixture.RecycleBin.Sent);
     }
@@ -341,7 +341,7 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         _ = cut.InvokeAsync(() => ops.HandleAsync(new LibraryTreeAction(LibraryTreeActionKind.Delete, item, null)));
         cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).Click());
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").Single(b => string.Equals(b.TextContent.Trim(), "Delete", StringComparison.Ordinal)).ClickAsync());
 
         cut.WaitForAssertion(() => Assert.Single(snackbar.ShownSnackbars));
         Assert.Equal("Couldn't delete: the Recycle Bin isn't available here.", snackbar.ShownSnackbars.Single().Message);
@@ -392,8 +392,8 @@ public sealed class LibraryFileOpsTests : IDisposable
         Assert.Equal("Name", cut.Find(".library-file-ops-name-field label").TextContent.Trim());
         Assert.Equal(["Create", "Cancel"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("Launch Q4"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Launch Q4"));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
         cut.WaitForAssertion(() => Assert.Single(changes), TimeSpan.FromSeconds(5));
 
         Assert.True(Directory.Exists(Path.Combine(teamsPath, "Teams", "Acme", "Launch Q4")));
@@ -422,8 +422,8 @@ public sealed class LibraryFileOpsTests : IDisposable
         Assert.Equal("Name", cut.Find(".library-file-ops-name-field label").TextContent.Trim());
         Assert.Equal(["Create", "Cancel"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("Meeting notes"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Meeting notes"));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
         cut.WaitForAssertion(() => Assert.Single(changes), TimeSpan.FromSeconds(5));
 
         Assert.True(File.Exists(Path.Combine(root, "Meeting notes.md")));
@@ -449,8 +449,8 @@ public sealed class LibraryFileOpsTests : IDisposable
 
         Assert.Equal("New folder", cut.Find(".mud-dialog-title").TextContent.Trim());
 
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("Archive"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Archive"));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
         cut.WaitForAssertion(() => Assert.True(Directory.Exists(Path.Combine(root, "Archive"))), TimeSpan.FromSeconds(5));
 
         Assert.False(File.Exists(Path.Combine(root, "Archive.md")));
@@ -476,8 +476,8 @@ public sealed class LibraryFileOpsTests : IDisposable
         Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim());
         Assert.Equal(["Create", "Cancel"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
 
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("Meeting notes"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Meeting notes"));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].ClickAsync());
         await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
 
         Assert.True(File.Exists(Path.Combine(root, "Meeting notes.md")));
@@ -509,8 +509,8 @@ public sealed class LibraryFileOpsTests : IDisposable
             completed = true;
         });
         cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
-        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("Meeting notes"));
-        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").Click());
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").ChangeAsync("Meeting notes"));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").ClickAsync());
         await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
 
         Assert.True(completed);

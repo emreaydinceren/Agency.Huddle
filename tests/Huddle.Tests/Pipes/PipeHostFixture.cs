@@ -168,7 +168,7 @@ public sealed class PipeHostFixture : IAsyncDisposable
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <see cref="Agency.Huddle.Tests.Acp.PersonaSupervisorTests"/> sets <c>Team:Acp:Enabled=true</c> on this fixture and then
+    /// <see cref="Agency.Huddle.Tests.Acp.PersonaSupervisorLifecycleTests"/> sets <c>Team:Acp:Enabled=true</c> on this fixture and then
     /// builds its own <see cref="PersonaSupervisor"/> by hand, wired to a <see cref="Agency.Huddle.Tests.Acp.Fakes.FakeAgentHostFactory"/>,
     /// so it never has to launch a real "node" adapter to prove the supervisor's behaviour. Before this method existed,
     /// the fixture's composition root ran a second, DI-owned <see cref="PersonaSupervisor"/> alongside that hand-built
@@ -180,8 +180,8 @@ public sealed class PipeHostFixture : IAsyncDisposable
     /// <see cref="Agency.Huddle.App.Acp.PersonaRunner.StartAsync"/>'s read waiting for its <c>Welcome</c>, so it threw
     /// "Expected a Welcome envelope for Persona '...' but received end of stream." Which runner lost the race was
     /// timing-dependent, so the tests passed alone and failed intermittently in the full suite — <see
-    /// cref="Agency.Huddle.Tests.Acp.PersonaSupervisorTests.PersonaRemoved_StopsItsHost"/> and
-    /// <see cref="Agency.Huddle.Tests.Acp.PersonaSupervisorTests.Shutdown_DisposesEveryHost"/> were the ones caught doing it.
+    /// cref="Agency.Huddle.Tests.Acp.PersonaSupervisorLifecycleTests.PersonaRemoved_StopsItsHost"/> and
+    /// <see cref="Agency.Huddle.Tests.Acp.PersonaSupervisorLifecycleTests.Shutdown_DisposesEveryHost"/> were the ones caught doing it.
     /// It looked like a supervisor bug; it was two supervisors.
     /// </para>
     /// <para>
@@ -264,7 +264,7 @@ public sealed class PipeHostFixture : IAsyncDisposable
     /// unbidden, with its own free Name/Alias search racing whatever the test just wrote, is the
     /// same "second, independently-behaving thing polluting a controlled fixture" problem
     /// <see cref="RemovePersonaSupervisorHostedService"/>'s own remarks describe, one hosted service
-    /// over. <see cref="Agency.Huddle.Tests.Acp.PersonaSupervisorTests"/> is what surfaced this: with
+    /// over. <see cref="Agency.Huddle.Tests.Acp.PersonaSupervisorLifecycleTests"/> is what surfaced this: with
     /// the seeder left in, <c>Enabled_StartsOneHostPerPersonaFile</c> saw three hosts start instead
     /// of two, and several single-Persona tests saw a second, always-Offline "Chief of Staff" host
     /// racing the one Persona they actually wrote.
