@@ -17,13 +17,19 @@
     $PSScriptRoot) with the given filters and a "<Label>-mutation" label, and ALWAYS restore the original
     bytes in a finally block, then verify the restored file is byte-identical to the original.
 
-    Exit 0 if the mutation turned at least one test red (the tests can see the mutation - good). Exit 7
-    if everything stayed green (the tests cannot see the mutation - the coverage claim is false). Exit 2
-    if -Find does not occur exactly once, or -Line is out of range for the file.
+    Exit codes:
+      0  - the mutation turned at least one test red (tests ran, a test failed: the tests can see the
+           mutation - good).
+      2  - -Find does not occur exactly once, or -Line is out of range for the file.
+      7  - everything stayed green (the tests cannot see the mutation - the coverage claim is false).
+      10 - INVALID: the mutant did not build (Run-Tests.ps1 exit 1, or its output has "Build failed" /
+           a compiler `error XX1234:` line and no test totals). A build failure is not a proof: the script
+           prints `INVALID: the mutant did not build (first error: <line>)` instead of "Mutation caught".
+           The file is still restored and RESTORED is printed.
 
     NOTE: the replacement text must keep every `using` the file still needs; if the mutation removes the
-    last use of a type, the build fails (a compile error) rather than the tests going red, and that
-    compile failure will itself register as "at least one test red" via Run-Tests.ps1's summary.
+    last use of a type, the build fails (a compile error) and the result is INVALID (exit 10), not a catch.
+    Only "tests ran and at least one failed" counts as a proof.
 
 .PARAMETER File
     Path to the source file to mutate (and restore).
@@ -148,10 +154,28 @@ try {
         $runTestsArgs['FilterMethod'] = $FilterMethod
     }
 
-    & $runTestsScript @runTestsArgs
+    # Echo Run-Tests.ps1's output live (it writes with Write-Host) while keeping a copy to classify.
+    $runOutput = New-Object System.Collections.Generic.List[string]
+    & $runTestsScript @runTestsArgs *>&1 | ForEach-Object {
+        $outLine = "$_"
+        $runOutput.Add($outLine)
+        Write-Host $outLine
+    }
     $testExitCode = $LASTEXITCODE
 
-    if ($testExitCode -ne 0) {
+    $compilerErrorPattern = '\berror [A-Za-z]+\d+:'
+    $hasTotals = @($runOutput | Where-Object { $_ -match '^\s*total:\s*\d+' }).Count -gt 0
+    $firstCompilerError = $runOutput | Where-Object { $_ -match $compilerErrorPattern } | Select-Object -First 1
+    $buildFailed = ($testExitCode -eq 1) -or
+        (-not $hasTotals -and (($null -ne $firstCompilerError) -or (@($runOutput | Where-Object { $_ -match 'Build failed' }).Count -gt 0)))
+
+    if ($buildFailed) {
+        $exitCode = 10
+        $firstErrorText = if ($null -ne $firstCompilerError) { $firstCompilerError.Trim() } else { 'none found in output' }
+        Write-Host ''
+        Write-Host "INVALID: the mutant did not build (first error: $firstErrorText)"
+    }
+    elseif ($testExitCode -ne 0) {
         $exitCode = 0
         Write-Host ''
         Write-Host "Mutation caught: tests went red (Run-Tests.ps1 exit $testExitCode)."

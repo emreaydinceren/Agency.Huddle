@@ -33,6 +33,7 @@ the hub: [AgencyTeam.md](../AgencyTeam.md).
 | `Components/Pages/TeammateGrouping.cs` | The grouping and filtering behind that page, as a pure function — extracted because `HtmlRenderer` cannot simulate choosing a `<select>` option, so inline it would have been untestable. |
 | `Components/Pages/Settings.razor` | The settings shell at `/settings`. Its tab rail is `MudTabs`, but the tabs still **route** — `ActivePanelIndex` is derived from the `{Tab}` route parameter and a click calls `NavigateTo`, so `/settings/prompts` stays bookmarkable and an unknown tab still falls back. Owns every editable Prompt value; `PromptsPanel` holds none. |
 | `Components/Pages/Tasks.razor` | The Tasks page (Spec §13.2): holds the effective View — the saved View with the toolbar's session overrides applied — and requeries on `TasksReloaded`, `TaskChanged` and `ViewsChanged`. |
+| `Components/Pages/TeamPage.razor` | The Team page and the Project page, one component (Spec §6.6): Members, Files and Tasks tabs driven by route parameters. Routes are `/teams/<Team>[/{Tab}]` and `/teams/<Team>/projects/<Project>[/{Tab}]`. |
 | `Components/Tasks/TaskColors.cs` | The Spec §13.10 mapping from a Task's state, priority or presence to a MudBlazor `Color` (and the priority icon). |
 | `Components/Tasks/TaskDetailMode.cs` | Which of `TaskDetail`'s two layouts (Spec §13.6) is shown. |
 | `Components/Tasks/ConflictChoice.cs` | Which side of a conflicting field the Human picked when resolving a `TaskResult.Conflict` (Spec §13.7). |
@@ -56,6 +57,17 @@ the hub: [AgencyTeam.md](../AgencyTeam.md).
 | `Components/Settings/ResetAllControl.razor` | Restore every Prompt to its default, with an inline confirm rather than a dialog. Stages the defaults like any other edit — Save is still the only thing that writes. |
 | `Components/Settings/Appearance.razor` | The Appearance tab: **two** sections since 2026-09-22 — a grouped Theme picker, and the Human's own Avatar, which lives here because the Human has a Name but no Persona file and therefore no Teammate card to edit one on. Unlike the card, it has no Save button, so it saves on every change; that difference is deliberate, because there is no Cancel here to protect. It arms a flag before each save: `AvatarStore.Save` raises `AvatarsChanged` **synchronously**, and re-seeding from that echo would flip the Human's just-made choice back — a genuine bug the tests caught. Plus the credit line naming Visual Studio Code and the path to `appearance.json`. The light/dark preference that sat beside it went on 2026-09-21 ([ADR-0017](../adr/0017-a-theme-is-a-palette-not-a-pair.md)). A `MudList` with `MudListSubheader` headings, not a `MudSelect`: MudBlazor 9 ships no `MudSelectItemGroup`, and a list shows the whole catalog at once. Renders `ThemeCatalog.Grouped` rather than a list of its own, so Themes arrive without this file changing. Saving applies immediately — `MudThemeProvider` lives in the render tree, so there is no page reload and no `<head>` to rewrite. Note the injected field is named `AppearanceStore`, not `Appearance`: a service named after its own component collides with the generated class (`CS0542`). |
 | `Components/Settings/SettingsTab.cs` | Which pane the tab rail is showing. Public for the same reason `TeammateCardMode` is — see [Rules](rules.md). |
+| `Components/Teams/TeamsNav.razor` | The sidebar's list of Teams and their Projects (Spec §6.5): one `MudNavGroup` titled "Teams", each Team with its Projects nested as a `MudNavGroup`. Subscribes to `ITeamCatalog.Changed`. |
+| `Components/Teams/NewTeamDialog.razor` | The name dialog for creating a new Team or Project (Spec §6.5), behind the TeamsNav's "New team" and "New project" buttons. Copies `Library/AddFolderDialog.razor`'s shape. |
+| `Components/Teams/NewTeamDialogMode.cs` | Enum: whether `NewTeamDialog` is naming a Team or a Project. |
+| `Components/Teams/AddMemberDialog.razor` | The dialog to add a Teammate to a Team (Spec §6.7): a strict `MudAutocomplete` over the Teammates not yet in the Team, searched over Name, Alias and Title. |
+| `Components/Teams/TeammateChoice.cs` | One Teammate in the Add member dialog: Name, Title and Alias. |
+| `Components/Teams/TeamTabToolbar.razor` | The action button and search field every Team page tab shares (Spec §6.6): owned state for search text, passed back debounced and trimmed-to-null. |
+| `Components/Teams/TeamMembers.razor` | The Members tab list of a Team page (Spec §6.7): one row per member with status dot, avatar, Name and "Title · Alias", sorted by Name. Rows open the same `TeammateCard` the Teammates page does, and a context menu offers to remove the member. |
+| `Components/Teams/TeamFilesTab.razor` | The Files tab of a Team or Project page (Spec §6.8): a `LibraryExplorer` scoped to the Team's or Project's folder, with a shared toolbar for "New note" and "Search files". |
+| `Components/Teams/TeamTasksTab.razor` | The Tasks tab of a Team or Project page (Spec §6.9): shows an in-memory Task View grouped into swimlanes by Project for Teams, or ungrouped for Projects. |
+| *(`Components/Teams/TeamMembers.razor.css` — scoped stylesheet)* | Styling for the Members tab, including the `stopPropagation` wrapper around Team member row menu. |
+| *(`Components/Teams/TeamsNav.razor.css` — scoped stylesheet)* | Styling for the sidebar Teams list. |
 | *(`Themes/ThemeTokens.cs` — deleted 2026-09-14)* | The 39 Token names are gone with `theme.css`. MudBlazor's `Palette` properties are the key set roadmap item 7 maps onto now. See [ADR-0010](../adr/0010-a-theme-is-a-mudblazor-theme.md). |
 | `Themes/ThemeCatalog.cs` | An assembly point and nothing else: `BuiltIn`, a flat list of nineteen `ThemeDescriptor`s in **authoring** order, and `Grouped`, the projection the picker renders. `HuddleTheme.LightDescriptor` is deliberately first — three call sites read `BuiltIn[0]` to mean "the default Theme", which is why grouping is a projection and never a re-sort. |
 | `Themes/ThemeGrouping.cs` | One picker heading and its Themes. `Heading` is the display text; the grouping itself is computed once in `ThemeCatalog.Grouped`. |
@@ -234,6 +246,26 @@ order decides per Token, independently.
 | `DotAcp/EffortConfigOptions.cs` | `ModelConfigOptions`'s sibling over the `thought_level` category. Materially different class doc: here, an absent entry is the NORMAL case ("this model offers no effort choice"), not "unknown" — see [Traps](traps.md). |
 | `Tools/AppToolServer.cs` | Loopback Kestrel serving MCP. **It builds its own DI container**, so `IAppTool` instances must be created by Huddle.App's provider and passed in. Its 401 carries a **bare** `WWW-Authenticate: Bearer` — no `resource_metadata`, deliberately, because that parameter is what keys MCP's OAuth discovery path and neither side has designed one. |
 
+`src/Huddle.App/Teams` — the Teams catalog and membership operations:
+
+| Path | Responsibility |
+| --- | --- |
+| `Teams/ITeamCatalog.cs` | The live list of Teams as the pages see it, rebuilt whenever a Persona label or a Team folder changes. |
+| `Teams/TeamCatalog.cs` | Builds and holds one immutable snapshot of Teams, rebuilt on `PersonaStore.PersonasChanged` and `TaskStore.IndexChanged` events. Swaps the snapshot in before raising `Changed`. No lock: a reader always sees a whole snapshot. |
+| `Teams/TeamSummary.cs` | One Team as the pages see it: Name (the display spelling), HasMembers, and the read-only list of Projects. Names compare ignoring case. |
+| `Teams/TeamPageFeatures.cs` | Which optional features the installation has on; decides which tabs exist on Team pages. |
+| `Teams/TeamPageTab.cs` | A tab of a Team or Project page: Members, Files or Tasks. |
+| `Teams/TeamPageTabs.cs` | Determines which tabs appear based on enabled features, and resolves URL segments to tabs. |
+| `Teams/ITeamMembership.cs` | Adds a Persona to a Team or removes it, by rewriting only the `teams` field of the Persona's definition. |
+| `Teams/TeamMembership.cs` | Implementation: reads the Persona, edits its YAML, saves it through `PersonaStore.Update`, which keeps the Model and Effort and raises `PersonasChanged`. Serialises the whole read-modify-write. |
+| `Teams/MembershipOutcome.cs` | Enum: what a membership change did (Added, Removed or Unchanged). |
+| `Teams/MembershipResult.cs` | The outcome, plus the store's message when the save was rejected. |
+| `Teams/TeamLabels.cs` | Pure operations on a list of team labels, comparing case-insensitively by team name: add, remove, contains, unique-with-spelling. |
+| `Teams/TeamNames.cs` | Validation rules for Team and Project names, and the reserved `memory` folder name. |
+| `Teams/TeamMemoryGroup.cs` | One Team's Memory snapshot, holding the Team-wide Memory and each Project's Memory separately (Spec §6.2, §7.2). |
+| `Teams/TeamMemorySnapshot.cs` | A Persona's Team Memory snapshot, holding each Team's Memory grouped by Project (Spec §7.2). |
+| `Teams/TeamMemoryIndex.cs` | Builds one Persona's Team Memory snapshot: the Team-wide and per-Project Memory of every Team the Persona carries a label for, capped across all of them (Spec §6.4, §8.4). |
+
 The Library — the explorer, viewer and editor, Spec §6. Paths are relative to `src/Huddle.App`:
 
 | Path | Responsibility |
@@ -248,6 +280,8 @@ The Library — the explorer, viewer and editor, Spec §6. Paths are relative to
 | `Library/LibraryReferenceResolver.cs`, `Library/LibraryPathPatterns.cs` | Turn a Library path in a chat Message or note into a link. |
 | `Library/LibraryDocumentCollector.cs` | The Library documents a Turn's prompt block hands an Agent. |
 | `Library/TeamFolderCatalog.cs`, `Library/TeamFolderProvisioner.cs` | List and create Team and Project folders. |
+| `Library/ITeamFolders.cs` | Creates the folders behind a Team and its Projects on demand for the Team pages (Spec §6.5, §6.6). Every refusal is a `LibraryResult<T>` with a user-facing reason; nothing is ever renamed or deleted. |
+| `Library/LibrarySearchResult.cs` | Search results from a Library query, including the hits and whether more results were truncated. |
 | `Library/IRecycleBin.cs`, `Library/WindowsRecycleBin.cs` | Delete to the Recycle Bin; `NotAvailableRecycleBin.cs` off Windows. |
 | `Library/LayoutGuard.cs` | Validates that `Teams:Dir` and `Acp:TeammatesDir` do not overlap. |
 | `Library/LibraryLocation.cs` | The public record a host passes to say which folder the explorer starts from. |

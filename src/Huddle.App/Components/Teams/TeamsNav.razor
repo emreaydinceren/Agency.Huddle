@@ -1,0 +1,359 @@
+@*
+    Spec §6.5: the sidebar's list of Teams and their Projects, one MudNavGroup titled "Teams".
+    Copies TaskViewNav.razor's shape: subscribe to ITeamCatalog.Changed, marshal with
+    DispatchAsync and unsubscribe in Dispose (the catalog is a singleton, so an undisposed
+    subscription would throw on the next publish after this component is torn down), plus the
+    row-actions menu - a keyboard-focusable "..." MudIconButton and a right-click on the row, both
+    opening the SAME MudMenu instance through an @ref.
+
+    A MudNavGroup title toggles the group and has no Href, so a Team is a link plus a separate
+    chevron rather than a nested group. The chevron's behaviour (expansion state) and the New project
+    / New team handlers arrive in tasks 7.3 and 7.4; this file only lists.
+*@
+
+@using System.Text.Json
+@using Agency.Huddle.App.Library
+@using Microsoft.Extensions.Options
+@implements IDisposable
+@inject ITeamCatalog Catalog
+@inject ITeamFolders Folders
+@inject IDialogService Dialogs
+@inject ISnackbar Snackbar
+@inject IOptions<TeamOptions> TeamConfig
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<div class="teams-nav-host">
+    <MudNavMenu Class="teams-nav">
+        <MudNavGroup Title="Teams" Icon="@Icons.Material.Outlined.Groups" @bind-Expanded="this.expanded">
+            @foreach (TeamSummary team in this.Catalog.Teams)
+            {
+                bool isExpanded = this.IsExpanded(team.Name);
+                <div class="hover-reveal-row"
+                     @oncontextmenu="@(e => this.OnRowContextMenuAsync(team.Name, e))"
+                     @oncontextmenu:preventDefault="true">
+                    <MudIconButton Icon="@(isExpanded ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
+                                   Size="Size.Small" Class="teams-nav-chevron"
+                                   aria-label="@(isExpanded ? $"Collapse {team.Name}" : $"Expand {team.Name}")"
+                                   aria-expanded="@(isExpanded ? "true" : "false")"
+                                   OnClick="@(() => this.ToggleAsync(team.Name))" />
+                    <MudNavLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}")" Match="NavLinkMatch.Prefix"
+                                Class="hover-reveal-link">@team.Name</MudNavLink>
+                    @if (!team.HasMembers)
+                    {
+                        <MudText Typo="Typo.caption" Class="teams-nav-nomembers">No members</MudText>
+                    }
+                    @if (this.ProjectsAllowed)
+                    {
+                        <MudMenu @ref="@this.menuRefs[team.Name]" Class="hover-reveal-menu">
+                            @* ActivatorContent replaces MudMenu's own built-in activator entirely, so
+                               MudMenu does not wire a click listener around it automatically - the
+                               supplied MenuContext.ToggleAsync is how custom activator content opens
+                               the menu (TaskViewNav.razor's and RoomList.razor's own precedent). *@
+                            <ActivatorContent Context="menuContext">
+                                <MudTooltip Text="Team actions">
+                                    <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                                   aria-label="Team actions" Class="hover-reveal-menu-button"
+                                                   OnClick="menuContext.ToggleAsync" />
+                                </MudTooltip>
+                            </ActivatorContent>
+                            <ChildContent>
+                                <MudMenuItem OnClick="@(() => this.NewProjectAsync(team.Name))">New project</MudMenuItem>
+                            </ChildContent>
+                        </MudMenu>
+                    }
+                </div>
+                @if (isExpanded)
+                {
+                    @foreach (string project in team.Projects)
+                    {
+                        <MudNavLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}/projects/{Uri.EscapeDataString(project)}")"
+                                    Class="nav-project-link">@project</MudNavLink>
+                    }
+                }
+            }
+            <MudNavLink Icon="@Icons.Material.Filled.Add" IconColor="Color.Primary" Class="nav-action-link" OnClick="this.NewTeamAsync">New team</MudNavLink>
+        </MudNavGroup>
+    </MudNavMenu>
+</div>
+
+@code {
+    private bool expanded = true;
+    private readonly Dictionary<string, MudMenu> menuRefs = new(StringComparer.OrdinalIgnoreCase);
+
+    private const string CollapsedKey = "teamsNav:collapsed";
+
+    /// <summary>Lower-cased names of the Teams the user collapsed (stored under <c>teamsNav:collapsed</c>); a Team not in it is expanded.</summary>
+    private readonly HashSet<string> collapsed = new(StringComparer.Ordinal);
+
+    /// <summary>The lower-cased, unescaped Team of the current route, or <see langword="null"/> outside <c>/teams/{Team}</c>.</summary>
+    private string? routeTeam;
+
+    /// <summary>Whether the route's Team is forced open: set by every navigation, cleared when the chevron collapses that Team.</summary>
+    private bool routeOpen;
+
+    private EventHandler<LocationChangedEventArgs>? locationChanged;
+
+    /// <summary>Subscribes to <see cref="ITeamCatalog.Changed"/> and to navigation, and reads the route's Team.</summary>
+    protected override void OnInitialized()
+    {
+        this.UpdateRoute();
+        this.Catalog.Changed += this.OnCatalogChanged;
+        this.locationChanged = (_, _) => _ = this.DispatchAsync(() =>
+        {
+            this.UpdateRoute();
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+        this.Navigation.LocationChanged += this.locationChanged;
+    }
+
+    /// <summary>Loads the remembered collapsed Teams once, after the first render.</summary>
+    /// <param name="firstRender">Whether this is the component's first render.</param>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            string? stored = await this.JS.InvokeAsync<string?>("huddleStorage.get", CollapsedKey);
+            if (stored is null)
+            {
+                return;
+            }
+
+            string?[]? names = JsonSerializer.Deserialize<string?[]>(stored);
+            if (names is null)
+            {
+                return;
+            }
+
+            foreach (string? name in names)
+            {
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    this.collapsed.Add(name.ToLowerInvariant());
+                }
+            }
+
+            this.StateHasChanged();
+        }
+        catch (JSException)
+        {
+            // Storage may be blocked (private mode, policy): every Team stays expanded.
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit went away before the read finished; nothing to render.
+        }
+        catch (JsonException)
+        {
+            // Stored text may be stale or hand-edited and not a JSON array of strings: every Team stays expanded.
+        }
+    }
+
+    /// <summary>Unsubscribes from <see cref="ITeamCatalog.Changed"/> and navigation.</summary>
+    public void Dispose()
+    {
+        this.Catalog.Changed -= this.OnCatalogChanged;
+        if (this.locationChanged is not null)
+        {
+            this.Navigation.LocationChanged -= this.locationChanged;
+        }
+    }
+
+    /// <summary>A Team is expanded when it is the route's Team (and the chevron has not collapsed it since the last navigation) or is not in the collapsed set.</summary>
+    private bool IsExpanded(string team)
+    {
+        string key = team.ToLowerInvariant();
+        return (this.routeOpen && string.Equals(key, this.routeTeam, StringComparison.Ordinal)) || !this.collapsed.Contains(key);
+    }
+
+    /// <summary>Flips the Team's state and remembers the choice; a click on the route's forced-open Team collapses it for real until the next navigation into it.</summary>
+    private async Task ToggleAsync(string team)
+    {
+        string key = team.ToLowerInvariant();
+        if (this.IsExpanded(team))
+        {
+            this.collapsed.Add(key);
+            if (string.Equals(key, this.routeTeam, StringComparison.Ordinal))
+            {
+                this.routeOpen = false;
+            }
+        }
+        else
+        {
+            this.collapsed.Remove(key);
+        }
+
+        try
+        {
+            string json = JsonSerializer.Serialize(this.collapsed.Order(StringComparer.Ordinal));
+            await this.JS.InvokeVoidAsync("huddleStorage.set", CollapsedKey, json);
+        }
+        catch (JSException)
+        {
+            // Storage may be blocked: the choice still holds for this session, it is just not remembered.
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit went away before the write finished; nothing to remember it for.
+        }
+    }
+
+    /// <summary>Reads the Team out of <c>/teams/{Team}[/...]</c> (unescaped, lower-cased) and forces it open until the chevron collapses it.</summary>
+    private void UpdateRoute()
+    {
+        string path = this.Navigation.ToBaseRelativePath(this.Navigation.Uri);
+        int end = path.IndexOfAny(['?', '#']);
+        string[] segments = (end < 0 ? path : path[..end]).Split('/');
+        bool inTeam = segments.Length >= 2
+            && string.Equals(segments[0], "teams", StringComparison.OrdinalIgnoreCase)
+            && segments[1].Length > 0;
+        this.routeTeam = inTeam ? Uri.UnescapeDataString(segments[1]).ToLowerInvariant() : null;
+        this.routeOpen = inTeam;
+    }
+
+    private void OnCatalogChanged() => _ = this.DispatchAsync(() =>
+    {
+        this.menuRefs.Clear();
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a catalog event racing component teardown can throw.</summary>
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to render.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
+    }
+
+    /// <summary>How long a create action waits for the catalog to list the new Team or Project before navigating anyway.</summary>
+    private static readonly TimeSpan CatalogWait = TimeSpan.FromSeconds(2);
+
+    /// <summary>Spec §6.5 Gating: a Project needs the Library or Tasks to live in, so "New project" is offered only when either is enabled.</summary>
+    private bool ProjectsAllowed => this.TeamConfig.Value.Library.Enabled || this.TeamConfig.Value.Tasks.Enabled;
+
+    /// <summary>Asks for a Team name, creates the Team's folder and opens its page.</summary>
+    private async Task NewTeamAsync()
+    {
+        DialogParameters<NewTeamDialog> parameters = new()
+        {
+            { x => x.Mode, NewTeamDialogMode.Team },
+            { x => x.Team, null },
+            { x => x.Teams, this.Catalog.Teams },
+        };
+        string? name = await this.AskNameAsync("New team", parameters);
+        if (name is null)
+        {
+            return;
+        }
+
+        await this.CreateAndOpenAsync(
+            () => this.Folders.EnsureTeam(name),
+            () => this.Catalog.Find(name) is not null,
+            $"/teams/{Uri.EscapeDataString(name)}");
+    }
+
+    /// <summary>Asks for a Project name, creates the Project's folder in <paramref name="team"/> and opens its page.</summary>
+    /// <param name="team">The Team whose row's menu was used.</param>
+    private async Task NewProjectAsync(string team)
+    {
+        DialogParameters<NewTeamDialog> parameters = new()
+        {
+            { x => x.Mode, NewTeamDialogMode.Project },
+            { x => x.Team, team },
+            { x => x.Teams, this.Catalog.Teams },
+        };
+        string? project = await this.AskNameAsync("New project", parameters);
+        if (project is null)
+        {
+            return;
+        }
+
+        await this.CreateAndOpenAsync(
+            () => this.Folders.EnsureProjectIn(team, project),
+            () => this.Catalog.ProjectExists(team, project),
+            $"/teams/{Uri.EscapeDataString(team)}/projects/{Uri.EscapeDataString(project)}");
+    }
+
+    /// <summary>Shows the name dialog and returns the trimmed name it closed with, or <see langword="null"/> when it was cancelled.</summary>
+    private async Task<string?> AskNameAsync(string title, DialogParameters<NewTeamDialog> parameters)
+    {
+        IDialogReference reference = await this.Dialogs.ShowAsync<NewTeamDialog>(title, parameters, NewTeamDialog.Options);
+        DialogResult? result = await reference.Result;
+        return result is { Canceled: false, Data: string name } ? name : null;
+    }
+
+    /// <summary>
+    /// Runs <paramref name="create"/>, snackbars a refusal, and otherwise navigates to <paramref name="href"/>
+    /// once <paramref name="listed"/> says the catalog knows the new item (a folder created here reaches the
+    /// catalog about 500 ms later, and navigating sooner flashes "There is no Team named"). The wait is driven
+    /// by <see cref="ITeamCatalog.Changed"/>, subscribed BEFORE <paramref name="create"/> so no event is missed,
+    /// and is bounded by <see cref="CatalogWait"/>.
+    /// </summary>
+    private async Task CreateAndOpenAsync(Func<LibraryResult<LibraryPath>> create, Func<bool> listed, string href)
+    {
+        TaskCompletionSource seen = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        Action onChanged = () =>
+        {
+            if (listed())
+            {
+                seen.TrySetResult();
+            }
+        };
+        this.Catalog.Changed += onChanged;
+        try
+        {
+            LibraryResult<LibraryPath> result = create();
+            if (result.Error is { } error)
+            {
+                this.Snackbar.Add(error, Severity.Error);
+                return;
+            }
+
+            if (!listed())
+            {
+                try
+                {
+                    await seen.Task.WaitAsync(CatalogWait);
+                }
+                catch (TimeoutException)
+                {
+                    // Navigate anyway: the page shows its own "no such Team" text if the catalog never catches up.
+                    // This timeout path has no test because it would need a real 2 s delay.
+                }
+            }
+
+            this.Navigation.NavigateTo(href);
+        }
+        finally
+        {
+            this.Catalog.Changed -= onChanged;
+        }
+    }
+
+    /// <summary>Opens the row's own MudMenu programmatically, so a right-click reaches the same menu the "..." button does (TaskViewNav.razor's own precedent).</summary>
+    /// <param name="team">The Team whose row was right-clicked.</param>
+    /// <param name="e">The right-click's mouse event args, forwarded to <see cref="MudMenu.OpenMenuAsync"/>.</param>
+    private async Task OnRowContextMenuAsync(string team, MouseEventArgs e)
+    {
+        if (this.menuRefs.TryGetValue(team, out MudMenu? menu))
+        {
+            await menu.OpenMenuAsync(e);
+        }
+    }
+}

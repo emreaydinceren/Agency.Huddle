@@ -821,6 +821,62 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
+            Key: "systemPrompt.teamMemory",
+            Label: "Team Memory block",
+            HelperText:
+                "Explains the shared Memory folders of the Teams an Agent belongs to and shows what they " +
+                "hold, appended to the system prompt after the personal Memory block. Must keep " +
+                "{{teamMemoryPaths}} and {{teamMemoryIndex}}: without the first the Agent cannot name " +
+                "where to write, and without the second it is told nothing of what its Teams remember.",
+            Default:
+                "## Team Memory\n" +
+                "Your Teams keep shared Memory. Write a fact here, one file per fact with the fact on the " +
+                "first line, when it matters to the whole Team or Project rather than only to you:\n" +
+                "{{teamMemoryPaths}}\n" +
+                "Keep private preferences in your own Memory.\n" +
+                "\n" +
+                "{{teamMemoryIndex}}",
+            Placeholders: ["{{teamMemoryPaths}}", "{{teamMemoryIndex}}"],
+            RequiredPlaceholders: ["{{teamMemoryPaths}}", "{{teamMemoryIndex}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.teamMemoryPaths",
+            Label: "Team Memory paths",
+            HelperText:
+                "The two folder lines shown for each Team an Agent belongs to, one for the whole Team " +
+                "and one pattern for a single Project. Must keep {{teamMemoryPath}} and " +
+                "{{projectMemoryPattern}}: they are the only places the Agent is told where to write.",
+            Default:
+                "- {{team}}, whole Team: {{teamMemoryPath}}\n" +
+                "- {{team}}, one Project: {{projectMemoryPattern}}",
+            Placeholders: ["{{team}}", "{{teamMemoryPath}}", "{{projectMemoryPattern}}"],
+            RequiredPlaceholders: ["{{teamMemoryPath}}", "{{projectMemoryPattern}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.teamMemoryHeading",
+            Label: "Team Memory heading",
+            HelperText:
+                "The heading line above each group of Team Memory entries, naming the Team or Project " +
+                "they belong to. Must keep {{scope}}: without it the entries are not labelled.",
+            Default: "{{scope}}:",
+            Placeholders: ["{{scope}}"],
+            RequiredPlaceholders: ["{{scope}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "systemPrompt.teamMemoryMore",
+            Label: "Team Memory index, more",
+            HelperText:
+                "Appended after the listed Team Memory entries when more exist than the cap shows. Must " +
+                "keep {{count}}: without it the Agent has no idea how much shared Memory it is not seeing.",
+            Default: "…and {{count}} more in the Teams' memory folders.",
+            Placeholders: ["{{count}}"],
+            RequiredPlaceholders: ["{{count}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
             Key: "systemPrompt.roomSessions",
             Label: "Room Sessions",
             HelperText:

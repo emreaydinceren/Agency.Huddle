@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Tasks;
 
@@ -89,6 +90,7 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         Directory.CreateDirectory(tasksRoot);
 
         this.index = this.Scan();
+        this.LogStrandedMemoryTasks();
         foreach (TaskItem task in this.index.All)
         {
             this.RecordVersion(task);
@@ -1053,6 +1055,40 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         }
     }
 
+    /// <summary>
+    /// Logs one Warning per Team folder whose reserved <see cref="TeamNames.MemoryFolder"/> folder (any
+    /// case) still holds Task files under <c>_tasks</c> or <c>_tasks/_closed</c> - Tasks a Human filed
+    /// there before <c>memory</c> became reserved (Spec §12 E-2). Read-only: it moves nothing. Called once
+    /// from the constructor, never from <see cref="Scan"/> (which re-runs on every watcher rebuild) or
+    /// <see cref="BuildTeams"/>. Stranded Tasks are not loaded, so they leave <c>All</c> and <c>Rejected</c>
+    /// and <c>HighestNumber</c> no longer sees their numbers: the persisted counter protects Huddle-created
+    /// numbers, but a hand-copied higher-numbered file could have its number reused (accepted).
+    /// </summary>
+    private void LogStrandedMemoryTasks()
+    {
+        foreach (string teamDir in this.RawTeamDirectories())
+        {
+            List<string> files = [];
+            foreach (string memoryDir in this.RawSubfolders(teamDir))
+            {
+                if (string.Equals(Path.GetFileName(memoryDir), TeamNames.MemoryFolder, StringComparison.OrdinalIgnoreCase))
+                {
+                    this.AddTasksFolderFiles(memoryDir, files);
+                }
+            }
+
+            if (files.Count == 0)
+            {
+                continue;
+            }
+
+            string team = Path.GetFileName(teamDir);
+            string fileNames = string.Join(", ", files.Select(Path.GetFileName).Order(StringComparer.Ordinal));
+            string message = $"Team folder '{team}' has Tasks under 'memory/_tasks/' ({fileNames}); 'memory' is reserved for Team Memory, so they are not loaded. Move them to '{team}/_tasks/' or into a Project.";
+            this.logger.LogWarning("{Message}", message);
+        }
+    }
+
     /// <summary>The full paths of <paramref name="parent"/>'s non-reserved (<see cref="TaskLayout.IsReservedFolderName"/>)
     /// direct sub-folders, every case variant included.</summary>
     /// <param name="parent">The folder to list.</param>
@@ -1109,14 +1145,16 @@ internal sealed partial class TaskStore : IDisposable, ITaskReferenceResolver
         return (teams, aliasToCanonical);
     }
 
-    /// <summary>The names of <paramref name="teamPath"/>'s Project sub-folders, excluding any reserved
-    /// name (<see cref="TaskLayout.IsReservedFolderName"/>) - so the Team's own <c>_tasks</c> and
-    /// <c>_closed</c> folders are never listed as Projects.</summary>
+    /// <summary>The names of <paramref name="teamPath"/>'s Project sub-folders, excluding any name
+    /// reserved for Projects (<see cref="TeamNames.IsReservedProjectName"/>) - so the Team's own
+    /// <c>_tasks</c> and <c>_closed</c> folders, and its <c>memory</c> folder in any case, are never
+    /// listed as Projects.</summary>
     private List<string> ListProjects(string teamPath) =>
         this.RawSubfolders(teamPath)
             .Select(Path.GetFileName)
             .Where(name => name is { Length: > 0 })
             .Select(name => name!)
+            .Where(name => !TeamNames.IsReservedProjectName(name))
             .ToList();
 
     /// <summary>

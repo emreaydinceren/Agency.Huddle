@@ -1,0 +1,17 @@
+/* The wrapper div is a plain element, so it carries the scope attribute; ::deep reaches the MudBlazor
+   markup inside it. Colours are theme variables only (ThemeSourceTests). */
+.teams-nav-host ::deep .nav-project-link .mud-nav-link {
+    padding-left: 3rem;
+}
+
+.teams-nav-host ::deep .teams-nav-chevron {
+    flex: 0 0 auto;
+    color: var(--mud-palette-text-secondary);
+}
+
+.teams-nav-host ::deep .teams-nav-nomembers {
+    flex: 0 0 auto;
+    margin-right: 4px;
+    color: var(--mud-palette-text-secondary);
+    font-style: italic;
+}

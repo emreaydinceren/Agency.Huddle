@@ -1,0 +1,334 @@
+@*
+    Spec §6.7's list half: one row per member of the Team it is given (status dot, avatar, Name, and
+    "Title · Alias"), sorted by Name and narrowed by the search text. A row click or the row menu's
+    "Open card" opens the same TeammateCard the Teammates page opens, built by the same
+    Teammates.BuildViewParameters, and the status dot resolves exactly as that page resolves it: the
+    AGENT id (found through ITeamDirectory) against pipe liveness, then reported health, through
+    PersonaStatusResolver. Adding and removing a member arrive in tasks 7.9 and 7.10.
+
+    Teammates is spelled through an alias: inside Agency.Huddle.App.Components.* the simple name
+    reaches the namespace Agency.Huddle.App.Teammates before it reaches the page class.
+*@
+
+@using Agency.Huddle.App.Acp
+@using Agency.Huddle.App.Avatars
+@using Agency.Huddle.App.Pipes
+@using TeammatesPage = Agency.Huddle.App.Components.Pages.Teammates
+@implements IDisposable
+@inject PersonaStore Personas
+@inject ITeamDirectory TeamDirectory
+@inject IAgentGateway Gateway
+@inject PersonaHealth Health
+@inject AvatarStore Avatars
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject ITeamMembership Membership
+
+@if (this.Team is not null)
+{
+    <div class="team-members">
+        <TeamTabToolbar ActionText="Add member" SearchPlaceholder="Search members"
+                        OnAction="this.AddMemberAsync"
+                        Search="@this.Search" SearchChanged="this.SearchChanged" />
+
+        @if (this.VisibleMembers.Count == 0)
+        {
+            <MudText Typo="Typo.body2" Class="team-members-empty mud-text-secondary">@this.EmptyText</MudText>
+        }
+        else
+        {
+            <MudList T="string" Dense="true">
+                @foreach (string member in this.VisibleMembers)
+                {
+                    PersonaEntry? entry = this.FindEntry(member);
+                    @if (string.Equals(this.confirmingRemoval, member, StringComparison.Ordinal))
+                    {
+                        <div class="team-members-confirm">
+                            <MudText Typo="Typo.body2" Class="team-members-confirm-text">Remove @member from @(this.Team.Name)? @member restarts and loses its conversation memory.</MudText>
+                            @if (this.busy)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            }
+                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" Class="team-members-confirm-button"
+                                       Disabled="this.busy" OnClick="@(() => this.ConfirmRemovalAsync(member))">Confirm</MudButton>
+                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Class="team-members-cancel-button"
+                                       Disabled="this.busy" OnClick="this.CancelRemoval">Cancel</MudButton>
+                        </div>
+                        continue;
+                    }
+
+                    <MudListItem T="string" Value="@member" OnClick="@(() => this.OpenCardAsync(member))" Class="team-members-row">
+                        <div class="team-members-row-content">
+                            <StatusDot State="this.ResolveStatus(member).State" />
+                            <TeammateAvatar Name="@member" Avatar="this.Avatars.Get(member)" Size="Size.Small" />
+                            <div class="team-members-text">
+                                <MudText Typo="Typo.body1" Class="team-members-name">@member</MudText>
+                                <MudText Typo="Typo.body2" Class="team-members-role mud-text-secondary">@RoleOf(entry)</MudText>
+                            </div>
+                            <MudMenu Class="team-members-menu">
+                                @* ActivatorContent replaces MudMenu's built-in activator, so the button's OnClick
+                                   toggles the menu through MenuContext (TaskViewNav.razor's shape). The row is
+                                   clickable too, so the span stops the click bubbling up to it (house precedent:
+                                   TaskListView.razor's span around a control in a clickable row): without it,
+                                   opening the menu would also open the card. *@
+                                <ActivatorContent Context="menuContext">
+                                    <span @onclick:stopPropagation="true">
+                                        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small"
+                                                       aria-label="Member actions" OnClick="menuContext.ToggleAsync" />
+                                    </span>
+                                </ActivatorContent>
+                                <ChildContent>
+                                    <MudMenuItem OnClick="@(() => this.OpenCardAsync(member))">Open card</MudMenuItem>
+                                    <MudMenuItem OnClick="@(() => this.BeginRemoval(member))">Remove from Team</MudMenuItem>
+                                </ChildContent>
+                            </MudMenu>
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The Team whose members are listed; nothing renders while it is <see langword="null"/>.</summary>
+    [Parameter]
+    public TeamSummary? Team { get; set; }
+
+    /// <summary>The search text shown in the toolbar and matched, ignoring case, against each member's Name, Alias and Title.</summary>
+    [Parameter]
+    public string? Search { get; set; }
+
+    /// <summary>Raised, debounced, as the toolbar's search text changes; blank text is reported as <see langword="null"/>.</summary>
+    [Parameter]
+    public EventCallback<string?> SearchChanged { get; set; }
+
+    /// <summary>The middle dot that joins a Title and an Alias.</summary>
+    private const string RoleSeparator = "·";
+
+    private string? confirmingRemoval;
+    private bool busy;
+    private TeamSummary? loadedTeam;
+    private Dictionary<string, string?> agentIdByMember = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string?> roomIdByMember = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The members that pass the search, sorted by Name ignoring case.</summary>
+    private IReadOnlyList<string> VisibleMembers
+    {
+        get
+        {
+            if (this.Team is null)
+            {
+                return [];
+            }
+
+            string? needle = string.IsNullOrWhiteSpace(this.Search) ? null : this.Search.Trim();
+            return [.. this.Team.Members
+                .Where(member => needle is null || this.Matches(member, needle))
+                .OrderBy(member => member, StringComparer.OrdinalIgnoreCase)];
+        }
+    }
+
+    /// <summary>The hint shown in place of the rows: "No members yet." for a Team without members, otherwise the no-match hint naming the search.</summary>
+    private string EmptyText => this.Team is { Members.Count: > 0 }
+        ? $"No members match \"{this.Search}\"."
+        : "No members yet.";
+
+    protected override void OnInitialized()
+    {
+        // Health and pipe liveness are the two facts PersonaStatusResolver combines, so either one
+        // changing must repaint every dot. Both are singletons: unsubscribed in Dispose (rules.md).
+        this.Health.Changed += this.OnHealthOrPresenceChanged;
+        this.Gateway.PresenceChanged += this.OnHealthOrPresenceChanged;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ReferenceEquals(this.loadedTeam, this.Team))
+        {
+            return;
+        }
+
+        this.loadedTeam = this.Team;
+        Dictionary<string, string?> agentIds = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string?> roomIds = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string member in this.Team?.Members ?? [])
+        {
+            string lookupName = this.FindEntry(member)?.Name ?? member;
+            User? agent = await this.TeamDirectory.FindUserByNameAsync(lookupName);
+            agentIds[member] = agent?.Id;
+
+            // Only a Teammate that has actually connected has a Room to be messaged in, so the
+            // card's Message action is absent rather than broken for one that never has.
+            roomIds[member] = agent is null
+                ? null
+                : (await this.TeamDirectory.FindRoomWithExactMembersAsync(KnownIds.Human, agent.Id))?.Id;
+        }
+
+        this.agentIdByMember = agentIds;
+        this.roomIdByMember = roomIds;
+    }
+
+    public void Dispose()
+    {
+        this.Health.Changed -= this.OnHealthOrPresenceChanged;
+        this.Gateway.PresenceChanged -= this.OnHealthOrPresenceChanged;
+    }
+
+    /// <summary>The directory entry of <paramref name="member"/> ignoring case, or <see langword="null"/> when it has none (a race with a deleted Persona file).</summary>
+    private PersonaEntry? FindEntry(string member) =>
+        this.Personas.Entries.FirstOrDefault(candidate => string.Equals(candidate.Name, member, StringComparison.OrdinalIgnoreCase));
+
+    private bool Matches(string member, string needle)
+    {
+        PersonaEntry? entry = this.FindEntry(member);
+        return member.Contains(needle, StringComparison.OrdinalIgnoreCase)
+            || (entry is not null
+                && (entry.Alias.Contains(needle, StringComparison.OrdinalIgnoreCase)
+                    || entry.Title.Contains(needle, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private static string RoleOf(PersonaEntry? entry) =>
+        entry is null ? string.Empty : $"{entry.Title} {RoleSeparator} {entry.Alias}";
+
+    /// <summary>The one status this list renders for <paramref name="member"/>, resolved as the Teammates page resolves it.</summary>
+    private PersonaStatus ResolveStatus(string member)
+    {
+        string? agentId = this.agentIdByMember.GetValueOrDefault(member);
+        bool connected = agentId is not null && this.Gateway.IsOnline(agentId);
+        return PersonaStatusResolver.Resolve(connected, this.Health.Get(this.FindEntry(member)?.Name ?? member));
+    }
+
+    private async Task OpenCardAsync(string member)
+    {
+        PersonaEntry? entry = this.FindEntry(member);
+        string lookupName = entry?.Name ?? member;
+        DialogParameters parameters = TeammatesPage.BuildViewParameters(
+            member,
+            entry,
+            this.Personas.Get(lookupName),
+            this.ResolveStatus(member),
+            this.roomIdByMember.GetValueOrDefault(member),
+            this.TryPathFor(lookupName));
+
+        await this.DialogService.ShowAsync<TeammateCard>(member, parameters, TeammateCard.Options);
+    }
+
+    /// <summary>
+    /// Opens <see cref="AddMemberDialog"/> over a snapshot of the Teammates that are not yet members. The dialog
+    /// adds the member itself, so on an OK result this only announces it.
+    /// </summary>
+    private async Task AddMemberAsync()
+    {
+        if (this.Team is not { } team)
+        {
+            return;
+        }
+
+        IReadOnlyList<TeammateChoice> candidates = [.. this.Personas.Entries
+            .Where(entry => !team.Members.Contains(entry.Name, StringComparer.OrdinalIgnoreCase))
+            .OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(entry => new TeammateChoice(entry.Name, entry.Title, entry.Alias))];
+        DialogParameters<AddMemberDialog> parameters = new()
+        {
+            { dialog => dialog.Team, team },
+            { dialog => dialog.Candidates, candidates },
+        };
+
+        IDialogReference reference = await this.DialogService.ShowAsync<AddMemberDialog>($"Add member to {team.Name}", parameters, AddMemberDialog.Options);
+        DialogResult? result = await reference.Result;
+        if (result is { Canceled: false, Data: string name })
+        {
+            this.Snackbar.Add($"{name} added to {team.Name}.", Severity.Success);
+        }
+    }
+
+    /// <summary>Swaps <paramref name="member"/>'s row for the inline confirm.</summary>
+    private void BeginRemoval(string member) => this.confirmingRemoval = member;
+
+    /// <summary>Restores the row; ignored while a removal is running.</summary>
+    private void CancelRemoval()
+    {
+        if (!this.busy)
+        {
+            this.confirmingRemoval = null;
+        }
+    }
+
+    /// <summary>
+    /// Removes <paramref name="member"/> from the Team off the circuit thread (the Persona restarts), then
+    /// reports the outcome. The row never leaves here: it goes when the Team parameter changes.
+    /// </summary>
+    private async Task ConfirmRemovalAsync(string member)
+    {
+        if (this.busy || this.Team is not { } team)
+        {
+            return;
+        }
+
+        this.busy = true;
+        try
+        {
+            MembershipResult result = await Task.Run(() => this.Membership.Remove(team.Name, member));
+            this.ReportRemoval(result, team.Name, member);
+        }
+        finally
+        {
+            this.busy = false;
+            this.confirmingRemoval = null;
+        }
+    }
+
+    /// <summary>Shows the success snackbar for a removal, or an error snackbar naming why nothing was removed.</summary>
+    private void ReportRemoval(MembershipResult result, string team, string member)
+    {
+        if (result.Outcome == MembershipOutcome.Removed)
+        {
+            this.Snackbar.Add($"{member} removed from {team}.", Severity.Success);
+            return;
+        }
+
+        string message = result.Outcome switch
+        {
+            MembershipOutcome.NotMember => $"{member} is not in {team}.",
+            MembershipOutcome.NotFound => $"{member} no longer exists.",
+            _ => result.Problem ?? $"Couldn't remove {member} from {team}.",
+        };
+        this.Snackbar.Add(message, Severity.Error);
+    }
+
+    private string? TryPathFor(string name)
+    {
+        try
+        {
+            return this.Personas.PathFor(name);
+        }
+        catch (ChatException)
+        {
+            return null;
+        }
+    }
+
+    private void OnHealthOrPresenceChanged() => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions an event racing component teardown can throw.</summary>
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to render.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
+    }
+}

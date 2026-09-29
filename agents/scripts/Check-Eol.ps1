@@ -24,6 +24,7 @@ param(
     [switch]$Fix
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $BinaryExtensions = @('.png', '.ico', '.woff', '.woff2', '.ttf', '.otf', '.jpg', '.jpeg', '.gif', '.pdf', '.zip', '.dll', '.exe', '.pfx', '.snk')
@@ -56,6 +57,11 @@ foreach ($line in $porcelain) {
 
     $ext = [IO.Path]::GetExtension($relPath).ToLowerInvariant()
     if ($BinaryExtensions -contains $ext) {
+        continue
+    }
+
+    # Shell scripts must stay LF: bash rejects CRLF (the crlf-after-write hook skips them too).
+    if ($ext -eq '.sh') {
         continue
     }
 

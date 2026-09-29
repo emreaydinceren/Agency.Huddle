@@ -154,6 +154,7 @@ param(
     [string]$AcceptedUntestedPath
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 if (-not $AcceptedUntestedPath) {

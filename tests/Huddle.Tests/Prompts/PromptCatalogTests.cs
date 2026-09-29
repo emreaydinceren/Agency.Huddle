@@ -22,12 +22,49 @@ public sealed partial class PromptCatalogTests
     /// <c>systemPrompt.sharedSession</c> added for RS §6.9/§8.1 (Task 16.2), plus
     /// <c>task.wake.message</c> added for Spec §10.5/§11.9 (Task 9.2), plus the six
     /// <c>tool.*Task.description</c> prompts and <c>getHelp.tasks</c> added for Spec §11.9 (Task 10.7;
-    /// corrections-B4 D10 item 7 - method name kept, count updated to 57).
+    /// corrections-B4 D10 item 7 - method name kept, count updated to 57), plus the four Team Memory
+    /// prompts (<c>systemPrompt.teamMemory</c>, <c>systemPrompt.teamMemoryPaths</c>,
+    /// <c>systemPrompt.teamMemoryHeading</c>, <c>systemPrompt.teamMemoryMore</c>) added for Team Pages
+    /// Spec §7.4 (Task 5.4 - method name kept, count now 67).
     /// </summary>
     [Fact]
     public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(63, PromptCatalog.All.Count);
+        Assert.Equal(67, PromptCatalog.All.Count);
+    }
+
+    /// <summary>The four Team Memory prompts Team Pages Spec §7.4 defines all exist, are <see cref="PromptTiming.NextSession"/>, have their exact one-line defaults, the whole placeholder list, the required placeholders, and a helper text free of <c>mcp__team__</c>.</summary>
+    [Theory]
+    [InlineData(
+        "systemPrompt.teamMemory",
+        "## Team Memory\nYour Teams keep shared Memory. Write a fact here, one file per fact with the fact on the first line, when it matters to the whole Team or Project rather than only to you:\n{{teamMemoryPaths}}\nKeep private preferences in your own Memory.\n\n{{teamMemoryIndex}}",
+        new object[] { "{{teamMemoryPaths}}", "{{teamMemoryIndex}}" },
+        new object[] { "{{teamMemoryPaths}}", "{{teamMemoryIndex}}" })]
+    [InlineData(
+        "systemPrompt.teamMemoryPaths",
+        "- {{team}}, whole Team: {{teamMemoryPath}}\n- {{team}}, one Project: {{projectMemoryPattern}}",
+        new object[] { "{{team}}", "{{teamMemoryPath}}", "{{projectMemoryPattern}}" },
+        new object[] { "{{teamMemoryPath}}", "{{projectMemoryPattern}}" })]
+    [InlineData(
+        "systemPrompt.teamMemoryHeading",
+        "{{scope}}:",
+        new object[] { "{{scope}}" },
+        new object[] { "{{scope}}" })]
+    [InlineData(
+        "systemPrompt.teamMemoryMore",
+        "…and {{count}} more in the Teams' memory folders.",
+        new object[] { "{{count}}" },
+        new object[] { "{{count}}" })]
+    public void TeamMemoryPrompts_HaveSpecDefaultsAndPlaceholders(string key, string expectedDefault, object?[] expectedPlaceholders, object?[] expectedRequired)
+    {
+        var prompt = PromptCatalog.Get(key);
+
+        Assert.Equal(PromptTiming.NextSession, prompt.Timing);
+        Assert.Equal(expectedDefault, prompt.Default);
+        Assert.Equal(expectedPlaceholders.Cast<string>().ToList(), prompt.Placeholders);
+        Assert.Equal(expectedRequired.Cast<string>().ToList(), prompt.RequiredPlaceholders);
+        Assert.False(string.IsNullOrWhiteSpace(prompt.HelperText));
+        Assert.False(prompt.HelperText.Contains("mcp__team__", StringComparison.Ordinal));
     }
 
     /// <summary>

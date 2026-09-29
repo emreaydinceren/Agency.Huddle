@@ -4,6 +4,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.Tests.Acp.Tools;
 using Agency.Huddle.Tests.Tasks;
+using Agency.Huddle.Tests.Teams;
 
 namespace Agency.Huddle.Tests.Library;
 
@@ -49,7 +50,7 @@ public sealed class TasksLibraryHandOffTests
     {
         using TaskToolHarness harness = new();
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Attach(harness.Options.Value.DataDir);
-        TeamFolderProvisioner provisioner = new(harness.Personas, fixture.RootStore, fixture.Resolver, NullLogger<TeamFolderProvisioner>.Instance);
+        TeamFolderProvisioner provisioner = new(harness.Personas, fixture.RootStore, fixture.Resolver, NullLogger<TeamFolderProvisioner>.Instance, catalog: new FakeTeamCatalog());
 
         // Creating the Team folder itself raises its own IndexChanged; wait it out first so it can
         // never be mistaken for the signal EnsureProject's own Project folder below is awaited for.

@@ -15,6 +15,7 @@ using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
 using Agency.Huddle.App.Teammates;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App;
 
@@ -251,6 +252,20 @@ public static class ServiceCollectionExtensions
         // "New Project" trigger needs to call EnsureProject on the very instance the host is running.
         services.AddSingleton<TeamFolderProvisioner>();
         services.AddHostedService(sp => sp.GetRequiredService<TeamFolderProvisioner>());
+
+        // Registered right after TeamFolderProvisioner (Task 2.2.i): it depends on PersonaStore and
+        // TaskStore, both registered earlier. The interface resolves to the same instance, so the
+        // pages and the container's Dispose see one catalog.
+        services.AddSingleton<TeamCatalog>();
+        services.AddSingleton<ITeamCatalog>(sp => sp.GetRequiredService<TeamCatalog>());
+
+        // Task 4.2.i: stateless apart from its own lock; it reads and writes Personas through the
+        // PersonaStore registered earlier and resolves Team spellings from the catalog above.
+        services.AddSingleton<ITeamMembership, TeamMembership>();
+
+        // Task 6.4.i: the Team pages create Teams and Projects through this interface; it resolves
+        // to the very provisioner instance the host runs (no cycle: it needs the catalog above).
+        services.AddSingleton<ITeamFolders>(sp => sp.GetRequiredService<TeamFolderProvisioner>());
 
         // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
         // this, and a plain registration cannot produce the two-watchers-on-one-path hazard the

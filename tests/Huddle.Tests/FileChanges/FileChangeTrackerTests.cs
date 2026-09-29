@@ -497,6 +497,110 @@ public sealed class FileChangeTrackerTests
         Assert.Equal(briefPath, change.FullPath);
     }
 
+    /// <summary>
+    /// Spec §6.4 and §12 T12: a Persona in Team "Business" is told about a new file in the Team's
+    /// <c>memory</c> folder on its next Turn, because the implicit Team watch does not prune it.
+    /// </summary>
+    [Fact]
+    public async Task Collect_NewFileInTeamMemory_ListedAsAdded()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct, teams: "Business");
+        string roomA = await CreateRoomAsync(fixture, "RoomA", ct);
+        string memoryDir = Path.Combine(fixture.DataDir.Path, "Teams", "Business", "memory");
+        Directory.CreateDirectory(memoryDir);
+        Directory.CreateDirectory(Path.Combine(fixture.DataDir.Path, "Teams", "Business", "Marketing"));
+
+        await fixture.Tracker.CommitAsync("Nova", roomA, await fixture.Tracker.CollectAsync("Nova", roomA, [], ct), [], ct);
+
+        string filePath = Path.Combine(memoryDir, "a.md");
+        File.WriteAllText(filePath, "team fact");
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", roomA, [], ct);
+
+        Assert.Equal(
+            [(FileChangeKind.Added, filePath)],
+            collected.Report.Changes.Select(change => (change.Kind, change.FullPath)));
+    }
+
+    /// <summary>
+    /// Spec §6.4 and §12 T12: a new file in a Project's <c>memory</c> folder under the Team
+    /// ("Business", Project "Marketing") is listed as added on the member's next Turn.
+    /// </summary>
+    [Fact]
+    public async Task Collect_NewFileInProjectMemory_ListedAsAdded()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct, teams: "Business");
+        string roomA = await CreateRoomAsync(fixture, "RoomA", ct);
+        string memoryDir = Path.Combine(fixture.DataDir.Path, "Teams", "Business", "Marketing", "memory");
+        Directory.CreateDirectory(memoryDir);
+
+        await fixture.Tracker.CommitAsync("Nova", roomA, await fixture.Tracker.CollectAsync("Nova", roomA, [], ct), [], ct);
+
+        string filePath = Path.Combine(memoryDir, "b.md");
+        File.WriteAllText(filePath, "project fact");
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", roomA, [], ct);
+
+        Assert.Equal(
+            [(FileChangeKind.Added, filePath)],
+            collected.Report.Changes.Select(change => (change.Kind, change.FullPath)));
+    }
+
+    /// <summary>
+    /// Contrast to the <c>memory</c> rows: a new file in a Project's <c>_tasks</c> folder is pruned
+    /// (underscore prefix) and never listed, while the sibling <c>memory</c> file in the same Turn is.
+    /// </summary>
+    [Fact]
+    public async Task Collect_NewFileInProjectTasksFolder_NotListed_WhileMemorySiblingIs()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct, teams: "Business");
+        string roomA = await CreateRoomAsync(fixture, "RoomA", ct);
+        string projectDir = Path.Combine(fixture.DataDir.Path, "Teams", "Business", "Marketing");
+        Directory.CreateDirectory(Path.Combine(projectDir, "_tasks"));
+        Directory.CreateDirectory(Path.Combine(projectDir, "memory"));
+
+        await fixture.Tracker.CommitAsync("Nova", roomA, await fixture.Tracker.CollectAsync("Nova", roomA, [], ct), [], ct);
+
+        File.WriteAllText(Path.Combine(projectDir, "_tasks", "T.md"), "task");
+        string memoryPath = Path.Combine(projectDir, "memory", "b.md");
+        File.WriteAllText(memoryPath, "project fact");
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", roomA, [], ct);
+
+        Assert.Equal(
+            [(FileChangeKind.Added, memoryPath)],
+            collected.Report.Changes.Select(change => (change.Kind, change.FullPath)));
+    }
+
+    /// <summary>
+    /// A Persona in Team "Other" (not "Business") is told about neither the Team memory file nor the
+    /// Project memory file under <c>Teams/Business</c>, even though its own Team folder is watched.
+    /// </summary>
+    [Fact]
+    public async Task Collect_MemoryOfAnotherTeam_NotListed()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using Fixture fixture = await CreateFixtureAsync(ct, teams: "Other");
+        string roomA = await CreateRoomAsync(fixture, "RoomA", ct);
+        string businessDir = Path.Combine(fixture.DataDir.Path, "Teams", "Business");
+        Directory.CreateDirectory(Path.Combine(fixture.DataDir.Path, "Teams", "Other"));
+        Directory.CreateDirectory(Path.Combine(businessDir, "memory"));
+        Directory.CreateDirectory(Path.Combine(businessDir, "Marketing", "memory"));
+
+        await fixture.Tracker.CommitAsync("Nova", roomA, await fixture.Tracker.CollectAsync("Nova", roomA, [], ct), [], ct);
+
+        File.WriteAllText(Path.Combine(businessDir, "memory", "a.md"), "team fact");
+        File.WriteAllText(Path.Combine(businessDir, "Marketing", "memory", "b.md"), "project fact");
+
+        CollectedChanges collected = await fixture.Tracker.CollectAsync("Nova", roomA, [], ct);
+
+        Assert.Equal(["Nova", "team:Other"], collected.Folders.Select(folder => folder.Entry));
+        Assert.Empty(collected.Report.Changes);
+    }
+
     /// <summary>A Persona on two Teams implicitly watches both Team folders.</summary>
     [Fact]
     public async Task Collect_TwoTeams_WatchesBoth()

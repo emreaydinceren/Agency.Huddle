@@ -67,6 +67,13 @@ and `ci-main.yaml`; their `validate` jobs are byte-identical on purpose, so chan
 both or neither. `.gitea/**` and `.gitleaks.toml` are shared root-level files —
 announce changes the same way as any other.
 
+Do **not** run the Linux Docker repro as a routine check, and do not add it to a delivery
+plan's verification steps: a run rebuilds the whole solution from a clean copy, takes 4-20
+minutes and a lot of tokens, and CI already runs the same restore, build and test on Linux at
+check-in. Verify on Windows (build, tests, the `Check-*` scripts) and let CI catch a
+Linux-only failure. Run the repro only to debug a red CI run, and only when the CI log is not
+enough.
+
 Read `agents/CIPipeline.md` before debugging a red run. It carries the local Docker
 repro and the environmental failure modes, including the two that look like code
 regressions and are not: a stale SDK image against `global.json`'s `latestPatch` pin,

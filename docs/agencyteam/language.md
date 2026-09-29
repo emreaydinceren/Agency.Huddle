@@ -83,6 +83,7 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   it groups and filters the Teammates page and the invite dialog, and nothing
   more. It is never a permission: every Agent still sees every other Agent
   through `mcp__team__list_agents`, and any Agent can be invited to any Room.
+  A Team has a page at `/teams/<Team>` with Members, Files and Tasks tabs.
 : A Persona's Team is **not a folder**: its Team membership is its frontmatter
   alone, and where the Persona's Teammate folder sits changes nothing.
   On disk, a Team has a folder under `Teams/` (ADR-0030) for its notes, Projects
@@ -281,6 +282,16 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   thing, and Personas should not use it.
 : *Avoid*: notes, knowledge base, scratchpad, context.
 
+**Team Memory**
+: What a Team keeps going forward, shared by every member: one Markdown file per
+  fact, the fact on the first line, in `Teams/<Team>/memory/` for the whole Team or
+  `Teams/<Team>/<Project>/memory/` for one Project. Every member's new session
+  starts with an index of it after its own Memory; later edits arrive as File
+  Changes. **Delivered 2026-09-29** — see
+  [ADR-0032](../adr/0032-a-team-and-each-project-share-a-memory-folder.md).
+: Never just *Memory*, which stays the Agent's own.
+: *Avoid*: shared memory, project memory, team notes.
+
 **Context only**
 : What a delivery amounted to when it named no Teammate the Reply Gate would wake:
   the Message was read as context and no Turn began. A property of the delivery, the
@@ -377,7 +388,9 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 : `{DataDir}/Teams/<Team>/`, a Team's folder of notes, Projects and Tasks.
 
 **Project**
-: A direct sub-folder of a Team folder; the same Project Tasks files into.
+: A direct sub-folder of a Team folder; the same Project Tasks files into. A folder
+  whose name starts with `_` or `.`, or is `memory` (Team Memory, proposed in
+  ADR-0032), is never a Project.
 
 **Teammate folder**
 : `{DataDir}/Teammates/<Name>/`: the Teammate's definition and its `work/` Work Dir.

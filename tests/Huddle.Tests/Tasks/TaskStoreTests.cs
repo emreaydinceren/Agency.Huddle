@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
@@ -791,6 +790,100 @@ public sealed class TaskStoreTests
         Assert.DoesNotContain(TaskLayout.ClosedFolder, marketing.Projects);
     }
 
+    /// <summary>A Team's <c>memory</c> folder (any case) and its <c>_x</c> folder are never Projects
+    /// (ADR-0032, Spec §6.3): only <c>Launch</c> is listed. Where the file system is case-insensitive
+    /// the two case variants are one folder.</summary>
+    [Fact]
+    public void Teams_MemoryFolder_IsNotAProject()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        Directory.CreateDirectory(Path.Combine(root, "Business", "memory"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "Memory"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "Launch"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "_x"));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        TeamFolder business = Assert.Single(store.Teams, team => string.Equals(team.Name, "Business", StringComparison.Ordinal));
+        List<string> projects = business.Projects.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
+        Assert.Equal(["Launch"], projects);
+    }
+
+    /// <summary>The allowed neighbours of <c>memory</c> - <c>memory-notes</c> and <c>memories</c> -
+    /// are still Projects beside <c>Marketing</c>; the <c>memory</c> folder itself is not.</summary>
+    [Fact]
+    public void Teams_MemoryNeighbours_AreStillProjects()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        Directory.CreateDirectory(Path.Combine(root, "Business", "memory"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "Memory-Notes"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "memories"));
+        Directory.CreateDirectory(Path.Combine(root, "Business", "Marketing"));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        TeamFolder business = Assert.Single(store.Teams, team => string.Equals(team.Name, "Business", StringComparison.Ordinal));
+        List<string> projects = business.Projects.OrderBy(name => name, StringComparer.OrdinalIgnoreCase).ToList();
+        Assert.Equal(["Marketing", "memories", "Memory-Notes"], projects);
+    }
+
+    /// <summary>A Team folder named <c>memory</c> is still a Team: the reserved name applies to
+    /// Projects only.</summary>
+    [Fact]
+    public void Teams_TeamNamedMemory_IsStillATeam()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        Directory.CreateDirectory(Path.Combine(root, "memory", "Marketing"));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        TeamFolder memory = Assert.Single(store.Teams, team => string.Equals(team.Name, "memory", StringComparison.Ordinal));
+        Assert.Equal(["Marketing"], memory.Projects);
+    }
+
+    /// <summary>A Task file under <c>Business/memory/_tasks</c> is neither indexed nor rejected: the
+    /// <c>memory</c> folder is not a Project, so the path is outside the Tasks layout.</summary>
+    [Fact]
+    public void Scan_TaskFileUnderMemoryFolder_IsNotIndexedNorRejected()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        TestTaskStore.WriteTask(root, Path.Combine("Business", "memory", "_tasks", "BUS-0001.md"), TestTasks.Make(id: "BUS-0001", location: new("Business", "memory", false)));
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        Assert.Empty(store.All);
+        Assert.Empty(store.RejectedFiles);
+    }
+
+    /// <summary>Scanning a Team that has a <c>memory</c> folder creates nothing and deletes nothing
+    /// under it: the file set is the same before and after the store starts.</summary>
+    [Fact]
+    public void Scan_MemoryFolder_IsLeftUntouched()
+    {
+        using TempDataDir dir = new();
+        string root = TestTaskStore.Root(dir);
+        string memory = Path.Combine(root, "Business", "memory");
+        _ = WriteRawFile(root, Path.Combine("Business", "memory", "note.md"), "a note");
+        _ = WriteRawFile(root, Path.Combine("Business", "memory", "_tasks", "BUS-0001.md"), "not a task");
+        string[] before = Directory.GetFileSystemEntries(memory, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToArray();
+        using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
+
+        using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
+
+        string[] after = Directory.GetFileSystemEntries(memory, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal).ToArray();
+        Assert.Equal(before, after);
+        Assert.Equal("a note", File.ReadAllText(Path.Combine(memory, "note.md")));
+        Assert.Empty(store.All);
+    }
+
     /// <summary>A dot folder and underscore folders at the scan root - including one literally named
     /// <c>_closed</c> - never become Teams; only the ordinary folder beside them does.</summary>
     [Fact]
@@ -813,7 +906,7 @@ public sealed class TaskStoreTests
     /// <summary>A Project's note tree, however deep, is never enumerated by the scan: a Task under
     /// its <c>_tasks</c> folder is still found, a deeply nested note is ignored, and a folder inside
     /// the note tree that the scan could not list raises no warning, because the targeted scan never
-    /// reaches it. On Linux the CI container runs as root, which ignores <see cref="DenyListing"/>'s
+    /// reaches it. On Linux the CI container runs as root, which ignores <see cref="TestListing.DenyListing"/>'s
     /// Unix file mode, so there the assertions hold trivially rather than proving the denial worked.</summary>
     [Fact]
     public void Scan_DeepNoteTree_IsNotEnumerated()
@@ -824,7 +917,7 @@ public sealed class TaskStoreTests
         _ = WriteRawFile(root, Path.Combine("Marketing", "Launch Q4", "research", "a", "b", "c.md"), "deep note");
         string locked = Path.Combine(root, "Marketing", "Launch Q4", "research", "locked");
         Directory.CreateDirectory(locked);
-        DenyListing(locked);
+        TestListing.DenyListing(locked);
         try
         {
             RecordingLogger<TaskStore> logger = new();
@@ -838,54 +931,8 @@ public sealed class TaskStoreTests
         }
         finally
         {
-            GrantListing(locked);
+            TestListing.GrantListing(locked);
         }
-    }
-
-    /// <summary>Denies the current user the right to list <paramref name="path"/>'s contents: <c>icacls</c>
-    /// on Windows (no ACL package is referenced by this solution), or <see cref="UnixFileMode.None"/> via
-    /// <see cref="File.SetUnixFileMode(string, UnixFileMode)"/> on Linux/macOS. Running as root - the CI
-    /// container's user - ignores the Unix mode entirely, so on that platform the test still passes but
-    /// proves less.</summary>
-    /// <param name="path">The folder to lock.</param>
-    private static void DenyListing(string path)
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            RunIcacls(path, "/inheritance:r", "/deny", $"{Environment.UserName}:(RD)");
-        }
-        else
-        {
-            File.SetUnixFileMode(path, UnixFileMode.None);
-        }
-    }
-
-    /// <summary>Reverses <see cref="DenyListing"/> so <see cref="TempDataDir.Dispose"/> can clean up.</summary>
-    /// <param name="path">The folder to unlock.</param>
-    private static void GrantListing(string path)
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            RunIcacls(path, "/reset");
-        }
-        else
-        {
-            File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-        }
-    }
-
-    /// <summary>Runs <c>icacls</c> with the given arguments and waits for it to exit.</summary>
-    /// <param name="arguments">The command-line arguments, passed unquoted via <see cref="ProcessStartInfo.ArgumentList"/>.</param>
-    private static void RunIcacls(params string[] arguments)
-    {
-        ProcessStartInfo info = new("icacls") { UseShellExecute = false, CreateNoWindow = true };
-        foreach (string argument in arguments)
-        {
-            info.ArgumentList.Add(argument);
-        }
-
-        using Process process = Process.Start(info) ?? throw new InvalidOperationException("icacls failed to start.");
-        process.WaitForExit();
     }
 
     /// <summary>An <see cref="ILogger{TCategoryName}"/> that records every call made to it, for

@@ -10,6 +10,7 @@ using Agency.Huddle.App.Components.Library;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.Tests.Library;
 using Agency.Huddle.Tests.Tasks;
+using Agency.Huddle.Tests.Teams;
 
 namespace Agency.Huddle.Tests.Ui.Library;
 
@@ -455,6 +456,70 @@ public sealed class LibraryFileOpsTests : IDisposable
         Assert.False(File.Exists(Path.Combine(root, "Archive.md")));
     }
 
+    /// <summary>[6.6] <see cref="LibraryFileOps.NewNoteAsync"/> opens the same settled New note prompt, and
+    /// confirming creates the file and returns the created note's whole path (Spec §6.8).</summary>
+    [Fact]
+    public async Task NewNoteAsync_Confirmed_ReturnsTheCreatedPath()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        LibraryPath folder = this.fixture.LibraryFixture.Resolve(root, string.Empty);
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx);
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+
+        LibraryPath? created = null;
+        Task pending = cut.InvokeAsync(async () => created = await ops.NewNoteAsync(folder));
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".mud-dialog-title")));
+
+        Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim());
+        Assert.Equal(["Create", "Cancel"], cut.FindAll(".mud-dialog-actions button").Select(b => b.TextContent.Trim()).ToList());
+
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("Meeting notes"));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button")[0].Click());
+        await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
+
+        Assert.True(File.Exists(Path.Combine(root, "Meeting notes.md")));
+        Assert.NotNull(created);
+        Assert.Equal(this.fixture.LibraryFixture.Resolve(root, "Meeting notes.md"), created);
+        Assert.Equal("Meeting notes.md", created.RelativePath);
+    }
+
+    /// <summary>[6.6] Cancelling the prompt returns <see langword="null"/>, creates nothing and raises no
+    /// <c>OnChanged</c>.</summary>
+    [Fact]
+    public async Task NewNoteAsync_WhenCancelled_ReturnsNull_AndCreatesNothing()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        string root = this.fixture.LibraryFixture.CreatePinnedRoot("Notes");
+        LibraryPath folder = this.fixture.LibraryFixture.Resolve(root, string.Empty);
+        List<LibraryChange> changes = [];
+
+        await using MudBunitContext ctx = this.fixture.NewContext();
+        IRenderedComponent<ContainerFragment> cut = RenderOps(ctx, onChanged: EventCallback.Factory.Create<LibraryChange>(this, c => changes.Add(c)));
+        LibraryFileOps ops = cut.FindComponent<LibraryFileOps>().Instance;
+        List<string> before = [.. Directory.GetFileSystemEntries(root)];
+
+        LibraryPath? created = null;
+        bool completed = false;
+        Task pending = cut.InvokeAsync(async () =>
+        {
+            created = await ops.NewNoteAsync(folder);
+            completed = true;
+        });
+        cut.WaitForAssertion(() => Assert.Equal("New note", cut.Find(".mud-dialog-title").TextContent.Trim()));
+        await cut.InvokeAsync(() => cut.Find(".library-file-ops-name-field input").Change("Meeting notes"));
+        await cut.InvokeAsync(() => cut.FindAll(".mud-dialog-actions button").First(b => b.TextContent.Trim() == "Cancel").Click());
+        await pending.WaitAsync(TimeSpan.FromSeconds(5), ct);
+
+        Assert.True(completed);
+        Assert.Null(created);
+        List<string> after = [.. Directory.GetFileSystemEntries(root)];
+        Assert.Equal(before, after);
+        Assert.Empty(changes);
+    }
+
     private static IRenderedComponent<ContainerFragment> RenderOps(
         MudBunitContext ctx,
         LibraryPath? scope = null,
@@ -504,7 +569,7 @@ public sealed class LibraryFileOpsTests : IDisposable
             ctx.Services.AddSingleton(this.LibraryFixture.RootStore);
             ctx.Services.AddSingleton(this.LibraryFixture.CreateService());
             ctx.Services.AddSingleton(new TeamFolderProvisioner(
-                this.personas, this.LibraryFixture.RootStore, this.LibraryFixture.Resolver, NullLogger<TeamFolderProvisioner>.Instance));
+                this.personas, this.LibraryFixture.RootStore, this.LibraryFixture.Resolver, NullLogger<TeamFolderProvisioner>.Instance, catalog: new FakeTeamCatalog()));
             return ctx;
         }
 

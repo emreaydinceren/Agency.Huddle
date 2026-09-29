@@ -1205,6 +1205,127 @@ public sealed class TaskServiceTests
         Assert.Equal(lastClosedEntry.At, secondClosed.ClosedAt);
     }
 
+    /// <summary>Spec §6.3: a Project named <c>memory</c> in any case is the Team's shared Memory, so Create refuses it with exactly one problem and writes nothing.</summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("Memory")]
+    [InlineData("MEMORY")]
+    public void Create_ProjectMemory_RefusedWithMemoryReservedProblem(string project)
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskResult result = service.Create(new TaskDraft("T", "Platform", project), HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Equal(["\"memory\" is reserved for the Team's shared Memory."], refused.Problems);
+        Assert.False(Directory.Exists(Path.Combine(TestTaskStore.Root(dir), "Platform", project)));
+        Assert.Empty(store.All);
+    }
+
+    /// <summary>A Team that is not known AND a Project named <c>memory</c> give two problems, one each, the memory text exactly once.</summary>
+    [Fact]
+    public void Create_UnknownTeamAndProjectMemory_OneProblemEach()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskResult result = service.Create(new TaskDraft("T", "Ghost", "memory"), HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Equal(
+            ["Unknown team 'Ghost'. Known teams: Platform.", "\"memory\" is reserved for the Team's shared Memory."],
+            refused.Problems);
+    }
+
+    /// <summary>Guard (passes today): names that merely start with or resemble <c>memory</c> are legal Projects and Create still saves them.</summary>
+    [Theory]
+    [InlineData("memory-notes")]
+    [InlineData("memories")]
+    public void Create_ProjectNearMemory_Accepted(string project)
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskResult result = service.Create(new TaskDraft("T", "Platform", project), HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal(project, saved.Task.Location.Project);
+    }
+
+    /// <summary>Guard (passes today, corrections-D3 item 11): a <c>.x</c> Project is NOT newly refused by TaskService.</summary>
+    [Fact]
+    public void Create_ProjectDotX_StillAccepted()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskResult result = service.Create(new TaskDraft("T", "Platform", ".x"), HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal(".x", saved.Task.Location.Project);
+    }
+
+    /// <summary>Guard (passes today): an underscore-prefixed Project keeps its own refusal text, unchanged by the memory rule.</summary>
+    [Fact]
+    public void Create_ProjectUnderscore_RefusedWithUnderscoreText()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+
+        TaskResult result = service.Create(new TaskDraft("T", "Platform", "_x"), HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Equal(["The Project name '_x' cannot be a folder name on this computer (it starts with '_')."], refused.Problems);
+    }
+
+    /// <summary>Spec §6.3 on the Update entry point: moving a Task into Project <c>memory</c> (any case) is refused with exactly one problem (the Team is known), and the Task stays where it was.</summary>
+    [Theory]
+    [InlineData("memory")]
+    [InlineData("Memory")]
+    public void Update_ProjectMemory_RefusedWithMemoryReservedProblem(string project)
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", "Auth v2"));
+        byte[] before = File.ReadAllBytes(task.Path);
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Project = Optional<string?>.Set(project) }, null, HumanActor);
+
+        TaskResult.Refused refused = Assert.IsType<TaskResult.Refused>(result);
+        Assert.Equal(["\"memory\" is reserved for the Team's shared Memory."], refused.Problems);
+        Assert.Equal(before, File.ReadAllBytes(task.Path));
+        Assert.False(Directory.Exists(Path.Combine(TestTaskStore.Root(dir), "Platform", project)));
+    }
+
+    /// <summary>Guard (passes today): Update into Project <c>memory-notes</c> still moves the Task.</summary>
+    [Fact]
+    public void Update_ProjectMemoryNotes_Accepted()
+    {
+        using TempDataDir dir = new();
+        using PersonaStore personas = CreatePersonaStore(dir);
+        using TaskStore store = CreateTaskStore(dir, personas);
+        TaskService service = CreateTaskService(dir, store, personas);
+        TaskItem task = SeedTask(service, new TaskDraft("T", "Platform", null));
+
+        TaskResult result = service.Update(task.Id, new TaskPatch { Project = Optional<string?>.Set("memory-notes") }, null, HumanActor);
+
+        TaskResult.Saved saved = Assert.IsType<TaskResult.Saved>(result);
+        Assert.Equal("memory-notes", saved.Task.Location.Project);
+    }
+
     /// <summary>Creates a Task through <see cref="TaskService.Create"/> for a test to update, asserting it saved.</summary>
     private static TaskItem SeedTask(TaskService service, TaskDraft draft) =>
         Assert.IsType<TaskResult.Saved>(service.Create(draft, HumanActor)).Task;

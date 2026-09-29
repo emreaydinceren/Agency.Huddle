@@ -1,0 +1,94 @@
+@*
+    Spec §6.5 (Creation): the name dialog behind the Teams nav's "New team" and "New project".
+    Copies Library/AddFolderDialog.razor's shape (nullable IMudDialogInstance, static Options, an
+    owned problem element, Cancel). The problem text is computed from TeamNames.ValidateTeamName /
+    ValidateProjectName on every keystroke (Immediate), so Create is disabled synchronously rather
+    than on MudBlazor's own validation schedule. The TRIMMED name is what is validated and returned.
+    The opener passes the title through IDialogService.ShowAsync.
+*@
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudTextField T="string" Label="@(this.Mode == NewTeamDialogMode.Team ? "Team name" : "Project name")"
+                          Value="this.name" ValueChanged="this.OnNameChanged" Immediate="true"
+                          Error="@(this.problem is not null)" OnKeyDown="this.OnKeyDown"
+                          Class="new-team-dialog-name-field" />
+            @if (this.problem is not null)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Error" role="alert" Class="new-team-dialog-problem">@this.problem</MudText>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" Disabled="@(!this.IsValid)" Class="new-team-dialog-create-button" OnClick="this.Create">Create</MudButton>
+        <MudButton Class="new-team-dialog-cancel-button" OnClick="this.Cancel">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    /// <summary>How <see cref="TeamsNav"/> shows this dialog: small, full-width, with a close button that cancels.</summary>
+    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    [CascadingParameter]
+    private IMudDialogInstance? Dialog { get; set; }
+
+    /// <summary>Whether a Team or a Project is being named.</summary>
+    [Parameter]
+    public NewTeamDialogMode Mode { get; set; }
+
+    /// <summary>The Team the new Project goes in (Project mode); unused in Team mode.</summary>
+    [Parameter]
+    public string? Team { get; set; }
+
+    /// <summary>A snapshot of the Teams the name is checked against; it does not follow later catalog changes while the dialog is open.</summary>
+    [Parameter]
+    public IReadOnlyList<TeamSummary> Teams { get; set; } = [];
+
+    private string name = string.Empty;
+    private string? problem;
+
+    /// <summary>Whether the trimmed name is non-empty and has no problem.</summary>
+    private bool IsValid => this.name.Trim().Length > 0 && this.problem is null;
+
+    /// <summary>Stores the typed text and recomputes the problem for its trimmed form (none while the field is empty).</summary>
+    private void OnNameChanged(string? value)
+    {
+        this.name = value ?? string.Empty;
+        string trimmed = this.name.Trim();
+        this.problem = trimmed.Length == 0 ? null : this.Validate(trimmed);
+    }
+
+    /// <summary>The settled refusal for <paramref name="trimmed"/> in the current mode, or <see langword="null"/> when it is fine.</summary>
+    private string? Validate(string trimmed)
+    {
+        if (this.Mode == NewTeamDialogMode.Team)
+        {
+            return TeamNames.ValidateTeamName(trimmed, this.Teams);
+        }
+
+        TeamSummary? summary = this.Teams.FirstOrDefault(t => string.Equals(t.Name, this.Team, StringComparison.OrdinalIgnoreCase));
+        return TeamNames.ValidateProjectName(trimmed, summary ?? new TeamSummary(this.Team ?? string.Empty, [], [], false));
+    }
+
+    /// <summary>Enter submits, exactly as Create does (and so only when the name is valid).</summary>
+    private void OnKeyDown(KeyboardEventArgs e)
+    {
+        if (string.Equals(e.Key, "Enter", StringComparison.Ordinal))
+        {
+            this.Create();
+        }
+    }
+
+    private void Create()
+    {
+        if (!this.IsValid)
+        {
+            return;
+        }
+
+        this.Dialog?.Close(DialogResult.Ok<string?>(this.name.Trim()));
+    }
+
+    private void Cancel() => this.Dialog?.Cancel();
+}

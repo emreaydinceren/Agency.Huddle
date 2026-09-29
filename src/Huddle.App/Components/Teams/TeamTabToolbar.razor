@@ -1,0 +1,41 @@
+@*
+    Spec §6.6: the action button and search field every Team page tab shares. It owns no state: the
+    tab passes the search text in and receives the debounced, trimmed-to-null text back.
+*@
+
+<div class="team-tab-toolbar">
+    <MudButton Variant="Variant.Text" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add"
+               OnClick="this.OnAction" Class="team-tab-toolbar-action">@this.ActionText</MudButton>
+
+    <MudTextField T="string" Value="@this.Search" ValueChanged="this.OnSearchChangedAsync" Immediate="true"
+                  DebounceInterval="250" Clearable="true" Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search" Placeholder="@this.SearchPlaceholder"
+                  aria-label="@this.SearchPlaceholder" Class="team-tab-toolbar-search" />
+</div>
+
+@code {
+    /// <summary>The action button's text, for example "Add member".</summary>
+    [Parameter]
+    [EditorRequired]
+    public string ActionText { get; set; } = string.Empty;
+
+    /// <summary>Raised when the action button is clicked.</summary>
+    [Parameter]
+    public EventCallback OnAction { get; set; }
+
+    /// <summary>The search field's placeholder, also used as its accessible name.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string SearchPlaceholder { get; set; } = string.Empty;
+
+    /// <summary>The search text shown in the field.</summary>
+    [Parameter]
+    public string? Search { get; set; }
+
+    /// <summary>Raised, debounced, as the search text changes; blank text is reported as <see langword="null"/>.</summary>
+    [Parameter]
+    public EventCallback<string?> SearchChanged { get; set; }
+
+    private Task OnSearchChangedAsync(string? value) =>
+        this.SearchChanged.InvokeAsync(string.IsNullOrWhiteSpace(value) ? null : value);
+}

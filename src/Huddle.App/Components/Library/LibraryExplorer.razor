@@ -51,6 +51,7 @@
 @inject LibraryPathResolver Resolver
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@inject LibraryFileService FileService
 
 <div class="library-explorer" @onfocusin="@this.OnFocusInAsync" @onmouseup="@this.OnDividerMouseUpAsync">
     @if (this.ShowScopeRoot)
@@ -73,9 +74,40 @@
         <MudSplitPanel @ref="this.splitPanel" Horizontal="@(this.Layout == LibraryExplorerLayout.Stacked)"
                        FirstPanelInitialSize="@(this.Layout == LibraryExplorerLayout.SideBySide ? 300 : 240)" Class="@this.SplitClass()">
             <FirstPanel>
-                <div class="library-tree">
-                    <LibraryTree @ref="this.tree" Scopes="@this.resolvedScopes" ShowScopeRoot="@this.ShowScopeRoot" OnOpenFile="@this.OnOpenFileAsync" OnAction="@this.OnTreeActionAsync" />
+                @* The tree is never unmounted while filtered (nothing persists its expansion): it is
+                   hidden, and the results render beside it. *@
+                <div class="@this.TreeClass()">
+                    <LibraryTree @ref="this.tree" Scopes="@this.resolvedScopes" ShowScopeRoot="@this.ShowScopeRoot" SelectedPath="@this.selectedPath" SelectedPathChanged="@this.OnSelectedPathChanged" OnOpenFile="@this.OnOpenFileAsync" OnAction="@this.OnTreeActionAsync" />
                 </div>
+                @if (this.resultTerm is not null)
+                {
+                    <div class="library-search-results">
+                        @if (this.truncated)
+                        {
+                            <MudAlert Severity="Severity.Info" role="status" Class="library-search-truncated">@TruncatedText</MudAlert>
+                        }
+                        @if (this.hits.Count == 0)
+                        {
+                            <div class="library-search-empty">@this.EmptyText()</div>
+                        }
+                        else
+                        {
+                            <ul class="library-search-list">
+                                @foreach (SearchRow row in this.hits)
+                                {
+                                    <li>
+                                        <button type="button" class="library-search-hit" data-path="@row.Entry.Path.RelativePath"
+                                                @onclick="@(() => this.OnHitClickAsync(row))">
+                                            <MudIcon Icon="@(row.Entry.IsFolder ? Icons.Material.Outlined.Folder : Icons.Material.Outlined.InsertDriveFile)" Size="Size.Small" />
+                                            <span class="library-search-hit-name">@HitName(row.Entry.Path)</span>
+                                            <span class="library-search-hit-path">@row.FolderPath</span>
+                                        </button>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                }
             </FirstPanel>
             <SecondPanel>
                 @if (this.currentPath is not null)
@@ -91,12 +123,27 @@
 @code {
     private IReadOnlyList<LibraryPath> resolvedScopes = [];
     private LibraryPath? currentPath;
+    private LibraryPath? selectedPath;
     private bool unavailable;
     private string unavailableReason = string.Empty;
     private LibraryFileOps? fileOps;
     private LibraryTree? tree;
     private LibraryDocument? document;
     private MudSplitPanel? splitPanel;
+
+    /// <summary>The most hits shown across every scope (Spec §6.8).</summary>
+    private const int MaxHits = 200;
+
+    private const string TruncatedText = "Showing the first 200 matches — refine the search.";
+
+    private string searchedTerm = string.Empty;
+    private string? resultTerm;
+    private IReadOnlyList<SearchRow> hits = [];
+    private bool truncated;
+    private CancellationTokenSource? searchCts;
+
+    /// <summary>One result row: the entry and its folder path relative to its scope.</summary>
+    private sealed record SearchRow(LibraryEntry Entry, string FolderPath);
 
     /// <summary>The folders shown as the tree's top nodes. <see langword="null"/> means every Library
     /// Root: the full Library (Spec §6.16).</summary>
@@ -137,11 +184,135 @@
     [Parameter]
     public EventCallback<LibraryPath> OnOpenInLibrary { get; set; }
 
+    /// <summary>A name filter (Spec §6.8). Null or blank shows the tree; otherwise the tree is hidden (never
+    /// unmounted) and the name matches under every scope render beside it. The explorer does not debounce.</summary>
+    [Parameter]
+    public string? Filter { get; set; }
+
+    /// <summary>Raised with <see langword="null"/> when a folder hit clears the filter, so a two-way host
+    /// updates its own value.</summary>
+    [Parameter]
+    public EventCallback<string?> FilterChanged { get; set; }
+
     /// <inheritdoc/>
     protected override void OnInitialized()
     {
         this.ResolveScopes();
         this.Navigation.LocationChanged += this.OnLocationChanged;
+    }
+
+    /// <summary>Searches only when the normalised <see cref="Filter"/> differs from the last one searched:
+    /// this runs on the first mount and on every parent render, and most of those carry the same term.</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        string normalised = (this.Filter ?? string.Empty).Trim();
+        if (string.Equals(normalised, this.searchedTerm, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        this.searchedTerm = normalised;
+        await this.SearchAsync(normalised);
+    }
+
+    private async Task SearchAsync(string term)
+    {
+        this.searchCts?.Cancel();
+        this.searchCts?.Dispose();
+        this.searchCts = null;
+
+        if (term.Length == 0)
+        {
+            this.resultTerm = null;
+            this.hits = [];
+            this.truncated = false;
+            return;
+        }
+
+        CancellationTokenSource cts = new();
+        this.searchCts = cts;
+        try
+        {
+            (List<SearchRow> found, bool isTruncated) = await this.FindAcrossScopesAsync(term, cts.Token);
+            cts.Token.ThrowIfCancellationRequested();
+            this.hits = found;
+            this.truncated = isTruncated;
+            this.resultTerm = term;
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded by a newer term (or the component is going away): its results are never rendered.
+        }
+    }
+
+    /// <summary>Walks the scopes in order for at most <see cref="MaxHits"/> hits in total. When an earlier
+    /// scope filled the cap exactly, the next scope is probed with a max of one to decide whether there were more.</summary>
+    private async Task<(List<SearchRow> Rows, bool Truncated)> FindAcrossScopesAsync(string term, CancellationToken ct)
+    {
+        List<SearchRow> rows = [];
+        bool more = false;
+        foreach (LibraryPath scope in this.resolvedScopes)
+        {
+            if (rows.Count == MaxHits)
+            {
+                if (more)
+                {
+                    break;
+                }
+
+                LibrarySearchResult probe = await this.FileService.FindAsync(scope, term, 1, ct);
+                if (probe.Hits.Count > 0)
+                {
+                    more = true;
+                }
+
+                continue;
+            }
+
+            LibrarySearchResult result = await this.FileService.FindAsync(scope, term, MaxHits - rows.Count, ct);
+            rows.AddRange(result.Hits.Select(entry => new SearchRow(entry, FolderPathWithin(scope, entry.Path))));
+            more |= result.Truncated;
+        }
+
+        return (rows, more);
+    }
+
+    /// <summary>The hit's folder, relative to its scope, built from <c>RelativePath</c> strings (never
+    /// <c>FullPath</c>): empty for a hit directly under the scope.</summary>
+    private static string FolderPathWithin(LibraryPath scope, LibraryPath hit)
+    {
+        string relative = hit.RelativePath;
+        string within = scope.RelativePath.Length == 0 || relative.Length <= scope.RelativePath.Length
+            ? relative
+            : relative[(scope.RelativePath.Length + 1)..];
+        int slash = within.LastIndexOf('/');
+        return slash < 0 ? string.Empty : within[..slash];
+    }
+
+    private static string HitName(LibraryPath hit) => hit.RelativePath[(hit.RelativePath.LastIndexOf('/') + 1)..];
+
+    private string TreeClass() => this.resultTerm is null ? "library-tree" : "library-tree hidden";
+
+    private string EmptyText() => string.Create(CultureInfo.InvariantCulture, $"No files match \"{this.resultTerm}\".");
+
+    /// <summary>A file hit opens like a tree click; a folder hit drops the results locally, tells the host to
+    /// clear its filter, and reveals the folder in the (still mounted) tree.</summary>
+    private async Task OnHitClickAsync(SearchRow row)
+    {
+        if (!row.Entry.IsFolder)
+        {
+            await this.OnOpenFileAsync(row.Entry.Path);
+            return;
+        }
+
+        this.resultTerm = null;
+        this.hits = [];
+        this.truncated = false;
+        await this.FilterChanged.InvokeAsync(null);
+        if (this.tree is not null)
+        {
+            await this.tree.RevealAsync(row.Entry.Path);
+        }
     }
 
     /// <inheritdoc/>
@@ -252,6 +423,49 @@
     }
 
     private LibraryPath? PrimaryScope() => this.resolvedScopes.Count > 0 ? this.resolvedScopes[0] : null;
+
+    /// <summary>Opens the New note dialog in the folder selected in the tree when it lies inside the first
+    /// scope (a selected file counts as its parent folder), else in the first scope's folder, and opens the
+    /// created note in the document area. Returns when the dialog closes; cancelling creates and opens nothing.</summary>
+    public async Task NewNoteAsync()
+    {
+        LibraryPath? scope = this.PrimaryScope();
+        if (scope is null || this.fileOps is null)
+        {
+            return;
+        }
+
+        LibraryPath target = this.SelectedFolder() is { } selected && ContainsOrEquals(scope, selected) ? selected : scope;
+        LibraryPath? created = await this.fileOps.NewNoteAsync(target);
+        if (created is not null)
+        {
+            // LibraryFileOps.NewNoteAsync raises no OnChanged (only its menu path does), so refresh the tree here.
+            await this.OnFileOpsChangedAsync(new LibraryChange(null, created, []));
+            await this.OnOpenFileAsync(created);
+
+            // A host calls this outside any of the explorer's own event callbacks, so nothing else re-renders it.
+            await this.InvokeAsync(this.StateHasChanged);
+        }
+    }
+
+    /// <summary>The tree's selected folder: the selection itself, or a selected file's parent folder.</summary>
+    private LibraryPath? SelectedFolder()
+    {
+        if (this.selectedPath is not { IsFile: true } file)
+        {
+            return this.selectedPath;
+        }
+
+        int slash = file.RelativePath.LastIndexOf('/');
+        string parentRelative = slash < 0 ? string.Empty : file.RelativePath[..slash];
+        return this.Resolver.TryResolve(file.Root.Id, parentRelative, out LibraryPath? parent, out _) ? parent : null;
+    }
+
+    private Task OnSelectedPathChanged(LibraryPath? path)
+    {
+        this.selectedPath = path;
+        return Task.CompletedTask;
+    }
 
     /// <summary>The explorer's one boundary scope, when it has exactly one (Spec §6.16 "Inside a
     /// scope"); <see langword="null"/> for the whole Library or more than one scope, so
@@ -509,5 +723,10 @@
     }
 
     /// <inheritdoc/>
-    public void Dispose() => this.Navigation.LocationChanged -= this.OnLocationChanged;
+    public void Dispose()
+    {
+        this.Navigation.LocationChanged -= this.OnLocationChanged;
+        this.searchCts?.Cancel();
+        this.searchCts?.Dispose();
+    }
 }

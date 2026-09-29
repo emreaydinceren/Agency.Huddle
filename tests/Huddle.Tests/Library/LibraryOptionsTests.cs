@@ -46,4 +46,40 @@ public sealed class LibraryOptionsTests
         Assert.Equal(100, options.Library.MaxInlineBytes);
         Assert.Equal("T", options.Teams.Dir);
     }
+
+    /// <summary>Default MaxMemoryEntries is 50.</summary>
+    [Fact]
+    public void MaxMemoryEntries_Default_Is50()
+    {
+        TeamOptions options = new();
+
+        Assert.Equal(50, options.Teams.MaxMemoryEntries);
+    }
+
+    /// <summary>MaxMemoryEntries binds from Team:Teams configuration section.</summary>
+    [Fact]
+    public void MaxMemoryEntries_Binds_FromTeamTeamsSection()
+    {
+        IConfigurationRoot configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:Teams:MaxMemoryEntries"] = "7",
+            })
+            .Build();
+
+        TeamOptions options = new();
+        configuration.GetSection(TeamOptions.SectionName).Bind(options);
+
+        Assert.Equal(7, options.Teams.MaxMemoryEntries);
+    }
+
+    /// <summary>MaxMemoryEntries of zero is allowed.</summary>
+    [Fact]
+    public void MaxMemoryEntries_Zero_IsAllowed()
+    {
+        TeamOptions options = new();
+        options.Teams.MaxMemoryEntries = 0;
+
+        Assert.Equal(0, options.Teams.MaxMemoryEntries);
+    }
 }
