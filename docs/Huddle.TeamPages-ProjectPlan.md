@@ -784,7 +784,10 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
 - **Deliverable:** `src/Huddle.App/Teams/TeamLabels.cs`, `internal static class`, exactly the
   *Type map* signatures, `StringComparison.OrdinalIgnoreCase` throughout, returning new lists
   (collection expressions), `///` docs.
-- **Acceptance:** 4.1.t green.
+- **Acceptance:** 4.1.t green. Mutation (R1, corrections-D4 #1): `pwsh -NoProfile -File
+  agents/scripts/Prove-Mutation.ps1 -File src/Huddle.App/Teams/TeamLabels.cs -Find "<a literal that
+  matches once, in Remove's comparison>" -Replace "<a non-empty building replacement that stops
+  Remove dropping every case variant>" -FilterClass "*TeamLabelsTests" -Label 4.1.i`; CAUGHT (exit 0).
 
 ### Task 4.2.t (#20) — Test: `TeamMembership` [Sonnet]
 
@@ -922,7 +925,7 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   not list-none-and-count-all, count the `*.md` files yourself once `remaining` is zero.
 - **Acceptance:** 5.3.t green. Mutation: swap the subtract to add → the cap row fails.
 
-### Task 5.4.t (#28) — Test: the four Team Memory Prompts [Haiku]
+### Task 5.4.t (#28) — Test: the four Team Memory Prompts [Sonnet]
 
 - **Goal:** Pin the model-facing text as configuration, **Spec §7.4 (857–869)**,
   [ADR-0007](adr/0007-model-facing-text-is-configuration.md).
@@ -935,7 +938,7 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
 - **Acceptance:** Red, `-NewNames "systemPrompt.teamMemory"`-style names as the harness accepts
   them (look at how the existing red for a new prompt was recorded).
 
-### Task 5.4.i (#29) — Add the four Prompts [Haiku]
+### Task 5.4.i (#29) — Add the four Prompts [Sonnet]
 
 - **Goal:** Implement 5.4.t.
 - **Read first:** Task 5.4.t; `PromptCatalog` entries for `systemPrompt.memory`,
@@ -943,8 +946,9 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
 - **Risk:** `data`.
 - **Deliverable:** Add the four entries with the exact defaults and placeholders in *The Team
   Memory Prompts*, in the same group and order convention as the memory entries. Run
-  `agents/scripts/Regenerate-PromptDefaults.ps1` and commit the regenerated `prompts.default.json`
-  in the same change. If a catalog-size or group-count test fails, update it.
+  `agents/scripts/Regenerate-PromptDefaults.ps1` and leave the regenerated `prompts.default.json`
+  in the working tree, unstaged (the manager commits). The catalog-size test is changed in the
+  `.t`, never here (corrections-D5 #8): an `.i` never edits a test.
 - **Acceptance:** 5.4.t green; `PromptDefaultsFileTests` green; **no golden changed** (`git diff
   --stat` shows no golden file).
 
@@ -1293,8 +1297,9 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
 - **Read first:** **Spec §6.5**; Pointer P13 (`TaskViewNav.razor`, `RoomList.razor`); facts
   *Preflight › tests* item 3; `agents/BlazorTesting.md` (bUnit setup).
 - **Risk:** `logic`.
-- **Deliverable:** `tests/Huddle.Tests/Ui/Teams/FakeTeamCatalog.cs` (a settable `Teams` list, a
-  `Raise()` that fires `Changed`, and a counter of `Changed` subscribers) and
+- **Deliverable (R1):** REUSE `tests/Huddle.Tests/Teams/FakeTeamCatalog.cs` (created by Task 4.2.t:
+  a settable `Teams` list, `Raise()` that fires `Changed`, and a counter of `Changed` subscribers;
+  extend it only if a member is missing) and add
   `tests/Huddle.Tests/Ui/Teams/TeamsNavTests.cs`:
   - `Renders_GroupTitledTeams_WithTeamsInCatalogOrder`.
   - `Project_Rows_AreNestedUnderTheirTeam`, each `MudNavLink` `href` escaped:
@@ -1306,11 +1311,14 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
     active class (`NavLinkMatch.Prefix`).
   - `NewTeamAction_IsPresent` (text `New team`, class `nav-action-link`).
   - `Changed_ReRenders_WithTheNewTeam`; `Dispose_UnsubscribesFromTheCatalog` (subscriber count 0).
-- **Acceptance:** Red, `-NewNames "TeamsNav,FakeTeamCatalog"`.
+- **Acceptance:** Red, `-NewNames "TeamsNav,Teams"` (`Teams` because the namespace
+  `Agency.Huddle.App.Components.Teams` does not exist yet: CS0234 quotes its last segment).
 
 ### Task 7.2.i (#50) — Implement `TeamsNav` (listing) [Sonnet]
 
-- **Goal:** Implement 7.2.t.
+- **Goal:** Implement 7.2.t. Add `@using Agency.Huddle.App.Components.Teams` and
+  `@using Agency.Huddle.App.Teams` to `Components/_Imports.razor` (R1: the way Library and Tasks are
+  listed at :13 and :21).
 - **Read first:** Task 7.2.t; Pointer P13; `ITeamCatalog` (2.2.i).
 - **Risk:** `logic`.
 - **Deliverable:** `src/Huddle.App/Components/Teams/TeamsNav.razor`, following `TaskViewNav.razor`'s
@@ -1734,7 +1742,12 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   `personas.Update` call (step 2 fails); in `TeamMemoryIndex.Build` skip the Project loop (step 3
   fails).
 
-### Task 8.2 (#74) — Reconcile the Spec with corrections S1–S15 [Sonnet]
+### Task 8.2 (#74) — Reconcile the Spec with corrections S1–S17 [Sonnet]
+
+> S16a-c are in `Conversation/teampages/corrections-D3.md` (items 8, 11) and S17 in
+> `corrections-D4.md` #13; apply them with S1–S15. The known flake
+> `PersonaRenameCascadeTests.Rename_RenamesTheAgentRow_AndKeepsItsId` goes to
+> `docs/agencyteam/known-limits.md` in Task 8.3.
 
 - **Goal:** The Spec matches what was built, so the next reader is not misled.
 - **Read first:** [Spec corrections](#spec-corrections-s1s15); the Spec by heading, and by grep for
@@ -1808,7 +1821,7 @@ The manager records each retrospective here, newest last, and commits the plan c
 
 | # | After task | Date | Top findings | Plan changes made |
 | --- | --- | --- | --- | --- |
-| R1 | #15 | | | |
+| R1 | #15 | 2026-09-28 | The brief pointed at stale `Conversation/scripts/` copies (no `-RedDir`/`-AllowCodes`); 3 Haiku agents used `-Force` and reported no deviation; Haiku 2.1.i edited a test's expected value to pass; Haiku pairs cost 44-50 calls / 2.3-3.3M re-read against 22-26 / 1.3-1.9M for Sonnet pairs; four architect reviews = 42% of subagent tokens (19.7M of 46.5M); general-purpose agents start at 49-65K context against 21-25K for `teampages-dev`; missing `using Agency.Huddle.App.Teams;` failed three builds | Brief fixed and given an R1 rules block; 10 fact lines added to the facts Core; 5.4.t/5.4.i retagged Haiku -> Sonnet and 5.4.i no longer edits tests or commits `prompts.default.json`; 4.1.i gets the exact mutation command; 4.2.t creates the shared `FakeTeamCatalog` (7.2.t reuses it, `-NewNames` gains `Teams`); 7.2.i adds `_Imports.razor`; 8.2 covers S1-S17; verifiers run as `teampages-dev`; `Check-All.ps1` and a red wrapper scripted; the D7 review is split into three Opus reviews (<=35 calls each) |
 | R2 | #30 | | | |
 | R3 | #45 | | | |
 | R4 | #60 | | | |
