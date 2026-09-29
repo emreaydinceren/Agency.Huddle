@@ -58,6 +58,7 @@ question is yours; the cost column is roughly what it will spend.
 | [Library design](Huddle.Library-Specifications.md) | Before work on the Library pane, Library Roots, Team folders (`Teams/<Team>/[<Project>/]`), the `Teammates/<Name>/` layout that replaces `Teams/*.md` and `work/`, the Markdown editor, wikilinks, or links from chat to files. Delivered (code) 2026-09-28 | ~14k |
 | [Library project plan](Huddle.Library-ProjectPlan.md) | **Start here to build the Library.** 131 atomic, test-first tasks in 15 deliverables (45 sized for Haiku), each written for an agent with no context, with a retrospective every 15 tasks | ~36k |
 | [Library tracker](Huddle.Library-Tracker.md) | To see or record where each of the plan's 131 tasks and 8 retrospectives stands | ~4k |
+| [Team Pages design](Huddle.TeamPages-Specifications.md) | Before work on the Teams sidebar group, Team and Project pages (Members, Files, Tasks tabs), adding a Teammate to a Team from the UI, or Team Memory (`Teams/<Team>/[<Project>/]memory/`). Test-first task list in Appendix A. Proposed, not built | ~14k |
 | [Room Sessions design](Huddle.RoomSessions-Specifications.md) | Before work on per-Room sessions, `IAgentHostFactory`, session resume, `ReadTranscript`, or what Stop applies to. Roadmap item 18. Proposed, not built; build it after File Changes and Memory | ~14k |
 | [Tasks design](Huddle.Tasks-Specifications.md) | Before work on Tasks — Task files, Views, the Board or List, the six App Tools, or wake notifications; `Huddle.Tasks-ProjectPlan.md` holds the task-by-task delivery plan. **Delivered (code) 2026-09-25** | ~37k |
 | [The `team-building` Skill](../src/Huddle.App/Skills/Defaults/team-building/) | Why a team rather than one agent, the five patterns, every team the Chief of Staff offers, and the role library. The product reasoning [What a team is for](#what-a-team-is-for) summarises. Model-facing text: edit it as a Skill, not as docs | ~17k |
@@ -76,7 +77,7 @@ them without opening [Language](agencyteam/language.md):
 
 > Teammate · Human · Agent · Name · Alias · Title · Avatar · Team · Adapter · Room ·
 > Member · Invitation · Archived · Persona · Rejected file · Model · Effort · Turn · Room Session ·
-> App Tool · Reply Gate · Budget · Catch-up · Watched Folder · File Changes · Memory · Progressive discovery · Skill · Proposal ·
+> App Tool · Reply Gate · Budget · Catch-up · Watched Folder · File Changes · Memory · Team Memory · Progressive discovery · Skill · Proposal ·
 > Candidate · Question · Greeting · Work Dir ·
 > Message · Draft · Mention · Envelope · Transcript · Stop · Team Directory ·
 > Prompt · Placeholder · Default · Timing · Theme · Token · Appearance
