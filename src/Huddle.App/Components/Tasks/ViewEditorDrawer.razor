@@ -31,7 +31,7 @@
 @inject NavigationManager Navigation
 
 <MudDrawer Open="@this.Open" OpenChanged="@this.OpenChanged" Anchor="Anchor.End" Variant="DrawerVariant.Temporary"
-           Width="420px" Class="view-editor-drawer">
+           OverlayAutoClose="@(!this.IsDirty())" Width="420px" Class="view-editor-drawer">
     <MudStack Spacing="3" Class="pa-4">
         @if (this.ViewStore.LoadError is { } loadError)
         {
@@ -83,6 +83,13 @@
         </MudMenu>
 
         <MudText Typo="Typo.subtitle2">Filters</MudText>
+        <MudText Typo="Typo.caption" Class="view-editor-filter-blocked-label">Blocked</MudText>
+        <HuddleSegmentedControl T="BlockedFilter" Value="this.blockedFilter" ValueChanged="this.OnBlockedFilterChanged" Disabled="this.ControlsDisabled"
+                                Class="view-editor-filter-blocked" ItemCount="3">
+            <MudToggleItem Value="BlockedFilter.All" Text="All" />
+            <MudToggleItem Value="BlockedFilter.Blocked" Text="Blocked" />
+            <MudToggleItem Value="BlockedFilter.Unblocked" Text="Unblocked" />
+        </HuddleSegmentedControl>
         <div class="view-editor-filter-team-row">
             @foreach ((string team, int index) in this.teamFilter.Select((value, index) => (value, index)))
             {
@@ -231,6 +238,7 @@
 
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="this.Save"
                    Disabled="@(problems.Count > 0 || this.ControlsDisabled)" Class="view-editor-save">Save view</MudButton>
+        <MudButton Variant="Variant.Outlined" OnClick="this.CancelAsync" Class="view-editor-cancel">Cancel</MudButton>
         @if (!this.loadedView.BuiltIn)
         {
             <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="this.DeleteAsync"
@@ -267,6 +275,13 @@
     // an entry with "id": "" to views.json, which then threw ArgumentException out of
     // ViewStore.Delete's ThrowIfNullOrWhiteSpace guard the first time anything tried to remove it.
     private bool seeded;
+
+    // Whether Open was true on the previous OnParametersSet, so the true -> false edge (Cancel, the
+    // backdrop, Escape - however the host closed it) can discard the draft. The drawer's content stays
+    // mounted while closed, so a draft left dirty would keep MudExitPrompt armed for every navigation
+    // made with the drawer out of sight: the user's Cancel in that prompt only means "stay here", so
+    // the prompt returned on every later click with no way to make it stop.
+    private bool wasOpen;
     private string? loadedId;
     private TaskView loadedView = NewBlankView(string.Empty);
     private FieldRow[] fieldRows = [];
@@ -279,6 +294,7 @@
     private List<string> assigneeFilter = [];
     private List<TaskState> stateFilter = [];
     private List<TaskPriority> priorityFilter = [];
+    private BlockedFilter blockedFilter = BlockedFilter.All;
     private List<TaskGroupField> grouping = [];
     private List<SortKey> sort = [];
     private List<BoardColumn> columns = [];
@@ -298,14 +314,27 @@
     /// <summary>Loads the draft for <see cref="Id"/> the first time it is seen - always on this instance's very first call, per <see cref="seeded"/>'s own remarks, even when <see cref="Id"/> is null both then and now.</summary>
     protected override void OnParametersSet()
     {
-        if (this.seeded && string.Equals(this.loadedId, this.Id, StringComparison.Ordinal))
+        bool justClosed = this.wasOpen && !this.Open;
+        this.wasOpen = this.Open;
+        if (this.seeded && !justClosed && string.Equals(this.loadedId, this.Id, StringComparison.Ordinal))
         {
             return;
         }
 
         this.seeded = true;
         this.loadedId = this.Id;
+        this.SeedFromStore();
+    }
+
+    /// <summary>Re-seeds the draft from the store's View for <see cref="Id"/>, or from a blank one with a fresh id when <see cref="Id"/> is null - which is also what discards an unsaved draft.</summary>
+    private void SeedFromStore() =>
         this.SeedFrom(this.Id is { } id ? this.ViewStore.Get(id) ?? NewBlankView(id) : NewBlankView(Guid.NewGuid().ToString("N")));
+
+    /// <summary>Cancel (Spec §13.5 item 8): throws the unsaved draft away and asks the host to close the drawer. Without it a dirty draft had no way out - it outlived the drawer closing, leaving <see cref="MudExitPrompt"/> armed for every later navigation.</summary>
+    private async Task CancelAsync()
+    {
+        this.SeedFromStore();
+        await this.OpenChanged.InvokeAsync(false);
     }
 
     /// <summary>Replaces every draft field from <paramref name="view"/>, including <see cref="loadedView"/> itself (the dirty baseline).</summary>
@@ -322,6 +351,7 @@
         this.assigneeFilter = [.. view.Filter.Assignees];
         this.stateFilter = [.. view.Filter.States];
         this.priorityFilter = [.. view.Filter.Priorities];
+        this.blockedFilter = view.Filter.Blocked;
         this.grouping = [.. view.Grouping];
         this.sort = [.. view.Sort];
         this.columns = [.. view.Columns];
@@ -381,6 +411,8 @@
     private void OnStateFilterChanged(IEnumerable<TaskState> values) => this.stateFilter = [.. values];
 
     private void OnPriorityFilterChanged(IEnumerable<TaskPriority> values) => this.priorityFilter = [.. values];
+
+    private void OnBlockedFilterChanged(BlockedFilter value) => this.blockedFilter = value;
 
     /// <summary>The Fields rows' keys, in their current order (shown and switched-off alike).</summary>
     private List<string> FieldKeys() => [.. this.fieldRows.Select(row => row.Key)];
@@ -592,6 +624,7 @@
             Assignees = [.. this.assigneeFilter],
             States = [.. this.stateFilter],
             Priorities = [.. this.priorityFilter],
+            Blocked = this.blockedFilter,
         },
         Grouping = [.. this.grouping],
         Sort = [.. this.sort],
@@ -607,8 +640,22 @@
         JsonSerializer.Serialize(this.loadedView, ViewJson.Options),
         StringComparison.Ordinal);
 
-    /// <summary>Saves the draft, unconditionally except for the Save button's own <c>Disabled</c> gate above.</summary>
-    private void Save() => _ = this.ViewStore.Save(this.BuildView());
+    /// <summary>
+    /// Saves the draft, unconditionally except for the Save button's own <c>Disabled</c> gate above. A
+    /// successful save makes the saved View the new dirty baseline (<see cref="loadedView"/>): the drawer
+    /// stays open after Save, so without this the draft kept differing from the View it had just written,
+    /// <see cref="IsDirty"/> stayed true, and <c>OverlayAutoClose</c> stayed off - a freshly created View's
+    /// drawer could then only be dismissed through Cancel, while an untouched existing one closed on any
+    /// outside click.
+    /// </summary>
+    private void Save()
+    {
+        TaskView toSave = this.BuildView();
+        if (this.ViewStore.Save(toSave).Saved)
+        {
+            this.loadedView = toSave;
+        }
+    }
 
     /// <summary>Confirms through <see cref="IDialogService.ShowMessageBoxAsync(string, string, string, string?, string?, DialogOptions?)"/> with Spec §13.5 item 8's exact texts, then deletes and navigates to <c>/tasks</c> (corrections-B5 D13 item 5).</summary>
     private async Task DeleteAsync()

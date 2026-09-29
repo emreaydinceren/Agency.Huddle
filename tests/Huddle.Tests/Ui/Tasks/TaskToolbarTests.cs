@@ -47,6 +47,34 @@ public sealed class TaskToolbarTests
         Assert.Null(unsaved.Filter.Teams.SingleOrDefault());
     }
 
+    /// <summary>The toolbar's All | Blocked | Unblocked control is ad hoc: picking Blocked raises <c>EffectiveViewChanged</c> with the filter set, offers <c>Save to View</c> once the parent reflects it, and never writes to <see cref="ViewStore"/>.</summary>
+    [Fact]
+    public async Task BlockedControl_RaisesEffectiveViewChanged_AndOffersSave_WithoutWritingToViewStore()
+    {
+        using var dir = new TempDataDir();
+        using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
+        var saved = Save(store, "v1", ViewKind.List, []);
+
+        TaskView? raised = null;
+        await using var ctx = NewContext(store);
+        var (root, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
+
+        var control = toolbar.FindComponent<MudToggleGroup<BlockedFilter>>();
+        Assert.Equal(["All", "Blocked", "Unblocked"], toolbar.FindAll(".task-toolbar-blocked .mud-toggle-item").Select(item => item.TextContent.Trim()));
+        Assert.Equal("All", toolbar.Find(".task-toolbar-blocked .huddle-segmented-active-item").TextContent.Trim());
+
+        await toolbar.InvokeAsync(() => control.Instance.ValueChanged.InvokeAsync(BlockedFilter.Blocked));
+
+        TaskView updated = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
+        Assert.Equal(BlockedFilter.Blocked, updated.Filter.Blocked);
+
+        toolbar.Render(builder => builder.Add(t => t.EffectiveView, updated));
+
+        Assert.Equal("Blocked", toolbar.Find(".task-toolbar-blocked .huddle-segmented-active-item").TextContent.Trim());
+        Assert.NotEmpty(root.FindAll(".task-toolbar-save"));
+        Assert.Equal(BlockedFilter.All, store.Get("v1")?.Filter.Blocked);
+    }
+
     /// <summary>The Search field debounces at 200ms and is never part of a saved View.</summary>
     [Fact]
     public async Task Search_IsDebounced_AndNeverSaved()
@@ -68,9 +96,9 @@ public sealed class TaskToolbarTests
         Assert.Empty(root.FindAll(".task-toolbar-save"));
     }
 
-    /// <summary>The toolbar carries neither the Active/Closed nor the List/Board toggle (both are set in the View editor), and <c>+ New task</c> is its first control.</summary>
+    /// <summary>The toolbar has no Active/Closed toggle (Scope is set in the View editor); <c>+ New task</c> leads it and the List | Board control sits directly after it, before <c>Filter</c>.</summary>
     [Fact]
-    public async Task Toolbar_HasNoScopeOrKindToggle_AndLeadsWithNewTask()
+    public async Task Toolbar_LeadsWithNewTask_ThenListBoardControl_ThenFilter_AndHasNoScopeToggle()
     {
         using var dir = new TempDataDir();
         using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
@@ -80,9 +108,69 @@ public sealed class TaskToolbarTests
         var (_, toolbar) = RenderToolbar(ctx, saved);
 
         Assert.Empty(toolbar.FindComponents<MudToggleGroup<ViewScope>>());
-        Assert.Empty(toolbar.FindComponents<MudToggleGroup<ViewKind>>());
-        var firstControl = toolbar.Find(".task-toolbar").Children[0];
-        Assert.Contains("btn-action-tight", firstControl.ClassList);
+        var children = toolbar.Find(".task-toolbar").Children;
+        Assert.Contains("btn-action-tight", children[0].ClassList);
+        Assert.Contains("task-toolbar-kind", children[1].ClassList);
+        Assert.Contains("task-toolbar-filter", children[2].ClassList);
+        Assert.Equal(["List", "Board"], toolbar.FindAll(".task-toolbar-kind .mud-toggle-item").Select(item => item.TextContent.Trim()));
+        Assert.Equal("Board", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
+    }
+
+    /// <summary>Picking Board on a List View raises <c>EffectiveViewChanged</c> with a Board that passes <c>ViewValidator</c> (Active scope, every state in a column), offers <c>Save to View</c> once reflected, and leaves the saved View a List.</summary>
+    [Fact]
+    public async Task KindControl_ListToBoard_RaisesAValidBoard_AndOffersSave_WithoutWritingToViewStore()
+    {
+        using var dir = new TempDataDir();
+        using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
+        var saved = Save(store, "v1", ViewKind.List, []);
+
+        TaskView? raised = null;
+        await using var ctx = NewContext(store);
+        var (root, toolbar) = RenderToolbar(ctx, saved, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
+
+        Assert.Equal("List", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
+        await toolbar.InvokeAsync(() => toolbar.FindComponent<MudToggleGroup<ViewKind>>().Instance.ValueChanged.InvokeAsync(ViewKind.Board));
+
+        TaskView updated = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
+        Assert.Equal(ViewKind.Board, updated.Kind);
+        Assert.Equal(ViewScope.Active, updated.Scope);
+        Assert.Empty(ViewValidator.Validate(updated, []));
+
+        toolbar.Render(builder => builder.Add(t => t.EffectiveView, updated));
+
+        Assert.Equal("Board", toolbar.Find(".task-toolbar-kind .huddle-segmented-active-item").TextContent.Trim());
+        Assert.NotEmpty(root.FindAll(".task-toolbar-save"));
+        Assert.Equal(ViewKind.List, store.Get("v1")?.Kind);
+    }
+
+    /// <summary>Picking List on a Board View drops its columns (a List cannot have any) so the result passes <c>ViewValidator</c>; a Closed-scope List picked as Board is forced to Active.</summary>
+    [Fact]
+    public async Task KindControl_BoardToList_DropsColumns_AndClosedListToBoardForcesActive()
+    {
+        using var dir = new TempDataDir();
+        using var store = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
+        var board = Save(store, "v1", ViewKind.Board, BoardDefaultColumns);
+
+        TaskView? raised = null;
+        await using var ctx = NewContext(store);
+        var (_, toolbar) = RenderToolbar(ctx, board, effectiveViewChanged: EventCallback.Factory.Create<TaskView>(this, v => raised = v));
+
+        await toolbar.InvokeAsync(() => toolbar.FindComponent<MudToggleGroup<ViewKind>>().Instance.ValueChanged.InvokeAsync(ViewKind.List));
+
+        TaskView list = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
+        Assert.Equal(ViewKind.List, list.Kind);
+        Assert.Empty(list.Columns);
+        Assert.Empty(ViewValidator.Validate(list, []));
+
+        raised = null;
+        TaskView closedList = list with { Scope = ViewScope.Closed };
+        toolbar.Render(builder => builder.Add(t => t.EffectiveView, closedList));
+        await toolbar.InvokeAsync(() => toolbar.FindComponent<MudToggleGroup<ViewKind>>().Instance.ValueChanged.InvokeAsync(ViewKind.Board));
+
+        TaskView backToBoard = raised ?? throw new InvalidOperationException("EffectiveViewChanged was not raised.");
+        Assert.Equal(ViewScope.Active, backToBoard.Scope);
+        Assert.Equal(board.Columns.Count, backToBoard.Columns.Count);
+        Assert.Empty(ViewValidator.Validate(backToBoard, []));
     }
 
     /// <summary><c>+ New task</c> defaults the Team from the filter when it names exactly one, and leaves it unset otherwise.</summary>

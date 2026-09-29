@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Agency.Huddle.App.Tasks.Views;
 
 /// <summary>The layout a View renders as: a data grid or a Kanban board.</summary>
@@ -44,6 +46,19 @@ public enum SortDirection
 
     /// <summary>Highest to lowest.</summary>
     Descending,
+}
+
+/// <summary>Whether a View keeps Tasks held up by an open blocker (<see cref="TaskItem.BlockedBy"/>), the ones that are not, or both.</summary>
+public enum BlockedFilter
+{
+    /// <summary>Blocked and unblocked Tasks alike.</summary>
+    All,
+
+    /// <summary>Only Tasks with at least one blocker that exists and is not terminal.</summary>
+    Blocked,
+
+    /// <summary>Only Tasks with no blockers, only terminal blockers, or only blockers that no longer exist.</summary>
+    Unblocked,
 }
 
 /// <summary>A saved arrangement of Tasks: a filter, a grouping, a sort, and either a List's columns or a Board's.</summary>
@@ -100,6 +115,10 @@ public sealed record TaskFilter
 
     /// <summary>Matches Tasks whose Priority is one of these. Empty matches every Priority.</summary>
     public IReadOnlyList<TaskPriority> Priorities { get; init; } = [];
+
+    /// <summary>Whether to keep only blocked or only unblocked Tasks. <see cref="BlockedFilter.All"/> (the default) is not written to <c>views.json</c>, so a View that never used it stays byte-identical.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public BlockedFilter Blocked { get; init; } = BlockedFilter.All;
 }
 
 /// <summary>A Team, and optionally a Project within it. A null Project matches Tasks directly under the Team ("No project").</summary>
