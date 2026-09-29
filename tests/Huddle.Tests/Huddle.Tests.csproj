@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\src\Huddle.App\Huddle.App.csproj" />
     <ProjectReference Include="..\..\src\Huddle.Contracts\Huddle.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Huddle.MockAdapter\Huddle.MockAdapter.csproj" />
+    <ProjectReference Include="..\..\src\Huddle.Seeder\Huddle.Seeder.csproj" />
   </ItemGroup>
 
   <ItemGroup>
