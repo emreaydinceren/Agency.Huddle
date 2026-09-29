@@ -153,4 +153,81 @@ public sealed class TaskQueryFilterTests
 
         Assert.Empty(result);
     }
+
+    /// <summary>
+    /// Fixture for the Blocked filter: 0001 waits on an open Task (0002), 0003 waits only on a Done Task (0004),
+    /// 0005 waits on a Task that no longer exists, 0006 waits on one open and one Done Task, and 0002 and 0004
+    /// wait on nothing.
+    /// </summary>
+    private static IReadOnlyList<TaskItem> BlockingFixture() =>
+    [
+        TestTasks.Make(id: "PLAT-0001", blockedBy: [new TaskId("PLAT", 2)], location: new("Platform", null, false)),
+        TestTasks.Make(id: "PLAT-0002", location: new("Platform", null, false)),
+        TestTasks.Make(id: "PLAT-0003", blockedBy: [new TaskId("PLAT", 4)], location: new("Platform", null, false)),
+        TestTasks.Make(id: "PLAT-0004", status: TaskState.Done, location: new("Platform", null, true)),
+        TestTasks.Make(id: "PLAT-0005", blockedBy: [new TaskId("PLAT", 99)], location: new("Platform", null, false)),
+        TestTasks.Make(id: "PLAT-0006", blockedBy: [new TaskId("PLAT", 4), new TaskId("PLAT", 2)], location: new("Platform", null, false)),
+    ];
+
+    /// <summary>The default <see cref="BlockedFilter.All"/> keeps blocked and unblocked Tasks alike.</summary>
+    [Fact]
+    public void Filter_BlockedAll_KeepsEveryTaskInScope()
+    {
+        IReadOnlyList<TaskItem> result = TaskQuery.Filter(BlockingFixture(), ViewScope.Active, new TaskFilter(), null, "Human");
+
+        Assert.Equal(5, result.Count);
+    }
+
+    /// <summary>
+    /// <see cref="BlockedFilter.Blocked"/> keeps only Tasks with at least one blocker that exists and is not
+    /// terminal - the same rule the detail panel's "Blocked by N open tasks" line uses.
+    /// </summary>
+    [Fact]
+    public void Filter_BlockedOnly_KeepsTasksWithAnOpenBlocker()
+    {
+        TaskFilter filter = new() { Blocked = BlockedFilter.Blocked };
+
+        IReadOnlyList<TaskItem> result = TaskQuery.Filter(BlockingFixture(), ViewScope.Active, filter, null, "Human");
+
+        Assert.Equal(["PLAT-0001", "PLAT-0006"], result.Select(task => task.Id.ToString()));
+    }
+
+    /// <summary>
+    /// <see cref="BlockedFilter.Unblocked"/> keeps Tasks with no blockers, only terminal blockers, or blockers
+    /// that no longer exist - a dangling reference cannot hold anything up.
+    /// </summary>
+    [Fact]
+    public void Filter_UnblockedOnly_KeepsTasksWithoutAnOpenBlocker()
+    {
+        TaskFilter filter = new() { Blocked = BlockedFilter.Unblocked };
+
+        IReadOnlyList<TaskItem> result = TaskQuery.Filter(BlockingFixture(), ViewScope.Active, filter, null, "Human");
+
+        Assert.Equal(["PLAT-0002", "PLAT-0003", "PLAT-0005"], result.Select(task => task.Id.ToString()));
+    }
+
+    /// <summary>The blocker lookup spans Closed Tasks too, so a Done blocker in the Closed folder does not count as open while the Active scope is showing.</summary>
+    [Fact]
+    public void Filter_BlockedOnly_LooksUpBlockersOutsideTheScope()
+    {
+        TaskFilter filter = new() { Blocked = BlockedFilter.Blocked };
+
+        IReadOnlyList<TaskItem> result = TaskQuery.Filter(BlockingFixture(), ViewScope.Active, filter, null, "Human");
+
+        Assert.DoesNotContain(result, task => string.Equals(task.Id.ToString(), "PLAT-0003", StringComparison.Ordinal));
+    }
+
+    /// <summary>Blocked is one more AND'd dimension: it narrows the result of the others.</summary>
+    [Fact]
+    public void Filter_BlockedAndAssignee_AndsAcrossDimensions()
+    {
+        List<TaskItem> tasks = [.. BlockingFixture()];
+        tasks[0] = tasks[0] with { Assignee = "Nova" };
+        TaskFilter filter = new() { Blocked = BlockedFilter.Blocked, Assignees = ["Nova"] };
+
+        IReadOnlyList<TaskItem> result = TaskQuery.Filter(tasks, ViewScope.Active, filter, null, "Human");
+
+        TaskItem only = Assert.Single(result);
+        Assert.Equal("PLAT-0001", only.Id.ToString());
+    }
 }

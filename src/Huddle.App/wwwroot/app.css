@@ -973,6 +973,42 @@ button:focus-visible {
     user-select: all;
 }
 
+/* ---- The View's own actions menu, beside the Tasks page title ----------------------------------
+   MudFabMenu positions each item absolutely under its button and lets the label wrap inside a pill
+   only as wide as its first word, so "Edit task view" broke over three lines. Nowrap gives each
+   item its natural width; the component's own AlignItems.Start makes that width extend rightwards
+   from the button instead of overhanging the title on the left. The default-coloured item is
+   painted by MudBlazor as a 6% black wash, which lets the toolbar behind it show through where the
+   menu overlaps it; the theme's surface colour makes it opaque under every Theme. */
+.tasks-view-menu .mud-fab-menu-item {
+    white-space: nowrap;
+}
+
+.tasks-view-menu .mud-fab-menu-item.mud-fab-default {
+    background-color: var(--mud-palette-surface);
+}
+
+/* Size.Small is still a 40px button (34px for the extended item pills) with a 1.25rem icon, larger
+   than the page title beside it wants. Everything here is 80% of that: 32px, 27px and 1rem. The
+   .mud-fab base rule's min-height:36px would otherwise stop the button shrinking below 36px. */
+.tasks-view-menu .mud-fab.mud-fab-size-small {
+    width: 32px;
+    height: 32px;
+    min-height: 0;
+}
+
+.tasks-view-menu .mud-fab.mud-fab-extended.mud-fab-size-small {
+    width: auto;
+    height: 27px;
+    min-width: 27px;
+    padding: 0 10px;
+    border-radius: 14px;
+}
+
+.tasks-view-menu .mud-fab.mud-fab-size-small .mud-icon-root {
+    font-size: 1rem;
+}
+
 /* ---- The Task detail panel: comfortable margins around and between its fields -----------------
    Every field TaskDetail.razor renders in Panel mode (fieldsContent/sideContent) is a flat sibling
    directly under .task-detail - there is no per-field wrapper to carry spacing of its own - so this
@@ -1176,4 +1212,53 @@ button:focus-visible {
 /* The scoped explorer header: the root's full path, which can be long, so it wraps anywhere rather than widening the page. */
 .library-explorer-root-path {
     overflow-wrap: anywhere;
+}
+
+/* The toolbar's Blocked segmented control. HuddleSegmentedControl's indicator assumes equal-width segments, but MudToolBar is a flex row that would shrink the control until its longest label ("Unblocked") overflows its segment, so the control keeps its width and every segment gets the same floor. */
+.task-toolbar-blocked,
+.task-toolbar-kind {
+    flex: none;
+}
+
+.task-toolbar-blocked .mud-toggle-item {
+    min-width: 5.5rem;
+}
+
+/* The List | Board control has two short, equal-width segments, so the same equal-segment floor is smaller. */
+.task-toolbar-kind .mud-toggle-item {
+    min-width: 4.5rem;
+}
+
+
+/* A Library document's rendered Markdown. The global reset zeroes block margins, so without these the paragraphs of a Teammate definition run together. */
+.library-rendered {
+    overflow-wrap: anywhere;
+}
+
+.library-rendered p,
+.library-rendered ul,
+.library-rendered ol,
+.library-rendered pre,
+.library-rendered blockquote,
+.library-rendered table {
+    margin: 0 0 0.75rem;
+}
+
+/* The leading YAML frontmatter, shown as a small key/value card instead of folding into a heading (LibraryDocument.RenderMarkdown). */
+.library-frontmatter {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.125rem 1rem;
+    padding: 0.5rem 0.75rem;
+    background: var(--mud-palette-background-gray);
+    border-radius: var(--mud-default-borderradius);
+    color: var(--mud-palette-text-secondary);
+}
+
+.library-frontmatter dt {
+    font-weight: 600;
+}
+
+.library-frontmatter dd {
+    margin: 0;
 }

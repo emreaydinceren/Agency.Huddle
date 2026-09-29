@@ -33,6 +33,9 @@ internal static class TaskQuery
         string? search,
         string humanName)
     {
+        // Blockers are looked up across every Task, not just the ones in scope: a Done blocker sits in
+        // the Closed folder, and must still read as terminal while the Active scope is showing.
+        Dictionary<TaskId, TaskItem>? byId = filter.Blocked == BlockedFilter.All ? null : all.ToDictionary(task => task.Id);
         List<TaskItem> matches = [];
         foreach (TaskItem task in all)
         {
@@ -42,6 +45,7 @@ internal static class TaskQuery
                 MatchesAssignees(task, filter.Assignees, humanName) &&
                 MatchesStates(task, filter.States) &&
                 MatchesPriorities(task, filter.Priorities) &&
+                MatchesBlocked(task, filter.Blocked, byId) &&
                 MatchesSearch(task, search))
             {
                 matches.Add(task);
@@ -100,6 +104,18 @@ internal static class TaskQuery
     /// <summary>Whether the Task's Priority is one of <paramref name="priorities"/>, or the dimension is empty.</summary>
     private static bool MatchesPriorities(TaskItem task, IReadOnlyList<TaskPriority> priorities) =>
         priorities.Count == 0 || priorities.Contains(task.Priority);
+
+    /// <summary>Whether the Task's blocked-ness matches <paramref name="blocked"/>. A Task is blocked when at least one of its <see cref="TaskItem.BlockedBy"/> exists in <paramref name="byId"/> and is not terminal - the rule the detail panel's "Blocked by N open tasks" line uses.</summary>
+    private static bool MatchesBlocked(TaskItem task, BlockedFilter blocked, Dictionary<TaskId, TaskItem>? byId)
+    {
+        if (blocked == BlockedFilter.All || byId is null)
+        {
+            return true;
+        }
+
+        bool isBlocked = task.BlockedBy.Any(id => byId.TryGetValue(id, out TaskItem? blocker) && !blocker.Status.IsTerminal());
+        return isBlocked == (blocked == BlockedFilter.Blocked);
+    }
 
     /// <summary>Whether the Task's id or title contains <paramref name="search"/>, case-insensitively.</summary>
     private static bool MatchesSearch(TaskItem task, string? search)

@@ -5,8 +5,9 @@
     group or sort change. "Save to View" itself is computed by comparing the serialised
     effective View against the serialised saved one (ViewJson.Options, never record ==, per D13
     corrections item 1, which the same brief applies to this toolbar's own visibility rule too),
-    with Scope masked out first. Active/Closed and List/Board are no longer toolbar controls - Scope
-    and Kind are set in the View editor - and "+ New task" leads the toolbar rather than sitting at its far end.
+    with Scope masked out first. Active/Closed is no longer a toolbar control - Scope is set in the View
+    editor - while List/Board is again one, sitting right after "+ New task", which leads the toolbar
+    rather than sitting at its far end. The List/Board switch is ad hoc (session-only) like the rest.
 *@
 
 @using System.Text.Json
@@ -14,6 +15,14 @@
 
 <MudToolBar Dense="true" Class="task-toolbar">
     <MudButton StartIcon="@Icons.Material.Outlined.Add" Color="Color.Primary" OnClick="this.OnNewTaskClickedAsync" Class="btn-action-tight">New task</MudButton>
+
+    @* Ad hoc like every other toolbar control: it flips the effective View's layout only, and "Save to view"
+       offers to persist it - the View editor's own Kind control is the saved counterpart. *@
+    <HuddleSegmentedControl T="ViewKind" Value="this.EffectiveView.Kind" ValueChanged="this.OnKindChangedAsync"
+                            Class="task-toolbar-kind" ItemCount="2">
+        <MudToggleItem Value="ViewKind.List" Text="List" />
+        <MudToggleItem Value="ViewKind.Board" Text="Board" />
+    </HuddleSegmentedControl>
 
     <MudMenu Label="Filter" Class="task-toolbar-filter">
         <MudChipSet T="string" ReadOnly="false" OnClose="this.OnRemoveTeamFilterAsync" Class="task-toolbar-filter-chips">
@@ -37,13 +46,25 @@
         </MudSelect>
     </MudMenu>
 
+    @* Ad hoc like every other toolbar control: it changes the effective View only, and "Save to view"
+       above offers to persist it - the View editor's own Blocked control is the saved counterpart. *@
+    <HuddleSegmentedControl T="BlockedFilter" Value="this.EffectiveView.Filter.Blocked" ValueChanged="this.OnBlockedChangedAsync"
+                            Class="task-toolbar-blocked" ItemCount="3">
+        <MudToggleItem Value="BlockedFilter.All" Text="All" />
+        <MudToggleItem Value="BlockedFilter.Blocked" Text="Blocked" />
+        <MudToggleItem Value="BlockedFilter.Unblocked" Text="Unblocked" />
+    </HuddleSegmentedControl>
+
     <MudTextField T="string" Value="@this.Search" ValueChanged="this.OnSearchChangedAsync" Immediate="true"
                    DebounceInterval="200" Clearable="true" Adornment="Adornment.Start"
                    AdornmentIcon="@Icons.Material.Filled.Search" Placeholder="Search" Class="task-toolbar-search" />
 
     @if (this.ShowSaveToView)
     {
-        <MudButton Variant="Variant.Text" OnClick="this.SaveToViewAsync" Class="task-toolbar-save">Save to view</MudButton>
+        <MudTooltip Text="Save to view">
+            <MudIconButton Icon="@Icons.Material.Filled.Save" Size="Size.Small" OnClick="this.SaveToViewAsync"
+                           aria-label="Save to view" Class="task-toolbar-save" />
+        </MudTooltip>
     }
 </MudToolBar>
 
@@ -130,6 +151,45 @@
         IReadOnlyList<TaskGroupField> grouping = field.HasValue ? [field.Value] : [];
         return this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Grouping = grouping });
     }
+
+    /// <summary>
+    /// Switches the effective View between List and Board, keeping it valid for <c>ViewValidator</c>: a
+    /// Board is Active-scoped, has columns covering every state and never groups by State, while a List
+    /// has no columns. Returning to Board reuses the saved View's own columns when it is a Board, so
+    /// List-then-Board does not drop a customised layout.
+    /// </summary>
+    /// <param name="kind">The layout the Human picked.</param>
+    private Task OnKindChangedAsync(ViewKind kind)
+    {
+        if (kind == this.EffectiveView.Kind)
+        {
+            return Task.CompletedTask;
+        }
+
+        TaskView updated;
+        if (kind == ViewKind.Board)
+        {
+            IReadOnlyList<BoardColumn> columns = this.ViewStore.Get(this.EffectiveView.Id) is { Kind: ViewKind.Board, Columns.Count: > 0 } saved
+                ? saved.Columns
+                : BoardLayout.DefaultColumns;
+            updated = this.EffectiveView with
+            {
+                Kind = ViewKind.Board,
+                Scope = ViewScope.Active,
+                Columns = columns,
+                Grouping = [.. this.EffectiveView.Grouping.Where(static field => field != TaskGroupField.State)],
+            };
+        }
+        else
+        {
+            updated = this.EffectiveView with { Kind = ViewKind.List, Columns = [] };
+        }
+
+        return this.EffectiveViewChanged.InvokeAsync(updated);
+    }
+
+    private Task OnBlockedChangedAsync(BlockedFilter blocked) =>
+        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { Blocked = blocked } });
 
     private Task OnSearchChangedAsync(string? value) => this.SearchChanged.InvokeAsync(value);
 
