@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. Tasks 5.7.t and 8.1.t are green on arrival and have no `.i`: they are Done once their mutation proofs are reported CAUGHT. Only the manager updates this file, with `agents/scripts/Set-Tracker.ps1 -TrackerPath docs/Huddle.TeamPages-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 7 of 77 tasks Done · 0 of 5 retrospectives done · last updated 2026-09-28.
+**Status:** 11 of 77 tasks Done · 0 of 5 retrospectives done · last updated 2026-09-28.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -24,10 +24,10 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 | 1.2.t Test: `TeamNames` · #6 · Haiku | | | ✔ |
 | 1.2.i Implement `TeamNames` · #7 · Haiku | | | ✔ |
 | **D2. Team Catalog** | | | |
-| 2.1.t Test: `TeamCatalog.Build` · #8 · Haiku | | ✔ | |
-| 2.1.i Implement `TeamCatalog.Build` · #9 · Haiku | ✔ | | |
-| 2.2.t Test: the `TeamCatalog` service · #10 · Sonnet | | | |
-| 2.2.i Implement the `TeamCatalog` service · #11 · Sonnet | | | |
+| 2.1.t Test: `TeamCatalog.Build` · #8 · Haiku | | | ✔ |
+| 2.1.i Implement `TeamCatalog.Build` · #9 · Haiku | | | ✔ |
+| 2.2.t Test: the `TeamCatalog` service · #10 · Sonnet | | | ✔ |
+| 2.2.i Implement the `TeamCatalog` service · #11 · Sonnet | | | ✔ |
 | **D3. Tasks routing (`memory` is not a Project)** | | | |
 | 3.1.t Test: `memory` is never a Project in the Tasks layout · #12 · Sonnet | | | |
 | 3.1.i Route `ListProjects` and `TryMap` through `TeamNames` · #13 · Sonnet | | | |
@@ -57,6 +57,8 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 | 5.6.i Build the snapshot at session start · #33 · Sonnet | | | |
 | 5.7.t Characterisation: Team Memory reaches members as File Changes · #34 · Sonnet | | | |
 | **D6. Library additions** | | | |
+| 6.0.t Test: `memory` under a Team is a plain folder in the Library (added by the D6 review, corrections-D6) · unnumbered · Sonnet | | | |
+| 6.0.i Implement the `memory` classification in `LibraryPathResolver` · unnumbered · Sonnet | | | |
 | 6.1.t Test: `LibrarySearchResult` · #35 · Haiku | | | |
 | 6.1.i Implement `LibrarySearchResult` · #36 · Haiku | | | |
 | 6.2.t Test: `FindAsync` matching, hiding and caps · #37 · Sonnet | | | |

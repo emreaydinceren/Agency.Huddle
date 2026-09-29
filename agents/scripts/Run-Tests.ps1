@@ -96,6 +96,12 @@
     failure. Without -NewNames, the code-set check still runs (disallowed codes still fail with exit 8),
     but identifiers are not checked against a list.
 
+.PARAMETER AllowCodes
+    Comma-separated extra compiler codes (e.g. "CS1729,CS1674") the red gate accepts for THIS run only,
+    added to the default allowed set. Use it only when the manager has named the code: a new constructor
+    on an existing class gives CS1729, and `using` a not-yet-IDisposable type gives CS1674. The default
+    list is unchanged, and an allowed code's quoted identifier is still checked against -NewNames.
+
 .EXAMPLE
     pwsh agents/scripts/Run-Tests.ps1 -FilterClass "*PromptDefaultsFileTests" -Label prompt-defaults
 
@@ -125,7 +131,8 @@ param(
     [string]$RedTask,
     [switch]$Force,
     [string]$ExpectFail,
-    [string]$NewNames
+    [string]$NewNames,
+    [string]$AllowCodes
 )
 
 $ErrorActionPreference = 'Stop'
@@ -314,6 +321,10 @@ function Compare-ExpectFail {
 # Any other CS error code (CS7036 wrong-argument-count, CS1503 wrong-argument-type, CS0029 cannot
 # implicitly convert, etc.) means the red is broken in some other way, not just "not implemented yet".
 $script:AllowedRedCodes = @('CS0246', 'CS0103', 'CS1061', 'CS0117', 'CS0234', 'CS1739', 'CS0411')
+# -AllowCodes widens the set for this run only; the default list above is untouched.
+if ($AllowCodes) {
+    $script:AllowedRedCodes += @($AllowCodes -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
+}
 
 <#
 .SYNOPSIS
