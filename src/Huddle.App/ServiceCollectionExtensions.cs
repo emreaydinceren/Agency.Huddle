@@ -259,6 +259,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<TeamCatalog>();
         services.AddSingleton<ITeamCatalog>(sp => sp.GetRequiredService<TeamCatalog>());
 
+        // Task 4.2.i: stateless apart from its own lock; it reads and writes Personas through the
+        // PersonaStore registered earlier and resolves Team spellings from the catalog above.
+        services.AddSingleton<ITeamMembership, TeamMembership>();
+
         // No interface, same reasoning as AvatarStore just above: nothing needs to substitute
         // this, and a plain registration cannot produce the two-watchers-on-one-path hazard the
         // aliased registrations elsewhere in this file exist to avoid.
