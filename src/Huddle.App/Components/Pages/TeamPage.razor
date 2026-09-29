@@ -1,0 +1,190 @@
+@page "/teams/{Team}"
+@page "/teams/{Team}/{Tab}"
+@page "/teams/{Team}/projects/{Project}"
+@page "/teams/{Team}/projects/{Project}/{Tab}"
+@implements IDisposable
+@using Microsoft.Extensions.Options
+@inject ITeamCatalog Catalog
+@inject IOptions<TeamOptions> TeamConfig
+@inject NavigationManager Navigation
+
+@*
+    Spec §6.6: the Team page and the Project page, one component. The route drives everything:
+    ActivePanelIndex is computed from TeamPageTabs.Resolve on every render, and a tab click only
+    navigates (the Settings.razor rule), so the page never flips a local field of its own. KeepPanelsAlive
+    is off, so only the active tab's component is built. The Team and Project are looked up in the
+    catalog on every render rather than cached in OnParametersSet, so a Team that appears later shows
+    up as soon as the catalog raises Changed; the catalog's own spelling (never the route's) is what the
+    breadcrumbs, the title and the tabs receive. Neither an unknown Team nor an unknown Project creates
+    anything.
+*@
+
+@{
+    TeamSummary? summary = this.Catalog.Find(this.Team);
+    bool isProject = !string.IsNullOrWhiteSpace(this.Project);
+    string? project = summary is not null && isProject ? this.FindProject(summary) : null;
+    string title = summary is null || (isProject && project is null)
+        ? "Huddle"
+        : (project is null ? $"{summary.Name} — Huddle" : $"{project} · {summary.Name} — Huddle");
+}
+
+<PageTitle>@title</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
+    @if (summary is null)
+    {
+        <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
+            <span class="team-page-notice-text">There is no Team named "@this.Team".</span>
+            <MudLink Href="/teammates" Class="team-page-notice-link">Teammates</MudLink>
+        </MudAlert>
+    }
+    else if (isProject && project is null)
+    {
+        <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
+            <span class="team-page-notice-text">There is no Project named "@this.Project" in Team "@summary.Name".</span>
+            <MudLink Href="@TeamHref(summary.Name)" Class="team-page-notice-link">@summary.Name</MudLink>
+        </MudAlert>
+    }
+    else
+    {
+        IReadOnlyList<TeamPageTab> available = TeamPageTabs.Available(isProject, this.Features());
+        int activeIndex = Math.Max(0, available.ToList().IndexOf(TeamPageTabs.Resolve(isProject, this.Tab, this.Features())));
+
+        <MudBreadcrumbs Items="@Crumbs(summary.Name, project)" Separator=" › " Class="team-page-breadcrumbs" />
+
+        @if (available.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" role="alert" Class="team-page-notice">
+                <span class="team-page-notice-text">Files and Tasks are turned off in this installation.</span>
+            </MudAlert>
+        }
+        else
+        {
+            <MudTabs Class="team-page-tabs" KeepPanelsAlive="false"
+                     ActivePanelIndex="@activeIndex"
+                     ActivePanelIndexChanged="this.OnActivePanelIndexChanged">
+                @foreach (TeamPageTab tab in available)
+                {
+                    TeamPageTab current = tab;
+                    <MudTabPanel Text="@current.ToString()" @key="current">
+                        @switch (current)
+                        {
+                            case TeamPageTab.Members:
+                                <TeamMembers Team="@summary" Search="@this.SearchFor(current)"
+                                             SearchChanged="@(text => this.SetSearch(current, text))" />
+                                break;
+                            case TeamPageTab.Files:
+                                <TeamFilesTab Team="@summary.Name" Project="@project" Search="@this.SearchFor(current)"
+                                              SearchChanged="@(text => this.SetSearch(current, text))" />
+                                break;
+                            case TeamPageTab.Tasks:
+                                <TeamTasksTab Team="@summary.Name" Project="@project" Search="@this.SearchFor(current)"
+                                              SearchChanged="@(text => this.SetSearch(current, text))" />
+                                break;
+                        }
+                    </MudTabPanel>
+                }
+            </MudTabs>
+        }
+    }
+</MudContainer>
+
+@code {
+    /// <summary>The search text each tab keeps while the route stays on the same Team and Project.</summary>
+    private readonly Dictionary<TeamPageTab, string?> searches = [];
+
+    private string? lastTeam;
+    private string? lastProject;
+
+    /// <summary>The Team named by the route, in whatever case the URL spelt it.</summary>
+    [Parameter]
+    public string Team { get; set; } = string.Empty;
+
+    /// <summary>The Project named by the route, or <see langword="null"/> on a Team page.</summary>
+    [Parameter]
+    public string? Project { get; set; }
+
+    /// <summary>The tab segment named by the route; anything unknown or disabled falls back to the page's default tab.</summary>
+    [Parameter]
+    public string? Tab { get; set; }
+
+    /// <inheritdoc />
+    protected override void OnInitialized() => this.Catalog.Changed += this.OnCatalogChanged;
+
+    /// <inheritdoc />
+    protected override void OnParametersSet()
+    {
+        if (!string.Equals(this.lastTeam, this.Team, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(this.lastProject, this.Project, StringComparison.OrdinalIgnoreCase))
+        {
+            this.searches.Clear();
+            this.lastTeam = this.Team;
+            this.lastProject = this.Project;
+        }
+    }
+
+    /// <summary>Unsubscribes from <see cref="ITeamCatalog.Changed"/>.</summary>
+    public void Dispose() => this.Catalog.Changed -= this.OnCatalogChanged;
+
+    private static string TeamHref(string team) => $"/teams/{Uri.EscapeDataString(team)}";
+
+    private static List<BreadcrumbItem> Crumbs(string team, string? project) => project is null
+        ? [new BreadcrumbItem(team, href: null, disabled: true)]
+        : [new BreadcrumbItem(team, TeamHref(team)), new BreadcrumbItem(project, href: null, disabled: true)];
+
+    private TeamPageFeatures Features() => new(this.TeamConfig.Value.Library.Enabled, this.TeamConfig.Value.Tasks.Enabled);
+
+    /// <summary>The catalog's own spelling of the route's Project, or <see langword="null"/> when the Team has no such Project.</summary>
+    private string? FindProject(TeamSummary summary) =>
+        summary.Projects.FirstOrDefault(name => string.Equals(name, this.Project, StringComparison.OrdinalIgnoreCase));
+
+    private string? SearchFor(TeamPageTab tab) => this.searches.GetValueOrDefault(tab);
+
+    private void SetSearch(TeamPageTab tab, string? text) => this.searches[tab] = text;
+
+    /// <summary>Navigates to the clicked tab's route; the route change, not this handler, moves the active tab.</summary>
+    private void OnActivePanelIndexChanged(int index)
+    {
+        TeamSummary? summary = this.Catalog.Find(this.Team);
+        if (summary is null)
+        {
+            return;
+        }
+
+        bool isProject = !string.IsNullOrWhiteSpace(this.Project);
+        string? project = isProject ? this.FindProject(summary) : null;
+        IReadOnlyList<TeamPageTab> available = TeamPageTabs.Available(isProject, this.Features());
+        if ((isProject && project is null) || index < 0 || index >= available.Count)
+        {
+            return;
+        }
+
+        string path = project is null
+            ? TeamHref(summary.Name)
+            : $"{TeamHref(summary.Name)}/projects/{Uri.EscapeDataString(project)}";
+        this.Navigation.NavigateTo($"{path}/{TeamPageTabs.Segment(available[index])}");
+    }
+
+    private void OnCatalogChanged() => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a catalog event racing component teardown can throw.</summary>
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to render.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
+    }
+}

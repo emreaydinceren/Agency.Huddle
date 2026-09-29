@@ -1,0 +1,40 @@
+/* The rows are MudBlazor list items, so ::deep reaches the markup this component slots into them.
+   Colours are theme variables only (ThemeSourceTests). */
+.team-members ::deep .team-members-row-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+}
+
+.team-members ::deep .team-members-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.team-members ::deep .team-members-name,
+.team-members ::deep .team-members-role {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.team-members ::deep .team-members-menu {
+    flex: 0 0 auto;
+}
+
+.team-members ::deep .team-members-empty {
+    padding: 1rem;
+}
+
+.team-members ::deep .team-members-confirm {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+}
+
+.team-members ::deep .team-members-confirm-text {
+    flex: 1 1 auto;
+    min-width: 0;
+}

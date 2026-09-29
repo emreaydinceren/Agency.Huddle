@@ -52,6 +52,9 @@
 </MudDialog>
 
 @code {
+    /// <summary>How <see cref="TeamMembers"/> shows this dialog: small, full-width, with a close button that cancels.</summary>
+    public static readonly DialogOptions Options = new() { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+
     [CascadingParameter]
     private IMudDialogInstance? Dialog { get; set; }
 

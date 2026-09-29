@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. Tasks 5.7.t and 8.1.t are green on arrival and have no `.i`: they are Done once their mutation proofs are reported CAUGHT. Only the manager updates this file, with `agents/scripts/Set-Tracker.ps1 -TrackerPath docs/Huddle.TeamPages-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 64 of 81 tasks Done · 3 of 5 retrospectives done · last updated 2026-09-29.
+**Status:** 76 of 81 tasks Done · 4 of 5 retrospectives done · last updated 2026-09-29.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -90,18 +90,18 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 | 7.7.t Test: `AddMemberDialog` · #59 · Sonnet | | | ✔ |
 | 7.7.i Implement `AddMemberDialog` · #60 · Sonnet | | | ✔ |
 | 🔁 R4 — Opus retrospective after #60, and plan update | | | ✔ |
-| 7.8.t Test: `TeamMembers` list and search · #61 · Sonnet | | | |
-| 7.8.i Implement `TeamMembers` (list and search) · #62 · Sonnet | | | |
-| 7.9.t Test: `TeamMembers` adds a member · #63 · Sonnet | | | |
-| 7.9.i Wire *Add member* · #64 · Sonnet | | | |
-| 7.10.t Test: `TeamMembers` removes a member · #65 · Sonnet | | | |
-| 7.10.i Implement *Remove from Team* · #66 · Sonnet | | | |
-| 7.11.t Test: `TeamFilesTab` · #67 · Sonnet | | | |
-| 7.11.i Implement `TeamFilesTab` · #68 · Sonnet | | | |
-| 7.12.t Test: `TeamTasksTab` · #69 · Sonnet | | | |
-| 7.12.i Implement `TeamTasksTab` · #70 · Sonnet | | | |
-| 7.13.t Test: `TeamPage` · #71 · Sonnet | | | |
-| 7.13.i Implement `TeamPage` · #72 · Sonnet | | | |
+| 7.8.t Test: `TeamMembers` list and search · #61 · Sonnet | | | ✔ |
+| 7.8.i Implement `TeamMembers` (list and search) · #62 · Sonnet | | | ✔ |
+| 7.9.t Test: `TeamMembers` adds a member · #63 · Sonnet | | | ✔ |
+| 7.9.i Wire *Add member* · #64 · Sonnet | | | ✔ |
+| 7.10.t Test: `TeamMembers` removes a member · #65 · Sonnet | | | ✔ |
+| 7.10.i Implement *Remove from Team* · #66 · Sonnet | | | ✔ |
+| 7.11.t Test: `TeamFilesTab` · #67 · Sonnet | | | ✔ |
+| 7.11.i Implement `TeamFilesTab` · #68 · Sonnet | | | ✔ |
+| 7.12.t Test: `TeamTasksTab` · #69 · Sonnet | | | ✔ |
+| 7.12.i Implement `TeamTasksTab` · #70 · Sonnet | | | ✔ |
+| 7.13.t Test: `TeamPage` · #71 · Sonnet | | | ✔ |
+| 7.13.i Implement `TeamPage` · #72 · Sonnet | | | ✔ |
 | **D8. Docs and verification** | | | |
 | 8.1.t Characterisation: Team pages end to end · #73 · Sonnet | | | |
 | 8.2 Reconcile the Spec with corrections S1–S11 · #74 · Sonnet | | | |

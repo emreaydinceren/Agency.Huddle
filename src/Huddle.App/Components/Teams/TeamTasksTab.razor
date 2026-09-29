@@ -1,0 +1,175 @@
+@*
+    Spec §6.9: the Tasks tab of a Team or Project page. The shared toolbar ("New task", "Search tasks")
+    sits above the Task Board, which shows an in-memory View built on each render: the Team's Tasks
+    grouped into swimlanes by Project, or one Project's Tasks with no swimlanes. The View's Id is a
+    fixed, non-persisted "team:<Team>[/<Project>]" so the Board's per-View UI state has a stable key,
+    and it names BOTH the Team and the Project for a Project page.
+
+    The Tasks come from TaskQuery over the store exactly as the Tasks page builds them, requeried on
+    TaskEvents.TasksReloaded and TaskChanged (corrections-D7b item 22). The Board gets no OnEditColumns
+    or ViewChanged, so its column editing is inert here; its Columns are the defaults, because an empty
+    list renders no columns at all. "New task" opens the expanded TaskDetailDialog on a draft for this
+    Team (and Project); a card opens the same dialog on its id (the Tasks page's drawer with its
+    discard confirmation is not copied), and its Copy id is the Tasks page's own copy path.
+*@
+
+@implements IDisposable
+@using Microsoft.Extensions.Options
+@inject TaskStore Store
+@inject TaskEvents Events
+@inject IOptions<TeamOptions> Options
+@inject IDialogService Dialogs
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+
+<div class="team-tasks-tab">
+    <TeamTabToolbar ActionText="New task" SearchPlaceholder="Search tasks"
+                    OnAction="this.NewTaskAsync"
+                    Search="@this.Search" SearchChanged="this.SearchChanged" />
+
+    @{
+        TaskView view = this.BuildView();
+    }
+    <TaskBoard View="view" Tasks="this.FilteredTasks(view)" Search="@this.Search"
+               OnOpenTask="this.OpenTaskAsync" OnCopyId="this.CopyIdAsync" />
+</div>
+
+@code {
+    /// <summary>The Team page's swimlane grouping.</summary>
+    private static readonly IReadOnlyList<TaskGroupField> ProjectGrouping = [TaskGroupField.Project];
+
+    /// <summary>The Project page's grouping: no swimlanes.</summary>
+    private static readonly IReadOnlyList<TaskGroupField> NoGrouping = [];
+
+    /// <summary>The Team whose Tasks the Board shows.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Team { get; set; } = string.Empty;
+
+    /// <summary>The Project inside the Team whose Tasks the Board shows, or <see langword="null"/> for the whole Team.</summary>
+    [Parameter]
+    public string? Project { get; set; }
+
+    /// <summary>The search text shown in the toolbar and applied to the Tasks.</summary>
+    [Parameter]
+    public string? Search { get; set; }
+
+    /// <summary>Raised, debounced, as the toolbar's text changes.</summary>
+    [Parameter]
+    public EventCallback<string?> SearchChanged { get; set; }
+
+    private bool OnProjectPage => !string.IsNullOrWhiteSpace(this.Project);
+
+    /// <inheritdoc />
+    protected override void OnInitialized()
+    {
+        this.Events.TasksReloaded += this.OnTasksReloaded;
+        this.Events.TaskChanged += this.OnTaskChanged;
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        this.Events.TasksReloaded -= this.OnTasksReloaded;
+        this.Events.TaskChanged -= this.OnTaskChanged;
+    }
+
+    /// <summary>The in-memory Board View for the Team or the Project.</summary>
+    private TaskView BuildView() => this.OnProjectPage
+        ? new TaskView
+        {
+            Id = $"team:{this.Team}/{this.Project}",
+            Name = this.Project ?? this.Team,
+            Kind = ViewKind.Board,
+            Filter = new TaskFilter
+            {
+                Teams = [this.Team],
+                Projects = [new ProjectRef(this.Team, this.Project)],
+            },
+            Grouping = NoGrouping,
+            Columns = BoardLayout.DefaultColumns,
+        }
+        : new TaskView
+        {
+            Id = $"team:{this.Team}",
+            Name = this.Team,
+            Kind = ViewKind.Board,
+            Filter = new TaskFilter { Teams = [this.Team] },
+            Grouping = ProjectGrouping,
+            Columns = BoardLayout.DefaultColumns,
+        };
+
+    /// <summary>The Tasks matching <paramref name="view"/>'s scope and filter and the search, sorted per its Sort keys.</summary>
+    /// <param name="view">The View.</param>
+    private IReadOnlyList<TaskItem> FilteredTasks(TaskView view)
+    {
+        IReadOnlyList<TaskItem> filtered = TaskQuery.Filter(
+            this.Store.All,
+            view.Scope,
+            view.Filter,
+            this.Search,
+            this.Options.Value.HumanName);
+        return TaskQuery.Sort(filtered, view.Sort);
+    }
+
+    /// <summary>"New task": opens the expanded dialog in create mode on a draft for this Team and Project.</summary>
+    private async Task NewTaskAsync()
+    {
+        TaskDraft draft = new(string.Empty, this.Team, this.OnProjectPage ? this.Project : null);
+        DialogParameters<TaskDetailDialog> parameters = new() { { dialog => dialog.Draft, draft } };
+        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>("New task", parameters, TaskDetailDialog.Options);
+    }
+
+    /// <summary>Opens the expanded dialog on the clicked card's Task.</summary>
+    /// <param name="id">The Task's id.</param>
+    private async Task OpenTaskAsync(TaskId id)
+    {
+        DialogParameters<TaskDetailDialog> parameters = new() { { dialog => dialog.Id, id } };
+        _ = await this.Dialogs.ShowAsync<TaskDetailDialog>(id.ToString(), parameters, TaskDetailDialog.Options);
+    }
+
+    /// <summary>Copies a card's id to the clipboard, with the same success or warning toast as the Tasks page.</summary>
+    /// <param name="id">The Task id to copy.</param>
+    private async Task CopyIdAsync(TaskId id)
+    {
+        bool copied = await this.JS.InvokeAsync<bool>("huddleClipboard.copy", id.ToString());
+        if (copied)
+        {
+            this.Snackbar.Add($"Copied {id}", Severity.Success, configure: null, key: "copy");
+        }
+        else
+        {
+            this.Snackbar.Add("Couldn't copy. The id is selected; press Ctrl+C.", Severity.Warning, configure: null, key: "copy");
+        }
+    }
+
+    private void OnTasksReloaded() => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    private void OnTaskChanged(TaskChange change) => _ = this.DispatchAsync(() =>
+    {
+        this.StateHasChanged();
+        return Task.CompletedTask;
+    });
+
+    /// <summary>Invokes <paramref name="action"/> on the renderer's synchronization context, swallowing the two exceptions a Task event racing component teardown can throw.</summary>
+    /// <param name="action">The work to run.</param>
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+            // Circuit gone; nothing to render.
+        }
+        catch (InvalidOperationException)
+        {
+            // Renderer disposed mid-dispatch.
+        }
+    }
+}

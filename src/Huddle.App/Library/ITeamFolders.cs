@@ -6,8 +6,8 @@ namespace Agency.Huddle.App.Library;
 /// </summary>
 /// <remarks>
 /// A folder created here is visible in the Team catalog only after the Task store's rebuild, about
-/// 500 ms later. A caller that navigates to the new Team must poll <c>ITeamCatalog.Find</c> first, or
-/// the page flashes "There is no Team named".
+/// 500 ms later. A caller that navigates to the new Team waits on <c>ITeamCatalog.Changed</c> (see
+/// <c>TeamsNav</c>) first, or the page flashes "There is no Team named".
 /// </remarks>
 internal interface ITeamFolders
 {

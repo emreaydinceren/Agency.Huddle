@@ -1,0 +1,54 @@
+@*
+    Spec §6.8: the Files tab of a Team or Project page. The shared toolbar ("New note", "Search files")
+    sits above a LibraryExplorer scoped to the Team's folder, or the Project's folder inside it, under
+    the "teams" Library Root, side by side. The search text is the explorer's Filter; the explorer
+    reports a folder hit's clearing through FilterChanged, and the toolbar reports its own typing and
+    clearing, both raised from here as SearchChanged (blank as null).
+
+    The explorer resolves Scopes only in OnInitialized, so the explorer is keyed by the scope: a page
+    that moves from a Team to one of its Projects (or back) gets a new explorer instead of a stale tree.
+*@
+
+@using Agency.Huddle.App.Library
+
+<div class="team-files-tab">
+    <TeamTabToolbar ActionText="New note" SearchPlaceholder="Search files"
+                    OnAction="this.NewNoteAsync"
+                    Search="@this.Search" SearchChanged="this.SearchChanged" />
+
+    <LibraryExplorer @key="this.ScopePath" @ref="this.explorer"
+                     Scopes="@this.Scopes" Layout="LibraryExplorerLayout.SideBySide"
+                     Filter="@this.Search" FilterChanged="this.SearchChanged"
+                     StateKey="@this.StateKey" />
+</div>
+
+@code {
+    /// <summary>The Team whose folder the explorer shows.</summary>
+    [Parameter]
+    [EditorRequired]
+    public string Team { get; set; } = string.Empty;
+
+    /// <summary>The Project inside the Team whose folder the explorer shows, or <see langword="null"/> for the Team's own folder.</summary>
+    [Parameter]
+    public string? Project { get; set; }
+
+    /// <summary>The search text shown in the toolbar and passed to the explorer as its filter.</summary>
+    [Parameter]
+    public string? Search { get; set; }
+
+    /// <summary>Raised, debounced, as the toolbar's text changes, and with <see langword="null"/> when a folder hit clears the filter.</summary>
+    [Parameter]
+    public EventCallback<string?> SearchChanged { get; set; }
+
+    private LibraryExplorer? explorer;
+
+    /// <summary>The folder shown, relative to the "teams" root: the Team, or the Team and Project joined by a slash.</summary>
+    private string ScopePath => string.IsNullOrWhiteSpace(this.Project) ? this.Team : $"{this.Team}/{this.Project}";
+
+    private IReadOnlyList<LibraryLocation> Scopes => [new LibraryLocation("teams", this.ScopePath)];
+
+    private string StateKey => $"team:{this.ScopePath}";
+
+    /// <summary>Opens the explorer's New note dialog and returns when it closes.</summary>
+    private Task NewNoteAsync() => this.explorer?.NewNoteAsync() ?? Task.CompletedTask;
+}
