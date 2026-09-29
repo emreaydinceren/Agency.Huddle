@@ -53,6 +53,7 @@ param(
     [string]$AllowlistPath
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 if (-not $AllowlistPath) {
@@ -107,7 +108,7 @@ function Get-PublicTypesAtIndent {
         }) | Out-Null
     }
 
-    return $found
+    return , $found
 }
 
 $violations = New-Object System.Collections.Generic.List[object]

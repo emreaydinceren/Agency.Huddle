@@ -1676,6 +1676,7 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
   - The `TaskBoard` shows the six default columns even when the Team has no Tasks (S15: the
     view's `Columns` is `BoardLayout.DefaultColumns`).
 - **Acceptance:** Red, `-NewNames "TeamTasksTab"`.
+- **R4:** can run in parallel with 7.8-7.10 (depends only on `TeamTabToolbar`).
 
 ### Task 7.12.i (#70) — Implement `TeamTasksTab` [Sonnet]
 
@@ -1724,6 +1725,9 @@ Entries reuse `systemPrompt.memoryEntry` and `systemPrompt.memoryEmpty` unchange
     or Project parameter changes.
   - The page re-renders when the catalog raises `Changed` (a Team that appears after load).
 - **Acceptance:** Red, `-NewNames "TeamPage"`.
+- **R4:** split into 7.13a.t (bUnit with stubs: tabs, flags, fallback, nav, alerts, per-tab search,
+  `Changed`, spelling) and 7.13b.t (HTTP via `TeamWebApplicationFactory`: routes, escaping,
+  `PageTitle`), 7.13b after 7.13.i's markup exists; see corrections-D7b #26 and #34.
 
 ### Task 7.13.i (#72) — Implement `TeamPage` [Sonnet]
 
@@ -1872,5 +1876,5 @@ The manager records each retrospective here, newest last, and commits the plan c
 | R1 | #15 | 2026-09-28 | The brief pointed at stale `Conversation/scripts/` copies (no `-RedDir`/`-AllowCodes`); 3 Haiku agents used `-Force` and reported no deviation; Haiku 2.1.i edited a test's expected value to pass; Haiku pairs cost 44-50 calls / 2.3-3.3M re-read against 22-26 / 1.3-1.9M for Sonnet pairs; four architect reviews = 42% of subagent tokens (19.7M of 46.5M); general-purpose agents start at 49-65K context against 21-25K for `teampages-dev`; missing `using Agency.Huddle.App.Teams;` failed three builds | Brief fixed and given an R1 rules block; 10 fact lines added to the facts Core; 5.4.t/5.4.i retagged Haiku -> Sonnet and 5.4.i no longer edits tests or commits `prompts.default.json`; 4.1.i gets the exact mutation command; 4.2.t creates the shared `FakeTeamCatalog` (7.2.t reuses it, `-NewNames` gains `Teams`); 7.2.i adds `_Imports.razor`; 8.2 covers S1-S17; verifiers run as `teampages-dev`; `Check-All.ps1` and a red wrapper scripted; the D7 review is split into three Opus reviews (<=35 calls each) |
 | R2 | #30 | 2026-09-28 | Run-Red rejects -RedDir; IDE0005 on the Teams using in new reds; CA1062/CA1859 hidden behind compile reds; stale ACL pointer (:846-875 vs :945-985) made 5.3.t copy the helper; corrections-D5 #16/#20 pointers stale; the manager session (418K context, ~360K re-read per call) costs more per pair than the agents; every agent reads ~20K of brief+facts | Facts R2 block (13 lines); brief R1 bullet replaced and an R2 block added; corrections-D5 #16/#20/#26/#27 and corrections-D6 #11/#35-37 fixed or added; 6.0 stub in the plan; 7.4/7.11/7.13/8.3/8.5/6.3.t notes; TestListing.cs and Run-LinuxRepro.sh chores; D7 gets two architect reviews (7.1-7.7 during D6, 7.8-7.13 before R4) |
 | R3 | #45 | 2026-09-28 | Prove-Mutation reports a non-building mutant as "caught"; a Haiku .i edited a test while reporting no deviations (6.1); an agent edited the shared wwwroot/app.css (6.5.i); the tree does not refresh after a note is created through the explorer; the manager session is 85% of the cost (418K->565K context, 41M re-read in 84 calls); one agent across two pairs cost more on the second (6.3: 1.99M vs 1.2M fresh); the slim brief and the facts index did not cut calls before first edit | Facts R3 block (13 bullets); protected-file rule in the brief, the agent file and D7; 6.7 pair added; 7.11/8.2/8.3/8.5 edits; corrections-D7a #9 overridden; Prove-Mutation INVALID exit, Check-All summary line and app.css hash guard, Mark-Task.ps1 scripted; RetroActions rows updated; from D7 on use one manager session per stage with a <=5K state file |
-| R4 | #60 | | | |
+| R4 | #60 | 2026-09-29 | Fresh .i after a red-only .t costs 2x; manager session continued (112K first call); Run-Red saves a wrong-name compile red without -NewNames then exit 6; canceled failures missing from red files; Check-Visibility $null.Count under strict mode; .t defects J14/J15 and correction #24 hidden behind reds; facts Core 17K read whole | Resume-the-.t rule; 3-line .t self-check; Run-Tests/Check-Visibility chores; facts Core <=6K; fresh D7b manager session |
 | R5 | #75 | | | |

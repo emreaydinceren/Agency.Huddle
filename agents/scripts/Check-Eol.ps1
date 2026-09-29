@@ -24,6 +24,7 @@ param(
     [switch]$Fix
 )
 
+Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $BinaryExtensions = @('.png', '.ico', '.woff', '.woff2', '.ttf', '.otf', '.jpg', '.jpeg', '.gif', '.pdf', '.zip', '.dll', '.exe', '.pfx', '.snk')

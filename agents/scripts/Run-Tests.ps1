@@ -89,12 +89,13 @@
     the missing identifier in its message: CS0246 (type/namespace not found), CS0103 (name does not
     exist), CS1061 (no such member), CS0117 (no such member on type), CS0234 (type/namespace does not
     exist in namespace), CS1739 (no argument given for parameter), CS0411 (type arguments cannot be
-    inferred). When -NewNames is given, every line with one of those codes must quote an identifier in
-    the list, or the run is rejected (exit 8, no file written) and the offending lines are printed. Any
-    compiler error OUTSIDE that allowed code set (e.g. CS7036, CS1503, CS0029) is always rejected the
-    same way, whether or not -NewNames is given - it means the red is not a clean "doesn't exist yet"
-    failure. Without -NewNames, the code-set check still runs (disallowed codes still fail with exit 8),
-    but identifiers are not checked against a list.
+    inferred). A compile red REQUIRES -NewNames: without it, every compiler error line is rejected
+    (exit 8, no file written), even one with an allowed code, so a wrong name (e.g. CS1061 on the wrong
+    member) cannot be saved as a red. With -NewNames, every line with one of those codes must quote an
+    identifier in the list, or the run is rejected (exit 8, no file written) and the offending lines are
+    printed. Any compiler error OUTSIDE that allowed code set (e.g. CS7036, CS1503, CS0029) is always
+    rejected the same way - it means the red is not a clean "doesn't exist yet" failure. A runtime red
+    (failing tests, no compiler errors) needs no -NewNames.
 
 .PARAMETER AllowCodes
     Comma-separated extra compiler codes (e.g. "CS1729,CS1674") the red gate accepts for THIS run only,
@@ -233,7 +234,7 @@ function Get-TestRunSummary {
 
         # Individual failing test: "failed <Fully.Qualified.Name> (<dur>)" - no "(tfm|arch)" segment, so
         # this cannot be confused with the per-assembly line above.
-        if ($line -match '^\s*failed\s+(?<name>\S+)\s+\(') {
+        if ($line -match '^\s*failed\s+(?:\(\w+\)\s+)?(?<name>.+?)\s+\((?:\d+(?:\.\d+)?\s*(?:ms|s|m|h)\s*)+\)\s*$') {
             $name = $Matches.name
             if (-not $failingTests.Contains($name)) {
                 $failingTests.Add($name) | Out-Null
@@ -277,7 +278,7 @@ function Get-RedLines {
         }
 
         # Extract failed test lines and their following message lines (up to 3)
-        if ($line -match '^\s*failed\s+\S+\s+\(') {
+        if ($line -match '^\s*failed\s+(?:\(\w+\)\s+)?.+?\s+\((?:\d+(?:\.\d+)?\s*(?:ms|s|m|h)\s*)+\)\s*$') {
             $redLines.Add($line) | Out-Null
             # Capture up to 3 following lines for the failure message
             for ($j = 1; $j -le 3 -and ($i + $j) -lt $Lines.Length; $j++) {
@@ -302,7 +303,8 @@ function Compare-ExpectFail {
     param([string]$ExpectFail, $Summary)
 
     $expected = @($ExpectFail -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
-    $actual = @($Summary.FailingTests | ForEach-Object { ($_ -split '\.')[-1] })
+    # A theory row's display name carries its arguments ("Name(stored: "")"): drop them before taking the method name.
+    $actual = @($Summary.FailingTests | ForEach-Object { (($_ -replace '\(.*$', '') -split '\.')[-1] })
 
     $expectedSet = [System.Collections.Generic.HashSet[string]]::new([string[]]$expected)
     $actualSet = [System.Collections.Generic.HashSet[string]]::new([string[]]$actual)
@@ -352,6 +354,8 @@ function Test-RedGate {
             $disallowedLines.Add($line.Trim()) | Out-Null
             continue
         }
+
+        if ($null -eq $allowedNames) { $disallowedLines.Add($line.Trim()) | Out-Null; continue }
 
         if ($null -ne $allowedNames) {
             # CS1061/CS0117 read "'Receiver' does not contain a definition for 'Member'": the new

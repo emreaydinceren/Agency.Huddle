@@ -89,7 +89,7 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 | 7.6.i Implement `TeamTabToolbar` · #58 · Sonnet | | | ✔ |
 | 7.7.t Test: `AddMemberDialog` · #59 · Sonnet | | | ✔ |
 | 7.7.i Implement `AddMemberDialog` · #60 · Sonnet | | | ✔ |
-| 🔁 R4 — Opus retrospective after #60, and plan update | | | |
+| 🔁 R4 — Opus retrospective after #60, and plan update | | | ✔ |
 | 7.8.t Test: `TeamMembers` list and search · #61 · Sonnet | | | |
 | 7.8.i Implement `TeamMembers` (list and search) · #62 · Sonnet | | | |
 | 7.9.t Test: `TeamMembers` adds a member · #63 · Sonnet | | | |

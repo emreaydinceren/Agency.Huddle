@@ -12,10 +12,12 @@
     The task identifier (e.g., "1.1.t" or "feature-red"). Used as -Label and -RedTask.
 
 .PARAMETER FilterClass
-    Test class filter pattern, passed to Run-Tests.ps1 -FilterClass.
+    Test class filter pattern, passed to Run-Tests.ps1 -FilterClass. Use -FilterClass "*A,*B" for
+    several classes.
 
 .PARAMETER NewNames
-    Optional; passed to Run-Tests.ps1 -NewNames if supplied.
+    Passed to Run-Tests.ps1 -NewNames if supplied. A compile red requires -NewNames: without it every
+    compiler error is rejected (exit 8, no red file). A runtime red (failing tests) needs none.
 
 .PARAMETER AllowCodes
     Optional; passed to Run-Tests.ps1 -AllowCodes if supplied.
