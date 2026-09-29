@@ -59,6 +59,11 @@ foreach ($line in $porcelain) {
         continue
     }
 
+    # Shell scripts must stay LF: bash rejects CRLF (the crlf-after-write hook skips them too).
+    if ($ext -eq '.sh') {
+        continue
+    }
+
     $candidates.Add($relPath) | Out-Null
 }
 

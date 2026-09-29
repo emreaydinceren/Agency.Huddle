@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Tasks;
@@ -907,7 +906,7 @@ public sealed class TaskStoreTests
     /// <summary>A Project's note tree, however deep, is never enumerated by the scan: a Task under
     /// its <c>_tasks</c> folder is still found, a deeply nested note is ignored, and a folder inside
     /// the note tree that the scan could not list raises no warning, because the targeted scan never
-    /// reaches it. On Linux the CI container runs as root, which ignores <see cref="DenyListing"/>'s
+    /// reaches it. On Linux the CI container runs as root, which ignores <see cref="TestListing.DenyListing"/>'s
     /// Unix file mode, so there the assertions hold trivially rather than proving the denial worked.</summary>
     [Fact]
     public void Scan_DeepNoteTree_IsNotEnumerated()
@@ -918,7 +917,7 @@ public sealed class TaskStoreTests
         _ = WriteRawFile(root, Path.Combine("Marketing", "Launch Q4", "research", "a", "b", "c.md"), "deep note");
         string locked = Path.Combine(root, "Marketing", "Launch Q4", "research", "locked");
         Directory.CreateDirectory(locked);
-        DenyListing(locked);
+        TestListing.DenyListing(locked);
         try
         {
             RecordingLogger<TaskStore> logger = new();
@@ -932,54 +931,8 @@ public sealed class TaskStoreTests
         }
         finally
         {
-            GrantListing(locked);
+            TestListing.GrantListing(locked);
         }
-    }
-
-    /// <summary>Denies the current user the right to list <paramref name="path"/>'s contents: <c>icacls</c>
-    /// on Windows (no ACL package is referenced by this solution), or <see cref="UnixFileMode.None"/> via
-    /// <see cref="File.SetUnixFileMode(string, UnixFileMode)"/> on Linux/macOS. Running as root - the CI
-    /// container's user - ignores the Unix mode entirely, so on that platform the test still passes but
-    /// proves less.</summary>
-    /// <param name="path">The folder to lock.</param>
-    private static void DenyListing(string path)
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            RunIcacls(path, "/inheritance:r", "/deny", $"{Environment.UserName}:(RD)");
-        }
-        else
-        {
-            File.SetUnixFileMode(path, UnixFileMode.None);
-        }
-    }
-
-    /// <summary>Reverses <see cref="DenyListing"/> so <see cref="TempDataDir.Dispose"/> can clean up.</summary>
-    /// <param name="path">The folder to unlock.</param>
-    private static void GrantListing(string path)
-    {
-        if (OperatingSystem.IsWindows())
-        {
-            RunIcacls(path, "/reset");
-        }
-        else
-        {
-            File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
-        }
-    }
-
-    /// <summary>Runs <c>icacls</c> with the given arguments and waits for it to exit.</summary>
-    /// <param name="arguments">The command-line arguments, passed unquoted via <see cref="ProcessStartInfo.ArgumentList"/>.</param>
-    private static void RunIcacls(params string[] arguments)
-    {
-        ProcessStartInfo info = new("icacls") { UseShellExecute = false, CreateNoWindow = true };
-        foreach (string argument in arguments)
-        {
-            info.ArgumentList.Add(argument);
-        }
-
-        using Process process = Process.Start(info) ?? throw new InvalidOperationException("icacls failed to start.");
-        process.WaitForExit();
     }
 
     /// <summary>An <see cref="ILogger{TCategoryName}"/> that records every call made to it, for

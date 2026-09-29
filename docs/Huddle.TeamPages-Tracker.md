@@ -10,7 +10,7 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 
 **Update rules.** Exactly one `✔` per row. Move a task to **In Progress** when its agent is dispatched, and to **Done** only after the manager has re-run the build and tests. A `🔁` row is a retrospective checkpoint: it is Done once its row in the plan's *Retrospective log* is filled in, and no task after it may start before then. Tasks 5.7.t and 8.1.t are green on arrival and have no `.i`: they are Done once their mutation proofs are reported CAUGHT. Only the manager updates this file, with `agents/scripts/Set-Tracker.ps1 -TrackerPath docs/Huddle.TeamPages-Tracker.md -Task <ids> -State <Active|InProgress|Done>`.
 
-**Status:** 31 of 79 tasks Done · 2 of 5 retrospectives done · last updated 2026-09-28.
+**Status:** 34 of 79 tasks Done · 2 of 5 retrospectives done · last updated 2026-09-28.
 
 | **Deliverable / Task** | **Active** | **In Progress** | **Done** |
 | --- | --- | --- | --- |
@@ -53,9 +53,9 @@ This is the Kanban status of every task in [Huddle.TeamPages-ProjectPlan.md](Hud
 | 5.5.t Test: the Team Memory block in the composed prompt · #30 · Sonnet | | | ✔ |
 | 5.5.i Render the Team Memory block · #31 · Sonnet | | | ✔ |
 | 🔁 R2 — Opus retrospective after #30, and plan update | | | ✔ |
-| 5.6.t Test: a session starts with the Team's Memory · #32 · Sonnet | ✔ | | |
-| 5.6.i Build the snapshot at session start · #33 · Sonnet | | | |
-| 5.7.t Characterisation: Team Memory reaches members as File Changes · #34 · Sonnet | | | |
+| 5.6.t Test: a session starts with the Team's Memory · #32 · Sonnet | | | ✔ |
+| 5.6.i Build the snapshot at session start · #33 · Sonnet | | | ✔ |
+| 5.7.t Characterisation: Team Memory reaches members as File Changes · #34 · Sonnet | | | ✔ |
 | **D6. Library additions** | | | |
 | 6.0.t Test: `memory` under a Team is a plain folder in the Library (added by the D6 review, corrections-D6) · unnumbered · Sonnet | | | |
 | 6.0.i Implement the `memory` classification in `LibraryPathResolver` · unnumbered · Sonnet | | | |

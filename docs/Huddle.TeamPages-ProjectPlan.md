@@ -117,7 +117,11 @@ pair boundary, the manager stops dispatching and runs a retrospective.
    - script any chore repeated three or more times, under `agents/scripts/`, and name the script
      in the tasks that need it.
 4. **Record** the retrospective in the [Retrospective log](#retrospective-log) (date, tasks
-   covered, top findings, what changed). Commit the plan change on its own.
+   covered, top findings, what changed). Commit the plan change on its own. Also add each finding
+   as a row of [Huddle.TeamPages-RetroActions.md](Huddle.TeamPages-RetroActions.md) (owner, status,
+   how the next batch will show it works) and update the status of every earlier row from
+   evidence. The Opus agent is asked to check every row that is not *Verified*. Task 8.5's final
+   report lists every row still not *Verified*, so nothing is dropped silently.
 5. **Resume** dispatching.
 
 **Retrospective brief (copy verbatim; fill the three lists):**

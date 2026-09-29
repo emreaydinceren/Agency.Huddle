@@ -4,6 +4,7 @@ using System.Globalization;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Teams;
 
 /// <summary>
 /// Builds the full system prompt for an Agent's session: a short canned orientation naming
@@ -43,6 +44,12 @@ internal static class SystemPromptComposer
     /// the hand-wrapped literal this composer replaced; see the type-level remarks.
     /// </summary>
     private const int ToolNameWrapWidth = 80;
+
+    /// <summary>
+    /// A Team with at most this many Projects lists its empty Projects with <c>systemPrompt.memoryEmpty</c>;
+    /// a Team with more leaves them out to save prompt space (Spec §6.4).
+    /// </summary>
+    private const int MaxProjectsListedWhenEmpty = 5;
 
     /// <summary>Composes a Persona's full system prompt from its prompts and its own text.</summary>
     /// <param name="persona">The Persona whose <see cref="Persona.Text"/> and <see cref="Persona.Name"/> are spliced in.</param>
@@ -172,9 +179,14 @@ internal static class SystemPromptComposer
     /// Which of RS §6.9's two truthful texts this session gets, resolved by the caller from the
     /// Adapter Profile's <see cref="AdapterProfile.SessionPerRoom"/>.
     /// </param>
+    /// <param name="teamMemory">
+    /// The Persona's Team Memory snapshot, or <see langword="null"/> for none. A snapshot with no Groups
+    /// adds nothing, so <see langword="null"/> and an empty snapshot give byte-identical output.
+    /// </param>
     /// <returns>
     /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/>
     /// is non-empty, plus a seventh memory block when <paramref name="memory"/> is non-null, plus a
+    /// Team Memory block right after it when <paramref name="teamMemory"/> holds a Group, plus a
     /// closing part chosen by <paramref name="scope"/>: <c>systemPrompt.sharedSession</c> for
     /// <see cref="SessionScope.Shared"/>, or <c>systemPrompt.roomSessions</c> — with
     /// <c>systemPrompt.roomSessionsCarry</c> as its own trailing part when <paramref name="memory"/>
@@ -188,7 +200,8 @@ internal static class SystemPromptComposer
         IReadOnlyList<Skill> skills,
         string readSkillToolName,
         MemorySnapshot? memory,
-        SessionScope scope)
+        SessionScope scope,
+        TeamMemorySnapshot? teamMemory = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -230,6 +243,11 @@ internal static class SystemPromptComposer
         if (memory is not null)
         {
             parts.Add(BuildMemoryBlock(prompts, memory));
+        }
+
+        if (teamMemory is not null && teamMemory.Groups.Count > 0)
+        {
+            parts.Add(BuildTeamMemoryBlock(prompts, teamMemory));
         }
 
         // D16 P0-1 / D28 (RS §6.9, §8.1): the truthful closing part is appended here, in this — the
@@ -281,6 +299,106 @@ internal static class SystemPromptComposer
         return prompts.Render(
             "systemPrompt.memory",
             new Dictionary<string, string> { ["{{memoryPath}}"] = memory.MemoryPath, ["{{memoryIndex}}"] = index });
+    }
+
+    /// <summary>
+    /// Renders the <c>systemPrompt.teamMemory</c> block (Spec §6.4). The paths part, each heading and each
+    /// entry are rendered first and only then handed to the block prompt as values: the renderer is one
+    /// pass and never re-scans a value, so a Team or Project name containing <c>{{x}}</c> stays literal.
+    /// </summary>
+    /// <param name="prompts">Resolves each Team Memory prompt's current text.</param>
+    /// <param name="teamMemory">The Persona's Team Memory snapshot; it holds at least one Group.</param>
+    private static string BuildTeamMemoryBlock(IPromptSource prompts, TeamMemorySnapshot teamMemory)
+    {
+        var separator = Path.DirectorySeparatorChar.ToString();
+
+        var paths = string.Join(
+            '\n',
+            teamMemory.Groups.Select(group =>
+            {
+                var teamMemoryPath = Path.TrimEndingDirectorySeparator(group.TeamMemoryPath);
+                var teamFolder = Path.GetDirectoryName(teamMemoryPath) ?? string.Empty;
+
+                return prompts.Render(
+                    "systemPrompt.teamMemoryPaths",
+                    new Dictionary<string, string>
+                    {
+                        ["{{team}}"] = group.Team,
+                        ["{{teamMemoryPath}}"] = teamMemoryPath + separator,
+                        ["{{projectMemoryPattern}}"] = Path.Combine(teamFolder, "<Project>", "memory") + separator,
+                    });
+            }));
+
+        List<string> lines = [];
+        foreach (var group in teamMemory.Groups)
+        {
+            AddScope(prompts, lines, group.Team, group.TeamWide, isProject: false, listWhenEmpty: true);
+
+            var listEmptyProjects = group.Projects.Count <= MaxProjectsListedWhenEmpty;
+            foreach (var (project, memory) in group.Projects)
+            {
+                AddScope(prompts, lines, $"{group.Team} › {project}", memory, isProject: true, listWhenEmpty: listEmptyProjects);
+            }
+        }
+
+        if (teamMemory.NotListed > 0)
+        {
+            lines.Add(prompts.Render(
+                "systemPrompt.teamMemoryMore",
+                new Dictionary<string, string> { ["{{count}}"] = teamMemory.NotListed.ToString(CultureInfo.InvariantCulture) }));
+        }
+
+        return prompts.Render(
+            "systemPrompt.teamMemory",
+            new Dictionary<string, string>
+            {
+                ["{{teamMemoryPaths}}"] = paths,
+                ["{{teamMemoryIndex}}"] = string.Join('\n', lines),
+            });
+    }
+
+    /// <summary>
+    /// Adds one scope's heading and entries to <paramref name="lines"/>. A scope with entries is always
+    /// listed. A scope with none reads <c>systemPrompt.memoryEmpty</c> only when it holds no unlisted
+    /// files either, and only when <paramref name="listWhenEmpty"/> allows it; a scope that holds only
+    /// unlisted files gets its heading and nothing under it if it is the Team-wide scope, and is left out
+    /// if it is a Project (its files still count in the closing "more" line).
+    /// </summary>
+    /// <param name="prompts">Resolves each prompt's current text.</param>
+    /// <param name="lines">The index lines built so far.</param>
+    /// <param name="scope">The heading's scope: the Team, or <c>Team › Project</c>.</param>
+    /// <param name="memory">The scope's Memory snapshot.</param>
+    /// <param name="isProject">Whether the scope is a Project rather than the Team-wide Memory.</param>
+    /// <param name="listWhenEmpty">Whether a scope with neither entries nor unlisted files is listed.</param>
+    private static void AddScope(
+        IPromptSource prompts,
+        List<string> lines,
+        string scope,
+        MemorySnapshot memory,
+        bool isProject,
+        bool listWhenEmpty)
+    {
+        var hasEntries = memory.Entries.Count > 0;
+        var isEmpty = !hasEntries && memory.NotListed == 0;
+
+        if (!hasEntries && ((isProject && memory.NotListed > 0) || (isEmpty && !listWhenEmpty)))
+        {
+            return;
+        }
+
+        lines.Add(prompts.Render("systemPrompt.teamMemoryHeading", new Dictionary<string, string> { ["{{scope}}"] = scope }));
+
+        if (isEmpty)
+        {
+            lines.Add(prompts.Render("systemPrompt.memoryEmpty", new Dictionary<string, string>()));
+        }
+
+        foreach (var entry in memory.Entries)
+        {
+            lines.Add(prompts.Render(
+                "systemPrompt.memoryEntry",
+                new Dictionary<string, string> { ["{{summary}}"] = entry.Summary, ["{{path}}"] = entry.FullPath }));
+        }
     }
 
     /// <summary>Renders the Skill Index: one <c>- {name}: {description}</c> line per Skill, in the given order.</summary>

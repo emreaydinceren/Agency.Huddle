@@ -8,6 +8,7 @@ using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp;
 
@@ -42,6 +43,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     private readonly SkillStore skills;
     private readonly TeammatePaths teammatePaths;
     private readonly TeammateFolderMoves folderMoves;
+    private readonly ITeamCatalog teamCatalog;
 
     /// <summary>Initializes a new instance of the <see cref="DotAcpAgentHostFactory"/> class.</summary>
     /// <param name="options">The bound <see cref="TeamOptions"/>.</param>
@@ -67,6 +69,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// </param>
     /// <param name="teammatePaths">Locates each Persona's Work Dir.</param>
     /// <param name="folderMoves">Awaited before creating a Persona's Work Dir, so a rename's Teammate-folder move never races this factory creating a stale copy of it - corrections-B2 item 20.</param>
+    /// <param name="teamCatalog">The Teams and their Projects, handed to each Persona's host so its session start can list the Team Memory of the Teams the Persona belongs to (Spec §6.4).</param>
     public DotAcpAgentHostFactory(
         IOptions<TeamOptions> options,
         IServiceProvider serviceProvider,
@@ -75,7 +78,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         IAgentProcessLauncher launcher,
         SkillStore skills,
         TeammatePaths teammatePaths,
-        TeammateFolderMoves folderMoves)
+        TeammateFolderMoves folderMoves,
+        ITeamCatalog teamCatalog)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(serviceProvider);
@@ -85,8 +89,10 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         ArgumentNullException.ThrowIfNull(skills);
         ArgumentNullException.ThrowIfNull(teammatePaths);
         ArgumentNullException.ThrowIfNull(folderMoves);
+        ArgumentNullException.ThrowIfNull(teamCatalog);
 
         this.options = options.Value;
+        this.teamCatalog = teamCatalog;
         this.serviceProvider = serviceProvider;
         this.loggerFactory = loggerFactory;
         this.logger = loggerFactory.CreateLogger<DotAcpAgentHostFactory>();
@@ -139,9 +145,13 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         // Skills. PersonaSupervisor resolves the same names a second time, purely to report a Degraded
         // warning for one that does not exist (Task 5.2); this factory never surfaces that warning,
         // only the resulting tool grants and Skill Index.
-        IReadOnlyList<string> skillNames = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)
-            ? identity.Skills ?? []
-            : [];
+        bool hasIdentity = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _);
+        PersonaIdentity? parsed = hasIdentity ? identity : null;
+        IReadOnlyList<string> skillNames = parsed?.Skills ?? [];
+
+        // The same parse gives the Teams line, whose Team Memory DotAcpPersonaHost lists at every
+        // session start (Spec §6.4); a Persona with no identity is in no Team.
+        IReadOnlyList<string> teamLabels = parsed?.Teams ?? [];
         SkillResolution skillResolution = this.skills.Resolve(skillNames);
 
         // Built by our own service provider, bound to this Agent id, so each tool call runs the same
@@ -274,6 +284,10 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             memoryDir,
             readsMemory,
             this.options.FileChanges.MaxMemoryEntries,
+            teamLabels,
+            this.teamCatalog,
+            Path.GetFullPath(Path.Combine(this.options.DataDir, this.options.Teams.Dir)),
+            this.options.Teams.MaxMemoryEntries,
             workDir,
             toolServer.Endpoint,
             meta,

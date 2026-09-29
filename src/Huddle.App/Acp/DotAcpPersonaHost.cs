@@ -4,6 +4,7 @@ using Agency.Huddle.Acp.Tools;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Teams;
 
 namespace Agency.Huddle.App.Acp;
 
@@ -32,6 +33,10 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private readonly string memoryDir;
     private readonly bool readsMemory;
     private readonly int maxMemoryEntries;
+    private readonly IReadOnlyList<string> teamLabels;
+    private readonly ITeamCatalog teamCatalog;
+    private readonly string teamsRoot;
+    private readonly int maxTeamMemoryEntries;
     private readonly string workDir;
     private readonly ToolServerEndpoint toolServerEndpoint;
     private readonly IReadOnlyDictionary<string, object>? meta;
@@ -50,6 +55,10 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="memoryDir">The Persona's memory folder (FC §6.15), created whether or not it is read.</param>
     /// <param name="readsMemory">Whether File Changes is on and the resolved Adapter can read files.</param>
     /// <param name="maxMemoryEntries">The cap <see cref="MemoryIndex.Build"/> applies when <paramref name="readsMemory"/>.</param>
+    /// <param name="teamLabels">The Team labels of the Persona's Teams line, in the order written; empty for a Persona in no Team.</param>
+    /// <param name="teamCatalog">The Teams and their Projects; its snapshot is read once per session build.</param>
+    /// <param name="teamsRoot">The full path of the Teams root folder.</param>
+    /// <param name="maxTeamMemoryEntries">The cap <see cref="TeamMemoryIndex.Build"/> applies across all of the Persona's Teams when <paramref name="readsMemory"/>.</param>
     /// <param name="workDir">The Persona's Work Dir, this host's session <c>cwd</c>.</param>
     /// <param name="toolServerEndpoint">The endpoint and bearer token every opened session is handed.</param>
     /// <param name="meta">D14's isolation <c>_meta</c> (RS §6.10), or <see langword="null"/> when the profile does not ask for it.</param>
@@ -67,6 +76,10 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         string memoryDir,
         bool readsMemory,
         int maxMemoryEntries,
+        IReadOnlyList<string> teamLabels,
+        ITeamCatalog teamCatalog,
+        string teamsRoot,
+        int maxTeamMemoryEntries,
         string workDir,
         ToolServerEndpoint toolServerEndpoint,
         IReadOnlyDictionary<string, object>? meta,
@@ -81,6 +94,9 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         ArgumentNullException.ThrowIfNull(toolNames);
         ArgumentNullException.ThrowIfNull(skills);
         ArgumentException.ThrowIfNullOrWhiteSpace(memoryDir);
+        ArgumentNullException.ThrowIfNull(teamLabels);
+        ArgumentNullException.ThrowIfNull(teamCatalog);
+        ArgumentException.ThrowIfNullOrWhiteSpace(teamsRoot);
         ArgumentException.ThrowIfNullOrWhiteSpace(workDir);
         ArgumentNullException.ThrowIfNull(toolServerEndpoint);
         ArgumentNullException.ThrowIfNull(loggerFactory);
@@ -97,6 +113,10 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         this.memoryDir = memoryDir;
         this.readsMemory = readsMemory;
         this.maxMemoryEntries = maxMemoryEntries;
+        this.teamLabels = teamLabels;
+        this.teamCatalog = teamCatalog;
+        this.teamsRoot = teamsRoot;
+        this.maxTeamMemoryEntries = maxTeamMemoryEntries;
         this.workDir = workDir;
         this.toolServerEndpoint = toolServerEndpoint;
         this.meta = meta;
@@ -151,10 +171,20 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private AgentSessionOptions BuildOptions()
     {
         MemorySnapshot? memory = null;
+        TeamMemorySnapshot? teamMemory = null;
         if (this.readsMemory)
         {
             var (entries, notListed) = MemoryIndex.Build(this.memoryDir, this.maxMemoryEntries);
             memory = new MemorySnapshot(this.memoryDir, entries, notListed);
+
+            if (this.teamLabels.Count > 0)
+            {
+                // Read once into a local: this runs per open or resume, concurrently across Rooms, and
+                // the catalog's snapshot is swapped atomically, so one read is one consistent view.
+                IReadOnlyList<TeamSummary> catalogTeams = this.teamCatalog.Teams;
+                TeamMemorySnapshot built = TeamMemoryIndex.Build(this.teamsRoot, this.teamLabels, catalogTeams, this.maxTeamMemoryEntries);
+                teamMemory = built.Groups.Count > 0 ? built : null;
+            }
         }
 
         return new AgentSessionOptions(
@@ -177,7 +207,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
                     this.skills,
                     this.readSkillToolName,
                     memory,
-                    this.Profile.SessionPerRoom ? SessionScope.PerRoom : SessionScope.Shared),
+                    this.Profile.SessionPerRoom ? SessionScope.PerRoom : SessionScope.Shared,
+                    teamMemory: teamMemory),
                 SystemPromptMode.Append),
             this.toolServerEndpoint,
             this.persona.Model,
