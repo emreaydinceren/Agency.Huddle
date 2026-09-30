@@ -1779,8 +1779,10 @@ public sealed class PersonaRunnerTests
         factory.Session.EnqueueReplyWithUsage([150], "first reply");
         factory.Session.EnqueueReply("second reply");
         var persona = new Persona("nova", "You are Nova.");
+        StatusRecorder statuses = new();
 
         await using var agentHost = CreateHost(fixture, persona, factory);
+        agentHost.StatusChanged += statuses.Record;
         await agentHost.StartAsync(ct);
         var (novaId, _) = await WaitForDirectRoomAsync(fixture, "nova", ct);
 
@@ -1789,6 +1791,13 @@ public sealed class PersonaRunnerTests
         await WaitForHistoryCountAsync(store, room.Id, 2, ct);
 
         await chat.PostAsync(room.Id, friendId, "@nova two", ct: ct);
+
+        // The spent-Budget report is what says "two" was refused: the Room's drain loop decides that
+        // after the read loop has seen the Message, so probing straight away let the probe's reset
+        // land first and "two" took a Turn (main run 733).
+        await statuses.AssertContainsEventuallyAsync(
+            s => s.State == PersonaState.Degraded && s.Reason!.Contains("token Budget", StringComparison.Ordinal),
+            ct);
 
         // A sentinel proves "two" took no Turn without sleeping. A Human Message resets the token
         // Budget, so the probe that follows on the same ordered pipe is a Turn Nova does take, and it
