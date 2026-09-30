@@ -1,11 +1,22 @@
 /* The wrapper div is a plain element, so it carries the scope attribute; ::deep reaches the MudBlazor
    markup inside it. Colours are theme variables only (ThemeSourceTests). */
+/* Every other group's child text starts at 62px (36px link padding). A Team row keeps that: the chevron
+   floats over the link's left padding instead of pushing the name right, and a Project's icon starts
+   at that same 62px so it sits directly under the Team's name, with the Project name after the icon. */
 .teams-nav-host ::deep .nav-project-link .mud-nav-link {
-    padding-left: 3rem;
+    padding-left: 3.875rem;
+}
+
+.teams-nav-host ::deep .nav-project-link .mud-nav-link-icon {
+    font-size: 1.125rem;
+    color: var(--mud-palette-text-secondary);
 }
 
 .teams-nav-host ::deep .teams-nav-chevron {
-    flex: 0 0 auto;
+    position: absolute;
+    left: 0.75rem;
+    z-index: 1;
+    padding: 0;
     color: var(--mud-palette-text-secondary);
 }
 

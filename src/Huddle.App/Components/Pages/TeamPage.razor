@@ -26,11 +26,15 @@
     string title = summary is null || (isProject && project is null)
         ? "Huddle"
         : (project is null ? $"{summary.Name} — Huddle" : $"{project} · {summary.Name} — Huddle");
+
+    // The Files tab's explorer and document use the whole page, so its container drops the width cap and padding.
+    bool filesActive = summary is not null && (!isProject || project is not null)
+        && TeamPageTabs.Resolve(isProject, this.Tab, this.Features()) == TeamPageTab.Files;
 }
 
 <PageTitle>@title</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
+<MudContainer MaxWidth="@(filesActive ? MaxWidth.False : MaxWidth.Large)" Class="@(filesActive ? "team-page-files" : "pa-4")">
     @if (summary is null)
     {
         <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
@@ -129,8 +133,11 @@
     private static string TeamHref(string team) => $"/teams/{Uri.EscapeDataString(team)}";
 
     private static List<BreadcrumbItem> Crumbs(string team, string? project) => project is null
-        ? [new BreadcrumbItem(team, href: null, disabled: true)]
-        : [new BreadcrumbItem(team, TeamHref(team)), new BreadcrumbItem(project, href: null, disabled: true)];
+        ? [new BreadcrumbItem(team, href: null, disabled: true, icon: Icons.Material.Outlined.Groups)]
+        : [
+            new BreadcrumbItem(team, TeamHref(team), icon: Icons.Material.Outlined.Groups),
+            new BreadcrumbItem(project, href: null, disabled: true, icon: Icons.Material.Filled.FactCheck),
+        ];
 
     private TeamPageFeatures Features() => new(this.TeamConfig.Value.Library.Enabled, this.TeamConfig.Value.Tasks.Enabled);
 
