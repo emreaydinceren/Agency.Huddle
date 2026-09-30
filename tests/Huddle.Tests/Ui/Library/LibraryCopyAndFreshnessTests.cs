@@ -249,7 +249,7 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".library-document-freshness-notice")));
         Assert.Equal("someone else's content", cut.FindComponent<LibraryEditor>().Instance.Text);
-        Assert.False(cut.Find(".library-document-title").TextContent.Trim().EndsWith('●'));
+        Assert.False(cut.Find(".library-document-path").TextContent.Trim().EndsWith('●'));
     }
 
     /// <summary>(corrections-B6 item 11) Keep mine, from the freshness notice, hides the notice and keeps the
@@ -282,7 +282,7 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
 
         cut.WaitForAssertion(() => Assert.Empty(cut.FindAll(".library-document-freshness-notice")));
         Assert.Equal("hi", cut.FindComponent<LibraryEditor>().Instance.Text);
-        Assert.Equal("a.md ●", cut.Find(".library-document-title").TextContent.Trim());
+        Assert.Equal("a.md ●", cut.Find(".library-document-path").TextContent.Trim());
     }
 
     /// <summary>(corrections-B6 item 23, judgement 46) A refresh that finds the open file changed on disk

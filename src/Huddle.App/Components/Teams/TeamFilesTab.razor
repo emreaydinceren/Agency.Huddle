@@ -17,7 +17,7 @@
                     Search="@this.Search" SearchChanged="this.SearchChanged" />
 
     <LibraryExplorer @key="this.ScopePath" @ref="this.explorer"
-                     Scopes="@this.Scopes" Layout="LibraryExplorerLayout.SideBySide"
+                     Scopes="@this.Scopes" Layout="LibraryExplorerLayout.SideBySide" ShowTitle="false"
                      Filter="@this.Search" FilterChanged="this.SearchChanged"
                      StateKey="@this.StateKey" />
 </div>

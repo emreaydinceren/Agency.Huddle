@@ -68,6 +68,7 @@
                     @foreach (string project in team.Projects)
                     {
                         <MudNavLink Href="@($"/teams/{Uri.EscapeDataString(team.Name)}/projects/{Uri.EscapeDataString(project)}")"
+                                    Icon="@Icons.Material.Filled.FactCheck"
                                     Class="nav-project-link">@project</MudNavLink>
                     }
                 }

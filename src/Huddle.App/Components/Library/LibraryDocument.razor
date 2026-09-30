@@ -22,8 +22,15 @@
 <div class="library-document">
     <MudExitPrompt Title="Discard changes?" Text="Your unsaved edits to this file will be lost." Disabled="@(!this.dirty)" Class="library-document-exit-prompt" />
     <MudToolBar Dense="true" Class="library-document-toolbar">
-        <MudBreadcrumbs Items="@this.BreadcrumbItems()" Class="library-document-breadcrumbs" />
-        <div class="library-document-title">@this.TitleText()</div>
+        @if (this.Path.Root.Kind == LibraryRootKind.Teams)
+        {
+            @* No crumbs here: the page header names the Team and Project, so the path takes the crumbs' place. *@
+            <MudText Typo="Typo.caption" Class="library-document-path library-document-path-inline">@this.DirectoryPathText()</MudText>
+        }
+        else
+        {
+            <MudBreadcrumbs Items="@this.BreadcrumbItems()" Class="library-document-breadcrumbs" />
+        }
         <MudSpacer />
         @if (this.ShowModeToggle())
         {
@@ -38,6 +45,10 @@
         <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" aria-label="Pop out" Class="library-document-pop-out" />
         <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="Close" Class="library-document-close" />
     </MudToolBar>
+    @if (this.Path.Root.Kind != LibraryRootKind.Teams)
+    {
+        <MudText Typo="Typo.caption" Class="library-document-path">@this.DirectoryPathText()</MudText>
+    }
 
     @if (this.outsideScope)
     {
@@ -305,8 +316,6 @@
         return Task.CompletedTask;
     }
 
-    /// <summary>The document title with a trailing <c>●</c> while dirty (Spec §6.7).</summary>
-    private string TitleText() => this.dirty ? $"{this.FileName()} ●" : this.FileName();
 
     /// <summary>
     /// The save sequence (Spec §6.4, §6.12; corrections-B6 items 11, 15, 21; judgement 44):
@@ -498,7 +507,11 @@
     private bool ShowModeToggle() => !this.outsideScope && !this.missing
         && this.content is { Kind: LibraryFileKind.Markdown, Editable: true };
 
-    /// <summary>The root's display name, then each folder on the way to the document, in order (Spec §8).</summary>
+    /// <summary>
+    /// The header's crumbs for a pinned or Teammate root: the root's display name, then each folder on the way
+    /// to the document, in order (Spec §8). A document under the Teams root shows no crumbs: its Team and
+    /// Project head the page itself, and <see cref="DirectoryPathText"/> names the path.
+    /// </summary>
     private List<BreadcrumbItem> BreadcrumbItems()
     {
         List<BreadcrumbItem> items = [new(this.Path.Root.DisplayName, href: null, disabled: true)];
@@ -509,6 +522,17 @@
         }
 
         return items;
+    }
+
+    /// <summary>
+    /// The document's folder path below its root plus its file name (<c>Platform / API v2 / Design.md</c>),
+    /// shown under the header, with a trailing <c>●</c> while dirty (Spec §6.7). This line is the document's
+    /// title: the header itself holds only the crumbs.
+    /// </summary>
+    private string DirectoryPathText()
+    {
+        string path = string.Join(" / ", this.Path.RelativePath.Split('/', StringSplitOptions.RemoveEmptyEntries));
+        return this.dirty ? $"{path} ●" : path;
     }
 
     /// <summary>The document's file name, from its relative path.</summary>

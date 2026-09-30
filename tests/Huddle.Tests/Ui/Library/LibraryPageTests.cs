@@ -81,9 +81,9 @@ public sealed class LibraryPageTests : IDisposable
         IRenderedComponent<ContainerFragment> cut = RenderPage(
             ctx, root: query["root"].ToString(), path: query["path"].ToString(), scopeRoot: null, scopePath: null);
 
-        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-title")));
-        AngleSharp.Dom.IElement title = cut.Find(".library-document-title");
-        Assert.Equal("Test.md", title.TextContent.Trim());
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".library-document-path")));
+        AngleSharp.Dom.IElement title = cut.Find(".library-document-path");
+        Assert.Equal("My Folder / Test.md", title.TextContent.Trim());
     }
 
     /// <summary>An unknown root in the query shows the explorer with no file open, and no exception.</summary>

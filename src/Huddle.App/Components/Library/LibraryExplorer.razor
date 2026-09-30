@@ -56,7 +56,10 @@
 <div class="library-explorer" @onfocusin="@this.OnFocusInAsync" @onmouseup="@this.OnDividerMouseUpAsync">
     @if (this.ShowScopeRoot)
     {
-        <div class="library-explorer-title">@this.ResolvedTitle()</div>
+        @if (this.ShowTitle)
+        {
+            <div class="library-explorer-title">@this.ResolvedTitle()</div>
+        }
     }
     else if (this.SingleScope() is { } scopeRoot)
     {
@@ -166,6 +169,15 @@
     /// </summary>
     [Parameter]
     public bool ShowScopeRoot { get; set; } = true;
+
+    /// <summary>
+    /// Whether the header label (<see cref="ResolvedTitle"/>) shows above the tree when
+    /// <see cref="ShowScopeRoot"/> is on. Defaults to <see langword="true"/>; the Team and Project
+    /// Files tab passes <see langword="false"/> because its page header already names the folder and
+    /// the tree's own top row repeats it.
+    /// </summary>
+    [Parameter]
+    public bool ShowTitle { get; set; } = true;
 
     /// <summary>Whether the tree and document sit side by side or stacked.</summary>
     [Parameter]

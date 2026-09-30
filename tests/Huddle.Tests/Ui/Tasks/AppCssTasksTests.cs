@@ -96,7 +96,7 @@ public sealed class AppCssTasksTests
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
         Assert.Contains("display: grid", rule, StringComparison.Ordinal);
         // contains-ok: source-fact test, no CSS parser - the rule's own text is what's pinned.
-        Assert.Contains("grid-auto-columns: minmax(240px, 1fr)", rule, StringComparison.Ordinal);
+        Assert.Contains("grid-auto-columns: 310px", rule, StringComparison.Ordinal);
     }
 
     /// <summary>The column header lays out its label, count and menu in a row (finding F10).</summary>

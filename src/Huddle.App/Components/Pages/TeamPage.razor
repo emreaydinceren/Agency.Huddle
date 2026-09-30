@@ -26,11 +26,16 @@
     string title = summary is null || (isProject && project is null)
         ? "Huddle"
         : (project is null ? $"{summary.Name} — Huddle" : $"{project} · {summary.Name} — Huddle");
+
+    // Every tab uses the whole page, so the container drops the width cap and padding whenever the Team (and
+    // Project) exist; the not-found and "turned off" notices keep the capped, padded container.
+    bool wideActive = summary is not null && (!isProject || project is not null)
+        && TeamPageTabs.Available(isProject, this.Features()).Count > 0;
 }
 
 <PageTitle>@title</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
+<MudContainer MaxWidth="@(wideActive ? MaxWidth.False : MaxWidth.Large)" Class="@(wideActive ? "team-page-wide" : "pa-4")">
     @if (summary is null)
     {
         <MudAlert Severity="Severity.Warning" role="alert" Class="team-page-notice">
@@ -60,13 +65,16 @@
         }
         else
         {
-            <MudTabs Class="team-page-tabs" KeepPanelsAlive="false"
+            @* Keyed by Team and Project: a Project page and its Team page both have index 0 active, so MudTabs
+               sees no index change and would keep showing the previous page's panel against the new route. *@
+            <MudTabs @key="@($"{summary.Name}/{project}")" Class="team-page-tabs" KeepPanelsAlive="false"
                      ActivePanelIndex="@activeIndex"
                      ActivePanelIndexChanged="this.OnActivePanelIndexChanged">
                 @foreach (TeamPageTab tab in available)
                 {
                     TeamPageTab current = tab;
-                    <MudTabPanel Text="@current.ToString()" @key="current">
+                    <MudTabPanel Text="@current.ToString()" @key="current"
+                                 Icon="@TabIcon(current)">
                         @switch (current)
                         {
                             case TeamPageTab.Members:
@@ -126,11 +134,22 @@
     /// <summary>Unsubscribes from <see cref="ITeamCatalog.Changed"/>.</summary>
     public void Dispose() => this.Catalog.Changed -= this.OnCatalogChanged;
 
+    /// <summary>A tab's icon: People for Members, and the sidebar's own Library and Tasks icons for Files and Tasks.</summary>
+    private static string TabIcon(TeamPageTab tab) => tab switch
+    {
+        TeamPageTab.Members => Icons.Material.Filled.People,
+        TeamPageTab.Files => Icons.Material.Filled.MenuBook,
+        _ => Icons.Material.Outlined.TaskAlt,
+    };
+
     private static string TeamHref(string team) => $"/teams/{Uri.EscapeDataString(team)}";
 
     private static List<BreadcrumbItem> Crumbs(string team, string? project) => project is null
-        ? [new BreadcrumbItem(team, href: null, disabled: true)]
-        : [new BreadcrumbItem(team, TeamHref(team)), new BreadcrumbItem(project, href: null, disabled: true)];
+        ? [new BreadcrumbItem(team, href: null, disabled: true, icon: Icons.Material.Outlined.Groups)]
+        : [
+            new BreadcrumbItem(team, TeamHref(team), icon: Icons.Material.Outlined.Groups),
+            new BreadcrumbItem(project, href: null, disabled: true, icon: Icons.Material.Filled.FactCheck),
+        ];
 
     private TeamPageFeatures Features() => new(this.TeamConfig.Value.Library.Enabled, this.TeamConfig.Value.Tasks.Enabled);
 
