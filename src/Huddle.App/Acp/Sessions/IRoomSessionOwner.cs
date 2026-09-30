@@ -40,6 +40,15 @@ internal interface IRoomSessionOwner
     /// <param name="currency">The currency of <paramref name="runningTotal"/>.</param>
     void AddSpend(string sessionId, decimal runningTotal, string currency);
 
+    /// <summary>
+    /// Reports the complete list of commands an Adapter session now advertises (Commands spec, section
+    /// 6.3). Each call replaces the last: the Adapter sends the whole list every time. The owner keeps
+    /// only those its Adapter Profile allows; the full list is never stored.
+    /// </summary>
+    /// <param name="sessionId">The Adapter session that advertised the list.</param>
+    /// <param name="advertised">Every command the Adapter currently advertises, in the Adapter's own casing.</param>
+    void SetCommands(string sessionId, IReadOnlyList<AvailableCommandInfo> advertised);
+
     /// <summary>Reports that the Persona-wide token Budget is spent (Degraded).</summary>
     void ReportTokenBudgetSpent();
 

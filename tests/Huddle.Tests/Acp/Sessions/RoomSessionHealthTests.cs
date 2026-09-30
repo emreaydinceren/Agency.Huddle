@@ -404,6 +404,31 @@ public sealed class RoomSessionHealthTests
     }
 
     /// <summary>Builds a bare <see cref="PersonaRunner"/> with no pipe connection at all, for a test that only calls its <see cref="IRoomSessionOwner"/> members directly.</summary>
+    /// <summary>
+    /// An Adapter that has disconnected offers nothing: its list goes when the runner reports Offline, even
+    /// though the runner itself has not stopped, so the card and the command routing stop offering
+    /// commands that cannot run.
+    /// </summary>
+    [Fact]
+    public void ReportOffline_ForgetsTheOfferedCommands()
+    {
+        PersonaCommands commands = new(NullLogger<PersonaCommands>.Instance);
+        commands.Set("nova", [new AdapterCommand("compact", "Free up context", null)]);
+        PersonaRunner runner = new(
+            new Persona("nova", "You are Nova."),
+            Options.Create(new TeamOptions()),
+            new FakeAgentHostFactory(),
+            new FakePromptSource(),
+            new RoomFollows(),
+            NullLogger<PersonaRunner>.Instance,
+            commands: commands);
+        IRoomSessionOwner owner = runner;
+
+        owner.ReportOffline("The Adapter process disconnected.");
+
+        Assert.Empty(commands.Get("nova"));
+    }
+
     private static PersonaRunner CreateBareRunner() =>
         new(
             new Persona("nova", "You are Nova."),

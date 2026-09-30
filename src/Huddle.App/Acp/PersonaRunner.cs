@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO.Pipes;
 using Agency.Huddle.Acp.Abstractions;
@@ -44,6 +45,10 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private readonly ILogger<PersonaRunner> logger;
     private readonly FileChangeTracker? fileChanges;
     private readonly IReadOnlyList<string> declaredWatches;
+
+    // The handles this Persona answers to: its Name and, when the frontmatter declares one, its Alias.
+    // AdapterCommandInvocation matches a leading Mention against exactly these, never by pattern.
+    private readonly IReadOnlyList<string> ownHandles;
     private readonly CancellationTokenSource runCts = new();
 
     // Per-Room catch-up buffers for Messages the Agent received but was not Mentioned in (ADR-0004).
@@ -100,6 +105,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     // The display-only Spend table, or null where there is none (a runner built without a container).
     // Written to, never read on the Turn path: a cost cannot spend a Budget.
     private readonly PersonaSpend? spend;
+    // The Adapter commands this Persona currently offers, or null where there is none (a runner built
+    // without a container). Written from the Adapter's advertisements, read on the read loop.
+    private readonly PersonaCommands? commands;
 
     private IPersonaHost? host;
     private Task? readLoopTask;
@@ -134,7 +142,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         TurnActivity? turnActivity = null,
         LibraryDocumentCollector? libraryDocs = null,
         bool readsFiles = true,
-        PersonaSpend? spend = null)
+        PersonaSpend? spend = null,
+        PersonaCommands? commands = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
@@ -157,9 +166,17 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.libraryDocs = libraryDocs;
         this.readsFiles = readsFiles;
         this.spend = spend;
-        this.declaredWatches = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)
-            ? identity.Watches ?? []
-            : [];
+        this.commands = commands;
+        if (PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _))
+        {
+            this.declaredWatches = identity.Watches ?? [];
+            this.ownHandles = [persona.Name, identity.Alias];
+        }
+        else
+        {
+            this.declaredWatches = [];
+            this.ownHandles = [persona.Name];
+        }
     }
 
     /// <summary>
@@ -203,6 +220,33 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     /// <inheritdoc />
     void IRoomSessionOwner.AddSpend(string sessionId, decimal runningTotal, string currency) =>
         this.spend?.Add(this.persona.Name, sessionId, runningTotal, currency);
+
+    /// <inheritdoc />
+    void IRoomSessionOwner.SetCommands(string sessionId, IReadOnlyList<AvailableCommandInfo> advertised)
+    {
+        if (this.commands is null)
+        {
+            return;
+        }
+
+        // Filtered here, at ingest, so the full advertised list (which holds the Human's own skills
+        // when isolation is off) is never stored. The profile's allowlist is the gate (Commands spec,
+        // section 6.2); an absent one offers nothing.
+        IReadOnlyList<string>? allowed = this.host?.Profile.Commands;
+        List<AdapterCommand> offered = [];
+        if (allowed is { Count: > 0 })
+        {
+            foreach (AvailableCommandInfo command in advertised)
+            {
+                if (allowed.Contains(command.Name, StringComparer.OrdinalIgnoreCase))
+                {
+                    offered.Add(new AdapterCommand(command.Name, command.Description, command.InputHint));
+                }
+            }
+        }
+
+        this.commands.Set(this.persona.Name, offered);
+    }
 
     /// <inheritdoc />
     void IRoomSessionOwner.ReportTokenBudgetSpent()
@@ -482,6 +526,9 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         {
             await this.stream.DisposeAsync();
         }
+
+        // A stopped Teammate offers nothing; the next runner relearns the list from its Adapter.
+        this.commands?.Forget(this.persona.Name);
     }
 
     public async ValueTask DisposeAsync()
@@ -533,6 +580,16 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
                         posted.Mentioned, posted.Members.Count, posted.AgentMessagesSinceHuman, posted.Budget, following))
                     {
                         case ReplyDecision.Reply:
+                            // Decided BEFORE anything is drained: building an ordinary item takes the
+                            // Catch-up buffer and own-post lines as a side effect, and a bare command
+                            // prompt has nowhere to put them, so a command item must leave both queued
+                            // for the next ordinary Turn (Commands spec, section 6.5).
+                            if (this.TryBuildCommandItem(posted, out var commandItem))
+                            {
+                                this.pool?.Enqueue(new QueuedWork(Interlocked.Increment(ref this.sequenceCounter), commandItem));
+                                break;
+                            }
+
                             var missed = this.TakeCatchUp(posted.RoomId);
 
                             // D27, RS §6.7, finding P-22: drained here, in the read loop, beside
@@ -697,6 +754,14 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     /// <param name="reason">Why, when known; otherwise <see langword="null"/>.</param>
     private void RaiseStatusChanged(PersonaState state, string? reason)
     {
+        // An Adapter that has gone offers nothing, even though this runner has not stopped: its list
+        // goes now, so a card and the command routing stop offering what cannot run. The next
+        // advertisement from a reconnected Adapter refills it.
+        if (state == PersonaState.Offline)
+        {
+            this.commands?.Forget(this.persona.Name);
+        }
+
         if (this.StatusChanged is not { } handlers)
         {
             return;
@@ -768,6 +833,54 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     /// <returns><see langword="true"/> only if the sender is still a Member and is the Human.</returns>
     private static bool SenderIsHuman(MessagePosted posted) =>
         posted.Members.FirstOrDefault(m => m.Id == posted.Message.SenderId)?.Kind == UserKind.Human;
+
+    /// <summary>
+    /// Reads <paramref name="posted"/> as an Adapter command for this Persona: a Human's Message that
+    /// opens with this Persona's Mention and a slash name this Persona currently offers. Takes nothing
+    /// from the Catch-up buffer or the own-post memory.
+    /// </summary>
+    /// <param name="posted">The delivery the Reply Gate said to answer.</param>
+    /// <param name="item">The Command work item, when this returns <see langword="true"/>.</param>
+    /// <returns><see langword="false"/> for every Message that is not a command, which is then an ordinary Turn.</returns>
+    private bool TryBuildCommandItem(MessagePosted posted, [NotNullWhen(true)] out WorkItem? item)
+    {
+        item = null;
+        if (this.commands is null
+            || !SenderIsHuman(posted)
+            || !AdapterCommandInvocation.TryParse(posted.Message.Text, this.ownHandles, out AdapterCommandCall? call))
+        {
+            return false;
+        }
+
+        AdapterCommand? offered = this.commands.Find(this.persona.Name, call.Name);
+        if (offered is null)
+        {
+            // Not an error: the Adapter may not advertise it (yet, or any more), or the profile may not
+            // allow it. The Message goes through as ordinary text, which the framed prompt keeps the
+            // Adapter from reading as a command.
+            if (this.logger.IsEnabled(LogLevel.Information))
+            {
+                this.logger.LogInformation(
+                    "Persona '{PersonaName}' read '/{CommandName}' in room {RoomId} as an ordinary message: the command is not offered to it.",
+                    this.persona.Name,
+                    call.Name,
+                    posted.RoomId);
+            }
+
+            return false;
+        }
+
+        item = new WorkItem(
+            posted.RoomId,
+            RoomLabels.Distinguish(posted.RoomId, posted.RoomName, this.knownRoomNames),
+            posted.Message.SenderName,
+            posted.Message.Text,
+            [],
+            WorkItemKind.Command,
+            TriggerMessageId: posted.Message.Id,
+            Command: new AdapterCommandCall(offered.Name, call.Arguments));
+        return true;
+    }
 
     private void AppendCatchUp(string roomId, string senderName, string text)
     {

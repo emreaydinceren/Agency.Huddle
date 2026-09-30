@@ -119,10 +119,12 @@ internal sealed class RoomSession : IAsyncDisposable
     private bool resumedOnLastOpen;
     private string? resumedAfterMessageId;
 
-    // Set alongside firstTurnPending/resumedOnLastOpen; consumed by RunEventReaderAsync's own
-    // single-threaded loop, the same unlocked-by-construction reasoning lastUsed itself already
-    // relies on (D22 correction 9, built here for D24).
-    private bool usageBaselinePending;
+    // Set alongside firstTurnPending/resumedOnLastOpen and consumed by RunEventReaderAsync's own
+    // single-threaded loop, the same reasoning lastUsed itself relies on (D22 correction 9, built
+    // here for D24). It is ALSO set by the consumer when a Command Turn completes (Commands spec,
+    // section 6.7), so the two threads share it: volatile, so the reader sees the consumer's write
+    // on the very next update rather than after some later fence.
+    private volatile bool usageBaselinePending;
 
     // D26, RS §6.8, finding P-14: this Room Session's OWN consecutive-failure count - separate from
     // the Persona-wide one IRoomSessionOwner.ReportTurnFailure tracks - counted only in per-Room mode
@@ -808,7 +810,11 @@ internal sealed class RoomSession : IAsyncDisposable
         // neither counts as Adapter silence. Cleared here regardless of outcome: RS §9 E-3 (refused
         // or timed out) and a Greeting or a Turn with no TriggerMessageId all still consume this
         // Turn's "first after open" opportunity (D24 correction 19) without ever reading anything.
-        if (this.firstTurnPending)
+        //
+        // A Command Turn sends only the bare command, so it reads no Transcript and must not use the
+        // opportunity up: the Messages this session has not seen are still unseen, and the next
+        // ordinary Turn is the one that needs them (Commands spec, section 6.6).
+        if (this.firstTurnPending && item.Kind != WorkItemKind.Command)
         {
             this.firstTurnPending = false;
             if (this.RoomId is not null && item.Kind == WorkItemKind.Message && item.TriggerMessageId is { } triggerId)
@@ -943,10 +949,29 @@ internal sealed class RoomSession : IAsyncDisposable
             // before the stop: neither is fit to post into the Room.
             var isPostable = outcome.Reason is not (StopReason.Refusal or StopReason.Cancelled)
                 && !string.IsNullOrWhiteSpace(outcome.Text);
-            if (isPostable)
+            string? postText = isPostable ? outcome.Text : null;
+
+            // An Adapter's /compact replies with no text at all, so a command that said nothing is
+            // reported by a fixed line built from its tool output. Without it the Room could not tell a
+            // finished compaction from a failed one. A command that did reply keeps its own words.
+            if (postText is null && item.Kind == WorkItemKind.Command && item.Command is { } ranCommand)
             {
-                await this.owner.WriteAsync(new PostMessage(item.RoomId, messageId, outcome.Text), ct);
+                postText = AdapterCommandOutcome.Describe(ranCommand.Name, outcome.Reason, turn.LastOutputJson, turn.ToolCallFailed);
+            }
+
+            if (postText is not null)
+            {
+                await this.owner.WriteAsync(new PostMessage(item.RoomId, messageId, postText), ct);
                 replyPosted = true;
+            }
+
+            // A compaction drops the context's fill and the next ordinary Turn rebuilds the session's
+            // fixed overhead, a rise that is not a cost of that Turn. Taking the next update as the
+            // baseline, as a resumed session does, keeps it from being counted as spend (Commands
+            // spec, section 6.7). Only a completed command: a Stop changed nothing.
+            if (item.Kind == WorkItemKind.Command && outcome.Reason == StopReason.EndTurn)
+            {
+                this.usageBaselinePending = true;
             }
 
             // Health reporting (T4.3): every StopReason but Cancelled is a Turn that completed, so
@@ -1107,7 +1132,13 @@ internal sealed class RoomSession : IAsyncDisposable
             // shutting down. LastMessageId is the reply's own minted id when one was actually
             // posted, else the triggering Message's - a Greeting with neither leaves it null,
             // legal per RoomSessionEntry's own doc comment.
+            //
+            // A Command Turn writes nothing: it left the Catch-up buffer undrained, so this session has
+            // NOT seen the Messages before it, and storing the outcome Message's id as LastMessageId
+            // would make a resume skip them for good. The entry an earlier Turn stored is still right,
+            // because a compaction does not change the session id, Model or Effort.
             if (this.RoomId is { } storeRoomId && this.roomSessionStore is not null && this.host is not null && this.persona is not null
+                && item.Kind != WorkItemKind.Command
                 && !ct.IsCancellationRequested && (promptReturned || turn.SawActivity))
             {
                 var lastMessageId = replyPosted ? messageId : item.TriggerMessageId;
@@ -1237,11 +1268,13 @@ internal sealed class RoomSession : IAsyncDisposable
                 }
                 else if (agentEvent is ToolCallStarted started)
                 {
+                    this.RecordToolCallResult(started.ToolCallId, isStart: true, started.Status, null);
                     this.RecordTouchedPaths(started.Kind, started.RawInputJson);
                     await this.WriteToolActivityAsync(started.ToolCallId, started.Title, MapToolCallStatus(started.Status), started.Location, started.Diff, ct);
                 }
                 else if (agentEvent is ToolCallUpdated updated)
                 {
+                    this.RecordToolCallResult(updated.ToolCallId, isStart: false, updated.Status, updated.RawOutputJson);
                     this.RecordTouchedPaths(updated.Kind, updated.RawInputJson);
                     await this.WriteToolActivityAsync(updated.ToolCallId, updated.Title, MapToolCallStatus(updated.Status), updated.Location, updated.Diff, ct);
                 }
@@ -1293,6 +1326,13 @@ internal sealed class RoomSession : IAsyncDisposable
                     {
                         this.owner.AddSpend(usage.SessionId, cost.Amount, cost.Currency);
                     }
+                }
+
+                else if (agentEvent is AvailableCommandsUpdated advertised)
+                {
+                    // The Adapter's complete list, replacing the last. The owner filters it by the
+                    // Adapter Profile's allowlist and keeps only what a Human may run.
+                    this.owner.SetCommands(advertised.SessionId, advertised.Commands);
                 }
 
                 // ThoughtChunk, PlanUpdated, ModeChanged, UserMessageChunk, UnsupportedContent and
@@ -1462,6 +1502,50 @@ internal sealed class RoomSession : IAsyncDisposable
     }
 
     /// <summary>
+    /// Keeps, for the Turn in flight, the last tool output that is a JSON object and whether any tool
+    /// call failed, which is all an Adapter command's outcome line is built from. Only calls this Turn
+    /// itself started count: a Stop or an idle timeout lets the consumer move on without waiting for
+    /// the aborted Turn's tail, so a late update for an earlier Turn's call must not be read as this
+    /// Turn's failure.
+    /// </summary>
+    /// <param name="toolCallId">The tool call the update belongs to.</param>
+    /// <param name="isStart">Whether this is the call's first event, which enrols it in the Turn.</param>
+    /// <param name="status">The tool call's status on this update.</param>
+    /// <param name="rawOutputJson">The tool call's output, if this update carries one.</param>
+    private void RecordToolCallResult(string toolCallId, bool isStart, ToolCallStatus status, string? rawOutputJson)
+    {
+        ActiveTurn? turn;
+        lock (this.gate)
+        {
+            turn = this.activeTurn;
+        }
+
+        if (turn is null)
+        {
+            return;
+        }
+
+        if (isStart)
+        {
+            turn.ToolCallIds.Add(toolCallId);
+        }
+        else if (!turn.ToolCallIds.Contains(toolCallId))
+        {
+            return;
+        }
+
+        if (status == ToolCallStatus.Failed)
+        {
+            turn.ToolCallFailed = true;
+        }
+
+        if (rawOutputJson is not null && rawOutputJson.AsSpan().TrimStart().StartsWith('{'))
+        {
+            turn.LastOutputJson = rawOutputJson;
+        }
+    }
+
+    /// <summary>
     /// Adds every rooted path found in <paramref name="rawInputJson"/> to the active Turn's
     /// <see cref="ActiveTurn.Touched"/> set, per FC §6.8 item 2 and FC D-3b - but only for
     /// <see cref="ToolKind.Edit"/>, <see cref="ToolKind.Delete"/> or <see cref="ToolKind.Move"/>: an
@@ -1492,11 +1576,21 @@ internal sealed class RoomSession : IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// What precedes a prompt that would otherwise open with a slash. An Adapter reads a command only
+    /// at the very start of a prompt, so this makes the text plain. A Prompt template can be edited to
+    /// open with another Agent's text, and <c>PromptValidator</c> reports but never refuses, so the
+    /// guard is applied to every prompt rather than trusted to the templates (Commands spec, D-9).
+    /// </summary>
+    internal const string CommandGuardMarker = "Message: ";
+
     /// <summary>Builds the prompt text delivered to the model for one Turn.</summary>
     /// <param name="item">The Turn's Room, sender, text, any catch-up context, and its <see cref="WorkItemKind"/>.</param>
     /// <param name="prompts">Resolves each <c>turn.*</c> prompt's current text — a configured override, or the <see cref="PromptCatalog"/> default.</param>
     /// <returns>
-    /// For a <see cref="WorkItemKind.Greeting"/>, the <c>turn.greeting</c> prompt alone. Otherwise: with
+    /// For a <see cref="WorkItemKind.Command"/>, the bare command: <c>/compact</c>, or
+    /// <c>/compact arguments</c>, and nothing else. For a <see cref="WorkItemKind.Greeting"/>, the
+    /// <c>turn.greeting</c> prompt alone. Otherwise: with
     /// no catch-up context, the <c>turn.message</c> line alone; with catch-up context, a
     /// <c>turn.catchUpHeader</c> line, one <c>turn.catchUpLine</c> per missed message, a blank line,
     /// then the <c>turn.message</c> line.
@@ -1506,6 +1600,21 @@ internal sealed class RoomSession : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(prompts);
 
+        if (item.Kind == WorkItemKind.Command)
+        {
+            // Exactly the command, one text block, no Room label: the Adapter recognises it only at
+            // the start of the prompt, and its input is the rest of this line.
+            AdapterCommandCall command = item.Command
+                ?? throw new InvalidOperationException("A Command work item carries no command.");
+            return command.Arguments.Length == 0 ? $"/{command.Name}" : $"/{command.Name} {command.Arguments}";
+        }
+
+        string prompt = RoomSession.BuildFramedPrompt(item, prompts);
+        return prompt.AsSpan().TrimStart().StartsWith('/') ? CommandGuardMarker + prompt : prompt;
+    }
+
+    private static string BuildFramedPrompt(WorkItem item, IPromptSource prompts)
+    {
         // The Room's id rides along with its name because it is the only way an Agent can learn one.
         // mcp__team__post_message and mcp__team__invite_agent both take a room id, and nothing else
         // in a turn carries it: without this they reach only Rooms the Agent created itself.
@@ -1846,6 +1955,19 @@ internal sealed class RoomSession : IAsyncDisposable
         /// Touched only from the single-threaded event-reader loop, so it needs no lock of its own.
         /// </summary>
         public bool DeltaWriteFailed { get; set; }
+
+        /// <summary>
+        /// The last tool output of this Turn that was a JSON object, which is where an Adapter command
+        /// reports its figures. Written by the single-threaded event-reader loop and read by the
+        /// consumer only after <see cref="Completion"/> has been awaited, so it needs no lock.
+        /// </summary>
+        public string? LastOutputJson { get; set; }
+
+        /// <summary>Whether any tool call of this Turn reached <see cref="ToolCallStatus.Failed"/>. Same threading as <see cref="LastOutputJson"/>.</summary>
+        public bool ToolCallFailed { get; set; }
+
+        /// <summary>The ids of the tool calls this Turn started, so an update belonging to an earlier Turn is ignored. Same threading as <see cref="LastOutputJson"/>.</summary>
+        public HashSet<string> ToolCallIds { get; } = new(StringComparer.Ordinal);
 
         /// <summary>
         /// The last <see cref="EditChange"/> written for each tool call of this Turn, keyed by tool

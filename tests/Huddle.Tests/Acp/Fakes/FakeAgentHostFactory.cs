@@ -41,6 +41,13 @@ internal sealed class FakeAgentHostFactory : IAgentHostFactory
     public bool SessionPerRoom { get; set; }
 
     /// <summary>
+    /// The <see cref="AdapterProfile.Commands"/> allowlist <see cref="StartAsync"/> gives the host it
+    /// creates. Defaults <see langword="null"/>, so every test that never touches it offers no Adapter
+    /// command, exactly as a configured profile with no <c>Commands</c> does.
+    /// </summary>
+    public IReadOnlyList<string>? Commands { get; set; }
+
+    /// <summary>
     /// Runs, if set, right after <see cref="StartAsync"/> creates its <see cref="FakePersonaHost"/>
     /// and before returning it - the only point at which a test can script that host (for example
     /// <see cref="FakePersonaHost.FailNextOpenWith"/>) before the runner's own first open call
@@ -91,7 +98,8 @@ internal sealed class FakeAgentHostFactory : IAgentHostFactory
                 EnvironmentOverrides: null,
                 ReadsFiles: true,
                 IsolateUserSettings: true,
-                SessionPerRoom: this.SessionPerRoom));
+                SessionPerRoom: this.SessionPerRoom,
+                Commands: this.Commands));
 
         this.Host = host;
         this.OnHostStarted?.Invoke(host);

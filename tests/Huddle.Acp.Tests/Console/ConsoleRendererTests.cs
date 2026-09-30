@@ -48,6 +48,23 @@ public sealed class ConsoleRendererTests
         Assert.Equal("Hello\n[tool:read] Read x (pending)\n", output.Text);
     }
 
+    /// <summary>An advertised command list is reported as a count, not dropped and not thrown on.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task AvailableCommandsUpdated_PrintsCount()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Channel<AgentEvent> channel = Channel.CreateUnbounded<AgentEvent>();
+        RecordingConsoleOutput output = new RecordingConsoleOutput();
+        ConsoleRenderer renderer = new ConsoleRenderer(output);
+
+        channel.Writer.TryWrite(new AvailableCommandsUpdated("sess-1", [new AvailableCommandInfo("compact", "Free up context", null), new AvailableCommandInfo("init", "Initialize", null)]));
+        channel.Writer.TryWrite(new TurnCompleted("sess-1", StopReason.EndTurn));
+
+        _ = await renderer.RenderTurnAsync(channel.Reader, cancellationToken);
+
+        Assert.Equal("[commands] 2 available\n", output.Text);
+    }
+
     [Fact(Timeout = 10000)]
     public async Task Thought_UsesThoughtStyleAndPrefix()
     {

@@ -339,6 +339,41 @@ public sealed class PersonaRenameCascadeTests
         Assert.Empty(harness.Spend.Get("ghost"));
     }
 
+    /// <summary>
+    /// A rename moves a Persona's offered Adapter commands even when no Agent has registered under the
+    /// old Name, for the same reason as Spend: the move sits above the "no Agent row" early return.
+    /// </summary>
+    [Fact]
+    public async Task Rename_MovesOfferedCommands_EvenWhenNoAgentRowExists()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("ghost"), "Nobody has ever started this one.");
+        var compact = new AdapterCommand("compact", "Free up context", null);
+        harness.Commands.Set("ghost", [compact]);
+
+        harness.PersonaStore.Update("ghost", PersonaText("ghostprime", "Nobody has ever started this one."), model: null, effort: null);
+
+        Assert.Equal([compact], harness.Commands.Get("ghostprime"));
+        Assert.Empty(harness.Commands.Get("ghost"));
+    }
+
+    /// <summary>Removing a Persona forgets its offered commands, so a new Persona that takes the Name starts with none.</summary>
+    [Fact]
+    public async Task Removed_ForgetsOfferedCommands()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.Commands.Set("echo", [new AdapterCommand("compact", "Free up context", null)]);
+
+        harness.PersonaStore.Remove("echo");
+
+        Assert.Empty(harness.Commands.Get("echo"));
+    }
+
     /// <summary>Removing a Persona forgets its Spend, so a new Persona that takes the Name starts from zero.</summary>
     [Fact]
     public async Task Removed_ForgetsSpend()
@@ -733,6 +768,7 @@ public sealed class PersonaRenameCascadeTests
         var viewStore = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
         var folderMoves = new TeammateFolderMoves();
         var spend = new PersonaSpend(NullLogger<PersonaSpend>.Instance);
+        var commands = new PersonaCommands(NullLogger<PersonaCommands>.Instance);
         var cascade = new PersonaRenameCascade(
             teamDirectory,
             personaStore,
@@ -746,7 +782,8 @@ public sealed class PersonaRenameCascadeTests
             tasks: taskService,
             views: viewStore,
             folderMoves: folderMoves,
-            spend: spend);
+            spend: spend,
+            commands: commands);
 
         await cascade.StartAsync(ct);
 
@@ -764,6 +801,7 @@ public sealed class PersonaRenameCascadeTests
             Cascade = cascade,
             FolderMoves = folderMoves,
             Spend = spend,
+            Commands = commands,
         };
     }
 
@@ -870,6 +908,9 @@ public sealed class PersonaRenameCascadeTests
 
         /// <summary>The display-only <see cref="PersonaSpend"/> table the cascade renames and forgets entries in.</summary>
         public required PersonaSpend Spend { get; init; }
+
+        /// <summary>The <see cref="PersonaCommands"/> table the cascade renames and forgets entries in.</summary>
+        public required PersonaCommands Commands { get; init; }
 
         /// <summary>The <see cref="TeammateFolderMoves"/> gate the cascade signals around a Teammate folder move, so a test can await <see cref="TeammateFolderMoves.WhenSettledAsync"/> the same way a host starting mid-rename would.</summary>
         public required TeammateFolderMoves FolderMoves { get; init; }

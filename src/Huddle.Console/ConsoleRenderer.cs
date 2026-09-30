@@ -92,6 +92,11 @@ internal sealed class ConsoleRenderer(IConsoleOutput output)
                         previous = RenderedKind.Other;
                         break;
 
+                    case AvailableCommandsUpdated availableCommandsUpdated:
+                        output.WriteLine($"[commands] {availableCommandsUpdated.Commands.Count} available", ConsoleStyle.Info);
+                        previous = RenderedKind.Other;
+                        break;
+
                     case UnknownUpdate unknownUpdate:
                         output.WriteLine($"[update] {unknownUpdate.TypeName}", ConsoleStyle.Info);
                         previous = RenderedKind.Other;

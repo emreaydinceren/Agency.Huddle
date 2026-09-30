@@ -72,4 +72,12 @@ public sealed class AdapterProfileOptions
     /// process.
     /// </summary>
     public bool SessionPerRoom { get; set; } = true;
+
+    /// <summary>
+    /// Names of the Adapter commands a Human may run on a Teammate on this Adapter, for example
+    /// <c>compact</c>. No initialiser: <c>ConfigurationBinder</c> appends bound array elements to an
+    /// already-populated collection (docs/agencyteam/rules.md, "Collection options need no
+    /// initialiser"). <see langword="null"/> or empty means none. Compared case-insensitively.
+    /// </summary>
+    public IReadOnlyList<string>? Commands { get; set; }
 }

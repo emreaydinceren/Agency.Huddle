@@ -81,5 +81,19 @@ public sealed record ModeChanged(string SessionId, string ModeId) : AgentEvent(S
 /// <summary>The agent's turn finished with the given stop reason.</summary>
 public sealed record TurnCompleted(string SessionId, StopReason StopReason) : AgentEvent(SessionId);
 
+/// <summary>One command an agent advertises for a session (ACP <c>available_commands_update</c>).</summary>
+/// <param name="Name">The command's name, without the leading slash, in the agent's own casing.</param>
+/// <param name="Description">The agent's one-line description of the command.</param>
+/// <param name="InputHint">The placeholder the agent suggests for the command's free-text input, or <see langword="null"/> when it takes none.</param>
+public sealed record AvailableCommandInfo(string Name, string Description, string? InputHint);
+
+/// <summary>
+/// The agent replaced its list of available commands. Each update is the complete list, never a delta, and
+/// an agent may send it more than once (after <c>session/new</c>, and again at the start of a turn).
+/// </summary>
+/// <param name="SessionId">The id of the session this update belongs to.</param>
+/// <param name="Commands">Every command the agent currently advertises.</param>
+public sealed record AvailableCommandsUpdated(string SessionId, IReadOnlyList<AvailableCommandInfo> Commands) : AgentEvent(SessionId);
+
 /// <summary>An update of a kind not recognised by this client.</summary>
 public sealed record UnknownUpdate(string SessionId, string TypeName) : AgentEvent(SessionId);

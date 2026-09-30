@@ -95,6 +95,50 @@ public sealed class TranscriptCatchUpTests
         }
     }
 
+    /// <summary>
+    /// A command as a session's first Turn does not use up its Transcript read: it sends a bare command,
+    /// so the Messages the session missed are still unseen, and the next ordinary Turn must still read them.
+    /// </summary>
+    [Fact]
+    public async Task CommandFirst_LeavesTheTranscriptReadForTheNextOrdinaryTurn()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        session.EnqueueReply();
+        session.EnqueueReply("ok");
+        FakeRoomSessionOwner owner = new();
+        owner.ReadTranscriptHandler = (roomId, _, _, _, _) => Task.FromResult<TranscriptTail?>(
+            new TranscriptTail("req", roomId, [new ChatMessage("m1", DateTimeOffset.UtcNow, "hu", "Human", "an earlier remark")], Omitted: 0));
+        var (room, runCts) = CreateSession(owner, FixedOpen(session));
+        try
+        {
+            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "@nova /compact", [], WorkItemKind.Command, TriggerMessageId: "trig-1", Command: new AdapterCommandCall("compact", string.Empty))));
+            await WaitUntilAsync(() => session.Prompts.Count == 1, ct);
+            room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "go on", [], TriggerMessageId: "trig-2")));
+
+            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(post => post.Text == "ok"), ct);
+
+            var call = Assert.Single(owner.TranscriptReadCalls);
+            Assert.Equal("trig-2", call.BeforeMessageId);
+            Assert.Equal("/compact", session.Prompts[0]);
+            Assert.Equal(
+                RoomSession.BuildPrompt(
+                    new WorkItem(
+                        "room-1",
+                        "Room 1",
+                        "Human",
+                        "go on",
+                        [],
+                        Transcript: new TranscriptCatchUp(false, [new ChatMessage("m1", DateTimeOffset.UtcNow, "hu", "Human", "an earlier remark")], 0)),
+                    new FakePromptSource()),
+                session.Prompts[1]);
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
     /// <summary>A Room's first Turn ever - the range before the trigger holds no Messages - leaves the prompt byte-identical to today's, with no Transcript block at all.</summary>
     [Fact]
     public async Task RoomsFirstTurnEver_NoBlock_ByteIdenticalToToday()

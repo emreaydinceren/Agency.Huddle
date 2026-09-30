@@ -931,6 +931,419 @@ public sealed class PersonaRunnerTests
     }
 
     /// <summary>
+    /// The Adapter advertises 83 commands and the profile allows one: only that one is kept, in the
+    /// Adapter's own casing. The other 82, which include the Human's own skills when isolation is off,
+    /// are never held.
+    /// </summary>
+    [Fact]
+    public async Task AdvertisedCommands_AreFilteredByTheProfileAllowlist()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory { Commands = ["COMPACT"] };
+        factory.Session.EnqueueToolActivity(new AvailableCommandsUpdated(factory.Session.SessionId, AdvertisedCommands(83)));
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        PersonaCommands commands = new(NullLogger<PersonaCommands>.Instance);
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, commands: commands);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+        await ReceiveUntilAsync<PostMessage>(server, ct);
+
+        AdapterCommand offered = Assert.Single(commands.Get("nova"));
+        Assert.Equal("compact", offered.Name);
+    }
+
+    /// <summary>A profile that lists no commands offers none, however many the Adapter advertises.</summary>
+    [Fact]
+    public async Task AdvertisedCommands_WithNoAllowlist_OfferNothing()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueToolActivity(new AvailableCommandsUpdated(factory.Session.SessionId, AdvertisedCommands(83)));
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        PersonaCommands commands = new(NullLogger<PersonaCommands>.Instance);
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, commands: commands);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+        await ReceiveUntilAsync<PostMessage>(server, ct);
+
+        Assert.Empty(commands.Get("nova"));
+    }
+
+    /// <summary>A later list that no longer advertises <c>compact</c> removes it: each update replaces the last whole.</summary>
+    [Fact]
+    public async Task AdvertisedCommands_ALaterListWithoutCompact_RemovesIt()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory { Commands = ["compact"] };
+        factory.Session.EnqueueToolActivity(new AvailableCommandsUpdated(factory.Session.SessionId, AdvertisedCommands(83)));
+        factory.Session.EnqueueToolActivity(new AvailableCommandsUpdated(factory.Session.SessionId, [new AvailableCommandInfo("init", "Initialize", null)]));
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        PersonaCommands commands = new(NullLogger<PersonaCommands>.Instance);
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, commands: commands);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+        await ReceiveUntilAsync<PostMessage>(server, ct);
+        Assert.Single(commands.Get("nova"));
+        await server.SendAsync(NewMessagePosted("room-1", "again"), ct);
+        await ReceiveUntilAsync<PostMessage>(server, ct);
+
+        Assert.Empty(commands.Get("nova"));
+    }
+
+    /// <summary>A stopped runner forgets what it offered: a Teammate that is not running offers nothing.</summary>
+    [Fact]
+    public async Task StoppingTheRunner_ForgetsItsOfferedCommands()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory { Commands = ["compact"] };
+        factory.Session.EnqueueToolActivity(new AvailableCommandsUpdated(factory.Session.SessionId, AdvertisedCommands(5)));
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        PersonaCommands commands = new(NullLogger<PersonaCommands>.Instance);
+        var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, commands: commands);
+        await server.HandshakeAsync(runner, ct);
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+        await ReceiveUntilAsync<PostMessage>(server, ct);
+        Assert.Single(commands.Get("nova"));
+
+        await runner.StopAsync();
+
+        Assert.Empty(commands.Get("nova"));
+        await runner.DisposeAsync();
+    }
+
+    /// <summary>A Human's <c>@nova /compact</c> reaches the Adapter as the whole prompt: no Room label, no catch-up, nothing else.</summary>
+    [Fact]
+    public async Task HumanCommand_SendsTheBareCommandAsThePrompt()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+        await using var rig = await CommandRig.StartAsync(["compact"], advertise: true, ct);
+
+        await rig.Server.SendAsync(HumanPosts("@nova /compact"), ct);
+
+        var prompts = await WaitForPromptCountAsync(rig.Factory.Session, 2, ct);
+        Assert.Equal("/compact", prompts[1]);
+    }
+
+    /// <summary>A Persona's Alias works wherever its Name does: <c>@jar /compact</c> reaches the Adapter as the bare command.</summary>
+    [Fact]
+    public async Task HumanCommandByAlias_SendsTheBareCommand()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+        Persona aliased = new("nova", PersonaFrontmatter.Compose(new PersonaIdentity("nova", "Chief of Staff", "jar", []), "You are Nova."));
+        await using var rig = await CommandRig.StartAsync(["compact"], advertise: true, ct, persona: aliased);
+
+        await rig.Server.SendAsync(HumanPosts("@jar /compact"), ct);
+
+        var prompts = await WaitForPromptCountAsync(rig.Factory.Session, 2, ct);
+        Assert.Equal("/compact", prompts[1]);
+    }
+
+    /// <summary>The arguments after the name are sent verbatim, and the name is sent in the Adapter's casing, not the Human's.</summary>
+    [Fact]
+    public async Task HumanCommandWithArguments_SendsTheAdaptersCasingAndTheArguments()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+        await using var rig = await CommandRig.StartAsync(["compact"], advertise: true, ct);
+
+        await rig.Server.SendAsync(HumanPosts("@NOVA /COMPACT keep the decisions"), ct);
+
+        var prompts = await WaitForPromptCountAsync(rig.Factory.Session, 2, ct);
+        Assert.Equal("/compact keep the decisions", prompts[1]);
+    }
+
+    /// <summary>
+    /// The same text from an Agent is an ordinary Message: only a Human may run a command, so one Agent
+    /// cannot compact another.
+    /// </summary>
+    [Fact]
+    public async Task AgentSender_SameText_IsAnOrdinaryTurn()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+        await using var rig = await CommandRig.StartAsync(["compact"], advertise: true, ct);
+
+        await rig.Server.SendAsync(AgentPosts("@nova /compact"), ct);
+
+        var prompts = await WaitForPromptCountAsync(rig.Factory.Session, 2, ct);
+        Assert.Equal(RoomSession.BuildPrompt(new WorkItem("room-1", "Room", "luna", "@nova /compact", []), new FakePromptSource()), prompts[1]);
+    }
+
+    /// <summary>A name the profile does not allow is an ordinary Message, however the Adapter advertises it.</summary>
+    [Fact]
+    public async Task DisallowedCommand_IsAnOrdinaryTurn_AndIsLoggedOnce()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+        RecordingLogger<PersonaRunner> logger = new();
+        await using var rig = await CommandRig.StartAsync(["compact"], advertise: true, ct, logger);
+
+        await rig.Server.SendAsync(HumanPosts("@nova /config"), ct);
+
+        var prompts = await WaitForPromptCountAsync(rig.Factory.Session, 2, ct);
+        Assert.Equal(RoomSession.BuildPrompt(new WorkItem("room-1", "Room", "You", "@nova /config", []), new FakePromptSource()), prompts[1]);
+        Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Information && entry.Message.Contains("not offered", StringComparison.Ordinal));
+    }
+
+    /// <summary>A profile with no allowlist offers nothing, so even <c>/compact</c> is an ordinary Message.</summary>
+    [Fact]
+    public async Task NoAllowlist_CompactIsAnOrdinaryTurn()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+        await using var rig = await CommandRig.StartAsync(null, advertise: true, ct);
+
+        await rig.Server.SendAsync(HumanPosts("@nova /compact"), ct);
+
+        var prompts = await WaitForPromptCountAsync(rig.Factory.Session, 2, ct);
+        Assert.NotEqual("/compact", prompts[1]);
+    }
+
+    /// <summary>Before the Adapter has advertised anything the catalog is empty, so a command is an ordinary Message.</summary>
+    [Fact]
+    public async Task BeforeTheFirstAdvertisement_CompactIsAnOrdinaryTurn()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+        await using var rig = await CommandRig.StartAsync(["compact"], advertise: false, ct);
+
+        await rig.Server.SendAsync(HumanPosts("@nova /compact"), ct);
+
+        var prompts = await WaitForPromptCountAsync(rig.Factory.Session, 1, ct);
+        Assert.NotEqual("/compact", prompts[0]);
+    }
+
+    /// <summary>
+    /// A command Turn drains nothing it does not send. The Message the Agent missed stays buffered and
+    /// reaches the next ordinary Turn, instead of being discarded with a prompt that has nowhere to put it.
+    /// </summary>
+    [Fact]
+    public async Task CommandTurn_LeavesCatchUpForTheNextOrdinaryTurn()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+        await using var rig = await CommandRig.StartAsync(["compact"], advertise: true, ct);
+        await rig.Server.SendAsync(HumanPosts("a missed remark", mentioned: false), ct);
+
+        await rig.Server.SendAsync(HumanPosts("@nova /compact"), ct);
+        var afterCommand = await WaitForPromptCountAsync(rig.Factory.Session, 2, ct);
+        await rig.Server.SendAsync(HumanPosts("@nova next question"), ct);
+        var afterNext = await WaitForPromptCountAsync(rig.Factory.Session, 3, ct);
+
+        Assert.Equal("/compact", afterCommand[1]);
+        Assert.Equal(
+            RoomSession.BuildPrompt(new WorkItem("room-1", "Room", "You", "@nova next question", [new CaughtUpMessage("You", "a missed remark")]), new FakePromptSource()),
+            afterNext[2]);
+    }
+
+    /// <summary>The Agent's own earlier posts into the Room likewise stay queued through a command Turn.</summary>
+    [Fact]
+    public async Task CommandTurn_LeavesOwnPostLinesForTheNextOrdinaryTurn()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+        await using var rig = await CommandRig.StartAsync(["compact"], advertise: true, ct);
+        rig.OwnPosts.Record("agent-1", "room-1", "my earlier post");
+
+        await rig.Server.SendAsync(HumanPosts("@nova /compact"), ct);
+        var afterCommand = await WaitForPromptCountAsync(rig.Factory.Session, 2, ct);
+        await rig.Server.SendAsync(HumanPosts("@nova next question"), ct);
+        var afterNext = await WaitForPromptCountAsync(rig.Factory.Session, 3, ct);
+
+        Assert.Equal("/compact", afterCommand[1]);
+        Assert.Equal(
+            RoomSession.BuildPrompt(new WorkItem("room-1", "Room", "You", "@nova next question", [], OwnPostLines: ["my earlier post"]), new FakePromptSource()),
+            afterNext[2]);
+    }
+
+    /// <summary>A Human's Message in a Room of three, from <c>human</c>, with the members a real delivery carries.</summary>
+    private static MessagePosted HumanPosts(string text, bool mentioned = true) => PostedBy("human", "You", text, mentioned);
+
+    /// <summary>An Agent's Message in a Room of three, from <c>luna-id</c>.</summary>
+    private static MessagePosted AgentPosts(string text) => PostedBy("luna-id", "luna", text, mentioned: true);
+
+    private static MessagePosted PostedBy(string senderId, string senderName, string text, bool mentioned) =>
+        new(
+            "room-1",
+            "Room",
+            new ChatMessage(Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow, senderId, senderName, text),
+            Mentioned: mentioned,
+            Mentions: [],
+            Members:
+            [
+                new MemberInfo("human", "You", UserKind.Human),
+                new MemberInfo("agent-1", "nova", UserKind.Agent),
+                new MemberInfo("luna-id", "luna", UserKind.Agent),
+            ],
+            AgentMessagesSinceHuman: 0,
+            Budget: 0);
+
+    /// <summary>
+    /// A started runner on a fake Adapter, with its Persona's Adapter commands filled in by a first
+    /// ordinary Turn, so a test can send the Message under test as the next one.
+    /// </summary>
+    private sealed class CommandRig : IAsyncDisposable
+    {
+        private readonly Lock gate = new();
+        private readonly List<ProtocolMessage> received = [];
+        private readonly Task drain;
+
+        private CommandRig(FakePersonaServer server, FakeAgentHostFactory factory, PersonaRunner runner, OwnPosts ownPosts, CancellationToken ct)
+        {
+            this.Server = server;
+            this.Factory = factory;
+            this.Runner = runner;
+            this.OwnPosts = ownPosts;
+            this.drain = Task.Run(() => this.DrainAsync(ct), CancellationToken.None);
+        }
+
+        /// <summary>The fake server the runner is connected to.</summary>
+        public FakePersonaServer Server { get; }
+
+        /// <summary>The factory whose single session records every prompt.</summary>
+        public FakeAgentHostFactory Factory { get; }
+
+        /// <summary>The runner under test.</summary>
+        public PersonaRunner Runner { get; }
+
+        /// <summary>The own-post memory the runner drains beside its catch-up buffer.</summary>
+        public OwnPosts OwnPosts { get; }
+
+        /// <summary>The text of every Message the runner has posted, in order.</summary>
+        public IReadOnlyList<string> PostedTexts
+        {
+            get
+            {
+                lock (this.gate)
+                {
+                    return [.. this.received.OfType<PostMessage>().Select(post => post.Text)];
+                }
+            }
+        }
+
+        /// <summary>Starts the rig; with <paramref name="advertise"/> it sends one ordinary Message so the Adapter's list arrives first.</summary>
+        /// <param name="allowed">The profile's <c>Commands</c> allowlist.</param>
+        /// <param name="advertise">Whether the Adapter advertises its commands on the first Turn.</param>
+        /// <param name="ct">Bounds the start and the first Turn.</param>
+        /// <param name="logger">The runner's logger; defaults to a logger that records nothing.</param>
+        /// <param name="persona">The Persona to run; defaults to a plain <c>nova</c> with no Alias.</param>
+        /// <returns>The started rig.</returns>
+        public static async Task<CommandRig> StartAsync(IReadOnlyList<string>? allowed, bool advertise, CancellationToken ct, ILogger<PersonaRunner>? logger = null, Persona? persona = null)
+        {
+            var server = new FakePersonaServer();
+            var factory = new FakeAgentHostFactory { Commands = allowed };
+            if (advertise)
+            {
+                factory.Session.EnqueueToolActivity(new AvailableCommandsUpdated(factory.Session.SessionId, AdvertisedCommands(83)));
+            }
+
+            var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+            var ownPosts = new OwnPosts(options);
+            var runner = new PersonaRunner(
+                persona ?? new Persona("nova", "You are Nova."),
+                options,
+                factory,
+                new FakePromptSource(),
+                new RoomFollows(),
+                logger ?? NullLogger<PersonaRunner>.Instance,
+                ownPosts: ownPosts,
+                commands: new PersonaCommands(NullLogger<PersonaCommands>.Instance));
+            await server.HandshakeAsync(runner, ct);
+            CommandRig rig = new(server, factory, runner, ownPosts, ct);
+
+            if (advertise)
+            {
+                await server.SendAsync(HumanPosts("@nova hello"), ct);
+                await rig.WaitForPostsAsync(1, ct);
+            }
+
+            return rig;
+        }
+
+        /// <summary>Waits until the runner has posted at least <paramref name="count"/> Messages.</summary>
+        /// <param name="count">How many posts to wait for, counting from the start of the rig.</param>
+        /// <param name="ct">Bounds the wait.</param>
+        /// <returns>The text of every post so far.</returns>
+        public async Task<IReadOnlyList<string>> WaitForPostsAsync(int count, CancellationToken ct)
+        {
+            while (true)
+            {
+                IReadOnlyList<string> posted = this.PostedTexts;
+                if (posted.Count >= count)
+                {
+                    return posted;
+                }
+
+                await Task.Delay(5, ct);
+            }
+        }
+
+        /// <summary>Stops the runner, then the server.</summary>
+        public async ValueTask DisposeAsync()
+        {
+            await this.Runner.DisposeAsync();
+            await this.Server.DisposeAsync();
+            await this.drain;
+        }
+
+        // Reads and records every envelope the runner writes. The fake pipe has no buffer, so a runner
+        // whose Turn writes a final delta would otherwise stall until something read it.
+        private async Task DrainAsync(CancellationToken ct)
+        {
+            try
+            {
+                while (await this.Server.ReceiveRawAsync(ct) is { } message)
+                {
+                    lock (this.gate)
+                    {
+                        this.received.Add(message);
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is OperationCanceledException or IOException or ObjectDisposedException)
+            {
+                // The runner or the test ended: the pipe closed or the test's token fired.
+            }
+        }
+    }
+
+    /// <summary>Builds an advertised list of <paramref name="count"/> commands, the first of which is <c>compact</c>.</summary>
+    private static List<AvailableCommandInfo> AdvertisedCommands(int count)
+    {
+        List<AvailableCommandInfo> advertised = [new AvailableCommandInfo("compact", "Free up context by summarizing the conversation so far", "<optional custom summarization instructions>")];
+        for (int index = 1; index < count; index++)
+        {
+            advertised.Add(new AvailableCommandInfo($"skill-{index}", "One of the Human's own skills", null));
+        }
+
+        return advertised;
+    }
+
+    /// <summary>
     /// Proves item 4 of task T2.2: a Stop ends the live Turn - <see cref="IAgentSession.CancelAsync"/>
     /// is called exactly once - and discards every Turn still queued behind it, none of which ever
     /// reaches <see cref="FakeAgentSession.PromptAsync"/>.

@@ -95,6 +95,27 @@ legitimate empty result. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
   contain spaces, so a pattern that spells one out truncates `@Emily Lee` to
   `Emily` and then reports the wrong Name as unknown. `MentionParser` and the
   `/invite` command each learned this the same way.
+- **An Adapter reads a command only at the very start of a prompt, so no ordinary prompt may
+  start with `/`.** `claude-agent-acp` runs `/compact` when it is the first characters of the
+  prompt and answers `[Room: r] Human: /compact` as plain text (observed 2026-09-30).
+  `RoomSession.BuildPrompt` therefore prefixes `Message: ` to any Message or Greeting prompt that
+  would open with a slash, leading whitespace ignored. The guard is not redundant with today's templates: every one opens
+  with a Room label, but `prompts.json` is hand-editable and `PromptValidator` reports and never
+  refuses, so a `turn.message` of `{{text}}` would otherwise let another Agent's text start a
+  command. Keep the guard if you change `BuildPrompt`.
+- **A Command Turn must not drain anything it does not send.** Building an ordinary `WorkItem`
+  in the read loop takes the Catch-up buffer and the own-post lines as a side effect, and a
+  bare `/compact` prompt has nowhere to put them. `PersonaRunner.TryBuildCommandItem` is
+  therefore decided *before* those drains, and `RoomSession` neither collects File Changes nor
+  spends the session's first-Turn Transcript read on a Command Turn, and it writes no
+  `RoomSessionStore` entry: the outcome Message's id as `LastMessageId` would make a resume skip
+  the Messages the undrained Catch-up still holds. Each of the four, done the obvious way,
+  silently loses context the next ordinary Turn needed.
+- **A compaction is not spend.** `UsageUpdated.Used` is context fill and the token Budget sums
+  only its rises; `/compact` drops it, and the next Turn then re-fills the session's fixed
+  overhead (a 40,944-token rise in the observed run). A completed Command Turn sets
+  `usageBaselinePending` so that re-fill is taken as the baseline. The price is a small
+  undercount; see [Known limits](known-limits.md).
 - **Unsubscribe from `RoomEvents` in `Dispose`.** The hub is a singleton.
 - **A system prompt and a Model are both fixed at `session/new`.** Changing
   either on a Persona means restarting the session. There is no other way, and

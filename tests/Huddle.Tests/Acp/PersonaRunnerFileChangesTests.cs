@@ -100,6 +100,60 @@ public sealed class PersonaRunnerFileChangesTests
     }
 
     /// <summary>
+    /// A command Turn neither collects nor commits File Changes: a change made before it is still
+    /// pending afterwards, so the next ordinary Turn lists it. Collecting without ever showing the
+    /// report would advance the baseline past changes the Agent was never told about (FC §6.8).
+    /// </summary>
+    [Fact]
+    public async Task CommandTurn_DoesNotConsumeFileChanges_TheNextOrdinaryTurnListsThem()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var workDir = OwnWorkDir(options.Value, "nova");
+        Directory.CreateDirectory(workDir);
+        var filePath = Path.Combine(workDir, "a.txt");
+        File.WriteAllText(filePath, "v1");
+
+        var factory = new FakeAgentHostFactory { Commands = ["compact"] };
+        factory.Session.EnqueueToolActivity(new AvailableCommandsUpdated(factory.Session.SessionId, [new AvailableCommandInfo("compact", "Free up context", null)]));
+        factory.Session.EnqueueReply("first");
+        factory.Session.EnqueueReply();
+        factory.Session.EnqueueReply("third");
+        var persona = new Persona("nova", "You are Nova.");
+        var tracker = fixture.Services.GetRequiredService<FileChangeTracker>();
+
+        await using var agentHost = CreateHost(fixture, persona, factory, tracker, new PersonaCommands(Microsoft.Extensions.Logging.Abstractions.NullLogger<PersonaCommands>.Instance));
+        await agentHost.StartAsync(ct);
+
+        var (_, roomId) = await WaitForDirectRoomAsync(fixture, "nova", ct);
+        var chat = fixture.Services.GetRequiredService<ChatService>();
+        var store = fixture.Services.GetRequiredService<IChatStore>();
+
+        await chat.PostAsync(roomId, KnownIds.Human, "hi", ct: ct);
+        await WaitForHistoryCountAsync(store, roomId, 2, ct);
+
+        File.SetLastWriteTimeUtc(filePath, DateTime.UtcNow.AddMinutes(5));
+        File.WriteAllText(filePath, "v1 changed");
+
+        await chat.PostAsync(roomId, KnownIds.Human, "@nova /compact", ct: ct);
+        await chat.PostAsync(roomId, KnownIds.Human, "hi again", ct: ct);
+        while (factory.Session.Prompts.Count < 3)
+        {
+            await Task.Delay(20, ct);
+        }
+
+        var header = new FakePromptSource().Render("turn.fileChangesHeader", new Dictionary<string, string>());
+
+        Assert.Equal("/compact", factory.Session.Prompts[1]);
+
+        // contains-ok: prompt text, not markup; only the File Changes header that opens the prompt is under test, not the file list after it.
+        Assert.StartsWith(header, factory.Session.Prompts[2], StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// F0, the headline test: an edit this Agent made itself, attributed via a <see cref="ToolKind.Edit"/>
     /// tool call, is not listed back in the Room it was made in, but is listed in another Room this
     /// Agent is also in (FC §6.7, §6.8 item 2).
@@ -436,7 +490,7 @@ public sealed class PersonaRunnerFileChangesTests
 
     /// <summary>Builds a <see cref="PersonaRunner"/> over <paramref name="fixture"/>'s real pipe, with the given (or absent) File Changes tracker.</summary>
     private static PersonaRunner CreateHost(
-        PipeHostFixture fixture, Persona persona, FakeAgentHostFactory factory, FileChangeTracker? fileChanges)
+        PipeHostFixture fixture, Persona persona, FakeAgentHostFactory factory, FileChangeTracker? fileChanges, PersonaCommands? commands = null)
     {
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
 
@@ -445,7 +499,7 @@ public sealed class PersonaRunnerFileChangesTests
         // host, and NullLogger would silently discard every entry a test like
         // CommitFails_TurnStillPostsAndConsumerLives needs to assert against.
         var logger = fixture.Services.GetRequiredService<ILogger<PersonaRunner>>();
-        return new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger, fileChanges);
+        return new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), logger, fileChanges, commands: commands);
     }
 
     /// <summary><paramref name="agentName"/>'s own Work Dir, always the first Watched Folder (FC §6.7 step 1).</summary>

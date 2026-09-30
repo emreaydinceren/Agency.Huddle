@@ -121,7 +121,8 @@ public static class MentionParser
         return char.IsAsciiLetterOrDigit(c) || c == '_' || c == '@';
     }
 
-    private static bool IsNameCharacter(char c)
+    /// <summary>Whether <paramref name="c"/> can continue a Name, so a handle ends at the first character that cannot. Shared with <see cref="Agency.Huddle.App.Acp.AdapterCommandInvocation"/>.</summary>
+    internal static bool IsNameCharacter(char c)
     {
         return char.IsAsciiLetterOrDigit(c) || c == '_' || c == '-';
     }

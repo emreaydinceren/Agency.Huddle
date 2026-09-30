@@ -180,6 +180,33 @@ public sealed class RoomSessionTests
         }
     }
 
+    /// <summary>An advertised command list reaches the owner with the Adapter session's id, whole, as the Adapter sent it.</summary>
+    [Fact]
+    public async Task AvailableCommandsUpdate_CallsSetCommandsWithTheAdvertisedList()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        AvailableCommandInfo compact = new("compact", "Free up context", "<hint>");
+        AvailableCommandInfo init = new("init", "Initialize", null);
+        session.EnqueueToolActivity(new AvailableCommandsUpdated(session.SessionId, [compact, init]));
+        FakeRoomSessionOwner owner = new();
+        var (room, runCts) = CreateSession(owner, FixedOpen(session));
+        try
+        {
+            room.Enqueue(new QueuedWork(1, RoomAItem));
+
+            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+
+            var call = Assert.Single(owner.CommandsSet);
+            Assert.Equal(session.SessionId, call.SessionId);
+            Assert.Equal([compact, init], call.Advertised);
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
     /// <summary>A usage update with no cost reports no Spend, so a local model never shows a zero.</summary>
     [Fact]
     public async Task UsageWithoutCost_DoesNotCallAddSpend()
