@@ -198,10 +198,13 @@ public sealed class PersonaSupervisorLifecycleTests
         await using var fixture = await PipeHostFixture.StartAsync(
             new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
         var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
-        WritePersonaFile(options, "bad");
-        WritePersonaFile(options, "good");
-
         var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+
+        // Seeded through Add, which indexes synchronously: writing the files would make the test
+        // wait on the store's 500 ms watcher debounce inside its 10 s budget, and a loaded CI
+        // runner overran that (main run 732) - the watcher is not what this test is about.
+        personaStore.Add(Identity("bad"), "You are a persona.");
+        personaStore.Add(Identity("good"), "You are a persona.");
         var inner = new FakeAgentHostFactory();
         var factory = new FailingForOneAgentHostFactory("bad", new InvalidOperationException("Simulated failure starting Persona 'bad'."), inner);
         var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
