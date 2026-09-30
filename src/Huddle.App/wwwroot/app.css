@@ -921,10 +921,10 @@ button:focus-visible {
 /* ---- Board layout (Spec §13.4, §13.10) --------------------------------------------------------
    The Board is a header row (.task-board-columns) followed by one horizontal band per lane
    (.task-board-lane). A lane is flex-column, not grid: its label (rendered only when the View
-   groups) must span the full width above its cards, not be squeezed into a 240px grid track the
+   groups) must span the full width above its cards, not be squeezed into a 310px grid track the
    way a card would be. The actual row of fixed-width columns - both the header's and every
-   lane's - is CSS grid, per the Spec's own snippet ("display: grid; grid-auto-flow: column;
-   grid-auto-columns: minmax(240px, 1fr) on the lane row"): .task-board-columns and
+   lane's - is CSS grid (the Spec's snippet said minmax(240px, 1fr); columns are now a fixed 310px, so
+   a wide page leaves free space on the right instead of stretching them): .task-board-columns and
    .task-board-lane-columns share the exact same grid-auto-columns function, so their tracks land
    at identical x offsets and a header cell sits directly above the cards it describes. The board
    itself scrolls horizontally once the columns are wider than the page. */
@@ -936,7 +936,8 @@ button:focus-visible {
 .task-board-lane-columns {
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: minmax(240px, 1fr);
+    grid-auto-columns: 310px;
+    column-gap: 0.5rem;
 }
 
 .task-board-column-header {
@@ -989,8 +990,12 @@ button:focus-visible {
     padding: 0.25rem 0;
 }
 
+/* A column is a tinted lane (background-gray, darker than the page) and each card on it is a light
+   surface, so cards read as separate objects on a contrasting column. Theme tokens only. */
 .task-board-column {
     min-width: 0;
+    background-color: var(--mud-palette-background-gray);
+    border-radius: var(--mud-default-borderradius);
 }
 
 /* Every zone - a single-state column, a multi-state display zone, or a ghost bucket's own
@@ -1053,6 +1058,8 @@ button:focus-visible {
 
 .task-card {
     text-align: left;
+    background-color: var(--mud-palette-surface);
+    border-radius: var(--mud-default-borderradius);
 }
 
 /* The card currently being dragged. */
@@ -1254,7 +1261,7 @@ button:focus-visible {
 /* The Team/Project Files tab: the explorer fills the page's height and width, flush left. Every wrapper from
    the main column down to the split panel becomes a flex column that may shrink, so the tree runs the whole
    height and the document pane takes all the room to its right; the document's own text is a centred column. */
-.team-page-files.mud-container {
+.team-page-wide.mud-container {
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
@@ -1262,48 +1269,59 @@ button:focus-visible {
     padding: 0;
 }
 
-.team-page-files .team-page-breadcrumbs {
+.team-page-wide .team-page-breadcrumbs {
     padding: 8px 16px;
 }
 
-.team-page-files .team-page-tabs,
-.team-page-files .mud-tabs-panels,
-.team-page-files .team-files-tab,
-.team-page-files .library-explorer {
+.team-page-wide .team-page-tabs,
+.team-page-wide .mud-tabs-panels,
+.team-page-wide .team-files-tab,
+.team-page-wide .team-tasks-tab,
+.team-page-wide .library-explorer {
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
     flex-direction: column;
 }
 
-.team-page-files .library-explorer-split {
+.team-page-wide .team-tasks-tab,
+.team-page-wide .team-members {
+    padding: 0 16px 16px;
+}
+
+.team-page-wide .team-tasks-tab > .task-board {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.team-page-wide .library-explorer-split {
     flex: 1 1 auto;
     min-height: 0;
     height: auto;
 }
 
-.team-page-files .library-explorer-split > .child-panel {
+.team-page-wide .library-explorer-split > .child-panel {
     overflow: auto;
 }
 
 /* Split mode on this page: the editor and the live preview sit side by side, each scrolling on its own
    inside the pane's full height, and the preview uses its half instead of the centred reading column. */
-.team-page-files .library-explorer-split > .child-panel:last-child > .library-document {
+.team-page-wide .library-explorer-split > .child-panel:last-child > .library-document {
     display: flex;
     flex-direction: column;
     min-height: 100%;
 }
 
-.team-page-files .library-document > .library-editor {
+.team-page-wide .library-document > .library-editor {
     flex: 1 1 0;
     min-height: 0;
 }
 
-.team-page-files .library-document > .library-editor .cm-editor {
+.team-page-wide .library-document > .library-editor .cm-editor {
     height: 100%;
 }
 
-.team-page-files .library-document-split {
+.team-page-wide .library-document-split {
     flex: 1 1 0;
     min-height: 0;
     display: grid;
@@ -1311,21 +1329,21 @@ button:focus-visible {
     gap: 16px;
 }
 
-.team-page-files .library-document-split > .library-editor,
-.team-page-files .library-document-split .cm-editor {
+.team-page-wide .library-document-split > .library-editor,
+.team-page-wide .library-document-split .cm-editor {
     height: 100%;
     min-height: 0;
 }
 
-.team-page-files .library-document .library-document-split > .library-rendered {
+.team-page-wide .library-document .library-document-split > .library-rendered {
     max-width: none;
     margin-inline: 0;
     overflow: auto;
     padding: 4px 16px 0 0;
 }
 
-.team-page-files .library-document .library-rendered,
-.team-page-files .library-document .mud-expansion-panels {
+.team-page-wide .library-document .library-rendered,
+.team-page-wide .library-document .mud-expansion-panels {
     max-width: 56rem;
     margin-inline: auto;
 }
