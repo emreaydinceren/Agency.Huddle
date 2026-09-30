@@ -1,9 +1,12 @@
 @*
-    Spec §6.9: the Tasks tab of a Team or Project page. The shared toolbar ("New task", "Search tasks")
-    sits above the Task Board, which shows an in-memory View built on each render: the Team's Tasks
-    grouped into swimlanes by Project, or one Project's Tasks with no swimlanes. The View's Id is a
-    fixed, non-persisted "team:<Team>[/<Project>]" so the Board's per-View UI state has a stable key,
-    and it names BOTH the Team and the Project for a Project page.
+    Spec §6.9: the Tasks tab of a Team or Project page. It hosts the very same TaskToolbar as the Tasks
+    page (New task, List/Board, Filter, Group/Sort, All/Blocked/Unblocked, Search), over the List or
+    the Board, which shows an in-memory View: the Team's Tasks grouped into swimlanes by Project, or
+    one Project's Tasks with no swimlanes, with the toolbar's session-only overrides applied on top.
+    The Team and Project scope is re-imposed on every override, so the toolbar can never widen the
+    tab past its own page. The View's Id is a fixed, non-persisted "team:<Team>[/<Project>]" so the
+    Board's per-View UI state has a stable key, and it names BOTH the Team and the Project for a
+    Project page. Being unsaved, the toolbar offers no "Save to view".
 
     The Tasks come from TaskQuery over the store exactly as the Tasks page builds them, requeried on
     TaskEvents.TasksReloaded and TaskChanged (corrections-D7b item 22). The Board gets no OnEditColumns
@@ -23,15 +26,23 @@
 @inject ISnackbar Snackbar
 
 <div class="team-tasks-tab">
-    <TeamTabToolbar ActionText="New task" SearchPlaceholder="Search tasks"
-                    OnAction="this.NewTaskAsync"
-                    Search="@this.Search" SearchChanged="this.SearchChanged" />
-
     @{
-        TaskView view = this.BuildView();
+        TaskView view = this.EffectiveView();
     }
-    <TaskBoard View="view" Tasks="this.FilteredTasks(view)" Search="@this.Search"
-               OnOpenTask="this.OpenTaskAsync" OnCopyId="this.CopyIdAsync" />
+    <TaskToolbar EffectiveView="view" EffectiveViewChanged="this.OnViewChanged"
+                 Search="@this.Search" SearchChanged="this.SearchChanged"
+                 OnNewTask="this.NewTaskAsync" />
+
+    @if (view.Kind == ViewKind.List)
+    {
+        <TaskListView View="view" Tasks="this.FilteredTasks(view)" Search="@this.Search"
+                      OnOpenTask="this.OpenTaskAsync" OnCopyId="this.CopyIdAsync" />
+    }
+    else
+    {
+        <TaskBoard View="view" Tasks="this.FilteredTasks(view)" Search="@this.Search"
+                   ViewChanged="this.OnViewChanged" OnOpenTask="this.OpenTaskAsync" OnCopyId="this.CopyIdAsync" />
+    }
 </div>
 
 @code {
@@ -58,6 +69,8 @@
     [Parameter]
     public EventCallback<string?> SearchChanged { get; set; }
 
+    private TaskView? overrides;
+
     private bool OnProjectPage => !string.IsNullOrWhiteSpace(this.Project);
 
     /// <inheritdoc />
@@ -72,6 +85,32 @@
     {
         this.Events.TasksReloaded -= this.OnTasksReloaded;
         this.Events.TaskChanged -= this.OnTaskChanged;
+    }
+
+    /// <summary>Drops the toolbar's overrides when the page moves to another Team or Project, since they were made against the previous scope.</summary>
+    protected override void OnParametersSet()
+    {
+        if (this.overrides is { } current && !string.Equals(current.Id, this.BuildView().Id, StringComparison.Ordinal))
+        {
+            this.overrides = null;
+        }
+    }
+
+    /// <summary>The View on screen: the toolbar's overrides, if any, with this page's Team and Project scope put back.</summary>
+    private TaskView EffectiveView()
+    {
+        TaskView page = this.BuildView();
+        return this.overrides is { } current
+            ? current with { Filter = current.Filter with { Teams = page.Filter.Teams, Projects = page.Filter.Projects } }
+            : page;
+    }
+
+    /// <summary>Keeps the toolbar's (or the Board's) session-only change to the View.</summary>
+    /// <param name="view">The changed View.</param>
+    private Task OnViewChanged(TaskView view)
+    {
+        this.overrides = view;
+        return Task.CompletedTask;
     }
 
     /// <summary>The in-memory Board View for the Team or the Project.</summary>
@@ -112,8 +151,8 @@
         return TaskQuery.Sort(filtered, view.Sort);
     }
 
-    /// <summary>"New task": opens the expanded dialog in create mode on a draft for this Team and Project.</summary>
-    private async Task NewTaskAsync()
+    /// <summary>"New task": opens the expanded dialog in create mode on a draft for this Team and Project, whatever defaults the toolbar names.</summary>
+    private async Task NewTaskAsync(NewTaskDefaults __)
     {
         TaskDraft draft = new(string.Empty, this.Team, this.OnProjectPage ? this.Project : null);
         DialogParameters<TaskDetailDialog> parameters = new() { { dialog => dialog.Draft, draft } };
