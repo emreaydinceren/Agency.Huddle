@@ -907,6 +907,29 @@ public sealed class PersonaRunnerTests
         Assert.Equal(started.MessageId, updated.MessageId);
     }
 
+    /// <summary>A cost the Adapter reports reaches the Persona's Spend under the Persona's own Name, through the runner that owns the session.</summary>
+    [Fact]
+    public async Task CostReportedByTheAdapter_IsAddedToThePersonasSpend()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var server = new FakePersonaServer();
+        var factory = new FakeAgentHostFactory();
+        factory.Session.EnqueueReplyWithUsageAndCost([100], [new UsageCost(0.05m, "USD")], "done");
+        var persona = new Persona("nova", "You are Nova.");
+        var options = Options.Create(new TeamOptions { PipeName = server.PipeName });
+        PersonaSpend spend = new(NullLogger<PersonaSpend>.Instance);
+
+        await using var runner = new PersonaRunner(persona, options, factory, new FakePromptSource(), new RoomFollows(), NullLogger<PersonaRunner>.Instance, spend: spend);
+        await server.HandshakeAsync(runner, ct);
+
+        await server.SendAsync(NewMessagePosted("room-1", "hi"), ct);
+        await ReceiveUntilAsync<PostMessage>(server, ct);
+
+        Assert.Equal([new SpendAmount(0.05m, "USD")], spend.Get("nova"));
+    }
+
     /// <summary>
     /// Proves item 4 of task T2.2: a Stop ends the live Turn - <see cref="IAgentSession.CancelAsync"/>
     /// is called exactly once - and discards every Turn still queued behind it, none of which ever

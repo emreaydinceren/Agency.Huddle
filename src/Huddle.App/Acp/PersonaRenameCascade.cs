@@ -54,6 +54,7 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="tasks">Rewrites <c>creator:</c>/<c>assignee:</c> in a renamed Persona's Task files — Spec §9.6.</param>
 /// <param name="views">Rewrites a renamed Persona's assignee filter in every saved View — Spec §9.6.</param>
 /// <param name="folderMoves">Signals a Teammate-folder move as pending before it starts and settled once it finishes, so <c>DotAcpAgentHostFactory</c> can wait for it instead of racing it — corrections-B2 item 20.</param>
+/// <param name="spend">Moves a renamed Persona's display-only Spend, and forgets a removed Persona's — the Turn detail spec, section 6.6.</param>
 internal sealed partial class PersonaRenameCascade(
     ITeamDirectory teamDirectory,
     PersonaStore personaStore,
@@ -66,7 +67,8 @@ internal sealed partial class PersonaRenameCascade(
     ILogger<PersonaRenameCascade> logger,
     TaskService tasks,
     ViewStore views,
-    TeammateFolderMoves folderMoves) : IHostedService, IDisposable
+    TeammateFolderMoves folderMoves,
+    PersonaSpend spend) : IHostedService, IDisposable
 {
     // The runner it raced against restarts within milliseconds and inherits the Work Dir as its cwd,
     // so a handful of short retries covers the ordinary case (the old process has not yet exited)
@@ -128,6 +130,12 @@ internal sealed partial class PersonaRenameCascade(
         // stale read. Detaching it would let the OLD Name's avatar render, or none at all, for
         // however long the detached task takes to run.
         avatars.Rename(renamed.OldName, renamed.NewName);
+
+        // Spend is per Persona Name and exists whether or not an Agent row does, so, like the Avatar
+        // just above, it must sit ABOVE the "no Agent row" early return below: that guard fires for
+        // every Teammate in a stock installation, where Acp:Enabled is false. In memory only, so it
+        // cannot fail or block.
+        spend.Rename(renamed.OldName, renamed.NewName);
 
         // Same placement and the same reason as the Avatar rename immediately above (FC §6.12): file
         // state exists whether or not an Agent has ever connected, so this must sit ABOVE the "no
@@ -229,6 +237,7 @@ internal sealed partial class PersonaRenameCascade(
     private void OnPersonaRemoved(PersonaRemoved removed)
     {
         avatars.Remove(removed.Name);
+        spend.Forget(removed.Name);
 
         try
         {

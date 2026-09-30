@@ -70,6 +70,7 @@ internal static class TeammateCardTestSupport
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<ITeamDirectory>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IAgentGateway>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaHealth>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSpend>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<PersonaSupervisor>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<RoomEvents>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IModelCatalog>());

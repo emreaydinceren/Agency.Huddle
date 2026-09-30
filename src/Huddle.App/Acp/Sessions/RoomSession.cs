@@ -1238,12 +1238,12 @@ internal sealed class RoomSession : IAsyncDisposable
                 else if (agentEvent is ToolCallStarted started)
                 {
                     this.RecordTouchedPaths(started.Kind, started.RawInputJson);
-                    await this.WriteToolActivityAsync(started.ToolCallId, started.Title, MapToolCallStatus(started.Status), ct);
+                    await this.WriteToolActivityAsync(started.ToolCallId, started.Title, MapToolCallStatus(started.Status), started.Location, started.Diff, ct);
                 }
                 else if (agentEvent is ToolCallUpdated updated)
                 {
                     this.RecordTouchedPaths(updated.Kind, updated.RawInputJson);
-                    await this.WriteToolActivityAsync(updated.ToolCallId, updated.Title, MapToolCallStatus(updated.Status), ct);
+                    await this.WriteToolActivityAsync(updated.ToolCallId, updated.Title, MapToolCallStatus(updated.Status), updated.Location, updated.Diff, ct);
                 }
                 else if (agentEvent is TurnCompleted completed)
                 {
@@ -1284,6 +1284,14 @@ internal sealed class RoomSession : IAsyncDisposable
                         {
                             this.owner.AddTokens(usage.Used - previous);
                         }
+                    }
+
+                    // Display-only, and deliberately after and apart from the token logic: a cost
+                    // never changes what the token Budget counts. The Adapter sends it on only the
+                    // last update of a Turn, as a running total for this session.
+                    if (usage.Cost is { } cost)
+                    {
+                        this.owner.AddSpend(usage.SessionId, cost.Amount, cost.Currency);
                     }
                 }
 
@@ -1382,8 +1390,16 @@ internal sealed class RoomSession : IAsyncDisposable
     /// <param name="toolCallId">The id of the tool call this activity reports on.</param>
     /// <param name="title">A human-readable label for the call, if the agent supplied one.</param>
     /// <param name="status">The call's current lifecycle state, already mapped to the wire enum.</param>
+    /// <param name="location">The call's first location, or <see langword="null"/> when this notification has none.</param>
+    /// <param name="diff">The call's first change, or <see langword="null"/> when this notification has none.</param>
     /// <param name="ct">Cancels the write.</param>
-    private async Task WriteToolActivityAsync(string toolCallId, string? title, ToolActivityStatus status, CancellationToken ct)
+    private async Task WriteToolActivityAsync(
+        string toolCallId,
+        string? title,
+        ToolActivityStatus status,
+        ToolCallLocationInfo? location,
+        ToolCallDiffInfo? diff,
+        CancellationToken ct)
     {
         ActiveTurn? turn;
         lock (this.gate)
@@ -1396,9 +1412,26 @@ internal sealed class RoomSession : IAsyncDisposable
             return;
         }
 
+        string? path = location?.Path ?? diff?.Path;
+        EditChange? edit = BuildEditChange(diff);
+        if (edit is not null)
+        {
+            // The Adapter repeats the same diff on a later update of the same call (the second one
+            // adds the line), so a preview already sent is not sent again: it is the largest thing on
+            // this wire. The map is touched only from the single-threaded event reader.
+            if (turn.LastSentEdits.TryGetValue(toolCallId, out EditChange? lastSent) && edit == lastSent)
+            {
+                edit = null;
+            }
+            else
+            {
+                turn.LastSentEdits[toolCallId] = edit;
+            }
+        }
+
         try
         {
-            await this.owner.WriteAsync(new ToolActivity(turn.RoomId, turn.MessageId, toolCallId, title, status), ct);
+            await this.owner.WriteAsync(new ToolActivity(turn.RoomId, turn.MessageId, toolCallId, title, status, path, location?.Line, edit), ct);
         }
         catch (Exception ex) when (ex is IOException or ObjectDisposedException)
         {
@@ -1408,6 +1441,24 @@ internal sealed class RoomSession : IAsyncDisposable
                 this.owner.PersonaName,
                 turn.RoomId);
         }
+    }
+
+    /// <summary>
+    /// Builds the wire <see cref="EditChange"/> for a tool call's first change, each side clipped
+    /// rune-safely to <see cref="ToolActivityLimits.MaxEditSideLength"/>, or <see langword="null"/>
+    /// when the call has no change.
+    /// </summary>
+    /// <param name="diff">The call's first change, or <see langword="null"/>.</param>
+    private static EditChange? BuildEditChange(ToolCallDiffInfo? diff)
+    {
+        if (diff is null)
+        {
+            return null;
+        }
+
+        string? oldText = ToolActivityLimits.Clip(diff.OldText, ToolActivityLimits.MaxEditSideLength, out bool oldClipped);
+        string? newText = ToolActivityLimits.Clip(diff.NewText, ToolActivityLimits.MaxEditSideLength, out bool newClipped);
+        return new EditChange(oldText, newText, oldClipped || newClipped, diff.OmittedChanges);
     }
 
     /// <summary>
@@ -1795,6 +1846,13 @@ internal sealed class RoomSession : IAsyncDisposable
         /// Touched only from the single-threaded event-reader loop, so it needs no lock of its own.
         /// </summary>
         public bool DeltaWriteFailed { get; set; }
+
+        /// <summary>
+        /// The last <see cref="EditChange"/> written for each tool call of this Turn, keyed by tool
+        /// call id, so an unchanged preview is not sent twice. Touched only from the single-threaded
+        /// event-reader loop, so it needs no lock, and it dies with the Turn.
+        /// </summary>
+        public Dictionary<string, EditChange> LastSentEdits { get; } = new(StringComparer.Ordinal);
 
         /// <summary>
         /// Full paths this Agent's own tool calls touched this Turn (FC §6.8 item 2), read and

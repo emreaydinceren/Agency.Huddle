@@ -114,6 +114,14 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   first profile rather than failing.
 : *Avoid*: backend, host, provider, target.
 
+**Adapter command**
+: A command an Adapter advertises for a session, sent to it as the start of a prompt. Not a
+  **Skill**, which is Huddle's own folder of Markdown and not Claude's `.claude/skills/`, and not an
+  **App Tool**. Proposed for a later version and blocked on the unverified isolation checks: the list
+  an Adapter advertises today includes the Human's own Claude Code skills. See
+  [Known limits](known-limits.md).
+: *Avoid*: slash command on its own (`/invite` is Huddle's), skill, tool.
+
 ## Conversations
 
 **Room**
@@ -205,6 +213,20 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   means shutdown; see [Rules](rules.md) for the two traps that tell them apart.
 : *Avoid*: request, exchange, round.
 
+**Plan**
+: An Agent's own checklist for one Turn, replaced whole each time it changes. Each line is a
+  **Plan entry** with a status and a priority. Private to the Turn: unshared, unassigned and never
+  a file. Nothing sends one today, because the Claude Adapter's session has no todo-list tool.
+  Proposed, not built.
+: Never a **Task**, which has the same fields and is shared, persisted and assigned.
+: *Avoid*: task, to-do, step list.
+
+**Thinking**
+: The reasoning text an Adapter streams before its reply, to be shown collapsed in Turn detail.
+  Nothing sends it at the default **Effort** today. Proposed, not built.
+: *Avoid*: thought, reasoning, chain of thought. "Thought level" is avoided under **Effort**, and
+  that names a setting, not this.
+
 **App Tool**
 : A tool named by us whose body runs inside `Huddle.App`, offered to a session over
   MCP. This is what lets an Agent genuinely create a Room without reaching into
@@ -236,6 +258,12 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   cannot, and a per-Room one would reset with every fresh Room (RS D-10). See
   ADR-0006.
 : *Avoid*: quota, limit, cap, rate limit, throttle, allowance.
+
+**Spend**
+: What the Adapter has reported spending for one Teammate since the app started, shown in money on
+  its card. Display only: it informs and never limits, which is what a **Budget** is for, and it is
+  lost on restart. Built 2026-09-30.
+: *Avoid*: cost in interface copy, bill, and **Budget** for this.
 
 **Catch-up**
 : The Messages an Agent missed in a Room while unmentioned, carried along the
@@ -413,6 +441,8 @@ See
   code the record is `TaskItem`, because a type named `Task` would shadow
   `System.Threading.Tasks.Task`.
 : Capitalised, it means only this. A task in the ordinary sense stays lower case.
+: Not a **Plan entry**: an Agent's own checklist for one Turn has a status and a priority too,
+  but it is private, unassigned and never a file.
 : A Task is **referenced** in chat by writing its plain id. Rendered Messages turn
   an id that matches a real Task into a link. The copy button and the composer's
   `#` picker both produce exactly the id, with no marker kept.
@@ -507,13 +537,28 @@ See
 : *Avoid*: packet, frame, payload (that is the inner object).
 
 **Draft**
-: The text of a Turn in progress, shown in the Room before it becomes a Message.
-  In memory only - never written to the Transcript, lost on restart, and capped so
+: The text of a Turn in progress, and its **Turn detail**, shown in the Room before it becomes a
+  Message. In memory only - never written to the Transcript, lost on restart, and capped so
   one runaway Turn cannot grow a Singleton without bound. Held by `Drafts`, keyed
   by the Message id the Turn will post under, because two Agents can stream into
   one Room at once.
 : *Avoid*: partial, streaming message, preview, buffer, and **delta** - that is the
   Envelope that carries one, not the thing itself.
+
+**Turn detail**
+: What a Draft shows beside its text while a Turn runs: the Agent's most recent tool calls, each
+  with a status and, for an edit, an **Edit preview**. In memory only, at most six calls per Draft,
+  and gone when the Draft is. It is never written to the Transcript, so scrollback shows what an
+  Agent said and not what it did ([ADR-0008](../adr/0008-a-turn-is-visible-stoppable-and-says-when-it-fails.md)).
+  Built 2026-09-30 — see [the Turn detail spec](../Huddle.TurnDetail-Specifications.md).
+: *Avoid*: progress, trace, activity (avoided under **Change log**).
+
+**Edit preview**
+: The change one tool call makes to one file — the path, the line when known, and the text removed
+  and added — shown in a Draft's Turn detail and opened by the Human in place. Display only: it is
+  what the Adapter described, clipped to a fixed length, and Huddle never computes, applies or
+  reverts it. Built 2026-09-30.
+: *Avoid*: diff (avoided under **File Changes**, which are names only), patch, change list.
 
 **Stop**
 : The Human ending a Turn in progress, in one Room. It ends that Room Session's

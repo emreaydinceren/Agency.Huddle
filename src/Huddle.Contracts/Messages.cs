@@ -79,8 +79,25 @@ public sealed record MessageDelta(string RoomId, string MessageId, string Text, 
 /// <param name="ToolCallId">The id of the tool call this activity reports on.</param>
 /// <param name="Title">A human-readable label for the call, or <see langword="null"/> if none is available yet.</param>
 /// <param name="Status">The call's current lifecycle state.</param>
+/// <param name="Path">The file the call touches, or <see langword="null"/> when not known or not sent on this update. Omitted from the wire when null.</param>
+/// <param name="Line">The 1-based line in <paramref name="Path"/>, or <see langword="null"/> when not known or not sent on this update. Omitted from the wire when null.</param>
+/// <param name="Edit">What the call changes, for the Edit preview, or <see langword="null"/> when not an edit or not sent on this update. Omitted from the wire when null.</param>
 public sealed record ToolActivity(
-    string RoomId, string MessageId, string ToolCallId, string? Title, ToolActivityStatus Status) : ProtocolMessage;
+    string RoomId,
+    string MessageId,
+    string ToolCallId,
+    string? Title,
+    ToolActivityStatus Status,
+    string? Path = null,
+    int? Line = null,
+    EditChange? Edit = null) : ProtocolMessage;
+
+/// <summary>What an edit changes, as the Adapter described it. Display only: never applied, never diffed.</summary>
+/// <param name="OldText">The text replaced, or <see langword="null"/> for a new file.</param>
+/// <param name="NewText">The replacement text, or the whole new file, clipped to <see cref="ToolActivityLimits.MaxEditSideLength"/>.</param>
+/// <param name="Truncated">Whether either side was clipped to fit.</param>
+/// <param name="OmittedChanges">How many further changes the same call carried.</param>
+public sealed record EditChange(string? OldText, string? NewText, bool Truncated = false, int OmittedChanges = 0);
 
 // server -> client
 public sealed record Welcome(string AgentId, string Name, IReadOnlyList<RoomInfo> Rooms) : ProtocolMessage;

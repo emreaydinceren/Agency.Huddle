@@ -30,8 +30,9 @@
             </div>
         </div>
     }
-    @foreach (var draft in this.Drafts)
+    @for (var draftIndex = 0; draftIndex < this.Drafts.Count; draftIndex++)
     {
+        var draft = this.Drafts[draftIndex];
         <div class="message-row streaming">
             @* A Draft is the same Teammate mid-sentence, so it gets an avatar too - a gutter that only
                appeared once the Turn landed would make every streaming reply jump sideways as it
@@ -59,9 +60,56 @@
                    harmless extra step. The text settles into rendered Markdown the moment the real Message
                    arrives and this row is replaced. *@
                 <div class="message-body streaming">@draft.Text<span class="draft-caret"></span></div>
-                @if (draft.ToolTitle is not null)
+                @* The Turn detail: one row per tool call, oldest first, under the text. A real <ul> with a
+                   name and deliberately no aria-live - a Turn fires several updates a second and a live
+                   region would read every one out. Every mark has a text label: state never rests on
+                   colour alone. Text is rendered through Razor's escaping, never as MarkupString, for
+                   the same reason the Draft's own text is. *@
+                @if (draft.ToolCalls.Count > 0)
                 {
-                    <div class="tool-activity">@draft.ToolTitle</div>
+                    <ul class="turn-detail" aria-label="Tool calls">
+                        @for (var callIndex = 0; callIndex < draft.ToolCalls.Count; callIndex++)
+                        {
+                            var call = draft.ToolCalls[callIndex];
+                            var key = (draft.MessageId, call.ToolCallId);
+                            var open = this.expanded.Contains(key);
+                            // Index-based, never the ToolCallId: that is Adapter-chosen text and may hold
+                            // characters that are not safe in an id or a selector.
+                            var panelId = $"turn-detail-{draftIndex}-{callIndex}";
+                            <li class="turn-detail-row" @key="call.ToolCallId">
+                                <span class="turn-detail-mark" role="img" aria-label="@MessageList.StatusLabel(call.Status)">
+                                    @if (call.Status == ToolActivityStatus.InProgress)
+                                    {
+                                        <MudProgressCircular Indeterminate="true" Size="Size.Small" />
+                                    }
+                                    else
+                                    {
+                                        <MudIcon Icon="@MessageList.StatusIcon(call.Status)" Size="Size.Small" />
+                                    }
+                                </span>
+                                <span class="tool-activity" title="@call.Path">@MessageList.RowText(call)</span>
+                                @if (call.Line is not null)
+                                {
+                                    <span class="turn-detail-line">line @call.Line</span>
+                                }
+                                @if (call.Edit is not null)
+                                {
+                                    var fileName = MessageList.FileName(call.Path) ?? MessageList.RowText(call);
+                                    <button type="button" class="turn-detail-toggle"
+                                            aria-expanded="@(open ? "true" : "false")" aria-controls="@panelId"
+                                            aria-label="@($"{(open ? "Hide" : "Show")} change to {fileName}")"
+                                            @onclick="() => this.Toggle(key)">
+                                        <MudIcon Icon="@(open ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" Size="Size.Small" />
+                                    </button>
+                                    <div id="@panelId" class="turn-detail-panel">
+                                        <MudCollapse Expanded="@open">
+                                            <EditPreview Edit="@call.Edit" Path="@(call.Path ?? fileName)" />
+                                        </MudCollapse>
+                                    </div>
+                                }
+                            </li>
+                        }
+                    </ul>
                 }
             </div>
         </div>
@@ -108,6 +156,31 @@
     private int lastRenderedSignature;
 
     /// <summary>
+    /// The rows the Human has opened, by Message id and tool call id. View state only: a row stays
+    /// open across the re-renders a burst of updates causes because the key, not the position,
+    /// identifies it, and <see cref="OnParametersSet"/> forgets every key whose Draft is gone.
+    /// </summary>
+    private readonly HashSet<(string MessageId, string ToolCallId)> expanded = [];
+
+    /// <summary>Opens the row <paramref name="key"/> names if it is closed, and closes it if it is open.</summary>
+    /// <param name="key">The Message id and tool call id of the row.</param>
+    private void Toggle((string MessageId, string ToolCallId) key)
+    {
+        if (!this.expanded.Remove(key))
+        {
+            this.expanded.Add(key);
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        // A finished Turn leaves nothing behind: drop the open state of every row whose call is gone.
+        this.expanded.RemoveWhere(key => !this.Drafts.Any(draft =>
+            string.Equals(draft.MessageId, key.MessageId, StringComparison.Ordinal)
+            && draft.ToolCalls.Any(call => string.Equals(call.ToolCallId, key.ToolCallId, StringComparison.Ordinal))));
+    }
+
+    /// <summary>
     /// How much content this Room has rendered, as one number. A growing Draft never changes
     /// <c>Messages.Count</c>, so counting Messages alone would leave a streaming reply on screen
     /// and never scroll to it; folding the Draft text length into the same signature means either
@@ -124,7 +197,48 @@
     /// <param name="drafts">The Drafts currently rendered.</param>
     /// <returns>A value that differs whenever the rendered content has grown or shrunk.</returns>
     internal static int RenderedSignature(IReadOnlyList<ChatMessage> messages, IReadOnlyList<Draft> drafts) =>
-        messages.Count + drafts.Sum(draft => draft.Text.Length);
+        messages.Count + drafts.Sum(draft => draft.Text.Length + draft.ToolCalls.Count + draft.ToolCalls.Sum(call => (int)call.Status + 1));
+
+    /// <summary>The text label of a tool call's status mark, for assistive technology and for anyone who cannot tell the marks apart.</summary>
+    /// <param name="status">The call's lifecycle state.</param>
+    private static string StatusLabel(ToolActivityStatus status) => status switch
+    {
+        ToolActivityStatus.Pending => "Waiting",
+        ToolActivityStatus.InProgress => "Running",
+        ToolActivityStatus.Completed => "Done",
+        ToolActivityStatus.Failed => "Failed",
+        _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Unmapped tool activity status."),
+    };
+
+    /// <summary>The icon of a tool call's status mark. A running call is drawn as a spinner instead, so it has none here.</summary>
+    /// <param name="status">The call's lifecycle state.</param>
+    private static string StatusIcon(ToolActivityStatus status) => status switch
+    {
+        ToolActivityStatus.Pending => Icons.Material.Filled.Schedule,
+        ToolActivityStatus.Completed => Icons.Material.Filled.CheckCircleOutline,
+        ToolActivityStatus.Failed => Icons.Material.Filled.ErrorOutline,
+        _ => Icons.Material.Filled.Circle,
+    };
+
+    /// <summary>What a row says: the Adapter's title, else the file name of its path, else a plain fallback.</summary>
+    /// <param name="call">The tool call.</param>
+    private static string RowText(ToolCallDetail call) => call.Title ?? MessageList.FileName(call.Path) ?? "Tool call";
+
+    /// <summary>
+    /// The last segment of <paramref name="path"/>, splitting on both separators because the path is
+    /// the Adapter's text and may name a Windows file while this server runs anywhere.
+    /// </summary>
+    /// <param name="path">The path, or <see langword="null"/>.</param>
+    private static string? FileName(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+        {
+            return null;
+        }
+
+        string name = path[(path.AsSpan().LastIndexOfAny('\\', '/') + 1)..];
+        return name.Length > 0 ? name : path;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

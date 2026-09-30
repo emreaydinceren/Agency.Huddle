@@ -195,6 +195,22 @@ internal sealed class FakeAgentSession : IAgentSession
     }
 
     /// <summary>
+    /// Queues a turn that reports context-window levels, each with the running cost the Adapter would
+    /// attach to that update (or none), before it completes. Like <see cref="EnqueueReplyWithUsage"/>
+    /// the levels are fill levels; the costs are running totals for the session, as ACP defines them.
+    /// </summary>
+    /// <param name="usageLevels">The <c>Used</c> values to publish, in order, before the reply.</param>
+    /// <param name="costs">The cost carried by the update at the same index; an entry or the whole list may be absent.</param>
+    /// <param name="chunks">The reply text.</param>
+    public void EnqueueReplyWithUsageAndCost(IReadOnlyList<long> usageLevels, IReadOnlyList<UsageCost?> costs, params string[] chunks)
+    {
+        lock (this.gate)
+        {
+            this.plannedTurns.Enqueue(new TurnPlan(chunks, null, TimeSpan.Zero, usageLevels, UsageCosts: costs));
+        }
+    }
+
+    /// <summary>
     /// Queues zero or more ACP tool-call events to be published on the next <see cref="PromptAsync"/>
     /// call, before its reply chunks - so a test can prove <see cref="ToolCallStarted"/> and
     /// <see cref="ToolCallUpdated"/> events reach the wire as <c>ToolActivity</c> envelopes.
@@ -314,9 +330,10 @@ internal sealed class FakeAgentSession : IAgentSession
                 this.events.Writer.TryWrite(toolEvent);
             }
 
-            foreach (var level in plan.UsageLevels)
+            for (var index = 0; index < plan.UsageLevels.Count; index++)
             {
-                this.events.Writer.TryWrite(new UsageUpdated(this.SessionId, ContextWindowSize, level));
+                UsageCost? cost = plan.UsageCosts is not null && index < plan.UsageCosts.Count ? plan.UsageCosts[index] : null;
+                this.events.Writer.TryWrite(new UsageUpdated(this.SessionId, ContextWindowSize, plan.UsageLevels[index], cost));
             }
 
             if (plan.DripGap is { } dripGap)
@@ -360,5 +377,6 @@ internal sealed class FakeAgentSession : IAgentSession
         IReadOnlyList<long> UsageLevels,
         StopReason Reason = StopReason.EndTurn,
         TimeSpan? DripGap = null,
-        Task? Gate = null);
+        Task? Gate = null,
+        IReadOnlyList<UsageCost?>? UsageCosts = null);
 }

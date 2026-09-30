@@ -97,6 +97,10 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 
     private RoomSessionPool? pool;
     private JsonLineStream? stream;
+    // The display-only Spend table, or null where there is none (a runner built without a container).
+    // Written to, never read on the Turn path: a cost cannot spend a Budget.
+    private readonly PersonaSpend? spend;
+
     private IPersonaHost? host;
     private Task? readLoopTask;
     private string? agentId;
@@ -129,7 +133,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         OwnPosts? ownPosts = null,
         TurnActivity? turnActivity = null,
         LibraryDocumentCollector? libraryDocs = null,
-        bool readsFiles = true)
+        bool readsFiles = true,
+        PersonaSpend? spend = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
@@ -151,6 +156,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.turnActivity = turnActivity;
         this.libraryDocs = libraryDocs;
         this.readsFiles = readsFiles;
+        this.spend = spend;
         this.declaredWatches = PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _)
             ? identity.Watches ?? []
             : [];
@@ -193,6 +199,10 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
 
     /// <inheritdoc />
     void IRoomSessionOwner.AddTokens(long delta) => Interlocked.Add(ref this.tokensConsumed, delta);
+
+    /// <inheritdoc />
+    void IRoomSessionOwner.AddSpend(string sessionId, decimal runningTotal, string currency) =>
+        this.spend?.Add(this.persona.Name, sessionId, runningTotal, currency);
 
     /// <inheritdoc />
     void IRoomSessionOwner.ReportTokenBudgetSpent()

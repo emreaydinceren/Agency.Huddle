@@ -8,6 +8,27 @@ oversights or quietly add them.
 Two entries have since been planned and one has since been built; each one says
 so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
 
+- **Turn detail and Spend are built, and here is what they do not cover.** A Draft
+  shows its recent tool calls, an edit opens to an Edit preview, and a Teammate's card
+  shows what its Adapter has reported spending — [ADR-0034](../adr/0034-turn-detail-rides-on-tool-activity-as-optional-fields.md),
+  [Roadmap](roadmap.md) item 21, [the design](../Huddle.TurnDetail-Specifications.md).
+  Four gaps are deliberate:
+  - **Both are lost on a restart, and Turn detail goes with its Draft.** The list of
+    tool calls lives and dies with the Draft, in memory, and never reaches the
+    Transcript. Spend is a figure for this run, not a ledger, and starts again from zero
+    when the app does.
+  - **One change is shown per call.** The Adapter can describe a call that edits one
+    file several times; the preview shows the first change and says how many more it did
+    not show. It is display only: never applied, never diffed.
+  - **Six rows is a window, not a log.** A seventh call pushes the oldest out. A longer
+    history, or a log the Human can open after the Turn, would need the persistence the
+    design leaves out.
+  - **Spend limits nothing and is not a Budget.** It is the Adapter's own figure,
+    summed per currency across the sessions this run has seen. A local model reports no
+    cost and shows no line, never a zero. Whether a cost continues or restarts when a
+    closed Room Session is re-opened in the *same* Adapter process is unverified live
+    (verification V-3), so a first re-open after an idle close could over- or
+    under-count until it is run.
 - **The runaway-loop guard is built, and here is what it does not cover.** A Room
   now has a Budget of agent-authored Messages between one Human Message and the
   next, and asks before granting another — [ADR-0006](../adr/0006-a-room-has-a-budget-for-agent-replies.md).

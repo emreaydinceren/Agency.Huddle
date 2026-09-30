@@ -47,6 +47,8 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~17~~ | ~~Skills and the Chief of Staff~~ — **delivered 2026-09-22** | `Skills/`, `Teammates/`, then `DotAcpAgentHostFactory` and `PersonaRunner` | shipped; the first mechanism for item 9's per-Persona tool grants, and the first Turn that no delivered Message starts — see [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) and [the Skills design](../Huddle.Skills-Specifications.md) |
 | ~~18~~ | ~~One session per Room~~ — **DELIVERED (code) 2026-09-23** | `Acp/Sessions/`, the `IAgentHostFactory`/`IPersonaHost` split | shipped: a Room Session per (Persona, Room), lazy open, LRU eviction, resume by stored id, Transcript Catch-up on a session's first Turn, Stop routed per Room. Paid checks (RS-M1 through RS-M10, V-3, V-5) not yet run — see [the Room Sessions spec](../Huddle.RoomSessions-Specifications.md), [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md) and [Known limits](known-limits.md) |
 | ~~19~~ | ~~Tasks~~ — **delivered 2026-09-25** | `Tasks/`, then `Acp/Tools/*TaskTool.cs` and `Components/Tasks/*` | shipped: a Markdown Task per file under `Tasks/<Team>/[<Project>/]`, a wake-on-change trigger reusing the Reply Gate and Budget, six App Tools, and a Board/List/Detail UI with a `#` picker and task-ref links in chat. Four paid manual tests and one concurrent-move race are not yet verified — see [the Tasks spec](../Huddle.Tasks-Specifications.md), [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md), [ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md) and [Known limits](known-limits.md) |
+| 20 | An Agent asks the Human before a tool runs — **proposed 2026-09-30, not built** | a new approval handler wrapping `WorkDirPermissionHandler`, a pending-approval store, an approval card in the Room, and a pause in `RoomSession`'s idle watchdog | `IPermissionHandler` is already the seam, `session/request_permission` already arrives and is answered, and Stop already cancels a waiting request — see [item 20](#20-an-agent-asks-the-human-before-a-tool-runs--proposed-2026-09-30-not-built) |
+| 21 | Turn detail: an Edit preview and Spend — **built 2026-09-30 (V1); Adapter commands, Plan and Thinking not built** | `Drafts` and `MessageList.razor` for the preview; a new `PersonaSpend` and `TeammateCard.razor` for Spend | `diff`, `locations` and `cost` already arrive and `SessionUpdateMapper` drops them. No protocol bump: every change is an optional field on `ToolActivity`, and Spend never crosses the pipe. Item 20's approval card reuses the preview — see [the Turn detail spec](../Huddle.TurnDetail-Specifications.md) |
 
 ## 1. Renaming a Teammate
 
@@ -1240,6 +1242,12 @@ Three rules carry the design, and each is easy to lose in a refactor:
   from a Proposal, which survives typed Messages because revising it through prose is
   its normal path. It is why the two have separate stores.
 
+One constraint sits outside the tool. Huddle must not advertise `clientCapabilities.elicitation`
+while this is the only way to ask: `claude-agent-acp` keeps Claude's built-in `AskUserQuestion`
+off until the client does, and advertising it also switches on the refusal-fallback dialog and
+MCP-initiated forms, each of which holds a Turn open. See §6.8 and D-13 of
+[the Questions spec](../Huddle.Questions-Specifications.md).
+
 ## 17. Skills and the Chief of Staff — DELIVERED 2026-09-22
 
 > **Delivered**, with
@@ -1377,3 +1385,98 @@ How the sessions are run:
 > - an editor save can overwrite a link that a rename just rewrote (the freshness notice and the
 >   save confirm mitigate this);
 > - an Agent's edits reach Backlinks only after a refresh.
+
+## 20. An Agent asks the Human before a tool runs — PROPOSED 2026-09-30, not built
+
+> **Proposed, not built, not scheduled, and not designed.** The Human decided on 2026-09-30
+> that auto-approve is acceptable for now, so nothing changes today. This entry records what
+> was found while deciding, so whoever builds it does not repeat the investigation. There is no
+> spec and no ADR. Read [Rules](rules.md) (the Turn-ending row, TRAP 1 and TRAP 2) and
+> [ADR-0022](../adr/0022-an-agent-asks-the-human-with-a-question.md) first.
+
+Today nobody is asked. `DotAcpPersonaHost.BuildOptions` gives every session a
+`WorkDirPermissionHandler`, which answers every `session/request_permission` itself: it picks
+`allow_once`, else `allow_always`, and refuses only a tool call that names a path under
+`~/.claude`. No setting controls this, because `AcpOptions` has no permission member, and every
+Teammate gets the same handler.
+
+**What a live Turn showed, 2026-09-29.** With `Team:Acp:TraceWire=true`, the Chief of Staff was
+asked to read a file outside its Work Dir. The Adapter (`claude-agent-acp` 0.75.1) sent
+`session/request_permission` twice for that one read, because it retried its `Grep`. Each request
+carried the reason *Path is outside allowed working directories* in `_meta.permission.description`
+and three options: `allow-once` (kind `allow_once`, "Yes"), `allow-with-updates` (kind
+`allow_always`, "Yes, allow reading from Huddle2\ during this session") and `reject` (kind
+`reject_once`, "No"). The handler answered `allow-once` both times within about 70 ms, nothing
+appeared in the Room, and the reply was correct. `allow_once` does not persist, which is why the
+second request came.
+
+**What a second run measured, 2026-09-30.** The Chief of Staff was asked to create and then
+edit a scratch file inside its own Work Dir. Each step produced one request, so **an edit inside
+the Work Dir does ask**: a `Write` (kind `edit`) and an `Edit`. Both offered only `allow-once`
+and `reject`, with no `allow_always` option, unlike the read above. Both carried populated
+`rawInput`, a `diff` content block (`oldText` null for a new file; the replaced and replacement
+text for an edit) and `locations`. Reads inside the Work Dir and `Bash` were not tried, so how
+often a card would appear for an ordinary Turn is still unknown. The wire trace is the only way
+to see a request today, because the handler logs a refusal and nothing else.
+
+**One documented claim that is stale.** [agent-guide.md](../acp/agent-guide.md) §3.4 says
+`rawInput` arrives at request time with empty arrays (`{"file_path":[],"content":[]}`), so a
+prompt cannot show what is about to be written. On `claude-agent-acp` 0.75.1 a `Grep`, a `Write`
+and an `Edit` request each carried real values, a `title` and a `diff`, so a card can show the
+change itself. The guide belongs to the ACP effort's subtree, so this entry records the
+discrepancy and does not edit it.
+
+**Why this is not `ask_human` with a different card.** ADR-0022 refuses to hold a Turn open for
+the Human: a tool that waits collides with `TurnIdleTimeoutSeconds` and blocks the Agent in every
+other Room. A permission request has no such way out, because ACP suspends the Agent's tool call
+until the client answers. So all three costs ADR-0022 avoids have to be handled instead:
+
+- **The idle watchdog must pause.** `RoomSession.WatchForAdapterSilenceAsync` cancels a Turn after
+  `TurnIdleTimeoutSeconds` (180) with no event, and a waiting request produces none. An unanswered
+  card would be reported as a hung Adapter and the Turn abandoned. The clock has to stop while a
+  decision is pending and restart on the answer. A card that is left to lapse is a third cause of
+  cancellation, neither a timeout nor a Stop, so it needs its own latch written before the
+  cancellation it causes (TRAP 1).
+- **The Turn keeps its `TurnGate` slot.** `MaxConcurrentTurns` defaults to 1 per Persona, so while
+  a card waits, that Persona's Turns in its other Rooms queue behind it. Accept and document that,
+  or release the slot while waiting, which touches the ticket protocol (RS §6.1).
+- **A card needs a Room, and the request carries only a `SessionId`.** `PermissionRequestContext`
+  has no Room, and `BuildOptions`, where the handler is built, has none either. A Room Session
+  serves one Room, but a shared session (`SessionPerRoom: false`) serves every Room and only its
+  active Turn knows which. `RoomSession` already tells `TurnActivity` which Room a Turn belongs
+  to; the same moment can bind the session to that Room for the Turn's duration. One prompt is in
+  flight per session, so the binding is unambiguous in both modes.
+
+What already works is **Stop**. `DotAcpClientAdapter.RequestPermissionAsync` links the handler's
+token to the session's prompt cancellation, and `DotAcpAgentSession.CancelAsync` cancels that
+source, so a Stop reaches a waiting handler as an `OperationCanceledException` and the Adapter
+receives a `cancelled` outcome. This was checked by reading both; nothing has run it with a
+handler that actually waits.
+
+**Shape, if built.** An approval handler that wraps `WorkDirPermissionHandler`, so the `~/.claude`
+refusal still comes first: a call that is always refused is never put to the Human. A request
+waits in memory on a card in its Room, in the image of the Question card (item 16), but as a list,
+because two Agents in one Room can each be waiting. The buttons are the options the Adapter
+offered, labelled with its own `name`, because it words the `allow_always` option itself and names
+the folder. They are chosen by `kind`, never by `optionId`, which is Adapter-defined.
+`_meta.permission.description` supplies the reason when the Adapter sends one; the `Write` and
+`Edit` requests sent only a `title`.
+
+**Open decisions, and what to lean towards.**
+
+- **The default.** `Ask` out of the box changes every install; `AutoApprove` as the default with
+  `Ask` as an opt-in changes none. The Human chose to keep auto-approve for now. A global
+  `Team:Acp:PermissionMode` (`Ask` or `AutoApprove`) is the smallest first step.
+- **Scope.** Global first. A per-Teammate choice needs a store outside the `Persona` record, for
+  the reason an Avatar does (item 15): a field in frontmatter would restart the session on every
+  change.
+- **An unanswered card.** Reject after a configurable wait (10 minutes is a starting point), so an
+  unattended Room cannot pin a Turn slot for ever. The alternative is to wait until a Stop.
+- **Whether a decision is recorded.** Tool activity is never written to the Transcript (item 5),
+  but an approval is an authorisation. Undecided; the floor is a log line at Information.
+
+**What it does not do.** It does not make the Work Dir a jail: once a `Bash` call is approved, it
+can do anything the Human can. The `~/.claude` guard still misses a `Bash` command that redirects
+into that folder. And the approval card shows what the Adapter says it will do, which is only as
+good as the `rawInput` it sends. Build it after item 16, which shares the store-and-card pattern
+and probably `Chat.razor` and `RoomEvents`, though neither blocks the other.

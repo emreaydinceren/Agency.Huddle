@@ -191,6 +191,176 @@ public sealed class SessionUpdateMapperTests
         Assert.Equal(new UsageUpdated("s", 1000, 250), result);
     }
 
+    /// <summary>A tool call's first <c>diff</c> block and first location reach the event, so the Room view can name the file and show the change.</summary>
+    [Fact]
+    public void Map_ToolCallWithDiffAndLocation_CarriesBoth()
+    {
+        dotacp.protocol.ToolCall update = new dotacp.protocol.ToolCall
+        {
+            ToolCallId = "call-1",
+            Title = "Edit notes.md",
+            Kind = dotacp.protocol.ToolKind.Edit,
+            Status = dotacp.protocol.ToolCallStatus.InProgress,
+            Content = new dotacp.protocol.ToolCallContent[]
+            {
+                new dotacp.protocol.Diff { Path = "E:\\work\\notes.md", OldText = "one", NewText = "two" },
+            },
+            Locations = new[] { new dotacp.protocol.ToolCallLocation { Path = "E:\\work\\notes.md", Line = 12 } },
+        };
+
+        ToolCallStarted result = Assert.IsType<ToolCallStarted>(SessionUpdateMapper.Map("s", update));
+
+        Assert.Equal(new ToolCallDiffInfo("E:\\work\\notes.md", "one", "two"), result.Diff);
+        Assert.Equal(new ToolCallLocationInfo("E:\\work\\notes.md", 12), result.Location);
+    }
+
+    /// <summary>An update that omits <c>content</c> and <c>locations</c> maps to null, which the consumer reads as "unchanged".</summary>
+    [Fact]
+    public void Map_ToolCallUpdateWithoutContent_LeavesDiffAndLocationNull()
+    {
+        dotacp.protocol.SessionUpdateToolCallUpdate update = new dotacp.protocol.SessionUpdateToolCallUpdate
+        {
+            ToolCallId = "call-1",
+            Kind = dotacp.protocol.ToolKind.Edit,
+            Status = dotacp.protocol.ToolCallStatus.Completed,
+        };
+
+        ToolCallUpdated result = Assert.IsType<ToolCallUpdated>(SessionUpdateMapper.Map("s", update));
+
+        Assert.Null(result.Diff);
+        Assert.Null(result.Location);
+    }
+
+    /// <summary>An update carries the diff and the line when the Adapter sends them on a later notification.</summary>
+    [Fact]
+    public void Map_ToolCallUpdateWithDiffAndLine_CarriesBoth()
+    {
+        dotacp.protocol.SessionUpdateToolCallUpdate update = new dotacp.protocol.SessionUpdateToolCallUpdate
+        {
+            ToolCallId = "call-1",
+            Kind = dotacp.protocol.ToolKind.Edit,
+            Status = dotacp.protocol.ToolCallStatus.InProgress,
+            Content = new dotacp.protocol.ToolCallContent[]
+            {
+                new dotacp.protocol.Diff { Path = "E:\\work\\notes.md", OldText = "one", NewText = "two" },
+            },
+            Locations = new[] { new dotacp.protocol.ToolCallLocation { Path = "E:\\work\\notes.md", Line = 12 } },
+        };
+
+        ToolCallUpdated result = Assert.IsType<ToolCallUpdated>(SessionUpdateMapper.Map("s", update));
+
+        Assert.Equal(new ToolCallDiffInfo("E:\\work\\notes.md", "one", "two"), result.Diff);
+        Assert.Equal(new ToolCallLocationInfo("E:\\work\\notes.md", 12), result.Location);
+    }
+
+    /// <summary>A write creates a file, so the diff has no old side.</summary>
+    [Fact]
+    public void Map_WriteDiff_HasNullOldText()
+    {
+        dotacp.protocol.ToolCall update = new dotacp.protocol.ToolCall
+        {
+            ToolCallId = "call-1",
+            Kind = dotacp.protocol.ToolKind.Edit,
+            Status = dotacp.protocol.ToolCallStatus.InProgress,
+            Content = new dotacp.protocol.ToolCallContent[]
+            {
+                new dotacp.protocol.Diff { Path = "E:\\work\\new.txt", NewText = "hello" },
+            },
+        };
+
+        ToolCallStarted result = Assert.IsType<ToolCallStarted>(SessionUpdateMapper.Map("s", update));
+
+        Assert.Equal(new ToolCallDiffInfo("E:\\work\\new.txt", null, "hello"), result.Diff);
+    }
+
+    /// <summary>A multi-change call keeps its first change and counts the others, so the view can say it shows one of several.</summary>
+    [Fact]
+    public void Map_TwoDiffBlocks_KeepsTheFirstAndCountsTheRest()
+    {
+        dotacp.protocol.ToolCall update = new dotacp.protocol.ToolCall
+        {
+            ToolCallId = "call-1",
+            Kind = dotacp.protocol.ToolKind.Edit,
+            Status = dotacp.protocol.ToolCallStatus.InProgress,
+            Content = new dotacp.protocol.ToolCallContent[]
+            {
+                new dotacp.protocol.Diff { Path = "a.txt", OldText = "1", NewText = "2" },
+                new dotacp.protocol.Diff { Path = "a.txt", OldText = "3", NewText = "4" },
+            },
+        };
+
+        ToolCallStarted result = Assert.IsType<ToolCallStarted>(SessionUpdateMapper.Map("s", update));
+
+        Assert.Equal(new ToolCallDiffInfo("a.txt", "1", "2", 1), result.Diff);
+    }
+
+    /// <summary>A diff block whose <c>newText</c> never arrived is a change to empty text, not a failure.</summary>
+    [Fact]
+    public void Map_DiffWithoutNewText_HasEmptyNewText()
+    {
+        dotacp.protocol.ToolCall update = new dotacp.protocol.ToolCall
+        {
+            ToolCallId = "call-1",
+            Kind = dotacp.protocol.ToolKind.Edit,
+            Status = dotacp.protocol.ToolCallStatus.InProgress,
+            Content = new dotacp.protocol.ToolCallContent[]
+            {
+                new dotacp.protocol.Diff { Path = "a.txt", OldText = "x" },
+            },
+        };
+
+        ToolCallStarted result = Assert.IsType<ToolCallStarted>(SessionUpdateMapper.Map("s", update));
+
+        Assert.Equal(new ToolCallDiffInfo("a.txt", "x", string.Empty), result.Diff);
+    }
+
+    /// <summary>A non-diff content block (for example terminal output) is not a diff.</summary>
+    [Fact]
+    public void Map_ContentWithoutADiffBlock_LeavesDiffNull()
+    {
+        dotacp.protocol.ToolCall update = new dotacp.protocol.ToolCall
+        {
+            ToolCallId = "call-1",
+            Kind = dotacp.protocol.ToolKind.Read,
+            Status = dotacp.protocol.ToolCallStatus.InProgress,
+            Content = new dotacp.protocol.ToolCallContent[]
+            {
+                new dotacp.protocol.Terminal { TerminalId = "term-1" },
+            },
+        };
+
+        ToolCallStarted result = Assert.IsType<ToolCallStarted>(SessionUpdateMapper.Map("s", update));
+
+        Assert.Null(result.Diff);
+    }
+
+    /// <summary>A usage update with a cost carries the amount and the currency.</summary>
+    [Fact]
+    public void Map_UsageUpdateWithCost_CarriesAmountAndCurrency()
+    {
+        dotacp.protocol.UsageUpdate update = new dotacp.protocol.UsageUpdate
+        {
+            Size = 1000,
+            Used = 250,
+            Cost = new dotacp.protocol.Cost { Amount = 0.054828, Currency = "USD" },
+        };
+
+        UsageUpdated result = Assert.IsType<UsageUpdated>(SessionUpdateMapper.Map("s", update));
+
+        Assert.Equal(new UsageCost(0.054828m, "USD"), result.Cost);
+    }
+
+    /// <summary>A usage update without a cost leaves it null, so a local model shows no Spend.</summary>
+    [Fact]
+    public void Map_UsageUpdateWithoutCost_LeavesCostNull()
+    {
+        dotacp.protocol.UsageUpdate update = new dotacp.protocol.UsageUpdate { Size = 1000, Used = 250 };
+
+        UsageUpdated result = Assert.IsType<UsageUpdated>(SessionUpdateMapper.Map("s", update));
+
+        Assert.Null(result.Cost);
+    }
+
     [Fact]
     public void CurrentModeUpdate_MapsModeChanged()
     {

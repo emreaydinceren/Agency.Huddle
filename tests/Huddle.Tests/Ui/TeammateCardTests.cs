@@ -60,6 +60,104 @@ public sealed class TeammateCardTests
         Assert.Empty(cut.FindAll("textarea"));
     }
 
+    /// <summary>What a Teammate's Adapter has reported spending shows as one line under its status: the amount to three decimals in the current culture, then the currency.</summary>
+    [Fact]
+    public async Task SpendLine_ShowsThreeDecimalsAndTheCurrency()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "x");
+        factory.Services.GetRequiredService<PersonaSpend>().Add("coo", "s1", 0.0908m, "USD");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+
+        var line = Assert.Single(cut.FindAll(".teammate-card-spend"));
+        Assert.Equal($"Spent since start: {0.091m.ToString("N3", System.Globalization.CultureInfo.CurrentCulture)} USD", line.TextContent.Trim());
+    }
+
+    /// <summary>A Teammate that reports no cost, such as a local model, has no Spend line at all, never a zero.</summary>
+    [Fact]
+    public async Task SpendLine_IsAbsent_WhenNothingWasReported()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "x");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+
+        Assert.Empty(cut.FindAll(".teammate-card-spend"));
+        Assert.DoesNotContain("Spent since start", cut.Markup, StringComparison.Ordinal);
+    }
+
+    /// <summary>An open card follows a new report without being reopened: a MudDialog freezes its parameters, so the card subscribes itself.</summary>
+    [Fact]
+    public async Task SpendLine_UpdatesOnSpendChanged()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "x");
+        await using var ctx = NewContext(factory);
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        Assert.Empty(cut.FindAll(".teammate-card-spend"));
+
+        factory.Services.GetRequiredService<PersonaSpend>().Add("coo", "s1", 0.25m, "USD");
+
+        cut.WaitForAssertion(() => Assert.Single(cut.FindAll(".teammate-card-spend")));
+    }
+
+    /// <summary>A Teammate billed in two currencies shows one line for each, never a sum across them.</summary>
+    [Fact]
+    public async Task TwoCurrencies_ShowTwoLines()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "x");
+        var spend = factory.Services.GetRequiredService<PersonaSpend>();
+        spend.Add("coo", "s1", 0.4m, "USD");
+        spend.Add("coo", "s1", 1.25m, "EUR");
+        await using var ctx = NewContext(factory);
+
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+
+        var culture = System.Globalization.CultureInfo.CurrentCulture;
+        Assert.Equal(
+            [
+                $"Spent since start: {1.25m.ToString("N3", culture)} EUR",
+                $"Spent since start: {0.4m.ToString("N3", culture)} USD",
+            ],
+            cut.FindAll(".teammate-card-spend").Select(line => line.TextContent.Trim()));
+    }
+
+    /// <summary>The card unsubscribes when it goes, because <see cref="PersonaSpend"/> outlives it and a leaked handler would keep every closed card alive.</summary>
+    [Fact]
+    public async Task Dispose_Unsubscribes()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "x");
+        var spend = factory.Services.GetRequiredService<PersonaSpend>();
+        await using var ctx = NewContext(factory);
+        _ = await OpenViewCardAsync(ctx, factory, "coo");
+        Assert.Equal(1, spend.SubscriberCount);
+
+        await ctx.DisposeComponentsAsync();
+
+        Assert.Equal(0, spend.SubscriberCount);
+    }
+
+    /// <summary>Spend is shown when reading the card, not in Edit, where the card is a form for changing the Teammate.</summary>
+    [Fact]
+    public async Task SpendLine_IsNotShownInEditMode()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await SeedPersonaAsync(factory, "coo", "x");
+        factory.Services.GetRequiredService<PersonaSpend>().Add("coo", "s1", 0.25m, "USD");
+        await using var ctx = NewContext(factory);
+        var cut = await OpenViewCardAsync(ctx, factory, "coo");
+        Assert.NotEmpty(cut.FindAll(".teammate-card-spend"));
+
+        await ClickButtonAsync(cut, "Edit");
+
+        Assert.Empty(cut.FindAll(".teammate-card-spend"));
+    }
+
     /// <summary>View mode is the one place Title, Alias and Teams are shown alongside the Name - Edit's top identity area stays as before (see <see cref="EditMode_TopIdentityAreaStillOmitsTitleAliasAndTeamsAsReadOnlyText"/>).</summary>
     [Fact]
     public async Task ViewMode_ShowsTitleAliasAndTeams()

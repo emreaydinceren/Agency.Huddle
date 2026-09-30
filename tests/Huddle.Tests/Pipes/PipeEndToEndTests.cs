@@ -740,6 +740,181 @@ public sealed class PipeEndToEndTests
         Assert.Equal("Searching", draft.ToolTitle);
     }
 
+    /// <summary>An activity carrying a path, a line and an Edit reaches the Draft's row with all three.</summary>
+    [Fact]
+    public async Task ToolActivity_WithEdit_ReachesTheDraft()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var (client, roomId) = await ConnectEchoAsync(fixture, ct);
+        await using var _ = client;
+
+        ToolCallDetail call = await SendToolActivityAsync(
+            fixture, client, roomId, "Edit notes.md", "E:\\work\\notes.md", 12, new EditChange("one", "two"), ct);
+
+        Assert.Equal(new ToolCallDetail("call-1", "Edit notes.md", ToolActivityStatus.InProgress, "E:\\work\\notes.md", 12, new EditChange("one", "two")), call);
+    }
+
+    /// <summary>An Agent that is not a Member of the Room cannot put a tool call, or an Edit preview, on its Draft.</summary>
+    [Fact]
+    public async Task ToolActivity_FromANonMember_IsRefused()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var drafts = fixture.Services.GetRequiredService<Drafts>();
+        var (echo, echoRoomId) = await ConnectEchoAsync(fixture, ct);
+        await using var _ = echo;
+
+        await using var alpha = await fixture.ConnectClientAsync(ct);
+        await alpha.WriteAsync(new Hello("alpha", null), ct);
+        Assert.IsType<Welcome>(await alpha.ReadAsync(ct));
+
+        await alpha.WriteAsync(new ToolActivity(echoRoomId, "m-tool-9", "call-1", "Edit", ToolActivityStatus.InProgress, "a.txt", 1, new EditChange("1", "2")), ct);
+
+        var error = Assert.IsType<ProtocolError>(await alpha.ReadAsync(ct));
+        Assert.Equal(ErrorCodes.NotMember, error.Code);
+        Assert.Empty(drafts.ForRoom(echoRoomId));
+    }
+
+    /// <summary>An Edit side over the limit is cut to it and marked truncated, because the pipe is a validation boundary and a runner's clip is not trusted.</summary>
+    [Fact]
+    public async Task ToolActivity_OversizeEdit_IsClipped()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var (client, roomId) = await ConnectEchoAsync(fixture, ct);
+        await using var _ = client;
+        string huge = new('x', ToolActivityLimits.MaxEditSideLength + 10);
+
+        ToolCallDetail call = await SendToolActivityAsync(fixture, client, roomId, "Write", "a.txt", null, new EditChange(huge, huge), ct);
+
+        Assert.NotNull(call.Edit);
+        Assert.Equal(ToolActivityLimits.MaxEditSideLength, call.Edit.OldText?.Length);
+        Assert.Equal(ToolActivityLimits.MaxEditSideLength, call.Edit.NewText?.Length);
+        Assert.True(call.Edit.Truncated);
+    }
+
+    /// <summary>A line below 1 is dropped, and the rest of the activity still lands.</summary>
+    [Fact]
+    public async Task ToolActivity_InvalidLine_IsDropped()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var (client, roomId) = await ConnectEchoAsync(fixture, ct);
+        await using var _ = client;
+
+        ToolCallDetail call = await SendToolActivityAsync(fixture, client, roomId, "Edit", "a.txt", 0, null, ct);
+
+        Assert.Null(call.Line);
+        Assert.Equal("a.txt", call.Path);
+    }
+
+    /// <summary>A path over the limit is dropped rather than shown cut, because a cut path names a file that does not exist.</summary>
+    [Fact]
+    public async Task ToolActivity_OverlongPath_IsDropped()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var (client, roomId) = await ConnectEchoAsync(fixture, ct);
+        await using var _ = client;
+
+        ToolCallDetail call = await SendToolActivityAsync(fixture, client, roomId, "Edit", new string('p', ToolActivityLimits.MaxPathLength + 1), 3, null, ct);
+
+        Assert.Null(call.Path);
+        Assert.Equal(3, call.Line);
+    }
+
+    /// <summary>A title over the limit is cut to it.</summary>
+    [Fact]
+    public async Task ToolActivity_OverlongTitle_IsClipped()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var (client, roomId) = await ConnectEchoAsync(fixture, ct);
+        await using var _ = client;
+
+        ToolCallDetail call = await SendToolActivityAsync(fixture, client, roomId, new string('t', ToolActivityLimits.MaxTitleLength + 50), null, null, null, ct);
+
+        Assert.Equal(ToolActivityLimits.MaxTitleLength, call.Title?.Length);
+    }
+
+    /// <summary>A runner's own truncation flag survives, so a preview the runner already cut still says it was shortened.</summary>
+    [Fact]
+    public async Task ToolActivity_RunnerMarkedTruncated_StaysTruncated()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var (client, roomId) = await ConnectEchoAsync(fixture, ct);
+        await using var _ = client;
+
+        ToolCallDetail call = await SendToolActivityAsync(fixture, client, roomId, "Edit", "a.txt", null, new EditChange("1", "2", true), ct);
+
+        Assert.True(call.Edit?.Truncated);
+    }
+
+    /// <summary>A negative omitted-changes count is set to zero, so the view never says "-2 more changes".</summary>
+    [Fact]
+    public async Task ToolActivity_NegativeOmittedChanges_IsSetToZero()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(ct);
+        var (client, roomId) = await ConnectEchoAsync(fixture, ct);
+        await using var _ = client;
+
+        ToolCallDetail call = await SendToolActivityAsync(fixture, client, roomId, "Edit", "a.txt", null, new EditChange("1", "2", false, -2), ct);
+
+        Assert.Equal(0, call.Edit?.OmittedChanges);
+    }
+
+    /// <summary>Connects the built-in echo Agent and returns its client with the id of its direct Room.</summary>
+    private static async Task<(JsonLineStream Client, string RoomId)> ConnectEchoAsync(PipeHostFixture fixture, CancellationToken ct)
+    {
+        var client = await fixture.ConnectClientAsync(ct);
+        await client.WriteAsync(new Hello("echo", null), ct);
+        var welcome = Assert.IsType<Welcome>(await client.ReadAsync(ct));
+        return (client, Assert.Single(welcome.Rooms).Id);
+    }
+
+    /// <summary>Sends one <see cref="ToolActivity"/> for call-1 and returns the Draft row the server built once it has published the change.</summary>
+    private static async Task<ToolCallDetail> SendToolActivityAsync(
+        PipeHostFixture fixture,
+        JsonLineStream client,
+        string roomId,
+        string? title,
+        string? path,
+        int? line,
+        EditChange? edit,
+        CancellationToken ct)
+    {
+        var events = fixture.Services.GetRequiredService<RoomEvents>();
+        var drafts = fixture.Services.GetRequiredService<Drafts>();
+        var changed = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        events.DraftChanged += room => changed.TrySetResult(room);
+
+        await client.WriteAsync(new ToolActivity(roomId, "m-tool-1", "call-1", title, ToolActivityStatus.InProgress, path, line, edit), ct);
+
+        using var registration = ct.Register(() => changed.TrySetCanceled(ct));
+        await changed.Task;
+
+        return Assert.Single(Assert.Single(drafts.ForRoom(roomId)).ToolCalls);
+    }
+
     /// <summary>
     /// A client that closes its end cleanly - what Ctrl+C or killing the client process both do - still reaches
     /// end of stream on <see cref="AgentConnection.RunAsync"/>'s read loop rather than an <see cref="IOException"/>,

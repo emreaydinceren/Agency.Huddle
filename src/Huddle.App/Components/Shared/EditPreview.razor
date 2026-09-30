@@ -1,0 +1,59 @@
+@using System.Globalization
+@* The Edit preview of one tool call: what an Agent's edit removed and added, as plain text. Stateless
+   - it takes its data as parameters and never calls a service - and display only: the text is what the
+   Adapter described, never applied and never diffed. Rendered through Razor's escaping into <pre>,
+   never as a MarkupString: partial model output is not Markdown and a half-fenced block would flip. *@
+<div class="edit-preview" role="group" aria-label="@this.GroupName">
+    <div class="edit-preview-path" title="@this.Path">@this.Path</div>
+    @if (this.Edit.OldText is not null)
+    {
+        <div class="edit-preview-side removed">
+            <span class="edit-preview-label"><span aria-hidden="true">−</span> Removed</span>
+            <pre>@this.Edit.OldText</pre>
+        </div>
+    }
+    @if (this.Edit.NewText is not null)
+    {
+        <div class="edit-preview-side added">
+            <span class="edit-preview-label"><span aria-hidden="true">+</span> Added</span>
+            <pre>@this.Edit.NewText</pre>
+        </div>
+    }
+    @if (this.Edit.Truncated)
+    {
+        <div class="edit-preview-note truncated">Shortened: showing the first @ToolActivityLimits.MaxEditSideLength.ToString("N0", CultureInfo.InvariantCulture) characters.</div>
+    }
+    @if (this.Edit.OmittedChanges > 0)
+    {
+        <div class="edit-preview-note omitted">@this.OmittedText</div>
+    }
+</div>
+
+@code {
+    /// <summary>What the call changes, as the Adapter described it.</summary>
+    [Parameter, EditorRequired]
+    public EditChange Edit { get; set; } = new(null, null);
+
+    /// <summary>The full path of the file the call changes, shown as the preview's header.</summary>
+    [Parameter, EditorRequired]
+    public string Path { get; set; } = string.Empty;
+
+    /// <summary>The group's accessible name: <c>Change to</c> and the file's name.</summary>
+    private string GroupName => $"Change to {EditPreview.FileName(this.Path)}";
+
+    /// <summary>How many further changes the call carried and this preview does not show.</summary>
+    private string OmittedText => this.Edit.OmittedChanges == 1
+        ? "and 1 more change in this call"
+        : $"and {this.Edit.OmittedChanges.ToString(CultureInfo.InvariantCulture)} more changes in this call";
+
+    /// <summary>
+    /// The last segment of <paramref name="path"/>, splitting on both separators because the path is
+    /// the Adapter's text and may name a Windows file while this server runs anywhere.
+    /// </summary>
+    /// <param name="path">The path to reduce.</param>
+    internal static string FileName(string path)
+    {
+        string name = path[(path.AsSpan().LastIndexOfAny('\\', '/') + 1)..];
+        return name.Length > 0 ? name : path;
+    }
+}

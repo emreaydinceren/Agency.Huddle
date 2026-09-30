@@ -30,6 +30,13 @@ internal sealed class Drafts
     /// </summary>
     internal const int MaxDraftTextLength = 256 * 1024;
 
+    /// <summary>
+    /// The most tool calls a Draft keeps. The Room view shows a short list, not a log: past this the
+    /// oldest row is dropped, which also bounds what a Singleton holds per Turn (see the Turn detail
+    /// spec, section 11).
+    /// </summary>
+    internal const int MaxToolCalls = 6;
+
     private readonly Lock gate = new();
     private readonly Dictionary<string, DraftState> drafts = new(StringComparer.Ordinal);
 
@@ -66,20 +73,25 @@ internal sealed class Drafts
     }
 
     /// <summary>
-    /// Records what tool the Agent is using right now. Only the current activity is kept — a new call
-    /// replaces whatever the previous one recorded, never accumulates alongside it — and
-    /// <paramref name="toolCallId"/> is validated but not retained, because a Draft tracks only the
-    /// single activity in flight, not a history of calls. Safe to call before any <see cref="Append"/>
-    /// for the same <paramref name="messageId"/>: a Draft may open with a tool call before it has any
-    /// text.
+    /// Records one tool call the Agent is making. Calls are kept, oldest first, up to
+    /// <see cref="MaxToolCalls"/>: an update with a known <paramref name="toolCallId"/> merges into its
+    /// row, a new id appends one and, past the bound, drops the oldest. A null
+    /// <paramref name="title"/>, <paramref name="path"/>, <paramref name="line"/> or
+    /// <paramref name="edit"/> leaves the stored value alone, because ACP reads an omitted field as
+    /// unchanged; <paramref name="status"/> always replaces. Safe to call before any
+    /// <see cref="Append"/> for the same <paramref name="messageId"/>: a Draft may open with a tool
+    /// call before it has any text.
     /// </summary>
     /// <param name="messageId">The id the Message will have once this Turn is posted.</param>
-    /// <param name="toolCallId">The tool call this activity is about.</param>
+    /// <param name="toolCallId">The tool call this activity is about; the key its row is merged by.</param>
     /// <param name="roomId">The Room the Turn is happening in.</param>
     /// <param name="agentId">The Agent writing this Turn.</param>
     /// <param name="senderName">The Agent's display name.</param>
-    /// <param name="title">What the Agent is doing, or <see langword="null"/> if the Agent did not say.</param>
+    /// <param name="title">What the Agent is doing, or <see langword="null"/> if this update did not say.</param>
     /// <param name="status">The lifecycle state of this tool call.</param>
+    /// <param name="path">The file the call touches, or <see langword="null"/> if this update did not say.</param>
+    /// <param name="line">The 1-based line in <paramref name="path"/>, or <see langword="null"/> if this update did not say.</param>
+    /// <param name="edit">What the call changes, or <see langword="null"/> if this update did not say.</param>
     public void Activity(
         string messageId,
         string toolCallId,
@@ -87,7 +99,10 @@ internal sealed class Drafts
         string agentId,
         string senderName,
         string? title,
-        ToolActivityStatus status)
+        ToolActivityStatus status,
+        string? path = null,
+        int? line = null,
+        EditChange? edit = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
         ArgumentException.ThrowIfNullOrWhiteSpace(toolCallId);
@@ -98,8 +113,26 @@ internal sealed class Drafts
         lock (this.gate)
         {
             var state = this.GetOrCreate(messageId, roomId, agentId, senderName);
-            state.ToolTitle = title;
-            state.ToolStatus = status;
+            int index = state.ToolCalls.FindIndex(call => string.Equals(call.ToolCallId, toolCallId, StringComparison.Ordinal));
+            if (index < 0)
+            {
+                state.ToolCalls.Add(new ToolCallDetail(toolCallId, title, status, path, line, edit));
+                if (state.ToolCalls.Count > Drafts.MaxToolCalls)
+                {
+                    state.ToolCalls.RemoveAt(0);
+                }
+
+                return;
+            }
+
+            ToolCallDetail existing = state.ToolCalls[index];
+            state.ToolCalls[index] = new ToolCallDetail(
+                toolCallId,
+                title ?? existing.Title,
+                status,
+                path ?? existing.Path,
+                line ?? existing.Line,
+                edit ?? existing.Edit);
         }
     }
 
@@ -187,8 +220,7 @@ internal sealed class Drafts
             state.AgentId,
             state.SenderName,
             state.Text.ToString(),
-            state.ToolTitle,
-            state.ToolStatus);
+            [.. state.ToolCalls]);
     }
 
     private DraftState GetOrCreate(string messageId, string roomId, string agentId, string senderName)
@@ -225,8 +257,6 @@ internal sealed class Drafts
 
         public StringBuilder Text { get; } = new();
 
-        public string? ToolTitle { get; set; }
-
-        public ToolActivityStatus? ToolStatus { get; set; }
+        public List<ToolCallDetail> ToolCalls { get; } = [];
     }
 }
