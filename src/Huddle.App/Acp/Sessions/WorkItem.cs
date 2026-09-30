@@ -12,6 +12,13 @@ internal enum WorkItemKind
 
     /// <summary>The Chief of Staff's unprompted first Message to the Human (Spec §6.14). No triggering Message and no catch-up.</summary>
     Greeting,
+
+    /// <summary>
+    /// An Adapter command a Human addressed to this Teammate by Mention, for example <c>@Nova /compact</c>
+    /// (Commands spec, section 6.5). The prompt is the bare command and nothing else, and the Turn
+    /// neither collects File Changes nor drains Catch-up.
+    /// </summary>
+    Command,
 }
 
 /// <summary>One Turn's Room, sender, text, any catch-up context, its kind and its File Changes report.</summary>
@@ -43,6 +50,7 @@ internal enum WorkItemKind
 /// The absolute Library document paths mentioned in this Turn's Message and Catch-up (Spec §6.14), or
 /// <see langword="null"/> when none were found or the Library is off.
 /// </param>
+/// <param name="Command">The command to run, in the Adapter's own casing; set exactly when <paramref name="Kind"/> is <see cref="WorkItemKind.Command"/>.</param>
 internal sealed record WorkItem(
     string RoomId,
     string RoomName,
@@ -54,7 +62,8 @@ internal sealed record WorkItem(
     string? TriggerMessageId = null,
     TranscriptCatchUp? Transcript = null,
     IReadOnlyList<string>? OwnPostLines = null,
-    LibraryDocumentsReport? LibraryDocuments = null);
+    LibraryDocumentsReport? LibraryDocuments = null,
+    AdapterCommandCall? Command = null);
 
 /// <summary>One earlier Message the Agent was not Mentioned in, carried as catch-up context only.</summary>
 /// <param name="SenderName">Who sent it.</param>

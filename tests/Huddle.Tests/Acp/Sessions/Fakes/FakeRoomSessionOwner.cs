@@ -122,6 +122,18 @@ internal sealed class FakeRoomSessionOwner : IRoomSessionOwner
         }
     }
 
+    /// <summary>Every <see cref="SetCommands"/> call's arguments, in call order.</summary>
+    public List<(string SessionId, IReadOnlyList<AvailableCommandInfo> Advertised)> CommandsSet { get; } = [];
+
+    /// <inheritdoc />
+    public void SetCommands(string sessionId, IReadOnlyList<AvailableCommandInfo> advertised)
+    {
+        lock (this.gate)
+        {
+            this.CommandsSet.Add((sessionId, advertised));
+        }
+    }
+
     /// <inheritdoc />
     public void ReportTokenBudgetSpent() => this.RecordCall(nameof(this.ReportTokenBudgetSpent));
 

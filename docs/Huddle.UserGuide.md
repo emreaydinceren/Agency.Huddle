@@ -16,6 +16,7 @@ configuring models. See [the chat-surface hub](AgencyTeam.md) for that.
 | If you want to… | Read |
 | --- | --- |
 | Understand how Teammates, Teams, Tasks and memory relate | [The data model](#the-data-model) |
+| Free a long-running Teammate's memory without restarting it | [Freeing a Teammate's memory with `/compact`](#freeing-a-teammates-memory-with-compact) |
 | Know which file a change lands in | [Where your data lives](#where-your-data-lives) and [What happens when…](#what-happens-when-reference) |
 | Add or change a Teammate | [Working with Teammates](#working-with-teammates) |
 | Set up Teams and Projects | [Organising Teams and Projects](#organising-teams-and-projects) |
@@ -406,6 +407,52 @@ messages of the transcript.
   Library pane. The Teammates who answer are also given the list of those files,
   or, for adapters that cannot read files, the text of small ones.
 
+### Freeing a Teammate's memory with `/compact`
+
+A Teammate that has worked in a Room for a long time carries a long conversation.
+**Compacting** summarises it, which frees space and usually speeds and cheapens
+later turns, without the **Restart** that forgets the conversation entirely. To
+compact one Teammate, **mention it and then write the command**:
+
+```text
+@nova /compact
+```
+
+You can add guidance after the name, which is passed to the Teammate as written:
+`@nova /compact keep the decisions and the open questions`.
+
+When it finishes, the Teammate posts one line in the Room, for example
+`Compacted my conversation: 50,624 → 2,964 tokens in 9 s.` It still knows the
+conversation, but as a summary: a detail you care about may not survive, so put
+lasting facts in memory files.
+
+- **The mention comes first, and is required.** This works in a Room of two as
+  well. A bare `/compact` is refused with *Unknown command*, because a message
+  that starts with a slash is one of Huddle's own commands (such as `/invite`).
+- **Only you can run one.** The same text from another Teammate is an ordinary
+  message.
+- **Only listed commands work.** `/compact` is the one offered to Teammates on the
+  standard Claude adapter. Anything else you write after a mention, such as
+  `@nova /config`, is sent as ordinary text and runs nothing. A Teammate's
+  card lists what it offers: open **Teammates**, select the Teammate, and look for
+  lines like `/compact — Free up context by summarizing the conversation so far`.
+  The line is absent while the Teammate is offline.
+- **It costs a little.** A compaction is a model call, and Huddle does not show it
+  in the **Spent since start** line. The Teammate's token budget may also count
+  slightly fewer tokens afterwards than were really used.
+- **Stop works.** Use **Stop** to cancel one in progress; a stopped command posts
+  nothing.
+
+If a Teammate has just started and you write the command straight away, it may be
+treated as an ordinary message, because it has not yet told Huddle what it
+offers. Try again a moment later.
+
+**In the background:** your message is stored like any other, in
+`rooms/<roomId>.jsonl`. Huddle sends only the command to the Teammate's adapter for
+that turn, without the Room context, and keeps any messages the Teammate missed
+for its next ordinary turn. The Teammate's own summary lives in its adapter
+session; nothing new is written to disk for the compaction itself.
+
 ### Renaming, archiving and deleting Rooms
 
 | Action | In the background |
@@ -741,6 +788,7 @@ from the built-in version. **Settings › Skills** marks the Skill as
 | Create a Project | `Teams/<Team>/<Project>/` | Members see it as a file change |
 | Start a chat | `team.db` | None until you post |
 | Post a message | One line appended to `rooms/<roomId>.jsonl` | Addressed Teammates take a turn |
+| Write `@name /compact` | One line in `rooms/<roomId>.jsonl`, then the Teammate's outcome line | That Teammate compacts its conversation; other Teammates only read the outcome |
 | Archive a Room | `team.db` | None; Room still works |
 | Delete a Room | `team.db`; deletes `rooms/<roomId>.jsonl` permanently | Resume entry pruned at next start |
 | Create or edit a Task | `Teams/<Team>/[<Project>/]_tasks/<ID>.md` with a Change log line | Assignee woken |
@@ -757,6 +805,8 @@ from the built-in version. **Settings › Skills** marks the Skill as
 
 | Symptom | Cause and fix |
 | --- | --- |
+| `@nova /compact` got an ordinary reply instead of compacting | The Teammate does not offer that command (check its card), it was not yet online, or another Teammate wrote it. Only you can run a command, and only those listed on the card. |
+| `/compact` on its own says *Unknown command* | Write the mention first: `@nova /compact`. |
 | A Teammate forgot our conversation | It was restarted: an edit, a membership change, or **Restart**. Put lasting facts in memory files. |
 | A Teammate file does not appear | See **Files that didn't load** on the Teammates page. Common causes: missing `name`, `title` or `alias`, a duplicate alias, or `name` not matching the file. |
 | All Teammates show **Offline** | The agent host is off, for example when Huddle is started with `--Team:Acp:Enabled=false`. |

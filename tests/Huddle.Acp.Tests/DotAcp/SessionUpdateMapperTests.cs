@@ -371,14 +371,44 @@ public sealed class SessionUpdateMapperTests
         Assert.Equal(new ModeChanged("s", "plan"), result);
     }
 
+    /// <summary>An advertised command list maps to an event carrying each command's name, description and input hint.</summary>
     [Fact]
-    public void AvailableCommandsUpdate_MapsToUnknownUpdate()
+    public void AvailableCommandsUpdate_MapsNamesDescriptionsAndHints()
     {
-        dotacp.protocol.AvailableCommandsUpdate update = new dotacp.protocol.AvailableCommandsUpdate();
+        dotacp.protocol.AvailableCommandsUpdate update = new dotacp.protocol.AvailableCommandsUpdate
+        {
+            AvailableCommands =
+            [
+                new dotacp.protocol.AvailableCommand
+                {
+                    Name = "compact",
+                    Description = "Free up context by summarizing the conversation so far",
+                    Input = new dotacp.protocol.UnstructuredCommandInput { Hint = "<optional custom summarization instructions>" },
+                },
+                new dotacp.protocol.AvailableCommand { Name = "init", Description = "Initialize a CLAUDE.md file" },
+            ],
+        };
 
-        AgentEvent result = SessionUpdateMapper.Map("s", update);
+        AvailableCommandsUpdated result = Assert.IsType<AvailableCommandsUpdated>(SessionUpdateMapper.Map("s", update));
 
-        Assert.Equal(new UnknownUpdate("s", "AvailableCommandsUpdate"), result);
+        Assert.Equal("s", result.SessionId);
+        Assert.Equal(
+            [
+                new AvailableCommandInfo("compact", "Free up context by summarizing the conversation so far", "<optional custom summarization instructions>"),
+                new AvailableCommandInfo("init", "Initialize a CLAUDE.md file", null),
+            ],
+            result.Commands);
+    }
+
+    /// <summary>An empty advertised list maps to an empty event, not to <see cref="UnknownUpdate"/>.</summary>
+    [Fact]
+    public void AvailableCommandsUpdate_EmptyList_MapsToEmptyEvent()
+    {
+        dotacp.protocol.AvailableCommandsUpdate update = new dotacp.protocol.AvailableCommandsUpdate { AvailableCommands = [] };
+
+        AvailableCommandsUpdated result = Assert.IsType<AvailableCommandsUpdated>(SessionUpdateMapper.Map("s", update));
+
+        Assert.Empty(result.Commands);
     }
 
     public static TheoryData<dotacp.protocol.ToolKind> ToolKindValues()

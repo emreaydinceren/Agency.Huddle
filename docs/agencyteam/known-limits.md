@@ -8,6 +8,29 @@ oversights or quietly add them.
 Two entries have since been planned and one has since been built; each one says
 so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
 
+- **Adapter commands are built, and here is what they do not cover.** The Human can run
+  `@Nova /compact` on a Teammate, and the Teammate says what it did —
+  [ADR-0035](../adr/0035-an-adapter-command-is-a-message-the-human-addresses-by-mention.md),
+  [the design](../Huddle.Commands-Specifications.md). Five gaps are deliberate:
+  - **One command, one Adapter.** Only `compact` is allowed, and only on the synthesised Claude
+    profile. A configured Adapter allows nothing until `Team:Acp:Adapters:*:Commands` names it, and
+    changing that needs a restart. The other 50 commands the Claude Adapter advertises under isolation
+    (`config`, `mcp`, `model`, `effort`, `init` among them) are not offered: most are wrong to reach
+    from a chat Room, and two duplicate Huddle's own settings.
+  - **The Mention is required, in every Room.** A bare `/compact` is still *"Unknown command"*, even
+    in a Room of two. The shorthand needs the composer to know the live list, and stays open for a
+    later version.
+  - **A compaction's own cost is invisible.** `/compact` runs a model call, but the Adapter reports no
+    `cost` on it (its figures are in `_meta.quota`, which nothing reads), so the Spend line does not
+    move, and the token Budget sees the context fall and then takes the next update as its baseline.
+    The price is a small **undercount**: the first ordinary Turn's own new tokens after a compaction
+    are absorbed into that baseline. The alternative was a 40,000-token overcount per compaction.
+  - **The list is empty until the Adapter's first update.** Straight after a restart, or before a
+    Teammate has connected, `@Nova /compact` is an ordinary Message, sent as text the Adapter does not
+    read as a command. The update normally arrives within a second or two of the first Room Session.
+  - **Two live checks have not run.** Whether Stop interrupts a compaction in flight (V-4), and the
+    whole path in the real app (V-2), are deferred to user acceptance — see
+    [manual-tests/adapter-commands.md](manual-tests/adapter-commands.md).
 - **Turn detail and Spend are built, and here is what they do not cover.** A Draft
   shows its recent tool calls, an edit opens to an Edit preview, and a Teammate's card
   shows what its Adapter has reported spending — [ADR-0034](../adr/0034-turn-detail-rides-on-tool-activity-as-optional-fields.md),

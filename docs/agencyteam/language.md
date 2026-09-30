@@ -117,9 +117,10 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 **Adapter command**
 : A command an Adapter advertises for a session, sent to it as the start of a prompt. Not a
   **Skill**, which is Huddle's own folder of Markdown and not Claude's `.claude/skills/`, and not an
-  **App Tool**. Proposed for a later version and blocked on the unverified isolation checks: the list
-  an Adapter advertises today includes the Human's own Claude Code skills. See
-  [Known limits](known-limits.md).
+  **App Tool**. The Human runs one on a Teammate by Mentioning it, `@Nova /compact`, and only a command
+  that the Teammate's Adapter Profile names in `Commands` is offered: the list an Adapter advertises is
+  much longer, and without isolation includes the Human's own Claude Code skills. Built 2026-09-30;
+  see [the Adapter commands spec](../Huddle.Commands-Specifications.md).
 : *Avoid*: slash command on its own (`/invite` is Huddle's), skill, tool.
 
 ## Conversations

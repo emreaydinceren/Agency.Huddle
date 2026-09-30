@@ -70,7 +70,8 @@ internal sealed class AdapterCatalog
                     EnvironmentOverrides: null,
                     ReadsFiles: true,
                     IsolateUserSettings: true,
-                    SessionPerRoom: true),
+                    SessionPerRoom: true,
+                    Commands: ["compact"]),
             ];
         }
 
@@ -88,7 +89,8 @@ internal sealed class AdapterCatalog
                 EnvironmentOverrides: AdapterCatalog.CopyEnvironment(entry.EnvironmentOverrides),
                 ReadsFiles: entry.ReadsFiles,
                 IsolateUserSettings: entry.IsolateUserSettings,
-                SessionPerRoom: entry.SessionPerRoom));
+                SessionPerRoom: entry.SessionPerRoom,
+                Commands: AdapterCatalog.CopyCommands(entry.Commands)));
         }
 
         return profiles;
@@ -101,6 +103,24 @@ internal sealed class AdapterCatalog
     // keeping a stock install's launch byte-identical to before this feature existed.
     private static Dictionary<string, string>? CopyEnvironment(IReadOnlyDictionary<string, string>? overrides) =>
         overrides is { Count: > 0 } ? new Dictionary<string, string>(overrides, StringComparer.Ordinal) : null;
+
+    /// <summary>
+    /// Copies rather than aliases <paramref name="commands"/>, for the same reason as
+    /// <see cref="CopyEnvironment"/>. Blank entries are dropped and an empty list normalises to
+    /// <see langword="null"/>, so "absent" and "empty" both mean none.
+    /// </summary>
+    /// <param name="commands">The configured allowlist, or <see langword="null"/>.</param>
+    /// <returns>The non-blank names, or <see langword="null"/> when there are none.</returns>
+    private static string[]? CopyCommands(IReadOnlyList<string>? commands)
+    {
+        if (commands is null)
+        {
+            return null;
+        }
+
+        string[] names = [.. commands.Where(static name => !string.IsNullOrWhiteSpace(name))];
+        return names.Length > 0 ? names : null;
+    }
 
     // Fail-fast at startup, the same shape as the Team:Acp:PersonaDir rename guard in
     // ServiceCollectionExtensions: a misconfigured profile is a startup error, never a first-Turn

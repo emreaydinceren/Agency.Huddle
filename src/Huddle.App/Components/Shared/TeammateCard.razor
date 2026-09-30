@@ -51,6 +51,7 @@
 @inject AdapterCatalog Adapters
 @inject PersonaHealth Health
 @inject PersonaSpend Spend
+@inject PersonaCommands Commands
 @inject IAgentGateway Gateway
 @inject ITeamDirectory TeamDirectory
 @inject AvatarStore Avatars
@@ -113,6 +114,13 @@
                         @foreach (var amount in this.spendAmounts)
                         {
                             <MudText Typo="Typo.body2" Class="mud-text-secondary teammate-card-spend">Spent since start: @amount.Amount.ToString("N3", CultureInfo.CurrentCulture) @amount.Currency</MudText>
+                        }
+                        @* What this Teammate's Adapter lets a Human run, one line each, in the Adapter's own words.
+                           Razor encodes the description, so it is shown as text, never as Markdown or markup. Absent
+                           (no heading either) when it offers nothing, which is every Teammate on a stock install. *@
+                        @foreach (var command in this.offeredCommands)
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary teammate-card-command" title="@($"Write @{this.name} /{command.Name} in a Room to run it")">/@command.Name — @command.Description</MudText>
                         }
                         <MudText Typo="Typo.body2" Class="mud-text-secondary">Alias: @this.alias</MudText>
                         @if (this.teams.Length > 0)
@@ -557,6 +565,10 @@
     // What this Persona's Adapter has reported spending since the app started, one entry per
     // currency, re-read on PersonaSpend.SpendChanged. Empty when nothing was reported.
     private IReadOnlyList<SpendAmount> spendAmounts = [];
+
+    // The Adapter commands this Teammate currently offers, re-read on PersonaCommands.CommandsChanged.
+    // Empty when it offers none or is not running.
+    private IReadOnlyList<AdapterCommand> offeredCommands = [];
     private string? error;
     private bool confirmingRemove;
     private bool confirmingReset;
@@ -660,6 +672,10 @@
         this.Spend.SpendChanged += this.OnSpendChanged;
         this.spendAmounts = this.Spend.Get(this.name);
 
+        // PersonaCommands is the same kind of singleton, subscribed to and released the same way.
+        this.Commands.CommandsChanged += this.OnCommandsChanged;
+        this.offeredCommands = this.Commands.Get(this.name);
+
         // SkillStore is a singleton too - a Skill written or removed on disk while this card is open
         // must repaint both the option list and MissingSkillNames, the same reasoning as the
         // Health/Gateway subscriptions above (Spec §6.7's "Internal flow": subscribe, unsubscribe in
@@ -703,6 +719,7 @@
         this.Health.Changed -= this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged -= this.OnHealthOrPresenceChanged;
         this.Spend.SpendChanged -= this.OnSpendChanged;
+        this.Commands.CommandsChanged -= this.OnCommandsChanged;
         this.Skills.SkillsChanged -= this.OnSkillsStoreChanged;
     }
 
@@ -721,6 +738,26 @@
         _ = this.DispatchAsync(() =>
         {
             this.spendAmounts = this.Spend.Get(this.name);
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>
+    /// Repaints the command lines when <see cref="PersonaCommands.CommandsChanged"/> names this card's
+    /// Persona. Another Persona's list is ignored: it cannot change what is shown here.
+    /// </summary>
+    /// <param name="personaName">The Persona whose offered commands changed.</param>
+    private void OnCommandsChanged(string personaName)
+    {
+        if (!string.Equals(personaName, this.name, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _ = this.DispatchAsync(() =>
+        {
+            this.offeredCommands = this.Commands.Get(this.name);
             this.StateHasChanged();
             return Task.CompletedTask;
         });

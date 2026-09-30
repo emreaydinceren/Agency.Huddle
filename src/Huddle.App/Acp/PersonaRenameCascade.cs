@@ -55,6 +55,7 @@ namespace Agency.Huddle.App.Acp;
 /// <param name="views">Rewrites a renamed Persona's assignee filter in every saved View — Spec §9.6.</param>
 /// <param name="folderMoves">Signals a Teammate-folder move as pending before it starts and settled once it finishes, so <c>DotAcpAgentHostFactory</c> can wait for it instead of racing it — corrections-B2 item 20.</param>
 /// <param name="spend">Moves a renamed Persona's display-only Spend, and forgets a removed Persona's — the Turn detail spec, section 6.6.</param>
+/// <param name="commands">Moves a renamed Persona's offered Adapter commands, and forgets a removed Persona's — the Commands spec, section 6.3.</param>
 internal sealed partial class PersonaRenameCascade(
     ITeamDirectory teamDirectory,
     PersonaStore personaStore,
@@ -68,7 +69,8 @@ internal sealed partial class PersonaRenameCascade(
     TaskService tasks,
     ViewStore views,
     TeammateFolderMoves folderMoves,
-    PersonaSpend spend) : IHostedService, IDisposable
+    PersonaSpend spend,
+    PersonaCommands commands) : IHostedService, IDisposable
 {
     // The runner it raced against restarts within milliseconds and inherits the Work Dir as its cwd,
     // so a handful of short retries covers the ordinary case (the old process has not yet exited)
@@ -136,6 +138,10 @@ internal sealed partial class PersonaRenameCascade(
         // every Teammate in a stock installation, where Acp:Enabled is false. In memory only, so it
         // cannot fail or block.
         spend.Rename(renamed.OldName, renamed.NewName);
+
+        // The offered Adapter commands are the same kind of thing: per Persona Name, in memory, and
+        // present whether or not an Agent row exists, so they sit above the same early return.
+        commands.Rename(renamed.OldName, renamed.NewName);
 
         // Same placement and the same reason as the Avatar rename immediately above (FC §6.12): file
         // state exists whether or not an Agent has ever connected, so this must sit ABOVE the "no
@@ -238,6 +244,7 @@ internal sealed partial class PersonaRenameCascade(
     {
         avatars.Remove(removed.Name);
         spend.Forget(removed.Name);
+        commands.Forget(removed.Name);
 
         try
         {

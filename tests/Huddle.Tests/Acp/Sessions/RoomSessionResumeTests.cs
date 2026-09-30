@@ -63,6 +63,50 @@ public sealed class RoomSessionResumeTests
     }
 
     /// <summary>
+    /// A Command Turn does not move the resume watermark. It leaves the Catch-up buffer undrained, so the
+    /// session has not seen the Messages before it, and storing the outcome Message's id would make a
+    /// resume skip them for good. The entry keeps the id the last ordinary Turn stored.
+    /// </summary>
+    [Fact]
+    public async Task CommandTurn_LeavesTheStoredLastMessageIdAlone()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var dataDir = new TempDataDir();
+        RoomSessionStore store = new(dataDir.Options(), NullLogger<RoomSessionStore>.Instance);
+        FakeAgentSession session = new();
+        session.EnqueueReply("first");
+        session.EnqueueReply();
+        TaskCompletionSource releaseThird = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        session.EnqueueGatedReply(releaseThird.Task, "third");
+        FakePersonaHost host = new(session, ClaudeProfile());
+        FakeRoomSessionOwner owner = new();
+        var (room, runCts) = CreateRoomSession(owner, host, store);
+        try
+        {
+            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
+            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any() && store.Get("nova", "room-1") is not null, ct);
+            string? firstPostId = Assert.Single(owner.Written.OfType<PostMessage>()).MessageId;
+            Assert.NotNull(firstPostId);
+
+            room.Enqueue(new QueuedWork(2, new WorkItem("room-1", "Room 1", "Human", "@nova /compact", [], WorkItemKind.Command, TriggerMessageId: "trig-2", Command: new AdapterCommandCall("compact", string.Empty))));
+            room.Enqueue(new QueuedWork(3, new WorkItem("room-1", "Room 1", "Human", "go on", [], TriggerMessageId: "trig-3")));
+
+            // The third Turn is held in flight, so the command Turn has fully ended (its store write
+            // included) and the third has not yet written its own.
+            await WaitUntilAsync(() => session.Prompts.Count == 3, ct);
+            var entry = store.Get("nova", "room-1");
+            releaseThird.SetResult();
+
+            Assert.NotNull(entry);
+            Assert.Equal(firstPostId, entry.LastMessageId);
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
+    /// <summary>
     /// Finding P-17: a Turn stopped after it showed activity still stores an entry, even though
     /// <c>PromptAsync</c> never returned - the store write is gated on <c>promptReturned ||
     /// turn.SawActivity</c>, not on <c>promptReturned</c> alone.

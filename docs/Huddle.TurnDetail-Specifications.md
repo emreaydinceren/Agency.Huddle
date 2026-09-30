@@ -644,6 +644,13 @@ that reports no cost shows no line rather than a zero. Copy avoids *cost*, *bill
 earliest, and each needs a decision the Human has not made.
 ### 6.7 Adapter commands — V2 sketch, gated
 
+> [!NOTE]
+> **Superseded by [the Adapter commands spec](Huddle.Commands-Specifications.md), built 2026-09-30.**
+> It answers the three open questions below: a command addresses **one Teammate by Mention**
+> (`@Nova /compact`), the allowlist lives on the **Adapter Profile** (`Commands`), and the **Skill**
+> overlap does not arise because a Skill is Huddle's own know-how and an Adapter command is the
+> Adapter's. It defers the bare `/` picker below. What follows is kept as the record of the sketch.
+
 **Not built in V1.** This is the design as far as the evidence supports it, and the gate that must
 open first.
 

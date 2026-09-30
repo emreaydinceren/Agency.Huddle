@@ -79,6 +79,9 @@ internal static class SessionUpdateMapper
             case dotacp.protocol.CurrentModeUpdate currentModeUpdate:
             return new ModeChanged(sessionId, (string)currentModeUpdate.CurrentModeId);
 
+            case dotacp.protocol.AvailableCommandsUpdate availableCommandsUpdate:
+            return new AvailableCommandsUpdated(sessionId, SessionUpdateMapper.MapAvailableCommands(availableCommandsUpdate.AvailableCommands));
+
             default:
             return new UnknownUpdate(sessionId, update.GetType().Name);
         }
@@ -278,6 +281,26 @@ internal static class SessionUpdateMapper
 
         isText = false;
         return block.Type;
+    }
+
+    /// <summary>Maps an advertised command list, reading each command's input hint from its unstructured input when it has one.</summary>
+    /// <param name="commands">The wire commands; <see langword="null"/> maps to an empty list.</param>
+    /// <returns>The commands in the order the agent listed them.</returns>
+    private static List<AvailableCommandInfo> MapAvailableCommands(IEnumerable<dotacp.protocol.AvailableCommand>? commands)
+    {
+        List<AvailableCommandInfo> mapped = new List<AvailableCommandInfo>();
+        if (commands is null)
+        {
+            return mapped;
+        }
+
+        foreach (dotacp.protocol.AvailableCommand command in commands)
+        {
+            string? hint = command.Input is dotacp.protocol.UnstructuredCommandInput input ? input.Hint : null;
+            mapped.Add(new AvailableCommandInfo(command.Name, command.Description, hint));
+        }
+
+        return mapped;
     }
 
     private static List<PlanEntryInfo> MapPlanEntries(dotacp.protocol.PlanEntry[] entries)

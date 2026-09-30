@@ -405,4 +405,86 @@ public sealed class AdapterCatalogTests
         AdapterProfile profile = Assert.Single(catalog.Profiles);
         Assert.False(profile.SessionPerRoom);
     }
+
+    /// <summary>The synthesised legacy profile allows the <c>compact</c> Adapter command and nothing else.</summary>
+    [Fact]
+    public void Profiles_AdaptersNull_SynthesisedProfileAllowsCompact()
+    {
+        var acp = new AcpOptions { Command = "node", AdapterPath = "index.js", Args = ["a", "b"] };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.Equal(["compact"], profile.Commands);
+    }
+
+    /// <summary>A configured profile that lists no <c>Commands</c> allows none: absent means none.</summary>
+    [Fact]
+    public void Profiles_ConfiguredWithoutCommands_AllowsNone()
+    {
+        var acp = new AcpOptions
+        {
+            Adapters = [new AdapterProfileOptions { Id = "agency", Command = "agency-acp" }],
+        };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.Null(profile.Commands);
+    }
+
+    /// <summary>A configured profile copies its <c>Commands</c>, dropping blank entries.</summary>
+    [Fact]
+    public void Profiles_ConfiguredWithCommands_CopiesAndDropsBlankEntries()
+    {
+        var acp = new AcpOptions
+        {
+            Adapters = [new AdapterProfileOptions { Id = "claude", Command = "node", Commands = ["compact", " ", "", "init"] }],
+        };
+        var options = Options.Create(new TeamOptions { Acp = acp });
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.Equal(["compact", "init"], profile.Commands);
+    }
+
+    /// <summary>A profile never aliases the options collection: changing it afterwards does not change the profile.</summary>
+    [Fact]
+    public void Profiles_CommandsChangedAfterConstruction_ProfileIsUnchanged()
+    {
+        string[] configured = ["compact"];
+        var entry = new AdapterProfileOptions { Id = "claude", Command = "node", Commands = configured };
+        var options = Options.Create(new TeamOptions { Acp = new AcpOptions { Adapters = [entry] } });
+        var catalog = new AdapterCatalog(options);
+
+        configured[0] = "init";
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.Equal(["compact"], profile.Commands);
+    }
+
+    /// <summary>Binding from real configuration populates <c>Commands</c> once, not doubled.</summary>
+    [Fact]
+    public void Profiles_BoundFromConfiguration_PopulatesCommands()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:Acp:Adapters:0:Id"] = "claude",
+                ["Team:Acp:Adapters:0:Command"] = "node",
+                ["Team:Acp:Adapters:0:Commands:0"] = "compact",
+            })
+            .Build();
+        var teamOptions = new TeamOptions();
+        configuration.GetSection(TeamOptions.SectionName).Bind(teamOptions);
+        var options = Options.Create(teamOptions);
+
+        var catalog = new AdapterCatalog(options);
+
+        AdapterProfile profile = Assert.Single(catalog.Profiles);
+        Assert.Equal(["compact"], profile.Commands);
+    }
 }

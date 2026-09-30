@@ -45,6 +45,12 @@ namespace Agency.Huddle.App.Acp;
 /// system prompt is used - the mode a configured <c>agency-acp</c> entry must stay in until V-5
 /// (RS §6.12: it reports <c>loadSession: false</c> and nothing is known of its resume support).
 /// </param>
+/// <param name="Commands">
+/// The names of the Adapter commands (<c>/compact</c>) a Human may run on a Teammate on this Adapter,
+/// from <c>Team:Acp:Adapters:*:Commands</c>; <see langword="null"/> means none. A Teammate offers a
+/// command only when its Adapter advertises it <i>and</i> this list names it (Commands spec §6.2).
+/// Defaults to <see langword="null"/> so every existing positional call site keeps compiling unchanged.
+/// </param>
 public sealed record AdapterProfile(
     string Id,
     string DisplayName,
@@ -56,4 +62,5 @@ public sealed record AdapterProfile(
     IReadOnlyDictionary<string, string>? EnvironmentOverrides = null,
     bool ReadsFiles = true,
     bool IsolateUserSettings = false,
-    bool SessionPerRoom = true);
+    bool SessionPerRoom = true,
+    IReadOnlyList<string>? Commands = null);
