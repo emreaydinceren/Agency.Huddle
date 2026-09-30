@@ -25,10 +25,10 @@ namespace Agency.Huddle.Tests.Ui.Teams;
 public sealed class TeamTasksTabTests
 {
     /// <summary>The toolbar's action button ("New task").</summary>
-    private const string ActionButton = "button.team-tab-toolbar-action";
+    private const string ActionButton = ".task-toolbar > button.btn-action-tight";
 
     /// <summary>The toolbar's search input.</summary>
-    private const string SearchInput = ".team-tab-toolbar-search input";
+    private const string SearchInput = ".task-toolbar-search input";
 
     /// <summary>The Board's column header labels.</summary>
     private const string ColumnLabel = ".task-board-column-label";
@@ -180,7 +180,12 @@ public sealed class TeamTasksTabTests
         Rig rig = Render(ctx, harness, "Business");
 
         Assert.Equal("New task", rig.Tab.Find(ActionButton).TextContent.Trim());
-        Assert.Equal("Search tasks", rig.Tab.Find(SearchInput).GetAttribute("placeholder"));
+        Assert.Equal("Search", rig.Tab.Find(SearchInput).GetAttribute("placeholder"));
+        _ = rig.Tab.FindComponent<TaskToolbar>();
+        Assert.NotEmpty(rig.Tab.FindAll(".task-toolbar-kind"));
+        Assert.NotEmpty(rig.Tab.FindAll(".task-toolbar-blocked"));
+        Assert.NotEmpty(rig.Tab.FindAll(".task-toolbar-filter"));
+        Assert.NotEmpty(rig.Tab.FindAll(".task-toolbar-group-sort"));
     }
 
     /// <summary>Typing in the toolbar raises <c>SearchChanged</c> with the text; the tab owns no search state of its own.</summary>
@@ -194,10 +199,29 @@ public sealed class TeamTasksTabTests
         List<string?> searched = [];
         Rig rig = Render(ctx, harness, "Business", searched: searched);
 
-        IRenderedComponent<MudTextField<string>> field = rig.Tab.FindComponent<TeamTabToolbar>().FindComponent<MudTextField<string>>();
+        IRenderedComponent<MudTextField<string>> field = rig.Tab.FindComponent<TaskToolbar>().FindComponent<MudTextField<string>>();
         await rig.Tab.InvokeAsync(() => field.Instance.ValueChanged.InvokeAsync("launch"));
 
         Assert.Equal<string?>(["launch"], searched);
+    }
+
+    /// <summary>Choosing List in the toolbar swaps the Board for the List, and keeps the Team scope.</summary>
+    [Fact]
+    public async Task Toolbar_ListSwitch_ShowsTheListOfTheTeamsTasks()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        Seeded tasks = Seed(harness);
+        await using MudBunitContext ctx = new();
+        Rig rig = Render(ctx, harness, "Business");
+
+        IRenderedComponent<TaskToolbar> toolbar = rig.Tab.FindComponent<TaskToolbar>();
+        await rig.Tab.InvokeAsync(() => toolbar.Instance.EffectiveViewChanged.InvokeAsync(toolbar.Instance.EffectiveView with { Kind = ViewKind.List, Columns = [] }));
+
+        IRenderedComponent<TaskListView> list = rig.Tab.FindComponent<TaskListView>();
+        TaskId[] expected = [tasks.Marketing.Id, tasks.Taxes.Id, tasks.NoProject.Id];
+        Assert.Equal(expected, list.Instance.Tasks.Select(t => t.Id).ToArray());
+        Assert.Empty(rig.Tab.FindComponents<TaskBoard>());
     }
 
     /// <summary>A Team with no Tasks still shows the six default columns, and no cards.</summary>
