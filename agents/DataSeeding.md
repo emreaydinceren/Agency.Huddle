@@ -9,6 +9,28 @@ phases in order; each one depends on the one before.
 The procedure was run end to end on 2026-09-29 against `main`. For what each
 entity means to a user, read [the user guide](../docs/Huddle.UserGuide.md).
 
+> [!TIP]
+> **The repeatable route is `src/Huddle.Seeder`.** It is a console app (`huddle-seed`) that
+> wipes a seed root and rebuilds the whole `software-co` scenario in one command, with no
+> browser and no running Huddle:
+>
+> ```powershell
+> dotnet run --project src\Huddle.Seeder
+> ```
+>
+> It writes the files described below and creates `team.db` and the Room transcripts through
+> Huddle's own `ITeamDirectory` and `IChatStore`, so the phases that need the web UI (3, 5 and 6)
+> disappear. The root defaults to `C:\seeds\huddle\software-co` and is deleted first, including
+> `team.db`; it is refused unless it is empty, absent or holds the `.huddle-seed` marker, and drive
+> roots, the repository and the user profile are always refused. Dates are offsets from the run
+> date (`--today yyyy-MM-dd` pins them). It also writes `manifest.md` and prints the launch command.
+> To browse the result, run `./run.ps1 -Seed` (add `-Port 1111` for another port): it builds, then
+> starts Huddle on the seed with the mock adapter, so nothing paid runs. `-SeedRoot` points it at a
+> different seed root.
+> `tests/Huddle.Tests/Seeder/` loads the result through Huddle's own loaders, so it goes red when
+> this guide and the app drift apart. Use the manual procedure below for a scenario the tool
+> does not have yet; adding one is a new `IScenario` in `src/Huddle.Seeder/Scenarios/`.
+
 ## The rules
 
 1. **Write only Markdown (`.md`) and JSON (`.json`, `.jsonl`) files by hand.**

@@ -36,6 +36,17 @@
     over the environment variable. Relative values are resolved against
     src/Huddle.App, matching TeamOptions.DataDir's own default resolution.
 
+.PARAMETER Seed
+    Run against the data set built by src/Huddle.Seeder instead of App_Data. Teammates run on
+    the free mock adapter (no node, no paid model), on the same settings the seeder prints:
+    its own pipe name, no demo agents, no Task wake-ups. -DataDir still wins over the seed
+    root. Ignores -NoAcp, and cannot be combined with -Clean: rebuild the seed with
+    `dotnet run --project src/Huddle.Seeder` instead.
+
+.PARAMETER SeedRoot
+    The seed root -Seed reads (default: <system drive>:\seeds\huddle\software-co, the
+    seeder's own default). Its data folder is <SeedRoot>\data.
+
 .PARAMETER Clean
     Delete the previous run's SQLite database (Team:DataDir/team.db, plus its -wal/-shm
     sidecar files) and every Teammate definition file
@@ -58,6 +69,8 @@
     ./run.ps1 -Port 5200
     ./run.ps1 -NoAcp
     ./run.ps1 -NoBuild
+    ./run.ps1 -Seed
+    ./run.ps1 -Seed -Port 1111
     ./run.ps1 -Clean
     ./run.ps1 -CleanOnly -DataDir C:\temp\scratch-data
     ./run.ps1 -DryRun
@@ -68,6 +81,8 @@ param(
     [switch]$NoAcp,
     [switch]$NoBuild,
     [string]$DataDir,
+    [switch]$Seed,
+    [string]$SeedRoot = (Join-Path ([System.IO.Path]::GetPathRoot($env:SystemRoot)) 'seeds/huddle/software-co'),
     [switch]$Clean,
     [switch]$CleanOnly,
     [switch]$DryRun
@@ -77,6 +92,16 @@ $ErrorActionPreference = 'Stop'
 
 if ($CleanOnly) {
     $Clean = $true
+}
+
+if ($Seed -and $Clean) {
+    Write-Host '-Seed cannot be combined with -Clean or -CleanOnly.' -ForegroundColor Yellow
+    Write-Host '   To reset the seed, rebuild it: dotnet run --project src/Huddle.Seeder' -ForegroundColor Gray
+    exit 1
+}
+
+if ($Seed -and -not $DataDir) {
+    $DataDir = Join-Path $SeedRoot 'data'
 }
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -135,6 +160,33 @@ if (-not (Test-Path $solution)) {
     exit 1
 }
 
+# -- Seed: the data set from src/Huddle.Seeder, run on the free mock adapter -----
+
+# These are the settings the seeder prints for its launch command. Acp:Enabled must be set
+# explicitly because appsettings.Development.json changes its default, and Args:0 must be
+# present even though the mock ignores it, or Huddle reports that no adapter is installed.
+$seedArgs = @()
+$mockAdapter = Join-Path $scriptDir 'src/Huddle.MockAdapter/bin/Debug/net10.0/mock-acp.exe'
+if ($Seed) {
+    if (-not (Test-Path -LiteralPath (Join-Path $dataDir 'team.db'))) {
+        Write-Host "No seed found at $dataDir." -ForegroundColor Yellow
+        Write-Host '   Build it first: dotnet run --project src/Huddle.Seeder' -ForegroundColor Gray
+        exit 1
+    }
+
+    $seedArgs = @(
+        "--Team:DataDir=$dataDir",
+        '--Team:PipeName=huddle-seed',
+        '--Team:DemoAgent:Enabled=false',
+        '--Team:Tasks:WakeEnabled=false',
+        '--Team:Acp:Enabled=true',
+        '--Team:Acp:Adapters:0:Id=mock',
+        "--Team:Acp:Adapters:0:Command=$mockAdapter",
+        '--Team:Acp:Adapters:0:Args:0=--mock',
+        '--Team:Acp:Adapters:0:UsesToolNamePrefix=false'
+    )
+}
+
 # -- Clean-only: skip every other check, delete, exit -------------------------
 
 if ($CleanOnly) {
@@ -172,7 +224,7 @@ if ($CleanOnly) {
 
 # Acp:Enabled is on in Development and spawns one node process per Persona, so a
 # missing node turns into a startup failure rather than a missing feature.
-if (-not $NoAcp -and -not (Get-Command node -ErrorAction SilentlyContinue)) {
+if (-not $NoAcp -and -not $Seed -and -not (Get-Command node -ErrorAction SilentlyContinue)) {
     Write-Host "node was not found on PATH." -ForegroundColor Yellow
     Write-Host "   Development config sets Team:Acp:Enabled=true, which starts one node process per Persona." -ForegroundColor Gray
     Write-Host "   Install node, or run without them: ./run.ps1 -NoAcp" -ForegroundColor Gray
@@ -182,7 +234,7 @@ if (-not $NoAcp -and -not (Get-Command node -ErrorAction SilentlyContinue)) {
 # A blank clone has no tools/acp/node_modules, so the first Persona to start throws the
 # InvalidOperationException this check exists to pre-empt. -NoAcp needs none of this: no Persona
 # starts, so there is nothing to install.
-$needsAcpSetup = -not $NoAcp -and -not (Test-Path $acpAdapterEntryPoint)
+$needsAcpSetup = -not $NoAcp -and -not $Seed -and -not (Test-Path $acpAdapterEntryPoint)
 
 # -NoBuild runs whatever is compiled, so it needs something to be compiled.
 $appAssembly = Join-Path $appProject 'bin/Debug/net10.0/Huddle.App.dll'
@@ -194,6 +246,9 @@ if ($NoBuild -and -not (Test-Path $appAssembly)) {
 
 $buildCommand = "dotnet build `"$solution`""
 $runCommand = "dotnet run --project `"$appProject`" --no-build --urls $url"
+if ($Seed) {
+    $runCommand += ' -- ' + ($seedArgs -join ' ')
+}
 
 if ($DryRun) {
     Write-Host ''
@@ -370,6 +425,18 @@ try {
     # Always --no-build: either this script just built, or -NoBuild asked for
     # whatever is already compiled. Either way `dotnet run` must not build again.
     $runArgs = @('run', '--project', $appProject, '--no-build', '--urls', $url)
+    if ($Seed) {
+        if (-not (Test-Path -LiteralPath $mockAdapter)) {
+            Write-Host "The mock adapter was not found at $mockAdapter." -ForegroundColor Yellow
+            Write-Host '   Build the solution first: ./run.ps1 -Seed (without -NoBuild)' -ForegroundColor Gray
+            exit 1
+        }
+
+        # `--` ends dotnet run's own options; everything after it goes to Huddle.App.
+        $runArgs += '--'
+        $runArgs += $seedArgs
+        Write-Host "Seed data: $dataDir (mock adapter, no paid model)" -ForegroundColor Gray
+    }
 
     & dotnet @runArgs
     $runExitCode = $LASTEXITCODE
