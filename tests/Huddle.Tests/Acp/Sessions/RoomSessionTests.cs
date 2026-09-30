@@ -21,6 +21,212 @@ public sealed class RoomSessionTests
     private static readonly WorkItem RoomAItem = new("room-a", "Room A", "Bob", "hello a", []);
     private static readonly WorkItem RoomBItem = new("room-b", "Room B", "Bob", "hello b", []);
 
+    /// <summary>An edit tool call carries its path, its line and a preview of the change onto the wire, so the Room view can show what the Agent is changing.</summary>
+    [Fact]
+    public async Task EditToolCall_IsWrittenWithPathLineAndPreview()
+    {
+        IReadOnlyList<ToolActivity> activities = await RunToolTurnAsync(
+            new ToolCallStarted(
+                "s", "call-1", "Edit notes.md", ToolKind.Edit, ToolCallStatus.InProgress, null,
+                new ToolCallLocationInfo("E:\\work\\notes.md", 12),
+                new ToolCallDiffInfo("E:\\work\\notes.md", "one", "two")));
+
+        ToolActivity activity = Assert.Single(activities);
+        Assert.Equal("E:\\work\\notes.md", activity.Path);
+        Assert.Equal(12, activity.Line);
+        Assert.Equal(new EditChange("one", "two"), activity.Edit);
+    }
+
+    /// <summary>The Adapter repeats one diff on a later update of the same call; the second update carries the line but not the preview again.</summary>
+    [Fact]
+    public async Task SamePreviewOnASecondUpdate_IsNotSentAgain()
+    {
+        ToolCallDiffInfo diff = new("E:\\work\\notes.md", "one", "two");
+
+        IReadOnlyList<ToolActivity> activities = await RunToolTurnAsync(
+            new ToolCallStarted("s", "call-1", "Edit notes.md", ToolKind.Edit, ToolCallStatus.InProgress, null, null, diff),
+            new ToolCallUpdated("s", "call-1", null, ToolKind.Edit, ToolCallStatus.InProgress, null, null, new ToolCallLocationInfo("E:\\work\\notes.md", 12), diff));
+
+        Assert.Equal(2, activities.Count);
+        Assert.NotNull(activities[0].Edit);
+        Assert.Null(activities[1].Edit);
+        Assert.Equal(12, activities[1].Line);
+    }
+
+    /// <summary>A second update whose change differs from the last one sent is sent, so the view never shows a stale preview.</summary>
+    [Fact]
+    public async Task ChangedPreview_IsSentAgain()
+    {
+        IReadOnlyList<ToolActivity> activities = await RunToolTurnAsync(
+            new ToolCallStarted("s", "call-1", "Edit a", ToolKind.Edit, ToolCallStatus.InProgress, null, null, new ToolCallDiffInfo("a", "1", "2")),
+            new ToolCallUpdated("s", "call-1", null, ToolKind.Edit, ToolCallStatus.InProgress, null, null, null, new ToolCallDiffInfo("a", "1", "3")));
+
+        Assert.Equal(new EditChange("1", "3"), activities[1].Edit);
+    }
+
+    /// <summary>The same preview on two different calls is sent for each, because the last-sent record is per call.</summary>
+    [Fact]
+    public async Task SamePreviewOnTwoCalls_IsSentForEach()
+    {
+        ToolCallDiffInfo diff = new("a", "1", "2");
+
+        IReadOnlyList<ToolActivity> activities = await RunToolTurnAsync(
+            new ToolCallStarted("s", "call-1", "Edit a", ToolKind.Edit, ToolCallStatus.InProgress, null, null, diff),
+            new ToolCallStarted("s", "call-2", "Edit a", ToolKind.Edit, ToolCallStatus.InProgress, null, null, diff));
+
+        Assert.All(activities, activity => Assert.NotNull(activity.Edit));
+    }
+
+    /// <summary>An edit longer than the limit is cut to it on both sides and marked truncated, so the pipe never carries an unbounded preview.</summary>
+    [Fact]
+    public async Task OversizePreview_IsClippedAndMarkedTruncated()
+    {
+        string huge = new('x', ToolActivityLimits.MaxEditSideLength + 500);
+
+        IReadOnlyList<ToolActivity> activities = await RunToolTurnAsync(
+            new ToolCallStarted("s", "call-1", "Write big", ToolKind.Edit, ToolCallStatus.InProgress, null, null, new ToolCallDiffInfo("big.txt", huge, huge, 3)));
+
+        EditChange? edit = Assert.Single(activities).Edit;
+        Assert.NotNull(edit);
+        Assert.Equal(ToolActivityLimits.MaxEditSideLength, edit.OldText?.Length);
+        Assert.Equal(ToolActivityLimits.MaxEditSideLength, edit.NewText?.Length);
+        Assert.True(edit.Truncated);
+        Assert.Equal(3, edit.OmittedChanges);
+    }
+
+    /// <summary>A new file whose content alone is over the limit is marked truncated even though it has no old side.</summary>
+    [Fact]
+    public async Task OversizeNewFile_IsMarkedTruncated()
+    {
+        string huge = new('x', ToolActivityLimits.MaxEditSideLength + 1);
+
+        IReadOnlyList<ToolActivity> activities = await RunToolTurnAsync(
+            new ToolCallStarted("s", "call-1", "Write big", ToolKind.Edit, ToolCallStatus.InProgress, null, null, new ToolCallDiffInfo("big.txt", null, huge)));
+
+        EditChange? edit = Assert.Single(activities).Edit;
+        Assert.NotNull(edit);
+        Assert.Null(edit.OldText);
+        Assert.True(edit.Truncated);
+    }
+
+    /// <summary>A call with no diff, such as a read, carries a path but no preview.</summary>
+    [Fact]
+    public async Task NonEditToolCall_CarriesNoPreview()
+    {
+        IReadOnlyList<ToolActivity> activities = await RunToolTurnAsync(
+            new ToolCallStarted("s", "call-1", "Read notes.md", ToolKind.Read, ToolCallStatus.InProgress, null, new ToolCallLocationInfo("E:\\work\\notes.md", null)));
+
+        ToolActivity activity = Assert.Single(activities);
+        Assert.Equal("E:\\work\\notes.md", activity.Path);
+        Assert.Null(activity.Edit);
+    }
+
+    /// <summary>An update that omits its diff sends no preview, which the Room view reads as "unchanged".</summary>
+    [Fact]
+    public async Task UpdateWithoutADiff_SendsNoEdit()
+    {
+        IReadOnlyList<ToolActivity> activities = await RunToolTurnAsync(
+            new ToolCallUpdated("s", "call-1", "Edit a", ToolKind.Edit, ToolCallStatus.Completed, null));
+
+        ToolActivity activity = Assert.Single(activities);
+        Assert.Null(activity.Edit);
+        Assert.Null(activity.Path);
+        Assert.Null(activity.Line);
+    }
+
+    /// <summary>When a call has both, the location's path is the one sent, because it is what the Adapter says the call touches.</summary>
+    [Fact]
+    public async Task LocationPathWinsOverDiffPath()
+    {
+        IReadOnlyList<ToolActivity> activities = await RunToolTurnAsync(
+            new ToolCallStarted(
+                "s", "call-1", "Edit", ToolKind.Edit, ToolCallStatus.InProgress, null,
+                new ToolCallLocationInfo("location.txt", 3),
+                new ToolCallDiffInfo("diff.txt", "1", "2")));
+
+        Assert.Equal("location.txt", Assert.Single(activities).Path);
+    }
+
+    /// <summary>The path is taken from the diff when the call has no location.</summary>
+    [Fact]
+    public async Task DiffPath_IsUsedWhenThereIsNoLocation()
+    {
+        IReadOnlyList<ToolActivity> activities = await RunToolTurnAsync(
+            new ToolCallStarted("s", "call-1", "Edit", ToolKind.Edit, ToolCallStatus.InProgress, null, null, new ToolCallDiffInfo("diff.txt", "1", "2")));
+
+        Assert.Equal("diff.txt", Assert.Single(activities).Path);
+    }
+
+    /// <summary>A usage update that carries a cost reaches the owner with the Adapter session's id, which is what the Spend memory is keyed by.</summary>
+    [Fact]
+    public async Task UsageWithCost_CallsAddSpendWithTheSessionId()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        session.EnqueueReplyWithUsageAndCost([100], [new UsageCost(0.0548m, "USD")], "done");
+        FakeRoomSessionOwner owner = new();
+        var (room, runCts) = CreateSession(owner, FixedOpen(session));
+        try
+        {
+            room.Enqueue(new QueuedWork(1, RoomAItem));
+
+            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+
+            Assert.Equal([(session.SessionId, 0.0548m, "USD")], owner.SpendAdded);
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
+    /// <summary>A usage update with no cost reports no Spend, so a local model never shows a zero.</summary>
+    [Fact]
+    public async Task UsageWithoutCost_DoesNotCallAddSpend()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        session.EnqueueReplyWithUsage([100, 250], "done");
+        FakeRoomSessionOwner owner = new();
+        var (room, runCts) = CreateSession(owner, FixedOpen(session));
+        try
+        {
+            room.Enqueue(new QueuedWork(1, RoomAItem));
+
+            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+
+            Assert.Empty(owner.SpendAdded);
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
+    /// <summary>Spend is not a Budget: the tokens counted, and so the token Budget, are the same with a cost on the updates as without one.</summary>
+    [Fact]
+    public async Task TokenBudget_IsUnaffectedByACost()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        session.EnqueueReplyWithUsageAndCost([100, 300], [new UsageCost(0.01m, "USD"), new UsageCost(9.99m, "USD")], "done");
+        FakeRoomSessionOwner owner = new();
+        var (room, runCts) = CreateSession(owner, FixedOpen(session));
+        try
+        {
+            room.Enqueue(new QueuedWork(1, RoomAItem));
+
+            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+
+            Assert.Equal(300, owner.TokensAdded);
+            Assert.False(owner.TokenBudgetSpent);
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
     /// <summary>The first enqueued item opens the session exactly once, then prompts and posts the reply.</summary>
     [Fact]
     public async Task Enqueue_FirstItem_OpensOnceThenPromptsAndPostsReply()
@@ -635,6 +841,32 @@ public sealed class RoomSessionTests
         await runCts.CancelAsync();
         await session.DisposeAsync();
         runCts.Dispose();
+    }
+
+    /// <summary>
+    /// Runs one Turn whose session reports <paramref name="toolEvents"/> before its reply, and returns
+    /// every <see cref="ToolActivity"/> the runner wrote for it, in order.
+    /// </summary>
+    private static async Task<IReadOnlyList<ToolActivity>> RunToolTurnAsync(params AgentEvent[] toolEvents)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new();
+        session.EnqueueToolActivity(toolEvents);
+        session.EnqueueReply("done");
+        FakeRoomSessionOwner owner = new();
+        var (room, runCts) = CreateSession(owner, FixedOpen(session));
+        try
+        {
+            room.Enqueue(new QueuedWork(1, RoomAItem));
+
+            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+
+            return [.. owner.Written.OfType<ToolActivity>()];
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
     }
 
     /// <summary>An open delegate that always returns the same session.</summary>

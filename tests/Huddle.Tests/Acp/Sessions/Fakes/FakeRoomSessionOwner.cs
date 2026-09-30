@@ -14,6 +14,7 @@ internal sealed class FakeRoomSessionOwner : IRoomSessionOwner
     private readonly Lock gate = new();
     private readonly List<ProtocolMessage> written = [];
     private readonly List<string> reportCalls = [];
+    private readonly List<(string SessionId, decimal RunningTotal, string Currency)> spendAdded = [];
 
     /// <inheritdoc />
     /// <remarks>
@@ -99,6 +100,27 @@ internal sealed class FakeRoomSessionOwner : IRoomSessionOwner
 
     /// <inheritdoc />
     public void AddTokens(long delta) => this.TokensAdded += delta;
+
+    /// <summary>Every <see cref="AddSpend"/> call's arguments, in call order.</summary>
+    public IReadOnlyList<(string SessionId, decimal RunningTotal, string Currency)> SpendAdded
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return [.. this.spendAdded];
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public void AddSpend(string sessionId, decimal runningTotal, string currency)
+    {
+        lock (this.gate)
+        {
+            this.spendAdded.Add((sessionId, runningTotal, currency));
+        }
+    }
 
     /// <inheritdoc />
     public void ReportTokenBudgetSpent() => this.RecordCall(nameof(this.ReportTokenBudgetSpent));

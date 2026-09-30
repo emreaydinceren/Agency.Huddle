@@ -318,6 +318,42 @@ public sealed class PersonaRenameCascadeTests
         Assert.Equal(imageFile, harness.AvatarStore.Get("echoprime").Image);
     }
 
+    /// <summary>
+    /// A rename moves a Persona's Spend even when NO Agent has ever registered under the old Name:
+    /// the stock case, since <c>Team:Acp:Enabled</c> is false by default. Pins the placement of the
+    /// Spend move above the "no Agent row" early return, exactly as
+    /// <see cref="Rename_PersonaWithNoRegisteredAgent_MovesTheAvatarKey"/> does for the Avatar.
+    /// </summary>
+    [Fact]
+    public async Task Rename_MovesSpend_EvenWhenNoAgentRowExists()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("ghost"), "Nobody has ever started this one.");
+        harness.Spend.Add("ghost", "s1", 0.25m, "USD");
+
+        harness.PersonaStore.Update("ghost", PersonaText("ghostprime", "Nobody has ever started this one."), model: null, effort: null);
+
+        Assert.Equal([new SpendAmount(0.25m, "USD")], harness.Spend.Get("ghostprime"));
+        Assert.Empty(harness.Spend.Get("ghost"));
+    }
+
+    /// <summary>Removing a Persona forgets its Spend, so a new Persona that takes the Name starts from zero.</summary>
+    [Fact]
+    public async Task Removed_ForgetsSpend()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        using var harness = await CreateHarnessAsync(dir, ct);
+        harness.PersonaStore.Add(Identity("echo"), "You answer support questions.");
+        harness.Spend.Add("echo", "s1", 0.25m, "USD");
+
+        harness.PersonaStore.Remove("echo");
+
+        Assert.Empty(harness.Spend.Get("echo"));
+    }
+
     /// <summary>Removing a Persona deletes both its Avatar's JSON key and its image file from disk.</summary>
     [Fact]
     public async Task Remove_DeletesTheAvatarKeyAndItsImageFile()
@@ -696,6 +732,7 @@ public sealed class PersonaRenameCascadeTests
             NullLogger<TaskService>.Instance);
         var viewStore = new ViewStore(dir.Options(), NullLogger<ViewStore>.Instance);
         var folderMoves = new TeammateFolderMoves();
+        var spend = new PersonaSpend(NullLogger<PersonaSpend>.Instance);
         var cascade = new PersonaRenameCascade(
             teamDirectory,
             personaStore,
@@ -708,7 +745,8 @@ public sealed class PersonaRenameCascadeTests
             cascadeLogger ?? NullLogger<PersonaRenameCascade>.Instance,
             tasks: taskService,
             views: viewStore,
-            folderMoves: folderMoves);
+            folderMoves: folderMoves,
+            spend: spend);
 
         await cascade.StartAsync(ct);
 
@@ -725,6 +763,7 @@ public sealed class PersonaRenameCascadeTests
             ViewStore = viewStore,
             Cascade = cascade,
             FolderMoves = folderMoves,
+            Spend = spend,
         };
     }
 
@@ -828,6 +867,9 @@ public sealed class PersonaRenameCascadeTests
         public required ViewStore ViewStore { get; init; }
 
         public required PersonaRenameCascade Cascade { get; init; }
+
+        /// <summary>The display-only <see cref="PersonaSpend"/> table the cascade renames and forgets entries in.</summary>
+        public required PersonaSpend Spend { get; init; }
 
         /// <summary>The <see cref="TeammateFolderMoves"/> gate the cascade signals around a Teammate folder move, so a test can await <see cref="TeammateFolderMoves.WhenSettledAsync"/> the same way a host starting mid-rename would.</summary>
         public required TeammateFolderMoves FolderMoves { get; init; }

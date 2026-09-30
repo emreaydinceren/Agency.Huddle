@@ -324,7 +324,59 @@ public sealed class ChatPageTests
         Assert.DoesNotContain("continue-note", html, StringComparison.Ordinal);
     }
 
-    /// <summary>The tool the Agent is currently using renders as one muted line inside its Draft.</summary>
+    /// <summary>Every tool call a Draft has recorded renders as its own row in the Room, not just the newest one.</summary>
+    [Fact]
+    public async Task ChatPage_RendersEachToolCallAsARow()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, drafts) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+        var messageId = Guid.CreateVersion7().ToString("N");
+
+        drafts.Activity(messageId, "call-1", room.Id, agent.Id, agent.Name, "Reading Persona.cs", ToolActivityStatus.Completed);
+        drafts.Activity(messageId, "call-2", room.Id, agent.Id, agent.Name, "Editing Persona.cs", ToolActivityStatus.InProgress);
+
+        using var client = factory.CreateClient();
+        var html = await client.GetStringAsync($"/rooms/{room.Id}", ct);
+
+        Assert.Equal(2, CountOccurrences(html, "class=\"turn-detail-row\""));
+        Assert.Contains("Reading Persona.cs", html, StringComparison.Ordinal); // contains-ok: whole-page server HTML; the row markup is asserted exactly in MessageListTests
+        Assert.Contains("Editing Persona.cs", html, StringComparison.Ordinal); // contains-ok: whole-page server HTML; the row markup is asserted exactly in MessageListTests
+    }
+
+    /// <summary>A tab opened mid-Turn shows the Turn detail already gathered, by the same read of <c>Drafts.ForRoom</c> that gives it the text.</summary>
+    [Fact]
+    public async Task ChatPage_LoadsInFlightToolCallsOnEntry()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, drafts) = ChatPageTests.Services(factory);
+
+        var agent = await directory.UpsertAgentUserAsync("echo", "test agent", ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+        var messageId = Guid.CreateVersion7().ToString("N");
+
+        // Written before any request for the page is made, with no DraftChanged subscriber alive to
+        // have witnessed it, so the only way it reaches the page is LoadRoomAsync reading the store.
+        drafts.Activity(messageId, "call-1", room.Id, agent.Id, agent.Name, "Edit notes.md", ToolActivityStatus.Completed, "E:\\work\\notes.md", 4, new EditChange("one", "two"));
+
+        using var client = factory.CreateClient();
+        var html = await client.GetStringAsync($"/rooms/{room.Id}", ct);
+
+        Assert.Contains("aria-label=\"Show change to notes.md\"", html, StringComparison.Ordinal); // contains-ok: whole-page server HTML; the row markup is asserted exactly in MessageListTests
+        Assert.Contains("line 4", html, StringComparison.Ordinal); // contains-ok: whole-page server HTML; the row markup is asserted exactly in MessageListTests
+    }
+
+    /// <summary>The newest tool call the Agent is using renders as a row inside its Draft, with its title and mark.</summary>
     [Fact]
     public async Task ChatPage_RendersToolActivity()
     {
@@ -345,8 +397,10 @@ public sealed class ChatPageTests
         using var client = factory.CreateClient();
         var html = await client.GetStringAsync($"/rooms/{room.Id}", ct);
 
-        Assert.Contains("tool-activity", html, StringComparison.Ordinal);
-        Assert.Contains("Reading Persona.cs", html, StringComparison.Ordinal);
+        Assert.Contains("turn-detail-row", html, StringComparison.Ordinal); // contains-ok: whole-page server HTML; the row markup is asserted exactly in MessageListTests
+        Assert.Contains("tool-activity", html, StringComparison.Ordinal); // contains-ok: whole-page server HTML; the row markup is asserted exactly in MessageListTests
+        Assert.Contains("Reading Persona.cs", html, StringComparison.Ordinal); // contains-ok: whole-page server HTML; the row markup is asserted exactly in MessageListTests
+        Assert.Contains("aria-label=\"Running\"", html, StringComparison.Ordinal); // contains-ok: whole-page server HTML; the row markup is asserted exactly in MessageListTests
     }
 
     /// <summary>

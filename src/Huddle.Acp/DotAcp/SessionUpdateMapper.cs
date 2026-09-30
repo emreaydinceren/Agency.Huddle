@@ -54,7 +54,9 @@ internal static class SessionUpdateMapper
                 toolCall.Title,
                 SessionUpdateMapper.MapToolKind(toolCall.Kind),
                 SessionUpdateMapper.MapToolCallStatus(toolCall.Status),
-                SessionUpdateMapper.SerializeRaw(toolCall.RawInput));
+                SessionUpdateMapper.SerializeRaw(toolCall.RawInput),
+                SessionUpdateMapper.MapLocation(toolCall.Locations),
+                SessionUpdateMapper.MapDiff(toolCall.Content));
 
             case dotacp.protocol.SessionUpdateToolCallUpdate toolCallUpdate:
             return new ToolCallUpdated(
@@ -64,13 +66,15 @@ internal static class SessionUpdateMapper
                 SessionUpdateMapper.MapToolKind(toolCallUpdate.Kind),
                 SessionUpdateMapper.MapToolCallStatus(toolCallUpdate.Status),
                 SessionUpdateMapper.SerializeRaw(toolCallUpdate.RawOutput),
-                SessionUpdateMapper.SerializeRaw(toolCallUpdate.RawInput));
+                SessionUpdateMapper.SerializeRaw(toolCallUpdate.RawInput),
+                SessionUpdateMapper.MapLocation(toolCallUpdate.Locations),
+                SessionUpdateMapper.MapDiff(toolCallUpdate.Content));
 
             case dotacp.protocol.Plan plan:
             return new PlanUpdated(sessionId, SessionUpdateMapper.MapPlanEntries(plan.Entries));
 
             case dotacp.protocol.UsageUpdate usageUpdate:
-            return new UsageUpdated(sessionId, (long)usageUpdate.Size, (long)usageUpdate.Used);
+            return new UsageUpdated(sessionId, (long)usageUpdate.Size, (long)usageUpdate.Used, SessionUpdateMapper.MapCost(usageUpdate.Cost));
 
             case dotacp.protocol.CurrentModeUpdate currentModeUpdate:
             return new ModeChanged(sessionId, (string)currentModeUpdate.CurrentModeId);
@@ -184,6 +188,72 @@ internal static class SessionUpdateMapper
         }
 
         return new PermissionRequestContext((string)request.SessionId, toolCallInfo, options);
+    }
+
+    /// <summary>
+    /// Maps the first <c>diff</c> block of a tool call's content, counting the rest, or returns
+    /// <see langword="null"/> when there is none. ACP reads an omitted <c>content</c> as unchanged, so
+    /// null here means "not in this notification", never "cleared".
+    /// </summary>
+    /// <param name="content">The call's content blocks, or <see langword="null"/> when omitted.</param>
+    internal static ToolCallDiffInfo? MapDiff(dotacp.protocol.ToolCallContent[]? content)
+    {
+        if (content is null)
+        {
+            return null;
+        }
+
+        ToolCallDiffInfo? first = null;
+        int omitted = 0;
+        foreach (dotacp.protocol.ToolCallContent block in content)
+        {
+            if (block is not dotacp.protocol.Diff diff)
+            {
+                continue;
+            }
+
+            if (first is null)
+            {
+                first = new ToolCallDiffInfo(diff.Path, diff.OldText, diff.NewText ?? string.Empty);
+            }
+            else
+            {
+                omitted++;
+            }
+        }
+
+        return first is null ? null : first with { OmittedChanges = omitted };
+    }
+
+    /// <summary>
+    /// Maps a usage update's <c>cost</c>, or returns <see langword="null"/> when the Adapter sent none.
+    /// The wire carries a JSON number, so <see cref="Convert.ToDecimal(double)"/> rounds it to the
+    /// nearest representable decimal; a non-finite amount is treated as no cost rather than thrown on,
+    /// because an optional field must never fail a notification.
+    /// </summary>
+    /// <param name="cost">The wire cost, or <see langword="null"/> when omitted.</param>
+    internal static UsageCost? MapCost(dotacp.protocol.Cost? cost)
+    {
+        if (cost is null || !double.IsFinite(cost.Amount))
+        {
+            return null;
+        }
+
+        return new UsageCost(Convert.ToDecimal(cost.Amount), cost.Currency);
+    }
+
+    /// <summary>Maps the first entry of a tool call's <c>locations</c>, or returns <see langword="null"/> when there is none.</summary>
+    /// <param name="locations">The call's locations, or <see langword="null"/> when omitted.</param>
+    internal static ToolCallLocationInfo? MapLocation(dotacp.protocol.ToolCallLocation[]? locations)
+    {
+        if (locations is not { Length: > 0 })
+        {
+            return null;
+        }
+
+        dotacp.protocol.ToolCallLocation first = locations[0];
+        int? line = first.Line is { } value ? (int)Math.Min(value, (uint)int.MaxValue) : null;
+        return new ToolCallLocationInfo(first.Path, line);
     }
 
     internal static string? SerializeRaw(object? raw)

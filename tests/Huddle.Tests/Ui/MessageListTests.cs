@@ -81,7 +81,7 @@ public sealed class MessageListTests
     /// <summary>Builds a Draft carrying <paramref name="text"/> and nothing else of interest.</summary>
     /// <param name="text">The text the Draft has accumulated so far.</param>
     /// <returns>A Draft for use in a signature calculation.</returns>
-    private static Draft DraftWith(string text) => new("msg-1", "room-1", "agent-1", "echo", text, null, null);
+    private static Draft DraftWith(string text) => new("msg-1", "room-1", "agent-1", "echo", text, []);
 
     /// <summary>An avatar renders beside a settled Message row - the gutter Part A's two-column layout adds.</summary>
     [Fact]
@@ -168,7 +168,7 @@ public sealed class MessageListTests
     /// <param name="senderName">The Draft's <see cref="Draft.SenderName"/>, and the key <see cref="AvatarStore.Get(string)"/> resolves it by.</param>
     /// <param name="text">The text the Draft has accumulated so far.</param>
     private static Draft DraftFrom(string senderName, string text) =>
-        new("msg-1", "room-1", "agent-1", senderName, text, null, null);
+        new("msg-1", "room-1", "agent-1", senderName, text, []);
 
     /// <summary>Registers this factory's real <see cref="AvatarStore"/> into a fresh <see cref="MudBunitContext"/> - the same pattern <c>AppearanceAvatarTests.NewContext</c> and <c>TeammateCardTests.NewContext</c> use.</summary>
     /// <param name="factory">The factory whose composed <see cref="AvatarStore"/> singleton to reuse.</param>
@@ -256,6 +256,317 @@ public sealed class MessageListTests
         var anchor = cut.Find("a.library-ref");
         Assert.Equal("?library=teams/Marketing/plan.md", anchor.GetAttribute("href"));
     }
+
+    /// <summary>Each tool call of a Draft is one row, in order, with its status as a text label so the state never rests on colour alone.</summary>
+    [Fact]
+    public async Task Rows_ShowOnePerCallWithTheirStatusLabels()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        Draft draft = MessageListTests.DraftWithCalls(
+            new ToolCallDetail("c1", "Read notes.md", ToolActivityStatus.Completed, null, null, null),
+            new ToolCallDetail("c2", "Edit notes.md", ToolActivityStatus.InProgress, null, null, null),
+            new ToolCallDetail("c3", "Write summary.txt", ToolActivityStatus.Pending, null, null, null),
+            new ToolCallDetail("c4", "Run tests", ToolActivityStatus.Failed, null, null, null));
+
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [draft]));
+
+        Assert.Equal("Tool calls", cut.Find("ul.turn-detail").GetAttribute("aria-label"));
+        var rows = cut.FindAll("li.turn-detail-row");
+        Assert.Equal(
+            ["Read notes.md", "Edit notes.md", "Write summary.txt", "Run tests"],
+            rows.Select(row => row.QuerySelector(".tool-activity")?.TextContent.Trim()));
+        Assert.Equal(
+            ["Done", "Running", "Waiting", "Failed"],
+            rows.Select(row => row.QuerySelector("[role=img]")?.GetAttribute("aria-label")));
+    }
+
+    /// <summary>Nothing expands by itself: a closed row's preview is hidden from sight and from assistive technology until the Human opens it.</summary>
+    [Fact]
+    public async Task Preview_WhileClosed_IsHiddenUntilOpened()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit()]));
+
+        Assert.NotEmpty(cut.FindAll(".turn-detail-panel .mud-collapse-container.invisible"));
+
+        cut.Find("button.turn-detail-toggle").Click();
+
+        Assert.Empty(cut.FindAll(".turn-detail-panel .mud-collapse-container.invisible"));
+    }
+
+    /// <summary>A row with no Edit has no expander and no empty container, because there is nothing to open.</summary>
+    [Fact]
+    public async Task Row_WithoutAnEdit_HasNoExpander()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        Draft draft = MessageListTests.DraftWithCalls(new ToolCallDetail("c1", "Read notes.md", ToolActivityStatus.Completed, "notes.md", null, null));
+
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [draft]));
+
+        Assert.Empty(cut.FindAll(".turn-detail-toggle"));
+        Assert.Empty(cut.FindAll(".edit-preview"));
+    }
+
+    /// <summary>The expander is a button that announces its state, and pressing it twice returns the row to closed.</summary>
+    [Fact]
+    public async Task Expander_Toggles_AndSetsAriaExpanded()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit()]));
+
+        var closed = cut.Find("button.turn-detail-toggle");
+        Assert.Equal("false", closed.GetAttribute("aria-expanded"));
+        Assert.Equal("Show change to notes.md", closed.GetAttribute("aria-label"));
+
+        closed.Click();
+
+        var open = cut.Find("button.turn-detail-toggle");
+        Assert.Equal("true", open.GetAttribute("aria-expanded"));
+        Assert.Equal("Hide change to notes.md", open.GetAttribute("aria-label"));
+
+        open.Click();
+
+        Assert.Equal("false", cut.Find("button.turn-detail-toggle").GetAttribute("aria-expanded"));
+    }
+
+    /// <summary>The expander points at the panel it controls, by an id that does not depend on the Adapter's tool call id.</summary>
+    [Fact]
+    public async Task Expander_ControlsThePreviewPanelById()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit()]));
+
+        string? controls = cut.Find("button.turn-detail-toggle").GetAttribute("aria-controls");
+
+        Assert.Equal("turn-detail-0-0", controls);
+        Assert.NotNull(cut.Find($"#{controls}"));
+    }
+
+    /// <summary>An opened row shows what was removed and what was added, each in its own labelled block.</summary>
+    [Fact]
+    public async Task Preview_ShowsRemovedAndAdded()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit(new EditChange("one", "two"))]));
+        cut.Find("button.turn-detail-toggle").Click();
+
+        Assert.Equal("Change to notes.md", cut.Find(".edit-preview").GetAttribute("aria-label"));
+        Assert.Equal("E:\\work\\notes.md", cut.Find(".edit-preview-path").TextContent.Trim());
+        Assert.Equal("− Removed", cut.Find(".edit-preview-side.removed .edit-preview-label").TextContent.Trim());
+        Assert.Equal("one", cut.Find(".edit-preview-side.removed pre").TextContent);
+        Assert.Equal("+ Added", cut.Find(".edit-preview-side.added .edit-preview-label").TextContent.Trim());
+        Assert.Equal("two", cut.Find(".edit-preview-side.added pre").TextContent);
+    }
+
+    /// <summary>A new file has no old side, so only the Added block shows and there is no empty Removed block.</summary>
+    [Fact]
+    public async Task Preview_ForANewFile_ShowsOnlyAdded()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit(new EditChange(null, "hello"))]));
+        cut.Find("button.turn-detail-toggle").Click();
+
+        Assert.Empty(cut.FindAll(".edit-preview-side.removed"));
+        Assert.Equal("hello", cut.Find(".edit-preview-side.added pre").TextContent);
+    }
+
+    /// <summary>Text from the Agent is escaped, never parsed as markup: a preview that contains HTML shows it as text.</summary>
+    [Fact]
+    public async Task Preview_EscapesMarkup()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit(new EditChange("<b>x</b>", "<script>alert(1)</script>"))]));
+        cut.Find("button.turn-detail-toggle").Click();
+
+        Assert.Empty(cut.FindAll(".edit-preview b"));
+        Assert.Empty(cut.FindAll(".edit-preview script"));
+        Assert.Equal("<script>alert(1)</script>", cut.Find(".edit-preview-side.added pre").TextContent);
+    }
+
+    /// <summary>A preview the runner or the server cut says so, with the limit it was cut to.</summary>
+    [Fact]
+    public async Task Preview_Truncated_SaysShortened()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit(new EditChange("a", "b", Truncated: true))]));
+        cut.Find("button.turn-detail-toggle").Click();
+
+        Assert.Equal("Shortened: showing the first 4,096 characters.", cut.Find(".edit-preview-note.truncated").TextContent.Trim());
+    }
+
+    /// <summary>A call with further changes says how many it does not show, in the singular for one.</summary>
+    [Theory]
+    [InlineData(1, "and 1 more change in this call")]
+    [InlineData(3, "and 3 more changes in this call")]
+    public async Task Preview_OmittedChanges_SaysSo(int omitted, string expected)
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit(new EditChange("a", "b", false, omitted))]));
+        cut.Find("button.turn-detail-toggle").Click();
+
+        Assert.Equal(expected, cut.Find(".edit-preview-note.omitted").TextContent.Trim());
+    }
+
+    /// <summary>With nothing cut and nothing omitted, the preview carries no note.</summary>
+    [Fact]
+    public async Task Preview_Complete_HasNoNotes()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit(new EditChange("a", "b"))]));
+        cut.Find("button.turn-detail-toggle").Click();
+
+        Assert.Empty(cut.FindAll(".edit-preview-note"));
+    }
+
+    /// <summary>A call with a path but no title shows the file's name, and the full path is on the row as a tooltip.</summary>
+    [Fact]
+    public async Task Path_ShowsTheFileNameWithTheFullPathInATitle()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        Draft draft = MessageListTests.DraftWithCalls(new ToolCallDetail("c1", null, ToolActivityStatus.Completed, "E:\\work\\notes.md", null, null));
+
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [draft]));
+
+        var title = cut.Find(".turn-detail-row .tool-activity");
+        Assert.Equal("notes.md", title.TextContent.Trim());
+        Assert.Equal("E:\\work\\notes.md", title.GetAttribute("title"));
+    }
+
+    /// <summary>Both separators end a segment, so a Windows path and a POSIX path each reduce to their file name wherever the server runs.</summary>
+    [Theory]
+    [InlineData("E:\\work\\deep\\notes.md", "notes.md")]
+    [InlineData("/home/nova/work/notes.md", "notes.md")]
+    [InlineData("notes.md", "notes.md")]
+    public async Task Path_WithEitherSeparator_ShowsTheLastSegment(string path, string expected)
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        Draft draft = MessageListTests.DraftWithCalls(new ToolCallDetail("c1", null, ToolActivityStatus.Completed, path, null, null));
+
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [draft]));
+
+        Assert.Equal(expected, cut.Find(".turn-detail-row .tool-activity").TextContent.Trim());
+    }
+
+    /// <summary>A call the Adapter has told us nothing about still gets a row, with a plain fallback label.</summary>
+    [Fact]
+    public async Task Row_WithNeitherTitleNorPath_ShowsAFallbackLabel()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        Draft draft = MessageListTests.DraftWithCalls(new ToolCallDetail("c1", null, ToolActivityStatus.Pending, null, null, null));
+
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [draft]));
+
+        Assert.Equal("Tool call", cut.Find(".turn-detail-row .tool-activity").TextContent.Trim());
+    }
+
+    /// <summary>A known line shows at the end of the row, and an unknown one shows nothing.</summary>
+    [Fact]
+    public async Task Line_ShowsOnlyWhenKnown()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        Draft draft = MessageListTests.DraftWithCalls(
+            new ToolCallDetail("c1", "Edit a", ToolActivityStatus.Completed, "a", 12, null),
+            new ToolCallDetail("c2", "Edit b", ToolActivityStatus.Completed, "b", null, null));
+
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [draft]));
+
+        Assert.Equal(["line 12"], cut.FindAll(".turn-detail-line").Select(line => line.TextContent.Trim()));
+    }
+
+    /// <summary>A status change moves the signature, so a row finishing scrolls the Room to it.</summary>
+    [Fact]
+    public void RenderedSignature_ChangesWhenAStatusChanges()
+    {
+        Draft running = MessageListTests.DraftWithCalls(new ToolCallDetail("c1", "Edit a", ToolActivityStatus.InProgress, null, null, null));
+        Draft done = MessageListTests.DraftWithCalls(new ToolCallDetail("c1", "Edit a", ToolActivityStatus.Completed, null, null, null));
+
+        Assert.NotEqual(MessageList.RenderedSignature([], [running]), MessageList.RenderedSignature([], [done]));
+    }
+
+    /// <summary>A new row moves the signature even when no text arrived.</summary>
+    [Fact]
+    public void RenderedSignature_ChangesWhenARowIsAdded()
+    {
+        Draft one = MessageListTests.DraftWithCalls(new ToolCallDetail("c1", "Edit a", ToolActivityStatus.Completed, null, null, null));
+        Draft two = MessageListTests.DraftWithCalls(
+            new ToolCallDetail("c1", "Edit a", ToolActivityStatus.Completed, null, null, null),
+            new ToolCallDetail("c2", "Edit b", ToolActivityStatus.Completed, null, null, null));
+
+        Assert.NotEqual(MessageList.RenderedSignature([], [one]), MessageList.RenderedSignature([], [two]));
+    }
+
+    /// <summary>Opening a preview asks the browser to scroll no further: expanding a row changes no input to the scroll decision.</summary>
+    [Fact]
+    public async Task Expanding_ARow_DoesNotScrollTheRoom()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        ctx.JSInterop.Mode = Bunit.JSRuntimeMode.Loose;
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [MessageListTests.DraftWithEdit()]));
+        int scrollsBefore = ctx.JSInterop.Invocations.Count(invocation => string.Equals(invocation.Identifier, "teamScroll.toBottom", StringComparison.Ordinal));
+
+        cut.Find("button.turn-detail-toggle").Click();
+
+        int scrollsAfter = ctx.JSInterop.Invocations.Count(invocation => string.Equals(invocation.Identifier, "teamScroll.toBottom", StringComparison.Ordinal));
+        Assert.Equal(scrollsBefore, scrollsAfter);
+    }
+
+    /// <summary>A re-render caused by a status update keeps an opened row open, because its tool call id, not its position, identifies it.</summary>
+    [Fact]
+    public async Task ExpandedRow_SurvivesARerender()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        Draft running = MessageListTests.DraftWithCalls(new ToolCallDetail("c1", "Edit notes.md", ToolActivityStatus.InProgress, "E:\\work\\notes.md", null, new EditChange("one", "two")));
+        Draft done = MessageListTests.DraftWithCalls(new ToolCallDetail("c1", "Edit notes.md", ToolActivityStatus.Completed, "E:\\work\\notes.md", 1, new EditChange("one", "two")));
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [running]));
+        cut.Find("button.turn-detail-toggle").Click();
+
+        cut.Render(parameters => parameters.Add(p => p.Drafts, [done]));
+
+        Assert.Equal("true", cut.Find("button.turn-detail-toggle").GetAttribute("aria-expanded"));
+    }
+
+    /// <summary>Open state is forgotten once the Draft goes, so the next Turn's rows start closed.</summary>
+    [Fact]
+    public async Task ExpandedState_IsDroppedWhenTheDraftGoes()
+    {
+        await using var factory = new TeamWebApplicationFactory();
+        await using var ctx = MessageListTests.NewContext(factory);
+        Draft draft = MessageListTests.DraftWithEdit();
+        var cut = ctx.Render<MessageList>(parameters => parameters.Add(p => p.Drafts, [draft]));
+        cut.Find("button.turn-detail-toggle").Click();
+
+        cut.Render(parameters => parameters.Add(p => p.Drafts, []));
+        cut.Render(parameters => parameters.Add(p => p.Drafts, [draft]));
+
+        Assert.Equal("false", cut.Find("button.turn-detail-toggle").GetAttribute("aria-expanded"));
+    }
+
+    /// <summary>Builds a Draft with one edit call on <c>E:\work\notes.md</c> whose change is <paramref name="edit"/>.</summary>
+    /// <param name="edit">The change; a one-to-two replacement when omitted.</param>
+    private static Draft DraftWithEdit(EditChange? edit = null) =>
+        MessageListTests.DraftWithCalls(new ToolCallDetail("c1", "Edit notes.md", ToolActivityStatus.Completed, "E:\\work\\notes.md", 1, edit ?? new EditChange("one", "two")));
+
+    /// <summary>Builds a Draft carrying <paramref name="calls"/> and no text, with ids that carry no meaning of their own.</summary>
+    /// <param name="calls">The Draft's tool calls, oldest first.</param>
+    private static Draft DraftWithCalls(params ToolCallDetail[] calls) =>
+        new("msg-1", "room-1", "agent-1", "echo", string.Empty, calls);
 
     /// <summary>A Message naming both a Task id and an absolute path renders both a <c>task-ref</c> and a <c>library-ref</c> link, unchanged from each other.</summary>
     [Fact]

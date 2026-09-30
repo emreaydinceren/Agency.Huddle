@@ -140,6 +140,61 @@ public sealed class ProtocolJsonTests
         Assert.Equal(activity, result);
     }
 
+    /// <summary>An activity that carries none of the Turn detail members serialises exactly as a version 3 activity always did, so an older reader sees no change.</summary>
+    [Fact]
+    public void ToolActivity_WithoutNewFields_SerialisesExactlyAsBefore()
+    {
+        ToolActivity activity = new("room-1", "m-7", "tc-1", "Reading file.cs", ToolActivityStatus.InProgress);
+
+        string json = ProtocolJson.Serialize(activity);
+
+        Assert.Equal(
+            "{\"type\":\"toolActivity\",\"roomId\":\"room-1\",\"messageId\":\"m-7\",\"toolCallId\":\"tc-1\"," +
+            "\"title\":\"Reading file.cs\",\"status\":\"inProgress\",\"version\":3}",
+            json);
+    }
+
+    /// <summary>An activity with a path, a line and an Edit pins the exact wire shape.</summary>
+    [Fact]
+    public void ToolActivity_WithEdit_SerialisesToLiteralJson()
+    {
+        ToolActivity activity = new(
+            "room-1", "m-7", "tc-1", "Edit notes.md", ToolActivityStatus.Completed, "E:\\Data\\notes.md", 1, new EditChange("one", "two"));
+
+        string json = ProtocolJson.Serialize(activity);
+
+        Assert.Equal(
+            "{\"type\":\"toolActivity\",\"roomId\":\"room-1\",\"messageId\":\"m-7\",\"toolCallId\":\"tc-1\"," +
+            "\"title\":\"Edit notes.md\",\"status\":\"completed\",\"path\":\"E:\\\\Data\\\\notes.md\",\"line\":1," +
+            "\"edit\":{\"oldText\":\"one\",\"newText\":\"two\",\"truncated\":false,\"omittedChanges\":0},\"version\":3}",
+            json);
+    }
+
+    /// <summary>An activity with an Edit, including a new-file edit with no old side, round-trips unchanged.</summary>
+    [Fact]
+    public void ToolActivity_WithEdit_RoundTrips()
+    {
+        ToolActivity activity = new(
+            "room-1", "m-7", "tc-1", "Write a.txt", ToolActivityStatus.InProgress, "a.txt", null, new EditChange(null, "hello", true, 2));
+
+        ToolActivity result = Assert.IsType<ToolActivity>(ProtocolJson.Deserialize(ProtocolJson.Serialize(activity)));
+
+        Assert.Equal(activity, result);
+    }
+
+    /// <summary>A line from a newer runner with a member this reader does not know still deserialises, so a rolling upgrade never drops an activity.</summary>
+    [Fact]
+    public void ToolActivity_WithAnUnknownProperty_StillDeserialises()
+    {
+        string json =
+            "{\"type\":\"toolActivity\",\"roomId\":\"room-1\",\"messageId\":\"m-7\",\"toolCallId\":\"tc-1\"," +
+            "\"title\":\"Edit x\",\"status\":\"pending\",\"kind\":\"edit\",\"version\":3}";
+
+        ToolActivity result = Assert.IsType<ToolActivity>(ProtocolJson.Deserialize(json));
+
+        Assert.Equal(new ToolActivity("room-1", "m-7", "tc-1", "Edit x", ToolActivityStatus.Pending), result);
+    }
+
     /// <summary>A V3 <see cref="StopTurn"/> pins the exact wire shape and round-trips through <see cref="ProtocolJson"/>.</summary>
     [Fact]
     public void ProtocolJson_RoundTripsStopTurn()

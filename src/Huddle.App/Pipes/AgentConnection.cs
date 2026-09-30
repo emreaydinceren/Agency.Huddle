@@ -341,10 +341,50 @@ internal sealed class AgentConnection
             return;
         }
 
+        // The pipe is a validation boundary, so the display-only members are sanitised, never
+        // trusted. A violation never rejects the activity: a ProtocolError here would throw away a
+        // status change because a preview was large, which is the wrong trade for display data.
+        string? title = ToolActivityLimits.Clip(activity.Title, ToolActivityLimits.MaxTitleLength, out _);
+        string? path = activity.Path is { Length: > 0 and <= ToolActivityLimits.MaxPathLength } ? activity.Path : null;
+        int? line = activity.Line is >= 1 ? activity.Line : null;
+        EditChange? edit = SanitiseEdit(activity.Edit);
+        // Unreachable in practice - the membership check above already needed an Agent - but it is what
+        // lets the rest of this method read the Agent without a null-forgiving operator.
+        if (this.Agent is not { } agent)
+        {
+            return;
+        }
+
+        if ((path != activity.Path || line != activity.Line) && this.logger.IsEnabled(LogLevel.Debug))
+        {
+            this.logger.LogDebug(
+                "Dropped an out-of-range path or line on a tool activity for room {RoomId} from agent {AgentId}.",
+                activity.RoomId,
+                agent.Id);
+        }
+
         this.drafts.Activity(
-            activity.MessageId, activity.ToolCallId, activity.RoomId, this.Agent!.Id, this.Agent!.Name, activity.Title, activity.Status);
+            activity.MessageId, activity.ToolCallId, activity.RoomId, agent.Id, agent.Name, title, activity.Status, path, line, edit);
 
         this.roomEvents.PublishDraftChanged(activity.RoomId);
+    }
+
+    /// <summary>
+    /// Clips each side of <paramref name="edit"/> to <see cref="ToolActivityLimits.MaxEditSideLength"/>,
+    /// marks it truncated when either side was cut, and floors <see cref="EditChange.OmittedChanges"/>
+    /// at zero. The runner already clips, but a peer on this pipe is not trusted to.
+    /// </summary>
+    /// <param name="edit">The change as received, or <see langword="null"/>.</param>
+    private static EditChange? SanitiseEdit(EditChange? edit)
+    {
+        if (edit is null)
+        {
+            return null;
+        }
+
+        string? oldText = ToolActivityLimits.Clip(edit.OldText, ToolActivityLimits.MaxEditSideLength, out bool oldClipped);
+        string? newText = ToolActivityLimits.Clip(edit.NewText, ToolActivityLimits.MaxEditSideLength, out bool newClipped);
+        return new EditChange(oldText, newText, edit.Truncated || oldClipped || newClipped, Math.Max(edit.OmittedChanges, 0));
     }
 
     /// <summary>

@@ -435,6 +435,123 @@ button:focus-visible {
     font-style: italic;
 }
 
+/* ---- Turn detail: a Draft's recent tool calls, each row openable to its Edit preview ------- */
+
+.turn-detail {
+    margin: 0.25rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+
+.turn-detail-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 0.5rem;
+    padding: 0.125rem 0;
+}
+
+.turn-detail-row .tool-activity {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-top: 0;
+    overflow-wrap: anywhere;
+}
+
+.turn-detail-mark {
+    display: inline-flex;
+    align-items: center;
+    color: var(--mud-palette-text-secondary);
+}
+
+.turn-detail-line {
+    color: var(--mud-palette-text-disabled);
+    font-size: 0.8rem;
+}
+
+/* At least 44px each way so the expander is a real touch target at phone width. */
+.turn-detail-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: none;
+    color: var(--mud-palette-text-secondary);
+    cursor: pointer;
+}
+
+.turn-detail-toggle:hover {
+    background: var(--mud-palette-table-hover);
+}
+
+.turn-detail-toggle:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 1px;
+}
+
+.turn-detail-panel {
+    flex: 1 0 100%;
+    min-width: 0;
+}
+
+.edit-preview {
+    margin: 0.25rem 0 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 4px;
+    color: var(--mud-palette-text-primary);
+    font-size: 0.8rem;
+}
+
+.edit-preview-path {
+    margin-bottom: 0.25rem;
+    color: var(--mud-palette-text-secondary);
+    font-family: var(--font-mono);
+    overflow-wrap: anywhere;
+}
+
+/* The border carries the meaning as reinforcement only: the label and its - or + say it in words,
+   and the text keeps the Theme's own text colour so its contrast is whatever the Theme guarantees. */
+.edit-preview-side {
+    margin-top: 0.25rem;
+    padding-left: 0.5rem;
+    border-left: 3px solid var(--mud-palette-lines-default);
+}
+
+.edit-preview-side.removed {
+    border-left-color: var(--mud-palette-error);
+}
+
+.edit-preview-side.added {
+    border-left-color: var(--mud-palette-success);
+}
+
+.edit-preview-label {
+    color: var(--mud-palette-text-secondary);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.edit-preview-side pre {
+    max-height: 12rem;
+    margin: 0;
+    overflow: auto;
+    color: var(--mud-palette-text-primary);
+    font-family: var(--font-mono);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.edit-preview-note {
+    margin-top: 0.25rem;
+    color: var(--mud-palette-text-disabled);
+    font-size: 0.75rem;
+}
+
 /* Deliberately styled like an ordinary secondary action, never like .composer-error or
    .budget-prompt: a Stop is one of three normal ways a Turn ends, not a fault. Now a
    MudIconButton, so sizing, padding and disabled opacity are MudBlazor's own - only the

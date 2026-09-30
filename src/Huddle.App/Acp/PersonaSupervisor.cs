@@ -41,6 +41,10 @@ internal sealed class PersonaSupervisor : BackgroundService
     private readonly TurnActivity? turnActivity;
     private readonly LibraryDocumentCollector? libraryDocs;
 
+    // Every runner this supervisor builds writes the cost its Adapter reports into this table, which
+    // the Teammate card reads. Null where a supervisor is built without a container.
+    private readonly PersonaSpend? spend;
+
     private readonly Lock gate = new();
     private readonly Dictionary<string, PersonaRunner> hosts = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Action<PersonaStatus>> statusHandlers = new(StringComparer.Ordinal);
@@ -80,7 +84,8 @@ internal sealed class PersonaSupervisor : BackgroundService
         RoomSessionStore? roomSessions = null,
         OwnPosts? ownPosts = null,
         TurnActivity? turnActivity = null,
-        LibraryDocumentCollector? libraryDocs = null)
+        LibraryDocumentCollector? libraryDocs = null,
+        PersonaSpend? spend = null)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(personaStore);
@@ -108,6 +113,7 @@ internal sealed class PersonaSupervisor : BackgroundService
         this.ownPosts = ownPosts;
         this.turnActivity = turnActivity;
         this.libraryDocs = libraryDocs;
+        this.spend = spend;
     }
 
     /// <summary>The number of Personas with a currently running host. Test seam only.</summary>
@@ -509,7 +515,7 @@ internal sealed class PersonaSupervisor : BackgroundService
             // Library reaches every runner as a null collector, the same "absent means off" shape
             // File Changes and every other optional collaborator here already use.
             var host = new PersonaRunner(
-                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity, libraryDocs: this.options.Library.Enabled ? this.libraryDocs : null, readsFiles: profile.ReadsFiles);
+                persona, Options.Create(this.options), this.factory, this.prompts, this.roomFollows, this.loggerFactory.CreateLogger<PersonaRunner>(), tracker, roomSessions: this.roomSessions, ownPosts: this.ownPosts, turnActivity: this.turnActivity, libraryDocs: this.options.Library.Enabled ? this.libraryDocs : null, readsFiles: profile.ReadsFiles, spend: this.spend);
 
             // Forwards every health signal the runner itself observes (T4.3) - a session/Turn
             // fact, arriving over the wire - into the one table every UI surface reads.

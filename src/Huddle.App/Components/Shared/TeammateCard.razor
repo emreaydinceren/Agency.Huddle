@@ -50,6 +50,7 @@
 @inject IModelCatalog ModelCatalog
 @inject AdapterCatalog Adapters
 @inject PersonaHealth Health
+@inject PersonaSpend Spend
 @inject IAgentGateway Gateway
 @inject ITeamDirectory TeamDirectory
 @inject AvatarStore Avatars
@@ -106,6 +107,13 @@
                     }
                     @if (this.mode == TeammateCardMode.View)
                     {
+                        @* What this Teammate's Adapter has reported spending since the app started: display only, one
+                           line per currency, and absent (never a zero) when nothing was reported. View mode only -
+                           in Edit the card is a form for changing the Teammate, not for reading a running total. *@
+                        @foreach (var amount in this.spendAmounts)
+                        {
+                            <MudText Typo="Typo.body2" Class="mud-text-secondary teammate-card-spend">Spent since start: @amount.Amount.ToString("N3", CultureInfo.CurrentCulture) @amount.Currency</MudText>
+                        }
                         <MudText Typo="Typo.body2" Class="mud-text-secondary">Alias: @this.alias</MudText>
                         @if (this.teams.Length > 0)
                         {
@@ -545,6 +553,10 @@
     private string? roomId;
     private string? filePath;
     private PersonaStatus status = new(PersonaState.Offline, null, DateTimeOffset.MinValue);
+
+    // What this Persona's Adapter has reported spending since the app started, one entry per
+    // currency, re-read on PersonaSpend.SpendChanged. Empty when nothing was reported.
+    private IReadOnlyList<SpendAmount> spendAmounts = [];
     private string? error;
     private bool confirmingRemove;
     private bool confirmingReset;
@@ -642,6 +654,12 @@
         this.Health.Changed += this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged += this.OnHealthOrPresenceChanged;
 
+        // PersonaSpend is one more singleton that outlives this card, subscribed to for the same reason
+        // and unsubscribed in Dispose: a MudDialog freezes its parameters at open, so the Spend line
+        // would otherwise show what was true when the card opened.
+        this.Spend.SpendChanged += this.OnSpendChanged;
+        this.spendAmounts = this.Spend.Get(this.name);
+
         // SkillStore is a singleton too - a Skill written or removed on disk while this card is open
         // must repaint both the option list and MissingSkillNames, the same reasoning as the
         // Health/Gateway subscriptions above (Spec §6.7's "Internal flow": subscribe, unsubscribe in
@@ -684,7 +702,28 @@
     {
         this.Health.Changed -= this.OnHealthOrPresenceChanged;
         this.Gateway.PresenceChanged -= this.OnHealthOrPresenceChanged;
+        this.Spend.SpendChanged -= this.OnSpendChanged;
         this.Skills.SkillsChanged -= this.OnSkillsStoreChanged;
+    }
+
+    /// <summary>
+    /// Repaints the Spend line when <see cref="PersonaSpend.SpendChanged"/> names this card's
+    /// Persona. Another Persona's report is ignored: it cannot change a figure shown here.
+    /// </summary>
+    /// <param name="personaName">The Persona whose Spend changed.</param>
+    private void OnSpendChanged(string personaName)
+    {
+        if (!string.Equals(personaName, this.name, StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        _ = this.DispatchAsync(() =>
+        {
+            this.spendAmounts = this.Spend.Get(this.name);
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
     }
 
     /// <summary>

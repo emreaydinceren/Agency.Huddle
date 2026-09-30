@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 700" width="760" role="img" aria-labelledby="t d">
+<title id="t">A Draft with Turn detail, in three moments</title>
+<desc id="d">A Room view in three stages: a Turn starts with one tool call, runs with three rows and an open edit preview, and ends with the reply posted and no list.</desc>
+<style>
+.bg{fill:#ffffff}.panel{fill:#f6f7f9;stroke:#d5d9e0}.card{fill:#ffffff;stroke:#d5d9e0}.code{fill:#f0f2f5;stroke:#d5d9e0}
+.ink{fill:#1f2328}.mut{fill:#6a737d}.ok{fill:#1a7f37}.run{fill:#0969da}.fail{fill:#cf222e}
+.addbg{fill:#e6f4ea}.rembg{fill:#fdecea}.addbar{fill:#1a7f37}.rembar{fill:#cf222e}.btn{fill:#ffffff;stroke:#cf222e}
+.avatar{fill:#0969da}.white{fill:#ffffff}.rule{stroke:#d5d9e0;fill:none}.note{fill:none;stroke:#0969da;stroke-dasharray:4 3}
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:13px}.s{font-size:12px}.b{font-weight:600}.h{font-size:15px;font-weight:600}
+@media (prefers-color-scheme:dark){
+.bg{fill:#0d1117}.panel{fill:#161b22;stroke:#30363d}.card{fill:#0d1117;stroke:#30363d}.code{fill:#161b22;stroke:#30363d}
+.ink{fill:#e6edf3}.mut{fill:#8b949e}.ok{fill:#3fb950}.run{fill:#58a6ff}.fail{fill:#ff7b72}
+.addbg{fill:#12261a}.rembg{fill:#2d1517}.addbar{fill:#3fb950}.rembar{fill:#ff7b72}.btn{fill:#0d1117;stroke:#ff7b72}
+.avatar{fill:#1f6feb}.rule{stroke:#30363d}.note{fill:none;stroke:#58a6ff;stroke-dasharray:4 3}}
+</style>
+<rect class="bg" width="760" height="700"/>
+
+<!-- 1: Turn starts -->
+<text class="mut s b" x="20" y="26">1 · THE TURN STARTS</text>
+<rect class="panel" x="20" y="36" width="720" height="110" rx="8"/>
+<circle class="avatar" cx="50" cy="66" r="15"/><text class="white s b" x="50" y="70" text-anchor="middle">CS</text>
+<text class="ink b" x="76" y="62">Chief of Staff</text>
+<rect class="btn" x="640" y="48" width="84" height="26" rx="13"/><text class="fail s b" x="682" y="65" text-anchor="middle">■ Stop</text>
+<text class="ink" x="76" y="90">Let me look at the notes file first.▌</text>
+<text class="run b" x="76" y="122">◐</text><text class="ink" x="98" y="122">Read notes.md</text>
+
+<!-- 2: mid-Turn -->
+<text class="mut s b" x="20" y="186">2 · MID-TURN: ONE DONE, AN EDIT OPEN, ONE QUEUED</text>
+<rect class="panel" x="20" y="196" width="720" height="330" rx="8"/>
+<circle class="avatar" cx="50" cy="226" r="15"/><text class="white s b" x="50" y="230" text-anchor="middle">CS</text>
+<text class="ink b" x="76" y="222">Chief of Staff</text>
+<rect class="btn" x="640" y="208" width="84" height="26" rx="13"/><text class="fail s b" x="682" y="225" text-anchor="middle">■ Stop</text>
+<text class="ink" x="76" y="250">Found the typo on line 12. Fixing it.▌</text>
+
+<text class="mut" x="76" y="282">▸</text><text class="ok b" x="96" y="282">✓</text><text class="ink" x="118" y="282">Read notes.md</text>
+<line class="rule" x1="76" y1="294" x2="724" y2="294"/>
+<text class="mut" x="76" y="318">▾</text><text class="run b" x="96" y="318">◐</text><text class="ink" x="118" y="318">Edit notes.md</text><text class="mut s" x="690" y="318" text-anchor="end">line 12</text>
+<rect class="code" x="96" y="330" width="628" height="110" rx="6"/>
+<text class="mut mono s" x="110" y="350">…\Teammates\Chief of Staff\work\notes.md</text>
+<rect class="rembg" x="108" y="360" width="604" height="30" rx="3"/><rect class="rembar" x="108" y="360" width="4" height="30"/>
+<text class="mut s b" x="122" y="379">Removed</text><text class="ink mono" x="190" y="379">− Teh meeting is on Friday.</text>
+<rect class="addbg" x="108" y="396" width="604" height="30" rx="3"/><rect class="addbar" x="108" y="396" width="4" height="30"/>
+<text class="mut s b" x="122" y="415">Added</text><text class="ink mono" x="190" y="415">+ The meeting is on Friday.</text>
+<line class="rule" x1="76" y1="454" x2="724" y2="454"/>
+<text class="mut" x="76" y="478">·</text><text class="mut b" x="96" y="478">○</text><text class="ink" x="118" y="478">Write summary.txt</text>
+<text class="mut s" x="690" y="478" text-anchor="end">waiting</text>
+<text class="mut s" x="76" y="508">At most six rows stay. The list sits under the text, so the text growing above pushes it down.</text>
+
+<!-- 3: Turn ends -->
+<text class="mut s b" x="20" y="562">3 · THE TURN ENDS: THE REPLY POSTS, THE LIST GOES WITH THE DRAFT</text>
+<rect class="panel" x="20" y="572" width="720" height="100" rx="8"/>
+<circle class="avatar" cx="50" cy="602" r="15"/><text class="white s b" x="50" y="606" text-anchor="middle">CS</text>
+<text class="ink b" x="76" y="598">Chief of Staff</text><text class="mut s" x="178" y="598">just now</text>
+<text class="ink" x="76" y="626">Fixed the typo in notes.md and wrote summary.txt.</text>
+<text class="mut s" x="76" y="652">The Transcript holds only this text. Nothing about the tool calls was stored.</text>
+</svg>

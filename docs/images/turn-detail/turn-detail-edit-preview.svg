@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 560" width="760" role="img" aria-labelledby="t d">
+<title id="t">The Edit preview in three shapes</title>
+<desc id="d">An edit with removed and added text, a new file with only added text, and a clipped preview with a count of further changes.</desc>
+<style>
+.bg{fill:#ffffff}.panel{fill:#f6f7f9;stroke:#d5d9e0}.card{fill:#ffffff;stroke:#d5d9e0}.code{fill:#f0f2f5;stroke:#d5d9e0}
+.ink{fill:#1f2328}.mut{fill:#6a737d}.ok{fill:#1a7f37}.run{fill:#0969da}.fail{fill:#cf222e}
+.addbg{fill:#e6f4ea}.rembg{fill:#fdecea}.addbar{fill:#1a7f37}.rembar{fill:#cf222e}.btn{fill:#ffffff;stroke:#cf222e}
+.avatar{fill:#0969da}.white{fill:#ffffff}.rule{stroke:#d5d9e0;fill:none}.note{fill:none;stroke:#0969da;stroke-dasharray:4 3}
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:13px}.s{font-size:12px}.b{font-weight:600}.h{font-size:15px;font-weight:600}
+@media (prefers-color-scheme:dark){
+.bg{fill:#0d1117}.panel{fill:#161b22;stroke:#30363d}.card{fill:#0d1117;stroke:#30363d}.code{fill:#161b22;stroke:#30363d}
+.ink{fill:#e6edf3}.mut{fill:#8b949e}.ok{fill:#3fb950}.run{fill:#58a6ff}.fail{fill:#ff7b72}
+.addbg{fill:#12261a}.rembg{fill:#2d1517}.addbar{fill:#3fb950}.rembar{fill:#ff7b72}.btn{fill:#0d1117;stroke:#ff7b72}
+.avatar{fill:#1f6feb}.rule{stroke:#30363d}.note{fill:none;stroke:#58a6ff;stroke-dasharray:4 3}}
+</style>
+<rect class="bg" width="760" height="560"/>
+
+<!-- A: edit -->
+<text class="mut s b" x="20" y="26">A · AN EDIT</text>
+<rect class="panel" x="20" y="36" width="720" height="140" rx="8"/>
+<text class="mut" x="36" y="64">▾</text><text class="ok b" x="56" y="64">✓</text><text class="ink" x="78" y="64">Edit notes.md</text><text class="mut s" x="724" y="64" text-anchor="end">line 12</text>
+<rect class="code" x="56" y="74" width="668" height="92" rx="6"/>
+<text class="mut mono s" x="70" y="92">…\Teammates\Chief of Staff\work\notes.md</text>
+<rect class="rembg" x="68" y="100" width="644" height="26" rx="3"/><rect class="rembar" x="68" y="100" width="4" height="26"/>
+<text class="mut s b" x="82" y="117">Removed</text><text class="ink mono" x="150" y="117">− Teh meeting is on Friday.</text>
+<rect class="addbg" x="68" y="132" width="644" height="26" rx="3"/><rect class="addbar" x="68" y="132" width="4" height="26"/>
+<text class="mut s b" x="82" y="149">Added</text><text class="ink mono" x="150" y="149">+ The meeting is on Friday.</text>
+
+<!-- B: new file -->
+<text class="mut s b" x="20" y="206">B · A NEW FILE: NOTHING TO REMOVE, SO ONLY ADDED SHOWS</text>
+<rect class="panel" x="20" y="216" width="720" height="112" rx="8"/>
+<text class="mut" x="36" y="244">▾</text><text class="ok b" x="56" y="244">✓</text><text class="ink" x="78" y="244">Write summary.txt</text>
+<rect class="code" x="56" y="254" width="668" height="64" rx="6"/>
+<text class="mut mono s" x="70" y="272">…\Teammates\Chief of Staff\work\summary.txt</text>
+<rect class="addbg" x="68" y="280" width="644" height="26" rx="3"/><rect class="addbar" x="68" y="280" width="4" height="26"/>
+<text class="mut s b" x="82" y="297">Added</text><text class="ink mono" x="150" y="297">+ Meeting moved to Friday. Notes fixed.</text>
+
+<!-- C: clipped -->
+<text class="mut s b" x="20" y="358">C · CLIPPED: LONG TEXT CUT, AND FURTHER CHANGES COUNTED</text>
+<rect class="panel" x="20" y="368" width="720" height="172" rx="8"/>
+<text class="mut" x="36" y="396">▾</text><text class="run b" x="56" y="396">◐</text><text class="ink" x="78" y="396">Edit Program.cs</text><text class="mut s" x="724" y="396" text-anchor="end">line 40</text>
+<rect class="code" x="56" y="406" width="668" height="124" rx="6"/>
+<text class="mut mono s" x="70" y="424">…\Teammates\Chief of Staff\work\src\Program.cs</text>
+<rect class="rembg" x="68" y="432" width="644" height="26" rx="3"/><rect class="rembar" x="68" y="432" width="4" height="26"/>
+<text class="mut s b" x="82" y="449">Removed</text><text class="ink mono" x="150" y="449">− public static void Main(string[] args) { Run(args); }…</text>
+<rect class="addbg" x="68" y="464" width="644" height="26" rx="3"/><rect class="addbar" x="68" y="464" width="4" height="26"/>
+<text class="mut s b" x="82" y="481">Added</text><text class="ink mono" x="150" y="481">+ public static async Task Main(string[] args) { await RunAsync(args); }…</text>
+<text class="mut s" x="82" y="510">Shown clipped · 2 more changes in this call are not shown</text>
+</svg>

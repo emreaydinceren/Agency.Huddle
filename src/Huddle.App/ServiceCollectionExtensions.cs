@@ -86,6 +86,10 @@ public static class ServiceCollectionExtensions
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<PersonaHealth>();
 
+        // Display-only Spend per Persona since the app started, reached the same way PersonaHealth
+        // is: a DI singleton a runner writes to and the Teammate card reads. It limits nothing.
+        services.AddSingleton<PersonaSpend>();
+
         // Roadmap item 8's follow set: a DI singleton for the same reason PersonaHealth just above
         // is one - it is taken straight into Chat.razor and, later, into a follow/unfollow App Tool -
         // and it never crosses the wire, so it costs no ProtocolVersion bump. See RoomFollows' own

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 430" width="360" role="img" aria-labelledby="t d">
+<title id="t">A Draft with Turn detail at 320 px wide</title>
+<desc id="d">The same Draft on a phone: long paths are cut from the left, the expander stays reachable and the preview wraps inside the row.</desc>
+<style>
+.bg{fill:#ffffff}.panel{fill:#f6f7f9;stroke:#d5d9e0}.card{fill:#ffffff;stroke:#d5d9e0}.code{fill:#f0f2f5;stroke:#d5d9e0}
+.ink{fill:#1f2328}.mut{fill:#6a737d}.ok{fill:#1a7f37}.run{fill:#0969da}.fail{fill:#cf222e}
+.addbg{fill:#e6f4ea}.rembg{fill:#fdecea}.addbar{fill:#1a7f37}.rembar{fill:#cf222e}.btn{fill:#ffffff;stroke:#cf222e}
+.avatar{fill:#0969da}.white{fill:#ffffff}.rule{stroke:#d5d9e0;fill:none}.note{fill:none;stroke:#0969da;stroke-dasharray:4 3}
+text{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:13px}.s{font-size:12px}.b{font-weight:600}.h{font-size:15px;font-weight:600}
+@media (prefers-color-scheme:dark){
+.bg{fill:#0d1117}.panel{fill:#161b22;stroke:#30363d}.card{fill:#0d1117;stroke:#30363d}.code{fill:#161b22;stroke:#30363d}
+.ink{fill:#e6edf3}.mut{fill:#8b949e}.ok{fill:#3fb950}.run{fill:#58a6ff}.fail{fill:#ff7b72}
+.addbg{fill:#12261a}.rembg{fill:#2d1517}.addbar{fill:#3fb950}.rembar{fill:#ff7b72}.btn{fill:#0d1117;stroke:#ff7b72}
+.avatar{fill:#1f6feb}.rule{stroke:#30363d}.note{fill:none;stroke:#58a6ff;stroke-dasharray:4 3}}
+</style>
+<rect class="bg" width="360" height="430"/>
+
+<text class="mut s b" x="20" y="24">320 PX WIDE</text>
+<rect class="panel" x="20" y="34" width="320" height="376" rx="8"/>
+<circle class="avatar" cx="46" cy="60" r="14"/><text class="white s b" x="46" y="64" text-anchor="middle">CS</text>
+<text class="ink b" x="68" y="64">Chief of Staff</text>
+<rect class="btn" x="262" y="46" width="64" height="26" rx="13"/><text class="fail s b" x="294" y="63" text-anchor="middle">■ Stop</text>
+<text class="ink" x="36" y="96">Found the typo on line 12.▌</text>
+
+<text class="mut" x="36" y="128">▸</text><text class="ok b" x="54" y="128">✓</text><text class="ink" x="74" y="128">Read notes.md</text>
+<line class="rule" x1="36" y1="140" x2="324" y2="140"/>
+<text class="mut" x="36" y="164">▾</text><text class="run b" x="54" y="164">◐</text><text class="ink" x="74" y="164">Edit notes.md</text><text class="mut s" x="324" y="164" text-anchor="end">line 12</text>
+<rect class="code" x="54" y="176" width="270" height="160" rx="6"/>
+<text class="mut mono s" x="64" y="194">…\Chief of Staff\work\notes.md</text>
+<rect class="rembg" x="62" y="204" width="254" height="56" rx="3"/><rect class="rembar" x="62" y="204" width="4" height="56"/>
+<text class="mut s b" x="74" y="221">Removed</text>
+<text class="ink mono" x="74" y="239">− Teh meeting is on</text><text class="ink mono" x="74" y="254">  Friday.</text>
+<rect class="addbg" x="62" y="268" width="254" height="56" rx="3"/><rect class="addbar" x="62" y="268" width="4" height="56"/>
+<text class="mut s b" x="74" y="285">Added</text>
+<text class="ink mono" x="74" y="303">+ The meeting is on</text><text class="ink mono" x="74" y="318">  Friday.</text>
+<line class="rule" x1="36" y1="350" x2="324" y2="350"/>
+<text class="mut" x="36" y="374">·</text><text class="ok b" x="54" y="374">✓</text><text class="ink" x="74" y="374">Write summary.txt</text>
+<text class="mut s" x="36" y="398">Paths clip from the left; text wraps.</text>
+</svg>
