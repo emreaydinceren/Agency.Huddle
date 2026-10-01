@@ -10,6 +10,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 using FakeAgentGateway = Agency.Huddle.Tests.Acp.Tools.FakeAgentGateway;
@@ -154,7 +155,7 @@ internal static class TaskTriggerTestSupport
         RoomEvents roomEvents = new(NullLogger<RoomEvents>.Instance);
         ProposalStore proposals = new(roomEvents);
         ChatService chat = new(
-            directory, chatStore, roomEvents, new FakeMentionAliasSource(), teamOptions, proposals, NullLogger<ChatService>.Instance);
+            directory, chatStore, roomEvents, new FakeMentionAliasSource(), teamOptions, proposals, new QuestionStore(roomEvents), NullLogger<ChatService>.Instance);
 
         PersonaStore personas = new(
             new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);

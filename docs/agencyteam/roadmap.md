@@ -43,7 +43,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~13~~ | ~~Model-facing text is configuration~~ — **delivered 2026-09-13** | `Prompts/`, then the five sites that held the literals | shipped; never on this list before it was built, and it collides with item 9 — see [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) |
 | ~~14~~ | ~~Archiving and deleting a Room~~ — **delivered 2026-09-21** | `SqliteTeamDirectory`, `RoomList.razor` | shipped; never on this list before it was built, and it *reverses* a stance Known limits recorded — archived state went in a sibling table because `CREATE TABLE IF NOT EXISTS` never adds a column, and the one-1:1-Room-per-Agent invariant was knowingly given up — see [ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md) |
 | ~~15~~ | ~~A Teammate chooses its own Avatar~~ — **delivered 2026-09-22** | a new `Avatars/` store, `TeammateAvatar.razor` | shipped; never on this list before it was built, and it *reverses* a manual test that asserted no avatar appears in the transcript. The interesting decision was where it must **not** go: frontmatter would have made picking a colour restart the session — see [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) |
-| 16 | An Agent asks the Human with a Question — **designed 2026-09-22, not built** | a new `Questions/` store and service, `AskHumanTool`, `QuestionCard.razor` | nothing specific to it; it copies the Skills spec's Proposal card, which shipped with item 17 — see [the Questions spec](../Huddle.Questions-Specifications.md) and [ADR-0022](../adr/0022-an-agent-asks-the-human-with-a-question.md) |
+| ~~16~~ | ~~An Agent asks the Human with a Question~~ — **delivered 2026-10-01** | a new `Questions/` store and service, `AskHumanTool`, `QuestionCard.razor` | shipped; it copied the Skills spec's Proposal card, which shipped with item 17 — see [the Questions spec](../Huddle.Questions-Specifications.md) and [ADR-0022](../adr/0022-an-agent-asks-the-human-with-a-question.md) |
 | ~~17~~ | ~~Skills and the Chief of Staff~~ — **delivered 2026-09-22** | `Skills/`, `Teammates/`, then `DotAcpAgentHostFactory` and `PersonaRunner` | shipped; the first mechanism for item 9's per-Persona tool grants, and the first Turn that no delivered Message starts — see [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) and [the Skills design](../Huddle.Skills-Specifications.md) |
 | ~~18~~ | ~~One session per Room~~ — **DELIVERED (code) 2026-09-23** | `Acp/Sessions/`, the `IAgentHostFactory`/`IPersonaHost` split | shipped: a Room Session per (Persona, Room), lazy open, LRU eviction, resume by stored id, Transcript Catch-up on a session's first Turn, Stop routed per Room. Paid checks (RS-M1 through RS-M10, V-3, V-5) not yet run — see [the Room Sessions spec](../Huddle.RoomSessions-Specifications.md), [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md) and [Known limits](known-limits.md) |
 | ~~19~~ | ~~Tasks~~ — **delivered 2026-09-25** | `Tasks/`, then `Acp/Tools/*TaskTool.cs` and `Components/Tasks/*` | shipped: a Markdown Task per file under `Tasks/<Team>/[<Project>/]`, a wake-on-change trigger reusing the Reply Gate and Budget, six App Tools, and a Board/List/Detail UI with a `#` picker and task-ref links in chat. Four paid manual tests and one concurrent-move race are not yet verified — see [the Tasks spec](../Huddle.Tasks-Specifications.md), [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md), [ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md) and [Known limits](known-limits.md) |
@@ -1214,14 +1214,18 @@ was the recommendation; this was the repo owner's call, and it is recorded in
 > change: that guard fires for every Teammate in a stock installation, where
 > `Acp:Enabled` is false and nothing has ever connected.
 
-## 16. An Agent asks the Human with a Question — DESIGNED 2026-09-22, not built
+## 16. An Agent asks the Human with a Question — DELIVERED 2026-10-01
 
-> **Designed, not built.** The design is
+> **Delivered 2026-10-01**, designed 2026-09-22. The design is
 > [Huddle.Questions-Specifications.md](../Huddle.Questions-Specifications.md), with a
 > test-first task plan in its Appendix A. The decision is
 > [ADR-0022](../adr/0022-an-agent-asks-the-human-with-a-question.md), and
-> [Language](language.md) defines **Question**. Build it after the Skills spec's
-> Proposal card (see [Ordering](#ordering)).
+> [Language](language.md) defines **Question**. The six paid manual tests
+> ([questions.md](manual-tests/questions.md)) were run once on 2026-10-01: the card, the answer
+> and the wake work against a real model, but QM-1 **fails** — the Claude Adapter defers MCP
+> tools, so a model never reads `ask_human`'s description unless told to call it by name. A
+> `systemPrompt.askHuman` paragraph now carries the "when to ask" in the system prompt, and QM-1
+> passed against it on a one-sample re-run. See [the spec](../Huddle.Questions-Specifications.md)'s header note.
 
 Huddle's own version of the tappable-options tool Claude's apps offer. An Agent calls
 `ask_human` with one to three Questions, each with two to four short options, to pick
@@ -1234,7 +1238,7 @@ Three rules carry the design, and each is easy to lose in a refactor:
 
 - **The answer is a Message, not a tool result.** A tool that waited for the Human
   would hold a Turn open until the idle timeout reported a hung Adapter, and would
-  block that Agent in every other Room, since one session spans them all.
+  hold that Persona's one Turn slot (`MaxConcurrentTurns`, default 1) and so block that Agent in every other Room.
 - **No `@` in a question or an option.** The answer is posted *as the Human*, so an
   option carrying a Mention would wake another Agent on the Human's authority.
   Item 11 records the neighbouring trap: posting as the Human also resets the Budget,

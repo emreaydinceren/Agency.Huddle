@@ -8,6 +8,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 
@@ -26,7 +27,7 @@ public sealed class PostMessageToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
+        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
         var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions())));
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello there" };
 
@@ -52,7 +53,7 @@ public sealed class PostMessageToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
+        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
         var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions())));
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello" };
 
@@ -77,7 +78,7 @@ public sealed class PostMessageToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
+        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
         var ownPosts = new OwnPosts(Options.Create(new TeamOptions()));
         var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), ownPosts);
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello there" };
@@ -101,7 +102,7 @@ public sealed class PostMessageToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
+        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
         var ownPosts = new OwnPosts(Options.Create(new TeamOptions()));
         var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), ownPosts);
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "hello" };
@@ -124,7 +125,7 @@ public sealed class PostMessageToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
+        var chat = new ChatService(directory, store, events, new FakeMentionAliasSource(), Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
         var tool = new PostMessageTool(chat, echo.Id, new FakePromptSource(), new OwnPosts(Options.Create(new TeamOptions())));
         var arguments = new JsonObject { ["roomId"] = room.Id, ["text"] = "from a threadpool thread" };
         var tcs = new TaskCompletionSource<MessagePostedEvent>(TaskCreationOptions.RunContinuationsAsynchronously);

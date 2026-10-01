@@ -106,6 +106,24 @@ public sealed class SkillGrantsTests
         Assert.Equal(expectedNames, offered.Select(tool => tool.Name));
     }
 
+    /// <summary>
+    /// Questions spec D-10: <c>ask_human</c> goes to every Persona. It is not in
+    /// <see cref="SkillGrants.Grantable"/>, so no Skill file can switch it off for a Persona that does
+    /// not hold the Skill, and <see cref="SkillGrants.Offer"/> keeps it whether the Persona holds no
+    /// Skill, a Skill that names it, or a Skill that does not. Asking costs nothing and creates
+    /// nothing, unlike <c>propose_teammates</c>, which is gated because each Teammate is a billed process.
+    /// </summary>
+    [Fact]
+    public void Offer_AskHuman_IsOfferedToEveryPersonaWhateverItsSkills()
+    {
+        IReadOnlyList<IAppTool> all = [new StubTool("ask_human"), new StubTool("propose_teammates")];
+
+        Assert.DoesNotContain("ask_human", (IEnumerable<string>)SkillGrants.Grantable);
+        Assert.Equal(["ask_human"], SkillGrants.Offer(all, []).Select(tool => tool.Name));
+        Assert.Equal(["ask_human"], SkillGrants.Offer(all, [TeamBuildingSkill([])]).Select(tool => tool.Name));
+        Assert.Equal(["ask_human"], SkillGrants.Offer(all, [TeamBuildingSkill(["ask_human"])]).Select(tool => tool.Name));
+    }
+
     /// <summary>Builds a resolved <c>team-building</c> Skill granting exactly <paramref name="tools"/>.</summary>
     /// <param name="tools">The Skill's granted tool names.</param>
     private static Skill TeamBuildingSkill(IReadOnlyList<string> tools)

@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using Agency.Huddle.App;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 
@@ -1159,6 +1160,139 @@ public sealed class ChatServiceTests
         Assert.Equal(proposal, proposals.Get(room.Id));
     }
 
+    /// <summary>
+    /// Questions spec §6.5: a Message the Human posts in a Room drops the card waiting there,
+    /// because that Message is the answer the asker will act on.
+    /// </summary>
+    [Fact]
+    public async Task PostAsync_HumanMessage_DropsWaitingQuestions()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var coach = await directory.UpsertAgentUserAsync("Coach", null, ct);
+        Assert.NotNull(coach);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, coach.Id], ct);
+        var questions = new QuestionStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
+        var (service, _) = CreateService(dir, directory, questions: questions);
+        _ = questions.TryPut(MakePending(room.Id, coach.Id));
+
+        _ = await service.PostAsync(room.Id, KnownIds.Human, "Actually I have a bad knee", ct: ct);
+
+        Assert.Null(questions.Get(room.Id));
+    }
+
+    /// <summary>
+    /// Questions spec §6.5: an Agent's Message does not drop the card - the asker's own framing
+    /// Message arrives at the end of its Turn, after the card appeared, and must not remove it.
+    /// </summary>
+    [Fact]
+    public async Task PostAsync_AgentMessage_KeepsWaitingQuestions()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var coach = await directory.UpsertAgentUserAsync("Coach", null, ct);
+        Assert.NotNull(coach);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human, coach.Id], ct);
+        var questions = new QuestionStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
+        var (service, _) = CreateService(dir, directory, questions: questions);
+        var pending = MakePending(room.Id, coach.Id);
+        _ = questions.TryPut(pending);
+
+        _ = await service.PostAsync(room.Id, coach.Id, "Two quick questions first.", ct: ct);
+
+        Assert.Equal(pending, questions.Get(room.Id));
+    }
+
+    /// <summary>A Human Message in one Room leaves another Room's waiting card alone.</summary>
+    [Fact]
+    public async Task PostAsync_HumanMessage_KeepsOtherRoomsQuestions()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var coach = await directory.UpsertAgentUserAsync("Coach", null, ct);
+        Assert.NotNull(coach);
+        var first = await directory.CreateRoomAsync("one", [KnownIds.Human, coach.Id], ct);
+        var second = await directory.CreateRoomAsync("two", [KnownIds.Human, coach.Id], ct);
+        var questions = new QuestionStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
+        var (service, _) = CreateService(dir, directory, questions: questions);
+        var pending = MakePending(second.Id, coach.Id);
+        _ = questions.TryPut(pending);
+
+        _ = await service.PostAsync(first.Id, KnownIds.Human, "hello", ct: ct);
+
+        Assert.Equal(pending, questions.Get(second.Id));
+    }
+
+    /// <summary>Questions spec §6.5: archiving a Room drops its waiting card, as it does a Proposal.</summary>
+    [Fact]
+    public async Task SetRoomArchived_True_DropsWaitingQuestions()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        var questions = new QuestionStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
+        var (service, _) = CreateService(dir, directory, questions: questions);
+        _ = questions.TryPut(MakePending(room.Id, "agent-coach"));
+
+        await service.SetRoomArchivedAsync(room.Id, true, ct);
+
+        Assert.Null(questions.Get(room.Id));
+    }
+
+    /// <summary>Unarchiving is not archiving: a card waiting in the Room survives it, as a Proposal does.</summary>
+    [Fact]
+    public async Task SetRoomArchived_False_KeepsWaitingQuestions()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        var questions = new QuestionStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
+        var (service, _) = CreateService(dir, directory, questions: questions);
+        var pending = MakePending(room.Id, "agent-coach");
+        _ = questions.TryPut(pending);
+
+        await service.SetRoomArchivedAsync(room.Id, false, ct);
+
+        Assert.Equal(pending, questions.Get(room.Id));
+    }
+
+    /// <summary>Questions spec §6.5: deleting a Room drops its waiting card, since nothing can ever answer into it.</summary>
+    [Fact]
+    public async Task DeleteRoom_DropsWaitingQuestions()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var dir = new TempDataDir();
+        var directory = new SqliteTeamDirectory(dir.Options());
+        await directory.InitializeAsync("You", ct);
+        var room = await directory.CreateRoomAsync("echo", [KnownIds.Human], ct);
+        var questions = new QuestionStore(new RoomEvents(NullLogger<RoomEvents>.Instance));
+        var (service, _) = CreateService(dir, directory, questions: questions);
+        _ = questions.TryPut(MakePending(room.Id, "agent-coach"));
+
+        await service.DeleteRoomAsync(room.Id, ct);
+
+        Assert.Null(questions.Get(room.Id));
+    }
+
+    /// <summary>Builds a minimal, valid card of <see cref="PendingQuestions"/> waiting in <paramref name="roomId"/>, for the Question-drop tests above.</summary>
+    /// <param name="roomId">The Room the card waits in.</param>
+    /// <param name="askerAgentId">The asking Agent's id.</param>
+    private static PendingQuestions MakePending(string roomId, string askerAgentId)
+    {
+        Question question = new("What is your main goal?", ["Strength", "Cardio"], QuestionKind.SingleSelect);
+        return new PendingQuestions("card-1", roomId, askerAgentId, "Coach", [question], DateTimeOffset.UnixEpoch);
+    }
+
     /// <summary>Builds a minimal, valid <see cref="Proposal"/> pending in <paramref name="roomId"/>, for the Proposal-drop tests above.</summary>
     /// <param name="roomId">The Room the Proposal is pending in.</param>
     private static Proposal MakeProposal(string roomId)
@@ -1178,13 +1312,14 @@ public sealed class ChatServiceTests
         ITeamDirectory directory,
         IReadOnlyList<MentionAlias>? aliases = null,
         int agentMessageBudget = 40,
-        ProposalStore? proposals = null)
+        ProposalStore? proposals = null,
+        QuestionStore? questions = null)
     {
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var aliasSource = new FakeMentionAliasSource { Aliases = aliases ?? [] };
         var options = Options.Create(new TeamOptions { AgentMessageBudget = agentMessageBudget });
-        var service = new ChatService(directory, store, events, aliasSource, options, proposals ?? new ProposalStore(events), NullLogger<ChatService>.Instance);
+        var service = new ChatService(directory, store, events, aliasSource, options, proposals ?? new ProposalStore(events), questions ?? new QuestionStore(events), NullLogger<ChatService>.Instance);
         return (service, events);
     }
 }

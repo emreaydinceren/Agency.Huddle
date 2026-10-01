@@ -11,6 +11,7 @@ using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 using UiFakeAgentGateway = Agency.Huddle.Tests.Ui.FakeAgentGateway;
@@ -100,6 +101,7 @@ internal sealed class TaskToolHarness : IDisposable
             new FakeMentionAliasSource(),
             this.Options,
             proposals,
+            new QuestionStore(this.RoomEvents),
             NullLogger<ChatService>.Instance);
         this.OwnPosts = new OwnPosts(this.Options);
         this.Triggers = new TaskTriggerService(

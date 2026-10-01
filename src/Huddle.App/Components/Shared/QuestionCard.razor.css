@@ -1,0 +1,23 @@
+/* Options are at least 44 pixels tall and wrap, so the card works at phone width (Questions spec
+   §6.7). No var() and no colour here: nothing on this card carries a colour or typography of its
+   own, so ThemeSourceTests has nothing to object to. */
+.question-card-question {
+    margin-top: 0.75rem;
+}
+
+::deep .question-card-option {
+    min-height: 44px;
+    text-transform: none;
+}
+
+::deep .question-card-rank-row {
+    min-height: 44px;
+}
+
+.question-card-rank-label {
+    flex: 1 1 auto;
+}
+
+::deep .question-card-actions {
+    margin-top: 0.75rem;
+}

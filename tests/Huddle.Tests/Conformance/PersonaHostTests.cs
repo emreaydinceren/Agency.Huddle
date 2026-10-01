@@ -23,6 +23,9 @@ namespace Agency.Huddle.Tests.Conformance;
 /// </summary>
 public sealed class PersonaHostTests
 {
+    /// <summary>The only <c>clientCapabilities</c> keys Huddle advertises: both are turned off, and nothing else is on.</summary>
+    private static readonly string[] AllowedCapabilityKeys = ["fs", "terminal"];
+
     /// <summary><see cref="IAgentHostFactory.StartAsync"/> starts the host but sends no <c>session/new</c> at all.</summary>
     [Fact]
     public async Task Start_OpensNoSession()
@@ -34,6 +37,33 @@ public sealed class PersonaHostTests
 
         await Task.Delay(TimeSpan.FromMilliseconds(200), ct);
         Assert.DoesNotContain(fixture.Agent.Received, message => (string?)message["method"] == "session/new");
+    }
+
+    /// <summary>
+    /// Questions spec Q-G1 and D-13: the <c>initialize</c> request the real factory's host sends
+    /// advertises no <c>elicitation</c> capability, and no file-system or terminal capability either.
+    /// <c>claude-agent-acp</c> keeps Claude's built-in <c>AskUserQuestion</c> off, and with it the
+    /// refusal-fallback dialog and MCP-initiated forms, only while <c>elicitation.form</c> is absent;
+    /// advertising it would hold a Turn open on an <c>elicitation/create</c> nothing answers, and give a
+    /// Claude Persona two ways to ask beside <c>ask_human</c>. A deliberate decision to advertise it
+    /// should have to change this test, and so a new decision, rather than slip in beside a handler.
+    /// </summary>
+    [Fact]
+    public async Task Start_AdvertisesNoElicitation_AndNoFsOrTerminal()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        JsonObject initialize = Assert.Single(fixture.Agent.Received, message => (string?)message["method"] == "initialize");
+        JsonObject? capabilities = initialize["params"]?["clientCapabilities"]?.AsObject();
+        Assert.NotNull(capabilities);
+        Assert.False(capabilities.ContainsKey("elicitation"), "initialize must not advertise clientCapabilities.elicitation (Questions spec D-13).");
+        Assert.All(capabilities.Select(pair => pair.Key), key => Assert.Contains(key, AllowedCapabilityKeys));
+        Assert.False((bool?)capabilities["terminal"] ?? false);
+        Assert.False((bool?)capabilities["fs"]?["readTextFile"] ?? false);
+        Assert.False((bool?)capabilities["fs"]?["writeTextFile"] ?? false);
     }
 
     /// <summary>
@@ -103,6 +133,27 @@ public sealed class PersonaHostTests
         _ = await host.OpenAsync(ct);
         string secondPrompt = await fixture.AppendedSystemPromptAsync(occurrence: 2, ct);
         Assert.Contains("Porto trip notes", secondPrompt, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// Questions spec D-11, as measured live on 2026-10-01: the Claude Adapter defers every MCP tool, so a
+    /// model sees only <c>ask_human</c>'s name and never its description. The composed system prompt the real
+    /// factory hands <c>session/new</c> therefore carries its own paragraph on when to ask, naming the tool
+    /// with the Adapter's prefix, and carries it once.
+    /// </summary>
+    [Fact]
+    public async Task Open_SystemPromptCarriesTheAskHumanParagraph_NamingTheToolOnce()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        _ = await host.OpenAsync(ct);
+        string prompt = await fixture.AppendedSystemPromptAsync(occurrence: 1, ct);
+
+        const string Sentence = "call mcp__team__ask_human instead: it shows them as options the Human taps.";
+        Assert.Equal(1, prompt.Split(Sentence).Length - 1);
+        Assert.True(prompt.IndexOf(Sentence, StringComparison.Ordinal) > prompt.IndexOf("These tools run inside the application process:", StringComparison.Ordinal));
     }
 
     /// <summary>Every session this host opens is told about the same MCP endpoint URL and the same bearer token (RS §6.3: "the token is minted per host").</summary>

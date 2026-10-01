@@ -30,6 +30,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private readonly IReadOnlyList<string> toolNames;
     private readonly IReadOnlyList<Skill> skills;
     private readonly string readSkillToolName;
+    private readonly string askHumanToolName;
     private readonly string memoryDir;
     private readonly bool readsMemory;
     private readonly int maxMemoryEntries;
@@ -53,6 +54,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="toolNames">Every tool name this host's session exposes, already prefixed.</param>
     /// <param name="skills">The Persona's resolved Skills for this host's sessions.</param>
     /// <param name="readSkillToolName"><c>read_skill</c>'s own name, already carrying its full prefix.</param>
+    /// <param name="askHumanToolName"><c>ask_human</c>'s own name, already carrying its full prefix; named in the system prompt's asking-the-Human paragraph.</param>
     /// <param name="memoryDir">The Persona's memory folder (FC §6.15), created whether or not it is read.</param>
     /// <param name="readsMemory">Whether File Changes is on and the resolved Adapter can read files.</param>
     /// <param name="maxMemoryEntries">The cap <see cref="MemoryIndex.Build"/> applies when <paramref name="readsMemory"/>.</param>
@@ -75,6 +77,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         IReadOnlyList<string> toolNames,
         IReadOnlyList<Skill> skills,
         string readSkillToolName,
+        string askHumanToolName,
         string memoryDir,
         bool readsMemory,
         int maxMemoryEntries,
@@ -96,6 +99,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         ArgumentException.ThrowIfNullOrWhiteSpace(helpToolName);
         ArgumentNullException.ThrowIfNull(toolNames);
         ArgumentNullException.ThrowIfNull(skills);
+        ArgumentException.ThrowIfNullOrWhiteSpace(askHumanToolName);
         ArgumentException.ThrowIfNullOrWhiteSpace(memoryDir);
         ArgumentNullException.ThrowIfNull(teamLabels);
         ArgumentNullException.ThrowIfNull(teamCatalog);
@@ -114,6 +118,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         this.toolNames = toolNames;
         this.skills = skills;
         this.readSkillToolName = readSkillToolName;
+        this.askHumanToolName = askHumanToolName;
         this.memoryDir = memoryDir;
         this.readsMemory = readsMemory;
         this.maxMemoryEntries = maxMemoryEntries;
@@ -221,7 +226,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
                     this.readSkillToolName,
                     memory,
                     this.Profile.SessionPerRoom ? SessionScope.PerRoom : SessionScope.Shared,
-                    teamMemory: teamMemory),
+                    teamMemory: teamMemory,
+                    askHumanToolName: this.askHumanToolName),
                 SystemPromptMode.Append),
             this.toolServerEndpoint,
             this.persona.Model,

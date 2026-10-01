@@ -14,6 +14,7 @@ using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 using Agency.Huddle.Tests.Acp.Fakes;
@@ -67,6 +68,7 @@ public sealed class PromptGoldenTests
         "mcp__team__post_message",
         "mcp__team__follow_room",
         "mcp__team__unfollow_room",
+        "mcp__team__ask_human",
         "mcp__team__create_task",
         "mcp__team__get_task",
         "mcp__team__list_tasks",
@@ -88,6 +90,7 @@ public sealed class PromptGoldenTests
         "post_message",
         "follow_room",
         "unfollow_room",
+        "ask_human",
         "create_task",
         "get_task",
         "list_tasks",
@@ -239,6 +242,34 @@ public sealed class PromptGoldenTests
         var withSkills = SystemPromptComposer.Compose(
             persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [skill], "mcp__team__read_skill", memory: null);
         AssertMatchesGolden("systemPrompt.skills.txt", withSkills);
+    }
+
+    /// <summary>
+    /// Questions spec D-11: with <c>ask_human</c>'s prefixed name given, the composed prompt gains one
+    /// paragraph straight after the tools paragraph, naming the tool by substitution. Pins the whole
+    /// text, so rewording it is a visible, reviewed change.
+    /// </summary>
+    [Fact]
+    public void SystemPrompt_WithAskHuman_MatchesGolden()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared, askHumanToolName: "mcp__team__ask_human");
+
+        AssertMatchesGolden("systemPrompt.askHuman.txt", actual);
+    }
+
+    /// <summary>Without an <c>ask_human</c> name the composed prompt is the existing golden, byte for byte: an Adapter session that does not offer the tool says nothing about it.</summary>
+    [Fact]
+    public void SystemPrompt_WithoutAskHumanName_UnchangedFromExistingGolden()
+    {
+        var persona = new Persona("Nova", "You are Nova.");
+
+        var actual = SystemPromptComposer.Compose(
+            persona, new FakePromptSource(), "mcp__team__get_help", ToolNames, [], string.Empty, memory: null, SessionScope.Shared, askHumanToolName: null);
+
+        AssertMatchesGolden("systemPrompt.txt", actual);
     }
 
     /// <summary>
@@ -782,7 +813,7 @@ public sealed class PromptGoldenTests
         var aliasSource = new FakeMentionAliasSource();
         var proposals = new ProposalStore(events);
         var options = Options.Create(new TeamOptions());
-        var chat = new ChatService(directory, store, events, aliasSource, options, proposals, NullLogger<ChatService>.Instance);
+        var chat = new ChatService(directory, store, events, aliasSource, options, proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
 
         var gateway = new FakeAgentGateway();
         var checker = new CandidateChecker(personaStore, directory, gateway);
@@ -796,6 +827,7 @@ public sealed class PromptGoldenTests
             new PostMessageTool(chat, "caller-id", new FakePromptSource(), new OwnPosts(options)),
             new FollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
             new UnfollowRoomTool(follows, directory, "caller-id", new FakePromptSource()),
+            new AskHumanTool(new QuestionStore(events), chat, directory, TimeProvider.System, "caller-id", new FakePromptSource()),
             new ValidateTeammateTool(checker, new FakePromptSource()),
             new ProposeTeammatesTool(proposals, checker, personaStore, directory, options, TimeProvider.System, "test-agent", new FakePromptSource()),
             new CreateTaskTool(taskHarness.Service, taskHarness.Triggers, taskHarness.Directory, new FakePromptSource(), "caller-id"),
