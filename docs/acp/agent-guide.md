@@ -192,16 +192,20 @@ process is torn down before it flushes asynchronous replies. You get the
 pipe loses the `session/new` reply entirely. Keep the streams open for the
 lifetime of the connection.
 
-### 3.4 Known limitation, upstream of us
+### 3.4 Was blamed on the adapter; it was our serialiser
 
-At the moment `session/request_permission` fires, the tool call's `rawInput`
-arrives with **empty arrays** for its fields, e.g.
-`{"file_path":[],"content":[]}`. **Verified** against the live adapter. So the
-approval prompt cannot currently show *what* is about to be written, which
-limits how informed the human's decision can be. This appears to be the adapter
-populating those fields after the request is raised. Worth re-checking on a
-newer adapter version; if it is fixed upstream, the console prompt improves for
-free.
+Until 2026-10-01 this section said that at the moment `session/request_permission`
+fires, the tool call's `rawInput` arrives with **empty arrays** for its fields, e.g.
+`{"file_path":[],"content":[]}`, and put that down to the adapter. **That was wrong.**
+The adapter sends the real values (a wire trace of `claude-agent-acp` 0.75.1 shows
+`"rawInput": {"file_path": "...", "content": "gamma"}` on the request). dotacp reads
+`rawInput` with Newtonsoft, so it arrives as a `JObject`, and `SessionUpdateMapper.SerializeRaw`
+then wrote it with `System.Text.Json`, which walks a `JToken` as a sequence of its children
+and emits `[]` for every value. `SerializeRaw` now writes a `JToken` with Newtonsoft.
+
+One consequence mattered: the app's `~/.claude` write guard reads `file_path` from this
+string, never found a string value, and approved every write. See the manual-test
+tracker's WORKMODE-08 row.
 
 ### 3.5 You can give a session a system prompt, through `_meta`
 
@@ -421,8 +425,11 @@ with `string`. Cast to `string` before putting them in your own types.
 **`ProtocolMeta.Version` is a `ushort`.** `InitializeResponse.ProtocolVersion`
 needs a double cast: `(int)(ushort)response.ProtocolVersion`. **Verified.**
 
-**`RawInput` / `RawOutput` are `object`** holding a deserialised `JsonElement`.
-Serialise with `System.Text.Json`.
+**`RawInput` / `RawOutput` are `object`** holding a Newtonsoft `JToken` (a `JObject` for
+an object) when read off the wire. A hand-built test value may be a `JsonElement`.
+`SessionUpdateMapper.SerializeRaw` handles both. **Do not hand a `JToken` to
+`System.Text.Json`:** it serialises as its children, so `{"file_path":"x"}` becomes
+`{"file_path":[]}`.
 
 **The wire serialiser is Newtonsoft, not `System.Text.Json`.** The protocol types
 carry `[Newtonsoft.Json.JsonProperty]`; `NewSessionRequest.Meta`, for instance, is
