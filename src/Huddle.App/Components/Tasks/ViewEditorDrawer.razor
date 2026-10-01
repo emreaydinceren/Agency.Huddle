@@ -29,9 +29,11 @@
 @inject IOptions<TeamOptions> Options
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <MudDrawer Open="@this.Open" OpenChanged="@this.OpenChanged" Anchor="Anchor.End" Variant="DrawerVariant.Temporary"
-           OverlayAutoClose="@(!this.IsDirty())" Width="420px" Class="view-editor-drawer">
+           OverlayAutoClose="@(!this.IsDirty())" Class="view-editor-drawer">
+    <div @ref="this.resizeHandle" class="view-editor-resize-handle" role="separator" aria-orientation="vertical" aria-label="Resize View editor"></div>
     <MudStack Spacing="3" Class="pa-4">
         @if (this.ViewStore.LoadError is { } loadError)
         {
@@ -303,6 +305,7 @@
     // re-render does not refresh either (agents/BlazorTesting.md). Each container is therefore refreshed
     // by hand in OnAfterRender whenever the signature of what it shows has changed since it last drew.
     private MudDropContainer<string>? fieldsContainer;
+    private ElementReference resizeHandle;
     private MudDropContainer<TaskGroupField>? groupingContainer;
     private MudDropContainer<SortKey>? sortContainer;
     private string? fieldsSignature;
@@ -317,6 +320,25 @@
 
     /// <summary>Subscribes to <see cref="ViewStore.ViewsChanged"/> so an external Save re-seeds the draft (item 4), unless it is dirty.</summary>
     protected override void OnInitialized() => this.ViewStore.ViewsChanged += this.OnViewsChanged;
+
+    /// <summary>The <c>localStorage</c> key <c>huddleResize.attachDrawer</c> (app.js) remembers the editor's dragged width under.</summary>
+    private const string WidthStorageKey = "viewEditorDrawerWidth";
+
+    /// <summary>The editor's narrowest and widest drag-resized widths, in pixels.</summary>
+    private const int WidthMinPx = 320;
+    private const int WidthMaxPx = 800;
+
+    /// <summary>The editor's width before any drag has been recorded - matches <c>.view-editor-drawer</c>'s CSS default in app.css.</summary>
+    private const int WidthDefaultPx = 420;
+
+    /// <summary>Wires the drag-to-resize handle once, on first render: the drawer is never re-created while this component lives, and every later width is set and remembered in JS (<c>huddleResize.attachDrawer</c>, the Task detail panel's own helper).</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await this.JS.InvokeVoidAsync("huddleResize.attachDrawer", this.resizeHandle, WidthStorageKey, WidthMinPx, WidthMaxPx, WidthDefaultPx);
+        }
+    }
 
     /// <summary>Repaints the Fields, Grouping and Sort drop containers when their draft changed, since a parent render alone leaves them showing the previous rows.</summary>
     protected override void OnAfterRender(bool firstRender)

@@ -59,6 +59,12 @@
                    DebounceInterval="200" Clearable="true" Adornment="Adornment.Start"
                    AdornmentIcon="@Icons.Material.Filled.Search" Placeholder="Search" Class="task-toolbar-search" />
 
+    @if (this.EffectiveView.Kind == ViewKind.List)
+    {
+        <MudSwitch T="bool" Value="@(this.EffectiveView.Dense ?? true)" ValueChanged="this.OnDenseChangedAsync" Label="Dense" Color="Color.Primary"
+                   Class="task-toolbar-dense" />
+    }
+
     @if (this.ShowSaveToView)
     {
         <MudTooltip Text="Save to view">
@@ -190,6 +196,9 @@
 
     private Task OnBlockedChangedAsync(BlockedFilter blocked) =>
         this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Filter = this.EffectiveView.Filter with { Blocked = blocked } });
+
+    private Task OnDenseChangedAsync(bool dense) =>
+        this.EffectiveViewChanged.InvokeAsync(this.EffectiveView with { Dense = dense });
 
     private Task OnSearchChangedAsync(string? value) => this.SearchChanged.InvokeAsync(value);
 
