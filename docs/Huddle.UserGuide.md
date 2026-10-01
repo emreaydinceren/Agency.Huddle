@@ -150,9 +150,9 @@ You are Nova. You keep the team's Tasks moving and summarise progress.
 | `adapter` | No | Which AI adapter runs it. |
 | `watches` | No | Extra folders it is told about when files change. |
 
-**Model** and **Effort** are not in the file. They are stored in `team.db`, so
-you can change them without touching the Markdown. The **avatar** is stored in
-`avatars.json`.
+**Model**, **Effort** and **Work mode** are not in the file. They are stored in
+`team.db`, so you can change them without touching the Markdown. The **avatar**
+is stored in `avatars.json`.
 
 ## Where your data lives
 
@@ -207,7 +207,8 @@ Each Teammate has its own card with **Message**, **Edit**, **Open**,
 
 1. Select **New teammate**.
 2. Fill in **Name**, **Title** and **Alias**. Optionally add **Teams** as a
-   comma-separated list, choose **Skills**, **Model**, **Effort** and an avatar.
+   comma-separated list, choose **Skills**, **Model**, **Effort**, **Work mode**
+   and an avatar.
 3. Write the Teammate's instructions in the text area.
 4. Select **Add teammate**.
 
@@ -215,7 +216,7 @@ Each Teammate has its own card with **Message**, **Edit**, **Open**,
 
 - Huddle composes the frontmatter and writes
   `Teammates/<Name>/<Name>.md`.
-- Model and Effort are written to `team.db`.
+- Model, Effort and Work mode are written to `team.db`.
 - The Teammate starts as an Agent and appears in chat. Its `work/` and
   `work/memory/` folders are created.
 - Each Team label you entered that has no folder yet gets
@@ -241,13 +242,54 @@ their transcripts stay. On its next turn in each Room it catches up by reading
 up to the last 20 messages of that Room. Its personal memory files in
 `work/memory/` are kept.
 
-A restart also happens when you change Model, Effort, Adapter, Skills or Teams.
-Changing the avatar does not restart anything.
+A restart also happens when you change Model, Effort, Work mode, Adapter, Skills
+or Teams. Changing the avatar does not restart anything.
 
 > [!NOTE]
 > The Edit card has no **Teams** field. To change a Teammate's Teams after
 > creating it, use the Team page's **Members** tab, or edit the `teams:` line in
 > the text.
+
+### Choosing a Work mode
+
+A **Work mode** is how much the Teammate's agent may do before it must ask first.
+Select **Edit** on the card and pick one in **Work mode**, directly under
+**Effort**. The choices come from the Teammate's Adapter, so they are the
+Adapter's own names and the text under the select describes the one you picked.
+
+For the Claude adapter the choices are:
+
+| Choice | What it does |
+| --- | --- |
+| **Use the agent's default** | Huddle sends nothing and the agent starts in its own mode, which is Manual. |
+| **Manual** | The agent asks before it makes changes. |
+| **Accept edits** | The agent edits files without asking. |
+
+**Plan**, **Auto** and **Bypass permissions** are not offered. **Plan** is hidden
+because a Teammate in it ends its turn without posting a reply. **Auto** hands
+permission decisions to the model and changes with the Model. **Bypass
+permissions** removes every prompt. An operator who wants them back changes
+`Team:Acp:HiddenModes`. A mode on the hidden list is never sent, even if one is
+already stored for a Teammate.
+
+**In the background:**
+
+- The mode is stored in `team.db`, not in `<Name>.md`.
+- It is applied every time the Teammate starts or resumes, after its Model and
+  Effort.
+- **Saving a different Work mode restarts the Teammate and clears what it
+  remembers**, as a Model change does.
+- Changing the **Adapter** resets Work mode to the agent's default and the card
+  says so. Each Adapter advertises its own modes, so pick one again if you want
+  one.
+- An Adapter that advertises no modes shows no Work mode select.
+
+> [!NOTE]
+> Work mode changes what the agent asks, not who answers. Huddle still approves
+> the agent's permission requests on its own; nothing here asks you before a tool
+> runs. One thing is refused whatever the mode: a tool call that writes a file
+> inside the agent's own `~/.claude` folder. A shell command that redirects into
+> it is not caught.
 
 ### Renaming a Teammate
 
@@ -272,7 +314,7 @@ was said at the time.
 Select **Remove** and confirm.
 
 **In the background:** only `<Name>.md` is deleted, along with its Model, Effort,
-avatar and resume entries. The Teammate goes offline. Its Rooms, their
+Work mode, avatar and resume entries. The Teammate goes offline. Its Rooms, their
 transcripts and its `work/` folder stay on disk. Tasks still assigned to it keep
 the name and no longer wake anyone.
 
@@ -779,7 +821,7 @@ from the built-in version. **Settings › Skills** marks the Skill as
 | You… | Huddle writes | Teammate effect |
 | --- | --- | --- |
 | Add a Teammate | `Teammates/<Name>/<Name>.md`, `team.db`, `Teams/<label>/` if missing | Comes online |
-| Edit a Teammate, or change Model, Effort, Skills or Teams | Rewrites `<Name>.md` (Model and Effort in `team.db`) | Restarts; conversation memory cleared |
+| Edit a Teammate, or change Model, Effort, Work mode, Skills or Teams | Rewrites `<Name>.md` (Model, Effort and Work mode in `team.db`) | Restarts; conversation memory cleared |
 | Rename a Teammate | Moves `Teammates/<Old>/`; renames entries in `room-sessions/`, `file-state/`, `avatars.json`, `team.db`; rewrites Task creators and assignees and View filters | Restarts |
 | Remove a Teammate | Deletes `<Name>.md` only | Goes offline; Rooms, transcripts and `work/` stay |
 | Restart a Teammate | Deletes `room-sessions/<Name>.json` | Every Room starts fresh, with catch-up |
