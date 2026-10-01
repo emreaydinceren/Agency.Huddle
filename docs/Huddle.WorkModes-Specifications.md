@@ -737,7 +737,7 @@ new test copies the named effort test.
 - **`language.md`**: define **Work Mode**, *Avoid*: mode alone, permission mode, and ACP mode.
   Extend **Persona** to name the third table.
 - **[ADR-0015](adr/0015-model-and-effort-reset-when-the-adapter-changes.md)**: a line saying
-  ADR-0033 extends the reset to Work Mode. **ADR-0033** moves to `accepted` when built.
+  ADR-0033 extends the reset to Work Mode. **ADR-0033** is `accepted`.
 - **`rules.md`**: the resume match row gains Work Mode. New rows: modes are enforced in
   `BuildOptions`, and Work Mode keeps Adapter's `default` while Effort filters it.
 - **`session-config-options.md`** (the ACP effort's): the `mode` row becomes "Yes", and its

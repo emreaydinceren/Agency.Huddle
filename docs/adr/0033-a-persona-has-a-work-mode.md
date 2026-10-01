@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-09-30
 ---
 
@@ -117,7 +117,7 @@ Huddle's handlers would). The in-app manual tests remain the acceptance run.
   arrives with no active Turn, so it is normally lost; a race with the first Turn would append it to that reply.
   `auto` stays hidden by default.
 
-**Not established:** any of the above inside the running app.
+**In the running app, on 2026-10-01:** the manual tests WORKMODE-06 (no permission request for an edit under Accept edits), WORKMODE-07 (the request to leave plan mode is refused and nothing is posted to the Room, which confirms OQ-2) and WORKMODE-09 (the mode is applied again after a restart) passed. **Not yet run in the app:** WORKMODE-08 (the `~/.claude` guard under Accept edits, which stands on the outside-the-app run above) and WORKMODE-01 to WORKMODE-05.
 
 ## Consequences
 
