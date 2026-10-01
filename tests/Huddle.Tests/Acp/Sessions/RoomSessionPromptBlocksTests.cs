@@ -23,6 +23,9 @@ public sealed class RoomSessionPromptBlocksTests
 
     private static readonly AgentPromptCapabilities ImageAndText = new(Image: true, EmbeddedContext: true);
 
+    /// <summary>A path as a <c>file://</c> URL: the one form of an absolute path the collector recognises on every platform, so a test written on Windows also finds its files on Linux.</summary>
+    private static string Link(string path) => new Uri(path).AbsoluteUri;
+
     private static AdapterProfile ProfileOf(bool readsFiles = true, bool promptBlocks = true) =>
         new("claude", "Claude", null, "node", null, null, true, ReadsFiles: readsFiles, PromptBlocks: promptBlocks);
 
@@ -83,7 +86,7 @@ public sealed class RoomSessionPromptBlocksTests
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string png = WritePng(fixture);
 
-        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"what is wrong with {png}"), ImageAndText);
+        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"what is wrong with {Link(png)}"), ImageAndText);
 
         AgentImageBlock block = Assert.IsType<AgentImageBlock>(Assert.Single(prompt.Blocks!));
         Assert.Equal("image/png", block.MimeType);
@@ -99,7 +102,7 @@ public sealed class RoomSessionPromptBlocksTests
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string png = WritePng(fixture);
 
-        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"look {png}"), AgentPromptCapabilities.None);
+        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"look {Link(png)}"), AgentPromptCapabilities.None);
 
         Assert.Empty(prompt.Blocks!);
         Assert.DoesNotContain("included with this message", prompt.Text, StringComparison.Ordinal);
@@ -113,7 +116,7 @@ public sealed class RoomSessionPromptBlocksTests
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string png = WritePng(fixture);
 
-        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"look {png}"), ImageAndText, promptBlocks: false);
+        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"look {Link(png)}"), ImageAndText, promptBlocks: false);
 
         Assert.Empty(prompt.Blocks!);
     }
@@ -125,7 +128,7 @@ public sealed class RoomSessionPromptBlocksTests
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string png = WritePng(fixture);
 
-        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"look {png}"), null, withHost: false);
+        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"look {Link(png)}"), null, withHost: false);
 
         Assert.Empty(prompt.Blocks!);
     }
@@ -137,7 +140,7 @@ public sealed class RoomSessionPromptBlocksTests
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string png = WritePng(fixture);
 
-        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming("and now?", [new CaughtUpMessage("Friend", $"look {png}")]), ImageAndText);
+        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming("and now?", [new CaughtUpMessage("Friend", $"look {Link(png)}")]), ImageAndText);
 
         Assert.Empty(prompt.Blocks!);
         Assert.Contains(png, prompt.Text, StringComparison.Ordinal); // contains-ok: prompt text, not markup
@@ -150,7 +153,7 @@ public sealed class RoomSessionPromptBlocksTests
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string png = WritePng(fixture);
 
-        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"look {png}"), AgentPromptCapabilities.None, readsFiles: false);
+        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"look {Link(png)}"), AgentPromptCapabilities.None, readsFiles: false);
 
         Assert.Empty(prompt.Blocks!);
         Assert.Contains("an image you cannot see", prompt.Text, StringComparison.Ordinal); // contains-ok: prompt text, not markup
@@ -164,7 +167,7 @@ public sealed class RoomSessionPromptBlocksTests
         string notes = Path.Combine(fixture.CreatePinnedRoot("Design"), "notes.md");
         File.WriteAllText(notes, "# the document's own words");
 
-        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"read {notes}"), new AgentPromptCapabilities(Image: false, EmbeddedContext: true), readsFiles: false);
+        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"read {Link(notes)}"), new AgentPromptCapabilities(Image: false, EmbeddedContext: true), readsFiles: false);
 
         AgentTextResourceBlock block = Assert.IsType<AgentTextResourceBlock>(Assert.Single(prompt.Blocks!));
         Assert.Equal("# the document's own words", block.Text);
@@ -179,7 +182,7 @@ public sealed class RoomSessionPromptBlocksTests
         string notes = Path.Combine(fixture.CreatePinnedRoot("Design"), "notes.md");
         File.WriteAllText(notes, "# words");
 
-        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"read {notes}"), ImageAndText, readsFiles: true);
+        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"read {Link(notes)}"), ImageAndText, readsFiles: true);
 
         Assert.Empty(prompt.Blocks!);
     }
@@ -190,7 +193,7 @@ public sealed class RoomSessionPromptBlocksTests
     {
         using LibraryFileServiceFixture fixture = LibraryFileServiceFixture.Build();
         string png = WritePng(fixture);
-        WorkItem command = new("room-1", "Room 1", "Human", $"@nova /compact {png}", [], WorkItemKind.Command, TriggerMessageId: "trig-1", Command: new AdapterCommandCall("compact", string.Empty));
+        WorkItem command = new("room-1", "Room 1", "Human", $"@nova /compact {Link(png)}", [], WorkItemKind.Command, TriggerMessageId: "trig-1", Command: new AdapterCommandCall("compact", string.Empty));
 
         AgentPrompt prompt = await RunTurnAsync(fixture, command, ImageAndText);
 
@@ -221,7 +224,7 @@ public sealed class RoomSessionPromptBlocksTests
         File.WriteAllBytes(fake, TestImages.Png(40, 30, 3 * 1024 * 1024 + 10));
         RecordingLogger logger = new();
 
-        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"look {fake}"), ImageAndText, logger: logger);
+        AgentPrompt prompt = await RunTurnAsync(fixture, MessageNaming($"look {Link(fake)}"), ImageAndText, logger: logger);
 
         Assert.Empty(prompt.Blocks!);
         (LogLevel Level, string Message) entry = Assert.Single(logger.Entries, e => e.Message.Contains("path lines instead of blocks", StringComparison.Ordinal)); // contains-ok: log text

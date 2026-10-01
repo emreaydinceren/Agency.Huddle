@@ -14,6 +14,9 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
 {
     private static readonly PromptDelivery ImagesOn = new(ReadsFiles: true, Images: true, EmbeddedText: false, MaxImagesPerTurn: 4, MaxImageBytesPerTurn: 8 * 1024 * 1024);
 
+    /// <summary>A path as a <c>file://</c> URL: the one form of an absolute path the collector recognises on every platform, so a test written on Windows also finds its files on Linux.</summary>
+    private static string Link(string path) => new Uri(path).AbsoluteUri;
+
     private static (LibraryFileServiceFixture Fixture, LibraryDocumentCollector Collector, string Root) Build(Action<TeamOptions>? configure = null)
     {
         TeamOptions captured = new();
@@ -43,7 +46,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         using LibraryFileServiceFixture _ = fixture;
         string png = WritePng(root, "shot.png");
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"what is wrong with {png}"], ImagesOn, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"what is wrong with {Link(png)}"], ImagesOn, ct);
 
         LibraryDocumentItem item = Assert.Single(report.Items);
         Assert.Equal(LibraryDocumentDelivery.Block, item.Delivery);
@@ -63,7 +66,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         using LibraryFileServiceFixture _ = fixture;
         string png = WritePng(root, "old.png");
 
-        LibraryDocumentsReport report = await collector.CollectAsync(["no paths here", $"earlier: {png}"], ImagesOn, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync(["no paths here", $"earlier: {Link(png)}"], ImagesOn, ct);
 
         LibraryDocumentItem item = Assert.Single(report.Items);
         Assert.Equal(LibraryDocumentDelivery.Path, item.Delivery);
@@ -79,7 +82,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         using LibraryFileServiceFixture _ = fixture;
         string png = WritePng(root, "both.png");
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"look {png}", $"earlier: {png}"], ImagesOn, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"look {Link(png)}", $"earlier: {Link(png)}"], ImagesOn, ct);
 
         Assert.Equal(LibraryDocumentDelivery.Block, Assert.Single(report.Items).Delivery);
     }
@@ -94,7 +97,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         string current = WritePng(root, "current.png");
         string old = WritePng(root, "old.png");
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"see {current}", $"before: {old}"], ImagesOn, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"see {Link(current)}", $"before: {Link(old)}"], ImagesOn, ct);
 
         Assert.Equal(
             [LibraryDocumentDelivery.Block, LibraryDocumentDelivery.Path],
@@ -110,7 +113,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         using LibraryFileServiceFixture _ = fixture;
         string png = WritePng(root, "twice.png");
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"{png} and again {png}"], ImagesOn, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"{Link(png)} and again {Link(png)}"], ImagesOn, ct);
 
         Assert.Single(report.Items);
         Assert.Single(report.Items, item => item.Block is not null);
@@ -130,7 +133,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         File.WriteAllBytes(pdf, [0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x34, 0x00]);
         File.WriteAllBytes(other, [0x00, 0x01, 0x02, 0x03]);
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"`{svg}`\n`{pdf}`\n`{other}`"], ImagesOn, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"`{Link(svg)}`\n`{Link(pdf)}`\n`{Link(other)}`"], ImagesOn, ct);
 
         Assert.Equal(3, report.Items.Count);
         Assert.All(report.Items, item => Assert.Equal(LibraryDocumentDelivery.Path, item.Delivery));
@@ -147,7 +150,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         string fake = Path.Combine(root, "shot.png");
         File.WriteAllText(fake, "<html>hi</html>");
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"{fake}"], ImagesOn, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"{Link(fake)}"], ImagesOn, ct);
 
         LibraryDocumentItem item = Assert.Single(report.Items);
         Assert.Equal(LibraryDocumentDelivery.Path, item.Delivery);
@@ -163,7 +166,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         using TempDataDir outside = new();
         string png = WritePng(outside.Path, "secret.png");
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"look at {png}"], ImagesOn, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"look at {Link(png)}"], ImagesOn, ct);
 
         Assert.NotEqual(root, Path.GetDirectoryName(png));
         Assert.True(report.IsEmpty);
@@ -183,7 +186,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         string png = WritePng(root, "shot.png");
         PromptDelivery delivery = new(ReadsFiles: false, Images: images, EmbeddedText: false, 4, 8 * 1024 * 1024);
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"{png}"], delivery, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"{Link(png)}"], delivery, ct);
 
         Assert.Equal(expected, Assert.Single(report.Items).Delivery);
     }
@@ -197,7 +200,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         using LibraryFileServiceFixture _ = fixture;
         string png = WritePng(root, "big.png", padding: 500);
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"{png}"], ImagesOn, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"{Link(png)}"], ImagesOn, ct);
 
         LibraryDocumentItem item = Assert.Single(report.Items);
         Assert.Equal(LibraryDocumentDelivery.Path, item.Delivery);
@@ -213,7 +216,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         using LibraryFileServiceFixture _ = fixture;
         string png = WritePng(root, "wide.png", width: 101, height: 10);
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"{png}"], ImagesOn, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"{Link(png)}"], ImagesOn, ct);
 
         Assert.Equal(PromptBlockWithheld.TooManyPixels, Assert.Single(report.Items).Withheld);
     }
@@ -227,7 +230,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         using LibraryFileServiceFixture _ = fixture;
         string[] paths = [.. Enumerable.Range(1, 6).Select(i => WritePng(root, $"{i}.png"))];
 
-        LibraryDocumentsReport report = await collector.CollectAsync([string.Join(' ', paths)], ImagesOn with { MaxImagesPerTurn = 4 }, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([string.Join(' ', paths.Select(Link))], ImagesOn with { MaxImagesPerTurn = 4 }, ct);
 
         Assert.Equal(6, report.Items.Count);
         Assert.Equal(4, report.Items.Count(item => item.Block is not null));
@@ -245,7 +248,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         using LibraryFileServiceFixture _ = fixture;
         string png = WritePng(root, "shot.png");
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"{png}"], readsFiles: false, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"{Link(png)}"], readsFiles: false, ct);
 
         LibraryDocumentItem item = Assert.Single(report.Items);
         Assert.Equal(LibraryDocumentDelivery.Path, item.Delivery);
@@ -265,7 +268,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         File.WriteAllText(notes, "# Notes\nhello");
         PromptDelivery delivery = new(ReadsFiles: false, Images: false, EmbeddedText: true, 4, 8 * 1024 * 1024);
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"`{notes}`"], delivery, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"`{Link(notes)}`"], delivery, ct);
 
         LibraryDocumentItem item = Assert.Single(report.Items);
         Assert.Equal(LibraryDocumentDelivery.Block, item.Delivery);
@@ -288,7 +291,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         File.WriteAllText(notes, new string('x', 40));
         PromptDelivery delivery = new(ReadsFiles: false, Images: false, EmbeddedText: true, 4, 8 * 1024 * 1024);
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"{notes}"], delivery, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"{Link(notes)}"], delivery, ct);
 
         LibraryDocumentItem item = Assert.Single(report.Items);
         Assert.Equal(new string('x', 10), Assert.IsType<AgentTextResourceBlock>(item.Block).Text);
@@ -306,7 +309,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         File.WriteAllText(notes, "hello");
         PromptDelivery delivery = new(ReadsFiles: false, Images: false, EmbeddedText: false, 4, 8 * 1024 * 1024);
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"{notes}"], delivery, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"{Link(notes)}"], delivery, ct);
 
         LibraryDocumentItem item = Assert.Single(report.Items);
         Assert.Equal(LibraryDocumentDelivery.Path, item.Delivery);
@@ -324,7 +327,7 @@ public sealed class LibraryDocumentCollectorPromptBlockTests
         File.WriteAllText(notes, "hello");
         PromptDelivery delivery = new(ReadsFiles: true, Images: true, EmbeddedText: true, 4, 8 * 1024 * 1024);
 
-        LibraryDocumentsReport report = await collector.CollectAsync([$"{notes}"], delivery, ct);
+        LibraryDocumentsReport report = await collector.CollectAsync([$"{Link(notes)}"], delivery, ct);
 
         LibraryDocumentItem item = Assert.Single(report.Items);
         Assert.Null(item.Block);
