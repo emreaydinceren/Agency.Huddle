@@ -112,6 +112,7 @@ the per-area tables below.
 | [Tasks: creating, moving, viewing and referencing a unit of work](tasks.md) | 15 | 4 | [below](#tasks) |
 | [Work Mode: how much an Agent may do before it asks](work-mode.md) | 9 | 4 | [below](#work-mode) |
 | [Questions: an Agent asks the Human by tapping, not typing](questions.md) | 6 | 6 | [below](#questions) |
+| [Prompt blocks: an image the Human names reaches the Teammate](prompt-blocks.md) | 5 | 5 | [below](#prompt-blocks) |
 
 ---
 
@@ -793,6 +794,18 @@ Questions: an Agent asks the Human by tapping, not typing — [area file](questi
 | [QUESTIONS-04](questions.md#questions-04--the-same-on-a-teammate-running-on-agency-acp) | 💰 | Active | | | Inconclusive 2026-10-01: no `agency-acp` Adapter Profile is configured here |
 | [QUESTIONS-05](questions.md#questions-05--in-a-room-of-three-an-answer-wakes-only-the-asker) | 💰 | Pass | | | 2026-10-01, in the app, Room of Coach, Nova, Sable. One tap on Blue posted `> What's your favourite colour?`, a blank line, `Blue`, `@Coach`; only Coach replied (Nova's and Sable's Transcripts hold nothing from it), and Nova, asked next, read the answer from the Transcript. A multi-select and ranking card also posted `Mon, Fri` and `1. Speed · 2. Cost · 3. Quality` exactly |
 | [QUESTIONS-06](questions.md#questions-06--a-claude-teammate-has-no-built-in-askuserquestion) | 💰 | Pass | | | 2026-10-01, in the app, Haiku. Nova said it has no `AskUserQuestion` and offered `ask_human`; no second card, the Turn ended on its own, no idle-timeout line. The wire trace's `initialize` carries `fs` and `terminal` (both false) and no `elicitation`, and the log has no `elicitation` text and no `elicitation/create` |
+
+## prompt-blocks
+
+Prompt blocks: an image the Human names reaches the Teammate — [area file](prompt-blocks.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [PROMPTBLOCKS-01](prompt-blocks.md#promptblocks-01--a-named-image-is-seen-without-a-tool-call) | 💰 | Pass | | 2026-10-01, in the app, Haiku, one sample. The reply read `BANANA 4821` and the circle as red-orange from a PNG named by full path, with the Turn's prompt carrying the image block. |
+| [PROMPTBLOCKS-02](prompt-blocks.md#promptblocks-02--six-images-four-are-seen) | 💰 | Pass | | 2026-10-01, in the app, Haiku, one sample. Six PNGs named in one Message: the Teammate said it could see 4 pictures and listed Red, Blue, Yellow, Purple (the first four); the log held one line ending `ImageCountCap=2`. |
+| [PROMPTBLOCKS-03](prompt-blocks.md#promptblocks-03--an-image-over-the-size-limit-is-a-path-line) | 💰 | Pass | | 2026-10-01, in the app, one sample. A 4.3 MB PNG named in a Message: the Teammate replied `PATHONLY`, the Turn completed, and the log held one Information line ending `TooLarge=1` with no path in it. |
+| [PROMPTBLOCKS-04](prompt-blocks.md#promptblocks-04--an-image-mentioned-only-in-catch-up-is-not-re-sent) | 💰 | Active | | |
+| [PROMPTBLOCKS-05](prompt-blocks.md#promptblocks-05--an-adapter-profile-can-turn-blocks-off) | 💰 | Pass | | 2026-10-01, in the app, Haiku, one sample, relaunched with `Adapters:0` (`Id=claude`, `Command=node`, `PromptBlocks=false`; the locator found the stock adapter). A fresh PNG's banner text was asked for with no tools: the Teammate replied `CANNOT SEE`. |
 
 ---
 

@@ -869,8 +869,9 @@ internal sealed class RoomSession : IAsyncDisposable
                     .. item.MissedMessages.Select(missed => missed.Text),
                     .. item.Transcript?.Messages.Select(message => message.Text) ?? [],
                 ];
-                var report = await this.libraryDocs.CollectAsync(texts, this.readsFiles, ct);
+                var report = await this.libraryDocs.CollectAsync(texts, this.PromptDeliveryFor(this.libraryDocs), ct);
                 item = item with { LibraryDocuments = report };
+                this.LogWithheldImages(report, item.RoomId);
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -942,7 +943,7 @@ internal sealed class RoomSession : IAsyncDisposable
         try
         {
             var prompt = RoomSession.BuildPrompt(item, this.prompts);
-            await activeSession.PromptAsync(prompt, turnCancellation.Token);
+            await activeSession.PromptAsync(new AgentPrompt(prompt, RoomSession.BuildPromptBlocks(item)), turnCancellation.Token);
             promptReturned = true;
             var outcome = await completion.Task.WaitAsync(turnCancellation.Token);
 
@@ -1614,6 +1615,65 @@ internal sealed class RoomSession : IAsyncDisposable
         return prompt.AsSpan().TrimStart().StartsWith('/') ? CommandGuardMarker + prompt : prompt;
     }
 
+    /// <summary>
+    /// The Prompt blocks that follow the prompt's text on the wire (design §6.6): the block of each of
+    /// the Turn's Library documents, in order. Only an ordinary Message Turn can carry one: a
+    /// <see cref="WorkItemKind.Command"/> is the bare command and a <see cref="WorkItemKind.Greeting"/>
+    /// has no triggering Message, and neither collects Library documents in the first place.
+    /// </summary>
+    /// <param name="item">The Turn's work item.</param>
+    /// <returns>The blocks, possibly none.</returns>
+    internal static IReadOnlyList<AgentPromptBlock> BuildPromptBlocks(WorkItem item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        if (item.Kind != WorkItemKind.Message || item.LibraryDocuments is not { } report)
+        {
+            return [];
+        }
+
+        return [.. report.Items.Select(document => document.Block).OfType<AgentPromptBlock>()];
+    }
+
+    /// <summary>
+    /// What this Turn's prompt may carry beyond text, built from what the Adapter advertised at
+    /// <c>initialize</c> and the profile's <c>PromptBlocks</c> kill switch. No host (every caller that
+    /// predates resume) means nothing was advertised, so nothing is sent.
+    /// </summary>
+    /// <param name="collector">Supplies the per-Turn caps.</param>
+    private PromptDelivery PromptDeliveryFor(LibraryDocumentCollector collector)
+    {
+        AgentPromptCapabilities capabilities = this.host?.PromptCapabilities ?? AgentPromptCapabilities.None;
+        bool allowed = this.host?.Profile.PromptBlocks ?? false;
+        return collector.DeliveryFor(
+            this.readsFiles,
+            images: capabilities.Image && allowed,
+            embeddedText: capabilities.EmbeddedContext && allowed && !this.readsFiles);
+    }
+
+    /// <summary>Logs one Information line when an image that could have gone as a block did not: counts by reason, never the path's contents.</summary>
+    private void LogWithheldImages(LibraryDocumentsReport report, string roomId)
+    {
+        List<string> reasons =
+        [
+            .. report.Items
+                .Where(document => document.Withheld != PromptBlockWithheld.None)
+                .GroupBy(document => document.Withheld)
+                .OrderBy(group => group.Key)
+                .Select(group => string.Create(CultureInfo.InvariantCulture, $"{group.Key}={group.Count()}")),
+        ];
+
+        if (reasons.Count > 0 && this.logger.IsEnabled(LogLevel.Information))
+        {
+            string summary = string.Join(", ", reasons);
+            this.logger.LogInformation(
+                "Persona '{PersonaName}' sent image paths in room {RoomId} as path lines instead of blocks: {Reasons}.",
+                this.owner.PersonaName,
+                roomId,
+                summary);
+        }
+    }
+
     private static string BuildFramedPrompt(WorkItem item, IPromptSource prompts)
     {
         // The Room's id rides along with its name because it is the only way an Agent can learn one.
@@ -1784,6 +1844,37 @@ internal sealed class RoomSession : IAsyncDisposable
 
         foreach (var item in report.Items)
         {
+            // A document that travels with the message, or an image the model cannot be given, is worded
+            // by that fact before anything else: an image over the editable limit is "too large to read"
+            // as a path, and still arrives as a block (design §6.5).
+            if (item.Delivery != LibraryDocumentDelivery.Path)
+            {
+                var deliveryKey = item.Delivery == LibraryDocumentDelivery.Block ? "turn.libraryDocIncluded" : "turn.libraryImageUnavailable";
+                builder.Append(prompts.Render(
+                    deliveryKey,
+                    new Dictionary<string, string>
+                    {
+                        ["{{path}}"] = item.FullPath,
+                        ["{{location}}"] = item.Location,
+                        ["{{size}}"] = item.Size,
+                    }));
+                builder.Append('\n');
+
+                if (item.Block is AgentTextResourceBlock && item.Truncated)
+                {
+                    builder.Append(prompts.Render(
+                        "turn.libraryDocTruncated",
+                        new Dictionary<string, string>
+                        {
+                            ["{{max}}"] = report.MaxInlineBytes.ToString(CultureInfo.InvariantCulture),
+                            ["{{size}}"] = item.Size,
+                        }));
+                    builder.Append('\n');
+                }
+
+                continue;
+            }
+
             if (item.TooLarge)
             {
                 var sizeKb = (item.Length + 1023) / 1024;

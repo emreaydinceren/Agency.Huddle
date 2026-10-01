@@ -434,6 +434,32 @@ internal static class PromptCatalog
             Timing: PromptTiming.Live),
 
         new PromptDefinition(
+            Key: "turn.libraryDocIncluded",
+            Label: "Library document included",
+            HelperText:
+                "One line of the Library documents block for a file that travels with the message itself, as an image or a document's text the Adapter received beside this prompt. {{path}}, {{location}}, and {{size}} are all required.",
+            Default:
+                """
+                - {{path}} ({{location}}, {{size}}): included with this message
+                """,
+            Placeholders: ["{{path}}", "{{location}}", "{{size}}"],
+            RequiredPlaceholders: ["{{path}}", "{{location}}", "{{size}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.libraryImageUnavailable",
+            Label: "Library image unavailable",
+            HelperText:
+                "One line of the Library documents block for an image this Adapter cannot be given: it takes no images and has no file tools. {{path}}, {{location}}, and {{size}} are all required.",
+            Default:
+                """
+                - {{path}} ({{location}}, {{size}}): an image you cannot see
+                """,
+            Placeholders: ["{{path}}", "{{location}}", "{{size}}"],
+            RequiredPlaceholders: ["{{path}}", "{{location}}", "{{size}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
             Key: "turn.greeting",
             Label: "Greeting",
             HelperText:

@@ -26,12 +26,14 @@ public sealed partial class PromptCatalogTests
     /// prompts (<c>systemPrompt.teamMemory</c>, <c>systemPrompt.teamMemoryPaths</c>,
     /// <c>systemPrompt.teamMemoryHeading</c>, <c>systemPrompt.teamMemoryMore</c>) added for Team Pages
     /// Spec §7.4 (Task 5.4 - method name kept), plus <c>tool.askHuman.description</c> added for Questions
-    /// spec §6.6, plus <c>systemPrompt.askHuman</c> added for the same spec's D-11 amendment (count now 69).
+    /// spec §6.6, plus <c>systemPrompt.askHuman</c> added for the same spec's D-11 amendment (count now 69),
+    /// plus <c>turn.libraryDocIncluded</c> and <c>turn.libraryImageUnavailable</c> added for the Prompt
+    /// blocks design §6.5 (count now 71).
     /// </summary>
     [Fact]
     public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(69, PromptCatalog.All.Count);
+        Assert.Equal(71, PromptCatalog.All.Count);
     }
 
     /// <summary>

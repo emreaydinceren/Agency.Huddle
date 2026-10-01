@@ -8,6 +8,26 @@ oversights or quietly add them.
 Two entries have since been planned and one has since been built; each one says
 so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [AgencyTeam.md](../AgencyTeam.md).
 
+- **Prompt blocks are built, and here is what they do not cover.** A Library image the Human's own
+  Message names reaches the Adapter as an image, and an Adapter with no file tools gets a named
+  document's text as a resource — [ADR-0036](../adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md),
+  [the design](../Huddle.PromptBlocks-Specifications.md). Six gaps are deliberate:
+  - **Only a path the Human wrote in the Message that started the Turn.** Not Catch-up, not the
+    Transcript, not another Agent's post. The Human attaching or pasting a file in the composer is
+    [roadmap item 23](roadmap.md) B and is not built.
+  - **Raster images only.** PNG, JPEG, GIF and WebP, by magic bytes. **SVG is never sent** (it can carry
+    script), and **PDF and audio are not sent**: `claude-agent-acp` ignores a blob resource and audio, so
+    they would vanish without an error. Every other file keeps its path line.
+  - **An image stays in the Adapter session's context after the Turn.** It is not tracked, so naming the
+    same file in a later Message sends it again. It counts against the token Budget like any other input;
+    measured 2026-10-01, an image cost about 1,000 tokens however many megabytes it was.
+  - **Limits fall back to the path line, with an Information log line and nothing on screen.** An image
+    over 3 MiB, 8,000 px on a side, four per Turn or 8 MiB per Turn is sent as its path only. The Human
+    is not told in the Room; the Teammate's reply may say it could not see it.
+  - **`TraceWire` logs the base64.** With `Team:Acp:TraceWire` on, an image is written into the log in
+    full. Leave it off unless debugging a wire problem.
+  - **A corrupt image does not fail the Turn.** The Adapter removes it from the conversation and the
+    model says so (V-4); the image is not retried and cannot reappear, because only that Message sends it.
 - **Adapter commands are built, and here is what they do not cover.** The Human can run
   `@Nova /compact` on a Teammate, and the Teammate says what it did —
   [ADR-0035](../adr/0035-an-adapter-command-is-a-message-the-human-addresses-by-mention.md),

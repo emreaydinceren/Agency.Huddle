@@ -406,6 +406,48 @@ public sealed class AdapterCatalogTests
         Assert.False(profile.SessionPerRoom);
     }
 
+    /// <summary>The synthesised legacy profile sends Prompt blocks to an Adapter that advertises it can take them.</summary>
+    [Fact]
+    public void Profiles_AdaptersNull_SynthesisedProfileAllowsPromptBlocks()
+    {
+        var options = Options.Create(new TeamOptions { Acp = new AcpOptions { Command = "node" } });
+
+        var catalog = new AdapterCatalog(options);
+
+        Assert.True(Assert.Single(catalog.Profiles).PromptBlocks);
+    }
+
+    /// <summary>A configured profile that does not mention <c>PromptBlocks</c> allows them: the Adapter's own advertisement is the gate.</summary>
+    [Fact]
+    public void Profiles_ConfiguredWithoutPromptBlocks_DefaultsTrue()
+    {
+        var acp = new AcpOptions { Adapters = [new AdapterProfileOptions { Id = "claude", Command = "node" }] };
+
+        var catalog = new AdapterCatalog(Options.Create(new TeamOptions { Acp = acp }));
+
+        Assert.True(Assert.Single(catalog.Profiles).PromptBlocks);
+    }
+
+    /// <summary><c>PromptBlocks: false</c> binds from <c>Team:Acp:Adapters:*:PromptBlocks</c> and is carried into the profile.</summary>
+    [Fact]
+    public void Profiles_PromptBlocksFalse_BoundFromConfigurationAndCarried()
+    {
+        IConfigurationRoot configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:Acp:Adapters:0:Id"] = "agency",
+                ["Team:Acp:Adapters:0:Command"] = "agency-acp",
+                ["Team:Acp:Adapters:0:PromptBlocks"] = "false",
+            })
+            .Build();
+        TeamOptions teamOptions = new();
+        configuration.GetSection(TeamOptions.SectionName).Bind(teamOptions);
+
+        var catalog = new AdapterCatalog(Options.Create(teamOptions));
+
+        Assert.False(Assert.Single(catalog.Profiles).PromptBlocks);
+    }
+
     /// <summary>The synthesised legacy profile allows the <c>compact</c> Adapter command and nothing else.</summary>
     [Fact]
     public void Profiles_AdaptersNull_SynthesisedProfileAllowsCompact()

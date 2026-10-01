@@ -19,6 +19,7 @@ internal sealed class FakeAgentSession : IAgentSession
     private readonly Queue<TurnPlan> plannedTurns = new();
     private readonly Queue<IReadOnlyList<AgentEvent>> plannedToolEvents = new();
     private readonly List<string> prompts = [];
+    private readonly List<AgentPrompt> agentPrompts = [];
 
     private readonly TimeProvider time;
     private bool promptInFlight;
@@ -77,6 +78,18 @@ internal sealed class FakeAgentSession : IAgentSession
             lock (this.gate)
             {
                 return [.. this.prompts];
+            }
+        }
+    }
+
+    /// <summary>Every <see cref="AgentPrompt"/> received, in order, with its Prompt blocks; <see cref="Prompts"/> keeps only the text.</summary>
+    public IReadOnlyList<AgentPrompt> AgentPrompts
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return [.. this.agentPrompts];
             }
         }
     }
@@ -256,9 +269,9 @@ internal sealed class FakeAgentSession : IAgentSession
     /// <summary>Runs once, at the start of <see cref="DisposeAsync"/> - lets a host track how many sessions it opened are still live.</summary>
     public Action? OnDisposed { get; set; }
 
-    public Task<PromptResult> PromptAsync(string text, CancellationToken cancellationToken)
+    public Task<PromptResult> PromptAsync(AgentPrompt prompt, CancellationToken cancellationToken)
     {
-        return this.RunPromptAsync(text, cancellationToken);
+        return this.RunPromptAsync(prompt, cancellationToken);
     }
 
     public Task CancelAsync(CancellationToken cancellationToken)
@@ -287,8 +300,9 @@ internal sealed class FakeAgentSession : IAgentSession
         return ValueTask.CompletedTask;
     }
 
-    private async Task<PromptResult> RunPromptAsync(string text, CancellationToken ct)
+    private async Task<PromptResult> RunPromptAsync(AgentPrompt prompt, CancellationToken ct)
     {
+        string text = prompt.Text;
         lock (this.gate)
         {
             if (this.promptInFlight)
@@ -299,6 +313,7 @@ internal sealed class FakeAgentSession : IAgentSession
 
             this.promptInFlight = true;
             this.prompts.Add(text);
+            this.agentPrompts.Add(prompt);
         }
 
         this.OnPrompt?.Invoke(text);

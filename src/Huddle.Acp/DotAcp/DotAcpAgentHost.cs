@@ -95,7 +95,8 @@ public sealed partial class DotAcpAgentHost(
             (int)(ushort)response.ProtocolVersion,
             DotAcpAgentHost.MapAuthMethods(response.AuthMethods),
             response.AgentCapabilities?.LoadSession ?? false,
-            response.AgentCapabilities?.SessionCapabilities?.Resume is not null);
+            response.AgentCapabilities?.SessionCapabilities?.Resume is not null,
+            DotAcpAgentHost.MapPromptCapabilities(response.AgentCapabilities?.PromptCapabilities));
 
         _ = Task.Run(() => this.WatchForDisconnectAsync(clientAdapter, establishedConnection, launchedProcess), CancellationToken.None);
     }
@@ -525,6 +526,22 @@ public sealed partial class DotAcpAgentHost(
         }
 
         return mapped;
+    }
+
+    /// <summary>
+    /// Maps the stable <c>promptCapabilities</c> an agent advertised. An absent object is
+    /// <see cref="AgentPromptCapabilities.None"/>: ACP reads an omitted capability as unsupported.
+    /// </summary>
+    /// <param name="capabilities">The advertised object, or null when the agent said nothing.</param>
+    /// <returns>What a prompt may carry; never null.</returns>
+    private static AgentPromptCapabilities MapPromptCapabilities(dotacp.protocol.PromptCapabilities? capabilities)
+    {
+        if (capabilities is null)
+        {
+            return AgentPromptCapabilities.None;
+        }
+
+        return new AgentPromptCapabilities(capabilities.Image, capabilities.EmbeddedContext);
     }
 
     private static IReadOnlyList<AuthMethodInfo> MapAuthMethods(dotacp.protocol.AuthMethod[]? authMethods)

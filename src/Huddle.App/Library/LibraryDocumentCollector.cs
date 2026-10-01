@@ -5,6 +5,7 @@ using Markdig;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
 using Microsoft.Extensions.Options;
+using Agency.Huddle.Acp.Abstractions;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Services;
@@ -46,33 +47,95 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
     /// <param name="messageTexts">The Turn's message texts, in order.</param>
     /// <param name="readsFiles">Whether the Agent's Adapter can read files itself: when true, no text is inlined.</param>
     /// <param name="ct">Cancels the read of each kept document.</param>
-    internal async Task<LibraryDocumentsReport> CollectAsync(IReadOnlyList<string> messageTexts, bool readsFiles, CancellationToken ct)
+    internal Task<LibraryDocumentsReport> CollectAsync(IReadOnlyList<string> messageTexts, bool readsFiles, CancellationToken ct)
+    {
+        return this.CollectCoreAsync(messageTexts, readsFiles, null, ct);
+    }
+
+    /// <summary>
+    /// The same scan, and then, per document, a decision on how it reaches the model
+    /// (<see cref="PromptBlockPlanner"/>): as today's path line, as a Prompt block, or as "an image you
+    /// cannot see". Only a path written in the first text, the Message that started the Turn, can become a
+    /// block (design D-2).
+    /// </summary>
+    /// <param name="messageTexts">The Turn's message texts, in order; the first is the Message that started the Turn.</param>
+    /// <param name="delivery">What the Adapter and its profile allow a prompt to carry.</param>
+    /// <param name="ct">Cancels the reads.</param>
+    internal Task<LibraryDocumentsReport> CollectAsync(IReadOnlyList<string> messageTexts, PromptDelivery delivery, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(delivery);
+        return this.CollectCoreAsync(messageTexts, delivery.ReadsFiles, delivery, ct);
+    }
+
+    /// <summary>
+    /// Builds the <see cref="PromptDelivery"/> for a Turn: what the Adapter allows, combined with this
+    /// installation's per-Turn caps, so a caller needs no knowledge of <see cref="LibraryOptions"/>.
+    /// </summary>
+    /// <param name="readsFiles">Whether the Adapter has file tools.</param>
+    /// <param name="images">Whether an image may go as a block.</param>
+    /// <param name="embeddedText">Whether a document's text may go as an embedded resource.</param>
+    /// <returns>The delivery bundle.</returns>
+    internal PromptDelivery DeliveryFor(bool readsFiles, bool images, bool embeddedText)
+    {
+        LibraryOptions library = this.options.Value.Library;
+        return new PromptDelivery(readsFiles, images, embeddedText, library.MaxImagesPerTurn, library.MaxImageBytesPerTurn);
+    }
+
+    private async Task<LibraryDocumentsReport> CollectCoreAsync(IReadOnlyList<string> messageTexts, bool readsFiles, PromptDelivery? delivery, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(messageTexts);
 
         List<LibraryPath> ordered = [];
         HashSet<string> seen = new(FolderSnapshot.PathComparer);
+        HashSet<string> fromTrigger = new(FolderSnapshot.PathComparer);
 
-        foreach (string text in messageTexts)
+        for (int index = 0; index < messageTexts.Count; index++)
         {
-            this.CollectFromText(text, ordered, seen);
+            this.CollectFromText(messageTexts[index], ordered, seen);
+            if (index == 0)
+            {
+                fromTrigger.UnionWith(seen);
+            }
         }
 
-        int cap = this.options.Value.Library.MaxReferencedDocuments;
+        LibraryOptions library = this.options.Value.Library;
+        int cap = library.MaxReferencedDocuments;
         int notListed = Math.Max(0, ordered.Count - cap);
         IReadOnlyList<LibraryPath> kept = ordered.Count > cap ? ordered.GetRange(0, cap) : ordered;
 
         List<LibraryDocumentItem> items = [];
+        List<PlanInput> inputs = [];
         foreach (LibraryPath path in kept)
         {
-            LibraryDocumentItem? item = await this.TryBuildItemAsync(path, readsFiles, ct);
-            if (item is not null)
+            (LibraryDocumentItem Item, LibraryFileKind Kind)? built = await this.TryBuildItemAsync(path, readsFiles, ct);
+            if (built is { } read)
             {
-                items.Add(item);
+                items.Add(read.Item);
+                inputs.Add(new PlanInput(path, read.Kind, fromTrigger.Contains(path.FullPath), read.Item.Text));
             }
         }
 
-        return new LibraryDocumentsReport(items, notListed, this.options.Value.Library.MaxInlineBytes);
+        if (delivery is not null)
+        {
+            IReadOnlyList<PlannedDocument> plan = await PromptBlockPlanner.PlanAsync(
+                inputs,
+                delivery,
+                (path, token) => this.files.ReadImageAsync(path, library.MaxImageBytes, library.MaxImageEdgePixels, token),
+                ct);
+            for (int index = 0; index < items.Count; index++)
+            {
+                PlannedDocument decision = plan[index];
+                items[index] = items[index] with
+                {
+                    Delivery = decision.Delivery,
+                    Block = decision.Block,
+                    Withheld = decision.Withheld,
+                    Text = decision.Block is AgentTextResourceBlock ? null : items[index].Text,
+                };
+            }
+        }
+
+        return new LibraryDocumentsReport(items, notListed, library.MaxInlineBytes);
     }
 
     /// <summary>Finds code-span candidates (whole-string, spaces allowed) then plain-text candidates, in that order.</summary>
@@ -198,7 +261,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
     }
 
     /// <summary>Reads and labels one kept document; a file-system failure skips the item entirely.</summary>
-    private async Task<LibraryDocumentItem?> TryBuildItemAsync(LibraryPath path, bool readsFiles, CancellationToken ct)
+    private async Task<(LibraryDocumentItem Item, LibraryFileKind Kind)?> TryBuildItemAsync(LibraryPath path, bool readsFiles, CancellationToken ct)
     {
         try
         {
@@ -215,7 +278,7 @@ internal sealed class LibraryDocumentCollector(LibraryPathResolver resolver, Lib
                 (text, truncated) = LibraryDocumentCollector.TruncateToMaxInlineBytes(content.Text, this.options.Value.Library.MaxInlineBytes);
             }
 
-            return new LibraryDocumentItem(path.FullPath, location, size, text, truncated, content.Length, tooLarge);
+            return (new LibraryDocumentItem(path.FullPath, location, size, text, truncated, content.Length, tooLarge), content.Kind);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -328,4 +391,17 @@ internal sealed record LibraryDocumentsReport(IReadOnlyList<LibraryDocumentItem>
 /// <param name="Truncated">Whether <see cref="Text"/> was cut short of the document's full content.</param>
 /// <param name="Length">The document's true size in bytes.</param>
 /// <param name="TooLarge">Whether the document is over <see cref="LibraryOptions.MaxEditableBytes"/>.</param>
-internal sealed record LibraryDocumentItem(string FullPath, string Location, string Size, string? Text, bool Truncated, long Length, bool TooLarge);
+/// <param name="Delivery">How the document reaches the model; <see cref="LibraryDocumentDelivery.Path"/>, today's line, unless the collector was given a <see cref="PromptDelivery"/>.</param>
+/// <param name="Block">The Prompt block that carries the document when <paramref name="Delivery"/> is <see cref="LibraryDocumentDelivery.Block"/>.</param>
+/// <param name="Withheld">Why an image that could have been a block was not sent, for the Information log; <see cref="PromptBlockWithheld.None"/> otherwise.</param>
+internal sealed record LibraryDocumentItem(
+    string FullPath,
+    string Location,
+    string Size,
+    string? Text,
+    bool Truncated,
+    long Length,
+    bool TooLarge,
+    LibraryDocumentDelivery Delivery = LibraryDocumentDelivery.Path,
+    AgentPromptBlock? Block = null,
+    PromptBlockWithheld Withheld = PromptBlockWithheld.None);

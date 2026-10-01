@@ -17,6 +17,9 @@ internal interface IPersonaHost : IAsyncDisposable
     /// <summary>Whether the Adapter advertised <c>sessionCapabilities.resume</c>.</summary>
     bool CanResume { get; }
 
+    /// <summary>What the Adapter advertised a prompt may carry beyond text, read at <c>initialize</c>.</summary>
+    AgentPromptCapabilities PromptCapabilities { get; }
+
     /// <summary>Opens a fresh session, composing its system prompt now so the memory index is current.</summary>
     Task<IAgentSession> OpenAsync(CancellationToken cancellationToken);
 

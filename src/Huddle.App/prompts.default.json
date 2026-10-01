@@ -25,6 +25,8 @@
   "turn.libraryDocTruncated": "(cut at {{max}} bytes; the file is {{size}}.)",
   "turn.libraryDocsMore": "…and {{count}} more documents.",
   "turn.libraryDocTooLarge": "- {{label}}: {{path}} (too large to include: {{sizeKb}} KB; open it with your file tools)",
+  "turn.libraryDocIncluded": "- {{path}} ({{location}}, {{size}}): included with this message",
+  "turn.libraryImageUnavailable": "- {{path}} ({{location}}, {{size}}): an image you cannot see",
   "turn.greeting": "{{roomLabel}}\nThe Human has just started using this application and has not written anything yet. This is\nyour first Message to them, and nothing prompted it. Greet them: if you hold a Skill for\nthis, read it first and follow it. Keep it to one Message that ends with one question.",
   "getHelp.intro": "Team is a chat application. You are one Teammate in it, talking to a human and to other\nagents in Rooms. You are not working alone at a terminal.",
   "getHelp.rooms": "ROOMS\nA Room is a conversation with a fixed set of members. There is only one kind of Room, and\nhow you behave in it follows from how many members it has:\n  - two members  — a private conversation with the human. Answer every message.\n  - three or more — a group. Answer only when you are @-mentioned.",

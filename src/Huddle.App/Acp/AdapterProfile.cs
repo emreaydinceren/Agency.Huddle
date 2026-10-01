@@ -51,6 +51,13 @@ namespace Agency.Huddle.App.Acp;
 /// command only when its Adapter advertises it <i>and</i> this list names it (Commands spec §6.2).
 /// Defaults to <see langword="null"/> so every existing positional call site keeps compiling unchanged.
 /// </param>
+/// <param name="PromptBlocks">
+/// Whether to send Prompt blocks (an image, a document's text as a resource) to this Adapter when it
+/// advertises it can take them, from <c>Team:Acp:Adapters:*:PromptBlocks</c>. A kill switch only: it can
+/// turn blocks off for an Adapter that advertises a capability it does not honour, never on for one that
+/// did not advertise. Defaults to <see langword="true"/> so every existing positional call site keeps
+/// compiling unchanged.
+/// </param>
 public sealed record AdapterProfile(
     string Id,
     string DisplayName,
@@ -63,4 +70,5 @@ public sealed record AdapterProfile(
     bool ReadsFiles = true,
     bool IsolateUserSettings = false,
     bool SessionPerRoom = true,
-    IReadOnlyList<string>? Commands = null);
+    IReadOnlyList<string>? Commands = null,
+    bool PromptBlocks = true);
