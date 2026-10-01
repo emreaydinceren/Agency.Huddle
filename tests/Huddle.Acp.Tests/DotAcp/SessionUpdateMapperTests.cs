@@ -411,6 +411,60 @@ public sealed class SessionUpdateMapperTests
         Assert.Empty(result.Commands);
     }
 
+    /// <summary>A <c>config_option_update</c> that carries a mode select maps to <see cref="ModeChanged"/> with its current value.</summary>
+    [Fact]
+    public void ConfigOptionUpdate_WithModeOption_MapsToModeChanged()
+    {
+        dotacp.protocol.ConfigOptionUpdate update = new dotacp.protocol.ConfigOptionUpdate
+        {
+            ConfigOptions =
+            [
+                new dotacp.protocol.SessionConfigSelect
+                {
+                    Id = "permission",
+                    Name = "Mode",
+                    Category = dotacp.protocol.SessionConfigOptionCategory.Mode,
+                    CurrentValue = "acceptEdits",
+                    Options = new dotacp.protocol.SessionConfigSelectOption[]
+                    {
+                        new dotacp.protocol.SessionConfigSelectOption { Value = "acceptEdits", Name = "Accept edits", Description = null },
+                    },
+                },
+            ],
+        };
+
+        AgentEvent result = SessionUpdateMapper.Map("s", update);
+
+        Assert.Equal(new ModeChanged("s", "acceptEdits"), result);
+    }
+
+    /// <summary>A <c>config_option_update</c> without a mode option stays <see cref="UnknownUpdate"/>, as it was before modes were read.</summary>
+    [Fact]
+    public void ConfigOptionUpdate_WithoutModeOption_StaysUnknownUpdate()
+    {
+        dotacp.protocol.ConfigOptionUpdate update = new dotacp.protocol.ConfigOptionUpdate
+        {
+            ConfigOptions =
+            [
+                new dotacp.protocol.SessionConfigSelect
+                {
+                    Id = "model",
+                    Name = "Model",
+                    Category = dotacp.protocol.SessionConfigOptionCategory.Model,
+                    CurrentValue = "sonnet",
+                    Options = new dotacp.protocol.SessionConfigSelectOption[]
+                    {
+                        new dotacp.protocol.SessionConfigSelectOption { Value = "sonnet", Name = "Sonnet", Description = null },
+                    },
+                },
+            ],
+        };
+
+        AgentEvent result = SessionUpdateMapper.Map("s", update);
+
+        Assert.IsType<UnknownUpdate>(result);
+    }
+
     public static TheoryData<dotacp.protocol.ToolKind> ToolKindValues()
     {
         TheoryData<dotacp.protocol.ToolKind> data = new TheoryData<dotacp.protocol.ToolKind>();

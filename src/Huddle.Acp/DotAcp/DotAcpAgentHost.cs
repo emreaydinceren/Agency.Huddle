@@ -218,7 +218,14 @@ public sealed partial class DotAcpAgentHost(
         // AFTER the model switch, never the pre-switch response.
         session.SetEffortLevels(EffortConfigOptions.Read(currentConfigOptions));
 
-        await this.ApplyEffortAsync(activeConnection, sessionId, options.Effort, currentConfigOptions, cancellationToken).ConfigureAwait(false);
+        currentConfigOptions = await this.ApplyEffortAsync(activeConnection, sessionId, options.Effort, currentConfigOptions, cancellationToken).ConfigureAwait(false);
+
+        // Mode is last: the adapter can change it as a side effect of a model switch (it falls "auto"
+        // back to "acceptEdits" on a model that does not support it), so a request is judged against
+        // the model the session will actually run. Applied and then read back, because the adapter
+        // may clamp what it was asked for.
+        session.SetModeOptions(ModeConfigOptions.Read(currentConfigOptions));
+        session.SetCurrentMode(await this.ApplyModeAsync(activeConnection, sessionId, options.Mode, currentConfigOptions, cancellationToken).ConfigureAwait(false));
 
         return session;
     }
@@ -341,7 +348,13 @@ public sealed partial class DotAcpAgentHost(
     /// <param name="effort">The requested effort id, or null to do nothing.</param>
     /// <param name="configOptions">The configOptions snapshot to resolve <paramref name="effort"/> against.</param>
     /// <param name="cancellationToken">Cancels the request.</param>
-    private async Task ApplyEffortAsync(
+    /// <returns>
+    /// The successful set's <c>ConfigOptions</c> when it carried any, so the mode that follows reads a
+    /// snapshot true after this call; <paramref name="configOptions"/> on every other path, including a
+    /// response with none. Unlike a model switch, setting an effort cannot change which modes exist, so
+    /// an answer without options is no evidence that the earlier ones are gone.
+    /// </returns>
+    private async Task<dotacp.protocol.SessionConfigOption[]?> ApplyEffortAsync(
         dotacp.client.Connection activeConnection,
         string sessionId,
         string? effort,
@@ -350,18 +363,18 @@ public sealed partial class DotAcpAgentHost(
     {
         if (effort is null)
         {
-            return;
+            return configOptions;
         }
 
         if (!EffortConfigOptions.TryResolve(configOptions, effort, out dotacp.protocol.SessionConfigId configId, out dotacp.protocol.SessionConfigValueId value))
         {
             DotAcpAgentHost.LogEffortNotInCatalog(this.logger, effort);
-            return;
+            return configOptions;
         }
 
         try
         {
-            _ = await activeConnection.SetSessionConfigOptionAsync(
+            dotacp.protocol.SetSessionConfigOptionResponse setResponse = await activeConnection.SetSessionConfigOptionAsync(
                 new dotacp.protocol.SetSessionConfigOptionRequest
                 {
                     SessionId = sessionId,
@@ -370,10 +383,89 @@ public sealed partial class DotAcpAgentHost(
                     Value = value,
                 },
                 cancellationToken).ConfigureAwait(false);
+
+            return setResponse.ConfigOptions ?? configOptions;
         }
         catch (RemoteInvocationException ex)
         {
             DotAcpAgentHost.LogEffortConfigFailed(this.logger, effort, ex.Message);
+            return configOptions;
+        }
+    }
+
+    /// <summary>
+    /// Resolves and applies <paramref name="mode"/>, if one was requested, against
+    /// <paramref name="configOptions"/> - the snapshot after Model and Effort - and reads the answer
+    /// back. A mode that matches nothing, or an adapter that advertises none, is a warning, never an
+    /// exception. A mode the adapter already reports as current is not sent again, which is the normal
+    /// resume case when the adapter kept it. A response whose mode differs from the request is a clamp,
+    /// and is logged with both values.
+    /// </summary>
+    /// <param name="activeConnection">The connection to send <c>session/set_config_option</c> on.</param>
+    /// <param name="sessionId">The session id to apply the mode to.</param>
+    /// <param name="mode">The requested mode id, or null to do nothing.</param>
+    /// <param name="configOptions">The configOptions snapshot to resolve <paramref name="mode"/> against.</param>
+    /// <param name="cancellationToken">Cancels the request.</param>
+    /// <returns>
+    /// The mode id the session now runs in: the one the successful set's response reports, otherwise the
+    /// one <paramref name="configOptions"/> reported before. When a response carries no mode option the
+    /// request cannot be verified, so it is reported as applied and not treated as a clamp. Null when
+    /// the adapter advertises no mode option at all.
+    /// </returns>
+    private async Task<string?> ApplyModeAsync(
+        dotacp.client.Connection activeConnection,
+        string sessionId,
+        string? mode,
+        dotacp.protocol.SessionConfigOption[]? configOptions,
+        CancellationToken cancellationToken)
+    {
+        string? before = ModeConfigOptions.CurrentValue(configOptions);
+        if (mode is null)
+        {
+            return before;
+        }
+
+        if (!ModeConfigOptions.TryResolve(configOptions, mode, out dotacp.protocol.SessionConfigId configId, out dotacp.protocol.SessionConfigValueId value))
+        {
+            DotAcpAgentHost.LogModeNotInCatalog(this.logger, mode);
+            return before;
+        }
+
+        if (string.Equals(before, mode, StringComparison.Ordinal))
+        {
+            return before;
+        }
+
+        try
+        {
+            dotacp.protocol.SetSessionConfigOptionResponse setResponse = await activeConnection.SetSessionConfigOptionAsync(
+                new dotacp.protocol.SetSessionConfigOptionRequest
+                {
+                    SessionId = sessionId,
+                    ConfigId = configId,
+                    Type = "select",
+                    Value = value,
+                },
+                cancellationToken).ConfigureAwait(false);
+
+            string? effective = ModeConfigOptions.CurrentValue(setResponse.ConfigOptions);
+            if (effective is null)
+            {
+                // No mode option came back: the request cannot be verified, so report it as applied.
+                return mode;
+            }
+
+            if (!string.Equals(effective, mode, StringComparison.Ordinal))
+            {
+                DotAcpAgentHost.LogModeClamped(this.logger, mode, effective);
+            }
+
+            return effective;
+        }
+        catch (RemoteInvocationException ex)
+        {
+            DotAcpAgentHost.LogModeConfigFailed(this.logger, mode, ex.Message);
+            return before;
         }
     }
 
@@ -476,4 +568,13 @@ public sealed partial class DotAcpAgentHost(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to set effort '{Effort}' via session/set_config_option; continuing on the model's default. {Reason}")]
     private static partial void LogEffortConfigFailed(ILogger logger, string effort, string reason);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Requested mode '{Mode}' is not in the agent's advertised mode catalog; continuing in the agent's own mode.")]
+    private static partial void LogModeNotInCatalog(ILogger logger, string mode);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to set mode '{Mode}' via session/set_config_option; continuing in the agent's own mode. {Reason}")]
+    private static partial void LogModeConfigFailed(ILogger logger, string mode, string reason);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "The agent did not apply requested mode '{Requested}'; the session runs in '{Effective}'.")]
+    private static partial void LogModeClamped(ILogger logger, string requested, string effective);
 }

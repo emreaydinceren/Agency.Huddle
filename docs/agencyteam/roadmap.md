@@ -49,6 +49,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~19~~ | ~~Tasks~~ — **delivered 2026-09-25** | `Tasks/`, then `Acp/Tools/*TaskTool.cs` and `Components/Tasks/*` | shipped: a Markdown Task per file under `Tasks/<Team>/[<Project>/]`, a wake-on-change trigger reusing the Reply Gate and Budget, six App Tools, and a Board/List/Detail UI with a `#` picker and task-ref links in chat. Four paid manual tests and one concurrent-move race are not yet verified — see [the Tasks spec](../Huddle.Tasks-Specifications.md), [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md), [ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md) and [Known limits](known-limits.md) |
 | 20 | An Agent asks the Human before a tool runs — **proposed 2026-09-30, not built** | a new approval handler wrapping `WorkDirPermissionHandler`, a pending-approval store, an approval card in the Room, and a pause in `RoomSession`'s idle watchdog | `IPermissionHandler` is already the seam, `session/request_permission` already arrives and is answered, and Stop already cancels a waiting request — see [item 20](#20-an-agent-asks-the-human-before-a-tool-runs--proposed-2026-09-30-not-built) |
 | 21 | Turn detail: an Edit preview and Spend — **built 2026-09-30 (V1); Adapter commands built 2026-09-30 as [their own spec](../Huddle.Commands-Specifications.md); Plan and Thinking not built** | `Drafts` and `MessageList.razor` for the preview; a new `PersonaSpend` and `TeammateCard.razor` for Spend | `diff`, `locations` and `cost` already arrive and `SessionUpdateMapper` drops them. No protocol bump: every change is an optional field on `ToolActivity`, and Spend never crosses the pipe. Item 20's approval card reuses the preview — see [the Turn detail spec](../Huddle.TurnDetail-Specifications.md) |
+| 22 | A Persona has a Work Mode — **phase 1 delivered (code) 2026-09-30; phases 2 and 3 designed, not built** | `Persona`, `PersonaWorkModeStore`, `DotAcpAgentHost`'s option application, `WorkModePolicy`, `TeammateCard.razor` | shipped as a setting beside Model and Effort, applied with `session/set_config_option` and read back. Not a smarter permission handler: a mode changes what the Adapter will *try*. The live per-Room switch and non-blocking plan approval are the next two phases — see [item 22](#22-a-persona-has-a-work-mode--phase-1-delivered-code-2026-09-30) and [ADR-0033](../adr/0033-a-persona-has-a-work-mode.md) |
 
 ## 1. Renaming a Teammate
 
@@ -1480,3 +1481,50 @@ can do anything the Human can. The `~/.claude` guard still misses a `Bash` comma
 into that folder. And the approval card shows what the Adapter says it will do, which is only as
 good as the `rawInput` it sends. Build it after item 16, which shares the store-and-card pattern
 and probably `Chat.razor` and `RoomEvents`, though neither blocks the other.
+
+## 22. A Persona has a Work Mode — PHASE 1 DELIVERED (code) 2026-09-30
+
+> **Phase 1 delivered as code on 2026-09-30.** The design is
+> [Huddle.WorkModes-Specifications.md](../Huddle.WorkModes-Specifications.md), recorded in
+> [ADR-0033](../adr/0033-a-persona-has-a-work-mode.md). A Persona may have a **Work Mode**: the
+> ACP `mode` option, chosen on the Teammate card from the list its Adapter advertises, stored in
+> `persona_work_modes`, applied after Model and Effort and read back. `bypassPermissions`, `auto`
+> and `plan` are hidden by default (`Team:Acp:HiddenModes`; `plan` since the live run of
+> 2026-10-01, see below), and a Persona in `plan` mode cannot leave it. Only the Human sets it.
+
+**Not built.**
+
+- **Phase 2, a live switch per Room with no restart.** Needs `IAgentSession.SetModeAsync` between
+  Turns, new additive wire messages with wire names that differ from the ACP event `ModeChanged`
+  (no `ProtocolVersion` bump), a per-(Agent, Room) store, and the chosen mode written to the Room
+  Session entry so a resume restores it. Its prerequisite, that a switch survives resume, is
+  answered: a resumed session comes back in Manual, so the mode is re-applied after every resume.
+- **Phase 3, plan approval without blocking.** Needs phase 2, and is **also the prerequisite for
+  offering `plan` by default**: until the plan is captured, a plan-mode Persona is silent in the
+  Room (OQ-2, below). The guard keeps refusing the exit
+  so the Turn is not held open (ADR-0022); the plan is captured from the tool call's `rawInput`
+  and shown on a card beside `ProposalCard`; **Approve** switches to `acceptEdits` through phase 2
+  and posts a Message that starts the next Turn. `ToolCallInfo` carries `RawInputJson` today and
+  drops content.
+
+**Measured live, 2026-10-01.** A script drove the real `claude-agent-acp` 0.75.1 over stdio on
+Haiku (Windows, a Claude subscription, one run each), outside the Huddle app, so the in-app manual
+tests remain the acceptance run. **OQ-2, no:** in `plan` mode the plan does not reach the Room as
+text. The Adapter asks a `switch_mode` "Approve Plan" request with the plan in `rawInput.plan`; the
+guard refuses it; the Turn ends `cancelled` with only a short preamble; and `RoomSession` posts no
+cancelled Turn. `plan` therefore joined the default hidden list, the fallback the spec had named.
+**OQ-3, yes:** under `acceptEdits` a write outside the Work Dir still produces a permission
+request carrying `rawInput.file_path`, so the `~/.claude` guard survives (tested with a temp
+directory, not `~/.claude` itself). **MW-2, yes:** under `acceptEdits` an edit inside the Work Dir
+produces no permission request.
+
+**OQ-5 measured, 2026-10-01 (free).** `auto` on a model without support (Haiku) is clamped to
+`acceptEdits`: the response says so, which Huddle reads back, and a message chunk plus a
+`current_mode_update` arrive with no Turn running. `auto` stays hidden by default.
+
+**Still unrun.** The in-app manual tests WORKMODE-06 to WORKMODE-09 in
+[manual-tests/work-mode.md](manual-tests/work-mode.md); see [Known limits](known-limits.md).
+
+**Item 20 is unchanged.** The Human's decision that auto-approve is acceptable for now stands.
+This adds one refusal, the plan guard, and a way to choose a mode. Nothing asks the Human before
+a tool runs.

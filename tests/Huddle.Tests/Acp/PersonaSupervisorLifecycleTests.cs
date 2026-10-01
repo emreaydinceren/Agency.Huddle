@@ -34,6 +34,7 @@ public sealed class PersonaSupervisorLifecycleTests
             new TeammatePaths(options),
             new Agency.Huddle.App.Data.PersonaModelStore(options),
             new Agency.Huddle.App.Data.PersonaEffortStore(options),
+            new Agency.Huddle.App.Data.PersonaWorkModeStore(options),
             NullLogger<PersonaStore>.Instance);
         var factory = new FakeAgentHostFactory();
         var resolver = new AdapterProfileResolver(new AdapterCatalog(options));
@@ -290,7 +291,7 @@ public sealed class PersonaSupervisorLifecycleTests
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
 
-        personaStore.Update("nova", PersonaText("nova", "You are a changed Nova."), model: null, effort: null);
+        personaStore.Update("nova", PersonaText("nova", "You are a changed Nova."), model: null, effort: null, workMode: null);
 
         await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
         await supervisor.StopAsync(ct);
@@ -322,7 +323,7 @@ public sealed class PersonaSupervisorLifecycleTests
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
 
-        personaStore.Update("nova", PersonaText("nova", "You are Nova."), "b", effort: null);
+        personaStore.Update("nova", PersonaText("nova", "You are Nova."), "b", effort: null, workMode: null);
 
         await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
         await supervisor.StopAsync(ct);
@@ -389,7 +390,7 @@ public sealed class PersonaSupervisorLifecycleTests
         // PersonaText's capitalised, unquoted style, so re-typing it here would be a real text
         // change and a real restart, defeating the point of this test.
         var unchangedText = personaStore.Get("zeta")!.Text;
-        personaStore.Update("zeta", unchangedText, "a", effort: null);
+        personaStore.Update("zeta", unchangedText, "a", effort: null, workMode: null);
 
         // Adding an unrelated Persona proves PersonasChanged was actually observed after the
         // no-op Update above, without which the absence of a second "zeta" call would be
@@ -425,7 +426,7 @@ public sealed class PersonaSupervisorLifecycleTests
         await supervisor.StartAsync(ct);
         await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
 
-        personaStore.Update("nova", PersonaText("nova", "You are Nova."), "a", "high");
+        personaStore.Update("nova", PersonaText("nova", "You are Nova."), "a", "high", workMode: null);
 
         await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
         await supervisor.StopAsync(ct);
@@ -459,7 +460,7 @@ public sealed class PersonaSupervisorLifecycleTests
         // there is nothing for the supervisor to act on. See PersonaModelUnchanged_DoesNotRestartItsHost
         // for why the text resubmitted here has to be whatever Add itself just composed.
         var unchangedText = personaStore.Get("zeta")!.Text;
-        personaStore.Update("zeta", unchangedText, "a", "high");
+        personaStore.Update("zeta", unchangedText, "a", "high", workMode: null);
 
         // Adding an unrelated Persona proves PersonasChanged was actually observed after the
         // no-op Update above, without which the absence of a second "zeta" call would be
@@ -468,6 +469,101 @@ public sealed class PersonaSupervisorLifecycleTests
         await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
 
         // Bounded grace period: prove no further, unwanted restart of "zeta" happens.
+        await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
+        await supervisor.StopAsync(ct);
+
+        Assert.Single(factory.Calls, call => call.Persona.Name == "zeta");
+    }
+
+    /// <summary>A Persona's stored Work Mode reaches the factory, which reads <c>persona.WorkMode</c> to build its session options.</summary>
+    [Fact]
+    public async Task Enabled_PassesThePersonaWorkModeToTheFactory()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
+
+        personaStore.Add(Identity("nova"), "You are Nova.", "claude-opus-4", "high", "plan");
+
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+        await supervisor.StopAsync(ct);
+
+        Assert.Equal("plan", factory.Calls[0].Persona.WorkMode);
+    }
+
+    /// <summary>
+    /// Mirrors <see cref="PersonaEffortChanged_RestartsItsHost"/>: text, Model and Effort are identical and
+    /// only the Work Mode changes, which alone must be enough for the restart check's record comparison to
+    /// fire, because a mode is applied when a session opens and cannot be swapped into a running one.
+    /// </summary>
+    [Fact]
+    public async Task PersonaWorkModeChanged_RestartsItsHost()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
+
+        personaStore.Add(Identity("nova"), "You are Nova.", "a", "low", "acceptEdits");
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+
+        personaStore.Update("nova", PersonaText("nova", "You are Nova."), "a", "low", "plan");
+
+        await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
+        await supervisor.StopAsync(ct);
+
+        Assert.Equal(2, factory.Calls.Count);
+        Assert.Equal("plan", factory.Calls[^1].Persona.WorkMode);
+        Assert.Equal("low", factory.Calls[^1].Persona.Effort);
+    }
+
+    /// <summary>A Work Mode that did not change restarts nothing: an unrelated Persona event is not a reason to lose a conversation.</summary>
+    [Fact]
+    public async Task PersonaWorkModeUnchanged_DoesNotRestartItsHost()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var fixture = await PipeHostFixture.StartAsync(
+            new Dictionary<string, string?> { ["Team:Acp:Enabled"] = "true" }, ct);
+        var options = fixture.Services.GetRequiredService<IOptions<TeamOptions>>();
+        var personaStore = fixture.Services.GetRequiredService<PersonaStore>();
+        var factory = new FakeAgentHostFactory();
+        var resolver = fixture.Services.GetRequiredService<AdapterProfileResolver>();
+        using var skillStore = NewSkillStore(options);
+        using var supervisor = new PersonaSupervisor(options, personaStore, factory, resolver, NewHealth(), new FakePromptSource(), new RoomFollows(), NullLoggerFactory.Instance, NullLogger<PersonaSupervisor>.Instance, skillStore);
+
+        personaStore.Add(Identity("zeta"), "You are a persona.", "a", "high", "plan");
+        await supervisor.StartAsync(ct);
+        await WaitUntilAsync(() => factory.Calls.Count >= 1, ct);
+
+        var zeta = personaStore.Get("zeta");
+        Assert.NotNull(zeta);
+        var unchangedText = zeta.Text;
+        personaStore.Update("zeta", unchangedText, "a", "high", "plan");
+
+        // As in PersonaEffortUnchanged_DoesNotRestartItsHost: adding an unrelated Persona proves the
+        // no-op Update's PersonasChanged was actually observed before the absence is asserted.
+        personaStore.Add(Identity("other"), "You are Other.");
+        await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
+
         await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
         await supervisor.StopAsync(ct);
 

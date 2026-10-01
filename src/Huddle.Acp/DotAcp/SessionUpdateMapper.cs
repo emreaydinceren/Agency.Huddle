@@ -82,6 +82,12 @@ internal static class SessionUpdateMapper
             case dotacp.protocol.AvailableCommandsUpdate availableCommandsUpdate:
             return new AvailableCommandsUpdated(sessionId, SessionUpdateMapper.MapAvailableCommands(availableCommandsUpdate.AvailableCommands));
 
+            // A config_option_update carrying a mode select is the adapter announcing a mode change
+            // (it sends one when a model switch invalidates "auto"). Any other option is still
+            // unmapped, as before.
+            case dotacp.protocol.ConfigOptionUpdate configOptionUpdate when ModeConfigOptions.CurrentValue(configOptionUpdate.ConfigOptions) is { } currentMode:
+            return new ModeChanged(sessionId, currentMode);
+
             default:
             return new UnknownUpdate(sessionId, update.GetType().Name);
         }

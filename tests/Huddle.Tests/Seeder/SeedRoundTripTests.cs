@@ -29,7 +29,7 @@ public sealed class SeedRoundTripTests
         SeedPlan plan = seed.Summary.Plan;
         var options = seed.Options();
 
-        using PersonaStore store = new(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
+        using PersonaStore store = new(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
 
         Assert.Empty(store.RejectedFiles);
         Assert.Equal(plan.Teammates.Count, store.Entries.Count);
@@ -49,7 +49,7 @@ public sealed class SeedRoundTripTests
         using SeededFolder seed = await SeededFolder.CreateAsync(TestContext.Current.CancellationToken);
         SeedPlan plan = seed.Summary.Plan;
         var options = seed.Options();
-        using PersonaStore personas = new(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
+        using PersonaStore personas = new(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
 
         using TaskStore store = new(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
 
@@ -80,7 +80,7 @@ public sealed class SeedRoundTripTests
     {
         using SeededFolder seed = await SeededFolder.CreateAsync(TestContext.Current.CancellationToken);
         var options = seed.Options();
-        using PersonaStore personas = new(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
+        using PersonaStore personas = new(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
         using TaskStore store = new(options, personas, TimeProvider.System, NullLogger<TaskStore>.Instance);
 
         TaskItem task = Assert.Single(store.All, t => t.Id.ToString() == "SUPP-0005");

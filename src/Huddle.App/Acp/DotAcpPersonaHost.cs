@@ -41,6 +41,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     private readonly ToolServerEndpoint toolServerEndpoint;
     private readonly IReadOnlyDictionary<string, object>? meta;
     private readonly ILoggerFactory loggerFactory;
+    private readonly WorkModePolicy workModePolicy;
 
     /// <summary>Initializes a new instance of the <see cref="DotAcpPersonaHost"/> class.</summary>
     /// <param name="inner">The started ACP host, ready for <c>session/new</c> or <c>session/resume</c>.</param>
@@ -63,6 +64,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
     /// <param name="toolServerEndpoint">The endpoint and bearer token every opened session is handed.</param>
     /// <param name="meta">D14's isolation <c>_meta</c> (RS §6.10), or <see langword="null"/> when the profile does not ask for it.</param>
     /// <param name="loggerFactory">Creates the logger a fresh <see cref="WorkDirPermissionHandler"/> needs on every open or resume.</param>
+    /// <param name="workModePolicy">Decides whether the Persona's Work Mode may be sent (ADR-0033).</param>
     public DotAcpPersonaHost(
         DotAcpAgentHost inner,
         AppToolServer toolServer,
@@ -83,7 +85,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         string workDir,
         ToolServerEndpoint toolServerEndpoint,
         IReadOnlyDictionary<string, object>? meta,
-        ILoggerFactory loggerFactory)
+        ILoggerFactory loggerFactory,
+        WorkModePolicy workModePolicy)
     {
         ArgumentNullException.ThrowIfNull(inner);
         ArgumentNullException.ThrowIfNull(toolServer);
@@ -100,6 +103,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         ArgumentException.ThrowIfNullOrWhiteSpace(workDir);
         ArgumentNullException.ThrowIfNull(toolServerEndpoint);
         ArgumentNullException.ThrowIfNull(loggerFactory);
+        ArgumentNullException.ThrowIfNull(workModePolicy);
 
         this.inner = inner;
         this.toolServer = toolServer;
@@ -121,6 +125,7 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
         this.toolServerEndpoint = toolServerEndpoint;
         this.meta = meta;
         this.loggerFactory = loggerFactory;
+        this.workModePolicy = workModePolicy;
     }
 
     public AdapterProfile Profile { get; }
@@ -187,6 +192,10 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             }
         }
 
+        // Enforced here, where the options are built, so a database row written by hand for a hidden
+        // mode is inert (ADR-0033). Whether the Adapter advertises the mode is DotAcpAgentHost's check.
+        string? mode = this.workModePolicy.EffectiveMode(this.persona.Name, this.persona.WorkMode, this.loggerFactory.CreateLogger<DotAcpPersonaHost>());
+
         return new AgentSessionOptions(
             this.workDir,
             // Approves the way AutoApprovePermissionHandler does, except inside the human's own
@@ -194,10 +203,14 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             // exception is drawn there and not around the Work Dir. Falls back to the plain
             // auto-approve only if the profile directory cannot be resolved at all, rather than
             // inventing a path to protect. Built fresh per call: the handler itself holds no state
-            // worth reusing across opens.
-            WorkDirPermissionHandler.DefaultProtectedDirectory() is { } protectedDirectory
-                ? new WorkDirPermissionHandler(protectedDirectory, this.loggerFactory.CreateLogger<WorkDirPermissionHandler>())
-                : new AutoApprovePermissionHandler(),
+            // worth reusing across opens. A plan-mode Persona's handler is wrapped so the Adapter's
+            // request to leave plan mode is refused (see PlanModePermissionHandler).
+            DotAcpPersonaHost.GuardPermissions(
+                WorkDirPermissionHandler.DefaultProtectedDirectory() is { } protectedDirectory
+                    ? new WorkDirPermissionHandler(protectedDirectory, this.loggerFactory.CreateLogger<WorkDirPermissionHandler>())
+                    : new AutoApprovePermissionHandler(),
+                mode,
+                this.loggerFactory),
             new SystemPromptOptions(
                 SystemPromptComposer.Compose(
                     this.persona,
@@ -213,6 +226,23 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
             this.toolServerEndpoint,
             this.persona.Model,
             this.persona.Effort,
-            this.meta);
+            this.meta,
+            mode);
+    }
+
+    /// <summary>
+    /// Wraps <paramref name="handler"/> in the plan guard when the Persona's effective Work Mode is
+    /// <c>plan</c>, and returns it unchanged for every other Persona, so nothing changes for a Persona
+    /// with no Work Mode.
+    /// </summary>
+    /// <param name="handler">The handler every other request goes to.</param>
+    /// <param name="mode">The Persona's effective Work Mode, or <see langword="null"/>.</param>
+    /// <param name="loggerFactory">Creates the guard's logger.</param>
+    /// <returns>The handler to hand the session.</returns>
+    internal static IPermissionHandler GuardPermissions(IPermissionHandler handler, string? mode, ILoggerFactory loggerFactory)
+    {
+        return string.Equals(mode, PlanModePermissionHandler.PlanModeId, StringComparison.Ordinal)
+            ? new PlanModePermissionHandler(handler, mode, loggerFactory.CreateLogger<PlanModePermissionHandler>())
+            : handler;
     }
 }

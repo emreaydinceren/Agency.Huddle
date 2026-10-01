@@ -49,7 +49,7 @@ Four categories are defined, and `dotacp.protocol` exposes each as a
 | --- | --- | --- |
 | `model` | Which model the session runs | Yes — [ModelConfigOptions.cs](../../src/Team.Acp/DotAcp/ModelConfigOptions.cs) |
 | `thought_level` | Thinking effort for the current model | Yes — [EffortConfigOptions.cs](../../src/Team.Acp/DotAcp/EffortConfigOptions.cs) |
-| `mode` | Agent mode (e.g. plan vs. edit) | No |
+| `mode` | Agent mode (e.g. plan vs. edit) | Yes (Work Mode, [ADR-0033](../adr/0033-a-persona-has-a-work-mode.md); [design](../Huddle.WorkModes-Specifications.md)) |
 | `model_config` | Provider-level model configuration | No |
 
 **Enumerate** by filtering the array to the category you want and reading
@@ -174,6 +174,63 @@ not validate it for Claude or Codex: any string passes through and the adapter
 rejects what it does not know. A new level then works the day the adapter ships
 it, at the cost of no pre-flight validation.
 
+## How a mode works
+
+A `mode` option is how much the agent may do before it must ask. It is a config
+option like the other two, with `category: "mode"`, and it is selected the same way.
+This section records what `claude-agent-acp` 0.75.1 was seen to do on 2026-09-30 and
+2026-10-01, by a script that drove the vendored adapter over stdio. Nothing here was
+inferred from source alone. The 2026-10-01 runs (plan mode and writes under
+`acceptEdits`) used the Haiku model, one run each, on Windows with a Claude subscription,
+outside the Huddle app. The design is
+[Huddle.WorkModes-Specifications.md](../Huddle.WorkModes-Specifications.md).
+
+`session/new` returns the option with the id `mode`, and also the older `modes`
+field with the same five ids:
+
+| `value` | `name` | `_meta.kind` |
+| --- | --- | --- |
+| `default` | Manual | `standard` |
+| `acceptEdits` | Accept edits | `standard` |
+| `plan` | Plan | `plan` |
+| `auto` | Auto | `auto_review` |
+| `bypassPermissions` | Bypass permissions | `full_access` |
+
+`bypassPermissions` was offered on Windows. Each option also carries a `description`,
+such as "Always ask before making changes" for Manual.
+
+- **Setting it works through `session/set_config_option`.** The response carries the
+  full `configOptions` with the applied `currentValue`, and the adapter also sends a
+  `current_mode_update` notification.
+- **A resumed session comes back in Manual.** A session set to `acceptEdits`, then
+  resumed from a new adapter process, reported `currentValue: "default"`. The adapter
+  does not restore the mode, so a client must set it again after every resume.
+- **A session with no prompt cannot be resumed.** `session/resume` on a session that
+  never ran a turn fails with `-32002 Resource not found`. The session is persisted
+  by the first prompt.
+- **`_meta.kind` classifies each mode.** It is adapter-specific, and not a field of the
+  ACP spec, so a client must not depend on it for correctness.
+- **In `plan` mode the plan arrives as a permission request, not as text.** After the
+  model's read-only tool calls, the adapter sent `session/request_permission` with a
+  tool call of kind `switch_mode` titled "Approve Plan", and the whole plan as markdown
+  in `rawInput.plan`. Its options were `allow_once` "Yes, manually approve edits",
+  `allow_always` "Yes, clear context (26% used) and use auto mode", `allow_always`
+  "Yes, and use auto mode", and `reject_once` "No, keep planning".
+- **Refusing that exit ends the Turn with `stopReason: "cancelled"`.** After a
+  `reject_once` the only assistant text was 126 characters of preamble, not the plan,
+  and no file was written. A client that does not post a cancelled Turn therefore shows
+  nothing; the plan survives only in `rawInput.plan`.
+- **`rawInput` is present at request time** for these requests. It carried `plan` for
+  `switch_mode` and `{file_path, content}` for an edit.
+- **Under `acceptEdits`, an edit inside the working directory sends no permission
+  request.** The file was written and the Turn ended `end_turn`.
+- **Under `acceptEdits`, a write outside the working directory still asks.** The request
+  was kind `edit`, titled "Write <path>", with `rawInput` `{file_path, content}` and the
+  options `allow_once` "Yes", `allow_always` "Yes, allow all edits in outside\ during
+  this session", and `reject_once` "No". Refused, the file was not written and the model
+  said it needed permission. The test path was a temp directory, not `~/.claude`, and
+  `allow_always` was never chosen.
+
 ## How Team does it
 
 Team reads and applies both `model` and `thought_level`. The ACP-layer pieces are
@@ -218,6 +275,14 @@ them both resolved to **no new mechanism**:
   requested level back to `"default"`, the card will not say so. That is
   recorded in [known-limits.md](../agencyteam/known-limits.md) rather than
   worked around.
+
+**Team also reads and applies `mode`, as a Work Mode.** `DotAcpAgentHost` applies Model,
+then Effort, then Mode through `session/set_config_option`, and reads each response back, so an
+Adapter that clamps the mode is reported with both values rather than trusted. A hidden list
+(`Team:Acp:HiddenModes`, default `bypassPermissions`, `auto` and `plan`) is enforced when a
+session opens, not only in the picker. `plan` is hidden because a refused plan exit ends the
+Turn cancelled and nothing is posted. Unlike Effort, the `default` mode is kept: it is Manual, a real
+mode. See [Huddle.WorkModes-Specifications.md](../Huddle.WorkModes-Specifications.md).
 
 ## The unstable path
 

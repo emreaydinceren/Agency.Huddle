@@ -724,7 +724,7 @@ public sealed class TeamFolderProvisionerTests
 
             IOptions<TeamOptions> options = this.dir.Options();
             TeammatePaths paths = new(options);
-            this.Personas = new PersonaStore(paths, new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
+            this.Personas = new PersonaStore(paths, new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
             this.Roots = new LibraryRootStore(options, paths, NullLogger<LibraryRootStore>.Instance);
             this.Resolver = new LibraryPathResolver(this.Roots, options, NullLogger<LibraryPathResolver>.Instance);
             this.Tasks = TestTaskStore.CreateTaskStore(this.dir, this.Personas);

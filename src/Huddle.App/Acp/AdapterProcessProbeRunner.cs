@@ -33,7 +33,7 @@ internal sealed class AdapterProcessProbeRunner(IOptions<TeamOptions> options, I
                 new AgentSessionOptions(probeCwd, new AutoApprovePermissionHandler(), model: model),
                 cancellationToken).ConfigureAwait(false);
 
-            return new AdapterProbeOutcome(session.Models, session.EffortLevels);
+            return new AdapterProbeOutcome(session.Models, session.EffortLevels) { Modes = session.ModeOptions };
         }
         finally
         {

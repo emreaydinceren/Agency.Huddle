@@ -102,3 +102,5 @@ concludes the form is broken.
 
 **`role="alert"`.** It interrupts. The human caused this, and an alert that fires on every
 deliberate action is one nobody reads.
+
+**Extended by** [ADR-0033](0033-a-persona-has-a-work-mode.md), which applies the same reset to a Persona's Work Mode, with its own separate `role="status"` note. A Model change still keeps the Work Mode.

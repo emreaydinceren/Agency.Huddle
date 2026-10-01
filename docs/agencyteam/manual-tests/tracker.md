@@ -1,6 +1,6 @@
 # Manual test tracker
 
-Where every one of the 499 tests stands. One row per test, updated as you run it.
+Where every one of the 508 tests stands. One row per test, updated as you run it.
 
 > [!NOTE]
 > **An earlier full run exists, against the previous UI, and its results are deliberately not
@@ -110,6 +110,7 @@ the per-area tables below.
 | [App Tools a real model calls (progressive discovery)](app-tools.md) | 26 | 20 | [below](#app-tools) |
 | [Persona lifecycle: supervisor, work dirs, health and restarts](persona-lifecycle.md) | 32 | 7 | [below](#persona-lifecycle) |
 | [Tasks: creating, moving, viewing and referencing a unit of work](tasks.md) | 15 | 4 | [below](#tasks) |
+| [Work Mode: how much an Agent may do before it asks](work-mode.md) | 9 | 4 | [below](#work-mode) |
 
 ---
 
@@ -761,6 +762,23 @@ Skills: the Chief of Staff, team-building, and the Family Health Advisor — [ar
 | [SKILLS-04](skills.md#skills-04--over-the-limit-approve-creates-nothing-and-the-message-says-why) | 💰 | Active | | |
 | [SKILLS-05](skills.md#skills-05--the-greeting-on-a--clean-install-and-no-second-greeting-on-restart) | 💰 | Active | | |
 | [SKILLS-06](skills.md#skills-06--the-family-health-advisors-safety-behaviour) | 💰 | Active | | |
+
+
+## work-mode
+
+Work Mode: choosing how much an Agent may do before it asks — [area file](work-mode.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [WORKMODE-01](work-mode.md#workmode-01--the-picker-lists-what-the-adapter-advertises-minus-plan-auto-and-bypass-permissions) |  | Active | | |
+| [WORKMODE-02](work-mode.md#workmode-02--changing-the-adapter-clears-the-work-mode-and-says-so) |  | Active | | |
+| [WORKMODE-03](work-mode.md#workmode-03--a-hand-written-row-for-a-hidden-mode-is-dropped-with-a-warning) |  | Active | | |
+| [WORKMODE-04](work-mode.md#workmode-04--hiding-nothing-is-a-list-of-one-empty-string) |  | Active | | |
+| [WORKMODE-05](work-mode.md#workmode-05--an-adapter-that-advertises-no-mode-shows-no-picker) |  | Active | | |
+| [WORKMODE-06](work-mode.md#workmode-06--accept-edits-no-permission-request-for-an-edit) | 💰 | Pass | | 2026-10-01, in the app. A `Write` and an `Edit` ran under Accept edits with no `session/request_permission` in the whole run; the file held `beta`. Run on a resumed session, with a second file name |
+| [WORKMODE-07](work-mode.md#workmode-07--plan-nothing-is-written-and-the-request-to-leave-plan-mode-is-refused) | 💰 | Pass | | 2026-10-01, in the app. One `switch_mode` request refused (`reject`), the guard's log line present, no file, stop reason `cancelled`, and nothing posted to the Room (OQ-2 confirmed in the app) |
+| [WORKMODE-08](work-mode.md#workmode-08--accept-edits-a-write-into-claude-is-still-refused) | 💰 | Active | | Not run in the app 2026-10-01: the session's auto-mode classifier blocked typing a message that asks an agent to write into the real `~/.claude`, so nothing was sent and the file does not exist. The outside-the-app run of OQ-3 used a temp path and stands |
+| [WORKMODE-09](work-mode.md#workmode-09--a-mode-is-applied-again-after-an-app-restart) | 💰 | Pass | | 2026-10-01, in the app. `session/resume`, then `set_config_option` model, whose response showed the mode back at `default`, then `set_config_option` `mode=acceptEdits`, all before the prompt |
 
 ---
 

@@ -30,6 +30,21 @@ public interface IAgentSession : IAsyncDisposable
     /// </summary>
     IReadOnlyList<AgentEffortOption> EffortLevels { get; }
 
+    /// <summary>
+    /// The modes this session's agent advertised, in wire order. An EMPTY list is a real answer -
+    /// "this agent offers no mode choice" - not a failure to load. Unlike <see cref="EffortLevels"/>
+    /// it does not depend on the model, except that an agent may clamp one mode, "auto" for
+    /// example, on a model that does not support it.
+    /// </summary>
+    IReadOnlyList<AgentModeOption> ModeOptions { get; }
+
+    /// <summary>
+    /// The mode id this session is running in once <see cref="AgentSessionOptions.Mode"/> has been
+    /// applied and read back, so it is the EFFECTIVE mode when the agent clamped the request. Null
+    /// when the agent advertised no mode option.
+    /// </summary>
+    string? CurrentModeId { get; }
+
     Task<PromptResult> PromptAsync(string text, CancellationToken cancellationToken);
 
     Task CancelAsync(CancellationToken cancellationToken);

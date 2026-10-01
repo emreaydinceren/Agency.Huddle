@@ -211,6 +211,37 @@ public sealed class TeamMembershipTests
         Assert.Equal("high", stored.Effort);
     }
 
+    /// <summary>
+    /// The stored Work Mode survives an <c>Add</c>. <see cref="PersonaStore.Update"/> has no default for it, so
+    /// a membership edit that forgot to pass it would silently wipe the mode: this is the easy-to-miss caller.
+    /// </summary>
+    [Fact]
+    public void Add_PreservesWorkMode()
+    {
+        using Fixture f = new([("nova", Definition("Nova", "\n", "teams: [Research]"))], workMode: "plan");
+
+        MembershipResult result = f.Membership.Add("Business", "Nova");
+
+        Persona? stored = f.Personas.Get("Nova");
+        Assert.Equal(MembershipOutcome.Added, result.Outcome);
+        Assert.NotNull(stored);
+        Assert.Equal("plan", stored.WorkMode);
+    }
+
+    /// <summary>The stored Work Mode survives a <c>Remove</c> too.</summary>
+    [Fact]
+    public void Remove_PreservesWorkMode()
+    {
+        using Fixture f = new([("nova", Definition("Nova", "\n", "teams: [Research, Business]"))], workMode: "plan");
+
+        MembershipResult result = f.Membership.Remove("Business", "Nova");
+
+        Persona? stored = f.Personas.Get("Nova");
+        Assert.Equal(MembershipOutcome.Removed, result.Outcome);
+        Assert.NotNull(stored);
+        Assert.Equal("plan", stored.WorkMode);
+    }
+
     /// <summary>Removing a Team drops the label whatever case it is written in, and keeps every other label (a plain pin, not a mutation target: the parser already merges case variants).</summary>
     [Fact]
     public void Remove_DropsEveryCaseVariant()
@@ -374,7 +405,8 @@ public sealed class TeamMembershipTests
         /// <param name="files">The definition files as (stem, text) pairs.</param>
         /// <param name="model">The stored Model of "Nova", or null for none.</param>
         /// <param name="effort">The stored Effort of "Nova", or null for none.</param>
-        public Fixture(IReadOnlyList<(string Stem, string Text)> files, string? model = null, string? effort = null)
+        /// <param name="workMode">The stored Work Mode of "Nova", or null for none.</param>
+        public Fixture(IReadOnlyList<(string Stem, string Text)> files, string? model = null, string? effort = null, string? workMode = null)
         {
             IOptions<TeamOptions> options = this.dir.Options();
             this.paths = new TeammatePaths(options);
@@ -388,7 +420,9 @@ public sealed class TeamMembershipTests
             PersonaEffortStore efforts = new(options);
             models.Set("Nova", model);
             efforts.Set("Nova", effort);
-            this.Personas = new PersonaStore(this.paths, models, efforts, NullLogger<PersonaStore>.Instance);
+            PersonaWorkModeStore workModes = new(options);
+            workModes.Set("Nova", workMode);
+            this.Personas = new PersonaStore(this.paths, models, efforts, workModes, NullLogger<PersonaStore>.Instance);
             this.Catalog = new FakeTeamCatalog();
             this.Membership = new TeamMembership(this.Personas, this.Catalog);
         }

@@ -291,7 +291,7 @@ public sealed partial class CandidateCheckerTests
         await directory.InitializeAsync("You", ct);
 
         var personas = new PersonaStore(
-            paths, new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
+            paths, new PersonaModelStore(dataDir.Options()), new PersonaEffortStore(dataDir.Options()), new PersonaWorkModeStore(dataDir.Options()), NullLogger<PersonaStore>.Instance);
         var gateway = new FakeAgentGateway();
         var checker = new CandidateChecker(personas, directory, gateway);
 

@@ -51,6 +51,20 @@ public sealed class TeammateDialogParametersTests
         AssertEveryKeyIsARealParameter(parameters);
     }
 
+    /// <summary>The Work Mode is handed to the card under the name of its real parameter, so it is not silently dropped between the page and the dialog.</summary>
+    [Fact]
+    public void ViewParameters_CarryTheWorkMode()
+    {
+        var entry = new PersonaEntry("Jarvis", "Chief of Staff", "jar", ["Business"], "Jarvis.md", "You are Jarvis.");
+        var persona = new Persona("Jarvis", "You are Jarvis.", "claude-opus-4", "high", WorkMode: "plan");
+        var status = new PersonaStatus(PersonaState.Online, null, DateTimeOffset.UtcNow);
+
+        var parameters = TeammatesPage.BuildViewParameters("Jarvis", entry, persona, status, roomId: "room-1", filePath: @"C:\Teams\Jarvis.md");
+
+        Assert.Equal("plan", parameters[nameof(TeammateCard.WorkMode)]);
+        AssertEveryKeyIsARealParameter(parameters);
+    }
+
     /// <summary>The same guard against <see cref="TeammatesPage.BuildViewParameters"/>'s null-entry, null-persona path (a Persona somehow not yet in <see cref="PersonaStore.Entries"/>), which still must name only real parameters.</summary>
     [Fact]
     public void ViewParameters_WithNoEntryOrPersona_EveryKeyNamesARealTeammateCardParameter()

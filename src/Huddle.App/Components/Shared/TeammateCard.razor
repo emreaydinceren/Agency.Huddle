@@ -228,6 +228,11 @@
                 <MudText Typo="Typo.body1">@this.EffortDisplayText</MudText>
             </MudPaper>
 
+            <MudPaper Outlined="true" Class="pa-3 mb-3">
+                <MudText Typo="Typo.overline">Work mode</MudText>
+                <MudText Typo="Typo.body1">@this.WorkModeDisplayText</MudText>
+            </MudPaper>
+
             @if (this.filePath is not null)
             {
                 <MudPaper Outlined="true" Class="pa-3">
@@ -387,6 +392,37 @@
                 }
             </MudSelect>
 
+            @* ADR-0033. Same role="status" reasoning as the notes above: a consequence of what the Human
+               just did, never role="alert". Its own note, rather than a third clause in the Model/Effort
+               one, so the text those tests pin does not move. *@
+            @if (this.adapterResetWorkMode)
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mt-4" role="status">
+                    Changing the adapter reset Work mode to its default. Each adapter advertises its own modes, so a mode chosen for the previous adapter does not carry across — pick one again if you want a specific mode.
+                </MudAlert>
+            }
+
+            @* Work mode: how much the Agent may do before it must ask (ADR-0033). Offered from the
+               Adapter's own advertised list, so there is no list of modes in this file. Hidden when the
+               Adapter advertises none and nothing is stored (ShowWorkModePicker): a picker with only a
+               blank option is a control nobody can use, but a STORED value keeps it so the Human can
+               still see and clear it. Disabled, not ReadOnly, while the probe is out, for the reason
+               spelled out on the Model select above. The same probe answers this and Effort, so it
+               waits on effortsLoading. ToStringFunc shows the mode's name rather than its id (an id such
+               as "acceptEdits" is for the wire); the selected mode's own description is the helper text. *@
+            @if (this.ShowWorkModePicker)
+            {
+                <MudSelect T="string" Label="Work mode" Value="@(this.workMode ?? string.Empty)" ValueChanged="this.OnWorkModeChanged"
+                           Disabled="@this.effortsLoading" ToStringFunc="@this.WorkModeLabel"
+                           HelperText="@this.WorkModeHelperText" Class="mt-4">
+                    <MudSelectItem T="string" Value="@string.Empty">Use the agent's default</MudSelectItem>
+                    @foreach (var choice in this.WorkModeChoices)
+                    {
+                        <MudSelectItem T="string" Value="@choice.Id">@choice.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
             @* View mode shows none of this - consistent with Model and Effort rendering as plain text
                there (see the "mode == View" branch above). Styled the same Outlined MudPaper as the
                Model/Effort papers, above, even though it only ever appears in Create/Edit. *@
@@ -502,6 +538,14 @@
     [Parameter]
     public string? Effort { get; set; }
 
+    /// <summary>
+    /// The id of the Work Mode this Persona's sessions start in (ADR-0033), or <see langword="null"/>
+    /// for the Adapter's own mode. Named <c>WorkMode</c>, never <c>Mode</c>: the card already has a
+    /// <c>Mode</c> parameter, which is its Create/Edit/View state.
+    /// </summary>
+    [Parameter]
+    public string? WorkMode { get; set; }
+
     /// <summary>Which ACP agent runs this Persona's session (Spec §7.2), or <see langword="null"/> for the installation's default profile.</summary>
     [Parameter]
     public string? Adapter { get; set; }
@@ -535,6 +579,7 @@
     private string text = string.Empty;
     private string? model;
     private string? effort;
+    private string? workMode;
     private string? adapter;
 
     // Unlike model/effort/adapter above, this has no [Parameter] counterpart to seed from: a Skill
@@ -631,6 +676,19 @@
     /// </summary>
     private bool adapterResetModelAndEffort;
 
+    /// <summary>
+    /// Set when an Adapter change has just discarded a stored Work Mode (ADR-0033, extending
+    /// ADR-0015), and cleared on the same occasions as <see cref="adapterResetModelAndEffort"/>.
+    /// </summary>
+    private bool adapterResetWorkMode;
+
+    /// <summary>
+    /// The Work Modes the Adapter advertises, after the hidden-modes policy. Read by the same probe
+    /// as <see cref="availableEfforts"/>, so it loads and is superseded with it; see
+    /// <see cref="LoadEffortsAsync"/>.
+    /// </summary>
+    private IReadOnlyList<AgentModeOption> availableWorkModes = [];
+
     /// <summary>The Human-facing label for <paramref name="state"/> - "Starting" rather than "Offline" so a Persona launching for the first time does not read as a fault.</summary>
     /// <param name="state">The state to label.</param>
     private static string StatusLabel(PersonaState state) => state switch
@@ -652,6 +710,7 @@
         this.text = this.Text;
         this.model = this.Model;
         this.effort = this.Effort;
+        this.workMode = this.WorkMode;
         this.adapter = this.Adapter;
         this.skills = ReadSkills(this.text);
         this.SeedAvatarEditorState();
@@ -1102,6 +1161,64 @@
         }
     }
 
+    /// <summary>
+    /// Whether the Work mode select is rendered: while the probe is out (the catalog is unread, so
+    /// "empty" would be a false claim), when the Adapter advertises at least one mode, or when one is
+    /// stored. Hidden only when the Adapter advertises none and nothing is stored.
+    /// </summary>
+    private bool ShowWorkModePicker => this.effortsLoading || this.availableWorkModes.Count > 0 || this.workMode is not null;
+
+    // Opening Edit must not silently reset a stored choice when saved: a stored mode the Adapter no
+    // longer advertises (an upgrade, a failed probe) is synthesised, so the select still shows and keeps
+    // it - the same rule as EffortChoices.
+    private IReadOnlyList<AgentModeOption> WorkModeChoices
+    {
+        get
+        {
+            if (this.workMode is null || this.availableWorkModes.Any(mode => string.Equals(mode.Id, this.workMode, StringComparison.Ordinal)))
+            {
+                return this.availableWorkModes;
+            }
+
+            return [new AgentModeOption(this.workMode, this.workMode, null), .. this.availableWorkModes];
+        }
+    }
+
+    /// <summary>The name to show for a mode id: the Adapter's own name for it when it is advertised, otherwise the id itself.</summary>
+    /// <param name="id">The mode id, or blank for the Adapter's own mode.</param>
+    private string WorkModeLabel(string? id)
+    {
+        if (string.IsNullOrEmpty(id))
+        {
+            return string.Empty;
+        }
+
+        return this.availableWorkModes.FirstOrDefault(mode => string.Equals(mode.Id, id, StringComparison.Ordinal))?.Name ?? id;
+    }
+
+    // "Agent default", like Model: the mode is the Adapter's own when none is chosen.
+    private string WorkModeDisplayText => this.workMode is null ? "Agent default" : this.WorkModeLabel(this.workMode);
+
+    // The selected mode's own description - what the Adapter says it does - because the names alone
+    // ("Auto", "Plan") do not say what they permit.
+    private string WorkModeHelperText
+    {
+        get
+        {
+            if (this.effortsLoading)
+            {
+                return "Reading the work modes this agent offers…";
+            }
+
+            var description = this.availableWorkModes
+                .FirstOrDefault(mode => string.Equals(mode.Id, this.workMode, StringComparison.Ordinal))?.Description;
+
+            return description is { Length: > 0 }
+                ? $"{description}. Changing it restarts the teammate, which clears what it remembers."
+                : "How much this teammate may do before it must ask. Changing it restarts the teammate, which clears what it remembers.";
+        }
+    }
+
     private string TextHelperText => this.mode == TeammateCardMode.Create
         ? "Markdown. Becomes the teammate's system prompt, placed after the Name, Title, Alias and Teams above — no front matter needed here."
         : "Markdown. This is the whole Persona file, front matter included, and becomes the teammate's system prompt. Saving restarts it, which clears what it remembers.";
@@ -1128,6 +1245,10 @@
         this.text = persona?.Text ?? this.text;
         this.model = persona?.Model ?? this.model;
         this.effort = persona?.Effort ?? this.effort;
+
+        // Assigned straight from the Persona, with no "?? this.workMode" fallback like the lines above:
+        // a null read-back must clear a stale value, never keep it.
+        this.workMode = persona?.WorkMode;
         this.adapter = persona?.Adapter ?? this.adapter;
         this.skills = ReadSkills(this.text);
         this.SeedAvatarEditorState();
@@ -1136,6 +1257,7 @@
         this.confirmingReset = false;
         this.effortResetByModelChange = false;
         this.adapterResetModelAndEffort = false;
+        this.adapterResetWorkMode = false;
         this.nameLocked = false;
         this.titleLocked = false;
         this.aliasLocked = false;
@@ -1300,8 +1422,14 @@
         this.adapter = string.IsNullOrWhiteSpace(value) ? null : value;
         this.text = PersonaFrontmatter.WriteScalarField(this.text, "adapter", this.adapter ?? string.Empty);
         this.adapterResetModelAndEffort = this.model is not null || this.effort is not null;
+
+        // A mode chosen for one Adapter means nothing against another's list, so it is discarded with
+        // Model and Effort (ADR-0033, extending ADR-0015). Model and Effort ARE restricted to the
+        // Adapter that advertised them; the mode list is too, since each Adapter has its own.
+        this.adapterResetWorkMode = this.workMode is not null;
         this.model = null;
         this.effort = null;
+        this.workMode = null;
         this.effortResetByModelChange = false;
 
         await this.LoadModelsAsync();
@@ -1377,6 +1505,13 @@
         this.effort = string.IsNullOrWhiteSpace(value) ? null : value;
         this.effortResetByModelChange = false;
         this.adapterResetModelAndEffort = false;
+        this.adapterResetWorkMode = false;
+    }
+
+    private void OnWorkModeChanged(string value)
+    {
+        this.workMode = string.IsNullOrWhiteSpace(value) ? null : value;
+        this.adapterResetWorkMode = false;
     }
 
     // Runs on form-open, never on page-load: spawning the throwaway adapter this probes with costs a
@@ -1417,6 +1552,11 @@
     // renders with effortsLoading true before the probe answers; entering the loading state needs no
     // manual StateHasChanged. Leaving it needs none either, unlike LoadModelsAsync above: this is the
     // LAST await in all three of its callers, so the completion render already covers it.
+    //
+    // Also reads the Work Modes (ADR-0033), because the same throwaway session answers both: the second
+    // call is a cache hit on the entry the first filled, so it costs no extra spawn. One generation
+    // counter and one loading flag cover both, which is what keeps the faster-probe-wins rule intact
+    // with no second in-flight path to repaint.
     private async Task LoadEffortsAsync()
     {
         var generation = ++this.effortProbeGeneration;
@@ -1424,9 +1564,11 @@
         try
         {
             var efforts = await this.ModelCatalog.GetEffortLevelsAsync(this.adapter, this.model, CancellationToken.None);
+            var workModes = await this.ModelCatalog.GetWorkModesAsync(this.adapter, this.model, CancellationToken.None);
             if (generation == this.effortProbeGeneration)
             {
                 this.availableEfforts = efforts;
+                this.availableWorkModes = workModes;
             }
         }
         finally
@@ -1450,7 +1592,7 @@
             if (creating)
             {
                 var identity = new PersonaIdentity(this.name, this.title, this.alias, TeammateCard.ParseTeams(this.teams), this.adapter, this.skills);
-                persona = this.Personas.Add(identity, this.text, this.model, this.effort);
+                persona = this.Personas.Add(identity, this.text, this.model, this.effort, this.workMode);
             }
             else
             {
@@ -1461,7 +1603,7 @@
                 // that equality (rules.md), so it is false and no ACP session restarts merely because the
                 // Human picked a background colour. That is the entire reason Avatar was kept off the
                 // Persona record in the first place - invisible at this call site otherwise.
-                persona = this.Personas.Update(this.persistedName, this.text, this.model, this.effort);
+                persona = this.Personas.Update(this.persistedName, this.text, this.model, this.effort, this.workMode);
             }
         }
         catch (ChatException ex)
@@ -1503,6 +1645,7 @@
         this.confirmingReset = false;
         this.effortResetByModelChange = false;
         this.adapterResetModelAndEffort = false;
+        this.adapterResetWorkMode = false;
         this.nameLocked = false;
         this.titleLocked = false;
         this.aliasLocked = false;
@@ -1525,6 +1668,7 @@
         this.text = savedPersona?.Text ?? this.text;
         this.model = savedPersona?.Model;
         this.effort = savedPersona?.Effort;
+        this.workMode = savedPersona?.WorkMode;
         this.adapter = savedPersona?.Adapter;
         this.skills = ReadSkills(savedPersona?.Text ?? this.text);
         this.filePath = TeammateCard.TryPathFor(this.Personas, this.name);

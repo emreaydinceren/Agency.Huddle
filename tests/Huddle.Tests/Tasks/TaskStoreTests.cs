@@ -149,7 +149,7 @@ public sealed class TaskStoreTests
 
         TaskCompletionSource indexChanged = new(TaskCreationOptions.RunContinuationsAsynchronously);
         store.IndexChanged += () => indexChanged.TrySetResult();
-        personas.Update("Nova", PersonaTextWithTeams("Nova", "You work on Platform.", "Platform"), model: null, effort: null);
+        personas.Update("Nova", PersonaTextWithTeams("Nova", "You work on Platform.", "Platform"), model: null, effort: null, workMode: null);
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(10));
         await using CancellationTokenRegistration registration = cts.Token.Register(() => indexChanged.TrySetCanceled());
@@ -184,7 +184,7 @@ public sealed class TaskStoreTests
 
         int indexChangedCount = 0;
         store.IndexChanged += () => indexChangedCount++;
-        personas.Update("Nova", PersonaTextWithTeams("Nova", "You still work on Platform.", "Platform"), model: null, effort: null);
+        personas.Update("Nova", PersonaTextWithTeams("Nova", "You still work on Platform.", "Platform"), model: null, effort: null, workMode: null);
 
         await Task.Delay(TimeSpan.FromMilliseconds(900), ct);
 

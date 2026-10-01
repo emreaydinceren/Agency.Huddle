@@ -194,7 +194,7 @@ public sealed class InviteTeammateTests
         // The panel's own team filter needs a PersonaStore; created and disposed within this one
         // render so its FileSystemWatcher never outlives the test.
         using var personas = new PersonaStore(
-            new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+            new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         services.AddSingleton(personas);
 
         // The panel now renders a TeammateAvatar beside each candidate; created and disposed within

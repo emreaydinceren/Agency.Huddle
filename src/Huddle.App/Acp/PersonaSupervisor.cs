@@ -133,8 +133,8 @@ internal sealed class PersonaSupervisor : BackgroundService
 
     /// <summary>
     /// Restarts one Persona's host on demand - the Human-triggered counterpart to the restart
-    /// <see cref="OnPersonasChanged"/> performs automatically when a Persona's file, Model or Effort
-    /// changes. Wraps <see cref="RestartHostAsync"/> directly, so it shares the same <see cref="gate"/>-protected
+    /// <see cref="OnPersonasChanged"/> performs automatically when a Persona's file, Model, Effort or
+    /// Work Mode changes. Wraps <see cref="RestartHostAsync"/> directly, so it shares the same <see cref="gate"/>-protected
     /// <see cref="restarting"/> set that already stops two concurrent restarts of the same Persona - a
     /// Restart button is exactly the new way to provoke that race. A Persona with no host currently
     /// running still starts one: <see cref="RestartHostAsync"/> removes whatever host is running (none,
@@ -282,10 +282,10 @@ internal sealed class PersonaSupervisor : BackgroundService
 
     // Record value equality rather than a hand-rolled field-by-field comparison: this dictionary is
     // keyed by Name, so Name is always equal by the time this runs, which makes "persona != started"
-    // exactly "text, Model or Effort changed" - and, unlike a chain of string.Equals calls, it cannot
-    // go stale the next time Persona grows a field. A system prompt, a Model AND an Effort are all
-    // fixed at session/new, so any one of them changing means stop-and-restart; there is no other way
-    // for an edit to take effect. The `started is null` clause is defensive only and should now be
+    // exactly "text, Model, Effort or Work Mode changed" - and, unlike a chain of string.Equals calls, it
+    // cannot go stale the next time Persona grows a field (Work Mode, ADR-0033, needed no edit here). A
+    // system prompt, a Model, an Effort AND a Work Mode are all fixed when a session opens, so any one of
+    // them changing means stop-and-restart; there is no other way for an edit to take effect. The `started is null` clause is defensive only and should now be
     // unreachable: OnPersonasChanged calls this exclusively for a name present in `hosts`, and
     // StartHostIfMissingAsync assigns `hosts[name]` and `startedByName[name]` together under the same
     // lock, so `started` is non-null here by construction.
@@ -411,9 +411,9 @@ internal sealed class PersonaSupervisor : BackgroundService
             }
 
             // RS §6.13: a Restart - the button, or the automatic one a Persona edit / Model / Effort /
-            // Adapter change triggers - forgets every stored Room Session for this Persona, so its
-            // next Turn in every Room starts fresh with Catch-up rather than resuming a session tied
-            // to a system prompt, Model or Effort that may no longer match (U7). Deliberately AFTER
+            // Work Mode / Adapter change triggers - forgets every stored Room Session for this Persona,
+            // so its next Turn in every Room starts fresh with Catch-up rather than resuming a session
+            // tied to a system prompt, Model, Effort or Work Mode that may no longer match (U7). Deliberately AFTER
             // the whole block above, not inside it (D29 correction 16): this must still run when
             // oldHost was null (a Restart of a Persona that failed to start), and placing it after the
             // old host's dispose - rather than before - beats the same resurrection race StopHostAsync

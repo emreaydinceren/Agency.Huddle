@@ -117,7 +117,7 @@ internal sealed class TeamMembership(PersonaStore personas, ITeamCatalog catalog
         string text = PersonaFrontmatter.WriteListField(persona.Text, TeamsKey, labels);
         try
         {
-            personas.Update(persona.Name, text, persona.Model, persona.Effort);
+            personas.Update(persona.Name, text, persona.Model, persona.Effort, persona.WorkMode);
         }
         catch (ChatException ex)
         {

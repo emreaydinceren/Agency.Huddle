@@ -63,7 +63,7 @@ internal sealed class TaskToolHarness : IDisposable
         this.Personas = new PersonaStore(
             new TeammatePaths(this.Options),
             new PersonaModelStore(this.Options),
-            new PersonaEffortStore(this.Options),
+            new PersonaEffortStore(this.Options), new PersonaWorkModeStore(this.Options),
             NullLogger<PersonaStore>.Instance);
         // "Platform" is the same default Team TestTasks.Make and TaskStoreTests fixtures already
         // assume, so a test creating a Task through TaskService (which refuses an unknown Team,

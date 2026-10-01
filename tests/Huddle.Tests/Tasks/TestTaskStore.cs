@@ -63,7 +63,7 @@ internal static class TestTaskStore
     /// <summary>Constructs a real <see cref="PersonaStore"/> over the same <see cref="TempDataDir"/> a <see cref="TaskStore"/> under test also reads from.</summary>
     /// <param name="dir">The temporary data directory shared with the Task store under test.</param>
     public static PersonaStore CreatePersonaStore(TempDataDir dir) =>
-        new(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        new(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
 
     /// <summary>Constructs the <see cref="TaskStore"/> under test with default options and a real <see cref="TimeProvider"/>.</summary>
     /// <param name="dir">The temporary data directory to scan.</param>

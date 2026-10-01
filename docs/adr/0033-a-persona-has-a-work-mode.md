@@ -45,13 +45,17 @@ and unset means the Adapter's default, which is the normal case.
 NOT be required for correctness", and another Adapter's modes differ. Two ids do appear in
 code, each for a stated safety reason: the hidden list, and the plan guard below.
 
-**`bypassPermissions` and `auto` are hidden by default**, and the hiding is enforced when a
-session opens, not only in the picker. A stored value for a hidden mode is dropped with a
-warning. An operator lifts the block with `Team:Acp:HiddenModes`.
+**`bypassPermissions`, `auto` and `plan` are hidden by default**, and the hiding is enforced when
+a session opens, not only in the picker. A stored value for a hidden mode is dropped with a
+warning. An operator lifts the block with `Team:Acp:HiddenModes`. `plan` is hidden because the
+refused exit ends the Turn cancelled and the plan is in a tool call, not in text, so nothing
+reaches the Room until a later phase captures it. The picker by default lists Manual and Accept
+edits.
 
 **A Persona in `plan` mode cannot leave it.** The handler refuses the Adapter's request to
 exit plan mode. Without that, the handler's own "prefer `allow_once`" rule would pick the
-option that leaves plan mode on the first request.
+option that leaves plan mode on the first request. The guard stays even though `plan` is hidden
+by default, for an operator who lifts the block.
 
 ## Why a setting and not a smarter permission handler
 
@@ -71,7 +75,9 @@ means send nothing, and is the blank option.
 
 ## What was read, and what was not
 
-Read from the vendored `claude-agent-acp` 0.75.1 `dist/` on 2026-09-30. Nothing here was run.
+Read from the vendored `claude-agent-acp` 0.75.1 `dist/` on 2026-09-30. The first set of facts
+was run on 2026-09-30 (the option and its values, and resume). Three more were run on 2026-10-01
+and are listed under "Established live" below.
 
 - The option is `id: "mode"`, `category: "mode"`, `type: "select"`. It offers `default`
   (Manual), `acceptEdits`, `plan` and `auto`, and `bypassPermissions` when the process is not
@@ -88,9 +94,30 @@ Read from the vendored `claude-agent-acp` 0.75.1 `dist/` on 2026-09-30. Nothing 
   `acceptEdits` (kind `allow_always`), one that exits to Manual (`allow_once`), and one that
   reads "No, keep planning" (`reject_once`).
 
-**Not established:** that a resumed session really comes back in Manual, what the model does
-after "keep planning", and whether an edit *outside* the Work Dir still reaches the handler
-under `acceptEdits`. The spec lists each as a spike to run before the code that depends on it.
+**Established live.** A script drove the real 0.75.1 over stdio on Haiku (Windows, a Claude
+subscription, one run each, **outside the Huddle app**, answering permission requests as
+Huddle's handlers would). The in-app manual tests remain the acceptance run.
+
+- A session set to `acceptEdits` and resumed came back in `default`, as the source said
+  (2026-09-30).
+- **Plan mode: the plan does not reach the Room as text.** The Adapter asked a `switch_mode`
+  request titled "Approve Plan" with the whole plan in `rawInput.plan`. The guard refused with
+  `reject_once`; the Turn ended `cancelled`, the only assistant text was a 126-character
+  preamble, and no file was written. `RoomSession` posts no cancelled Turn, so a plan Persona
+  is silent. This is why `plan` joined the default hidden list, the fallback the spec had named.
+- **The `~/.claude` guard survives `acceptEdits`.** A write outside the Work Dir still produced
+  a `session/request_permission` (kind `edit`, `rawInput` `{file_path, content}`), and refusing
+  it left the file unwritten. The test path was a temp directory, not `~/.claude`, and
+  `allow_always` was never chosen.
+- Under `acceptEdits`, an edit inside the Work Dir produced no request, and the Turn ended
+  `end_turn`.
+
+- **OQ-5, on 2026-10-01 (no prompt sent):** `auto` on a model without support (Haiku, with no Turn running) answered `acceptEdits` in the `set_config_option` response, then sent an `agent_message_chunk` reading "Auto mode unavailable: the selected model does not support Auto mode; using Accept edits instead." and a `current_mode_update` to `acceptEdits`. Opus, Sonnet and the default accepted `auto`. Setting `auto` on Opus and then switching the model to Haiku moved the mode to `acceptEdits` with only a `current_mode_update`, no message chunk. The clamp is therefore visible in the response, which
+  Huddle reads back, and the notice chunk arrives with no Turn running. `RoomSession` drops a chunk that
+  arrives with no active Turn, so it is normally lost; a race with the first Turn would append it to that reply.
+  `auto` stays hidden by default.
+
+**Not established:** any of the above inside the running app.
 
 ## Consequences
 
@@ -99,8 +126,8 @@ under `acceptEdits`. The spec lists each as a spike to run before the code that 
 - The resume match rule becomes Adapter, Model, Effort and Work Mode. Existing entries stay
   valid for a Persona with no Work Mode.
 - Under `acceptEdits`, edits inside the Work Dir stop reaching the handler. The `~/.claude`
-  write guard therefore sees fewer calls, and the spec makes the outside-Work-Dir case a
-  manual test.
+  write guard therefore sees fewer calls. A live run showed an outside-Work-Dir write still
+  reaches it, and the spec keeps the case as a manual test.
 - `src/Huddle.Acp` gains members, so the ACP effort is told first. `Huddle.Console` needs no
   change, because no `AgentEvent` type is added.
 - Auto-approve stays the handler's behaviour for everything except the plan guard. Nothing
@@ -114,6 +141,6 @@ under `acceptEdits`. The spec lists each as a spike to run before the code that 
 | `session/set_mode` | Marked for removal, and the v2 draft drops it. `set_config_option` is the durable path |
 | A field in the Persona file | Model and Effort stay out of it. A Persona file is plain text people copy between installs, and a stored mode is a local choice about what runs unattended |
 | Filtering `default` as Effort does | It is a real mode here, not a sentinel |
-| Offering every advertised mode | `bypassPermissions` is advertised on Windows, and `auto` moves permission decisions to the model and silently changes with the Model |
+| Offering every advertised mode | `bypassPermissions` is advertised on Windows, `auto` moves permission decisions to the model and silently changes with the Model, and `plan` leaves the Room with no reply until the plan is captured from the tool call |
 | A blocking approval card for plan exit | [ADR-0022](0022-an-agent-asks-the-human-with-a-question.md) and roadmap §20 record why a request that waits collides with the idle watchdog. The later phase is non-blocking |
 | A per-Room mode now | It needs new wire messages and a UI keyed by Room. It is the second phase, and this one is what it builds on |

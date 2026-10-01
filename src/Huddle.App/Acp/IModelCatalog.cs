@@ -52,4 +52,21 @@ internal interface IModelCatalog
     /// </param>
     /// <param name="cancellationToken">Cancels the probe.</param>
     ValueTask<IReadOnlyList<AgentEffortOption>> GetEffortLevelsAsync(string? adapterId, string? model, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The Work Modes (ADR-0033) an ACP adapter advertises, discovered by the same throwaway session as
+    /// <see cref="GetEffortLevelsAsync"/> and sharing its cache entry, so asking for both of one
+    /// (Adapter, Model) costs one probe. Modes belong to the Adapter, not to a model, but the entry is
+    /// keyed the same way so the two answers always come from one session.
+    /// </summary>
+    /// <remarks>
+    /// Unlike the effort ladder, the adapter's <c>"default"</c> id is KEPT: for a mode it is Manual, a
+    /// real mode, not a sentinel. Modes the operator hides (<c>Team:Acp:HiddenModes</c>) are removed
+    /// before this returns. An empty list is a REAL answer (the Adapter offers no mode choice), and a
+    /// FAILED probe also returns an empty list but is never cached.
+    /// </remarks>
+    /// <param name="adapterId">The Persona's configured Adapter id, or <see langword="null"/> for the default Adapter.</param>
+    /// <param name="model">The model id to probe against, or <see langword="null"/> for the adapter's own default.</param>
+    /// <param name="cancellationToken">Cancels the probe.</param>
+    ValueTask<IReadOnlyList<AgentModeOption>> GetWorkModesAsync(string? adapterId, string? model, CancellationToken cancellationToken);
 }

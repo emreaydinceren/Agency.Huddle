@@ -196,7 +196,7 @@ public sealed class PersonaSupervisorRestartTests
         var room = await chat.CreateRoomForAsync([novaId], ct);
         roomSessions.Put("nova", room.Id, new RoomSessionEntry("sess-1", "claude", null, null, null, DateTimeOffset.UtcNow));
 
-        personaStore.Update("nova", PersonaText("nova", "You are a changed Nova."), model: null, effort: null);
+        personaStore.Update("nova", PersonaText("nova", "You are a changed Nova."), model: null, effort: null, workMode: null);
 
         await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
         await supervisor.StopAsync(ct);
@@ -231,7 +231,7 @@ public sealed class PersonaSupervisorRestartTests
         var room = await chat.CreateRoomForAsync([novaId], ct);
         roomSessions.Put("nova", room.Id, new RoomSessionEntry("sess-1", "claude", "a", null, null, DateTimeOffset.UtcNow));
 
-        personaStore.Update("nova", PersonaText("nova", "You are Nova."), "b", effort: null);
+        personaStore.Update("nova", PersonaText("nova", "You are Nova."), "b", effort: null, workMode: null);
 
         await WaitUntilAsync(() => factory.Calls.Count >= 2, ct);
         await supervisor.StopAsync(ct);

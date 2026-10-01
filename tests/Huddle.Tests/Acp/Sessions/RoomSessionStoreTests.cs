@@ -112,6 +112,53 @@ public sealed class RoomSessionStoreTests
         Assert.False(File.Exists(Path.Combine(folder, "Nova.json.tmp")));
     }
 
+    /// <summary>A stored Work Mode round-trips through the file.</summary>
+    [Fact]
+    public void PutThenGet_RoundTripsTheWorkMode()
+    {
+        using TempDataDir dataDir = new();
+        RoomSessionStore store = new(dataDir.Options(), NullLogger<RoomSessionStore>.Instance);
+
+        store.Put("Nova", "room-a", new RoomSessionEntry("sess-a", "claude", null, null, null, DateTimeOffset.UtcNow, "plan"));
+
+        RoomSessionEntry? stored = store.Get("Nova", "room-a");
+        Assert.NotNull(stored);
+        Assert.Equal("plan", stored.WorkMode);
+    }
+
+    /// <summary>A null Work Mode is omitted from the file, so a Persona with none writes the file it always wrote.</summary>
+    [Fact]
+    public void Put_NullWorkMode_IsNotWritten()
+    {
+        using TempDataDir dataDir = new();
+        RoomSessionStore store = new(dataDir.Options(), NullLogger<RoomSessionStore>.Instance);
+
+        store.Put("Nova", "room-a", new RoomSessionEntry("sess-a", "claude", null, null, null, DateTimeOffset.UtcNow));
+
+        string json = File.ReadAllText(Path.Combine(dataDir.Path, "room-sessions", "Nova.json"));
+        Assert.DoesNotContain("workMode", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// A file written before Work Modes existed has no <c>workMode</c> key. It must still load, with the
+    /// mode read as null, so existing entries stay valid for a Persona that has none: no migration.
+    /// </summary>
+    [Fact]
+    public void Get_FileWrittenBeforeWorkModes_LoadsWithANullWorkMode()
+    {
+        using TempDataDir dataDir = new();
+        RoomSessionStore store = new(dataDir.Options(), NullLogger<RoomSessionStore>.Instance);
+        store.Put("Nova", "room-a", new RoomSessionEntry("sess-a", "claude", "m1", "e1", "msg-1", DateTimeOffset.UtcNow));
+        string path = Path.Combine(dataDir.Path, "room-sessions", "Nova.json");
+        Assert.DoesNotContain("workMode", File.ReadAllText(path), StringComparison.OrdinalIgnoreCase);
+
+        RoomSessionEntry? entry = store.Get("Nova", "room-a");
+
+        Assert.NotNull(entry);
+        Assert.Equal("sess-a", entry.SessionId);
+        Assert.Null(entry.WorkMode);
+    }
+
     /// <summary><c>Forget</c> removes one Room's entry and leaves the others.</summary>
     [Fact]
     public void Forget_RemovesOneRoom()

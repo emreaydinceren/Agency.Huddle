@@ -44,6 +44,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     private readonly TeammatePaths teammatePaths;
     private readonly TeammateFolderMoves folderMoves;
     private readonly ITeamCatalog teamCatalog;
+    private readonly WorkModePolicy workModePolicy;
 
     /// <summary>Initializes a new instance of the <see cref="DotAcpAgentHostFactory"/> class.</summary>
     /// <param name="options">The bound <see cref="TeamOptions"/>.</param>
@@ -70,6 +71,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
     /// <param name="teammatePaths">Locates each Persona's Work Dir.</param>
     /// <param name="folderMoves">Awaited before creating a Persona's Work Dir, so a rename's Teammate-folder move never races this factory creating a stale copy of it - corrections-B2 item 20.</param>
     /// <param name="teamCatalog">The Teams and their Projects, handed to each Persona's host so its session start can list the Team Memory of the Teams the Persona belongs to (Spec §6.4).</param>
+    /// <param name="workModePolicy">Decides whether a Persona's Work Mode may be sent to its Adapter (ADR-0033).</param>
     public DotAcpAgentHostFactory(
         IOptions<TeamOptions> options,
         IServiceProvider serviceProvider,
@@ -79,7 +81,8 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         SkillStore skills,
         TeammatePaths teammatePaths,
         TeammateFolderMoves folderMoves,
-        ITeamCatalog teamCatalog)
+        ITeamCatalog teamCatalog,
+        WorkModePolicy workModePolicy)
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(serviceProvider);
@@ -90,8 +93,10 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         ArgumentNullException.ThrowIfNull(teammatePaths);
         ArgumentNullException.ThrowIfNull(folderMoves);
         ArgumentNullException.ThrowIfNull(teamCatalog);
+        ArgumentNullException.ThrowIfNull(workModePolicy);
 
         this.options = options.Value;
+        this.workModePolicy = workModePolicy;
         this.teamCatalog = teamCatalog;
         this.serviceProvider = serviceProvider;
         this.loggerFactory = loggerFactory;
@@ -291,6 +296,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             workDir,
             toolServer.Endpoint,
             meta,
-            this.loggerFactory);
+            this.loggerFactory,
+            this.workModePolicy);
     }
 }

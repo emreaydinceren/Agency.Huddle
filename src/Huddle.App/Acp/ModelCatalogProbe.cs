@@ -53,8 +53,14 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     // collide two different (Adapter, Model) pairs onto one cache entry (Spec §6.5). The first
     // component is the RESOLVED profile id, for the same reason modelCache above keys on it
     // rather than the requested id: two spellings of one Adapter must share one effort cache too.
-    private readonly ConcurrentDictionary<string, IReadOnlyList<AgentEffortOption>> effortCache =
+    //
+    // Holds the Work Modes beside the effort ladder (ADR-0033): one throwaway session answers both, so
+    // one probe fills both and one cache entry serves both. The modes held here are UNFILTERED; the
+    // hidden-modes policy is applied on the way out, so it is never baked into a cached answer.
+    private readonly ConcurrentDictionary<string, SessionCatalog> effortCache =
         new(StringComparer.Ordinal);
+
+    private readonly WorkModePolicy workModePolicy;
 
     /// <summary>Builds the probe over its resolver and its process-spawning seam.</summary>
     /// <param name="teammatePaths">Locates the Work Dir root the probe spawns into.</param>
@@ -65,21 +71,25 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     /// <see cref="AdapterProcessProbeRunner"/>; a test substitutes a fake — see
     /// <see cref="IAdapterProbeRunner"/>'s own doc comment for why this seam exists.
     /// </param>
+    /// <param name="workModePolicy">Decides which advertised Work Modes are offered (ADR-0033).</param>
     public ModelCatalogProbe(
         TeammatePaths teammatePaths,
         ILoggerFactory loggerFactory,
         AdapterProfileResolver resolver,
-        IAdapterProbeRunner probeRunner)
+        IAdapterProbeRunner probeRunner,
+        WorkModePolicy workModePolicy)
     {
         ArgumentNullException.ThrowIfNull(teammatePaths);
         ArgumentNullException.ThrowIfNull(loggerFactory);
         ArgumentNullException.ThrowIfNull(resolver);
         ArgumentNullException.ThrowIfNull(probeRunner);
+        ArgumentNullException.ThrowIfNull(workModePolicy);
 
         this.teammatePaths = teammatePaths;
         this.logger = loggerFactory.CreateLogger<ModelCatalogProbe>();
         this.resolver = resolver;
         this.probeRunner = probeRunner;
+        this.workModePolicy = workModePolicy;
     }
 
     public void Dispose()
@@ -132,7 +142,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
                 // default-model answer for this Adapter - store it under the same key
                 // GetEffortLevelsAsync would have probed for itself. The payoff: opening a card and
                 // leaving the model at "Use the agent's default" costs zero extra adapter spawns.
-                this.effortCache[ModelCatalogProbe.EffortCacheKey(profile.Id, null)] = result.EffortLevels;
+                this.effortCache[ModelCatalogProbe.EffortCacheKey(profile.Id, null)] = new SessionCatalog(result.EffortLevels, result.Modes);
             }
 
             return result.Models;
@@ -144,6 +154,30 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     }
 
     public async ValueTask<IReadOnlyList<AgentEffortOption>> GetEffortLevelsAsync(string? adapterId, string? model, CancellationToken cancellationToken)
+    {
+        SessionCatalog catalog = await this.GetSessionCatalogAsync(adapterId, model, cancellationToken).ConfigureAwait(false);
+        return catalog.EffortLevels;
+    }
+
+    /// <inheritdoc/>
+    public async ValueTask<IReadOnlyList<AgentModeOption>> GetWorkModesAsync(string? adapterId, string? model, CancellationToken cancellationToken)
+    {
+        SessionCatalog catalog = await this.GetSessionCatalogAsync(adapterId, model, cancellationToken).ConfigureAwait(false);
+
+        // Filtered here, on the way out, so the cache holds what the Adapter advertised.
+        return this.workModePolicy.Filter(catalog.Modes);
+    }
+
+    /// <summary>
+    /// The throwaway session's effort ladder and Work Modes for one (Adapter, Model), served from the
+    /// shared cache entry or probed once. Both public methods above go through here, which is what makes
+    /// asking for both cost one spawn: a second, modes-only probe would double the Adapter cost the card
+    /// pays on every open.
+    /// </summary>
+    /// <param name="adapterId">The requested Adapter id, or <see langword="null"/> for the default.</param>
+    /// <param name="model">The model id to probe against, or <see langword="null"/> for the Adapter's own default.</param>
+    /// <param name="cancellationToken">Cancels the probe.</param>
+    private async ValueTask<SessionCatalog> GetSessionCatalogAsync(string? adapterId, string? model, CancellationToken cancellationToken)
     {
         // See GetAsync's own comment: resolved once, and keyed on the RESOLVED profile id.
         (AdapterProfile profile, string? warning) = this.resolver.Resolve(adapterId);
@@ -169,12 +203,13 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
             }
 
             (bool succeeded, ProbeResult result) = await this.ProbeAsync(profile, model, cancellationToken).ConfigureAwait(false);
+            SessionCatalog answered = new(result.EffortLevels, result.Modes);
             if (succeeded)
             {
-                this.effortCache[key] = result.EffortLevels;
+                this.effortCache[key] = answered;
             }
 
-            return result.EffortLevels;
+            return answered;
         }
         finally
         {
@@ -222,13 +257,19 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     /// <param name="model">The model id, or <see langword="null"/> for the Adapter's own default.</param>
     private static string EffortCacheKey(string profileId, string? model) => $"{profileId}{model}";
 
-    /// <summary>The two catalogs one throwaway session can answer, read off the same session.</summary>
+    /// <summary>The catalogs one throwaway session can answer, read off the same session.</summary>
     private sealed record ProbeResult(
         IReadOnlyList<AgentModelOption> Models,
-        IReadOnlyList<AgentEffortOption> EffortLevels)
+        IReadOnlyList<AgentEffortOption> EffortLevels,
+        IReadOnlyList<AgentModeOption> Modes)
     {
-        internal static ProbeResult Empty { get; } = new ProbeResult([], []);
+        internal static ProbeResult Empty { get; } = new ProbeResult([], [], []);
     }
+
+    /// <summary>The effort ladder and the Work Modes of one (Adapter, Model), cached as a pair because one probe answers both.</summary>
+    private sealed record SessionCatalog(
+        IReadOnlyList<AgentEffortOption> EffortLevels,
+        IReadOnlyList<AgentModeOption> Modes);
 
     private async Task<(bool Succeeded, ProbeResult Result)> ProbeAsync(AdapterProfile profile, string? model, CancellationToken cancellationToken)
     {
@@ -257,7 +298,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
         try
         {
             AdapterProbeOutcome outcome = await this.probeRunner.RunAsync(processOptions, probeCwd, model, timeoutCts.Token).ConfigureAwait(false);
-            return (true, new ProbeResult(outcome.Models, ModelCatalogProbe.WithoutAdapterDefault(outcome.EffortLevels)));
+            return (true, new ProbeResult(outcome.Models, ModelCatalogProbe.WithoutAdapterDefault(outcome.EffortLevels), outcome.Modes));
         }
         catch (AgentAuthenticationRequiredException ex)
         {
