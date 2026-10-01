@@ -123,6 +123,17 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   see [the Adapter commands spec](../Huddle.Commands-Specifications.md).
 : *Avoid*: slash command on its own (`/invite` is Huddle's), skill, tool.
 
+**Prompt block**
+: A part of one Turn's prompt that is not its text: an image the Human's own Message names, or, for an
+  Adapter with no file tools, a document's text as an embedded resource. Sent beside the text, never
+  instead of it, and only when the Adapter said at `initialize` that it takes one and its Adapter
+  Profile's `PromptBlocks` allows it. Only the Message that started the Turn can contribute one, never
+  Catch-up. A document that is not sent as a block keeps its path line, which says whether the file is
+  included with the message. Built 2026-10-01; see [the Prompt blocks design](../Huddle.PromptBlocks-Specifications.md)
+  and [ADR-0036](../adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md).
+: *Avoid*: attachment (that is the Human attaching a file in the composer, roadmap item 23 B, not
+  built), upload, content block outside `Huddle.Acp`.
+
 ## Conversations
 
 **Room**

@@ -137,6 +137,8 @@ internal sealed class DotAcpPersonaHost : IPersonaHost
 
     public bool CanResume => this.inner.Info.SupportsResumeSession;
 
+    public AgentPromptCapabilities PromptCapabilities => this.inner.Info.PromptCapabilities ?? AgentPromptCapabilities.None;
+
     public async Task<IAgentSession> OpenAsync(CancellationToken cancellationToken)
     {
         return await this.inner.StartSessionAsync(this.BuildOptions(), cancellationToken).ConfigureAwait(false);

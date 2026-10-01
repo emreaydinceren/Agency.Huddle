@@ -130,8 +130,54 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
     /// <summary>Exposed for diagnostics; the logger this session was created with.</summary>
     internal ILogger Logger => this.logger;
 
-    public async Task<PromptResult> PromptAsync(string text, CancellationToken cancellationToken)
+    /// <summary>
+    /// Builds the wire content: one text block first, then each Prompt block in order. With no blocks
+    /// the array is exactly the single text block a text-only prompt has always sent.
+    /// </summary>
+    /// <param name="prompt">The prompt to map.</param>
+    /// <returns>The ACP content blocks, text first.</returns>
+    private static dotacp.protocol.ContentBlock[] MapPrompt(AgentPrompt prompt)
     {
+        IReadOnlyList<AgentPromptBlock> blocks = prompt.Blocks ?? [];
+        List<dotacp.protocol.ContentBlock> content = new(blocks.Count + 1)
+        {
+            new dotacp.protocol.TextContent { Text = prompt.Text },
+        };
+
+        foreach (AgentPromptBlock block in blocks)
+        {
+            switch (block)
+            {
+                case AgentImageBlock image:
+                    content.Add(new dotacp.protocol.ImageContent
+                    {
+                        Data = Convert.ToBase64String(image.Data.Span),
+                        MimeType = image.MimeType,
+                    });
+                    break;
+                case AgentTextResourceBlock resource:
+                    content.Add(new dotacp.protocol.EmbeddedResource
+                    {
+                        Resource = new dotacp.protocol.TextResourceContents
+                        {
+                            Uri = resource.Uri,
+                            MimeType = resource.MimeType,
+                            Text = resource.Text,
+                        },
+                    });
+                    break;
+                default:
+                    throw new NotSupportedException($"Prompt block type {block.GetType().Name} has no ACP mapping.");
+            }
+        }
+
+        return content.ToArray();
+    }
+
+    public async Task<PromptResult> PromptAsync(AgentPrompt prompt, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(prompt);
+
         CancellationTokenSource promptTokenSource;
         lock (this.gate)
         {
@@ -151,7 +197,7 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
                 new dotacp.protocol.PromptRequest
                 {
                     SessionId = this.SessionId,
-                    Prompt = new dotacp.protocol.ContentBlock[] { new dotacp.protocol.TextContent { Text = text } },
+                    Prompt = DotAcpAgentSession.MapPrompt(prompt),
                 },
                 cancellationToken).ConfigureAwait(false);
 

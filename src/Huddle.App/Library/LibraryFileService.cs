@@ -377,6 +377,74 @@ internal sealed class LibraryFileService(
     }
 
     /// <summary>
+    /// Reads an image for a Prompt block (design §6.3): re-resolves the path against the current
+    /// roots, confirms by magic bytes that it is a raster image, refuses it over
+    /// <paramref name="maxBytes"/> before reading it and again while reading, and refuses a header whose
+    /// longest side is over <paramref name="maxEdgePixels"/>. SVG is never an image here.
+    /// </summary>
+    /// <param name="file">The file to read; re-resolved before use, so a stale path is never trusted.</param>
+    /// <param name="maxBytes">The most bytes accepted; zero or less accepts nothing.</param>
+    /// <param name="maxEdgePixels">The longest side accepted, in pixels.</param>
+    /// <param name="ct">Cancels the read; cancellation propagates and is not a refusal.</param>
+    /// <returns>The image, or a refusal saying why it will not be sent.</returns>
+    internal async Task<LibraryImageResult> ReadImageAsync(LibraryPath file, int maxBytes, int maxEdgePixels, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        ct.ThrowIfCancellationRequested();
+
+        if (maxBytes < 1)
+        {
+            return new LibraryImageRefused(LibraryImageRefusal.TooLarge);
+        }
+
+        if (!this.resolver.TryResolve(file.Root.Id, file.RelativePath, out LibraryPath? fresh, out _) || !fresh.IsFile)
+        {
+            return new LibraryImageRefused(LibraryImageRefusal.Unreadable);
+        }
+
+        try
+        {
+            await using FileStream stream = new(fresh.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            if (stream.Length > maxBytes)
+            {
+                return new LibraryImageRefused(LibraryImageRefusal.TooLarge);
+            }
+
+            using MemoryStream buffer = new((int)stream.Length);
+            byte[] chunk = new byte[81920];
+            int read;
+            while ((read = await stream.ReadAsync(chunk, ct)) > 0)
+            {
+                if (buffer.Length + read > maxBytes)
+                {
+                    return new LibraryImageRefused(LibraryImageRefusal.TooLarge);
+                }
+
+                buffer.Write(chunk, 0, read);
+            }
+
+            byte[] bytes = buffer.ToArray();
+            string? mimeType = LibraryFileKinds.ImageContentType(bytes);
+            if (mimeType is null || !ImageHeader.TryReadSize(bytes, out int width, out int height))
+            {
+                return new LibraryImageRefused(LibraryImageRefusal.NotAnImage);
+            }
+
+            return Math.Max(width, height) > maxEdgePixels
+                ? new LibraryImageRefused(LibraryImageRefusal.TooManyPixels)
+                : new LibraryImageRead(mimeType, bytes, width, height);
+        }
+        catch (IOException)
+        {
+            return new LibraryImageRefused(LibraryImageRefusal.Unreadable);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return new LibraryImageRefused(LibraryImageRefusal.Unreadable);
+        }
+    }
+
+    /// <summary>
     /// Writes <paramref name="editorText"/> to <paramref name="file"/> (Spec §6.4 <c>WriteTextAsync</c>;
     /// ADR-0028): re-resolves the path first (corrections-B4 item 12, never trusting the caller's
     /// <c>FullPath</c>), re-checks editability at write time (item 13), refuses a Teammate definition's

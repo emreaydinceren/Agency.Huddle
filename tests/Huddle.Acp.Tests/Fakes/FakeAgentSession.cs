@@ -18,6 +18,8 @@ internal sealed class FakeAgentSession : IAgentSession
 
     private readonly List<string> prompts = new List<string>();
 
+    private readonly List<AgentPrompt> agentPrompts = new List<AgentPrompt>();
+
     private readonly Channel<AgentEvent> outputChannel = System.Threading.Channels.Channel.CreateUnbounded<AgentEvent>(
         new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
 
@@ -48,6 +50,18 @@ internal sealed class FakeAgentSession : IAgentSession
         }
     }
 
+    /// <summary>Every <see cref="AgentPrompt"/> received, in order, with its blocks; <see cref="Prompts"/> keeps only the text.</summary>
+    internal IReadOnlyList<AgentPrompt> AgentPrompts
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.agentPrompts.ToArray();
+            }
+        }
+    }
+
     internal int CancelCount => Volatile.Read(ref this.cancelCount);
 
     internal bool Disposed { get; private set; }
@@ -64,17 +78,18 @@ internal sealed class FakeAgentSession : IAgentSession
 
     public string? CurrentModeId => null;
 
-    public async Task<PromptResult> PromptAsync(string text, CancellationToken cancellationToken)
+    public async Task<PromptResult> PromptAsync(AgentPrompt prompt, CancellationToken cancellationToken)
     {
         lock (this.gate)
         {
-            this.prompts.Add(text);
+            this.prompts.Add(prompt.Text);
+            this.agentPrompts.Add(prompt);
         }
 
         Func<string, Task<PromptResult>>? handler = this.OnPrompt;
         if (handler is not null)
         {
-            return await handler(text).ConfigureAwait(false);
+            return await handler(prompt.Text).ConfigureAwait(false);
         }
 
         return await this.WaitForTurnCompletedAsync(cancellationToken).ConfigureAwait(false);

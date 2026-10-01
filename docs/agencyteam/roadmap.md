@@ -50,6 +50,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | 20 | An Agent asks the Human before a tool runs — **proposed 2026-09-30, not built** | a new approval handler wrapping `WorkDirPermissionHandler`, a pending-approval store, an approval card in the Room, and a pause in `RoomSession`'s idle watchdog | `IPermissionHandler` is already the seam, `session/request_permission` already arrives and is answered, and Stop already cancels a waiting request — see [item 20](#20-an-agent-asks-the-human-before-a-tool-runs--proposed-2026-09-30-not-built) |
 | 21 | Turn detail: an Edit preview and Spend — **built 2026-09-30 (V1); Adapter commands built 2026-09-30 as [their own spec](../Huddle.Commands-Specifications.md); Plan and Thinking not built** | `Drafts` and `MessageList.razor` for the preview; a new `PersonaSpend` and `TeammateCard.razor` for Spend | `diff`, `locations` and `cost` already arrive and `SessionUpdateMapper` drops them. No protocol bump: every change is an optional field on `ToolActivity`, and Spend never crosses the pipe. Item 20's approval card reuses the preview — see [the Turn detail spec](../Huddle.TurnDetail-Specifications.md) |
 | 22 | A Persona has a Work Mode — **phase 1 delivered (code) 2026-09-30; phases 2 and 3 designed, not built** | `Persona`, `PersonaWorkModeStore`, `DotAcpAgentHost`'s option application, `WorkModePolicy`, `TeammateCard.razor` | shipped as a setting beside Model and Effort, applied with `session/set_config_option` and read back. Not a smarter permission handler: a mode changes what the Adapter will *try*. The live per-Room switch and non-blocking plan approval are the next two phases — see [item 22](#22-a-persona-has-a-work-mode--phase-1-delivered-code-2026-09-30) and [ADR-0033](../adr/0033-a-persona-has-a-work-mode.md) |
+| 23 | Non-text prompts — **A built 2026-10-01 (live checks passed); B (the Human attaches a file to a Message) proposed, not built** | A (done): `LibraryDocumentCollector`, `RoomSession`, then `IAgentSession.PromptAsync`. B: `Composer.razor`, then wherever the bytes are kept | `claude-agent-acp` advertises `image` and `embeddedContext` and `dotacp` types the blocks; A now sends a named image, and for an Adapter with no file tools a document's text, as Prompt blocks ([ADR-0036](../adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md)). B's cheapest route reuses A — see [item 23](#23-non-text-prompts--a-designed-2026-10-01-b-proposed-neither-built) and [the Prompt blocks spec](../Huddle.PromptBlocks-Specifications.md) |
 
 ## 1. Renaming a Teammate
 
@@ -1532,3 +1533,58 @@ produces no permission request.
 **Item 20 is unchanged.** The Human's decision that auto-approve is acceptable for now stands.
 This adds one refusal, the plan guard, and a way to choose a mode. Nothing asks the Human before
 a tool runs.
+
+## 23. Non-text prompts — A designed 2026-10-01, B proposed, neither built
+
+> **A was built on 2026-10-01 and its live checks passed; B is proposed and not built or scheduled.**
+> A has a spec, [Huddle.PromptBlocks-Specifications.md](../Huddle.PromptBlocks-Specifications.md), and
+> [ADR-0036](../adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md); B has only this
+> entry. Nothing is decided about B except what is recorded below. (The heading above is kept as
+> written so the table's link to it still resolves.)
+
+**A, in one paragraph.** A Turn sends the Adapter one text block today. A has the Turn also send an
+`image` block for each image the Human's own Message names by Library path, but only when the
+Adapter advertised `promptCapabilities.image`, within byte, count and pixel caps, and falling back
+to today's path line for anything that does not qualify. Nothing about a Message, the Transcript
+or the wire changes.
+
+**B, the Human attaches a file to a Message.** Paste an image into the composer, or drop a file on
+it, and the Agent sees it. Today there is no way to do that: `known-limits.md` lists attachments as
+absent, and `ChatMessage` is `(Id, Timestamp, SenderId, SenderName, Text)`.
+
+What already exists:
+
+- `Composer.razor` and the `Chat.razor` page it sits in.
+- The Library identifies an image by its **magic bytes** and serves one only on that evidence
+  (`LibraryFilesEndpoint`), and avatars already accept an upload on the same rule (`AvatarImage`).
+  Both refuse SVG.
+- [ADR-0030](../adr/0030-a-team-folder-is-its-library-and-holds-its-tasks.md) reserves every
+  other `_`-prefixed folder under a Team for "future per-Team data such as attachments", and the
+  Tasks design lists a sibling `<ID>/` folder as its own V2 attachment home.
+- A, once built, delivers any Library image a Message names, and has no idea where it came from.
+
+Two routes, and they differ in how much of the app they touch:
+
+- **Cheapest: save, then name.** The composer writes the pasted file into a folder for that Room
+  under a Library Root and inserts its path into the Message text. A then delivers it unchanged: no
+  field on `ChatMessage`, no Transcript or wire change, and an external Agent over the pipe sees the
+  path like any other. The costs are a home for those files and their clean-up, the Human's text
+  gaining a long path they did not type, and a Message that now names a file the Human might later
+  move.
+- **Heavier: a first-class attachment.** `ChatMessage` gains an optional `Attachments` member (an
+  additive wire change, so no `ProtocolVersion` bump, as ADR-0004 and ADR-0006 set the precedent), the
+  JSONL line gains a field ([ADR-0002](../adr/0002-jsonl-file-per-room.md)), the bytes need a store,
+  and a pipe Agent sees text only unless the protocol carries them too. It is the right shape if
+  attachments must outlive a Library folder or show as a chip in the Transcript.
+
+Rules that bind either route, from [rules.md](rules.md): identify a file by magic bytes and never by
+extension or a client-supplied type; never accept SVG; serve a run-time file through
+`UseStaticFiles` and a `PhysicalFileProvider`, not `MapStaticAssets`; and keep persisted state in a
+sibling table rather than a new column.
+
+**Not decided.** Which route. Where a Room's folder lives and when it is cleaned. Whether the Human
+should see what was sent, which the Prompt blocks spec leaves to B (its D-14), because there the
+Human did not write the path. Whether a pipe Agent should ever receive the bytes.
+
+**Single place to change.** `Composer.razor` for the control. After that it depends on the route: the
+Library for the cheap one, `ChatMessage`, the Transcript store and the pipe contract for the heavy one.

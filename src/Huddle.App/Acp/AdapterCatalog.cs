@@ -71,7 +71,8 @@ internal sealed class AdapterCatalog
                     ReadsFiles: true,
                     IsolateUserSettings: true,
                     SessionPerRoom: true,
-                    Commands: ["compact"]),
+                    Commands: ["compact"],
+                    PromptBlocks: true),
             ];
         }
 
@@ -90,7 +91,8 @@ internal sealed class AdapterCatalog
                 ReadsFiles: entry.ReadsFiles,
                 IsolateUserSettings: entry.IsolateUserSettings,
                 SessionPerRoom: entry.SessionPerRoom,
-                Commands: AdapterCatalog.CopyCommands(entry.Commands)));
+                Commands: AdapterCatalog.CopyCommands(entry.Commands),
+                PromptBlocks: entry.PromptBlocks));
         }
 
         return profiles;
