@@ -56,7 +56,7 @@
         </HuddleSegmentedControl>
 
         <MudText Typo="Typo.subtitle2">Fields shown</MudText>
-        <MudDropContainer T="string" Items="this.FieldKeys()" ItemsSelector="@((_, _) => true)"
+        <MudDropContainer T="string" @ref="this.fieldsContainer" Items="this.FieldKeys()" ItemsSelector="@((_, _) => true)"
                            ItemDropped="this.OnFieldDropped" Class="view-editor-fields">
             <ChildContent>
                 <MudDropZone T="string" Identifier="fields" AllowReorder="true" />
@@ -167,7 +167,7 @@
         </MudSelect>
 
         <MudText Typo="Typo.subtitle2">Grouping order</MudText>
-        <MudDropContainer T="TaskGroupField" Items="this.grouping" ItemsSelector="@((_, _) => true)"
+        <MudDropContainer T="TaskGroupField" @ref="this.groupingContainer" Items="this.grouping" ItemsSelector="@((_, _) => true)"
                            ItemDropped="this.OnGroupingDropped" Class="view-editor-grouping">
             <ChildContent>
                 <MudDropZone T="TaskGroupField" Identifier="grouping" AllowReorder="true" />
@@ -185,7 +185,7 @@
         </MudMenu>
 
         <MudText Typo="Typo.subtitle2">Sorting</MudText>
-        <MudDropContainer T="SortKey" Items="this.sort" ItemsSelector="@((_, _) => true)"
+        <MudDropContainer T="SortKey" @ref="this.sortContainer" Items="this.sort" ItemsSelector="@((_, _) => true)"
                            ItemDropped="this.OnSortDropped" Class="view-editor-sort">
             <ChildContent>
                 <MudDropZone T="SortKey" Identifier="sort" AllowReorder="true" />
@@ -299,6 +299,16 @@
     private List<SortKey> sort = [];
     private List<BoardColumn> columns = [];
 
+    // MudDropContainer keeps its own copy of Items and of the rendered ItemRenderer output, and a parent
+    // re-render does not refresh either (agents/BlazorTesting.md). Each container is therefore refreshed
+    // by hand in OnAfterRender whenever the signature of what it shows has changed since it last drew.
+    private MudDropContainer<string>? fieldsContainer;
+    private MudDropContainer<TaskGroupField>? groupingContainer;
+    private MudDropContainer<SortKey>? sortContainer;
+    private string? fieldsSignature;
+    private string? groupingSignature;
+    private string? sortSignature;
+
     /// <summary>Whether every control should be disabled: <see cref="ViewStore.LoadError"/> makes the whole file read-only (Spec §13.5, "every control is disabled").</summary>
     private bool ControlsDisabled => this.ViewStore.LoadError is not null;
 
@@ -307,6 +317,31 @@
 
     /// <summary>Subscribes to <see cref="ViewStore.ViewsChanged"/> so an external Save re-seeds the draft (item 4), unless it is dirty.</summary>
     protected override void OnInitialized() => this.ViewStore.ViewsChanged += this.OnViewsChanged;
+
+    /// <summary>Repaints the Fields, Grouping and Sort drop containers when their draft changed, since a parent render alone leaves them showing the previous rows.</summary>
+    protected override void OnAfterRender(bool firstRender)
+    {
+        string fields = string.Join('|', this.fieldRows.Select(row => $"{row.Key}:{row.Shown}"));
+        if (!string.Equals(fields, this.fieldsSignature, StringComparison.Ordinal))
+        {
+            this.fieldsSignature = fields;
+            this.fieldsContainer?.Refresh();
+        }
+
+        string grouping = string.Join('|', this.grouping);
+        if (!string.Equals(grouping, this.groupingSignature, StringComparison.Ordinal))
+        {
+            this.groupingSignature = grouping;
+            this.groupingContainer?.Refresh();
+        }
+
+        string sorting = string.Join('|', this.sort.Select(key => $"{key.Field}:{key.Direction}"));
+        if (!string.Equals(sorting, this.sortSignature, StringComparison.Ordinal))
+        {
+            this.sortSignature = sorting;
+            this.sortContainer?.Refresh();
+        }
+    }
 
     /// <summary>Unsubscribes from <see cref="ViewStore.ViewsChanged"/> (rules.md: every subscriber to a singleton hub must unsubscribe).</summary>
     public void Dispose() => this.ViewStore.ViewsChanged -= this.OnViewsChanged;

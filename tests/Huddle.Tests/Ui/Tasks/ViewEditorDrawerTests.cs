@@ -179,6 +179,33 @@ public sealed class ViewEditorDrawerTests
         Assert.Equal(["status", "priority"], persisted.Fields);
     }
 
+    /// <summary>The Fields list paints the saved View's fields on open, and repaints when a field is added or removed - a parent render alone leaves <c>MudDropContainer</c> showing stale rows.</summary>
+    [Fact]
+    public async Task Fields_RenderedRows_FollowTheDraft()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
+        TaskView saved = Save(harness, "v1", ViewKind.List, fields: ["status", "priority"]);
+
+        await using MudBunitContext ctx = NewContext(harness);
+        IRenderedComponent<ContainerFragment> root = RenderDrawer(ctx, saved.Id);
+        IRenderedComponent<ViewEditorDrawer> drawer = root.FindComponent<ViewEditorDrawer>();
+
+        Assert.Equal(2, root.FindAll(".view-editor-field-row").Count);
+
+        await OpenMenuAsync(root, drawer, ".view-editor-fields-add");
+        var assigneeOption = root.FindAll(".view-editor-fields-add-option").Single(el => string.Equals(el.TextContent.Trim(), "assignee", StringComparison.Ordinal));
+        await root.InvokeAsync(() => assigneeOption.ClickAsync());
+
+        Assert.Equal(3, root.FindAll(".view-editor-field-row").Count);
+        Assert.NotEmpty(root.FindAll(".view-editor-field-remove-assignee"));
+
+        await ClickAsync(root, drawer, ".view-editor-field-remove-status");
+
+        Assert.Equal(2, root.FindAll(".view-editor-field-row").Count);
+        Assert.Empty(root.FindAll(".view-editor-field-remove-status"));
+    }
+
     /// <summary>Switching a Field's row off and saving excludes it from the saved <see cref="TaskView.Fields"/>, without disturbing the order of the fields still on.</summary>
     [Fact]
     public async Task Fields_SwitchOff_ExcludesTheFieldOnSave_KeepsOtherOrder()
