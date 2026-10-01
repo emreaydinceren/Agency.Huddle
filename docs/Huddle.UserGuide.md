@@ -629,9 +629,14 @@ are built in. Select **New view** to make your own.
 | Scope | **Active** or **Closed** Tasks |
 | Filters | Team, Project, Assignee, Status, Priority, and Blocked / Unblocked / All |
 | Fields shown, grouping, sorting | As you choose. Boards also let you rename, hide and reorder columns. |
+| Dense | Compact or roomier rows in a List. On by default. |
 
-The toolbar above a View lets you filter, group, search and switch List/Board
-for the current visit only. **Save to view** keeps those changes.
+In a List, Tags show as label chips and the Assignee as a chip with their
+avatar. The View editor opens in a side panel; drag its left edge to resize it.
+
+The toolbar above a View lets you filter, group, search, switch List/Board and
+turn **Dense** on or off for the current visit only. **Save to view** keeps those
+changes.
 
 **In the background:** Views are saved to `views.json` in the data root. If that
 file has a syntax error, Huddle shows the line and column and makes Views
