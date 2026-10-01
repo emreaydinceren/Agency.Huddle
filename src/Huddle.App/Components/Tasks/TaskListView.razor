@@ -20,10 +20,12 @@
 *@
 
 @using System.Globalization
+@using Agency.Huddle.App.Avatars
+@inject AvatarStore AvatarStore
 @inject TimeProvider Clock
 @inject TaskStore Store
 
-<MudDataGrid T="TaskItem" @key="@this.View.Id" Items="@this.Tasks" ReadOnly="true" Dense="true" Hover="true"
+<MudDataGrid T="TaskItem" @key="@this.View.Id" Items="@this.Tasks" ReadOnly="true" Dense="@(this.View.Dense ?? true)" Hover="true"
              Groupable="true" GroupExpanded="true" ShowColumnOptions="false" Filterable="false"
              RowClick="@this.OnRowClickAsync" RowClassFunc="@this.RowClass">
     <Columns>
@@ -67,7 +69,21 @@
                                      SortBy="@(t => (object)(t.Assignee ?? string.Empty))"
                                      Grouping="@this.IsGrouped(TaskGroupField.Assignee)" GroupByOrder="@this.GroupOrder(TaskGroupField.Assignee)"
                                      GroupBy="@(t => this.GroupSortKey(t, TaskGroupField.Assignee))">
-                        <CellTemplate>@(context.Item.Assignee ?? "Unassigned")</CellTemplate>
+                        <CellTemplate>
+                            @if (context.Item.Assignee is { } assignee)
+                            {
+                                <MudChip T="string" Size="Size.Small" Class="task-list-assignee">
+                                    <AvatarContent>
+                                        <TeammateAvatar Name="@assignee" Avatar="this.AvatarStore.Get(assignee)" />
+                                    </AvatarContent>
+                                    <ChildContent>@assignee</ChildContent>
+                                </MudChip>
+                            }
+                            else
+                            {
+                                @("Unassigned")
+                            }
+                        </CellTemplate>
                         <GroupTemplate>@this.GroupHeading(context, TaskGroupField.Assignee)</GroupTemplate>
                     </TemplateColumn>
                     break;
@@ -111,7 +127,12 @@
                     break;
                 case "tags":
                     <TemplateColumn @key="key" T="TaskItem" Title="Tags" Hidden="@(!this.Shows("tags"))" Sortable="false">
-                        <CellTemplate>@string.Join(", ", context.Item.Tags)</CellTemplate>
+                        <CellTemplate>
+                            @foreach (string tag in context.Item.Tags)
+                            {
+                                <MudChip T="string" Label="true" Size="Size.Small" Class="task-list-tag">@tag</MudChip>
+                            }
+                        </CellTemplate>
                     </TemplateColumn>
                     break;
                 case "start_date":

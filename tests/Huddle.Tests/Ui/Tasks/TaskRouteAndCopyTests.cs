@@ -236,6 +236,7 @@ public sealed class TaskRouteAndCopyTests
         await using MudBunitContext ctx = new();
         ctx.Services.AddSingleton(TimeProvider.System);
         ctx.Services.AddSingleton(store);
+        ctx.Services.AddSingleton(new Agency.Huddle.App.Avatars.AvatarStore(dataDir.Options(), Microsoft.Extensions.Logging.Abstractions.NullLogger<Agency.Huddle.App.Avatars.AvatarStore>.Instance));
         var cut = ctx.RenderWithPopovers(builder =>
         {
             builder.OpenComponent<TaskListView>(0);
