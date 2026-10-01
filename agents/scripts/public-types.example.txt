@@ -30,6 +30,7 @@ ViewKind
 ViewScope
 TaskGroupField
 SortDirection
+BlockedFilter
 BoardModel
 BoardLane
 BoardCell
