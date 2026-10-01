@@ -602,4 +602,89 @@ public sealed class SessionUpdateMapperTests
 
         Assert.Null(result);
     }
+
+    /// <summary>
+    /// The live case: dotacp deserialises <c>rawInput</c> with Newtonsoft, so the value is a
+    /// <c>JObject</c>, not a <see cref="JsonElement"/>. <c>System.Text.Json</c> turns a <c>JObject</c>
+    /// into <c>{"file_path":[],"content":[]}</c>, which is what made the <c>~/.claude</c> guard approve
+    /// every write. The values must survive.
+    /// </summary>
+    [Fact]
+    public void SerializeRaw_NewtonsoftJObject_KeepsEveryValue()
+    {
+        Newtonsoft.Json.Linq.JObject raw = Newtonsoft.Json.Linq.JObject.Parse("{\"file_path\":\"C:\\\\x\\\\a.md\",\"content\":\"gamma\",\"count\":3,\"nested\":{\"flag\":true},\"items\":[1,2]}");
+
+        string? result = SessionUpdateMapper.SerializeRaw(raw);
+
+        Assert.NotNull(result);
+        using JsonDocument document = JsonDocument.Parse(result);
+        JsonElement root = document.RootElement;
+        Assert.Equal("C:\\x\\a.md", root.GetProperty("file_path").GetString());
+        Assert.Equal("gamma", root.GetProperty("content").GetString());
+        Assert.Equal(3, root.GetProperty("count").GetInt32());
+        Assert.True(root.GetProperty("nested").GetProperty("flag").GetBoolean());
+        Assert.Equal(2, root.GetProperty("items").GetArrayLength());
+    }
+
+    /// <summary>A bare Newtonsoft string token (a <c>rawOutput</c> that is plain text) serialises as a JSON string, as it did before.</summary>
+    [Fact]
+    public void SerializeRaw_NewtonsoftStringToken_IsAJsonString()
+    {
+        Newtonsoft.Json.Linq.JValue raw = new("done");
+
+        string? result = SessionUpdateMapper.SerializeRaw(raw);
+
+        Assert.Equal("\"done\"", result);
+    }
+
+    /// <summary>A <see cref="JsonElement"/> still serialises to its own text: the fix adds a case, it does not replace one.</summary>
+    [Fact]
+    public void SerializeRaw_JsonElement_KeepsItsText()
+    {
+        JsonElement raw = JsonSerializer.Deserialize<JsonElement>("{\"path\":\"x\"}");
+
+        string? result = SessionUpdateMapper.SerializeRaw(raw);
+
+        Assert.Equal("{\"path\":\"x\"}", result);
+    }
+
+    /// <summary>
+    /// A permission request read off the wire the way the client reads it (Newtonsoft) maps to a tool
+    /// call whose <see cref="ToolCallInfo.RawInputJson"/> still names the path. <c>WorkDirPermissionHandler</c>
+    /// reads <c>file_path</c> from exactly this string.
+    /// </summary>
+    [Fact]
+    public void MapPermission_RequestReadFromTheWire_RawInputJsonCarriesTheFilePath()
+    {
+        const string Wire = "{\"toolCall\":{\"toolCallId\":\"t1\",\"title\":\"Write a.md\",\"kind\":\"edit\",\"status\":\"pending\",\"rawInput\":{\"file_path\":\"C:/Users/x/.claude/a.md\",\"content\":\"gamma\"}},\"options\":[{\"optionId\":\"allow-once\",\"name\":\"Yes\",\"kind\":\"allow_once\"}],\"sessionId\":\"s\"}";
+        dotacp.protocol.RequestPermissionRequest request = Newtonsoft.Json.JsonConvert.DeserializeObject<dotacp.protocol.RequestPermissionRequest>(Wire)
+            ?? throw new InvalidOperationException("The wire text did not deserialise.");
+
+        PermissionRequestContext context = SessionUpdateMapper.MapPermission(request);
+
+        Assert.NotNull(context.ToolCall.RawInputJson);
+        using JsonDocument document = JsonDocument.Parse(context.ToolCall.RawInputJson);
+        Assert.Equal("C:/Users/x/.claude/a.md", document.RootElement.GetProperty("file_path").GetString());
+    }
+
+    /// <summary>The same holds for a streamed <c>tool_call_update</c>: its input and output keep their values when they arrive as Newtonsoft tokens.</summary>
+    [Fact]
+    public void Map_ToolCallUpdateWithNewtonsoftInputAndOutput_KeepsTheValues()
+    {
+        dotacp.protocol.SessionUpdateToolCallUpdate update = new dotacp.protocol.SessionUpdateToolCallUpdate
+        {
+            ToolCallId = "call-1",
+            Title = "Edit a.md",
+            Kind = dotacp.protocol.ToolKind.Edit,
+            Status = dotacp.protocol.ToolCallStatus.Completed,
+            RawInput = Newtonsoft.Json.Linq.JObject.Parse("{\"file_path\":\"a.md\"}"),
+            RawOutput = Newtonsoft.Json.Linq.JObject.Parse("{\"result\":\"ok\"}"),
+        };
+
+        AgentEvent result = SessionUpdateMapper.Map("s", update);
+
+        ToolCallUpdated updated = Assert.IsType<ToolCallUpdated>(result);
+        Assert.Equal("{\"file_path\":\"a.md\"}", updated.RawInputJson);
+        Assert.Equal("{\"result\":\"ok\"}", updated.RawOutputJson);
+    }
 }

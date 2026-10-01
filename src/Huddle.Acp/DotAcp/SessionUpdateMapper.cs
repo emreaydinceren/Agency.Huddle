@@ -265,14 +265,23 @@ internal static class SessionUpdateMapper
         return new ToolCallLocationInfo(first.Path, line);
     }
 
+    /// <summary>
+    /// Writes a tool call's <c>rawInput</c> or <c>rawOutput</c> as JSON text. dotacp reads those fields
+    /// with Newtonsoft, so on the wire path the value is a <c>JToken</c>, and <c>System.Text.Json</c>
+    /// walks a <c>JToken</c> as a sequence of its children: <c>{"file_path":"x"}</c> comes out as
+    /// <c>{"file_path":[]}</c>. A <c>JToken</c> is therefore written by Newtonsoft; anything else (a
+    /// <see cref="JsonElement"/>, a plain object) keeps going through <c>System.Text.Json</c>.
+    /// </summary>
+    /// <param name="raw">The deserialised field, or <see langword="null"/> when it was absent.</param>
+    /// <returns>The JSON text, or <see langword="null"/> when <paramref name="raw"/> is.</returns>
     internal static string? SerializeRaw(object? raw)
     {
-        if (raw is null)
+        return raw switch
         {
-            return null;
-        }
-
-        return JsonSerializer.Serialize(raw);
+            null => null,
+            Newtonsoft.Json.Linq.JToken token => Newtonsoft.Json.JsonConvert.SerializeObject(token),
+            _ => JsonSerializer.Serialize(raw),
+        };
     }
 
     internal static string ContentText(dotacp.protocol.ContentBlock block, out bool isText)
