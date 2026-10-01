@@ -16,6 +16,7 @@ using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 using Agency.Huddle.Tests.Acp.Tools;
@@ -550,7 +551,7 @@ public sealed class TaskDetailTests
             FileChatStore chatStore = new(this.options, NullLogger<FileChatStore>.Instance);
             RoomEvents roomEvents = new(NullLogger<RoomEvents>.Instance);
             ProposalStore proposals = new(roomEvents);
-            ChatService chat = new(this.directory, chatStore, roomEvents, new FakeMentionAliasSource(), this.options, proposals, NullLogger<ChatService>.Instance);
+            ChatService chat = new(this.directory, chatStore, roomEvents, new FakeMentionAliasSource(), this.options, proposals, new QuestionStore(roomEvents), NullLogger<ChatService>.Instance);
             OwnPosts ownPosts = new(this.options);
 
             this.triggers = new TaskTriggerService(

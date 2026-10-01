@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 date: 2026-09-22
 ---
 
@@ -31,10 +31,14 @@ options, and ending with a Mention of the asker:
 
 ```markdown
 > What is your main goal?
+
 Strength
 
 @Coach
 ```
+
+A blank line separates each quote from its answer. Directly under `> question`, the answer
+would be a lazy continuation of the blockquote in CommonMark and render inside the Agent's quote.
 
 That Message wakes the asker through the ordinary Reply Gate, resets the Budget because the
 Human spoke, and stays in the Transcript for every other Member to read. Nothing crosses the
@@ -47,8 +51,10 @@ another Teammate Mentions them in a Message, as it always has.
 
 A tool that waited for the Human would hold a Turn open for as long as the Human took to
 answer. That runs straight into `Acp:TurnIdleTimeoutSeconds`, which would report a hung
-Adapter. It would also block that Agent's work in every other Room, because one session spans
-them all. A Message costs none of this, and reuses the Reply Gate, the Budget and the
+Adapter. It would also hold that Persona's Turn slot, and `Acp:MaxConcurrentTurns` is 1 by
+default, so the Agent's work in every other Room would stall. ([ADR-0024](0024-an-agent-holds-one-session-per-room.md)
+gave each Room its own session, so it is the slot that spans Rooms now, not the session.) A
+Message costs none of this, and reuses the Reply Gate, the Budget and the
 Transcript unchanged. It is the same choice the Skills spec made for a Proposal's outcome.
 
 ## Words posted as the Human must be the Human's
@@ -81,10 +87,13 @@ have two stores rather than one store with a mode.
 
 ## Consequences
 
-- Every Persona gains a tool, so the system prompt's tool roster and its two golden files
+- Every Persona gains a tool, so the system prompt's tool roster and its six golden files
   change once.
-- One Prompt is added: `tool.askHuman.description`. It holds all of the guidance on when to ask
-  and when not to, because a model decides whether to call a tool from its description.
+- Two Prompts are added. `tool.askHuman.description` holds the full guidance on when to ask and
+  when not to, because a model decides whether to call a tool from its description. But the Claude
+  Adapter defers every MCP tool, so a model may see only the name, as a live run on 2026-10-01
+  showed. `systemPrompt.askHuman` is therefore a shorter paragraph in the system prompt, after the
+  tools paragraph, naming the tool through a placeholder the code fills in.
 - A card waiting when the app restarts is lost, and the asker is not told. The Human types the
   answer instead. This goes into `known-limits.md`.
 - The `team-building` Skill's interview can use `ask_human` once the tool exists. Its Greeting

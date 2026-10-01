@@ -351,6 +351,23 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
   outcome Message that never comes; the Human has to ask again. Archiving or
   deleting the Room drops it on purpose. Deliberate for V1: persisting it would
   mean a table and a recovery path for a card the Human can recreate by asking.
+- **A waiting Question does not survive a restart, and the asker is not told.**
+  `QuestionStore` holds at most one card per Room in memory, like a Proposal, so a
+  restart loses it. The Agent that asked ended its Turn and is still waiting for an
+  answer Message that never comes; the Human types the answer instead. Archiving or
+  deleting the Room, and any typed Human Message in it, drop the card on purpose.
+  Deliberate for V1: persisting it would mean a table and a recovery path for a card
+  the Human can answer by typing. `ask_human` is also the only way a Claude Teammate
+  asks: Huddle advertises no `elicitation` capability, so the Adapter keeps its
+  built-in `AskUserQuestion` off ([the Questions spec](../Huddle.Questions-Specifications.md) §6.8).
+- **A Claude Teammate does not ask with `ask_human` on its own.** The Claude Adapter defers every
+  MCP tool: the model sees the name `mcp__team__ask_human` and nothing else until it calls
+  ToolSearch, so the description that says when to ask is never read. Measured 2026-10-01 on Haiku:
+  given *"Help me plan a workout routine"* it wrote its questions as a list, twice; told to call
+  the tool by name it did, and everything after worked. A paragraph on when to ask, `systemPrompt.askHuman`,
+  now sits in the system prompt, which a model always reads. One live re-run on Haiku (2026-10-01) called
+  ToolSearch and then the tool unprompted. That is one sample, so expect a model to still sometimes
+  write a list, and treat the paragraph's wording as the thing to tune.
 - **Stopping an Agent stops it in every Room.** One ACP session spans every Room
   its Agent is in, so there is nothing narrower to stop. `StopTurn` carries the
   Room the Human asked from as a label, not as a selector — the same

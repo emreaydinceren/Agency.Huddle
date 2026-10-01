@@ -11,6 +11,7 @@ using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Prompts;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 
@@ -32,7 +33,7 @@ public sealed class GetHelpToolTests
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var aliasSource = new FakeMentionAliasSource();
         var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
+        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
 
         var follows = new RoomFollows();
         IAppTool[] others =

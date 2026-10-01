@@ -14,6 +14,7 @@ using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Skills;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.App.Teams;
 
@@ -198,6 +199,15 @@ public static class ServiceCollectionExtensions
         // this, and its only dependency, RoomEvents, is already registered as a singleton at the top
         // of this method, so construction order is safe regardless of where in this list it sits.
         services.AddSingleton<ProposalStore>();
+
+        // No interface, same reasoning as ProposalStore: a leaf singleton whose only dependency,
+        // RoomEvents, is registered at the top of this method. ChatService takes it, so it must exist
+        // before ChatService does, and it takes nothing back.
+        services.AddSingleton<QuestionStore>();
+
+        // No interface, same reasoning as ProposalService: nothing needs to substitute it, and its
+        // dependencies (QuestionStore, ChatService, ITeamDirectory) are all singletons registered above.
+        services.AddSingleton<QuestionService>();
 
         // No interface, same reasoning as ProposalStore and CandidateChecker just above. Every one
         // of its own dependencies (ProposalStore, CandidateChecker, PersonaStore, ChatService,

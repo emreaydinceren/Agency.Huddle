@@ -8,6 +8,7 @@ using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 
 namespace Agency.Huddle.Tests.Ui;
@@ -298,7 +299,7 @@ public sealed class ProposalCardTests
             var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
             var proposals = new ProposalStore(events);
             var store = new FileChatStore(options, NullLogger<FileChatStore>.Instance);
-            var chat = new ChatService(directory, store, events, personas, options, proposals, NullLogger<ChatService>.Instance);
+            var chat = new ChatService(directory, store, events, personas, options, proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
             var service = new ProposalService(proposals, checker, personas, chat, directory, options, NullLogger<ProposalService>.Instance);
 
             return new Fixture(dataDir, personas, directory, events, proposals, service);

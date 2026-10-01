@@ -25,12 +25,56 @@ public sealed partial class PromptCatalogTests
     /// corrections-B4 D10 item 7 - method name kept, count updated to 57), plus the four Team Memory
     /// prompts (<c>systemPrompt.teamMemory</c>, <c>systemPrompt.teamMemoryPaths</c>,
     /// <c>systemPrompt.teamMemoryHeading</c>, <c>systemPrompt.teamMemoryMore</c>) added for Team Pages
-    /// Spec §7.4 (Task 5.4 - method name kept, count now 67).
+    /// Spec §7.4 (Task 5.4 - method name kept), plus <c>tool.askHuman.description</c> added for Questions
+    /// spec §6.6, plus <c>systemPrompt.askHuman</c> added for the same spec's D-11 amendment (count now 69).
     /// </summary>
     [Fact]
     public void All_HasExactlyThirtySevenPrompts()
     {
-        Assert.Equal(67, PromptCatalog.All.Count);
+        Assert.Equal(69, PromptCatalog.All.Count);
+    }
+
+    /// <summary>
+    /// Questions spec §6.6: <c>tool.askHuman.description</c> exists, is <see cref="PromptTiming.NextSession"/>
+    /// like every other tool description, takes no placeholders because it names no tool, and so
+    /// cannot break rules.md's rule that a Prompt never contains <c>mcp__team__</c>. It carries the
+    /// whole of when to ask and when not to (D-11), so those clauses are pinned.
+    /// </summary>
+    [Fact]
+    public void AskHumanDescription_IsNextSessionNamesNoToolAndCarriesTheGuidance()
+    {
+        var prompt = PromptCatalog.Get("tool.askHuman.description");
+
+        Assert.Equal(PromptTiming.NextSession, prompt.Timing);
+        Assert.Empty(prompt.Placeholders);
+        Assert.Empty(prompt.RequiredPlaceholders);
+        Assert.False(string.IsNullOrWhiteSpace(prompt.HelperText));
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+        Assert.False(prompt.HelperText.Contains("mcp__team__", StringComparison.Ordinal));
+        Assert.StartsWith("Asks the Human one to three multiple-choice questions", prompt.Default, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+        Assert.Contains("Do not use it when", prompt.Default, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+        Assert.Contains("It asks only the Human", prompt.Default, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+        Assert.Contains("end your Turn", prompt.Default, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+        Assert.Contains("rank_priorities", prompt.Default, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+    }
+
+    /// <summary>
+    /// Questions spec D-11: <c>systemPrompt.askHuman</c> is <see cref="PromptTiming.NextSession"/>, takes and
+    /// requires exactly <c>{{askHumanTool}}</c>, and never contains <c>mcp__team__</c> itself: rules.md says
+    /// the prefix is built in code and substituted, so a hand-edited Prompt cannot misspell the tool.
+    /// </summary>
+    [Fact]
+    public void AskHumanSystemPrompt_NamesTheToolOnlyThroughItsPlaceholder()
+    {
+        var prompt = PromptCatalog.Get("systemPrompt.askHuman");
+
+        Assert.Equal(PromptTiming.NextSession, prompt.Timing);
+        Assert.Equal(["{{askHumanTool}}"], prompt.Placeholders);
+        Assert.Equal(["{{askHumanTool}}"], prompt.RequiredPlaceholders);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+        Assert.False(prompt.HelperText.Contains("mcp__team__", StringComparison.Ordinal));
+        Assert.Contains("{{askHumanTool}}", prompt.Default, StringComparison.Ordinal); // contains-ok: prompt text, not markup
+        Assert.Contains("end your Turn", prompt.Default, StringComparison.Ordinal); // contains-ok: prompt text, not markup
     }
 
     /// <summary>The four Team Memory prompts Team Pages Spec §7.4 defines all exist, are <see cref="PromptTiming.NextSession"/>, have their exact one-line defaults, the whole placeholder list, the required placeholders, and a helper text free of <c>mcp__team__</c>.</summary>

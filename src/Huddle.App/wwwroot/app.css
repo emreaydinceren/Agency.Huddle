@@ -377,6 +377,21 @@ button:focus-visible {
     margin: 0.75rem 0;
 }
 
+/* A quoted line in a Message. Without it a blockquote renders as a plain paragraph, and the answer
+   to a Question (Questions spec §6.4: each question quoted, then the Human's answer under it) reads
+   as one run of identical lines. Only the quote is set back and muted, so the answer stays the
+   Human's own words. */
+.message-body blockquote {
+    margin: 0.75rem 0 0.25rem;
+    padding-left: 0.75rem;
+    border-left: 3px solid var(--mud-palette-lines-default);
+}
+
+.message-body blockquote p {
+    margin: 0;
+    color: var(--mud-palette-text-secondary);
+}
+
 /* An agent's reply has no .message-bubble wrapper the way a Human's does - the two rules below are
    what stops the first paragraph's own top margin from reading as a gap under the sender/timestamp
    line above it, and the last one's bottom margin from adding to .message-row's own margin-bottom.

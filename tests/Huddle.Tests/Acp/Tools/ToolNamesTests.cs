@@ -9,6 +9,7 @@ using Agency.Huddle.App.Acp.Sessions;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 
@@ -25,7 +26,7 @@ public sealed class ToolNamesTests
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var aliasSource = new FakeMentionAliasSource();
         var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
+        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
 
         var follows = new RoomFollows();
         var checker = new CandidateChecker(personaStore, directory, gateway);
@@ -47,6 +48,7 @@ public sealed class ToolNamesTests
             new UpdateTaskTool(taskHarness.Service, taskHarness.Store, taskHarness.Triggers, taskHarness.Directory, new FakePromptSource(), "caller-id"),
             new CloseTaskTool(taskHarness.Service, taskHarness.Store, taskHarness.Triggers, taskHarness.Directory, new FakePromptSource(), "caller-id"),
             new ReopenTaskTool(taskHarness.Service, taskHarness.Store, taskHarness.Triggers, taskHarness.Directory, new FakePromptSource(), "caller-id"),
+            new AskHumanTool(new QuestionStore(events), chat, directory, TimeProvider.System, "caller-id", new FakePromptSource()),
         };
 
         Assert.Equal("list_agents", tools[0].Name);
@@ -64,5 +66,6 @@ public sealed class ToolNamesTests
         Assert.Equal("update_task", tools[12].Name);
         Assert.Equal("close_task", tools[13].Name);
         Assert.Equal("reopen_task", tools[14].Name);
+        Assert.Equal("ask_human", tools[15].Name);
     }
 }

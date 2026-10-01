@@ -374,7 +374,7 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
   card in the Room and are answered together, as a Message from the Human that
   quotes each Question and Mentions the asker. Only the Human is ever asked. At
   most one card per Room, held in memory, and dropped by any typed Human Message
-  there. Proposed, not built — see
+  there. See
   [ADR-0022](../adr/0022-an-agent-asks-the-human-with-a-question.md).
 : Capitalised, it means only this. An ordinary question in a Message stays lower
   case.

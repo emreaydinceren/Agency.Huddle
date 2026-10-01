@@ -6,6 +6,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Tools;
 
@@ -425,7 +426,7 @@ public sealed class ProposalServiceTests
             var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
             var proposals = new ProposalStore(events);
             var store = new FileChatStore(options, NullLogger<FileChatStore>.Instance);
-            var chat = new ChatService(directory, store, events, personas, options, proposals, NullLogger<ChatService>.Instance);
+            var chat = new ChatService(directory, store, events, personas, options, proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
             var service = new ProposalService(proposals, checker, personas, chat, directory, options, NullLogger<ProposalService>.Instance);
 
             return new Fixture(dataDir, directory, personas, proposals, store, chat, service);

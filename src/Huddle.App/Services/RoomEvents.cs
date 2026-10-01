@@ -65,6 +65,14 @@ public sealed class RoomEvents
     /// </summary>
     public event Action<string>? ProposalChanged;
 
+    /// <summary>
+    /// The card of Questions waiting in a Room changed - one was stored, replaced, taken (answered
+    /// or dismissed), or dropped (a Human Message, archive or delete). Carries the Room id, not the
+    /// card, for the same reason <see cref="ProposalChanged"/> does. The Room view is the only
+    /// subscriber; an Agent is never told, because the answer reaches it as a Message.
+    /// </summary>
+    public event Action<string>? QuestionsChanged;
+
     public void PublishMessagePosted(MessagePostedEvent e)
     {
         this.Publish(this.MessagePosted, e, nameof(this.MessagePosted));
@@ -130,6 +138,16 @@ public sealed class RoomEvents
     internal void PublishProposalChanged(string roomId)
     {
         this.PublishRoomId(this.ProposalChanged, roomId, nameof(this.ProposalChanged));
+    }
+
+    /// <summary>
+    /// Publishes <see cref="QuestionsChanged"/> for <paramref name="roomId"/>. Called by
+    /// <see cref="Questions.QuestionStore"/> after its own lock is released, never while held.
+    /// </summary>
+    /// <param name="roomId">The Room whose waiting Questions changed.</param>
+    internal void PublishQuestionsChanged(string roomId)
+    {
+        this.PublishRoomId(this.QuestionsChanged, roomId, nameof(this.QuestionsChanged));
     }
 
     private void PublishRoomId(Action<string>? handlers, string roomId, string eventName)
