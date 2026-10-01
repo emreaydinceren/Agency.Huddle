@@ -25,8 +25,9 @@ entity means to a user, read [the user guide](../docs/Huddle.UserGuide.md).
 > roots, the repository and the user profile are always refused. Dates are offsets from the run
 > date (`--today yyyy-MM-dd` pins them). It also writes `manifest.md` and prints the launch command.
 > To browse the result, run `./run.ps1 -Seed` (add `-Port 1111` for another port): it builds, then
-> starts Huddle on the seed with the mock adapter, so nothing paid runs. `-SeedRoot` points it at a
-> different seed root.
+> starts Huddle on the seed data and changes nothing else, so Teammates use whatever adapter your
+> normal configuration names (add `-NoAcp` to keep paid models from running). `-SeedRoot` points it
+> at a different seed root.
 > `tests/Huddle.Tests/Seeder/` loads the result through Huddle's own loaders, so it goes red when
 > this guide and the app drift apart. Use the manual procedure below for a scenario the tool
 > does not have yet; adding one is a new `IScenario` in `src/Huddle.Seeder/Scenarios/`.
