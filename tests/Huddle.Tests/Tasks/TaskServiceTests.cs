@@ -1333,7 +1333,7 @@ public sealed class TaskServiceTests
     /// <summary>Constructs a real <see cref="PersonaStore"/> with Nova (alias "nova") and Kai (alias "kai") in Team Platform, over the same <see cref="TempDataDir"/> the Task store under test also reads from.</summary>
     private static PersonaStore CreatePersonaStore(TempDataDir dir)
     {
-        PersonaStore personas = new(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        PersonaStore personas = new(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
         _ = personas.Add(new PersonaIdentity("Nova", "Nova", "nova", ["Platform"]), "You are Nova.");
         _ = personas.Add(new PersonaIdentity("Kai", "Kai", "kai", ["Platform"]), "You are Kai.");
         return personas;

@@ -122,4 +122,34 @@ public sealed class FakeModelCatalog : IModelCatalog
 
         return ValueTask.FromResult(levels);
     }
+
+    /// <summary>
+    /// The Work Modes <see cref="GetWorkModesAsync"/> hands back, already filtered the way the real catalog
+    /// filters them: this fake never applies the hidden-modes policy, so a test sets exactly what the card
+    /// should be offered.
+    /// </summary>
+    public IReadOnlyList<AgentModeOption> WorkModes { get; set; } = [];
+
+    /// <summary>The Work Mode counterpart of <see cref="NeverCompletes"/> - see its remarks.</summary>
+    public bool WorkModesNeverComplete { get; set; }
+
+    /// <summary>How many times <see cref="GetWorkModesAsync"/> was called.</summary>
+    public int WorkModeProbeCount { get; private set; }
+
+    /// <summary>Every (Adapter id, model id) pair <see cref="GetWorkModesAsync"/> was asked about, in call order.</summary>
+    public List<(string? AdapterId, string? Model)> WorkModesProbed { get; } = [];
+
+    public ValueTask<IReadOnlyList<AgentModeOption>> GetWorkModesAsync(string? adapterId, string? model, CancellationToken cancellationToken)
+    {
+        this.WorkModeProbeCount++;
+        this.WorkModesProbed.Add((adapterId, model));
+        this.AdaptersProbed.Add(adapterId);
+
+        if (this.WorkModesNeverComplete)
+        {
+            return new ValueTask<IReadOnlyList<AgentModeOption>>(new TaskCompletionSource<IReadOnlyList<AgentModeOption>>().Task);
+        }
+
+        return ValueTask.FromResult(this.WorkModes);
+    }
 }

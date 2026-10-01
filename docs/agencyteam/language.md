@@ -31,8 +31,8 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 : What a Teammate is called — a display name, not a slug. Letters, digits, `_`,
   `-` and single interior spaces, at most 64 characters, opening on a letter or a
   digit. `NameRules.IsValidAgentName` is the whole rule. A Name is a wire identity
-  at `hello`, the `name` field of a Persona's frontmatter, the key its **Model**
-  and **Effort** rows are stored under, and a token a Mention is resolved against.
+  at `hello`, the `name` field of a Persona's frontmatter, the key its **Model**,
+  **Effort** and **Work Mode** rows are stored under, and a token a Mention is resolved against.
   A Persona's *filename* is none of those: it is storage, and nothing reads it.
 : The rule stays narrow even though the filename justification retired with
   frontmatter identity — `MentionParser` still matches a Name character by
@@ -154,9 +154,9 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 **Persona**
 : The Markdown instructions defining one Agent's character, stored as one file
   anywhere under `{DataDir}/{Acp:TeamsDir}` — enumerated recursively, so Team
-  sub-folders are free to exist and mean nothing — together with the **Model**
-  and the **Effort** it runs on, stored in the `persona_models` and
-  `persona_efforts` tables. The file body *becomes* part of a system prompt; it
+  sub-folders are free to exist and mean nothing — together with the **Model**,
+  the **Effort** and the **Work Mode** it runs on, stored in the `persona_models`,
+  `persona_efforts` and `persona_work_modes` tables. The file body *becomes* part of a system prompt; it
   is not one.
 : Its leading YAML frontmatter block is **partly schema**. `name`, `title` and
   `alias` are required and `teams` is optional; a file missing any required one
@@ -199,6 +199,17 @@ contexts](../AgencyTeam.md#two-bounded-contexts). Back to the hub:
 : *Avoid*: thinking level, reasoning level, thought level. Not **Budget**
   either — that is a defined term meaning something else entirely, and Effort is
   not one: it buys no allowance and is not spent.
+
+**Work Mode**
+: The mode, from the list its Adapter advertises (the ACP `mode` config option), that one
+  Persona's sessions start in: how much the Agent may do before it must ask. `claude-agent-acp`
+  advertises `default` (shown as Manual), `acceptEdits`, `plan` and `auto`, and
+  `bypassPermissions` where the process is not root. Unset means the Adapter's own mode and
+  nothing is sent, which is the normal case. Fixed for the life of a session, exactly like a
+  Model, and chosen only by the Human. See [ADR-0033](../adr/0033-a-persona-has-a-work-mode.md).
+: *Avoid*: "mode" alone — it already means light/dark, a Teammate card's Create/Edit/View state
+  and the system-prompt mode; "permission mode", "ACP mode". Not a **Plan**: the Adapter's `plan`
+  mode is one Work Mode, and a Plan is an Agent's own checklist.
 
 **Turn**
 : One prompt-to-completion cycle on a session — since Room Sessions shipped, one

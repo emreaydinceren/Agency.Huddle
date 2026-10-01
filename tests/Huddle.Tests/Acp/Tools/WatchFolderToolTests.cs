@@ -138,7 +138,7 @@ public sealed class WatchFolderToolTests
             PersonaStore personas = new(
                 teammatePaths,
                 new PersonaModelStore(options),
-                new PersonaEffortStore(options),
+                new PersonaEffortStore(options), new PersonaWorkModeStore(options),
                 NullLogger<PersonaStore>.Instance);
             FileStateStore store = new(options, NullLogger<FileStateStore>.Instance);
             WatchedFolderResolver resolver = new(options, teammatePaths);

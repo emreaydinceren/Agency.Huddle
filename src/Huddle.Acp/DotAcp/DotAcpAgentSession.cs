@@ -71,6 +71,10 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
 
     public IReadOnlyList<AgentEffortOption> EffortLevels { get; private set; } = [];
 
+    public IReadOnlyList<AgentModeOption> ModeOptions { get; private set; } = [];
+
+    public string? CurrentModeId { get; private set; }
+
     public IPermissionHandler PermissionHandler { get; }
 
     public CancellationToken PromptCancellation { get; private set; } = CancellationToken.None;
@@ -97,6 +101,27 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
     {
         ArgumentNullException.ThrowIfNull(effortLevels);
         this.EffortLevels = effortLevels;
+    }
+
+    /// <summary>
+    /// Sets <see cref="ModeOptions"/> after this session is constructed, for the same reason as
+    /// <see cref="SetEffortLevels"/>: the catalog is only knowable after Model and Effort have been
+    /// applied, and by then the session is already registered.
+    /// </summary>
+    /// <param name="modeOptions">The modes to publish.</param>
+    internal void SetModeOptions(IReadOnlyList<AgentModeOption> modeOptions)
+    {
+        ArgumentNullException.ThrowIfNull(modeOptions);
+        this.ModeOptions = modeOptions;
+    }
+
+    /// <summary>
+    /// Sets <see cref="CurrentModeId"/> once the requested mode has been applied and read back.
+    /// </summary>
+    /// <param name="modeId">The effective mode id, or null when the agent advertised none.</param>
+    internal void SetCurrentMode(string? modeId)
+    {
+        this.CurrentModeId = modeId;
     }
 
     /// <summary>Exposed for diagnostics; the dotacp connection this session was created against.</summary>

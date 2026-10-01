@@ -15,4 +15,13 @@ namespace Agency.Huddle.App.Acp;
 /// </param>
 internal sealed record AdapterProbeOutcome(
     IReadOnlyList<AgentModelOption> Models,
-    IReadOnlyList<AgentEffortOption> EffortLevels);
+    IReadOnlyList<AgentEffortOption> EffortLevels)
+{
+    /// <summary>
+    /// The Adapter's advertised Work Modes (ADR-0033), in wire order and BEFORE the hidden-modes policy:
+    /// hiding is <see cref="ModelCatalogProbe"/>'s job on the way out, so the cache never bakes a setting in.
+    /// An init property rather than a third positional parameter, so the two-argument construction used
+    /// everywhere a catalog is faked is unchanged.
+    /// </summary>
+    public IReadOnlyList<AgentModeOption> Modes { get; init; } = [];
+}

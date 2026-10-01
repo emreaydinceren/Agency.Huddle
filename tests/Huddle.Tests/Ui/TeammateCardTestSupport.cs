@@ -170,6 +170,21 @@ internal static class TeammateCardTestSupport
         factory.Services.GetRequiredService<PersonaStore>().Add(new PersonaIdentity(name, name, name, [], adapter), body, model, effort);
     }
 
+    /// <summary>
+    /// The <see cref="SeedPersonaWithModelEffortAndAdapter"/> sibling that also seeds a Work Mode
+    /// (ADR-0033), which lives in the SQLite-backed <c>persona_work_modes</c> table, so a store call is
+    /// the only way to seed one.
+    /// </summary>
+    /// <param name="factory">The factory whose <see cref="PersonaStore"/> to add the Persona through.</param>
+    /// <param name="name">The Persona's Name, Title and Alias alike.</param>
+    /// <param name="body">The Persona's system-prompt body.</param>
+    /// <param name="workMode">The Work Mode to store, or <see langword="null"/> for the Adapter's own.</param>
+    /// <param name="adapter">The Adapter id to store, or <see langword="null"/> for the installation's default.</param>
+    internal static void SeedPersonaWithWorkMode(TeamWebApplicationFactory factory, string name, string body, string? workMode, string? adapter = null)
+    {
+        factory.Services.GetRequiredService<PersonaStore>().Add(new PersonaIdentity(name, name, name, [], adapter), body, model: null, effort: null, workMode: workMode);
+    }
+
     /// <summary>Registers <paramref name="name"/>'s Agent with the real <see cref="ITeamDirectory"/> and marks it connected in <see cref="TeamWebApplicationFactory.FakeAgentGateway"/>, so <see cref="PersonaStatusResolver"/> resolves it Online.</summary>
     internal static async Task MakeOnlineAsync(TeamWebApplicationFactory factory, string name)
     {

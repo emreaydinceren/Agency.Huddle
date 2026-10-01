@@ -1,6 +1,6 @@
 # Manual test script — planning
 
-Which of the 484 tests to run, what each area covers, and which ones spend money.
+Which of the 493 tests to run, what each area covers, and which ones spend money.
 Read this to **choose** a run. You do not need it while executing one: the rules
 that bind a run live in [the script](../manual-tests.md), which is the page to
 have open instead.
@@ -35,6 +35,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 14 | [Persona lifecycle: supervisor, work dirs, health and restarts](persona-lifecycle.md) | 32 | 7 | 6.5h |
 | 15 | [Adapters: choosing one per Persona, and running two at once](adapters.md) | 4 | 2 | 1.4h |
 | 16 | [Skills: the Chief of Staff, team-building, and the Family Health Advisor](skills.md) | 6 | 6 | 1.8h |
+| 17 | [Work Mode: how much an Agent may do before it asks](work-mode.md) | 9 | 4 | 2h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.
@@ -77,7 +78,7 @@ change, and before committing to a full area. A failure here means stop and fix,
 
 ## Appendix A. Paid test register
 
-Every test that spends money, in one place. 62 tests, about 14.8 hours of
+Every test that spends money, in one place. 66 tests, about 15.8 hours of
 wall clock. Read [section 0.2](../manual-tests.md#02-the-cost-guard) and [section 0.3](../manual-tests.md#03-the-model-and-effort-convention) before running any of them.
 
 | Test id | Area | What it proves | Est. |
@@ -144,6 +145,10 @@ wall clock. Read [section 0.2](../manual-tests.md#02-the-cost-guard) and [sectio
 | [SKILLS-04](skills.md#skills-04--over-the-limit-approve-creates-nothing-and-the-message-says-why) | `skills` | The Teammate limit is re-checked at Approve time, not only when proposed, and Approve creates nothing over it | 15 min |
 | [SKILLS-05](skills.md#skills-05--the-greeting-on-a--clean-install-and-no-second-greeting-on-restart) | `skills` | On a fresh install the Chief of Staff's Room holds an unprompted Greeting built from `onboarding.md`, and a restart never repeats it | 15 min |
 | [SKILLS-06](skills.md#skills-06--the-family-health-advisors-safety-behaviour) | `skills` | The Family Health Advisor's starter Body leads with emergency advice, refuses dose changes, and re-reads its notes after a restart | 30 min |
+| [WORKMODE-06](work-mode.md#workmode-06--accept-edits-no-permission-request-for-an-edit) | `work-mode` | Accept edits: no permission request for an edit | 15 min |
+| [WORKMODE-07](work-mode.md#workmode-07--plan-nothing-is-written-and-the-request-to-leave-plan-mode-is-refused) | `work-mode` | Plan: nothing is written, and the request to leave plan mode is refused | 15 min |
+| [WORKMODE-08](work-mode.md#workmode-08--accept-edits-a-write-into-claude-is-still-refused) | `work-mode` | Accept edits: a write into `~/.claude` is still refused | 15 min |
+| [WORKMODE-09](work-mode.md#workmode-09--a-mode-is-applied-again-after-an-app-restart) | `work-mode` | A mode is applied again after an app restart | 15 min |
 
 Before the first paid test of a session:
 

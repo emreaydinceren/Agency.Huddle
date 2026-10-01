@@ -84,6 +84,7 @@ meant. Fixed options make both cheap, and make the answer unambiguous.
 | **Images, descriptions or icons on an option** | Short labels only. The Agent's framing Message carries any explanation |
 | **Drag-and-drop ranking** | Up and down buttons work with a keyboard and a screen reader, and need no JavaScript. V2 may add drag |
 | **A new Envelope or a `ProtocolVersion` bump** | The card never crosses the pipe (`traps.md`, the closed polymorphism rule) |
+| **ACP elicitation (`elicitation/create`) for Questions** | It holds the Turn open until the Human answers, which D-2 rejects, and advertising it re-enables Claude's built-in `AskUserQuestion` (§6.8, D-13) |
 
 ---
 
@@ -417,6 +418,37 @@ Each Question's text is shown as written, with its options below it.
 The `[Parameter]` types are `public`, per `rules.md`; `QuestionKind` and the records are
 public for that reason.
 
+### 6.8 Claude's built-in `AskUserQuestion` stays off
+
+Claude Code ships its own option-picker, `AskUserQuestion`. On a Claude Adapter `ask_human` does
+not compete with it, because the Adapter keeps it off, and this spec depends on that.
+
+| | `AskUserQuestion` | `ask_human` |
+| --- | --- | --- |
+| Owner | Claude Code, in its built-in tool preset. Claude Adapters only | Huddle's `AppToolServer`. Every Adapter |
+| Turn | Blocks until the Human answers | Returns at once; the asker ends its Turn |
+| Answer | The tool result | A Message from the Human, in the Transcript |
+| Shape | 1 to 4 Questions, 2 to 4 options with descriptions, `multiSelect`, and a free-text "Other" the Adapter adds | 1 to 3 Questions, three kinds including `rank_priorities`, no free text (§3) |
+
+- **Why it is off.** `claude-agent-acp` 0.75.1 adds `AskUserQuestion` to the SDK's
+  `disallowedTools` unless the client advertised `clientCapabilities.elicitation.form`
+  (`dist/acp-agent.js`: the `disallowedTools` constant near line 5878, passed to the SDK near
+  line 6007). Huddle advertises no `elicitation` capability, so a Claude Persona never sees the
+  tool, and `ask_human` is the only way it asks. This was read from the vendored source on
+  2026-09-30; a live model has not yet confirmed it (QM-6).
+- **What advertising it would do.** With `form` advertised the Adapter enables `AskUserQuestion`
+  and sends `elicitation/create`, then waits, holding the Turn open until the Human answers.
+  That is the design D-2 rejects: an open request emits no events, so it runs into
+  `Acp:TurnIdleTimeoutSeconds`, and the answer never reaches the Transcript.
+- **It is not one switch.** The same capability also turns on the Adapter's refusal-fallback
+  dialog (*"model X declined; retry with Y?"*) and lets any MCP server put a form to the user.
+  Each arrives as an `elicitation/create` that needs a handler which answers, or the Turn hangs.
+  Do not add `elicitation` to `ClientCapabilities` without a new decision (D-13). Task Q-G1 pins
+  its absence.
+- **URL mode** (`elicitation.url`, the Adapter's OAuth flow for MCP servers passed in
+  `session/new`) is not advertised either. Huddle's one MCP server authenticates with a bearer
+  token.
+
 ---
 
 ## 7. Storage
@@ -491,6 +523,7 @@ the task that registers the tool, and the diff is reviewed to be exactly one new
 | QM-3 | Ask *"What is the capital of France?"* and *"Should I learn Python or JavaScript?"* | It answers directly both times and does not call `ask_human` |
 | QM-4 | QM-1 on a Persona on `agency-acp` | Same as QM-1, or the failure is recorded in the Adapters live findings |
 | QM-5 | In a Room of three, answer a card | Only the asker wakes; the other Agent reads the answer as Catch-up next time it is Mentioned |
+| QM-6 | Ask a Claude Persona *"Use your AskUserQuestion tool to ask me my favourite colour"* | It says it has no such tool, or asks with `ask_human`. No other card appears and the Turn does not hang (§6.8) |
 
 ---
 
@@ -510,6 +543,7 @@ the task that registers the tool, and the diff is reviewed to be exactly one new
 | D-10 | **Every Agent gets the tool** | Granting it through a Skill | Asking costs nothing and creates nothing. `propose_teammates` is granted by a Skill because each Teammate is a billed process; `ask_human` is not |
 | D-11 | **The full decision guidance lives in the tool description** | A `get_help` section; a Skill | A model decides to call a tool from its description; guidance elsewhere is read too late or not at all |
 | D-12 | **`rank_priorities` ships in V1** | V2 | It is the one kind a typed answer is worst at, and up and down buttons keep it small |
+| D-13 | **Do not advertise ACP elicitation** | Bridging `AskUserQuestion` and `elicitation/create` to the `QuestionCard` | A bridge blocks the Turn (D-2) and needs the idle watchdog paused while a request is open. Advertising `form` also enables the refusal-fallback dialog and MCP-initiated forms, each needing a handler, and gives a Claude Persona two ways to ask. Revisit if a Question needs typed fields (Appendix B) |
 
 ---
 
@@ -536,6 +570,7 @@ Each `.t` task ends red for the right reason; each `.i` task ends with `dotnet t
 | Q-I7 | Impl | `DotAcpAgentHostFactory` registration | T7 green |
 | Q-T8 | bUnit | `QuestionCardTests`: one single Question sends on tap; Send disabled until complete; multi toggles; rank up/down reorders and sends `1. … · 2. …`; disabled while the asker has a Draft; Dismiss posts nothing; a second tab hides on `QuestionsChanged`; hidden when Archived | Fails |
 | Q-I8 | Impl | `QuestionCard.razor`, `Chat.razor` wiring | T8 green |
+| Q-G1 | Guard | A test that pins the `initialize` request's client capabilities: `Fs` and `Terminal` false, no `elicitation`. None exists today, and `DotAcpAgentHost` is the ACP effort's code, so announce the test before adding it to `Huddle.Acp.Tests`. Prove it can fail: add the capability locally, watch it go red, revert | Passes now, and goes red if `elicitation` is ever advertised |
 | Q-D | Docs | `language.md` Question drops "Proposed, not built"; `known-limits.md` gains "a waiting Question is lost on restart"; `manual-tests.md` gains QM-1 to QM-5; ADR-0022 to Accepted | Reviewed |
 
 ## Appendix B — Follow-ups outside this spec
@@ -545,3 +580,9 @@ Each `.t` task ends red for the right reason; each `.i` task ends with `dotnet t
   Greeting's menu of 31 teams is **not**: it is far past four options, and it stays prose. Edit
   the Skill once this tool exists, not before, so the Skill never names a tool its Teammate
   cannot call.
+- **ACP elicitation** for typed forms (dates, numbers, free text) is the one thing `ask_human`
+  cannot express. If a Skill needs it, that is the reason to revisit D-13. It needs the idle
+  watchdog paused while a request is open, a handler for every form the Adapter can send
+  (including the refusal-fallback dialog), and a decision on whether the answer is also posted
+  as a Message, so the Transcript stays complete. The same watchdog change is needed for any
+  human-approval card on `session/request_permission`.

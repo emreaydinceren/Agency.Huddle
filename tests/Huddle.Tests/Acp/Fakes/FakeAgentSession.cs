@@ -66,6 +66,10 @@ internal sealed class FakeAgentSession : IAgentSession
 
     public IReadOnlyList<AgentEffortOption> EffortLevels { get; } = [];
 
+    public IReadOnlyList<AgentModeOption> ModeOptions { get; set; } = [];
+
+    public string? CurrentModeId { get; set; }
+
     public IReadOnlyList<string> Prompts
     {
         get

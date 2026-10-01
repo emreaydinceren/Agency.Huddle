@@ -78,6 +78,39 @@ public sealed class AgentSessionOptionsTests
         Assert.Null(options.Effort);
     }
 
+    /// <summary>With no mode supplied, <see cref="AgentSessionOptions.Mode"/> defaults to null.</summary>
+    [Fact]
+    public void Mode_DefaultsToNull()
+    {
+        IPermissionHandler handler = new NeverCalledPermissionHandler();
+
+        AgentSessionOptions options = new AgentSessionOptions(Path.GetTempPath(), handler);
+
+        Assert.Null(options.Mode);
+    }
+
+    /// <summary>A blank mode is normalised to null, mirroring how <see cref="AgentSessionOptions.Effort"/> is normalised.</summary>
+    [Fact]
+    public void Mode_BlankIsNormalisedToNull()
+    {
+        IPermissionHandler handler = new NeverCalledPermissionHandler();
+
+        AgentSessionOptions options = new AgentSessionOptions(Path.GetTempPath(), handler, mode: "   ");
+
+        Assert.Null(options.Mode);
+    }
+
+    /// <summary>A supplied mode id is carried through unchanged.</summary>
+    [Fact]
+    public void Mode_Supplied_IsCarriedThrough()
+    {
+        IPermissionHandler handler = new NeverCalledPermissionHandler();
+
+        AgentSessionOptions options = new AgentSessionOptions(Path.GetTempPath(), handler, mode: "plan");
+
+        Assert.Equal("plan", options.Mode);
+    }
+
     private sealed class NeverCalledPermissionHandler : IPermissionHandler
     {
         public Task<PermissionDecision> DecideAsync(PermissionRequestContext context, CancellationToken cancellationToken)

@@ -110,11 +110,17 @@ public sealed class MockAdapterFixture : IAsyncDisposable
     /// out real wall-clock minutes (D30 correction 17).
     /// </param>
     /// <param name="cancellationToken">Cancels startup.</param>
+    /// <param name="scriptAgent">
+    /// Called with the scripted peer BEFORE the Persona's runner starts, so a test can set its
+    /// <c>On*</c> handlers (the <c>session/new</c> answer, for one) in time for the session the runner
+    /// opens during startup. <see langword="null"/> leaves the peer's defaults.
+    /// </param>
     /// <returns>The started fixture.</returns>
-    public static async Task<MockAdapterFixture> StartAsync(
+    internal static async Task<MockAdapterFixture> StartAsync(
         Persona persona,
         IReadOnlyDictionary<string, string?>? additionalConfig = null,
         TimeProvider? timeProvider = null,
+        Action<FakeAcpAgent>? scriptAgent = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(persona);
@@ -158,6 +164,7 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         // (the last IAgentProcessLauncher registration wins), but leaving both would misstate intent.
         builder.Services.RemoveAll<IAgentProcessLauncher>();
         FakeAgentProcessLauncher launcher = new();
+        scriptAgent?.Invoke(launcher.Agent);
         builder.Services.AddSingleton<IAgentProcessLauncher>(launcher);
 
         IHost host = builder.Build();

@@ -150,7 +150,7 @@ public sealed class PersonaStoreTests
         TestPersonaFiles.Write(new TeammatePaths(options), "coo", PersonaText("coo", "You are the Chief of Staff."));
         var models = new PersonaModelStore(options);
         models.Set("coo", "claude-opus-4");
-        using var store = new PersonaStore(new TeammatePaths(options), models, new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
+        using var store = new PersonaStore(new TeammatePaths(options), models, new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
 
         var persona = store.Get("coo");
 
@@ -170,7 +170,7 @@ public sealed class PersonaStoreTests
         TestPersonaFiles.Write(new TeammatePaths(options), "coo", PersonaText("coo", "You are the Chief of Staff."));
         var efforts = new PersonaEffortStore(options);
         efforts.Set("coo", "high");
-        using var store = new PersonaStore(new TeammatePaths(options), new PersonaModelStore(options), efforts, NullLogger<PersonaStore>.Instance);
+        using var store = new PersonaStore(new TeammatePaths(options), new PersonaModelStore(options), efforts, new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
 
         var persona = store.Get("coo");
 
@@ -186,7 +186,7 @@ public sealed class PersonaStoreTests
         using var dir = new TempDataDir();
         var options = dir.Options();
         TestPersonaFiles.Write(new TeammatePaths(options), "coo", PersonaText("coo", "You are the Chief of Staff.", "agency"));
-        using var store = new PersonaStore(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
+        using var store = new PersonaStore(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
 
         var persona = store.Get("coo");
 
@@ -220,9 +220,9 @@ public sealed class PersonaStoreTests
         var options = dir.Options();
         var text = PersonaText("coo", "first", "agency");
         TestPersonaFiles.Write(new TeammatePaths(options), "coo", text);
-        using var store = new PersonaStore(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), NullLogger<PersonaStore>.Instance);
+        using var store = new PersonaStore(new TeammatePaths(options), new PersonaModelStore(options), new PersonaEffortStore(options), new PersonaWorkModeStore(options), NullLogger<PersonaStore>.Instance);
 
-        var updated = store.Update("coo", text, model: null, effort: null);
+        var updated = store.Update("coo", text, model: null, effort: null, workMode: null);
 
         Assert.Equal("agency", updated.Adapter);
         Assert.Equal("agency", store.Get("coo")!.Adapter);
@@ -373,7 +373,7 @@ public sealed class PersonaStoreTests
         using var store = CreateStore(dir);
         store.Add(Identity("coo"), "first");
 
-        var updated = store.Update("coo", PersonaText("coo", "second"), model: null, effort: null);
+        var updated = store.Update("coo", PersonaText("coo", "second"), model: null, effort: null, workMode: null);
 
         Assert.Equal(PersonaText("coo", "second"), updated.Text);
         var path = store.PathFor("coo");
@@ -386,7 +386,7 @@ public sealed class PersonaStoreTests
         using var dir = new TempDataDir();
         using var store = CreateStore(dir);
 
-        var ex = Assert.Throws<ChatException>(() => store.Update("nope", "text", model: null, effort: null));
+        var ex = Assert.Throws<ChatException>(() => store.Update("nope", "text", model: null, effort: null, workMode: null));
 
         Assert.Equal(ErrorCodes.BadMessage, ex.Code);
     }
@@ -398,7 +398,7 @@ public sealed class PersonaStoreTests
         using var store = CreateStore(dir);
         var added = store.Add(Identity("coo"), "first");
 
-        var ex = Assert.Throws<ChatException>(() => store.Update("coo", "   ", model: null, effort: null));
+        var ex = Assert.Throws<ChatException>(() => store.Update("coo", "   ", model: null, effort: null, workMode: null));
 
         Assert.Equal(ErrorCodes.BadMessage, ex.Code);
 
@@ -419,7 +419,7 @@ public sealed class PersonaStoreTests
         var path = store.PathFor("coo");
         var before = await File.ReadAllBytesAsync(path, ct);
 
-        var ex = Assert.Throws<ChatException>(() => store.Update("coo", "You are the Chief of Staff, but with no frontmatter at all now.", model: null, effort: null));
+        var ex = Assert.Throws<ChatException>(() => store.Update("coo", "You are the Chief of Staff, but with no frontmatter at all now.", model: null, effort: null, workMode: null));
 
         Assert.Equal(ErrorCodes.BadMessage, ex.Code);
         var after = await File.ReadAllBytesAsync(path, ct);
@@ -435,7 +435,7 @@ public sealed class PersonaStoreTests
         var raised = false;
         store.PersonasChanged += () => raised = true;
 
-        store.Update("coo", PersonaText("coo", "second"), model: null, effort: null);
+        store.Update("coo", PersonaText("coo", "second"), model: null, effort: null, workMode: null);
 
         Assert.True(raised);
     }
@@ -447,7 +447,7 @@ public sealed class PersonaStoreTests
         using var store = CreateStore(dir);
         store.Add(Identity("coo"), "unchanged text");
 
-        var updated = store.Update("coo", PersonaText("coo", "unchanged text"), "claude-opus-4", effort: null);
+        var updated = store.Update("coo", PersonaText("coo", "unchanged text"), "claude-opus-4", effort: null, workMode: null);
 
         Assert.Equal(PersonaText("coo", "unchanged text"), updated.Text);
         Assert.Equal("claude-opus-4", updated.Model);
@@ -462,7 +462,7 @@ public sealed class PersonaStoreTests
         using var store = CreateStore(dir);
         store.Add(Identity("coo"), "unchanged text", "claude-opus-4");
 
-        var updated = store.Update("coo", PersonaText("coo", "unchanged text"), "claude-opus-4", "high");
+        var updated = store.Update("coo", PersonaText("coo", "unchanged text"), "claude-opus-4", "high", workMode: null);
 
         Assert.Equal(PersonaText("coo", "unchanged text"), updated.Text);
         Assert.Equal("claude-opus-4", updated.Model);
@@ -484,7 +484,7 @@ public sealed class PersonaStoreTests
         void Count() => raisedCount++;
         store.PersonasChanged += Count;
 
-        store.Update("coo", PersonaText("coo", "second"), "claude-opus-4", "high");
+        store.Update("coo", PersonaText("coo", "second"), "claude-opus-4", "high", workMode: null);
 
         // Stop counting the instant Update returns. This is what the test is about - the
         // SYNCHRONOUS raise - and without it the assertion is a race the test loses on a slow
@@ -509,7 +509,7 @@ public sealed class PersonaStoreTests
         var renames = new List<PersonaRenamed>();
         store.PersonaRenamed += renamed => renames.Add(renamed);
 
-        store.Update("coo", PersonaText("vp", "second"), model: null, effort: null);
+        store.Update("coo", PersonaText("vp", "second"), model: null, effort: null, workMode: null);
 
         var renamed = Assert.Single(renames);
         Assert.Equal("coo", renamed.OldName);
@@ -532,7 +532,7 @@ public sealed class PersonaStoreTests
         store.PersonaRenamed += _ => order.Add("PersonaRenamed");
         store.PersonasChanged += () => order.Add("PersonasChanged");
 
-        store.Update("coo", PersonaText("vp", "second"), model: null, effort: null);
+        store.Update("coo", PersonaText("vp", "second"), model: null, effort: null, workMode: null);
 
         Assert.Equal(["PersonaRenamed", "PersonasChanged"], order);
     }
@@ -547,7 +547,7 @@ public sealed class PersonaStoreTests
         var raised = false;
         store.PersonaRenamed += _ => raised = true;
 
-        store.Update("coo", PersonaText("coo", "second"), model: null, effort: null);
+        store.Update("coo", PersonaText("coo", "second"), model: null, effort: null, workMode: null);
 
         Assert.False(raised);
     }
@@ -562,7 +562,7 @@ public sealed class PersonaStoreTests
         var renames = new List<PersonaRenamed>();
         store.PersonaRenamed += renamed => renames.Add(renamed);
 
-        store.Update("coo", PersonaText("Coo", "second"), model: null, effort: null);
+        store.Update("coo", PersonaText("Coo", "second"), model: null, effort: null, workMode: null);
 
         var renamed = Assert.Single(renames);
         Assert.Equal("coo", renamed.OldName);
@@ -626,7 +626,7 @@ public sealed class PersonaStoreTests
             }
         };
 
-        store.Update("coo", PersonaText("vp", "second"), model: null, effort: null);
+        store.Update("coo", PersonaText("vp", "second"), model: null, effort: null, workMode: null);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         await using var registration = cts.Token.Register(() => secondPersonasChanged.TrySetCanceled());
@@ -684,7 +684,7 @@ public sealed class PersonaStoreTests
         using var store = CreateStore(dir);
         store.Add(Identity("coo"), "You are the Chief of Staff.", "claude-opus-4", "high");
 
-        var updated = store.Update("coo", PersonaText("vp", "You are the VP."), "claude-opus-4", "high");
+        var updated = store.Update("coo", PersonaText("vp", "You are the VP."), "claude-opus-4", "high", workMode: null);
 
         Assert.Equal("vp", updated.Name);
         Assert.Equal("claude-opus-4", updated.Model);
@@ -743,7 +743,7 @@ public sealed class PersonaStoreTests
         using var store = CreateStore(dir);
         Assert.Equal("coo", Assert.Single(store.ListNames()));
 
-        store.Update("coo", PersonaText("coo", "You are the revised Chief of Staff."), model: null, effort: null);
+        store.Update("coo", PersonaText("coo", "You are the revised Chief of Staff."), model: null, effort: null, workMode: null);
 
         Assert.Equal(PersonaText("coo", "You are the revised Chief of Staff."), await File.ReadAllTextAsync(definitionPath, ct));
         Assert.Equal(definitionPath, store.PathFor("coo"));
@@ -1260,7 +1260,7 @@ public sealed class PersonaStoreTests
     {
         using var dir = new TempDataDir();
         var throwingLogger = new ThrowingLogger<PersonaStore>();
-        using var store = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), throwingLogger);
+        using var store = new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), throwingLogger);
         store.Dispose();
 
         var exception = Record.Exception(() => store.OnWatcherError(store, new ErrorEventArgs(new IOException("simulated buffer overflow"))));
@@ -1314,7 +1314,7 @@ public sealed class PersonaStoreTests
                 () =>
                 {
                     updateThreadId = Environment.CurrentManagedThreadId;
-                    return store.Update("coo", PersonaText("vp", "You are the VP."), "claude-opus-4", null);
+                    return store.Update("coo", PersonaText("vp", "You are the VP."), "claude-opus-4", null, workMode: null);
                 },
                 ct);
 
@@ -1772,7 +1772,7 @@ public sealed class PersonaStoreTests
 
     private static PersonaStore CreateStore(TempDataDir dir)
     {
-        return new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), NullLogger<PersonaStore>.Instance);
+        return new PersonaStore(new TeammatePaths(dir.Options()), new PersonaModelStore(dir.Options()), new PersonaEffortStore(dir.Options()), new PersonaWorkModeStore(dir.Options()), NullLogger<PersonaStore>.Instance);
     }
 
     /// <summary>A valid <see cref="PersonaIdentity"/> for <paramref name="name"/>, with Title and Alias defaulting to <paramref name="name"/> and no Teams unless <paramref name="teams"/> is given - the structured input <see cref="PersonaStore.Add"/> now takes.</summary>

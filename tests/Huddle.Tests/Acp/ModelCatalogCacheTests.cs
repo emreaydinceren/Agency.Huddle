@@ -166,6 +166,116 @@ public sealed class ModelCatalogCacheTests
         Assert.Equal(Path.Combine(dir.Path, "Teammates"), runner.Calls[0].ProbeCwd);
     }
 
+    /// <summary>The Work Modes share the effort probe: asking for both of one (Adapter, Model) spawns one process, not two.</summary>
+    [Fact]
+    public async Task GetWorkModesAsync_AfterEffortLevelsForTheSameModel_DoesNotReprobe()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new()
+        {
+            Handler = static (_, _, _) => new AdapterProbeOutcome([], [new AgentEffortOption("high", "High", null)])
+            {
+                Modes = [new AgentModeOption("default", "Manual", null), new AgentModeOption("acceptEdits", "Accept edits", null)],
+            },
+        };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        await probe.GetEffortLevelsAsync("claude", "model-a", ct);
+        IReadOnlyList<AgentModeOption> modes = await probe.GetWorkModesAsync("claude", "model-a", ct);
+
+        Assert.Single(runner.Calls);
+        Assert.Equal(["default", "acceptEdits"], modes.Select(mode => mode.Id));
+    }
+
+    /// <summary>The model probe, which runs with no model requested, also answers the default model's Work Modes.</summary>
+    [Fact]
+    public async Task GetWorkModesAsync_AfterTheModelProbe_ForTheDefaultModel_DoesNotReprobe()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new()
+        {
+            Handler = static (_, _, _) => new AdapterProbeOutcome([new AgentModelOption("m1", "Model 1", null)], [])
+            {
+                Modes = [new AgentModeOption("acceptEdits", "Accept edits", null)],
+            },
+        };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        await probe.GetAsync("claude", ct);
+        IReadOnlyList<AgentModeOption> modes = await probe.GetWorkModesAsync("claude", null, ct);
+
+        Assert.Single(runner.Calls);
+        Assert.Single(modes);
+    }
+
+    /// <summary>The hidden modes are filtered out on the way out, and <c>default</c> (Manual) is kept.</summary>
+    [Fact]
+    public async Task GetWorkModesAsync_FiltersHiddenModesAndKeepsDefault()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new()
+        {
+            Handler = static (_, _, _) => new AdapterProbeOutcome([], [])
+            {
+                Modes =
+                [
+                    new AgentModeOption("default", "Manual", null),
+                    new AgentModeOption("acceptEdits", "Accept edits", null),
+                    new AgentModeOption("plan", "Plan", null),
+                    new AgentModeOption("auto", "Auto", null),
+                    new AgentModeOption("bypassPermissions", "Bypass permissions", null),
+                ],
+            },
+        };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        IReadOnlyList<AgentModeOption> modes = await probe.GetWorkModesAsync("claude", null, ct);
+
+        Assert.Equal(["default", "acceptEdits"], modes.Select(mode => mode.Id));
+    }
+
+    /// <summary>A successful answer with no modes is a real answer: it is cached, so the card is not re-probed.</summary>
+    [Fact]
+    public async Task GetWorkModesAsync_SuccessfulEmptyAnswer_IsCached()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new();
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        IReadOnlyList<AgentModeOption> first = await probe.GetWorkModesAsync("claude", null, ct);
+        IReadOnlyList<AgentModeOption> second = await probe.GetWorkModesAsync("claude", null, ct);
+
+        Assert.Empty(first);
+        Assert.Empty(second);
+        Assert.Single(runner.Calls);
+    }
+
+    /// <summary>A failed probe is not cached for modes either, so a retry probes again.</summary>
+    [Fact]
+    public async Task GetWorkModesAsync_FailedProbe_IsNeverCached_RetryProbesAgain()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        FakeAdapterProbeRunner runner = new()
+        {
+            Handler = static (_, _, _) => throw new IOException("adapter unreachable"),
+        };
+        using ModelCatalogProbe probe = ModelCatalogCacheTests.CreateProbe(dir, runner);
+
+        IReadOnlyList<AgentModeOption> failed = await probe.GetWorkModesAsync("claude", null, ct);
+        Assert.Empty(failed);
+
+        runner.Handler = static (_, _, _) => new AdapterProbeOutcome([], []) { Modes = [new AgentModeOption("acceptEdits", "Accept edits", null)] };
+        IReadOnlyList<AgentModeOption> retried = await probe.GetWorkModesAsync("claude", null, ct);
+
+        Assert.Single(retried);
+        Assert.Equal(2, runner.Calls.Count);
+    }
+
     /// <summary>Builds a <see cref="ModelCatalogProbe"/> over two configured Adapters, "claude" and "agency".</summary>
     /// <param name="dir">The isolated data directory the probe's Work Dir root lives under.</param>
     /// <param name="runner">The fake probe runner standing in for the real process spawn.</param>
@@ -183,6 +293,6 @@ public sealed class ModelCatalogCacheTests
         AdapterCatalog catalog = new(options);
         AdapterProfileResolver resolver = new(catalog);
 
-        return new ModelCatalogProbe(new(options), NullLoggerFactory.Instance, resolver, runner);
+        return new ModelCatalogProbe(new(options), NullLoggerFactory.Instance, resolver, runner, new WorkModePolicy(options));
     }
 }

@@ -77,6 +77,7 @@ have two stores rather than one store with a mode.
 | Escaping `@` in options instead of refusing it | An escaped Mention is still the Agent putting words in the Human's mouth |
 | Granting the tool through a Skill, like `propose_teammates` | `propose_teammates` is gated because each Teammate is a billed process. Asking costs nothing and creates nothing |
 | Drag-and-drop ranking | Up and down buttons work with a keyboard and a screen reader, and need no JavaScript |
+| Bridging ACP elicitation (`elicitation/create`) to the card | It holds the Turn open, against the idle timeout, and advertising it re-enables Claude's built-in `AskUserQuestion` alongside `ask_human`. The Adapter keeps that tool off while the capability is absent |
 
 ## Consequences
 
@@ -88,3 +89,6 @@ have two stores rather than one store with a mode.
   answer instead. This goes into `known-limits.md`.
 - The `team-building` Skill's interview can use `ask_human` once the tool exists. Its Greeting
   cannot: a menu of 31 teams is far past four options, and stays prose.
+- Huddle must not advertise `clientCapabilities.elicitation` while this is the only way to ask.
+  It would switch on Claude's built-in `AskUserQuestion`, the refusal-fallback dialog and
+  MCP-initiated forms, each needing a handler. A guard test pins the absence.

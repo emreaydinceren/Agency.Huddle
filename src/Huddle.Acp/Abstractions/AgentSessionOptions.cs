@@ -14,7 +14,8 @@ public sealed class AgentSessionOptions
         ToolServerEndpoint? toolServer = null,
         string? model = null,
         string? effort = null,
-        IReadOnlyDictionary<string, object>? meta = null)
+        IReadOnlyDictionary<string, object>? meta = null,
+        string? mode = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(cwd);
         ArgumentNullException.ThrowIfNull(permissionHandler);
@@ -40,6 +41,9 @@ public sealed class AgentSessionOptions
         // merge, and this keeps "no meta at all" (session/new's _meta unset) reachable through
         // the same code path as a genuinely null one, rather than sending an empty object.
         this.Meta = meta is { Count: > 0 } ? meta : null;
+
+        // Same reasoning as Effort above: a blank mode would never resolve against a catalog.
+        this.Mode = string.IsNullOrWhiteSpace(mode) ? null : mode;
     }
 
     public string Cwd { get; }
@@ -81,4 +85,15 @@ public sealed class AgentSessionOptions
     /// itself (RS §6.4).
     /// </summary>
     public IReadOnlyDictionary<string, object>? Meta { get; }
+
+    /// <summary>
+    /// The mode id (an <see cref="AgentModeOption.Id"/>) the caller wants this session started in,
+    /// or null to send no <c>session/set_config_option</c> call for it at all. Applied AFTER
+    /// <see cref="Model"/> and <see cref="Effort"/>, against the snapshot the previous call
+    /// returned, because a model switch can itself change the mode. A value matching nothing in the
+    /// advertised catalog is not an error: it is logged as a warning and the session starts in the
+    /// agent's own default mode. The agent may also clamp the request; the session then reports
+    /// the mode it really runs in.
+    /// </summary>
+    public string? Mode { get; }
 }

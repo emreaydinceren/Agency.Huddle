@@ -62,6 +62,103 @@ public sealed class RoomSessionResumeTests
         }
     }
 
+    /// <summary>At Turn end, the stored entry also carries the Persona's Work Mode, so a later open can tell whether it still matches (ADR-0033).</summary>
+    [Fact]
+    public async Task TurnEnd_StoresTheWorkMode()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var dataDir = new TempDataDir();
+        RoomSessionStore store = new(dataDir.Options(), NullLogger<RoomSessionStore>.Instance);
+        FakeAgentSession session = new();
+        session.EnqueueReply("hi back");
+        FakePersonaHost host = new(session, ClaudeProfile());
+        FakeRoomSessionOwner owner = new();
+        Persona persona = Nova with { WorkMode = "plan" };
+        var (room, runCts) = CreateRoomSession(owner, host, store, persona);
+        try
+        {
+            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "hi", [], TriggerMessageId: "trig-1")));
+
+            await WaitUntilAsync(() => store.Get("nova", "room-1") is not null, ct);
+
+            RoomSessionEntry? stored = store.Get("nova", "room-1");
+            Assert.NotNull(stored);
+            Assert.Equal("plan", stored.WorkMode);
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
+    /// <summary>
+    /// A Work Mode that differs from the stored one never resumes, in either direction, even when the host
+    /// is resume-capable and holds the stored id: a session opened in one mode must not be resumed for a
+    /// Persona now set to another (ADR-0033).
+    /// </summary>
+    [Theory]
+    [InlineData("acceptEdits", "plan")]
+    [InlineData(null, "plan")]
+    [InlineData("plan", null)]
+    public async Task Reopen_WorkModeChanged_NeverResumes(string? storedWorkMode, string? personaWorkMode)
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var dataDir = new TempDataDir();
+        RoomSessionStore store = new(dataDir.Options(), NullLogger<RoomSessionStore>.Instance);
+        store.Put("nova", "room-1", new RoomSessionEntry("stored-session-id", "claude", "m1", "e1", "msg-abc", DateTimeOffset.UtcNow, storedWorkMode));
+
+        FakeAgentSession freshSession = new();
+        freshSession.EnqueueReply("fresh reply");
+        FakePersonaHost host = new(freshSession, ClaudeProfile()) { CanResume = true };
+        host.ResumeHandler = static id => new FakeAgentSession();
+
+        FakeRoomSessionOwner owner = new();
+        var (room, runCts) = CreateRoomSession(owner, host, store, Nova with { WorkMode = personaWorkMode });
+        try
+        {
+            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-5")));
+
+            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+
+            Assert.Empty(host.ResumeCalls);
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
+    /// <summary>An entry and a Persona that carry the same Work Mode do resume.</summary>
+    [Fact]
+    public async Task Reopen_SameWorkMode_ResumesById()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using var dataDir = new TempDataDir();
+        RoomSessionStore store = new(dataDir.Options(), NullLogger<RoomSessionStore>.Instance);
+        store.Put("nova", "room-1", new RoomSessionEntry("stored-session-id", "claude", "m1", "e1", "msg-abc", DateTimeOffset.UtcNow, "plan"));
+
+        FakeAgentSession freshSession = new();
+        FakeAgentSession resumedSession = new();
+        resumedSession.EnqueueReply("resumed reply");
+        FakePersonaHost host = new(freshSession, ClaudeProfile()) { CanResume = true };
+        host.ResumeHandler = id => string.Equals(id, "stored-session-id", StringComparison.Ordinal) ? resumedSession : null;
+
+        FakeRoomSessionOwner owner = new();
+        var (room, runCts) = CreateRoomSession(owner, host, store, Nova with { WorkMode = "plan" });
+        try
+        {
+            room.Enqueue(new QueuedWork(1, new WorkItem("room-1", "Room 1", "Human", "go", [], TriggerMessageId: "trig-2")));
+
+            await WaitUntilAsync(() => owner.Written.OfType<PostMessage>().Any(), ct);
+
+            Assert.Contains("stored-session-id", host.ResumeCalls);
+        }
+        finally
+        {
+            await DisposeSessionAsync(room, runCts);
+        }
+    }
+
     /// <summary>
     /// A Command Turn does not move the resume watermark. It leaves the Catch-up buffer undrained, so the
     /// session has not seen the Messages before it, and storing the outcome Message's id would make a

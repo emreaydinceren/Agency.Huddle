@@ -39,6 +39,6 @@ internal sealed class BuiltinTeammateReset(PersonaStore personas)
         var text = PersonaFrontmatter.WriteScalarField(BuiltinTeammate.DefaultText, "name", currentName);
         text = PersonaFrontmatter.WriteScalarField(text, "alias", alias);
 
-        return personas.Update(currentName, text, model: null, effort: null);
+        return personas.Update(currentName, text, model: null, effort: null, workMode: null);
     }
 }

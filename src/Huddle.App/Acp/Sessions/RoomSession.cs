@@ -151,7 +151,7 @@ internal sealed class RoomSession : IAsyncDisposable
     /// wall-clock minutes. Defaults to <see cref="TimeProvider.System"/> when omitted, so every
     /// pre-D23 caller keeps compiling and behaving unchanged.
     /// </param>
-    /// <param name="persona">The Persona this session belongs to (D24): its Model and Effort gate a resume. <see langword="null"/> disables resume, like every pre-D24 caller.</param>
+    /// <param name="persona">The Persona this session belongs to (D24): its Model, Effort and Work Mode gate a resume. <see langword="null"/> disables resume, like every pre-D24 caller.</param>
     /// <param name="roomSessions">Backs resume and the Transcript Catch-up cursor (RS §6.1, §6.6). <see langword="null"/> disables storing and resuming.</param>
     /// <param name="host">Supplies <see cref="IPersonaHost.CanResume"/>, <see cref="AdapterProfile.Id"/> and <see cref="IPersonaHost.ResumeAsync"/> for the resume decision. <see langword="null"/> disables resume.</param>
     /// <param name="ownPosts">Marks this session's Room Busy for a Turn's own duration (D27, RS §6.7). <see langword="null"/> disables it, like every pre-D27 caller.</param>
@@ -544,7 +544,7 @@ internal sealed class RoomSession : IAsyncDisposable
 
     /// <summary>
     /// RS §6.1 "Opening": resumes by the stored id when this is a per-Room session with a stored
-    /// entry whose Adapter, Model and Effort all still match the Persona's current ones and the host
+    /// entry whose Adapter, Model, Effort and Work Mode all still match the Persona's current ones and the host
     /// advertises <see cref="IPersonaHost.CanResume"/>; opens fresh otherwise, including when
     /// <see cref="IPersonaHost.ResumeAsync"/> itself answers "not found" (<see langword="null"/>, RS
     /// §9 E-1). A resume that throws is left to propagate - the caller's own catch reports it as an
@@ -561,7 +561,8 @@ internal sealed class RoomSession : IAsyncDisposable
                 && this.host.CanResume
                 && string.Equals(entry.AdapterId, this.host.Profile.Id, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(entry.Model, this.persona.Model, StringComparison.Ordinal)
-                && string.Equals(entry.Effort, this.persona.Effort, StringComparison.Ordinal))
+                && string.Equals(entry.Effort, this.persona.Effort, StringComparison.Ordinal)
+                && string.Equals(entry.WorkMode, this.persona.WorkMode, StringComparison.Ordinal))
             {
                 var resumedSession = await this.host.ResumeAsync(entry.SessionId, cancellationToken);
                 if (resumedSession is not null)
@@ -1145,7 +1146,7 @@ internal sealed class RoomSession : IAsyncDisposable
                 this.roomSessionStore.Put(
                     this.owner.PersonaName,
                     storeRoomId,
-                    new RoomSessionEntry(activeSession.SessionId, this.host.Profile.Id, this.persona.Model, this.persona.Effort, lastMessageId, this.time.GetUtcNow()));
+                    new RoomSessionEntry(activeSession.SessionId, this.host.Profile.Id, this.persona.Model, this.persona.Effort, lastMessageId, this.time.GetUtcNow(), this.persona.WorkMode));
             }
 
             turnCancellation.Dispose();

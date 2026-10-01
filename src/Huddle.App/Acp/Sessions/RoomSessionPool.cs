@@ -50,7 +50,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <summary>Initializes a new instance of the <see cref="RoomSessionPool"/> class.</summary>
     /// <param name="host">The Persona's running Adapter host, which opens every Room Session's <see cref="IAgentSession"/>.</param>
     /// <param name="owner">What every Room Session reports Turn outcomes, tokens and health through.</param>
-    /// <param name="persona">The Persona this pool serves (RS §6.1 resume: its Model and Effort must still match a stored entry).</param>
+    /// <param name="persona">The Persona this pool serves (RS §6.1 resume: its Model, Effort and Work Mode must still match a stored entry).</param>
     /// <param name="prompts">Resolves every <c>turn.*</c> prompt's current text.</param>
     /// <param name="options">The Persona's current ACP options.</param>
     /// <param name="time">Drives idle eviction and the sweep timer.</param>

@@ -66,7 +66,7 @@ public sealed class TeamCatalogTests
         void Count() => raised++;
         catalog.Changed += Count;
 
-        personas.Update("Nova", PersonaText("Nova", "Ops"), model: null, effort: null);
+        personas.Update("Nova", PersonaText("Nova", "Ops"), model: null, effort: null, workMode: null);
 
         // Stop counting the instant Update returns: Update's own write trips the PersonaStore file
         // watcher, which raises a SECOND PersonasChanged after its 500 ms debounce (see
@@ -120,7 +120,7 @@ public sealed class TeamCatalogTests
         tasks.IndexChanged += CountTaskSignal;
 
         catalog.Dispose();
-        personas.Update("Nova", PersonaText("Nova", "Ops"), model: null, effort: null);
+        personas.Update("Nova", PersonaText("Nova", "Ops"), model: null, effort: null, workMode: null);
         CreateFolder(dir, "Research");
 
         // Prove the TaskStore signal DID fire after the dispose, so silence from the catalog is

@@ -141,6 +141,31 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Agenc
     settle these — RS-M1 through RS-M10, and V-3/V-5 — are written in
     [manual-tests/room-sessions.md](manual-tests/room-sessions.md) and have **not been run**;
     deferred to the Human's own user acceptance testing, the same way File Changes' paid checks are.
+  - **Measured for the Work Mode option, 2026-09-30:** a session set to `acceptEdits` and resumed
+    from a new `claude-agent-acp` 0.75.1 process came back in `default` (Manual). The Adapter does
+    not restore the mode, so Work Mode is re-applied after every resume
+    ([Huddle.WorkModes-Specifications.md](../Huddle.WorkModes-Specifications.md) §6.3). The same
+    run did not settle whether Model and Effort survive a resume.
+  - **Measured for Work Mode, 2026-10-01**, by a script that drove the real 0.75.1 over stdio on
+    Haiku (Windows, a Claude subscription, one run each), **outside the Huddle app**; the in-app
+    runs remain the acceptance. **OQ-2, no:** in `plan` mode the plan is not text. The Adapter
+    asked a `switch_mode` "Approve Plan" request with the plan in `rawInput.plan`, the plan guard
+    refused it, the Turn ended `cancelled` with 126 characters of preamble, and `RoomSession` posts
+    no cancelled Turn, so `plan` is on the default hidden list. **OQ-3, yes:** under `acceptEdits`
+    a write outside the Work Dir still produced a permission request carrying
+    `rawInput.file_path`, so the `~/.claude` guard survives (the path was a temp directory, not
+    `~/.claude`, and `allow_always` was never chosen). **MW-2, yes:** under `acceptEdits` an edit
+    inside the Work Dir produced no request and the Turn ended `end_turn`.
+  - **OQ-5, measured 2026-10-01 (free, no prompt):** `auto` on a model without support (Haiku, with no Turn running) answered `acceptEdits` in the `set_config_option` response, then sent an `agent_message_chunk` reading "Auto mode unavailable: the selected model does not support Auto mode; using Accept edits instead." and a `current_mode_update` to `acceptEdits`. Opus, Sonnet and the default accepted `auto`. Setting `auto` on Opus and then switching the model to Haiku moved the mode to `acceptEdits` with only a `current_mode_update`, no message chunk. A chunk that arrives with no active Turn is
+    dropped by `RoomSession`, so the notice is normally lost; if a Turn were already open it would be
+    appended to that reply. `auto` stays hidden by default. Not tried inside the app.
+  - **Still unrun, for Work Mode:** the in-app manual tests WORKMODE-06 to WORKMODE-09 in
+    [manual-tests/work-mode.md](manual-tests/work-mode.md).
+  - **A Persona set to `plan` is silent in the Room.** After an operator lifts the default block
+    through `Team:Acp:HiddenModes`, a plan-mode Persona's Turn ends cancelled with no posted reply,
+    because the plan lives only in the tool call. It stays so until phase 3 of the Work Modes
+    design captures it ([roadmap item 22](roadmap.md#22-a-persona-has-a-work-mode--phase-1-delivered-code-2026-09-30)). A stored `plan` row on an install that has
+    not lifted the block starts the Persona on the Adapter default with a warning.
 - **File Changes is built, and here is what a Turn can miss** — see
   [roadmap item 11, delivered 2026-09-23](roadmap.md#11-telling-an-agent-which-watched-files-changed--delivered-code-2026-09-23),
   [ADR-0023](../adr/0023-an-agent-learns-of-file-changes-on-its-next-turn.md), and FC §8. Six

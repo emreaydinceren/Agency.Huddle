@@ -531,7 +531,7 @@ public sealed class TaskDetailTests
             this.personas = new PersonaStore(
                 new TeammatePaths(this.options),
                 new PersonaModelStore(this.options),
-                new PersonaEffortStore(this.options),
+                new PersonaEffortStore(this.options), new PersonaWorkModeStore(this.options),
                 NullLogger<PersonaStore>.Instance);
             this.personas.Add(new PersonaIdentity("Nova", "Nova", "Nova", ["Platform"]), "You are Nova.");
 

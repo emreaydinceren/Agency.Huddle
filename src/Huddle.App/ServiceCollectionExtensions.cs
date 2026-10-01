@@ -158,6 +158,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<AdapterProfileResolver>();
         services.AddSingleton<PersonaModelStore>();
         services.AddSingleton<PersonaEffortStore>();
+        services.AddSingleton<PersonaWorkModeStore>();
         services.AddSingleton<TaskIdAllocator>();
 
         // No interface, same reasoning as AvatarStore/PromptStore above: a second, independently
@@ -286,6 +287,7 @@ public static class ServiceCollectionExtensions
         // keeps it honest is WHEN it runs — the /teammates page only calls it on card-open, never on
         // page-load.
         services.AddSingleton<IAdapterProbeRunner, AdapterProcessProbeRunner>();
+        services.AddSingleton<WorkModePolicy>();
         services.AddSingleton<IModelCatalog, ModelCatalogProbe>();
 
         // No interface, same reasoning as AppearanceStore/AvatarStore above: nothing needs to

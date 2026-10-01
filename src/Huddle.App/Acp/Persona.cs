@@ -24,4 +24,12 @@ namespace Agency.Huddle.App.Acp;
 /// Which ACP agent runs this Persona's session (Spec §7.2), or <see langword="null"/> to run on the
 /// installation's default profile.
 /// </param>
-public sealed record Persona(string Name, string Text, string? Model = null, string? Effort = null, string? Adapter = null);
+/// <param name="WorkMode">
+/// The id of the mode the Persona's Adapter should start its sessions in (ADR-0033), or
+/// <see langword="null"/> for the Adapter's own mode, in which case nothing is sent. Stored in
+/// <see cref="Agency.Huddle.App.Data.PersonaWorkModeStore"/>, like Model and Effort, and a scalar so the
+/// restart check picks it up through record equality. The ACP layer calls the same thing
+/// <c>Mode</c>; here it is <c>WorkMode</c> because <c>Mode</c> already means light or dark, the
+/// card state and the system-prompt mode.
+/// </param>
+public sealed record Persona(string Name, string Text, string? Model = null, string? Effort = null, string? Adapter = null, string? WorkMode = null);

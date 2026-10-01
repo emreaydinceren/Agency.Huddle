@@ -83,6 +83,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     private readonly TeammatePaths teammatePaths;
     private readonly PersonaModelStore models;
     private readonly PersonaEffortStore efforts;
+    private readonly PersonaWorkModeStore workModes;
     private readonly ILogger<PersonaStore> logger;
     private readonly Lock watchGate = new();
 
@@ -122,21 +123,25 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <param name="teammatePaths">Locates the Teams directory that this store scans and watches.</param>
     /// <param name="models">The SQLite-backed store for each Persona's chosen Model.</param>
     /// <param name="efforts">The SQLite-backed store for each Persona's chosen Effort.</param>
+    /// <param name="workModes">The SQLite-backed store for each Persona's chosen Work Mode.</param>
     /// <param name="logger">Used to warn if the filesystem watcher reports a dropped-event buffer overflow.</param>
     public PersonaStore(
         TeammatePaths teammatePaths,
         PersonaModelStore models,
         PersonaEffortStore efforts,
+        PersonaWorkModeStore workModes,
         ILogger<PersonaStore> logger)
     {
         ArgumentNullException.ThrowIfNull(teammatePaths);
         ArgumentNullException.ThrowIfNull(models);
         ArgumentNullException.ThrowIfNull(efforts);
+        ArgumentNullException.ThrowIfNull(workModes);
         ArgumentNullException.ThrowIfNull(logger);
 
         this.teammatePaths = teammatePaths;
         this.models = models;
         this.efforts = efforts;
+        this.workModes = workModes;
         this.logger = logger;
 
         // Created eagerly (rather than lazily on first Add) so the watcher below has a directory
@@ -300,7 +305,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         // both PersonaSupervisor and the razor page already go through Get. Adapter is not part of
         // that join - unlike Model and Effort, it travels with the file itself (Spec §7.1), so it
         // is carried straight off the entry rather than looked up in a store.
-        return new Persona(entry.Name, entry.Text, this.models.Get(entry.Name), this.efforts.Get(entry.Name), entry.Adapter);
+        return new Persona(entry.Name, entry.Text, this.models.Get(entry.Name), this.efforts.Get(entry.Name), entry.Adapter, this.workModes.Get(entry.Name));
     }
 
     /// <summary>
@@ -329,7 +334,8 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <param name="body">The Persona's system-prompt body - everything after the frontmatter this method composes.</param>
     /// <param name="model">The Model to store for the new Persona, or <see langword="null"/> for the agent's default.</param>
     /// <param name="effort">The Effort to store for the new Persona, or <see langword="null"/> for the model's default.</param>
-    public Persona Add(PersonaIdentity identity, string body, string? model = null, string? effort = null)
+    /// <param name="workMode">The Work Mode to store for the new Persona, or <see langword="null"/> for the Adapter's own mode.</param>
+    public Persona Add(PersonaIdentity identity, string body, string? model = null, string? effort = null, string? workMode = null)
     {
         ArgumentNullException.ThrowIfNull(identity);
 
@@ -372,6 +378,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
             File.WriteAllText(path, text);
             this.models.Set(entry.Name, model);
             this.efforts.Set(entry.Name, effort);
+            this.workModes.Set(entry.Name, workMode);
 
             // Published BEFORE writeGate is released, not after: the next Add or Update to take
             // this lock must see an index that already reflects THIS write, or it would pass
@@ -382,7 +389,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         // Raised only after writeGate is released - see NotifyChanged's remarks for why.
         this.NotifyChanged(change);
 
-        return new Persona(entry.Name, text, model, effort, entry.Adapter);
+        return new Persona(entry.Name, text, model, effort, entry.Adapter, workMode);
     }
 
     /// <summary>
@@ -401,12 +408,14 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// A <paramref name="text"/> that would not load cleanly (no valid identity, or a collision) is
     /// rejected with <see cref="ChatException"/> and the file is left untouched. When
     /// <paramref name="text"/>'s frontmatter Name differs from the Persona's current Name, the OLD
-    /// Name's Model and Effort rows are removed before the new ones are stored under the NEW Name -
-    /// without this, editing <c>name:</c> would silently drop the teammate's Model and Effort, the
-    /// exact "silently resurrect an old setting" failure docs/agencyteam/rules.md exists to prevent,
-    /// just running the other way (silently DROPPING a setting rather than resurrecting one).
+    /// Name's Model, Effort and Work Mode rows are removed before the new ones are stored under the
+    /// NEW Name - without this, editing <c>name:</c> would silently drop the teammate's Model and
+    /// Effort, the exact "silently resurrect an old setting" failure docs/agencyteam/rules.md exists
+    /// to prevent, just running the other way (silently DROPPING a setting rather than resurrecting
+    /// one). <paramref name="workMode"/> has no default for the same reason as the other two: a caller
+    /// that forgot it would wipe the stored mode, so every caller must pass it.
     /// </remarks>
-    public Persona Update(string name, string text, string? model, string? effort)
+    public Persona Update(string name, string text, string? model, string? effort, string? workMode)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -432,10 +441,12 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
             {
                 this.models.Remove(current.Name);
                 this.efforts.Remove(current.Name);
+                this.workModes.Remove(current.Name);
             }
 
             this.models.Set(entry.Name, model);
             this.efforts.Set(entry.Name, effort);
+            this.workModes.Set(entry.Name, workMode);
 
             // Published BEFORE writeGate is released - see Add's matching comment.
             change = this.PublishFreshIndex();
@@ -444,7 +455,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         // Raised only after writeGate is released - see NotifyChanged's remarks for why.
         this.NotifyChanged(change);
 
-        return new Persona(entry.Name, text, model, effort, entry.Adapter);
+        return new Persona(entry.Name, text, model, effort, entry.Adapter, workMode);
     }
 
     /// <summary>
@@ -465,6 +476,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         File.Delete(current.Path);
         this.models.Remove(current.Name);
         this.efforts.Remove(current.Name);
+        this.workModes.Remove(current.Name);
 
         this.RefreshIndexAndNotify();
     }

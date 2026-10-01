@@ -10,10 +10,10 @@
         "src/Huddle.App",
         "--",
         "--urls",
-        "http://localhost:5100",
+        "http://localhost:1111",
         "--Team:Acp:Enabled=false"
       ],
-      "port": 5100
+      "port": 1111
     }
   ]
 }

@@ -555,7 +555,7 @@ public sealed class TeammateCardTests
             new PersonaIdentity(
                 "Alfred", "Edited Title", seeded.Alias, Teams: [], Skills: ["team-building"], Builtin: BuiltinTeammate.ChiefOfStaffMarker),
             "This Body has been hand-edited and no longer matches the shipped default.");
-        personas.Update(seeded.Name, editedText, model: "claude-opus-4", effort: "high");
+        personas.Update(seeded.Name, editedText, model: "claude-opus-4", effort: "high", workMode: null);
 
         await using var ctx = NewContext(factory);
         var cut = await OpenViewCardAsync(ctx, factory, "Alfred");

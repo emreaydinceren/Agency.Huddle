@@ -60,6 +60,10 @@ internal sealed class FakeAgentSession : IAgentSession
 
     public IReadOnlyList<AgentEffortOption> EffortLevels { get; } = [];
 
+    public IReadOnlyList<AgentModeOption> ModeOptions { get; } = [];
+
+    public string? CurrentModeId => null;
+
     public async Task<PromptResult> PromptAsync(string text, CancellationToken cancellationToken)
     {
         lock (this.gate)

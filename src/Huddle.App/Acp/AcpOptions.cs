@@ -126,4 +126,16 @@ public sealed class AcpOptions
     /// when it resumes.
     /// </summary>
     public int TranscriptCatchUpMessages { get; set; } = 20;
+
+    /// <summary>
+    /// The Work Mode ids (ADR-0033) that are never offered in the Teammate card and never sent to an
+    /// Adapter, bound from <c>Team:Acp:HiddenModes</c>. Null, the key being absent, means the default
+    /// that <see cref="WorkModePolicy"/> holds; a list means exactly that list. To hide nothing, give a
+    /// list holding one empty string: configuration cannot express an empty list, since the binder
+    /// reads an empty value as absent. Nullable with no initialiser, for the reason <see cref="Args"/> gives:
+    /// <c>ConfigurationBinder</c> writes a bound array into an already-populated one by index, so a
+    /// default here would make <c>["auto"]</c> give <c>["auto", "auto"]</c> and silently unhide the
+    /// second default.
+    /// </summary>
+    public IReadOnlyList<string>? HiddenModes { get; set; }
 }

@@ -95,7 +95,7 @@ public sealed class RoomSessionConformanceTests
         };
 
         await using MockAdapterFixture fixture =
-            await MockAdapterFixture.StartAsync(persona, config, time, ct);
+            await MockAdapterFixture.StartAsync(persona, config, time, cancellationToken: ct);
         ITeamDirectory directory = fixture.Services.GetRequiredService<ITeamDirectory>();
         ChatService chat = fixture.Services.GetRequiredService<ChatService>();
         RoomEvents roomEvents = fixture.Services.GetRequiredService<RoomEvents>();
@@ -129,7 +129,7 @@ public sealed class RoomSessionConformanceTests
         };
 
         await using MockAdapterFixture fixture =
-            await MockAdapterFixture.StartAsync(persona, config, time, ct);
+            await MockAdapterFixture.StartAsync(persona, config, time, cancellationToken: ct);
         ITeamDirectory directory = fixture.Services.GetRequiredService<ITeamDirectory>();
         ChatService chat = fixture.Services.GetRequiredService<ChatService>();
         RoomEvents roomEvents = fixture.Services.GetRequiredService<RoomEvents>();
