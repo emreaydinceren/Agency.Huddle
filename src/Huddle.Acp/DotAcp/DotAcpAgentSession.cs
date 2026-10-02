@@ -32,6 +32,8 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
 
     private CancellationTokenSource? promptCts;
 
+    private IElicitationScope? elicitationScope;
+
     // Stamped by TryPublish whenever it publishes anything other than TurnCompleted - i.e. every
     // agent-originated session/update this session's sink has actually applied. Read and written via
     // Interlocked/Volatile since TryPublish runs on whatever thread dotacp/StreamJsonRpc dispatches a
@@ -78,6 +80,20 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
     public IPermissionHandler PermissionHandler { get; }
 
     public CancellationToken PromptCancellation { get; private set; } = CancellationToken.None;
+
+    /// <summary>Gets the scope bound by <see cref="BindElicitationScope"/>, or null before one is bound.</summary>
+    public IElicitationScope? ElicitationScope => Volatile.Read(ref this.elicitationScope);
+
+    /// <summary>
+    /// Stores <paramref name="scope"/> for <see cref="DotAcpClientAdapter"/> to find through
+    /// <see cref="ISessionSink"/>; a later call replaces an earlier one. Read on whatever thread
+    /// dotacp dispatches the agent's request on, hence the volatile field.
+    /// </summary>
+    /// <param name="scope">The scope that answers this session's elicitation requests.</param>
+    public void BindElicitationScope(IElicitationScope scope)
+    {
+        Volatile.Write(ref this.elicitationScope, scope);
+    }
 
     /// <summary>
     /// Sets <see cref="EffortLevels"/> after this session is constructed. This is deliberately a

@@ -507,6 +507,9 @@ public sealed partial class DotAcpAgentHost(
             activeAdapter.OnDisconnected(activeConnection);
         }
 
+        // Ends every elicitation request still waiting for the Human, so no handler outlives the host.
+        activeAdapter?.Dispose();
+
         activeConnection?.Dispose();
 
         if (activeProcess is not null)
