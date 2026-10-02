@@ -268,4 +268,4 @@ the switch. [`docs/Huddle.UserGuide.md`](Huddle.UserGuide.md) walks through
 Teammates, Teams, Tasks and the Library, and
 [`docs/Huddle.EngineeringGuide.md`](Huddle.EngineeringGuide.md) holds the whole design.
 
-.NET 10 and Blazor Server, 5,075 tests, zero build warnings.
+.NET 10 and Blazor Server, 5,284 tests, zero build warnings.

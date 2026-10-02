@@ -6,7 +6,7 @@ documentation: read it whole if you are picking the codebase up cold, then follo
 only the links your task needs.
 
 Applies to the repo as of 2026-10-01, after Work Modes: one solution, `Huddle.slnx`, holding all six projects, builds
-with zero warnings and 5061 of its 5075 tests pass and the other 14 are skipped unless
+with zero warnings and 5265 of its 5284 tests pass and the other 19 are skipped unless
 `Team:Acp:Enabled` is on — see [Build, test, run](#build-test-run).
 
 The product is Agency.Huddle, and since 2026-09-12 so is every namespace.
@@ -374,7 +374,7 @@ everything in the table above stays under `Team:`. See
 
 ```powershell
 dotnet build Huddle.slnx                             # must be 0 warnings
-dotnet test  Huddle.slnx --                          # 14 tests skipped when Acp:Enabled is off
+dotnet test  Huddle.slnx --                          # 19 tests skipped when Acp:Enabled is off
 ./test-health.ps1                                    # PASS or FAIL: does the built app boot and answer /health
 dotnet run --project src/Huddle.App --urls http://localhost:5100
 ```
