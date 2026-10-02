@@ -60,6 +60,17 @@ test-first task list. Every design decision is recorded in §11 with the alterna
 > the card in a browser found two defects the suite cannot see**, both fixed: the card had no height limit
 > (its CSS lived in a scoped stylesheet whose `::deep` rules can never match a Mud component), and a Room
 > whose Transcript was taller than the window could not be scrolled at all (§6.8a, "What looking at it found").
+>
+> **Checked live the same day** (QM-7 to QM-10, one sample each, Haiku through the real `claude-agent-acp`
+> 0.75.1). Claude called `AskUserQuestion` and the card appeared; it stayed open for about 47 seconds, more
+> than twice a 20-second idle bound, without the Turn being cancelled; answering put a Message in the
+> Transcript and Claude continued in the same Turn, while Coach's session received exactly one
+> `session/prompt`. Skip and Stop both ended a waiting form cleanly, and a 30-second bound dropped an
+> unanswered one. With `Acp:AdvertiseElicitation` off, Claude reported the tool disabled and the trace held no
+> `elicitation` text. Asked naturally to plan a workout with both tools available, Haiku chose `ask_human`.
+> **Not exercised against a real model:** the retry-after-refusal dialog and an MCP server's form (both were
+> run against the scripted adapter), a typed Message cancelling a form (scripted adapter only), and any
+> non-Claude Adapter.
 
 > [!NOTE]
 > **Sequencing.** The Skills work (S2) landed on 2026-09-22, so `ProposalStore` and
@@ -437,8 +448,15 @@ When you need the Human's preferences, constraints or goals before you can help,
 budget, or which of these matters most, and you were about to write your questions out as a list, call
 {{askHumanTool}} instead: it shows them as options the Human taps. Say in your reply why you are asking,
 then end your Turn; the answer arrives later as a Message from the Human. Do not use it for a fact you
-can look up or infer, when they want your own opinion, or when they have already given you the detail.
+can look up or infer, when they want your own opinion, or when they have already given you the detail. The
+built-in AskUserQuestion tool also works for tappable choices, but it holds this Turn open until the Human
+answers, so prefer {{askHumanTool}}: ending your Turn lets the answer arrive as the Human's next Message and
+keeps the conversation moving.
 ```
+
+The last sentence was added with the elicitation bridge (§6.8a, D-18): once `AskUserQuestion` exists the model
+has two ways to ask, and the paragraph says which to prefer and why. A live Haiku, asked to plan a workout
+with both available, chose `ask_human` (one sample).
 
 It *does* name the tool, so `{{askHumanTool}}` is filled in by code from the same instance the factory
 registers, with the Adapter's prefix (`mcp__team__ask_human`, or bare on `agency-acp`); the template
@@ -694,7 +712,7 @@ the task that registers the tool. Each diff is reviewed to be exactly one new to
 goes to every Persona (D-10).
 
 **Manual tests** live in [manual-tests/questions.md](engineering/manual-tests/questions.md) as QUESTIONS-01 to
-QUESTIONS-06, in this table's order, and are registered in [manual-tests.md](engineering/manual-tests.md):
+QUESTIONS-10, in this table's order, and are registered in [manual-tests.md](engineering/manual-tests.md). QM-7 to QM-10 are the elicitation bridge's, and all four were run on 2026-10-01 (QM-7 against `mock-acp`, QM-8 to QM-10 against a real Claude Adapter on Haiku): all pass, and QM-7 is where the two layout defects of §6.8a were found:
 
 | Id | Steps | Pass |
 | --- | --- | --- |
@@ -703,7 +721,11 @@ QUESTIONS-06, in this table's order, and are registered in [manual-tests.md](eng
 | QM-3 | Ask *"What is the capital of France?"* and *"Should I learn Python or JavaScript?"* | It answers directly both times and does not call `ask_human` |
 | QM-4 | QM-1 on a Persona on `agency-acp` | Same as QM-1, or the failure is recorded in the Adapters live findings |
 | QM-5 | In a Room of three, answer a card | Only the asker wakes; the other Agent reads the answer as Catch-up next time it is Mentioned |
-| QM-6 | Ask a Claude Persona *"Use your AskUserQuestion tool to ask me my favourite colour"* | It says it has no such tool, or asks with `ask_human`. No other card appears and the Turn does not hang (§6.8) |
+| QM-6 | With `Acp:AdvertiseElicitation` **off**, ask a Claude Persona *"Use your AskUserQuestion tool to ask me my favourite colour"* | It says it has no such tool, or asks with `ask_human`. No other card appears and the Turn does not hang (§6.8). With the default on, this is QM-8 |
+| QM-7 | A scripted Adapter (`mock-acp`) is sent `[elicit:form]`, `[elicit:ask]`, `[elicit:one]`, `[elicit:refusal]` and `[elicit:unsupported]` | Each form appears as a card with typed fields, or none for the unsupported one. The answer reaches the Adapter with the right JSON types, and a typed Message, Skip or an unsupported shape each produce the right `cancel` or `decline` (§6.8a). Free |
+| QM-8 | With the default on, ask Coach *"Use your AskUserQuestion tool to ask me my favourite colour"*, leave the card 45 seconds with `Acp:TurnIdleTimeoutSeconds` at 20, then answer | A card appears; the Turn is not cancelled by the idle bound; the answer is a Message in the Transcript, Coach continues in the same Turn, and Coach's session receives exactly one `session/prompt` |
+| QM-9 | Press Skip on one form and Stop on another's Turn | Skip posts nothing and the model is told it was skipped; Stop drops the card and the Persona answers the next message normally |
+| QM-10 | Leave a form unanswered with `Acp:UserInputTimeoutSeconds` at 30 | The card is dropped after the bound, the model is told the tool use did not go through, and the Turn ends without an idle-timeout line |
 
 ---
 
