@@ -1,6 +1,6 @@
 # Huddle.Questions — Design Specification
 
-**Date:** 2026-09-22 · **Status:** Proposed · **Decision record:**
+**Date:** 2026-09-22 (revised 2026-10-01) · **Status:** Built 2026-10-01 · **Decision record:**
 [ADR-0022](adr/0022-an-agent-asks-the-human-with-a-question.md) · **Vocabulary:**
 [language.md](engineering/language.md) (**Question**)
 
@@ -21,11 +21,39 @@ test-first task list. Every design decision is recorded in §11 with the alterna
 > overrides either.
 
 > [!NOTE]
-> **Sequencing.** This shares four files with the Skills work (S2): the tool list in
-> `DotAcpAgentHostFactory`, `PromptCatalog`, `ChatService` and `Chat.razor`. Build it after S2's
-> `ProposalCard` lands, and copy that card's patterns rather than inventing parallel ones. The
-> Proposal is referred to throughout as the precedent; see
-> [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.md) §6.9–§6.11.
+> **Built 2026-10-01.** Every task in Appendix A landed, in order. Three things differ from what
+> was drafted, and the text below says so where each matters. The answer has a **blank line between each
+> quoted Question and its answer** (§6.4): directly under `> question`, CommonMark reads the answer as a
+> lazy continuation of the quote and renders it inside the Agent's words, and a test now fails without
+> the blank line. **Q-G1 lives in `tests/Huddle.Tests/Conformance/PersonaHostTests.cs`**, not in
+> `Huddle.Acp.Tests`: it drives the real factory against the ACP effort's `FakeAcpAgent`, so it touches
+> nothing in their tree and needed no announcement. And `dotacp` 2026.7.19's `ClientCapabilities` has no
+> `Elicitation` member at all, so advertising the capability would need a library upgrade first; the
+> guard is there for that day. The six paid manual tests are written
+> ([questions.md](engineering/manual-tests/questions.md)) and were run once, 2026-10-01, in the app.
+>
+> **What that run found.** The card, the answer, the wake, D-8 and §6.8 all held against a real model
+> (QUESTIONS-02, 05 and 06 pass). **D-11 as first written did not.** On the Claude Adapter every `mcp__team__*` tool is a
+> *deferred* tool: the model sees only its name until it calls ToolSearch, so the description that carries
+> all of "when to ask and when not to" is never read. Haiku, given the exact QM-1 prompt, wrote its
+> questions as a list twice; told to call `ask_human` by name, it did so correctly. A fix has to put a
+> sentence about when to ask where the model always sees it (the system prompt's tool roster is the
+> candidate), or stop the Adapter deferring. **The first is built** (§6.6, D-11): `systemPrompt.askHuman`, one
+> paragraph after the tools paragraph. QUESTIONS-01, re-run against it the same day, **passed** (one sample: a
+> fresh Haiku Teammate called ToolSearch and then `ask_human` unprompted).
+> The run also added a muted, barred style for a quoted line in a Message (`app.css`), because an answer
+> and the question it quotes were otherwise indistinguishable.
+
+> [!NOTE]
+> **Sequencing.** The Skills work (S2) landed on 2026-09-22, so `ProposalStore` and
+> `ProposalCard` now exist; copy their patterns rather than inventing parallel ones. The Proposal
+> is referred to throughout as the precedent; see
+> [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.md) §6.9–§6.11. Four files are
+> still shared with other work: the tool list in `Acp/DotAcpAgentHostFactory.cs`,
+> `Prompts/PromptCatalog.cs`, `Services/ChatService.cs` and `Components/Pages/Chat.razor`. Work
+> Modes phase 3 (plan approval, [WorkModes spec](Huddle.WorkModes-Specifications.md)) will add a
+> third card beside `ProposalCard`, so it touches `Chat.razor` as well; whichever lands second
+> rebases.
 
 ---
 
@@ -138,11 +166,11 @@ meant. Fixed options make both cheap, and make the answer unambiguous.
 | `Questions/QuestionService.cs` | Scoped or singleton service | New |
 | `Acp/Tools/AskHumanTool.cs` | `IAppTool`, one per Persona | New |
 | `Components/Shared/QuestionCard.razor` | Component | New |
-| `RoomEvents.cs` | Gains `QuestionsChanged` | Changed |
-| `ChatService.cs` | Drops a waiting card on a Human post, on archive and on delete | Changed |
-| `DotAcpAgentHostFactory.cs` | Adds `ask_human` to every Persona's tools | Changed |
-| `PromptCatalog.cs`, `prompts.default.json` | Gains `tool.askHuman.description` | Changed |
-| `Chat.razor` | Renders `QuestionCard` and subscribes to `QuestionsChanged` | Changed |
+| `Services/RoomEvents.cs` | Gains `QuestionsChanged` | Changed |
+| `Services/ChatService.cs` | Drops a waiting card on a Human post, on archive and on delete | Changed |
+| `Acp/DotAcpAgentHostFactory.cs` | Adds `ask_human` to every Persona's tools | Changed |
+| `Prompts/PromptCatalog.cs`, `prompts.default.json` | Gains `tool.askHuman.description` | Changed |
+| `Components/Pages/Chat.razor` | Renders `QuestionCard` and subscribes to `QuestionsChanged` | Changed |
 
 ---
 
@@ -254,7 +282,7 @@ A replacement starts `Replaced your waiting questions.` and continues the same w
 **Purpose.** Hold at most one waiting card per Room.
 
 ```csharp
-internal sealed class QuestionStore(RoomEvents events)
+public sealed class QuestionStore(RoomEvents events)   // public only so ChatService's public constructor can take one
 {
     internal PendingQuestions? Get(string roomId);
     internal QuestionPut TryPut(PendingQuestions pending);      // Stored | Replaced | Refused(existing)
@@ -292,12 +320,13 @@ internal sealed class QuestionService(
                                                      the card builds them, the Human cannot)
  asker = directory's Agent by p.AskerAgentId  gone → no Mention
  text  = Compose(p, answers, asker?.Name)
- await chat.PostAsync(roomId, human.Id, text, ct)  → MessagePosted → Reply Gate wakes the asker
+ await chat.PostAsync(roomId, human.Id, text, ct: ct)  → MessagePosted → Reply Gate wakes the asker
  return text
 ```
 
 `TryTake` runs **before** `PostAsync`, so the Human-post hook in §6.5 finds nothing to drop and
-raises nothing twice.
+raises nothing twice. `PostAsync` takes an optional `messageId` before the token, so the token is
+passed by name.
 
 "Answers match" means one `QuestionAnswer` per Question, and:
 
@@ -313,17 +342,24 @@ is quoted, then answered, then the asker is Mentioned on the last line:
 
 ```markdown
 > What is your main goal?
+
 Strength
 
 > Which days can you train?
+
 Monday, Wednesday, Friday
 
 > Rank what matters most
+
 1. Speed · 2. Cost · 3. Quality
 
 @Coach
 ```
 
+- **A blank line separates each quote from its answer.** The first draft of this spec had the answer on
+  the line directly under the quote. In CommonMark that is a lazy continuation of the blockquote, so the
+  Human's answer rendered inside the Agent's quoted question. `QuestionServiceTests.Answer_RenderedAsMarkdown_KeepsTheAnswerOutsideTheQuote`
+  fails without the blank line.
 - Multiple choices are joined with `, `; a ranking is `1. … · 2. …` on one line, so the
   Markdown renderer does not turn it into a list that loses the numbers' meaning.
 - The Mention uses the asker's **current** Name, resolved from `AskerAgentId` at post time,
@@ -372,6 +408,27 @@ Asks the Human one to three multiple-choice questions, shown in a Room as option
 
 It names no tool, so it needs no placeholder and cannot break the `mcp__team__` rule in
 `rules.md`. `PromptValidator` needs no new check.
+
+**The same guidance, shorter, in the system prompt.** The paragraph above is the tool's *description*, and
+the first live run (2026-10-01) showed a model may never read it: the Claude Adapter defers every MCP
+tool, so the model sees `mcp__team__ask_human` as a bare name until it calls ToolSearch, and Haiku wrote
+its questions as a list twice. So `SystemPromptComposer` also appends **`systemPrompt.askHuman`** straight
+after the tools paragraph, for every Persona, whenever the session offers the tool:
+
+```text
+When you need the Human's preferences, constraints or goals before you can help, such as which days, what
+budget, or which of these matters most, and you were about to write your questions out as a list, call
+{{askHumanTool}} instead: it shows them as options the Human taps. Say in your reply why you are asking,
+then end your Turn; the answer arrives later as a Message from the Human. Do not use it for a fact you
+can look up or infer, when they want your own opinion, or when they have already given you the detail.
+```
+
+It *does* name the tool, so `{{askHumanTool}}` is filled in by code from the same instance the factory
+registers, with the Adapter's prefix (`mcp__team__ask_human`, or bare on `agency-acp`); the template
+never contains the prefix. The factory passes the name to `DotAcpPersonaHost`, which hands it to
+`SystemPromptComposer.Compose`'s `askHumanToolName`; a caller that passes none gets the old output byte
+for byte. It is a Prompt, `NextSession`, editable on Settings › Prompts, and the description stays: an
+Adapter that does not defer tools reads both.
 
 ### 6.7 `QuestionCard` in the Room
 
@@ -502,6 +559,7 @@ propose after the answer.
 | E-8 | The asker asks in a Room other than the one its Turn is in | Allowed. There is no framing Message there, so the card must stand on its own. The tool description asks for self-contained questions |
 | E-9 | `PostAsync` fails after the take | Logged; the card is gone; the Human types |
 | E-10 | An Adapter whose MCP client mishandles a nested array schema | Shared with `propose_teammates`. Manual test QM-4 on `agency-acp` |
+| E-11 | An option reads `/compact`, or any text beginning with `/` | Nothing runs. The answer is posted as a quoted Question and its answer, ending with the asker's Mention, so it never *begins* with a Mention, and an Adapter command needs a **leading** Mention of that Teammate ([ADR-0035](adr/0035-an-adapter-command-is-a-message-the-human-addresses-by-mention.md); Commands spec C8). An ordinary prompt is also guarded against a leading `/` (Commands D-9) |
 
 ---
 
@@ -510,11 +568,15 @@ propose after the answer.
 Every automated test uses fakes and costs nothing. What only a real model can show is in the
 manual tests.
 
-**Golden files change.** Adding a tool changes the roster in the system prompt, so
-`systemPrompt.txt`, `systemPrompt.unprefixed.txt` and any `get_help` golden are regenerated in
-the task that registers the tool, and the diff is reviewed to be exactly one new tool.
+**Golden files change.** Adding a tool changes the roster in the system prompt, so every
+`systemPrompt*.txt` in `tests/Huddle.Tests/Acp/Golden/` (six today: plain, `unprefixed`, `memory`,
+`roomSessions`, `roomSessions.memory` and `skills`) and any `get_help` golden are regenerated in
+the task that registers the tool. Each diff is reviewed to be exactly one new tool; none lists
+`propose_teammates` today, because a Skill grants it, but all list `post_message`, and `ask_human`
+goes to every Persona (D-10).
 
-**Manual tests**, to add to [manual-tests.md](engineering/manual-tests.md):
+**Manual tests** live in [manual-tests/questions.md](engineering/manual-tests/questions.md) as QUESTIONS-01 to
+QUESTIONS-06, in this table's order, and are registered in [manual-tests.md](engineering/manual-tests.md):
 
 | Id | Steps | Pass |
 | --- | --- | --- |
@@ -532,7 +594,7 @@ the task that registers the tool, and the diff is reviewed to be exactly one new
 | # | Decision | Rejected | Why |
 | --- | --- | --- | --- |
 | D-1 | **Only the Human is asked; no recipient argument** | Letting an Agent ask another Agent | Options save a person typing; an Agent reads prose as easily. Agent-to-Agent questions stay plain Mentions. Decided by the repo owner |
-| D-2 | **The answer is a Message from the Human** | A tool result the asker waits for; a new Envelope | A blocking tool would hold a Turn open for as long as the Human takes, against the idle timeout. An Envelope means a `ProtocolVersion` bump. A Message reuses the Reply Gate, the Budget and the Transcript unchanged |
+| D-2 | **The answer is a Message from the Human** | A tool result the asker waits for; a new Envelope | A blocking tool would hold a Turn open for as long as the Human takes. That runs into the idle timeout, and it holds the Persona's Turn slot: `MaxConcurrentTurns` is per Persona and defaults to 1 ([ADR-0024](adr/0024-an-agent-holds-one-session-per-room.md)), so the Teammate would stall in every other Room too. Sessions are per Room now, so it is the slot, not a shared session, that spans Rooms. An Envelope means a `ProtocolVersion` bump. A Message reuses the Reply Gate, the Budget and the Transcript unchanged. Work Modes D-16 takes the same stance for plan approval |
 | D-3 | **No `@` in a question or an option** | Escaping `@` when composing; allowing it | The answer is posted as the Human. An escaped `@` is still the Agent putting words in the Human's mouth; refusing is simpler, and costs only an e-mail address in an option |
 | D-4 | **Any typed Human Message drops the card** | Keeping it until answered, as a Proposal is kept | The typed Message is the answer the asker acts on. A card left behind invites a second, contradicting one. A Proposal is kept because revising it through prose is its normal path; a Question has no such path |
 | D-5 | **Refused in a paused Room** | Allowed, since only a Human tap can answer | A tap resets the Budget. A Human deciding whether to let a runaway Room continue should see the Continue prompt, not a card that makes the decision for them as a side effect |
@@ -541,7 +603,7 @@ the task that registers the tool, and the diff is reviewed to be exactly one new
 | D-8 | **Options disabled while the asker is still writing** | Enabled at once | Keeps the Transcript in the order it happened: the framing, then the answer |
 | D-9 | **Up and down buttons to rank** | Drag and drop | Keyboard and screen-reader access, and no JavaScript |
 | D-10 | **Every Agent gets the tool** | Granting it through a Skill | Asking costs nothing and creates nothing. `propose_teammates` is granted by a Skill because each Teammate is a billed process; `ask_human` is not |
-| D-11 | **The full decision guidance lives in the tool description** | A `get_help` section; a Skill | A model decides to call a tool from its description; guidance elsewhere is read too late or not at all |
+| D-11 | **The full decision guidance lives in the tool description, and a short form of it in the system prompt** | A `get_help` section; a Skill; the description alone | A model decides to call a tool from its description; guidance in `get_help` or a Skill is read too late or not at all. *Amended 2026-10-01:* the description alone proved not enough, because the Claude Adapter defers MCP tools and the model sees only the name. The system prompt is the one text it always reads, so it carries a paragraph on when to ask (§6.6). The description stays as the full version |
 | D-12 | **`rank_priorities` ships in V1** | V2 | It is the one kind a typed answer is worst at, and up and down buttons keep it small |
 | D-13 | **Do not advertise ACP elicitation** | Bridging `AskUserQuestion` and `elicitation/create` to the `QuestionCard` | A bridge blocks the Turn (D-2) and needs the idle watchdog paused while a request is open. Advertising `form` also enables the refusal-fallback dialog and MCP-initiated forms, each needing a handler, and gives a Claude Persona two ways to ask. Revisit if a Question needs typed fields (Appendix B) |
 
@@ -567,11 +629,11 @@ Each `.t` task ends red for the right reason; each `.i` task ends with `dotnet t
 | Q-T6 | Unit | `PromptCatalogTests`: `tool.askHuman.description` exists, `NextSession`, contains no `mcp__team__`; `prompts.default.json` drift test | Fails |
 | Q-I6 | Impl | The Prompt, and regenerate `prompts.default.json` | T6 green |
 | Q-T7 | Functional | The factory offers `ask_human` to every Persona; goldens regenerated and reviewed | Fails |
-| Q-I7 | Impl | `DotAcpAgentHostFactory` registration | T7 green |
+| Q-I7 | Impl | `DotAcpAgentHostFactory` registration. *Added 2026-10-01 (D-11):* `systemPrompt.askHuman`, `SystemPromptComposer`'s `askHumanToolName`, and the name threaded through `DotAcpPersonaHost`; `Golden/systemPrompt.askHuman.txt` pins the paragraph, and `PersonaHostTests.Open_SystemPromptCarriesTheAskHumanParagraph_NamingTheToolOnce` pins it on the real factory's `session/new` | T7 green |
 | Q-T8 | bUnit | `QuestionCardTests`: one single Question sends on tap; Send disabled until complete; multi toggles; rank up/down reorders and sends `1. … · 2. …`; disabled while the asker has a Draft; Dismiss posts nothing; a second tab hides on `QuestionsChanged`; hidden when Archived | Fails |
 | Q-I8 | Impl | `QuestionCard.razor`, `Chat.razor` wiring | T8 green |
-| Q-G1 | Guard | A test that pins the `initialize` request's client capabilities: `Fs` and `Terminal` false, no `elicitation`. None exists today, and `DotAcpAgentHost` is the ACP effort's code, so announce the test before adding it to `Huddle.Acp.Tests`. Prove it can fail: add the capability locally, watch it go red, revert | Passes now, and goes red if `elicitation` is ever advertised |
-| Q-D | Docs | `language.md` Question drops "Proposed, not built"; `known-limits.md` gains "a waiting Question is lost on restart"; `manual-tests.md` gains QM-1 to QM-5; ADR-0022 to Accepted | Reviewed |
+| Q-G1 | Guard | A test that pins the `initialize` request's client capabilities: `Fs` and `Terminal` false, no `elicitation`. **Done as** `PersonaHostTests.Start_AdvertisesNoElicitation_AndNoFsOrTerminal` in `tests/Huddle.Tests/Conformance`, which drives the real factory against `FakeAcpAgent`, so `DotAcpAgentHost` and `Huddle.Acp.Tests` are untouched. Proved by flipping `Terminal` to `true` locally (red), then reverting. The `elicitation` half could not be proved the same way: `ClientCapabilities` in `dotacp` 2026.7.19 has no such member | Passes now, and goes red if any capability beyond `fs` and `terminal` is ever advertised, or either is turned on |
+| Q-D | Docs | `language.md` Question drops "Proposed, not built"; `known-limits.md` gains "a waiting Question is lost on restart"; `manual-tests.md` gains QM-1 to QM-6; ADR-0022 to Accepted | Reviewed |
 
 ## Appendix B — Follow-ups outside this spec
 

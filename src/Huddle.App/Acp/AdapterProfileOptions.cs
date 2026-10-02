@@ -80,4 +80,11 @@ public sealed class AdapterProfileOptions
     /// initialiser"). <see langword="null"/> or empty means none. Compared case-insensitively.
     /// </summary>
     public IReadOnlyList<string>? Commands { get; set; }
+
+    /// <summary>
+    /// Whether to send Prompt blocks to this Adapter when it advertises it can take them. Defaults to
+    /// <see langword="true"/>; set <see langword="false"/> for an Adapter that advertises a capability it
+    /// does not honour. A <c>bool</c>, so an initialiser is safe.
+    /// </summary>
+    public bool PromptBlocks { get; set; } = true;
 }

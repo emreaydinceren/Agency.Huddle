@@ -108,6 +108,10 @@ else
            itself, and it already owns its own RoomEvents subscription rather than duplicating one
            here. *@
         <ProposalCard RoomId="@this.room.Id" />
+        @* Questions an Agent is waiting on (Questions spec §6.7), beside the Proposal for the same
+           reason: it is about the exchange just above it. A component with its own RoomEvents
+           subscriptions, and the same leading-@ RoomId rule as ProposalCard. *@
+        <QuestionCard RoomId="@this.room.Id" />
         @* Between the transcript and the composer on purpose: the exchange that spent the Budget is
            the thing you need to read before deciding whether to grant another one. Rendered inline
            rather than as a component because a string Parameter missing its leading @ passes the

@@ -3301,7 +3301,7 @@ public sealed class PersonaRunnerTests
         /// <summary>The agent replies with only whitespace.</summary>
         EmptyReply,
 
-        /// <summary><see cref="IAgentSession.PromptAsync"/> itself throws.</summary>
+        /// <summary><see cref="IAgentSession.PromptAsync(AgentPrompt, CancellationToken)"/> itself throws.</summary>
         ThrowingPrompt,
 
         /// <summary>The Human stops the Turn while it is still in flight.</summary>

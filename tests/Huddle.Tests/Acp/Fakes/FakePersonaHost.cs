@@ -39,6 +39,9 @@ internal sealed class FakePersonaHost : IPersonaHost
     /// <summary>Whether <see cref="ResumeAsync"/> is expected to find anything. Default <see langword="false"/>, matching a fresh Adapter with no resume capability.</summary>
     public bool CanResume { get; set; }
 
+    /// <summary>What this host says its Adapter advertised a prompt may carry. Default <see cref="AgentPromptCapabilities.None"/>, like an Adapter that said nothing.</summary>
+    public AgentPromptCapabilities PromptCapabilities { get; set; } = AgentPromptCapabilities.None;
+
     /// <summary>Every session <see cref="OpenAsync"/> has returned, in open order — the shared one first, then any fresh ones.</summary>
     public IReadOnlyList<FakeAgentSession> Sessions
     {

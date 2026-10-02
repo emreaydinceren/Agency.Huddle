@@ -62,7 +62,8 @@ that exercise it. All are **chat** unless stated.
 | File Changes and Memory | [Huddle.FileChanges-Specifications.md](Huddle.FileChanges-Specifications.md) | [0023](adr/0023-an-agent-learns-of-file-changes-on-its-next-turn.md) | [file-changes](engineering/manual-tests/file-changes.md) | Built; paid live checks not run |
 | Skills, Proposals and the Chief of Staff | [Huddle.Skills-Specifications.md](Huddle.Skills-Specifications.md) | [0020](adr/0020-a-hook-is-a-prompt.md), [0021](adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) | [skills](engineering/manual-tests/skills.md) | Built |
 | Agent tools (`mcp__team__*`) | [code-map.md](engineering/code-map.md) | none | [app-tools](engineering/manual-tests/app-tools.md) | Built |
-| Questions (`ask_human`) | [Huddle.Questions-Specifications.md](Huddle.Questions-Specifications.md) | [0022](adr/0022-an-agent-asks-the-human-with-a-question.md) | none | **Not built** |
+| Questions (`ask_human`) | [Huddle.Questions-Specifications.md](Huddle.Questions-Specifications.md) | [0022](adr/0022-an-agent-asks-the-human-with-a-question.md) | [questions](engineering/manual-tests/questions.md) | Built 2026-10-01 |
+| Prompt blocks: a Library image reaches the Agent as an image | [Huddle.PromptBlocks-Specifications.md](Huddle.PromptBlocks-Specifications.md) | [0036](adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md) | [prompt-blocks](engineering/manual-tests/prompt-blocks.md) | Built 2026-10-01 |
 | Tasks, Views, Board and List | [Huddle.Tasks-Specifications.md](Huddle.Tasks-Specifications.md) | [0025](adr/0025-in-tasks-a-team-is-a-folder-by-convention.md), [0026](adr/0026-a-change-to-a-task-wakes-its-assignee.md) | [tasks](engineering/manual-tests/tasks.md) | Built |
 | Library | [Huddle.Library-Specifications.md](Huddle.Library-Specifications.md) | [0027](adr/0027-the-library-sees-only-configured-roots.md), [0028](adr/0028-the-library-edits-markdown-as-source-and-never-rewrites-it.md), [0029](adr/0029-between-the-human-and-an-agent-the-last-write-wins.md) | [library](engineering/manual-tests/library.md), [teammates-library](engineering/manual-tests/teammates-library.md) | Built |
 | Teams, Projects, Team Memory | [Huddle.TeamPages-Specifications.md](Huddle.TeamPages-Specifications.md), [Huddle.TeamPages-RetroActions.md](Huddle.TeamPages-RetroActions.md) | [0030](adr/0030-a-team-folder-is-its-library-and-holds-its-tasks.md), [0031](adr/0031-teammates-and-teams-are-sibling-folders.md), [0032](adr/0032-a-team-and-each-project-share-a-memory-folder.md) | [team-pages](engineering/manual-tests/team-pages.md) | Built 2026-09-29 |
@@ -118,7 +119,7 @@ One row per decision. Open the ADR only when its row is your question.
 | [0019](adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) | An Avatar is three optional fields (Image, Label, Background) held apart from the Persona. | Accepted |
 | [0020](adr/0020-a-hook-is-a-prompt.md) | Hook is renamed to Prompt everywhere in the codebase. | Accepted |
 | [0021](adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) | A Skill is named Markdown the Agent reads with a tool. | Accepted |
-| [0022](adr/0022-an-agent-asks-the-human-with-a-question.md) | An Agent asks with an `ask_human` tool; the answer is a Message quoting and Mentioning the asker. Not built. | Proposed |
+| [0022](adr/0022-an-agent-asks-the-human-with-a-question.md) | An Agent asks with an `ask_human` tool; the answer is a Message quoting and Mentioning the asker. | Accepted |
 | [0023](adr/0023-an-agent-learns-of-file-changes-on-its-next-turn.md) | The change list rides on the Agent's next Turn, built inside PersonaRunner. | Accepted |
 | [0024](adr/0024-an-agent-holds-one-session-per-room.md) | One Room Session per Persona and Room pair; continuity through Memory and File Changes. | Accepted |
 | [0025](adr/0025-in-tasks-a-team-is-a-folder-by-convention.md) | Tasks get their own root; a Team is a folder by convention. | Accepted |
@@ -132,6 +133,7 @@ One row per decision. Open the ADR only when its row is your question.
 | [0033](adr/0033-a-persona-has-a-work-mode.md) | A Persona has a Work Mode from its Adapter, applied at open and resume. | Accepted |
 | [0034](adr/0034-turn-detail-rides-on-tool-activity-as-optional-fields.md) | ToolActivity gains optional Path, Line and Edit fields; the wire version stays 3. | Accepted |
 | [0035](adr/0035-an-adapter-command-is-a-message-the-human-addresses-by-mention.md) | A command is a Message like `@Nova /compact`; an allowlist sits on the Adapter Profile. | Accepted |
+| [0036](adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md) | A Prompt block (an image, or a document's text) is sent only when the Adapter advertised it, and only from the Message that started the Turn. | Accepted |
 
 ## 5. Manual tests
 
@@ -152,7 +154,9 @@ One page per feature area, run by hand in a browser. Start with `common.md`.
 | [model-effort.md](engineering/manual-tests/model-effort.md) | Model and Effort selection, catalog probe, persistence |
 | [persona-lifecycle.md](engineering/manual-tests/persona-lifecycle.md) | Persona lifecycle, Work Dirs, health badges, session restart |
 | [pipe-external.md](engineering/manual-tests/pipe-external.md) | Named pipe protocol, external agent clients, message routing |
+| [prompt-blocks.md](engineering/manual-tests/prompt-blocks.md) | Library images and document text sent to an Adapter as prompt blocks |
 | [prompts-settings.md](engineering/manual-tests/prompts-settings.md) | Prompts editor in Settings: validation, save, per-field reset |
+| [questions.md](engineering/manual-tests/questions.md) | An Agent asks with options (`ask_human`): the card, the answer as a Message |
 | [reply-gate-budget.md](engineering/manual-tests/reply-gate-budget.md) | Reply gate, Mention resolution, per-Room Budget |
 | [room-messaging.md](engineering/manual-tests/room-messaging.md) | Room messaging, Draft streaming, Markdown rendering, Transcript |
 | [room-sessions.md](engineering/manual-tests/room-sessions.md) | Room Sessions: per-Room context, resume, memory isolation |

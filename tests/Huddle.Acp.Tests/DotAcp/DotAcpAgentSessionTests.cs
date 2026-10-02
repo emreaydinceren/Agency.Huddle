@@ -39,6 +39,148 @@ public sealed class DotAcpAgentSessionTests
         }
     }
 
+    /// <summary>A text-only <see cref="AgentPrompt"/> sends exactly the one text block the string overload always has.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task PromptAsync_TextOnlyAgentPrompt_SendsSingleTextContentBlock()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        try
+        {
+            _ = await harness.Session.PromptAsync(new AgentPrompt("hello"), cancellationToken);
+
+            JsonObject prompt = await harness.Launcher.Agent.WaitForAsync("session/prompt", TimeSpan.FromSeconds(2));
+            JsonArray promptBlocks = Assert.IsType<JsonArray>(prompt["params"]!["prompt"]);
+            Assert.Single(promptBlocks);
+            Assert.Equal("text", (string?)promptBlocks[0]!["type"]);
+            Assert.Equal("hello", (string?)promptBlocks[0]!["text"]);
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
+    /// <summary>An empty block list is the same as none: still exactly one text block on the wire.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task PromptAsync_EmptyBlockList_SendsSingleTextContentBlock()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        try
+        {
+            _ = await harness.Session.PromptAsync(new AgentPrompt("hello", []), cancellationToken);
+
+            JsonObject prompt = await harness.Launcher.Agent.WaitForAsync("session/prompt", TimeSpan.FromSeconds(2));
+            JsonArray promptBlocks = Assert.IsType<JsonArray>(prompt["params"]!["prompt"]);
+            Assert.Single(promptBlocks);
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
+    /// <summary>
+    /// An image block arrives after the text, as <c>type:"image"</c> with the base64 of the bytes,
+    /// the MIME type, and no <c>uri</c> value: <c>claude-agent-acp</c> drops an image that has only a
+    /// <c>uri</c>, so the bytes must travel in <c>data</c> (design D-3).
+    /// </summary>
+    [Fact(Timeout = 10000)]
+    public async Task PromptAsync_ImageBlock_SendsTextThenBase64Image()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        try
+        {
+            byte[] bytes = [0x41, 0x42, 0x43];
+            AgentPrompt prompt = new("look at this", [new AgentImageBlock("image/png", bytes)]);
+
+            _ = await harness.Session.PromptAsync(prompt, cancellationToken);
+
+            JsonObject request = await harness.Launcher.Agent.WaitForAsync("session/prompt", TimeSpan.FromSeconds(2));
+            JsonArray promptBlocks = Assert.IsType<JsonArray>(request["params"]!["prompt"]);
+            Assert.Equal(2, promptBlocks.Count);
+            Assert.Equal("text", (string?)promptBlocks[0]!["type"]);
+            Assert.Equal("look at this", (string?)promptBlocks[0]!["text"]);
+            Assert.Equal("image", (string?)promptBlocks[1]!["type"]);
+            Assert.Equal("QUJD", (string?)promptBlocks[1]!["data"]);
+            Assert.Equal("image/png", (string?)promptBlocks[1]!["mimeType"]);
+            Assert.Null((string?)promptBlocks[1]!["uri"]);
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
+    /// <summary>A text resource arrives as <c>type:"resource"</c> carrying the URI, the MIME type and the text.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task PromptAsync_TextResourceBlock_SendsEmbeddedResource()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        try
+        {
+            AgentPrompt prompt = new("read it", [new AgentTextResourceBlock("file:///E:/a%20b/n.md", "text/markdown", "# t")]);
+
+            _ = await harness.Session.PromptAsync(prompt, cancellationToken);
+
+            JsonObject request = await harness.Launcher.Agent.WaitForAsync("session/prompt", TimeSpan.FromSeconds(2));
+            JsonArray promptBlocks = Assert.IsType<JsonArray>(request["params"]!["prompt"]);
+            Assert.Equal(2, promptBlocks.Count);
+            Assert.Equal("resource", (string?)promptBlocks[1]!["type"]);
+            JsonObject resource = Assert.IsType<JsonObject>(Assert.IsType<JsonObject>(promptBlocks[1])["resource"]);
+            Assert.Equal("file:///E:/a%20b/n.md", (string?)resource["uri"]);
+            Assert.Equal("text/markdown", (string?)resource["mimeType"]);
+            Assert.Equal("# t", (string?)resource["text"]);
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
+    /// <summary>Several blocks keep the order they were given in, after the text.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task PromptAsync_TwoImageBlocks_KeepsGivenOrder()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        Harness harness = await Harness.CreateAsync(cancellationToken);
+        try
+        {
+            AgentPrompt prompt = new(
+                "two",
+                [new AgentImageBlock("image/png", new byte[] { 1 }), new AgentImageBlock("image/jpeg", new byte[] { 2 })]);
+
+            _ = await harness.Session.PromptAsync(prompt, cancellationToken);
+
+            JsonObject request = await harness.Launcher.Agent.WaitForAsync("session/prompt", TimeSpan.FromSeconds(2));
+            JsonArray promptBlocks = Assert.IsType<JsonArray>(request["params"]!["prompt"]);
+            Assert.Equal(["text", "image", "image"], promptBlocks.Select(block => (string?)block!["type"]));
+            Assert.Equal("image/png", (string?)promptBlocks[1]!["mimeType"]);
+            Assert.Equal("image/jpeg", (string?)promptBlocks[2]!["mimeType"]);
+        }
+        finally
+        {
+            await harness.DisposeAsync();
+        }
+    }
+
+    /// <summary>The string overload on the interface sends the same single text block as an <see cref="AgentPrompt"/> would.</summary>
+    [Fact(Timeout = 10000)]
+    public async Task PromptAsync_StringOverload_DelegatesToAgentPrompt()
+    {
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        FakeAgentSession session = new() { OnPrompt = _ => Task.FromResult(new PromptResult(StopReason.EndTurn)) };
+
+        _ = await ((IAgentSession)session).PromptAsync("hello", cancellationToken);
+
+        AgentPrompt received = Assert.Single(session.AgentPrompts);
+        Assert.Equal("hello", received.Text);
+        Assert.Null(received.Blocks);
+    }
+
     [Fact(Timeout = 10000)]
     public async Task PromptAsync_ReturnsMappedStopReason()
     {

@@ -43,13 +43,14 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~13~~ | ~~Model-facing text is configuration~~ — **delivered 2026-09-13** | `Prompts/`, then the five sites that held the literals | shipped; never on this list before it was built, and it collides with item 9 — see [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) |
 | ~~14~~ | ~~Archiving and deleting a Room~~ — **delivered 2026-09-21** | `SqliteTeamDirectory`, `RoomList.razor` | shipped; never on this list before it was built, and it *reverses* a stance Known limits recorded — archived state went in a sibling table because `CREATE TABLE IF NOT EXISTS` never adds a column, and the one-1:1-Room-per-Agent invariant was knowingly given up — see [ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md) |
 | ~~15~~ | ~~A Teammate chooses its own Avatar~~ — **delivered 2026-09-22** | a new `Avatars/` store, `TeammateAvatar.razor` | shipped; never on this list before it was built, and it *reverses* a manual test that asserted no avatar appears in the transcript. The interesting decision was where it must **not** go: frontmatter would have made picking a colour restart the session — see [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) |
-| 16 | An Agent asks the Human with a Question — **designed 2026-09-22, not built** | a new `Questions/` store and service, `AskHumanTool`, `QuestionCard.razor` | nothing specific to it; it copies the Skills spec's Proposal card, which shipped with item 17 — see [the Questions spec](../Huddle.Questions-Specifications.md) and [ADR-0022](../adr/0022-an-agent-asks-the-human-with-a-question.md) |
+| ~~16~~ | ~~An Agent asks the Human with a Question~~ — **delivered 2026-10-01** | a new `Questions/` store and service, `AskHumanTool`, `QuestionCard.razor` | shipped; it copied the Skills spec's Proposal card, which shipped with item 17 — see [the Questions spec](../Huddle.Questions-Specifications.md) and [ADR-0022](../adr/0022-an-agent-asks-the-human-with-a-question.md) |
 | ~~17~~ | ~~Skills and the Chief of Staff~~ — **delivered 2026-09-22** | `Skills/`, `Teammates/`, then `DotAcpAgentHostFactory` and `PersonaRunner` | shipped; the first mechanism for item 9's per-Persona tool grants, and the first Turn that no delivered Message starts — see [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) and [the Skills design](../Huddle.Skills-Specifications.md) |
 | ~~18~~ | ~~One session per Room~~ — **DELIVERED (code) 2026-09-23** | `Acp/Sessions/`, the `IAgentHostFactory`/`IPersonaHost` split | shipped: a Room Session per (Persona, Room), lazy open, LRU eviction, resume by stored id, Transcript Catch-up on a session's first Turn, Stop routed per Room. Paid checks (RS-M1 through RS-M10, V-3, V-5) not yet run — see [the Room Sessions spec](../Huddle.RoomSessions-Specifications.md), [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md) and [Known limits](known-limits.md) |
 | ~~19~~ | ~~Tasks~~ — **delivered 2026-09-25** | `Tasks/`, then `Acp/Tools/*TaskTool.cs` and `Components/Tasks/*` | shipped: a Markdown Task per file under `Tasks/<Team>/[<Project>/]`, a wake-on-change trigger reusing the Reply Gate and Budget, six App Tools, and a Board/List/Detail UI with a `#` picker and task-ref links in chat. Four paid manual tests and one concurrent-move race are not yet verified — see [the Tasks spec](../Huddle.Tasks-Specifications.md), [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md), [ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md) and [Known limits](known-limits.md) |
 | 20 | An Agent asks the Human before a tool runs — **proposed 2026-09-30, not built** | a new approval handler wrapping `WorkDirPermissionHandler`, a pending-approval store, an approval card in the Room, and a pause in `RoomSession`'s idle watchdog | `IPermissionHandler` is already the seam, `session/request_permission` already arrives and is answered, and Stop already cancels a waiting request — see [item 20](#20-an-agent-asks-the-human-before-a-tool-runs--proposed-2026-09-30-not-built) |
 | 21 | Turn detail: an Edit preview and Spend — **built 2026-09-30 (V1); Adapter commands built 2026-09-30 as [their own spec](../Huddle.Commands-Specifications.md); Plan and Thinking not built** | `Drafts` and `MessageList.razor` for the preview; a new `PersonaSpend` and `TeammateCard.razor` for Spend | `diff`, `locations` and `cost` already arrive and `SessionUpdateMapper` drops them. No protocol bump: every change is an optional field on `ToolActivity`, and Spend never crosses the pipe. Item 20's approval card reuses the preview — see [the Turn detail spec](../Huddle.TurnDetail-Specifications.md) |
 | 22 | A Persona has a Work Mode — **phase 1 delivered (code) 2026-09-30; phases 2 and 3 designed, not built** | `Persona`, `PersonaWorkModeStore`, `DotAcpAgentHost`'s option application, `WorkModePolicy`, `TeammateCard.razor` | shipped as a setting beside Model and Effort, applied with `session/set_config_option` and read back. Not a smarter permission handler: a mode changes what the Adapter will *try*. The live per-Room switch and non-blocking plan approval are the next two phases — see [item 22](#22-a-persona-has-a-work-mode--phase-1-delivered-code-2026-09-30) and [ADR-0033](../adr/0033-a-persona-has-a-work-mode.md) |
+| 23 | Non-text prompts — **A built 2026-10-01 (live checks passed); B (the Human attaches a file to a Message) proposed, not built** | A (done): `LibraryDocumentCollector`, `RoomSession`, then `IAgentSession.PromptAsync`. B: `Composer.razor`, then wherever the bytes are kept | `claude-agent-acp` advertises `image` and `embeddedContext` and `dotacp` types the blocks; A now sends a named image, and for an Adapter with no file tools a document's text, as Prompt blocks ([ADR-0036](../adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md)). B's cheapest route reuses A — see [item 23](#23-non-text-prompts--a-designed-2026-10-01-b-proposed-neither-built) and [the Prompt blocks spec](../Huddle.PromptBlocks-Specifications.md) |
 
 ## 1. Renaming a Teammate
 
@@ -1214,14 +1215,18 @@ was the recommendation; this was the repo owner's call, and it is recorded in
 > change: that guard fires for every Teammate in a stock installation, where
 > `Acp:Enabled` is false and nothing has ever connected.
 
-## 16. An Agent asks the Human with a Question — DESIGNED 2026-09-22, not built
+## 16. An Agent asks the Human with a Question — DELIVERED 2026-10-01
 
-> **Designed, not built.** The design is
+> **Delivered 2026-10-01**, designed 2026-09-22. The design is
 > [Huddle.Questions-Specifications.md](../Huddle.Questions-Specifications.md), with a
 > test-first task plan in its Appendix A. The decision is
 > [ADR-0022](../adr/0022-an-agent-asks-the-human-with-a-question.md), and
-> [Language](language.md) defines **Question**. Build it after the Skills spec's
-> Proposal card (see [Ordering](#ordering)).
+> [Language](language.md) defines **Question**. The six paid manual tests
+> ([questions.md](manual-tests/questions.md)) were run once on 2026-10-01: the card, the answer
+> and the wake work against a real model, but QM-1 **fails** — the Claude Adapter defers MCP
+> tools, so a model never reads `ask_human`'s description unless told to call it by name. A
+> `systemPrompt.askHuman` paragraph now carries the "when to ask" in the system prompt, and QM-1
+> passed against it on a one-sample re-run. See [the spec](../Huddle.Questions-Specifications.md)'s header note.
 
 Huddle's own version of the tappable-options tool Claude's apps offer. An Agent calls
 `ask_human` with one to three Questions, each with two to four short options, to pick
@@ -1234,7 +1239,7 @@ Three rules carry the design, and each is easy to lose in a refactor:
 
 - **The answer is a Message, not a tool result.** A tool that waited for the Human
   would hold a Turn open until the idle timeout reported a hung Adapter, and would
-  block that Agent in every other Room, since one session spans them all.
+  hold that Persona's one Turn slot (`MaxConcurrentTurns`, default 1) and so block that Agent in every other Room.
 - **No `@` in a question or an option.** The answer is posted *as the Human*, so an
   option carrying a Mention would wake another Agent on the Human's authority.
   Item 11 records the neighbouring trap: posting as the Human also resets the Budget,
@@ -1528,3 +1533,58 @@ produces no permission request.
 **Item 20 is unchanged.** The Human's decision that auto-approve is acceptable for now stands.
 This adds one refusal, the plan guard, and a way to choose a mode. Nothing asks the Human before
 a tool runs.
+
+## 23. Non-text prompts — A designed 2026-10-01, B proposed, neither built
+
+> **A was built on 2026-10-01 and its live checks passed; B is proposed and not built or scheduled.**
+> A has a spec, [Huddle.PromptBlocks-Specifications.md](../Huddle.PromptBlocks-Specifications.md), and
+> [ADR-0036](../adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md); B has only this
+> entry. Nothing is decided about B except what is recorded below. (The heading above is kept as
+> written so the table's link to it still resolves.)
+
+**A, in one paragraph.** A Turn sends the Adapter one text block today. A has the Turn also send an
+`image` block for each image the Human's own Message names by Library path, but only when the
+Adapter advertised `promptCapabilities.image`, within byte, count and pixel caps, and falling back
+to today's path line for anything that does not qualify. Nothing about a Message, the Transcript
+or the wire changes.
+
+**B, the Human attaches a file to a Message.** Paste an image into the composer, or drop a file on
+it, and the Agent sees it. Today there is no way to do that: `known-limits.md` lists attachments as
+absent, and `ChatMessage` is `(Id, Timestamp, SenderId, SenderName, Text)`.
+
+What already exists:
+
+- `Composer.razor` and the `Chat.razor` page it sits in.
+- The Library identifies an image by its **magic bytes** and serves one only on that evidence
+  (`LibraryFilesEndpoint`), and avatars already accept an upload on the same rule (`AvatarImage`).
+  Both refuse SVG.
+- [ADR-0030](../adr/0030-a-team-folder-is-its-library-and-holds-its-tasks.md) reserves every
+  other `_`-prefixed folder under a Team for "future per-Team data such as attachments", and the
+  Tasks design lists a sibling `<ID>/` folder as its own V2 attachment home.
+- A, once built, delivers any Library image a Message names, and has no idea where it came from.
+
+Two routes, and they differ in how much of the app they touch:
+
+- **Cheapest: save, then name.** The composer writes the pasted file into a folder for that Room
+  under a Library Root and inserts its path into the Message text. A then delivers it unchanged: no
+  field on `ChatMessage`, no Transcript or wire change, and an external Agent over the pipe sees the
+  path like any other. The costs are a home for those files and their clean-up, the Human's text
+  gaining a long path they did not type, and a Message that now names a file the Human might later
+  move.
+- **Heavier: a first-class attachment.** `ChatMessage` gains an optional `Attachments` member (an
+  additive wire change, so no `ProtocolVersion` bump, as ADR-0004 and ADR-0006 set the precedent), the
+  JSONL line gains a field ([ADR-0002](../adr/0002-jsonl-file-per-room.md)), the bytes need a store,
+  and a pipe Agent sees text only unless the protocol carries them too. It is the right shape if
+  attachments must outlive a Library folder or show as a chip in the Transcript.
+
+Rules that bind either route, from [rules.md](rules.md): identify a file by magic bytes and never by
+extension or a client-supplied type; never accept SVG; serve a run-time file through
+`UseStaticFiles` and a `PhysicalFileProvider`, not `MapStaticAssets`; and keep persisted state in a
+sibling table rather than a new column.
+
+**Not decided.** Which route. Where a Room's folder lives and when it is cleaned. Whether the Human
+should see what was sent, which the Prompt blocks spec leaves to B (its D-14), because there the
+Human did not write the path. Whether a pipe Agent should ever receive the bytes.
+
+**Single place to change.** `Composer.razor` for the control. After that it depends on the route: the
+Library for the cheap one, `ChatMessage`, the Transcript store and the pipe contract for the heavy one.

@@ -165,6 +165,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         // Captured in its own local, the same reason getHelpTool is below, so this method never
         // retypes "read_skill" - the Compose call further down reads it off readSkillTool.Name.
         var readSkillTool = ActivatorUtilities.CreateInstance<ReadSkillTool>(this.serviceProvider, persona.Name);
+        var askHumanTool = ActivatorUtilities.CreateInstance<AskHumanTool>(this.serviceProvider, agentId);
         IReadOnlyList<IAppTool> chatTools =
         [
             ActivatorUtilities.CreateInstance<ListAgentsTool>(this.serviceProvider),
@@ -173,6 +174,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             ActivatorUtilities.CreateInstance<PostMessageTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<FollowRoomTool>(this.serviceProvider, agentId),
             ActivatorUtilities.CreateInstance<UnfollowRoomTool>(this.serviceProvider, agentId),
+            askHumanTool,
             readSkillTool,
             ActivatorUtilities.CreateInstance<ValidateTeammateTool>(this.serviceProvider),
             ActivatorUtilities.CreateInstance<ProposeTeammatesTool>(this.serviceProvider, agentId),
@@ -286,6 +288,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
             toolNames,
             skillResolution.Skills,
             toolNamePrefix + readSkillTool.Name,
+            toolNamePrefix + askHumanTool.Name,
             memoryDir,
             readsMemory,
             this.options.FileChanges.MaxMemoryEntries,

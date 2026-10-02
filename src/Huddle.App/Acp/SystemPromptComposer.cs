@@ -183,6 +183,10 @@ internal static class SystemPromptComposer
     /// The Persona's Team Memory snapshot, or <see langword="null"/> for none. A snapshot with no Groups
     /// adds nothing, so <see langword="null"/> and an empty snapshot give byte-identical output.
     /// </param>
+    /// <param name="askHumanToolName">
+    /// <c>ask_human</c>'s own name, already carrying its full prefix, or <see langword="null"/> when the
+    /// session does not offer it. When set, <c>systemPrompt.askHuman</c> follows the tools paragraph.
+    /// </param>
     /// <returns>
     /// The five parts joined with a blank line, plus a sixth Skills block when <paramref name="skills"/>
     /// is non-empty, plus a seventh memory block when <paramref name="memory"/> is non-null, plus a
@@ -201,7 +205,8 @@ internal static class SystemPromptComposer
         string readSkillToolName,
         MemorySnapshot? memory,
         SessionScope scope,
-        TeamMemorySnapshot? teamMemory = null)
+        TeamMemorySnapshot? teamMemory = null,
+        string? askHumanToolName = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(prompts);
@@ -224,6 +229,17 @@ internal static class SystemPromptComposer
             new Dictionary<string, string> { ["{{toolNames}}"] = WrapToolNames(toolNames) });
 
         List<string> parts = [orientation, persona.Text, identity, chatRules, tools];
+
+        // An Adapter can defer a tool's own description, so the model may see only the name of
+        // ask_human; this paragraph is the one place its "when to ask" is always read. The name
+        // arrives prefixed and is substituted, never typed (rules.md: App Tool names). Omitted when
+        // the session offers no such tool, so a caller that does not pass it gets the old output.
+        if (!string.IsNullOrWhiteSpace(askHumanToolName))
+        {
+            parts.Add(prompts.Render(
+                "systemPrompt.askHuman",
+                new Dictionary<string, string> { ["{{askHumanTool}}"] = askHumanToolName }));
+        }
 
         if (skills.Count > 0)
         {

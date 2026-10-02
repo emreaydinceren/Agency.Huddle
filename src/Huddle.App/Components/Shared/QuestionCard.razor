@@ -1,0 +1,396 @@
+@*
+    The Questions an Agent is waiting on, shown where the conversation that produced them happened
+    (Questions spec §6.7). Mirrors ProposalCard and the Budget prompt in Chat.razor: view state derived
+    from in-memory server state (QuestionStore.Get(roomId)), answered by an in-process call to
+    QuestionService - no Envelope. The answer is a Message from the Human; the card disappears on
+    RoomEvents.QuestionsChanged, and the outcome is never card state.
+
+    Two things differ from ProposalCard. First, options are disabled while the asker has a Draft in
+    this Room (D-8): the asker's framing Message lands in the Transcript when its Turn ends, and an
+    answer tapped before that would be posted ahead of the framing it answers. Second, one tap on a card
+    holding exactly one single-select Question sends at once, so there is no Send button in that case.
+
+    The busy flag and the QuestionsChanged subscription interact the way they do on ProposalCard:
+    QuestionService.AnswerAsync's first action is QuestionStore.TryTake, which raises QuestionsChanged
+    synchronously, and this card is itself subscribed. OnQuestionsChanged ignores a fire while busy is
+    true, and the click handler's own finally block re-reads the store once the call returns, so a tap
+    never hides the busy view before it can be seen, and another tab's change still updates normally.
+
+    An option is a MudButton with aria-pressed, not a MudChip: a chip's selection model is a MudChipSet
+    that owns the selected value, and this card needs to own it, because "choosing one clears the others"
+    differs by Question kind and a replaced card must reset it.
+*@
+@implements IDisposable
+@using Agency.Huddle.App.Questions
+
+@inject RoomEvents Events
+@inject QuestionStore Questions
+@inject QuestionService Service
+@inject Drafts Drafts
+@inject ITeamDirectory TeamDirectory
+@inject ISnackbar Snackbar
+
+@if (this.pending is { } current && this.room is { Archived: false })
+{
+    <MudPaper Outlined="true" Class="question-card pa-3 my-2" role="region" aria-label="@($"Questions from {this.askerName}")">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.subtitle2" Class="question-card-title">@this.askerName is asking</MudText>
+            <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="@this.busy" OnClick="this.Dismiss">Dismiss</MudButton>
+        </MudStack>
+
+        @if (this.askerIsWriting)
+        {
+            <MudText Typo="Typo.caption" role="status" Class="question-card-writing">@this.askerName is still writing…</MudText>
+        }
+
+        @for (int questionIndex = 0; questionIndex < current.Questions.Count; questionIndex++)
+        {
+            int q = questionIndex;
+            Question question = current.Questions[q];
+
+            <div role="group" aria-label="@question.Text" class="question-card-question">
+                <MudText Typo="Typo.body1">@question.Text</MudText>
+
+                @if (question.Kind == QuestionKind.MultiSelect)
+                {
+                    <MudText Typo="Typo.caption" Class="question-card-caption">Choose any.</MudText>
+                }
+                else if (question.Kind == QuestionKind.RankPriorities)
+                {
+                    <MudText Typo="Typo.caption" Class="question-card-caption">Most important first.</MudText>
+                }
+
+                @if (question.Kind == QuestionKind.RankPriorities)
+                {
+                    <MudStack Spacing="1" Class="question-card-rank">
+                        @for (int position = 0; position < this.picks[q].Count; position++)
+                        {
+                            int p = position;
+                            string option = question.Options[this.picks[q][p]];
+
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="question-card-rank-row">
+                                <span class="question-card-rank-label">@(p + 1). @option</span>
+                                <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowUp" Size="Size.Medium"
+                                               aria-label="@($"Move {option} up")"
+                                               Disabled="@(this.OptionsDisabled || p == 0)"
+                                               OnClick="@(() => this.MoveRank(q, p, -1))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.KeyboardArrowDown" Size="Size.Medium"
+                                               aria-label="@($"Move {option} down")"
+                                               Disabled="@(this.OptionsDisabled || p == this.picks[q].Count - 1)"
+                                               OnClick="@(() => this.MoveRank(q, p, 1))" />
+                            </MudStack>
+                        }
+                    </MudStack>
+                }
+                else
+                {
+                    <MudStack Row="true" Wrap="Wrap.Wrap" Spacing="2" Class="question-card-options">
+                        @for (int optionIndex = 0; optionIndex < question.Options.Count; optionIndex++)
+                        {
+                            int o = optionIndex;
+                            bool selected = this.picks[q].Contains(o);
+
+                            <MudButton Variant="@(selected ? Variant.Filled : Variant.Outlined)"
+                                       Color="Color.Primary"
+                                       Class="question-card-option"
+                                       aria-pressed="@(selected ? "true" : "false")"
+                                       Disabled="@this.OptionsDisabled"
+                                       OnClick="@(() => this.ChooseAsync(q, o))">@question.Options[o]</MudButton>
+                        }
+                    </MudStack>
+                }
+            </div>
+        }
+
+        @if (!this.SendsOnTap(current))
+        {
+            <MudStack Row="true" Spacing="2" Class="question-card-actions">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           Disabled="@(this.OptionsDisabled || !this.IsComplete(current))"
+                           OnClick="this.SendAsync">Send</MudButton>
+            </MudStack>
+        }
+    </MudPaper>
+}
+
+@code {
+    /// <summary>The Room whose waiting Questions, if any, this card shows.</summary>
+    [Parameter, EditorRequired]
+    public string RoomId { get; set; } = "";
+
+    private string? loadedRoomId;
+    private PendingQuestions? pending;
+    private Room? room;
+    private string askerName = "";
+    private bool askerIsWriting;
+    private bool busy;
+
+    // One entry per Question. Single and multi select hold the chosen option indexes; a ranking
+    // holds every option index in the order the Human has put them, starting in the Agent's order.
+    private List<List<int>> picks = [];
+
+    /// <summary>Whether a tap or a button would be ignored: an answer is in flight, or the asker's framing Message has not landed yet (D-8).</summary>
+    private bool OptionsDisabled => this.busy || this.askerIsWriting;
+
+    /// <summary>Subscribes to <see cref="RoomEvents.QuestionsChanged"/> and <see cref="RoomEvents.DraftChanged"/> - both unsubscribed in <see cref="Dispose"/>, per rules.md.</summary>
+    protected override void OnInitialized()
+    {
+        this.Events.QuestionsChanged += this.OnQuestionsChanged;
+        this.Events.DraftChanged += this.OnDraftChanged;
+    }
+
+    /// <summary>Reloads this card's Room and waiting Questions whenever <see cref="RoomId"/> changes - a component reused across Rooms.</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (this.RoomId == this.loadedRoomId)
+        {
+            return;
+        }
+
+        this.loadedRoomId = this.RoomId;
+        this.room = await this.TeamDirectory.GetRoomAsync(this.RoomId);
+        await this.ShowAsync(this.Questions.Get(this.RoomId));
+    }
+
+    /// <summary>Unsubscribes from both events - the hub is a singleton, so a component that does not unsubscribe here never dies.</summary>
+    public void Dispose()
+    {
+        this.Events.QuestionsChanged -= this.OnQuestionsChanged;
+        this.Events.DraftChanged -= this.OnDraftChanged;
+    }
+
+    /// <summary>
+    /// Shows <paramref name="next"/> (or nothing). The choices reset only when the card itself
+    /// changed, and the asker's current Name is resolved here so a rename while the card waited is
+    /// shown (E-4).
+    /// </summary>
+    /// <param name="next">The card now waiting, or <see langword="null"/>.</param>
+    private async Task ShowAsync(PendingQuestions? next)
+    {
+        if (next is null)
+        {
+            this.pending = null;
+            this.askerIsWriting = false;
+            return;
+        }
+
+        if (this.pending?.Id != next.Id)
+        {
+            this.picks = [.. next.Questions.Select(static question => question.Kind == QuestionKind.RankPriorities
+                ? Enumerable.Range(0, question.Options.Count).ToList()
+                : new List<int>())];
+        }
+
+        this.pending = next;
+        User? asker = await this.TeamDirectory.GetUserAsync(next.AskerAgentId);
+        this.askerName = asker?.Name ?? next.AskerName;
+        this.askerIsWriting = this.AskerHasDraft(next);
+    }
+
+    /// <summary>Whether the asker has a Draft open in this Room, which is what makes its framing Message not yet posted.</summary>
+    /// <param name="card">The waiting card.</param>
+    private bool AskerHasDraft(PendingQuestions card)
+    {
+        return this.Drafts.ForRoom(this.RoomId).Any(draft => string.Equals(draft.AgentId, card.AskerAgentId, StringComparison.Ordinal));
+    }
+
+    /// <summary>
+    /// Reacts to <see cref="RoomEvents.QuestionsChanged"/> for this card's own Room - ignored while
+    /// <see cref="busy"/> is true, because that is this card's own answer taking the card; the click
+    /// handler's <c>finally</c> block refreshes once the call returns.
+    /// </summary>
+    /// <param name="roomId">The Room whose waiting Questions changed.</param>
+    private void OnQuestionsChanged(string roomId)
+    {
+        if (!string.Equals(roomId, this.RoomId, StringComparison.Ordinal) || this.busy)
+        {
+            return;
+        }
+
+        _ = this.DispatchAsync(async () =>
+        {
+            await this.ShowAsync(this.Questions.Get(this.RoomId));
+            this.StateHasChanged();
+        });
+    }
+
+    /// <summary>Reacts to <see cref="RoomEvents.DraftChanged"/> for this card's Room: recomputes whether the asker is still writing (D-8).</summary>
+    /// <param name="roomId">The Room whose Drafts changed.</param>
+    private void OnDraftChanged(string roomId)
+    {
+        if (!string.Equals(roomId, this.RoomId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _ = this.DispatchAsync(() =>
+        {
+            this.askerIsWriting = this.pending is { } card && this.AskerHasDraft(card);
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>Whether one tap sends: the card holds exactly one Question, and it is a single select (Q3).</summary>
+    /// <param name="card">The waiting card.</param>
+    private bool SendsOnTap(PendingQuestions card)
+    {
+        return card.Questions is [{ Kind: QuestionKind.SingleSelect }];
+    }
+
+    /// <summary>
+    /// Whether Send is enabled: every single select has a choice and every multi select has at least
+    /// one. A ranking is always complete, because it starts in a valid order.
+    /// </summary>
+    /// <param name="card">The waiting card.</param>
+    private bool IsComplete(PendingQuestions card)
+    {
+        for (int index = 0; index < card.Questions.Count; index++)
+        {
+            bool answered = card.Questions[index].Kind switch
+            {
+                QuestionKind.SingleSelect => this.picks[index].Count == 1,
+                QuestionKind.MultiSelect => this.picks[index].Count > 0,
+                _ => true,
+            };
+
+            if (!answered)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Handles a tap on one option: a single select takes it and clears the others, a multi select
+    /// toggles it, and a card that sends on tap goes on to send.
+    /// </summary>
+    /// <param name="questionIndex">Which Question the option belongs to.</param>
+    /// <param name="optionIndex">Which option was tapped.</param>
+    private async Task ChooseAsync(int questionIndex, int optionIndex)
+    {
+        if (this.OptionsDisabled || this.pending is not { } card)
+        {
+            return;
+        }
+
+        List<int> chosen = this.picks[questionIndex];
+        if (card.Questions[questionIndex].Kind == QuestionKind.MultiSelect)
+        {
+            if (!chosen.Remove(optionIndex))
+            {
+                chosen.Add(optionIndex);
+            }
+
+            return;
+        }
+
+        chosen.Clear();
+        chosen.Add(optionIndex);
+
+        if (this.SendsOnTap(card))
+        {
+            await this.SendAsync();
+        }
+    }
+
+    /// <summary>Moves one row of a ranking up or down by swapping it with its neighbour.</summary>
+    /// <param name="questionIndex">Which Question is being ranked.</param>
+    /// <param name="position">The row's current position.</param>
+    /// <param name="delta">-1 to move it up, 1 to move it down.</param>
+    private void MoveRank(int questionIndex, int position, int delta)
+    {
+        List<int> order = this.picks[questionIndex];
+        int target = position + delta;
+        if (this.OptionsDisabled || target < 0 || target >= order.Count)
+        {
+            return;
+        }
+
+        (order[position], order[target]) = (order[target], order[position]);
+    }
+
+    /// <summary>
+    /// Sends the answer through the real <see cref="QuestionService"/>. The outcome is the posted
+    /// Message, never card state, so this only refreshes what is still waiting once the call returns.
+    /// <see cref="CancellationToken.None"/> on purpose: once the card is taken, abandoning the post
+    /// when a circuit drops would lose the answer. Any exception is reported through
+    /// <see cref="ISnackbar"/> rather than left to crash the circuit; <see cref="QuestionService"/>
+    /// already turns an expected failure into a <see langword="null"/> result.
+    /// </summary>
+    private async Task SendAsync()
+    {
+        if (this.OptionsDisabled || this.pending is not { } card || !this.IsComplete(card))
+        {
+            return;
+        }
+
+        this.busy = true;
+        try
+        {
+            _ = await this.Service.AnswerAsync(this.RoomId, card.Id, this.BuildAnswers(card), CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            this.Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            this.busy = false;
+            await this.ShowAsync(this.Questions.Get(this.RoomId));
+        }
+    }
+
+    /// <summary>Builds the answers the card holds. A multi select is sent in option order, as <see cref="QuestionService"/> requires.</summary>
+    /// <param name="card">The waiting card.</param>
+    private List<QuestionAnswer> BuildAnswers(PendingQuestions card)
+    {
+        List<QuestionAnswer> answers = [];
+        for (int index = 0; index < card.Questions.Count; index++)
+        {
+            List<int> chosen = [.. this.picks[index]];
+            if (card.Questions[index].Kind == QuestionKind.MultiSelect)
+            {
+                chosen.Sort();
+            }
+
+            answers.Add(new QuestionAnswer(chosen));
+        }
+
+        return answers;
+    }
+
+    /// <summary>Dismisses the waiting card: nothing is posted and the asker is not woken.</summary>
+    private void Dismiss()
+    {
+        if (this.busy || this.pending is not { } card)
+        {
+            return;
+        }
+
+        this.Service.Dismiss(this.RoomId, card.Id);
+        this.pending = this.Questions.Get(this.RoomId);
+    }
+
+    /// <summary>
+    /// Marshals <paramref name="action"/> onto this component's renderer, matching
+    /// <c>ProposalCard</c>'s own <c>DispatchAsync</c> - a stale subscription firing after this card has
+    /// already been disposed (a Room switch, a closed circuit) must not throw.
+    /// </summary>
+    /// <param name="action">The state update and repaint to run on the renderer.</param>
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+}

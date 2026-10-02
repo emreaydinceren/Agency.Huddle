@@ -150,9 +150,9 @@ You are Nova. You keep the team's Tasks moving and summarise progress.
 | `adapter` | No | Which AI adapter runs it. |
 | `watches` | No | Extra folders it is told about when files change. |
 
-**Model**, **Effort** and **Work mode** are not in the file. They are stored in `team.db`, so
-you can change them without touching the Markdown. The **avatar** is stored in
-`avatars.json`.
+**Model**, **Effort** and **Work mode** are not in the file. They are stored in
+`team.db`, so you can change them without touching the Markdown. The **avatar**
+is stored in `avatars.json`.
 
 ## Where your data lives
 
@@ -207,7 +207,8 @@ Each Teammate has its own card with **Message**, **Edit**, **Open**,
 
 1. Select **New teammate**.
 2. Fill in **Name**, **Title** and **Alias**. Optionally add **Teams** as a
-   comma-separated list, choose **Skills**, **Model**, **Effort**, **Work mode** and an avatar.
+   comma-separated list, choose **Skills**, **Model**, **Effort**, **Work mode**
+   and an avatar.
 3. Write the Teammate's instructions in the text area.
 4. Select **Add teammate**.
 
@@ -241,27 +242,54 @@ their transcripts stay. On its next turn in each Room it catches up by reading
 up to the last 20 messages of that Room. Its personal memory files in
 `work/memory/` are kept.
 
-A restart also happens when you change Model, Effort, Work mode, Adapter, Skills or Teams.
-Changing the avatar does not restart anything.
+A restart also happens when you change Model, Effort, Work mode, Adapter, Skills
+or Teams. Changing the avatar does not restart anything.
 
 > [!NOTE]
 > The Edit card has no **Teams** field. To change a Teammate's Teams after
 > creating it, use the Team page's **Members** tab, or edit the `teams:` line in
 > the text.
 
-### Work mode
+### Choosing a Work mode
 
-**Work mode** is how much a Teammate may do before it must ask you, for example
-asking before every edit, or editing files freely. It sits beside Model and
-Effort on the Edit card. The choices come from the Teammate's adapter, so the
-list differs between adapters, and the select is hidden when the adapter offers
-none. Leave it on **Use the agent's default** to take the adapter's own default.
+A **Work mode** is how much the Teammate's agent may do before it must ask first.
+Select **Edit** on the card and pick one in **Work mode**, directly under
+**Effort**. The choices come from the Teammate's Adapter, so they are the
+Adapter's own names and the text under the select describes the one you picked.
 
-Changing the adapter resets Work mode, because a mode chosen for one adapter
-may not exist on another. Pick one again if you want a specific mode.
+For the Claude adapter the choices are:
 
-Three modes are never offered: `bypassPermissions`, `auto` and `plan`. The
-operator can change that list with `Team:Acp:HiddenModes`.
+| Choice | What it does |
+| --- | --- |
+| **Use the agent's default** | Huddle sends nothing and the agent starts in its own mode, which is Manual. |
+| **Manual** | The agent asks before it makes changes. |
+| **Accept edits** | The agent edits files without asking. |
+
+**Plan**, **Auto** and **Bypass permissions** are not offered. **Plan** is hidden
+because a Teammate in it ends its turn without posting a reply. **Auto** hands
+permission decisions to the model and changes with the Model. **Bypass
+permissions** removes every prompt. An operator who wants them back changes
+`Team:Acp:HiddenModes`. A mode on the hidden list is never sent, even if one is
+already stored for a Teammate.
+
+**In the background:**
+
+- The mode is stored in `team.db`, not in `<Name>.md`.
+- It is applied every time the Teammate starts or resumes, after its Model and
+  Effort.
+- **Saving a different Work mode restarts the Teammate and clears what it
+  remembers**, as a Model change does.
+- Changing the **Adapter** resets Work mode to the agent's default and the card
+  says so. Each Adapter advertises its own modes, so pick one again if you want
+  one.
+- An Adapter that advertises no modes shows no Work mode select.
+
+> [!NOTE]
+> Work mode changes what the agent asks, not who answers. Huddle still approves
+> the agent's permission requests on its own; nothing here asks you before a tool
+> runs. One thing is refused whatever the mode: a tool call that writes a file
+> inside the agent's own `~/.claude` folder. A shell command that redirects into
+> it is not caught.
 
 ### Renaming a Teammate
 
@@ -660,9 +688,14 @@ are built in. Select **New view** to make your own.
 | Scope | **Active** or **Closed** Tasks |
 | Filters | Team, Project, Assignee, Status, Priority, and Blocked / Unblocked / All |
 | Fields shown, grouping, sorting | As you choose. Boards also let you rename, hide and reorder columns. |
+| Dense | Compact or roomier rows in a List. On by default. |
 
-The toolbar above a View lets you filter, group, search and switch List/Board
-for the current visit only. **Save to view** keeps those changes.
+In a List, Tags show as label chips and the Assignee as a chip with their
+avatar. The View editor opens in a side panel; drag its left edge to resize it.
+
+The toolbar above a View lets you filter, group, search, switch List/Board and
+turn **Dense** on or off for the current visit only. **Save to view** keeps those
+changes.
 
 **In the background:** Views are saved to `views.json` in the data root. If that
 file has a syntax error, Huddle shows the line and column and makes Views

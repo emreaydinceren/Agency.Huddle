@@ -5,6 +5,8 @@ using Bunit;
 using Bunit.Rendering;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Tasks;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Tasks.Views;
@@ -193,6 +195,37 @@ public sealed class TaskListViewTests : IDisposable
         Assert.DoesNotContain("Team", headers);
     }
 
+    /// <summary>The Tags column draws one label chip per tag and the Assignee column draws an avatar chip holding the assignee's name.</summary>
+    [Fact]
+    public async Task TagsAndAssignee_RenderAsChips()
+    {
+        TaskItem task = TestTasks.Make(id: "PLAT-0001", title: "T", assignee: "Amy", tags: ["alpha", "beta"]);
+        TaskView view = MakeView(fields: ["assignee", "tags"]);
+
+        await using MudBunitContext ctx = new();
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, view, [task]);
+
+        Assert.Equal(["alpha", "beta"], cut.FindAll(".task-list-tag").Select(chip => chip.TextContent.Trim()));
+        IElement assignee = cut.Find(".task-list-assignee");
+        Assert.Contains("Amy", assignee.TextContent, StringComparison.Ordinal);
+        Assert.NotNull(assignee.QuerySelector(".mud-avatar"));
+    }
+
+    /// <summary>The grid is dense by default and when <see cref="TaskView.Dense"/> is true, and drops the dense class when the View says false.</summary>
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public async Task Dense_FollowsTheView(bool? dense, bool expectDense)
+    {
+        TaskView view = MakeView() with { Dense = dense };
+
+        await using MudBunitContext ctx = new();
+        IRenderedComponent<ContainerFragment> cut = Render(ctx, view, [TestTasks.Make(id: "PLAT-0001", title: "T")]);
+
+        Assert.Equal(expectDense, cut.FindAll(".mud-table-dense").Count > 0);
+    }
+
     /// <summary>Builds a minimal List <see cref="TaskView"/> for these tests, with a fixed id and name.</summary>
     private static TaskView MakeView(
         IReadOnlyList<string>? fields = null,
@@ -216,6 +249,7 @@ public sealed class TaskListViewTests : IDisposable
         ManualTimeProvider clock = new() { UtcNow = new DateTimeOffset(2026, 9, 24, 0, 0, 0, TimeSpan.Zero) };
         ctx.Services.AddSingleton<TimeProvider>(clock);
         ctx.Services.AddSingleton(this.store);
+        ctx.Services.AddSingleton(new AvatarStore(this.dataDir.Options(), NullLogger<AvatarStore>.Instance));
 
         return ctx.RenderWithPopovers(builder =>
         {

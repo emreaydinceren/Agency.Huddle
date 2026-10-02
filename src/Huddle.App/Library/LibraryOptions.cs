@@ -25,4 +25,19 @@ public sealed class LibraryOptions
 
     /// <summary>Per document, the most text inlined for an Adapter without file tools.</summary>
     public int MaxInlineBytes { get; set; } = 16384;
+
+    /// <summary>
+    /// The most bytes of one image sent to an Adapter as a Prompt block. 3 MiB is 4 MiB once
+    /// base64-encoded, under the 5 MB Anthropic documents as its per-image limit. Zero or less sends none.
+    /// </summary>
+    public int MaxImageBytes { get; set; } = 3145728;
+
+    /// <summary>The most image Prompt blocks in one Turn's prompt; the rest stay path lines. Zero or less sends none.</summary>
+    public int MaxImagesPerTurn { get; set; } = 4;
+
+    /// <summary>The most raw image bytes in one Turn's prompt, about a third more on the wire. Zero or less sends none.</summary>
+    public int MaxImageBytesPerTurn { get; set; } = 8388608;
+
+    /// <summary>The longest side, in pixels, of an image sent as a Prompt block. Anthropic documents 8,000 as its limit.</summary>
+    public int MaxImageEdgePixels { get; set; } = 8000;
 }

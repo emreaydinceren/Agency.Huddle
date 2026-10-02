@@ -119,6 +119,22 @@ internal static class PromptCatalog
             Timing: PromptTiming.NextSession),
 
         new PromptDefinition(
+            Key: "systemPrompt.askHuman",
+            Label: "Asking the Human",
+            HelperText:
+                "One paragraph, after the tools paragraph, saying when to ask the Human with options " +
+                "instead of a typed list. It exists because an Adapter can defer a tool's own description, " +
+                "so the model may see only the tool's name; this is the text it always reads. Must keep " +
+                "{{askHumanTool}}: the tool's exact, prefixed name is substituted in.",
+            Default:
+                """
+                When you need the Human's preferences, constraints or goals before you can help, such as which days, what budget, or which of these matters most, and you were about to write your questions out as a list, call {{askHumanTool}} instead: it shows them as options the Human taps. Say in your reply why you are asking, then end your Turn; the answer arrives later as a Message from the Human. Do not use it for a fact you can look up or infer, when they want your own opinion, or when they have already given you the detail.
+                """,
+            Placeholders: ["{{askHumanTool}}"],
+            RequiredPlaceholders: ["{{askHumanTool}}"],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
             Key: "systemPrompt.skills",
             Label: "Skills block",
             HelperText:
@@ -415,6 +431,32 @@ internal static class PromptCatalog
                 """,
             Placeholders: ["{{label}}", "{{path}}", "{{sizeKb}}"],
             RequiredPlaceholders: ["{{label}}", "{{path}}", "{{sizeKb}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.libraryDocIncluded",
+            Label: "Library document included",
+            HelperText:
+                "One line of the Library documents block for a file that travels with the message itself, as an image or a document's text the Adapter received beside this prompt. {{path}}, {{location}}, and {{size}} are all required.",
+            Default:
+                """
+                - {{path}} ({{location}}, {{size}}): included with this message
+                """,
+            Placeholders: ["{{path}}", "{{location}}", "{{size}}"],
+            RequiredPlaceholders: ["{{path}}", "{{location}}", "{{size}}"],
+            Timing: PromptTiming.Live),
+
+        new PromptDefinition(
+            Key: "turn.libraryImageUnavailable",
+            Label: "Library image unavailable",
+            HelperText:
+                "One line of the Library documents block for an image this Adapter cannot be given: it takes no images and has no file tools. {{path}}, {{location}}, and {{size}} are all required.",
+            Default:
+                """
+                - {{path}} ({{location}}, {{size}}): an image you cannot see
+                """,
+            Placeholders: ["{{path}}", "{{location}}", "{{size}}"],
+            RequiredPlaceholders: ["{{path}}", "{{location}}", "{{size}}"],
             Timing: PromptTiming.Live),
 
         new PromptDefinition(
@@ -718,6 +760,21 @@ internal static class PromptCatalog
             Default:
                 """
                 Asks the Human to approve new Teammates. Give the id of the Room you are talking in and one to four Candidates. Nothing is created until the Human approves; you will be told the outcome in that Room.
+                """,
+            Placeholders: [],
+            RequiredPlaceholders: [],
+            Timing: PromptTiming.NextSession),
+
+        new PromptDefinition(
+            Key: "tool.askHuman.description",
+            Label: "ask_human description",
+            HelperText:
+                "The job description a model reads for the ask_human tool. It carries the whole of when " +
+                "to ask and when not to, because a model decides whether to call a tool from its " +
+                "description. Takes no placeholders.",
+            Default:
+                """
+                Asks the Human one to three multiple-choice questions, shown in a Room as options they tap. Use it when you need their preferences, constraints or goals before you can help, such as which days, what budget, or which of these matters most, and you were about to write your questions out as a list. Do not use it when the answer is already in the conversation or can be inferred, for a fact you can look up, when they want your own recommendation or opinion, when they are venting, or when they have already given you detailed constraints. It asks only the Human: to ask another Teammate something, Mention them in an ordinary Message. Prefer one question, and write each so it makes sense on its own. Each has 2 to 4 short options that do not overlap, and a type: single_select (the default), multi_select, or rank_priorities. Always say in your reply why you are asking. After calling it, end your Turn: the answer arrives later, as a Message from the Human in that Room.
                 """,
             Placeholders: [],
             RequiredPlaceholders: [],

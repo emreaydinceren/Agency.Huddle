@@ -377,6 +377,21 @@ button:focus-visible {
     margin: 0.75rem 0;
 }
 
+/* A quoted line in a Message. Without it a blockquote renders as a plain paragraph, and the answer
+   to a Question (Questions spec §6.4: each question quoted, then the Human's answer under it) reads
+   as one run of identical lines. Only the quote is set back and muted, so the answer stays the
+   Human's own words. */
+.message-body blockquote {
+    margin: 0.75rem 0 0.25rem;
+    padding-left: 0.75rem;
+    border-left: 3px solid var(--mud-palette-lines-default);
+}
+
+.message-body blockquote p {
+    margin: 0;
+    color: var(--mud-palette-text-secondary);
+}
+
 /* An agent's reply has no .message-bubble wrapper the way a Human's does - the two rules below are
    what stops the first paragraph's own top margin from reading as a gap under the sender/timestamp
    line above it, and the last one's bottom margin from adding to .message-row's own margin-bottom.
@@ -1215,6 +1230,67 @@ button:focus-visible {
     left: 2px;
     width: 5px;
     background-color: var(--mud-palette-primary);
+}
+
+/* ---- The View editor drawer: drag-to-resize width and single-line Fields rows ----------------
+   Same mechanism as .tasks-detail-drawer above: huddleResize.attachDrawer (app.js) reassigns
+   --mud-drawer-width on drag. The handle reuses the detail panel's look. */
+.view-editor-drawer {
+    --mud-drawer-width: 420px;
+}
+
+.view-editor-resize-handle {
+    position: absolute;
+    top: 0;
+    left: -4px;
+    z-index: 1;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+    touch-action: none;
+}
+
+.view-editor-resize-handle::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 3px;
+    width: 3px;
+    height: 100%;
+    background-color: var(--mud-palette-action-default);
+}
+
+.view-editor-resize-handle:hover::before,
+.view-editor-resize-handle:active::before {
+    left: 2px;
+    width: 5px;
+    background-color: var(--mud-palette-primary);
+}
+
+/* A Fields row is one line - switch, name, then the move and remove buttons - never wrapped. The
+   name takes the slack and truncates before the buttons are pushed onto a second line. */
+.view-editor-field-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
+}
+
+.view-editor-field-row > .mud-switch {
+    flex: 0 0 auto;
+    margin: 0;
+}
+
+.view-editor-field-row > .mud-typography {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.view-editor-field-row > .mud-icon-button {
+    flex: 0 0 auto;
 }
 
 /* ---- Library: CodeMirror editor theme and reference styles -----------------------------------

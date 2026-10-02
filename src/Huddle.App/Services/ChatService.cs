@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
 
@@ -96,6 +97,7 @@ public sealed partial class ChatService
     private readonly RoomEvents events;
     private readonly IMentionAliasSource aliasSource;
     private readonly ProposalStore proposals;
+    private readonly QuestionStore questions;
     private readonly ILogger<ChatService> logger;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> postLocks = new(StringComparer.Ordinal);
 
@@ -121,6 +123,11 @@ public sealed partial class ChatService
     /// (archiving only, never unarchiving) and <see cref="DeleteRoomAsync"/>, after either succeeds -
     /// Spec §12 F-16: a Room the sidebar no longer offers must not go on showing a Proposal card.
     /// </param>
+    /// <param name="questions">
+    /// Holds each Room's waiting Questions card (Questions spec §6.5). Dropped when the Human posts a
+    /// Message in the Room, because that Message is the answer the asker will act on, and when the
+    /// Room is archived or deleted.
+    /// </param>
     /// <param name="logger">Used to log Room creation and Invitation events.</param>
     public ChatService(
         ITeamDirectory teamDirectory,
@@ -129,6 +136,7 @@ public sealed partial class ChatService
         IMentionAliasSource aliasSource,
         IOptions<TeamOptions> options,
         ProposalStore proposals,
+        QuestionStore questions,
         ILogger<ChatService> logger)
     {
         ArgumentNullException.ThrowIfNull(teamDirectory);
@@ -137,6 +145,7 @@ public sealed partial class ChatService
         ArgumentNullException.ThrowIfNull(aliasSource);
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(proposals);
+        ArgumentNullException.ThrowIfNull(questions);
         ArgumentNullException.ThrowIfNull(logger);
 
         this.teamDirectory = teamDirectory;
@@ -145,6 +154,7 @@ public sealed partial class ChatService
         this.aliasSource = aliasSource;
         this.agentMessageBudget = options.Value.AgentMessageBudget;
         this.proposals = proposals;
+        this.questions = questions;
         this.logger = logger;
     }
 
@@ -196,6 +206,14 @@ public sealed partial class ChatService
                 ? budget with { Used = budget.Used + 1 }
                 : new RoomBudget(0, this.agentMessageBudget);
             this.budgets[roomId] = budget;
+
+            // A typed Human Message is the answer the asker will act on, so a card still waiting would
+            // invite a second, contradicting one (Questions spec §6.5, D-4). An Agent's Message must not
+            // drop it: the asker's own framing Message lands after the card appears.
+            if (!isAgent)
+            {
+                _ = this.questions.Drop(roomId);
+            }
 
             this.events.PublishMessagePosted(new MessagePostedEvent(room, message, members, mentions, budget));
             return message;
@@ -509,6 +527,7 @@ public sealed partial class ChatService
         if (archived)
         {
             this.proposals.Drop(roomId);
+            _ = this.questions.Drop(roomId);
         }
 
         ChatService.LogRoomArchived(this.logger, roomId, archived);
@@ -536,6 +555,7 @@ public sealed partial class ChatService
         // Spec §12 F-16: a deleted Room can never be Approved or Declined into, so any Proposal still
         // pending in it is dropped along with everything else below.
         this.proposals.Drop(roomId);
+        _ = this.questions.Drop(roomId);
 
         // Both budgets and postLocks are keyed by roomId and now describe a Room that no longer
         // exists, so drop them. Drafts and RoomFollows are deliberately left untouched: both are

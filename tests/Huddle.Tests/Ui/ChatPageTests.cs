@@ -12,6 +12,7 @@ using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Pipes;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Services;
 using Agency.Huddle.App.Tasks;
 using Agency.Huddle.App.Teammates;
@@ -997,6 +998,12 @@ public sealed class ChatPageTests
         // RoomEvents are already copied above, for the same reason.
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<ProposalStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<ProposalService>());
+
+        // Chat.razor renders QuestionCard beside ProposalCard (Questions spec §6.7), which injects these
+        // two even though these tests never ask a Question - RoomEvents, Drafts and ITeamDirectory are
+        // already registered above, for Chat.razor's own sake.
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<QuestionStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<QuestionService>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
 
         // Chat.razor's MessageList child now injects ITaskReferenceResolver (Task 15.1) to link Task

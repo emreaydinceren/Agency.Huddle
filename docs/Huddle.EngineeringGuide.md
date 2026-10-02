@@ -306,6 +306,11 @@ All under the `Team:` section — `TeamOptions.cs`, `Acp/AcpOptions.cs`, `FileCh
 | `Library:MaxIndexedFiles` | `5000` | Above this, a root's wikilink index is not built and backlinks say so. |
 | `Library:MaxReferencedDocuments` | `10` | The most Library documents listed in one Turn's prompt; the rest are counted. |
 | `Library:MaxInlineBytes` | `16384` | Per document, the most text inlined for an Adapter without file tools. |
+| `Library:MaxImageBytes` | `3145728` | The most bytes of one image sent to an Adapter as a Prompt block (3 MiB, 4 MiB once base64-encoded). Over it, the image is a path line. Zero or less sends none. |
+| `Library:MaxImagesPerTurn` | `4` | The most image Prompt blocks in one Turn's prompt; the rest stay path lines. |
+| `Library:MaxImageBytesPerTurn` | `8388608` | The most raw image bytes in one Turn's prompt, about a third more on the wire. |
+| `Library:MaxImageEdgePixels` | `8000` | The longest side, in pixels, of an image sent as a Prompt block, read from its header. |
+| `Acp:Adapters:*:PromptBlocks` | `true` | Whether to send Prompt blocks to an Adapter that advertises it can take them. A kill switch only: `false` for an Adapter that advertises a capability it does not honour; it can never turn blocks on for one that did not advertise. The synthesised legacy profile is `true`. Read at startup. See [ADR-0036](adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md) and [the design](Huddle.PromptBlocks-Specifications.md). |
 
 An installation running `agency-acp`, unverified for resume or for several sessions per process
 (RS Appendix B V-5), sets that Adapter's `SessionPerRoom` to `false` until V-5 passes:

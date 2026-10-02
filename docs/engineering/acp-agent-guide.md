@@ -68,8 +68,19 @@ There is no socket, no port, no daemon.
 |---|---|---|
 | `initialize` | request | Capability negotiation. Must be first. |
 | `session/new` | request | `cwd` **must be absolute**. Returns a session id. |
-| `session/prompt` | request | Returns only when the turn ends. |
+| `session/prompt` | request | Returns only when the turn ends. Takes a `prompt` array of content blocks: the text first, then optional `image` and `resource` blocks (below). |
 | `session/cancel` | notification | Fire and forget. |
+
+**Prompt content.** `IAgentSession.PromptAsync(AgentPrompt, …)` sends the text as the first block and
+each `AgentPromptBlock` after it; the string overload is the same call with no blocks. Send a non-text
+block only when `AgentHostInfo.PromptCapabilities` says the agent advertised it (`image`,
+`embeddedContext`): ACP reads an omitted capability as unsupported. **Verified against
+`claude-agent-acp` 0.75.1** (source, then live on 2026-10-01): an `image` block must carry its bytes in
+`data`, because an image with only a non-`http` `uri` is dropped without an error; a text `resource`
+becomes a link plus a `<context>` block the model reads; a `resource_link` is reduced to its URI; a blob
+`resource` (a PDF) and `audio` are ignored. A 3 MB image, and four of about 2 MB (a prompt line of about
+10 MB), crossed `dotacp` and the adapter intact. The text block stays first, because an adapter reads a
+command only from the start of a prompt. See [the Prompt blocks design](../Huddle.PromptBlocks-Specifications.md).
 
 ### 2.2 Methods, agent to client
 

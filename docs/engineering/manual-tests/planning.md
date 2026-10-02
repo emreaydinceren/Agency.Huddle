@@ -36,6 +36,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 15 | [Adapters: choosing one per Persona, and running two at once](adapters.md) | 4 | 2 | 1.4h |
 | 16 | [Skills: the Chief of Staff, team-building, and the Family Health Advisor](skills.md) | 6 | 6 | 1.8h |
 | 17 | [Work Mode: how much an Agent may do before it asks](work-mode.md) | 9 | 4 | 2h |
+| 18 | [Questions: an Agent asks the Human by tapping, not typing](questions.md) | 6 | 6 | 1.5h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.
@@ -149,6 +150,12 @@ wall clock. Read [section 0.2](../manual-tests.md#02-the-cost-guard) and [sectio
 | [WORKMODE-07](work-mode.md#workmode-07--plan-nothing-is-written-and-the-request-to-leave-plan-mode-is-refused) | `work-mode` | Plan: nothing is written, and the request to leave plan mode is refused | 15 min |
 | [WORKMODE-08](work-mode.md#workmode-08--accept-edits-a-write-into-claude-is-still-refused) | `work-mode` | Accept edits: a write into `~/.claude` is still refused | 15 min |
 | [WORKMODE-09](work-mode.md#workmode-09--a-mode-is-applied-again-after-an-app-restart) | `work-mode` | A mode is applied again after an app restart | 15 min |
+| [QUESTIONS-01](questions.md#questions-01--a-model-frames-its-ask-and-calls-ask_human-with-one-to-three-questions) | `questions` | A model frames its ask and calls `ask_human` with one to three Questions | 15 min |
+| [QUESTIONS-02](questions.md#questions-02--the-asker-ends-its-turn-without-guessing-and-the-framing-lands-before-the-card-can-be-tapped) | `questions` | The asker ends its Turn without guessing, and the framing lands before the card can be tapped | 15 min |
+| [QUESTIONS-03](questions.md#questions-03--a-factual-question-and-a-request-for-an-opinion-do-not-call-ask_human) | `questions` | A factual question and a request for an opinion do not call `ask_human` | 15 min |
+| [QUESTIONS-04](questions.md#questions-04--the-same-on-a-teammate-running-on-agency-acp) | `questions` | The same on a Teammate running on `agency-acp` | 20 min |
+| [QUESTIONS-05](questions.md#questions-05--in-a-room-of-three-an-answer-wakes-only-the-asker) | `questions` | In a Room of three, an answer wakes only the asker | 20 min |
+| [QUESTIONS-06](questions.md#questions-06--a-claude-teammate-has-no-built-in-askuserquestion) | `questions` | A Claude Teammate has no built-in `AskUserQuestion` | 20 min |
 
 Before the first paid test of a session:
 

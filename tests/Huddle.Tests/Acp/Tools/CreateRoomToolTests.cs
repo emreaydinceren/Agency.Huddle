@@ -7,6 +7,7 @@ using Agency.Huddle.App;
 using Agency.Huddle.App.Acp.Tools;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Services;
+using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Tests.Acp.Fakes;
 
@@ -129,7 +130,7 @@ public sealed class CreateRoomToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
+        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
         var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakePromptSource());
         var arguments = new JsonObject { ["agents"] = new JsonArray { "alpha" }, ["seed"] = "Let's figure out the release notes." };
 
@@ -160,7 +161,7 @@ public sealed class CreateRoomToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var proposals = new ProposalStore(events);
-        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
+        var chat = new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
         var tool = new CreateRoomTool(chat, directory, caller.Id, aliasSource, new FakePromptSource());
         var arguments = new JsonObject { ["agents"] = new JsonArray { "alpha" } };
 
@@ -178,6 +179,6 @@ public sealed class CreateRoomToolTests
         var store = new FileChatStore(dir.Options(), NullLogger<FileChatStore>.Instance);
         var events = new RoomEvents(NullLogger<RoomEvents>.Instance);
         var proposals = new ProposalStore(events);
-        return new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, NullLogger<ChatService>.Instance);
+        return new ChatService(directory, store, events, aliasSource, Options.Create(new TeamOptions()), proposals, new QuestionStore(events), NullLogger<ChatService>.Instance);
     }
 }

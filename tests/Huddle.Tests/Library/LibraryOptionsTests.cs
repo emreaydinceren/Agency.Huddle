@@ -47,6 +47,38 @@ public sealed class LibraryOptionsTests
         Assert.Equal("T", options.Teams.Dir);
     }
 
+    /// <summary>The Prompt-block limits default to the design's §6.7 values.</summary>
+    [Fact]
+    public void ImageLimits_Defaults_MatchDesign()
+    {
+        LibraryOptions options = new TeamOptions().Library;
+
+        Assert.Equal(3145728, options.MaxImageBytes);
+        Assert.Equal(4, options.MaxImagesPerTurn);
+        Assert.Equal(8388608, options.MaxImageBytesPerTurn);
+        Assert.Equal(8000, options.MaxImageEdgePixels);
+    }
+
+    /// <summary>The Prompt-block limits bind from <c>Team:Library</c>.</summary>
+    [Fact]
+    public void ImageLimits_Bind_FromConfiguration()
+    {
+        IConfigurationRoot configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Team:Library:MaxImageBytes"] = "1000",
+                ["Team:Library:MaxImagesPerTurn"] = "2",
+                ["Team:Library:MaxImageBytesPerTurn"] = "3000",
+                ["Team:Library:MaxImageEdgePixels"] = "512",
+            })
+            .Build();
+
+        TeamOptions options = new();
+        configuration.GetSection(TeamOptions.SectionName).Bind(options);
+
+        Assert.Equal((1000, 2, 3000, 512), (options.Library.MaxImageBytes, options.Library.MaxImagesPerTurn, options.Library.MaxImageBytesPerTurn, options.Library.MaxImageEdgePixels));
+    }
+
     /// <summary>Default MaxMemoryEntries is 50.</summary>
     [Fact]
     public void MaxMemoryEntries_Default_Is50()

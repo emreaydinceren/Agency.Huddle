@@ -111,6 +111,8 @@ the per-area tables below.
 | [Persona lifecycle: supervisor, work dirs, health and restarts](persona-lifecycle.md) | 32 | 7 | [below](#persona-lifecycle) |
 | [Tasks: creating, moving, viewing and referencing a unit of work](tasks.md) | 15 | 4 | [below](#tasks) |
 | [Work Mode: how much an Agent may do before it asks](work-mode.md) | 9 | 4 | [below](#work-mode) |
+| [Questions: an Agent asks the Human by tapping, not typing](questions.md) | 6 | 6 | [below](#questions) |
+| [Prompt blocks: an image the Human names reaches the Teammate](prompt-blocks.md) | 5 | 5 | [below](#prompt-blocks) |
 
 ---
 
@@ -779,6 +781,31 @@ Work Mode: choosing how much an Agent may do before it asks — [area file](work
 | [WORKMODE-07](work-mode.md#workmode-07--plan-nothing-is-written-and-the-request-to-leave-plan-mode-is-refused) | 💰 | Pass | | 2026-10-01, in the app. One `switch_mode` request refused (`reject`), the guard's log line present, no file, stop reason `cancelled`, and nothing posted to the Room (OQ-2 confirmed in the app) |
 | [WORKMODE-08](work-mode.md#workmode-08--accept-edits-a-write-into-claude-is-still-refused) | 💰 | Pass | | 2026-10-01, in the app, Haiku, Accept edits, on `017d684` (the `SerializeRaw` fix). One `session/request_permission` for the real `~/.claude/huddle-wm-test.txt`; the app logged "Refused a tool call writing to …", answered `reject`, the tool call failed, the file does not exist and the Teammate said permission was denied. **The first two runs failed** (Accept edits, then the Adapter's default): the app answered `allow-once` and the file was created, because `SerializeRaw` turned `rawInput` into `{"file_path":[]}`, so the guard never saw a path. That bug predates Work Modes and is fixed on this branch |
 | [WORKMODE-09](work-mode.md#workmode-09--a-mode-is-applied-again-after-an-app-restart) | 💰 | Pass | | 2026-10-01, in the app. `session/resume`, then `set_config_option` model, whose response showed the mode back at `default`, then `set_config_option` `mode=acceptEdits`, all before the prompt |
+
+## questions
+
+Questions: an Agent asks the Human by tapping, not typing — [area file](questions.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [QUESTIONS-01](questions.md#questions-01--a-model-frames-its-ask-and-calls-ask_human-with-one-to-three-questions) | 💰 | Pass | | | **Re-run 2026-10-01 after the fix, in the app, Haiku, one sample: Pass.** With `systemPrompt.askHuman` in the system prompt, a fresh Nova (body *"You are a fitness coach."*, never told about the tool) given the exact prompt called ToolSearch for `mcp__team__ask_human` unprompted, then the tool; the wire shows one `ask_human` call and no `elicitation`. It wrote one framing message (three sentences, over the "one or two" line, said in the past tense *"I've asked you"*) and a card of three single-select questions with 3 to 4 options each, no `@`, and wrote no routine and no guessed answers. **Before the fix, 2026-10-01: Fail, twice** (Coach, then a fresh Nova): each wrote its questions as a numbered list and never called `ask_human`. Cause: the Claude Adapter defers every MCP tool, so the model saw only the name, and the description that carried the guidance was never loaded. One sample proves the path works, not that it is reliable |
+| [QUESTIONS-02](questions.md#questions-02--the-asker-ends-its-turn-without-guessing-and-the-framing-lands-before-the-card-can-be-tapped) | 💰 | Pass | | | 2026-10-01, in the app, on an explicitly requested call. An in-page observer recorded the card appearing with `still writing` and 3/3 options disabled, then enabled 2.6 s later when Coach's Turn ended; Coach's last words were that it would wait for the answers, with no routine and no guessed answers. Not shown for a spontaneous call, which never happened (QUESTIONS-01) |
+| [QUESTIONS-03](questions.md#questions-03--a-factual-question-and-a-request-for-an-opinion-do-not-call-ask_human) | 💰 | Pass | | | 2026-10-01, in the app, Haiku. Sable answered Paris and the Python/JavaScript question directly, no card. Weak evidence: with the description deferred (QUESTIONS-01) the model could not have been restrained by it |
+| [QUESTIONS-04](questions.md#questions-04--the-same-on-a-teammate-running-on-agency-acp) | 💰 | Active | | | Inconclusive 2026-10-01: no `agency-acp` Adapter Profile is configured here |
+| [QUESTIONS-05](questions.md#questions-05--in-a-room-of-three-an-answer-wakes-only-the-asker) | 💰 | Pass | | | 2026-10-01, in the app, Room of Coach, Nova, Sable. One tap on Blue posted `> What's your favourite colour?`, a blank line, `Blue`, `@Coach`; only Coach replied (Nova's and Sable's Transcripts hold nothing from it), and Nova, asked next, read the answer from the Transcript. A multi-select and ranking card also posted `Mon, Fri` and `1. Speed · 2. Cost · 3. Quality` exactly |
+| [QUESTIONS-06](questions.md#questions-06--a-claude-teammate-has-no-built-in-askuserquestion) | 💰 | Pass | | | 2026-10-01, in the app, Haiku. Nova said it has no `AskUserQuestion` and offered `ask_human`; no second card, the Turn ended on its own, no idle-timeout line. The wire trace's `initialize` carries `fs` and `terminal` (both false) and no `elicitation`, and the log has no `elicitation` text and no `elicitation/create` |
+
+## prompt-blocks
+
+Prompt blocks: an image the Human names reaches the Teammate — [area file](prompt-blocks.md)
+
+| Test | 💰 | Status | Issue | Notes |
+| --- | --- | --- | --- | --- |
+| [PROMPTBLOCKS-01](prompt-blocks.md#promptblocks-01--a-named-image-is-seen-without-a-tool-call) | 💰 | Pass | | 2026-10-01, in the app, Haiku, one sample. The reply read `BANANA 4821` and the circle as red-orange from a PNG named by full path, with the Turn's prompt carrying the image block. |
+| [PROMPTBLOCKS-02](prompt-blocks.md#promptblocks-02--six-images-four-are-seen) | 💰 | Pass | | 2026-10-01, in the app, Haiku, one sample. Six PNGs named in one Message: the Teammate said it could see 4 pictures and listed Red, Blue, Yellow, Purple (the first four); the log held one line ending `ImageCountCap=2`. |
+| [PROMPTBLOCKS-03](prompt-blocks.md#promptblocks-03--an-image-over-the-size-limit-is-a-path-line) | 💰 | Pass | | 2026-10-01, in the app, one sample. A 4.3 MB PNG named in a Message: the Teammate replied `PATHONLY`, the Turn completed, and the log held one Information line ending `TooLarge=1` with no path in it. |
+| [PROMPTBLOCKS-04](prompt-blocks.md#promptblocks-04--an-image-mentioned-only-in-catch-up-is-not-re-sent) | 💰 | Active | | |
+| [PROMPTBLOCKS-05](prompt-blocks.md#promptblocks-05--an-adapter-profile-can-turn-blocks-off) | 💰 | Pass | | 2026-10-01, in the app, Haiku, one sample, relaunched with `Adapters:0` (`Id=claude`, `Command=node`, `PromptBlocks=false`; the locator found the stock adapter). A fresh PNG's banner text was asked for with no tools: the Teammate replied `CANNOT SEE`. |
 
 ---
 

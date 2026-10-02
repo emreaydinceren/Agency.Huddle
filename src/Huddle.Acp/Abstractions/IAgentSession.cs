@@ -45,7 +45,23 @@ public interface IAgentSession : IAsyncDisposable
     /// </summary>
     string? CurrentModeId { get; }
 
-    Task<PromptResult> PromptAsync(string text, CancellationToken cancellationToken);
+    /// <summary>
+    /// Sends one prompt: its text, then its Prompt blocks in order. This is the one method an
+    /// implementer must write, so none can handle the string form and silently drop blocks.
+    /// </summary>
+    /// <param name="prompt">The text and the blocks that follow it.</param>
+    /// <param name="cancellationToken">Cancels the Turn.</param>
+    /// <returns>How the Turn ended.</returns>
+    Task<PromptResult> PromptAsync(AgentPrompt prompt, CancellationToken cancellationToken);
+
+    /// <summary>Sends a text-only prompt. A default method: it is <see cref="PromptAsync(AgentPrompt, CancellationToken)"/> with no blocks.</summary>
+    /// <param name="text">The prompt text.</param>
+    /// <param name="cancellationToken">Cancels the Turn.</param>
+    /// <returns>How the Turn ended.</returns>
+    Task<PromptResult> PromptAsync(string text, CancellationToken cancellationToken)
+    {
+        return this.PromptAsync(new AgentPrompt(text), cancellationToken);
+    }
 
     Task CancelAsync(CancellationToken cancellationToken);
 }
