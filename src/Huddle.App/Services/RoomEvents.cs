@@ -3,12 +3,25 @@ using Agency.Huddle.Contracts;
 
 namespace Agency.Huddle.App.Services;
 
+/// <summary>A Message that reached a Room's Transcript, with who was in the Room and who it names.</summary>
+/// <param name="Room">The Room the Message was posted in.</param>
+/// <param name="Message">The Message itself.</param>
+/// <param name="Members">The Room's Members at the moment of posting.</param>
+/// <param name="Mentions">The Members the Message names.</param>
+/// <param name="Budget">The Room's Budget after the post.</param>
+/// <param name="WithheldFromAgentId">
+/// The Agent this Message is not delivered to, or <see langword="null"/> when every Agent Member
+/// except the sender receives it. Set only for the Human's answer to a form that Agent opened: its
+/// Turn is still open and takes the answer as the tool's own result, so a delivery would queue a
+/// second Turn. Read only by <c>AgentGateway</c>; the Room view shows the Message either way.
+/// </param>
 public sealed record MessagePostedEvent(
     Room Room,
     ChatMessage Message,
     IReadOnlyList<User> Members,
     IReadOnlyList<User> Mentions,
-    RoomBudget Budget)
+    RoomBudget Budget,
+    string? WithheldFromAgentId = null)
 {
     /// <summary>
     /// Whether <paramref name="member"/> is an Agent this Message is delivered to. An Agent never

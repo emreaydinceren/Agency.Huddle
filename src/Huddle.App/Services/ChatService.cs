@@ -168,6 +168,59 @@ public sealed partial class ChatService
             throw new ChatException(ErrorCodes.BadMessage, "empty message");
         }
 
+        return await this.PostCoreAsync(roomId, senderId, text, messageId, null, ct);
+    }
+
+    /// <summary>
+    /// Posts the Human's answer to a form the asker opened mid-Turn (elicitation bridge, decision E-4).
+    /// It is an ordinary Human Message in every way that matters to the Room - it is appended to the
+    /// Transcript, resets the Budget and drops the Room's waiting Questions, all under the same
+    /// per-Room lock as <see cref="PostAsync"/> - with two differences. It mentions nobody, whatever
+    /// its free text says, and it is withheld from the asker (<see cref="MessagePostedEvent.WithheldFromAgentId"/>).
+    /// The asker's Turn is still open and receives the answer as the tool's own result; a delivery
+    /// would queue a second Turn, and the Reply Gate cannot refuse it in a one-to-one Room, which it
+    /// answers whether or not anyone was mentioned.
+    /// </summary>
+    /// <remarks>
+    /// Accepted leaks, documented in <c>known-limits.md</c>: another Agent that follows the Room still
+    /// wakes; the asker's own token Budget is not reset; <see cref="ExtendBudgetAsync"/> redelivers the
+    /// Room's last Message without the withhold, which cannot reach the asker because the answer has
+    /// just unpaused the Room; and on resume the asker's catch-up may include the answer as context.
+    /// </remarks>
+    /// <param name="roomId">The Room the asker is waiting in.</param>
+    /// <param name="humanId">The Human, as a Member of that Room.</param>
+    /// <param name="text">The answer. Blank or whitespace-only is nothing to record.</param>
+    /// <param name="askerAgentId">The Agent that asked, and the only one this Message is withheld from.</param>
+    /// <param name="ct">Cancels the lookups, the lock wait and the append.</param>
+    /// <returns>The Message that was appended, or <see langword="null"/> when <paramref name="text"/> was blank and nothing was posted.</returns>
+    /// <exception cref="ChatException">The Room does not exist, or <paramref name="humanId"/> is not a Member of it.</exception>
+    public async Task<ChatMessage?> PostHumanAnswerAsync(
+        string roomId, string humanId, string text, string askerAgentId, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        return await this.PostCoreAsync(roomId, humanId, text, null, askerAgentId, ct);
+    }
+
+    /// <summary>
+    /// The body <see cref="PostAsync"/> and <see cref="PostHumanAnswerAsync"/> share, so both take the
+    /// same per-Room lock and neither can drift from the other's Budget, Question-drop or publish rules.
+    /// </summary>
+    /// <param name="roomId">The Room to post into.</param>
+    /// <param name="senderId">The sender, as a Member of that Room.</param>
+    /// <param name="text">The non-blank Message text.</param>
+    /// <param name="messageId">The Message's id, or <see langword="null"/> to generate one.</param>
+    /// <param name="withheldFromAgentId">
+    /// The Agent the Message is withheld from, or <see langword="null"/> for an ordinary post. Non-null
+    /// marks a Human answer, which also mentions nobody.
+    /// </param>
+    /// <param name="ct">Cancels the lookups, the lock wait and the append.</param>
+    private async Task<ChatMessage> PostCoreAsync(
+        string roomId, string senderId, string text, string? messageId, string? withheldFromAgentId, CancellationToken ct)
+    {
         var room = await this.teamDirectory.GetRoomAsync(roomId, ct)
             ?? throw new ChatException(ErrorCodes.UnknownRoom, $"Unknown room '{roomId}'.");
 
@@ -195,7 +248,9 @@ public sealed partial class ChatService
             }
 
             var id = messageId ?? Guid.CreateVersion7().ToString("N");
-            var mentions = MentionParser.Parse(text, members, this.aliasSource.Aliases);
+            IReadOnlyList<User> mentions = withheldFromAgentId is null
+                ? MentionParser.Parse(text, members, this.aliasSource.Aliases)
+                : [];
             var message = new ChatMessage(id, DateTimeOffset.UtcNow, sender.Id, sender.Name, text);
             await this.store.AppendAsync(roomId, message, ct);
 
@@ -215,7 +270,7 @@ public sealed partial class ChatService
                 _ = this.questions.Drop(roomId);
             }
 
-            this.events.PublishMessagePosted(new MessagePostedEvent(room, message, members, mentions, budget));
+            this.events.PublishMessagePosted(new MessagePostedEvent(room, message, members, mentions, budget, withheldFromAgentId));
             return message;
         }
         finally
