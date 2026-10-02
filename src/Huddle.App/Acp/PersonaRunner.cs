@@ -100,6 +100,10 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
     private readonly LibraryDocumentCollector? libraryDocs;
     private readonly bool readsFiles;
 
+    // Shows the Human the questions this Persona's agent asks (elicitation bridge); handed to every
+    // Room Session through the pool. Null answers every question as cancelled.
+    private readonly IElicitationBridge? elicitationBridge;
+
     private RoomSessionPool? pool;
     private JsonLineStream? stream;
     // The display-only Spend table, or null where there is none (a runner built without a container).
@@ -143,7 +147,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         LibraryDocumentCollector? libraryDocs = null,
         bool readsFiles = true,
         PersonaSpend? spend = null,
-        PersonaCommands? commands = null)
+        PersonaCommands? commands = null,
+        IElicitationBridge? elicitationBridge = null)
     {
         ArgumentNullException.ThrowIfNull(persona);
         ArgumentNullException.ThrowIfNull(options);
@@ -167,6 +172,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         this.readsFiles = readsFiles;
         this.spend = spend;
         this.commands = commands;
+        this.elicitationBridge = elicitationBridge;
         if (PersonaFrontmatter.TryReadIdentity(persona.Text, out var identity, out _))
         {
             this.declaredWatches = identity.Watches ?? [];
@@ -451,7 +457,8 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             this.agentId,
             this.turnActivity,
             this.libraryDocs,
-            this.readsFiles);
+            this.readsFiles,
+            this.elicitationBridge);
 
         // Per-Room mode opens the Room with exactly two Members, one of them the Human - the same
         // predicate as the Greeting's below, without IsEmpty: unlike the Greeting, this open must

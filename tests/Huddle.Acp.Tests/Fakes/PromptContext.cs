@@ -105,6 +105,42 @@ internal sealed class PromptContext
         return (JsonObject)result["outcome"]!;
     }
 
+    /// <summary>
+    /// Sends the real wire request <c>elicitation/create</c> in form mode, as the adapter does for an
+    /// AskUserQuestion, a refusal dialog or an MCP form, and returns the whole result object
+    /// (<c>action</c>, and <c>content</c> when accepted). Refuses, as the real adapter would not send
+    /// the request at all, when the client never advertised <c>elicitation.form</c> in
+    /// <c>initialize</c>.
+    /// </summary>
+    /// <param name="message">The prompt text.</param>
+    /// <param name="requestedSchema">The form's JSON Schema, an object with <c>type</c> and <c>properties</c>.</param>
+    /// <param name="toolCallId">The triggering tool call id, or null to send none (a refusal dialog or an MCP form carries none).</param>
+    /// <returns>The client's result object.</returns>
+    /// <exception cref="InvalidOperationException">The client never advertised <c>elicitation.form</c>.</exception>
+    internal async Task<JsonObject> RequestElicitationAsync(string message, JsonObject requestedSchema, string? toolCallId = null)
+    {
+        if (!this.agent.ElicitationFormAdvertised)
+        {
+            throw new InvalidOperationException(
+                "The client did not advertise elicitation.form in initialize, so a real adapter would not send elicitation/create; the fake refuses to.");
+        }
+
+        JsonObject parameters = new JsonObject
+        {
+            ["sessionId"] = this.SessionId,
+            ["mode"] = "form",
+            ["message"] = message,
+            ["requestedSchema"] = requestedSchema.DeepClone(),
+        };
+
+        if (toolCallId is not null)
+        {
+            parameters["toolCallId"] = toolCallId;
+        }
+
+        return await this.agent.SendRequestAsync("elicitation/create", parameters).ConfigureAwait(false);
+    }
+
 
     internal Task WaitForCancelAsync()
     {

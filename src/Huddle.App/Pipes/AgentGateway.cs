@@ -121,6 +121,13 @@ internal sealed class AgentGateway : IAgentGateway, IDisposable
                 continue;
             }
 
+            // The Human's answer to a form this Agent opened: its Turn is open and gets the answer as
+            // the tool's result, so a delivery would only queue a second Turn.
+            if (string.Equals(member.Id, e.WithheldFromAgentId, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             if (!this.connections.TryGetValue(member.Id, out var connection))
             {
                 continue;

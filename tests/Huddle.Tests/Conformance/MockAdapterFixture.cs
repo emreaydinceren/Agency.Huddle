@@ -179,7 +179,11 @@ public sealed class MockAdapterFixture : IAsyncDisposable
         RoomSessionStore roomSessions = host.Services.GetRequiredService<RoomSessionStore>();
         OwnPosts ownPosts = host.Services.GetRequiredService<OwnPosts>();
 
-        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger, fileChanges, timeProvider: timeProvider, roomSessions: roomSessions, ownPosts: ownPosts);
+        // Optional, exactly as PersonaSupervisor takes it: the runner it starts is handed whatever the
+        // container registered, so a container with no bridge answers every agent form as cancelled.
+        IElicitationBridge? elicitationBridge = host.Services.GetService<IElicitationBridge>();
+
+        PersonaRunner runner = new(persona, options, factory, prompts, roomFollows, logger, fileChanges, timeProvider: timeProvider, roomSessions: roomSessions, ownPosts: ownPosts, elicitationBridge: elicitationBridge);
 
         try
         {

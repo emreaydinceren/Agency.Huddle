@@ -64,4 +64,15 @@ public interface IAgentSession : IAsyncDisposable
     }
 
     Task CancelAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Binds the scope that answers this session's <see cref="ElicitationRequest"/>s; a second call
+    /// replaces the first. A default method that does nothing: a session type that cannot receive
+    /// elicitation ignores the scope, exactly as a session with no scope bound answers every request
+    /// as cancelled.
+    /// </summary>
+    /// <param name="scope">The scope to answer with.</param>
+    void BindElicitationScope(IElicitationScope scope)
+    {
+    }
 }

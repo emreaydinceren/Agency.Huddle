@@ -79,6 +79,25 @@ public sealed partial class PromptCatalogTests
         Assert.Contains("end your Turn", prompt.Default, StringComparison.Ordinal); // contains-ok: prompt text, not markup
     }
 
+    /// <summary>
+    /// Elicitation bridge E-8: now that Claude's built-in <c>AskUserQuestion</c> is bridged and works, the
+    /// paragraph says so but steers a Persona to <c>ask_human</c> for tappable choices, because the built-in
+    /// holds the Turn open until the Human answers. The model-facing text names the tool only through its
+    /// placeholder, in both places it mentions it, and carries no citation of a spec or a decision.
+    /// </summary>
+    [Fact]
+    public void AskHumanSystemPrompt_PrefersAskHumanOverTheBuiltInQuestionTool()
+    {
+        var prompt = PromptCatalog.Get("systemPrompt.askHuman");
+
+        const string Passage = "The built-in AskUserQuestion tool also works for tappable choices, but it holds this Turn open until the Human answers, so prefer {{askHumanTool}}: ending your Turn lets the answer arrive as the Human's next Message and keeps the conversation moving.";
+        Assert.Equal(1, prompt.Default.Split(Passage).Length - 1);
+        Assert.Equal(2, prompt.Default.Split("{{askHumanTool}}").Length - 1);
+        Assert.False(prompt.Default.Contains("mcp__team__", StringComparison.Ordinal));
+        Assert.False(prompt.Default.Contains("D-", StringComparison.Ordinal));
+        Assert.False(prompt.Default.Contains("spec", StringComparison.OrdinalIgnoreCase));
+    }
+
     /// <summary>The four Team Memory prompts Team Pages Spec §7.4 defines all exist, are <see cref="PromptTiming.NextSession"/>, have their exact one-line defaults, the whole placeholder list, the required placeholders, and a helper text free of <c>mcp__team__</c>.</summary>
     [Theory]
     [InlineData(

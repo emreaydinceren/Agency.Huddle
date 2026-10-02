@@ -13,6 +13,9 @@ internal interface ISessionSink
 
     CancellationToken PromptCancellation { get; }
 
+    /// <summary>Gets the scope that answers this session's elicitation requests, or null while none is bound.</summary>
+    IElicitationScope? ElicitationScope { get; }
+
     bool TryPublish(AgentEvent agentEvent);
 
     void Fault(Exception exception);

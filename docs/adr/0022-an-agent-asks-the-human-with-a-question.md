@@ -83,7 +83,7 @@ have two stores rather than one store with a mode.
 | Escaping `@` in options instead of refusing it | An escaped Mention is still the Agent putting words in the Human's mouth |
 | Granting the tool through a Skill, like `propose_teammates` | `propose_teammates` is gated because each Teammate is a billed process. Asking costs nothing and creates nothing |
 | Drag-and-drop ranking | Up and down buttons work with a keyboard and a screen reader, and need no JavaScript |
-| Bridging ACP elicitation (`elicitation/create`) to the card | It holds the Turn open, against the idle timeout, and advertising it re-enables Claude's built-in `AskUserQuestion` alongside `ask_human`. The Adapter keeps that tool off while the capability is absent |
+| Replacing `ask_human` with ACP elicitation (`elicitation/create`) | `ask_human` returns at once and its answer is an ordinary Message, while an elicitation request holds the Turn open. Elicitation was bridged **beside** it on 2026-10-01, not instead of it (see the note under Consequences) |
 
 ## Consequences
 
@@ -98,6 +98,18 @@ have two stores rather than one store with a mode.
   answer instead. This goes into `known-limits.md`.
 - The `team-building` Skill's interview can use `ask_human` once the tool exists. Its Greeting
   cannot: a menu of 31 teams is far past four options, and stays prose.
-- Huddle must not advertise `clientCapabilities.elicitation` while this is the only way to ask.
-  It would switch on Claude's built-in `AskUserQuestion`, the refusal-fallback dialog and
-  MCP-initiated forms, each needing a handler. A guard test pins the absence.
+- Huddle advertises `clientCapabilities.elicitation.form` (`Acp:AdvertiseElicitation`, on by default)
+  since 2026-10-01. It switches on Claude's built-in `AskUserQuestion`, the refusal-fallback dialog
+  and MCP-initiated forms, and one handler answers all three. A guard test pins exactly what is
+  advertised, and switching the option off restores the old behaviour.
+
+> **Note, 2026-10-01: the rejection of elicitation was conditional, and its condition is met.** The
+> one premise behind it was that an open request emits no events and runs into the idle timeout. The
+> idle watchdog now pauses while a request is open, bounded by `Acp:UserInputTimeoutSeconds`, and
+> roadmap item 20 can reuse the same pause. `ask_human` stays the primary way to ask, with the answer
+> a Message (the decision above); elicitation is bridged beside it, for typed forms from an MCP
+> server, Claude's own `AskUserQuestion` and the retry-after-refusal dialog. The three gates held: the
+> watchdog pause, a handler that answers every `elicitation/create`, and the answer written to the
+> Transcript as a Message, which cannot be an ordinary Human Message in a one-to-one Room because the
+> Reply Gate would wake the asker a second time. See
+> [The elicitation bridge](../Huddle.Questions-Specifications.md#68a-the-elicitation-bridge).

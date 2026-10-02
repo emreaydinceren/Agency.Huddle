@@ -22,6 +22,8 @@ internal sealed class FakeSessionSink : ISessionSink
 
     public IPermissionHandler PermissionHandler { get; set; } = new RecordingPermissionHandler();
 
+    public IElicitationScope? ElicitationScope { get; set; }
+
     internal CancellationTokenSource PromptCts { get; } = new CancellationTokenSource();
 
     public CancellationToken PromptCancellation => this.PromptCts.Token;

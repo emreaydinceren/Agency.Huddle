@@ -93,7 +93,7 @@ Agent is allowed to try, which a handler that answers after the Agent has asked 
 | **A fixed list of mode ids in code** | Adapters differ, and the spec says a category carries no correctness (D-1) |
 | **Setting a mode from `propose_teammates` or a Persona file** | `Candidate` cannot set Model, Effort or Adapter, for the same reason: each one grants capability or cost (D-9) |
 | **Changing what the handler approves, beyond the plan guard** | Roadmap §20 owns that decision |
-| **ACP elicitation** | Not advertised, and unrelated. [ADR-0022](adr/0022-an-agent-asks-the-human-with-a-question.md) D-13 |
+| **ACP elicitation** | Advertised since 2026-10-01 (`Acp:AdvertiseElicitation`), and unrelated to a Work Mode or plan approval. [ADR-0022](adr/0022-an-agent-asks-the-human-with-a-question.md), [the Questions spec](Huddle.Questions-Specifications.md) §6.8a |
 
 ---
 

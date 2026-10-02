@@ -27,6 +27,8 @@ public sealed partial class DotAcpAgentHost(
 
     private DotAcpClientAdapter? adapter;
 
+    private NdjsonMethodRewriteStream? rewriteStream;
+
     private AgentHostInfo? info;
 
     private bool started;
@@ -61,26 +63,40 @@ public sealed partial class DotAcpAgentHost(
             trace.Listeners.Add(new LoggerTraceListener(loggerFactory.CreateLogger("Agency.Huddle.Acp.Wire")));
         }
 
+        // Only a host that advertises elicitation can receive elicitation/create, so only that host
+        // reads through the rewrite stream (a host that never advertised sees no change at all).
+        // The connection does not dispose the streams it was given, so DisposeAsync releases the
+        // wrapper itself (the process pipe underneath is released by the process).
+        Stream agentOutput = launchedProcess.StandardOutput;
+        if (options.AdvertiseElicitationForm)
+        {
+            NdjsonMethodRewriteStream rewriter = new(agentOutput);
+            this.rewriteStream = rewriter;
+            agentOutput = rewriter;
+        }
+
         dotacp.client.Connection establishedConnection = dotacp.client.Connection.RunClient(
             clientAdapter,
             launchedProcess.StandardInput,
-            launchedProcess.StandardOutput,
+            agentOutput,
             trace) ?? throw new AgentException("Failed to create connection.");
         this.connection = establishedConnection;
+
+        dotacp.protocol.ClientCapabilities clientCapabilities = options.AdvertiseElicitationForm
+            ? new ElicitationClientCapabilities()
+            : new dotacp.protocol.ClientCapabilities();
+        clientCapabilities.Fs = new dotacp.protocol.FileSystemCapabilities
+        {
+            ReadTextFile = false,
+            WriteTextFile = false,
+        };
+        clientCapabilities.Terminal = false;
 
         dotacp.protocol.InitializeResponse response = await establishedConnection.InitializeAsync(
             new dotacp.protocol.InitializeRequest
             {
                 ProtocolVersion = dotacp.protocol.ProtocolMeta.Version,
-                ClientCapabilities = new dotacp.protocol.ClientCapabilities
-                {
-                    Fs = new dotacp.protocol.FileSystemCapabilities
-                    {
-                        ReadTextFile = false,
-                        WriteTextFile = false,
-                    },
-                    Terminal = false,
-                },
+                ClientCapabilities = clientCapabilities,
                 ClientInfo = new dotacp.protocol.Implementation
                 {
                     Name = options.ClientName,
@@ -491,6 +507,9 @@ public sealed partial class DotAcpAgentHost(
             activeAdapter.OnDisconnected(activeConnection);
         }
 
+        // Ends every elicitation request still waiting for the Human, so no handler outlives the host.
+        activeAdapter?.Dispose();
+
         activeConnection?.Dispose();
 
         if (activeProcess is not null)
@@ -505,6 +524,7 @@ public sealed partial class DotAcpAgentHost(
                 activeProcess.Kill();
             }
 
+            this.rewriteStream?.Dispose();
             activeProcess.Dispose();
         }
     }
