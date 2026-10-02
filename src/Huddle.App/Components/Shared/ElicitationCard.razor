@@ -121,7 +121,7 @@
                                 case ElicitationFieldKind.MultiSelect:
                                     <div role="group" aria-label="@shown.Label" aria-required="@(shown.Required ? "true" : null)" class="elicitation-card-group">
                                         @Heading(shown)
-                                        <MudStack Spacing="0">
+                                        <MudStack Spacing="0" AlignItems="AlignItems.Start">
                                             @foreach (ElicitationOption option in shown.Options)
                                             {
                                                 string value = option.Value;
