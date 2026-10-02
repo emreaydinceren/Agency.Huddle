@@ -273,7 +273,7 @@ internal sealed partial class DotAcpAgentSession : IAgentSession, ISessionSink
 
     /// <summary>
     /// Mitigates the ACP client dispatch-ordering defect documented in
-    /// <c>docs/agencyteam/known-limits.md</c> ("Second known flake, pre-existing") and reproduced
+    /// <c>docs/engineering/known-limits.md</c> ("Second known flake, pre-existing") and reproduced
     /// deterministically by <c>DotAcpAgentSessionTests.PromptAsync_ChunkDispatchedAfterResponse_StillPrecedesTurnCompleted</c>:
     /// ACP guarantees the agent writes every <c>session/update</c> for a Turn to the wire strictly
     /// before its <c>session/prompt</c> response, but StreamJsonRpc completes that response through a
