@@ -86,6 +86,7 @@ that exercise it. All are **chat** unless stated.
 | [testing.md](engineering/testing.md) | How to add a test, and what no test can prove | chat | ~2.3k |
 | [known-limits.md](engineering/known-limits.md) | What is deliberately absent, before you "fix" it | chat | ~1.9k |
 | [roadmap.md](engineering/roadmap.md) | The numbered plan, and what exists before work in `PersonaRunner`, `ReplyGate`, `app.css` or `Themes/` | chat | ~10.7k |
+| [installer-plan.md](engineering/installer-plan.md) | The delivery plan for the Windows and macOS one-line installers: decisions, spec, 79 tasks. Read a task and the spec sections it cites, never the whole page | chat | ~22k |
 | [decisions.md](engineering/decisions.md) | The decision record and the old-to-new vocabulary mapping | chat | ~6.3k |
 | [mudblazor.md](engineering/mudblazor.md) | Which MudBlazor facts were checked against the package | chat | small |
 | [acp-agent-guide.md](engineering/acp-agent-guide.md) | What was verified against the real adapter and what is only assumed. Written under the old `Team.*` names | acp | ~9k |
