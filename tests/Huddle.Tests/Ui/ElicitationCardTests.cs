@@ -44,7 +44,7 @@ public sealed class ElicitationCardTests
         IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
 
         Assert.Equal(["Coach is asking", "Nova is asking"], [.. cut.FindAll(".elicitation-card-title").Select(title => title.TextContent.Trim())]);
-        Assert.Equal([SingleQuestionMessage, RefusalMessage], [.. cut.FindAll(".elicitation-card-message").Select(message => message.TextContent.Trim())]);
+        Assert.Equal([RefusalMessage], [.. cut.FindAll(".elicitation-card-message").Select(message => message.TextContent.Trim())]);
         Assert.Equal(["Form from Coach", "Form from Nova"], [.. cut.FindAll("[role=region]").Select(region => region.GetAttribute("aria-label") ?? string.Empty)]);
     }
 
@@ -704,6 +704,385 @@ public sealed class ElicitationCardTests
         Assert.Equal([false, false], [.. OptionLabels(cut, 0, "label.mud-radio").Select(IsDisabled)]);
         Assert.Equal([false, false], [.. OptionLabels(cut, 0, "label.mud-radio").Select(IsChecked)]);
         Assert.True(SendButton(cut, 0).HasAttribute("disabled"));
+    }
+
+    /// <summary>
+    /// A one-question form whose message is the question (what the Adapter sends) shows that sentence
+    /// once, as the question's label, not again as a message line above it; a message that differs only
+    /// by surrounding whitespace is the same sentence.
+    /// </summary>
+    /// <param name="schema">The form's JSON Schema text.</param>
+    /// <param name="message">The request's message.</param>
+    [Theory]
+    [InlineData(SingleQuestionSchema, "Which database?")]
+    [InlineData(SingleQuestionSchema, "  Which database?\n")]
+    [InlineData("""{"type":"object","properties":{"question_0":{"type":"string","description":" Which database? ","oneOf":[{"const":"A","title":"A"}]}}}""", "Which database?")]
+    public async Task OneQuestionForm_MessageRepeatingTheQuestion_ShowsItOnce(string schema, string message)
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(schema, message));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        Assert.Empty(cut.FindAll(".elicitation-card-message"));
+        Assert.Equal(["Which database?"], [.. cut.FindAll(".elicitation-card-field-label").Select(label => label.TextContent.Trim())]);
+        Assert.Equal(1, LeafTextCount(Card(cut, 0), "Which database?"));
+    }
+
+    /// <summary>A message that is not the question's sentence - another text, or the same words in another case - is still shown above it, beside the question.</summary>
+    /// <param name="description">The question's own text.</param>
+    /// <param name="message">The request's message.</param>
+    [Theory]
+    [InlineData("Which database?", "Please answer the following question.")]
+    [InlineData("which database?", "Which database?")]
+    public async Task OneQuestionForm_MessageDifferingFromTheQuestion_ShowsBoth(string description, string message)
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        string schema = Schema("\"question_0\":{\"type\":\"string\",\"description\":\"" + description + "\",\"oneOf\":[{\"const\":\"A\",\"title\":\"A\"}]}");
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(schema, message));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        Assert.Equal([message], [.. cut.FindAll(".elicitation-card-message").Select(line => line.TextContent.Trim())]);
+        Assert.Equal([description], [.. cut.FindAll(".elicitation-card-field-label").Select(label => label.TextContent.Trim())]);
+    }
+
+    /// <summary>A form with two fields keeps its message even when it reads the same as one field's label: the message is the form's prompt, not that field's.</summary>
+    [Fact]
+    public async Task TwoFieldForm_MessageMatchingOneLabel_ShowsBoth()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        string schema = Schema("\"a\":{\"type\":\"string\",\"title\":\"Same\"},\"b\":{\"type\":\"string\",\"title\":\"Other thing\"}");
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(schema, "Same"));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        Assert.Equal(["Same"], [.. cut.FindAll(".elicitation-card-message").Select(line => line.TextContent.Trim())]);
+        Assert.Equal(["Same", "Other thing"], [.. cut.FindAll("label.mud-input-label").Select(label => label.TextContent.Trim())]);
+    }
+
+    /// <summary>The message is dropped for any kind of lone field, not only a select: a text field titled as its message keeps its label and loses the message line.</summary>
+    [Fact]
+    public async Task OneTextField_MessageRepeatingItsTitle_ShowsItOnce()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(Schema("\"name\":{\"type\":\"string\",\"title\":\"Your name\"}"), "Your name"));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        Assert.Empty(cut.FindAll(".elicitation-card-message"));
+        Assert.Equal(["Your name"], [.. cut.FindAll("label.mud-input-label").Select(label => label.TextContent.Trim())]);
+    }
+
+    /// <summary>
+    /// The refusal dialog's one field has only the key <c>choice</c> for a label: the card shows no
+    /// heading for it - the message above is the prompt - and the key appears nowhere in the card, while
+    /// the group's accessible name is the message.
+    /// </summary>
+    [Fact]
+    public async Task RefusalDialog_ShowsNoKeyHeading_AndTheGroupIsNamedByTheMessage()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(RefusalSchema, RefusalMessage));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        Assert.Equal([RefusalMessage], [.. cut.FindAll(".elicitation-card-message").Select(line => line.TextContent.Trim())]);
+        Assert.Empty(cut.FindAll(".elicitation-card-field-label"));
+        Assert.Empty(cut.FindAll(".elicitation-card-field-heading"));
+        Assert.Equal(0, LeafTextCount(Card(cut, 0), "choice"));
+        Assert.DoesNotContain("choice", Card(cut, 0).TextContent, StringComparison.Ordinal);
+        Assert.Equal([RefusalMessage], [.. cut.FindAll(".elicitation-card-group[role=group]").Select(group => group.GetAttribute("aria-label") ?? string.Empty)]);
+    }
+
+    /// <summary>A message that happens to be the bare key is still the prompt: the label (only the key) is what is dropped, so the text is shown once, as the message.</summary>
+    [Fact]
+    public async Task RefusalShapedForm_MessageEqualToTheKey_StillShowsTheMessageOnce()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(RefusalSchema, "choice"));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        Assert.Equal(["choice"], [.. cut.FindAll(".elicitation-card-message").Select(line => line.TextContent.Trim())]);
+        Assert.Empty(cut.FindAll(".elicitation-card-field-label"));
+        Assert.Equal(1, LeafTextCount(Card(cut, 0), "choice"));
+    }
+
+    /// <summary>A required key-labelled select still shows its required mark and says so to assistive technology, though it shows no label.</summary>
+    [Fact]
+    public async Task RefusalShapedForm_Required_KeepsItsMarkWithoutALabel()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        string schema = Schema("\"choice\":{\"type\":\"string\",\"oneOf\":[{\"const\":\"a\",\"title\":\"Alpha\"}]}", "[\"choice\"]");
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(schema, RefusalMessage));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        Assert.Empty(cut.FindAll(".elicitation-card-field-label"));
+        Assert.Single(cut.FindAll(".elicitation-card-required"));
+        Assert.Equal(["true"], [.. cut.FindAll(".elicitation-card-group[role=group]").Select(group => group.GetAttribute("aria-required") ?? string.Empty)]);
+    }
+
+    /// <summary>
+    /// A lone key-labelled field of any other kind shows no label either, and its field is a group named
+    /// by the message: the key is never shown to the Human.
+    /// </summary>
+    /// <param name="property">The one property of the form, as JSON.</param>
+    [Theory]
+    [InlineData("\"x\":{\"type\":\"string\"}")]
+    [InlineData("\"x\":{\"type\":\"integer\"}")]
+    [InlineData("\"x\":{\"type\":\"number\"}")]
+    [InlineData("\"x\":{\"type\":\"string\",\"format\":\"date\"}")]
+    [InlineData("\"x\":{\"type\":\"boolean\"}")]
+    [InlineData("\"x\":{\"type\":\"array\",\"items\":{\"type\":\"string\",\"enum\":[\"a\",\"b\"]}}")]
+    [InlineData("\"x\":{\"type\":\"string\",\"enum\":[\"a\",\"b\"]}")]
+    public async Task OneKeyLabelledField_OfAnyKind_ShowsNoKey_AndIsNamedByTheMessage(string property)
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(Schema(property), "Tell me about it."));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        Assert.Equal(["Tell me about it."], [.. cut.FindAll(".elicitation-card-message").Select(line => line.TextContent.Trim())]);
+        Assert.Equal(0, LeafTextCount(Card(cut, 0), "x"));
+        Assert.Empty(cut.FindAll(".elicitation-card-field-label"));
+        Assert.Empty(cut.FindAll("label.mud-input-label"));
+        Assert.Equal(["Tell me about it."], [.. cut.FindAll(".elicitation-card-field[role=group], .elicitation-card-group[role=group]").Select(group => group.GetAttribute("aria-label") ?? string.Empty)]);
+    }
+
+    /// <summary>With several fields an untitled one is still labelled by its key, as before: the message is the form's prompt, not any one field's name.</summary>
+    [Fact]
+    public async Task SeveralKeyLabelledFields_KeepTheirKeysAsLabels()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        string schema = Schema("\"alpha\":{\"type\":\"string\",\"oneOf\":[{\"const\":\"a\"}]},\"beta\":{\"type\":\"string\",\"oneOf\":[{\"const\":\"b\"}]},\"gamma\":{\"type\":\"string\"}");
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(schema, "Fill these in."));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        Assert.Equal(["alpha", "beta"], [.. cut.FindAll(".elicitation-card-field-label").Select(label => label.TextContent.Trim())]);
+        Assert.Equal(["alpha", "beta"], [.. cut.FindAll(".elicitation-card-group[role=group]").Select(group => group.GetAttribute("aria-label") ?? string.Empty)]);
+        Assert.Equal(["gamma"], [.. cut.FindAll("label.mud-input-label").Select(label => label.TextContent.Trim())]);
+    }
+
+    /// <summary>A lone field with a description but no title keeps its key as its heading: the description is its own text, so the field is not the bare key the dialog case is.</summary>
+    [Fact]
+    public async Task OneDescribedUntitledSelect_KeepsItsKeyHeading()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        string schema = Schema("\"mode\":{\"type\":\"string\",\"description\":\"How to proceed\",\"oneOf\":[{\"const\":\"a\",\"title\":\"Alpha\"}]}");
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(schema, "Which way?"));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        Assert.Equal(["mode"], [.. cut.FindAll(".elicitation-card-field-label").Select(label => label.TextContent.Trim())]);
+        Assert.Equal(["How to proceed"], [.. cut.FindAll(".elicitation-card-field-description").Select(text => text.TextContent.Trim())]);
+        Assert.Equal(["mode"], [.. cut.FindAll(".elicitation-card-group[role=group]").Select(group => group.GetAttribute("aria-label") ?? string.Empty)]);
+    }
+
+    /// <summary>A bounded number field says its allowed range under the input, in plain words, so the Human knows what Send waits for.</summary>
+    /// <param name="type">The field's JSON type.</param>
+    /// <param name="bounds">The bound keywords, as JSON members after the type.</param>
+    /// <param name="expected">The helper text under the input.</param>
+    [Theory]
+    [InlineData("integer", ",\"minimum\":1", "At least 1.")]
+    [InlineData("integer", ",\"maximum\":20", "At most 20.")]
+    [InlineData("integer", ",\"minimum\":1,\"maximum\":20", "Between 1 and 20.")]
+    [InlineData("number", ",\"minimum\":0.5", "At least 0.5.")]
+    [InlineData("number", ",\"maximum\":9.5", "At most 9.5.")]
+    [InlineData("number", ",\"minimum\":0.5,\"maximum\":9.5", "Between 0.5 and 9.5.")]
+    public async Task BoundedNumberField_ShowsItsRangeAsHelperText(string type, string bounds, string expected)
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(Schema("\"count\":{\"type\":\"" + type + "\",\"title\":\"Count\"" + bounds + "}")));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        Assert.Equal(expected, FieldControl(cut, 0, "Count").QuerySelector(".mud-input-helper-text")?.TextContent.Trim());
+    }
+
+    /// <summary>A field with no declared bounds shows no range: not an unbounded number, not a text with length limits, not a boolean.</summary>
+    /// <param name="property">The one property of the form, as JSON.</param>
+    [Theory]
+    [InlineData("\"count\":{\"type\":\"integer\",\"title\":\"Count\"}")]
+    [InlineData("\"count\":{\"type\":\"number\",\"title\":\"Count\"}")]
+    [InlineData("\"count\":{\"type\":\"string\",\"title\":\"Count\",\"minLength\":1,\"maxLength\":20}")]
+    public async Task FieldWithoutBounds_ShowsNoRange(string property)
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(Schema(property)));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        Assert.Empty(FieldControl(cut, 0, "Count").QuerySelectorAll(".mud-input-helper-text"));
+    }
+
+    /// <summary>A bounded number field's own description stays visible, on its own line above the range.</summary>
+    [Fact]
+    public async Task BoundedNumberField_WithADescription_ShowsTheDescriptionThenTheRange()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        string schema = Schema("\"count\":{\"type\":\"integer\",\"title\":\"Count\",\"description\":\"How many seats?\",\"minimum\":1,\"maximum\":20}");
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(schema));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        Assert.Equal("How many seats?\nBetween 1 and 20.", FieldControl(cut, 0, "Count").QuerySelector(".mud-input-helper-text")?.TextContent.Trim());
+    }
+
+    /// <summary>
+    /// A bounded number typed outside its range puts the field into its error state with the composer's
+    /// own reason as the error text, and Send stays disabled; a value inside the range, or nothing typed,
+    /// is no error and the range helper shows again.
+    /// </summary>
+    /// <param name="typed">What the Human typed.</param>
+    /// <param name="expectedText">The text under the input.</param>
+    /// <param name="expectedError">Whether the field is in its error state.</param>
+    [Theory]
+    [InlineData("21", "Field 'count' must be at most 20.", true)]
+    [InlineData("0", "Field 'count' must be at least 1.", true)]
+    [InlineData("abc", "Field 'count' must be a whole number.", true)]
+    [InlineData("2.5", "Field 'count' must be a whole number.", true)]
+    [InlineData("1", "Between 1 and 20.", false)]
+    [InlineData("20", "Between 1 and 20.", false)]
+    [InlineData("", "Between 1 and 20.", false)]
+    [InlineData("   ", "Between 1 and 20.", false)]
+    public async Task BoundedIntegerField_TypedValue_ShowsTheProblemOnlyWhenItFailsTheCheck(string typed, string expectedText, bool expectedError)
+    {
+        ArgumentNullException.ThrowIfNull(typed);
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(Schema("\"count\":{\"type\":\"integer\",\"title\":\"Count\",\"minimum\":1,\"maximum\":20}")));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        await TypeAsync(cut, 0, "Count", typed);
+
+        IElement control = FieldControl(cut, 0, "Count");
+        Assert.Equal(expectedText, control.QuerySelector(".mud-input-helper-text")?.TextContent.Trim());
+        Assert.Equal(expectedError, control.QuerySelector("input")?.GetAttribute("aria-invalid") == "true");
+        Assert.Equal(expectedError, control.QuerySelector(".mud-input-helper-text")?.ClassList.Contains("mud-input-error"));
+        Assert.Equal(!expectedError && typed.Trim().Length > 0, !SendButton(cut, 0).HasAttribute("disabled"));
+    }
+
+    /// <summary>A bounded number field that is fixed shows the range again once the value is back inside it.</summary>
+    [Fact]
+    public async Task BoundedNumberField_CorrectedValue_LeavesTheErrorState()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(Schema("\"ratio\":{\"type\":\"number\",\"title\":\"Ratio\",\"minimum\":0.5,\"maximum\":9.5}")));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+        await TypeAsync(cut, 0, "Ratio", "9.6");
+        Assert.Equal("Field 'ratio' must be at most 9.5.", FieldControl(cut, 0, "Ratio").QuerySelector(".mud-input-helper-text")?.TextContent.Trim());
+
+        await TypeAsync(cut, 0, "Ratio", "9.5");
+
+        IElement control = FieldControl(cut, 0, "Ratio");
+        Assert.Equal("Between 0.5 and 9.5.", control.QuerySelector(".mud-input-helper-text")?.TextContent.Trim());
+        Assert.NotEqual("true", control.QuerySelector("input")?.GetAttribute("aria-invalid"));
+    }
+
+    /// <summary>A text field never shows the number error state, whatever the Human typed: only number and integer fields do.</summary>
+    [Fact]
+    public async Task TextField_TooShort_IsNotInTheErrorState()
+    {
+        CancellationToken ct = Xunit.TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        _ = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(Schema("\"code\":{\"type\":\"string\",\"title\":\"Code\",\"minLength\":5}")));
+        await using MudBunitContext ctx = new();
+        Register(ctx, fixture);
+        IRenderedComponent<ContainerFragment> cut = RenderCard(ctx, room.Id);
+
+        await TypeAsync(cut, 0, "Code", "ab");
+
+        IElement control = FieldControl(cut, 0, "Code");
+        Assert.NotEqual("true", control.QuerySelector("input")?.GetAttribute("aria-invalid"));
+        Assert.Empty(control.QuerySelectorAll(".mud-input-helper-text"));
+        Assert.True(SendButton(cut, 0).HasAttribute("disabled"));
+    }
+
+    /// <summary>How many elements under <paramref name="scope"/> have no child element and read exactly <paramref name="text"/>: the number of times a sentence is shown.</summary>
+    /// <param name="scope">The element to look inside.</param>
+    /// <param name="text">The text to count.</param>
+    private static int LeafTextCount(IElement scope, string text)
+    {
+        return scope.QuerySelectorAll("*").Count(element => element.ChildElementCount == 0 && string.Equals(element.TextContent.Trim(), text, StringComparison.Ordinal));
     }
 
     /// <summary>Registers every real collaborator <c>ElicitationCard</c> injects into <paramref name="ctx"/>'s container; it needs no Drafts, because it never waits for the asker to finish writing.</summary>

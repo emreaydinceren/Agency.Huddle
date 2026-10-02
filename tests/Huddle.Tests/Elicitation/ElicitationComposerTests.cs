@@ -171,13 +171,169 @@ public sealed class ElicitationComposerTests
     public void Compose_SelectWithDistinctValueAndTitle_SendsTheValueShowsTheTitle()
     {
         ElicitationForm form = FormOf(Schema("""
-            "size":{"type":"string","oneOf":[{"const":"s","title":"Small"},{"const":"l","title":"Large"}]}
+            "size":{"type":"string","title":"Size","oneOf":[{"const":"s","title":"Small"},{"const":"l","title":"Large"}]}
             """));
 
         ElicitationAnswer answer = ElicitationComposer.Compose(form, Values(Pair("size", "s")));
 
         Assert.Equal("s", Assert.IsType<string>(answer.Content["size"]));
-        Assert.Equal("> size\n\nSmall", answer.Text);
+        Assert.Equal("> Size\n\nSmall", answer.Text);
+    }
+
+    /// <summary>The refusal dialog's one field has no label of its own, so the Transcript quotes the dialog's message where it would have quoted the key.</summary>
+    [Fact]
+    public void Compose_OneKeyLabelledField_QuotesTheMessageInsteadOfTheKey()
+    {
+        ElicitationForm form = FormOf(RefusalSchema, RefusalMessage);
+
+        ElicitationAnswer answer = ElicitationComposer.Compose(form, Values(Pair("choice", "cancelled")));
+
+        Assert.Equal("> " + RefusalMessage + "\n\nKeep the refusal", answer.Text);
+        Assert.Equal(["choice"], answer.Content.Keys.ToArray());
+    }
+
+    /// <summary>The message quoted in place of the key is trimmed and kept on one quote line, so model text cannot leave the quote.</summary>
+    [Fact]
+    public void Compose_OneKeyLabelledField_QuotesTheTrimmedMessageOnOneLine()
+    {
+        ElicitationForm form = FormOf(RefusalSchema, "  Keep it?\r\nOr retry.  \n");
+
+        ElicitationAnswer answer = ElicitationComposer.Compose(form, Values(Pair("choice", "retry_fallback")));
+
+        Assert.Equal("> Keep it? Or retry.\n\nRetry with Opus", answer.Text);
+    }
+
+    /// <summary>A one-field form whose message is blank has nothing to quote in the key's place, so the key is still quoted.</summary>
+    [Fact]
+    public void Compose_OneKeyLabelledField_WithABlankMessage_QuotesTheKey()
+    {
+        ElicitationForm form = FormOf(RefusalSchema, "   ");
+
+        ElicitationAnswer answer = ElicitationComposer.Compose(form, Values(Pair("choice", "cancelled")));
+
+        Assert.Equal("> choice\n\nKeep the refusal", answer.Text);
+    }
+
+    /// <summary>Several fields keep quoting the key of an untitled one: the message is the form's prompt, not the name of any one field.</summary>
+    [Fact]
+    public void Compose_SeveralKeyLabelledFields_StillQuoteTheirKeys()
+    {
+        ElicitationForm form = FormOf(OptionalSchema, "Tell me about it.");
+
+        ElicitationAnswer answer = ElicitationComposer.Compose(form, Values(Pair("a", "x"), Pair("b", "y")));
+
+        Assert.Equal("> a\n\nx\n\n> b\n\ny", answer.Text);
+    }
+
+    /// <summary>An untitled field with a description of its own still quotes its key: only a field with no text of its own at all is named by the message.</summary>
+    [Fact]
+    public void Compose_OneDescribedUntitledField_QuotesTheKey()
+    {
+        ElicitationForm form = FormOf(Schema("""
+            "note":{"type":"string","description":"Anything to add"}
+            """), "Tell me about it.");
+
+        ElicitationAnswer answer = ElicitationComposer.Compose(form, Values(Pair("note", "x")));
+
+        Assert.Equal("> note\n\nx", answer.Text);
+    }
+
+    /// <summary>A question counts with its typed "Other" companion as one field, so a custom answer to a key-labelled question is quoted under the message too.</summary>
+    [Fact]
+    public void Compose_KeyLabelledQuestionWithACompanion_QuotesTheMessageForTheTypedAnswer()
+    {
+        ElicitationForm form = FormOf(
+            Schema("""
+                "pick":{"type":"string","oneOf":[{"const":"A"}]},"pick_custom":{"type":"string","title":"Other","_meta":{"_askUserQuestionCustomAnswer":{"questionId":"pick"}}}
+                """),
+            "Which one?");
+
+        ElicitationAnswer answer = ElicitationComposer.Compose(form, Values(Pair("pick_custom", "Z")));
+
+        Assert.Equal("> Which one?\n\nZ", answer.Text);
+    }
+
+    /// <summary>
+    /// What stops one field being sent, for the card to show beside it: the composer's own reason for the
+    /// field's non-blank entries, and nothing for no entry or only blank ones.
+    /// </summary>
+    /// <param name="key">The field key in <see cref="McpSchema"/>.</param>
+    /// <param name="entry">The one entry the Human typed.</param>
+    /// <param name="expected">The reason, or <see langword="null"/> when the entry may be sent.</param>
+    [Theory]
+    [InlineData("age", "121", "Field 'age' must be at most 120.")]
+    [InlineData("age", "-1", "Field 'age' must be at least 0.")]
+    [InlineData("age", "2.5", "Field 'age' must be a whole number.")]
+    [InlineData("ratio", "abc", "Field 'ratio' must be a number.")]
+    [InlineData("ratio", "9.6", "Field 'ratio' must be at most 9.5.")]
+    [InlineData("age", "36", null)]
+    [InlineData("age", "   ", null)]
+    [InlineData("age", "", null)]
+    public void CheckField_GivesTheComposersReasonForOneField(string key, string entry, string? expected)
+    {
+        ElicitationForm form = FormOf(McpSchema);
+        ElicitationField field = form.Fields.Single(candidate => string.Equals(candidate.Key, key, StringComparison.Ordinal));
+
+        string? problem = ElicitationComposer.CheckField(field, [entry]);
+
+        Assert.Equal(expected, problem);
+    }
+
+    /// <summary>A field with no entries has no problem, whatever it requires: an empty field is the form's business, not the field's.</summary>
+    [Fact]
+    public void CheckField_NoEntries_HasNoProblem_EvenForARequiredField()
+    {
+        ElicitationForm form = FormOf(McpSchema);
+        ElicitationField name = form.Fields.Single(candidate => string.Equals(candidate.Key, "name", StringComparison.Ordinal));
+        Assert.True(name.Required);
+
+        Assert.Null(ElicitationComposer.CheckField(name, []));
+    }
+
+    /// <summary>
+    /// The allowed range of a number or an integer in plain words, naming only the bounds the schema
+    /// declares; no bounds, or a field that is not a number, has none.
+    /// </summary>
+    /// <param name="properties">The field's schema, as the body of the <c>properties</c> object.</param>
+    /// <param name="expected">The range text, or <see langword="null"/> when there is none.</param>
+    [Theory]
+    [InlineData("\"n\":{\"type\":\"integer\",\"minimum\":1}", "At least 1.")]
+    [InlineData("\"n\":{\"type\":\"integer\",\"maximum\":20}", "At most 20.")]
+    [InlineData("\"n\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":20}", "Between 1 and 20.")]
+    [InlineData("\"n\":{\"type\":\"integer\",\"minimum\":-5,\"maximum\":5}", "Between -5 and 5.")]
+    [InlineData("\"n\":{\"type\":\"number\",\"minimum\":0.5}", "At least 0.5.")]
+    [InlineData("\"n\":{\"type\":\"number\",\"maximum\":9.5}", "At most 9.5.")]
+    [InlineData("\"n\":{\"type\":\"number\",\"minimum\":0.5,\"maximum\":9.5}", "Between 0.5 and 9.5.")]
+    [InlineData("\"n\":{\"type\":\"integer\"}", null)]
+    [InlineData("\"n\":{\"type\":\"number\"}", null)]
+    [InlineData("\"n\":{\"type\":\"string\",\"minLength\":1,\"maxLength\":20}", null)]
+    [InlineData("\"n\":{\"type\":\"boolean\"}", null)]
+    public void RangeHint_SaysTheDeclaredBoundsInPlainWords(string properties, string? expected)
+    {
+        ElicitationForm form = FormOf(Schema(properties));
+
+        Assert.Equal(expected, ElicitationComposer.RangeHint(Assert.Single(form.Fields)));
+    }
+
+    /// <summary>Only a number or an integer has a range: a text field built with bounds - which the reader never does - still says nothing, because nothing would enforce them.</summary>
+    [Fact]
+    public void RangeHint_ForAFieldThatIsNotANumber_IsNull_EvenWithBounds()
+    {
+        ElicitationField text = new("n", "N", null, ElicitationFieldKind.Text, [], false, 1, 20, null, null, null);
+
+        Assert.Null(ElicitationComposer.RangeHint(text));
+    }
+
+    /// <summary>A bound is written with the invariant culture whatever the machine's own: 0.5 is never 0,5.</summary>
+    [Fact]
+    public void RangeHint_WritesBoundsInvariant_WhateverTheCurrentCulture()
+    {
+        ElicitationForm form = FormOf(Schema("\"n\":{\"type\":\"number\",\"minimum\":0.5,\"maximum\":9.5}"));
+        string? hint = null;
+
+        UnderCulture("de-DE", () => hint = ElicitationComposer.RangeHint(form.Fields[0]));
+
+        Assert.Equal("Between 0.5 and 9.5.", hint);
     }
 
     /// <summary>A label with line breaks stays on one quote line, so model text cannot break out of the quote.</summary>

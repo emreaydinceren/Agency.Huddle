@@ -358,11 +358,13 @@ internal static partial class ElicitationSchemaReader
         {
             string? prompt = context.QuestionCount == 1 ? context.Message : null;
             string label = description ?? prompt ?? title ?? key;
-            return new ElicitationField(key, label, null, shape.Kind, shape.Options, required, shape.Minimum, shape.Maximum, shape.MinLength, shape.MaxLength, null, title);
+            bool questionLabelIsKey = description is null && prompt is null && title is null;
+            return new ElicitationField(key, label, null, shape.Kind, shape.Options, required, shape.Minimum, shape.Maximum, shape.MinLength, shape.MaxLength, null, title, questionLabelIsKey);
         }
 
         string? customFor = shape.Kind == ElicitationFieldKind.Text ? CustomAnswerTarget(node, key, context.Keys) : null;
-        return new ElicitationField(key, title ?? key, description, shape.Kind, shape.Options, required, shape.Minimum, shape.Maximum, shape.MinLength, shape.MaxLength, customFor);
+        bool labelIsKey = title is null && description is null;
+        return new ElicitationField(key, title ?? key, description, shape.Kind, shape.Options, required, shape.Minimum, shape.Maximum, shape.MinLength, shape.MaxLength, customFor, LabelIsKey: labelIsKey);
     }
 
     /// <summary>

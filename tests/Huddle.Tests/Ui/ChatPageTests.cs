@@ -939,7 +939,7 @@ public sealed class ChatPageTests
         var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
         Assert.NotNull(agent);
         var room = await chat.EnsureRoomForAsync(agent, ct);
-        ElicitationForm form = Agency.Huddle.Tests.Elicitation.ElicitationTestSupport.FormOf(Agency.Huddle.Tests.Elicitation.ElicitationTestSupport.SingleQuestionSchema, "Which database?");
+        ElicitationForm form = Agency.Huddle.Tests.Elicitation.ElicitationTestSupport.FormOf(Agency.Huddle.Tests.Elicitation.ElicitationTestSupport.TwoQuestionSchema, "Which database?");
         _ = factory.Services.GetRequiredService<ElicitationStore>().Add(room.Id, agent.Id, agent.Name, form);
 
         await using MudBunitContext ctx = ChatPageTests.NewContext(factory);

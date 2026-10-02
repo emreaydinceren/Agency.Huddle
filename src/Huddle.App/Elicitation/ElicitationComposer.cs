@@ -74,6 +74,42 @@ internal static partial class ElicitationComposer
         return anyFilled ? null : "Fill in at least one field.";
     }
 
+    /// <summary>
+    /// Why the entries typed into one field may not be sent, or <see langword="null"/> when they may or
+    /// there are none: <see cref="Check"/>'s own reason for that field, which is what the card shows beside
+    /// it. A field left empty is the form's business (<c>required</c>, at least one filled), not the field's.
+    /// </summary>
+    /// <param name="field">The field.</param>
+    /// <param name="entries">What the Human entered into it; blank entries are no entry.</param>
+    /// <returns>The reason, naming the field, or <see langword="null"/>.</returns>
+    internal static string? CheckField(ElicitationField field, IReadOnlyList<string> entries)
+    {
+        List<string> filled = [.. entries.Where(static entry => !string.IsNullOrWhiteSpace(entry))];
+        return filled.Count == 0 ? null : CheckEntries(field, filled);
+    }
+
+    /// <summary>
+    /// The allowed range of a number or an integer in plain words - <c>At least 1.</c>, <c>At most 20.</c>
+    /// or <c>Between 1 and 20.</c> - naming only the bounds the schema declares, written with the
+    /// invariant culture; <see langword="null"/> for any other field and for a number with no bounds.
+    /// </summary>
+    /// <param name="field">The field.</param>
+    internal static string? RangeHint(ElicitationField field)
+    {
+        if (field.Kind is not (ElicitationFieldKind.Number or ElicitationFieldKind.Integer))
+        {
+            return null;
+        }
+
+        return (field.Minimum, field.Maximum) switch
+        {
+            ({ } minimum, { } maximum) => $"Between {minimum.ToString(CultureInfo.InvariantCulture)} and {maximum.ToString(CultureInfo.InvariantCulture)}.",
+            ({ } minimum, null) => $"At least {minimum.ToString(CultureInfo.InvariantCulture)}.",
+            (null, { } maximum) => $"At most {maximum.ToString(CultureInfo.InvariantCulture)}.",
+            _ => null,
+        };
+    }
+
     /// <summary>Whether the Human may send <paramref name="values"/> as the answer to <paramref name="form"/>: <see cref="Check"/> found nothing wrong.</summary>
     /// <param name="form">The form that was shown.</param>
     /// <param name="values">What the Human entered, by field key.</param>
@@ -113,7 +149,7 @@ internal static partial class ElicitationComposer
             {
                 string typed = custom[0].Trim();
                 content[companion.Key] = typed;
-                blocks.Add(Block(field.Label, typed));
+                blocks.Add(Block(form.NameOf(field), typed));
                 continue;
             }
 
@@ -125,7 +161,7 @@ internal static partial class ElicitationComposer
 
             (object wire, string shown) = ToWire(field, entries);
             content[field.Key] = wire;
-            blocks.Add(Block(field.Label, shown));
+            blocks.Add(Block(form.NameOf(field), shown));
         }
 
         return new ElicitationAnswer(string.Join("\n\n", blocks), content);

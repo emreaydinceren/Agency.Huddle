@@ -317,6 +317,132 @@ public sealed class ElicitationSchemaReaderTests
             Describe(field));
     }
 
+    /// <summary>The refusal dialog's one field has neither a title nor a description, so its label came from the key and the reader says so.</summary>
+    [Fact]
+    public void TryRead_UntitledUndescribedField_LabelIsKey()
+    {
+        ElicitationForm form = FormOf(RefusalSchema, RefusalMessage);
+
+        ElicitationField field = Assert.Single(form.Fields);
+        Assert.True(field.LabelIsKey);
+        Assert.Equal("choice", field.Label);
+    }
+
+    /// <summary>A field with a title is labelled by that title, so its label did not come from the key.</summary>
+    [Fact]
+    public void TryRead_TitledField_LabelIsNotTheKey()
+    {
+        ElicitationForm form = FormOf(Schema("""
+            "note":{"type":"string","title":"Your note"}
+            """));
+
+        ElicitationField field = Assert.Single(form.Fields);
+        Assert.False(field.LabelIsKey);
+        Assert.Equal("Your note", field.Label);
+    }
+
+    /// <summary>A field with a description but no title is still labelled by its key, yet it is not flagged: its description is text of its own beside the key, so the key is not the whole prompt.</summary>
+    [Fact]
+    public void TryRead_DescribedUntitledField_LabelIsNotFlaggedAsKey()
+    {
+        ElicitationForm form = FormOf(Schema("""
+            "note":{"type":"string","description":"Anything you want to add"}
+            """));
+
+        ElicitationField field = Assert.Single(form.Fields);
+        Assert.False(field.LabelIsKey);
+        Assert.Equal("note", field.Label);
+        Assert.Equal("Anything you want to add", field.Description);
+    }
+
+    /// <summary>An AskUserQuestion question in a one-question form is labelled by the request's message, an untitled one in a many-question form by its key: only the key is flagged.</summary>
+    [Fact]
+    public void TryRead_AskUserQuestions_OnlyAQuestionLabelledByItsKeyIsFlagged()
+    {
+        ElicitationForm single = FormOf(
+            Schema("""
+                "question_0":{"type":"string","oneOf":[{"const":"A"}]}
+                """),
+            "Pick a letter");
+        ElicitationForm several = FormOf(
+            Schema("""
+                "question_0":{"type":"string","oneOf":[{"const":"A"}]},"question_1":{"type":"string","oneOf":[{"const":"B"}]}
+                """),
+            TwoQuestionMessage);
+
+        Assert.False(Assert.Single(single.Fields).LabelIsKey);
+        Assert.Equal([true, true], several.Fields.Select(field => field.LabelIsKey).ToArray());
+    }
+
+    /// <summary>The sole field of a form counts a question with its typed "Other" companion as one, and is absent when the form asks several things.</summary>
+    [Fact]
+    public void SoleField_CountsAQuestionWithItsCompanionAsOne_AndIsNullForSeveralFields()
+    {
+        ElicitationForm single = FormOf(SingleQuestionSchema, SingleQuestionMessage);
+        ElicitationForm two = FormOf(TwoQuestionSchema, TwoQuestionMessage);
+
+        Assert.Equal("question_0", single.SoleField?.Key);
+        Assert.Null(two.SoleField);
+    }
+
+    /// <summary>
+    /// The message repeats the label only when the form has one field and the two read the same once
+    /// trimmed, compared ordinally: a different case, a different text, a second field, or a label that
+    /// is only the key does not count.
+    /// </summary>
+    /// <param name="schema">The form's JSON Schema text.</param>
+    /// <param name="message">The request's message.</param>
+    /// <param name="expected">Whether the message repeats the label.</param>
+    [Theory]
+    [InlineData(SingleQuestionSchema, "Which database?", true)]
+    [InlineData(SingleQuestionSchema, "  Which database?\r\n", true)]
+    [InlineData("""{"type":"object","properties":{"question_0":{"type":"string","description":" Which database? ","oneOf":[{"const":"A"}]}}}""", "Which database?", true)]
+    [InlineData("""{"type":"object","properties":{"question_0":{"type":"string","description":"which database?","oneOf":[{"const":"A"}]}}}""", "Which database?", false)]
+    [InlineData("""{"type":"object","properties":{"question_0":{"type":"string","description":"Which database?","oneOf":[{"const":"A"}]}}}""", "Please answer.", false)]
+    [InlineData("""{"type":"object","properties":{"a":{"type":"string","title":"Same"},"b":{"type":"string","title":"Other"}}}""", "Same", false)]
+    [InlineData("""{"type":"object","properties":{"choice":{"type":"string","oneOf":[{"const":"A"}]}}}""", "choice", false)]
+    public void MessageRepeatsLabel_OnlyForOneFieldWhoseTrimmedLabelEqualsTheTrimmedMessage(string schema, string message, bool expected)
+    {
+        ElicitationForm form = FormOf(schema, message);
+
+        Assert.Equal(expected, form.MessageRepeatsLabel);
+    }
+
+    /// <summary>
+    /// The message stands in for the label only when the form has exactly one field and that field's
+    /// label came from the key, and the message has text: a titled or described field, a second field or a
+    /// blank message keeps the label.
+    /// </summary>
+    /// <param name="schema">The form's JSON Schema text.</param>
+    /// <param name="message">The request's message.</param>
+    /// <param name="expected">Whether the message stands in for the label.</param>
+    [Theory]
+    [InlineData(RefusalSchema, RefusalMessage, true)]
+    [InlineData(RefusalSchema, "   ", false)]
+    [InlineData("""{"type":"object","properties":{"choice":{"type":"string","title":"Pick","oneOf":[{"const":"A"}]}}}""", "Which?", false)]
+    [InlineData("""{"type":"object","properties":{"choice":{"type":"string","description":"Pick","oneOf":[{"const":"A"}]}}}""", "Which?", false)]
+    [InlineData("""{"type":"object","properties":{"a":{"type":"string"},"b":{"type":"string"}}}""", "Which?", false)]
+    public void MessageStandsInForLabel_OnlyForOneKeyLabelledFieldAndAMessageWithText(string schema, string message, bool expected)
+    {
+        ElicitationForm form = FormOf(schema, message);
+
+        Assert.Equal(expected, form.MessageStandsInForLabel);
+    }
+
+    /// <summary>The name of a field is its label, except for the one key-labelled field of a one-field form, whose name is the message, trimmed.</summary>
+    [Fact]
+    public void NameOf_IsTheLabel_ExceptTheMessageForTheOneKeyLabelledField()
+    {
+        ElicitationForm refusal = FormOf(RefusalSchema, "  " + RefusalMessage + "\n");
+        ElicitationForm two = FormOf("""{"type":"object","properties":{"a":{"type":"string"},"b":{"type":"string"}}}""", "Which?");
+        ElicitationForm titled = FormOf(SingleQuestionSchema, SingleQuestionMessage);
+
+        Assert.Equal(RefusalMessage, refusal.NameOf(refusal.Fields[0]));
+        Assert.Equal(["a", "b"], two.Fields.Select(two.NameOf).ToArray());
+        Assert.Equal("Which database?", titled.NameOf(titled.Fields[0]));
+        Assert.Equal("Other", titled.NameOf(titled.Fields[1]));
+    }
+
     /// <summary>Model-authored text is carried verbatim - markup, a newline, even a megabyte - because the Room renders it as plain text and the reader neither cleans nor cuts it.</summary>
     [Fact]
     public void TryRead_HostileText_IsCarriedVerbatim()

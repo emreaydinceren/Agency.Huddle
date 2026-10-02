@@ -1632,6 +1632,11 @@ button:focus-visible {
     margin-top: 0.5rem;
 }
 
+/* A number field's helper text is its description and, on the next line, its allowed range. */
+.elicitation-card .mud-input-helper-text {
+    white-space: pre-line;
+}
+
 .elicitation-card-field-heading {
     display: flex;
     gap: 0.25rem;

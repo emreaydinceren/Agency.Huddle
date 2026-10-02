@@ -37,6 +37,24 @@ public sealed class ElicitationServiceTests
         Assert.Empty(fixture.Elicitations.Get(room.Id));
     }
 
+    /// <summary>The refusal dialog's one field has no label of its own: the posted Message quotes the dialog's message, never the raw key <c>choice</c>.</summary>
+    [Fact]
+    public async Task Answer_RefusalDialog_PostsTheMessageAsTheQuote_NotTheKey()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using ElicitationFixture fixture = await ElicitationFixture.CreateAsync(ct);
+        User coach = await fixture.AddAgentAsync("Coach", ct);
+        Room room = await fixture.CreateRoomAsync([coach], ct);
+        PendingElicitation card = fixture.Elicitations.Add(room.Id, coach.Id, coach.Name, FormOf(RefusalSchema, RefusalMessage));
+
+        string? text = await fixture.Service.AnswerAsync(room.Id, card.Id, Values(Pair("choice", "retry_fallback")), ct);
+
+        Assert.Equal("> " + RefusalMessage + "\n\nRetry with Opus", text);
+        ChatMessage posted = Assert.Single(await fixture.Transcript.ReadAllAsync(room.Id, ct));
+        Assert.Equal(KnownIds.Human, posted.SenderId);
+        Assert.Equal("> " + RefusalMessage + "\n\nRetry with Opus", posted.Text);
+    }
+
     /// <summary>
     /// The answer mentions nobody, even when its free text names the asker, and is withheld from the
     /// asker: the asker's Turn is still open and takes the answer as the tool's result, so a delivery

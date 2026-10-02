@@ -269,7 +269,7 @@ public sealed class ElicitationConformanceTests
         JsonObject wire = await scenario.WireAsync(ct);
 
         Assert.Equal("{\"action\":\"accept\",\"content\":{\"choice\":\"" + choice + "\"}}", wire.ToJsonString());
-        Assert.Equal("> choice\n\n" + label, posted);
+        Assert.Equal("> " + RefusalMessage + "\n\n" + label, posted);
         Assert.Equal(RefusalMessage, card.Form.Message);
     }
 

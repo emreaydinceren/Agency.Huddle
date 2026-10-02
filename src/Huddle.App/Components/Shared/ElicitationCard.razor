@@ -49,7 +49,7 @@
         <MudPaper @key="current.Id" Outlined="true" Class="elicitation-card pa-3 my-2" role="region" aria-label="@($"Form from {current.AskerName}")">
             <MudText Typo="Typo.subtitle2" Class="elicitation-card-title">@current.AskerName is asking</MudText>
 
-            @if (!string.IsNullOrWhiteSpace(current.Form.Message))
+            @if (!string.IsNullOrWhiteSpace(current.Form.Message) && !current.Form.MessageRepeatsLabel)
             {
                 <MudText Typo="Typo.body1" Class="elicitation-card-message">@current.Form.Message</MudText>
             }
@@ -60,14 +60,18 @@
                     ElicitationField shown = field;
                     ElicitationField? companion = CompanionOf(current.Form, shown);
                     bool optionsDisabled = busy || this.CompanionFilled(current, companion);
+                    bool labelHidden = HidesLabel(current.Form, shown);
+                    bool isSelect = shown.Kind is ElicitationFieldKind.SingleSelect or ElicitationFieldKind.MultiSelect;
+                    string? shownLabel = labelHidden ? null : shown.Label;
+                    string? loneName = labelHidden && !isSelect ? current.Form.NameOf(shown) : null;
 
                     if (shown.CustomAnswerFor is null)
                     {
-                        <div @key="shown.Key" class="elicitation-card-field">
+                        <div @key="shown.Key" class="elicitation-card-field" role="@(loneName is null ? null : "group")" aria-label="@loneName">
                             @switch (shown.Kind)
                             {
                                 case ElicitationFieldKind.Date:
-                                    <MudDatePicker Label="@shown.Label"
+                                    <MudDatePicker Label="@shownLabel"
                                                    HelperText="@shown.Description"
                                                    Required="@shown.Required"
                                                    Variant="Variant.Outlined"
@@ -86,7 +90,11 @@
                                                Disabled="@busy"
                                                Value="@(this.EntryOf(current, shown) == "true")"
                                                ValueChanged="@(on => this.SetBoolean(current, shown, on))">
-                                        <span class="elicitation-card-field-label">@shown.Label</span>@if (shown.Required)
+                                        @if (!labelHidden)
+                                        {
+                                            <span class="elicitation-card-field-label">@shown.Label</span>
+                                        }
+                                        @if (shown.Required)
                                         {
                                             <span class="elicitation-card-required" aria-hidden="true"> *</span>
                                         }
@@ -99,8 +107,8 @@
                                     break;
 
                                 case ElicitationFieldKind.SingleSelect:
-                                    <div role="group" aria-label="@shown.Label" aria-required="@(shown.Required ? "true" : null)" class="elicitation-card-group">
-                                        @Heading(shown)
+                                    <div role="group" aria-label="@current.Form.NameOf(shown)" aria-required="@(shown.Required ? "true" : null)" class="elicitation-card-group">
+                                        @Heading(shown, !labelHidden)
                                         <MudRadioGroup T="string"
                                                        Disabled="@optionsDisabled"
                                                        Value="@this.EntryOf(current, shown)"
@@ -119,8 +127,8 @@
                                     break;
 
                                 case ElicitationFieldKind.MultiSelect:
-                                    <div role="group" aria-label="@shown.Label" aria-required="@(shown.Required ? "true" : null)" class="elicitation-card-group">
-                                        @Heading(shown)
+                                    <div role="group" aria-label="@current.Form.NameOf(shown)" aria-required="@(shown.Required ? "true" : null)" class="elicitation-card-group">
+                                        @Heading(shown, !labelHidden)
                                         <MudStack Spacing="0" AlignItems="AlignItems.Start">
                                             @foreach (ElicitationOption option in shown.Options)
                                             {
@@ -142,9 +150,12 @@
                                     break;
 
                                 default:
+                                    string? problem = ProblemOf(shown, this.EntriesOf(current));
                                     <MudTextField T="string"
-                                                  Label="@shown.Label"
-                                                  HelperText="@shown.Description"
+                                                  Label="@shownLabel"
+                                                  HelperText="@HelperTextOf(shown)"
+                                                  Error="@(problem is not null)"
+                                                  ErrorText="@problem"
                                                   Required="@shown.Required"
                                                   Variant="Variant.Outlined"
                                                   Immediate="true"
@@ -444,22 +455,55 @@
         entries[field.Key] = [date.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)];
     }
 
-    /// <summary>The heading of a select: its header, its label with a required mark, and its description, all as plain text.</summary>
+    /// <summary>Whether <paramref name="field"/> is shown with no label because the form's message is the only name it has (a lone field labelled by nothing but its key).</summary>
+    /// <param name="form">The form.</param>
+    /// <param name="field">The field.</param>
+    private static bool HidesLabel(ElicitationForm form, ElicitationField field)
+    {
+        return form.MessageStandsInForLabel && string.Equals(form.SoleField?.Key, field.Key, StringComparison.Ordinal);
+    }
+
+    /// <summary>The text under a text-like input: the field's own description, then the range a number may take, on separate lines; <see langword="null"/> when it has neither.</summary>
+    /// <param name="field">The field.</param>
+    private static string? HelperTextOf(ElicitationField field)
+    {
+        string[] lines = [.. new[] { field.Description, ElicitationComposer.RangeHint(field) }.Where(static line => !string.IsNullOrEmpty(line)).OfType<string>()];
+        return lines.Length == 0 ? null : string.Join('\n', lines);
+    }
+
+    /// <summary>Why the number or integer typed into <paramref name="field"/> cannot be sent, as <see cref="ElicitationComposer"/> words it; <see langword="null"/> for any other field, an empty one or a valid value.</summary>
+    /// <param name="field">The field.</param>
+    /// <param name="entries">What the Human has entered into the card, by field key.</param>
+    private static string? ProblemOf(ElicitationField field, Dictionary<string, List<string>> entries)
+    {
+        return (field.Kind is ElicitationFieldKind.Number or ElicitationFieldKind.Integer) && entries.TryGetValue(field.Key, out List<string>? typed)
+            ? ElicitationComposer.CheckField(field, typed)
+            : null;
+    }
+
+    /// <summary>The heading of a select: its header, its label (when it is shown) with a required mark, and its description, all as plain text.</summary>
     /// <param name="field">The select.</param>
-    private static RenderFragment Heading(ElicitationField field)
+    /// <param name="showLabel">Whether to show the label; a select the message names has none, and keeps only its required mark.</param>
+    private static RenderFragment Heading(ElicitationField field, bool showLabel)
     {
         return @<div class="elicitation-card-field-head">
             @if (field.Header is not null)
             {
                 <MudText Typo="Typo.overline" Class="elicitation-card-field-header">@field.Header</MudText>
             }
-            <div class="elicitation-card-field-heading">
-                <MudText Typo="Typo.body1" Class="elicitation-card-field-label">@field.Label</MudText>
-                @if (field.Required)
-                {
-                    <span class="elicitation-card-required" aria-hidden="true">*</span>
-                }
-            </div>
+            @if (showLabel || field.Required)
+            {
+                <div class="elicitation-card-field-heading">
+                    @if (showLabel)
+                    {
+                        <MudText Typo="Typo.body1" Class="elicitation-card-field-label">@field.Label</MudText>
+                    }
+                    @if (field.Required)
+                    {
+                        <span class="elicitation-card-required" aria-hidden="true">*</span>
+                    }
+                </div>
+            }
             @if (field.Description is not null)
             {
                 <MudText Typo="Typo.caption" Class="elicitation-card-field-description">@field.Description</MudText>
