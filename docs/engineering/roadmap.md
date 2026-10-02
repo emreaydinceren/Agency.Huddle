@@ -43,7 +43,7 @@ reminder that the remaining three on that line are cheap for the same reason.
 | ~~13~~ | ~~Model-facing text is configuration~~ — **delivered 2026-09-13** | `Prompts/`, then the five sites that held the literals | shipped; never on this list before it was built, and it collides with item 9 — see [ADR-0007](../adr/0007-model-facing-text-is-configuration.md) |
 | ~~14~~ | ~~Archiving and deleting a Room~~ — **delivered 2026-09-21** | `SqliteTeamDirectory`, `RoomList.razor` | shipped; never on this list before it was built, and it *reverses* a stance Known limits recorded — archived state went in a sibling table because `CREATE TABLE IF NOT EXISTS` never adds a column, and the one-1:1-Room-per-Agent invariant was knowingly given up — see [ADR-0018](../adr/0018-a-room-can-be-archived-or-deleted.md) |
 | ~~15~~ | ~~A Teammate chooses its own Avatar~~ — **delivered 2026-09-22** | a new `Avatars/` store, `TeammateAvatar.razor` | shipped; never on this list before it was built, and it *reverses* a manual test that asserted no avatar appears in the transcript. The interesting decision was where it must **not** go: frontmatter would have made picking a colour restart the session — see [ADR-0019](../adr/0019-an-avatar-is-chosen-and-is-not-part-of-the-persona.md) |
-| ~~16~~ | ~~An Agent asks the Human with a Question~~ — **delivered 2026-10-01** | a new `Questions/` store and service, `AskHumanTool`, `QuestionCard.razor` | shipped; it copied the Skills spec's Proposal card, which shipped with item 17 — see [the Questions spec](../Huddle.Questions-Specifications.md) and [ADR-0022](../adr/0022-an-agent-asks-the-human-with-a-question.md) |
+| ~~16~~ | ~~An Agent asks the Human with a Question~~ — **delivered 2026-10-01** | a new `Questions/` store and service, `AskHumanTool`, `QuestionCard.razor` | shipped; it copied the Skills spec's Proposal card, which shipped with item 17. ACP elicitation for typed forms is its planned follow-up, not scheduled, and shares item 20's idle-watchdog pause — see [the Questions spec](../Huddle.Questions-Specifications.md) and [ADR-0022](../adr/0022-an-agent-asks-the-human-with-a-question.md) |
 | ~~17~~ | ~~Skills and the Chief of Staff~~ — **delivered 2026-09-22** | `Skills/`, `Teammates/`, then `DotAcpAgentHostFactory` and `PersonaRunner` | shipped; the first mechanism for item 9's per-Persona tool grants, and the first Turn that no delivered Message starts — see [ADR-0021](../adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) and [the Skills design](../Huddle.Skills-Specifications.md) |
 | ~~18~~ | ~~One session per Room~~ — **DELIVERED (code) 2026-09-23** | `Acp/Sessions/`, the `IAgentHostFactory`/`IPersonaHost` split | shipped: a Room Session per (Persona, Room), lazy open, LRU eviction, resume by stored id, Transcript Catch-up on a session's first Turn, Stop routed per Room. Paid checks (RS-M1 through RS-M10, V-3, V-5) not yet run — see [the Room Sessions spec](../Huddle.RoomSessions-Specifications.md), [ADR-0024](../adr/0024-an-agent-holds-one-session-per-room.md) and [Known limits](known-limits.md) |
 | ~~19~~ | ~~Tasks~~ — **delivered 2026-09-25** | `Tasks/`, then `Acp/Tools/*TaskTool.cs` and `Components/Tasks/*` | shipped: a Markdown Task per file under `Tasks/<Team>/[<Project>/]`, a wake-on-change trigger reusing the Reply Gate and Budget, six App Tools, and a Board/List/Detail UI with a `#` picker and task-ref links in chat. Four paid manual tests and one concurrent-move race are not yet verified — see [the Tasks spec](../Huddle.Tasks-Specifications.md), [ADR-0025](../adr/0025-in-tasks-a-team-is-a-folder-by-convention.md), [ADR-0026](../adr/0026-a-change-to-a-task-wakes-its-assignee.md) and [Known limits](known-limits.md) |
@@ -1248,10 +1248,15 @@ Three rules carry the design, and each is easy to lose in a refactor:
   from a Proposal, which survives typed Messages because revising it through prose is
   its normal path. It is why the two have separate stores.
 
-One constraint sits outside the tool. Huddle must not advertise `clientCapabilities.elicitation`
-while this is the only way to ask: `claude-agent-acp` keeps Claude's built-in `AskUserQuestion`
-off until the client does, and advertising it also switches on the refusal-fallback dialog and
-MCP-initiated forms, each of which holds a Turn open. See §6.8 and D-13 of
+One constraint sits outside the tool. Huddle does not advertise `clientCapabilities.elicitation`
+yet: `claude-agent-acp` keeps Claude's built-in `AskUserQuestion` off until the client does, and
+advertising it also switches on the refusal-fallback dialog and MCP-initiated forms, each of which
+needs a handler that answers or the Turn hangs. That is a condition, not a ban. Elicitation is the
+**planned follow-up for typed forms** (dates, numbers, free text), not scheduled, and it waits for
+three gates: the idle watchdog pauses while a request is open, a handler answers every
+`elicitation/create`, and the answer is written to the Transcript as a Message. The watchdog pause
+is **shared with [item 20](#20-an-agent-asks-the-human-before-a-tool-runs--proposed-2026-09-30-not-built)**,
+so building item 20 first pays that cost once. See §6.8, §6.8a and D-13 of
 [the Questions spec](../Huddle.Questions-Specifications.md).
 
 ## 17. Skills and the Chief of Staff — DELIVERED 2026-09-22
@@ -1442,7 +1447,10 @@ until the client answers. So all three costs ADR-0022 avoids have to be handled 
   card would be reported as a hung Adapter and the Turn abandoned. The clock has to stop while a
   decision is pending and restart on the answer. A card that is left to lapse is a third cause of
   cancellation, neither a timeout nor a Stop, so it needs its own latch written before the
-  cancellation it causes (TRAP 1).
+  cancellation it causes (TRAP 1). **This pause is shared with item 16's elicitation follow-up**
+  (ACP `elicitation/create` for typed forms, see [item 16](#16-an-agent-asks-the-human-with-a-question--delivered-2026-10-01)),
+  which has the same premise: an open request emits no events. Build the pause once, here, and
+  elicitation then needs only its handlers and the Transcript Message.
 - **The Turn keeps its `TurnGate` slot.** `MaxConcurrentTurns` defaults to 1 per Persona, so while
   a card waits, that Persona's Turns in its other Rooms queue behind it. Accept and document that,
   or release the slot while waiting, which touches the ticket protocol (RS §6.1).

@@ -112,7 +112,7 @@ meant. Fixed options make both cheap, and make the answer unambiguous.
 | **Images, descriptions or icons on an option** | Short labels only. The Agent's framing Message carries any explanation |
 | **Drag-and-drop ranking** | Up and down buttons work with a keyboard and a screen reader, and need no JavaScript. V2 may add drag |
 | **A new Envelope or a `ProtocolVersion` bump** | The card never crosses the pipe (`traps.md`, the closed polymorphism rule) |
-| **ACP elicitation (`elicitation/create`) for Questions** | It holds the Turn open until the Human answers, which D-2 rejects, and advertising it re-enables Claude's built-in `AskUserQuestion` (§6.8, D-13) |
+| **ACP elicitation (`elicitation/create`) for Questions** | **Not yet; the planned follow-up for typed forms.** It holds the Turn open until the Human answers, which runs into the idle timeout until the watchdog can pause for an open request, and advertising it re-enables Claude's built-in `AskUserQuestion` (§6.8, D-13). `ask_human` stays the primary way to ask (D-2); see [Follow-up: elicitation for typed forms](#68a-follow-up-elicitation-for-typed-forms) |
 
 ---
 
@@ -495,16 +495,44 @@ not compete with it, because the Adapter keeps it off, and this spec depends on 
   2026-09-30; a live model has not yet confirmed it (QM-6).
 - **What advertising it would do.** With `form` advertised the Adapter enables `AskUserQuestion`
   and sends `elicitation/create`, then waits, holding the Turn open until the Human answers.
-  That is the design D-2 rejects: an open request emits no events, so it runs into
-  `Acp:TurnIdleTimeoutSeconds`, and the answer never reaches the Transcript.
+  Today that runs into `Acp:TurnIdleTimeoutSeconds`, because an open request emits no events,
+  and the answer would be only a tool result, not a Message in the Transcript. The timeout half
+  is fixable by pausing the idle watchdog while a request is open; the Transcript half is a
+  rule that stays (see the follow-up below).
 - **It is not one switch.** The same capability also turns on the Adapter's refusal-fallback
   dialog (*"model X declined; retry with Y?"*) and lets any MCP server put a form to the user.
   Each arrives as an `elicitation/create` that needs a handler which answers, or the Turn hangs.
-  Do not add `elicitation` to `ClientCapabilities` without a new decision (D-13). Task Q-G1 pins
-  its absence.
+  Do not add `elicitation` to `ClientCapabilities` until the three gates in the follow-up below
+  are met (D-13). Task Q-G1 pins its absence until then.
 - **URL mode** (`elicitation.url`, the Adapter's OAuth flow for MCP servers passed in
   `session/new`) is not advertised either. Huddle's one MCP server authenticates with a bearer
   token.
+
+### 6.8a Follow-up: elicitation for typed forms
+
+ACP elicitation is **not rejected for good**. It is the planned follow-up for the one thing
+`ask_human` cannot express: typed fields (dates, numbers, free text). It is **not scheduled**, and
+it is added later without giving up the Transcript. `ask_human` stays the primary way an Agent
+asks the Human, and its answer stays an ordinary Message from the Human (D-2).
+
+The earlier rejection (D-13, [ADR-0022](adr/0022-an-agent-asks-the-human-with-a-question.md)) rests
+on one premise: an elicitation request holds the Turn open and emits no events, so it runs into
+`Acp:TurnIdleTimeoutSeconds`. Pausing the idle watchdog while a request is open removes that
+premise. Roadmap item 20 (approval before a tool runs) needs exactly the same pause, so the cost is
+paid once if item 20 is built first, and elicitation then becomes cheap. Elicitation is also the
+protocol's standard mechanism, and an Adapter other than Claude's may support only that route.
+
+Advertising `clientCapabilities.elicitation` waits for **all three** gates:
+
+1. **The idle watchdog pauses while a request is open**, shared with roadmap item 20.
+2. **A handler answers every `elicitation/create`**: the built-in `AskUserQuestion`, the Adapter's
+   refusal-fallback dialog, and any form an MCP server puts to the user. A request with no handler
+   hangs the Turn.
+3. **The answer is written to the Transcript as a Message.** A bridged answer is never only a tool
+   result.
+
+Advertising it also re-enables `AskUserQuestion` beside `ask_human`, so the follow-up must decide
+how a Claude Persona is steered between the two ways to ask.
 
 ---
 
@@ -605,7 +633,7 @@ QUESTIONS-06, in this table's order, and are registered in [manual-tests.md](eng
 | D-10 | **Every Agent gets the tool** | Granting it through a Skill | Asking costs nothing and creates nothing. `propose_teammates` is granted by a Skill because each Teammate is a billed process; `ask_human` is not |
 | D-11 | **The full decision guidance lives in the tool description, and a short form of it in the system prompt** | A `get_help` section; a Skill; the description alone | A model decides to call a tool from its description; guidance in `get_help` or a Skill is read too late or not at all. *Amended 2026-10-01:* the description alone proved not enough, because the Claude Adapter defers MCP tools and the model sees only the name. The system prompt is the one text it always reads, so it carries a paragraph on when to ask (§6.6). The description stays as the full version |
 | D-12 | **`rank_priorities` ships in V1** | V2 | It is the one kind a typed answer is worst at, and up and down buttons keep it small |
-| D-13 | **Do not advertise ACP elicitation** | Bridging `AskUserQuestion` and `elicitation/create` to the `QuestionCard` | A bridge blocks the Turn (D-2) and needs the idle watchdog paused while a request is open. Advertising `form` also enables the refusal-fallback dialog and MCP-initiated forms, each needing a handler, and gives a Claude Persona two ways to ask. Revisit if a Question needs typed fields (Appendix B) |
+| D-13 | **Do not advertise ACP elicitation yet, until (a) the idle watchdog can pause for an open request, (b) a handler answers every `elicitation/create`, including the refusal-fallback and MCP form cases, and (c) the answer is written to the Transcript as a Message** | Bridging `AskUserQuestion` and `elicitation/create` to the `QuestionCard` now | A bridge as built today blocks the Turn and runs into the idle timeout; pausing the watchdog, which roadmap item 20 also needs, fixes that. Advertising `form` also enables the refusal-fallback dialog and MCP-initiated forms, each needing a handler, and gives a Claude Persona two ways to ask. The rejection is conditional, not permanent: elicitation is the planned follow-up for typed fields (§6.8a, Appendix B), not scheduled |
 
 ---
 
@@ -632,7 +660,7 @@ Each `.t` task ends red for the right reason; each `.i` task ends with `dotnet t
 | Q-I7 | Impl | `DotAcpAgentHostFactory` registration. *Added 2026-10-01 (D-11):* `systemPrompt.askHuman`, `SystemPromptComposer`'s `askHumanToolName`, and the name threaded through `DotAcpPersonaHost`; `Golden/systemPrompt.askHuman.txt` pins the paragraph, and `PersonaHostTests.Open_SystemPromptCarriesTheAskHumanParagraph_NamingTheToolOnce` pins it on the real factory's `session/new` | T7 green |
 | Q-T8 | bUnit | `QuestionCardTests`: one single Question sends on tap; Send disabled until complete; multi toggles; rank up/down reorders and sends `1. … · 2. …`; disabled while the asker has a Draft; Dismiss posts nothing; a second tab hides on `QuestionsChanged`; hidden when Archived | Fails |
 | Q-I8 | Impl | `QuestionCard.razor`, `Chat.razor` wiring | T8 green |
-| Q-G1 | Guard | A test that pins the `initialize` request's client capabilities: `Fs` and `Terminal` false, no `elicitation`. **Done as** `PersonaHostTests.Start_AdvertisesNoElicitation_AndNoFsOrTerminal` in `tests/Huddle.Tests/Conformance`, which drives the real factory against `FakeAcpAgent`, so `DotAcpAgentHost` and `Huddle.Acp.Tests` are untouched. Proved by flipping `Terminal` to `true` locally (red), then reverting. The `elicitation` half could not be proved the same way: `ClientCapabilities` in `dotacp` 2026.7.19 has no such member | Passes now, and goes red if any capability beyond `fs` and `terminal` is ever advertised, or either is turned on |
+| Q-G1 | Guard | A test that pins the `initialize` request's client capabilities: `Fs` and `Terminal` false, no `elicitation`. **Done as** `PersonaHostTests.Start_AdvertisesNoElicitation_AndNoFsOrTerminal` in `tests/Huddle.Tests/Conformance`, which drives the real factory against `FakeAcpAgent`, so `DotAcpAgentHost` and `Huddle.Acp.Tests` are untouched. Proved by flipping `Terminal` to `true` locally (red), then reverting. The `elicitation` half could not be proved the same way: `ClientCapabilities` in `dotacp` 2026.7.19 has no such member | Passes now, and goes red if any capability beyond `fs` and `terminal` is ever advertised, or either is turned on. It is lifted by the follow-up decision (§6.8a), once its three gates are met, not forever |
 | Q-D | Docs | `language.md` Question drops "Proposed, not built"; `known-limits.md` gains "a waiting Question is lost on restart"; `manual-tests.md` gains QM-1 to QM-6; ADR-0022 to Accepted | Reviewed |
 
 ## Appendix B — Follow-ups outside this spec
@@ -643,8 +671,9 @@ Each `.t` task ends red for the right reason; each `.i` task ends with `dotnet t
   the Skill once this tool exists, not before, so the Skill never names a tool its Teammate
   cannot call.
 - **ACP elicitation** for typed forms (dates, numbers, free text) is the one thing `ask_human`
-  cannot express. If a Skill needs it, that is the reason to revisit D-13. It needs the idle
+  cannot express, and it is the planned follow-up (§6.8a), not scheduled. It needs the idle
   watchdog paused while a request is open, a handler for every form the Adapter can send
-  (including the refusal-fallback dialog), and a decision on whether the answer is also posted
-  as a Message, so the Transcript stays complete. The same watchdog change is needed for any
-  human-approval card on `session/request_permission`.
+  (including the refusal-fallback dialog and MCP forms), and the answer posted as a Message, so
+  the Transcript stays complete. The same watchdog change is needed for any human-approval card
+  on `session/request_permission` (roadmap item 20), so build that first and the cost is paid
+  once.
