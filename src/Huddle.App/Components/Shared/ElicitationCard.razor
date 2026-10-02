@@ -1,0 +1,534 @@
+@*
+    The forms an Agent is waiting on, shown where the conversation that produced them happened
+    (elicitation bridge, decisions E-5 and E-6). Mirrors QuestionCard: view state derived from in-memory
+    server state (ElicitationStore.Get(roomId)), answered by an in-process call to ElicitationService -
+    no Envelope. The answer is a Message from the Human; a card disappears on
+    RoomEvents.ElicitationsChanged, and the outcome is never card state.
+
+    Three things differ from QuestionCard. First, a Room can hold SEVERAL waiting cards (an Agent's
+    AskUserQuestion, a refusal dialog, an MCP form), so every card is shown, in arrival order, each
+    with the values the Human has entered into it. Second, the card is not held back while its asker
+    is writing: the asker's Turn is open on purpose (it is waiting on this very form), so there is
+    no D-8 gate and this component does not even inject Drafts. Third, the fields are typed, so the
+    card holds what the Human typed as text - one list of entries per field key, exactly the shape
+    ElicitationComposer reads (a scalar field zero or one entry, a multi select its chosen option
+    values) - and ElicitationComposer.CanSend, not this component, decides when Send is enabled.
+
+    Every text on the card (message, labels, descriptions, options, header) was written by a model or
+    an MCP server, so it is rendered as plain text through Razor's own encoding. Never MarkupString,
+    never Markdown.
+
+    The busy set and the ElicitationsChanged subscription interact the way they do on QuestionCard:
+    ElicitationService.AnswerAsync's first action is ElicitationStore.TryTake, which raises
+    ElicitationsChanged synchronously, and this card is itself subscribed. OnElicitationsChanged ignores
+    a fire while any answer is in flight, and the click handler's own finally block re-reads the store
+    once the call returns, so a tap never hides the busy view before it can be seen, and another tab's
+    change still updates normally.
+
+    An AskUserQuestion question carries a companion "Other" text field (CustomAnswerFor). It is drawn
+    under its question, and typing in it clears and disables that question's options - a typed answer
+    beats a selection, exactly as the Adapter does.
+*@
+@implements IDisposable
+@using System.Globalization
+@using Agency.Huddle.App.Elicitation
+
+@inject RoomEvents Events
+@inject ElicitationStore Elicitations
+@inject ElicitationService Service
+@inject ITeamDirectory TeamDirectory
+@inject ISnackbar Snackbar
+
+@if (this.room is { Archived: false })
+{
+    foreach (PendingElicitation card in this.cards)
+    {
+        PendingElicitation current = card;
+        bool busy = this.IsBusy(current);
+
+        <MudPaper @key="current.Id" Outlined="true" Class="elicitation-card pa-3 my-2" role="region" aria-label="@($"Form from {current.AskerName}")">
+            <MudText Typo="Typo.subtitle2" Class="elicitation-card-title">@current.AskerName is asking</MudText>
+
+            @if (!string.IsNullOrWhiteSpace(current.Form.Message))
+            {
+                <MudText Typo="Typo.body1" Class="elicitation-card-message">@current.Form.Message</MudText>
+            }
+
+            <MudStack Spacing="3" Class="elicitation-card-fields">
+                @foreach (ElicitationField field in current.Form.Fields)
+                {
+                    ElicitationField shown = field;
+                    ElicitationField? companion = CompanionOf(current.Form, shown);
+                    bool optionsDisabled = busy || this.CompanionFilled(current, companion);
+
+                    if (shown.CustomAnswerFor is null)
+                    {
+                        <div @key="shown.Key" class="elicitation-card-field">
+                            @switch (shown.Kind)
+                            {
+                                case ElicitationFieldKind.Date:
+                                    <MudDatePicker Label="@shown.Label"
+                                                   HelperText="@shown.Description"
+                                                   Required="@shown.Required"
+                                                   Variant="Variant.Outlined"
+                                                   Editable="true"
+                                                   DateFormat="yyyy-MM-dd"
+                                                   Culture="@CultureInfo.InvariantCulture"
+                                                   Disabled="@busy"
+                                                   Date="@this.DateOf(current, shown)"
+                                                   DateChanged="@(date => this.SetDate(current, shown, date))" />
+                                    break;
+
+                                case ElicitationFieldKind.Boolean:
+                                    <MudSwitch T="bool"
+                                               Color="Color.Primary"
+                                               Required="@shown.Required"
+                                               Disabled="@busy"
+                                               Value="@(this.EntryOf(current, shown) == "true")"
+                                               ValueChanged="@(on => this.SetBoolean(current, shown, on))">
+                                        <span class="elicitation-card-field-label">@shown.Label</span>@if (shown.Required)
+                                        {
+                                            <span class="elicitation-card-required" aria-hidden="true"> *</span>
+                                        }
+                                    </MudSwitch>
+                                    if (shown.Description is not null)
+                                    {
+                                        <MudText Typo="Typo.caption" Class="elicitation-card-field-description">@shown.Description</MudText>
+                                    }
+
+                                    break;
+
+                                case ElicitationFieldKind.SingleSelect:
+                                    <div role="group" aria-label="@shown.Label" aria-required="@(shown.Required ? "true" : null)" class="elicitation-card-group">
+                                        @Heading(shown)
+                                        <MudRadioGroup T="string"
+                                                       Disabled="@optionsDisabled"
+                                                       Value="@this.EntryOf(current, shown)"
+                                                       ValueChanged="@(value => this.SetSingle(current, shown, value))">
+                                            @foreach (ElicitationOption option in shown.Options)
+                                            {
+                                                <MudRadio @key="option.Value" T="string" Value="@option.Value" Color="Color.Primary" Class="elicitation-card-option">
+                                                    <span class="elicitation-card-option-label">@option.Label</span>@if (option.Description is not null)
+                                                    {
+                                                        <span class="elicitation-card-option-description">@option.Description</span>
+                                                    }
+                                                </MudRadio>
+                                            }
+                                        </MudRadioGroup>
+                                    </div>
+                                    break;
+
+                                case ElicitationFieldKind.MultiSelect:
+                                    <div role="group" aria-label="@shown.Label" aria-required="@(shown.Required ? "true" : null)" class="elicitation-card-group">
+                                        @Heading(shown)
+                                        <MudStack Spacing="0">
+                                            @foreach (ElicitationOption option in shown.Options)
+                                            {
+                                                string value = option.Value;
+                                                <MudCheckBox @key="value" T="bool"
+                                                             Color="Color.Primary"
+                                                             Class="elicitation-card-option"
+                                                             Disabled="@optionsDisabled"
+                                                             Value="@this.IsTicked(current, shown, value)"
+                                                             ValueChanged="@(on => this.SetTicked(current, shown, value, on))">
+                                                    <span class="elicitation-card-option-label">@option.Label</span>@if (option.Description is not null)
+                                                    {
+                                                        <span class="elicitation-card-option-description">@option.Description</span>
+                                                    }
+                                                </MudCheckBox>
+                                            }
+                                        </MudStack>
+                                    </div>
+                                    break;
+
+                                default:
+                                    <MudTextField T="string"
+                                                  Label="@shown.Label"
+                                                  HelperText="@shown.Description"
+                                                  Required="@shown.Required"
+                                                  Variant="Variant.Outlined"
+                                                  Immediate="true"
+                                                  InputMode="@InputModeOf(shown.Kind)"
+                                                  Disabled="@busy"
+                                                  Value="@this.EntryOf(current, shown)"
+                                                  ValueChanged="@(text => this.SetText(current, shown, text))" />
+                                    break;
+                            }
+
+                            @if (companion is { } other)
+                            {
+                                <MudTextField T="string"
+                                              Label="@other.Label"
+                                              HelperText="@other.Description"
+                                              Variant="Variant.Outlined"
+                                              Immediate="true"
+                                              Disabled="@busy"
+                                              Class="elicitation-card-other"
+                                              Value="@this.EntryOf(current, other)"
+                                              ValueChanged="@(text => this.SetText(current, other, text))" />
+                            }
+                        </div>
+                    }
+                }
+            </MudStack>
+
+            <MudStack Row="true" Spacing="2" Class="elicitation-card-actions">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="elicitation-card-send"
+                           Disabled="@(busy || !this.CanSend(current))"
+                           OnClick="@(() => this.SendAsync(current))">@(busy ? "Sending…" : "Send")</MudButton>
+                <MudButton Variant="Variant.Text" Class="elicitation-card-skip"
+                           Disabled="@busy"
+                           OnClick="@(() => this.SkipAsync(current))">Skip</MudButton>
+            </MudStack>
+        </MudPaper>
+    }
+}
+
+@code {
+    /// <summary>The Room whose waiting forms, if any, this card shows.</summary>
+    [Parameter, EditorRequired]
+    public string RoomId { get; set; } = "";
+
+    private string? loadedRoomId;
+    private Room? room;
+    private IReadOnlyList<PendingElicitation> cards = [];
+    private readonly HashSet<string> busyIds = new(StringComparer.Ordinal);
+
+    // What the Human has entered, by card id and then field key: the shape ElicitationComposer reads. A
+    // card's entry is dropped when the card leaves the Room, so only a card whose id changed starts empty.
+    private readonly Dictionary<string, Dictionary<string, List<string>>> entered = new(StringComparer.Ordinal);
+
+    /// <summary>Subscribes to <see cref="RoomEvents.ElicitationsChanged"/>, unsubscribed in <see cref="Dispose"/> per rules.md.</summary>
+    protected override void OnInitialized()
+    {
+        this.Events.ElicitationsChanged += this.OnElicitationsChanged;
+    }
+
+    /// <summary>Reloads this card's Room and waiting forms whenever <see cref="RoomId"/> changes - a component reused across Rooms.</summary>
+    protected override async Task OnParametersSetAsync()
+    {
+        if (this.RoomId == this.loadedRoomId)
+        {
+            return;
+        }
+
+        this.loadedRoomId = this.RoomId;
+        this.room = await this.TeamDirectory.GetRoomAsync(this.RoomId);
+        this.Show(this.Elicitations.Get(this.RoomId));
+    }
+
+    /// <summary>Unsubscribes - the hub is a singleton, so a component that does not unsubscribe here never dies.</summary>
+    public void Dispose()
+    {
+        this.Events.ElicitationsChanged -= this.OnElicitationsChanged;
+    }
+
+    /// <summary>
+    /// Shows <paramref name="next"/>, the cards now waiting, in the order the store lists them. What the
+    /// Human entered is kept for every card still waiting and dropped for every card that is gone, so an
+    /// entry resets only when its own card's id changes.
+    /// </summary>
+    /// <param name="next">The cards now waiting, oldest first.</param>
+    private void Show(IReadOnlyList<PendingElicitation> next)
+    {
+        HashSet<string> waiting = [.. next.Select(static card => card.Id)];
+        foreach (string gone in this.entered.Keys.Where(id => !waiting.Contains(id)).ToList())
+        {
+            _ = this.entered.Remove(gone);
+        }
+
+        this.cards = next;
+    }
+
+    /// <summary>
+    /// Reacts to <see cref="RoomEvents.ElicitationsChanged"/> for this card's own Room - ignored while an
+    /// answer is in flight, because that is this card's own answer taking its card; the click handler's
+    /// <c>finally</c> block refreshes once the call returns.
+    /// </summary>
+    /// <param name="roomId">The Room whose waiting forms changed.</param>
+    private void OnElicitationsChanged(string roomId)
+    {
+        if (!string.Equals(roomId, this.RoomId, StringComparison.Ordinal) || this.busyIds.Count > 0)
+        {
+            return;
+        }
+
+        _ = this.DispatchAsync(() =>
+        {
+            this.Show(this.Elicitations.Get(this.RoomId));
+            this.StateHasChanged();
+            return Task.CompletedTask;
+        });
+    }
+
+    /// <summary>Whether an answer for <paramref name="card"/> is in flight.</summary>
+    /// <param name="card">The card.</param>
+    private bool IsBusy(PendingElicitation card)
+    {
+        return this.busyIds.Contains(card.Id);
+    }
+
+    /// <summary>Whether <see cref="ElicitationComposer"/> says the values entered into <paramref name="card"/> may be sent.</summary>
+    /// <param name="card">The card.</param>
+    private bool CanSend(PendingElicitation card)
+    {
+        return ElicitationComposer.CanSend(card.Form, this.SnapshotOf(card));
+    }
+
+    /// <summary>The values entered into <paramref name="card"/> in the composer's shape: filled fields only.</summary>
+    /// <param name="card">The card.</param>
+    private Dictionary<string, IReadOnlyList<string>> SnapshotOf(PendingElicitation card)
+    {
+        Dictionary<string, IReadOnlyList<string>> values = new(StringComparer.Ordinal);
+        foreach ((string key, List<string> entries) in this.EntriesOf(card))
+        {
+            if (entries.Count > 0)
+            {
+                values[key] = [.. entries];
+            }
+        }
+
+        return values;
+    }
+
+    /// <summary>The entries the Human has made into <paramref name="card"/>, created empty on first use.</summary>
+    /// <param name="card">The card.</param>
+    private Dictionary<string, List<string>> EntriesOf(PendingElicitation card)
+    {
+        if (!this.entered.TryGetValue(card.Id, out Dictionary<string, List<string>>? entries))
+        {
+            entries = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            this.entered[card.Id] = entries;
+        }
+
+        return entries;
+    }
+
+    /// <summary>The single entry of a scalar field, or the empty string when there is none.</summary>
+    /// <param name="card">The card.</param>
+    /// <param name="field">The field.</param>
+    private string EntryOf(PendingElicitation card, ElicitationField field)
+    {
+        return this.EntriesOf(card).TryGetValue(field.Key, out List<string>? entries) && entries.Count > 0 ? entries[0] : string.Empty;
+    }
+
+    /// <summary>The "Other" field typed in place of <paramref name="field"/>'s selection, or <see langword="null"/>.</summary>
+    /// <param name="form">The form.</param>
+    /// <param name="field">The field that may be a question.</param>
+    private static ElicitationField? CompanionOf(ElicitationForm form, ElicitationField field)
+    {
+        return form.Fields.FirstOrDefault(candidate => string.Equals(candidate.CustomAnswerFor, field.Key, StringComparison.Ordinal));
+    }
+
+    /// <summary>Whether the Human has typed a non-blank custom answer into <paramref name="companion"/>, which makes it beat its question's options.</summary>
+    /// <param name="card">The card.</param>
+    /// <param name="companion">The "Other" field, or <see langword="null"/> when the field has none.</param>
+    private bool CompanionFilled(PendingElicitation card, ElicitationField? companion)
+    {
+        return companion is not null && !string.IsNullOrWhiteSpace(this.EntryOf(card, companion));
+    }
+
+    /// <summary>The keyboard hint for a text-like field: a number brings up a numeric pad, an integer a digits-only one.</summary>
+    /// <param name="kind">The field's kind.</param>
+    private static InputMode InputModeOf(ElicitationFieldKind kind)
+    {
+        return kind switch
+        {
+            ElicitationFieldKind.Integer => InputMode.numeric,
+            ElicitationFieldKind.Number => InputMode.@decimal,
+            _ => InputMode.text,
+        };
+    }
+
+    /// <summary>Stores what was typed into a text-like field. Typing a custom answer clears the selection it stands in for.</summary>
+    /// <param name="card">The card.</param>
+    /// <param name="field">The field typed into.</param>
+    /// <param name="text">The text now in the input.</param>
+    private void SetText(PendingElicitation card, ElicitationField field, string? text)
+    {
+        Dictionary<string, List<string>> entries = this.EntriesOf(card);
+        if (string.IsNullOrEmpty(text))
+        {
+            _ = entries.Remove(field.Key);
+            return;
+        }
+
+        entries[field.Key] = [text];
+        if (field.CustomAnswerFor is { } target && !string.IsNullOrWhiteSpace(text))
+        {
+            _ = entries.Remove(target);
+        }
+    }
+
+    /// <summary>Stores the option chosen in a single select.</summary>
+    /// <param name="card">The card.</param>
+    /// <param name="field">The single select.</param>
+    /// <param name="value">The chosen option's value.</param>
+    private void SetSingle(PendingElicitation card, ElicitationField field, string? value)
+    {
+        Dictionary<string, List<string>> entries = this.EntriesOf(card);
+        if (string.IsNullOrEmpty(value))
+        {
+            _ = entries.Remove(field.Key);
+            return;
+        }
+
+        entries[field.Key] = [value];
+    }
+
+    /// <summary>Whether <paramref name="optionValue"/> is among the options ticked in a multi select.</summary>
+    /// <param name="card">The card.</param>
+    /// <param name="field">The multi select.</param>
+    /// <param name="optionValue">The option's value.</param>
+    private bool IsTicked(PendingElicitation card, ElicitationField field, string optionValue)
+    {
+        return this.EntriesOf(card).TryGetValue(field.Key, out List<string>? entries) && entries.Contains(optionValue, StringComparer.Ordinal);
+    }
+
+    /// <summary>Ticks or unticks one option of a multi select.</summary>
+    /// <param name="card">The card.</param>
+    /// <param name="field">The multi select.</param>
+    /// <param name="optionValue">The option's value.</param>
+    /// <param name="ticked">Whether it is now ticked.</param>
+    private void SetTicked(PendingElicitation card, ElicitationField field, string optionValue, bool ticked)
+    {
+        Dictionary<string, List<string>> entries = this.EntriesOf(card);
+        List<string> chosen = entries.TryGetValue(field.Key, out List<string>? existing) ? existing : [];
+        _ = chosen.RemoveAll(entry => string.Equals(entry, optionValue, StringComparison.Ordinal));
+        if (ticked)
+        {
+            chosen.Add(optionValue);
+        }
+
+        if (chosen.Count == 0)
+        {
+            _ = entries.Remove(field.Key);
+            return;
+        }
+
+        entries[field.Key] = chosen;
+    }
+
+    /// <summary>Stores a switch: <c>true</c> or <c>false</c>, exactly what <see cref="ElicitationComposer"/> reads.</summary>
+    /// <param name="card">The card.</param>
+    /// <param name="field">The boolean field.</param>
+    /// <param name="on">Whether the switch is on.</param>
+    private void SetBoolean(PendingElicitation card, ElicitationField field, bool on)
+    {
+        this.EntriesOf(card)[field.Key] = [on ? "true" : "false"];
+    }
+
+    /// <summary>The date a date field currently holds, for the picker; <see langword="null"/> when none or not a valid <c>yyyy-MM-dd</c>.</summary>
+    /// <param name="card">The card.</param>
+    /// <param name="field">The date field.</param>
+    private DateTime? DateOf(PendingElicitation card, ElicitationField field)
+    {
+        return DateOnly.TryParseExact(this.EntryOf(card, field), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateOnly date)
+            ? date.ToDateTime(TimeOnly.MinValue)
+            : null;
+    }
+
+    /// <summary>Stores a picked date as ISO <c>yyyy-MM-dd</c> text, whatever the machine's culture; no date clears the field.</summary>
+    /// <param name="card">The card.</param>
+    /// <param name="field">The date field.</param>
+    /// <param name="date">The picked date, or <see langword="null"/>.</param>
+    private void SetDate(PendingElicitation card, ElicitationField field, DateTime? date)
+    {
+        Dictionary<string, List<string>> entries = this.EntriesOf(card);
+        if (date is null)
+        {
+            _ = entries.Remove(field.Key);
+            return;
+        }
+
+        entries[field.Key] = [date.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)];
+    }
+
+    /// <summary>The heading of a select: its header, its label with a required mark, and its description, all as plain text.</summary>
+    /// <param name="field">The select.</param>
+    private static RenderFragment Heading(ElicitationField field)
+    {
+        return @<div class="elicitation-card-field-head">
+            @if (field.Header is not null)
+            {
+                <MudText Typo="Typo.overline" Class="elicitation-card-field-header">@field.Header</MudText>
+            }
+            <div class="elicitation-card-field-heading">
+                <MudText Typo="Typo.body1" Class="elicitation-card-field-label">@field.Label</MudText>
+                @if (field.Required)
+                {
+                    <span class="elicitation-card-required" aria-hidden="true">*</span>
+                }
+            </div>
+            @if (field.Description is not null)
+            {
+                <MudText Typo="Typo.caption" Class="elicitation-card-field-description">@field.Description</MudText>
+            }
+        </div>;
+    }
+
+    /// <summary>
+    /// Sends the answer through the real <see cref="ElicitationService"/>. The outcome is the posted
+    /// Message, never card state, so this only refreshes what is still waiting once the call returns.
+    /// <see cref="CancellationToken.None"/> on purpose: once the card is taken, abandoning the post when a
+    /// circuit drops would lose the answer. The one documented failure, <see cref="InvalidOperationException"/>
+    /// (the values do not fit the form, a UI bug), is shown through <see cref="ISnackbar"/> and the card
+    /// stays waiting; <see cref="ElicitationService"/> turns every posting failure into a quiet result itself.
+    /// </summary>
+    /// <param name="card">The card being answered.</param>
+    private async Task SendAsync(PendingElicitation card)
+    {
+        if (this.IsBusy(card))
+        {
+            return;
+        }
+
+        _ = this.busyIds.Add(card.Id);
+        try
+        {
+            _ = await this.Service.AnswerAsync(this.RoomId, card.Id, this.SnapshotOf(card), CancellationToken.None);
+        }
+        catch (InvalidOperationException ex)
+        {
+            this.Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _ = this.busyIds.Remove(card.Id);
+            this.Show(this.Elicitations.Get(this.RoomId));
+        }
+    }
+
+    /// <summary>Skips the card: the waiting request is declined, nothing is posted and the asker is not woken.</summary>
+    /// <param name="card">The card being skipped.</param>
+    private async Task SkipAsync(PendingElicitation card)
+    {
+        if (this.IsBusy(card))
+        {
+            return;
+        }
+
+        _ = await this.Service.DeclineAsync(this.RoomId, card.Id);
+        this.Show(this.Elicitations.Get(this.RoomId));
+    }
+
+    /// <summary>
+    /// Marshals <paramref name="action"/> onto this component's renderer, matching <c>QuestionCard</c>'s own
+    /// <c>DispatchAsync</c> - a stale subscription firing after this card has already been disposed (a Room
+    /// switch, a closed circuit) must not throw.
+    /// </summary>
+    /// <param name="action">The state update and repaint to run on the renderer.</param>
+    private async Task DispatchAsync(Func<Task> action)
+    {
+        try
+        {
+            await this.InvokeAsync(action);
+        }
+        catch (ObjectDisposedException)
+        {
+        }
+        catch (InvalidOperationException)
+        {
+        }
+    }
+}
