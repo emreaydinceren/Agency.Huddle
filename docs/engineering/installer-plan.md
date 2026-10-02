@@ -29,6 +29,7 @@ project context; run it with the Execute-Project-Plan skill.
 - A2. `<org>/<repo>` is unknown today, so scripts carry the placeholder `__HUDDLE_REPO__`, replaced by the release workflow with `${{ github.repository }}`. Override with `$env:HUDDLE_REPO` / `HUDDLE_REPO=`.
 - A3. Redistribution: the release contains no Anthropic binary (D3). If that changes, check Anthropic's terms first.
 - A4. v1 has **no in-app Quit button**. Windows users close the console window or run `huddle stop`; macOS users run `huddle stop`. Recorded as a known limit by task 43, and a candidate for `roadmap.md`.
+- A5. Graceful stop disposes Persona adapters one after another (`PersonaSupervisor`, about 3 s grace each) and one thrown exception skips the rest, so `stop` can report "Stopped." while an adapter `node` process survives (found by the final Opus review, not fixed here: it is existing ACP shutdown code). The smoke tests (39, 40) therefore assert that **no `node` process from the install tree remains** after `stop`; a failure there is the trigger to harden the shutdown, and the upgrade step cannot replace `node/` while an adapter still runs.
 
 ---
 
@@ -124,6 +125,7 @@ The launcher (`huddle.cmd` / `bin/huddle`) sets these, then runs the app host wi
 | `Team__Acp__Enabled` | `true` (off by default in code; Spec §8, `AcpOptions.Enabled`) |
 | `Team__Acp__Command` | absolute path of the bundled `node` / `node.exe` |
 | `Team__DataDir` | `<DataRoot>/data` |
+| `Team__PipeName` | `huddle-<user name>` (Windows `huddle-%USERNAME%`, macOS `huddle-$(id -un)`). The default `team` is one machine-wide pipe: a second Windows user's instance, or a developer's `run.ps1` instance, would collide with it (found by the final Opus review) |
 | `ASPNETCORE_URLS` | `http://127.0.0.1:0` (loopback, kernel-chosen port) |
 | `ASPNETCORE_ENVIRONMENT` | `Production` |
 | `AllowedHosts` | `localhost;127.0.0.1` (closes DNS-rebinding; `appsettings.json` has `*`) |
@@ -163,7 +165,7 @@ Rules (each has a test):
 1. A second run with nothing new prints `[skip]` for every step, ends `Already up to date (vX.Y.Z).`, exits 0 and **changes no file** (a path+length+mtime snapshot of InstallRoot is identical).
 2. A step writes its state key **last**, so an interrupted run resumes at the first unsatisfied step.
 3. Work happens in a staging folder next to the target; the swap renames `InstallRoot` to `InstallRoot.old`, then staging to `InstallRoot`, deleting `.old` after; if the second rename fails the first is undone. A failed upgrade leaves the previous install runnable.
-4. A running instance is stopped (`<host> stop`) **only if** app, node or adapter will change. If it is still running 20 s later the run fails with a clear message; `-Force`/`--force` ends the process.
+4. A running instance is stopped (`<host> stop`) **only if** app, node or adapter will change. The `stop` verb itself waits up to 45 s for the process to exit (many Persona adapters stop one after another); if it is still running after that the run fails with a clear message; `-Force`/`--force` ends the process.
 5. Two installers at once: the second exits 1 immediately (Windows named mutex `Local\Agency.Huddle.Installer`; macOS `mkdir <cache>/install.lock`, removed on exit).
 6. Uninstall with nothing installed prints `[skip]` and exits 0.
 7. `-Uninstall` refuses to delete a folder that lacks the state file, is a drive/filesystem root, or has fewer than 3 path segments.
@@ -194,14 +196,14 @@ Off unless `Team:Desktop:Enabled=true`, so tests and `run.ps1` are unaffected.
 | `InstanceLock` | `internal sealed class`, `IDisposable`. `internal static InstanceLock? TryAcquire(string dataDir)`: creates `dataDir`, opens `{dataDir}/instance.lock` with `FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None`; returns `null` on `IOException` (held by another process). The OS releases it when the process dies |
 | `InstanceInfo` / `InstanceFile` | `internal sealed record InstanceInfo(string Url, string StopToken, int Pid)`. `InstanceFile`: `Write(dataDir, info)` (write `instance.json.tmp`, `File.Move(..., overwrite: true)`), `TryRead(dataDir)` -> `InstanceInfo?` (`null` if missing, empty, malformed or any field missing), `Delete(dataDir)` (idempotent). JSON camelCase |
 | `IBrowserOpener` | `void Open(string url)`. `SystemBrowserOpener` implements it; `NoopBrowserOpener` does nothing. `SystemBrowserOpener.BuildStartInfo(Uri url, DesktopPlatform platform)`: Windows = `FileName=url, UseShellExecute=true`; macOS = `open <url>`; Linux = `xdg-open <url>`. Throws `ArgumentException` unless scheme is `http` and host is exactly `127.0.0.1` or `localhost` |
-| `DesktopHandOff` | `internal static Task<bool> OpenExistingAsync(string dataDir, IBrowserOpener opener, TimeSpan timeout, TimeSpan pollInterval, CancellationToken ct)`: polls `InstanceFile.TryRead` until it returns an info (then `opener.Open(info.Url)`, return `true`) or `timeout` passes (return `false`) |
+| `DesktopHandOff` | `internal static Task<HandOffResult> AcquireOrHandOffAsync(string dataDir, IBrowserOpener opener, TimeSpan timeout, TimeSpan pollInterval, CancellationToken ct)` with `internal sealed record HandOffResult(InstanceLock? Lock, bool Opened)`. Each poll first tries `InstanceLock.TryAcquire` (returns the lock: we are the owner, which also covers a relaunch while the old instance is shutting down), else `InstanceFile.TryRead` (then `opener.Open(info.Url)`, `Opened = true`), else waits until `timeout` (`Lock = null`, `Opened = false`). (The first version, `OpenExistingAsync`, was replaced after the final review.) |
 | `DesktopLifetimeService` | `IHostedService`. On `ApplicationStarted`: first address of `IServerAddressesFeature` (Kestrel rewrites port 0 to the bound port); if none, log a warning and do nothing; else `InstanceFile.Write(dataDir, new InstanceInfo(url, session.StopToken, Environment.ProcessId))`, then `opener.Open(url)` only if `DesktopOptions.OpenBrowser`. On `StopAsync`: `InstanceFile.Delete(dataDir)` |
 | Stop endpoint | `POST /_desktop/stop`, mapped only when enabled, `.DisableAntiforgery()`. 403 if `RemoteIpAddress` is non-null and not loopback; 401 unless header `X-Huddle-Token` equals `StopToken` (`CryptographicOperations.FixedTimeEquals` over UTF-8 bytes, length mismatch handled); else `IHostApplicationLifetime.StopApplication()` and 202. A null `RemoteIpAddress` is allowed (in-memory test server; Kestrel TCP always sets it) |
-| `DesktopStopClient` | `internal static Task<int> RunAsync(string dataDir, HttpMessageHandler? handler, TextWriter output, TimeSpan stopTimeout, CancellationToken ct)`. No `instance.json`: print `Agency Huddle is not running.`, return 0. Connection refused: delete the stale file, same message, return 0. 401/403: print the reason, return 1. 2xx: wait up to `stopTimeout` for `InstanceLock.TryAcquire` to succeed (the owner is gone), print `Stopped.`, return 0; on timeout print `Did not stop within N s.`, return 1 |
+| `DesktopStopClient` | `internal static Task<int> RunAsync(string dataDir, HttpMessageHandler? handler, TextWriter output, TimeSpan stopTimeout, CancellationToken ct)`. **Lock first**: if `InstanceLock.TryAcquire` succeeds nobody owns the instance, so delete any stale `instance.json`, print `Agency Huddle is not running.`, return 0 (no HTTP call, so a stale record whose port was reused cannot make `stop` fail). If the lock is held but there is no record yet (the app is starting), poll for the record up to min(`stopTimeout`, 15 s), else print `Agency Huddle is starting or not answering.` and return 1. Connection refused with the lock held: same message, return 1. 401/403: print the reason, return 1. 2xx: wait up to `stopTimeout` for `InstanceLock.TryAcquire` to succeed (the owner is gone), print `Stopped.`, return 0; on timeout print `Did not stop within N s.`, return 1 |
 
 Program wiring (task 14; `src/Huddle.App/Program.cs`, 102 lines, `CreateBuilder` L11, `AddTeamServices` L25, `Build` L35, `MapHealthChecks` L94, `Run` L99):
-1. Before L11: `if (args is ["stop"])` return `await DesktopStopClient.RunAsync(<full path of env Team__DataDir, default App_Data>, null, Console.Out, 20 s, ...)`. Read the data dir from the **environment** (the launcher always sets it); do not pass `stop` to `CreateBuilder`.
-2. After L11: bind `DesktopOptions`; `using InstanceLock? instanceLock = desktop.Enabled ? InstanceLock.TryAcquire(dataDir) : null;`. If enabled and `instanceLock is null`: `return await DesktopHandOff.OpenExistingAsync(...) ? 0 : 1` (opener = `SystemBrowserOpener` if `OpenBrowser` else `NoopBrowserOpener`; timeout 15 s, poll 200 ms). If acquired: `InstanceFile.Delete(dataDir)` **immediately** (a crashed predecessor's stale file must not be handed off).
+1. Before L11: `if (args is ["stop"])` return `await DesktopStopClient.RunAsync(<full path of env Team__DataDir, default App_Data>, null, Console.Out, 45 s, ...)`. Read the data dir from the **environment** (the launcher always sets it); do not pass `stop` to `CreateBuilder`.
+2. After L11: bind `DesktopOptions`; `HandOffResult handOff = await DesktopHandOff.AcquireOrHandOffAsync(...)` when enabled (opener = `SystemBrowserOpener` if `OpenBrowser` else `NoopBrowserOpener`; timeout 15 s, poll 200 ms) and `using InstanceLock? instanceLock = handOff.Lock;`. If enabled and `handOff.Lock is null`: `return handOff.Opened ? 0 : 1`. If acquired: `InstanceFile.Delete(dataDir)` **immediately** (a crashed predecessor's stale file must not be handed off).
 3. After L25: `builder.Services.AddDesktopHost(builder.Configuration);`. After L94: `app.MapDesktopEndpoints();`. After L99: `return 0;`.
 
 ### Spec §9. Release workflow (`.github/workflows/release.yaml`)
@@ -576,7 +578,7 @@ All tasks edit the **one file** `installer/install.ps1` and its test file `insta
 - **Goal:** Make task 21.t green.
 - **Read first:** Task 21.t; Spec §6; Spec §3.
 - **Risk:** `boundary` (Sonnet; Opus review).
-- **Deliverable:** `Invoke-Tar -Archive -Destination` (seam; `tar.exe -xf`), `Invoke-HuddleStop -Paths` (seam; runs `<launcher> stop` with a 30 s cap), `Stop-HuddleIfRunning -Paths -Force`, `Install-App -Paths -Archive -State` implementing Spec §6 rule 3 exactly (stage next to InstallRoot, carry over `node\` and `tools\acp\node_modules`, validate, swap, rollback). Return whether anything changed. Do not write state here; `Invoke-Main` writes it (task 27).
+- **Deliverable:** `Invoke-Tar -Archive -Destination` (seam; `tar.exe -xf`), `Invoke-HuddleStop -Paths` (seam; runs `<launcher> stop` with a 60 s cap, above the verb's own 45 s), `Stop-HuddleIfRunning -Paths -Force`, `Install-App -Paths -Archive -State` implementing Spec §6 rule 3 exactly (stage next to InstallRoot, carry over `node\` and `tools\acp\node_modules`, validate, swap, rollback). Return whether anything changed. Do not write state here; `Invoke-Main` writes it (task 27).
 - **Acceptance:** 21.t green.
 
 ### Task 22.t — Test: install Node
@@ -616,7 +618,7 @@ All tasks edit the **one file** `installer/install.ps1` and its test file `insta
 - **Goal:** Pin the launcher text exactly (Spec §4).
 - **Read first:** Spec §4.
 - **Risk:** `data` (Haiku).
-- **Deliverable:** `Get-LauncherContent -Paths` returns a string; assert it contains, each on its own line in this order: `@echo off`, `setlocal`, then `set "Team__Desktop__Enabled=true"`, `set "Team__Acp__Enabled=true"`, `set "Team__Acp__Command=<NodeExe>"`, `set "Team__DataDir=<DataRoot>\data"`, `set "ASPNETCORE_URLS=http://127.0.0.1:0"`, `set "ASPNETCORE_ENVIRONMENT=Production"`, `set "AllowedHosts=localhost;127.0.0.1"`, `set "PATH=<NodeDir>;%PATH%"`, and last `"<ExePath>" %*`; CRLF line endings; ASCII; paths with spaces are quoted correctly.
+- **Deliverable:** `Get-LauncherContent -Paths` returns a string; assert it contains, each on its own line in this order: `@echo off`, `setlocal`, then `set "Team__Desktop__Enabled=true"`, `set "Team__Acp__Enabled=true"`, `set "Team__Acp__Command=<NodeExe>"`, `set "Team__DataDir=<DataRoot>\data"`, `set "Team__PipeName=huddle-%USERNAME%"`, `set "ASPNETCORE_URLS=http://127.0.0.1:0"`, `set "ASPNETCORE_ENVIRONMENT=Production"`, `set "AllowedHosts=localhost;127.0.0.1"`, `set "PATH=<NodeDir>;%PATH%"`, and last `"<ExePath>" %*`; CRLF line endings; ASCII; paths with spaces are quoted correctly.
 - **Acceptance:** Red until 24.i.
 
 ### Task 24.i — `Get-LauncherContent`
@@ -758,7 +760,7 @@ All tasks edit the **one file** `installer/install.sh` and `installer/tests/inst
 - **Goal:** Make task 32.t green.
 - **Read first:** Task 32.t; Spec §6.
 - **Risk:** `boundary` (Sonnet; Opus review).
-- **Deliverable:** `run_tar` (`tar -xzf`), `run_codesign`, `run_xattr`, `run_huddle_stop` (runs `<InstallRoot>/bin/huddle stop`, 30 s cap), `stop_huddle_if_running`, `install_app` per Spec §6 rule 3, `ensure_signed DIR` (for each file whose `file -b` mentions `Mach-O`: if `codesign --verify` fails, `run_codesign --force --sign - FILE`), `chmod +x` on the host. Return whether anything changed.
+- **Deliverable:** `run_tar` (`tar -xzf`), `run_codesign`, `run_xattr`, `run_huddle_stop` (runs `<InstallRoot>/bin/huddle stop`, 60 s cap), `stop_huddle_if_running`, `install_app` per Spec §6 rule 3, `ensure_signed DIR` (for each file whose `file -b` mentions `Mach-O`: if `codesign --verify` fails, `run_codesign --force --sign - FILE`), `chmod +x` on the host. Return whether anything changed.
 - **Acceptance:** 32.t green.
 
 ### Task 33.t — Test: install Node
@@ -798,7 +800,7 @@ All tasks edit the **one file** `installer/install.sh` and `installer/tests/inst
 - **Goal:** Pin the generated text (Spec §4).
 - **Read first:** Spec §4.
 - **Risk:** `data` (Haiku).
-- **Deliverable:** `launcher_content` output, line by line: `#!/bin/sh`, `set -eu`, then `export Team__Desktop__Enabled=true`, `export Team__Acp__Enabled=true`, `export Team__Acp__Command='<NODE_BIN>'`, `export Team__DataDir='<DATA_ROOT>/data'`, `export ASPNETCORE_URLS='http://127.0.0.1:0'`, `export ASPNETCORE_ENVIRONMENT=Production`, `export AllowedHosts='localhost;127.0.0.1'`, `export PATH='<node bin dir>':"$PATH"`, and last `exec '<APP_EXE>' "$@"`; a path containing a space and one containing a single quote are quoted safely; `app_stub_content` (the `.app`'s executable) is `#!/bin/sh` then `exec '<INSTALL_ROOT>/bin/huddle' "$@" >>'<DATA_ROOT>/launcher.log' 2>&1`; `plist_content VERSION` is valid XML containing `CFBundleExecutable` = `AgencyHuddle`, `CFBundleIdentifier` = `com.agency.huddle`, `CFBundleName` = `Agency Huddle`, `CFBundlePackageType` = `APPL`, `CFBundleVersion` = the argument, `LSUIElement` = `<true/>`; LF only.
+- **Deliverable:** `launcher_content` output, line by line: `#!/bin/sh`, `set -eu`, then `export Team__Desktop__Enabled=true`, `export Team__Acp__Enabled=true`, `export Team__Acp__Command='<NODE_BIN>'`, `export Team__DataDir='<DATA_ROOT>/data'`, `export Team__PipeName="huddle-$(id -un)"`, `export ASPNETCORE_URLS='http://127.0.0.1:0'`, `export ASPNETCORE_ENVIRONMENT=Production`, `export AllowedHosts='localhost;127.0.0.1'`, `export PATH='<node bin dir>':"$PATH"`, and last `exec '<APP_EXE>' "$@"`; a path containing a space and one containing a single quote are quoted safely; `app_stub_content` (the `.app`'s executable) is `#!/bin/sh` then `exec '<INSTALL_ROOT>/bin/huddle' "$@" >>'<DATA_ROOT>/launcher.log' 2>&1`; `plist_content VERSION` is valid XML containing `CFBundleExecutable` = `AgencyHuddle`, `CFBundleIdentifier` = `com.agency.huddle`, `CFBundleName` = `Agency Huddle`, `CFBundlePackageType` = `APPL`, `CFBundleVersion` = the argument, `LSUIElement` = `<true/>`; LF only.
 - **Acceptance:** Red until 35.i.
 
 ### Task 35.i — `launcher_content`, `app_stub_content`, `plist_content`
