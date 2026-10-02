@@ -8,7 +8,7 @@ namespace Agency.Huddle.App.Components.Shared;
 /// is set, the same precedence <see cref="TeammateAvatar"/> renders by. Deliberately <c>internal</c>
 /// rather than <c>public</c>: it backs a local field on <see cref="TeammateCard"/>, never a Razor
 /// <c>[Parameter]</c> - a <c>[Parameter]</c> may not be of an <c>internal</c> type (<c>CS0053</c>,
-/// see <c>docs/agencyteam/rules.md</c>), which is exactly the constraint this type is exempt from.
+/// see <c>docs/engineering/rules.md</c>), which is exactly the constraint this type is exempt from.
 /// </summary>
 internal enum AvatarChoice
 {

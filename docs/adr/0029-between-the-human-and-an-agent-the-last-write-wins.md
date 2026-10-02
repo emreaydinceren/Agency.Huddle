@@ -13,7 +13,7 @@ Agents a file is being edited and does not check for a conflict before saving. T
 ## The problem
 
 Agents are not sandboxed. `Bash` and `Write` run against the real disk
-([rules.md](../agencyteam/rules.md), *The Work Dir is not a jail*), so an Agent can change a file
+([rules.md](../engineering/rules.md), *The Work Dir is not a jail*), so an Agent can change a file
 while the Human has it open. Any policy has to accept that Huddle can see those writes but cannot
 stop them.
 

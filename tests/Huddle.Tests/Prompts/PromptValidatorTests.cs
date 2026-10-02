@@ -4,7 +4,7 @@ using Agency.Huddle.App.Prompts;
 
 /// <summary>
 /// Tests for <see cref="PromptValidator"/>: that it surfaces the two silent failure modes
-/// <c>docs/agencyteam/rules.md</c> documents as binding — a missing <c>mcp__team__</c> tool name (rule
+/// <c>docs/engineering/rules.md</c> documents as binding — a missing <c>mcp__team__</c> tool name (rule
 /// 32) and a Room label that lost its id (rule 33) — plus the related placeholder mistakes, and that it
 /// never throws regardless of how malformed its input is.
 /// </summary>

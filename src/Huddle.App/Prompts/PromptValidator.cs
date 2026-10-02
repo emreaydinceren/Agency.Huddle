@@ -2,7 +2,7 @@ namespace Agency.Huddle.App.Prompts;
 
 /// <summary>
 /// Checks a single prompt's text, a full set of configured overrides, or a fully rendered and composed
-/// system prompt, for the two silent failure modes <c>docs/agencyteam/rules.md</c> documents as
+/// system prompt, for the two silent failure modes <c>docs/engineering/rules.md</c> documents as
 /// binding — a missing <c>mcp__team__</c> tool name (rule 32) and a Room label that lost its id (rule
 /// 33) — plus the more general placeholder mistakes that share the same shape.
 /// </summary>
@@ -129,7 +129,7 @@ internal static class PromptValidator
 
     /// <summary>
     /// Checks a fully rendered and composed system prompt for every tool name a running Agent needs to
-    /// find spelled out in full — the failure <c>docs/agencyteam/rules.md:32</c> documents: a tool name
+    /// find spelled out in full — the failure <c>docs/engineering/rules.md:32</c> documents: a tool name
     /// that is missing, or mangled, makes the model report that no such tool exists.
     /// </summary>
     /// <param name="renderedPrompt">

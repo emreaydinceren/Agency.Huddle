@@ -96,7 +96,7 @@ Two of those steps exist for reasons specific to this repo:
 
 Two tests are excluded by name in the test step. They are **quarantined, not fixed**, and
 the underlying race is recorded in
-[known-limits.md](../docs/agencyteam/known-limits.md) as pre-existing.
+[known-limits.md](../docs/engineering/known-limits.md) as pre-existing.
 
 > [!IMPORTANT]
 > **A fourth test shows the same race and is not quarantined.** On 2026-09-15, run 607 failed on
@@ -122,7 +122,7 @@ unrelated to the change under test, which is how a team learns to ignore CI.
 > that class spent the *whole* budget, whatever the budget was — raised to 30 s, the same runs
 > still failed, 30 s later. The condition never arrived, because on Linux `PersonaStore`'s
 > watcher can miss a Persona file written into a just-created sub-folder (see
-> [traps.md](../docs/agencyteam/traps.md)). Fixed in `PersonaStore.AffectsATeamsFile`. On current
+> [traps.md](../docs/engineering/traps.md)). Fixed in `PersonaStore.AffectsATeamsFile`. On current
 > `main`, the test ran 80 times under 1-CPU, 8-process load in the CI container with no failure.
 
 ### Reproducing a flake: load, not loops
@@ -242,7 +242,7 @@ covers prompts; `PromptGoldenTests` and `PromptDefaultsFileTests` both normalise
 *both* sides before comparing, so neither could see it either.
 
 `PromptDefinition.Default` now normalises to `\n` once at construction, which makes model-facing
-text independent of the checkout. `docs/agencyteam/traps.md` asserted the opposite mechanism
+text independent of the checkout. `docs/engineering/traps.md` asserted the opposite mechanism
 until 2026-09-15 and has been corrected; this section was right and that one was wrong, which is
 worth knowing if the two ever disagree again.
 
@@ -358,6 +358,6 @@ step boundaries and the one that died in a single pass.
 ## Related
 
 - [C# Principles](CSharpPrinciples.md) — the house style the build enforces
-- [Testing](../docs/agencyteam/testing.md) — how the suite is built, and the manual checklist
+- [Testing](../docs/engineering/testing.md) — how the suite is built, and the manual checklist
   covering what no test can prove
-- [AgencyTeam.md](../docs/AgencyTeam.md) — the hub for the chat surface
+- [Huddle.EngineeringGuide.md](../docs/Huddle.EngineeringGuide.md) — the hub for the chat surface

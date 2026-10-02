@@ -11,7 +11,7 @@ namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
 /// Tests for the Settings page's tab rail and its Prompts panel. Split two ways, per
-/// <c>docs/agencyteam/testing.md</c>: routing, HTTP status, the prompts/appearance file paths and
+/// <c>docs/engineering/testing.md</c>: routing, HTTP status, the prompts/appearance file paths and
 /// <c>FakeModelCatalog.ProbeCount</c> are facts about the server, so they stay on a plain HTTP GET
 /// against <see cref="TeamWebApplicationFactory"/>; everything that asserts on the tab rail, the Save
 /// button or the Reset-all button now renders <see cref="Settings"/> directly through

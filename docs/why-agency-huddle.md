@@ -17,6 +17,29 @@ framework claims them.
 We agree with all of that. Agency.Huddle is built on those five pillars. Where we part
 company is the diagram that usually comes next.
 
+## What makes a team worth having
+
+A team is not a gain just because it has more members. Agents on the same model,
+working from the same context, share blind spots and agree with each other as
+easily as one agent agrees with itself. The research on why multi-agent systems
+fail points the same way: poor role design, agents out of step with each other,
+and weak verification (Cemri et al., [arXiv 2503.13657](https://arxiv.org/abs/2503.13657)).
+More agents alone adds cost, not quality.
+
+The gain comes from three things together:
+
+1. **Different roles.** Each member has its own job, instructions and tools.
+2. **Separate context.** Each member holds only its own part, so its attention is
+   not diluted and it does not inherit the author's assumptions.
+3. **A real review or test step.** Something checks the result against ground
+   truth: a test, a source, or a person.
+
+Put those in a loop and you have **Generate → Challenge → Verify**. One agent
+produces the work, a second with its own context hunts for flaws, and a third step
+checks the result against something real. Without the last step it is just two
+agents agreeing. Everything below is how Agency.Huddle tries to supply all three,
+and where it does not yet.
+
 ## The diagram with a hole in it
 
 ```text
@@ -79,28 +102,38 @@ is not in, because the code has no branch for it.
 
 Oversight stops being a feature and becomes a consequence of the data model.
 Nobody has to remember to insert the checkpoint. The Scale Fallacy is still real
-— two agents can still tag each other until you stop them — but it happens in a
-room you can open.
+— two agents can still tag each other — but it happens in a room you can open, and
+a cap stops it (see [What we have not solved](#what-we-have-not-solved)).
+
+That human is also the **Verify** step. A person who is in the room at the moment
+a claim is made can ask for the source, which a gate at the bottom of a pipeline
+cannot do for a mistake made three stages earlier.
 
 ## Five pillars, five answers
 
-**Specialised agents.** A Persona is a Markdown file. Its filename is the
-teammate's name; its frontmatter says what it knows and when to consult it; its
-body becomes the system prompt. Drop `CFO.md` into the personas folder and a
-`FileSystemWatcher` brings `@CFO` online without a restart.
+**Specialised agents.** A **Teammate** is a Markdown file,
+`Teammates/<Name>/<Name>.md`. Its frontmatter says who it is and what it knows; its
+body becomes its private instructions. Drop a new file in and `@CFO` comes online
+without a restart.
 
 ```yaml
-role: 'Owns the numbers: budget, margin and what a plan actually costs'
-consult_when:
-  - 'A recommendation rests on figures nobody has sourced'
-do_not_consult_for:
-  - 'Positioning or copy — that is the CMO'
+name: 'CFO'
+title: 'Finance'
+alias: 'cfo'
+teams: ['Business']
+skills: ['team-building']
+consult_when: 'A recommendation rests on figures nobody has sourced'
 ```
 
-Those fields compose into a job description other agents can read, which is what
-lets one agent bring in the right colleague instead of guessing at a name. Notice
-what they describe: a domain, not a workflow stage. A Persona is a job. More on
-that below.
+The fields other Teammates may see compose into a job description, which is what
+lets one agent bring in the right colleague instead of guessing at a name. The body
+never reaches anyone else, so a character can hold goals the others do not see.
+A Teammate's **Model**, **Effort** and **Work Mode** (how much it may do before it
+must ask) are set per Teammate, and so is its **Adapter**, the AI process behind it,
+so one team can span vendors and different blind spots are a setting rather than a
+project. A **Skill** is know-how an agent reads on demand, and the built-in Chief of
+Staff proposes a whole team from it: nothing is created until you select Approve.
+Teammates group into **Teams** and work on **Projects**, which are folders.
 
 **Communication channels.** A named pipe, one JSON object per line. An agent
 exists in Agency.Huddle for exactly one reason: some process connected to the pipe and
@@ -109,33 +142,34 @@ echoes text back is a full member of any room, and so is a real Claude session �
 the chat surface cannot tell them apart, and that is the point. Any language, any
 process, one line of JSON.
 
-**Coordination rules.** This is the whole rule:
+**Coordination rules.** The reply rule is still one pure function:
 
 ```csharp
-internal static bool ShouldReply(bool mentioned, int memberCount)
-{
-    return memberCount <= 2 || mentioned;
-}
+return memberCount <= 2 || mentioned || following ? ReplyDecision.Reply : ReplyDecision.CatchUp;
 ```
 
 Two members is a private conversation, so the agent answers everything. Three or
-more is a group, so it answers only when `@`-mentioned. A room's behaviour comes
-from how many members it has. There is no "direct room" type in the schema,
-because a stored type would have to be kept in sync on every invite and would
-drift. The server labels each delivery with who was mentioned; it never decides
-who replies.
+more is a group, so it answers only when `@`-mentioned, or when it has chosen to
+follow the room. A room's behaviour comes from how many members it has. There is
+no "direct room" type in the schema, because a stored type would have to be kept in
+sync on every invite and would drift. Above that rule sits one override: a room
+that has spent its **Budget** of agent replies answers nothing until you speak or
+grant more. The server labels each delivery; it never decides who replies.
 
-**Tools.** Agents get five, offered over MCP, whose bodies run inside the app:
-`get_help`, `list_agents`, `create_room`, `invite_agent` and `post_message`. An
-agent never reaches into storage — it asks, and the app decides. The system
-prompt names exactly one of these, `get_help`, and that tool names the rest.
-Detail an agent may never need is paid for when it asks, not on every turn of
-every session.
+**Tools.** Agents get a set of tools offered over MCP, whose bodies run inside the
+app: to find colleagues, create rooms, invite and post, follow a room, read a Skill,
+watch a folder, and file and update **Tasks**. An agent never reaches into storage —
+it asks, and the app decides. `get_help` describes the rest, so detail an agent may
+never need is paid for when it asks, not on every turn of every session.
 
-**Memory.** Shared: one append-only JSON Lines file per room — the transcript
-everyone reads. Individual: each agent buffers the messages it was not mentioned
-in and carries them along the next time it is. That is the honest extent of it.
-No vector store, no memory beyond a session. It is a proof of concept.
+**Memory.** Shared: one append-only JSON Lines **Transcript** per room that
+everyone reads, plus a **Team Memory** folder every member of a Team sees. Individual:
+each Teammate has its own memory folder and its own **Room Session** per room, so the
+context of one conversation does not leak into another. Work that must outlast a
+chat lives in **Tasks**, a Markdown file with an owner, a status and a change log,
+and in the **Library**, where you and your Teammates keep notes side by side. A
+Teammate is told which watched files changed since its last turn. There is no vector
+store; the memory is files you can open.
 
 ## Stages are verbs, not people
 
@@ -155,7 +189,7 @@ So in Agency.Huddle the verb goes in the request:
 @CFO critique the margin assumptions above
 ```
 
-Two Personas, two verbs, no mechanism. Mention-gating routes it. The CFO
+Two Teammates, two verbs, no mechanism. Mention-gating routes it. The CFO
 critiques the numbers *because* it is the CFO.
 
 ## Topology without an engine
@@ -171,8 +205,14 @@ strategy starts a room with the CMO and the CFO, writes the brief as the first
 message, and brings the outcome back to you. You are in that room too; you are
 just not interrupted by it.
 
+Reports on multi-agent systems name three layouts: **centralized** (one coordinator
+routes everything, easy to follow but a bottleneck), **peer-to-peer** (agents talk
+directly, flexible but hard to track and prone to drift) and **hierarchical** (leads
+supervise sub-teams, scales but costs more hand-offs). Most tools ask you to choose
+one before you start.
+
 Nothing switches modes. There is no room kind. Topology is whatever falls out of
-which Personas exist, which tools each holds, and who is in the room. The design
+which Teammates exist, which tools each holds, and who is in the room. The design
 record — including why we rejected a blocking `delegate()` tool, and why relying
 on specialists to tag the coordinator back turned out to be a silent failure
 path — is in
@@ -180,36 +220,52 @@ path — is in
 
 ## What we have not solved
 
-The same explainers list the guardrails an autonomous network needs. Here is
-where Agency.Huddle stands on each, honestly:
+A team fixes none of its own failure modes by default. Four are worth saying plainly:
+
+- **Collaboration is not automatic value.** Teammates talking to each other is not
+  a review. Mention a challenger to attack a specific piece of work.
+- **Cascading errors.** If one Teammate makes a wrong assumption early and the next
+  trusts it, every later step builds on it and the work looks more finished, not
+  less. The fix is to verify at each hand-off, not only at the end.
+- **Cost.** Every hand-off is more model calls. A team costs more than one agent
+  doing the same job.
+- **Mental load moves, it does not vanish.** Setting up roles and reviewing a team's
+  output is work. The payoff comes on repeated or long-running jobs. Start with one
+  Teammate, and add a team when coordination, not capability, is what slows you down.
+
+And here is where Agency.Huddle stands on the guardrails an autonomous network needs:
 
 | Guardrail | Status |
 | --- | --- |
 | Human-in-the-loop | **Structural.** Every room, by schema. |
-| Least-privilege tool access | Not yet. Every agent holds every tool. [Roadmap item 9](agencyteam/roadmap.md). |
-| Action logging | Not yet. Three log calls in the whole agent path, all warnings. [Roadmap item 5](agencyteam/roadmap.md). |
-| Runaway-loop guard | Not yet. Two agents that tag each other spend tokens until you stop the app. [Roadmap item 2](agencyteam/roadmap.md). |
-| Sandboxing | No. A Persona's work directory is real disk. |
+| A verify step | **Partly.** The human is always in the room and Tasks name an owner, but there is no built-in test step. A team that has only a Generate and a Challenge Teammate has no Verify. |
+| Runaway-loop guard | **Yes.** A per-room Budget of agent replies (40 by default) that any human message resets, a per-Teammate token Budget, and an idle timeout on a silent Turn. **Stop** cancels a Turn. |
+| Seeing what an agent did | **Mostly.** A reply shows its recent tool calls, an edit opens to a preview, a Teammate card shows its reported spend, Task changes are logged, and file changes are reported to the next Turn. None of the tool-call detail is kept after the reply. |
+| Least-privilege tool access | **Partly.** A Work Mode limits what a Teammate may do before it asks, and writes outside its Work Dir are refused. Per-Teammate tool grants are not built ([roadmap item 9](engineering/roadmap.md)), and asking the human before a tool runs is proposed, not built (item 20). |
+| Sandboxing | No. A Teammate's work directory is real disk. |
 | Authentication | None, by design. Run it on your own machine. |
 
-And one constraint no explainer mentions: **one session per Persona spans every
-room it is in.** The CFO's context carries your main room and the Valentine's
-room together, separated only by a label the model may ignore. That is a nuisance
-in a mesh and a correctness problem in a pipeline, and it is the wall we expect to
-hit first.
+The wall we expected to hit first, one session per agent spanning every room, is
+gone: a Teammate now holds one Room Session per room
+([ADR-0024](adr/0024-an-agent-holds-one-session-per-room.md)). What remains is the
+Adapter. One that cannot resume a session has to be run in the older shared shape,
+and that is a setting, not a guarantee.
 
 ## Try it
 
-Requires the .NET 10 SDK. No Node, no API key, no account for this first run:
+Requires the .NET 10 SDK. For a first run that spends nothing, turn the agent
+process off, because the development configuration starts a real one per Teammate:
 
 ```powershell
-dotnet run --project src/Team.App
+$env:Team__Acp__Enabled = 'false'
+dotnet run --project src/Huddle.App --urls http://localhost:5100
 ```
 
-Your browser opens on `http://localhost:5100` with two rooms already there. Click
-**echo**, type `hi`, and it answers. Bringing real Claude agents online takes
-Node.js and a logged-in `claude` CLI, and spends money — the
-[README](../README.md) says exactly how much and where the switch is.
+Open `http://localhost:5100`. Two rooms, `echo` and `alpha`, are already there.
+Click **echo**, type `hi`, and it answers. Bringing real Claude agents online takes
+Node.js and a logged-in `claude` CLI, and **spends money**; `Team:Acp:Enabled` is
+the switch. [`docs/Huddle.UserGuide.md`](Huddle.UserGuide.md) walks through
+Teammates, Teams, Tasks and the Library, and
+[`docs/Huddle.EngineeringGuide.md`](Huddle.EngineeringGuide.md) holds the whole design.
 
-560 tests, zero build warnings, .NET 10 and Blazor Server. The whole design is in
-[`docs/AgencyTeam.md`](AgencyTeam.md).
+.NET 10 and Blazor Server, 5,075 tests, zero build warnings.

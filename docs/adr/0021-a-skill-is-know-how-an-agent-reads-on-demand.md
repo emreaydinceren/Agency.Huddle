@@ -96,7 +96,7 @@ default tool away from every Agent just by listing it. The grant happens at sess
 `tools/list` once, which is why tool descriptions are badged *Next session*. Reading a Skill
 mid-conversation therefore cannot add a tool; assigning it can.
 
-This is the first mechanism for [Roadmap](../agencyteam/roadmap.md) item 9, per-Persona tool
+This is the first mechanism for [Roadmap](../engineering/roadmap.md) item 9, per-Persona tool
 grants, but not the whole of it. Whether item 9 still needs a separate `_tools` field, to
 take a default tool *away* from a Persona, is left to item 9.
 
@@ -164,7 +164,7 @@ checked when proposing, with a refusal the model can act on (*"5 Teammates exist
 limit is 8; propose at most 3"*), and again at Approve, because the Human may have added
 Teammates in between. It never blocks the Teammate card, because it guards against Agents
 growing the library, not against the Human. Zero or less disables it, as for both Budgets.
-[Known limits](../agencyteam/known-limits.md)' concern about one `AppToolServer` per Persona
+[Known limits](../engineering/known-limits.md)' concern about one `AppToolServer` per Persona
 past about four stays there, to be measured.
 
 ## The Chief of Staff

@@ -5,7 +5,7 @@ date: 2026-09-13
 
 # A Turn is visible while it happens, can be stopped, and says when it fails
 
-[Roadmap](../agencyteam/roadmap.md) item 3 opened with the problem in one
+[Roadmap](../engineering/roadmap.md) item 3 opened with the problem in one
 sentence: *an Agent thinking for thirty seconds and an Agent that has crashed
 look identical in the browser — both show nothing.* Items 4 and 5 were the same
 sentence from two other angles, and the roadmap said all three lived in
@@ -17,7 +17,7 @@ of reaching a log and nowhere else.
 
 ## A Draft is not a Message
 
-[Language](../agencyteam/language.md) defines a Message as *one persisted unit of
+[Language](../engineering/language.md) defines a Message as *one persisted unit of
 text*. A half-arrived reply is never written to the Transcript, so it is not one,
 and calling it a Message would have made the glossary's own definition false.
 
@@ -39,7 +39,7 @@ without a clean disconnect never sends the terminator that would clear it.
 
 ## The wire gained two types, and that is why the version moved
 
-`ProtocolVersion.Current` is **3**. [Traps](../agencyteam/traps.md) is explicit
+`ProtocolVersion.Current` is **3**. [Traps](../engineering/traps.md) is explicit
 that bumping over an *addition* is its own mistake — a new property, or a new
 `ErrorCodes` value, is additive, and an older client ignores what it does not
 recognise. This was not that. `[JsonPolymorphic]` is closed, so an unregistered
@@ -83,7 +83,7 @@ run token, never by exception type.
 **The envelope's `RoomId` is a label, not a selector.** One ACP session spans
 every Room its Agent is in, so stopping an Agent stops it everywhere; the id
 records where the Human asked. That is the one-session-per-Persona
-[Known limit](../agencyteam/known-limits.md) showing through.
+[Known limit](../engineering/known-limits.md) showing through.
 
 **Two extension points are deliberate, so nobody re-invents them.** A future
 *"stop this conversation"* — every Agent in the Room — is the same `StopTurn`
@@ -127,7 +127,7 @@ Degraded badge there would mark an Agent working exactly as designed.
 Item 3's own text said a failure gets *"a posted Message"*. **That is reversed
 here**, for the reasons ADR-0006 gave when it reversed the same instinct for the
 Budget pause: a posted Message needs a sender and there is no honest one. A
-`system` sender costs a third `UserKind`, which [Traps](../agencyteam/traps.md)
+`system` sender costs a third `UserKind`, which [Traps](../engineering/traps.md)
 records as needing a fresh `App_Data`; the failing Agent posting about its own
 failure is circular; and the Human posting it resets the Budget it reports. A
 fourth reason applies only here — **an Agent that failed to start cannot post

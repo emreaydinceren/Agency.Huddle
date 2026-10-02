@@ -398,7 +398,7 @@ public sealed partial class ChatService
     /// </summary>
     /// <remarks>
     /// A Room the Human renamed through <see cref="RenameRoomAsync"/> is the fix for the duplicate-name
-    /// problem recorded in <c>docs/agencyteam/product-observations.md</c> §6 - a manual test run found
+    /// problem recorded in <c>docs/engineering/product-observations.md</c> §6 - a manual test run found
     /// 14 Rooms in the sidebar, five of them showing the indistinguishable auto-derived name
     /// "Nova, Jarvis". Re-deriving the name on every Invitation regardless would throw that chosen name
     /// away on the very next <c>mcp__team__invite_agent</c> call, so this method compares the Room's
@@ -418,7 +418,7 @@ public sealed partial class ChatService
         var user = await this.teamDirectory.FindUserByNameAsync(agentName, ct);
         if (user is null || user.Kind != UserKind.Agent)
         {
-            // agentName may be a Persona's Alias rather than its Name - docs/agencyteam/traps.md is
+            // agentName may be a Persona's Alias rather than its Name - docs/engineering/traps.md is
             // explicit that anything resolving a typed Name must resolve it against the Members (or
             // here, the Team) rather than reject it outright, and an Alias is just the Persona's
             // second, shorter spelling of the same identity. PersonaIndex guarantees Aliases are

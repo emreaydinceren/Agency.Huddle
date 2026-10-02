@@ -12,7 +12,7 @@ A Task's `id` lives in its frontmatter and never changes. See also
 [ADR-0030](0030-a-team-folder-is-its-library-and-holds-its-tasks.md). The full design is
 [Huddle.Tasks-Specifications.md](../Huddle.Tasks-Specifications.md) (§7, §8).
 
-This is the **opposite** of the rule for Personas, which [language.md](../agencyteam/language.md)
+This is the **opposite** of the rule for Personas, which [language.md](../engineering/language.md)
 states as *a Team is emphatically not a folder*. This ADR records why the two differ, so that
 nobody "unifies" them later.
 
@@ -27,7 +27,7 @@ existing design constrain it.
 - **Persona identity is deliberately not a path.** On 2026-09-12 the Teams feature moved a
   Persona's identity into its frontmatter and made Team membership a field. Moving a Persona file
   between sub-folders was made a no-op, because a path-derived key would turn tidying the folders
-  into a silent change of identity ([decisions.md](../agencyteam/decisions.md), and roadmap
+  into a silent change of identity ([decisions.md](../engineering/decisions.md), and roadmap
   item 10's divergence).
 
 The question is whether Tasks should copy that rule and carry `team:` and `project:` fields, or

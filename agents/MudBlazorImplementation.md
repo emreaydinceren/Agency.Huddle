@@ -41,7 +41,7 @@ To refresh this list, search `src/Huddle.App` for `<Mud`.
 
 ## Huddle rules that bite MudBlazor code
 
-[Rules](../docs/agencyteam/rules.md) is binding for `src/Huddle.App`. These rows are the ones a
+[Rules](../docs/engineering/rules.md) is binding for `src/Huddle.App`. These rows are the ones a
 MudBlazor example will lead you to break:
 
 - **No colour or font literals.** Stylesheets read `var(--mud-palette-*)` and
@@ -56,12 +56,12 @@ MudBlazor example will lead you to break:
   a human sees** (the avatar label is the case in the rules). It truncates by
   UTF-16 unit and can split a surrogate pair.
 
-[Traps](../docs/agencyteam/traps.md) and the house components record the rest. These are the ones
+[Traps](../docs/engineering/traps.md) and the house components record the rest. These are the ones
 a MudBlazor example won't warn you about:
 
 - **`MudAlert` has no `role`.** It emits no role and no aria. Add `role="alert"`
   for an interruption and `role="status"` for a consequence, yourself
-  ([traps.md](../docs/agencyteam/traps.md), the `MudAlert` entry).
+  ([traps.md](../docs/engineering/traps.md), the `MudAlert` entry).
 - **An open dialog's parameters are frozen.** MudBlazor ignores every
   `SetParametersAsync` after `IDialogService.ShowAsync` opens it. Pass an id or
   a snapshot, and let the dialog load and subscribe for itself. The reasoning is
@@ -73,7 +73,7 @@ a MudBlazor example won't warn you about:
 - **bUnit needs the real popover and dialog hosts.** `MudSelect` items appear
   only after a real click, and a `MudDialog` renders nothing on its own. Render
   through `MudBunitContext.RenderWithPopovers` and drive dialogs through the
-  real `IDialogService` ([testing.md](../docs/agencyteam/testing.md)).
+  real `IDialogService` ([testing.md](../docs/engineering/testing.md)).
 
 ## Checking an API against 9.10.0
 

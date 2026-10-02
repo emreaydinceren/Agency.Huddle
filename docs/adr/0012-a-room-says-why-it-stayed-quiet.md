@@ -22,14 +22,14 @@ spent, a **Continue** that re-delivers a Message naming nobody — and until now
 showed the Human nothing at all for any of them. From the user's seat, *working as designed*
 and *broken* were indistinguishable.
 
-[Product observations](../agencyteam/product-observations.md) records the cost directly: a
+[Product observations](../engineering/product-observations.md) records the cost directly: a
 tester concluded the app was wedged **twice** in one run, once restarting it three times on a
 wrong theory, **with the server log open**. A user without the log has no route through it.
 
 Two decisions already settle the *medium*. [ADR-0006](0006-a-room-has-a-budget-for-agent-replies.md)
 and [ADR-0008](0008-a-turn-is-visible-stoppable-and-says-when-it-fails.md) each reversed the
 same instinct — "and it posts a Message saying so" — because a Message needs a sender and there
-is no honest one, and [Roadmap](../agencyteam/roadmap.md) item 11 reaches the same conclusion
+is no honest one, and [Roadmap](../engineering/roadmap.md) item 11 reaches the same conclusion
 independently: *resist inventing a `system` sender*. This ADR does not re-open any of that. It
 answers the question those two left: at **what scope**, and in **what words**.
 
@@ -72,7 +72,7 @@ Two further costs, either of which would have been sufficient on its own:
   3 → 4 under a strict equality check, so every client updated in the same commit,
   `tools/echo-bot.ps1` included. That is the same bill ADR-0006 and ADR-0008 both refused for a
   `system` sender, for a UI nicety.
-- **Mentioned is a property of a delivery.** [Language](../agencyteam/language.md) says so
+- **Mentioned is a property of a delivery.** [Language](../engineering/language.md) says so
   outright. A per-message badge is therefore per-(Message × Agent) — N badges on one row in an
   N-Agent Room — and `ChatMessage` is `(Id, Timestamp, SenderId, SenderName, Text)` with nowhere
   to put one, over an append-only `FileChatStore` with no rewrite path.
@@ -86,7 +86,7 @@ whoever is listening, while a prediction is one `follow_room` call away from bei
 
 It is `role="status"`, not `role="alert"`, following [ADR-0011](0011-a-rename-moves-the-teammate-not-its-history.md)'s
 precedent: this is a consequence, not an interruption. `MudAlert` emits no role of its own
-(see [Traps](../agencyteam/traps.md)), so the attribute is written explicitly, as both existing
+(see [Traps](../engineering/traps.md)), so the attribute is written explicitly, as both existing
 strips already do.
 
 *"No teammate"*, not *"nobody"*: `@You` **is** a Mention, and so is a handle that resolved to
@@ -97,7 +97,7 @@ the Human. The claim has to be about Teammates or it is false in its own test ca
 `Expected` does not mean "someone will reply". `AgentGateway.DeliverAsync` also skips a
 disconnected Agent, and `Team:Acp:Enabled` is `false` by default, so in a stock configuration no
 Persona has ever started. Without a filter, `@Nova hello` would resolve to `Expected`, render no
-note, raise no health strip — the strip needs a *Reason*, per [Rules](../agencyteam/rules.md) —
+note, raise no health strip — the strip needs a *Reason*, per [Rules](../engineering/rules.md) —
 and produce precisely the silence this ADR exists to remove.
 
 So an unreachable Agent is **not a recipient**. A Room whose Teammates are all Offline resolves
@@ -117,7 +117,7 @@ a side door, and the point of naming it is that every other answer available at 
 untrue.
 
 That leaves one silence still unexplained, and it is recorded as such in
-[Known limits](../agencyteam/known-limits.md) rather than papered over. Explaining *that* one is
+[Known limits](../engineering/known-limits.md) rather than papered over. Explaining *that* one is
 a separate change; shipping a wrong instruction was not an acceptable way to avoid it.
 
 Reachability is derived through `PersonaStatusResolver`, never from `AgentGateway.IsOnline`

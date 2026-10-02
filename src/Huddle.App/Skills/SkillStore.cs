@@ -456,7 +456,7 @@ internal sealed class SkillStore : IDisposable
         lock (this.writeGate)
         {
             // Checked BEFORE logging or touching the timer - see the class remarks and
-            // docs/agencyteam/known-limits.md's PersonaStore.OnWatcherError entry: logging first and
+            // docs/engineering/known-limits.md's PersonaStore.OnWatcherError entry: logging first and
             // checking disposed second means a watcher event that fires during host teardown, after
             // this store (and possibly the logger it holds) has been disposed, crashes the test host
             // instead of harmlessly no-op'ing.

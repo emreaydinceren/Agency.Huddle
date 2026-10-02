@@ -2,8 +2,8 @@
 
 **Date:** 2026-09-22 · **Status:** Proposed · **Decision record:**
 [ADR-0023](adr/0023-an-agent-learns-of-file-changes-on-its-next-turn.md) · **Vocabulary:**
-[language.md](agencyteam/language.md) (**Watched Folder**, **File Changes**, **Memory**) · **Replaces:** the
-delivery plan in [roadmap item 11](agencyteam/roadmap.md#11-notifying-an-agent-when-a-file-it-depends-on-changes)
+[language.md](engineering/language.md) (**Watched Folder**, **File Changes**, **Memory**) · **Replaces:** the
+delivery plan in [roadmap item 11](engineering/roadmap.md#11-notifying-an-agent-when-a-file-it-depends-on-changes)
 
 This is the design for telling an Agent which files changed in the folders it depends on. On
 each Turn, before the Message that started it, the Agent's prompt lists every file added, changed
@@ -17,7 +17,7 @@ Room with Kelly, the prompt opens with `changed E:\…\work\Nova\memory\launch-d
 memory has new information and can read it. On its next Turn back with Alex, nothing is listed,
 because that is where the edit was made. This holds whether Nova is one session spanning every
 Room, as today, or one session per Room, should that
-[known limit](agencyteam/known-limits.md) ever be lifted.
+[known limit](engineering/known-limits.md) ever be lifted.
 
 It is written for the engineers or agents building it, with no memory of the conversation that
 produced it. Read §5 for the shape, §6 for the subsystems, and Appendix A for the ordered,
@@ -25,7 +25,7 @@ test-first task list. Every design decision is recorded in §11 with the alterna
 
 > [!IMPORTANT]
 > Two pages are binding before any code in this spec is written:
-> [rules.md](agencyteam/rules.md) before editing `src/Huddle.App`, and
+> [rules.md](engineering/rules.md) before editing `src/Huddle.App`, and
 > [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) for every C# file. Nothing here
 > overrides either.
 
@@ -455,7 +455,7 @@ must only ever cost an extra line, never a missed change.
 > `ToolCallStarted` or of a later `ToolCallUpdated` in the same Turn. If the input arrives
 > somewhere else, own edits go unattributed. Nothing is lost, but they are listed back in the
 > Room they were made in, as F7a is. Record the finding in
-> [Huddle.Adapters-LiveFindings.md](Huddle.Adapters-LiveFindings.md). `ToolCallUpdated` carries
+> the Adapters design (Huddle.Adapters-Specifications.md). `ToolCallUpdated` carries
 > `RawOutputJson` rather than input, so check which one holds the path.
 
 `BuildPrompt` stays static and pure. With a non-empty report, it writes the file-changes block,
@@ -589,7 +589,7 @@ File Changes tells an Agent that something changed. Memory is where an Agent put
 **chooses** to keep: a preference the Human stated, a decision that holds beyond one Room, a
 fact about ongoing work. Every copy of that Agent can see it: the same session in another Room
 today, and a separate session per Room if that
-[known limit](agencyteam/known-limits.md) is lifted. It also outlives a restart.
+[known limit](engineering/known-limits.md) is lifted. It also outlives a restart.
 
 **It is a folder of files the Agent writes with its own tools.** `{WorkDir}/memory/`, one Markdown
 file per fact:
@@ -719,7 +719,7 @@ rewritten whole every Turn, and never queried across Agents except by the rename
 | The commit fails on I/O | Same | A Turn must not fail on a bookkeeping write |
 | The state file is corrupt or deleted | The next Turn lists nothing, and saves a fresh baseline | One lost list, not a crash |
 
-These go into [known-limits.md](agencyteam/known-limits.md) when this ships.
+These go into [known-limits.md](engineering/known-limits.md) when this ships.
 
 ---
 
@@ -812,7 +812,7 @@ with `File.SetLastWriteTimeUtc` rather than sleeping.
 
 ### Manual tests
 
-Add these to [manual-tests/](agencyteam/manual-tests/):
+Add these to [manual-tests/](engineering/manual-tests/):
 
 | # | Steps | Expect |
 | --- | --- | --- |

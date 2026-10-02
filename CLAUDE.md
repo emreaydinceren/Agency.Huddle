@@ -12,11 +12,17 @@ folders and the solution followed, so the project `Huddle.App` declares
 
 ## Orientation
 
-`docs/AgencyTeam.md` is the source of truth for the chat surface. It is a hub:
-read it, then follow only the rows in its map that your task needs. Two of those
-pages are binding — `docs/agencyteam/rules.md` before editing `src/Huddle.App`,
-and `docs/agencyteam/traps.md` before touching `Huddle.Acp`, `Huddle.Contracts` or
-the wire protocol.
+Start at `docs/Index.md`. It routes you by task and by feature to the one page that
+owns the answer, so you read the row you need rather than every file or a guess from
+a title. `docs/Huddle.EngineeringGuide.md` is the source of truth for the chat
+surface: the idea, every `Team:` configuration key and the build. Two pages are
+binding — `docs/engineering/rules.md` before editing `src/Huddle.App`, and
+`docs/engineering/traps.md` before touching `Huddle.Acp`, `Huddle.Contracts` or the
+wire protocol.
+
+When you add, rename or delete a page under `docs/`, change `docs/Index.md` in the
+same commit. `agents/scripts/Check-DocIndex.ps1` (run by `Check-All.ps1`) fails
+otherwise.
 
 Do **not** orient from `README.md`. It belongs to the ACP effort, and its chat
 section is several milestones behind — it still reports the app as "not yet
@@ -32,7 +38,7 @@ subtree, and root files are shared — announce changes before making them.
 | --- | --- | --- |
 | Source | `src/Huddle.Acp`, `src/Huddle.Console` | `src/Huddle.App`, `src/Huddle.Contracts`, `src/Huddle.MockAdapter` |
 | Tests | `tests/Huddle.Acp.Tests` | `tests/Huddle.Tests` |
-| Docs | `docs/acp/**`, `README.md` | `docs/AgencyTeam.md`, `docs/agencyteam/**`, `docs/adr/**`, `docs/Huddle.Adapters-*.md` |
+| Docs | `docs/engineering/acp-*.md`, `README.md` | `docs/Huddle.EngineeringGuide.md`, `docs/engineering/**` (except `acp-*.md`), `docs/adr/**`, `docs/Huddle.Adapters-*.md` |
 
 `src/Huddle.MockAdapter` (assembly `mock-acp`) is the one place the two subtrees touch by
 design: it **links** `FakeAcpAgent.cs`, `PromptContext.cs` and `FakeRpcError.cs` out of

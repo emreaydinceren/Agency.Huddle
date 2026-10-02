@@ -31,7 +31,7 @@ internal enum RoomSessionState
 /// one <see cref="RoomSession"/> per Persona. <see cref="ProcessWorkItemAsync"/>,
 /// <see cref="WatchForAdapterSilenceAsync"/>, <see cref="RunEventReaderAsync"/> and
 /// <see cref="BuildPrompt"/> moved here from <see cref="PersonaRunner"/> with their comments and
-/// both traps intact (<c>docs/agencyteam/rules.md</c>, "A Turn ends four ways").
+/// both traps intact (<c>docs/engineering/rules.md</c>, "A Turn ends four ways").
 /// </summary>
 internal sealed class RoomSession : IAsyncDisposable
 {
@@ -1171,7 +1171,7 @@ internal sealed class RoomSession : IAsyncDisposable
     /// <paramref name="idleBound"/> does.
     /// </summary>
     /// <remarks>
-    /// TRAP 2 (docs/agencyteam/rules.md): the obvious implementation - cancel <paramref name="turn"/>'s
+    /// TRAP 2 (docs/engineering/rules.md): the obvious implementation - cancel <paramref name="turn"/>'s
     /// token, then call <see cref="IAgentSession.CancelAsync"/> - never reaches the far side.
     /// <c>DotAcpAgentSession.PromptAsync</c>'s <c>finally</c> nulls its <c>promptCts</c> the instant the
     /// prompt call throws locally, and <c>DotAcpAgentSession.CancelAsync</c> silently no-ops when

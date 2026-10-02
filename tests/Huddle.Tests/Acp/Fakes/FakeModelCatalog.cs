@@ -26,7 +26,7 @@ public sealed class FakeModelCatalog : IModelCatalog
     /// Every Adapter id <see cref="GetAsync"/> or <see cref="GetEffortLevelsAsync"/> was asked
     /// about, in call order — including <c>null</c> for the installation's default Adapter. This is
     /// the hook a test uses to prove which Adapter a probe actually ran against, and that changing
-    /// the Adapter in the card spawns a probe for the NEW one (docs/agencyteam/rules.md).
+    /// the Adapter in the card spawns a probe for the NEW one (docs/engineering/rules.md).
     /// </summary>
     public List<string?> AdaptersProbed { get; } = [];
 

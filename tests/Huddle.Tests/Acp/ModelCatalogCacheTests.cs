@@ -11,7 +11,7 @@ namespace Agency.Huddle.Tests.Acp;
 /// Pins Spec §6.5's re-keyed caches: <see cref="ModelCatalogProbe"/> caches models per Adapter and
 /// effort levels per (Adapter, Model), and a failed probe is never cached. Exercises the real
 /// <see cref="ModelCatalogProbe"/> against a <see cref="FakeAdapterProbeRunner"/> standing in for
-/// the real process spawn — docs/agencyteam/rules.md row 35 ("No test may reach the real
+/// the real process spawn — docs/engineering/rules.md row 35 ("No test may reach the real
 /// <see cref="ModelCatalogProbe"/>") forbids a test reaching the real probe, which is exactly what
 /// exercising this caching logic required before <see cref="IAdapterProbeRunner"/> was extracted as
 /// a seam.

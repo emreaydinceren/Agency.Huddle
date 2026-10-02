@@ -154,7 +154,7 @@ internal sealed class PersonaSupervisor : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         // Starting an agent process spends real money on the user's Claude subscription
-        // (agent-guide.md §3.1), so off is the default and code must never turn it on itself.
+        // (acp-agent-guide.md §3.1), so off is the default and code must never turn it on itself.
         if (!this.options.Acp.Enabled)
         {
             return;
@@ -294,7 +294,7 @@ internal sealed class PersonaSupervisor : BackgroundService
 
     /// <summary>
     /// Classifies a start failure into interface copy for <see cref="PersonaHealth.Report"/> —
-    /// read by the Human, so <c>docs/agencyteam/language.md</c> is binding for it. Order matters:
+    /// read by the Human, so <c>docs/engineering/language.md</c> is binding for it. Order matters:
     /// <see cref="AgentAuthenticationRequiredException"/> and <see cref="AgentProcessStartException"/>
     /// are both sealed subtypes of <see cref="AgentException"/>, so they are matched before the base
     /// type, and <see cref="OperationCanceledException"/> never reaches here at all - the caller's own
@@ -366,7 +366,7 @@ internal sealed class PersonaSupervisor : BackgroundService
 
     /// <summary>
     /// Restarts the runner for a Persona whose text changed, or whose Model changed. Because a
-    /// system prompt is fixed at <c>session/new</c> (agent-guide.md §3.5), this is the only way an
+    /// system prompt is fixed at <c>session/new</c> (acp-agent-guide.md §3.5), this is the only way an
     /// edit takes effect, and it unavoidably loses the session's conversation memory.
     /// </summary>
     private async Task RestartHostAsync(string name, CancellationToken cancellationToken)

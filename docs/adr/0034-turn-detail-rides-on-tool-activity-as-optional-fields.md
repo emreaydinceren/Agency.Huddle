@@ -46,7 +46,7 @@ A closed `[JsonPolymorphic]` throws on a `"type"` it has not registered, which i
 ADR-0008 had to bump the version: an old reader cannot skip a line it cannot name. A new *member*
 on a type the reader already knows is a different thing. `System.Text.Json` ignores it, and
 `MessagePosted_WithUnknownProperties_StillDeserialises` already proves that for these options.
-[Traps](../agencyteam/traps.md) draws the same line: a new property is additive, a new type is not.
+[Traps](../engineering/traps.md) draws the same line: a new property is additive, a new type is not.
 
 The direction helps too. `ToolActivity` travels from the runner to the server, and both run in
 the same process, so the only client that sends the new members is one that was built with them.
@@ -58,7 +58,7 @@ predates them ignores them.
 | Alternative | Why not |
 | --- | --- |
 | A new `EditPreview` Envelope | A new type throws in the closed polymorphic, so it forces version 4: `echo-bot.ps1` (which hardcodes 3), every pinned-JSON test, and every client in one commit. The data describes a tool call that already has a row, so a second Envelope would need joining back to it by `ToolCallId` |
-| A new Envelope with no bump, following `ReadTranscript` and `TranscriptTail` | That argument holds for a reply the server sends only when asked, so an old client never receives one. `ToolActivity` is pushed from the runner, and an old server would answer the unknown type with `BadMessage`. [The decision record](../agencyteam/decisions.md) (D-17) applies the same rule: a new Envelope needs version 4, where an additive `RoomInfo.IsEmpty` needed no bump |
+| A new Envelope with no bump, following `ReadTranscript` and `TranscriptTail` | That argument holds for a reply the server sends only when asked, so an old client never receives one. `ToolActivity` is pushed from the runner, and an old server would answer the unknown type with `BadMessage`. [The decision record](../engineering/decisions.md) (D-17) applies the same rule: a new Envelope needs version 4, where an additive `RoomInfo.IsEmpty` needed no bump |
 | The runner writing `Drafts` directly | It bypasses the pipe that every `PersonaRunner` test stands on through `FakePersonaServer`, and it makes the Room view depend on something the pipe does not carry |
 | Making the protocol tolerate unknown types | ADR-0008 already declined it: it weakens a strict-equality check that catches real mistakes loudly, and it is a decision of its own rather than a rider on this one |
 

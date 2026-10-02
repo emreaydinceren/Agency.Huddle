@@ -35,7 +35,7 @@ internal static class AvatarImage
     /// <remarks>
     /// SVG is deliberately never accepted, however it is spelled: it is a document format that can
     /// carry a <c>&lt;script&gt;</c> element, and this application has no authentication gate in front
-    /// of the files it serves - the same class of reasoning <c>docs/agencyteam/rules.md</c> gives for
+    /// of the files it serves - the same class of reasoning <c>docs/engineering/rules.md</c> gives for
     /// never turning on <c>UseAdvancedExtensions()</c> in the markdown pipeline. Decoding, dimension
     /// checks and resizing are out of scope for the same reason: any of them needs an image decoder,
     /// which means a new NuGet dependency and a decompression-bomb surface this method does not take on.

@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-22 · **Status:** Proposed · **Decision record:**
 [ADR-0024](adr/0024-an-agent-holds-one-session-per-room.md) · **Vocabulary:**
-[language.md](agencyteam/language.md) (**Room Session**; amended **Catch-up**, **Stop**, **Budget**,
+[language.md](engineering/language.md) (**Room Session**; amended **Catch-up**, **Stop**, **Budget**,
 **Turn**) · **Depends on:** [the File Changes spec](Huddle.FileChanges-Specifications.md), including
 its **Memory** (§6.15 there) · **Lifts:** the known limit "One session per Persona spans every Room"
 
@@ -30,8 +30,8 @@ Memory's avoid list.
 
 > [!IMPORTANT]
 > Three pages are binding before any code in this spec is written:
-> [rules.md](agencyteam/rules.md) before editing `src/Huddle.App`,
-> [traps.md](agencyteam/traps.md) before touching `Huddle.Contracts` or `Huddle.Acp`, and
+> [rules.md](engineering/rules.md) before editing `src/Huddle.App`,
+> [traps.md](engineering/traps.md) before touching `Huddle.Contracts` or `Huddle.Acp`, and
 > [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) for every C# file.
 
 > [!NOTE]
@@ -141,7 +141,7 @@ through an explicit store.
 2. **Only deliberate routes cross Rooms.** Memory and File Changes are visible and attributed. A
    shared context window is neither.
 3. **The pipe stays the only door.** `PersonaRunner` stays an ordinary pipe client with no Team
-   Directory access ([the one big idea](AgencyTeam.md#the-one-big-idea)). The Transcript reaches
+   Directory access ([the one big idea](Huddle.EngineeringGuide.md#the-one-big-idea)). The Transcript reaches
    it in an Envelope, and only when it asks.
 4. **A prompt is fixed when its Mention arrives.** No Catch-up ever includes a Message posted after
    the one that started the Turn.
@@ -202,7 +202,7 @@ PersonaRenameCascade ─► RoomSessionStore.Rename / Remove
 One per Room the Agent has work in. It is what the whole runner is today: a queue with one
 consumer, an `ActiveTurn`, an event reader over its own `IAgentSession.Events`, the idle watchdog
 and `lastUsed`. `ProcessWorkItemAsync`, `WatchForAdapterSilenceAsync`, `RunEventReaderAsync` and
-`BuildPrompt` move into it with their comments and both traps intact ([rules.md](agencyteam/rules.md),
+`BuildPrompt` move into it with their comments and both traps intact ([rules.md](engineering/rules.md),
 "A Turn ends four ways"). One Turn at a time per session stays load-bearing:
 `DotAcpAgentSession.PromptAsync` throws when a prompt is in flight (`DotAcpAgentSession.cs:95-106`).
 
@@ -363,7 +363,7 @@ public sealed record TranscriptTail(
     string RequestId, string RoomId, IReadOnlyList<ChatMessage> Messages, int Omitted) : ProtocolMessage;
 ```
 
-- **No `ProtocolVersion` bump** ([traps.md](agencyteam/traps.md): adding to the wire is not changing
+- **No `ProtocolVersion` bump** ([traps.md](engineering/traps.md): adding to the wire is not changing
   it). An unknown type discriminator fails deserialisation, so an old client would break on
   `TranscriptTail`, but it never receives one: the server sends it only in answer to
   `ReadTranscript`. `tools/echo-bot.ps1` and the demo agents are untouched, and
@@ -374,7 +374,7 @@ public sealed record TranscriptTail(
   slices; answers. A `BeforeMessageId` not in the Transcript reads to the end. The server labels;
   the client decides ([ADR-0003](adr/0003-mention-gated-replies-and-membership-defined-direct-rooms.md)).
 - **It ends before the triggering Message.** That keeps independent first answers (U10, and
-  [what the code must keep true](AgencyTeam.md#what-the-code-must-keep-true)): replies posted while
+  [what the code must keep true](Huddle.EngineeringGuide.md#what-the-code-must-keep-true)): replies posted while
   the Turn waited in the queue are never in its prompt.
 - **It replaces the buffer on that Turn only**, since the range contains everything the buffer
   holds. A Room's first Turn ever has no block, and its prompt is byte-identical to today's.
@@ -461,7 +461,7 @@ ships first.
 - `AgentDisconnectedException` still means the Adapter process is gone: Offline, as today.
 
 **The token Budget stays per Persona, as a sum.** It exists to catch "a loop that mints fresh
-Rooms, which the per-Room Budget cannot" ([configuration](AgencyTeam.md#configuration)); per Room,
+Rooms, which the per-Room Budget cannot" ([configuration](Huddle.EngineeringGuide.md#configuration)); per Room,
 it would reset with every fresh Room. So `tokensConsumed` stays one `Interlocked` counter on the
 runner, reset by any Human Message. **`lastUsed` moves into `RoomSession`**: `UsageUpdated.Used` is
 one session's context fill and falls when that session compacts (`PersonaRunner.cs:743-753`). A
@@ -567,7 +567,7 @@ Skill and the built-in Chief of Staff's Persona text need a paragraph saying the
 `ReadsFiles`, bound from `Team:Acp:Adapters:*:SessionPerRoom`; the synthesised legacy profile is
 `true`. With `false`, every Room maps to one Room Session and the shared-session Prompt is used.
 
-`agency-acp` reports `loadSession: false` ([live findings](Huddle.Adapters-LiveFindings.md):258),
+`agency-acp` reports `loadSession: false` (live findings:258),
 and nothing is known of its `resume` or of several sessions on one process. Until V-5, an
 installation running it sets `SessionPerRoom: false`. If it holds several sessions but cannot
 resume, it can run per Room, with every reopened session fresh plus Catch-up.
@@ -576,12 +576,12 @@ resume, it can run per Room, with every reopened session fresh plus Catch-up.
 
 | Event | Effect |
 | --- | --- |
-| **Rename** | `PersonaRenameCascade` calls `RoomSessionStore.Rename`, beside the avatar call and **above** the "no Agent row" early return ([rules.md](agencyteam/rules.md)). The Work Dir, each session's `cwd`, has moved; if Claude Code will not resume across that (V-3), resume answers "not found" and the Room opens fresh |
+| **Rename** | `PersonaRenameCascade` calls `RoomSessionStore.Rename`, beside the avatar call and **above** the "no Agent row" early return ([rules.md](engineering/rules.md)). The Work Dir, each session's `cwd`, has moved; if Claude Code will not resume across that (V-3), resume answers "not found" and the Room opens fresh |
 | **Removal** | `RoomSessionStore.Remove` |
 | **Persona edit; Model, Effort or Adapter change** | Restart as today, plus `ForgetAll`. Each entry also records Adapter, Model and Effort, so a stale one is never resumed |
 | **Restart button** | Closes every Room Session and `ForgetAll`. Each Room's next Turn is fresh, with Catch-up from the Transcript: Restart forgets the sessions, **not the Rooms** (D-14) |
 | **App restart** | Nothing forgotten; each Room resumes on its next Turn |
-| **Archive** | Nothing. Archiving must never reach the delivery path ([rules.md](agencyteam/rules.md)) |
+| **Archive** | Nothing. Archiving must never reach the delivery path ([rules.md](engineering/rules.md)) |
 | **Delete** | An open session closes when idle, since no Message reaches it again; its entry is pruned at the next Welcome; Claude Code's transcript for it stays behind (Appendix C) |
 
 ### 6.14 Options
@@ -720,7 +720,7 @@ a fake `TimeProvider`. Every automated test is free.
 
 ### Manual tests
 
-Paid tests spend real money and are marked as the [manual test script](agencyteam/manual-tests.md)
+Paid tests spend real money and are marked as the [manual test script](engineering/manual-tests.md)
 marks them. Keep the Model and the Effort the same between a *before* and an *after* run, and record
 both.
 
@@ -733,7 +733,7 @@ both.
 | RS-M5 | Yes | `SessionIdleMinutes` 1; talk; wait two minutes; ask a follow-up needing the earlier answer. Then restart the app and follow up again | `session/close` then `session/resume` in the `TraceWire` log, both times; both follow-ups right |
 | RS-M6 | Yes | Press Restart on Nova's card; follow up | A fresh session whose first prompt carries the Room's recent Messages |
 | RS-M7 | Yes | A Persona on `agency-acp` with `SessionPerRoom: false`, in two Rooms | One session, with the shared-session Prompt |
-| RS-M8 | Yes | Nova in four busy Rooms; `Get-Process` after each first Turn | One Adapter process and at most three CLI children. Record memory per child and the open and resume timings in [the live findings](Huddle.Adapters-LiveFindings.md) |
+| RS-M8 | Yes | Nova in four busy Rooms; `Get-Process` after each first Turn | One Adapter process and at most three CLI children. Record memory per child and the open and resume timings in the live findings |
 | RS-M9 | Yes | Set an output style in your own `~/.claude/settings.json`; ask Nova anything | No trace of it; and File Changes' FM-6 passes |
 | RS-M10 | Yes | The Chief of Staff runs two work Rooms it follows; in its Room with the Human, ask "where are we on both?" | It answers from its memory files and reports, says which Room each fact came from, and invents nothing it cannot see |
 
@@ -792,7 +792,7 @@ work. Build and run `dotnet test Huddle.slnx --` after each pair.
 | RS-T12 / RS-I12 | MockAdapter conformance against A-5 |
 | RS-T13 / RS-I13 | The coordinator paragraph in the `team-building` Skill and the Chief of Staff's Persona text |
 | RS-M | RS-M1 after P0-I3 and again after RS-I13; the rest after RS-I13 |
-| RS-D | Docs: `language.md`, `AgencyTeam.md`, `known-limits.md`, `roadmap.md`, `manual-tests/`; ADR-0024 to Accepted |
+| RS-D | Docs: `language.md`, `Huddle.EngineeringGuide.md`, `known-limits.md`, `roadmap.md`, `manual-tests/`; ADR-0024 to Accepted |
 
 ## Appendix B. Verification before relying on it
 

@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-22 · **Status:** Proposed · **Decision record:**
 [ADR-0022](adr/0022-an-agent-asks-the-human-with-a-question.md) · **Vocabulary:**
-[language.md](agencyteam/language.md) (**Question**)
+[language.md](engineering/language.md) (**Question**)
 
 This is the design for `ask_human`, an App Tool that lets an Agent put one to three
 multiple-choice Questions to the Human. They appear on a card in the Room as options to tap,
@@ -16,7 +16,7 @@ test-first task list. Every design decision is recorded in §11 with the alterna
 
 > [!IMPORTANT]
 > Two pages are binding before any code in this spec is written:
-> [rules.md](agencyteam/rules.md) before editing `src/Huddle.App`, and
+> [rules.md](engineering/rules.md) before editing `src/Huddle.App`, and
 > [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) for every C# file. Nothing here
 > overrides either.
 
@@ -514,7 +514,7 @@ manual tests.
 `systemPrompt.txt`, `systemPrompt.unprefixed.txt` and any `get_help` golden are regenerated in
 the task that registers the tool, and the diff is reviewed to be exactly one new tool.
 
-**Manual tests**, to add to [manual-tests.md](agencyteam/manual-tests.md):
+**Manual tests**, to add to [manual-tests.md](engineering/manual-tests.md):
 
 | Id | Steps | Pass |
 | --- | --- | --- |

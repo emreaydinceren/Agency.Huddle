@@ -22,7 +22,7 @@ public sealed class AdapterProfileOptions
     /// <summary>
     /// Explicit process arguments. No initialiser: <c>ConfigurationBinder</c> appends bound array
     /// elements to an already-populated list/array property instead of replacing it, silently
-    /// doubling the value (docs/agencyteam/rules.md, "Collection options need no initialiser").
+    /// doubling the value (docs/engineering/rules.md, "Collection options need no initialiser").
     /// Consumers default when this is null or empty.
     /// </summary>
     public IReadOnlyList<string>? Args { get; set; }
@@ -33,7 +33,7 @@ public sealed class AdapterProfileOptions
     /// <summary>
     /// Environment variables to set on the launched process, for example
     /// <c>Agent__DefaultModel</c>. No initialiser: <c>ConfigurationBinder</c> merges bound entries
-    /// into an already-populated dictionary property instead of replacing it (docs/agencyteam/rules.md,
+    /// into an already-populated dictionary property instead of replacing it (docs/engineering/rules.md,
     /// "Collection options need no initialiser"). <see langword="null"/> or empty means the Adapter
     /// needs no environment overrides.
     /// </summary>
@@ -51,7 +51,7 @@ public sealed class AdapterProfileOptions
 
     /// <summary>
     /// Whether this Adapter's agent process can read files at all — FC §6.11. A <c>bool</c>, not a
-    /// collection, so an initialiser is safe (docs/agencyteam/rules.md, "Collection options need no
+    /// collection, so an initialiser is safe (docs/engineering/rules.md, "Collection options need no
     /// initialiser" does not apply here).
     /// </summary>
     public bool ReadsFiles { get; set; } = true;
@@ -76,7 +76,7 @@ public sealed class AdapterProfileOptions
     /// <summary>
     /// Names of the Adapter commands a Human may run on a Teammate on this Adapter, for example
     /// <c>compact</c>. No initialiser: <c>ConfigurationBinder</c> appends bound array elements to an
-    /// already-populated collection (docs/agencyteam/rules.md, "Collection options need no
+    /// already-populated collection (docs/engineering/rules.md, "Collection options need no
     /// initialiser"). <see langword="null"/> or empty means none. Compared case-insensitively.
     /// </summary>
     public IReadOnlyList<string>? Commands { get; set; }

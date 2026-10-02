@@ -21,7 +21,7 @@ public sealed class PersonaSupervisorLifecycleTests
     public async Task Disabled_StartsNoHosts()
     {
         // Money-safety test: starting an Agent Host spends real money on the user's Claude
-        // subscription (agent-guide.md §3.1). With Team:Acp:Enabled left at its default (false,
+        // subscription (acp-agent-guide.md §3.1). With Team:Acp:Enabled left at its default (false,
         // which is what PipeHostFixture's base config sets), the supervisor must start nothing
         // even though a Persona exists on disk.
         var ct = TestContext.Current.CancellationToken;

@@ -19,7 +19,7 @@ namespace Agency.Huddle.App.Acp;
 /// and its <see cref="FileStateStore"/> file under the same subscription (FC §6.12), and subscribes
 /// to <see cref="PersonaStore.PersonaRemoved"/> to delete a removed Persona's Avatar entry, image
 /// file and <see cref="FileStateStore"/> file - see <see cref="OnPersonaRemoved"/>'s doc comment for
-/// why a removal cascades here even though <c>docs/agencyteam/rules.md</c> row 38 says a removal does
+/// why a removal cascades here even though <c>docs/engineering/rules.md</c> row 38 says a removal does
 /// not cascade to Agents, Rooms or Transcripts.
 /// </summary>
 /// <remarks>
@@ -230,7 +230,7 @@ internal sealed partial class PersonaRenameCascade(
     }
 
     /// <summary>
-    /// Deletes the removed Persona's Avatar entry and image file. <c>docs/agencyteam/rules.md</c> row
+    /// Deletes the removed Persona's Avatar entry and image file. <c>docs/engineering/rules.md</c> row
     /// 38 says a removal deliberately does NOT cascade to the Agent, its Rooms or its Transcripts -
     /// those are chat facts that outlive the Persona that created them - but that same row cascades
     /// the Model and the Effort, because both are part of the Persona itself: "leaving either row

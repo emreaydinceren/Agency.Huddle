@@ -22,7 +22,7 @@ using System.Collections.Frozen;
 /// Beyond that per-file check, three collisions are rejected across the whole set, all compared
 /// case-insensitively (matching SQLite's <c>COLLATE NOCASE</c> and <c>MentionParser</c>'s
 /// <see cref="StringComparer.OrdinalIgnoreCase"/> - and closing the live bug
-/// docs/agencyteam/known-limits.md records, "Jarvis" and "jarvis" sharing one SQLite row): two files
+/// docs/engineering/known-limits.md records, "Jarvis" and "jarvis" sharing one SQLite row): two files
 /// sharing a Name, two files sharing an Alias, and one file's Alias equalling a DIFFERENT file's
 /// Name. Every file on either side of a collision is rejected - there is no "first one wins" rule,
 /// because picking a winner by enumeration order is how an edit to the loser silently does nothing.

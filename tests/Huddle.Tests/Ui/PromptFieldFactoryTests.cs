@@ -157,7 +157,7 @@ public sealed class PromptFieldFactoryTests
     /// <summary>
     /// A multi-line prompt's default carries whatever line endings <c>PromptCatalog.cs</c> had at compile
     /// time (raw string literals preserve them, they do not normalise — see
-    /// <c>docs/agencyteam/traps.md</c>), while a browser <c>&lt;textarea&gt;</c> always hands back
+    /// <c>docs/engineering/traps.md</c>), while a browser <c>&lt;textarea&gt;</c> always hands back
     /// <c>\n</c>. A pending edit that is the default with every line ending collapsed to <c>\n</c>
     /// must still read as unmodified, not as a change the badge should flag.
     /// </summary>

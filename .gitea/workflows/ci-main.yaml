@@ -127,7 +127,7 @@ jobs:
       # Testing Platform CLI exits 5 with "Zero tests ran", which reads as a no-op rather
       # than a failure. There is deliberately no retry loop: this suite is offline and
       # deterministic, so a retry would hide a real flake instead of surfacing it.
-      # Two tests are quarantined, not fixed. docs/agencyteam/known-limits.md records the
+      # Two tests are quarantined, not fixed. docs/engineering/known-limits.md records the
       # pre-existing event-ordering race over the fake transport in DotAcpAgentSessionTests
       # (~1 run in 5, passes on rerun). Excluding them by name keeps the rest strict and
       # single-attempt, rather than wrapping the whole suite in retries that would also mask a

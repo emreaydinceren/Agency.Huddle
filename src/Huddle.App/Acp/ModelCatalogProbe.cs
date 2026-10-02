@@ -12,7 +12,7 @@ namespace Agency.Huddle.App.Acp;
 /// prompt turn, no tokens.
 /// </summary>
 /// <remarks>
-/// docs/acp/session-config-options.md says not to cache a model list across spawns. That rule protects
+/// docs/engineering/acp-session-config.md says not to cache a model list across spawns. That rule protects
 /// *selection*: which model id a real session actually starts against. Selection is re-resolved
 /// live, inside Huddle.Acp, on every session start — this class has no say in it. What is cached here
 /// is purely presentational, for populating a &lt;select&gt; in the Teammate card, and a slightly
@@ -222,7 +222,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     /// Filtered HERE, in the app layer, and never in <c>Huddle.Acp</c>: <see
     /// cref="IAgentSession.EffortLevels"/> must stay a faithful report of what the agent actually
     /// advertised, because a protocol reader that silently drops an advertised option is exactly the
-    /// class of failure <c>docs/agencyteam/traps.md</c> exists for. The reason the filter belongs
+    /// class of failure <c>docs/engineering/traps.md</c> exists for. The reason the filter belongs
     /// somewhere is that the Teammate card's blank "Use the agent's default" option already IS this
     /// choice, and already stores <c>null</c> for it — offering the sentinel too would be two
     /// options with one meaning, and would let the literal string <c>"default"</c> reach
@@ -231,7 +231,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     /// </summary>
     /// <remarks>
     /// Pure and <c>internal</c> by design: no I/O, no state, so it is directly unit-testable without
-    /// tripping <c>docs/agencyteam/rules.md</c> row 35 ("No test may reach the real
+    /// tripping <c>docs/engineering/rules.md</c> row 35 ("No test may reach the real
     /// <see cref="ModelCatalogProbe"/>"). <c>src/Huddle.App/Huddle.App.csproj</c> already grants
     /// <c>InternalsVisibleTo("Huddle.Tests")</c>, which is what makes that visible to the test project.
     /// Matches by <see cref="AgentEffortOption.Id"/>, not by position: the sentinel is documented as

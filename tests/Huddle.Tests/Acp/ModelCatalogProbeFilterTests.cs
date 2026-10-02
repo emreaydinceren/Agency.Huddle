@@ -7,7 +7,7 @@ namespace Agency.Huddle.Tests.Acp;
 /// Tests <see cref="ModelCatalogProbe.WithoutAdapterDefault"/> in isolation. This is deliberately the
 /// only kind of test <see cref="ModelCatalogProbe"/> gets in this suite: the method is pure — no I/O,
 /// no adapter process — so it is reachable directly through <c>InternalsVisibleTo</c> without
-/// tripping <c>docs/agencyteam/rules.md</c> row 35 ("No test may reach the real
+/// tripping <c>docs/engineering/rules.md</c> row 35 ("No test may reach the real
 /// <see cref="ModelCatalogProbe"/>"), which spawns a real <c>node</c> process.
 /// </summary>
 public sealed class ModelCatalogProbeFilterTests

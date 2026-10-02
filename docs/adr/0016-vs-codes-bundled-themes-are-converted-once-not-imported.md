@@ -10,7 +10,7 @@ date: 2026-09-16
 be wrong, so nothing proved the extension point worked. This fills it with seventeen of the
 colour themes Visual Studio Code bundles, converted **once, at authoring time**, into C#.
 
-This is **not** [Roadmap](../agencyteam/roadmap.md) item 7. No importer ships: nothing reads
+This is **not** [Roadmap](../engineering/roadmap.md) item 7. No importer ships: nothing reads
 theme JSON at run time, there is no `{DataDir}/themes/` directory and no second file
 provider. Item 7 — importing an *arbitrary* theme a Human supplies — stays open, and
 inherits the mapping below rather than having to invent one.
@@ -175,7 +175,7 @@ Success = "#89d185", // charts.green (registry default)
 and every file opens with a header recording its source path, VS Code 1.138.0, the
 extension's `"license": "MIT"` declaration, the `contributes.themes` id and `uiTheme`, and
 the extraction date. This continues ADR-0009's habit — *"the name and the mapping cannot
-separate"* — and is enforced by [Rules](../agencyteam/rules.md). A value without one is
+separate"* — and is enforced by [Rules](../engineering/rules.md). A value without one is
 unreviewable: 340 hex literals all compile.
 
 The nine community ports state only what is verifiably on disk. Their extensions declare

@@ -1,7 +1,7 @@
 # Huddle.Adapters — Design Specification (HLD)
 
 **Status:** delivered 2026-09-16 (PR #59) · **Date:** 2026-09-16 · **Supersedes:** the plan recorded in
-[roadmap item 12](agencyteam/roadmap.md#12-running-a-persona-on-a-local-model-via-agencynet--delivered-2026-09-16)
+[roadmap item 12](engineering/roadmap.md#12-running-a-persona-on-a-local-model-via-agencynet--delivered-2026-09-16)
 
 Delivers roadmap item 12 — *running a Persona on a local Model* — by a route item 12 did not
 foresee. Agency.NET is shipping an **ACP agent** (`Agency.Acp`, specified in
@@ -86,7 +86,7 @@ One step in eight. So the design is **one factory that resolves a profile**, not
 > *"zero diff in `PersonaRunner.cs`"*. That is now false: the per-Turn idle bound added ~208 lines
 > to it (`Acp:TurnIdleTimeoutSeconds`, the `ActiveTurn` latches, the watchdog). The bound exists
 > because an Adapter on an unreachable endpoint returns **nothing at all**, which reads to a Human
-> as hung rather than Degraded — see [Live findings](Huddle.Adapters-LiveFindings.md) D-3 and D-5.
+> as hung rather than Degraded — see Live findings D-3 and D-5.
 >
 > **The principle survives intact**, which is why the row was reworded rather than struck. P3 says
 > `PersonaRunner` never learns which Adapter answered, and it still does not: the bound measures
@@ -420,7 +420,7 @@ placeholder). Out of scope here because `Agency.Acp` takes its configuration fro
 > **Moved to V1, 2026-09-17.** The premise above was wrong: `Agency.Acp` ships **no**
 > `appsettings.json` at all — its `.csproj` declares no content-copy items — so `session/new`
 > hard-fails on a vanilla build with *"Agent:DefaultModel is not configured"*
-> ([Live findings](Huddle.Adapters-LiveFindings.md), D-2). It does reference
+> (Live findings, D-2). It does reference
 > `Microsoft.Extensions.Configuration.EnvironmentVariables`, so environment variables are a
 > first-class configuration source there rather than a workaround. `AdapterProfile` therefore
 > carries `EnvironmentOverrides`, projected by `AdapterCatalog` and passed at all three
@@ -936,7 +936,7 @@ from the parsed identity.
 rather than a packaged executable, so the DLL is `Args[0]`. `AgentProcessOptionsFactory` passes
 `Args` through verbatim and appends nothing, so anything else the profile needs follows it in the
 same list. `"AdapterPath": "…/Agency.Acp.dll"` with no `Args` is equivalent. A local build is not a
-substitute: see the traps in [the handoff](Huddle.Adapters-Handoff.md).
+substitute: see the traps in the handoff.
 
 **Legacy keys survive.** `Command`, `AdapterPath` and `Args` remain on `AcpOptions` and are read
 only when `Adapters` is absent. Removing them would break every existing `appsettings` and gains
@@ -1440,7 +1440,7 @@ portability into the test, not into a comment**: a portable assertion that quiet
 > The shallow one: every Phase 6 test but T-30 is wired to `MockAdapterFixture`, which substitutes
 > `IAgentProcessLauncher` with an in-proc stream pair. No configuration turns that into a launched
 > process. That is fixable by parameterising the fixture, and is what
-> [Live findings](Huddle.Adapters-LiveFindings.md) D-4 records.
+> Live findings D-4 records.
 >
 > The deep one: **five of the six conformance test files assert through `FakeAcpAgent.Received`.**
 > Parameterising the launcher would let them *run* against `agency-acp` and leave them with nothing
@@ -1471,7 +1471,7 @@ the re-point T-31 promised, and is corrected in §15.9.
 
 ## 16. Vocabulary changes
 
-`docs/agencyteam/language.md` is binding. Item 12 predicted two definitions would stop being
+`docs/engineering/language.md` is binding. Item 12 predicted two definitions would stop being
 true. Checked against the design: **one widens, one narrows, and one survives** — item 12 was
 wrong about which.
 

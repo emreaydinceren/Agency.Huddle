@@ -51,7 +51,7 @@ internal sealed class CreateRoomTool(ChatService chat, ITeamDirectory teamDirect
         // reading agent learns "@jar" is a working handle for "Jarvis" - rejecting that same handle
         // here would make the tool contradict what it just told the model. Each entry in 'agents' is
         // a complete JSON string the model filled in, never carved out of free text by a pattern, so
-        // resolving it is a plain lookup, not the truncation-prone parsing docs/agencyteam/traps.md
+        // resolving it is a plain lookup, not the truncation-prone parsing docs/engineering/traps.md
         // warns about.
         var agentIds = new List<string> { callerAgentId };
         var unknown = new List<string>();

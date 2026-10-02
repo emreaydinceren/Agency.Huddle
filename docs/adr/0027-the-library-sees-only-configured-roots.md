@@ -19,7 +19,7 @@ leaving the chat. The files involved are spread across Huddle's own `DataDir` (W
 folder outside it, such as a repo's `docs/` kept as an Obsidian vault.
 
 Huddle serves its pages same-origin with no authentication, and the Open action already runs a
-process on the server, ungated ([rules.md](../agencyteam/rules.md), *The Open action launches a
+process on the server, ungated ([rules.md](../engineering/rules.md), *The Open action launches a
 process…*). A file browser that can reach the whole disk would turn every future bug in it into a
 read or write anywhere on the machine.
 

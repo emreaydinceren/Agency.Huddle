@@ -3,7 +3,7 @@ namespace Agency.Huddle.App.Acp;
 public sealed class AcpOptions
 {
     // Off by default: starting an agent process spends real money on the user's Claude
-    // subscription (docs/acp/agent-guide.md §3.1), so code must never turn this on and test
+    // subscription (docs/engineering/acp-agent-guide.md §3.1), so code must never turn this on and test
     // fixtures state it explicitly (Team:Acp:Enabled=false) rather than relying on this default.
     public bool Enabled { get; set; }
 
@@ -45,7 +45,7 @@ public sealed class AcpOptions
     // agent-side Bash and Write run against the real disk.
     public string WorkDir { get; set; } = "work";
 
-    // Warning: wire traces dump the tool server's bearer token (docs/acp/agent-guide.md §7.5).
+    // Warning: wire traces dump the tool server's bearer token (docs/engineering/acp-agent-guide.md §7.5).
     // Never enable this outside a throwaway, trusted debugging session.
     public bool TraceWire { get; set; }
 
@@ -53,7 +53,7 @@ public sealed class AcpOptions
     // recent unmentioned Messages that ride along once the Agent is finally Mentioned in that Room.
     public int CatchUpMessages { get; set; } = 20;
 
-    // The third layer of the cap (docs/agencyteam/roadmap.md item 2): a per-Persona token Budget,
+    // The third layer of the cap (docs/engineering/roadmap.md item 2): a per-Persona token Budget,
     // accumulated in PersonaRunner from UsageUpdated.
     //
     // UsageUpdated.Used is how full the context window is, not a running bill - Huddle.Console's

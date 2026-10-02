@@ -9,7 +9,7 @@ disk** every time you change something.
 
 Applies to `main` as of 2026-09-29, which includes Room Sessions, Tasks, Skills,
 the Library and Team Pages. This guide does not cover installing adapters or
-configuring models. See [the chat-surface hub](AgencyTeam.md) for that.
+configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for that.
 
 ## Contents at a glance
 
@@ -150,7 +150,7 @@ You are Nova. You keep the team's Tasks moving and summarise progress.
 | `adapter` | No | Which AI adapter runs it. |
 | `watches` | No | Extra folders it is told about when files change. |
 
-**Model** and **Effort** are not in the file. They are stored in `team.db`, so
+**Model**, **Effort** and **Work mode** are not in the file. They are stored in `team.db`, so
 you can change them without touching the Markdown. The **avatar** is stored in
 `avatars.json`.
 
@@ -207,7 +207,7 @@ Each Teammate has its own card with **Message**, **Edit**, **Open**,
 
 1. Select **New teammate**.
 2. Fill in **Name**, **Title** and **Alias**. Optionally add **Teams** as a
-   comma-separated list, choose **Skills**, **Model**, **Effort** and an avatar.
+   comma-separated list, choose **Skills**, **Model**, **Effort**, **Work mode** and an avatar.
 3. Write the Teammate's instructions in the text area.
 4. Select **Add teammate**.
 
@@ -215,7 +215,7 @@ Each Teammate has its own card with **Message**, **Edit**, **Open**,
 
 - Huddle composes the frontmatter and writes
   `Teammates/<Name>/<Name>.md`.
-- Model and Effort are written to `team.db`.
+- Model, Effort and Work mode are written to `team.db`.
 - The Teammate starts as an Agent and appears in chat. Its `work/` and
   `work/memory/` folders are created.
 - Each Team label you entered that has no folder yet gets
@@ -241,13 +241,27 @@ their transcripts stay. On its next turn in each Room it catches up by reading
 up to the last 20 messages of that Room. Its personal memory files in
 `work/memory/` are kept.
 
-A restart also happens when you change Model, Effort, Adapter, Skills or Teams.
+A restart also happens when you change Model, Effort, Work mode, Adapter, Skills or Teams.
 Changing the avatar does not restart anything.
 
 > [!NOTE]
 > The Edit card has no **Teams** field. To change a Teammate's Teams after
 > creating it, use the Team page's **Members** tab, or edit the `teams:` line in
 > the text.
+
+### Work mode
+
+**Work mode** is how much a Teammate may do before it must ask you, for example
+asking before every edit, or editing files freely. It sits beside Model and
+Effort on the Edit card. The choices come from the Teammate's adapter, so the
+list differs between adapters, and the select is hidden when the adapter offers
+none. Leave it on **Use the agent's default** to take the adapter's own default.
+
+Changing the adapter resets Work mode, because a mode chosen for one adapter
+may not exist on another. Pick one again if you want a specific mode.
+
+Three modes are never offered: `bypassPermissions`, `auto` and `plan`. The
+operator can change that list with `Team:Acp:HiddenModes`.
 
 ### Renaming a Teammate
 
@@ -272,7 +286,7 @@ was said at the time.
 Select **Remove** and confirm.
 
 **In the background:** only `<Name>.md` is deleted, along with its Model, Effort,
-avatar and resume entries. The Teammate goes offline. Its Rooms, their
+Work mode, avatar and resume entries. The Teammate goes offline. Its Rooms, their
 transcripts and its `work/` folder stay on disk. Tasks still assigned to it keep
 the name and no longer wake anyone.
 
@@ -351,7 +365,10 @@ Select a Team or Project in the sidebar.
 | --- | --- | --- |
 | **Members** | Members, with status, title and alias; search; Add and Remove. Opening a row opens the Teammate card. | Not shown. Projects are worked by the Team. |
 | **Files** | The Library, scoped to `Teams/<Team>/`, with **New note** and a file-name search. | Scoped to `Teams/<Team>/<Project>/`. |
-| **Tasks** | A board of the Team's Tasks, one swimlane per Project. **New task** fills in the Team. | A single-lane board. **New task** fills in the Team and Project. |
+| **Tasks** | The Team's Tasks as a List or a Board (one swimlane per Project), with the same toolbar as the Tasks page. **New task** fills in the Team. | The same, for the Project. **New task** fills in the Team and Project. |
+
+Changes you make with the Tasks tab toolbar (filter, group, sort, search) last for
+the current visit only, and always stay inside the Team or Project.
 
 The Files tab is hidden when the Library is turned off (`Team:Library:Enabled`).
 The Tasks tab is hidden when Tasks are turned off (`Team:Tasks:Enabled`).
@@ -398,6 +415,20 @@ Room Sessions are opened on demand and closed after 30 minutes idle. At most 3
 are open per Teammate at once. A closed session resumes where it left off if the
 adapter supports it. Otherwise it starts fresh and catches up from the last 20
 messages of the transcript.
+
+### Watching a Teammate work
+
+While a Teammate is answering, its reply shows its last six tool calls as rows.
+Each row has a status (**Waiting**, **Running**, **Failed** or done), and shows
+the file name and line when the call touches a file. When the call is an edit,
+select the arrow on its row to see an **Edit preview** of the change in place.
+
+A Teammate's card also shows **Spent since start**, one line per currency, when
+its adapter reports a cost. It is a figure for this run, not a ledger.
+
+> [!NOTE]
+> Tool-call rows are not saved. They disappear when the reply is finished or
+> the app restarts, and are never written to the transcript.
 
 ### Linking to Tasks and files
 
@@ -779,7 +810,7 @@ from the built-in version. **Settings › Skills** marks the Skill as
 | You… | Huddle writes | Teammate effect |
 | --- | --- | --- |
 | Add a Teammate | `Teammates/<Name>/<Name>.md`, `team.db`, `Teams/<label>/` if missing | Comes online |
-| Edit a Teammate, or change Model, Effort, Skills or Teams | Rewrites `<Name>.md` (Model and Effort in `team.db`) | Restarts; conversation memory cleared |
+| Edit a Teammate, or change Model, Effort, Work mode, Skills or Teams | Rewrites `<Name>.md` (Model, Effort and Work mode in `team.db`) | Restarts; conversation memory cleared |
 | Rename a Teammate | Moves `Teammates/<Old>/`; renames entries in `room-sessions/`, `file-state/`, `avatars.json`, `team.db`; rewrites Task creators and assignees and View filters | Restarts |
 | Remove a Teammate | Deletes `<Name>.md` only | Goes offline; Rooms, transcripts and `work/` stay |
 | Restart a Teammate | Deletes `room-sessions/<Name>.json` | Every Room starts fresh, with catch-up |

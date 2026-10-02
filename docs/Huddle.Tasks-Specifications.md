@@ -3,7 +3,7 @@
 **Date:** 2026-09-24 · **Status:** Proposed · **Decision records:**
 [ADR-0025](adr/0025-in-tasks-a-team-is-a-folder-by-convention.md) (*In Tasks, a Team is a folder
 by convention*) and [ADR-0026](adr/0026-a-change-to-a-task-wakes-its-assignee.md) (*A change to
-a Task wakes its assignee*) · **Vocabulary:** [language.md](agencyteam/language.md) → *Tasks*
+a Task wakes its assignee*) · **Vocabulary:** [language.md](engineering/language.md) → *Tasks*
 (Task, Project, Closed, Won't do, Change log, Origin, Wake, Awake / Asleep / Offline, View,
 Board) · **UX source:** the *Huddle Tasks Brief* artifact (v2), whose three concept mockups this
 spec turns into components
@@ -20,8 +20,8 @@ sections your workstream names; you shouldn't need to search the codebase to fin
 Where this spec says *copy X*, X is the precedent. Don't design a parallel version of it.
 
 > [!IMPORTANT]
-> Binding before any code: [rules.md](agencyteam/rules.md) before editing `src/Huddle.App`,
-> [traps.md](agencyteam/traps.md), and [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md)
+> Binding before any code: [rules.md](engineering/rules.md) before editing `src/Huddle.App`,
+> [traps.md](engineering/traps.md), and [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md)
 > for every C# file. Nothing here overrides them. Build and test the **solution**, with the
 > trailing `--`: `dotnet build Huddle.slnx` then `dotnet test Huddle.slnx --`.
 
@@ -136,7 +136,7 @@ Agent takes a single action.
 5. **Pure core, file-and-Room edges.** Parsing, composing, diffing, querying, grouping and board
    layout are pure static functions that are unit-tested without I/O. `TaskStore`, `ViewStore`,
    `TaskTriggerService` and the components form the imperative shell.
-6. **MudBlazor before custom UI.** Check [mudblazor.md](agencyteam/mudblazor.md) before writing
+6. **MudBlazor before custom UI.** Check [mudblazor.md](engineering/mudblazor.md) before writing
    a component or a CSS rule. §13.0 maps every need in this spec to a component.
 7. **Copy the house precedents.** The store follows `AvatarStore` and `PersonaStore`. Tools follow
    `FollowRoomTool`. The dialog follows `TeammateCard`. The event subscription follows
@@ -1341,7 +1341,7 @@ literals, and no inline `Style` colours.** `ThemeSourceTests` enforces this.
 
 ### 13.0 MudBlazor first
 
-Read [mudblazor.md](agencyteam/mudblazor.md) before building any piece of this UI. Its rule applies
+Read [mudblazor.md](engineering/mudblazor.md) before building any piece of this UI. Its rule applies
 here: *write your own component only when no row fits, or when composing two or three MudBlazor
 components is the component.*
 
@@ -2092,7 +2092,7 @@ dialog. A dialog is always driven through the real `IDialogService`
 - Delete the affected golden files and run the tests to reseed them (:678-697). Review the diff:
   it should be exactly the new tools plus the `systemPrompt.tools` clause.
 
-**Manual tests.** Create a new area, `docs/agencyteam/manual-tests/tasks.md`, using the format in
+**Manual tests.** Create a new area, `docs/engineering/manual-tests/tasks.md`, using the format in
 `persona-lifecycle.md`, and add rows to `tracker.md`. Of these, TASKS-1 to TASKS-9 are free and
 TASKS-10 to TASKS-12 are paid 💰.
 
@@ -2225,7 +2225,7 @@ WS5 lands `task.wake.message` first.
 | TK-I18 | 11 | Impl | The route, the copy button and its menu items, `huddleClipboard`, `TaskQuery.Suggest` | §13.13.1, §13.13.3 | T18 green |
 | TK-T19 | 11 | bUnit | `ComposerTests`: `TaskQueryAsync` opens the popover and `null` closes it; `MoveAsync` wraps; `PickAsync` returns the highlighted id, or null with no matches; the listbox has `aria-activedescendant`. The JavaScript key handling can't be tested by bUnit, so it is manual test TASKS-14 | §13.13.4 | Fails |
 | TK-I19 | 11 | Impl | The `#` picker: `teamComposer` extended in `app.js`, plus `Composer.razor`'s popover and three `[JSInvokable]`s | §13.13.4 | T19 green, TASKS-14 passes |
-| TK-D | — | Docs | **Already written on 2026-09-24:** ADR-0025 and ADR-0026 (status *proposed*), and `language.md`'s *Tasks* section plus the Team entry's ADR-0025 sentence. **When the feature ships:** set both ADRs to *accepted*, and replace the *Tasks* section's "Proposed, not built" line. `code-map.md` gets a row per new file. `AgencyTeam.md` gets a map row plus config rows for `Team:Tasks:*`. `known-limits.md` covers: an offline assignee misses the wake-up; startup edits wake no one; wake budgets reset on restart; tags can't contain `,` or `;`; a Task link reflects the index when the Message was last rendered. `decisions.md` gets a dated entry. `roadmap.md` gets an item. `manual-tests/tasks.md` plus `tracker.md` rows. `mudblazor.md` → *Components Huddle already uses* gains rows for `MudDataGrid` (`TaskListView.razor`), `MudDropContainer`/`MudDropZone` (`TaskBoard.razor`), `MudToggleGroup`, `MudTimeline`, `MudExitPrompt`, `MudBadge` and `MudNavGroup`, each pointing at its Tasks file | all | Reviewed |
+| TK-D | — | Docs | **Already written on 2026-09-24:** ADR-0025 and ADR-0026 (status *proposed*), and `language.md`'s *Tasks* section plus the Team entry's ADR-0025 sentence. **When the feature ships:** set both ADRs to *accepted*, and replace the *Tasks* section's "Proposed, not built" line. `code-map.md` gets a row per new file. `Huddle.EngineeringGuide.md` gets a map row plus config rows for `Team:Tasks:*`. `known-limits.md` covers: an offline assignee misses the wake-up; startup edits wake no one; wake budgets reset on restart; tags can't contain `,` or `;`; a Task link reflects the index when the Message was last rendered. `decisions.md` gets a dated entry. `roadmap.md` gets an item. `manual-tests/tasks.md` plus `tracker.md` rows. `mudblazor.md` → *Components Huddle already uses* gains rows for `MudDataGrid` (`TaskListView.razor`), `MudDropContainer`/`MudDropZone` (`TaskBoard.razor`), `MudToggleGroup`, `MudTimeline`, `MudExitPrompt`, `MudBadge` and `MudNavGroup`, each pointing at its Tasks file | all | Reviewed |
 
 ---
 

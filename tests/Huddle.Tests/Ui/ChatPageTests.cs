@@ -110,14 +110,14 @@ public sealed class ChatPageTests
 
         // Not the literal text "Stop": the button is an icon now, and a MudTooltip's own text only
         // materialises against MudPopoverProvider, so it is not reliably present in prerendered HTML.
-        // aria-label is the reliable, accessible handle - see docs/agencyteam/testing.md.
+        // aria-label is the reliable, accessible handle - see docs/engineering/testing.md.
         Assert.Contains("aria-label=\"Stop\"", withDraft, StringComparison.Ordinal);
     }
 
     /// <summary>
     /// The Room header offers a Rename control seeded from the Room's current name. Rendered through
     /// <see cref="MudBunitContext"/> rather than a plain HTTP GET: the control sits behind a click
-    /// (the Edit icon button), which is absent from a prerender - see <c>docs/agencyteam/testing.md</c>.
+    /// (the Edit icon button), which is absent from a prerender - see <c>docs/engineering/testing.md</c>.
     /// </summary>
     [Fact]
     public async Task ChatPage_RoomHeader_OffersARenameControlSeededFromTheRoomName()

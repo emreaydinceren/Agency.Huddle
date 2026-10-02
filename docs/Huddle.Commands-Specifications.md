@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-30 · **Status:** Built 2026-09-30 (V1); paid live checks V-2 and V-4 deferred to user acceptance · **Decision record:**
 [ADR-0035](adr/0035-an-adapter-command-is-a-message-the-human-addresses-by-mention.md) ·
-**Vocabulary:** [language.md](agencyteam/language.md) (**Adapter command**)
+**Vocabulary:** [language.md](engineering/language.md) (**Adapter command**)
 
 This is the design for **Adapter commands**: the commands an Adapter advertises for a session,
 which the Human runs on one Teammate by writing a Message that addresses it, such as
@@ -21,9 +21,9 @@ each beat, and Appendix A for the ordered, test-first task list.
 
 > [!IMPORTANT]
 > Two pages are binding before any code in this spec is written:
-> [rules.md](agencyteam/rules.md) before editing `src/Huddle.App`, and
+> [rules.md](engineering/rules.md) before editing `src/Huddle.App`, and
 > [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) for every C# file.
-> [traps.md](agencyteam/traps.md) is binding before touching `Huddle.Acp`, and this spec does.
+> [traps.md](engineering/traps.md) is binding before touching `Huddle.Acp`, and this spec does.
 > Nothing here overrides any of them.
 
 > [!NOTE]
@@ -70,7 +70,7 @@ Concretely:
 
 **Why this matters.** A Teammate's context only grows. A session closed by `SessionIdleMinutes` is
 *resumed* with its whole context restored, so idling does not shed it. Restart forgets the
-conversation on purpose ([rules.md](agencyteam/rules.md), "Restart forgets Room Sessions"), which is
+conversation on purpose ([rules.md](engineering/rules.md), "Restart forgets Room Sessions"), which is
 the wrong tool for "I want you to keep going, with less weight". In the observed console session, two
 tiny turns had already filled 50,624 tokens, most of it the session's fixed overhead; a Teammate in
 several busy Rooms reaches the per-Persona token Budget (`Acp:TokenBudget`, 1,000,000) sooner than it
@@ -212,7 +212,7 @@ Commands)` out, where each `AvailableCommandInfo` is `(Name, Description, InputH
 - The update arrives **twice** *(observed)*: right after `session/new`, and again at the start of the
   first Turn with a different list (82 then 80 entries in one run, `doctor` and `color` dropped). It is a
   full replacement each time, never a delta. The mapper does not merge.
-- Map and publish synchronously, before any `await` ([agent-guide.md](acp/agent-guide.md) §2.4).
+- Map and publish synchronously, before any `await` ([acp-agent-guide.md](engineering/acp-agent-guide.md) §2.4).
 - `_meta` is ignored.
 - `SessionUpdateMapperTests.AvailableCommandsUpdate_MapsToUnknownUpdate` flips to assert the new event.
 
@@ -280,7 +280,7 @@ returning the command with the Adapter's own casing, or `null`; `Get(personaName
 - A lock, and the change event raised outside it, exactly as `PersonaSpend` does.
 
 **Constraints.** Registered as a singleton in `ServiceCollectionExtensions`. A `Razor [Parameter]`
-may not be of an `internal` type ([rules.md](agencyteam/rules.md)), so the card reads it through an
+may not be of an `internal` type ([rules.md](engineering/rules.md)), so the card reads it through an
 injected service and a public view type, as it does for Spend.
 
 **V1 versus V2.** V1 is the latest list. V2 may add the Adapter's `input.hint`.
@@ -300,10 +300,10 @@ Persona's Name and Alias, and `Invocation` is `(Name, Arguments)`.
 - **Resolved against the known handle, never by a pattern.** A Name may contain spaces, so
   `@Emily Lee /compact` and `@Emily` followed by the word `Lee` are the same characters. The parser
   matches the Teammate's **own** handles, longest first, exactly as `MentionParser` does, and lets the
-  handle decide where the Mention ends ([rules.md](agencyteam/rules.md), Name row; [traps.md](agencyteam/traps.md)).
+  handle decide where the Mention ends ([rules.md](engineering/rules.md), Name row; [traps.md](engineering/traps.md)).
 - It reuses `MentionParser`'s boundary rule (a handle ends at a character that is not a Name
   character). That rule is private today; expose it `internal` rather than copying it.
-- **Alias works wherever a Name does** ([rules.md](agencyteam/rules.md), Alias row): `@jar /compact`.
+- **Alias works wherever a Name does** ([rules.md](engineering/rules.md), Alias row): `@jar /compact`.
 - **Leading only.** After trimming, the text must begin with the Teammate's own Mention, then
   whitespace, then `/`. Any other shape is not a command (C8).
 - The command name is the run of non-whitespace characters after `/`. Names may contain `:`, `-`,
@@ -661,7 +661,7 @@ Each was put to the repo owner, with a recommendation, on 2026-09-30 unless mark
 
 ### 14.2 Vocabulary
 
-**Adapter command** is already defined in [language.md](agencyteam/language.md) as a Proposed term. This
+**Adapter command** is already defined in [language.md](engineering/language.md) as a Proposed term. This
 spec moves it from "a later version, blocked on the isolation checks" to a designed feature: the gate
 opened by D-2 (an allowlist per Adapter Profile) and by V-1 (isolation removes the Human's own skills).
 The entry was amended when this spec was written; task D10 covers the rest. No new term is introduced. **Outcome Message** is not a term:
@@ -806,7 +806,7 @@ before the code it covers exists. Names follow `Method_Scenario_Expectation`.
 
 | # | Task | Files |
 | --- | --- | --- |
-| D10 | Amend **Adapter command** in `language.md` from "later version, blocked" to this design. Add the `Acp:Adapters:*:Commands` row to the hub's configuration table. Add this spec to the hub map and the Turn detail §6.7 cross-reference. Add a manual test `docs/agencyteam/manual-tests/adapter-commands.md` covering C1, C5 to C7, C10, C13 and C15. Add a `known-limits.md` entry for the invisible compaction cost | `docs/agencyteam/language.md`, `docs/AgencyTeam.md`, `docs/Huddle.TurnDetail-Specifications.md`, `docs/agencyteam/known-limits.md` |
+| D10 | Amend **Adapter command** in `language.md` from "later version, blocked" to this design. Add the `Acp:Adapters:*:Commands` row to the hub's configuration table. Add this spec to the hub map and the Turn detail §6.7 cross-reference. Add a manual test `docs/engineering/manual-tests/adapter-commands.md` covering C1, C5 to C7, C10, C13 and C15. Add a `known-limits.md` entry for the invisible compaction cost | `docs/engineering/language.md`, `docs/Huddle.EngineeringGuide.md`, `docs/Huddle.TurnDetail-Specifications.md`, `docs/engineering/known-limits.md` |
 
 ### Phase 11: live checks (paid)
 
@@ -886,7 +886,7 @@ covers. Running cost from `usage_update.cost`: $0.200, $0.216, (none on the comp
 | # | Question | How | Status |
 | --- | --- | --- | --- |
 | V-1 | Does the app's isolation remove the Human's own skills from the list, and keep `compact`? | `session/new` with the app's `_meta`; no model call | **Done.** 83 → 51, `compact` kept (B.4) |
-| V-2 | Does `@Nova /compact` work end to end in the real app, with the outcome posted and the baseline reset? | Run the app with `Acp:Enabled`, a Claude Persona and a few turns; about $0.30 | Open. Deferred to user acceptance: [manual-tests/adapter-commands.md](agencyteam/manual-tests/adapter-commands.md) COMMANDS-01 |
+| V-2 | Does `@Nova /compact` work end to end in the real app, with the outcome posted and the baseline reset? | Run the app with `Acp:Enabled`, a Claude Persona and a few turns; about $0.30 | Open. Deferred to user acceptance: [manual-tests/adapter-commands.md](engineering/manual-tests/adapter-commands.md) COMMANDS-01 |
 | V-3 | What marker for the command guard does the Adapter treat as plain text, and does a prompt starting with it still answer normally? | Send `<marker>/compact` and confirm no compaction and a normal reply; one cheap turn | **Done.** `Message: /compact` ran no compaction (no tool call, 9 message chunks: *"There's no substantial conversation history yet to compact…"*) and `Message: /config` was explained, not run. About $0.014. The marker is a prefix, `Message: ` (OQ-3 closed) |
 | V-4 | Does `session/cancel` interrupt a compaction in flight, and leave the session usable? | Start `/compact` on a larger context and cancel after two seconds | Open. Deferred to user acceptance: COMMANDS-04 |
 | V-5 | Does a non-Claude Adapter advertise commands, and in what shape? | Point the harness at `agency-acp`; free | Open. Not a V1 gate |

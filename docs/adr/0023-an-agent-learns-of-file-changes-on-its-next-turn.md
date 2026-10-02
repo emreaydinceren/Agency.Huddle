@@ -9,7 +9,7 @@ On each Turn, an Agent's prompt opens with the files added, changed or deleted i
 **Watched Folders** since its previous Turn, one full path per line. The Agent reads the ones
 that matter with the Adapter's own tools. Nothing wakes it. The full design is
 [Huddle.FileChanges-Specifications.md](../Huddle.FileChanges-Specifications.md), and this
-replaces the delivery plan in [roadmap item 11](../agencyteam/roadmap.md#11-telling-an-agent-which-watched-files-changed--delivered-code-2026-09-23).
+replaces the delivery plan in [roadmap item 11](../engineering/roadmap.md#11-telling-an-agent-which-watched-files-changed--delivered-code-2026-09-23).
 
 ## The problem
 

@@ -409,7 +409,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         }
 
         // Only now, with Registration complete, does the Agent id exist, so only now can the host
-        // be started with the tools bound to it by construction (docs/acp/agent-guide.md §3.6).
+        // be started with the tools bound to it by construction (docs/engineering/acp-agent-guide.md §3.6).
         // this.host is assigned BEFORE the session opens, so a failed first open is still disposed
         // with the runner - StopAsync's this.host-is-not-null disposal covers it.
         this.host = await this.factory.StartAsync(this.persona, welcome.AgentId, cancellationToken);

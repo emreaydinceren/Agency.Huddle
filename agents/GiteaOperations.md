@@ -149,7 +149,7 @@ the same `$base` above: `$base/compare/main...feat/some-branch`.
 ## Issues
 
 Issues are how a failed manual test is recorded — [the manual test
-tracker](../docs/agencyteam/manual-tests/tracker.md#failures-are-tracked-as-gitea-issues) owns
+tracker](../docs/engineering/manual-tests/tracker.md#failures-are-tracked-as-gitea-issues) owns
 the policy (when a Fail earns an issue, the `TESTID-NN: what broke` title format, what the body
 must quote). This section owns the mechanics: the endpoints, and the four ways they surprise you.
 
@@ -269,6 +269,6 @@ assuming the whole approach is wrong.
 
 - [CIPipeline.md](CIPipeline.md) — CI/Actions internals: workflow topology, failure modes, and
   the full Actions API reference this doc points to above
-- [Manual test tracker](../docs/agencyteam/manual-tests/tracker.md) — when an issue gets opened
+- [Manual test tracker](../docs/engineering/manual-tests/tracker.md) — when an issue gets opened
   and how it is titled; this doc covers how to open it
 - [C# Principles](CSharpPrinciples.md) — the house style the build enforces

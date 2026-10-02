@@ -1244,7 +1244,7 @@ public sealed class PersonaStoreTests
     }
 
     /// <summary>
-    /// Pins docs/agencyteam/known-limits.md's "Third known flake": <see cref="PersonaStore.OnWatcherError"/>
+    /// Pins docs/engineering/known-limits.md's "Third known flake": <see cref="PersonaStore.OnWatcherError"/>
     /// used to call the logger BEFORE taking <c>watchGate</c> and checking <c>disposed</c>, so a late
     /// <see cref="FileSystemWatcher"/> Error event arriving after <see cref="PersonaStore.Dispose"/> -
     /// during host teardown, when the logging provider itself can already be disposed - threw an

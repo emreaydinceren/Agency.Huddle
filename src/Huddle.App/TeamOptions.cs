@@ -26,7 +26,7 @@ public sealed class TeamOptions
     //
     // Zero or less disables the cap, which is the only way back to the behaviour ADR-0004 recorded
     // as "deliberately no runaway-loop guard". In memory and per Room, so a restart un-pauses
-    // everything - see docs/agencyteam/known-limits.md.
+    // everything - see docs/engineering/known-limits.md.
     public int AgentMessageBudget { get; set; } = 40;
 
     public DemoAgentOptions DemoAgent { get; set; } = new();

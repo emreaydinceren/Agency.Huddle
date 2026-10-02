@@ -5,7 +5,7 @@ date: 2026-09-13
 
 # A Theme is a stylesheet layered over the tokens
 
-[Roadmap](../agencyteam/roadmap.md) item 6 put the problem in one line: *dark mode
+[Roadmap](../engineering/roadmap.md) item 6 put the problem in one line: *dark mode
 is not so much a second feature as the test that the first one is finished — a
 colour still written as a literal shows up immediately as the one element that did
 not switch.* The item asked for two things: move every colour and every font out of
@@ -15,7 +15,7 @@ before item 7 points a generator at a stranger's JSON.
 Both shipped. `wwwroot/app.css` declares no colour and no font-family literal any
 more — 117 substitutions by (selector, property), 123 `var()` references, and not
 one rule reordered, renamed or merged. A **Theme** is a CSS file layered over a base
-layer of 39 **Tokens** — [Language](../agencyteam/language.md) defines both words —
+layer of 39 **Tokens** — [Language](../engineering/language.md) defines both words —
 and the Human's per-Token overrides are a third layer on top of that. The feature
 adds **no JavaScript at all**, and no `data-theme` attribute.
 
@@ -210,7 +210,7 @@ nobody performs often.
 
 `MainLayout.razor.css` keeps `background: lightyellow` and `color-scheme: light only`,
 and `ThemeSourceTests` exempts that one file by name
-([Rules](../agencyteam/rules.md) carries the rule). `#blazor-error-ui` is the banner
+([Rules](../engineering/rules.md) carries the rule). `#blazor-error-ui` is the banner
 shown when the application has **already failed** — the one moment a Theme cannot be
 trusted, since a bad override or a half-loaded Theme is among the things that could have
 failed. It stays literal so it stays readable.
@@ -239,7 +239,7 @@ that did not switch*.
 The shape is worth writing down once, in the spirit of
 [ADR-0008](0008-a-turn-is-visible-stoppable-and-says-when-it-fails.md)'s *"one thing that
 entry did not foresee at all"*: **the framework's not-found behaviour here is to return the
-input.** [Traps](../agencyteam/traps.md) now carries it. `AppShell_EveryLinkedStylesheetIsServed`
+input.** [Traps](../engineering/traps.md) now carries it. `AppShell_EveryLinkedStylesheetIsServed`
 is the test that would have caught it, and it is an HTTP round-trip because no cheaper layer
 can see the defect: the resolved href is fingerprinted (`theme.ce2n94aiaf.css`), so the
 literal key never appears in the document for a string assertion to match against.

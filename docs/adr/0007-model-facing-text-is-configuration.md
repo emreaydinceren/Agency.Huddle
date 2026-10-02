@@ -37,8 +37,8 @@ than discovered later.
 ## Two timings, because a system prompt cannot be changed
 
 A system prompt is sent exactly once, in `session/new`'s `_meta.systemPrompt`.
-There is no later event that re-reads it, which [Rules](../agencyteam/rules.md)
-and [Traps](../agencyteam/traps.md) both already state for a Persona's text and
+There is no later event that re-reads it, which [Rules](../engineering/rules.md)
+and [Traps](../engineering/traps.md) both already state for a Persona's text and
 its Model.
 
 So a Hook carries a `HookTiming`:
@@ -76,7 +76,7 @@ changed nothing" into a file that has to be kept in step with the code forever.
 
 ## The tool prefix is derived, never typed
 
-[Rules](../agencyteam/rules.md) makes `mcp__team__*` binding: a tool named loosely
+[Rules](../engineering/rules.md) makes `mcp__team__*` binding: a tool named loosely
 makes the model report that no such tool exists, and it fails silently — nothing
 in any log says why. Letting a human hand-edit the prompt that names those tools
 is exactly the way to reintroduce that.
@@ -140,5 +140,5 @@ by tests, and making them configurable buys prompt-experimenting value that is
 unlikely to be used. That line may move later; it was drawn deliberately.
 
 The Budget refusal in particular must stay one source feeding both doors into a
-post — [Rules](../agencyteam/rules.md) makes its terminal wording binding — so if
+post — [Rules](../engineering/rules.md) makes its terminal wording binding — so if
 it ever becomes a Hook it becomes exactly one Hook, not two.

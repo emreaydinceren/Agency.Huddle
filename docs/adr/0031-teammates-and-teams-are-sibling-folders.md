@@ -22,7 +22,7 @@ purely organisational (`PersonaStore.cs:644`). Each Teammate's Work Dir is elsew
   Tasks. Under the recursive Persona scan, every note there would be listed as a rejected Persona.
 - **A Teammate is spread over two places.** Its definition is in `Teams/`, and its memory and
   outputs are in `work/`. The folder called `Teams/` holds no Teams, which is what
-  [language.md](../agencyteam/language.md) warns against: *a Team is emphatically not a folder*
+  [language.md](../engineering/language.md) warns against: *a Team is emphatically not a folder*
   for a Persona.
 
 ## The decision
@@ -48,7 +48,7 @@ purely organisational (`PersonaStore.cs:644`). Each Teammate's Work Dir is elsew
 - **The definition sits beside the `cwd`, not in it.** The Agent runs in `Teammates/Nova/work/`.
   Its own definition is one level up, so an ordinary `Write` in its `cwd` can't change it. Every
   such change restarts the Agent and forgets its Room Sessions
-  ([rules.md](../agencyteam/rules.md), *Editing a Persona … restarts its session*). This is
+  ([rules.md](../engineering/rules.md), *Editing a Persona … restarts its session*). This is
   separation, not protection: the Work Dir is still not a jail.
 - **The Persona scan reads one level.** `PersonaStore` loads `Teammates/*/*.md` and never looks
   inside `work/`, so memory files and Markdown outputs are never taken for definitions.
@@ -113,6 +113,6 @@ already logs for a held Work Dir.
   folder, its definition file and its `work/` folder can't be renamed, moved or deleted from the
   Library. Renaming belongs to the Teammates page.
 - **The built-in Chief of Staff** is seeded into `Teammates/<Name>/` by `BuiltinTeammateSeeder`.
-- **`AgencyTeam.md`'s configuration table,** `language.md` (*Work Dir*, *Persona*, *Team*) and
+- **`Huddle.EngineeringGuide.md`'s configuration table,** `language.md` (*Work Dir*, *Persona*, *Team*) and
   the Persona-file wording in [ADR-0025](0025-in-tasks-a-team-is-a-folder-by-convention.md) change
   when this is accepted.
