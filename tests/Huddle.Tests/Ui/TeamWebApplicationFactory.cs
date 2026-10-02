@@ -125,6 +125,7 @@ public sealed class TeamWebApplicationFactory : WebApplicationFactory<Program>
         // a test host. Left on, every fixture would open a file handle under its temp data directory
         // and race that directory's own disposal when the host shuts down.
         builder.UseSetting("Team:FileLog:Enabled", "false");
+        builder.UseSetting("Team:Desktop:Enabled", "false");
 
         if (this.AgentMessageBudget is int budget)
         {
