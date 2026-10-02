@@ -390,7 +390,20 @@ contexts](../Huddle.EngineeringGuide.md#two-bounded-contexts). Back to the hub:
 : Capitalised, it means only this. An ordinary question in a Message stays lower
   case.
 : *Avoid*: poll (one person answers), prompt (a defined term for model-facing
-  text), form, survey, quick reply.
+  text), form (a **Form** is the other thing, defined next), survey, quick reply.
+
+**Form**
+: A set of typed fields an Agent's tool asks the Human to fill in, over ACP
+  elicitation: Claude's built-in `AskUserQuestion`, its retry-after-refusal
+  dialog, or a form an MCP server sends. It waits on an `ElicitationCard` in the
+  Room, any number at once, and the Agent's Turn stays open until it ends. The
+  answer is a Message from the Human that mentions nobody and is withheld from the
+  asker, which receives it as the tool's own result; Skip tells the Agent the
+  Human skipped it. See
+  [the Questions spec](../Huddle.Questions-Specifications.md#68a-the-elicitation-bridge).
+: Capitalised, it means only this. It is not a **Question**: a Question is
+  `ask_human`'s tappable options, and its asker has already ended its Turn.
+: *Avoid*: Question (the other thing), survey, dialog, popup.
 
 **Greeting**
 : The first Message the built-in Chief of Staff posts to a new Human, unprompted,

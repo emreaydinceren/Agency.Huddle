@@ -27,9 +27,9 @@ test-first task list. Every design decision is recorded in §11 with the alterna
 > lazy continuation of the quote and renders it inside the Agent's words, and a test now fails without
 > the blank line. **Q-G1 lives in `tests/Huddle.Tests/Conformance/PersonaHostTests.cs`**, not in
 > `Huddle.Acp.Tests`: it drives the real factory against the ACP effort's `FakeAcpAgent`, so it touches
-> nothing in their tree and needed no announcement. And `dotacp` 2026.7.19's `ClientCapabilities` has no
-> `Elicitation` member at all, so advertising the capability would need a library upgrade first; the
-> guard is there for that day. The six paid manual tests are written
+> nothing in their tree and needed no announcement. And `dotacp` 2026.7.19's stable `ClientCapabilities` has
+> no `Elicitation` member, so the `elicitation` half of the guard could not be proved by flipping a
+> member; the elicitation bridge below got around that without a library upgrade. The six paid manual tests are written
 > ([questions.md](engineering/manual-tests/questions.md)) and were run once, 2026-10-01, in the app.
 >
 > **What that run found.** The card, the answer, the wake, D-8 and §6.8 all held against a real model
@@ -43,6 +43,23 @@ test-first task list. Every design decision is recorded in §11 with the alterna
 > fresh Haiku Teammate called ToolSearch and then `ask_human` unprompted).
 > The run also added a muted, barred style for a quoted line in a Message (`app.css`), because an answer
 > and the question it quotes were otherwise indistinguishable.
+
+> [!NOTE]
+> **The elicitation bridge, built 2026-10-01 (§6.8a).** `ask_human` is still the primary way to ask, and
+> its answer is still an ordinary Message (D-2). Beside it Huddle now advertises ACP
+> `clientCapabilities.elicitation.form` (`Acp:AdvertiseElicitation`, on by default), so the Claude Adapter
+> turns on `AskUserQuestion`, the retry-after-refusal dialog and MCP forms, and every `elicitation/create`
+> is answered with a card in the Room. The three gates D-13 set are met: the idle watchdog pauses while a
+> request is open, no request is left unanswered, and the answer is written to the Transcript as a Message.
+> Three things differ from what the earlier text assumed. `dotacp` 2026.7.19 needed **no upgrade**: its
+> typed `unstable` elicitation request drops `sessionId`, `requestedSchema` and the answer's `content`, so
+> Huddle stays on the stable types, adds the capability through a subclass and renames the inbound request
+> so dotacp routes it. The answer **cannot be an ordinary Human Message** in a one-to-one Room, because the
+> Reply Gate answers every Human Message there and would queue a second Turn behind the open one, so it is
+> posted through `ChatService.PostHumanAnswerAsync`, which withholds it from the asker. And **looking at
+> the card in a browser found two defects the suite cannot see**, both fixed: the card had no height limit
+> (its CSS lived in a scoped stylesheet whose `::deep` rules can never match a Mud component), and a Room
+> whose Transcript was taller than the window could not be scrolled at all (§6.8a, "What looking at it found").
 
 > [!NOTE]
 > **Sequencing.** The Skills work (S2) landed on 2026-09-22, so `ProposalStore` and
@@ -112,7 +129,7 @@ meant. Fixed options make both cheap, and make the answer unambiguous.
 | **Images, descriptions or icons on an option** | Short labels only. The Agent's framing Message carries any explanation |
 | **Drag-and-drop ranking** | Up and down buttons work with a keyboard and a screen reader, and need no JavaScript. V2 may add drag |
 | **A new Envelope or a `ProtocolVersion` bump** | The card never crosses the pipe (`traps.md`, the closed polymorphism rule) |
-| **ACP elicitation (`elicitation/create`) for Questions** | **Not yet; the planned follow-up for typed forms.** It holds the Turn open until the Human answers, which runs into the idle timeout until the watchdog can pause for an open request, and advertising it re-enables Claude's built-in `AskUserQuestion` (§6.8, D-13). `ask_human` stays the primary way to ask (D-2); see [Follow-up: elicitation for typed forms](#68a-follow-up-elicitation-for-typed-forms) |
+| **ACP elicitation (`elicitation/create`) as the way `ask_human` works** | **Built beside `ask_human`, not instead of it.** A form the Adapter puts to the Human (Claude's built-in `AskUserQuestion`, the retry-after-refusal dialog, an MCP server's form) is shown as an `ElicitationCard`, and the answer is still written to the Transcript as a Message. `ask_human` stays the primary way to ask, because it returns at once and its answer is an ordinary Message (D-2). See [The elicitation bridge](#68a-the-elicitation-bridge) |
 
 ---
 
@@ -475,64 +492,137 @@ Each Question's text is shown as written, with its options below it.
 The `[Parameter]` types are `public`, per `rules.md`; `QuestionKind` and the records are
 public for that reason.
 
-### 6.8 Claude's built-in `AskUserQuestion` stays off
+### 6.8 Claude's built-in `AskUserQuestion` and ACP elicitation
 
-Claude Code ships its own option-picker, `AskUserQuestion`. On a Claude Adapter `ask_human` does
-not compete with it, because the Adapter keeps it off, and this spec depends on that.
+Claude Code ships its own option-picker, `AskUserQuestion`. Whether a Claude Persona sees it depends
+on whether Huddle advertises ACP elicitation. Until 2026-10-01 it did not, so the Adapter kept the tool
+off and `ask_human` had no competitor. It now advertises `elicitation.form` by default
+(`Acp:AdvertiseElicitation`), the Adapter offers the tool, and §6.8a is how it, the retry-after-refusal
+dialog and an MCP server's forms reach the Human. The section below is why that needed three gates, and
+what the Adapter does. With `Acp:AdvertiseElicitation` off the old behaviour returns exactly.
 
 | | `AskUserQuestion` | `ask_human` |
 | --- | --- | --- |
 | Owner | Claude Code, in its built-in tool preset. Claude Adapters only | Huddle's `AppToolServer`. Every Adapter |
-| Turn | Blocks until the Human answers | Returns at once; the asker ends its Turn |
-| Answer | The tool result | A Message from the Human, in the Transcript |
+| Turn | Blocks until the Human answers; Huddle pauses the idle watchdog for the wait and bounds it (§6.8a) | Returns at once; the asker ends its Turn |
+| Answer | The tool result, and also a Message from the Human in the Transcript (G3) | A Message from the Human, in the Transcript |
 | Shape | 1 to 4 Questions, 2 to 4 options with descriptions, `multiSelect`, and a free-text "Other" the Adapter adds | 1 to 3 Questions, three kinds including `rank_priorities`, no free text (§3) |
 
-- **Why it is off.** `claude-agent-acp` 0.75.1 adds `AskUserQuestion` to the SDK's
+- **Why it was off.** `claude-agent-acp` 0.75.1 adds `AskUserQuestion` to the SDK's
   `disallowedTools` unless the client advertised `clientCapabilities.elicitation.form`
   (`dist/acp-agent.js`: the `disallowedTools` constant near line 5878, passed to the SDK near
-  line 6007). Huddle advertises no `elicitation` capability, so a Claude Persona never sees the
-  tool, and `ask_human` is the only way it asks. This was read from the vendored source on
-  2026-09-30, and a live model confirmed it on 2026-10-01 (QUESTIONS-06, QM-6).
-- **What advertising it would do.** With `form` advertised the Adapter enables `AskUserQuestion`
-  and sends `elicitation/create`, then waits, holding the Turn open until the Human answers.
-  Today that runs into `Acp:TurnIdleTimeoutSeconds`, because an open request emits no events,
-  and the answer would be only a tool result, not a Message in the Transcript. The timeout half
-  is fixable by pausing the idle watchdog while a request is open; the Transcript half is a
-  rule that stays (see the follow-up below).
+  line 6007). Huddle advertised no `elicitation` capability, so a Claude Persona never saw the
+  tool, and `ask_human` was the only way it asked. This was read from the vendored source on
+  2026-09-30, and a live model confirmed it on 2026-10-01 (QUESTIONS-06, QM-6, run before the bridge).
+- **What advertising it does.** With `form` advertised the Adapter enables `AskUserQuestion`
+  and sends `elicitation/create`, then waits, holding the Turn open until the Human answers. The
+  Adapter never times out by itself, and an open request emits no events, so without a pause it
+  runs into `Acp:TurnIdleTimeoutSeconds`. Huddle pauses the watchdog for the wait and bounds the
+  wait itself, and writes the answer to the Transcript as a Message (§6.8a).
 - **It is not one switch.** The same capability also turns on the Adapter's refusal-fallback
   dialog (*"model X declined; retry with Y?"*) and lets any MCP server put a form to the user.
-  Each arrives as an `elicitation/create` that needs a handler which answers, or the Turn hangs.
-  Do not add `elicitation` to `ClientCapabilities` until the three gates in the follow-up below
-  are met (D-13). Task Q-G1 pins its absence until then.
+  All three arrive as an `elicitation/create`, and one handler answers all of them, so none can
+  hang the Turn. A request that handler cannot show faithfully is answered `decline` at once, with
+  no card. Switching `Acp:AdvertiseElicitation` off removes all three together (D-13, Q-G1).
 - **URL mode** (`elicitation.url`, the Adapter's OAuth flow for MCP servers passed in
   `session/new`) is not advertised either. Huddle's one MCP server authenticates with a bearer
   token.
 
-### 6.8a Follow-up: elicitation for typed forms
+### 6.8a The elicitation bridge
 
-ACP elicitation is **not rejected for good**. It is the planned follow-up for the one thing
-`ask_human` cannot express: typed fields (dates, numbers, free text). It is **not scheduled**, and
-it is added later without giving up the Transcript. `ask_human` stays the primary way an Agent
-asks the Human, and its answer stays an ordinary Message from the Human (D-2).
+ACP elicitation is the protocol's standard way for an Agent to put a form to the Human, and the
+earlier rejection of it (D-13, [ADR-0022](adr/0022-an-agent-asks-the-human-with-a-question.md)) rested
+on one premise: an open request holds the Turn and emits no events, so it ran into
+`Acp:TurnIdleTimeoutSeconds`. Pausing the watchdog removes that premise, so the bridge was built on
+2026-10-01, **beside** `ask_human` and not instead of it: `ask_human` stays the primary way an Agent
+asks (D-2), because it returns at once and the asker ends its Turn. The bridge exists for what the
+Adapter can send that `ask_human` cannot express: typed fields (dates, numbers, booleans, free text) from
+an MCP server, Claude's own `AskUserQuestion`, and the retry-after-refusal dialog. It met the three gates
+D-13 set before it advertised anything:
 
-The earlier rejection (D-13, [ADR-0022](adr/0022-an-agent-asks-the-human-with-a-question.md)) rests
-on one premise: an elicitation request holds the Turn open and emits no events, so it runs into
-`Acp:TurnIdleTimeoutSeconds`. Pausing the idle watchdog while a request is open removes that
-premise. Roadmap item 20 (approval before a tool runs) needs exactly the same pause, so the cost is
-paid once if item 20 is built first, and elicitation then becomes cheap. Elicitation is also the
-protocol's standard mechanism, and an Adapter other than Claude's may support only that route.
+1. **The idle watchdog pauses while a request is open (G1).**
+2. **A handler answers every `elicitation/create` (G2)**, so no request can hang the Turn.
+3. **The answer is written to the Transcript as a Message (G3).** A bridged answer is never only a
+   tool result.
 
-Advertising `clientCapabilities.elicitation` waits for **all three** gates:
+**The wire.** `dotacp` 2026.7.19 routes only an inbound method that starts with `_` to the client's
+`ExtMethodAsync`, and its typed `unstable` elicitation request has no `sessionId`, `toolCallId` or
+`requestedSchema` (and its response no `content`), so Huddle stays on the stable types. With
+`DotAcpHostOptions.AdvertiseElicitationForm` on, the host (1) subclasses `ClientCapabilities` to add
+`"elicitation":{"form":{}}`, never `url`, because the Adapter would then start an MCP OAuth flow this client
+cannot complete, and (2) wraps the Adapter's output in `NdjsonMethodRewriteStream`, which renames an inbound
+**request** whose `method` is exactly `elicitation/create` to `_elicitation/create`, line by line and only
+after parsing it (never a byte replace: a `session/update` chunk can contain the string). The wire trace
+therefore shows `_elicitation/create`. `DotAcpClientAdapter.ExtMethodAsync` then reads the raw arguments,
+gives `ElicitationRequest(SessionId, ToolCallId, Message, RequestedSchemaJson)` to the session's
+`IElicitationScope`, and replies `{action, content}` with plain CLR types, never a `JsonNode`. A request
+nothing can answer (an unknown session, no scope bound, the Turn gone) is answered `cancel`. The Adapter
+sends `$/cancel_request` when it cancels, which StreamJsonRpc does not hear (it listens for
+`$/cancelRequest`), and dotacp cancels no handler when the peer closes or the connection is disposed, so
+Huddle cancels each handler itself: on Stop, when the Turn ends, when the session is disposed, on a
+disconnect, and when the bound below runs out.
 
-1. **The idle watchdog pauses while a request is open**, shared with roadmap item 20.
-2. **A handler answers every `elicitation/create`**: the built-in `AskUserQuestion`, the Adapter's
-   refusal-fallback dialog, and any form an MCP server puts to the user. A request with no handler
-   hangs the Turn.
-3. **The answer is written to the Transcript as a Message.** A bridged answer is never only a tool
-   result.
+**G1: the watchdog pause.** `RoomSession` is each session's scope. It takes a lease on the Turn in flight;
+while any lease is open `ActiveTurn.IdleFor` is zero, so `WatchForAdapterSilenceAsync` sleeps another full
+bound instead of firing, and releasing a lease restarts the clock from the answer. The lease counts open
+requests per **Turn**, never per session, so one that is never released ends with its Turn and cannot pause
+the next. It is idempotent, and Stop, the watchdog, a shutdown and a normal end all cancel it. The pause
+removes the only timeout there was, so `Acp:UserInputTimeoutSeconds` (default 600, clamped to 30 to 86,400)
+bounds a question: on expiry the request is answered `cancel`, which is not a Turn failure and never sets the
+Turn's timed-out latch. The Turn's slot stays held while a card waits, and `Acp:MaxConcurrentTurns` defaults
+to 1, so an unanswered form holds that Persona's other Rooms back for up to the bound. That is the cost D-2
+refused for `ask_human` and accepts here, because a form is what the Adapter asked for.
 
-Advertising it also re-enables `AskUserQuestion` beside `ask_human`, so the follow-up must decide
-how a Claude Persona is steered between the two ways to ask.
+**G3: the answer is a Message, and does not wake the asker.** `ElicitationService` posts the answer through
+`ChatService.PostHumanAnswerAsync`: a Message from the Human, in the Transcript, quoting each field's label
+and the answer (a blank line between them, as §6.4), that mentions nobody and is **withheld from the asker**
+(`MessagePostedEvent.WithheldFromAgentId`; `AgentGateway` skips that Agent). The asker's Turn is still open
+and takes the answer as the tool's own result; an ordinary Human Message would queue a second Turn, because
+the Reply Gate answers every Human Message in a one-to-one Room whether or not anyone is mentioned. The post
+takes the same per-Room lock as `PostAsync`, resets the Budget and drops waiting Questions, and a blank answer
+posts nothing. The request is answered after the Message is posted, and **always**: if posting throws, the
+request is still answered and the failure is logged. Accepted leaks, in `known-limits.md`: another Agent that
+follows the Room still wakes, the asker's own token Budget is not reset, and on resume the asker's catch-up
+may include the answer as context.
+
+**Cards and mapping.** `ElicitationStore` holds **many** waiting forms per Room (each its own handler,
+ordered by a counter, not the clock); `ElicitationCard` shows each of them between the Transcript and the
+composer with one control per field kind: text, number, integer (typed, with the schema's bounds), date
+(ISO text), boolean, single select (radios), multi select (checkboxes), and an "Other" box under an
+`AskUserQuestion` question that, once typed in, clears and disables that question's options, exactly as the
+Adapter lets a custom answer beat a choice. Send is enabled when every schema-`required` field is set and,
+when none is required, at least one field is filled; **Skip** answers `decline` (the model is told the user
+skipped) and posts nothing. Anything that ends the form without the Human answering it answers `cancel`: Stop,
+the Turn ending, archive, delete, a typed Human Message, the bound running out, a disconnect. A schema the
+reader cannot show faithfully (a nested object, an array of objects, `$ref`/`allOf`, a type list, no `type`,
+more than 20 properties or 50 options) is answered `decline` at once with a logged warning and **no card**;
+a number or boolean is never degraded to text, because the server would reject a string. Every string the
+Adapter or an MCP server wrote (the message, labels, descriptions, options) is rendered as plain text, never
+Markdown. `AskUserQuestion` is answered with the Adapter's own keys: `question_n` as the option's value (an
+array for multi select) and `question_n_custom` for Other, only the keys that were filled; the retry dialog
+answers `{"choice": "retry_fallback"}` or `{"choice": "cancelled"}`.
+
+**Steering.** With both tools available the system prompt (`systemPrompt.askHuman`) tells a Claude Persona to
+prefer `ask_human`: the built-in tool works but holds the Turn open until the Human answers, while ending the
+Turn lets the answer arrive as the Human's next Message and keeps the conversation moving.
+
+**What looking at it found.** The suite cannot see layout, and two defects only showed in a browser. The
+card's rules lived in `ElicitationCard.razor.css`, and Blazor's CSS isolation stamps its attribute only on
+HTML elements written in the component's own markup, so `::deep .elicitation-card` (a `MudPaper` root with
+Mud components inside) compiled to a selector with no scoped ancestor and never matched: the card had no
+height limit, and a form of eight fields was taller than the window and pushed Send and the composer off the
+page. Its rules are now in `app.css` (capped at half the window, the fields scroll, the actions stay in view),
+the scoped file is gone, and `MudBlazorImplementation.md` already said to do this. Second, **pre-existing**:
+the Room's own column had no `min-height: 0`, so a Transcript taller than the window grew the column past it,
+`.main-column` clipped the top, and `.message-list` never got a bounded height to scroll in, so the header and
+every earlier Message were unreachable by the Human. It now shrinks and the message list scrolls
+(`RoomLayoutSourceTests` pins both, as source text, since nothing in the suite renders a browser). The
+multi-select options were also centred and stair-stepped instead of left-aligned.
+
+**Not built, and not scheduled.** URL mode (`elicitation.url`, the Adapter's OAuth flow); a Huddle tool that
+lets an Agent *start* a typed form of its own (today typed fields arrive only from an MCP server, a non-Claude
+Adapter, or `AskUserQuestion`'s free-text Other); and a human approval before a tool runs (roadmap item 20),
+which shares the watchdog pause above and nothing else.
 
 ---
 
@@ -633,7 +723,13 @@ QUESTIONS-06, in this table's order, and are registered in [manual-tests.md](eng
 | D-10 | **Every Agent gets the tool** | Granting it through a Skill | Asking costs nothing and creates nothing. `propose_teammates` is granted by a Skill because each Teammate is a billed process; `ask_human` is not |
 | D-11 | **The full decision guidance lives in the tool description, and a short form of it in the system prompt** | A `get_help` section; a Skill; the description alone | A model decides to call a tool from its description; guidance in `get_help` or a Skill is read too late or not at all. *Amended 2026-10-01:* the description alone proved not enough, because the Claude Adapter defers MCP tools and the model sees only the name. The system prompt is the one text it always reads, so it carries a paragraph on when to ask (§6.6). The description stays as the full version |
 | D-12 | **`rank_priorities` ships in V1** | V2 | It is the one kind a typed answer is worst at, and up and down buttons keep it small |
-| D-13 | **Do not advertise ACP elicitation yet, until (a) the idle watchdog can pause for an open request, (b) a handler answers every `elicitation/create`, including the refusal-fallback and MCP form cases, and (c) the answer is written to the Transcript as a Message** | Bridging `AskUserQuestion` and `elicitation/create` to the `QuestionCard` now | A bridge as built today blocks the Turn and runs into the idle timeout; pausing the watchdog, which roadmap item 20 also needs, fixes that. Advertising `form` also enables the refusal-fallback dialog and MCP-initiated forms, each needing a handler, and gives a Claude Persona two ways to ask. The rejection is conditional, not permanent: elicitation is the planned follow-up for typed fields (§6.8a, Appendix B), not scheduled |
+| D-13 | **Advertise ACP elicitation only once (a) the idle watchdog can pause for an open request, (b) a handler answers every `elicitation/create`, including the refusal-fallback and MCP form cases, and (c) the answer is written to the Transcript as a Message.** *Met 2026-10-01 (§6.8a, D-14 to D-19); `Acp:AdvertiseElicitation` is on by default and off restores the old behaviour exactly* | Bridging `AskUserQuestion` and `elicitation/create` to the `QuestionCard` before those held; rejecting elicitation for good | A bridge without the pause blocks the Turn and runs into the idle timeout; advertising `form` also enables the refusal-fallback dialog and MCP-initiated forms, each needing a handler, and gives a Claude Persona two ways to ask. The rejection was conditional, never permanent, and it ended when the three gates were met |
+| D-14 | **Stay on the stable `dotacp` types: add the capability through a `ClientCapabilities` subclass and rename the inbound request** | Upgrading `dotacp` (2026.7.19 is the newest release); using its `unstable` typed elicitation | The `unstable` request has no `sessionId`, `toolCallId` or `requestedSchema` and its response no `content`, so it cannot carry the form or the answer. Stable dotacp routes only a `_`-prefixed method to `ExtMethodAsync`, so `NdjsonMethodRewriteStream` renames the one request it needs, parsing each line and never replacing bytes |
+| D-15 | **The pause is a per-Turn lease on `RoomSession`, bounded by `Acp:UserInputTimeoutSeconds`** | A counter on the session; a registry of sessions by id; an unbounded wait | A counter on the session leaks into the next Turn and silences its watchdog; a registry goes stale when a session is replaced. The pause removes the only timeout there was, and `MaxConcurrentTurns` is 1, so without a bound one absent Human freezes a Persona in every Room |
+| D-16 | **The answer is posted with `ChatService.PostHumanAnswerAsync`: a Message from the Human that mentions nobody and is withheld from the asker** | `PostAsync` with or without `@asker`; a tool result alone | The Reply Gate answers every Human Message in a one-to-one Room, mentioned or not, so any ordinary post queues a second Turn behind the open one. A tool result alone leaves the Transcript without what the Human said (G3) |
+| D-17 | **Many waiting forms per Room, each its own handler; a schema that cannot be shown faithfully is declined with no card** | One card per Room, as for Questions; degrading a number or boolean to a text box | Each form is a blocking request, so a second one cannot replace the first. A server rejects a string where it asked for a number |
+| D-18 | **The system prompt tells a Claude Persona to prefer `ask_human`** | Turning `AskUserQuestion` off again through the Adapter's `disallowedTools` while elicitation stays on for the other two cases | `AskUserQuestion` still works and is bridged, so the model may use either; the prompt says which to prefer and why. Switching it off is possible later and was not needed |
+| D-19 | **`Acp:AdvertiseElicitation` defaults to `true`, with an off switch** | Off by default until a real model had been watched using it | The suite and a scripted adapter exercise every path, and the live check is in the manual tests (QUESTIONS-07 to QUESTIONS-10). The switch exists so a problem found later is one setting, not a revert |
 
 ---
 
@@ -660,8 +756,24 @@ Each `.t` task ends red for the right reason; each `.i` task ends with `dotnet t
 | Q-I7 | Impl | `DotAcpAgentHostFactory` registration. *Added 2026-10-01 (D-11):* `systemPrompt.askHuman`, `SystemPromptComposer`'s `askHumanToolName`, and the name threaded through `DotAcpPersonaHost`; `Golden/systemPrompt.askHuman.txt` pins the paragraph, and `PersonaHostTests.Open_SystemPromptCarriesTheAskHumanParagraph_NamingTheToolOnce` pins it on the real factory's `session/new` | T7 green |
 | Q-T8 | bUnit | `QuestionCardTests`: one single Question sends on tap; Send disabled until complete; multi toggles; rank up/down reorders and sends `1. … · 2. …`; disabled while the asker has a Draft; Dismiss posts nothing; a second tab hides on `QuestionsChanged`; hidden when Archived | Fails |
 | Q-I8 | Impl | `QuestionCard.razor`, `Chat.razor` wiring | T8 green |
-| Q-G1 | Guard | A test that pins the `initialize` request's client capabilities: `Fs` and `Terminal` false, no `elicitation`. **Done as** `PersonaHostTests.Start_AdvertisesNoElicitation_AndNoFsOrTerminal` in `tests/Huddle.Tests/Conformance`, which drives the real factory against `FakeAcpAgent`, so `DotAcpAgentHost` and `Huddle.Acp.Tests` are untouched. Proved by flipping `Terminal` to `true` locally (red), then reverting. The `elicitation` half could not be proved the same way: `ClientCapabilities` in `dotacp` 2026.7.19 has no such member | Passes now, and goes red if any capability beyond `fs` and `terminal` is ever advertised, or either is turned on. It is lifted by the follow-up decision (§6.8a), once its three gates are met, not forever |
+| Q-G1 | Guard | A test that pins the `initialize` request's client capabilities: `Fs` and `Terminal` false, and `elicitation` present only as `{"form":{}}` when `Acp:AdvertiseElicitation` is on, absent when it is off. **Done as** `PersonaHostTests.Start_WithAdvertiseElicitationOn_AdvertisesFormObjectOnly`, `…Start_CapabilityKeys_AreFsTerminalElicitation_Only`, `…Start_WithAdvertiseElicitationOff_AdvertisesNoElicitation` and `…Start_WithTheShippedDefault_AdvertisesFormObjectOnly` in `tests/Huddle.Tests/Conformance`, which drive the real factory against `FakeAcpAgent`. Each was proved by mutation (a `url` entry added, another key added, always or never advertising) | Passes now, and goes red if `url` or any capability beyond `fs`, `terminal` and `elicitation.form` is ever advertised, or `fs`/`terminal` is turned on. The probe host and the console never advertise (`DotAcpHostOptions.AdvertiseElicitationForm` defaults to `false`) |
 | Q-D | Docs | `language.md` Question drops "Proposed, not built"; `known-limits.md` gains "a waiting Question is lost on restart"; `manual-tests.md` gains QM-1 to QM-6; ADR-0022 to Accepted | Reviewed |
+
+## Appendix A2 — The elicitation bridge, as built
+
+Built 2026-10-01 in this order, each part test-first and green on its own, with the flip that turns it on last.
+
+| Part | What it is | Pinned by |
+| --- | --- | --- |
+| Wire | `NdjsonMethodRewriteStream`, `ElicitationClientCapabilities`, `DotAcpHostOptions.AdvertiseElicitationForm` (off by default) | `NdjsonMethodRewriteStreamTests`, `DotAcpAgentHostElicitationWireTests` |
+| Adapter | `DotAcpClientAdapter` answers `elicitation/create` through the session's `IElicitationScope`; handlers are cancelled on peer close, session dispose and prompt cancellation | `DotAcpClientAdapterElicitationTests`, `DotAcpAgentHostElicitationHandlingTests`, `FakeAcpAgentElicitationTests` (the fake sends the real wire method and refuses unless `elicitation.form` was advertised) |
+| G1 | `RoomSession` lease, the watchdog pause, `Acp:UserInputTimeoutSeconds` | `RoomSessionUserInputTests`, `ElicitationBridgePlumbingTests` |
+| G3 | `ChatService.PostHumanAnswerAsync`, `MessagePostedEvent.WithheldFromAgentId`, the `AgentGateway` skip | `ChatServiceHumanAnswerTests`, `AgentGatewayWithheldAnswerTests` |
+| Core | `ElicitationSchemaReader`, `ElicitationStore`, `ElicitationComposer`, `ElicitationService`, `RoomElicitationBridge`, and the drops on a typed message, archive and delete | `tests/Huddle.Tests/Elicitation/*`, `ChatServiceElicitationDropTests` |
+| Card | `ElicitationCard` | `ElicitationCardTests`, `ChatPageTests` |
+| Flip | `Acp:AdvertiseElicitation` (default on), the steering sentence, Q-G1, the whole path against a scripted agent | `ElicitationConformanceTests`, `PersonaHostTests`, `PromptCatalogTests` |
+| Layout | the card's rules in `app.css`, the Room column's `min-height: 0` | `RoomLayoutSourceTests` |
+| Scripted adapter | `mock-acp` puts a form to the Human when a prompt contains `[elicit:ask]`, `[elicit:one]`, `[elicit:form]`, `[elicit:refusal]` or `[elicit:unsupported]`, and replies with what it got | `MockElicitationTests` |
 
 ## Appendix B — Follow-ups outside this spec
 
@@ -670,10 +782,8 @@ Each `.t` task ends red for the right reason; each `.i` task ends with `dotnet t
   Greeting's menu of 31 teams is **not**: it is far past four options, and it stays prose. Edit
   the Skill once this tool exists, not before, so the Skill never names a tool its Teammate
   cannot call.
-- **ACP elicitation** for typed forms (dates, numbers, free text) is the one thing `ask_human`
-  cannot express, and it is the planned follow-up (§6.8a), not scheduled. It needs the idle
-  watchdog paused while a request is open, a handler for every form the Adapter can send
-  (including the refusal-fallback dialog and MCP forms), and the answer posted as a Message, so
-  the Transcript stays complete. The same watchdog change is needed for any human-approval card
-  on `session/request_permission` (roadmap item 20), so build that first and the cost is paid
-  once.
+- **ACP elicitation** is built (§6.8a). Still outside this spec, and not scheduled: URL mode (the
+  Adapter's OAuth flow for MCP servers); a Huddle tool that lets an Agent *start* a typed form of its own,
+  since typed fields today arrive only from an MCP server, a non-Claude Adapter or `AskUserQuestion`'s
+  free-text Other; and a human approval card on `session/request_permission` (roadmap item 20), which now
+  needs only its own card and the Transcript Message, because the watchdog pause is built.
