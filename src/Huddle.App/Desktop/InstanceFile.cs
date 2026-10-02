@@ -36,10 +36,24 @@ internal static class InstanceFile
     /// <param name="info">The record to publish.</param>
     internal static void Write(string dataDir, InstanceInfo info)
     {
-        Directory.CreateDirectory(dataDir);
+        if (OperatingSystem.IsWindows())
+        {
+            Directory.CreateDirectory(dataDir);
+        }
+        else
+        {
+            Directory.CreateDirectory(dataDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+
         string temp = Path.Combine(dataDir, TempFileName);
         string final = Path.Combine(dataDir, FileName);
         File.WriteAllText(temp, JsonSerializer.Serialize(info, JsonOptions));
+
+        // The record carries the stop token, so on Unix only the owner may read it.
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(temp, UnixFileMode.UserRead | UnixFileMode.UserWrite);
+        }
 
         for (int attempt = 1; attempt <= MoveAttempts; attempt++)
         {

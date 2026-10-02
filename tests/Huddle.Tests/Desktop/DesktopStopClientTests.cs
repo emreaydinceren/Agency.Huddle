@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using Agency.Huddle.App.Desktop;
 
@@ -95,6 +96,7 @@ public sealed class DesktopStopClientTests
         using TempDataDir dir = new();
         InstanceFile.Write(dir.Path, Info with { Url = "http://127.0.0.1:5123/" });
         using FakeHttpHandler handler = FakeHttpHandler.Returning(HttpStatusCode.Accepted);
+        using InstanceLock held = Hold(dir.Path);
 
         _ = await DesktopStopClient.RunAsync(dir.Path, handler, new StringWriter(), ShortTimeout, ct);
 
@@ -120,23 +122,72 @@ public sealed class DesktopStopClientTests
         Assert.DoesNotContain("Stopped.", output.ToString(), StringComparison.Ordinal);
     }
 
-    /// <summary>Connection refused with nobody holding the lock means the record is stale: it is deleted and the client returns 0.</summary>
+    /// <summary>A record with nobody holding the lock is stale: it is deleted, the client returns 0 and sends no request.</summary>
     [Fact]
-    public async Task RunAsync_ConnectionRefusedAndLockFree_DeletesStaleFileAndReturnsZero()
+    public async Task RunAsync_RecordPresentAndLockFree_DeletesStaleFileAndNeverCallsHandler()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         InstanceFile.Write(dir.Path, Info);
-        using FakeHttpHandler handler = FakeHttpHandler.Throwing(new HttpRequestException("refused"));
+        using FakeHttpHandler handler = FakeHttpHandler.Returning(HttpStatusCode.Accepted);
         StringWriter output = new();
 
         int exit = await DesktopStopClient.RunAsync(dir.Path, handler, output, ShortTimeout, ct);
 
         Assert.Equal(0, exit);
         Assert.Null(InstanceFile.TryRead(dir.Path));
+        Assert.False(File.Exists(Path.Combine(dir.Path, "instance.json")));
         Assert.Contains("Agency Huddle is not running.", output.ToString(), StringComparison.Ordinal);
+        Assert.Empty(handler.Requests);
         using InstanceLock? after = InstanceLock.TryAcquire(dir.Path);
         Assert.NotNull(after);
+    }
+
+    /// <summary>With the lock held and no record yet the client waits for one, gives up after the stop timeout and returns 1 without a request.</summary>
+    [Fact]
+    public async Task RunAsync_NoRecordAndLockHeld_WaitsThenReportsStartingAndReturnsOne()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using FakeHttpHandler handler = FakeHttpHandler.Returning(HttpStatusCode.Accepted);
+        StringWriter output = new();
+        using InstanceLock held = Hold(dir.Path);
+        Stopwatch clock = Stopwatch.StartNew();
+
+        int exit = await DesktopStopClient.RunAsync(dir.Path, handler, output, ShortTimeout, ct);
+
+        Assert.Equal(1, exit);
+        Assert.True(clock.Elapsed >= TimeSpan.FromMilliseconds(250), $"Returned after {clock.Elapsed}.");
+        Assert.Contains("Agency Huddle is starting or not answering.", output.ToString(), StringComparison.Ordinal);
+        Assert.Empty(handler.Requests);
+    }
+
+    /// <summary>A record that appears shortly after the client starts, while the lock is held, is picked up and the instance is stopped.</summary>
+    [Fact]
+    public async Task RunAsync_RecordAppearsWhileLockHeld_ProceedsAndStops()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        using TempDataDir dir = new();
+        using FakeHttpHandler handler = FakeHttpHandler.Returning(HttpStatusCode.Accepted);
+        StringWriter output = new();
+        InstanceLock held = Hold(dir.Path);
+        Task owner = Task.Run(
+            async () =>
+            {
+                await Task.Delay(100, ct);
+                InstanceFile.Write(dir.Path, Info);
+                await Task.Delay(300, ct);
+                held.Dispose();
+            },
+            ct);
+
+        int exit = await DesktopStopClient.RunAsync(dir.Path, handler, output, TimeSpan.FromSeconds(5), ct);
+        await owner;
+
+        Assert.Equal(0, exit);
+        Assert.Contains("Stopped.", output.ToString(), StringComparison.Ordinal);
+        RecordedRequest request = Assert.Single(handler.Requests);
+        Assert.Equal([Info.StopToken], request.TokenValues);
     }
 
     /// <summary>Connection refused while the lock is held means a live instance is starting: the record is kept and the client returns 1.</summary>
@@ -166,6 +217,7 @@ public sealed class DesktopStopClientTests
         InstanceFile.Write(dir.Path, Info);
         using FakeHttpHandler handler = FakeHttpHandler.Throwing(new TaskCanceledException("timed out"));
         StringWriter output = new();
+        using InstanceLock held = Hold(dir.Path);
 
         int exit = await DesktopStopClient.RunAsync(dir.Path, handler, output, ShortTimeout, ct);
 
@@ -182,6 +234,7 @@ public sealed class DesktopStopClientTests
         InstanceFile.Write(dir.Path, Info);
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
+        using InstanceLock held = Hold(dir.Path);
         using FakeHttpHandler handler = new((_, token) =>
         {
             token.ThrowIfCancellationRequested();
@@ -201,6 +254,7 @@ public sealed class DesktopStopClientTests
         InstanceFile.Write(dir.Path, Info);
         using FakeHttpHandler handler = FakeHttpHandler.Returning(HttpStatusCode.Unauthorized);
         StringWriter output = new();
+        using InstanceLock held = Hold(dir.Path);
 
         int exit = await DesktopStopClient.RunAsync(dir.Path, handler, output, ShortTimeout, ct);
 
@@ -218,6 +272,7 @@ public sealed class DesktopStopClientTests
         InstanceFile.Write(dir.Path, Info);
         using FakeHttpHandler handler = FakeHttpHandler.Returning(HttpStatusCode.Forbidden);
         StringWriter output = new();
+        using InstanceLock held = Hold(dir.Path);
 
         int exit = await DesktopStopClient.RunAsync(dir.Path, handler, output, ShortTimeout, ct);
 
@@ -234,6 +289,7 @@ public sealed class DesktopStopClientTests
         InstanceFile.Write(dir.Path, Info);
         using FakeHttpHandler handler = FakeHttpHandler.Returning(HttpStatusCode.InternalServerError);
         StringWriter output = new();
+        using InstanceLock held = Hold(dir.Path);
 
         int exit = await DesktopStopClient.RunAsync(dir.Path, handler, output, ShortTimeout, ct);
 

@@ -27,7 +27,15 @@ internal sealed class InstanceLock : IDisposable
     /// <returns>The held lock, or <see langword="null"/> when another owner already holds it.</returns>
     internal static InstanceLock? TryAcquire(string dataDir)
     {
-        Directory.CreateDirectory(dataDir);
+        if (OperatingSystem.IsWindows())
+        {
+            Directory.CreateDirectory(dataDir);
+        }
+        else
+        {
+            Directory.CreateDirectory(dataDir, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+
         string path = Path.Combine(dataDir, "instance.lock");
 
         try

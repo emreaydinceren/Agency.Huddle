@@ -14,6 +14,8 @@ internal static class DesktopStopClient
 
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(100);
 
+    private static readonly TimeSpan MaxRecordWait = TimeSpan.FromSeconds(15);
+
     /// <summary>
     /// Stops the instance that owns <paramref name="dataDir"/>, if any.
     /// </summary>
@@ -22,7 +24,10 @@ internal static class DesktopStopClient
     /// <param name="output">Where the outcome is printed. The stop token is never printed.</param>
     /// <param name="stopTimeout">How long to wait for the instance to release its lock after it accepts the request.</param>
     /// <param name="ct">Cancels the call.</param>
-    /// <returns>0 when nothing is running any more, 1 when the instance refused, did not answer or did not stop in time.</returns>
+    /// <returns>
+    /// 0 when nothing is running (the lock is free, so any record is stale and is deleted) or the instance stopped,
+    /// 1 when the instance refused, is still starting, did not answer or did not stop in time.
+    /// </returns>
     internal static async Task<int> RunAsync(
         string dataDir,
         HttpMessageHandler? handler,
@@ -30,11 +35,24 @@ internal static class DesktopStopClient
         TimeSpan stopTimeout,
         CancellationToken ct)
     {
-        InstanceInfo? info = InstanceFile.TryRead(dataDir);
+        // The lock, not the record, says whether an instance is alive: a record outlives a crashed owner and its
+        // port may by now belong to another service. The probe is released before anything else happens.
+        using (InstanceLock? probe = InstanceLock.TryAcquire(dataDir))
+        {
+            if (probe is not null)
+            {
+                InstanceFile.Delete(dataDir);
+                output.WriteLine("Agency Huddle is not running.");
+                return 0;
+            }
+        }
+
+        TimeSpan recordWait = stopTimeout < MaxRecordWait ? stopTimeout : MaxRecordWait;
+        InstanceInfo? info = await WaitForRecordAsync(dataDir, recordWait, ct);
         if (info is null)
         {
-            output.WriteLine("Agency Huddle is not running.");
-            return 0;
+            output.WriteLine("Agency Huddle is starting or not answering.");
+            return 1;
         }
 
         if (!Uri.TryCreate(info.Url, UriKind.Absolute, out Uri? baseUrl))
@@ -59,7 +77,9 @@ internal static class DesktopStopClient
         }
         catch (HttpRequestException)
         {
-            return HandleConnectionFailure(dataDir, output);
+            // The lock is held, so a live instance is starting or stuck: keep its record.
+            output.WriteLine("Agency Huddle is starting or not answering.");
+            return 1;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
@@ -85,24 +105,32 @@ internal static class DesktopStopClient
     }
 
     /// <summary>
-    /// Decides what a refused connection means: when nobody holds the instance lock the record is stale and is
-    /// removed; when the lock is held a live instance is starting or stuck and the record is left alone.
+    /// Reads the record, polling every <see cref="PollInterval"/> for up to <paramref name="wait"/> when the
+    /// lock is held but the instance has not published it yet.
     /// </summary>
     /// <param name="dataDir">The data directory.</param>
-    /// <param name="output">Where the outcome is printed.</param>
-    /// <returns>0 for a stale record, otherwise 1.</returns>
-    private static int HandleConnectionFailure(string dataDir, TextWriter output)
+    /// <param name="wait">How long to wait for the record.</param>
+    /// <param name="ct">Cancels the wait.</param>
+    /// <returns>The record, or <see langword="null"/> when none appeared in time.</returns>
+    private static async Task<InstanceInfo?> WaitForRecordAsync(string dataDir, TimeSpan wait, CancellationToken ct)
     {
-        using InstanceLock? probe = InstanceLock.TryAcquire(dataDir);
-        if (probe is null)
+        Stopwatch clock = Stopwatch.StartNew();
+        while (true)
         {
-            output.WriteLine("Agency Huddle is starting or not answering.");
-            return 1;
-        }
+            InstanceInfo? info = InstanceFile.TryRead(dataDir);
+            if (info is not null)
+            {
+                return info;
+            }
 
-        InstanceFile.Delete(dataDir);
-        output.WriteLine("Agency Huddle is not running.");
-        return 0;
+            TimeSpan remaining = wait - clock.Elapsed;
+            if (remaining <= TimeSpan.Zero)
+            {
+                return null;
+            }
+
+            await Task.Delay(remaining < PollInterval ? remaining : PollInterval, ct);
+        }
     }
 
     /// <summary>

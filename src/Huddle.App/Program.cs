@@ -16,7 +16,7 @@ if (args is ["stop"])
     string stopDataDir = Path.GetFullPath(
         Environment.GetEnvironmentVariable("Team__DataDir") is { Length: > 0 } stopDir ? stopDir : "App_Data");
     return await DesktopStopClient.RunAsync(
-        stopDataDir, null, Console.Out, TimeSpan.FromSeconds(20), CancellationToken.None);
+        stopDataDir, null, Console.Out, TimeSpan.FromSeconds(45), CancellationToken.None);
 }
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,16 +26,17 @@ var builder = WebApplication.CreateBuilder(args);
 // instance.json a crashed predecessor left behind, before anything can read it as live.
 DesktopOptions desktop = builder.Configuration.GetSection(DesktopOptions.SectionName).Get<DesktopOptions>() ?? new();
 string desktopDataDir = Path.GetFullPath(builder.Configuration["Team:DataDir"] ?? "App_Data");
-using InstanceLock? instanceLock = desktop.Enabled ? InstanceLock.TryAcquire(desktopDataDir) : null;
+IBrowserOpener handOffOpener = desktop.OpenBrowser ? new SystemBrowserOpener() : new NoopBrowserOpener();
+HandOffResult handOff = desktop.Enabled
+    ? await DesktopHandOff.AcquireOrHandOffAsync(
+        desktopDataDir, handOffOpener, TimeSpan.FromSeconds(15), TimeSpan.FromMilliseconds(200), CancellationToken.None)
+    : new HandOffResult(null, false);
+using InstanceLock? instanceLock = handOff.Lock;
 if (desktop.Enabled)
 {
     if (instanceLock is null)
     {
-        IBrowserOpener handOffOpener = desktop.OpenBrowser ? new SystemBrowserOpener() : new NoopBrowserOpener();
-        return await DesktopHandOff.OpenExistingAsync(
-            desktopDataDir, handOffOpener, TimeSpan.FromSeconds(15), TimeSpan.FromMilliseconds(200), CancellationToken.None)
-            ? 0
-            : 1;
+        return handOff.Opened ? 0 : 1;
     }
 
     InstanceFile.Delete(desktopDataDir);

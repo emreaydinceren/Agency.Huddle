@@ -51,6 +51,29 @@ public sealed class InstanceFileTests
         Assert.False(File.Exists(Path.Combine(nested, "instance.json.tmp")));
     }
 
+    /// <summary>On Unix the published file is readable and writable by its owner only (0600) and a created data directory is 0700; Windows has no mode to check.</summary>
+    [Fact]
+    public void Write_OnUnix_FileIsOwnerOnlyAndCreatedDirectoryIsPrivate()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.True(OperatingSystem.IsWindows());
+            return;
+        }
+
+        using TempDataDir dir = new();
+        string nested = Path.Combine(dir.Path, "private-data");
+
+        InstanceFile.Write(nested, new InstanceInfo("http://localhost:1", "t", 7));
+
+        Assert.Equal(
+            UnixFileMode.UserRead | UnixFileMode.UserWrite,
+            File.GetUnixFileMode(Path.Combine(nested, "instance.json")));
+        Assert.Equal(
+            UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute,
+            File.GetUnixFileMode(nested));
+    }
+
     /// <summary>With no file in the directory, <see cref="InstanceFile.TryRead"/> returns null.</summary>
     [Fact]
     public void TryRead_NoFile_ReturnsNull()
