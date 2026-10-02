@@ -2,6 +2,7 @@ using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.Questions;
 using Agency.Huddle.App.Teammates;
 using Agency.Huddle.Contracts;
@@ -98,6 +99,7 @@ public sealed partial class ChatService
     private readonly IMentionAliasSource aliasSource;
     private readonly ProposalStore proposals;
     private readonly QuestionStore questions;
+    private readonly ElicitationStore? elicitations;
     private readonly ILogger<ChatService> logger;
     private readonly ConcurrentDictionary<string, SemaphoreSlim> postLocks = new(StringComparer.Ordinal);
 
@@ -129,6 +131,13 @@ public sealed partial class ChatService
     /// Room is archived or deleted.
     /// </param>
     /// <param name="logger">Used to log Room creation and Invitation events.</param>
+    /// <param name="elicitations">
+    /// Holds each Room's waiting forms (elicitation bridge, decision E-5). Every card of a Room is dropped -
+    /// its request resolved as cancelled - when the Human types a Message there, and when the Room is
+    /// archived or deleted. <see cref="PostHumanAnswerAsync"/> and an Agent's Message leave them alone:
+    /// answering one form must not cancel another. Optional and last so every earlier caller compiles
+    /// unchanged; <see langword="null"/> drops nothing.
+    /// </param>
     public ChatService(
         ITeamDirectory teamDirectory,
         IChatStore store,
@@ -137,7 +146,8 @@ public sealed partial class ChatService
         IOptions<TeamOptions> options,
         ProposalStore proposals,
         QuestionStore questions,
-        ILogger<ChatService> logger)
+        ILogger<ChatService> logger,
+        ElicitationStore? elicitations = null)
     {
         ArgumentNullException.ThrowIfNull(teamDirectory);
         ArgumentNullException.ThrowIfNull(store);
@@ -155,6 +165,7 @@ public sealed partial class ChatService
         this.agentMessageBudget = options.Value.AgentMessageBudget;
         this.proposals = proposals;
         this.questions = questions;
+        this.elicitations = elicitations;
         this.logger = logger;
     }
 
@@ -268,6 +279,13 @@ public sealed partial class ChatService
             if (!isAgent)
             {
                 _ = this.questions.Drop(roomId);
+
+                // A typed Message cancels every form still waiting in the Room. The Human's own answer to
+                // a form (withheldFromAgentId set) is not that: it must leave the Room's other forms waiting.
+                if (withheldFromAgentId is null)
+                {
+                    _ = this.elicitations?.Drop(roomId);
+                }
             }
 
             this.events.PublishMessagePosted(new MessagePostedEvent(room, message, members, mentions, budget, withheldFromAgentId));
@@ -583,6 +601,7 @@ public sealed partial class ChatService
         {
             this.proposals.Drop(roomId);
             _ = this.questions.Drop(roomId);
+            _ = this.elicitations?.Drop(roomId);
         }
 
         ChatService.LogRoomArchived(this.logger, roomId, archived);
@@ -611,6 +630,7 @@ public sealed partial class ChatService
         // pending in it is dropped along with everything else below.
         this.proposals.Drop(roomId);
         _ = this.questions.Drop(roomId);
+        _ = this.elicitations?.Drop(roomId);
 
         // Both budgets and postLocks are keyed by roomId and now describe a Room that no longer
         // exists, so drop them. Drafts and RoomFollows are deliberately left untouched: both are

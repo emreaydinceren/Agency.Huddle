@@ -86,6 +86,14 @@ public sealed class RoomEvents
     /// </summary>
     public event Action<string>? QuestionsChanged;
 
+    /// <summary>
+    /// The forms waiting for the Human in a Room changed - one arrived, was taken (answered or skipped),
+    /// or was dropped (its request was cancelled, a typed Human Message, an archive or a delete). Carries
+    /// the Room id, not the cards, for the same reason <see cref="QuestionsChanged"/> does. The Room view
+    /// is the only subscriber; an Agent is never told, because the answer reaches it as the form's result.
+    /// </summary>
+    public event Action<string>? ElicitationsChanged;
+
     public void PublishMessagePosted(MessagePostedEvent e)
     {
         this.Publish(this.MessagePosted, e, nameof(this.MessagePosted));
@@ -161,6 +169,16 @@ public sealed class RoomEvents
     internal void PublishQuestionsChanged(string roomId)
     {
         this.PublishRoomId(this.QuestionsChanged, roomId, nameof(this.QuestionsChanged));
+    }
+
+    /// <summary>
+    /// Publishes <see cref="ElicitationsChanged"/> for <paramref name="roomId"/>. Called by
+    /// <see cref="Elicitation.ElicitationStore"/> after its own lock is released, never while held.
+    /// </summary>
+    /// <param name="roomId">The Room whose waiting forms changed.</param>
+    internal void PublishElicitationsChanged(string roomId)
+    {
+        this.PublishRoomId(this.ElicitationsChanged, roomId, nameof(this.ElicitationsChanged));
     }
 
     private void PublishRoomId(Action<string>? handlers, string roomId, string eventName)
