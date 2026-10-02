@@ -20,6 +20,8 @@ internal sealed class FakeAgentSession : IAgentSession
 
     private readonly List<AgentPrompt> agentPrompts = new List<AgentPrompt>();
 
+    private readonly List<IElicitationScope> boundScopes = new List<IElicitationScope>();
+
     private readonly Channel<AgentEvent> outputChannel = System.Threading.Channels.Channel.CreateUnbounded<AgentEvent>(
         new UnboundedChannelOptions { SingleReader = true, SingleWriter = true });
 
@@ -62,6 +64,18 @@ internal sealed class FakeAgentSession : IAgentSession
         }
     }
 
+    /// <summary>Every scope <see cref="BindElicitationScope"/> has been called with, in call order.</summary>
+    internal IReadOnlyList<IElicitationScope> BoundScopes
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.boundScopes.ToArray();
+            }
+        }
+    }
+
     internal int CancelCount => Volatile.Read(ref this.cancelCount);
 
     internal bool Disposed { get; private set; }
@@ -93,6 +107,18 @@ internal sealed class FakeAgentSession : IAgentSession
         }
 
         return await this.WaitForTurnCompletedAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Records <paramref name="scope"/> in <see cref="BoundScopes"/>.</summary>
+    /// <param name="scope">The scope the code under test bound.</param>
+    public void BindElicitationScope(IElicitationScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+
+        lock (this.gate)
+        {
+            this.boundScopes.Add(scope);
+        }
     }
 
     public Task CancelAsync(CancellationToken cancellationToken)

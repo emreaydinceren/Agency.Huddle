@@ -20,11 +20,13 @@ internal sealed class FakeAgentSession : IAgentSession
     private readonly Queue<IReadOnlyList<AgentEvent>> plannedToolEvents = new();
     private readonly List<string> prompts = [];
     private readonly List<AgentPrompt> agentPrompts = [];
+    private readonly List<IElicitationScope> boundScopes = [];
 
     private readonly TimeProvider time;
     private bool promptInFlight;
     private int cancelCallCount;
     private bool cancelObservedPromptInFlight;
+    private CancellationToken lastPromptCancellationToken;
 
     /// <summary>Initializes a new instance of the <see cref="FakeAgentSession"/> class.</summary>
     /// <param name="completeEventsOnDispose">
@@ -90,6 +92,33 @@ internal sealed class FakeAgentSession : IAgentSession
             lock (this.gate)
             {
                 return [.. this.agentPrompts];
+            }
+        }
+    }
+
+    /// <summary>Every scope <see cref="BindElicitationScope"/> has been called with, in call order.</summary>
+    public IReadOnlyList<IElicitationScope> BoundScopes
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return [.. this.boundScopes];
+            }
+        }
+    }
+
+    /// <summary>
+    /// The token the most recent <see cref="PromptAsync"/> call received, so a test can tell whether the
+    /// Turn's own token has been cancelled while a gated reply, which never observes it, is still in flight.
+    /// </summary>
+    public CancellationToken LastPromptCancellationToken
+    {
+        get
+        {
+            lock (this.gate)
+            {
+                return this.lastPromptCancellationToken;
             }
         }
     }
@@ -274,6 +303,18 @@ internal sealed class FakeAgentSession : IAgentSession
         return this.RunPromptAsync(prompt, cancellationToken);
     }
 
+    /// <summary>Records <paramref name="scope"/> in <see cref="BoundScopes"/>.</summary>
+    /// <param name="scope">The scope the session under test bound.</param>
+    public void BindElicitationScope(IElicitationScope scope)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+
+        lock (this.gate)
+        {
+            this.boundScopes.Add(scope);
+        }
+    }
+
     public Task CancelAsync(CancellationToken cancellationToken)
     {
         lock (this.gate)
@@ -312,6 +353,7 @@ internal sealed class FakeAgentSession : IAgentSession
             }
 
             this.promptInFlight = true;
+            this.lastPromptCancellationToken = ct;
             this.prompts.Add(text);
             this.agentPrompts.Add(prompt);
         }

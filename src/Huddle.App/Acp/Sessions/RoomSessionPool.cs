@@ -33,6 +33,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     private readonly TurnActivity? turnActivity;
     private readonly LibraryDocumentCollector? libraryDocs;
     private readonly bool readsFiles;
+    private readonly IElicitationBridge? elicitationBridge;
     private readonly bool sessionPerRoom;
     private readonly TurnGate gate;
     private readonly int effectiveMaxLiveSessions;
@@ -67,6 +68,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
     /// <param name="turnActivity">Records which Room each Room Session's Agent has a Turn running in (Spec §10.8). <see langword="null"/> disables it, like every caller that predates it.</param>
     /// <param name="libraryDocs">Collects the Library documents mentioned in a Turn (Spec §6.14), passed to every Room Session this pool creates. <see langword="null"/> when the Library is off, like every caller that predates it.</param>
     /// <param name="readsFiles">Whether the resolved Adapter Profile can read files (FC §6.11's Library counterpart), passed to every Room Session this pool creates.</param>
+    /// <param name="elicitationBridge">Shows the Human the questions the agent asks (E-3), passed to every Room Session this pool creates. <see langword="null"/> answers every one as cancelled, like every caller that predates it.</param>
     public RoomSessionPool(
         IPersonaHost host,
         IRoomSessionOwner owner,
@@ -83,7 +85,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         string? agentId = null,
         TurnActivity? turnActivity = null,
         LibraryDocumentCollector? libraryDocs = null,
-        bool readsFiles = true)
+        bool readsFiles = true,
+        IElicitationBridge? elicitationBridge = null)
     {
         ArgumentNullException.ThrowIfNull(host);
         ArgumentNullException.ThrowIfNull(owner);
@@ -110,6 +113,7 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
         this.turnActivity = turnActivity;
         this.libraryDocs = libraryDocs;
         this.readsFiles = readsFiles;
+        this.elicitationBridge = elicitationBridge;
         this.sessionPerRoom = host.Profile.SessionPerRoom;
 
         var configuredConcurrency = Math.Max(1, options.MaxConcurrentTurns);
@@ -345,7 +349,8 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             agentId: this.agentId,
             turnActivity: this.turnActivity,
             libraryDocs: this.libraryDocs,
-            readsFiles: this.readsFiles);
+            readsFiles: this.readsFiles,
+            elicitationBridge: this.elicitationBridge);
 
     private RoomSession GetOrCreateSession(string roomId)
     {

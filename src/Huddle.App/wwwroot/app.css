@@ -101,6 +101,16 @@ button:focus-visible {
     overflow: hidden;
 }
 
+/* The Room's own column fills .main-column (h-100) and holds the header, the .message-list, any cards
+   and the composer. A flex item's min-height defaults to auto, which refuses to shrink below its
+   content, so once the Transcript was taller than the window the column simply grew past it and
+   .main-column clipped the top: .message-list never got a bounded height, never scrolled, and the
+   header and every earlier Message were unreachable. min-height: 0 lets the column be the window's
+   height, so .message-list shrinks and scrolls and the composer stays on screen. */
+.room-column {
+    min-height: 0;
+}
+
 
 
 /* ---- The drawer, and pinning Settings to the bottom of it ------------------------------------
@@ -1563,4 +1573,72 @@ button:focus-visible {
 
 .library-frontmatter dd {
     margin: 0;
+}
+
+
+/* ---- The Elicitation card: a form an Agent's tool put to the Human --------------------------------
+   These rules live HERE and not in ElicitationCard.razor.css, for the reason the drawer rules above
+   give: the card's root is a MudPaper and its controls are Mud components, and Blazor's CSS isolation
+   stamps its [b-xxxxx] attribute only onto HTML elements written in the component's own markup, so a
+   "::deep .elicitation-card" there compiled to a selector with no scoped ancestor and never matched.
+   For a first version the card had no height limit at all as a result: a form of eight fields was
+   taller than the window and pushed Send, Skip and the composer off the page, where nothing could
+   scroll to them. Nothing in the test suite renders a browser, so only looking at it showed that.
+
+   No var() and no colour here: nothing on this card carries a colour or typography of its own, so
+   ThemeSourceTests has nothing to object to. */
+
+/* The card is capped at half the window and its fields scroll inside it, while the title, the
+   message and Send / Skip stay in view; the other half is left for the Transcript above and the
+   composer below. min-height: 0 is what lets a flex child shrink below its content and scroll
+   instead of overflowing. */
+.elicitation-card {
+    display: flex;
+    flex-direction: column;
+    max-height: 50vh;
+}
+
+.elicitation-card-fields {
+    margin-top: 0.75rem;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.elicitation-card-actions {
+    margin-top: 0.75rem;
+    flex: 0 0 auto;
+}
+
+/* An agent's text is shown verbatim, so the line breaks in a message or a description are kept. */
+.elicitation-card-message,
+.elicitation-card-field-description,
+.elicitation-card-option-description {
+    white-space: pre-line;
+}
+
+/* Options are at least 44 pixels tall and the card wraps, so it works at phone width. */
+.elicitation-card-option {
+    min-height: 44px;
+    align-items: center;
+}
+
+.elicitation-card-option-label,
+.elicitation-card-option-description {
+    display: block;
+}
+
+.elicitation-card-other {
+    margin-top: 0.5rem;
+}
+
+/* A number field's helper text is its description and, on the next line, its allowed range. */
+.elicitation-card .mud-input-helper-text {
+    white-space: pre-line;
+}
+
+.elicitation-card-field-heading {
+    display: flex;
+    gap: 0.25rem;
+    align-items: baseline;
 }

@@ -10,6 +10,7 @@ using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Components.Pages;
 using Agency.Huddle.App.Components.Shared;
 using Agency.Huddle.App.Data;
+using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Pipes;
 using Agency.Huddle.App.Questions;
@@ -922,6 +923,33 @@ public sealed class ChatPageTests
         Assert.DoesNotContain("Invited gamma.", cut.Markup, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// The Room page hosts <see cref="ElicitationCard"/> for its own Room: a form waiting there is shown
+    /// under its asker's name, which also proves the page passes the Room's real id and not the literal
+    /// text a missing leading @ would pass.
+    /// </summary>
+    [Fact]
+    public async Task ChatPage_ShowsTheRoomsWaitingForm()
+    {
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        var ct = cts.Token;
+
+        await using var factory = new TeamWebApplicationFactory();
+        var (directory, chat, _) = ChatPageTests.Services(factory);
+        var agent = await directory.UpsertAgentUserAsync("echo", null, ct);
+        Assert.NotNull(agent);
+        var room = await chat.EnsureRoomForAsync(agent, ct);
+        ElicitationForm form = Agency.Huddle.Tests.Elicitation.ElicitationTestSupport.FormOf(Agency.Huddle.Tests.Elicitation.ElicitationTestSupport.TwoQuestionSchema, "Which database?");
+        _ = factory.Services.GetRequiredService<ElicitationStore>().Add(room.Id, agent.Id, agent.Name, form);
+
+        await using MudBunitContext ctx = ChatPageTests.NewContext(factory);
+        var cut = ChatPageTests.RenderChatPage(ctx, room.Id);
+        await ChatPageTests.WaitForMarkupAsync(cut, "elicitation-card-title", ct);
+
+        Assert.Equal("echo is asking", cut.Find(".elicitation-card-title").TextContent.Trim());
+        Assert.Equal("Which database?", cut.Find(".elicitation-card-message").TextContent.Trim());
+    }
+
     /// <summary>Creates a Room of the Human plus two named Agents ("alpha" and "beta") - the shape most of the context-only note tests need.</summary>
     private static async Task<(Room Room, User First, User Second)> CreateGroupRoomAsync(
         ITeamDirectory directory, ChatService chat, CancellationToken ct)
@@ -1005,6 +1033,12 @@ public sealed class ChatPageTests
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<QuestionStore>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<QuestionService>());
         ctx.Services.AddSingleton(factory.Services.GetRequiredService<IOptions<TeamOptions>>());
+
+        // Chat.razor renders ElicitationCard beside QuestionCard (elicitation bridge, E-5), which injects
+        // these two even though most of these tests never put a form to the Human - RoomEvents and
+        // ITeamDirectory are already registered above, for Chat.razor's own sake.
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ElicitationStore>());
+        ctx.Services.AddSingleton(factory.Services.GetRequiredService<ElicitationService>());
 
         // Chat.razor's MessageList child now injects ITaskReferenceResolver (Task 15.1) to link Task
         // ids - needed even though these tests never resolve one.

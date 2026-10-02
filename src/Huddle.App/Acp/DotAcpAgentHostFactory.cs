@@ -245,7 +245,10 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         DotAcpAgentHost innerHost;
         try
         {
-            var hostOptions = new DotAcpHostOptions(ClientName: "Team.App", TraceWire: this.options.Acp.TraceWire);
+            var hostOptions = new DotAcpHostOptions(
+                ClientName: "Team.App",
+                TraceWire: this.options.Acp.TraceWire,
+                AdvertiseElicitationForm: this.options.Acp.AdvertiseElicitation);
             innerHost = new DotAcpAgentHost(processOptions, this.launcher, hostOptions, this.loggerFactory);
             await innerHost.StartAsync(cancellationToken).ConfigureAwait(false);
         }

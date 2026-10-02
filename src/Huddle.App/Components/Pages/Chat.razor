@@ -21,7 +21,7 @@
 }
 else
 {
-    <MudStack Class="h-100" Spacing="0">
+    <MudStack Class="h-100 room-column" Spacing="0">
         <MudStack Class="pa-4 border-b-1 mud-border-lines-default" Spacing="2">
             <MudStack Row="true" AlignItems="AlignItems.Start" Justify="Justify.SpaceBetween">
                 <MudStack Spacing="1">
@@ -112,6 +112,11 @@ else
            reason: it is about the exchange just above it. A component with its own RoomEvents
            subscriptions, and the same leading-@ RoomId rule as ProposalCard. *@
         <QuestionCard RoomId="@this.room.Id" />
+        @* Forms an Agent's tool asked the Human to fill in (elicitation bridge, E-5): AskUserQuestion, the
+           refusal dialog, an MCP server's form. Every waiting card of the Room, in arrival order, from a
+           component with its own RoomEvents subscription, and the same leading-@ RoomId rule as
+           ProposalCard and QuestionCard - a missing @ passes the literal text and fails only on screen. *@
+        <ElicitationCard RoomId="@this.room.Id" />
         @* Between the transcript and the composer on purpose: the exchange that spent the Budget is
            the thing you need to read before deciding whether to grant another one. Rendered inline
            rather than as a component because a string Parameter missing its leading @ passes the

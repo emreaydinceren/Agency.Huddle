@@ -238,7 +238,7 @@ public sealed class DotAcpAgentSessionTests
     }
 
     /// <summary>
-    /// D30 ordering defect regression (docs/agencyteam/known-limits.md, "Second known flake"):
+    /// D30 ordering defect regression (docs/engineering/known-limits.md, "Second known flake"):
     /// StreamJsonRpc completes our outbound <c>session/prompt</c> request through a different path
     /// than the one that dispatches an inbound <c>session/update</c> notification's target method, so
     /// <see cref="DotAcpAgentSession.PromptAsync"/> can observe the response - and be ready to publish

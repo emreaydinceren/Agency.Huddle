@@ -36,7 +36,7 @@ is done. Within an area, tests run top to bottom — free tests first, paid test
 | 15 | [Adapters: choosing one per Persona, and running two at once](adapters.md) | 4 | 2 | 1.4h |
 | 16 | [Skills: the Chief of Staff, team-building, and the Family Health Advisor](skills.md) | 6 | 6 | 1.8h |
 | 17 | [Work Mode: how much an Agent may do before it asks](work-mode.md) | 9 | 4 | 2h |
-| 18 | [Questions: an Agent asks the Human by tapping, not typing](questions.md) | 6 | 6 | 1.5h |
+| 18 | [Questions: an Agent asks the Human by tapping, not typing](questions.md) | 10 | 9 | 3h |
 
 💰 marks a test that spends real money. Estimates assume you already know the app; first time
 through, roughly double them.
@@ -155,7 +155,11 @@ wall clock. Read [section 0.2](../manual-tests.md#02-the-cost-guard) and [sectio
 | [QUESTIONS-03](questions.md#questions-03--a-factual-question-and-a-request-for-an-opinion-do-not-call-ask_human) | `questions` | A factual question and a request for an opinion do not call `ask_human` | 15 min |
 | [QUESTIONS-04](questions.md#questions-04--the-same-on-a-teammate-running-on-agency-acp) | `questions` | The same on a Teammate running on `agency-acp` | 20 min |
 | [QUESTIONS-05](questions.md#questions-05--in-a-room-of-three-an-answer-wakes-only-the-asker) | `questions` | In a Room of three, an answer wakes only the asker | 20 min |
-| [QUESTIONS-06](questions.md#questions-06--a-claude-teammate-has-no-built-in-askuserquestion) | `questions` | A Claude Teammate has no built-in `AskUserQuestion` | 20 min |
+| [QUESTIONS-06](questions.md#questions-06--a-claude-teammate-has-no-built-in-askuserquestion) | `questions` | A Claude Teammate has no built-in `AskUserQuestion` (with `Acp:AdvertiseElicitation` off) | 20 min |
+| [QUESTIONS-07](questions.md#questions-07--a-scripted-adapters-forms-reach-the-human-as-cards-with-the-right-types) | `questions` | A scripted Adapter's forms reach the Human as cards, with the right types | 25 min |
+| [QUESTIONS-08](questions.md#questions-08--claudes-askuserquestion-reaches-the-human-and-the-turn-survives-the-wait) | `questions` | Claude's `AskUserQuestion` reaches the Human, and the Turn survives the wait | 20 min |
+| [QUESTIONS-09](questions.md#questions-09--skip-and-stop-end-a-waiting-form-cleanly) | `questions` | Skip and Stop end a waiting form cleanly | 20 min |
+| [QUESTIONS-10](questions.md#questions-10--an-unanswered-form-is-dropped-after-acpuserinputtimeoutseconds) | `questions` | An unanswered form is dropped after `Acp:UserInputTimeoutSeconds` | 15 min |
 
 Before the first paid test of a session:
 

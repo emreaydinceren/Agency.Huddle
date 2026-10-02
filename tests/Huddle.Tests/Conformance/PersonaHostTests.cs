@@ -23,8 +23,11 @@ namespace Agency.Huddle.Tests.Conformance;
 /// </summary>
 public sealed class PersonaHostTests
 {
-    /// <summary>The only <c>clientCapabilities</c> keys Huddle advertises: both are turned off, and nothing else is on.</summary>
-    private static readonly string[] AllowedCapabilityKeys = ["fs", "terminal"];
+    /// <summary>The configuration key that switches elicitation advertising, named from the option so a rename cannot leave these tests asserting on a switch that no longer exists.</summary>
+    private static readonly string AdvertiseKey = "Team:Acp:" + nameof(AcpOptions.AdvertiseElicitation);
+
+    /// <summary>The only <c>clientCapabilities</c> keys Huddle ever advertises, sorted: file system and terminal (both turned off) and elicitation (form mode only, when switched on).</summary>
+    private static readonly string[] AllowedCapabilityKeys = ["elicitation", "fs", "terminal"];
 
     /// <summary><see cref="IAgentHostFactory.StartAsync"/> starts the host but sends no <c>session/new</c> at all.</summary>
     [Fact]
@@ -40,30 +43,77 @@ public sealed class PersonaHostTests
     }
 
     /// <summary>
-    /// Questions spec Q-G1 and D-13: the <c>initialize</c> request the real factory's host sends
-    /// advertises no <c>elicitation</c> capability, and no file-system or terminal capability either.
-    /// <c>claude-agent-acp</c> keeps Claude's built-in <c>AskUserQuestion</c> off, and with it the
-    /// refusal-fallback dialog and MCP-initiated forms, only while <c>elicitation.form</c> is absent;
-    /// advertising it would hold a Turn open on an <c>elicitation/create</c> nothing answers, and give a
-    /// Claude Persona two ways to ask beside <c>ask_human</c>. A deliberate decision to advertise it
-    /// should have to change this test, and so a new decision, rather than slip in beside a handler.
+    /// Questions spec Q-G1 (follow-up decision §6.8a): with <c>Acp:AdvertiseElicitation</c> on, the
+    /// <c>initialize</c> request the real factory's host sends carries <c>clientCapabilities.elicitation</c>
+    /// equal to exactly <c>{"form":{}}</c>. Never a <c>url</c> entry: <c>claude-agent-acp</c> would start its
+    /// MCP OAuth path for one, which Huddle has no way to complete. File system and terminal stay off.
     /// </summary>
     [Fact]
-    public async Task Start_AdvertisesNoElicitation_AndNoFsOrTerminal()
+    public async Task Start_WithAdvertiseElicitationOn_AdvertisesFormObjectOnly()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct, advertiseElicitation: true);
+
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        JsonObject capabilities = InitializeCapabilities(fixture);
+        Assert.Equal("""{"form":{}}""", capabilities["elicitation"]?.ToJsonString());
+        Assert.False(capabilities["elicitation"]?.AsObject().ContainsKey("url"));
+        AssertFsAndTerminalOff(capabilities);
+    }
+
+    /// <summary>
+    /// With <c>Acp:AdvertiseElicitation</c> left alone, the real factory's host advertises the form object
+    /// too: the shipped configuration is the one that bridges Claude's questions to the Human.
+    /// </summary>
+    [Fact]
+    public async Task Start_WithTheShippedDefault_AdvertisesFormObjectOnly()
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         await using Fixture fixture = await Fixture.StartAsync(ct);
 
         await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
 
-        JsonObject initialize = Assert.Single(fixture.Agent.Received, message => (string?)message["method"] == "initialize");
-        JsonObject? capabilities = initialize["params"]?["clientCapabilities"]?.AsObject();
-        Assert.NotNull(capabilities);
-        Assert.False(capabilities.ContainsKey("elicitation"), "initialize must not advertise clientCapabilities.elicitation (Questions spec D-13).");
-        Assert.All(capabilities.Select(pair => pair.Key), key => Assert.Contains(key, AllowedCapabilityKeys));
-        Assert.False((bool?)capabilities["terminal"] ?? false);
-        Assert.False((bool?)capabilities["fs"]?["readTextFile"] ?? false);
-        Assert.False((bool?)capabilities["fs"]?["writeTextFile"] ?? false);
+        JsonObject capabilities = InitializeCapabilities(fixture);
+        Assert.Equal("""{"form":{}}""", capabilities["elicitation"]?.ToJsonString());
+    }
+
+    /// <summary>
+    /// Questions spec Q-G1: whatever the switch, the only <c>clientCapabilities</c> keys <c>initialize</c>
+    /// carries are <c>fs</c>, <c>terminal</c> and <c>elicitation</c>. A capability added beside them is a new
+    /// decision the way elicitation was, so it has to change this test rather than slip in unnoticed.
+    /// </summary>
+    [Fact]
+    public async Task Start_CapabilityKeys_AreFsTerminalElicitation_Only()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct, advertiseElicitation: true);
+
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        JsonObject capabilities = InitializeCapabilities(fixture);
+        Assert.Equal(AllowedCapabilityKeys, capabilities.Select(pair => pair.Key).Order(StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// Questions spec Q-G1 and D-13, as before the option existed: with <c>Acp:AdvertiseElicitation</c> off,
+    /// <c>initialize</c> advertises no <c>elicitation</c> capability and no file-system or terminal capability
+    /// either. <c>claude-agent-acp</c> keeps Claude's built-in <c>AskUserQuestion</c> off, and with it the
+    /// refusal-fallback dialog and MCP-initiated forms, only while <c>elicitation.form</c> is absent, so off
+    /// restores that behaviour exactly.
+    /// </summary>
+    [Fact]
+    public async Task Start_WithAdvertiseElicitationOff_AdvertisesNoElicitation()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct, advertiseElicitation: false);
+
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        JsonObject capabilities = InitializeCapabilities(fixture);
+        Assert.False(capabilities.ContainsKey("elicitation"), "initialize must not advertise clientCapabilities.elicitation while Acp:AdvertiseElicitation is off.");
+        Assert.Equal(["fs", "terminal"], capabilities.Select(pair => pair.Key).Order(StringComparer.Ordinal));
+        AssertFsAndTerminalOff(capabilities);
     }
 
     /// <summary>
@@ -156,6 +206,25 @@ public sealed class PersonaHostTests
         Assert.True(prompt.IndexOf(Sentence, StringComparison.Ordinal) > prompt.IndexOf("These tools run inside the application process:", StringComparison.Ordinal));
     }
 
+    /// <summary>
+    /// Elicitation bridge E-8: the composed system prompt the real factory hands <c>session/new</c> steers a
+    /// Persona to <c>ask_human</c>, named with the Adapter's prefix, rather than Claude's built-in
+    /// <c>AskUserQuestion</c>, which holds the Turn open until the Human answers; the passage appears once.
+    /// </summary>
+    [Fact]
+    public async Task Open_SystemPromptPrefersAskHumanOverTheBuiltInQuestionTool()
+    {
+        CancellationToken ct = TestContext.Current.CancellationToken;
+        await using Fixture fixture = await Fixture.StartAsync(ct);
+        await using IPersonaHost host = await fixture.Factory.StartAsync(fixture.Persona, "agent-1", ct);
+
+        _ = await host.OpenAsync(ct);
+        string prompt = await fixture.AppendedSystemPromptAsync(occurrence: 1, ct);
+
+        const string Passage = "The built-in AskUserQuestion tool also works for tappable choices, but it holds this Turn open until the Human answers, so prefer mcp__team__ask_human: ending your Turn lets the answer arrive as the Human's next Message and keeps the conversation moving.";
+        Assert.Equal(1, prompt.Split(Passage).Length - 1);
+    }
+
     /// <summary>Every session this host opens is told about the same MCP endpoint URL and the same bearer token (RS §6.3: "the token is minted per host").</summary>
     [Fact]
     public async Task Open_Twice_SameToolServerEndpointAndToken()
@@ -245,6 +314,25 @@ public sealed class PersonaHostTests
         await Assert.ThrowsAnyAsync<Exception>(() => client.GetAsync(toolServerUri, timeout.Token));
     }
 
+    /// <summary>The <c>clientCapabilities</c> object of the one <c>initialize</c> request <paramref name="fixture"/>'s scripted agent received.</summary>
+    /// <param name="fixture">The started harness.</param>
+    private static JsonObject InitializeCapabilities(Fixture fixture)
+    {
+        JsonObject initialize = Assert.Single(fixture.Agent.Received, message => (string?)message["method"] == "initialize");
+        JsonObject? capabilities = initialize["params"]?["clientCapabilities"]?.AsObject();
+        Assert.NotNull(capabilities);
+        return capabilities;
+    }
+
+    /// <summary>Asserts that file-system access and terminal access are both advertised as off, in every configuration.</summary>
+    /// <param name="capabilities">The advertised <c>clientCapabilities</c>.</param>
+    private static void AssertFsAndTerminalOff(JsonObject capabilities)
+    {
+        Assert.False((bool?)capabilities["terminal"] ?? false);
+        Assert.False((bool?)capabilities["fs"]?["readTextFile"] ?? false);
+        Assert.False((bool?)capabilities["fs"]?["writeTextFile"] ?? false);
+    }
+
     /// <summary>
     /// A minimal, pipe-free harness: a real Huddle host with <c>Team:Acp:Enabled</c> true and its
     /// process launcher substituted for <see cref="FakeAgentProcessLauncher"/>, exposing the real
@@ -278,7 +366,10 @@ public sealed class PersonaHostTests
         /// <summary>The same <see cref="TeammateFolderMoves"/> singleton <see cref="Factory"/> awaits before creating a Persona's Work Dir.</summary>
         internal TeammateFolderMoves Moves => this.host.Services.GetRequiredService<TeammateFolderMoves>();
 
-        internal static async Task<Fixture> StartAsync(CancellationToken cancellationToken)
+        /// <summary>Starts the harness, optionally pinning <c>Acp:AdvertiseElicitation</c>.</summary>
+        /// <param name="cancellationToken">Cancels startup.</param>
+        /// <param name="advertiseElicitation">The value to pin, or <see langword="null"/> to leave the shipped default alone.</param>
+        internal static async Task<Fixture> StartAsync(CancellationToken cancellationToken, bool? advertiseElicitation = null)
         {
             TempDataDir dataDir = new();
             string pipeName = "persona-host-test-" + Guid.NewGuid().ToString("N");
@@ -292,6 +383,11 @@ public sealed class PersonaHostTests
                 ["Team:Acp:Enabled"] = "true",
                 ["Team:Acp:Args:0"] = "--persona-host-fixture",
             };
+
+            if (advertiseElicitation is { } advertise)
+            {
+                config[AdvertiseKey] = advertise ? "true" : "false";
+            }
 
             HostApplicationBuilder builder = Host.CreateApplicationBuilder();
             builder.Configuration.AddInMemoryCollection(config);

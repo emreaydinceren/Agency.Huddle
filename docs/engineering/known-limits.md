@@ -377,9 +377,23 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   answer Message that never comes; the Human types the answer instead. Archiving or
   deleting the Room, and any typed Human Message in it, drop the card on purpose.
   Deliberate for V1: persisting it would mean a table and a recovery path for a card
-  the Human can answer by typing. `ask_human` is also the only way a Claude Teammate
-  asks: Huddle advertises no `elicitation` capability, so the Adapter keeps its
-  built-in `AskUserQuestion` off ([the Questions spec](../Huddle.Questions-Specifications.md) §6.8).
+  the Human can answer by typing. Since 2026-10-01 `ask_human` is no longer the only way a Claude
+  Teammate asks: Huddle advertises `elicitation.form` (`Acp:AdvertiseElicitation`), so the Adapter's
+  built-in `AskUserQuestion` works too, as the next entry describes
+  ([the Questions spec](../Huddle.Questions-Specifications.md) §6.8, §6.8a).
+- **A waiting form holds its Turn, and its Persona's slot, until it ends.** ACP `elicitation/create`
+  (Claude's `AskUserQuestion`, the retry-after-refusal dialog, an MCP server's form) keeps the asker's Turn
+  open while the `ElicitationCard` waits, unlike `ask_human`. The idle watchdog is paused for the wait, so a
+  forgotten card is not reported as a hung Adapter, and `Acp:UserInputTimeoutSeconds` (default 600) ends it:
+  the request is answered cancelled and the card goes. With `Acp:MaxConcurrentTurns` at its default of 1 the
+  Persona's Turns in its other Rooms queue behind the card for that long. A restart loses the card and the
+  Turn with it. Answering a form never wakes the asker (the answer is a Message withheld from it); the
+  accepted leaks are that another Agent that follows the Room still wakes, that the asker's own token
+  Budget is not reset by the Human's answer, and that on resume the asker's catch-up may include the answer as
+  context. A schema the card cannot show faithfully (a nested object, an array of objects, `$ref`/`allOf`, a type
+  list, more than 20 fields or 50 options) is answered `decline` at once and no card appears. The wire trace
+  shows the request as `_elicitation/create`, because the host renames it so `dotacp` routes it
+  ([the Questions spec](../Huddle.Questions-Specifications.md) §6.8a).
 - **A Claude Teammate does not ask with `ask_human` on its own.** The Claude Adapter defers every
   MCP tool: the model sees the name `mcp__team__ask_human` and nothing else until it calls
   ToolSearch, so the description that says when to ask is never read. Measured 2026-10-01 on Haiku:

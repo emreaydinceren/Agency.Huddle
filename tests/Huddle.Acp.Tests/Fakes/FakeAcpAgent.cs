@@ -29,6 +29,11 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
 
     private readonly ConcurrentDictionary<int, TaskCompletionSource<JsonObject>> pendingRequests = new ConcurrentDictionary<int, TaskCompletionSource<JsonObject>>();
 
+    /// <summary>The <c>elicitation/create</c> requests this fake sent and the client has not answered yet, as request id to session id; <c>session/cancel</c> cancels the ones of its session, as the real adapter does.</summary>
+    private readonly ConcurrentDictionary<int, string> outstandingElicitations = new ConcurrentDictionary<int, string>();
+
+    private bool elicitationFormAdvertised;
+
     /// <summary>Every session id this fake has minted through <c>session/new</c> (RS §6.4 A-5). Closing does not remove one: RS §6.2 "Closing" - Claude Code keeps closed conversations on disk, so a closed id still resumes.</summary>
     private readonly HashSet<string> knownSessionIds = new HashSet<string>(StringComparer.Ordinal);
 
@@ -63,6 +68,9 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
     /// resource-not-found before this hook runs). Default: succeeds with an empty result.
     /// </summary>
     internal Func<JsonObject, Task<JsonObject>> OnResumeSession { get; set; } = FakeAcpAgent.DefaultResumeSessionAsync;
+
+    /// <summary>Gets a value indicating whether the client's <c>initialize</c> advertised <c>clientCapabilities.elicitation.form</c>, the gate the real adapter applies before it sends <c>elicitation/create</c>.</summary>
+    internal bool ElicitationFormAdvertised => Volatile.Read(ref this.elicitationFormAdvertised);
 
     internal List<JsonObject> Received
     {
@@ -191,6 +199,11 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
         TaskCompletionSource<JsonObject> completionSource = new TaskCompletionSource<JsonObject>(TaskCreationOptions.RunContinuationsAsynchronously);
         this.pendingRequests[id] = completionSource;
 
+        if (string.Equals(method, "elicitation/create", StringComparison.Ordinal))
+        {
+            this.outstandingElicitations[id] = (string?)parameters["sessionId"] ?? string.Empty;
+        }
+
         JsonObject message = new JsonObject
         {
             ["jsonrpc"] = "2.0",
@@ -311,8 +324,7 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
         if (method is not null)
         {
             JsonObject parameters = message["params"] as JsonObject ?? new JsonObject();
-            this.HandleNotification(method, parameters);
-            return Task.CompletedTask;
+            return this.HandleNotificationAsync(method, parameters);
         }
 
         if (hasId)
@@ -331,6 +343,7 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
             case "initialize":
                 try
                 {
+                    Volatile.Write(ref this.elicitationFormAdvertised, ((parameters["clientCapabilities"] as JsonObject)?["elicitation"] as JsonObject)?["form"] is JsonObject);
                     JsonObject result = this.OnInitialize(parameters);
                     await this.WriteResultAsync(id, result).ConfigureAwait(false);
                 }
@@ -438,7 +451,7 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
         }
     }
 
-    private void HandleNotification(string method, JsonObject parameters)
+    private async Task HandleNotificationAsync(string method, JsonObject parameters)
     {
         if (string.Equals(method, "session/cancel", StringComparison.Ordinal))
         {
@@ -447,6 +460,22 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
             lock (this.gate)
             {
                 this.activePrompts.TryGetValue(sessionId, out context);
+            }
+
+            // The real adapter cancels the client requests it has open for a session by sending
+            // $/cancel_request (not the $/cancelRequest StreamJsonRpc listens for) for each of them.
+            foreach (KeyValuePair<int, string> outstanding in this.outstandingElicitations)
+            {
+                if (string.Equals(outstanding.Value, sessionId, StringComparison.Ordinal))
+                {
+                    JsonObject cancelRequest = new JsonObject
+                    {
+                        ["jsonrpc"] = "2.0",
+                        ["method"] = "$/cancel_request",
+                        ["params"] = new JsonObject { ["requestId"] = outstanding.Key },
+                    };
+                    await this.WriteMessageAsync(cancelRequest).ConfigureAwait(false);
+                }
             }
 
             context?.SignalCancel();
@@ -464,6 +493,8 @@ internal sealed class FakeAcpAgent : IAsyncDisposable
         {
             return;
         }
+
+        _ = this.outstandingElicitations.TryRemove(id, out _);
 
         JsonObject? errorObject = message["error"] as JsonObject;
         if (errorObject is not null)

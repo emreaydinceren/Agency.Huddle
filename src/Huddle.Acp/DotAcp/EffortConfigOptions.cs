@@ -19,7 +19,7 @@ using Agency.Huddle.Acp.Abstractions;
 ///
 /// <see cref="Read"/> does NOT filter the "default" sentinel the adapter always advertises first: a
 /// protocol reader that silently drops an advertised option is exactly the failure class
-/// docs/agencyteam/traps.md exists for. Filtering it, where wanted, is an app-layer concern owned
+/// docs/engineering/traps.md exists for. Filtering it, where wanted, is an app-layer concern owned
 /// elsewhere.
 /// </summary>
 internal static class EffortConfigOptions

@@ -6,6 +6,7 @@ using Agency.Huddle.App.Appearance;
 using Agency.Huddle.App.Avatars;
 using Agency.Huddle.App.Data;
 using Agency.Huddle.App.Demo;
+using Agency.Huddle.App.Elicitation;
 using Agency.Huddle.App.FileChanges;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Prompts;
@@ -208,6 +209,21 @@ public static class ServiceCollectionExtensions
         // No interface, same reasoning as ProposalService: nothing needs to substitute it, and its
         // dependencies (QuestionStore, ChatService, ITeamDirectory) are all singletons registered above.
         services.AddSingleton<QuestionService>();
+
+        // No interface, same reasoning as QuestionStore: a leaf singleton whose only dependency, RoomEvents,
+        // is registered at the top of this method. ChatService takes it (an optional constructor parameter,
+        // so every direct construction in a test keeps compiling), and the bridge and service below share
+        // this one instance - a second store would make a card the Human sees one the Turn cannot cancel.
+        services.AddSingleton<ElicitationStore>();
+
+        // No interface, same reasoning as QuestionService: its dependencies (ElicitationStore, ChatService,
+        // ITeamDirectory) are all singletons registered above.
+        services.AddSingleton<ElicitationService>();
+
+        // The one implementation of the interface RoomSession answers an agent's form with. PersonaSupervisor
+        // takes it as an optional constructor parameter and hands it to every runner it starts, which is how
+        // a real Room Session reaches the Human; a supervisor built without one answers every form as cancelled.
+        services.AddSingleton<IElicitationBridge, RoomElicitationBridge>();
 
         // No interface, same reasoning as ProposalStore and CandidateChecker just above. Every one
         // of its own dependencies (ProposalStore, CandidateChecker, PersonaStore, ChatService,
