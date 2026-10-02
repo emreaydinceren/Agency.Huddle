@@ -492,7 +492,7 @@ not compete with it, because the Adapter keeps it off, and this spec depends on 
   (`dist/acp-agent.js`: the `disallowedTools` constant near line 5878, passed to the SDK near
   line 6007). Huddle advertises no `elicitation` capability, so a Claude Persona never sees the
   tool, and `ask_human` is the only way it asks. This was read from the vendored source on
-  2026-09-30; a live model has not yet confirmed it (QM-6).
+  2026-09-30, and a live model confirmed it on 2026-10-01 (QUESTIONS-06, QM-6).
 - **What advertising it would do.** With `form` advertised the Adapter enables `AskUserQuestion`
   and sends `elicitation/create`, then waits, holding the Turn open until the Human answers.
   Today that runs into `Acp:TurnIdleTimeoutSeconds`, because an open request emits no events,
