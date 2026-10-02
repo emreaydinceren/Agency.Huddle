@@ -90,6 +90,23 @@ public sealed class AcpOptions
     public int TurnIdleTimeoutSeconds { get; set; } = 180;
 
     /// <summary>
+    /// The longest, in seconds, a question an agent put to the Human (an AskUserQuestion, a refusal
+    /// choice, an MCP form) may wait for its answer before it is dropped and the agent is told it was
+    /// cancelled. While a question is open the idle bound <see cref="TurnIdleTimeoutSeconds"/> is
+    /// paused, so this is the one thing that stops a Persona waiting on an absent Human forever.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="TurnIdleTimeoutSeconds"/> this can never be switched off: a value below 30,
+    /// zero and negative included, is raised to 30, and one above a day (86,400) is cut to a day, so a
+    /// typo can neither make a question expire before anyone could read it nor throw when the timer is
+    /// armed. Read live when each question arrives, like the idle bound. Hitting it is not a Turn
+    /// failure and not a Turn timeout: only the question ends, and the Turn goes on. It does not
+    /// release the Turn's slot, so at the default <see cref="MaxConcurrentTurns"/> of 1 a waiting
+    /// question holds every other Room's Turn back for up to this long.
+    /// </remarks>
+    public int UserInputTimeoutSeconds { get; set; } = 600;
+
+    /// <summary>
     /// The most Teammates this installation allows - every loaded <see cref="PersonaStore"/> entry,
     /// rejected files excluded (Spec §7.3). Checked by <c>propose_teammates</c> and again at Approve,
     /// never on the Teammate card, which has no count of its own to enforce against. Zero or less

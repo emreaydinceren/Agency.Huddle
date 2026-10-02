@@ -33,9 +33,15 @@ internal enum RoomSessionState
 /// <see cref="BuildPrompt"/> moved here from <see cref="PersonaRunner"/> with their comments and
 /// both traps intact (<c>docs/engineering/rules.md</c>, "A Turn ends four ways").
 /// </summary>
-internal sealed class RoomSession : IAsyncDisposable
+internal sealed class RoomSession : IAsyncDisposable, IElicitationScope
 {
     private const int MaxDescriptionLength = 200;
+
+    // The bounds on Acp:UserInputTimeoutSeconds. The floor keeps a question from expiring before a
+    // Human could read it and, since zero and below are raised to it, means a question is never
+    // unbounded. The ceiling keeps CancellationTokenSource from throwing on a typo.
+    private const int MinUserInputTimeoutSeconds = 30;
+    private const int MaxUserInputTimeoutSeconds = 86_400;
 
     // Bounds how long the idle-timeout watchdog waits for IAgentSession.CancelAsync to reach the far
     // side (TRAP 2) before giving up and cancelling the Turn's own token anyway. See PersonaRunner's
@@ -80,6 +86,10 @@ internal sealed class RoomSession : IAsyncDisposable
     // caller predates it.
     private readonly LibraryDocumentCollector? libraryDocs;
     private readonly bool readsFiles;
+
+    // Shows the Human an agent's elicitation request (E-3). Null means there is no UI to show it in:
+    // every request is then answered as cancelled, which is what an agent with no scope bound gets.
+    private readonly IElicitationBridge? elicitationBridge;
 
     // Guards every field below: the queue, the state machine, the Stop marks, activeTurn and
     // pendingStopCancel - one lock, exactly as turnLock was on PersonaRunner, for the same reason:
@@ -159,6 +169,7 @@ internal sealed class RoomSession : IAsyncDisposable
     /// <param name="turnActivity">Records which Room this Agent has a Turn running in (Spec §10.8). <see langword="null"/> disables it, like every caller that predates it.</param>
     /// <param name="libraryDocs">Collects the Library documents mentioned in a Turn (Spec §6.14). <see langword="null"/> when the Library is off, like every caller that predates it.</param>
     /// <param name="readsFiles">Whether the resolved Adapter Profile can read files (FC §6.11's Library counterpart): <see langword="false"/> inlines a kept document's own text instead of just its path.</param>
+    /// <param name="elicitationBridge">Shows the Human the questions the agent asks through this session (E-3). <see langword="null"/> answers every one as cancelled, like every caller that predates it.</param>
     public RoomSession(
         string? roomId,
         Func<CancellationToken, Task<IAgentSession>> open,
@@ -178,7 +189,8 @@ internal sealed class RoomSession : IAsyncDisposable
         string? agentId = null,
         TurnActivity? turnActivity = null,
         LibraryDocumentCollector? libraryDocs = null,
-        bool readsFiles = true)
+        bool readsFiles = true,
+        IElicitationBridge? elicitationBridge = null)
     {
         ArgumentNullException.ThrowIfNull(open);
         ArgumentNullException.ThrowIfNull(owner);
@@ -208,6 +220,7 @@ internal sealed class RoomSession : IAsyncDisposable
         this.turnActivity = turnActivity;
         this.libraryDocs = libraryDocs;
         this.readsFiles = readsFiles;
+        this.elicitationBridge = elicitationBridge;
 
         this.consumerTask = this.RunConsumerAsync(runToken);
     }
@@ -275,6 +288,70 @@ internal sealed class RoomSession : IAsyncDisposable
         }
 
         this.itemAvailable.Release();
+    }
+
+    /// <summary>
+    /// Opens a question on the Turn in flight, if there is one: pauses that Turn's idle watchdog until the
+    /// returned lease is disposed, and hands back the token that is cancelled when the Turn ends. Taken
+    /// under <see cref="gate"/>, the same lock that publishes and clears <see cref="activeTurn"/>, so a
+    /// lease is only ever opened on a Turn that is still live.
+    /// </summary>
+    /// <returns>The lease, or <see langword="null"/> when no Turn is in flight in this session.</returns>
+    internal UserInputLease? TryBeginUserInput()
+    {
+        lock (this.gate)
+        {
+            return this.activeTurn?.BeginUserInput();
+        }
+    }
+
+    /// <summary>
+    /// Answers an agent's question by handing it to the <see cref="IElicitationBridge"/> for the Turn's
+    /// own Room, with the Turn's idle watchdog paused while it waits (E-3). The answer is
+    /// <see cref="ElicitationCancelled"/> whenever there is nobody to ask or nothing left to answer: no
+    /// bridge, no known Agent, no Turn in flight, the Turn stopped or ended, the session shut down, the
+    /// caller gave up, or <see cref="AcpOptions.UserInputTimeoutSeconds"/> ran out. None of those is a
+    /// Turn failure: the question's own end never sets the Turn's timed-out latch and never reports one.
+    /// </summary>
+    /// <param name="request">The form the agent asked for.</param>
+    /// <param name="cancellationToken">Cancelled when the agent's own request can no longer be answered.</param>
+    /// <returns>How the question ended.</returns>
+    public async Task<ElicitationResult> ElicitAsync(ElicitationRequest request, CancellationToken cancellationToken)
+    {
+        if (this.elicitationBridge is not { } bridge || this.agentId is not { } askerAgentId)
+        {
+            return new ElicitationCancelled();
+        }
+
+        using UserInputLease? lease = this.TryBeginUserInput();
+        if (lease is null)
+        {
+            return new ElicitationCancelled();
+        }
+
+        // Read live, like the idle bound, and on this session's own clock so a test drives it.
+        TimeSpan bound = UserInputTimeoutFrom(this.options.UserInputTimeoutSeconds);
+        using CancellationTokenSource timeout = new(bound, this.time);
+        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, lease.Token, timeout.Token);
+        try
+        {
+            return await bridge.RequestAsync(new ElicitationContext(lease.RoomId, askerAgentId), request, linked.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            // A Stop, the Turn ending, a shutdown and the caller giving up are all expected and silent;
+            // only the bound running out is worth a line, because the Human sees a question vanish.
+            if (timeout.IsCancellationRequested)
+            {
+                this.logger.LogWarning(
+                    "Persona '{PersonaName}' dropped a question in room {RoomId}: no answer after {TimeoutSeconds} seconds.",
+                    this.owner.PersonaName,
+                    lease.RoomId,
+                    bound.TotalSeconds);
+            }
+
+            return new ElicitationCancelled();
+        }
     }
 
     /// <summary>Opens this session's <see cref="IAgentSession"/>, idempotently: a second call while already open or opening awaits the same result.</summary>
@@ -495,6 +572,10 @@ internal sealed class RoomSession : IAsyncDisposable
         try
         {
             var (opened, resumed, resumedAfterId) = await this.OpenOrResumeAsync(cancellationToken);
+
+            // A freshly opened and a resumed session alike: either can be asked a question on its first
+            // Turn, and one with no scope bound is answered as cancelled (E-3).
+            opened.BindElicitationScope(this);
             var readerCts = CancellationTokenSource.CreateLinkedTokenSource(this.runToken);
             lock (this.gate)
             {
@@ -892,7 +973,7 @@ internal sealed class RoomSession : IAsyncDisposable
         var messageId = Guid.CreateVersion7().ToString("N");
         var completion = new TaskCompletionSource<TurnOutcome>(TaskCreationOptions.RunContinuationsAsynchronously);
         var turnCancellation = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        var turn = new ActiveTurn(item.RoomId, messageId, new StringBuilder(), completion, turnCancellation, this.time);
+        ActiveTurn turn;
         IAgentSession activeSession;
         lock (this.gate)
         {
@@ -917,7 +998,10 @@ internal sealed class RoomSession : IAsyncDisposable
                 return;
             }
 
+            // Built here, after both early returns above, so a Turn that never publishes never creates
+            // the question source linked to turnCancellation that EndUserInput must dispose.
             activeSession = opened;
+            turn = new ActiveTurn(item.RoomId, messageId, new StringBuilder(), completion, turnCancellation, this.time);
             this.activeTurn = turn;
         }
 
@@ -1067,6 +1151,12 @@ internal sealed class RoomSession : IAsyncDisposable
                 this.ownPosts?.EndTurn(endTurnAgentId, this.RoomId);
                 this.turnActivity?.End(endTurnAgentId, turn.RoomId);
             }
+
+            // However this Turn ended - the Adapter finished, a Stop, the watchdog, a shutdown, a
+            // failure - a question still waiting on it can no longer be answered, so its token is
+            // cancelled here (E-3). Before activeTurn is cleared below, and unconditionally: the
+            // Adapter's own prompt call ends without cancelling anything it handed out.
+            turn.EndUserInput();
 
             lock (this.gate)
             {
@@ -1247,6 +1337,12 @@ internal sealed class RoomSession : IAsyncDisposable
     /// <param name="seconds"><see cref="AcpOptions.TurnIdleTimeoutSeconds"/>'s current value.</param>
     /// <returns>The bound as a <see cref="TimeSpan"/>, or <see cref="TimeSpan.Zero"/> when disabled.</returns>
     private static TimeSpan IdleTimeoutFrom(int seconds) => seconds > 0 ? TimeSpan.FromSeconds(seconds) : TimeSpan.Zero;
+
+    /// <summary>Converts the configured question bound to a <see cref="TimeSpan"/>, clamped so it is never disabled and never too large to arm.</summary>
+    /// <param name="seconds"><see cref="AcpOptions.UserInputTimeoutSeconds"/>'s current value.</param>
+    /// <returns>The bound, between <see cref="MinUserInputTimeoutSeconds"/> and <see cref="MaxUserInputTimeoutSeconds"/> seconds.</returns>
+    private static TimeSpan UserInputTimeoutFrom(int seconds) =>
+        TimeSpan.FromSeconds(Math.Clamp(seconds, MinUserInputTimeoutSeconds, MaxUserInputTimeoutSeconds));
 
     private async Task RunEventReaderAsync(IAgentSession activeSession, CancellationToken ct)
     {
@@ -2041,6 +2137,21 @@ internal sealed class RoomSession : IAsyncDisposable
         private bool timedOut;
         private bool sawActivity;
 
+        // The questions the agent has open on this Turn (E-3). A COUNT, not a flag: two overlapping
+        // questions must keep the watchdog paused until both are answered. Per Turn, never per session,
+        // so one that is somehow never released ends with its Turn instead of pausing the next one.
+        // Written with Interlocked by whoever opens or answers a question, read by the watchdog.
+        private int openRequests;
+
+        // Cancelled and disposed exactly once, by EndUserInput. Linked to Cancellation, so a Stop, the
+        // watchdog's timeout and a shutdown all cancel every open question without a line of their own.
+        // BeginUserInput reads the token under userInputGate while the source is still live, so a lease
+        // opened a moment before the Turn ends can read its token afterwards without touching a
+        // disposed source.
+        private readonly CancellationTokenSource userInputCts = CancellationTokenSource.CreateLinkedTokenSource(Cancellation.Token);
+        private readonly Lock userInputGate = new();
+        private bool userInputEnded;
+
         /// <summary>
         /// Whether a <see cref="MessageDelta"/> write has already failed for this Turn. Set once a
         /// write throws, so a dead pipe is logged at most once per Turn rather than once per chunk.
@@ -2091,9 +2202,17 @@ internal sealed class RoomSession : IAsyncDisposable
         /// </summary>
         public bool TimedOut => Volatile.Read(ref this.timedOut);
 
-        /// <summary>How long it has been, as of now, since the last sign of life on this Turn.</summary>
+        /// <summary>
+        /// How long it has been, as of now, since the last sign of life on this Turn - and zero while the
+        /// agent has a question open, because a Turn waiting on the Human is not an Adapter gone quiet.
+        /// The watchdog's loop then computes <c>remaining = idleBound - IdleFor</c> as a full bound and
+        /// sleeps again rather than firing; answering restarts the clock from the answer, see
+        /// <see cref="BeginUserInput"/>.
+        /// </summary>
         public TimeSpan IdleFor =>
-            this.Time.GetElapsedTime(Interlocked.Read(ref this.lastActivityTimestamp));
+            Volatile.Read(ref this.openRequests) > 0
+                ? TimeSpan.Zero
+                : this.Time.GetElapsedTime(Interlocked.Read(ref this.lastActivityTimestamp));
 
         /// <summary>
         /// Whether the event-reader loop has observed any <see cref="AgentEvent"/> at all for this
@@ -2132,6 +2251,61 @@ internal sealed class RoomSession : IAsyncDisposable
         /// <see cref="MarkStopRequested"/> is.
         /// </summary>
         public void MarkTimedOut() => Volatile.Write(ref this.timedOut, true);
+
+        /// <summary>
+        /// Opens one question on this Turn: counts it, which pauses the idle watchdog through
+        /// <see cref="IdleFor"/>, and counts as activity. Nothing is opened once <see cref="EndUserInput"/>
+        /// has run.
+        /// </summary>
+        /// <returns>The lease whose disposal ends this question's pause, or <see langword="null"/> when this Turn has already ended.</returns>
+        public UserInputLease? BeginUserInput()
+        {
+            CancellationToken token;
+            lock (this.userInputGate)
+            {
+                if (this.userInputEnded)
+                {
+                    return null;
+                }
+
+                token = this.userInputCts.Token;
+                Interlocked.Increment(ref this.openRequests);
+            }
+
+            this.MarkActivity();
+            return new UserInputLease(this.RoomId, this.ReleaseUserInput, token);
+        }
+
+        /// <summary>
+        /// Cancels every question still open on this Turn and disposes their shared source. The Turn is
+        /// over, so nothing can be answered any more. Safe to call more than once.
+        /// </summary>
+        public void EndUserInput()
+        {
+            lock (this.userInputGate)
+            {
+                if (this.userInputEnded)
+                {
+                    return;
+                }
+
+                this.userInputEnded = true;
+            }
+
+            this.userInputCts.Cancel();
+            this.userInputCts.Dispose();
+        }
+
+        /// <summary>
+        /// Ends one question's pause. The clock is restarted BEFORE the count drops, so the watchdog can
+        /// never see an unpaused Turn with the stale timestamp the question's whole wait left behind, and
+        /// fire the instant the Human answers.
+        /// </summary>
+        private void ReleaseUserInput()
+        {
+            this.MarkActivity();
+            Interlocked.Decrement(ref this.openRequests);
+        }
     }
 
     /// <summary>How a Turn ended: the text it produced, and why it stopped.</summary>
