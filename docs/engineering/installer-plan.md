@@ -382,7 +382,7 @@ All tasks in this deliverable follow Conv C1. Folder `src/Huddle.App/Desktop/`; 
 - **Goal:** Pin the second-launch behaviour (Spec §8 `DesktopHandOff`).
 - **Read first:** Spec §8; `InstanceFile` from task 8.i.
 - **Risk:** `logic` (Sonnet).
-- **Deliverable:** `DesktopHandOffTests.cs` with a recording `IBrowserOpener` fake: (1) record present -> `true`, opener called once with its `Url`; (2) no record, timeout 300 ms, poll 20 ms -> `false`, opener never called; (3) the record appears after 100 ms (written by a delayed task) -> `true`; (4) a cancelled token throws `OperationCanceledException`.
+- **Deliverable:** `DesktopHandOffTests.cs` with a recording `IBrowserOpener` fake in its own file `tests/Huddle.Tests/Desktop/RecordingBrowserOpener.cs` (task 11.t reuses it): (1) record present -> `true`, opener called once with its `Url`; (2) no record, timeout 300 ms, poll 20 ms -> `false`, opener never called; (3) the record appears after 100 ms (written by a delayed task) -> `true`; (4) a cancelled token throws `OperationCanceledException`.
 - **Acceptance:** Fails to build before 10.i (Red).
 
 ### Task 10.i — Implement `DesktopHandOff`
@@ -398,7 +398,7 @@ All tasks in this deliverable follow Conv C1. Folder `src/Huddle.App/Desktop/`; 
 - **Goal:** Pin what a running instance publishes and cleans up (Spec §8 `DesktopLifetimeService`).
 - **Read first:** Spec §8; Conv C1 (`ManualTimeProvider` not needed).
 - **Risk:** `logic` (Sonnet).
-- **Deliverable:** `DesktopLifetimeServiceTests.cs` with fakes: `FakeServer : IServer` whose `Features` holds an `IServerAddressesFeature` with chosen addresses, `FakeLifetime : IHostApplicationLifetime` (three `CancellationTokenSource`s, `StopApplication` records a call), a recording opener. Cases: (1) after `StartAsync` then firing `ApplicationStarted`, `InstanceFile.TryRead` returns `Url` = first address, `StopToken` = `session.StopToken`, `Pid == Environment.ProcessId`; (2) `OpenBrowser=true` -> opener called once with that URL; (3) `OpenBrowser=false` -> not called, file still written; (4) no addresses -> no file, no open; (5) `StopAsync` deletes the file.
+- **Deliverable:** `DesktopLifetimeServiceTests.cs` with fakes: `FakeServer : IServer` whose `Features` holds an `IServerAddressesFeature` with chosen addresses, `FakeLifetime : IHostApplicationLifetime` in its own file `tests/Huddle.Tests/Desktop/FakeLifetime.cs` (three `CancellationTokenSource`s, so it is `IDisposable`), and the `RecordingBrowserOpener` from task 10.t. Cases: (1) after `StartAsync` then firing `ApplicationStarted`, `InstanceFile.TryRead` returns `Url` = first address, `StopToken` = `session.StopToken`, `Pid == Environment.ProcessId`; (2) `OpenBrowser=true` -> opener called once with that URL; (3) `OpenBrowser=false` -> not called, file still written; (4) no addresses -> no file, no open; (5) `StopAsync` deletes the file.
 - **Acceptance:** Fails to build before 11.i (Red).
 
 ### Task 11.i — Implement `DesktopLifetimeService`
@@ -414,7 +414,7 @@ All tasks in this deliverable follow Conv C1. Folder `src/Huddle.App/Desktop/`; 
 - **Goal:** Pin the stop endpoint's authentication (Spec §8 "Stop endpoint").
 - **Read first:** Spec §8.
 - **Risk:** `boundary` (Sonnet).
-- **Deliverable:** `DesktopStopEndpointTests.cs` calling `DesktopStopEndpoint.HandleAsync(HttpContext, DesktopSession, IHostApplicationLifetime)` with a `DefaultHttpContext` and the `FakeLifetime` from 11.t (move it to a shared `tests/Huddle.Tests/Desktop/FakeLifetime.cs` when you need it twice). Cases: correct token + loopback -> 202 and `StopApplication` called once; wrong token -> 401, not called; no header -> 401; correct token + `RemoteIpAddress` `192.0.2.7` -> 403, not called; correct token + null remote -> 202; token that is a prefix of the real one -> 401; empty header value -> 401.
+- **Deliverable:** `DesktopStopEndpointTests.cs` calling `DesktopStopEndpoint.HandleAsync(HttpContext, DesktopSession, IHostApplicationLifetime)` with a `DefaultHttpContext` and a recording `FakeDesktopShutdown : IDesktopShutdown` in its own file (see `corrections-C.md`, section 12; `FakeLifetime` is not used here). Cases: correct token + loopback -> 202 and `StopApplication` called once; wrong token -> 401, not called; no header -> 401; correct token + `RemoteIpAddress` `192.0.2.7` -> 403, not called; correct token + null remote -> 202; token that is a prefix of the real one -> 401; empty header value -> 401.
 - **Acceptance:** Fails to build before 12.i (Red).
 
 ### Task 12.i — Implement the stop endpoint
@@ -455,7 +455,7 @@ All tasks in this deliverable follow Conv C1. Folder `src/Huddle.App/Desktop/`; 
 - **Read first:** `src/Huddle.App/Program.cs` L9-L12, L23-L36, L92-L102; Spec §8 (all of "Program wiring"); `src/Huddle.App/Logging/LoggingBuilderExtensions.cs` L30-L40 (how DataDir is resolved before the container exists).
 - **Risk:** `boundary` (Sonnet; Opus review).
 - **Deliverable:** Create `src/Huddle.App/Desktop/DesktopServiceCollectionExtensions.cs`: `AddDesktopHost(this IServiceCollection, IConfiguration)` registers `Configure<DesktopOptions>`, singleton `DesktopSession`, `IBrowserOpener` -> `SystemBrowserOpener`, and `AddHostedService<DesktopLifetimeService>()` **only when enabled**; and `MapDesktopEndpoints(this WebApplication)` mapping `POST /_desktop/stop` **only when enabled**. Edit `Program.cs` per Spec §8 steps 1-3 (resolve the data dir with `Path.GetFullPath(configuration["Team:DataDir"] ?? "App_Data")`, the same rule `PostConfigure` applies). Keep `public partial class Program`.
-- **Acceptance:** `dotnet build Huddle.slnx`, `dotnet test Huddle.slnx --` fully green (no regression in the existing suite); `./test-health.ps1` still passes.
+- **Acceptance:** `agents/scripts/Build.ps1` clean and the full `agents/scripts/Run-Tests.ps1` run green (no regression in the existing suite); `./test-health.ps1 -Configuration Debug` still passes.
 
 ---
 
@@ -951,7 +951,7 @@ Read 2026-10-02 from the bundled binary's `--help` output (`--version` 2.1.257),
 
 | After task | Date | Main findings | Plan edits made |
 | --- | --- | --- | --- |
-| 15 | | | |
+| 15 | 2026-10-02 | Agents re-read the whole plan (7 of 7), `rules.md` is 44K characters not "97 lines", commands found by trial (red file flags, one class per run, PowerShell has no `head`), reports claimed checks that were not run, manager context 86K to 353K | Facts Core and brief rewritten (red-file flags, trimmed full-suite pipe, rules digest, report integrity); agent type `installer-dev` added; fakes `RecordingBrowserOpener`, `FakeLifetime`, `FakeDesktopShutdown` named up front in 10.t, 11.t and 12.t; 14.i acceptance uses the runner scripts; one fresh agent per pair from task 10 |
 | 30 | | | |
 | 45 | | | |
 | 60 | | | |
