@@ -21,7 +21,7 @@ using Agency.Huddle.App.Teams;
 /// code and are not configurable.
 /// </para>
 /// <para>
-/// agent-guide.md §3.6 is binding here: the tools must be named with their full <c>mcp__team__</c>
+/// acp-agent-guide.md §3.6 is binding here: the tools must be named with their full <c>mcp__team__</c>
 /// prefix, or a deferred-tool-mode model reports that no such tool exists rather than finding it by a
 /// looser name. Getting this wrong cost a previous author four rounds of debugging. That prefix is
 /// applied by the caller, in code, from the same tool-server name it hands to <c>AppToolServer</c> —

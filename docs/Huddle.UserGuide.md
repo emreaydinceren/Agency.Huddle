@@ -9,7 +9,7 @@ disk** every time you change something.
 
 Applies to `main` as of 2026-09-29, which includes Room Sessions, Tasks, Skills,
 the Library and Team Pages. This guide does not cover installing adapters or
-configuring models. See [the chat-surface hub](AgencyTeam.md) for that.
+configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for that.
 
 ## Contents at a glance
 
@@ -393,7 +393,10 @@ Select a Team or Project in the sidebar.
 | --- | --- | --- |
 | **Members** | Members, with status, title and alias; search; Add and Remove. Opening a row opens the Teammate card. | Not shown. Projects are worked by the Team. |
 | **Files** | The Library, scoped to `Teams/<Team>/`, with **New note** and a file-name search. | Scoped to `Teams/<Team>/<Project>/`. |
-| **Tasks** | A board of the Team's Tasks, one swimlane per Project. **New task** fills in the Team. | A single-lane board. **New task** fills in the Team and Project. |
+| **Tasks** | The Team's Tasks as a List or a Board (one swimlane per Project), with the same toolbar as the Tasks page. **New task** fills in the Team. | The same, for the Project. **New task** fills in the Team and Project. |
+
+Changes you make with the Tasks tab toolbar (filter, group, sort, search) last for
+the current visit only, and always stay inside the Team or Project.
 
 The Files tab is hidden when the Library is turned off (`Team:Library:Enabled`).
 The Tasks tab is hidden when Tasks are turned off (`Team:Tasks:Enabled`).
@@ -440,6 +443,20 @@ Room Sessions are opened on demand and closed after 30 minutes idle. At most 3
 are open per Teammate at once. A closed session resumes where it left off if the
 adapter supports it. Otherwise it starts fresh and catches up from the last 20
 messages of the transcript.
+
+### Watching a Teammate work
+
+While a Teammate is answering, its reply shows its last six tool calls as rows.
+Each row has a status (**Waiting**, **Running**, **Failed** or done), and shows
+the file name and line when the call touches a file. When the call is an edit,
+select the arrow on its row to see an **Edit preview** of the change in place.
+
+A Teammate's card also shows **Spent since start**, one line per currency, when
+its adapter reports a cost. It is a figure for this run, not a ledger.
+
+> [!NOTE]
+> Tool-call rows are not saved. They disappear when the reply is finished or
+> the app restarts, and are never written to the transcript.
 
 ### Linking to Tasks and files
 

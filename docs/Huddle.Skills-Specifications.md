@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-22 · **Status:** Delivered 2026-09-22 · **Decision record:**
 [ADR-0021](adr/0021-a-skill-is-know-how-an-agent-reads-on-demand.md) · **Vocabulary:**
-[language.md](agencyteam/language.md) (**Skill**, **Proposal**, **Candidate**)
+[language.md](engineering/language.md) (**Skill**, **Proposal**, **Candidate**)
 
 This is the high-level design for three pieces of work that together let a new user describe
 a goal in conversation and have a Teammate assemble a team for it:
@@ -20,7 +20,7 @@ recorded in §14 with the alternative it beat.
 
 > [!IMPORTANT]
 > Two pages are binding before any code in this spec is written:
-> [rules.md](agencyteam/rules.md) before editing `src/Huddle.App`, and
+> [rules.md](engineering/rules.md) before editing `src/Huddle.App`, and
 > [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) for every C# file. Nothing here
 > overrides either.
 
@@ -89,8 +89,8 @@ Each row is a scenario the finished system must handle. §13 walks the first one
 | **Editing a Candidate on the Proposal card** | The Human replies in the Room; the Agent revises. V2 |
 | **In-app editing or creation of Skill files** | V1 is read-only in the UI; Skills are written in the Human's editor. V2 |
 | **Persisting Proposals across restarts** | Held in memory, like a Budget. Lost on restart by design |
-| **Per-Room sessions or Skill scoping per Room** | One session per Persona spans every Room ([Known limits](agencyteam/known-limits.md)); unchanged |
-| **Taking a default tool *away* from a Persona** | That is the rest of [Roadmap](agencyteam/roadmap.md) item 9. This spec builds only the *grant* half |
+| **Per-Room sessions or Skill scoping per Room** | One session per Persona spans every Room ([Known limits](engineering/known-limits.md)); unchanged |
+| **Taking a default tool *away* from a Persona** | That is the rest of [Roadmap](engineering/roadmap.md) item 9. This spec builds only the *grant* half |
 | **A Skill marketplace, sharing or versioning** | No current feature asks for it; the hub's "simple over complete" rule applies |
 | **Shipping any Persona other than the Chief of Staff** | The repository ships no library; the Chief of Staff builds the rest |
 | **A Greeting from any Teammate but the Chief of Staff**, or on anything but an empty Room | One unprompted, paid Turn per install is a deliberate exception to "a Turn starts from a Message"; it stays one |
@@ -1048,7 +1048,7 @@ No new database table. Everything is a file the Human owns, or memory a restart 
 | `isEmpty` | bool | `false` | `AgentConnection`, from `IChatStore.HasMessagesAsync` |
 
 `ProtocolVersion.Current` stays 3. `ProtocolJsonTests` pins the new literal JSON, and the
-`welcome` sample in `AgencyTeam.md` gains the field.
+`welcome` sample in `Huddle.EngineeringGuide.md` gains the field.
 
 ### 7.3 Configuration
 
@@ -1198,7 +1198,7 @@ was told and what it can call in agreement.
 | The Greeting | One Turn per install: `SKILL.md` + `onboarding.md` reads plus one reply, ≈ 5–8k tokens | Counts against the per-Persona token Budget | Paid once; repeats only after `-Clean` or a failed Greeting |
 | `validate_teammate` | < 5 ms | 50 ms | Builds one candidate `PersonaIndex`, O(Personas) |
 | Approve, 3 Candidates | < 100 ms to write; Teammates Online in seconds | — | File writes are serial; Adapter start dominates and is existing behaviour |
-| Idle cost per created Teammate | One `node` process + one loopback Kestrel | `MaxTeammates` = 8 | Unmeasured past four ([Known limits](agencyteam/known-limits.md)); the ceiling bounds it |
+| Idle cost per created Teammate | One `node` process + one loopback Kestrel | `MaxTeammates` = 8 | Unmeasured past four ([Known limits](engineering/known-limits.md)); the ceiling bounds it |
 
 **Scaling notes.**
 - **Tokens, not CPU, are the constraint.** Keep descriptions short. The Settings tab warns
@@ -1374,7 +1374,7 @@ dotnet test  Huddle.slnx --
 | S1-I16 | Impl | Card picker + `WriteListField` | T16 green |
 | S1-T17 | Functional (bUnit) | `SettingsPageTests.SkillsTab_ListsSourceAndIssues` + `…_RestoreDefault_RemovesOverride` | Fails |
 | S1-I17 | Impl | `SettingsTab.Skills`, `SkillsPanel.razor` | T17 green |
-| S1-D | Docs | ADR-0021 D-9 amendment and `accepted`; `AgencyTeam.md` config and files tables; `language.md` drops "Proposed, not built" for Skill; `rules.md` rows for D-9 and D-15; `manual-tests/prompts-settings.md` key count | Reviewed |
+| S1-D | Docs | ADR-0021 D-9 amendment and `accepted`; `Huddle.EngineeringGuide.md` config and files tables; `language.md` drops "Proposed, not built" for Skill; `rules.md` rows for D-9 and D-15; `manual-tests/prompts-settings.md` key count | Reviewed |
 
 ### S2 — Team-building tools
 
@@ -1406,7 +1406,7 @@ dotnet test  Huddle.slnx --
 | S2-I12 | Impl | `ProposalCard.razor`, `Chat.razor` wiring | T12 green |
 | S2-T13 | Unit | `PromptGoldenTests.ToolDescriptions_MatchesGolden` regenerated with the two new tools | Fails until regenerated |
 | S2-I13 | Impl | Regenerate golden and `prompts.default.json` | T13 green |
-| S2-D | Docs | `language.md` Proposal/Candidate drop "not built"; `AgencyTeam.md` config row for `MaxTeammates`; `known-limits.md` F-19; ADR-0006 cross-reference | Reviewed |
+| S2-D | Docs | `language.md` Proposal/Candidate drop "not built"; `Huddle.EngineeringGuide.md` config row for `MaxTeammates`; `known-limits.md` F-19; ADR-0006 cross-reference | Reviewed |
 
 ### S3 — Content and the built-in Chief of Staff
 
@@ -1433,8 +1433,8 @@ dotnet test  Huddle.slnx --
 | S3-T10 | Functional | `PersonaRunnerTests.Greeting_FakeSessionReplies_PostedAsChiefOfStaffMessageInHumanRoom` + `…_TurnFails_NothingPostedRoomStillEmpty` | Fails |
 | S3-I10 | Impl | Post path and failure handling for a Turn with no triggering Message | T10 green |
 | S3-T11 | E2E (health) | `./test-health.ps1` passes with an empty `DataDir` (the seeder must not throw at process start) | Run after build |
-| S3-T12 | Manual 💰 | New `docs/agencyteam/manual-tests/skills.md`: **SKILLS-01** the Chief of Staff reads `team-building` unprompted when asked for a team; **SKILLS-02** Approve creates and wakes it, and it opens a seeded Room; **SKILLS-03** Decline and revise; **SKILLS-04** over-limit; **SKILLS-05** on a `-Clean` install with ACP on, the Chief of Staff's Room holds a Greeting before the Human types, it read `onboarding.md`, and it ends with one question; restarting does not greet twice. Haiku / low Effort per the manual-test convention. Testers should know Catch-up is per Room, so a private Advisor does not know what happened in a scenario Room; that is not a failure | Results recorded in the Tracker |
-| S3-D | Docs | Roadmap item 16 marked delivered; `decisions.md` entry; hub `AgencyTeam.md` updated test count | Reviewed |
+| S3-T12 | Manual 💰 | New `docs/engineering/manual-tests/skills.md`: **SKILLS-01** the Chief of Staff reads `team-building` unprompted when asked for a team; **SKILLS-02** Approve creates and wakes it, and it opens a seeded Room; **SKILLS-03** Decline and revise; **SKILLS-04** over-limit; **SKILLS-05** on a `-Clean` install with ACP on, the Chief of Staff's Room holds a Greeting before the Human types, it read `onboarding.md`, and it ends with one question; restarting does not greet twice. Haiku / low Effort per the manual-test convention. Testers should know Catch-up is per Room, so a private Advisor does not know what happened in a scenario Room; that is not a failure | Results recorded in the Tracker |
+| S3-D | Docs | Roadmap item 16 marked delivered; `decisions.md` entry; hub `Huddle.EngineeringGuide.md` updated test count | Reviewed |
 
 ---
 

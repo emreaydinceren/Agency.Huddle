@@ -40,7 +40,7 @@ namespace Agency.Huddle.App.Avatars;
 /// </para>
 /// <para>
 /// <b>Lookups are case-insensitive, matching <c>persona_models</c>' <c>COLLATE NOCASE</c> and
-/// <c>MentionParser</c>'s <c>OrdinalIgnoreCase</c></b> (<c>docs/agencyteam/rules.md</c>: a duplicate
+/// <c>MentionParser</c>'s <c>OrdinalIgnoreCase</c></b> (<c>docs/engineering/rules.md</c>: a duplicate
 /// Name is compared case-insensitively too), while the key is preserved exactly as it was written in
 /// the file. <see cref="CaseInsensitiveNodeOptions"/> is what buys this for free: a
 /// <see cref="JsonObject"/> built with it compares keys with <see cref="StringComparer.OrdinalIgnoreCase"/>
@@ -303,7 +303,7 @@ internal sealed partial class AvatarStore : IDisposable
     /// from the Teammate's Name, for three reasons, each a real defect this avoids:
     /// <list type="number">
     /// <item><description>A Name may contain interior spaces (<c>rules.md</c>), so a Name-derived URL would need percent-encoding at every call site.</description></item>
-    /// <item><description><c>docs/agencyteam/known-limits.md</c> records that Windows reserved device names (<c>CON</c>, <c>NUL</c>, <c>COM1</c>) pass <c>NameRules</c>, and <c>CON.png</c> is a file Windows will not create.</description></item>
+    /// <item><description><c>docs/engineering/known-limits.md</c> records that Windows reserved device names (<c>CON</c>, <c>NUL</c>, <c>COM1</c>) pass <c>NameRules</c>, and <c>CON.png</c> is a file Windows will not create.</description></item>
     /// <item><description>An opaque id means <see cref="Rename"/> touches no image file at all, and gives cache-busting for free: a replaced image gets a new id and therefore a new URL, so no query string or timestamp is needed.</description></item>
     /// </list>
     /// </remarks>

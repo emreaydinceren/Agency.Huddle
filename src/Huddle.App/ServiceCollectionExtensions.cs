@@ -33,7 +33,7 @@ public static class ServiceCollectionExtensions
         // so a fallback would be dead weight. But a value left behind in a user secret or an
         // environment variable would otherwise bind to nothing, and PersonaStore would quietly scan
         // an empty default "Teammates" folder - zero teammates, no exception, no log anywhere. That
-        // silent-degradation shape is exactly what docs/agencyteam/traps.md exists to catch, so fail
+        // silent-degradation shape is exactly what docs/engineering/traps.md exists to catch, so fail
         // loudly at startup instead, naming the new key. This runs ahead of Configure<TeamOptions>
         // below, in the one place both this app's Program.cs and every test that composes it
         // (TeamWebApplicationFactory) are guaranteed to pass through.

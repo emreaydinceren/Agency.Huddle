@@ -5,7 +5,7 @@ date: 2026-09-15
 
 # A rename moves the Teammate, not its history
 
-[Roadmap](../agencyteam/roadmap.md) item 1 has had one unanswered question since it was
+[Roadmap](../engineering/roadmap.md) item 1 has had one unanswered question since it was
 written: *what does renaming a Teammate mean to the chat surface?* Item 10 answered the easy
 half in 2026-09-12 — a rename is an edit to one frontmatter field, and `PersonaStore.Update`
 moves the Model and Effort rows by hand. This answers the hard half.
@@ -117,7 +117,7 @@ this same database, for the same shape of reason ("Synchronous, because its only
 
 ## What this does not retire
 
-**`PersonaStore` still has no reference to `ITeamDirectory`.** [Rules](../agencyteam/rules.md)
+**`PersonaStore` still has no reference to `ITeamDirectory`.** [Rules](../engineering/rules.md)
 records that property, and it survives: `PersonaStore` raises an event and knows nothing about
 who listens. The cascade lives in a separate subscriber that holds both.
 

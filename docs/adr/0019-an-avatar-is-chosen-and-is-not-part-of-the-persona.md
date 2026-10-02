@@ -5,7 +5,7 @@ date: 2026-09-22
 
 # An Avatar is chosen, and is not part of the Persona
 
-> **Reverses one thing [Known limits](../agencyteam/known-limits.md) recorded as settled**: the
+> **Reverses one thing [Known limits](../engineering/known-limits.md) recorded as settled**: the
 > transcript now shows an avatar beside every Message. Manual test ROOMMESSAGING-16 asserted the
 > opposite — *"No avatar, circle or monogram appears anywhere in the transcript"* — and has been
 > rewritten rather than deleted, so the reversal stays visible.
@@ -64,7 +64,7 @@ reasons, and the first alone decides it.
 `PersonaSupervisor.NeedsRestart` is `persona != started` — whole-record value equality — and
 `Persona.Text` is the full raw file text, frontmatter included. So an `avatar:` key means **picking
 a background colour stops a live ACP session and throws away everything that Agent remembers.**
-[Rules](../agencyteam/rules.md) already settled this exact question for Hooks: *"Restarting would
+[Rules](../engineering/rules.md) already settled this exact question for Hooks: *"Restarting would
 make every edit land immediately and throw away that Agent's conversation memory every time someone
 reworded a sentence."* That sentence is, word for word, the argument here.
 
@@ -86,7 +86,7 @@ write lock, debounced `FileSystemWatcher` and wholesale fallback on a malformed 
 
 The cost, accepted: **an Avatar does not travel with a copied `.md` file.** Neither does that
 Persona's Model or its Effort, and nobody has asked for those. It is recorded in
-[Known limits](../agencyteam/known-limits.md).
+[Known limits](../engineering/known-limits.md).
 
 ## Why the key is a Teammate's Name
 
@@ -101,7 +101,7 @@ work:
 
 A rename therefore has to move the key. It hangs off `PersonaStore.PersonaRenamed` and **not** off
 `PersonaStore.Update`, for two reasons: `Update` would give `PersonaStore` a reference to an
-avatars-layer store, breaking the decoupling [Rules](../agencyteam/rules.md) praises; and `Update` is
+avatars-layer store, breaking the decoupling [Rules](../engineering/rules.md) praises; and `Update` is
 only one of the two rename paths — a Human editing `name:` in an editor reaches the watcher and the
 event, never `Update`.
 
@@ -112,7 +112,7 @@ Teammate has an Agent row — put the move below the guard and renaming a Teamma
 face, in the default configuration. A test pins it, and was confirmed to fail when the line is moved.
 
 A removal takes the Avatar and its image file with it, for the reason
-[Rules](../agencyteam/rules.md) gives for the Model and the Effort: leaving per-Persona state behind
+[Rules](../engineering/rules.md) gives for the Model and the Effort: leaving per-Persona state behind
 would silently resurrect it on a later Persona that reused the Name. `PersonaStore` gained a
 `PersonaRemoved` event for this, raised from **both** doors `PersonaRenamed` is raised from — the
 in-app path and the watcher — because a `.md` deleted in an editor is noticed only by the second.
@@ -123,7 +123,7 @@ in-app path and the watcher — because a `.md` deleted in an editor is noticed 
   `IBrowserFile.ContentType`; both are client-supplied and trivially forged.
 - **Never SVG.** It is a document format that can carry a `<script>` element, and this application
   serves files same-origin with no authentication of any kind. The same class of reasoning
-  [Rules](../agencyteam/rules.md) gives for never enabling `UseAdvancedExtensions()` in the markdown
+  [Rules](../engineering/rules.md) gives for never enabling `UseAdvancedExtensions()` in the markdown
   pipeline.
 - **512 000 bytes**, which is Blazor's own default `maxAllowedSize` for `IBrowserFile.OpenReadStream`
   rather than an invented number. Enforced twice — on `file.Size` before opening, and on the stream
@@ -133,7 +133,7 @@ in-app path and the watcher — because a `.md` deleted in an editor is noticed 
 
 **The file name is an opaque generated id, never the Teammate's Name.** Three concrete defects avoid
 themselves: a Name may contain interior spaces, so a Name-derived URL would need percent-encoding at
-every call site; [Known limits](../agencyteam/known-limits.md) records that Windows reserved device
+every call site; [Known limits](../engineering/known-limits.md) records that Windows reserved device
 names (`CON`, `NUL`, `COM1`) pass `NameRules`, and `CON.png` is a file Windows will not create; and an
 opaque id means a rename touches **no file at all** and gives cache-busting for free, because a
 replaced image gets a new id and therefore a new URL.
@@ -159,7 +159,7 @@ wrong reason.
 
 ## Colour
 
-A background is real per-Teammate data, so it cannot live in a stylesheet — [Rules](../agencyteam/rules.md)
+A background is real per-Teammate data, so it cannot live in a stylesheet — [Rules](../engineering/rules.md)
 confines colour literals to `MainLayout.razor.css` and `ThemeSourceTests` fails the build on any
 other. It is therefore emitted as an inline `style` built from a **C# string**, and a new test,
 `RazorComponents_NoInlineColourLiteralInStyleAttribute`, enumerates `Components/**/*.razor` and fails

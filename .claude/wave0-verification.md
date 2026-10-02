@@ -110,7 +110,7 @@ dotnet run --project src\Huddle.App -- --urls http://localhost:5100 --Team:Acp:E
 1. Open `http://localhost:5100/teammates`, click **Nova**, click **Edit**.
 2. Wait for the Model dropdown to populate (up to ~10 seconds). A
    `claude-agent-acp` adapter process appears for about a second — this is
-   expected and documented in `docs/agencyteam/known-limits.md`. It is **not**
+   expected and documented in `docs/engineering/known-limits.md`. It is **not**
    issue #21, which concerns an adapter that *persists*.
 3. Set **Model = Sonnet**. Save.
 4. Stop the app (Ctrl+C, or stop the process).

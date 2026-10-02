@@ -54,5 +54,5 @@ to be in a Room where it is mentioned.
 - **A Team label reaches the system prompt.** A Team is still never a permission, but it now
   changes what a member is told at session start. That is one more reason a membership change
   restarts the Teammate.
-- **Memory has two owners now.** [language.md](../agencyteam/language.md) keeps **Memory** for the
+- **Memory has two owners now.** [language.md](../engineering/language.md) keeps **Memory** for the
   Agent's own, and adds **Team Memory** for this.

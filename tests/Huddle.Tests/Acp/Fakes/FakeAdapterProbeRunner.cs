@@ -6,7 +6,7 @@ namespace Agency.Huddle.Tests.Acp.Fakes;
 /// <summary>
 /// A test double for <see cref="IAdapterProbeRunner"/>. Stands in for the real process spawn so
 /// <see cref="ModelCatalogProbe"/>'s caching, keying and gating logic is testable without launching
-/// a real adapter — docs/agencyteam/rules.md row 35 ("No test may reach the real
+/// a real adapter — docs/engineering/rules.md row 35 ("No test may reach the real
 /// <see cref="ModelCatalogProbe"/>") forbids exactly that, and this is the seam
 /// <see cref="ModelCatalogProbe"/> now calls instead of spawning directly.
 /// </summary>

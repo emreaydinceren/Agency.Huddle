@@ -57,7 +57,7 @@ internal sealed class InviteAgentTool(ChatService chat, ITeamDirectory teamDirec
         // here would make the tool contradict what it just told the model. 'agent' arrives as a
         // complete JSON string argument the model filled in, never carved out of free text by a
         // pattern, so resolving it is a plain lookup, not the truncation-prone parsing
-        // docs/agencyteam/traps.md warns about.
+        // docs/engineering/traps.md warns about.
         var user = await teamDirectory.FindUserByNameAsync(agentName, cancellationToken);
         if (user is null || user.Kind != UserKind.Agent)
         {

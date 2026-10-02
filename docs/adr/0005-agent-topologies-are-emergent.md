@@ -6,7 +6,7 @@ date: 2026-09-11
 # Agent topology is emergent; a Room is seeded by whoever creates it and followed by whoever opts in
 
 > **Partly built as of 2026-09-16, and deliberately still `proposed`.** Both gaps this ADR names
-> shipped as [Roadmap](../agencyteam/roadmap.md) item 8: `follow_room` / `unfollow_room`, and the
+> shipped as [Roadmap](../engineering/roadmap.md) item 8: `follow_room` / `unfollow_room`, and the
 > optional `seed` on `create_room`. Step 3 of the Sequencing below — per-Persona tool grants and the
 > verb vocabulary in `get_help` — is roadmap item 9 and is not built; step 5, session scoping, is
 > not either. The status stays `proposed` because this ADR decides more than item 8 did, following
@@ -83,7 +83,7 @@ Three properties decide the design:
   the Chief of Staff creates the Valentine's Room, its Turn is still in the
   Human's Room — a current-Room tool would follow the wrong one. The id comes
   back from `create_room`.
-- **It is not named `subscribe`.** [Language](../agencyteam/language.md) lists
+- **It is not named `subscribe`.** [Language](../engineering/language.md) lists
   *subscriber* as a word to avoid for Member, and `get_help`'s catalog is the
   only place many Agents ever read a tool's name.
 - **The state is per-Persona and in memory.** `PersonaRunner` and its App Tools
@@ -201,7 +201,7 @@ it.
   contains them like any other. Auditability is structural, not a logging feature.
 - **A follower is woken by every Message in that Room**, including exchanges
   between two specialists it is not part of, and each wake is a billed Turn.
-  [Roadmap](../agencyteam/roadmap.md) item 2's budget is a hard prerequisite, not a
+  [Roadmap](../engineering/roadmap.md) item 2's budget is a hard prerequisite, not a
   companion improvement.
 - **A forgotten `unfollow_room` self-heals on restart**, because the set is in
   memory. So does a follow: a coordinator that restarts mid-task stops following

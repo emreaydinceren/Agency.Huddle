@@ -21,7 +21,7 @@ using Agency.Huddle.Tests.Acp.Fakes;
 /// pass in. Rendering through a <see cref="FakePromptSource"/> configured with <em>no</em> overrides — it
 /// falls back to exactly <see cref="PromptCatalog"/>'s defaults by construction — re-anchors both
 /// assertions against the thing that can actually vary now: the default text a fresh install ships
-/// with. That keeps <c>docs/agencyteam/rules.md</c> rule 32 (the <c>mcp__team__</c> tool prefix pin)
+/// with. That keeps <c>docs/engineering/rules.md</c> rule 32 (the <c>mcp__team__</c> tool prefix pin)
 /// and the orientation-ordering guarantee meaningful.
 /// </para>
 /// </remarks>

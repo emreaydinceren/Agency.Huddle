@@ -47,7 +47,7 @@ URIs; no `resource_link`; no PDF until a live check says an Adapter honours one.
 - **`Huddle.Acp` gains** three records, one interface member and one trailing optional `AgentHostInfo`
   member. The ACP effort must be told. `FakeAcpAgent` is not edited.
 - **An image stays in the Adapter session's context** after the Turn and counts against the token
-  Budget like any other input. `TraceWire` logs the base64. See [Known limits](../agencyteam/known-limits.md).
+  Budget like any other input. `TraceWire` logs the base64. See [Known limits](../engineering/known-limits.md).
 - **The config keys are public:** `Team:Library:MaxImageBytes`, `MaxImagesPerTurn`,
   `MaxImageBytesPerTurn`, `MaxImageEdgePixels` and `Team:Acp:Adapters:*:PromptBlocks`.
 - **SVG, PDF and audio are never sent.** SVG is XML that can carry script (the avatar rule); the other

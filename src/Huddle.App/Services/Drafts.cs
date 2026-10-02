@@ -7,7 +7,7 @@ namespace Agency.Huddle.App.Services;
 /// Holds every Turn's Draft while it is being written, keyed by <see cref="Draft.MessageId"/> rather
 /// than by Room: a Group Room where two Agents were both Mentioned can have two Turns streaming into
 /// it at once, and a Room-keyed store would silently drop one of them. Nothing here ever reaches the
-/// Transcript — a Draft is, by definition, in memory only (<c>docs/agencyteam/language.md</c>) — and
+/// Transcript — a Draft is, by definition, in memory only (<c>docs/engineering/language.md</c>) — and
 /// each entry is removed the moment its Turn finishes; see <see cref="Complete"/>.
 /// </summary>
 /// <remarks>

@@ -62,7 +62,7 @@ else
         @* Same slot as the budget prompt below, and for the same reason: this is the thing you need
            to read before the composer, not after. Rendered inline rather than as a component for the
            same reason the budget prompt is - a string Parameter missing its leading @ passes the
-           literal text, compiles clean and fails only on screen - see docs/agencyteam/rules.md.
+           literal text, compiles clean and fails only on screen - see docs/engineering/rules.md.
            Offline and Degraded ONLY: a stopped Turn and a spent Room Budget both leave every Member
            healthy, and a Stop is a normal outcome, not a failure - see StopDraftAsync and the
            budget-prompt block just below, which already own those two cases. *@
@@ -86,7 +86,7 @@ else
         }
         @* Rendered inline rather than as a component for the same reason every other strip on this
            page is: a string Parameter missing its leading @ passes the literal text, compiles clean
-           and fails only on screen - see docs/agencyteam/rules.md. The drafts.Count == 0 guard is
+           and fails only on screen - see docs/engineering/rules.md. The drafts.Count == 0 guard is
            deliberate: a teammate mid-Turn from an earlier Mention is visibly typing, and "name one to
            ask for a reply" rendered beside a streaming row is a worse lie than silence. *@
         @if (this.outlook == RoomReply.ContextOnly && this.drafts.Count == 0)
@@ -115,7 +115,7 @@ else
         @* Between the transcript and the composer on purpose: the exchange that spent the Budget is
            the thing you need to read before deciding whether to grant another one. Rendered inline
            rather than as a component because a string Parameter missing its leading @ passes the
-           literal text, compiles clean and fails only on screen - see docs/agencyteam/rules.md. *@
+           literal text, compiles clean and fails only on screen - see docs/engineering/rules.md. *@
         @if (this.budget.Exhausted && !this.budgetPromptDismissed)
         {
             @* MudAlert renders no role by default - verified against the rendered markup, not assumed -
@@ -153,7 +153,7 @@ else
             <MudText Typo="Typo.caption" Class="budget-note">@this.budget.Used of @this.budget.Granted agent replies since you last spoke.</MudText>
         }
         @* Rendered inline rather than as a component for the same reason every other strip on this
-           page is - see docs/agencyteam/rules.md. Granted + Expected deliberately renders nothing:
+           page is - see docs/engineering/rules.md. Granted + Expected deliberately renders nothing:
            the reply is coming, so there is nothing to explain. RoomReply.Paused also renders nothing
            on every path here: ADR-0006's Continue prompt already owns that surface, and a second
            strip saying the same thing is noise nobody asked for. *@

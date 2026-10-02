@@ -163,7 +163,7 @@ Run it on your own machine. Do not host it.
 
 Everything deliberately left out — threads, reactions, edits, search, more than one
 human — is listed with its reasoning in
-[Known limits](docs/agencyteam/known-limits.md).
+[Known limits](docs/engineering/known-limits.md).
 
 ## How it works
 
@@ -203,7 +203,7 @@ fake agent host and never starts a real session.
 
 ## Documentation
 
-[`docs/AgencyTeam.md`](docs/AgencyTeam.md) is the source of truth. It is a hub —
+[`docs/Huddle.EngineeringGuide.md`](docs/Huddle.EngineeringGuide.md) is the source of truth. It is a hub —
 read it, then follow only the rows in its map that your task needs.
 
 ---
@@ -221,7 +221,7 @@ the official npm adapter, which wraps the Claude Agent SDK and reuses your exist
 `claude` CLI login, so no API key is needed.
 
 > **Working on this code, human or AI?** Read
-> [`docs/acp/agent-guide.md`](docs/acp/agent-guide.md) first. It collects what the
+> [`docs/engineering/acp-agent-guide.md`](docs/engineering/acp-agent-guide.md) first. It collects what the
 > protocol reference does not tell you: the authentication signal that reads
 > backwards, the notifications the adapter sends unasked, the three near-identical
 > tool-call types, and the invariants where the natural implementation is the wrong

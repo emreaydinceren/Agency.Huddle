@@ -2,7 +2,7 @@
 
 **Date:** 2026-09-22 (revised 2026-10-01) · **Status:** Built 2026-10-01 · **Decision record:**
 [ADR-0022](adr/0022-an-agent-asks-the-human-with-a-question.md) · **Vocabulary:**
-[language.md](agencyteam/language.md) (**Question**)
+[language.md](engineering/language.md) (**Question**)
 
 This is the design for `ask_human`, an App Tool that lets an Agent put one to three
 multiple-choice Questions to the Human. They appear on a card in the Room as options to tap,
@@ -16,7 +16,7 @@ test-first task list. Every design decision is recorded in §11 with the alterna
 
 > [!IMPORTANT]
 > Two pages are binding before any code in this spec is written:
-> [rules.md](agencyteam/rules.md) before editing `src/Huddle.App`, and
+> [rules.md](engineering/rules.md) before editing `src/Huddle.App`, and
 > [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) for every C# file. Nothing here
 > overrides either.
 
@@ -30,7 +30,7 @@ test-first task list. Every design decision is recorded in §11 with the alterna
 > nothing in their tree and needed no announcement. And `dotacp` 2026.7.19's `ClientCapabilities` has no
 > `Elicitation` member at all, so advertising the capability would need a library upgrade first; the
 > guard is there for that day. The six paid manual tests are written
-> ([questions.md](agencyteam/manual-tests/questions.md)) and were run once, 2026-10-01, in the app.
+> ([questions.md](engineering/manual-tests/questions.md)) and were run once, 2026-10-01, in the app.
 >
 > **What that run found.** The card, the answer, the wake, D-8 and §6.8 all held against a real model
 > (QUESTIONS-02, 05 and 06 pass). **D-11 as first written did not.** On the Claude Adapter every `mcp__team__*` tool is a
@@ -575,8 +575,8 @@ the task that registers the tool. Each diff is reviewed to be exactly one new to
 `propose_teammates` today, because a Skill grants it, but all list `post_message`, and `ask_human`
 goes to every Persona (D-10).
 
-**Manual tests** live in [manual-tests/questions.md](agencyteam/manual-tests/questions.md) as QUESTIONS-01 to
-QUESTIONS-06, in this table's order, and are registered in [manual-tests.md](agencyteam/manual-tests.md):
+**Manual tests** live in [manual-tests/questions.md](engineering/manual-tests/questions.md) as QUESTIONS-01 to
+QUESTIONS-06, in this table's order, and are registered in [manual-tests.md](engineering/manual-tests.md):
 
 | Id | Steps | Pass |
 | --- | --- | --- |

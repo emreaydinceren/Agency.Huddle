@@ -5,7 +5,7 @@ date: 2026-09-16
 
 # An Adapter is a property of the Persona
 
-[Roadmap](../agencyteam/roadmap.md) item 12 asked how a Persona could run on a local Model
+[Roadmap](../engineering/roadmap.md) item 12 asked how a Persona could run on a local Model
 instead of a cloud Claude. It answered with a second `IAgentHostFactory` and a global
 registration, and noted in passing that a global backend switch "makes the only interesting
 configuration unreachable". This settles the question the other way round: the Adapter is not
@@ -47,7 +47,7 @@ global "which backend" setting is wrong by construction.
 
 ## Why frontmatter and not a table
 
-[Ordering](../agencyteam/roadmap.md#ordering)'s standing warning is binding: *every per-Persona
+[Ordering](../engineering/roadmap.md#ordering)'s standing warning is binding: *every per-Persona
 store added is one more place a rename has to touch, and that cost never goes down.*
 `PersonaRenameCascade` already touches the Team Directory row, `persona_models`,
 `persona_efforts`, the Room names and the Work Dir. **It gains nothing here.**

@@ -18,7 +18,7 @@ namespace Agency.Huddle.App.Acp;
 /// </summary>
 /// <remarks>
 /// This runs one <see cref="AppToolServer"/> per Persona, on its own ephemeral loopback port, matching
-/// <c>Team.Console</c>. agent-guide.md §7.5 argues the eventual shape for a multi-persona host is a
+/// <c>Team.Console</c>. acp-agent-guide.md §7.5 argues the eventual shape for a multi-persona host is a
 /// single shared MCP endpoint, but §8 records that nothing is known about several agents calling one
 /// endpoint concurrently, so per-Persona is the better-evidenced option today and needs zero new
 /// JSON-RPC code. Revisit this past roughly four Personas, when N loopback listeners stops being free.
@@ -141,7 +141,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
                 + "tools/acp/install.ps1 (or set Team:Acp:AdapterPath / Team:Acp:Args) before enabling this Persona.");
 
         // Minted fresh per session and never logged: wire traces already leak it
-        // (agent-guide.md §7.5), so this is the only place its value is held outside the tool server.
+        // (acp-agent-guide.md §7.5), so this is the only place its value is held outside the tool server.
         var authToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
 
         // Parsed from the Persona's own text rather than threaded through this method's signature

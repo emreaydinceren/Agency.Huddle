@@ -185,7 +185,7 @@ public sealed class PipeHostFixture : IAsyncDisposable
     /// It looked like a supervisor bug; it was two supervisors.
     /// </para>
     /// <para>
-    /// Removing the registration also keeps <c>docs/agencyteam/rules.md</c> row 26 honest ("ACP is off by default
+    /// Removing the registration also keeps <c>docs/engineering/rules.md</c> row 26 honest ("ACP is off by default
     /// and spends real money... both test fixtures pin it false"): with the hosted service gone, no test running
     /// against this fixture can end up resolving the real <see cref="Agency.Huddle.App.Acp.DotAcpAgentHostFactory"/> and
     /// spawning a real <c>node</c> adapter process, no matter what it sets <c>Team:Acp:Enabled</c> to — a test that

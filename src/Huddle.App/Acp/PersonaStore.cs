@@ -163,7 +163,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         // otherwise drop the event and leave every Persona path nested under it stale.
         // IncludeSubdirectories = true is the headline fix of this phase: without it, a Persona
         // under a Team sub-folder is found once by the startup scan and then never reloads on
-        // edit again - no error, no log, nothing, exactly the shape docs/agencyteam/traps.md warns
+        // edit again - no error, no log, nothing, exactly the shape docs/engineering/traps.md warns
         // about. NotifyFilters.DirectoryName is what makes a directory rename raise an event at
         // all.
         this.watcher = new FileSystemWatcher(this.Paths.DefinitionsRoot, "*")
@@ -215,7 +215,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// every subscriber to finish handling it, is what guarantees the rename-in-place wins that race.
     /// This class deliberately takes no dependency on
     /// <see cref="Agency.Huddle.App.Data.ITeamDirectory"/> to do the renaming itself - see
-    /// docs/agencyteam/rules.md - it only announces that a rename happened.
+    /// docs/engineering/rules.md - it only announces that a rename happened.
     /// </remarks>
     internal event Action<PersonaRenamed>? PersonaRenamed;
 
@@ -235,7 +235,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <see cref="Agency.Huddle.App.Acp.PersonaRenameCascade"/>) needs the fact settled before
     /// <see cref="PersonaSupervisor"/> reacts to <see cref="PersonasChanged"/>. This class deliberately
     /// takes no dependency on anything downstream to do the cascading itself - see
-    /// docs/agencyteam/rules.md - it only announces that a removal happened.
+    /// docs/engineering/rules.md - it only announces that a removal happened.
     /// </remarks>
     internal event Action<PersonaRemoved>? PersonaRemoved;
 
@@ -395,7 +395,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <summary>
     /// Overwrites an existing Persona's file, at whichever path it was actually discovered under -
     /// nested or not - and its stored model and effort together. Because a system prompt, a model AND
-    /// an effort are all fixed at <c>session/new</c> (docs/acp/agent-guide.md §3.5), the only way for
+    /// an effort are all fixed at <c>session/new</c> (docs/engineering/acp-agent-guide.md §3.5), the only way for
     /// any of these edits to take effect is for the observer of <see cref="PersonasChanged"/>
     /// (<see cref="PersonaSupervisor"/>) to restart that Persona's session, losing its conversation
     /// memory. There is deliberately no default for <paramref name="model"/> or
@@ -410,7 +410,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// <paramref name="text"/>'s frontmatter Name differs from the Persona's current Name, the OLD
     /// Name's Model, Effort and Work Mode rows are removed before the new ones are stored under the
     /// NEW Name - without this, editing <c>name:</c> would silently drop the teammate's Model and
-    /// Effort, the exact "silently resurrect an old setting" failure docs/agencyteam/rules.md exists
+    /// Effort, the exact "silently resurrect an old setting" failure docs/engineering/rules.md exists
     /// to prevent, just running the other way (silently DROPPING a setting rather than resurrecting
     /// one). <paramref name="workMode"/> has no default for the same reason as the other two: a caller
     /// that forgot it would wipe the stored mode, so every caller must pass it.
@@ -1128,7 +1128,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
     /// one a normal change takes: schedule a refresh on the existing debounce path rather than trust
     /// whatever the watcher's view of the world now is. <c>internal</c> rather than <c>private</c>
     /// only so <c>Huddle.Tests</c> can invoke it directly after <see cref="Dispose"/> - see
-    /// docs/agencyteam/known-limits.md's "Third known flake" entry and
+    /// docs/engineering/known-limits.md's "Third known flake" entry and
     /// <c>PersonaStoreTests.OnWatcherError_AfterDispose_DoesNotLog</c>.
     /// </summary>
     /// <param name="sender">Unused; required by the <see cref="FileSystemWatcher.Error"/> event shape.</param>
@@ -1141,7 +1141,7 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
             // a watcher Error event that fires during host teardown, after this store (and possibly
             // the logging provider itself) has been disposed, threw an unhandled
             // ObjectDisposedException on the watcher callback thread and crashed the process -
-            // docs/agencyteam/known-limits.md's "Third known flake" entry.
+            // docs/engineering/known-limits.md's "Third known flake" entry.
             // SkillStore.OnWatcherError already gets this ordering right; this now matches it.
             if (this.disposed)
             {

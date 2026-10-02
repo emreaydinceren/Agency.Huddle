@@ -4,8 +4,8 @@ Every finding of a retrospective becomes a row here, with an owner, a *done when
 manager updates the status when the action lands and re-checks it in the next retrospective's token tally
 or transcript sample. A row is **Verified** only when a later batch shows the behaviour, not when the edit
 was made. Rows marked **Open** are dispatched in the run, as chores, before the deliverable that needs
-them. See [the plan](Huddle.TeamPages-ProjectPlan.md#retrospectives-every-15-completed-tasks) and the
-[tracker](Huddle.TeamPages-Tracker.md).
+them. The plan and the
+tracker were removed after delivery and are in the git history.
 
 Status: **Verified** (seen working in a later batch) · **Done** (applied, not yet observed) · **Partial** ·
 **Open** (not applied) · **Changed** (superseded).

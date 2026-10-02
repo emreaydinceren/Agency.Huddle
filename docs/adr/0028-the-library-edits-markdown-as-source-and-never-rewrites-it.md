@@ -30,7 +30,7 @@ on load and restored on save. The text in between is what the Human typed. There
 formatter, no frontmatter round-trip through a YAML model and no trailing-newline fix-up.
 
 **Rendering reuses `MarkdownRenderer`.** The pipeline keeps `DisableHtml()` and the link
-rewriter, and never calls `UseAdvancedExtensions()` ([rules.md](../agencyteam/rules.md)).
+rewriter, and never calls `UseAdvancedExtensions()` ([rules.md](../engineering/rules.md)).
 Wikilinks are added the same way Task ids were: a pass over the parsed document's
 `LiteralInline`s with an `ILibraryReferenceResolver`, beside the existing
 `LinkTaskReferences`. There is no new Markdig parser extension.

@@ -68,7 +68,7 @@ deliberate reversal of what Roadmap item 2 originally said. A Message needs a
 sender and there is no honest one:
 
 - A `system` sender means a third `UserKind`. That is a SQL `CHECK` constraint,
-  which `docs/agencyteam/traps.md` records as needing a fresh `App_Data`, **and**
+  which `docs/engineering/traps.md` records as needing a fresh `App_Data`, **and**
   a wire enum inside `MemberInfo`, which means a `ProtocolVersion` bump and every
   client updated in the same commit. Roadmap item 11 reaches the same conclusion
   independently: *resist inventing a `system` sender.*

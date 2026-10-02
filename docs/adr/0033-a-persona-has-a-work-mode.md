@@ -13,7 +13,7 @@ is [Huddle.WorkModes-Specifications.md](../Huddle.WorkModes-Specifications.md).
 ## The problem
 
 Every Persona runs in the Adapter's default mode, and Huddle's permission handler answers every
-`session/request_permission` itself. [Roadmap §20](../agencyteam/roadmap.md) recorded the
+`session/request_permission` itself. [Roadmap §20](../engineering/roadmap.md) recorded the
 result on 2026-09-30: the Human decided auto-approve is acceptable for now, and a live Turn
 showed that an edit inside the Work Dir still round-trips a request that is always approved.
 
@@ -24,7 +24,7 @@ still pays a request per edit.
 ACP has a standard place for this. `session/new` returns a `configOptions` entry with
 `category: "mode"`, and `session/set_config_option` changes it. Huddle reads the `model` and
 `thought_level` entries from the same array and ignores `mode`
-([session-config-options.md](../acp/session-config-options.md) lists it as "No").
+([acp-session-config.md](../engineering/acp-session-config.md) lists it as "No").
 
 ## The decision
 
@@ -68,7 +68,7 @@ error to react to on every attempt. A mode gives it a tool set that matches its 
 
 Effort's ladder carries an `"default"` sentinel, and the app filters it because *null means send
 nothing*, a different wire behaviour from sending `"default"`
-([rules.md](../agencyteam/rules.md), the Effort row). A mode list has no such sentinel:
+([rules.md](../engineering/rules.md), the Effort row). A mode list has no such sentinel:
 `claude-agent-acp` advertises `default` as **Manual**, a real mode meaning "always ask before
 making changes". Filtering it would remove the one way to choose it explicitly. Null still
 means send nothing, and is the blank option.

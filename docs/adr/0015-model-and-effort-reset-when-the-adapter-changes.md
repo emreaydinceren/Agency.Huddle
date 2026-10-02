@@ -18,7 +18,7 @@ to `claude-agent-acp`. There is no mapping between them and there could not be o
 different models from different vendors, and even a same-named model is a different deployment.
 
 Effort is worse, because it is downstream of Model. Its ladder is whatever the Adapter
-advertises, and [Language](../agencyteam/language.md) narrowed the definition in this same
+advertises, and [Language](../engineering/language.md) narrowed the definition in this same
 change: whether that ladder varies *by Model* is now the Adapter's business.
 `claude-agent-acp` advertises one ladder per Model; `agency-acp` advertises one per endpoint
 surface. An Effort id carried across an Adapter change is a value from a ladder that may not
@@ -52,7 +52,7 @@ nowhere in between**, so without it the Model select repaints when the *effort* 
 That is issue #39, which measured two entries arriving at 265 ms and six at 8.5 s with no sign
 the first reading was provisional.
 
-[Rules](../agencyteam/rules.md) already carried this as a binding row for two dropdowns. There
+[Rules](../engineering/rules.md) already carried this as a binding row for two dropdowns. There
 are now three, and one more place to get it wrong.
 
 ## A defect this feature created, and had to fix
@@ -91,7 +91,7 @@ from the *shape* of the change rather than found by a user.
 
 **Keeping Model and Effort across the change.** A cross-Adapter model id is meaningless, and the
 session would start on the Adapter's default anyway while the card claimed otherwise — the
-silent-disagreement shape [Traps](../agencyteam/traps.md) exists to catch.
+silent-disagreement shape [Traps](../engineering/traps.md) exists to catch.
 
 **Storing Model per Adapter.** A `persona_models` row per (Persona, Adapter) pair is a schema
 change, a migration, and one more thing `PersonaRenameCascade` must touch — against the standing

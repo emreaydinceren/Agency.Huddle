@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-01 · **Status:** Built 2026-10-01 (A, phases 0 to 6; phase 7's live checks answered
 in Appendix C) · **Decision record:**
-[ADR-0036](adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md) · **Vocabulary:** [language.md](agencyteam/language.md)
+[ADR-0036](adr/0036-a-prompt-block-is-sent-only-when-the-adapter-advertised-it.md) · **Vocabulary:** [language.md](engineering/language.md)
 (term **Prompt block**)
 
 This is the design for **Prompt blocks**: parts of a Turn's prompt that are not text. Today a Turn
@@ -17,15 +17,15 @@ beat, and Appendix A for the ordered, test-first task list.
 
 > [!IMPORTANT]
 > Two pages are binding before any code in this spec is written:
-> [rules.md](agencyteam/rules.md) before editing `src/Huddle.App`, and
+> [rules.md](engineering/rules.md) before editing `src/Huddle.App`, and
 > [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) for every C# file.
-> [traps.md](agencyteam/traps.md) is binding before touching `Huddle.Acp`, and this spec does.
+> [traps.md](engineering/traps.md) is binding before touching `Huddle.Acp`, and this spec does.
 > Nothing here overrides any of them.
 
 > [!NOTE]
 > **Scope.** V1 is **A**: a Library file the Human's own Message names. It is sent as a Prompt block
 > only for that Turn. **B**, the Human attaching or pasting a file in the composer, is
-> [roadmap item 23](agencyteam/roadmap.md) and not built here; §3 and §14.12 say how B would reuse
+> [roadmap item 23](engineering/roadmap.md) and not built here; §3 and §14.12 say how B would reuse
 > this work. Phase 5 (a document's text as a resource) ships separately from Phases 1 to 4 and can be
 > dropped without touching them.
 
@@ -121,9 +121,9 @@ already types them, yet `DotAcpAgentSession.PromptAsync` builds exactly one `Tex
 
 | Not in scope | Why |
 | --- | --- |
-| **B: the Human attaches or pastes a file in the composer** | New composer UI, a store for the bytes, a field on `ChatMessage` and a Transcript line format. [Roadmap item 23](agencyteam/roadmap.md). The cheapest route reuses this design (§14.12) |
+| **B: the Human attaches or pastes a file in the composer** | New composer UI, a store for the bytes, a field on `ChatMessage` and a Transcript line format. [Roadmap item 23](engineering/roadmap.md). The cheapest route reuses this design (§14.12) |
 | **PDF and other blob resources** | `claude-agent-acp` **ignores** a blob `resource` *(source, Appendix B.2)*, so a PDF would be dropped without an error. V2, behind a live check (V-6) |
-| **SVG** | XML that can carry script; most vision models do not accept it as an image; the Library never serves one as an image either. [rules.md](agencyteam/rules.md) refuses it for avatars on the same argument |
+| **SVG** | XML that can carry script; most vision models do not accept it as an image; the Library never serves one as an image either. [rules.md](engineering/rules.md) refuses it for avatars on the same argument |
 | **Audio** | No source for it, and the adapter ignores it *(source)* |
 | **`resource_link` blocks** | Baseline for every Adapter, but `claude-agent-acp` reduces one to a link of its URI *(source)*, so it carries nothing the path line does not (D-4) |
 | **Resizing or re-encoding an image** | Needs an image library: a dependency, a licence, an attack surface. A header read is enough to refuse (D-9) |
@@ -637,7 +637,7 @@ Prompt blocks are **per Turn and stateless**: nothing is cached and nothing carr
 
 **An image stays in the session's context.** After a Turn that sent one, each later Turn in that
 session carries it as cached context. That is real, recurring spend that nothing in Huddle shows; it
-goes in [Known limits](agencyteam/known-limits.md), and `@Nova /compact`
+goes in [Known limits](engineering/known-limits.md), and `@Nova /compact`
 ([Commands design](Huddle.Commands-Specifications.md)) is the way to shed it.
 
 **Scaling.** `MaxConcurrentTurns` (default 1) bounds simultaneous peaks. Raising it multiplies the
@@ -923,7 +923,7 @@ fail before the code it covers exists. Names follow `Method_Scenario_Expectation
 
 | # | Task | Files |
 | --- | --- | --- |
-| D6 | Add **Prompt block** to `language.md`. Mark this spec's hub-map row built and add the five configuration rows to the hub's table. Add a `known-limits.md` entry: an image stays in the session's context; `TraceWire` logs the base64; PDF, SVG and audio are not sent. Update `docs/acp/agent-guide.md` where it says prompts are text only. Add `manual-tests/prompt-blocks.md` covering P1, P2, P5, P6, P11 and P18. Mark roadmap item 23's A part built | `docs/agencyteam/language.md`, `docs/AgencyTeam.md`, `known-limits.md`, `docs/acp/agent-guide.md`, `docs/agencyteam/manual-tests/` |
+| D6 | Add **Prompt block** to `language.md`. Mark this spec's hub-map row built and add the five configuration rows to the hub's table. Add a `known-limits.md` entry: an image stays in the session's context; `TraceWire` logs the base64; PDF, SVG and audio are not sent. Update `docs/engineering/acp-agent-guide.md` where it says prompts are text only. Add `manual-tests/prompt-blocks.md` covering P1, P2, P5, P6, P11 and P18. Mark roadmap item 23's A part built | `docs/engineering/language.md`, `docs/Huddle.EngineeringGuide.md`, `known-limits.md`, `docs/engineering/acp-agent-guide.md`, `docs/engineering/manual-tests/` |
 
 ### Phase 7: live checks (paid, small)
 

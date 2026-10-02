@@ -1,8 +1,8 @@
 # Huddle.TurnDetail — Design Specification
 
 **Date:** 2026-09-30 · **Status:** V1 built 2026-09-30 (Edit preview and Spend); V2 and V3 not built. See "As built" at the end of Appendix A · **Decision record:** [ADR-0034](adr/0034-turn-detail-rides-on-tool-activity-as-optional-fields.md) (§14.3) · **Vocabulary:** six new terms, agreed and added to
-[language.md](agencyteam/language.md) on 2026-09-30 (§14.2) · **Neighbour:** roadmap
-[item 20](agencyteam/roadmap.md#20-an-agent-asks-the-human-before-a-tool-runs--proposed-2026-09-30-not-built),
+[language.md](engineering/language.md) on 2026-09-30 (§14.2) · **Neighbour:** roadmap
+[item 20](engineering/roadmap.md#20-an-agent-asks-the-human-before-a-tool-runs--proposed-2026-09-30-not-built),
 which reuses the Edit preview this spec builds.
 
 This is the design for showing more of what an Adapter already tells Huddle while a Turn runs:
@@ -18,8 +18,8 @@ Appendix C.
 
 > [!IMPORTANT]
 > Two pages are binding before any code in this spec is written:
-> [rules.md](agencyteam/rules.md) before editing `src/Huddle.App`, and
-> [traps.md](agencyteam/traps.md) before touching `Huddle.Acp`, `Huddle.Contracts` or the wire.
+> [rules.md](engineering/rules.md) before editing `src/Huddle.App`, and
+> [traps.md](engineering/traps.md) before touching `Huddle.Acp`, `Huddle.Contracts` or the wire.
 > [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) applies to every C# file, and
 > [agents/Testing.md](../agents/Testing.md) to every test. Nothing here overrides any of them.
 

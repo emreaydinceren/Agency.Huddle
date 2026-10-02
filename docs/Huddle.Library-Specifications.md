@@ -6,7 +6,7 @@
 [ADR-0029](adr/0029-between-the-human-and-an-agent-the-last-write-wins.md) (concurrency),
 [ADR-0030](adr/0030-a-team-folder-is-its-library-and-holds-its-tasks.md) (Team folders),
 [ADR-0031](adr/0031-teammates-and-teams-are-sibling-folders.md) (`Teammates/` beside `Teams/`) ·
-**Vocabulary:** [language.md](agencyteam/language.md) (**Library**, **Library Root**,
+**Vocabulary:** [language.md](engineering/language.md) (**Library**, **Library Root**,
 **Team folder**, **Project**, **Teammate folder**, **Work Dir**, **Watched Folder**) ·
 **Depends on:** [Tasks](Huddle.Tasks-Specifications.md) accepting ADR-0030
 
@@ -36,9 +36,9 @@ test-first task list. Every design decision is recorded in §11 with the alterna
 
 > [!IMPORTANT]
 > Two pages are binding before any code in this spec is written:
-> [rules.md](agencyteam/rules.md) before editing `src/Huddle.App`, and
+> [rules.md](engineering/rules.md) before editing `src/Huddle.App`, and
 > [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) for every C# file. Read
-> [mudblazor.md](agencyteam/mudblazor.md) before building any UI. Nothing here overrides them.
+> [mudblazor.md](engineering/mudblazor.md) before building any UI. Nothing here overrides them.
 
 **Sequencing.** Workstream L0 moves Persona files and Work Dirs into `Teammates/` (ADR-0031,
 §6.15) and frees `Teams/`. It comes first. Workstream L2 changes the Tasks layout (§6.3) and
@@ -117,7 +117,7 @@ drag and drop, and a graph view.
 | **Pinned root** | A Library Root the Human added in configuration or Settings |
 | **Library Path** | A resolved (root id, relative path, full path) value. The only way code reaches a file |
 
-These go into [language.md](agencyteam/language.md) under a new *Library* section.
+These go into [language.md](engineering/language.md) under a new *Library* section.
 
 ---
 
@@ -270,7 +270,7 @@ Owned by the Tasks effort, and requested in the Conversation note:
 | `RenameAsync`, `MoveAsync` | Within one root only. Refused for protected Team and Project folders (§6.2), and for a Teammate folder, its definition file and its `work/` folder (§6.15). For a `.md` file or a folder containing any, runs the link rewrite (§6.5) |
 | `RecycleAsync(path)` | `IRecycleBin.Send(path)`. The Windows implementation calls `Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile`/`DeleteDirectory` with `RecycleOption.SendToRecycleBin` and `UIOption.OnlyErrorDialogs`. Refused for a root itself, a protected Team or Project folder, a Teammate folder, its definition and its `work/` folder |
 
-A Teammate's Work Dir is never deleted from the app ([AgencyTeam.md](AgencyTeam.md), configuration
+A Teammate's Work Dir is never deleted from the app ([Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md), configuration
 table). Its contents can be recycled one item at a time.
 
 ### 6.5 Wikilinks, backlinks and rename rewriting
@@ -417,7 +417,7 @@ The built-in roots can be hidden but not removed.
 | Markdown | `.md`, `.markdown` | Read, Edit, Split |
 | Text and code | `.txt`, `.json`, `.yaml`, `.yml`, `.cs`, `.js`, `.ts`, `.css`, `.xml`, `.ps1`, `.csv`, `.log`, and any file whose first 8 KB decodes as UTF-8 with no NUL | Read-only, highlighted |
 | Image | `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, identified by magic bytes | Previewed through `/library-files/{rootId}/…`, served by `UseStaticFiles` + `PhysicalFileProvider` with those four content types only |
-| SVG | `.svg` | **Never served** ([rules.md](agencyteam/rules.md)); offered as text, read-only |
+| SVG | `.svg` | **Never served** ([rules.md](engineering/rules.md)); offered as text, read-only |
 | Anything else | | *Open in default app*, using the same server-side `Process.Start` as `TeammateCard.razor` |
 
 All files are shown in the tree.
@@ -427,7 +427,7 @@ All files are shown in the tree.
 A Teammate's definition, `Teammates/<Name>/<Name>.md`, is one click from its memory in the
 Teammates root. It opens in Read mode with a banner (`MudAlert`, §8): *This is Ada's definition.* Saving it shows
 *Saving restarts Ada and clears its conversation memory* first
-([rules.md](agencyteam/rules.md), *Editing a Persona … restarts its session*). The Teammates page
+([rules.md](engineering/rules.md), *Editing a Persona … restarts its session*). The Teammates page
 stays the main place to edit a Teammate, and the only place to rename one.
 
 ### 6.13 Agents and the Team folder
@@ -551,7 +551,7 @@ public sealed record LibraryLocation(string RootId, string FolderPath);
 | `StateKey` | `string` | Keys the remembered expanded folders, open file and divider position in `window.huddleStorage`, so each host remembers its own |
 
 `LibraryLocation`, `LibraryExplorerLayout` and any other parameter type are **`public`**:
-[rules.md](agencyteam/rules.md) forbids a `[Parameter]` of an `internal` type (CS0053). Everything
+[rules.md](engineering/rules.md) forbids a `[Parameter]` of an `internal` type (CS0053). Everything
 behind the parameters (the resolver, the services, the index) stays `internal`.
 
 **The scope is a location, never a path.** A host can't pass an absolute folder. Each
@@ -614,7 +614,7 @@ All under `Team:`.
 
 ## 8. User interface
 
-Every choice below comes from [mudblazor.md](agencyteam/mudblazor.md)'s *Finding a component by
+Every choice below comes from [mudblazor.md](engineering/mudblazor.md)'s *Finding a component by
 what you need*. Facts marked ✔ were checked against the pinned 9.10.0 package on 2026-09-24, and
 are added to that page's *Facts already checked*.
 
@@ -630,7 +630,7 @@ are added to that page's *Facts already checked*.
 | Explain each icon button | [Tooltip](https://mudblazor.com/components/tooltip) | `Chat.razor` | Every `MudIconButton` |
 | *Path copied* | [Snackbar](https://mudblazor.com/components/snackbar) `ISnackbar` | `SkillsPanel.razor` | `key: "library-copy"` so repeated copies collapse |
 | Confirm Delete, a Persona save, unsaved edits on switch | [Message Box](https://mudblazor.com/components/messagebox) `ShowMessageBoxAsync` | `SkillsPanel.razor` | |
-| Rename, move (with the link count), New note/folder/Project | [Dialog](https://mudblazor.com/components/dialog#passing-data) via `IDialogService` | `ArchivedChatsDialog.razor` | Pass a snapshot: an open dialog's parameters are frozen ([mudblazor.md](agencyteam/mudblazor.md) traps). The name field validates against §6.4's rules |
+| Rename, move (with the link count), New note/folder/Project | [Dialog](https://mudblazor.com/components/dialog#passing-data) via `IDialogService` | `ArchivedChatsDialog.razor` | Pass a snapshot: an open dialog's parameters are frozen ([mudblazor.md](engineering/mudblazor.md) traps). The name field validates against §6.4's rules |
 | Unsaved edits when leaving the page | [Exit Prompt](https://mudblazor.com/components/exitprompt) `MudExitPrompt` | — | ✔ `Title`, `Text`, `Disabled`, `UseNativePrompt` |
 | Backlinks | [Expansion Panels](https://mudblazor.com/components/expansionpanels) | `ProposalCard.razor` | One panel, collapsed by default, count in the title |
 | Orphan Team, missing pinned root | `MudIcon` + [Tooltip](https://mudblazor.com/components/tooltip); `MudAlert` in the pane | — | `Color="Color.Warning"`. A `MudAlert` needs `role="status"` added by hand |
@@ -638,7 +638,7 @@ are added to that page's *Facts already checked*.
 | Loading a folder or a document | [Progress](https://mudblazor.com/components/progress#circular-progress) | — | `MudProgressCircular Indeterminate="true" Size="Size.Small"` |
 | Pinned roots in Settings | `MudSimpleTable` + `MudTextField` + `MudButton` | `SkillsPanel.razor` | A small hand-written table |
 
-**Rules that bite here** ([mudblazor.md](agencyteam/mudblazor.md), *Huddle rules*):
+**Rules that bite here** ([mudblazor.md](engineering/mudblazor.md), *Huddle rules*):
 
 - No colour or font literals. The CodeMirror theme and every Library style live in a marked
   `/* Library */` block in `app.css`, reading `--mud-palette-*`, `--mud-typography-*` and
@@ -662,7 +662,7 @@ are added to that page's *Facts already checked*.
 4. **Images are served by content type, never SVG,** from a mount that re-runs the resolver on
    each request.
 5. **The Open action is server-side and ungated,** as today. It is acceptable only because Huddle
-   runs on the Human's own machine ([rules.md](agencyteam/rules.md)).
+   runs on the Human's own machine ([rules.md](engineering/rules.md)).
 
 ---
 
@@ -761,7 +761,7 @@ solution after each (`dotnet build Huddle.slnx`, then `dotnet test Huddle.slnx -
 | LB-I7 | L3 | Impl | `WikiLink`, `WikiLinkIndex`; wire the rewrite into `RenameAsync`/`MoveAsync` | §6.5 |
 | LB-T8 | L3 | Unit | `MarkdownRendererTests` additions: chat absolute paths inside and outside roots, code-span paths, `?library=` accepted only by exact shape; **every existing test unchanged** | §6.6 |
 | LB-I8 | L3 | Impl | `ILibraryReferenceResolver`, `LibraryReferenceResolver`, the renderer pass, `MessageList` wiring | §6.6 |
-| LB-T9 | L4 | Component | bUnit, rendering through `MudBunitContext.RenderWithPopovers` and the real `IDialogService` ([testing.md](agencyteam/testing.md)): `LibraryTree` lazy load and protected-folder menus; `LibraryDocument` mode toggle, dirty marker, unsaved-edit prompt, Persona warning; `?library=` opens the pane | §6.7–§6.12 |
+| LB-T9 | L4 | Component | bUnit, rendering through `MudBunitContext.RenderWithPopovers` and the real `IDialogService` ([testing.md](engineering/testing.md)): `LibraryTree` lazy load and protected-folder menus; `LibraryDocument` mode toggle, dirty marker, unsaved-edit prompt, Persona warning; `?library=` opens the pane | §6.7–§6.12 |
 | LB-I9 | L4 | Impl | Vendor CodeMirror 6, `library-editor.js`, `LibraryEditor`, `LibraryDocument`, `LibraryTree`, `BacklinksPanel`, `LibraryPane` | §6.7 |
 | LB-T12 | L4 | Component | bUnit for `LibraryExplorer`: `Scopes` null shows every root; one scope shows only that folder as a protected top node; an unresolvable scope shows the alert; a wikilink to a file outside the scope opens it with the *Outside this view* hint and doesn't expand the tree; `StateKey` separates two hosts' remembered state | §6.16 |
 | LB-I15 | L4 | Impl | `LibraryLocation`, `LibraryExplorerLayout`, `LibraryExplorer` composed from the parts; `LibraryPane` and the `/library` page as its first two hosts | §6.16 |
@@ -773,4 +773,4 @@ solution after each (`dotnet build Huddle.slnx`, then `dotnet test Huddle.slnx -
 | LB-I13 | L3 | Impl | The block in `RoomSession`, the four `turn.library*` keys, the `LibraryPathResolver` lookup from an absolute path | §6.14 |
 | LB-I14 | L4 | Impl | The Copy button on the document header and the node menu, using `window.huddleClipboard` | §6.14 |
 | LB-M1 | L5 | Manual | Walk use cases L0–L13 in the running app, including a real Obsidian vault as a pinned root opened in Obsidian afterwards | §2 |
-| LB-D1 | L5 | Docs | `language.md` Library section; `AgencyTeam.md` map row and configuration rows; roadmap item; ADRs 0027–0030 to *accepted* | §4 |
+| LB-D1 | L5 | Docs | `language.md` Library section; `Huddle.EngineeringGuide.md` map row and configuration rows; roadmap item; ADRs 0027–0030 to *accepted* | §4 |

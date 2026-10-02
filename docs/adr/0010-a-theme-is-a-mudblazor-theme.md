@@ -17,7 +17,7 @@ date: 2026-09-14
 > the first-paint flash) went with it. Read the paragraphs about a palette *pair* and about the
 > `dark` key as history.
 
-[Roadmap](../agencyteam/roadmap.md) item 6 built a theming system out of 39 custom properties,
+[Roadmap](../engineering/roadmap.md) item 6 built a theming system out of 39 custom properties,
 `light-dark()` and three cascade layers, and it worked. This records why it was replaced a day
 later, and what was given up to do it.
 
@@ -38,7 +38,7 @@ A **Theme** is a `MudTheme` object in `ThemeCatalog`, carrying a `PaletteLight` 
 `dark`. `AppearanceStore` keeps the shape it had: overrides-only, debounced `FileSystemWatcher`,
 malformed falls back wholesale, an absent file is normal and is never created just to read from.
 
-**Token, as [Language](../agencyteam/language.md) defined it, no longer exists.** That word named
+**Token, as [Language](../engineering/language.md) defined it, no longer exists.** That word named
 35 colours and 4 typography values declared once in `theme.css`. What remains is a MudBlazor
 palette property, which is a different thing and should not inherit the name.
 
@@ -87,7 +87,7 @@ like what they hold — the next reader would have no way to tell a decision fro
 **A bad theme id is no longer reported on the page.** `AppearanceSettings.Problems` is gone with
 the override layer that justified it. `AppearanceStore` still logs a warning naming the unknown
 id and still leaves the file untouched, and `Current_WithAnUnknownThemeId_...` still pins that —
-but the Appearance tab no longer shows it. See [Known limits](../agencyteam/known-limits.md).
+but the Appearance tab no longer shows it. See [Known limits](../engineering/known-limits.md).
 
 ## What was gained
 
@@ -162,6 +162,6 @@ touch its stylesheet".**
   prose no longer exists. Three new tests replace the coverage that still applies.
 - **`MudSelect` renders its items into a popover that only populates on a real click**, so a
   plain HTTP GET can never see non-selected option labels. This is the same *"anything behind a
-  click is absent from that HTML"* limitation [Testing](../agencyteam/testing.md) already records
+  click is absent from that HTML"* limitation [Testing](../engineering/testing.md) already records
   for `TeammateCard`, and it now applies to every converted `<select>`. Coverage of the full
   option list moves to bUnit.

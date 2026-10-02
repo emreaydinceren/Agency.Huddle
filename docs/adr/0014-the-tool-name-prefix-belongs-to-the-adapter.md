@@ -8,7 +8,7 @@ date: 2026-09-16
 Every App Tool is named twice. `AppToolServer` advertises it over MCP under the tool-server
 name `team`, and the system prompt tells the model what to type. Until now those two names were
 locked together by a constant: the server was called `team`, so the prompt said
-`mcp__team__get_help`, and [Rules](../agencyteam/rules.md) made it binding that *"App Tool names
+`mcp__team__get_help`, and [Rules](../engineering/rules.md) made it binding that *"App Tool names
 must be spelled `mcp__team__*` in the system prompt"*.
 
 That rule exists because the failure it prevents is silent and expensive. Naming a tool

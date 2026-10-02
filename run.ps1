@@ -18,7 +18,7 @@
     checkout needs nothing but this script and node on PATH. Pass -NoAcp to
     skip that check entirely.
 
-    See docs/AgencyTeam.md ("Build, test, run") for the commands this wraps.
+    See docs/Huddle.EngineeringGuide.md ("Build, test, run") for the commands this wraps.
 
 .PARAMETER Port
     Port to listen on (default: 5100, matching launchSettings.json).

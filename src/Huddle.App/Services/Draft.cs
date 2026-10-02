@@ -3,7 +3,7 @@ using Agency.Huddle.Contracts;
 namespace Agency.Huddle.App.Services;
 
 /// <summary>
-/// One Turn's text as it arrives, before it becomes a Message — see <c>docs/agencyteam/language.md</c>
+/// One Turn's text as it arrives, before it becomes a Message — see <c>docs/engineering/language.md</c>
 /// for why a Draft is not a Message: a Message is one persisted unit of text, and a Draft is never
 /// written to the Transcript. Public even though the store that produces it, <see cref="Drafts"/>, is
 /// not: a later task passes a <see cref="Draft"/> as a Blazor component <c>[Parameter]</c>, and Razor

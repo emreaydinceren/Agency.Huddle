@@ -1,11 +1,11 @@
 # Huddle.TeamPages — Design Specification
 
 **Date:** 2026-09-28 · **Status:** Delivered (code) 2026-09-29 ·
-**Plan:** [Huddle.TeamPages-ProjectPlan.md](Huddle.TeamPages-ProjectPlan.md) (the task list, spec
+**Plan:** removed after delivery, and in the git history (the task list, spec
 corrections S1–S17 and the retrospectives; this Spec now describes what was built) ·
 **Decision record:**
 [ADR-0032](adr/0032-a-team-and-each-project-share-a-memory-folder.md) (Team Memory) ·
-**Vocabulary:** [language.md](agencyteam/language.md) (**Team**, **Team folder**, **Project**,
+**Vocabulary:** [language.md](engineering/language.md) (**Team**, **Team folder**, **Project**,
 **Memory**, **Team Memory**, **Watched Folder**) · **Depends on:** the
 [Library](Huddle.Library-Specifications.md) (`LibraryExplorer`, Team folders, delivered
 2026-09-28) and [Tasks](Huddle.Tasks-Specifications.md) (`TaskBoard`, `TaskQuery`, delivered
@@ -62,7 +62,7 @@ that produced it:
 
 > [!IMPORTANT]
 > Two pages are binding before any code in this spec is written:
-> [rules.md](agencyteam/rules.md) before editing `src/Huddle.App`, and
+> [rules.md](engineering/rules.md) before editing `src/Huddle.App`, and
 > [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) for every C# file. Read
 > [agents/MudBlazorImplementation.md](../agents/MudBlazorImplementation.md) before building any
 > UI. Nothing here overrides them.
@@ -99,7 +99,7 @@ This spec closes that gap, and adds the one capability the tree was missing.
 5. **Nothing new to learn.** Each tab has the same shape: an action button, a search box, and
    the content below them. The search box filters by name only (§3).
 
-**Why this matters.** The product claim in [AgencyTeam.md](AgencyTeam.md#what-a-team-is-for) is
+**Why this matters.** The product claim in [Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md#what-a-team-is-for) is
 that a team does what one agent cannot. It depends on context kept for one job and on memory that
 outlives a session. Until now both were per Teammate. A Project was a folder the Agents could
 read, but nothing told an Agent what the Team had already decided. Team Memory makes a decision
@@ -140,7 +140,7 @@ reached in one Room with one Teammate part of every member's starting context.
 | Full-text search | The Library spec defers it (§12 there). The search boxes filter by name |
 | Creating a Teammate from *+ Add member* | The Teammates page owns creation. *+ Add member* picks an existing Teammate |
 | Team settings (colour, icon, description) | No place to store them that isn't a second source of truth. V2 could use a `Teams/<Team>/_team.md` |
-| Permissions | A Team is still never a permission ([language.md](agencyteam/language.md), *Team*). Every Agent can still read every Team folder with its own tools |
+| Permissions | A Team is still never a permission ([language.md](engineering/language.md), *Team*). Every Agent can still read every Team folder with its own tools |
 | A Team-level Budget or token Budget | Budgets stay per Room and per Persona |
 | Changing how personal Memory works | `Teammates/<Name>/work/memory/` is unchanged. Team Memory sits beside it |
 
@@ -166,7 +166,7 @@ reached in one Room with one Teammate part of every member's starting context.
 6. **Agents learn through the channels they already have.** Team Memory reaches an Agent through
    the system prompt at session start, and through File Changes afterwards. That is exactly how
    personal Memory works. There is no new tool, event or notification.
-7. **Simple over complete.** This is a proof of concept ([AgencyTeam.md](AgencyTeam.md)). No
+7. **Simple over complete.** This is a proof of concept ([Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md)). No
    caching layer, no background indexer, no new configuration beyond the one cap Team Memory
    needs.
 
@@ -276,7 +276,7 @@ The new code goes in folder `src/Huddle.App/Teams/`, namespace `Agency.Huddle.Ap
 | `Acp/DotAcpPersonaHost.cs` | Four new constructor parameters (Team labels, `ITeamCatalog`, Teams root, cap). `BuildOptions` builds a `TeamMemorySnapshot` beside the personal one, under the same `readsMemory` condition, on each open and resume | §6.4 |
 | `Acp/SystemPromptComposer.cs` | New optional **last** parameter `TeamMemorySnapshot? teamMemory = null`, and a Team Memory block after the Memory block | §6.4 |
 | `Prompts/PromptCatalog` + `prompts.default.json` | Four new Prompts (§7.4) | §6.4 |
-| `docs/agencyteam/language.md`, `docs/AgencyTeam.md` | *Team Memory* term, `memory` reserved in *Project*, map row, config row | Appendix A |
+| `docs/engineering/language.md`, `docs/Huddle.EngineeringGuide.md` | *Team Memory* term, `memory` reserved in *Project*, map row, config row | Appendix A |
 
 ---
 
@@ -640,7 +640,7 @@ is never hidden; the chevron collapses it again after the next navigation.
   never navigates.
 - The dialog validates as the Human types (`MudTextField` `Validation` func calling `TeamNames`),
   so OK is disabled while the name is invalid. The dialog receives a snapshot of the catalog
-  ([mudblazor.md](agencyteam/mudblazor.md): an open dialog's parameters are frozen).
+  ([mudblazor.md](engineering/mudblazor.md): an open dialog's parameters are frozen).
 
 **Gating.** The group renders whenever the app runs. Teams exist without Tasks or the Library,
 because membership alone is useful. *New project* needs Team folders, so it is hidden when both
@@ -1259,7 +1259,7 @@ shape that are already in production for personal Memory.
 ## Appendix A — Workstreams
 
 The test-first task list that used to be here lives in the delivered plan,
-[Huddle.TeamPages-ProjectPlan.md](Huddle.TeamPages-ProjectPlan.md): one numbered task per
+now removed and in the git history: one numbered task per
 deliverable D0–D8 (`Task 1.1` … `Task 8.3`), each split into a `.t` test step and an `.i`
 implementation step, with the spec corrections S1–S17 and the retrospectives. Read the plan for
 the tasks; this Spec no longer duplicates them, so the two cannot drift. The workstreams below map
@@ -1273,7 +1273,7 @@ this Spec's original ids to the plan's deliverables.
 | P3 Team Memory | `TeamMemoryIndex`, `Team:Teams:MaxMemoryEntries`, the four Prompts, the composer block, the host wiring | §6.4, §6.10, §7.3, §7.4 | D5 |
 | P4 Library additions | `LibraryFileService.FindAsync`, the explorer's `Filter` and `NewNoteAsync`, `EnsureTeam` and `EnsureProjectIn` | §6.5, §6.8 | D6 |
 | P5 UI | `TeamPageTabs`, `TeamsNav`, `NewTeamDialog`, `TeamPage`, the three tabs, `AddMemberDialog` | §6.5–§6.9 | D7 |
-| P6 Docs and verification | `language.md` (**Team Memory**, *Project* excludes `memory`, *Team* notes the page), `AgencyTeam.md` (map row, config row), ADR-0032 status, the manual test page, the full build and test run (TP-20, TP-T21, TP-21) | — | D8 |
+| P6 Docs and verification | `language.md` (**Team Memory**, *Project* excludes `memory`, *Team* notes the page), `Huddle.EngineeringGuide.md` (map row, config row), ADR-0032 status, the manual test page, the full build and test run (TP-20, TP-T21, TP-21) | — | D8 |
 
 **Sequencing.** P0 comes first. P1 comes before everything else, because `TeamNames` and the
 catalog are used everywhere. After that, P2, P3 and P4 are independent and can run in parallel.

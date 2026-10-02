@@ -4,7 +4,7 @@
 OQ-2, OQ-3 and OQ-5 answered live outside the app on 2026-10-01, so `plan` is now hidden by default;
 the in-app manual runs not done) · **Decision record:**
 [ADR-0033](adr/0033-a-persona-has-a-work-mode.md) · **Vocabulary:**
-[language.md](agencyteam/language.md) (**Work Mode**). §14 lists where the build differs from
+[language.md](engineering/language.md) (**Work Mode**). §14 lists where the build differs from
 the design below.
 
 This is the design for a **Work Mode**: a Persona setting, chosen from the modes its Adapter
@@ -19,9 +19,9 @@ alternatives each beat, and Appendix A for the ordered, test-first task list.
 
 > [!IMPORTANT]
 > Two pages are binding before any code in this spec is written:
-> [rules.md](agencyteam/rules.md) before editing `src/Huddle.App`, and
+> [rules.md](engineering/rules.md) before editing `src/Huddle.App`, and
 > [agents/CSharpPrinciples.md](../agents/CSharpPrinciples.md) for every C# file.
-> [traps.md](agencyteam/traps.md) is binding before touching `Huddle.Acp`, and this spec does.
+> [traps.md](engineering/traps.md) is binding before touching `Huddle.Acp`, and this spec does.
 > Nothing here overrides any of them.
 
 > [!NOTE]
@@ -32,7 +32,7 @@ alternatives each beat, and Appendix A for the ordered, test-first task list.
 > as the effort tests do.
 
 > [!NOTE]
-> **What this does not change.** [Roadmap §20](agencyteam/roadmap.md) records the Human's
+> **What this does not change.** [Roadmap §20](engineering/roadmap.md) records the Human's
 > decision, on 2026-09-30, that auto-approve is acceptable for now. It stays. This spec adds
 > one refusal to the handler (§6.9) and a way to choose a mode. Nothing in it asks the Human
 > before a tool runs.
@@ -598,7 +598,7 @@ Human's subscription.
 unchanged; a golden diff means something leaked into a prompt.
 
 **Manual tests**, to add as `manual-tests/work-mode.md` and to
-[manual-tests.md](agencyteam/manual-tests.md):
+[manual-tests.md](engineering/manual-tests.md):
 
 | Id | Steps | Pass |
 | --- | --- | --- |
@@ -648,8 +648,8 @@ manual tests stay the acceptance run.
 
 | # | Question | What it decides | How |
 | --- | --- | --- | --- |
-| OQ-4 ✓ | Does the probe's `session/new` response carry the mode option, with the values in §6.1? | The whole catalog design | **Yes.** `id: "mode"`, `category: "mode"`, the five values in §6.1, each with a `description` and an adapter-specific `_meta.kind`. The legacy `modes` field carries the same ids. Recorded in [session-config-options.md](acp/session-config-options.md) |
-| OQ-1 ✓ | Does a resumed session come back in Manual? The source says so | Whether §6.3 step 3 ever fires, and phase 2 | **Yes.** A session set to `acceptEdits` resumed as `default`. A session that never ran a prompt cannot be resumed at all (`-32002`), so this needs one turn, not none. Recorded in [known-limits.md](agencyteam/known-limits.md) |
+| OQ-4 ✓ | Does the probe's `session/new` response carry the mode option, with the values in §6.1? | The whole catalog design | **Yes.** `id: "mode"`, `category: "mode"`, the five values in §6.1, each with a `description` and an adapter-specific `_meta.kind`. The legacy `modes` field carries the same ids. Recorded in [acp-session-config.md](engineering/acp-session-config.md) |
+| OQ-1 ✓ | Does a resumed session come back in Manual? The source says so | Whether §6.3 step 3 ever fires, and phase 2 | **Yes.** A session set to `acceptEdits` resumed as `default`. A session that never ran a prompt cannot be resumed at all (`-32002`), so this needs one turn, not none. Recorded in [known-limits.md](engineering/known-limits.md) |
 | OQ-2 ✓ | After "No, keep planning", does the reply contain the plan? | Whether `plan` may ship before phase 3. If not, add `plan` to the default hidden list | **No.** The Adapter asked a `switch_mode` "Approve Plan" request with the plan in `rawInput.plan`. The guard refused with `reject_once`; the Turn ended `cancelled` with only 126 characters of preamble, and `RoomSession` posts no cancelled Turn. `plan` is now in the default hidden list (D-17). §6.9. Re-check in-app with MW-3 |
 | OQ-3 ✓ | Under Accept edits, does a write outside the Work Dir still reach the handler? | Whether the `~/.claude` guard survives the mode | **Yes.** A write outside the Work Dir produced a `session/request_permission` (kind `edit`, title "Write <path>", `rawInput` `{file_path, content}`). Refused, the file was not written. `WorkDirPermissionHandler` reads `rawInput.file_path`, so its `~/.claude` refusal still sees such writes. Caveats: the path was a temp directory, not `~/.claude` itself, and `allow_always` was never chosen. Re-check in-app with MW-4 |
 | OQ-5 ✓ | Where does the message chunk from an `auto` clamp land when no Turn is running? | Whether `auto` may ever be offered | **It arrives as a `session/update` notification.** `auto` on a model without support (Haiku, with no Turn running) answered `acceptEdits` in the `set_config_option` response, then sent an `agent_message_chunk` reading "Auto mode unavailable: the selected model does not support Auto mode; using Accept edits instead." and a `current_mode_update` to `acceptEdits`. Opus, Sonnet and the default accepted `auto`. Setting `auto` on Opus and then switching the model to Haiku moved the mode to `acceptEdits` with only a `current_mode_update`, no message chunk. Run 2026-10-01 with no prompt, so it cost nothing |
@@ -693,7 +693,7 @@ and the notice chunk is dropped by `RoomSession` unless a Turn happens to be ope
 default: a model switch can still move the mode silently, and the in-app behaviour is untried.
 
 **Not run.** The in-app manual tests in
-[manual-tests/work-mode.md](agencyteam/manual-tests/work-mode.md).
+[manual-tests/work-mode.md](engineering/manual-tests/work-mode.md).
 
 ---
 
@@ -705,7 +705,7 @@ new test copies the named effort test.
 
 | # | Kind | Task | Done when |
 | --- | --- | --- | --- |
-| WM-0 ✓ | Spike | OQ-4 and OQ-1 from §13. Record the real option and the resume result in `session-config-options.md` and `known-limits.md` | The two answers are written down. **Done 2026-09-30** |
+| WM-0 ✓ | Spike | OQ-4 and OQ-1 from §13. Record the real option and the resume result in `acp-session-config.md` and `known-limits.md` | The two answers are written down. **Done 2026-09-30** |
 | WM-T1 | Unit | `ModeConfigOptionsTests`, copying `EffortConfigOptionsTests`: flat, grouped, no mode option, null, model category only, `default` kept, `TryResolve` match, not in catalog, no select, and the configId is the option's own (use `permission` as the id) | Fails |
 | WM-I1 | Impl | `AgentModeOption`, `ModeConfigOptions` | T1 green |
 | WM-T2 | Unit | `AgentSessionOptionsTests.Mode_DefaultsToNull` and `Mode_BlankIsNormalisedToNull` | Fails |
@@ -740,10 +740,10 @@ new test copies the named effort test.
   ADR-0033 extends the reset to Work Mode. **ADR-0033** is `accepted`.
 - **`rules.md`**: the resume match row gains Work Mode. New rows: modes are enforced in
   `BuildOptions`, and Work Mode keeps Adapter's `default` while Effort filters it.
-- **`session-config-options.md`** (the ACP effort's): the `mode` row becomes "Yes", and its
+- **`acp-session-config.md`** (the ACP effort's): the `mode` row becomes "Yes", and its
   `src/Team.Acp/` links are stale. Announce first.
 - **`known-limits.md`**: the answers to OQ-1, OQ-2 and OQ-3.
-- **`agent-guide.md`** §3.4 (the ACP effort's) is stale on `rawInput` at request time.
+- **`acp-agent-guide.md`** §3.4 (the ACP effort's) is stale on `rawInput` at request time.
   Roadmap §20 already records this; correct it in the same change as the ACP layer.
-- **`code-map.md`**, **`AgencyTeam.md`** (map row), **`roadmap.md`** (a new item), and
+- **`code-map.md`**, **`Huddle.EngineeringGuide.md`** (map row), **`roadmap.md`** (a new item), and
   `manual-tests/work-mode.md` with its index row.

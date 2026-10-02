@@ -124,7 +124,7 @@ public sealed class PersonaIndexTests
         Assert.Empty(index.Rejected);
     }
 
-    /// <summary>Closes the live bug docs/agencyteam/known-limits.md records: "Jarvis" and "jarvis" sharing one SQLite row.</summary>
+    /// <summary>Closes the live bug docs/engineering/known-limits.md records: "Jarvis" and "jarvis" sharing one SQLite row.</summary>
     [Fact]
     public void Build_NamesDifferingOnlyByCase_AreTreatedAsACollision()
     {

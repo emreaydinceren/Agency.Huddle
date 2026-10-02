@@ -23,7 +23,7 @@ public sealed class ServiceCollectionExtensionsTests
     /// weight. But a value left behind in a user secret or an environment variable would otherwise
     /// bind to nothing, leaving <see cref="Agency.Huddle.App.Acp.PersonaStore"/> to scan an empty
     /// default "Teammates" folder - zero teammates, no exception, no log anywhere. That
-    /// silent-degradation shape is exactly what docs/agencyteam/traps.md exists to catch, so this
+    /// silent-degradation shape is exactly what docs/engineering/traps.md exists to catch, so this
     /// must fail loudly at startup instead, naming the new key.
     /// </summary>
     [Fact]

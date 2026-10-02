@@ -6,7 +6,7 @@ namespace Agency.Huddle.App.Acp;
 /// Runs one throwaway adapter probe: spawns the process described by an <see cref="AgentProcessOptions"/>,
 /// negotiates a session requesting one model, reads back the Adapter's advertised catalogs, and
 /// disposes. Extracted out of <see cref="ModelCatalogProbe"/> as the seam its caching, keying and
-/// gating logic is tested through: docs/agencyteam/rules.md row 35 ("No test may reach the real
+/// gating logic is tested through: docs/engineering/rules.md row 35 ("No test may reach the real
 /// <see cref="ModelCatalogProbe"/>") forbids a test reaching the real probe, because it spawns a
 /// real adapter process, and <see cref="ModelCatalogProbe"/> could not previously be exercised
 /// without one. Internal, like <see cref="IModelCatalog"/> itself — a test seam, not a public

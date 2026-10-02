@@ -14,7 +14,7 @@ using TeammatesPage = Agency.Huddle.App.Components.Pages.Teammates;
 namespace Agency.Huddle.Tests.Ui;
 
 /// <summary>
-/// Split two ways, per <c>docs/agencyteam/testing.md</c>: routing, HTTP status and
+/// Split two ways, per <c>docs/engineering/testing.md</c>: routing, HTTP status and
 /// <c>ProbeCount</c>/<c>EffortProbeCount</c> are facts about the server, so they stay on a plain HTTP
 /// GET against <see cref="TeamWebApplicationFactory"/>. Everything that depends on the exact markup a
 /// MudBlazor control renders - the Create card's own content, or a <c>MudSelect</c>'s options, which

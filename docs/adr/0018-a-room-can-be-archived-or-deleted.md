@@ -6,7 +6,7 @@ date: 2026-09-21
 # A Room can be archived or deleted
 
 Until now a Room was permanent. That was not an oversight — it was a stated position,
-recorded in [Known limits](../agencyteam/known-limits.md) and repeated as an instruction to
+recorded in [Known limits](../engineering/known-limits.md) and repeated as an instruction to
 testers in `manual-tests/invite-rooms.md`:
 
 > A Room can never be deleted, left, or renamed by hand — there is no such control anywhere in
@@ -48,8 +48,8 @@ This is the least obvious decision here and the one most likely to be "tidied" l
 
 The obvious shape is `ALTER TABLE rooms ADD COLUMN archived`. It is wrong in this codebase, and
 silently so. All schema DDL in `SqliteTeamDirectory` is `CREATE TABLE IF NOT EXISTS`, which
-means **an existing `team.db` never gains a new column and never says so**. [Traps](../agencyteam/traps.md)
-records this, and [Known limits](../agencyteam/known-limits.md) records the one previous time
+means **an existing `team.db` never gains a new column and never says so**. [Traps](../engineering/traps.md)
+records this, and [Known limits](../engineering/known-limits.md) records the one previous time
 the decision came up: Room auto-naming detects a Human-chosen name by *comparing* against
 `RoomNaming.Derive` rather than storing a `name_is_custom` flag, for exactly this reason.
 
