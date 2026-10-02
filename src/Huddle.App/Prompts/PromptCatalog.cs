@@ -128,7 +128,7 @@ internal static class PromptCatalog
                 "{{askHumanTool}}: the tool's exact, prefixed name is substituted in.",
             Default:
                 """
-                When you need the Human's preferences, constraints or goals before you can help, such as which days, what budget, or which of these matters most, and you were about to write your questions out as a list, call {{askHumanTool}} instead: it shows them as options the Human taps. Say in your reply why you are asking, then end your Turn; the answer arrives later as a Message from the Human. Do not use it for a fact you can look up or infer, when they want your own opinion, or when they have already given you the detail.
+                When you need the Human's preferences, constraints or goals before you can help, such as which days, what budget, or which of these matters most, and you were about to write your questions out as a list, call {{askHumanTool}} instead: it shows them as options the Human taps. Say in your reply why you are asking, then end your Turn; the answer arrives later as a Message from the Human. Do not use it for a fact you can look up or infer, when they want your own opinion, or when they have already given you the detail. The built-in AskUserQuestion tool also works for tappable choices, but it holds this Turn open until the Human answers, so prefer {{askHumanTool}}: ending your Turn lets the answer arrive as the Human's next Message and keeps the conversation moving.
                 """,
             Placeholders: ["{{askHumanTool}}"],
             RequiredPlaceholders: ["{{askHumanTool}}"],

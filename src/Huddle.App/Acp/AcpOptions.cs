@@ -107,6 +107,21 @@ public sealed class AcpOptions
     public int UserInputTimeoutSeconds { get; set; } = 600;
 
     /// <summary>
+    /// Whether Huddle tells the Adapter, in <c>initialize</c>, that it can show the Human a form
+    /// (<c>clientCapabilities.elicitation.form</c>, never <c>url</c>). On, the Adapter turns on three things
+    /// that all arrive as an <c>elicitation/create</c> request Huddle answers with a card in the Room:
+    /// Claude's built-in <c>AskUserQuestion</c> tool, the dialog that offers to retry after a refusal, and
+    /// the forms an MCP server asks for. Off restores the old behaviour exactly: the Adapter advertises
+    /// nothing of the kind, keeps those three off, and <c>ask_human</c> is the only way an agent asks.
+    /// </summary>
+    /// <remarks>
+    /// Read once, when a Persona's Adapter process starts, so a change applies to the next start of that
+    /// Persona's host and not to a session already running. Only the app's own host reads it: the model
+    /// catalog probe and the console never advertise, whatever it says.
+    /// </remarks>
+    public bool AdvertiseElicitation { get; set; } = true;
+
+    /// <summary>
     /// The most Teammates this installation allows - every loaded <see cref="PersonaStore"/> entry,
     /// rejected files excluded (Spec §7.3). Checked by <c>propose_teammates</c> and again at Approve,
     /// never on the Teammate card, which has no count of its own to enforce against. Zero or less

@@ -40,4 +40,17 @@ public sealed class AcpOptionsTests
 
         Assert.Equal(20, options.TranscriptCatchUpMessages);
     }
+
+    /// <summary>
+    /// <see cref="AcpOptions.AdvertiseElicitation"/> ships on: Claude's built-in <c>AskUserQuestion</c>, the
+    /// refusal-fallback dialog and MCP forms reach the Human unless an operator turns it off (elicitation
+    /// bridge E-1b, the last step of its delivery).
+    /// </summary>
+    [Fact]
+    public void AcpOptions_AdvertiseElicitation_DefaultsToTrue()
+    {
+        var options = new AcpOptions();
+
+        Assert.True(options.AdvertiseElicitation);
+    }
 }
