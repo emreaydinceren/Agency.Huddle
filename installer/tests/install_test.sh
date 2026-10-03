@@ -938,6 +938,513 @@ test_state_functions_use_local_variables() {
     rm -f "$state_file"
 }
 
+# ---- Task 32: stop_huddle_if_running, ensure_signed and install_app -----------------------------
+
+# Test doubles for the seams. Every call is appended to $AP_CALLS (a file, because some seams run in
+# a pipeline subshell). ap_setup installs them again, so a test that needs a real seam calls
+# ap_real_seams afterwards, which sources install.sh a second time.
+ap_stubs() {
+    run_codesign() {
+        printf 'codesign %s\n' "$*" >>"$AP_CALLS"
+        case $* in
+            "--verify "*x.dylib) return 1 ;;
+            "--force "*) return "${AP_SIGN_RC:-0}" ;;
+        esac
+        return 0
+    }
+    run_xattr() {
+        printf 'xattr %s\n' "$*" >>"$AP_CALLS"
+    }
+    is_macho() {
+        case $1 in
+            *.dylib | */Huddle.App) return 0 ;;
+        esac
+        return 1
+    }
+    run_huddle_stop() {
+        if [ -e "$INSTALL_ROOT.old" ]; then
+            printf 'stop old_present=1\n' >>"$AP_CALLS"
+        else
+            printf 'stop old_present=0\n' >>"$AP_CALLS"
+        fi
+        return "${AP_STOP_RC:-0}"
+    }
+    process_running() {
+        [ "${AP_ALIVE:-0}" -eq 1 ]
+    }
+    run_kill_process() {
+        printf 'kill %s\n' "$1" >>"$AP_CALLS"
+    }
+}
+
+# ap_child <script line>...: runs the lines in a child shell that sourced the real install.sh and
+# resolved the sandbox paths, so a test can reach a real seam without losing the fakes of this
+# file. Prints the child's stdout and stderr.
+ap_child() {
+    {
+        printf 'HUDDLE_INSTALL_NO_MAIN=1\n. "%s/../install.sh"\n' "$HERE"
+        printf 'parse_args --install-root "%s" --data-root "%s"\nresolve_paths\n' "$INSTALL_ROOT" "$DATA_ROOT"
+        printf '%s\n' "$@"
+    } >"$AP/child.sh"
+    ap_shell=$(command -v "$T_SHELL")
+    "$ap_shell" "$AP/child.sh" </dev/null 2>&1 || true
+}
+
+# A fresh sandbox with paths that contain spaces: $AP, the call log and the resolved paths.
+ap_setup() {
+    AP=$(mktemp -d "$TEST_HOME/ap.XXXXXX")
+    AP_CALLS="$AP/calls"
+    : >"$AP_CALLS"
+    AP_STOP_RC=0
+    AP_ALIVE=0
+    AP_SIGN_RC=0
+    APP_CHANGED=unset
+    ap_stubs
+    parse_args --install-root "$AP/root dir/Agency Huddle" --data-root "$AP/data dir"
+    resolve_paths
+}
+
+# ap_build_archive <tag> [nohost]: builds $AP_ARCHIVE the way the release workflow lays it out.
+# Files are created without the execute bit, so the install must set it.
+ap_build_archive() {
+    ap_src="$AP/src"
+    rm -rf "$ap_src"
+    mkdir -p "$ap_src/app" "$ap_src/tools/acp"
+    if [ "${2:-}" != nohost ]; then
+        # The shebang makes `[ -x ]` meaningful on Windows (Git Bash infers it from the shebang).
+        printf '#!/bin/sh\n# host %s\n' "$1" >"$ap_src/app/Huddle.App"
+    fi
+    printf 'lib %s\n' "$1" >"$ap_src/app/libx.dylib"
+    printf '{}\n' >"$ap_src/tools/acp/package.json"
+    printf '{}\n' >"$ap_src/tools/acp/package-lock.json"
+    printf '{"version": "%s", "nodeVersion": "v24.21.0"}\n' "$1" >"$ap_src/release-info.json"
+    AP_ARCHIVE="$AP/huddle-osx-arm64.tar.gz"
+    rm -f "$AP_ARCHIVE"
+    tar -czf "$AP_ARCHIVE" -C "$ap_src" .
+}
+
+# Installs version <tag> and then drops the markers a later upgrade has to keep.
+ap_install_with_markers() {
+    ap_build_archive "$1"
+    install_app "$AP_ARCHIVE" >"$AP/first.out" 2>&1 || true
+    mkdir -p "$INSTALL_ROOT/node/bin" "$INSTALL_ROOT/tools/acp/node_modules" "$INSTALL_ROOT/bin"
+    printf 'node-marker\n' >"$INSTALL_ROOT/node/bin/node"
+    printf 'module-marker\n' >"$INSTALL_ROOT/tools/acp/node_modules/marker"
+    printf 'launcher-marker\n' >"$INSTALL_ROOT/bin/huddle"
+    printf 'schema=1\nversion=%s\n' "$1" >"$STATE_FILE"
+    : >"$AP_CALLS"
+}
+
+ap_instance_json() {
+    mkdir -p "$DATA_ROOT/data"
+    printf '{"url":"http://127.0.0.1:5000","stopToken":"tok","pid":%s}\n' "$1" >"$DATA_ROOT/data/instance.json"
+}
+
+ap_count_calls() {
+    ap_n=$(grep -c "$1" "$AP_CALLS" || true)
+    printf '%s' "$ap_n"
+}
+
+test_t_run_honours_t_only_and_prints_run_lines_only_for_failures() {
+    ap_dir=$(mktemp -d "$TEST_HOME/tonly.XXXXXX")
+    {
+        printf '. "%s/lib.sh"\n' "$HERE"
+        printf 'test_alpha() { t_assert_eq 1 1 alpha-check; }\n'
+        printf 'test_beta() { t_assert_eq 1 2 beta-check; }\n'
+        printf 't_run test_alpha\nt_run test_beta\nt_summary\n'
+    } >"$ap_dir/child.sh"
+    shell_path=$(command -v "$T_SHELL")
+    only_alpha=$(T_ONLY=alpha "$shell_path" "$ap_dir/child.sh" </dev/null 2>&1 || true)
+    only_beta=$(T_ONLY=beta "$shell_path" "$ap_dir/child.sh" </dev/null 2>&1 || true)
+    everything=$(T_ONLY= "$shell_path" "$ap_dir/child.sh" </dev/null 2>&1 || true)
+    t_assert_eq "1 passed, 0 failed" "$only_alpha" "T_ONLY=alpha runs one passing test and prints no RUN line"
+    t_assert_contains "$only_beta" "RUN  test_beta" "a failing test prints its RUN line"
+    t_assert_contains "$only_beta" "FAIL [test_beta]" "a failing test prints its FAIL line"
+    t_assert_not_contains "$only_beta" "test_alpha" "T_ONLY=beta skips alpha"
+    t_assert_contains "$everything" "1 passed, 1 failed" "an empty T_ONLY runs everything"
+    t_assert_not_contains "$everything" "RUN  test_alpha" "a passing test prints no RUN line"
+}
+
+test_install_app_fresh_install() {
+    ap_setup
+    ap_build_archive v1
+    chmod() {
+        printf 'chmod %s\n' "$*" >>"$AP_CALLS"
+        command chmod "$@"
+    }
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    unset -f chmod
+    t_assert_eq "0" "$rc" "install_app succeeds"
+    t_assert_eq "1" "$APP_CHANGED" "APP_CHANGED is 1 after an install"
+    if [ -x "$APP_EXE" ]; then t_pass; else t_fail "app/Huddle.App must be executable"; fi
+    t_assert_eq "chmod +x $INSTALL_ROOT.staging/app/Huddle.App" "$(grep '^chmod' "$AP_CALLS")" "the host is made executable (Windows cannot show the bit)"
+    t_assert_eq "# host v1" "$(tail -1 "$APP_EXE")" "the host comes from the archive"
+    t_assert_file "$INSTALL_ROOT/app/libx.dylib" "the dylib is installed"
+    t_assert_file "$INSTALL_ROOT/tools/acp/package.json" "package.json is installed"
+    t_assert_file "$INSTALL_ROOT/tools/acp/package-lock.json" "package-lock.json is installed"
+    t_assert_file "$INSTALL_ROOT/release-info.json" "release-info.json is installed"
+    t_assert_no_file "$INSTALL_ROOT.staging" "no staging folder is left"
+    t_assert_no_file "$INSTALL_ROOT.old" "no .old folder is left"
+    t_assert_no_file "$STATE_FILE" "install_app does not write the state"
+    t_assert_contains "$(cat "$AP/out")" "[ok] app" "the step is reported"
+}
+
+test_install_app_clears_quarantine_on_the_install_root() {
+    ap_setup
+    ap_build_archive v1
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || true
+    t_assert_eq "xattr -dr com.apple.quarantine $INSTALL_ROOT" "$(grep '^xattr' "$AP_CALLS")" "xattr arguments"
+    t_assert_eq "1" "$(ap_count_calls '^xattr')" "xattr runs once"
+}
+
+test_install_app_signs_only_macho_files_that_fail_verification() {
+    ap_setup
+    ap_build_archive v1
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || true
+    expected_verify="codesign --verify $INSTALL_ROOT.staging/app/Huddle.App${NL}codesign --verify $INSTALL_ROOT.staging/app/libx.dylib"
+    t_assert_eq "$expected_verify" "$(grep -- '--verify' "$AP_CALLS" | sort)" "only the Mach-O files are verified"
+    t_assert_eq "codesign --force --sign - $INSTALL_ROOT.staging/app/libx.dylib" "$(grep -- '--force' "$AP_CALLS")" "only the file that failed verification is signed"
+}
+
+test_ensure_signed_handles_spaces_and_reports_a_signing_failure() {
+    ap_setup
+    mkdir -p "$AP/with space/inner dir"
+    printf 'x\n' >"$AP/with space/inner dir/my x.dylib"
+    printf 'x\n' >"$AP/with space/inner dir/notes.txt"
+    rc=0
+    ensure_signed "$AP/with space" || rc=$?
+    t_assert_eq "0" "$rc" "ensure_signed succeeds"
+    t_assert_eq "codesign --force --sign - $AP/with space/inner dir/my x.dylib" "$(grep -- '--force' "$AP_CALLS")" "the path with spaces is passed whole"
+    t_assert_eq "0" "$(ap_count_calls 'notes.txt')" "a non Mach-O file is left alone"
+    AP_SIGN_RC=1
+    rc=0
+    ensure_signed "$AP/with space" 2>"$AP/err" || rc=$?
+    t_assert_eq "1" "$rc" "a signing failure is returned"
+    t_assert_contains "$(cat "$AP/err")" "could not sign" "and explained"
+}
+
+test_install_app_second_run_with_matching_state_does_nothing() {
+    ap_setup
+    ap_build_archive v1
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || true
+    write_state_key "$STATE_FILE" app_sha256 "$(file_sha256 "$AP_ARCHIVE")"
+    ap_instance_json 4242
+    : >"$AP_CALLS"
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out2" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "the skip succeeds"
+    t_assert_eq "0" "$APP_CHANGED" "APP_CHANGED is 0 when skipped"
+    t_assert_contains "$(cat "$AP/out2")" "[skip] app" "the skip is reported"
+    t_assert_eq "" "$(cat "$AP_CALLS")" "no stop, no signing, no xattr"
+}
+
+test_install_app_reinstalls_when_the_host_is_missing_or_the_hash_differs() {
+    ap_setup
+    ap_build_archive v1
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || true
+    write_state_key "$STATE_FILE" app_sha256 "$(file_sha256 "$AP_ARCHIVE")"
+    rm -f "$APP_EXE"
+    install_app "$AP_ARCHIVE" >"$AP/out2" 2>&1 || true
+    t_assert_eq "1" "$APP_CHANGED" "a missing host is reinstalled although the state matches"
+    t_assert_file "$APP_EXE" "and the host is back"
+    write_state_key "$STATE_FILE" app_sha256 "0000"
+    install_app "$AP_ARCHIVE" >"$AP/out3" 2>&1 || true
+    t_assert_eq "1" "$APP_CHANGED" "a different recorded hash is reinstalled"
+}
+
+test_install_app_upgrade_keeps_node_modules_state_and_launcher() {
+    ap_setup
+    ap_install_with_markers v1
+    ap_build_archive v2
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "the upgrade succeeds"
+    t_assert_eq "1" "$APP_CHANGED" "APP_CHANGED is 1"
+    t_assert_eq "# host v2" "$(tail -1 "$APP_EXE")" "the host is the new one"
+    t_assert_eq "node-marker" "$(cat "$INSTALL_ROOT/node/bin/node")" "node/ is preserved"
+    t_assert_eq "module-marker" "$(cat "$INSTALL_ROOT/tools/acp/node_modules/marker")" "node_modules is preserved"
+    t_assert_eq "launcher-marker" "$(cat "$INSTALL_ROOT/bin/huddle")" "bin/ is preserved"
+    t_assert_eq "version=v1" "$(grep '^version=' "$STATE_FILE")" "install-state is carried over"
+    t_assert_file "$INSTALL_ROOT/tools/acp/package-lock.json" "the new lock file is there"
+    t_assert_no_file "$INSTALL_ROOT.staging" "no staging folder is left"
+    t_assert_no_file "$INSTALL_ROOT.old" "no .old folder is left"
+}
+
+test_install_app_archive_without_host_fails_and_changes_nothing() {
+    ap_setup
+    ap_install_with_markers v1
+    ap_build_archive v2 nohost
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "1" "$rc" "install_app fails"
+    t_assert_eq "0" "$APP_CHANGED" "APP_CHANGED stays 0"
+    t_assert_eq "# host v1" "$(tail -1 "$APP_EXE")" "the old host is untouched"
+    t_assert_eq "node-marker" "$(cat "$INSTALL_ROOT/node/bin/node")" "node/ is untouched"
+    t_assert_no_file "$INSTALL_ROOT.staging" "no staging folder is left"
+    t_assert_no_file "$INSTALL_ROOT.old" "no .old folder is left"
+    t_assert_contains "$(cat "$AP/out")" "app/Huddle.App" "the missing file is named"
+    t_assert_contains "$(cat "$AP/out")" "fix:" "with a fix line"
+    t_assert_eq "0" "$(ap_count_calls '^stop')" "the app was not stopped for a bad archive"
+}
+
+test_install_app_corrupt_archive_fails_and_changes_nothing() {
+    ap_setup
+    ap_install_with_markers v1
+    printf 'not a tarball\n' >"$AP/bad.tar.gz"
+    rc=0
+    install_app "$AP/bad.tar.gz" >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "1" "$rc" "install_app fails"
+    t_assert_eq "# host v1" "$(tail -1 "$APP_EXE")" "the old host is untouched"
+    t_assert_no_file "$INSTALL_ROOT.staging" "no staging folder is left"
+}
+
+test_install_app_failed_swap_rolls_back() {
+    ap_setup
+    ap_install_with_markers v1
+    ap_build_archive v2
+    mv() {
+        if [ "$1" = "$INSTALL_ROOT.staging" ] && [ "$2" = "$INSTALL_ROOT" ]; then
+            return 1
+        fi
+        command mv "$@"
+    }
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    unset -f mv
+    t_assert_eq "1" "$rc" "install_app fails"
+    t_assert_eq "0" "$APP_CHANGED" "APP_CHANGED stays 0"
+    t_assert_eq "# host v1" "$(tail -1 "$APP_EXE")" "the previous host is back"
+    t_assert_eq "node-marker" "$(cat "$INSTALL_ROOT/node/bin/node")" "node/ is back"
+    t_assert_eq "module-marker" "$(cat "$INSTALL_ROOT/tools/acp/node_modules/marker")" "node_modules is back"
+    t_assert_eq "launcher-marker" "$(cat "$INSTALL_ROOT/bin/huddle")" "bin/ is back"
+    t_assert_no_file "$INSTALL_ROOT.staging" "no staging folder is left"
+    t_assert_no_file "$INSTALL_ROOT.old" "no .old folder is left"
+    t_assert_contains "$(cat "$AP/out")" "[!!] app" "the failure is reported"
+}
+
+test_install_app_recovers_a_swap_that_died_between_its_renames() {
+    ap_setup
+    ap_install_with_markers v1
+    mv "$INSTALL_ROOT" "$INSTALL_ROOT.old"
+    mkdir -p "$INSTALL_ROOT.staging"
+    printf 'junk\n' >"$INSTALL_ROOT.staging/junk"
+    ap_build_archive v2
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "install_app succeeds"
+    t_assert_eq "# host v2" "$(tail -1 "$APP_EXE")" "the new host is installed"
+    t_assert_eq "node-marker" "$(cat "$INSTALL_ROOT/node/bin/node")" "node/ came back from .old"
+    t_assert_no_file "$INSTALL_ROOT.staging" "no staging folder is left"
+    t_assert_no_file "$INSTALL_ROOT.old" "no .old folder is left"
+}
+
+test_install_app_stops_a_running_instance_before_the_swap() {
+    ap_setup
+    ap_install_with_markers v1
+    ap_instance_json 4242
+    ap_build_archive v2
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "install_app succeeds"
+    t_assert_eq "1" "$(ap_count_calls '^stop old_present=0$')" "stop ran once, before the old folder was renamed"
+    t_assert_eq "xattr" "$(tail -1 "$AP_CALLS" | cut -d' ' -f1)" "quarantine is cleared last"
+}
+
+test_install_app_fresh_install_never_stops() {
+    ap_setup
+    ap_instance_json 4242
+    ap_build_archive v1
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || true
+    t_assert_eq "0" "$(ap_count_calls '^stop')" "nothing to stop when there is no install yet"
+    t_assert_eq "1" "$APP_CHANGED" "and the install happened"
+}
+
+test_install_app_survivor_aborts_the_upgrade_untouched() {
+    ap_setup
+    ap_install_with_markers v1
+    ap_instance_json 4242
+    AP_ALIVE=1
+    ap_build_archive v2
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "1" "$rc" "install_app fails"
+    t_assert_eq "0" "$APP_CHANGED" "APP_CHANGED stays 0"
+    t_assert_eq "# host v1" "$(tail -1 "$APP_EXE")" "the old host is untouched"
+    t_assert_eq "node-marker" "$(cat "$INSTALL_ROOT/node/bin/node")" "node/ is untouched"
+    t_assert_no_file "$INSTALL_ROOT.staging" "no staging folder is left"
+    t_assert_contains "$(cat "$AP/out")" "--force" "the fix names --force"
+}
+
+test_stop_without_an_instance_record_never_calls_stop() {
+    ap_setup
+    rc=0
+    stop_huddle_if_running >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "returns 0"
+    t_assert_eq "" "$(cat "$AP_CALLS")" "run_huddle_stop was not called"
+    t_assert_eq "" "$(cat "$AP/out")" "and nothing was printed"
+}
+
+test_stop_with_an_instance_record_calls_stop() {
+    ap_setup
+    ap_instance_json 4242
+    rc=0
+    stop_huddle_if_running >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "returns 0 once the process is gone"
+    t_assert_eq "stop old_present=0" "$(cat "$AP_CALLS")" "run_huddle_stop was called once"
+    t_assert_contains "$(cat "$AP/out")" "[ok] stop" "the stop is reported"
+}
+
+test_stop_survivor_fails_without_force() {
+    ap_setup
+    ap_instance_json 4242
+    AP_ALIVE=1
+    OPT_FORCE=0
+    rc=0
+    stop_huddle_if_running >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "1" "$rc" "returns 1"
+    t_assert_contains "$(cat "$AP/out")" "pid 4242" "the pid is named"
+    t_assert_contains "$(cat "$AP/out")" "--force" "the fix names --force"
+    t_assert_eq "0" "$(ap_count_calls '^kill')" "nothing is killed"
+}
+
+test_stop_survivor_is_ended_with_force() {
+    ap_setup
+    ap_instance_json 4242
+    AP_ALIVE=1
+    OPT_FORCE=1
+    rc=0
+    stop_huddle_if_running >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "returns 0"
+    t_assert_eq "kill 4242" "$(grep '^kill' "$AP_CALLS")" "the survivor is killed"
+    t_assert_no_file "$DATA_ROOT/data/instance.json" "the stale record is removed"
+}
+
+test_stop_failed_request_without_a_pid_decides_by_exit_code() {
+    ap_setup
+    mkdir -p "$DATA_ROOT/data"
+    printf 'garbage\n' >"$DATA_ROOT/data/instance.json"
+    AP_STOP_RC=1
+    OPT_FORCE=0
+    rc=0
+    stop_huddle_if_running >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "1" "$rc" "a failed stop request without a pid fails"
+    OPT_FORCE=1
+    rc=0
+    stop_huddle_if_running >"$AP/out2" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "--force continues"
+    AP_STOP_RC=0
+    OPT_FORCE=0
+    rc=0
+    stop_huddle_if_running >"$AP/out3" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "a clean stop request without a pid is fine"
+}
+
+test_run_huddle_stop_prefers_the_launcher() {
+    ap_setup
+    mkdir -p "$INSTALL_ROOT/bin" "$INSTALL_ROOT/app"
+    printf '#!/bin/sh\nprintf "launcher %%s\\n" "$*" >"%s/who"\nexit 7\n' "$AP" >"$INSTALL_ROOT/bin/huddle"
+    printf '#!/bin/sh\nprintf "host %%s\\n" "$*" >"%s/who"\n' "$AP" >"$APP_EXE"
+    chmod +x "$INSTALL_ROOT/bin/huddle" "$APP_EXE"
+    out=$(ap_child 'rc=0' 'run_huddle_stop || rc=$?' 'echo "rc=$rc"')
+    t_assert_eq "rc=7" "$out" "the launcher's exit code is returned"
+    t_assert_eq "launcher stop" "$(cat "$AP/who")" "the launcher gets the stop verb"
+}
+
+test_run_huddle_stop_falls_back_to_the_host_with_the_data_dir() {
+    ap_setup
+    mkdir -p "$INSTALL_ROOT/app"
+    printf '#!/bin/sh\nprintf "%%s|%%s\\n" "$1" "$Team__DataDir" >"%s/who"\n' "$AP" >"$APP_EXE"
+    chmod +x "$APP_EXE"
+    out=$(ap_child 'rc=0' 'run_huddle_stop || rc=$?' 'echo "rc=$rc"')
+    t_assert_eq "rc=0" "$out" "the host's exit code is returned"
+    t_assert_eq "stop|$DATA_ROOT/data" "$(cat "$AP/who")" "stop verb and Team__DataDir"
+}
+
+test_is_macho_reads_file_output() {
+    ap_setup
+    out=$(ap_child \
+        "file() { printf 'Mach-O 64-bit dynamically linked shared library arm64\\n'; }" \
+        'if is_macho x; then echo yes; else echo no; fi' \
+        "file() { printf 'ASCII text\\n'; }" \
+        'if is_macho x; then echo yes; else echo no; fi')
+    t_assert_eq "yes${NL}no" "$out" "Mach-O output is recognised and other output is not"
+}
+
+test_run_kill_process_kills_and_waits_a_bounded_time() {
+    ap_setup
+    out=$(ap_child \
+        "kill() { printf 'kill %s\\n' \"\$*\"; }" \
+        "sleep_seconds() { printf 'sleep %s\\n' \"\$1\"; }" \
+        'process_running() { return 1; }' \
+        'if run_kill_process 4242; then echo gone; else echo stays; fi' \
+        'process_running() { return 0; }' \
+        'if run_kill_process 4242; then echo gone; else echo stays; fi')
+    expected="kill -KILL 4242${NL}gone${NL}kill -KILL 4242"
+    for ap_i in 1 2 3 4 5 6 7 8 9 10; do
+        expected="$expected${NL}sleep 1"
+    done
+    expected="$expected${NL}stays"
+    t_assert_eq "$expected" "$out" "SIGKILL once per call, ten one-second waits, then gives up"
+}
+
+test_process_running_sees_live_and_dead_processes() {
+    ap_setup
+    out=$(ap_child \
+        'if process_running $$; then echo live; else echo dead; fi' \
+        "sh -c 'exit 0' &" \
+        'child=$!' \
+        'wait "$child"' \
+        'if process_running "$child"; then echo live; else echo dead; fi')
+    t_assert_eq "live${NL}dead" "$out" "this shell is running, a finished child is not"
+}
+
+test_install_app_uses_local_variables() {
+    ap_setup
+    ap_install_with_markers v1
+    ap_instance_json 4242
+    ap_build_archive v2
+    archive=KEEP sha=KEEP root=KEEP staging=KEEP old=KEEP parent=KEEP item=KEEP carried=KEEP old_moved=KEEP
+    record=KEEP pid=KEEP rc=KEEP dir=KEEP file_path=KEEP waited=KEEP
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || true
+    for kept in "$archive" "$sha" "$root" "$staging" "$old" "$parent" "$item" "$carried" "$old_moved" "$record" "$pid" "$rc" "$dir" "$file_path" "$waited"; do
+        t_assert_eq "KEEP" "$kept" "a caller variable survived install_app"
+    done
+}
+
+test_install_app_leaves_the_script_with_one_placeholder() {
+    count=$(grep -o '__HUDDLE_REPO__' "$HERE/../install.sh" | wc -l | tr -d ' ')
+    t_assert_eq "1" "$count" "placeholder still appears exactly once"
+}
+
+t_run test_t_run_honours_t_only_and_prints_run_lines_only_for_failures
+t_run test_install_app_fresh_install
+t_run test_install_app_clears_quarantine_on_the_install_root
+t_run test_install_app_signs_only_macho_files_that_fail_verification
+t_run test_ensure_signed_handles_spaces_and_reports_a_signing_failure
+t_run test_install_app_second_run_with_matching_state_does_nothing
+t_run test_install_app_reinstalls_when_the_host_is_missing_or_the_hash_differs
+t_run test_install_app_upgrade_keeps_node_modules_state_and_launcher
+t_run test_install_app_archive_without_host_fails_and_changes_nothing
+t_run test_install_app_corrupt_archive_fails_and_changes_nothing
+t_run test_install_app_failed_swap_rolls_back
+t_run test_install_app_recovers_a_swap_that_died_between_its_renames
+t_run test_install_app_stops_a_running_instance_before_the_swap
+t_run test_install_app_fresh_install_never_stops
+t_run test_install_app_survivor_aborts_the_upgrade_untouched
+t_run test_stop_without_an_instance_record_never_calls_stop
+t_run test_stop_with_an_instance_record_calls_stop
+t_run test_stop_survivor_fails_without_force
+t_run test_stop_survivor_is_ended_with_force
+t_run test_stop_failed_request_without_a_pid_decides_by_exit_code
+t_run test_run_huddle_stop_prefers_the_launcher
+t_run test_run_huddle_stop_falls_back_to_the_host_with_the_data_dir
+t_run test_is_macho_reads_file_output
+t_run test_run_kill_process_kills_and_waits_a_bounded_time
+t_run test_process_running_sees_live_and_dead_processes
+t_run test_install_app_uses_local_variables
+t_run test_install_app_leaves_the_script_with_one_placeholder
+
 t_run test_read_state_key_missing_file
 t_run test_read_state_key_missing_key
 t_run test_read_state_key_existing_key

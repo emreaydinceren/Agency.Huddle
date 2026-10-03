@@ -7,7 +7,9 @@
 #   t_assert_not_contains <haystack> <needle> <label>
 #   t_assert_file <path> <label>          the path exists as a regular file
 #   t_assert_no_file <path> <label>       the path does not exist at all
-#   t_run <function-name>                 runs the function in the current shell
+#   t_run <function-name>                 runs the function in the current shell; with T_ONLY=<text>
+#                                         only functions whose name contains it run; a RUN line
+#                                         is printed only for a failing test
 #   t_summary                             prints totals; status 1 when anything failed
 #
 # T_SHELL is the shell tests use when they launch install.sh as a child process.
@@ -15,6 +17,7 @@
 T_PASS=0
 T_FAIL=0
 T_CURRENT=""
+T_SHOWN=1
 T_SHELL="${T_SHELL:-sh}"
 
 t_pass() {
@@ -23,6 +26,10 @@ t_pass() {
 
 t_fail() {
     T_FAIL=$((T_FAIL + 1))
+    if [ "$T_SHOWN" -eq 0 ]; then
+        T_SHOWN=1
+        printf 'RUN  %s\n' "$T_CURRENT"
+    fi
     printf 'FAIL [%s] %s\n' "$T_CURRENT" "$1"
 }
 
@@ -64,9 +71,17 @@ t_assert_no_file() {
     fi
 }
 
+# Runs the test function named $1. When T_ONLY is set, only tests whose name contains it run.
+# A "RUN <name>" line is printed only for a test that fails, ahead of its FAIL lines.
 t_run() {
+    if [ -n "${T_ONLY:-}" ]; then
+        case $1 in
+            *"$T_ONLY"*) ;;
+            *) return 0 ;;
+        esac
+    fi
     T_CURRENT=$1
-    printf 'RUN  %s\n' "$1"
+    T_SHOWN=0
     "$1" || t_fail "test function returned non-zero"
 }
 

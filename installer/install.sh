@@ -535,6 +535,247 @@ step_satisfied() {
     return 1
 }
 
+# ---- App install (Spec section 6, rules 3 and 4) -------------------------------------------------
+
+# Set by install_app: 1 when the app on disk was replaced, 0 when the step was skipped or failed.
+APP_CHANGED=0
+
+# Seam: extracts the .tar.gz in $1 into the existing folder in $2.
+run_tar() {
+    tar -xzf "$1" -C "$2" </dev/null
+}
+
+# Seam (macOS only): runs codesign with the given arguments.
+run_codesign() {
+    codesign "$@" </dev/null
+}
+
+# Seam (macOS only): runs xattr with the given arguments.
+run_xattr() {
+    xattr "$@" </dev/null
+}
+
+# Seam (macOS only): succeeds when the file in $1 is a Mach-O binary according to `file -b`.
+is_macho() {
+    case $(file -b "$1" 2>/dev/null) in
+        *Mach-O*) return 0 ;;
+    esac
+    return 1
+}
+
+# Seam: succeeds while the process $1 exists.
+process_running() {
+    kill -0 "$1" 2>/dev/null
+}
+
+# Seam: kills the process $1 and waits up to 10 s for it to go. Returns 1 if it is still there.
+run_kill_process() {
+    local pid waited
+    pid=$1
+    waited=0
+    kill -KILL "$pid" 2>/dev/null || true
+    while process_running "$pid"; do
+        if [ "$waited" -ge 10 ]; then
+            return 1
+        fi
+        sleep_seconds 1
+        waited=$((waited + 1))
+    done
+    return 0
+}
+
+# Seam: asks the installed app to stop (the app's own `stop` verb waits up to 45 s for the process
+# to exit; macOS has no `timeout`, so there is no second cap here). Prefers the launcher, which
+# sets the data folder itself; without one the host runs with Team__DataDir exported.
+# Returns the exit code of the stop request.
+run_huddle_stop() {
+    if [ -x "$INSTALL_ROOT/bin/huddle" ]; then
+        "$INSTALL_ROOT/bin/huddle" stop </dev/null
+    else
+        Team__DataDir="$DATA_ROOT/data" "$APP_EXE" stop </dev/null
+    fi
+}
+
+# Stops a running instance (an instance.json record exists in <DataRoot>/data). Returns 0 when
+# nothing was running or the instance stopped, 1 when it is still running (or the stop request
+# failed) and --force was not given. With --force a surviving process is killed.
+stop_huddle_if_running() {
+    local record pid rc
+    record="$DATA_ROOT/data/instance.json"
+    if [ ! -f "$record" ]; then
+        return 0
+    fi
+    pid=$(sed -n 's/.*"[Pp][Ii][Dd]" *: *\([0-9][0-9]*\).*/\1/p' "$record" 2>/dev/null | head -1) || pid=""
+    pid=${pid:-0}
+    log_step work stop "stopping the running Agency Huddle"
+    rc=0
+    run_huddle_stop || rc=$?
+    if [ "$pid" -gt 0 ]; then
+        if process_running "$pid"; then
+            if [ "${OPT_FORCE:-0}" -ne 1 ]; then
+                log_step fail stop "Agency Huddle (pid $pid) is still running after the stop request" "Close it and run the installer again, or pass --force to end the process."
+                return 1
+            fi
+            log_step work stop "ending process $pid (--force)"
+            if ! run_kill_process "$pid"; then
+                log_step fail stop "process $pid did not end" "End it by hand and run the installer again."
+                return 1
+            fi
+            rm -f "$record"
+        fi
+    elif [ "$rc" -ne 0 ]; then
+        if [ "${OPT_FORCE:-0}" -ne 1 ]; then
+            log_step fail stop "the stop request for Agency Huddle failed (exit code $rc)" "Close it and run the installer again, or pass --force."
+            return 1
+        fi
+        log_step work stop "stop request exited with code $rc; continuing because of --force"
+    fi
+    log_step ok stop stopped
+    return 0
+}
+
+# Gives every Mach-O file under the folder $1 a signature the kernel accepts: a file whose
+# `codesign --verify` fails is signed ad hoc. Arm64 macOS refuses to load unsigned native code.
+# Returns 1 when a file cannot be signed.
+ensure_signed() {
+    local dir file_path
+    dir=$1
+    find "$dir" -type f | while IFS= read -r file_path; do
+        if is_macho "$file_path"; then
+            if ! run_codesign --verify "$file_path" >/dev/null 2>&1; then
+                if ! run_codesign --force --sign - "$file_path" >/dev/null; then
+                    printf 'install.sh: could not sign %s\n' "$file_path" >&2
+                    return 1
+                fi
+            fi
+        fi
+    done
+}
+
+# Undoes a failed swap: puts the old install back, moves the carried items home, removes the
+# staging folder. install_app_restore <staging> <old> <carried items> <1 when the old folder was
+# renamed>. Returns 1 (with a message) when the rollback itself failed.
+install_app_restore() {
+    local staging old carried old_moved item rc
+    staging=$1
+    old=$2
+    carried=$3
+    old_moved=$4
+    rc=0
+    if [ "$old_moved" = 1 ] && [ ! -e "$INSTALL_ROOT" ]; then
+        mv "$old" "$INSTALL_ROOT" || rc=1
+    fi
+    for item in $carried; do
+        mkdir -p "$(dirname "$INSTALL_ROOT/$item")" || rc=1
+        mv "$staging/$item" "$INSTALL_ROOT/$item" || rc=1
+    done
+    if [ "$rc" -ne 0 ]; then
+        log_step fail app "rollback failed" "Restore $INSTALL_ROOT from $old by hand."
+        return 1
+    fi
+    rm -rf "$staging"
+    return 0
+}
+
+# Installs the app from the verified archive in $1 (Spec section 6, rule 3). Sets APP_CHANGED to 1
+# when the install was replaced and 0 when the step was skipped (the state holds this archive's
+# hash and the host exists) or failed. Returns 1 on a failure, after logging it; the previous
+# install is left runnable. Does not write the install state (the caller does, last).
+#
+# The archive is extracted next to InstallRoot (<InstallRoot>.staging), checked, made executable
+# and signed there. Only then is a running instance stopped and the swap done: InstallRoot becomes
+# <InstallRoot>.old, staging becomes InstallRoot, .old is deleted. node/ and tools/acp/node_modules
+# move across, install-state and bin/ are copied across.
+install_app() {
+    local archive sha root staging old parent item carried old_moved
+    archive=$1
+    APP_CHANGED=0
+    sha=$(file_sha256 "$archive") || return 1
+    if [ -f "$APP_EXE" ] && step_satisfied "$STATE_FILE" app_sha256 "$sha"; then
+        log_step skip app "already installed"
+        return 0
+    fi
+    root=${INSTALL_ROOT%/}
+    staging="$root.staging"
+    old="$root.old"
+    parent=$(dirname "$root")
+    # Leftovers of an interrupted run: a swap that died between its two renames, then stale folders.
+    if [ ! -e "$root" ] && [ -e "$old" ]; then
+        if ! mv "$old" "$root"; then
+            log_step fail app "cannot restore $old" "Rename $old to $root by hand and run the installer again."
+            return 1
+        fi
+    fi
+    rm -rf "$staging" "$old"
+    log_step work app "extracting the release archive"
+    if ! mkdir -p "$parent" "$staging"; then
+        log_step fail app "cannot create $staging" "Check the permissions on $parent."
+        return 1
+    fi
+    if ! run_tar "$archive" "$staging"; then
+        rm -rf "$staging"
+        log_step fail app "cannot extract $archive" "Delete the file and run the installer again."
+        return 1
+    fi
+    if [ ! -f "$staging/app/Huddle.App" ] || [ ! -f "$staging/release-info.json" ]; then
+        rm -rf "$staging"
+        log_step fail app "the release archive does not contain app/Huddle.App and release-info.json; the previous install was left untouched" "Download the release again."
+        return 1
+    fi
+    if ! chmod +x "$staging/app/Huddle.App" || ! ensure_signed "$staging/app"; then
+        rm -rf "$staging"
+        log_step fail app "cannot make the app runnable; the previous install was left untouched" "Run the installer again."
+        return 1
+    fi
+    carried=""
+    old_moved=0
+    if [ -e "$root" ]; then
+        # macOS cannot replace a folder whose files a running process holds open.
+        if ! stop_huddle_if_running; then
+            rm -rf "$staging"
+            return 1
+        fi
+        for item in node tools/acp/node_modules; do
+            if [ -e "$root/$item" ]; then
+                if mkdir -p "$(dirname "$staging/$item")" && rm -rf "$staging/$item" && mv "$root/$item" "$staging/$item"; then
+                    carried="$carried $item"
+                else
+                    install_app_restore "$staging" "$old" "$carried" 0 || true
+                    log_step fail app "cannot carry $item over; the previous install was left untouched" "Run the installer again."
+                    return 1
+                fi
+            fi
+        done
+        # Small items the other steps read next are copied, so the old tree stays whole for a rollback.
+        for item in install-state bin; do
+            if [ -e "$root/$item" ] && [ ! -e "$staging/$item" ]; then
+                if ! cp -R -p "$root/$item" "$staging/$item"; then
+                    install_app_restore "$staging" "$old" "$carried" 0 || true
+                    log_step fail app "cannot copy $item over; the previous install was left untouched" "Run the installer again."
+                    return 1
+                fi
+            fi
+        done
+        if ! mv "$root" "$old"; then
+            install_app_restore "$staging" "$old" "$carried" 0 || true
+            log_step fail app "cannot rename $root; the previous install was left untouched" "Close anything using it and run the installer again."
+            return 1
+        fi
+        old_moved=1
+    fi
+    if ! mv "$staging" "$root"; then
+        install_app_restore "$staging" "$old" "$carried" "$old_moved" || true
+        log_step fail app "cannot move the new app into place; the previous install was restored" "Run the installer again."
+        return 1
+    fi
+    rm -rf "$old"
+    # xattr exits non-zero when there is no quarantine flag to clear; either way the app is installed.
+    run_xattr -dr com.apple.quarantine "$root" || true
+    APP_CHANGED=1
+    log_step ok app "installed"
+    return 0
+}
+
 main() {
     parse_args "$@"
     if [ -z "$OPT_BASE_URL" ] && [ "$HUDDLE_REPO" = "$HUDDLE_REPO_PLACEHOLDER" ]; then
