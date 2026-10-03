@@ -1933,6 +1933,496 @@ Describe 'Invoke-Uninstall' {
     }
 }
 
+Describe 'Orchestration seams' {
+    It 'Enter-InstallerMutex returns a releaser, a second process sees it held, and releasing frees it' {
+        $quotedScript = $ScriptPath.Replace("'", "''")
+        $childCommand = "`$env:HUDDLE_INSTALL_NO_MAIN='1'; . '$quotedScript'; `$r = Enter-InstallerMutex; if (`$r) { & `$r; 'FREE' } else { 'HELD' }"
+        $exe = (Get-Process -Id $PID).Path
+        $releaser = Enter-InstallerMutex
+        try {
+            $releaser | Should -BeOfType [scriptblock]
+            $whileHeld = (& $exe -NoProfile -Command $childCommand) -join ''
+        }
+        finally {
+            if ($releaser) {
+                & $releaser
+            }
+        }
+
+        $whileHeld | Should -Be 'HELD'
+        $afterRelease = (& $exe -NoProfile -Command $childCommand) -join ''
+        $afterRelease | Should -Be 'FREE'
+    }
+
+    It 'Test-InteractiveSession is false when <Name> is set' -ForEach @(
+        @{ Name = 'NO_BROWSER' },
+        @{ Name = 'SSH_CONNECTION' },
+        @{ Name = 'SSH_CLIENT' },
+        @{ Name = 'SSH_TTY' },
+        @{ Name = 'CLAUDE_CODE_REMOTE' }
+    ) {
+        $saved = [Environment]::GetEnvironmentVariable($Name)
+        try {
+            [Environment]::SetEnvironmentVariable($Name, '1')
+            Test-InteractiveSession | Should -BeFalse
+        }
+        finally {
+            [Environment]::SetEnvironmentVariable($Name, $saved)
+        }
+    }
+
+    It 'Invoke-ClaudeAuthStatus returns a non-zero code when the binary is missing' {
+        $code = Invoke-ClaudeAuthStatus -ClaudePath (Join-Path $TestDrive 'no-such-claude.exe')
+        $code | Should -Not -Be 0
+    }
+
+    It 'Invoke-ClaudeAuthStatus returns the exit code of the binary and prints nothing' {
+        $ok = Join-Path $TestDrive 'claude-ok.cmd'
+        $bad = Join-Path $TestDrive 'claude-bad.cmd'
+        [System.IO.File]::WriteAllText($ok, "@echo off`r`necho {secret}`r`nexit /b 0`r`n")
+        [System.IO.File]::WriteAllText($bad, "@echo off`r`necho {secret}`r`nexit /b 1`r`n")
+        $lines = Get-HostLines {
+            $script:AuthOk = Invoke-ClaudeAuthStatus -ClaudePath $ok
+            $script:AuthBad = Invoke-ClaudeAuthStatus -ClaudePath $bad
+        }
+        $script:AuthOk | Should -Be 0
+        $script:AuthBad | Should -Be 1
+        ($lines -join "`n") | Should -Not -BeLike '*secret*'
+    }
+
+    It 'Invoke-ClaudeAuthStatus gives up after the time cap and reports not signed in' {
+        $slow = Join-Path $TestDrive 'claude-slow.cmd'
+        [System.IO.File]::WriteAllText($slow, "@echo off`r`nping -n 8 127.0.0.1 > nul`r`nexit /b 0`r`n")
+        $watch = [System.Diagnostics.Stopwatch]::StartNew()
+        $code = Invoke-ClaudeAuthStatus -ClaudePath $slow -TimeoutSeconds 1
+        $watch.Stop()
+        $code | Should -Not -Be 0
+        $watch.Elapsed.TotalSeconds | Should -BeLessThan 6
+    }
+
+    It 'Start-HuddleLauncher throws a clear message for a missing launcher' {
+        { Start-HuddleLauncher -LauncherPath (Join-Path $TestDrive 'no-such-huddle.cmd') } | Should -Throw '*no-such-huddle.cmd*'
+    }
+
+    It 'Test-PathWritable leaves the modification time of an existing folder as it found it' {
+        $folder = Join-Path $TestDrive 'writable-mtime'
+        New-Item -ItemType Directory -Path $folder | Out-Null
+        $old = [datetime]::SpecifyKind([datetime]'2020-01-01 00:00:00', [System.DateTimeKind]::Utc)
+        [System.IO.Directory]::SetLastWriteTimeUtc($folder, $old)
+        Test-PathWritable -Path $folder | Should -BeTrue
+        [System.IO.Directory]::GetLastWriteTimeUtc($folder).Ticks | Should -Be $old.Ticks
+    }
+}
+
+Describe 'Invoke-Main orchestration' {
+    BeforeAll {
+        # A folder that plays the GitHub release: huddle-win-x64.zip plus SHA256SUMS. Returns the zip's hash.
+        function New-ReleaseFolder {
+            param([string]$Dir, [string]$ExeText = 'exe v1', [string]$Version = '1.2.3')
+            New-Item -ItemType Directory -Path $Dir -Force | Out-Null
+            $src = Join-Path $TestDrive ('rel-src-' + [guid]::NewGuid().ToString('N'))
+            New-Item -ItemType Directory -Path (Join-Path $src 'app') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $src 'tools\acp') -Force | Out-Null
+            [System.IO.File]::WriteAllText((Join-Path $src 'app\Huddle.App.exe'), $ExeText)
+            [System.IO.File]::WriteAllText((Join-Path $src 'tools\acp\package.json'), '{}')
+            [System.IO.File]::WriteAllText((Join-Path $src 'tools\acp\package-lock.json'), '{"lockfileVersion":3}')
+            [System.IO.File]::WriteAllText((Join-Path $src 'release-info.json'), ('{"schema":"1","version":"' + $Version + '","rid":"win-x64","nodeVersion":"v24.21.0"}'))
+            $zip = Join-Path $Dir 'huddle-win-x64.zip'
+            Compress-Archive -Path (Join-Path $src '*') -DestinationPath $zip -Force
+            $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+            [System.IO.File]::WriteAllText((Join-Path $Dir 'SHA256SUMS'), ($hash + '  huddle-win-x64.zip' + "`n" + ('e' * 64) + '  install.ps1' + "`n"))
+            return $hash
+        }
+
+        # A folder that plays nodejs.org/dist/v24.21.0: the Windows zip plus SHASUMS256.txt.
+        function New-FakeNodeDist {
+            param([string]$Dir)
+            New-Item -ItemType Directory -Path $Dir -Force | Out-Null
+            $wrapper = 'node-v24.21.0-win-x64'
+            $src = Join-Path $TestDrive ('node-src-' + [guid]::NewGuid().ToString('N'))
+            New-Item -ItemType Directory -Path (Join-Path $src "$wrapper\node_modules\npm\bin") -Force | Out-Null
+            [System.IO.File]::WriteAllText((Join-Path $src "$wrapper\node.exe"), 'node v24.21.0')
+            [System.IO.File]::WriteAllText((Join-Path $src "$wrapper\node_modules\npm\bin\npm-cli.js"), '// npm cli')
+            $zip = Join-Path $Dir ($wrapper + '.zip')
+            Compress-Archive -Path (Join-Path $src $wrapper) -DestinationPath $zip -Force
+            $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+            [System.IO.File]::WriteAllText((Join-Path $Dir 'SHASUMS256.txt'), ($hash + '  ' + $wrapper + ".zip`n"))
+        }
+
+        # Runs Invoke-Main and returns its exit code and everything it wrote to the host.
+        function Invoke-MainCapture {
+            param([hashtable]$Arguments)
+            $all = @(Invoke-Main @Arguments 6>&1)
+            $code = $null
+            $lines = @()
+            foreach ($item in $all) {
+                if ($item -is [int]) {
+                    $code = $item
+                }
+                else {
+                    $lines += [string]$item
+                }
+            }
+
+            return [pscustomobject]@{ Code = $code; Lines = $lines; Text = ($lines -join "`n") }
+        }
+
+        # Path + length + mtime of the folder and everything below it.
+        function Get-TreeSnapshot {
+            param([string]$Root)
+            $items = @(Get-Item -LiteralPath $Root -Force) + @(Get-ChildItem -LiteralPath $Root -Recurse -Force)
+            $rows = foreach ($item in $items) {
+                $length = '-'
+                if (-not $item.PSIsContainer) {
+                    $length = [string]$item.Length
+                }
+
+                $item.FullName + '|' + $length + '|' + $item.LastWriteTimeUtc.Ticks
+            }
+
+            return (@($rows | Sort-Object) -join "`n")
+        }
+
+        # Moves every modification time far into the past so that any later rewrite is visible.
+        function Set-TreeOld {
+            param([string]$Root)
+            $old = [datetime]::SpecifyKind([datetime]'2020-01-01 00:00:00', [System.DateTimeKind]::Utc)
+            foreach ($item in @(Get-ChildItem -LiteralPath $Root -Recurse -Force | Where-Object { -not $_.PSIsContainer })) {
+                [System.IO.File]::SetLastWriteTimeUtc($item.FullName, $old)
+            }
+
+            foreach ($item in @(Get-ChildItem -LiteralPath $Root -Recurse -Force | Where-Object { $_.PSIsContainer })) {
+                [System.IO.Directory]::SetLastWriteTimeUtc($item.FullName, $old)
+            }
+
+            [System.IO.Directory]::SetLastWriteTimeUtc($Root, $old)
+        }
+    }
+
+    BeforeEach {
+        $script:ORoot = Join-Path $TestDrive ('orch-' + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $script:ORoot | Out-Null
+        $script:OInstall = Join-Path $script:ORoot 'install'
+        $script:OData = Join-Path $script:ORoot 'data-root'
+        $script:ORelease = Join-Path $script:ORoot 'release'
+        $script:ONode = Join-Path $script:ORoot 'node-dist'
+        $script:OPaths = Resolve-InstallPaths -InstallRoot $script:OInstall -DataRoot $script:OData
+        $script:OHash = New-ReleaseFolder -Dir $script:ORelease
+        New-FakeNodeDist -Dir $script:ONode
+        $script:OArgs = @{ BaseUrl = $script:ORelease; InstallRoot = $script:OInstall; DataRoot = $script:OData; NoLaunch = $true }
+        $script:OReleased = 0
+        $script:OReleaser = { $script:OReleased++ }
+        $script:ONpmExit = 0
+        $script:OFakeLnk = $null
+        $script:OFakePath = 'C:\Windows'
+
+        Mock Get-OsBuild { 22631 }
+        Mock Get-HostArchitecture { 'AMD64' }
+        Mock Test-CommandAvailable { $true }
+        Mock Get-FreeDiskMb { 100000 }
+        Mock Test-UrlReachable { $true }
+        Mock Enter-InstallerMutex { return $script:OReleaser }
+        Mock Invoke-Tar { Expand-Archive -LiteralPath $Archive -DestinationPath $Destination -Force }
+        Mock Stop-HuddleIfRunning { return $false }
+        Mock Get-InstalledNodeVersion { return 'v24.21.0' }
+        Mock Invoke-Download { Copy-Item -LiteralPath (Join-Path $script:ONode $Url.Substring($Url.LastIndexOf('/') + 1)) -Destination $OutFile -Force }
+        Mock Invoke-NpmCi {
+            if ($script:ONpmExit -eq 0) {
+                New-Item -ItemType Directory -Path (Split-Path -Parent $script:OPaths.AdapterEntry) -Force | Out-Null
+                [System.IO.File]::WriteAllText($script:OPaths.AdapterEntry, '// adapter')
+            }
+
+            return $script:ONpmExit
+        }
+        Mock Get-ShortcutTarget { return $script:OFakeLnk }
+        Mock New-HuddleShortcut { $script:OFakeLnk = $Target }
+        Mock Get-UserPathValue { return $script:OFakePath }
+        Mock Set-UserPathValue { $script:OFakePath = $Value }
+        Mock Test-InteractiveSession { return $false }
+        Mock Invoke-ClaudeAuthStatus { return 0 }
+        Mock Start-HuddleLauncher { }
+    }
+
+    It 'first run exits 0, runs every step and writes all four state keys' {
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 0
+        foreach ($step in @('app', 'node', 'adapter', 'launcher')) {
+            $result.Text | Should -BeLike ('*[[]ok] ' + $step + '*')
+        }
+
+        $result.Text | Should -BeLike '*Agency Huddle 1.2.3 installed.*'
+        $state = Read-InstallState -Path $script:OPaths.StatePath
+        $state.version | Should -Be '1.2.3'
+        $state.appSha256 | Should -Be $script:OHash
+        $state.nodeVersion | Should -Be 'v24.21.0'
+        $state.lockSha256 | Should -Be (Get-FileSha256 -Path (Join-Path $script:OInstall 'tools\acp\package-lock.json'))
+        Test-Path -LiteralPath $script:OPaths.ExePath | Should -BeTrue
+        Test-Path -LiteralPath $script:OPaths.NodeExe | Should -BeTrue
+        Test-Path -LiteralPath $script:OPaths.AdapterEntry | Should -BeTrue
+        Test-Path -LiteralPath $script:OPaths.LauncherPath | Should -BeTrue
+        Test-Path -LiteralPath ($script:OInstall + '.staging') | Should -BeFalse
+        Test-Path -LiteralPath ($script:OInstall + '.old') | Should -BeFalse
+    }
+
+    It 'takes the install mutex once and releases it once' {
+        $null = Invoke-MainCapture -Arguments $script:OArgs
+        Should -Invoke Enter-InstallerMutex -Times 1 -Exactly
+        $script:OReleased | Should -Be 1
+    }
+
+    It 'second run skips every step, says it is up to date and changes no file in InstallRoot' {
+        $first = Invoke-MainCapture -Arguments $script:OArgs
+        $first.Code | Should -Be 0
+        Set-TreeOld -Root $script:OInstall
+        $before = Get-TreeSnapshot -Root $script:OInstall
+
+        Mock Invoke-Tar { throw 'the second run must not extract anything' }
+        Mock Invoke-Download { throw 'the second run must not download anything' }
+        Mock Invoke-NpmCi { throw 'the second run must not run npm' }
+        Mock Stop-HuddleIfRunning { throw 'the second run must not stop the app' }
+        Mock New-HuddleShortcut { throw 'the second run must not rewrite the shortcut' }
+        Mock Set-UserPathValue { throw 'the second run must not edit the PATH' }
+
+        $second = Invoke-MainCapture -Arguments $script:OArgs
+        $second.Code | Should -Be 0
+        foreach ($step in @('app', 'node', 'adapter', 'launcher', 'shortcut', 'path')) {
+            $second.Text | Should -BeLike ('*[[]skip] ' + $step + '*')
+        }
+
+        $second.Text | Should -BeLike '*Already up to date (1.2.3).*'
+        $second.Text | Should -Not -BeLike '*installed.*'
+        (Get-TreeSnapshot -Root $script:OInstall) | Should -BeExactly $before
+    }
+
+    It 'a run with a changed archive runs only the app step and keeps the data folder' {
+        $first = Invoke-MainCapture -Arguments $script:OArgs
+        $first.Code | Should -Be 0
+        $marker = Join-Path $script:OData 'data\marker.txt'
+        New-Item -ItemType Directory -Path (Split-Path -Parent $marker) -Force | Out-Null
+        [System.IO.File]::WriteAllText($marker, 'keep me')
+        $newHash = New-ReleaseFolder -Dir $script:ORelease -ExeText 'exe v2'
+        $newHash | Should -Not -Be $script:OHash
+
+        Mock Invoke-NpmCi { throw 'the adapter step must be skipped' }
+        Mock Invoke-Download { throw 'the node step must be skipped' }
+
+        $second = Invoke-MainCapture -Arguments $script:OArgs
+        $second.Code | Should -Be 0
+        $second.Text | Should -BeLike '*[[]ok] app*'
+        $second.Text | Should -BeLike '*[[]skip] node*'
+        $second.Text | Should -BeLike '*[[]skip] adapter*'
+        $second.Text | Should -BeLike '*Agency Huddle 1.2.3 installed.*'
+        [System.IO.File]::ReadAllText($script:OPaths.ExePath) | Should -Be 'exe v2'
+        [System.IO.File]::ReadAllText($marker) | Should -Be 'keep me'
+        (Read-InstallState -Path $script:OPaths.StatePath).appSha256 | Should -Be $newHash
+    }
+
+    It 'an interrupted run leaves appSha256 and nodeVersion but no lockSha256, and the next run resumes at the adapter' {
+        $script:ONpmExit = 1
+        $first = Invoke-MainCapture -Arguments $script:OArgs
+        $first.Code | Should -Be 1
+        $first.Text | Should -BeLike '*[[]!!] adapter*'
+        $first.Text | Should -BeLike '*fix:*'
+        $first.Text | Should -Not -BeLike '*ScriptStackTrace*'
+        $first.Text | Should -Not -BeLike '*at <ScriptBlock>*'
+        $first.Text | Should -Not -BeLike '*installed.*'
+        $state = Read-InstallState -Path $script:OPaths.StatePath
+        $state.appSha256 | Should -Be $script:OHash
+        $state.nodeVersion | Should -Be 'v24.21.0'
+        $state.PSObject.Properties['lockSha256'] | Should -BeNullOrEmpty
+        $script:OReleased | Should -Be 1
+
+        $script:ONpmExit = 0
+        Mock Invoke-Tar { throw 'the resumed run must not extract anything' }
+        Mock Invoke-Download { throw 'the resumed run must not download anything' }
+        $second = Invoke-MainCapture -Arguments $script:OArgs
+        $second.Code | Should -Be 0
+        $second.Text | Should -BeLike '*[[]skip] app*'
+        $second.Text | Should -BeLike '*[[]skip] node*'
+        $second.Text | Should -BeLike '*[[]ok] adapter*'
+        (Read-InstallState -Path $script:OPaths.StatePath).lockSha256 | Should -Not -BeNullOrEmpty
+    }
+
+    It 'a second installer at the same time exits 1 with a fix line and installs nothing' {
+        Mock Enter-InstallerMutex { return $null }
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 1
+        $result.Text | Should -BeLike '*[[]!!]*'
+        $result.Text | Should -BeLike '*fix:*'
+        Test-Path -LiteralPath $script:OInstall | Should -BeFalse
+        Test-Path -LiteralPath $script:OData | Should -BeFalse
+        $script:OReleased | Should -Be 0
+    }
+
+    It 'an unmet prerequisite exits 2, creates nothing and still releases the mutex' {
+        Mock Get-OsBuild { 17000 }
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 2
+        $result.Text | Should -BeLike '*[[]!!] OS*'
+        Test-Path -LiteralPath $script:OInstall | Should -BeFalse
+        Test-Path -LiteralPath $script:OData | Should -BeFalse
+        $script:OReleased | Should -Be 1
+    }
+
+    It '-CheckOnly exits 0 when everything is met and installs nothing' {
+        $result = Invoke-MainCapture -Arguments ($script:OArgs + @{ CheckOnly = $true })
+        $result.Code | Should -Be 0
+        Test-Path -LiteralPath $script:OInstall | Should -BeFalse
+        Test-Path -LiteralPath $script:OData | Should -BeFalse
+        Should -Invoke Start-HuddleLauncher -Times 0 -Exactly
+    }
+
+    It '-CheckOnly exits 2 when a prerequisite is unmet' {
+        Mock Test-CommandAvailable { $false }
+        $result = Invoke-MainCapture -Arguments ($script:OArgs + @{ CheckOnly = $true })
+        $result.Code | Should -Be 2
+    }
+
+    It '-PurgeData without -Uninstall exits 3 with a fix line before taking the mutex' {
+        $result = Invoke-MainCapture -Arguments ($script:OArgs + @{ PurgeData = $true })
+        $result.Code | Should -Be 3
+        $result.Text | Should -BeLike '*[[]!!]*'
+        $result.Text | Should -BeLike '*fix:*-Uninstall*'
+        Should -Invoke Enter-InstallerMutex -Times 0 -Exactly
+        Test-Path -LiteralPath $script:OInstall | Should -BeFalse
+    }
+
+    It '-Uninstall does not check prerequisites, takes the mutex, passes -PurgeData and returns the uninstall code' {
+        Mock Get-OsBuild { 17000 }
+        Mock Test-UrlReachable { $false }
+        Mock Invoke-Uninstall { return 0 }
+        $result = Invoke-MainCapture -Arguments @{ Uninstall = $true; PurgeData = $true; InstallRoot = $script:OInstall; DataRoot = $script:OData }
+        $result.Code | Should -Be 0
+        Should -Invoke Invoke-Uninstall -Times 1 -Exactly -ParameterFilter { $PurgeData -eq $true }
+        Should -Invoke Enter-InstallerMutex -Times 1 -Exactly
+        $script:OReleased | Should -Be 1
+    }
+
+    It '-Uninstall maps a failed uninstall to exit 1' {
+        Mock Invoke-Uninstall { return 1 }
+        $result = Invoke-MainCapture -Arguments @{ Uninstall = $true; InstallRoot = $script:OInstall; DataRoot = $script:OData }
+        $result.Code | Should -Be 1
+        Should -Invoke Invoke-Uninstall -Times 1 -Exactly -ParameterFilter { -not $PurgeData }
+        $script:OReleased | Should -Be 1
+    }
+
+    It 'a missing SHA256SUMS exits 1 with [!!] and fix, no stack trace, and installs nothing' {
+        Remove-Item -LiteralPath (Join-Path $script:ORelease 'SHA256SUMS')
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 1
+        $result.Text | Should -BeLike '*[[]!!]*'
+        $result.Text | Should -BeLike '*fix:*'
+        $result.Text | Should -Not -BeLike '*ScriptStackTrace*'
+        $result.Text | Should -Not -BeLike '*at <ScriptBlock>*'
+        Test-Path -LiteralPath $script:OInstall | Should -BeFalse
+        $script:OReleased | Should -Be 1
+    }
+
+    It 'an archive that does not match SHA256SUMS exits 1 and installs nothing' {
+        [System.IO.File]::WriteAllText((Join-Path $script:ORelease 'SHA256SUMS'), (('0' * 64) + "  huddle-win-x64.zip`n"))
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 1
+        $result.Text | Should -BeLike '*[[]!!]*'
+        Test-Path -LiteralPath $script:OInstall | Should -BeFalse
+    }
+
+    It '-NoLaunch does not start the launcher' {
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 0
+        Should -Invoke Start-HuddleLauncher -Times 0 -Exactly
+    }
+
+    It 'without -NoLaunch the launcher is started exactly once, after the install' {
+        $arguments = $script:OArgs.Clone()
+        $arguments.Remove('NoLaunch')
+        $result = Invoke-MainCapture -Arguments $arguments
+        $result.Code | Should -Be 0
+        Should -Invoke Start-HuddleLauncher -Times 1 -Exactly -ParameterFilter { $LauncherPath -eq $script:OPaths.LauncherPath }
+    }
+
+    It 'a launcher that fails to start prints [!!] with a fix but does not fail the install' {
+        Mock Start-HuddleLauncher { throw 'cannot start' }
+        $arguments = $script:OArgs.Clone()
+        $arguments.Remove('NoLaunch')
+        $result = Invoke-MainCapture -Arguments $arguments
+        $result.Code | Should -Be 0
+        $result.Text | Should -BeLike '*[[]!!] launch*'
+        $result.Text | Should -BeLike '*fix:*'
+    }
+
+    It 'an interactive session that is signed in prints "Claude: signed in."' {
+        Mock Test-InteractiveSession { return $true }
+        Mock Invoke-ClaudeAuthStatus { return 0 }
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 0
+        $result.Text | Should -BeLike '*Claude: signed in.*'
+        $result.Text | Should -Not -BeLike '*auth login*'
+        $claude = Join-Path $script:OInstall 'tools\acp\node_modules\@anthropic-ai\claude-agent-sdk-win32-x64\claude.exe'
+        Should -Invoke Invoke-ClaudeAuthStatus -Times 1 -Exactly -ParameterFilter { $ClaudePath -eq $claude }
+    }
+
+    It 'an interactive session that is not signed in prints the F3 instruction and still exits 0' {
+        Mock Test-InteractiveSession { return $true }
+        Mock Invoke-ClaudeAuthStatus { return 1 }
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $claude = Join-Path $script:OInstall 'tools\acp\node_modules\@anthropic-ai\claude-agent-sdk-win32-x64\claude.exe'
+        $result.Code | Should -Be 0
+        $result.Lines | Should -Contain 'Claude is not signed in yet. Sign in once, then start Agency Huddle:'
+        $result.Lines | Should -Contain ('  "' + $claude + '" auth login')
+        $result.Lines | Should -Contain '(This opens your browser. Add --console to use API billing instead of a Claude subscription.)'
+    }
+
+    It 'a non-interactive session never runs auth status and only prints how to sign in' {
+        Mock Test-InteractiveSession { return $false }
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 0
+        Should -Invoke Invoke-ClaudeAuthStatus -Times 0 -Exactly
+        $result.Text | Should -BeLike '*auth login*'
+        $result.Text | Should -Not -BeLike '*Claude: signed in.*'
+    }
+
+    It 'a failing auth status call never fails the install' {
+        Mock Test-InteractiveSession { return $true }
+        Mock Invoke-ClaudeAuthStatus { throw 'status exploded' }
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 0
+        $result.Text | Should -BeLike '*auth login*'
+    }
+
+    It 'prints how to start Agency Huddle after the summary' {
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $summary = [array]::IndexOf($result.Lines, 'Agency Huddle 1.2.3 installed.')
+        $summary | Should -BeGreaterOrEqual 0
+        ($result.Lines[($summary + 1)..($result.Lines.Count - 1)] -join "`n") | Should -BeLike '*huddle*'
+    }
+}
+
+Describe 'Invoke-Main entry paths (real child processes)' {
+    BeforeAll {
+        $installerDir = Split-Path -Parent $ScriptPath
+    }
+
+    It 'as a file in Windows PowerShell 5.1 -PurgeData without -Uninstall exits 3' -Skip:$script:NoPs51 {
+        $saved = $env:HUDDLE_INSTALL_NO_MAIN
+        $env:HUDDLE_INSTALL_NO_MAIN = $null
+        try {
+            $null = & $Ps51Path -NoProfile -File $ScriptPath -PurgeData -BaseUrl $installerDir
+            $LASTEXITCODE | Should -Be 3
+        }
+        finally {
+            $env:HUDDLE_INSTALL_NO_MAIN = $saved
+        }
+    }
+
+    It 'under iex in Windows PowerShell 5.1 -PurgeData without -Uninstall sets LASTEXITCODE 3 and the session survives' -Skip:$script:NoPs51 {
+        $quotedDir = $installerDir.Replace("'", "''")
+        $quotedScript = $ScriptPath.Replace("'", "''")
+        $command = "Remove-Item Env:HUDDLE_INSTALL_NO_MAIN -ErrorAction SilentlyContinue; `$env:HUDDLE_PURGE_DATA='1'; `$env:HUDDLE_BASE_URL='$quotedDir'; iex ([IO.File]::ReadAllText('$quotedScript')) | Out-Null; 'ALIVE:' + `$LASTEXITCODE + ' EAP:' + `$ErrorActionPreference"
+        $output = (& $Ps51Path -NoProfile -Command $command) -join "`n"
+        $output | Should -Match 'ALIVE:3 EAP:Continue'
+    }
+}
+
 Describe 'Release-time repository replacement' {
     BeforeAll {
         $rawText = [IO.File]::ReadAllText($ScriptPath)

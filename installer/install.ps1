@@ -1547,6 +1547,7 @@ function Test-PathWritable {
     }
 
     $probe = Join-Path $ancestor ('.huddle-write-probe-' + [guid]::NewGuid().ToString('N'))
+    $savedTime = [System.IO.Directory]::GetLastWriteTimeUtc($ancestor)
     try {
         [System.IO.File]::WriteAllText($probe, 'x')
         Remove-Item -LiteralPath $probe -Force
@@ -1555,6 +1556,16 @@ function Test-PathWritable {
     catch {
         # Not writable (permissions, read-only media): the caller reports it.
         return $false
+    }
+    finally {
+        # The probe must leave no trace: a second install run changes no file or folder time.
+        try {
+            [System.IO.Directory]::SetLastWriteTimeUtc($ancestor, $savedTime)
+        }
+        catch {
+            # Best effort only: a folder we could not write to cannot be restored either.
+            $null = $_
+        }
     }
 }
 
@@ -1766,6 +1777,363 @@ function Resolve-Options {
     return [pscustomobject]$result
 }
 
+# Seam: takes the per-user installer mutex without waiting. Returns a releaser (a script block to invoke
+# in the finally block), or $null when another installer already holds it. The Local\ prefix scopes the
+# name to the logon session, so two users on one machine do not block each other.
+function Enter-InstallerMutex {
+    [CmdletBinding()]
+    param()
+
+    $mutex = [System.Threading.Mutex]::new($false, 'Local\Agency.Huddle.Installer')
+    $acquired = $false
+    try {
+        $acquired = $mutex.WaitOne(0)
+    }
+    catch [System.Threading.AbandonedMutexException] {
+        # The previous installer died while holding it; the mutex is ours now.
+        $acquired = $true
+    }
+
+    if (-not $acquired) {
+        $mutex.Dispose()
+        return $null
+    }
+
+    return {
+        try {
+            $mutex.ReleaseMutex()
+        }
+        catch {
+            # Released twice or from another thread: nothing is left to release.
+            $null = $_
+        }
+
+        $mutex.Dispose()
+    }.GetNewClosure()
+}
+
+# Seam: true when a person is at the console and may be pointed at a browser sign-in.
+function Test-InteractiveSession {
+    [CmdletBinding()]
+    param()
+
+    foreach ($name in @('NO_BROWSER', 'SSH_CONNECTION', 'SSH_CLIENT', 'SSH_TTY', 'CLAUDE_CODE_REMOTE')) {
+        if ([Environment]::GetEnvironmentVariable($name)) {
+            return $false
+        }
+    }
+
+    if (-not [Environment]::UserInteractive) {
+        return $false
+    }
+
+    try {
+        if ([Console]::IsInputRedirected) {
+            return $false
+        }
+    }
+    catch {
+        # No console at all (a service or a hidden host): not interactive.
+        return $false
+    }
+
+    return $true
+}
+
+# Seam: runs "<claude> auth status" and returns its exit code. The output (it names the account) is
+# discarded, never read. A missing binary, a start failure or the time cap all return -1 (= not signed in).
+function Invoke-ClaudeAuthStatus {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$ClaudePath,
+
+        [int]$TimeoutSeconds = 10
+    )
+
+    if (-not (Test-Path -LiteralPath $ClaudePath -PathType Leaf)) {
+        return -1
+    }
+
+    $info = New-Object System.Diagnostics.ProcessStartInfo
+    $info.FileName = $ClaudePath
+    $info.Arguments = 'auth status'
+    $info.UseShellExecute = $false
+    $info.CreateNoWindow = $true
+    $info.RedirectStandardInput = $true
+    $info.RedirectStandardOutput = $true
+    $info.RedirectStandardError = $true
+
+    $process = $null
+    try {
+        $process = [System.Diagnostics.Process]::Start($info)
+        $process.StandardInput.Close()
+        # No handler is attached, so every line that arrives is dropped.
+        $process.BeginOutputReadLine()
+        $process.BeginErrorReadLine()
+
+        if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+            try {
+                $process.Kill()
+                $null = $process.WaitForExit(2000)
+            }
+            catch {
+                # It exited between the wait and the kill: the answer is "not signed in" either way.
+                $null = $_
+            }
+
+            return -1
+        }
+
+        return [int]$process.ExitCode
+    }
+    catch {
+        # Could not start (blocked by policy, corrupt binary): not signed in.
+        return -1
+    }
+    finally {
+        if ($null -ne $process) {
+            $process.Dispose()
+        }
+    }
+}
+
+# Seam: starts the launcher minimized and does not wait for it.
+function Start-HuddleLauncher {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$LauncherPath
+    )
+
+    if (-not (Test-Path -LiteralPath $LauncherPath -PathType Leaf)) {
+        throw ('The launcher was not found: ' + $LauncherPath)
+    }
+
+    Start-Process -FilePath $LauncherPath -WorkingDirectory (Split-Path -Parent $LauncherPath) -WindowStyle Minimized | Out-Null
+}
+
+# Reads SHA256SUMS of the release (a folder file or a download into the cache) as a name -> hash table.
+function Get-ReleaseSums {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        $Paths,
+
+        [string]$BaseUrl = '',
+
+        [string]$Version = 'latest'
+    )
+
+    $source = Resolve-AssetSource -Name 'SHA256SUMS' -BaseUrl $BaseUrl -Version $Version
+    if ($source.Kind -eq 'file') {
+        $sumsPath = $source.Location
+        if (-not (Test-Path -LiteralPath $sumsPath -PathType Leaf)) {
+            throw ('SHA256SUMS was not found at ' + $sumsPath)
+        }
+    }
+    else {
+        if (-not (Test-Path -LiteralPath $Paths.CacheDir -PathType Container)) {
+            New-Item -ItemType Directory -Path $Paths.CacheDir -Force | Out-Null
+        }
+
+        # SHA256SUMS has no hash of its own to check against; it comes from the same TLS-protected origin as the archive.
+        $sumsPath = Join-Path $Paths.CacheDir 'SHA256SUMS'
+        if (Test-Path -LiteralPath $sumsPath) {
+            Remove-Item -LiteralPath $sumsPath -Force
+        }
+
+        Invoke-Download -Url $source.Location -OutFile $sumsPath
+    }
+
+    return (Read-Sums -Text ([System.IO.File]::ReadAllText($sumsPath)))
+}
+
+# Reads release-info.json from the installed app and insists on the two values the run needs.
+function Read-ReleaseInfo {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw ('release-info.json is missing from the installed app: ' + $Path)
+    }
+
+    $info = [System.IO.File]::ReadAllText($Path) | ConvertFrom-Json
+    foreach ($name in @('version', 'nodeVersion')) {
+        $property = $info.PSObject.Properties[$name]
+        if (($null -eq $property) -or [string]::IsNullOrWhiteSpace([string]$property.Value)) {
+            throw ('release-info.json has no "' + $name + '" value: ' + $Path)
+        }
+    }
+
+    return $info
+}
+
+# Applies the changes to the in-memory state values and writes the state file only when a value differs,
+# so a run with nothing new never touches install-state.json.
+function Update-InstallState {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path,
+
+        [Parameter(Mandatory)]
+        [System.Collections.Specialized.OrderedDictionary]$Values,
+
+        [Parameter(Mandatory)]
+        [System.Collections.IDictionary]$Changes
+    )
+
+    $dirty = $false
+    foreach ($key in @($Changes.Keys)) {
+        $new = [string]$Changes[$key]
+        if ((-not $Values.Contains($key)) -or ([string]$Values[$key] -cne $new)) {
+            $Values[$key] = $new
+            $dirty = $true
+        }
+    }
+
+    if ($dirty) {
+        Write-InstallState -Path $Path -State $Values
+    }
+}
+
+# The last lines of a successful run: where Claude lives and how to sign in. Never fails the install.
+function Show-ClaudeSignIn {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        $Paths
+    )
+
+    $claude = Join-Path $Paths.InstallRoot 'tools\acp\node_modules\@anthropic-ai\claude-agent-sdk-win32-x64\claude.exe'
+    try {
+        if (Test-InteractiveSession) {
+            $status = -1
+            try {
+                $status = Invoke-ClaudeAuthStatus -ClaudePath $claude
+            }
+            catch {
+                # Any failure of the check means "not signed in"; the note below tells the user what to do.
+                $status = -1
+            }
+
+            if ($status -eq 0) {
+                Write-Host 'Claude: signed in.'
+                return
+            }
+
+            Write-Host 'Claude is not signed in yet. Sign in once, then start Agency Huddle:'
+        }
+        else {
+            # Nobody to ask and no way to check without a terminal: only say how.
+            Write-Host 'To use Claude, sign in once before you start Agency Huddle:'
+        }
+
+        Write-Host ('  "' + $claude + '" auth login')
+        Write-Host '(This opens your browser. Add --console to use API billing instead of a Claude subscription.)'
+    }
+    catch {
+        # The note is advice only: a host that cannot print it must not fail a finished install.
+        $null = $_
+    }
+}
+
+# Steps 1 to 5 of Spec section 6 (release, app, node, adapter, launcher) plus summary, sign-in note and launch.
+# Returns the exit code; it prints [!!] with a fix line instead of throwing.
+function Invoke-InstallSteps {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        $Paths,
+
+        [string]$BaseUrl = '',
+
+        [string]$Version = 'latest',
+
+        [bool]$Force = $false,
+
+        [bool]$NoLaunch = $false
+    )
+
+    $step = 'release'
+    try {
+        $archiveName = 'huddle-' + $Paths.Rid + '.zip'
+        $sums = Get-ReleaseSums -Paths $Paths -BaseUrl $BaseUrl -Version $Version
+        $expected = Get-ExpectedHash -Sums $sums -Name $archiveName
+        $source = Resolve-AssetSource -Name $archiveName -BaseUrl $BaseUrl -Version $Version
+        $archive = Get-VerifiedAsset -Name $archiveName -ExpectedSha256 $expected -Source $source -CacheDir $Paths.CacheDir
+
+        $state = Read-InstallState -Path $Paths.StatePath
+        $values = [ordered]@{}
+        if ($null -ne $state) {
+            foreach ($key in $script:StateKeys) {
+                $property = $state.PSObject.Properties[$key]
+                if ($null -ne $property) {
+                    $values[$key] = [string]$property.Value
+                }
+            }
+        }
+
+        # Each Install-* function decides for itself whether it is satisfied, stops the app only when a
+        # change is certain, and never writes state. The key of a step is written right after that step.
+        $step = 'app'
+        $appChanged = [bool](Install-App -Paths $Paths -Archive $archive -State $state -Force:$Force)
+        $info = Read-ReleaseInfo -Path $Paths.ReleaseInfoPath
+        Update-InstallState -Path $Paths.StatePath -Values $values -Changes ([ordered]@{ version = [string]$info.version; appSha256 = $expected })
+
+        $step = 'node'
+        $nodeChanged = [bool](Install-Node -Paths $Paths -NodeVersion ([string]$info.nodeVersion) -State $state -Force:$Force)
+        Update-InstallState -Path $Paths.StatePath -Values $values -Changes ([ordered]@{ nodeVersion = [string]$info.nodeVersion })
+
+        $step = 'adapter'
+        $adapterChanged = [bool](Install-Adapter -Paths $Paths -State $state -Force:$Force)
+        $lockSha = Get-FileSha256 -Path (Join-Path $Paths.InstallRoot 'tools\acp\package-lock.json')
+        Update-InstallState -Path $Paths.StatePath -Values $values -Changes ([ordered]@{ lockSha256 = $lockSha })
+
+        $step = 'launcher'
+        $launcherChanged = [bool](Install-Launcher -Paths $Paths)
+    }
+    catch {
+        $message = ([string]$_.Exception.Message).Trim()
+        $fix = 'Run the installer again: it resumes where it stopped. If it keeps failing, report the lines above.'
+        $marker = $message.LastIndexOf('fix:', [System.StringComparison]::OrdinalIgnoreCase)
+        if ($marker -ge 0) {
+            $fix = $message.Substring($marker + 4).Trim()
+            $message = $message.Substring(0, $marker).Trim()
+        }
+
+        Write-Step -Status '!!' -Name $step -Detail $message -Fix $fix
+        return $script:ExitCodes.StepFailed
+    }
+
+    $installedVersion = [string]$info.version
+    if ($appChanged -or $nodeChanged -or $adapterChanged -or $launcherChanged) {
+        Write-Host ('Agency Huddle ' + $installedVersion + ' installed.')
+    }
+    else {
+        Write-Host ('Already up to date (' + $installedVersion + ').')
+    }
+
+    Write-Host 'Start it from the Start menu (Agency Huddle), or open a new terminal and run: huddle'
+    Show-ClaudeSignIn -Paths $Paths
+
+    if (-not $NoLaunch) {
+        try {
+            Start-HuddleLauncher -LauncherPath $Paths.LauncherPath
+            Write-Step -Status 'ok' -Name 'launch' -Detail 'started Agency Huddle'
+        }
+        catch {
+            Write-Step -Status '!!' -Name 'launch' -Detail ([string]$_.Exception.Message) -Fix 'Start Agency Huddle from the Start menu, or open a new terminal and run: huddle'
+        }
+    }
+
+    return $script:ExitCodes.Success
+}
+
 function Invoke-Main {
     [CmdletBinding()]
     param(
@@ -1800,15 +2168,47 @@ function Invoke-Main {
         return $script:ExitCodes.BadUsage
     }
 
-    $paths = Resolve-InstallPaths -InstallRoot $InstallRoot -DataRoot $DataRoot
-    $items = @(Test-Prerequisites -Paths $paths -BaseUrl $BaseUrl)
-    Show-Prerequisites -Items $items
-
-    if (@($items | Where-Object { -not $_.Ok }).Count -gt 0) {
-        return $script:ExitCodes.PrerequisitesUnmet
+    if ($PurgeData -and (-not $Uninstall)) {
+        Write-Step -Status '!!' -Name 'usage' -Detail '-PurgeData only works together with -Uninstall.' -Fix 'Run again with -Uninstall -PurgeData to remove the program and your data, or drop -PurgeData.'
+        return $script:ExitCodes.BadUsage
     }
 
-    return $script:ExitCodes.Success
+    $paths = Resolve-InstallPaths -InstallRoot $InstallRoot -DataRoot $DataRoot
+
+    $releaser = Enter-InstallerMutex
+    if ($null -eq $releaser) {
+        Write-Step -Status '!!' -Name 'installer' -Detail 'another Agency Huddle installer is already running.' -Fix 'Wait for it to finish, then run this command again.'
+        return $script:ExitCodes.StepFailed
+    }
+
+    try {
+        # An uninstall works offline and on a machine that no longer meets the install prerequisites.
+        if ($Uninstall) {
+            $uninstallCode = @(Invoke-Uninstall -Paths $paths -PurgeData:$PurgeData -Force:$Force)
+            return [int]$uninstallCode[-1]
+        }
+
+        $items = @(Test-Prerequisites -Paths $paths -BaseUrl $BaseUrl)
+        Show-Prerequisites -Items $items
+
+        if (@($items | Where-Object { -not $_.Ok }).Count -gt 0) {
+            return $script:ExitCodes.PrerequisitesUnmet
+        }
+
+        if ($CheckOnly) {
+            return $script:ExitCodes.Success
+        }
+
+        $installCode = @(Invoke-InstallSteps -Paths $paths -BaseUrl $BaseUrl -Version $Version -Force ([bool]$Force) -NoLaunch ([bool]$NoLaunch))
+        return [int]$installCode[-1]
+    }
+    catch {
+        Write-Step -Status '!!' -Name 'installer' -Detail ([string]$_.Exception.Message) -Fix 'Run the installer again. If it keeps failing, report the line above.'
+        return $script:ExitCodes.StepFailed
+    }
+    finally {
+        & $releaser
+    }
 }
 
 if (-not $env:HUDDLE_INSTALL_NO_MAIN) {
