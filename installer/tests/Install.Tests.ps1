@@ -430,6 +430,327 @@ Describe 'Resolve-Options' {
     }
 }
 
+Describe 'Read-Sums' {
+    BeforeAll {
+        $script:HashA = ('a' * 64)
+        $script:HashB = ('0123456789abcdef' * 4)
+    }
+
+    It 'parses a two-line SHA256SUMS (two-space separator) into a name-to-hash table' {
+        $text = $script:HashA + '  huddle-win-x64.zip' + "`n" + $script:HashB + '  install.ps1' + "`n"
+        $sums = Read-Sums -Text $text
+        $sums.Count | Should -Be 2
+        $sums['huddle-win-x64.zip'] | Should -Be $script:HashA
+        $sums['install.ps1'] | Should -Be $script:HashB
+    }
+
+    It 'tolerates CRLF line endings' {
+        $text = $script:HashA + '  huddle-win-x64.zip' + "`r`n" + $script:HashB + '  install.ps1' + "`r`n"
+        $sums = Read-Sums -Text $text
+        $sums.Count | Should -Be 2
+        $sums['huddle-win-x64.zip'] | Should -Be $script:HashA
+        $sums['install.ps1'] | Should -Be $script:HashB
+    }
+
+    It 'ignores blank lines' {
+        $text = "`r`n" + $script:HashA + '  huddle-win-x64.zip' + "`r`n`r`n   `r`n" + $script:HashB + '  install.ps1'
+        $sums = Read-Sums -Text $text
+        $sums.Count | Should -Be 2
+        $sums['install.ps1'] | Should -Be $script:HashB
+    }
+
+    It 'stores hashes in lower case' {
+        $sums = Read-Sums -Text (('ABCDEF0123456789' * 4) + '  x.zip')
+        $sums['x.zip'] | Should -Be ('abcdef0123456789' * 4)
+    }
+
+    It 'returns an empty table for empty text' {
+        $sums = Read-Sums -Text ''
+        $sums.Count | Should -Be 0
+    }
+}
+
+Describe 'Get-ExpectedHash' {
+    It 'returns the hash listed for the name' {
+        $sums = @{ 'huddle-win-x64.zip' = ('b' * 64) }
+        Get-ExpectedHash -Sums $sums -Name 'huddle-win-x64.zip' | Should -Be ('b' * 64)
+    }
+
+    It 'throws when the name is not listed' {
+        $sums = @{ 'huddle-win-x64.zip' = ('b' * 64) }
+        { Get-ExpectedHash -Sums $sums -Name 'other.zip' } | Should -Throw "*'other.zip' is not listed in SHA256SUMS*"
+    }
+}
+
+Describe 'Get-FileSha256' {
+    It 'returns the lower-case hex SHA-256 of the file' {
+        $path = Join-Path $TestDrive 'abc.txt'
+        [System.IO.File]::WriteAllBytes($path, [System.Text.Encoding]::ASCII.GetBytes('abc'))
+        Get-FileSha256 -Path $path | Should -BeExactly 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'
+    }
+}
+
+Describe 'Get-VerifiedAsset' {
+    BeforeAll {
+        # Independent of the code under test: hash the fixture bytes directly.
+        function Get-TestHash {
+            param([byte[]]$Bytes)
+            $sha = [System.Security.Cryptography.SHA256]::Create()
+            try {
+                return (([System.BitConverter]::ToString($sha.ComputeHash($Bytes))).Replace('-', '')).ToLowerInvariant()
+            }
+            finally {
+                $sha.Dispose()
+            }
+        }
+    }
+
+    BeforeEach {
+        $script:Fixture = Join-Path $TestDrive 'fixture.zip'
+        $script:GoodBytes = [System.Text.Encoding]::ASCII.GetBytes('the good archive')
+        [System.IO.File]::WriteAllBytes($script:Fixture, $script:GoodBytes)
+        $script:GoodHash = Get-TestHash -Bytes $script:GoodBytes
+        $script:BadBytes = [System.Text.Encoding]::ASCII.GetBytes('a corrupted archive')
+        $script:BadHash = Get-TestHash -Bytes $script:BadBytes
+        $script:Cache = Join-Path $TestDrive ('cache-' + [guid]::NewGuid().ToString('N'))
+        $script:UrlSource = [pscustomobject]@{ Kind = 'url'; Location = 'https://example.invalid/huddle-win-x64.zip' }
+        $script:Attempts = 0
+        Mock Start-Sleep { }
+        Mock Invoke-Download { Copy-Item -LiteralPath $script:Fixture -Destination $OutFile }
+    }
+
+    It 'downloads into the cache and returns the cache path when the hash matches' {
+        $path = Get-VerifiedAsset -Name 'huddle-win-x64.zip' -ExpectedSha256 $script:GoodHash -Source $script:UrlSource -CacheDir $script:Cache
+        $path | Should -Be (Join-Path $script:Cache 'huddle-win-x64.zip')
+        Test-Path -LiteralPath $path | Should -BeTrue
+        Get-TestHash -Bytes ([System.IO.File]::ReadAllBytes($path)) | Should -Be $script:GoodHash
+        Should -Invoke Invoke-Download -Times 1 -Exactly
+        Should -Invoke Invoke-Download -Times 1 -Exactly -ParameterFilter { $Url -eq 'https://example.invalid/huddle-win-x64.zip' }
+    }
+
+    It 'leaves no .partial file behind after a successful download' {
+        $null = Get-VerifiedAsset -Name 'huddle-win-x64.zip' -ExpectedSha256 $script:GoodHash -Source $script:UrlSource -CacheDir $script:Cache
+        Test-Path -LiteralPath (Join-Path $script:Cache 'huddle-win-x64.zip.partial') | Should -BeFalse
+    }
+
+    It 'compares the expected hash case-insensitively' {
+        $path = Get-VerifiedAsset -Name 'huddle-win-x64.zip' -ExpectedSha256 $script:GoodHash.ToUpperInvariant() -Source $script:UrlSource -CacheDir $script:Cache
+        Test-Path -LiteralPath $path | Should -BeTrue
+    }
+
+    It 'skips the download when the cached file already has the right hash' {
+        New-Item -ItemType Directory -Path $script:Cache | Out-Null
+        Copy-Item -LiteralPath $script:Fixture -Destination (Join-Path $script:Cache 'huddle-win-x64.zip')
+        $path = Get-VerifiedAsset -Name 'huddle-win-x64.zip' -ExpectedSha256 $script:GoodHash -Source $script:UrlSource -CacheDir $script:Cache
+        $path | Should -Be (Join-Path $script:Cache 'huddle-win-x64.zip')
+        Should -Invoke Invoke-Download -Times 0 -Exactly
+    }
+
+    It 're-downloads when the cached file has the wrong hash' {
+        New-Item -ItemType Directory -Path $script:Cache | Out-Null
+        $cached = Join-Path $script:Cache 'huddle-win-x64.zip'
+        [System.IO.File]::WriteAllBytes($cached, $script:BadBytes)
+        $path = Get-VerifiedAsset -Name 'huddle-win-x64.zip' -ExpectedSha256 $script:GoodHash -Source $script:UrlSource -CacheDir $script:Cache
+        Should -Invoke Invoke-Download -Times 1 -Exactly
+        Get-TestHash -Bytes ([System.IO.File]::ReadAllBytes($path)) | Should -Be $script:GoodHash
+    }
+
+    It 'throws on a hash mismatch, names both hashes and leaves no file under the final or .partial name' {
+        Mock Invoke-Download { [System.IO.File]::WriteAllBytes($OutFile, $script:BadBytes) }
+        $message = ''
+        try {
+            $null = Get-VerifiedAsset -Name 'huddle-win-x64.zip' -ExpectedSha256 $script:GoodHash -Source $script:UrlSource -CacheDir $script:Cache
+        }
+        catch {
+            $message = $_.Exception.Message
+        }
+
+        $message | Should -Not -BeNullOrEmpty
+        $message | Should -BeLike ('*' + $script:GoodHash + '*')
+        $message | Should -BeLike ('*' + $script:BadHash + '*')
+        Test-Path -LiteralPath (Join-Path $script:Cache 'huddle-win-x64.zip') | Should -BeFalse
+        Test-Path -LiteralPath (Join-Path $script:Cache 'huddle-win-x64.zip.partial') | Should -BeFalse
+    }
+
+    It 'retries a transient failure: two failures then success makes 3 calls and succeeds' {
+        Mock Invoke-Download {
+            $script:Attempts = $script:Attempts + 1
+            if ($script:Attempts -le 2) {
+                throw 'transient network error'
+            }
+
+            Copy-Item -LiteralPath $script:Fixture -Destination $OutFile
+        }
+
+        $path = Get-VerifiedAsset -Name 'huddle-win-x64.zip' -ExpectedSha256 $script:GoodHash -Source $script:UrlSource -CacheDir $script:Cache
+        Should -Invoke Invoke-Download -Times 3 -Exactly
+        Test-Path -LiteralPath $path | Should -BeTrue
+    }
+
+    It 'backs off 1 s then 3 s between attempts' {
+        Mock Invoke-Download { throw 'transient network error' }
+        { Get-VerifiedAsset -Name 'huddle-win-x64.zip' -ExpectedSha256 $script:GoodHash -Source $script:UrlSource -CacheDir $script:Cache } | Should -Throw
+        Should -Invoke Start-Sleep -Times 2 -Exactly
+        Should -Invoke Start-Sleep -Times 1 -Exactly -ParameterFilter { $Seconds -eq 1 }
+        Should -Invoke Start-Sleep -Times 1 -Exactly -ParameterFilter { $Seconds -eq 3 }
+    }
+
+    It 'throws after 3 failed attempts' {
+        Mock Invoke-Download { throw 'transient network error' }
+        { Get-VerifiedAsset -Name 'huddle-win-x64.zip' -ExpectedSha256 $script:GoodHash -Source $script:UrlSource -CacheDir $script:Cache } | Should -Throw '*transient network error*'
+        Should -Invoke Invoke-Download -Times 3 -Exactly
+        Test-Path -LiteralPath (Join-Path $script:Cache 'huddle-win-x64.zip') | Should -BeFalse
+    }
+
+    It 'copies a file-kind source instead of downloading it' {
+        $source = [pscustomobject]@{ Kind = 'file'; Location = $script:Fixture }
+        $path = Get-VerifiedAsset -Name 'huddle-win-x64.zip' -ExpectedSha256 $script:GoodHash -Source $source -CacheDir $script:Cache
+        Should -Invoke Invoke-Download -Times 0 -Exactly
+        $path | Should -Be (Join-Path $script:Cache 'huddle-win-x64.zip')
+        Get-TestHash -Bytes ([System.IO.File]::ReadAllBytes($path)) | Should -Be $script:GoodHash
+        Test-Path -LiteralPath $script:Fixture | Should -BeTrue
+    }
+
+    It 'rejects a file-kind source with the wrong hash and leaves nothing in the cache under the final name' {
+        $source = [pscustomobject]@{ Kind = 'file'; Location = $script:Fixture }
+        { Get-VerifiedAsset -Name 'huddle-win-x64.zip' -ExpectedSha256 $script:BadHash -Source $source -CacheDir $script:Cache } | Should -Throw ('*' + $script:BadHash + '*')
+        Test-Path -LiteralPath (Join-Path $script:Cache 'huddle-win-x64.zip') | Should -BeFalse
+    }
+}
+
+Describe 'Invoke-Download seam' {
+    It 'is a function with Url and OutFile parameters' {
+        $command = Get-Command Invoke-Download -CommandType Function
+        $command.Parameters.ContainsKey('Url') | Should -BeTrue
+        $command.Parameters.ContainsKey('OutFile') | Should -BeTrue
+    }
+}
+
+Describe 'Read-InstallState' {
+    It 'returns $null for a missing file' {
+        Read-InstallState -Path (Join-Path $TestDrive 'no-such-state.json') | Should -BeNullOrEmpty
+    }
+
+    It 'returns $null for an empty file' {
+        $path = Join-Path $TestDrive 'empty-state.json'
+        [System.IO.File]::WriteAllBytes($path, [byte[]]@())
+        Read-InstallState -Path $path | Should -BeNullOrEmpty
+    }
+
+    It 'returns $null for a whitespace-only file' {
+        $path = Join-Path $TestDrive 'blank-state.json'
+        [System.IO.File]::WriteAllText($path, "  `r`n  ")
+        Read-InstallState -Path $path | Should -BeNullOrEmpty
+    }
+
+    It 'returns $null for malformed JSON' {
+        $path = Join-Path $TestDrive 'bad-state.json'
+        [System.IO.File]::WriteAllText($path, '{ "schema": "1", "version": ')
+        Read-InstallState -Path $path | Should -BeNullOrEmpty
+    }
+
+    It 'returns $null when the JSON is not an object' {
+        $path = Join-Path $TestDrive 'array-state.json'
+        [System.IO.File]::WriteAllText($path, '[1, 2, 3]')
+        Read-InstallState -Path $path | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Write-InstallState' {
+    BeforeEach {
+        $script:StatePath = Join-Path $TestDrive ('state-' + [guid]::NewGuid().ToString('N') + '.json')
+        $script:Full = @{
+            version     = 'v1.2.3'
+            appSha256   = ('a' * 64)
+            nodeVersion = 'v24.21.0'
+            lockSha256  = ('b' * 64)
+        }
+    }
+
+    It 'round-trips version, appSha256, nodeVersion and lockSha256 with schema 1' {
+        Write-InstallState -Path $script:StatePath -State $script:Full
+        $state = Read-InstallState -Path $script:StatePath
+        $state | Should -Not -BeNullOrEmpty
+        $state.schema | Should -BeExactly '1'
+        $state.version | Should -Be 'v1.2.3'
+        $state.appSha256 | Should -Be ('a' * 64)
+        $state.nodeVersion | Should -Be 'v24.21.0'
+        $state.lockSha256 | Should -Be ('b' * 64)
+    }
+
+    It 'accepts the object that Read-InstallState returned, so a step can update one key' {
+        Write-InstallState -Path $script:StatePath -State $script:Full
+        $state = Read-InstallState -Path $script:StatePath
+        $state.appSha256 = ('c' * 64)
+        Write-InstallState -Path $script:StatePath -State $state
+        $again = Read-InstallState -Path $script:StatePath
+        $again.appSha256 | Should -Be ('c' * 64)
+        $again.nodeVersion | Should -Be 'v24.21.0'
+        $again.schema | Should -BeExactly '1'
+    }
+
+    It 'leaves no .tmp file behind' {
+        Write-InstallState -Path $script:StatePath -State $script:Full
+        Test-Path -LiteralPath ($script:StatePath + '.tmp') | Should -BeFalse
+        Test-Path -LiteralPath $script:StatePath | Should -BeTrue
+    }
+
+    It 'overwrites an existing state file' {
+        Write-InstallState -Path $script:StatePath -State $script:Full
+        $second = @{ version = 'v2.0.0'; appSha256 = ('d' * 64); nodeVersion = 'v24.21.0'; lockSha256 = ('e' * 64) }
+        Write-InstallState -Path $script:StatePath -State $second
+        (Read-InstallState -Path $script:StatePath).version | Should -Be 'v2.0.0'
+        Test-Path -LiteralPath ($script:StatePath + '.tmp') | Should -BeFalse
+    }
+
+    It 'writes ASCII with no byte order mark' {
+        Write-InstallState -Path $script:StatePath -State $script:Full
+        $bytes = [System.IO.File]::ReadAllBytes($script:StatePath)
+        $bytes.Length | Should -BeGreaterThan 0
+        @($bytes | Where-Object { $_ -gt 127 }).Count | Should -Be 0
+    }
+
+    It 'creates the parent folder when it does not exist' {
+        $nested = Join-Path $TestDrive ('nested-' + [guid]::NewGuid().ToString('N') + '\install-state.json')
+        Write-InstallState -Path $nested -State $script:Full
+        (Read-InstallState -Path $nested).version | Should -Be 'v1.2.3'
+    }
+}
+
+Describe 'Test-StepSatisfied' {
+    BeforeAll {
+        $script:SampleState = [pscustomobject]@{ schema = '1'; version = 'v1.2.3'; appSha256 = ('ab' * 32); nodeVersion = 'v24.21.0' }
+    }
+
+    It 'is true on an exact match' {
+        Test-StepSatisfied -State $script:SampleState -Key 'appSha256' -Expected ('ab' * 32) | Should -BeTrue
+    }
+
+    It 'is true when only the case differs' {
+        Test-StepSatisfied -State $script:SampleState -Key 'appSha256' -Expected ('AB' * 32) | Should -BeTrue
+    }
+
+    It 'is false on a different value' {
+        Test-StepSatisfied -State $script:SampleState -Key 'appSha256' -Expected ('cd' * 32) | Should -BeFalse
+    }
+
+    It 'is false on a partial match' {
+        Test-StepSatisfied -State $script:SampleState -Key 'nodeVersion' -Expected 'v24.21' | Should -BeFalse
+    }
+
+    It 'is false when the state is $null' {
+        Test-StepSatisfied -State $null -Key 'appSha256' -Expected ('ab' * 32) | Should -BeFalse
+    }
+
+    It 'is false when the key is not in the state' {
+        Test-StepSatisfied -State $script:SampleState -Key 'lockSha256' -Expected ('ab' * 32) | Should -BeFalse
+    }
+
+    It 'is false when the expected value is empty' {
+        Test-StepSatisfied -State $script:SampleState -Key 'appSha256' -Expected '' | Should -BeFalse
+    }
+}
+
 Describe 'Running as a file or through iex' {
     BeforeAll {
         $installerDir = Split-Path -Parent $ScriptPath

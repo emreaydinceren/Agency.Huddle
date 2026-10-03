@@ -162,6 +162,251 @@ function Resolve-AssetSource {
 }
 
 # ---------------------------------------------------------------------------
+# Verified asset download (SHA256SUMS, cache, retry)
+# ---------------------------------------------------------------------------
+
+function Read-Sums {
+    [CmdletBinding()]
+    param(
+        [AllowEmptyString()]
+        [string]$Text = ''
+    )
+
+    $sums = @{}
+    foreach ($line in ($Text -split "\r?\n")) {
+        if ($line -match '^\s*([0-9a-fA-F]{64})\s+\*?(\S.*?)\s*$') {
+            $sums[$Matches[2]] = $Matches[1].ToLowerInvariant()
+        }
+    }
+
+    return $sums
+}
+
+function Get-ExpectedHash {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [hashtable]$Sums,
+
+        [Parameter(Mandatory)]
+        [string]$Name
+    )
+
+    if (-not $Sums.ContainsKey($Name)) {
+        throw "'$Name' is not listed in SHA256SUMS"
+    }
+
+    return [string]$Sums[$Name]
+}
+
+function Get-FileSha256 {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path
+    )
+
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+
+# Seam: the only place a file is fetched over the network.
+function Invoke-Download {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Url,
+
+        [Parameter(Mandatory)]
+        [string]$OutFile
+    )
+
+    # Progress rendering makes Windows PowerShell 5.1 downloads very slow. The assignment is local
+    # to this function, so it does not touch the caller's session.
+    $ProgressPreference = 'SilentlyContinue'
+
+    if ($PSVersionTable.PSVersion.Major -lt 6) {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+    }
+
+    Invoke-WebRequest -Uri $Url -OutFile $OutFile -UseBasicParsing
+}
+
+function Get-VerifiedAsset {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Name,
+
+        [Parameter(Mandatory)]
+        [string]$ExpectedSha256,
+
+        [Parameter(Mandatory)]
+        $Source,
+
+        [Parameter(Mandatory)]
+        [string]$CacheDir
+    )
+
+    $expected = $ExpectedSha256.Trim().ToLowerInvariant()
+
+    if (-not (Test-Path -LiteralPath $CacheDir -PathType Container)) {
+        New-Item -ItemType Directory -Path $CacheDir -Force | Out-Null
+    }
+
+    $final = Join-Path $CacheDir $Name
+    $partial = $final + '.partial'
+
+    if (Test-Path -LiteralPath $final -PathType Leaf) {
+        if ((Get-FileSha256 -Path $final) -eq $expected) {
+            return $final
+        }
+
+        Remove-Item -LiteralPath $final -Force
+    }
+
+    # A local file is copied once; a network download gets 3 attempts with 1 s and 3 s backoff.
+    $maxAttempts = 3
+    if ($Source.Kind -eq 'file') {
+        $maxAttempts = 1
+    }
+
+    $backoffSeconds = @(1, 3)
+    $lastMessage = ''
+
+    for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+        try {
+            if (Test-Path -LiteralPath $partial) {
+                Remove-Item -LiteralPath $partial -Force
+            }
+
+            if ($Source.Kind -eq 'file') {
+                Copy-Item -LiteralPath $Source.Location -Destination $partial -Force
+            }
+            else {
+                Invoke-Download -Url $Source.Location -OutFile $partial
+            }
+
+            $actual = Get-FileSha256 -Path $partial
+            if ($actual -ne $expected) {
+                throw "Hash mismatch for '$Name': expected $expected but got $actual."
+            }
+
+            Move-Item -LiteralPath $partial -Destination $final -Force
+            return $final
+        }
+        catch {
+            $lastMessage = $_.Exception.Message
+            if (Test-Path -LiteralPath $partial) {
+                Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
+            }
+
+            if ($attempt -lt $maxAttempts) {
+                Start-Sleep -Seconds $backoffSeconds[$attempt - 1]
+            }
+        }
+    }
+
+    throw "Could not get a verified '$Name' after $maxAttempts attempt(s): $lastMessage"
+}
+
+# ---------------------------------------------------------------------------
+# Install state (idempotency, Spec section 6)
+# ---------------------------------------------------------------------------
+
+# The keys the state file may carry, in the order they are written.
+$script:StateKeys = @('version', 'appSha256', 'nodeVersion', 'lockSha256')
+
+function Read-InstallState {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        return $null
+    }
+
+    try {
+        $text = [System.IO.File]::ReadAllText($Path)
+        if ([string]::IsNullOrWhiteSpace($text)) {
+            return $null
+        }
+
+        $state = $text | ConvertFrom-Json -ErrorAction Stop
+    }
+    catch {
+        # An unreadable or malformed state file means "nothing is known": every step runs again.
+        return $null
+    }
+
+    if ($state -is [System.Management.Automation.PSCustomObject]) {
+        return $state
+    }
+
+    return $null
+}
+
+function Write-InstallState {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path,
+
+        # A hashtable or the object Read-InstallState returned.
+        [Parameter(Mandatory)]
+        $State
+    )
+
+    $ordered = [ordered]@{ schema = '1' }
+    foreach ($key in $script:StateKeys) {
+        $property = $State.PSObject.Properties[$key]
+        if ($null -ne $property) {
+            $ordered[$key] = [string]$property.Value
+        }
+        elseif (($State -is [System.Collections.IDictionary]) -and $State.Contains($key)) {
+            $ordered[$key] = [string]$State[$key]
+        }
+    }
+
+    $parent = Split-Path -Parent $Path
+    if ($parent -and -not (Test-Path -LiteralPath $parent -PathType Container)) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+
+    $json = $ordered | ConvertTo-Json
+    $tmp = $Path + '.tmp'
+    [System.IO.File]::WriteAllText($tmp, $json, (New-Object System.Text.UTF8Encoding($false)))
+    Move-Item -LiteralPath $tmp -Destination $Path -Force
+}
+
+function Test-StepSatisfied {
+    [CmdletBinding()]
+    param(
+        [AllowNull()]
+        $State,
+
+        [Parameter(Mandatory)]
+        [string]$Key,
+
+        [AllowEmptyString()]
+        [AllowNull()]
+        [string]$Expected
+    )
+
+    if ($null -eq $State -or [string]::IsNullOrEmpty($Expected)) {
+        return $false
+    }
+
+    $property = $State.PSObject.Properties[$Key]
+    if ($null -eq $property -or $null -eq $property.Value) {
+        return $false
+    }
+
+    return [string]::Equals([string]$property.Value, $Expected, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+# ---------------------------------------------------------------------------
 # Prerequisite seams (every external effect of the checks sits behind one)
 # ---------------------------------------------------------------------------
 
