@@ -79,6 +79,34 @@ function Write-Step {
 # Paths and asset sources
 # ---------------------------------------------------------------------------
 
+# Makes a folder path absolute against the session location (not the process directory). Throws a
+# message that ends in 'fix:' for a non-FileSystem provider path or a drive that does not exist.
+function ConvertTo-AbsolutePath {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path,
+
+        [Parameter(Mandatory)]
+        [string]$Label
+    )
+
+    $provider = $null
+    $drive = $null
+    try {
+        $full = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path, [ref]$provider, [ref]$drive)
+    }
+    catch {
+        throw ($Label + ' ' + $Path + ' cannot be used: its drive or location does not exist. fix: pass a folder on a drive that exists, for example C:\Huddle')
+    }
+
+    if (($null -eq $provider) -or (-not [string]::Equals($provider.Name, 'FileSystem', [System.StringComparison]::OrdinalIgnoreCase))) {
+        throw ($Label + ' ' + $Path + ' is not a file system folder. fix: pass a folder path such as C:\Huddle')
+    }
+
+    return $full
+}
+
 function Resolve-InstallPaths {
     [CmdletBinding()]
     param(
@@ -108,6 +136,9 @@ function Resolve-InstallPaths {
     if ([string]::IsNullOrWhiteSpace($DataRoot)) {
         $DataRoot = Join-Path $localAppData 'Agency.Huddle'
     }
+
+    $InstallRoot = ConvertTo-AbsolutePath -Path $InstallRoot -Label 'InstallRoot'
+    $DataRoot = ConvertTo-AbsolutePath -Path $DataRoot -Label 'DataRoot'
 
     return [pscustomobject]@{
         InstallRoot     = $InstallRoot
@@ -546,6 +577,28 @@ function Test-ProcessRunning {
     return [string]::Equals($process.ProcessName, 'Huddle.App', [System.StringComparison]::OrdinalIgnoreCase)
 }
 
+# Seam: waits for the Huddle.App process to disappear. Returns $true when it is gone, $false at the timeout.
+function Wait-HuddleProcessExit {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [int]$ProcessId,
+
+        [int]$TimeoutSec = 10
+    )
+
+    $deadline = [datetime]::UtcNow.AddSeconds($TimeoutSec)
+    while (Test-ProcessRunning -ProcessId $ProcessId) {
+        if ([datetime]::UtcNow -ge $deadline) {
+            return $false
+        }
+
+        Start-Sleep -Milliseconds 200
+    }
+
+    return $true
+}
+
 # Seam: ends a process that survived the stop request (-Force only).
 function Stop-HuddleProcess {
     [CmdletBinding()]
@@ -587,9 +640,10 @@ function Stop-HuddleIfRunning {
     $exitCode = Invoke-HuddleStop -Paths $Paths
 
     if ($instancePid -gt 0) {
-        if (Test-ProcessRunning -ProcessId $instancePid) {
+        # The stop request returns before the process has finished exiting: give it up to 10 seconds.
+        if ((Test-ProcessRunning -ProcessId $instancePid) -and (-not (Wait-HuddleProcessExit -ProcessId $instancePid -TimeoutSec 10))) {
             if (-not $Force) {
-                throw ('Agency Huddle (pid ' + $instancePid + ') is still running after the stop request. Close it and run the installer again, or pass -Force to end the process.')
+                throw ('Agency Huddle (pid ' + $instancePid + ') is still running after the stop request. Close it and run the installer again, or pass -Force to end the process (with irm | iex, set $env:HUDDLE_FORCE=''1'' first).')
             }
 
             Write-Step -Status '..' -Name 'stop' -Detail ('ending process ' + $instancePid + ' (-Force)')
@@ -598,7 +652,7 @@ function Stop-HuddleIfRunning {
     }
     elseif ($exitCode -ne 0) {
         if (-not $Force) {
-            throw ('The stop request for Agency Huddle failed (exit code ' + $exitCode + '). Close it and run the installer again, or pass -Force.')
+            throw ('The stop request for Agency Huddle failed (exit code ' + $exitCode + '). Close it and run the installer again, or pass -Force (with irm | iex, set $env:HUDDLE_FORCE=''1'' first).')
         }
 
         Write-Step -Status '..' -Name 'stop' -Detail ('stop request exited with code ' + $exitCode + '; continuing because of -Force')
@@ -606,6 +660,23 @@ function Stop-HuddleIfRunning {
 
     Write-Step -Status 'ok' -Name 'stop' -Detail 'stopped'
     return $true
+}
+
+# True when the folder holds a file only an Agency Huddle install or release leaves behind.
+function Test-HuddleMarker {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path
+    )
+
+    foreach ($name in @('release-info.json', 'install-state.json')) {
+        if (Test-Path -LiteralPath (Join-Path $Path $name) -PathType Leaf) {
+            return $true
+        }
+    }
+
+    return $false
 }
 
 # Installs the app from a verified archive. Returns $true when the install changed, $false when
@@ -628,7 +699,7 @@ function Install-App {
     $ErrorActionPreference = 'Stop'
 
     $archiveSha = Get-FileSha256 -Path $Archive
-    if ((Test-StepSatisfied -State $State -Key 'appSha256' -Expected $archiveSha) -and (Test-Path -LiteralPath $Paths.ExePath -PathType Leaf)) {
+    if ((-not $Force) -and (Test-StepSatisfied -State $State -Key 'appSha256' -Expected $archiveSha) -and (Test-Path -LiteralPath $Paths.ExePath -PathType Leaf)) {
         Write-Step -Status 'skip' -Name 'app' -Detail 'already installed'
         return $false
     }
@@ -636,6 +707,31 @@ function Install-App {
     $installRoot = $Paths.InstallRoot.TrimEnd('\', '/')
     $staging = $installRoot + '.staging'
     $old = $installRoot + '.old'
+
+    # Nothing is moved or deleted until every folder this step touches is known to be ours: the root
+    # is missing, empty or a Huddle install, and the leftovers carry a Huddle marker file.
+    $refusal = 'fix: choose an empty folder or remove it'
+    if (-not (Test-SafeToDelete -Path $installRoot)) {
+        throw ($installRoot + ' is a drive root, a protected folder or less than two levels below a drive, so the installer will not replace it. ' + $refusal)
+    }
+
+    if (Test-Path -LiteralPath $installRoot) {
+        $isFolder = Test-Path -LiteralPath $installRoot -PathType Container
+        if (-not $isFolder) {
+            throw ($installRoot + ' is a file, not a folder. ' + $refusal)
+        }
+
+        $isEmpty = @(Get-ChildItem -LiteralPath $installRoot -Force).Count -eq 0
+        if ((-not $isEmpty) -and (-not (Test-HuddleMarker -Path $installRoot))) {
+            throw ($installRoot + ' is not empty and is not an Agency Huddle install. ' + $refusal)
+        }
+    }
+
+    foreach ($leftover in @($staging, $old)) {
+        if ((Test-Path -LiteralPath $leftover) -and ((-not (Test-HuddleMarker -Path $leftover)) -or (-not (Test-SafeToDelete -Path $leftover)))) {
+            throw ($leftover + ' is not a leftover of an Agency Huddle install and was not touched. ' + $refusal)
+        }
+    }
 
     # Leftovers of an interrupted run: a swap that died between its two renames, then stale folders.
     if ((-not (Test-Path -LiteralPath $installRoot)) -and (Test-Path -LiteralPath $old)) {
@@ -2159,36 +2255,46 @@ function Invoke-Main {
     Set-StrictMode -Version Latest
     $ErrorActionPreference = 'Stop'
 
-    $options = Resolve-Options -Bound $PSBoundParameters
-    $Version = $options.Version
-    $BaseUrl = $options.BaseUrl
-    $InstallRoot = $options.InstallRoot
-    $DataRoot = $options.DataRoot
-    $CheckOnly = $options.CheckOnly
-    $Uninstall = $options.Uninstall
-    $PurgeData = $options.PurgeData
-    $Force = $options.Force
-    $NoLaunch = $options.NoLaunch
-
-    if ($BaseUrl -and ($BaseUrl -notmatch '^https://') -and (-not (Test-Path -LiteralPath $BaseUrl -PathType Container))) {
-        Write-Step -Status '!!' -Name 'usage' -Detail ('BaseUrl is neither an https URL nor an existing folder: ' + $BaseUrl) -Fix 'Pass -BaseUrl https://... or the path of an existing folder.'
-        return $script:ExitCodes.BadUsage
-    }
-
-    if ($PurgeData -and (-not $Uninstall)) {
-        Write-Step -Status '!!' -Name 'usage' -Detail '-PurgeData only works together with -Uninstall.' -Fix 'Run again with -Uninstall -PurgeData to remove the program and your data, or drop -PurgeData.'
-        return $script:ExitCodes.BadUsage
-    }
-
-    $paths = Resolve-InstallPaths -InstallRoot $InstallRoot -DataRoot $DataRoot
-
-    $releaser = Enter-InstallerMutex
-    if ($null -eq $releaser) {
-        Write-Step -Status '!!' -Name 'installer' -Detail 'another Agency Huddle installer is already running.' -Fix 'Wait for it to finish, then run this command again.'
-        return $script:ExitCodes.StepFailed
-    }
-
+    $releaser = $null
+    $failureCode = $script:ExitCodes.BadUsage
     try {
+        $options = Resolve-Options -Bound $PSBoundParameters
+        $Version = ([string]$options.Version).Trim()
+        $BaseUrl = $options.BaseUrl
+        $InstallRoot = $options.InstallRoot
+        $DataRoot = $options.DataRoot
+        $CheckOnly = $options.CheckOnly
+        $Uninstall = $options.Uninstall
+        $PurgeData = $options.PurgeData
+        $Force = $options.Force
+        $NoLaunch = $options.NoLaunch
+
+        # The version is spliced into the download URL, so only a release tag shape gets through.
+        if (-not (($Version -eq 'latest') -or ($Version -cmatch '^v?[0-9]+\.[0-9]+\.[0-9]+([-+.][0-9A-Za-z.]+)*\z'))) {
+            Write-Step -Status '!!' -Name 'usage' -Detail ('Not a valid version: "' + $Version + '"') -Fix 'use latest or a version such as v1.2.3'
+            return $script:ExitCodes.BadUsage
+        }
+
+        if ($BaseUrl -and ($BaseUrl -notmatch '^https://') -and (-not (Test-Path -LiteralPath $BaseUrl -PathType Container))) {
+            Write-Step -Status '!!' -Name 'usage' -Detail ('BaseUrl is neither an https URL nor an existing folder: ' + $BaseUrl) -Fix 'Pass -BaseUrl https://... or the path of an existing folder.'
+            return $script:ExitCodes.BadUsage
+        }
+
+        if ($PurgeData -and (-not $Uninstall)) {
+            Write-Step -Status '!!' -Name 'usage' -Detail '-PurgeData only works together with -Uninstall.' -Fix 'Run again with -Uninstall -PurgeData to remove the program and your data, or drop -PurgeData.'
+            return $script:ExitCodes.BadUsage
+        }
+
+        $paths = Resolve-InstallPaths -InstallRoot $InstallRoot -DataRoot $DataRoot
+
+        # From here an unexpected error is a failed step, not a usage problem.
+        $failureCode = $script:ExitCodes.StepFailed
+        $releaser = Enter-InstallerMutex
+        if ($null -eq $releaser) {
+            Write-Step -Status '!!' -Name 'installer' -Detail 'another Agency Huddle installer is already running.' -Fix 'Wait for it to finish, then run this command again.'
+            return $script:ExitCodes.StepFailed
+        }
+
         # An uninstall works offline and on a machine that no longer meets the install prerequisites.
         if ($Uninstall) {
             $uninstallCode = @(Invoke-Uninstall -Paths $paths -PurgeData:$PurgeData -Force:$Force)
@@ -2210,18 +2316,30 @@ function Invoke-Main {
         return [int]$installCode[-1]
     }
     catch {
-        Write-Step -Status '!!' -Name 'installer' -Detail ([string]$_.Exception.Message) -Fix 'Run the installer again. If it keeps failing, report the line above.'
-        return $script:ExitCodes.StepFailed
+        $message = ([string]$_.Exception.Message).Trim()
+        $fix = 'Run the installer again. If it keeps failing, report the line above.'
+        $marker = $message.LastIndexOf('fix:', [System.StringComparison]::OrdinalIgnoreCase)
+        if ($marker -ge 0) {
+            $fix = $message.Substring($marker + 4).Trim()
+            $message = $message.Substring(0, $marker).Trim()
+        }
+
+        Write-Step -Status '!!' -Name 'installer' -Detail $message -Fix $fix
+        return $failureCode
     }
     finally {
-        & $releaser
+        if ($null -ne $releaser) {
+            & $releaser
+        }
     }
 }
 
 if (-not $env:HUDDLE_INSTALL_NO_MAIN) {
     # Under iex (irm | iex) or as a scriptblock, exit would close the user's PowerShell window.
     # No top-level variable is created here: under iex it would persist in the user's session.
-    if ($PSCommandPath) {
+    # {}.File is the script path when this file runs as a file and empty under iex, even when the
+    # iex call sits inside another script (where $PSCommandPath would be that script's path).
+    if ({}.File) {
         exit (Invoke-Main @PSBoundParameters)
     }
 

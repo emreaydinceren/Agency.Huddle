@@ -80,6 +80,24 @@ Describe 'Resolve-InstallPaths' {
         $paths.ExePath | Should -Be 'C:\x\inst\app\Huddle.App.exe'
         $paths.CacheDir | Should -Be 'C:\x\data\cache'
     }
+
+    It 'makes relative roots absolute against the session location' {
+        $here = (Get-Location).ProviderPath
+        $paths = Resolve-InstallPaths -InstallRoot '.\h' -DataRoot '.\d'
+        $paths.InstallRoot | Should -Be (Join-Path $here 'h')
+        $paths.DataRoot | Should -Be (Join-Path $here 'd')
+        $paths.ExePath | Should -Be (Join-Path $here 'h\app\Huddle.App.exe')
+        [System.IO.Path]::IsPathRooted($paths.CacheDir) | Should -BeTrue
+    }
+
+    It 'refuses a root on a drive that does not exist, with a fix' {
+        { Resolve-InstallPaths -InstallRoot 'Q:\nodrive\x' } | Should -Throw '*fix:*'
+        { Resolve-InstallPaths -DataRoot 'Q:\nodrive\x' } | Should -Throw '*fix:*'
+    }
+
+    It 'refuses a root that is not a file system path' {
+        { Resolve-InstallPaths -InstallRoot 'HKCU:\Software\x' } | Should -Throw '*fix:*'
+    }
 }
 
 Describe 'Resolve-AssetSource' {
@@ -759,6 +777,32 @@ Describe 'Stop-HuddleIfRunning' {
         Mock Invoke-HuddleStop { return 0 }
         Mock Test-ProcessRunning { return $false }
         Mock Stop-HuddleProcess { }
+        Mock Wait-HuddleProcessExit { return $false }
+    }
+
+    It 'waits up to 10 seconds for the process to exit before declaring it still running' {
+        New-Item -ItemType Directory -Path (Split-Path -Parent $script:RecordPath) -Force | Out-Null
+        [System.IO.File]::WriteAllText($script:RecordPath, '{"url":"http://127.0.0.1:5000","stopToken":"t","pid":4242}')
+        Mock Test-ProcessRunning { return $true }
+        Mock Wait-HuddleProcessExit { return $false }
+        { Stop-HuddleIfRunning -Paths $script:StopPaths } | Should -Throw '*still running*'
+        Should -Invoke Wait-HuddleProcessExit -Times 1 -Exactly -ParameterFilter { $ProcessId -eq 4242 -and $TimeoutSec -eq 10 }
+    }
+
+    It 'does not throw and does not end the process when it exits during the wait' {
+        New-Item -ItemType Directory -Path (Split-Path -Parent $script:RecordPath) -Force | Out-Null
+        [System.IO.File]::WriteAllText($script:RecordPath, '{"url":"http://127.0.0.1:5000","stopToken":"t","pid":4242}')
+        Mock Test-ProcessRunning { return $true }
+        Mock Wait-HuddleProcessExit { return $true }
+        Stop-HuddleIfRunning -Paths $script:StopPaths 6>$null | Should -BeTrue
+        Should -Invoke Stop-HuddleProcess -Times 0 -Exactly
+    }
+
+    It 'the still-running message names -Force and the HUDDLE_FORCE variable for iex users' {
+        New-Item -ItemType Directory -Path (Split-Path -Parent $script:RecordPath) -Force | Out-Null
+        [System.IO.File]::WriteAllText($script:RecordPath, '{"url":"http://127.0.0.1:5000","stopToken":"t","pid":4242}')
+        Mock Test-ProcessRunning { return $true }
+        { Stop-HuddleIfRunning -Paths $script:StopPaths } | Should -Throw "*-Force*`$env:HUDDLE_FORCE='1'*"
     }
 
     It 'never calls Invoke-HuddleStop when no instance record exists' {
@@ -796,6 +840,21 @@ Describe 'Stop-HuddleIfRunning' {
         Mock Invoke-HuddleStop { return 1 }
         { Stop-HuddleIfRunning -Paths $script:StopPaths } | Should -Throw '*exit code 1*'
         Stop-HuddleIfRunning -Paths $script:StopPaths -Force 3>$null | Should -BeTrue
+    }
+}
+
+Describe 'Wait-HuddleProcessExit seam' {
+    It 'returns true at once when the process is gone' {
+        Mock Test-ProcessRunning { return $false }
+        Wait-HuddleProcessExit -ProcessId 4242 -TimeoutSec 5 | Should -BeTrue
+    }
+
+    It 'returns false after the timeout when the process stays' {
+        Mock Test-ProcessRunning { return $true }
+        $watch = [System.Diagnostics.Stopwatch]::StartNew()
+        Wait-HuddleProcessExit -ProcessId 4242 -TimeoutSec 1 | Should -BeFalse
+        $watch.Elapsed.TotalSeconds | Should -BeGreaterOrEqual 0.9
+        $watch.Elapsed.TotalSeconds | Should -BeLessThan 5
     }
 }
 
@@ -1013,10 +1072,68 @@ Describe 'Install-App' {
     It 'removes a stale staging folder left by an interrupted run' {
         New-Item -ItemType Directory -Path (Join-Path $script:Staging 'app') -Force | Out-Null
         [System.IO.File]::WriteAllText((Join-Path $script:Staging 'app\junk.txt'), 'junk')
+        [System.IO.File]::WriteAllText((Join-Path $script:Staging 'release-info.json'), '{}')
         $null = Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null
         Test-Path -LiteralPath $script:Staging | Should -BeFalse
         Test-Path -LiteralPath (Join-Path $script:AppPaths.InstallRoot 'app\junk.txt') | Should -BeFalse
         Test-Path -LiteralPath $script:AppPaths.ExePath | Should -BeTrue
+    }
+
+    It 'refuses an InstallRoot that is not a Huddle install and touches nothing' {
+        New-Item -ItemType Directory -Path $script:AppPaths.InstallRoot | Out-Null
+        $precious = Join-Path $script:AppPaths.InstallRoot 'precious.txt'
+        [System.IO.File]::WriteAllText($precious, 'keep me')
+        { Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null } | Should -Throw '*fix: choose an empty folder or remove it*'
+        [System.IO.File]::ReadAllText($precious) | Should -Be 'keep me'
+        Test-Path -LiteralPath $script:OldDir | Should -BeFalse
+        Test-Path -LiteralPath $script:Staging | Should -BeFalse
+        Should -Invoke Invoke-Tar -Times 0 -Exactly
+        Should -Invoke Invoke-HuddleStop -Times 0 -Exactly
+    }
+
+    It 'installs into an existing empty InstallRoot' {
+        New-Item -ItemType Directory -Path $script:AppPaths.InstallRoot | Out-Null
+        Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null | Should -BeTrue
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'new exe'
+        Test-Path -LiteralPath $script:OldDir | Should -BeFalse
+    }
+
+    It 'refuses a marked InstallRoot that Test-SafeToDelete rejects and touches nothing' {
+        New-OldInstall -Paths $script:AppPaths
+        Mock Test-SafeToDelete { return $false }
+        { Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null } | Should -Throw '*fix: choose an empty folder or remove it*'
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'old exe'
+        Test-Path -LiteralPath $script:OldDir | Should -BeFalse
+        Test-Path -LiteralPath $script:Staging | Should -BeFalse
+    }
+
+    It 'refuses a sibling .old folder without a Huddle marker and does not delete it' {
+        New-OldInstall -Paths $script:AppPaths
+        New-Item -ItemType Directory -Path $script:OldDir | Out-Null
+        $mine = Join-Path $script:OldDir 'mine.txt'
+        [System.IO.File]::WriteAllText($mine, 'not yours')
+        { Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null } | Should -Throw '*fix: choose an empty folder or remove it*'
+        [System.IO.File]::ReadAllText($mine) | Should -Be 'not yours'
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'old exe'
+        Test-Path -LiteralPath $script:Staging | Should -BeFalse
+    }
+
+    It 'refuses a sibling .staging folder without a Huddle marker and does not delete it' {
+        New-OldInstall -Paths $script:AppPaths
+        New-Item -ItemType Directory -Path $script:Staging | Out-Null
+        $mine = Join-Path $script:Staging 'mine.txt'
+        [System.IO.File]::WriteAllText($mine, 'not yours')
+        { Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null } | Should -Throw '*fix: choose an empty folder or remove it*'
+        [System.IO.File]::ReadAllText($mine) | Should -Be 'not yours'
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'old exe'
+    }
+
+    It 'with -Force reinstalls even when the state hash matches and the app host exists' {
+        New-OldInstall -Paths $script:AppPaths
+        $state = [pscustomobject]@{ appSha256 = $script:AppHash }
+        Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $state -Force 6>$null | Should -BeTrue
+        Should -Invoke Invoke-Tar -Times 1 -Exactly
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'new exe'
     }
 
     It 'restores the old folder when a previous run died between the two renames' {
@@ -2468,6 +2585,120 @@ Describe 'Invoke-Main orchestration' {
         $summary | Should -BeGreaterOrEqual 0
         ($result.Lines[($summary + 1)..($result.Lines.Count - 1)] -join "`n") | Should -BeLike '*huddle*'
     }
+
+    It 'an InstallRoot that is not a Huddle install exits 1 with [!!] and the fix and leaves the folder alone' {
+        New-Item -ItemType Directory -Path $script:OInstall | Out-Null
+        $precious = Join-Path $script:OInstall 'precious.txt'
+        [System.IO.File]::WriteAllText($precious, 'keep me')
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 1
+        $result.Text | Should -BeLike '*[[]!!]*'
+        $result.Text | Should -BeLike '*fix: choose an empty folder or remove it*'
+        [System.IO.File]::ReadAllText($precious) | Should -Be 'keep me'
+        Test-Path -LiteralPath ($script:OInstall + '.old') | Should -BeFalse
+        Test-Path -LiteralPath ($script:OInstall + '.staging') | Should -BeFalse
+    }
+
+    It 'a root on a drive that does not exist exits 3 with [!!] and fix, no stack trace, no mutex' {
+        $arguments = $script:OArgs.Clone()
+        $arguments.InstallRoot = 'Q:\nodrive\x'
+        $result = Invoke-MainCapture -Arguments $arguments
+        $result.Code | Should -Be 3
+        $result.Text | Should -BeLike '*[[]!!]*'
+        $result.Text | Should -BeLike '*fix:*'
+        $result.Text | Should -Not -BeLike '*ScriptStackTrace*'
+        Should -Invoke Enter-InstallerMutex -Times 0 -Exactly
+    }
+
+    It 'a registry path as the root exits 3' {
+        $arguments = $script:OArgs.Clone()
+        $arguments.DataRoot = 'HKCU:\Software\x'
+        $result = Invoke-MainCapture -Arguments $arguments
+        $result.Code | Should -Be 3
+        $result.Text | Should -BeLike '*fix:*'
+    }
+
+    It 'a root given by HUDDLE_INSTALL_ROOT is checked too' {
+        $saved = $env:HUDDLE_INSTALL_ROOT
+        try {
+            $env:HUDDLE_INSTALL_ROOT = 'HKCU:\Software\x'
+            $arguments = $script:OArgs.Clone()
+            $arguments.Remove('InstallRoot')
+            $result = Invoke-MainCapture -Arguments $arguments
+            $result.Code | Should -Be 3
+        }
+        finally {
+            $env:HUDDLE_INSTALL_ROOT = $saved
+        }
+    }
+
+    It 'an error while resolving the options exits 3 with [!!] and fix instead of throwing' {
+        Mock Resolve-Options { throw 'options exploded' }
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 3
+        $result.Text | Should -BeLike '*[[]!!]*options exploded*'
+        $result.Text | Should -BeLike '*fix:*'
+    }
+
+    It 'an error while taking the mutex exits 1 with [!!] and fix instead of throwing' {
+        Mock Enter-InstallerMutex { throw 'mutex exploded' }
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 1
+        $result.Text | Should -BeLike '*[[]!!]*mutex exploded*'
+        $result.Text | Should -BeLike '*fix:*'
+    }
+
+    It 'releases the mutex when a step throws' {
+        Mock Test-Prerequisites { throw 'prerequisites exploded' }
+        $result = Invoke-MainCapture -Arguments $script:OArgs
+        $result.Code | Should -Be 1
+        $script:OReleased | Should -Be 1
+    }
+
+    It 'rejects a -Version that is not latest or a version number with exit 3' -TestCases @(
+        @{ Bad = '../x' }
+        @{ Bad = 'v1.2.3?x=1' }
+        @{ Bad = 'v1.2.3#a' }
+        @{ Bad = 'v1' }
+        @{ Bad = '   ' }
+        @{ Bad = 'v1.2.3/../../x' }
+    ) {
+        param($Bad)
+        $arguments = $script:OArgs.Clone()
+        $arguments.Version = $Bad
+        $result = Invoke-MainCapture -Arguments $arguments
+        $result.Code | Should -Be 3
+        $result.Text | Should -BeLike '*[[]!!]*'
+        $result.Text | Should -BeLike '*fix: use latest or a version such as v1.2.3*'
+        Test-Path -LiteralPath $script:OInstall | Should -BeFalse
+    }
+
+    It 'accepts latest and version numbers' -TestCases @(
+        @{ Good = 'latest' }
+        @{ Good = 'v1.2.3' }
+        @{ Good = '1.2.3' }
+        @{ Good = 'v1.2.3-rc.1' }
+        @{ Good = 'v1.2.3+build.5' }
+    ) {
+        param($Good)
+        $arguments = $script:OArgs.Clone()
+        $arguments.Version = $Good
+        $arguments.CheckOnly = $true
+        $result = Invoke-MainCapture -Arguments $arguments
+        $result.Code | Should -Be 0
+    }
+
+    It 'rejects a bad HUDDLE_VERSION too' {
+        $saved = $env:HUDDLE_VERSION
+        try {
+            $env:HUDDLE_VERSION = '../x'
+            $result = Invoke-MainCapture -Arguments $script:OArgs
+            $result.Code | Should -Be 3
+        }
+        finally {
+            $env:HUDDLE_VERSION = $saved
+        }
+    }
 }
 
 Describe 'Invoke-Main entry paths (real child processes)' {
@@ -2585,6 +2816,27 @@ Describe 'Running as a file or through iex' {
         }
         finally {
             $env:HUDDLE_INSTALL_NO_MAIN = $saved
+        }
+    }
+
+    It 'inside a wrapper script that runs iex the wrapper survives (exit is not called)' -Skip:$script:NoPs51 {
+        $wrapper = Join-Path ([System.IO.Path]::GetTempPath()) ('huddle-wrapper-' + [guid]::NewGuid().ToString('N') + '.ps1')
+        $quotedDir = $installerDir.Replace("'", "''")
+        $quotedScript = $ScriptPath.Replace("'", "''")
+        $lines = @(
+            'Remove-Item Env:HUDDLE_INSTALL_NO_MAIN -ErrorAction SilentlyContinue',
+            "`$env:HUDDLE_CHECK_ONLY = '1'",
+            "`$env:HUDDLE_BASE_URL = '$quotedDir'",
+            "iex ([IO.File]::ReadAllText('$quotedScript')) | Out-Null",
+            "'WRAPPER-ALIVE:' + `$LASTEXITCODE"
+        )
+        [System.IO.File]::WriteAllText($wrapper, ($lines -join "`r`n"), [System.Text.Encoding]::ASCII)
+        try {
+            $output = (& $Ps51Path -NoProfile -ExecutionPolicy Bypass -File $wrapper) -join "`n"
+            $output | Should -Match 'WRAPPER-ALIVE:0'
+        }
+        finally {
+            Remove-Item -LiteralPath $wrapper -Force -ErrorAction SilentlyContinue
         }
     }
 
