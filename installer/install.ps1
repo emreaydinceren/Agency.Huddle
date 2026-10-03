@@ -23,6 +23,13 @@ param(
 # Strict mode and ErrorActionPreference 'Stop' are set inside Invoke-Main, not here: under
 # irm | iex this top level runs in the user's own session and must not change it.
 
+# Under iex every function below would stay in the user's session, so the names that exist before this
+# script defines anything are remembered and the entry guard at the end removes the rest. The only
+# top-level variable; the guard removes it. Not taken when running as a file or for the tests.
+if ((-not $env:HUDDLE_INSTALL_NO_MAIN) -and (-not {}.File)) {
+    $huddleFunctionSnapshot = @((Get-ChildItem -Path Function:).Name)
+}
+
 $script:HuddleRepo = if ($env:HUDDLE_REPO) { $env:HUDDLE_REPO } else { '__HUDDLE_REPO__' }
 # Built from two parts so the release-time replacement of the literal above cannot rewrite it.
 $script:RepoPlaceholder = '__HUDDLE_' + 'REPO__'
@@ -267,11 +274,18 @@ function Invoke-Download {
     # to this function, so it does not touch the caller's session.
     $ProgressPreference = 'SilentlyContinue'
 
-    if ($PSVersionTable.PSVersion.Major -lt 6) {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-    }
+    # The protocol list is process-wide, so it is put back afterwards (under iex that is the user's session).
+    $originalProtocol = [Net.ServicePointManager]::SecurityProtocol
+    try {
+        if ($PSVersionTable.PSVersion.Major -lt 6) {
+            [Net.ServicePointManager]::SecurityProtocol = $originalProtocol -bor [Net.SecurityProtocolType]::Tls12
+        }
 
-    Invoke-WebRequest -Uri $Url -OutFile $OutFile -UseBasicParsing
+        Invoke-WebRequest -Uri $Url -OutFile $OutFile -UseBasicParsing
+    }
+    finally {
+        [Net.ServicePointManager]::SecurityProtocol = $originalProtocol
+    }
 }
 
 function Get-VerifiedAsset {
@@ -423,6 +437,42 @@ function Write-InstallState {
     Move-Item -LiteralPath $tmp -Destination $Path -Force
 }
 
+# Spells a path for huddle.cmd: under InstallRoot as %~dp0 plus the remainder (the launcher lives in
+# InstallRoot), under LOCALAPPDATA as %LOCALAPPDATA%\..., anything else unchanged. Case-insensitive.
+function ConvertTo-LauncherPath {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path,
+
+        [Parameter(Mandatory)]
+        [string]$InstallRoot
+    )
+
+    $text = $Path.TrimEnd('\', '/')
+    $root = $InstallRoot.TrimEnd('\', '/')
+    if ([string]::Equals($text, $root, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return '%~dp0'
+    }
+
+    if ($text.StartsWith($root + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+        return '%~dp0' + $text.Substring($root.Length + 1)
+    }
+
+    $local = ([string]$env:LOCALAPPDATA).TrimEnd('\', '/')
+    if ($local) {
+        if ([string]::Equals($text, $local, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return '%LOCALAPPDATA%'
+        }
+
+        if ($text.StartsWith($local + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+            return '%LOCALAPPDATA%\' + $text.Substring($local.Length + 1)
+        }
+    }
+
+    return $Path
+}
+
 function Get-LauncherContent {
     [CmdletBinding()]
     param(
@@ -430,10 +480,13 @@ function Get-LauncherContent {
         [pscustomobject]$Paths
     )
 
-    $nodeDir = Split-Path -Parent $Paths.NodeExe
-    $nodeExe = $Paths.NodeExe
-    $dataDir = $Paths.DataRoot + '\data'
-    $exePath = $Paths.ExePath
+    # The file is written as ASCII, so a path with a non-ASCII character (a user name such as Jose with an
+    # acute e) cannot be spelled out. Everything under InstallRoot is relative to the launcher (%~dp0, which
+    # ends with a backslash) and a data folder under LOCALAPPDATA goes through that variable.
+    $nodeDir = ConvertTo-LauncherPath -Path (Split-Path -Parent $Paths.NodeExe) -InstallRoot $Paths.InstallRoot
+    $nodeExe = ConvertTo-LauncherPath -Path $Paths.NodeExe -InstallRoot $Paths.InstallRoot
+    $dataDir = ConvertTo-LauncherPath -Path ($Paths.DataRoot.TrimEnd('\', '/') + '\data') -InstallRoot $Paths.InstallRoot
+    $exePath = ConvertTo-LauncherPath -Path $Paths.ExePath -InstallRoot $Paths.InstallRoot
 
     # The outer quotes in set "VAR=value" protect spaces in the value
     $lines = @(
@@ -711,8 +764,8 @@ function Install-App {
     # Nothing is moved or deleted until every folder this step touches is known to be ours: the root
     # is missing, empty or a Huddle install, and the leftovers carry a Huddle marker file.
     $refusal = 'fix: choose an empty folder or remove it'
-    if (-not (Test-SafeToDelete -Path $installRoot)) {
-        throw ($installRoot + ' is a drive root, a protected folder or less than two levels below a drive, so the installer will not replace it. ' + $refusal)
+    if (-not (Test-SafeToDelete -Path $installRoot -MinSegments 2)) {
+        throw ($installRoot + ' is a drive root or a protected folder (such as your user profile), so the installer will not replace it. ' + $refusal)
     }
 
     if (Test-Path -LiteralPath $installRoot) {
@@ -1111,21 +1164,80 @@ function Install-Adapter {
     $logPath = Join-Path $Paths.CacheDir 'npm-ci.log'
     Write-Step -Status '..' -Name 'adapter' -Detail 'installing the adapter (npm ci)'
 
-    $exitCode = Invoke-NpmCi -NodeExe $Paths.NodeExe -WorkingDirectory $acpDir -LogPath $logPath
-    if ($exitCode -ne 0) {
-        $tail = '(the npm log is empty or missing: ' + $logPath + ')'
-        if (Test-Path -LiteralPath $logPath -PathType Leaf) {
-            $lines = @(Get-Content -LiteralPath $logPath -Tail 15)
-            if ($lines.Count -gt 0) {
-                $tail = $lines -join "`r`n"
+    # npm ci runs in a staged copy, so a proxy or offline failure cannot delete the live node_modules.
+    $staging = $acpDir + '.staging'
+    $liveModules = Join-Path $acpDir 'node_modules'
+    $oldModules = Join-Path $acpDir 'node_modules.old'
+    $stagedModules = Join-Path $staging 'node_modules'
+    $entryRelative = $Paths.AdapterEntry.Substring($acpDir.Length).TrimStart('\', '/')
+    $stagedEntry = Join-Path $staging $entryRelative
+
+    if (Test-Path -LiteralPath $staging) {
+        Remove-Item -LiteralPath $staging -Recurse -Force
+    }
+
+    try {
+        New-Item -ItemType Directory -Path $staging -Force | Out-Null
+        foreach ($name in @('package.json', 'package-lock.json')) {
+            $source = Join-Path $acpDir $name
+            if (Test-Path -LiteralPath $source -PathType Leaf) {
+                Copy-Item -LiteralPath $source -Destination (Join-Path $staging $name) -Force
             }
         }
 
-        throw ('npm ci failed (exit code ' + $exitCode + '). Last lines of ' + $logPath + ":`r`n" + $tail + "`r`n" + 'fix: if you are behind a proxy, set HTTPS_PROXY (and HTTP_PROXY) or run "npm config set proxy" and "npm config set https-proxy", then run the installer again.')
-    }
+        $exitCode = Invoke-NpmCi -NodeExe $Paths.NodeExe -WorkingDirectory $staging -LogPath $logPath
+        if ($exitCode -ne 0) {
+            $tail = '(the npm log is empty or missing: ' + $logPath + ')'
+            if (Test-Path -LiteralPath $logPath -PathType Leaf) {
+                $lines = @(Get-Content -LiteralPath $logPath -Tail 15)
+                if ($lines.Count -gt 0) {
+                    $tail = $lines -join "`r`n"
+                }
+            }
 
-    if (-not (Test-Path -LiteralPath $Paths.AdapterEntry -PathType Leaf)) {
-        throw ('npm ci finished but the adapter entry not found at ' + $Paths.AdapterEntry + '. fix: run the installer again; if it persists, delete ' + $acpDir + '\node_modules and retry.')
+            throw ('npm ci failed (exit code ' + $exitCode + '). Last lines of ' + $logPath + ":`r`n" + $tail + "`r`n" + 'fix: if you are behind a proxy, set HTTPS_PROXY (and HTTP_PROXY) or run "npm config set proxy" and "npm config set https-proxy", then run the installer again.')
+        }
+
+        if (-not (Test-Path -LiteralPath $stagedEntry -PathType Leaf)) {
+            throw ('npm ci finished but the adapter entry not found at ' + $Paths.AdapterEntry + '. fix: run the installer again; if it persists, delete ' + $liveModules + ' and retry.')
+        }
+
+        # Swap: the old tree moves aside, the staged one moves in, the old one is deleted. A failed move
+        # puts the old tree back.
+        if (Test-Path -LiteralPath $oldModules) {
+            Remove-Item -LiteralPath $oldModules -Recurse -Force
+        }
+
+        $hadOld = Test-Path -LiteralPath $liveModules
+        if ($hadOld) {
+            Move-Item -LiteralPath $liveModules -Destination $oldModules
+        }
+
+        try {
+            Move-Item -LiteralPath $stagedModules -Destination $liveModules
+        }
+        catch {
+            if ($hadOld -and (-not (Test-Path -LiteralPath $liveModules))) {
+                Move-Item -LiteralPath $oldModules -Destination $liveModules
+            }
+
+            throw
+        }
+
+        if (Test-Path -LiteralPath $oldModules) {
+            try {
+                Remove-Item -LiteralPath $oldModules -Recurse -Force
+            }
+            catch {
+                # The new tree is already in place; a leftover node_modules.old is removed by the next run.
+                Write-Verbose ('Could not delete ' + $oldModules + ': ' + $_.Exception.Message)
+            }
+        }
+    }
+    finally {
+        if (Test-Path -LiteralPath $staging) {
+            Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 
     Write-Step -Status 'ok' -Name 'adapter' -Detail 'installed'
@@ -1210,15 +1322,77 @@ function Get-ShortcutTarget {
     }
 }
 
-# Seam: the current user's persistent PATH (registry), or $null when unset.
+# Seam: HKCU\Environment value Path exactly as stored, %VARS% not expanded ('' when unset).
+function Get-UserPathRegistryValue {
+    [CmdletBinding()]
+    param()
+
+    $key = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment')
+    if ($null -eq $key) {
+        return ''
+    }
+
+    try {
+        return [string]$key.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+    }
+    finally {
+        $key.Close()
+    }
+}
+
+# Seam: writes HKCU\Environment value Path with the given kind (the caller passes ExpandString).
+function Set-UserPathRegistryValue {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [AllowEmptyString()]
+        [string]$Value,
+
+        [Parameter(Mandatory)]
+        [Microsoft.Win32.RegistryValueKind]$Kind
+    )
+
+    $key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey('Environment')
+    try {
+        $key.SetValue('Path', $Value, $Kind)
+    }
+    finally {
+        $key.Close()
+    }
+}
+
+# Seam: tells running programs (Explorer, new terminals) that the user environment changed, by broadcasting
+# WM_SETTINGCHANGE for 'Environment'. It never throws: the PATH is already saved, only the live refresh is lost.
+function Send-EnvironmentChange {
+    [CmdletBinding()]
+    param()
+
+    try {
+        if (-not ('HuddleInstaller.NativeMethods' -as [type])) {
+            $signature = '[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)] public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam, uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);'
+            Add-Type -Namespace HuddleInstaller -Name NativeMethods -MemberDefinition $signature
+        }
+
+        $result = [UIntPtr]::Zero
+        # HWND_BROADCAST = 0xffff, WM_SETTINGCHANGE = 0x1A, SMTO_ABORTIFHUNG = 2, five seconds per window.
+        $null = [HuddleInstaller.NativeMethods]::SendMessageTimeout([IntPtr]0xffff, 0x1A, [UIntPtr]::Zero, 'Environment', 2, 5000, [ref]$result)
+    }
+    catch {
+        # The broadcast only refreshes programs that are already open; a new terminal reads the registry anyway.
+        Write-Verbose ('Could not broadcast the environment change: ' + $_.Exception.Message)
+    }
+}
+
+# Seam: the current user's persistent PATH with %VARS% unexpanded, or '' when unset.
 function Get-UserPathValue {
     [CmdletBinding()]
     param()
 
-    return [Environment]::GetEnvironmentVariable('Path', 'User')
+    return Get-UserPathRegistryValue
 }
 
-# Seam: replaces the current user's persistent PATH.
+# Seam: replaces the current user's persistent PATH. Written as REG_EXPAND_SZ so the entries that use
+# %VARS% keep working, then the change is broadcast.
 function Set-UserPathValue {
     [CmdletBinding()]
     param(
@@ -1227,7 +1401,8 @@ function Set-UserPathValue {
         [string]$Value
     )
 
-    [Environment]::SetEnvironmentVariable('Path', $Value, 'User')
+    Set-UserPathRegistryValue -Value $Value -Kind ([Microsoft.Win32.RegistryValueKind]::ExpandString)
+    Send-EnvironmentChange
 }
 
 # Splits a PATH value into its non-empty entries.
@@ -1247,7 +1422,8 @@ function Split-PathValue {
     return , $entries
 }
 
-# True when a PATH entry names the folder: case-insensitive, trailing backslash tolerant.
+# True when a PATH entry names the folder: %VARS% on both sides are expanded first, case-insensitive,
+# trailing backslash tolerant.
 function Test-PathEntryMatch {
     [CmdletBinding()]
     param(
@@ -1258,8 +1434,8 @@ function Test-PathEntryMatch {
         [string]$Folder
     )
 
-    $left = $Entry.Trim().TrimEnd('\', '/')
-    $right = $Folder.Trim().TrimEnd('\', '/')
+    $left = [Environment]::ExpandEnvironmentVariables($Entry.Trim()).TrimEnd('\', '/')
+    $right = [Environment]::ExpandEnvironmentVariables($Folder.Trim()).TrimEnd('\', '/')
     return [string]::Equals($left, $right, [System.StringComparison]::OrdinalIgnoreCase)
 }
 
@@ -1274,8 +1450,17 @@ function Install-Launcher {
 
     $changed = $false
 
-    # Launcher: compare the bytes that would be written with the bytes on disk.
-    $expected = [System.Text.Encoding]::ASCII.GetBytes((Get-LauncherContent -Paths $Paths) + "`r`n")
+    # Launcher: compare the bytes that would be written with the bytes on disk. The file is ASCII, so a path
+    # that still has a non-ASCII character after the relative forms would be written as '?': refuse it
+    # before anything (launcher, shortcut or PATH) is changed.
+    $content = (Get-LauncherContent -Paths $Paths) + "`r`n"
+    foreach ($character in $content.ToCharArray()) {
+        if ([int]$character -gt 127) {
+            throw 'The launcher cannot spell a path that has a non-ASCII character, so nothing was written. fix: choose an install folder with only ASCII characters (-InstallRoot)'
+        }
+    }
+
+    $expected = [System.Text.Encoding]::ASCII.GetBytes($content)
     $current = $null
     if (Test-Path -LiteralPath $Paths.LauncherPath -PathType Leaf) {
         $current = [System.IO.File]::ReadAllBytes($Paths.LauncherPath)
@@ -1337,7 +1522,8 @@ function Install-Launcher {
 # ---------------------------------------------------------------------------
 
 # True when it is safe to delete the folder recursively. The path is resolved with GetFullPath first and
-# a wildcard is never accepted. Refuses: empty text, a drive or share root, fewer than 3 path segments, the
+# a wildcard is never accepted. Refuses: empty text, a drive or share root, fewer than -MinSegments (default 3;
+# the install step passes 2, so C:\Huddle works) path segments, the
 # user profile (and any folder that contains it), LOCALAPPDATA and APPDATA themselves. With
 # -RequireStateFile the folder must also hold install-state.json (used for InstallRoot only).
 function Test-SafeToDelete {
@@ -1347,7 +1533,9 @@ function Test-SafeToDelete {
         [AllowNull()]
         [string]$Path,
 
-        [switch]$RequireStateFile
+        [switch]$RequireStateFile,
+
+        [int]$MinSegments = 3
     )
 
     if ([string]::IsNullOrWhiteSpace($Path)) {
@@ -1373,7 +1561,7 @@ function Test-SafeToDelete {
     }
 
     $segments = @($full.Split([char[]]@('\', '/'), [System.StringSplitOptions]::RemoveEmptyEntries))
-    if ($segments.Count -lt 3) {
+    if ($segments.Count -lt $MinSegments) {
         return $false
     }
 
@@ -1675,8 +1863,9 @@ function Test-UrlReachable {
     )
 
     $ProgressPreference = 'SilentlyContinue'
+    $originalProtocol = [Net.ServicePointManager]::SecurityProtocol
     try {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        [Net.ServicePointManager]::SecurityProtocol = $originalProtocol -bor [Net.SecurityProtocolType]::Tls12
         $null = Invoke-WebRequest -Uri $Url -Method Head -UseBasicParsing -TimeoutSec $TimeoutSec
         return $true
     }
@@ -1688,6 +1877,9 @@ function Test-UrlReachable {
         }
 
         return ($null -ne $response)
+    }
+    finally {
+        [Net.ServicePointManager]::SecurityProtocol = $originalProtocol
     }
 }
 
@@ -2343,8 +2535,16 @@ if (-not $env:HUDDLE_INSTALL_NO_MAIN) {
         exit (Invoke-Main @PSBoundParameters)
     }
 
-    $global:LASTEXITCODE = Invoke-Main @PSBoundParameters
+    try {
+        $global:LASTEXITCODE = Invoke-Main @PSBoundParameters
+    }
+    finally {
+        # Nothing this script defined may stay in the user's session: every function that was not there
+        # before the first line ran, then the constants (at the prompt $script: is the global scope) and
+        # the snapshot itself.
+        # Functions that belong to a module (autoloaded while this ran) are not ours and stay.
+        Get-ChildItem -Path Function: | Where-Object { (-not $_.ModuleName) -and ($huddleFunctionSnapshot -notcontains $_.Name) } | Remove-Item -Force -ErrorAction SilentlyContinue
 
-    # At the prompt, $script: is the global scope, so the constants above would stay in the user's session.
-    Remove-Variable -Name HuddleRepo, RepoPlaceholder, ExitCodes, MinWindowsBuild, MinFreeMb, NetworkHosts, StateKeys -Scope Script -ErrorAction SilentlyContinue
+        Remove-Variable -Name HuddleRepo, RepoPlaceholder, ExitCodes, MinWindowsBuild, MinFreeMb, NetworkHosts, StateKeys, huddleFunctionSnapshot -Scope Script -ErrorAction SilentlyContinue
+    }
 }

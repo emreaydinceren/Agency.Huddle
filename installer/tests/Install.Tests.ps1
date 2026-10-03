@@ -1107,6 +1107,12 @@ Describe 'Install-App' {
         Test-Path -LiteralPath $script:Staging | Should -BeFalse
     }
 
+    It 'asks Test-SafeToDelete for at least two path segments, so a short root such as C:\Huddle can be installed and upgraded' {
+        Mock Test-SafeToDelete { return $true }
+        $null = Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null
+        Should -Invoke Test-SafeToDelete -Times 1 -Exactly -ParameterFilter { $Path -eq $script:AppPaths.InstallRoot -and $MinSegments -eq 2 }
+    }
+
     It 'refuses a sibling .old folder without a Huddle marker and does not delete it' {
         New-OldInstall -Paths $script:AppPaths
         New-Item -ItemType Directory -Path $script:OldDir | Out-Null
@@ -1409,11 +1415,83 @@ Describe 'Install-Adapter' {
         $script:ALockHash = (Get-FileHash -LiteralPath $script:ALock -Algorithm SHA256).Hash.ToLowerInvariant()
         $script:AState = [pscustomobject]@{ schema = '1'; lockSha256 = $script:ALockHash }
         Mock Stop-HuddleIfRunning { return $false }
+        # npm ci runs in the staged copy: the fake writes the adapter entry where it was told to work.
         Mock Invoke-NpmCi {
-            New-Item -ItemType Directory -Path (Split-Path -Parent $script:APaths.AdapterEntry) -Force | Out-Null
-            [System.IO.File]::WriteAllText($script:APaths.AdapterEntry, '// adapter')
+            $entry = Join-Path $WorkingDirectory 'node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js'
+            New-Item -ItemType Directory -Path (Split-Path -Parent $entry) -Force | Out-Null
+            [System.IO.File]::WriteAllText($entry, '// adapter')
             return 0
         }
+    }
+
+    It 'runs npm ci in a staged copy next to tools\acp that holds the live package files, not in the live folder' {
+        [System.IO.File]::WriteAllText((Join-Path $script:AAcp 'package.json'), '{"name":"live"}')
+        Mock Invoke-NpmCi {
+            $script:AStagedPackage = [System.IO.File]::ReadAllText((Join-Path $WorkingDirectory 'package.json'))
+            $script:AStagedLock = [System.IO.File]::ReadAllText((Join-Path $WorkingDirectory 'package-lock.json'))
+            $entry = Join-Path $WorkingDirectory 'node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js'
+            New-Item -ItemType Directory -Path (Split-Path -Parent $entry) -Force | Out-Null
+            [System.IO.File]::WriteAllText($entry, '// adapter')
+            return 0
+        }
+        $null = Install-Adapter -Paths $script:APaths -State $null 6>$null
+        Should -Invoke Invoke-NpmCi -Times 1 -Exactly -ParameterFilter { $WorkingDirectory -eq ($script:AAcp + '.staging') }
+        $script:AStagedPackage | Should -Be '{"name":"live"}'
+        $script:AStagedLock | Should -Be '{"lockfileVersion":3}'
+        Test-Path -LiteralPath ($script:AAcp + '.staging') | Should -BeFalse
+        Test-Path -LiteralPath (Join-Path $script:AAcp 'node_modules.old') | Should -BeFalse
+    }
+
+    It 'replaces an existing node_modules with the staged one when npm ci succeeds' {
+        $nodeModules = Join-Path $script:AAcp 'node_modules'
+        New-Item -ItemType Directory -Path $nodeModules -Force | Out-Null
+        [System.IO.File]::WriteAllText((Join-Path $nodeModules 'marker.txt'), 'old')
+        Install-Adapter -Paths $script:APaths -State $null 6>$null | Should -BeTrue
+        Test-Path -LiteralPath (Join-Path $nodeModules 'marker.txt') | Should -BeFalse
+        Test-Path -LiteralPath $script:APaths.AdapterEntry -PathType Leaf | Should -BeTrue
+        Test-Path -LiteralPath (Join-Path $script:AAcp 'node_modules.old') | Should -BeFalse
+        Test-Path -LiteralPath ($script:AAcp + '.staging') | Should -BeFalse
+    }
+
+    It 'leaves the previous node_modules untouched and removes the staging folder when npm ci exits non-zero' {
+        $nodeModules = Join-Path $script:AAcp 'node_modules'
+        New-Item -ItemType Directory -Path $nodeModules -Force | Out-Null
+        [System.IO.File]::WriteAllText((Join-Path $nodeModules 'marker.txt'), 'old')
+        Mock Invoke-NpmCi {
+            New-Item -ItemType Directory -Path (Join-Path $WorkingDirectory 'node_modules\half') -Force | Out-Null
+            return 1
+        }
+        { Install-Adapter -Paths $script:APaths -State $null 6>$null } | Should -Throw '*npm ci failed*fix:*'
+        [System.IO.File]::ReadAllText((Join-Path $nodeModules 'marker.txt')) | Should -Be 'old'
+        Test-Path -LiteralPath (Join-Path $nodeModules 'half') | Should -BeFalse
+        Test-Path -LiteralPath ($script:AAcp + '.staging') | Should -BeFalse
+    }
+
+    It 'leaves the previous node_modules untouched when the seam itself throws' {
+        $nodeModules = Join-Path $script:AAcp 'node_modules'
+        New-Item -ItemType Directory -Path $nodeModules -Force | Out-Null
+        [System.IO.File]::WriteAllText((Join-Path $nodeModules 'marker.txt'), 'old')
+        Mock Invoke-NpmCi { throw 'proxy refused' }
+        { Install-Adapter -Paths $script:APaths -State $null 6>$null } | Should -Throw '*proxy refused*'
+        [System.IO.File]::ReadAllText((Join-Path $nodeModules 'marker.txt')) | Should -Be 'old'
+        Test-Path -LiteralPath ($script:AAcp + '.staging') | Should -BeFalse
+    }
+
+    It 'leaves the previous node_modules untouched when the staged tree lacks the adapter entry' {
+        $nodeModules = Join-Path $script:AAcp 'node_modules'
+        New-Item -ItemType Directory -Path $nodeModules -Force | Out-Null
+        [System.IO.File]::WriteAllText((Join-Path $nodeModules 'marker.txt'), 'old')
+        Mock Invoke-NpmCi { return 0 }
+        { Install-Adapter -Paths $script:APaths -State $null 6>$null } | Should -Throw '*adapter entry not found*'
+        [System.IO.File]::ReadAllText((Join-Path $nodeModules 'marker.txt')) | Should -Be 'old'
+        Test-Path -LiteralPath ($script:AAcp + '.staging') | Should -BeFalse
+    }
+
+    It 'discards a stale staging folder from an interrupted run before it starts' {
+        New-Item -ItemType Directory -Path ($script:AAcp + '.staging\node_modules\stale') -Force | Out-Null
+        $null = Install-Adapter -Paths $script:APaths -State $null 6>$null
+        Test-Path -LiteralPath (Join-Path $script:AAcp 'node_modules\stale') | Should -BeFalse
+        Test-Path -LiteralPath $script:APaths.AdapterEntry -PathType Leaf | Should -BeTrue
     }
 
     It 'runs npm ci when there is no state and returns $true' {
@@ -1445,11 +1523,11 @@ Describe 'Install-Adapter' {
         Should -Invoke Invoke-NpmCi -Times 1
     }
 
-    It 'calls the seam with the bundled node, tools\acp as the working directory and <Cache>\npm-ci.log' {
+    It 'calls the seam with the bundled node, tools\acp.staging as the working directory and <Cache>\npm-ci.log' {
         $null = Install-Adapter -Paths $script:APaths -State $null 6>$null
         $log = Join-Path $script:APaths.CacheDir 'npm-ci.log'
         Should -Invoke Invoke-NpmCi -Times 1 -ParameterFilter {
-            $NodeExe -eq $script:APaths.NodeExe -and $WorkingDirectory -eq $script:AAcp -and $LogPath -eq $log
+            $NodeExe -eq $script:APaths.NodeExe -and $WorkingDirectory -eq ($script:AAcp + '.staging') -and $LogPath -eq $log
         }
     }
 
@@ -1526,7 +1604,17 @@ Describe 'Get-LauncherContent' {
         }
     }
 
-    It 'returns a string with the required lines in order' {
+    BeforeEach {
+        # The data folder is compared with LOCALAPPDATA, so the tests pin it.
+        $script:SavedLocalAppData = $env:LOCALAPPDATA
+        $env:LOCALAPPDATA = 'C:\Users\test\AppData\Local'
+    }
+
+    AfterEach {
+        $env:LOCALAPPDATA = $script:SavedLocalAppData
+    }
+
+    It 'returns a string with the required lines in order, paths under InstallRoot relative to the launcher and a data folder under LOCALAPPDATA through the variable' {
         $content = Get-LauncherContent -Paths $testPaths
         $lines = $content -split "`r`n"
 
@@ -1534,14 +1622,56 @@ Describe 'Get-LauncherContent' {
         $lines[1] | Should -Be 'setlocal'
         $lines[2] | Should -Be 'set "Team__Desktop__Enabled=true"'
         $lines[3] | Should -Be 'set "Team__Acp__Enabled=true"'
-        $lines[4] | Should -Be 'set "Team__Acp__Command=C:\Program Files\Agency.Huddle\node\node.exe"'
-        $lines[5] | Should -Be 'set "Team__DataDir=C:\Users\test\AppData\Local\Agency.Huddle\data"'
+        $lines[4] | Should -Be 'set "Team__Acp__Command=%~dp0node\node.exe"'
+        $lines[5] | Should -Be 'set "Team__DataDir=%LOCALAPPDATA%\Agency.Huddle\data"'
         $lines[6] | Should -Be 'set "Team__PipeName=huddle-%USERNAME%"'
         $lines[7] | Should -Be 'set "ASPNETCORE_URLS=http://127.0.0.1:0"'
         $lines[8] | Should -Be 'set "ASPNETCORE_ENVIRONMENT=Production"'
         $lines[9] | Should -Be 'set "AllowedHosts=localhost;127.0.0.1"'
-        $lines[10] | Should -Be 'set "PATH=C:\Program Files\Agency.Huddle\node;%PATH%"'
-        $lines[11] | Should -Be '"C:\Program Files\Agency.Huddle\app\Huddle.App.exe" %*'
+        $lines[10] | Should -Be 'set "PATH=%~dp0node;%PATH%"'
+        $lines[11] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
+    }
+
+    It 'compares the data folder with LOCALAPPDATA case-insensitively and on a folder boundary' {
+        $env:LOCALAPPDATA = 'c:\users\TEST\appdata\local'
+        $lines = (Get-LauncherContent -Paths $testPaths) -split "`r`n"
+        $lines[5] | Should -Be 'set "Team__DataDir=%LOCALAPPDATA%\Agency.Huddle\data"'
+
+        $env:LOCALAPPDATA = 'C:\Users\test\AppData\Loc'
+        $lines = (Get-LauncherContent -Paths $testPaths) -split "`r`n"
+        $lines[5] | Should -Be 'set "Team__DataDir=C:\Users\test\AppData\Local\Agency.Huddle\data"'
+    }
+
+    It 'keeps a data folder outside LOCALAPPDATA literal, including a space in the path' {
+        $paths = [pscustomobject]@{
+            InstallRoot = 'C:\Program Files\My Company\Agency.Huddle'
+            DataRoot    = 'D:\My Data\Agency.Huddle'
+            ExePath     = 'C:\Program Files\My Company\Agency.Huddle\app\Huddle.App.exe'
+            NodeExe     = 'C:\Program Files\My Company\Agency.Huddle\node\node.exe'
+        }
+        $lines = (Get-LauncherContent -Paths $paths) -split "`r`n"
+        $lines[4] | Should -Be 'set "Team__Acp__Command=%~dp0node\node.exe"'
+        $lines[5] | Should -Be 'set "Team__DataDir=D:\My Data\Agency.Huddle\data"'
+        $lines[10] | Should -Be 'set "PATH=%~dp0node;%PATH%"'
+        $lines[11] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
+    }
+
+    It 'writes a user name with a non-ASCII character as the launcher-relative and LOCALAPPDATA forms, so the text stays ASCII' {
+        $user = 'Jos' + [char]0x00E9
+        $env:LOCALAPPDATA = 'C:\Users\' + $user + '\AppData\Local'
+        $paths = [pscustomobject]@{
+            InstallRoot = $env:LOCALAPPDATA + '\Programs\Agency.Huddle'
+            DataRoot    = $env:LOCALAPPDATA + '\Agency.Huddle'
+            ExePath     = $env:LOCALAPPDATA + '\Programs\Agency.Huddle\app\Huddle.App.exe'
+            NodeExe     = $env:LOCALAPPDATA + '\Programs\Agency.Huddle\node\node.exe'
+        }
+        $content = Get-LauncherContent -Paths $paths
+        $lines = $content -split "`r`n"
+        $lines[4] | Should -Be 'set "Team__Acp__Command=%~dp0node\node.exe"'
+        $lines[5] | Should -Be 'set "Team__DataDir=%LOCALAPPDATA%\Agency.Huddle\data"'
+        $lines[10] | Should -Be 'set "PATH=%~dp0node;%PATH%"'
+        $lines[11] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
+        @($content.ToCharArray() | Where-Object { [int]$_ -gt 127 }).Count | Should -Be 0
     }
 
     It 'quotes paths containing spaces' {
@@ -1549,10 +1679,10 @@ Describe 'Get-LauncherContent' {
         $lines = $content -split "`r`n"
 
         # Expected lines for paths with spaces: no quotes INSIDE the set values
-        $lines[4] | Should -Be 'set "Team__Acp__Command=C:\Program Files\My Company\Agency.Huddle\node\node.exe"'
+        $lines[4] | Should -Be 'set "Team__Acp__Command=%~dp0node\node.exe"'
         $lines[5] | Should -Be 'set "Team__DataDir=C:\Users\test user\AppData\Local\Agency.Huddle\data"'
-        $lines[10] | Should -Be 'set "PATH=C:\Program Files\My Company\Agency.Huddle\node;%PATH%"'
-        $lines[11] | Should -Be '"C:\Program Files\My Company\Agency.Huddle\app\Huddle.App.exe" %*'
+        $lines[10] | Should -Be 'set "PATH=%~dp0node;%PATH%"'
+        $lines[11] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
 
         # Verify no set lines contain =" (which would indicate nested quotes)
         foreach ($line in $lines) {
@@ -1642,13 +1772,46 @@ Describe 'Install-Launcher' {
     }
 
     It 'writes the exact launcher lines for paths that contain spaces' {
-        $null = Install-Launcher -Paths $script:LPaths 6>$null
+        $saved = $env:LOCALAPPDATA
+        try {
+            $env:LOCALAPPDATA = 'Z:\nowhere\local'
+            $null = Install-Launcher -Paths $script:LPaths 6>$null
+        }
+        finally {
+            $env:LOCALAPPDATA = $saved
+        }
+
         $lines = [System.IO.File]::ReadAllText($script:LPaths.LauncherPath) -split "`r`n"
-        $lines[4] | Should -Be ('set "Team__Acp__Command=' + (Join-Path $script:LPaths.InstallRoot 'node\node.exe') + '"')
+        $lines[4] | Should -Be 'set "Team__Acp__Command=%~dp0node\node.exe"'
         $lines[5] | Should -Be ('set "Team__DataDir=' + $script:LPaths.DataRoot + '\data"')
-        $lines[10] | Should -Be ('set "PATH=' + (Join-Path $script:LPaths.InstallRoot 'node') + ';%PATH%"')
-        $lines[11] | Should -Be ('"' + (Join-Path $script:LPaths.InstallRoot 'app\Huddle.App.exe') + '" %*')
+        $lines[10] | Should -Be 'set "PATH=%~dp0node;%PATH%"'
+        $lines[11] | Should -Be '"%~dp0app\Huddle.App.exe" %*'
         $script:LPaths.InstallRoot | Should -BeLike '* *'
+        $script:LPaths.DataRoot | Should -BeLike '* *'
+    }
+
+    It 'fails with the ASCII fix and writes nothing when a remaining path has a non-ASCII character' {
+        $eAcute = [string][char]0x00E9
+        $paths = Resolve-InstallPaths -InstallRoot (Join-Path $script:LRoot 'install dir') -DataRoot (Join-Path $script:LRoot ('data ' + $eAcute)) -ShortcutPath (Join-Path $script:LRoot 'menu\Agency Huddle.lnk')
+        $saved = $env:LOCALAPPDATA
+        $message = ''
+        try {
+            $env:LOCALAPPDATA = 'Z:\nowhere\local'
+            try {
+                $null = Install-Launcher -Paths $paths 6>$null
+            }
+            catch {
+                $message = $_.Exception.Message
+            }
+        }
+        finally {
+            $env:LOCALAPPDATA = $saved
+        }
+
+        $message | Should -BeLike '*fix: choose an install folder with only ASCII characters (-InstallRoot)*'
+        Test-Path -LiteralPath $paths.LauncherPath | Should -BeFalse
+        Should -Invoke New-HuddleShortcut -Times 0 -Exactly
+        Should -Invoke Set-UserPathValue -Times 0 -Exactly
     }
 
     It 'a second run writes nothing, invokes no seam and reports [skip] for every entry point' {
@@ -1747,6 +1910,79 @@ Describe 'Install-Launcher' {
     }
 }
 
+Describe 'User PATH registry handling' {
+    BeforeEach {
+        $script:RegRaw = $null
+        $script:RegWritten = $null
+        $script:RegKind = $null
+        Mock Get-UserPathRegistryValue { return $script:RegRaw }
+        Mock Set-UserPathRegistryValue { $script:RegWritten = $Value; $script:RegKind = $Kind }
+        Mock Send-EnvironmentChange { }
+    }
+
+    It 'Set-UserPathValue writes the value as ExpandString and then broadcasts the change' {
+        Set-UserPathValue -Value '%USERPROFILE%\bin;C:\Tools'
+        $script:RegWritten | Should -Be '%USERPROFILE%\bin;C:\Tools'
+        $script:RegKind | Should -Be ([Microsoft.Win32.RegistryValueKind]::ExpandString)
+        Should -Invoke Set-UserPathRegistryValue -Times 1 -Exactly
+        Should -Invoke Send-EnvironmentChange -Times 1 -Exactly
+    }
+
+    It 'Get-UserPathValue returns what the registry seam read, unexpanded' {
+        $script:RegRaw = '%USERPROFILE%\bin;C:\Tools'
+        Get-UserPathValue | Should -Be '%USERPROFILE%\bin;C:\Tools'
+    }
+
+    It 'Install-Launcher keeps an unexpanded entry verbatim when it appends InstallRoot' {
+        $root = Join-Path $TestDrive ('pathreg-' + [guid]::NewGuid().ToString('N'))
+        $paths = Resolve-InstallPaths -InstallRoot (Join-Path $root 'install') -DataRoot (Join-Path $root 'data') -ShortcutPath (Join-Path $root 'menu\Agency Huddle.lnk')
+        New-Item -ItemType Directory -Path $paths.InstallRoot -Force | Out-Null
+        Mock New-HuddleShortcut { }
+        Mock Get-ShortcutTarget { return $null }
+        $script:RegRaw = '%USERPROFILE%\bin;%SystemRoot%\system32'
+        $null = Install-Launcher -Paths $paths 6>$null
+        $script:RegWritten | Should -Be ('%USERPROFILE%\bin;%SystemRoot%\system32;' + $paths.InstallRoot)
+        $script:RegKind | Should -Be ([Microsoft.Win32.RegistryValueKind]::ExpandString)
+        Should -Invoke Send-EnvironmentChange -Times 1 -Exactly
+    }
+
+    It 'Install-Launcher recognises InstallRoot written with a variable and does not add it twice' {
+        $root = Join-Path $TestDrive ('pathvar-' + [guid]::NewGuid().ToString('N'))
+        $paths = Resolve-InstallPaths -InstallRoot (Join-Path $root 'install') -DataRoot (Join-Path $root 'data') -ShortcutPath (Join-Path $root 'menu\Agency Huddle.lnk')
+        New-Item -ItemType Directory -Path $paths.InstallRoot -Force | Out-Null
+        Mock New-HuddleShortcut { }
+        Mock Get-ShortcutTarget { return $null }
+        $env:HUDDLE_TEST_ROOT = $root
+        try {
+            $script:RegRaw = 'C:\Tools;%HUDDLE_TEST_ROOT%\install\'
+            $null = Install-Launcher -Paths $paths 6>$null
+        }
+        finally {
+            Remove-Item Env:HUDDLE_TEST_ROOT -ErrorAction SilentlyContinue
+        }
+
+        Should -Invoke Set-UserPathRegistryValue -Times 0 -Exactly
+    }
+
+    It 'Test-PathEntryMatch expands variables on both sides before it compares' {
+        Test-PathEntryMatch -Entry '%USERPROFILE%\bin' -Folder (Join-Path $env:USERPROFILE 'bin') | Should -BeTrue
+        Test-PathEntryMatch -Entry (Join-Path $env:USERPROFILE 'BIN\') -Folder '%USERPROFILE%\bin' | Should -BeTrue
+        Test-PathEntryMatch -Entry '%USERPROFILE%\bin' -Folder '%USERPROFILE%\other' | Should -BeFalse
+    }
+
+    It 'Send-EnvironmentChange never throws, even when the native call cannot be compiled' {
+        Mock Add-Type { throw 'cannot compile' }
+        { Send-EnvironmentChange } | Should -Not -Throw
+    }
+
+    It 'the registry seams exist with the documented parameters' {
+        (Get-Command Get-UserPathRegistryValue).Parameters.Count | Should -BeGreaterThan 0
+        (Get-Command Set-UserPathRegistryValue).Parameters.Keys | Should -Contain 'Value'
+        (Get-Command Set-UserPathRegistryValue).Parameters.Keys | Should -Contain 'Kind'
+        (Get-Command Send-EnvironmentChange).Parameters.Count | Should -BeGreaterThan 0
+    }
+}
+
 Describe 'Launcher and uninstall seams' {
     It 'Get-UserPathValue and Set-UserPathValue exist with the documented parameters' {
         (Get-Command Get-UserPathValue).Parameters.Count | Should -BeGreaterThan 0
@@ -1810,6 +2046,23 @@ Describe 'Test-SafeToDelete' {
         @{ Path = 'C:\one\two\th?ee'; Why = 'wildcard question mark' }
     ) {
         Test-SafeToDelete -Path $Path | Should -BeFalse
+    }
+
+    It 'accepts a two-segment root such as C:\Huddle only with -MinSegments 2 (the install step), and the default still refuses it' {
+        Test-SafeToDelete -Path 'C:\Huddle' -MinSegments 2 | Should -BeTrue
+        Test-SafeToDelete -Path 'C:\Huddle\' -MinSegments 2 | Should -BeTrue
+        Test-SafeToDelete -Path 'C:\Huddle' | Should -BeFalse
+    }
+
+    It 'still refuses a drive root, a one-segment path and the user profile with -MinSegments 2' {
+        Test-SafeToDelete -Path 'C:\' -MinSegments 2 | Should -BeFalse
+        Test-SafeToDelete -Path 'C:/' -MinSegments 2 | Should -BeFalse
+        Test-SafeToDelete -Path '\\server\share' -MinSegments 2 | Should -BeFalse
+        Invoke-WithUserProfile -Value 'D:\home\tester' -Block {
+            Test-SafeToDelete -Path 'D:\home\tester' -MinSegments 2 | Should -BeFalse
+            Test-SafeToDelete -Path 'D:\home' -MinSegments 2 | Should -BeFalse
+            Test-SafeToDelete -Path 'D:\home\tester\Huddle' -MinSegments 2 | Should -BeTrue
+        }
     }
 
     It 'accepts a folder with three or more segments that is not special' {
@@ -2245,8 +2498,9 @@ Describe 'Invoke-Main orchestration' {
         Mock Invoke-Download { Copy-Item -LiteralPath (Join-Path $script:ONode $Url.Substring($Url.LastIndexOf('/') + 1)) -Destination $OutFile -Force }
         Mock Invoke-NpmCi {
             if ($script:ONpmExit -eq 0) {
-                New-Item -ItemType Directory -Path (Split-Path -Parent $script:OPaths.AdapterEntry) -Force | Out-Null
-                [System.IO.File]::WriteAllText($script:OPaths.AdapterEntry, '// adapter')
+                $entry = Join-Path $WorkingDirectory 'node_modules\@agentclientprotocol\claude-agent-acp\dist\index.js'
+                New-Item -ItemType Directory -Path (Split-Path -Parent $entry) -Force | Out-Null
+                [System.IO.File]::WriteAllText($entry, '// adapter')
             }
 
             return $script:ONpmExit
@@ -2727,6 +2981,21 @@ Describe 'Invoke-Main entry paths (real child processes)' {
     }
 }
 
+Describe 'Test-UrlReachable SecurityProtocol' {
+    It 'puts the session SecurityProtocol back after it probed a URL' {
+        Mock Invoke-WebRequest { }
+        $saved = [Net.ServicePointManager]::SecurityProtocol
+        try {
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls
+            Test-UrlReachable -Url 'https://example.invalid/' | Should -BeTrue
+            [Net.ServicePointManager]::SecurityProtocol | Should -Be ([Net.SecurityProtocolType]::Tls)
+        }
+        finally {
+            [Net.ServicePointManager]::SecurityProtocol = $saved
+        }
+    }
+}
+
 Describe 'Release-time repository replacement' {
     BeforeAll {
         $rawText = [IO.File]::ReadAllText($ScriptPath)
@@ -2805,6 +3074,60 @@ Describe 'Running as a file or through iex' {
         $allowed = @('before', 'LASTEXITCODE')
         $unexpected = @($added -split ',' | Where-Object { $_ -and ($allowed -notcontains $_) })
         $unexpected | Should -BeNullOrEmpty
+    }
+
+    It 'under iex removes every function the script defined, so the session keeps only its own' -Skip:$script:NoPs51 {
+        $quotedDir = $installerDir.Replace("'", "''")
+        $quotedScript = $ScriptPath.Replace("'", "''")
+        $command = "Remove-Item Env:HUDDLE_INSTALL_NO_MAIN -ErrorAction SilentlyContinue; `$env:HUDDLE_CHECK_ONLY='1'; `$env:HUDDLE_BASE_URL='$quotedDir'; `$fnBefore = @((Get-ChildItem Function:).Name); iex ([IO.File]::ReadAllText('$quotedScript')) | Out-Null; 'STEP:' + [bool](Get-Command Write-Step -ErrorAction SilentlyContinue); 'APP:' + [bool](Get-Command Install-App -ErrorAction SilentlyContinue); 'MAIN:' + [bool](Get-Command Invoke-Main -ErrorAction SilentlyContinue); 'LEFT:' + ((@((Get-ChildItem Function:).Name) | Where-Object { `$fnBefore -notcontains `$_ } | Sort-Object) -join ',')"
+        $output = (& $Ps51Path -NoProfile -Command $command) -join "`n"
+        $output | Should -Match 'STEP:False'
+        $output | Should -Match 'APP:False'
+        $output | Should -Match 'MAIN:False'
+        # Functions a module autoloaded during the run are not ours: only the script's own names must be gone.
+        $ours = @([regex]::Matches([IO.File]::ReadAllText($ScriptPath), '(?m)^function ([A-Za-z0-9-]+)') | ForEach-Object { $_.Groups[1].Value })
+        $ours.Count | Should -BeGreaterThan 50
+        $leftLine = @($output -split "`n" | Where-Object { $_ -like 'LEFT:*' })[0]
+        $left = @(($leftLine -replace '^LEFT:', '').Trim() -split ',' | Where-Object { $_ })
+        @($left | Where-Object { $ours -contains $_ }) | Should -BeNullOrEmpty
+    }
+
+    It 'under iex inside a wrapper script the functions are gone as well and the wrapper survives' -Skip:$script:NoPs51 {
+        $wrapper = Join-Path ([System.IO.Path]::GetTempPath()) ('huddle-wrapper-fn-' + [guid]::NewGuid().ToString('N') + '.ps1')
+        $quotedDir = $installerDir.Replace("'", "''")
+        $quotedScript = $ScriptPath.Replace("'", "''")
+        $lines = @(
+            'Remove-Item Env:HUDDLE_INSTALL_NO_MAIN -ErrorAction SilentlyContinue',
+            "`$env:HUDDLE_CHECK_ONLY = '1'",
+            "`$env:HUDDLE_BASE_URL = '$quotedDir'",
+            "iex ([IO.File]::ReadAllText('$quotedScript')) | Out-Null",
+            "'WRAPPER-STEP:' + [bool](Get-Command Write-Step -ErrorAction SilentlyContinue)",
+            "'WRAPPER-SNAP:' + [bool](Get-Variable huddleFunctionSnapshot -ErrorAction SilentlyContinue)"
+        )
+        [System.IO.File]::WriteAllText($wrapper, ($lines -join "`r`n"), [System.Text.Encoding]::ASCII)
+        try {
+            $output = (& $Ps51Path -NoProfile -ExecutionPolicy Bypass -File $wrapper) -join "`n"
+            $output | Should -Match 'WRAPPER-STEP:False'
+            $output | Should -Match 'WRAPPER-SNAP:False'
+        }
+        finally {
+            Remove-Item -LiteralPath $wrapper -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    It 'dot-sourced with HUDDLE_INSTALL_NO_MAIN the functions stay and no snapshot variable is created' -Skip:$script:NoPs51 {
+        $quotedScript = $ScriptPath.Replace("'", "''")
+        $command = "`$env:HUDDLE_INSTALL_NO_MAIN='1'; . '$quotedScript'; 'APP:' + [bool](Get-Command Install-App -ErrorAction SilentlyContinue); 'SNAP:' + [bool](Get-Variable huddleFunctionSnapshot -ErrorAction SilentlyContinue)"
+        $output = (& $Ps51Path -NoProfile -Command $command) -join "`n"
+        $output | Should -Match 'APP:True'
+        $output | Should -Match 'SNAP:False'
+    }
+
+    It 'Invoke-Download in Windows PowerShell 5.1 puts the session SecurityProtocol back' -Skip:$script:NoPs51 {
+        $quotedScript = $ScriptPath.Replace("'", "''")
+        $command = "`$env:HUDDLE_INSTALL_NO_MAIN='1'; . '$quotedScript'; function Invoke-WebRequest { }; [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls; Invoke-Download -Url 'https://example.invalid/x' -OutFile 'x'; 'PROTO:' + [Net.ServicePointManager]::SecurityProtocol"
+        $output = (& $Ps51Path -NoProfile -Command $command) -join "`n"
+        $output | Should -Match 'PROTO:Tls\s*($|\n)'
     }
 
     It 'as a file in Windows PowerShell 5.1 -CheckOnly exits 0' -Skip:$script:NoPs51 {
