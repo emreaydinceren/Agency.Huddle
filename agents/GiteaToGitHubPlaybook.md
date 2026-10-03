@@ -69,6 +69,17 @@ messages, and old revisions of docs.
   copy of the rule would name the very address the scrub is hiding.
 - **`.claude/settings.local.json` is stripped defensively.** It has never been committed, but
   it is the file that would hold machine-specific permissions.
+- **JSON-escaped Windows paths need their own rule.** A path inside a JSON string appears with
+  doubled backslashes (`Users\\<name>`), which a single-backslash needle does not match. Typing
+  a doubled backslash into a shell or an editing tool can silently collapse it to one, leaving
+  a duplicate line and an unscrubbed form. Cover it with a `regex:` line that needs no
+  backslash, such as `regex:Users[^A-Za-z0-9]{1,2}<name>==>Users/user`, and dry-run it.
+- **Add the secrets on the repo page, not under user settings.** A secret saved at user level
+  still reaches this workflow, but it reaches every repo that user owns. The repo page lists
+  `SYNC_*` when they are in the right place.
+- **The first sync into an existing GitHub repo may start no CI.** A repo created with a
+  licence file is not empty, and the first force-push replaces its commit. GitHub can show
+  "no workflow runs" afterwards. Push one new commit to Gitea `main` and sync again.
 
 ## One-time setup
 
