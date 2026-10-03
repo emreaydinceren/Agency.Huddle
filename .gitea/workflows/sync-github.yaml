@@ -42,7 +42,10 @@ jobs:
         run: |
           git config --global --add safe.directory '*'
           AUTH_URL="${GITHUB_SERVER_URL/http:\/\//http:\/\/x-access-token:$GIT_TOKEN@}"
-          git clone --branch main "$AUTH_URL/$GITHUB_REPOSITORY.git" scrub-clone
+          # --single-branch: only `main` and its tags are pushed, so only they may be scanned. A
+          # plain clone also fetches every unmerged branch, and `--all` below would then fail the
+          # run on fixtures that never reach GitHub (e.g. the analyzer-probe branch).
+          git clone --single-branch --branch main "$AUTH_URL/$GITHUB_REPOSITORY.git" scrub-clone
           git -C scrub-clone tag -l | xargs -r -n1 -I{} echo "found tag: {}"
 
       - name: 🛠️ Install git-filter-repo and gitleaks
