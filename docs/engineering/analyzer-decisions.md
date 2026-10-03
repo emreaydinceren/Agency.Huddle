@@ -11,6 +11,11 @@ the files that carry the settings are `Directory.Build.props`, `Directory.Packag
 First written 2026-10-03 against SonarAnalyzer.CSharp 10.32.0.713. Update it in the same
 commit as any change to those files.
 
+**Where it stands.** The denylist was 282 entries on `main`. It is now 144: 34 rules that fire
+here and are noise or reviewed false positives, 101 that were read and denied for a stated
+reason, and 9 telemetry entries. The goal is to keep narrowing it; every entry should end up
+with a reason on this page, not a number in a list.
+
 ## How a rule gets its severity
 
 | Layer | Where | Effect |
@@ -128,6 +133,45 @@ coverage.
 the probe was wrong or the rule is narrower than its title; nobody checked which, so both stay
 denied until someone does.
 
+### Seventh batch
+
+The 189 rules that were denied only because they were default-on were each read on their Sonar
+title (listed with `agents/scripts/List-SonarRules.cs`). Eighty-eight guard correctness, security,
+a house rule or a technology this repository uses, and were enabled. All had zero hits on the
+whole solution. The grouping is mine, from the titles; the sites were not read because there were
+none to read.
+
+| Group | Rules |
+| --- | --- |
+| Hazards and API misuse | `S3236`, `S3343`, `S4583`, `S3346`, `S5034`, `S3869`, `S3363`, `S1215`, `S3971`, `S3981`, `S3998`, `S3875`, `S1048`, `S2291`, `S2139`, `S3877`, `S3397`, `S3444`, `S3011`, `S3885`, `S2953`, `S3060`, `S2934`, `S3449`, `S2757`, `S2761`, `S2198`, `S3440`, `S3603`, `S4201`, `S3457`, `S3458`, `S4275`, `S2372`, `S2376`, `S4456`, `S3889`, `S3443`, `S2178`, `S3464` |
+| Types, enums, overrides and attributes | `S4070`, `S2345`, `S2346`, `S4015`, `S4019`, `S3600`, `S3262`, `S3466`, `S3427`, `S3450`, `S3451`, `S3447`, `S4260`, `S4545`, `S3251`, `S2368`, `S3887`, `S2696`, `S3010`, `S1104`, `S2290` |
+| Logging (matches the `{PascalCase}` template rule) | `S6668`, `S6673`, `S6678`, `S6672`, `S6618`, `S6580` |
+| Test hygiene | `S2925`, `S3433`, `S2187`, `S3415`, `S2970` |
+| Blazor and web | `S6797`, `S6798`, `S6800`, `S6962`, `S6967`, `S6964`, `S6930`, `S6931`, `S6934`, `S6965`, `S6961`, `S6932` |
+| Security | `S6377`, `S7039`, `S1313`, `S2857` |
+
+**Proven (41)**, by a deliberate violation that failed the build with the rule's ID: `S1048`,
+`S1104`, `S1215`, `S1313`, `S2139`, `S2178`, `S2290`, `S2291`, `S2346`, `S2368`, `S2376`,
+`S2696`, `S2757`, `S2761`, `S2953`, `S3010`, `S3011`, `S3060`, `S3262`, `S3343`, `S3427`,
+`S3440`, `S3443`, `S3447`, `S3458`, `S3466`, `S3600`, `S3603`, `S3869`, `S3875`, `S3885`,
+`S3981`, `S4070`, `S4201`, `S4456`, `S4545`, `S5034`, `S6580`, `S6618`, `S6672`, `S6678`.
+
+**Unproven (47).** They produced no output on the real code and were not (or could not be)
+triggered by a probe: `S2187`, `S2198`, `S2345`, `S2372`, `S2857`, `S2925`, `S2934`, `S2970`,
+`S3236`, `S3251`, `S3346`, `S3363`, `S3397`, `S3415`, `S3433`, `S3444`, `S3449`, `S3450`,
+`S3451`, `S3457`, `S3464`, `S3877`, `S3887`, `S3889`, `S3971`, `S3998`, `S4015`, `S4019`,
+`S4260`, `S4275`, `S4583`, `S6377`, `S6668`, `S6673`, `S6797`, `S6798`, `S6800`, `S6930`,
+`S6931`, `S6932`, `S6934`, `S6961`, `S6962`, `S6964`, `S6965`, `S6967`, `S7039`.
+
+Some of the unproven rules were probed and did not fire: `S2372` (a getter that throws
+`InvalidOperationException`), `S2345`, `S3346` (`Debug.Assert(x++ > 0)`), `S3236`, `S3998`
+(`lock (typeof(T))`), `S3887`, `S4275`, `S2198`, `S3450`, `S3451`. Either the probe was not
+what the rule looks for or the rule is narrower than its title. Nobody checked which. The test
+and web rules need a test or web project, and were not probed at all.
+
+A rule that was enabled and never fires is harmless but gives a false sense of cover. If one of
+these matters to you, write a probe for it first.
+
 ## Denied on purpose
 
 Thirty-four rules fire on this codebase today and stay denied. `src` and `tests` are hit counts
@@ -174,21 +218,43 @@ the decision rests on the diagnostic's message and its hit count, with the sites
 The three **Reviewed** rows are the only ones where the sites were read. For every other row,
 treat "Noise" as "not worth the cost at the time", not as "proven harmless".
 
-## Denied, zero hits, never judged
+## Denied after review, zero hits
 
-About 199 rules are denied only because they were default-on when the analyzer arrived. They
-have no hits today, so enabling one costs nothing. **They were never judged one by one**, and
-no rule description was to hand for most of them, so this page does not name what each does. The IDs are in the second `<NoWarn>` group of `Directory.Build.props`, under a
-comment saying so.
+The 101 rules of the original 189 that stayed denied, in five groups, each its own `<NoWarn>`
+element in `Directory.Build.props` with the reason in a comment above it. They have zero hits, so
+the reason is never "it would break the build"; it is what the rule is. Judged on the Sonar
+title only.
 
-To clear a rule from the list:
+| Group | Count | Rules | Why |
+| --- | --- | --- | --- |
+| Technology this repository does not use | 22 | `S6420`, `S6419`, `S6424`, `S6422` (Azure Functions), `S3597`, `S3598` (WCF), `S4210` (WinForms), `S4428`, `S4159`, `S4277` (MEF), `S4200`, `S4211`, `S3925`, `S3927`, `S3926` (legacy serialization), `S3431` (NUnit), `S6670`, `S6675` (the `Trace` API), `S8380`, `S8381`, `S8367`, `S8368` (C# 14 keyword-escape naming) | Nothing here to guard. The C# 14 ones are also reported by the compiler. |
+| Another rule already covers it | 14 | `S112` (`CA2201`), `S2629` (`CA2254`), `S3260` (`CA1852`), `S1172` (`IDE0060`), `S3445` (`CA2200`), `S101` (`IDE1006`), `S1155` (`CA1860`), `S1905` (`IDE0004`), `S2223` (`CA2211`), `S2681` (`IDE0011`), `S1699`, `S2306`, `S4220`, `S3903` | Enabling it would print each finding twice. The mapping is by title, not tested. |
+| Kept for a stated reason | 4 | `S4036`, `S1607`, `S6610`, `S1075` | See below. |
+| Tried, did not fire | 2 | `S2114`, `S2328` | See [Sixth batch](#sixth-batch). |
+| Style, naming, design opinion or micro-performance | 59 | `S1110`, `S1116`, `S1121`, `S1123`, `S1133`, `S1134`, `S1168`, `S1185`, `S1186`, `S1199`, `S1210`, `S1244`, `S1264`, `S1694`, `S1939`, `S1940`, `S2166`, `S2219`, `S2344`, `S3217`, `S3246`, `S3247`, `S3249`, `S3261`, `S3263`, `S3400`, `S3453`, `S3456`, `S3459`, `S3604`, `S3610`, `S3897`, `S3904`, `S3963`, `S3972`, `S3973`, `S3993`, `S4035`, `S4050`, `S4052`, `S4061`, `S4136`, `S4524`, `S4635`, `S4663`, `S6561`, `S6575`, `S6588`, `S6607`, `S6608`, `S6609`, `S6613`, `S6617`, `S6640`, `S6960`, `S6968`, `S818`, `S907`, `S927` | Taste. None guards correctness or security. |
 
-1. Look up its description on rules.sonarsource.com.
+The four **kept for a stated reason** rest on reasoning, not on a test:
+
+- `S4036` (OS commands should not rely on `PATH` resolution): the app spawns agent adapters by
+  command name. Believed deliberate; not checked against the spawn code.
+- `S1607` (tests should not be ignored): conditional `Skip` is used for the live-agent tests, and
+  the CI quarantine may use it too. Not checked whether Sonar flags a conditional skip.
+- `S6610` (use the `char` overload of `StartsWith`): the house rule is
+  `StringComparison.Ordinal`. Whether the two actually conflict was not tested.
+- `S1075` (URIs should not be hardcoded): fixtures hardcode URIs legitimately. Zero hits today,
+  which is mildly surprising; not investigated.
+
+Nine `S9999-*` entries in the last group are Sonar's own telemetry diagnostics, not code rules.
+
+Nothing in these groups is urgent. The "style" group is the only one where a different taste
+would change the answer, and the `S6561`, `S6575` and `S6588` date rules and `S6607` (filter
+before sort) are the ones closest to correctness. To clear a rule:
+
+1. Read its title (`dotnet run agents/scripts/List-SonarRules.cs`) and its page on
+   rules.sonarsource.com.
 2. Decide whether it guards correctness, security or a house rule, or is style.
 3. If it is worth having, move it to `.editorconfig` as a warning and prove it fires.
-4. If it is not, leave it and add it, with the reason, to [Denied on purpose](#denied-on-purpose).
-
-Nine `S9999-*` entries in the third group are Sonar's own telemetry diagnostics, not code rules.
+4. If it is not, leave it and put the reason in the group's comment and in the table above.
 
 ## Non-Sonar settings
 
@@ -226,11 +292,13 @@ was wrong, as above.
 
 ## Changing a rule
 
-1. Measure first: build with the rule enabled and the denylist lifted, and read the hits. Zero
-   hits is the cheap case; some hits means reading the sites.
-2. Prove it fires. Write a scratch file with a deliberate violation, build, expect the rule's
+1. Read what the rule is. `dotnet run agents/scripts/List-SonarRules.cs` prints every rule's ID,
+   severity and title. Judge it on that, not on its number.
+2. Measure: build with the rule enabled and the denylist lifted, and read the hits. Zero hits is
+   the cheap case; some hits means reading the sites.
+3. Prove it fires. Write a scratch file with a deliberate violation, build, expect the rule's
    ID, delete the file. "No output" does not mean "works".
-3. Fix real findings in the same change. Do not suppress to get a build through; the suppression
+4. Fix real findings in the same change. Do not suppress to get a build through; the suppression
    rules are in `CSharpPrinciples.md`.
-4. Move the rule between the groups in `Directory.Build.props` and add the `.editorconfig` line.
-5. Update this page in the same commit.
+5. Move the rule between the groups in `Directory.Build.props` and add the `.editorconfig` line.
+6. Update this page in the same commit.
