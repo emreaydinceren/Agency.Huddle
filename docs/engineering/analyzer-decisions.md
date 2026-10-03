@@ -92,7 +92,7 @@ builds them and compares what fired with what each `// probe: Sxxxx` tag expects
 `Check-All.ps1` runs it only when the branch touches the analyzer configuration, because it builds two
 projects and takes about a minute.
 
-Where the probes stand: of 295 enabled Sonar rules, 238 have a probe that fires and 57 do not. The 57 are
+Where the probes stand: of 296 enabled Sonar rules, 239 have a probe that fires and 57 do not. The 57 are
 18 `no-technology`, 6 `compiler-rejects`, 7 `needs-package`, 22 `probe-did-not-fire` and 4
 `not-yet-probed`. The `probe-did-not-fire` rules are the interesting ones; nobody has checked whether
 the probe or the rule is at fault. The `IDE*` and `RS0030` rules in the first Enabled table are not Sonar
