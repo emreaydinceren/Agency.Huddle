@@ -12,17 +12,16 @@ HUDDLE_REPO="${HUDDLE_REPO:-__HUDDLE_REPO__}"
 # value is built from two pieces and survives the replacement.
 HUDDLE_REPO_PLACEHOLDER="__HUDDLE_""REPO__"
 
-# Prints a usage error on stderr and exits 3.
+# Prints a "[!!] usage" line with its fix on stderr and returns 3. Callers pass the 3 up to main,
+# which returns it; only the entry guard at the end of the file exits.
 usage_error() {
-    printf 'install.sh: %s\n' "$1" >&2
-    printf 'usage: install.sh [--version TAG] [--base-url URL|DIR] [--install-root DIR] [--data-root DIR]\n' >&2
-    printf '                  [--check-only] [--uninstall [--purge-data]] [--force] [--no-launch]\n' >&2
-    exit 3
+    log_step fail usage "$1" "usage: install.sh [--version TAG] [--base-url URL|DIR] [--install-root DIR] [--data-root DIR] [--check-only] [--uninstall [--purge-data]] [--force] [--no-launch]" >&2
+    return 3
 }
 
-# Exits 3 unless the flag in $1 has a value in $2.
+# Returns 3 (after the usage message) unless the flag in $1 has a value in $2.
 need_value() {
-    [ "$#" -ge 2 ] || usage_error "$1 needs a value"
+    [ "$#" -ge 2 ] || usage_error "$1 needs a value" || return $?
 }
 
 # Prints 1 when $1 is a non-empty value other than 0 (how HUDDLE_* switches are read), else 0.
@@ -48,16 +47,16 @@ parse_args() {
     OPT_NO_LAUNCH=$(env_switch "${HUDDLE_NO_LAUNCH:-}")
     while [ "$#" -gt 0 ]; do
         case $1 in
-            --version) need_value "$@"; OPT_VERSION=$2; shift 2 ;;
-            --base-url) need_value "$@"; OPT_BASE_URL=$2; shift 2 ;;
-            --install-root) need_value "$@"; OPT_INSTALL_ROOT=$2; shift 2 ;;
-            --data-root) need_value "$@"; OPT_DATA_ROOT=$2; shift 2 ;;
+            --version) need_value "$@" || return $?; OPT_VERSION=$2; shift 2 ;;
+            --base-url) need_value "$@" || return $?; OPT_BASE_URL=$2; shift 2 ;;
+            --install-root) need_value "$@" || return $?; OPT_INSTALL_ROOT=$2; shift 2 ;;
+            --data-root) need_value "$@" || return $?; OPT_DATA_ROOT=$2; shift 2 ;;
             --check-only) OPT_CHECK_ONLY=1; shift ;;
             --uninstall) OPT_UNINSTALL=1; shift ;;
             --purge-data) OPT_PURGE_DATA=1; shift ;;
             --force) OPT_FORCE=1; shift ;;
             --no-launch) OPT_NO_LAUNCH=1; shift ;;
-            *) usage_error "unknown option: $1" ;;
+            *) usage_error "unknown option: $1" || return $? ;;
         esac
     done
 }
@@ -84,7 +83,7 @@ resolve_asset() {
         else
             case $OPT_BASE_URL in
                 https://*) ASSET_KIND=url ;;
-                *) usage_error "--base-url must be an https URL or an existing folder: $OPT_BASE_URL" ;;
+                *) usage_error "--base-url must be an https URL or an existing folder: $OPT_BASE_URL" || return $? ;;
             esac
         fi
         ASSET_SRC="$base/$1"
@@ -693,7 +692,7 @@ install_app() {
     archive=$1
     APP_CHANGED=0
     sha=$(file_sha256 "$archive") || return 1
-    if [ -f "$APP_EXE" ] && step_satisfied "$STATE_FILE" app_sha256 "$sha"; then
+    if [ "${OPT_FORCE:-0}" != 1 ] && [ -f "$APP_EXE" ] && step_satisfied "$STATE_FILE" app_sha256 "$sha"; then
         log_step skip app "already installed"
         return 0
     fi
@@ -1391,24 +1390,274 @@ do_uninstall() {
     return 0
 }
 
-main() {
-    parse_args "$@"
-    if [ -z "$OPT_BASE_URL" ] && [ "$HUDDLE_REPO" = "$HUDDLE_REPO_PLACEHOLDER" ]; then
-        printf 'install.sh: this copy does not know which repository to download from.\n' >&2
-        printf 'Run the install.sh attached to a release, or pass --base-url <folder|https url>.\n' >&2
-        exit 3
+# ---- Orchestration (Spec sections 6 and 7) -----------------------------------------------------
+
+LOCK_HELD=0
+LOCK_DIR=""
+# Seconds the Claude sign-in check may take before it counts as "not signed in".
+AUTH_STATUS_SECONDS=10
+
+# Takes the single-installer lock: mkdir is atomic, so the second installer fails at once. Sets
+# LOCK_HELD only when this run created the folder. Returns 1 when the lock is taken by someone else
+# or the cache folder cannot be created.
+acquire_lock() {
+    LOCK_DIR="$CACHE_DIR/install.lock"
+    mkdir -p "$CACHE_DIR" 2>/dev/null || return 1
+    mkdir "$LOCK_DIR" 2>/dev/null || return 1
+    LOCK_HELD=1
+}
+
+# Removes the lock, but only one this run took. Also the EXIT trap of the entry path.
+release_lock() {
+    [ "$LOCK_HELD" = 1 ] || return 0
+    LOCK_HELD=0
+    # --purge-data removes the data root, and the lock with it: then there is nothing to release.
+    rmdir "$LOCK_DIR" 2>/dev/null || true
+}
+
+# acquire_lock plus the [!!] message and fix. Returns 1 on failure.
+take_lock() {
+    if acquire_lock; then
+        return 0
     fi
+    if [ -d "$CACHE_DIR/install.lock" ]; then
+        log_step fail installer "another Agency Huddle installer is already running." "Wait for it to finish, then run this command again. If none is running, delete the folder $CACHE_DIR/install.lock and run it again."
+    else
+        log_step fail installer "cannot create $CACHE_DIR" "Check that you may write to $DATA_ROOT."
+    fi
+    return 1
+}
+
+# Seam: starts the app bundle in $1 the way a double-click does.
+run_open() {
+    open "$1" </dev/null
+}
+
+# Seam: runs "<claude> auth status" and returns its exit code (0 = signed in). Output is discarded
+# (it names the account) and stdin is closed. A binary that is missing, not executable or still
+# running after AUTH_STATUS_SECONDS counts as not signed in.
+claude_auth_status() {
+    local claude pid watchdog rc
+    claude=$1
+    [ -x "$claude" ] || return 1
+    "$claude" auth status >/dev/null 2>&1 </dev/null &
+    pid=$!
+    ( sleep "$AUTH_STATUS_SECONDS"; kill "$pid" ) >/dev/null 2>&1 </dev/null &
+    watchdog=$!
+    rc=0
+    wait "$pid" || rc=$?
+    kill "$watchdog" >/dev/null 2>&1 || true
+    return "$rc"
+}
+
+# 0 unless the environment says nobody can complete a browser sign-in (Findings F3).
+interactive_environment() {
+    [ -z "${NO_BROWSER:-}${SSH_CONNECTION:-}${SSH_CLIENT:-}${SSH_TTY:-}${CLAUDE_CODE_REMOTE:-}" ]
+}
+
+# Seam: 0 when a person is looking at this run. stdin is the script itself under `curl | sh`, so the
+# terminal is judged by stdout.
+is_interactive() {
+    interactive_environment && [ -t 1 ]
+}
+
+# Prints the bundled claude binary for this Mac.
+claude_path() {
+    local arch
+    case ${HOST_RID:-} in
+        osx-x64) arch=x64 ;;
+        *) arch=arm64 ;;
+    esac
+    printf '%s/tools/acp/node_modules/@anthropic-ai/claude-agent-sdk-darwin-%s/claude' "${INSTALL_ROOT%/}" "$arch"
+}
+
+# The closing Claude sign-in note (Findings F3). Advice only: it never fails the install.
+show_claude_signin() {
+    local claude
+    claude=$(claude_path)
+    if is_interactive; then
+        if claude_auth_status "$claude"; then
+            printf 'Claude: signed in.\n'
+            return 0
+        fi
+        printf 'Claude is not signed in yet. Sign in once, then start Agency Huddle:\n'
+    else
+        printf 'To use Claude, sign in once before you start Agency Huddle:\n'
+    fi
+    printf '  "%s" auth login\n' "$claude"
+    printf '(This opens your browser. Add --console to use API billing instead of a Claude subscription.)\n'
+    return 0
+}
+
+# Copies or downloads SHA256SUMS into the cache and parses it into SUMS (3 attempts for a URL).
+fetch_sums() {
+    local dest attempt
+    dest="$CACHE_DIR/SHA256SUMS"
+    resolve_asset SHA256SUMS || return $?
+    if ! mkdir -p "$CACHE_DIR"; then
+        log_step fail release "cannot create $CACHE_DIR" "Check that you may write to $DATA_ROOT."
+        return 1
+    fi
+    rm -f "$dest"
+    if [ "$ASSET_KIND" = file ]; then
+        if ! cp "$ASSET_SRC" "$dest" 2>/dev/null; then
+            log_step fail release "cannot read $ASSET_SRC" "Check --base-url: the folder must hold SHA256SUMS and the release archives."
+            return 1
+        fi
+    else
+        attempt=1
+        while ! http_get "$ASSET_SRC" "$dest"; do
+            rm -f "$dest"
+            if [ "$attempt" -ge 3 ]; then
+                log_step fail release "cannot download $ASSET_SRC" "Check your network connection and --version, then run the installer again."
+                return 1
+            fi
+            if [ "$attempt" -eq 1 ]; then
+                sleep_seconds 1
+            else
+                sleep_seconds 3
+            fi
+            attempt=$((attempt + 1))
+        done
+    fi
+    if ! parse_sums "$dest"; then
+        log_step fail release "cannot read $dest" "Run the installer again."
+        return 1
+    fi
+}
+
+# Writes a state key unless it already holds the value, so a run with nothing new touches no file.
+state_set() {
+    if step_satisfied "$STATE_FILE" "$1" "$2"; then
+        return 0
+    fi
+    write_state_key "$STATE_FILE" "$1" "$2"
+}
+
+# Prints a flat string value of the installed release-info.json.
+release_info_value() {
+    sed -n "s/.*\"$1\" *: *\"\([^\"]*\)\".*/\1/p" "$INSTALL_ROOT/release-info.json" 2>/dev/null | head -1
+}
+
+# Logs a failed state write and returns 1.
+state_failed() {
+    log_step fail state "cannot write $STATE_FILE" "Check that you may write to $INSTALL_ROOT, then run the installer again."
+    return 1
+}
+
+# Steps 1 to 5 of Spec section 6 plus summary, sign-in note and launch. Each step writes its state key
+# after itself, so an interrupted run resumes at the first unsatisfied step. Returns 0, or 1 after
+# logging the failing step.
+install_steps() {
+    local name expected archive version node_version lock_sha
+    fetch_sums || return 1
+    name="huddle-$HOST_RID.tar.gz"
+    if ! expected=$(expected_hash "$name" 2>/dev/null); then
+        log_step fail release "SHA256SUMS has no line for $name" "Use a release that contains $name for this Mac (--version), or run the installer attached to it."
+        return 1
+    fi
+    # A satisfied app step is decided from the SHA256SUMS line alone: the archive is not downloaded.
+    if [ "${OPT_FORCE:-0}" != 1 ] && [ -f "$APP_EXE" ] && step_satisfied "$STATE_FILE" app_sha256 "$expected"; then
+        log_step skip app "already installed"
+        APP_CHANGED=0
+    else
+        resolve_asset "$name" || return $?
+        if ! archive=$(get_verified_asset "$name" "$expected" "$ASSET_KIND:$ASSET_SRC" "$CACHE_DIR"); then
+            log_step fail app "cannot get a verified $name" "Check your network connection (the reason is above), then run the installer again."
+            return 1
+        fi
+        install_app "$archive" || return 1
+    fi
+    version=$(release_info_value version)
+    if [ -z "$version" ]; then
+        log_step fail app "$INSTALL_ROOT/release-info.json has no version" "Run the installer again with --force."
+        return 1
+    fi
+    state_set schema 1 || state_failed || return 1
+    state_set version "$version" || state_failed || return 1
+    state_set app_sha256 "$expected" || state_failed || return 1
+
+    install_node || return 1
+    node_version=$(release_info_value nodeVersion)
+    state_set node_version "$node_version" || state_failed || return 1
+
+    install_adapter || return 1
+    lock_sha=$(file_sha256 "$INSTALL_ROOT/tools/acp/package-lock.json") || return 1
+    state_set lock_sha256 "$lock_sha" || state_failed || return 1
+
+    install_launcher || return 1
+
+    if [ "$APP_CHANGED" = 1 ] || [ "$NODE_CHANGED" = 1 ] || [ "$ADAPTER_CHANGED" = 1 ] || [ "$LAUNCHER_CHANGED" = 1 ]; then
+        printf 'Agency Huddle %s installed.\n' "$version"
+    else
+        printf 'Already up to date (%s).\n' "$version"
+    fi
+    printf 'Start it from Launchpad or Spotlight (Agency Huddle), or open a new terminal and run: huddle\n'
+    show_claude_signin
+    if [ "${OPT_NO_LAUNCH:-0}" != 1 ]; then
+        if run_open "$APP_BUNDLE"; then
+            log_step ok launch "started Agency Huddle"
+        else
+            log_step fail launch "could not start Agency Huddle" "Start it from Launchpad or Spotlight (Agency Huddle), or open a new terminal and run: huddle"
+        fi
+    fi
+    return 0
+}
+
+# Runs the whole installer and returns its exit code (0 success or up to date, 1 a step failed, 2
+# prerequisites unmet, 3 bad usage). Never exits: only the entry guard below does.
+# Order: arguments, prerequisites (an uninstall skips them: it must work offline and on a Mac that no
+# longer qualifies), lock, uninstall or install steps.
+main() {
+    local rc
+    parse_args "$@" || return $?
+    if [ "$OPT_PURGE_DATA" = 1 ] && [ "$OPT_UNINSTALL" != 1 ]; then
+        usage_error "--purge-data only works together with --uninstall. Run again with --uninstall --purge-data to remove the program and your data, or drop --purge-data." || return $?
+    fi
+    if [ "$OPT_UNINSTALL" != 1 ] && [ -z "$OPT_BASE_URL" ] && [ "$HUDDLE_REPO" = "$HUDDLE_REPO_PLACEHOLDER" ]; then
+        log_step fail usage "this copy does not know which repository to download from." "Run the install.sh attached to a release, or pass --base-url <folder|https url>." >&2
+        return 3
+    fi
+    if [ -z "${HOME:-}" ]; then
+        log_step fail usage "HOME is not set, so the install folders cannot be worked out." "Run the installer from a normal login shell, or pass --install-root and --data-root and set HOME." >&2
+        return 3
+    fi
+    resolve_asset SHA256SUMS || return $?
     resolve_paths
-    if [ "$OPT_CHECK_ONLY" = 1 ]; then
+    if [ "$OPT_UNINSTALL" != 1 ] || [ "$OPT_CHECK_ONLY" = 1 ]; then
         check_prerequisites
         print_prerequisites
         if [ "$PREREQ_FAILED" -ne 0 ]; then
             return 2
         fi
-        printf 'All prerequisites are met.\n'
-        return 0
+        if [ "$OPT_CHECK_ONLY" = 1 ]; then
+            printf 'All prerequisites are met.\n'
+            return 0
+        fi
     fi
-    return 0
+    rc=0
+    if [ "$OPT_UNINSTALL" = 1 ]; then
+        # With no data folder there is nothing installed to race with, and nothing is created.
+        if [ -d "$DATA_ROOT" ]; then
+            take_lock || return 1
+        fi
+        do_uninstall || rc=$?
+    else
+        take_lock || return 1
+        install_steps || rc=$?
+    fi
+    release_lock
+    return "$rc"
 }
 
-[ -n "${HUDDLE_INSTALL_NO_MAIN:-}" ] || main "$@"
+# Entry guard: the only place that exits, and the only place that installs traps (a test that sources
+# this file with HUDDLE_INSTALL_NO_MAIN set keeps its own traps).
+if [ -z "${HUDDLE_INSTALL_NO_MAIN:-}" ]; then
+    trap release_lock EXIT
+    trap 'exit 129' HUP
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    main_status=0
+    main "$@" || main_status=$?
+    exit "$main_status"
+fi

@@ -151,8 +151,8 @@ test_sourcing_with_guard_runs_nothing() {
 test_main_returns_zero_for_folder_base() {
     mkdir -p "$TEST_HOME/assets"
     rc=0
-    (HUDDLE_REPO="owner/repo"; main --base-url "$TEST_HOME/assets") >/dev/null 2>&1 || rc=$?
-    t_assert_eq "0" "$rc" "main exit code"
+    (HUDDLE_REPO="owner/repo"; main --base-url "$TEST_HOME/assets" --uninstall) >/dev/null 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "main exit code (uninstall of nothing)"
 }
 
 test_main_unreplaced_placeholder_exits_3() {
@@ -161,7 +161,7 @@ test_main_unreplaced_placeholder_exits_3() {
     t_assert_eq "3" "$rc" "placeholder exit code"
     t_assert_contains "$err" "release" "run-from-a-release message"
     rc=0
-    (HUDDLE_REPO="__HUDDLE_REPO__"; main --base-url "$TEST_HOME") >/dev/null 2>&1 || rc=$?
+    (HUDDLE_REPO="__HUDDLE_REPO__"; main --base-url "$TEST_HOME" --uninstall) >/dev/null 2>&1 || rc=$?
     t_assert_eq "0" "$rc" "base-url makes the repo irrelevant"
 }
 
@@ -183,7 +183,7 @@ test_script_run_directly() {
     HUDDLE_INSTALL_NO_MAIN= HUDDLE_REPO="owner/repo" "$T_SHELL" -s -- --bogus <"$HERE/../install.sh" >/dev/null 2>&1 || rc=$?
     t_assert_eq "3" "$rc" "piped run (curl | sh), unknown flag"
     rc=0
-    HUDDLE_INSTALL_NO_MAIN= HUDDLE_REPO="owner/repo" "$T_SHELL" "$HERE/../install.sh" --base-url "$TEST_HOME" >/dev/null 2>&1 || rc=$?
+    HUDDLE_INSTALL_NO_MAIN= HUDDLE_REPO="owner/repo" "$T_SHELL" "$HERE/../install.sh" --base-url "$TEST_HOME" --uninstall >/dev/null 2>&1 || rc=$?
     t_assert_eq "0" "$rc" "direct run, folder base url"
 }
 
@@ -1950,6 +1950,480 @@ test_launcher_content_lines_exact_order() {
     t_assert_not_contains "$output" "$(printf '\r')" "no carriage returns"
 }
 
+# ---- Task 38: main (Spec sections 6 and 7) -------------------------------------------------
+# A FAKE release (tar.gz + SHA256SUMS in a folder, a fake node tarball served by a fake http_get) and
+# a private HOME: nothing here downloads, runs real npm or open, or touches the real home.
+
+MN_ZERO=0000000000000000000000000000000000000000000000000000000000000000
+
+# mn_build_release <tag>: builds $MN_BASE/huddle-osx-arm64.tar.gz and a SHA256SUMS with decoy lines.
+mn_build_release() {
+    ap_build_archive "$1"
+    mkdir -p "$MN_BASE"
+    cp "$AP_ARCHIVE" "$MN_BASE/huddle-osx-arm64.tar.gz"
+    mn_hash=$(file_sha256 "$MN_BASE/huddle-osx-arm64.tar.gz")
+    {
+        printf '%s  huddle-osx-x64.tar.gz\n' "$MN_ZERO"
+        printf '%s  huddle-win-x64.zip\n' "$MN_ZERO"
+        printf '%s  huddle-osx-arm64.tar.gz\n' "$mn_hash"
+    } >"$MN_BASE/SHA256SUMS"
+}
+
+# A sandbox with spaces in every path. MN_DATA is deliberately NOT created: "nothing created" is a test.
+mn_setup() {
+    ap_setup
+    MN_HOME="$AP/home dir"
+    MN_BASE="$AP/release dir"
+    MN_DATA="$AP/data dir"
+    MN_ROOT="$MN_DATA/install"
+    MN_NPM_FAIL="$AP/npm-fail-once"
+    MN_MACOS=15
+    MN_AUTH_RC=0
+    MN_INTERACTIVE=1
+    mkdir -p "$MN_HOME"
+    nd_build_node v24.21.0 arm64
+    mn_build_release 1.2.3
+    rm -f "$AP/http.log"
+}
+
+# The seams main reaches, faked. Called inside the subshell of mn_run.
+mn_fakes() {
+    ap_stubs
+    la_stubs
+    good_seams
+    macos_major() { printf '%s\n' "$MN_MACOS"; }
+    codesign() { :; }
+    xattr() { :; }
+    sleep_seconds() { :; }
+    http_get() {
+        printf '%s\n' "$1" >>"$AP/http.log"
+        [ -f "$AP/nodebase/${1##*/}" ] || return 22
+        cp "$AP/nodebase/${1##*/}" "$2"
+    }
+    node_version_of() {
+        if [ -f "$1" ]; then
+            sed -n 's/^# fakenode //p' "$1"
+        fi
+    }
+    run_npm_ci() {
+        printf 'npm_ci\n' >>"$AP_CALLS"
+        if [ -f "$MN_NPM_FAIL" ]; then
+            rm -f "$MN_NPM_FAIL"
+            printf 'npm exploded\n'
+            return 1
+        fi
+        mkdir -p "$(dirname "$ADAPTER_ENTRY")"
+        printf '// adapter\n' >"$ADAPTER_ENTRY"
+    }
+    run_open() {
+        printf 'run_open %s\n' "$1" >>"$AP_CALLS"
+        return "${MN_OPEN_RC:-0}"
+    }
+    claude_auth_status() {
+        printf 'auth_status %s\n' "$1" >>"$AP_CALLS"
+        return "$MN_AUTH_RC"
+    }
+    is_interactive() {
+        [ "$MN_INTERACTIVE" -eq 1 ]
+    }
+}
+
+# mn_run [main args]: runs main the way the entry guard does, in a subshell, against the fake release
+# and the sandbox roots. MN_RC is its status, MN_OUT its stdout and stderr.
+mn_run() {
+    MN_RC=0
+    (
+        HOME="$MN_HOME"
+        export HOME
+        HUDDLE_REPO="owner/repo"
+        mn_fakes
+        mn_status=0
+        main --base-url "$MN_BASE" --install-root "$MN_ROOT" --data-root "$MN_DATA" "$@" || mn_status=$?
+        exit "$mn_status"
+    ) >"$AP/mn.out" 2>&1 || MN_RC=$?
+    MN_OUT=$(cat "$AP/mn.out")
+}
+
+mn_state() {
+    read_state_key "$MN_ROOT/install-state" "$1" || true
+}
+
+# Path, size and modification time of every file main may touch, sorted.
+mn_snapshot() {
+    find "$MN_ROOT" "$MN_HOME" -type f -exec ls -l {} + | sort
+}
+
+# mn_entry direct|piped args...: runs the real script as a child process the two ways users do.
+mn_entry() {
+    mn_mode=$1
+    shift
+    mn_shell=$(command -v "$T_SHELL")
+    mn_script="$HERE/../install.sh"
+    if [ "$mn_mode" = piped ]; then
+        env HOME="$MN_HOME" HUDDLE_INSTALL_NO_MAIN= HUDDLE_REPO=owner/repo "$mn_shell" -s -- "$@" <"$mn_script" 2>&1 || printf 'rc=%s\n' "$?"
+    else
+        env HOME="$MN_HOME" HUDDLE_INSTALL_NO_MAIN= HUDDLE_REPO=owner/repo "$mn_shell" "$mn_script" "$@" </dev/null 2>&1 || printf 'rc=%s\n' "$?"
+    fi
+}
+
+test_main_first_run_installs_everything() {
+    mn_setup
+    mn_run
+    t_assert_eq "0" "$MN_RC" "exit code: $MN_OUT"
+    t_assert_contains "$MN_OUT" "Agency Huddle 1.2.3 installed." "summary line"
+    t_assert_contains "$MN_OUT" "[ok] app" "app step"
+    t_assert_contains "$MN_OUT" "[ok] node" "node step"
+    t_assert_contains "$MN_OUT" "[ok] adapter" "adapter step"
+    t_assert_contains "$MN_OUT" "[ok] launcher" "launcher step"
+    t_assert_file "$MN_ROOT/app/Huddle.App" "app host"
+    t_assert_file "$MN_ROOT/node/bin/node" "node"
+    t_assert_file "$MN_ROOT/tools/acp/node_modules/@agentclientprotocol/claude-agent-acp/dist/index.js" "adapter entry"
+    t_assert_file "$MN_ROOT/bin/huddle" "launcher"
+    t_assert_file "$MN_HOME/Applications/Agency Huddle.app/Contents/Info.plist" "bundle"
+    t_assert_eq "1.2.3" "$(mn_state version)" "state version"
+    t_assert_eq "$(file_sha256 "$MN_BASE/huddle-osx-arm64.tar.gz")" "$(mn_state app_sha256)" "state app_sha256"
+    t_assert_eq "v24.21.0" "$(mn_state node_version)" "state node_version"
+    t_assert_eq "$(file_sha256 "$MN_ROOT/tools/acp/package-lock.json")" "$(mn_state lock_sha256)" "state lock_sha256"
+    t_assert_eq "1" "$(ap_count_calls '^npm_ci')" "npm ci ran once"
+    t_assert_eq "1" "$(ap_count_calls '^run_open ')" "open ran once"
+    t_assert_eq "run_open $MN_HOME/Applications/Agency Huddle.app" "$(grep '^run_open ' "$AP_CALLS")" "open starts the .app"
+    t_assert_no_file "$MN_DATA/cache/install.lock" "the lock is released"
+}
+
+test_main_second_run_skips_everything_and_changes_no_file() {
+    mn_setup
+    mn_run
+    t_assert_eq "0" "$MN_RC" "first run: $MN_OUT"
+    find "$MN_ROOT" "$MN_HOME" -type f -exec touch -t 200101010000 {} +
+    rm -rf "$MN_DATA/cache"
+    rm -f "$AP/http.log"
+    : >"$AP_CALLS"
+    before=$(mn_snapshot)
+    mn_run
+    after=$(mn_snapshot)
+    t_assert_eq "0" "$MN_RC" "second run: $MN_OUT"
+    t_assert_contains "$MN_OUT" "Already up to date (1.2.3)." "up-to-date line"
+    t_assert_not_contains "$MN_OUT" "installed." "no installed line"
+    t_assert_contains "$MN_OUT" "[skip] app" "app skipped"
+    t_assert_contains "$MN_OUT" "[skip] node" "node skipped"
+    t_assert_contains "$MN_OUT" "[skip] adapter" "adapter skipped"
+    t_assert_contains "$MN_OUT" "[skip] launcher" "launcher skipped"
+    t_assert_not_contains "$MN_OUT" "[..]" "no step did any work"
+    t_assert_eq "$before" "$after" "path, size and mtime snapshot"
+    t_assert_no_file "$AP/http.log" "http_get was never called (empty cache dir)"
+    t_assert_eq "0" "$(ap_count_calls '^npm_ci')" "no npm ci"
+}
+
+test_main_changed_archive_runs_only_the_app_step() {
+    mn_setup
+    mn_run
+    printf 'mine\n' >"$MN_DATA/marker.txt"
+    mn_build_release 1.3.0
+    : >"$AP_CALLS"
+    mn_run
+    t_assert_eq "0" "$MN_RC" "upgrade: $MN_OUT"
+    t_assert_contains "$MN_OUT" "Agency Huddle 1.3.0 installed." "new version"
+    t_assert_contains "$MN_OUT" "[ok] app" "app replaced"
+    t_assert_contains "$MN_OUT" "[skip] node" "node kept"
+    t_assert_contains "$MN_OUT" "[skip] adapter" "adapter kept"
+    t_assert_eq "mine" "$(cat "$MN_DATA/marker.txt")" "the data root is untouched"
+    t_assert_eq "1.3.0" "$(mn_state version)" "state version"
+    t_assert_eq "$(file_sha256 "$MN_BASE/huddle-osx-arm64.tar.gz")" "$(mn_state app_sha256)" "state app_sha256"
+    t_assert_eq "0" "$(ap_count_calls '^npm_ci')" "no npm ci on an app-only change"
+}
+
+test_main_force_reinstalls_the_app() {
+    mn_setup
+    mn_run
+    : >"$AP_CALLS"
+    mn_run --force
+    t_assert_eq "0" "$MN_RC" "forced run: $MN_OUT"
+    t_assert_contains "$MN_OUT" "[ok] app" "app reinstalled although nothing changed"
+}
+
+test_main_interrupted_run_resumes_at_the_adapter() {
+    mn_setup
+    : >"$MN_NPM_FAIL"
+    mn_run
+    t_assert_eq "1" "$MN_RC" "exit code of the failed run: $MN_OUT"
+    t_assert_contains "$MN_OUT" "[!!] adapter" "the failing step is named"
+    t_assert_contains "$MN_OUT" "fix:" "with a fix line"
+    t_assert_not_contains "$MN_OUT" "installed." "no success line"
+    t_assert_eq "v24.21.0" "$(mn_state node_version)" "node_version was written"
+    t_assert_eq "" "$(mn_state lock_sha256)" "lock_sha256 was not written"
+    t_assert_eq "0" "$(ap_count_calls '^run_open ')" "no launch after a failure"
+    t_assert_no_file "$MN_DATA/cache/install.lock" "the lock is released after a failure"
+    mn_run
+    t_assert_eq "0" "$MN_RC" "resumed run: $MN_OUT"
+    t_assert_contains "$MN_OUT" "[skip] app" "app already done"
+    t_assert_contains "$MN_OUT" "[skip] node" "node already done"
+    t_assert_contains "$MN_OUT" "[ok] adapter" "adapter resumed"
+    t_assert_eq "2" "$(ap_count_calls '^npm_ci')" "npm ci ran again exactly once"
+    t_assert_eq "$(file_sha256 "$MN_ROOT/tools/acp/package-lock.json")" "$(mn_state lock_sha256)" "lock_sha256 written last"
+}
+
+test_main_concurrent_run_exits_1_and_keeps_the_other_lock() {
+    mn_setup
+    mkdir -p "$MN_DATA/cache/install.lock"
+    mn_run
+    t_assert_eq "1" "$MN_RC" "exit code: $MN_OUT"
+    t_assert_contains "$MN_OUT" "[!!] installer" "named step"
+    t_assert_contains "$MN_OUT" "another Agency Huddle installer is already running" "message"
+    t_assert_contains "$MN_OUT" "fix:" "fix line"
+    t_assert_no_file "$MN_ROOT" "nothing installed"
+    if [ -d "$MN_DATA/cache/install.lock" ]; then
+        t_pass
+    else
+        t_fail "the other installer's lock must stay"
+    fi
+}
+
+test_main_unmet_prerequisite_exits_2_and_creates_nothing() {
+    mn_setup
+    MN_MACOS=14
+    mn_run
+    t_assert_eq "2" "$MN_RC" "exit code: $MN_OUT"
+    t_assert_contains "$MN_OUT" "[!!]" "failed prerequisite shown"
+    t_assert_no_file "$MN_DATA" "no data root"
+    t_assert_no_file "$MN_ROOT" "no install root"
+    t_assert_no_file "$MN_HOME/Applications" "no bundle folder"
+    t_assert_no_file "$AP/http.log" "no download"
+}
+
+test_main_check_only_exits_0_or_2_and_creates_nothing() {
+    mn_setup
+    mn_run --check-only
+    t_assert_eq "0" "$MN_RC" "met: $MN_OUT"
+    t_assert_contains "$MN_OUT" "All prerequisites are met." "message"
+    MN_MACOS=14
+    mn_run --check-only
+    t_assert_eq "2" "$MN_RC" "unmet: $MN_OUT"
+    t_assert_no_file "$MN_DATA" "no data root"
+    t_assert_no_file "$MN_ROOT" "no install root"
+    t_assert_eq "0" "$(ap_count_calls '^run_open ')" "no launch"
+}
+
+test_main_purge_data_without_uninstall_exits_3() {
+    mn_setup
+    mn_run --purge-data
+    t_assert_eq "3" "$MN_RC" "exit code: $MN_OUT"
+    t_assert_contains "$MN_OUT" "[!!]" "failure marker"
+    t_assert_contains "$MN_OUT" "fix:" "fix line"
+    t_assert_contains "$MN_OUT" "--uninstall" "names the missing flag"
+    t_assert_no_file "$MN_DATA" "nothing created"
+}
+
+test_main_bad_arguments_print_a_fix_and_return_3() {
+    mn_setup
+    mn_run --bogus
+    t_assert_eq "3" "$MN_RC" "unknown flag: $MN_OUT"
+    t_assert_contains "$MN_OUT" "[!!]" "failure marker"
+    t_assert_contains "$MN_OUT" "fix:" "fix line"
+    t_assert_contains "$MN_OUT" "--bogus" "the flag is named"
+    t_assert_not_contains "$MN_OUT" "line " "no shell trace"
+    mn_run --version
+    t_assert_eq "3" "$MN_RC" "missing value: $MN_OUT"
+    rc=0
+    out=$( (HOME="$MN_HOME"; HUDDLE_REPO="owner/repo"; main --base-url "$AP/nope" --install-root "$MN_ROOT") 2>&1 ) || rc=$?
+    t_assert_eq "3" "$rc" "bad base url: $out"
+    t_assert_contains "$out" "fix:" "bad base url has a fix"
+    rc=0
+    out=$( (HOME=""; HUDDLE_REPO="owner/repo"; main --base-url "$MN_BASE") 2>&1 ) || rc=$?
+    t_assert_eq "3" "$rc" "empty HOME: $out"
+    t_assert_contains "$out" "HOME" "names HOME"
+}
+
+test_main_sign_in_note_when_interactive_and_signed_in() {
+    mn_setup
+    mn_run
+    t_assert_contains "$MN_OUT" "Claude: signed in." "signed-in note"
+    t_assert_not_contains "$MN_OUT" "auth login" "no instruction when signed in"
+    t_assert_eq "1" "$(ap_count_calls '^auth_status ')" "auth status asked once"
+    t_assert_eq "auth_status $MN_ROOT/tools/acp/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude" "$(grep '^auth_status ' "$AP_CALLS")" "the bundled claude binary"
+}
+
+test_main_sign_in_note_when_interactive_and_not_signed_in() {
+    mn_setup
+    MN_AUTH_RC=1
+    mn_run
+    t_assert_eq "0" "$MN_RC" "a missing sign-in never fails the install: $MN_OUT"
+    t_assert_contains "$MN_OUT" "Claude is not signed in yet. Sign in once, then start Agency Huddle:" "heading"
+    t_assert_contains "$MN_OUT" "  \"$MN_ROOT/tools/acp/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude\" auth login" "exact command line"
+    t_assert_contains "$MN_OUT" "(This opens your browser. Add --console to use API billing instead of a Claude subscription.)" "browser hint"
+    t_assert_not_contains "$MN_OUT" "Claude: signed in." "no signed-in line"
+}
+
+test_main_sign_in_note_when_not_interactive_only_prints_the_instruction() {
+    mn_setup
+    MN_INTERACTIVE=0
+    MN_AUTH_RC=1
+    mn_run
+    t_assert_eq "0" "$MN_RC" "exit code: $MN_OUT"
+    t_assert_contains "$MN_OUT" "To use Claude, sign in once before you start Agency Huddle:" "heading"
+    t_assert_contains "$MN_OUT" "claude-agent-sdk-darwin-arm64/claude\" auth login" "command line"
+    t_assert_eq "0" "$(ap_count_calls '^auth_status ')" "auth status is not run without a terminal"
+}
+
+test_main_no_launch_omits_open() {
+    mn_setup
+    mn_run --no-launch
+    t_assert_eq "0" "$MN_RC" "exit code: $MN_OUT"
+    t_assert_eq "0" "$(ap_count_calls '^run_open ')" "open was not called"
+    t_assert_not_contains "$MN_OUT" "[ok] launch -" "no launch line"
+    mn_setup
+    HUDDLE_NO_LAUNCH=1
+    export HUDDLE_NO_LAUNCH
+    mn_run
+    unset HUDDLE_NO_LAUNCH
+    t_assert_eq "0" "$(ap_count_calls '^run_open ')" "HUDDLE_NO_LAUNCH works too"
+}
+
+test_main_launch_failure_is_reported_but_does_not_fail_the_install() {
+    mn_setup
+    mn_run
+    t_assert_contains "$MN_OUT" "[ok] launch -" "launch line"
+    mn_setup
+    MN_OPEN_RC=1
+    mn_run
+    MN_OPEN_RC=0
+    t_assert_eq "0" "$MN_RC" "exit code: $MN_OUT"
+    t_assert_contains "$MN_OUT" "[!!] launch -" "launch failure shown"
+    t_assert_contains "$MN_OUT" "fix:" "with a fix"
+    t_assert_contains "$MN_OUT" "Agency Huddle 1.2.3 installed." "install summary still printed"
+}
+
+test_main_uninstall_removes_the_install_and_keeps_data() {
+    mn_setup
+    mn_run
+    printf 'mine\n' >"$MN_DATA/marker.txt"
+    mn_run --uninstall
+    t_assert_eq "0" "$MN_RC" "exit code: $MN_OUT"
+    t_assert_no_file "$MN_ROOT" "install root removed"
+    t_assert_no_file "$MN_HOME/Applications/Agency Huddle.app" "bundle removed"
+    t_assert_eq "mine" "$(cat "$MN_DATA/marker.txt")" "data kept"
+    t_assert_no_file "$MN_DATA/cache/install.lock" "lock released"
+    t_assert_not_contains "$MN_OUT" "Agency Huddle 1.2.3" "no install summary on uninstall"
+}
+
+test_main_uninstall_purge_removes_the_data_too() {
+    mn_setup
+    mn_run
+    mn_run --uninstall --purge-data
+    t_assert_eq "0" "$MN_RC" "exit code: $MN_OUT"
+    t_assert_no_file "$MN_ROOT" "install root removed"
+    t_assert_no_file "$MN_DATA" "data root removed"
+}
+
+test_main_uninstall_works_when_prerequisites_are_unmet() {
+    mn_setup
+    MN_MACOS=14
+    mn_run --uninstall
+    t_assert_eq "0" "$MN_RC" "uninstall does not need the install prerequisites: $MN_OUT"
+    t_assert_contains "$MN_OUT" "[skip] install" "nothing installed"
+    t_assert_no_file "$MN_DATA" "nothing created"
+}
+
+test_main_entry_paths_direct_and_piped() {
+    mn_setup
+    for mn_mode in direct piped; do
+        out=$(mn_entry "$mn_mode" --purge-data)
+        t_assert_contains "$out" "rc=3" "$mn_mode: --purge-data alone exits 3"
+        t_assert_contains "$out" "fix:" "$mn_mode: with a fix line"
+        out=$(mn_entry "$mn_mode" --bogus)
+        t_assert_contains "$out" "rc=3" "$mn_mode: unknown flag exits 3"
+        out=$(mn_entry "$mn_mode" --uninstall --install-root "$MN_ROOT" --data-root "$MN_DATA")
+        t_assert_contains "$out" "[skip] install" "$mn_mode: uninstall of nothing"
+        t_assert_not_contains "$out" "rc=" "$mn_mode: and exits 0"
+        t_assert_no_file "$MN_DATA" "$mn_mode: nothing created"
+    done
+}
+
+test_main_entry_path_installs_the_trap_and_sourcing_does_not() {
+    mn_setup
+    out=$(HUDDLE_INSTALL_NO_MAIN=1 HOME="$MN_HOME" "$(command -v "$T_SHELL")" -c '. "$1"; main --purge-data >/dev/null 2>&1 || true; trap' sh "$HERE/../install.sh" 2>&1 </dev/null)
+    t_assert_eq "" "$out" "sourcing and calling main sets no trap"
+    mkdir -p "$MN_DATA"
+    out=$(mn_entry direct --uninstall --install-root "$MN_ROOT" --data-root "$MN_DATA")
+    t_assert_no_file "$MN_DATA/cache/install.lock" "the entry path leaves no lock behind"
+}
+
+test_release_lock_only_removes_a_lock_this_run_took() {
+    mn_setup
+    mkdir -p "$MN_DATA/cache/install.lock"
+    parse_args --install-root "$MN_ROOT" --data-root "$MN_DATA"
+    resolve_paths
+    LOCK_HELD=0
+    release_lock
+    if [ -d "$MN_DATA/cache/install.lock" ]; then
+        t_pass
+    else
+        t_fail "a lock that is not ours was removed"
+    fi
+    rmdir "$MN_DATA/cache/install.lock"
+    acquire_lock
+    t_assert_eq "1" "$LOCK_HELD" "LOCK_HELD after acquire"
+    if acquire_lock 2>/dev/null; then
+        t_fail "a second acquire must fail"
+    else
+        t_pass
+    fi
+    release_lock
+    t_assert_no_file "$MN_DATA/cache/install.lock" "released"
+    t_assert_eq "0" "$LOCK_HELD" "LOCK_HELD after release"
+}
+
+test_claude_path_follows_the_host_arch() {
+    mn_setup
+    HOST_RID=osx-arm64
+    t_assert_eq "$INSTALL_ROOT/tools/acp/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude" "$(claude_path)" "arm64"
+    HOST_RID=osx-x64
+    t_assert_eq "$INSTALL_ROOT/tools/acp/node_modules/@anthropic-ai/claude-agent-sdk-darwin-x64/claude" "$(claude_path)" "x64"
+}
+
+test_claude_auth_status_seam_returns_the_exit_code_and_discards_output() {
+    mn_setup
+    mkdir -p "$AP/bin"
+    printf '#!/bin/sh\ncat >"%s/stdin.seen"\necho person@example.com\nexit 0\n' "$AP" >"$AP/bin/ok"
+    printf '#!/bin/sh\necho person@example.com\nexit 1\n' >"$AP/bin/no"
+    printf '#!/bin/sh\nexec sleep 30\n' >"$AP/bin/hang"
+    chmod +x "$AP/bin/ok" "$AP/bin/no" "$AP/bin/hang"
+    out=$(ap_child "rc=0; claude_auth_status '$AP/bin/ok' || rc=\$?; echo \"ok rc=\$rc\"" \
+        "rc=0; claude_auth_status '$AP/bin/no' || rc=\$?; echo \"no rc=\$rc\"" \
+        "rc=0; claude_auth_status '$AP/missing' || rc=\$?; echo \"missing rc=\$rc\"" \
+        "AUTH_STATUS_SECONDS=1; rc=0; claude_auth_status '$AP/bin/hang' || rc=\$?; echo \"hang rc=\$rc\"")
+    t_assert_contains "$out" "ok rc=0" "signed in"
+    t_assert_contains "$out" "no rc=1" "not signed in"
+    t_assert_not_contains "$out" "missing rc=0" "a missing binary is not signed in"
+    t_assert_contains "$out" "missing rc=" "missing binary answered"
+    t_assert_not_contains "$out" "hang rc=0" "a hung status call is not signed in"
+    t_assert_contains "$out" "hang rc=" "a hung status call returned"
+    t_assert_not_contains "$out" "person@example.com" "the account is never printed"
+    if [ -s "$AP/stdin.seen" ]; then
+        t_fail "the status call must read /dev/null"
+    else
+        t_pass
+    fi
+}
+
+test_run_open_and_is_interactive_seams() {
+    mn_setup
+    mkdir -p "$AP/bin"
+    printf '#!/bin/sh\nprintf "%%s|" "$@" >"%s/open.args"\ncat >"%s/open.stdin"\n' "$AP" "$AP" >"$AP/bin/open"
+    chmod +x "$AP/bin/open"
+    out=$(ap_child "PATH='$AP/bin':\$PATH" "run_open '/some dir/Agency Huddle.app'; echo \"rc=\$?\"")
+    t_assert_contains "$out" "rc=0" "run_open succeeded"
+    t_assert_eq "/some dir/Agency Huddle.app|" "$(cat "$AP/open.args")" "open receives the bundle path as one argument"
+    t_assert_eq "" "$(cat "$AP/open.stdin")" "open reads /dev/null"
+    out=$(ap_child "unset NO_BROWSER SSH_CONNECTION SSH_CLIENT SSH_TTY CLAUDE_CODE_REMOTE" \
+        "if interactive_environment; then echo yes; else echo no; fi" \
+        "NO_BROWSER=1; if interactive_environment; then echo yes; else echo no; fi" \
+        "NO_BROWSER=; SSH_CONNECTION=x; if interactive_environment; then echo yes; else echo no; fi" \
+        "SSH_CONNECTION=; SSH_TTY=x; if interactive_environment; then echo yes; else echo no; fi" \
+        "SSH_TTY=; CLAUDE_CODE_REMOTE=1; if interactive_environment; then echo yes; else echo no; fi" \
+        "CLAUDE_CODE_REMOTE=; if is_interactive </dev/null; then echo yes; else echo no; fi")
+    t_assert_eq "yes${NL}no${NL}no${NL}no${NL}no${NL}no" "$out" "NO_BROWSER, SSH_* and CLAUDE_CODE_REMOTE mean not interactive; no terminal on stdout means no"
+}
+
 t_run test_shell_quote_empty_string
 t_run test_shell_quote_no_special_chars
 t_run test_shell_quote_single_quote
@@ -2649,5 +3123,29 @@ t_run test_do_uninstall_does_not_delete_when_the_app_will_not_stop
 t_run test_do_uninstall_does_not_stop_anything_when_nothing_is_installed
 t_run test_do_uninstall_protects_caller_variables
 t_run test_remove_tree_refuses_empty_and_root
+t_run test_main_first_run_installs_everything
+t_run test_main_second_run_skips_everything_and_changes_no_file
+t_run test_main_changed_archive_runs_only_the_app_step
+t_run test_main_force_reinstalls_the_app
+t_run test_main_interrupted_run_resumes_at_the_adapter
+t_run test_main_concurrent_run_exits_1_and_keeps_the_other_lock
+t_run test_main_unmet_prerequisite_exits_2_and_creates_nothing
+t_run test_main_check_only_exits_0_or_2_and_creates_nothing
+t_run test_main_purge_data_without_uninstall_exits_3
+t_run test_main_bad_arguments_print_a_fix_and_return_3
+t_run test_main_sign_in_note_when_interactive_and_signed_in
+t_run test_main_sign_in_note_when_interactive_and_not_signed_in
+t_run test_main_sign_in_note_when_not_interactive_only_prints_the_instruction
+t_run test_main_no_launch_omits_open
+t_run test_main_launch_failure_is_reported_but_does_not_fail_the_install
+t_run test_main_uninstall_removes_the_install_and_keeps_data
+t_run test_main_uninstall_purge_removes_the_data_too
+t_run test_main_uninstall_works_when_prerequisites_are_unmet
+t_run test_main_entry_paths_direct_and_piped
+t_run test_main_entry_path_installs_the_trap_and_sourcing_does_not
+t_run test_release_lock_only_removes_a_lock_this_run_took
+t_run test_claude_path_follows_the_host_arch
+t_run test_claude_auth_status_seam_returns_the_exit_code_and_discards_output
+t_run test_run_open_and_is_interactive_seams
 
 t_summary
