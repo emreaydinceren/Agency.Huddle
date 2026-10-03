@@ -45,7 +45,7 @@ project context; run it with the Execute-Project-Plan skill.
 
 **C2. PowerShell (`installer/install.ps1`, `installer/tests/*.ps1`).**
 - Must parse and run on **Windows PowerShell 5.1 and pwsh 7**: no `&&`/`||`, no ternary `?:`, no `??`, no `-Parallel`, no `ForEach-Object -Parallel`, no `Join-String`.
-- `Set-StrictMode -Version Latest` and `$ErrorActionPreference = 'Stop'` immediately after `param(...)`.
+- `Set-StrictMode -Version Latest` and `$ErrorActionPreference = 'Stop'` at the START OF `Invoke-Main` (function scope), never at the script's top level: under `irm | iex` a top-level setting would leak into the user's interactive session (found in review of task 17; a Pester test proves `EAP:Continue` afterwards). Tests set strict mode in `BeforeAll`.
 - **ASCII only** in `install.ps1` (it is fed to `Invoke-Expression` as a string; non-ASCII breaks under some encodings). One self-contained file, no dot-sourced helpers (`irm | iex` fetches one file).
 - Importable for tests: the last line is `if (-not $env:HUDDLE_INSTALL_NO_MAIN) { Invoke-Main }`. Tests set `$env:HUDDLE_INSTALL_NO_MAIN = '1'` and dot-source `installer/install.ps1`.
 - Every external effect sits behind a **seam function** so Pester can `Mock` it: `Invoke-Tar`, `Invoke-NpmCi`, `Get-InstalledNodeVersion`, `Invoke-HuddleStop`, `Get-FreeDiskMb`, `Test-UrlReachable`, `Get-OsBuild`, `Get-HostArchitecture`, `Test-CommandAvailable`, `Get-UserPathValue`, `Set-UserPathValue`, `New-HuddleShortcut`, `Invoke-Download`. Nothing else shells out.
@@ -181,6 +181,8 @@ Rules (each has a test):
 | `-Uninstall` [`-PurgeData`] | `--uninstall` [`--purge-data`] | Remove (data kept unless purged) |
 | `-Force` | `--force` | Spec §6 rule 4 |
 | `-NoLaunch` | `--no-launch` | Do not start the app at the end |
+
+**Environment variables (found in review of task 17).** `irm | iex` cannot pass parameters, so every option also has an environment variable, used when the parameter is not given (an explicit parameter wins): `HUDDLE_VERSION`, `HUDDLE_BASE_URL`, `HUDDLE_INSTALL_ROOT`, `HUDDLE_DATA_ROOT`, and, switched on by any non-empty value other than `0`, `HUDDLE_CHECK_ONLY`, `HUDDLE_UNINSTALL`, `HUDDLE_PURGE_DATA`, `HUDDLE_FORCE`, `HUDDLE_NO_LAUNCH`. So an uninstall from the one-liner is `$env:HUDDLE_UNINSTALL='1'; irm <url> | iex`. A script run through `iex` (or as a scriptblock) **must never call `exit`**: that would close the user's PowerShell window. `install.ps1` calls `exit` only when it runs as a file (`$PSCommandPath` is set); otherwise it sets `$global:LASTEXITCODE` and returns. `install.sh` has no such problem under `curl | sh` but honours the same variables.
 
 Output, one line per step: `[ok] name - detail`, `[skip] name - already satisfied`, `[..] name - working`, `[!!] name - detail` then `     fix: ...`. Exit codes: **0** success, up to date, or check passed; **1** a step failed; **2** prerequisites unmet; **3** bad usage. The script never prompts, except the optional sign-in step (Findings F3) when stdin is a terminal.
 Final lines on success: `Agency Huddle <version> installed.` (or `Already up to date (<version>).`), then how to start it, then the Claude sign-in note.
