@@ -15,8 +15,6 @@ public class SecurityA
 {
     public string Password() { /* probe: S2068 */ string password = "Sup3rS3cret!"; return password; }
 
-    public string Secret() { /* probe: S6418 */ const string apiKey = "9f8d7c6b5a4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c"; return apiKey; }
-
     public void Sql(IDbCommand command, string name)
     {
         // probe: S2077

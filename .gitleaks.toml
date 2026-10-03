@@ -98,4 +98,7 @@ paths = [
   # Vendored, pre-built CodeMirror 6 bundle (Library task 11.1): minified third-party JS, not
   # source we wrote, and dense enough to false-positive the generic secret regexes.
   '''(^|/)src/Huddle\.App/wwwroot/lib/codemirror/.*''',
+  # The analyzer probes need one fake high-entropy string literal so Sonar's S6418 has something to
+  # flag. The file holds that single probe; see tests/Huddle.AnalyzerProbes/Probes/Secrets.cs.
+  '''(^|/)tests/Huddle\.AnalyzerProbes/Probes/Secrets\.cs$''',
 ]
