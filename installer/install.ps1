@@ -17,7 +17,8 @@ param(
     [switch]$Uninstall,
     [switch]$PurgeData,
     [switch]$Force,
-    [switch]$NoLaunch
+    [switch]$NoLaunch,
+    [switch]$NoShellIntegration
 )
 
 # Strict mode and ErrorActionPreference 'Stop' are set inside Invoke-Main, not here: under
@@ -1441,11 +1442,14 @@ function Test-PathEntryMatch {
 
 # Writes huddle.cmd, the Start menu shortcut and the user PATH entry. Each is rewritten only when its
 # content differs. Returns $true when anything changed, $false when all three were already right.
+# -NoShellIntegration (the smoke test uses it) writes huddle.cmd only: no shortcut, no user PATH edit.
 function Install-Launcher {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [pscustomobject]$Paths
+        [pscustomobject]$Paths,
+
+        [switch]$NoShellIntegration
     )
 
     $changed = $false
@@ -1482,6 +1486,10 @@ function Install-Launcher {
         [System.IO.File]::WriteAllBytes($Paths.LauncherPath, $expected)
         Write-Step -Status 'ok' -Name 'launcher' -Detail ('wrote ' + $Paths.LauncherPath)
         $changed = $true
+    }
+
+    if ($NoShellIntegration) {
+        return $changed
     }
 
     # Shortcut: present and pointing at this launcher.
@@ -2031,7 +2039,8 @@ function Resolve-Options {
         @('Uninstall', 'HUDDLE_UNINSTALL'),
         @('PurgeData', 'HUDDLE_PURGE_DATA'),
         @('Force', 'HUDDLE_FORCE'),
-        @('NoLaunch', 'HUDDLE_NO_LAUNCH')
+        @('NoLaunch', 'HUDDLE_NO_LAUNCH'),
+        @('NoShellIntegration', 'HUDDLE_NO_SHELL_INTEGRATION')
     )
 
     $result = [ordered]@{}
@@ -2344,7 +2353,9 @@ function Invoke-InstallSteps {
 
         [bool]$Force = $false,
 
-        [bool]$NoLaunch = $false
+        [bool]$NoLaunch = $false,
+
+        [bool]$NoShellIntegration = $false
     )
 
     $step = 'release'
@@ -2390,7 +2401,7 @@ function Invoke-InstallSteps {
         Update-InstallState -Path $Paths.StatePath -Values $values -Changes ([ordered]@{ lockSha256 = $lockSha })
 
         $step = 'launcher'
-        $launcherChanged = [bool](Install-Launcher -Paths $Paths)
+        $launcherChanged = [bool](Install-Launcher -Paths $Paths -NoShellIntegration:$NoShellIntegration)
     }
     catch {
         $message = ([string]$_.Exception.Message).Trim()
@@ -2440,7 +2451,8 @@ function Invoke-Main {
         [switch]$Uninstall,
         [switch]$PurgeData,
         [switch]$Force,
-        [switch]$NoLaunch
+        [switch]$NoLaunch,
+        [switch]$NoShellIntegration
     )
 
     # Function scope: these end with Invoke-Main, and the helpers it calls inherit them.
@@ -2460,6 +2472,7 @@ function Invoke-Main {
         $PurgeData = $options.PurgeData
         $Force = $options.Force
         $NoLaunch = $options.NoLaunch
+        $NoShellIntegration = $options.NoShellIntegration
 
         # The version is spliced into the download URL, so only a release tag shape gets through.
         if (-not (($Version -eq 'latest') -or ($Version -cmatch '^v?[0-9]+\.[0-9]+\.[0-9]+([-+.][0-9A-Za-z.]+)*\z'))) {
@@ -2504,7 +2517,7 @@ function Invoke-Main {
             return $script:ExitCodes.Success
         }
 
-        $installCode = @(Invoke-InstallSteps -Paths $paths -BaseUrl $BaseUrl -Version $Version -Force ([bool]$Force) -NoLaunch ([bool]$NoLaunch))
+        $installCode = @(Invoke-InstallSteps -Paths $paths -BaseUrl $BaseUrl -Version $Version -Force ([bool]$Force) -NoLaunch ([bool]$NoLaunch) -NoShellIntegration ([bool]$NoShellIntegration))
         return [int]$installCode[-1]
     }
     catch {

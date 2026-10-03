@@ -357,7 +357,17 @@ Describe 'Prerequisite seams' {
 
 Describe 'Resolve-Options' {
     BeforeAll {
-        $optionVars = @('HUDDLE_VERSION', 'HUDDLE_BASE_URL', 'HUDDLE_INSTALL_ROOT', 'HUDDLE_DATA_ROOT', 'HUDDLE_CHECK_ONLY', 'HUDDLE_UNINSTALL', 'HUDDLE_PURGE_DATA', 'HUDDLE_FORCE', 'HUDDLE_NO_LAUNCH')
+        $optionVars = @('HUDDLE_VERSION', 'HUDDLE_BASE_URL', 'HUDDLE_INSTALL_ROOT', 'HUDDLE_DATA_ROOT', 'HUDDLE_CHECK_ONLY', 'HUDDLE_UNINSTALL', 'HUDDLE_PURGE_DATA', 'HUDDLE_FORCE', 'HUDDLE_NO_LAUNCH', 'HUDDLE_NO_SHELL_INTEGRATION')
+    }
+
+    It 'NoShellIntegration is off by default, on from HUDDLE_NO_SHELL_INTEGRATION, and an explicit parameter wins' {
+        (Resolve-Options -Bound @{}).NoShellIntegration | Should -BeFalse
+        [Environment]::SetEnvironmentVariable('HUDDLE_NO_SHELL_INTEGRATION', '1')
+        (Resolve-Options -Bound @{}).NoShellIntegration | Should -BeTrue
+        (Resolve-Options -Bound @{ NoShellIntegration = [switch]::new($false) }).NoShellIntegration | Should -BeFalse
+        [Environment]::SetEnvironmentVariable('HUDDLE_NO_SHELL_INTEGRATION', '0')
+        (Resolve-Options -Bound @{}).NoShellIntegration | Should -BeFalse
+        (Resolve-Options -Bound @{ NoShellIntegration = [switch]::new($true) }).NoShellIntegration | Should -BeTrue
     }
 
     BeforeEach {
@@ -1750,6 +1760,24 @@ Describe 'Install-Launcher' {
         Mock Set-UserPathValue { $script:LUserPath = $Value }
     }
 
+    It '-NoShellIntegration writes only huddle.cmd: no shortcut, no PATH entry, and the rerun is a no-op' {
+        $lines = Get-HostLines { $script:LResult = Install-Launcher -Paths $script:LPaths -NoShellIntegration }
+        @($script:LResult).Count | Should -Be 1
+        $script:LResult | Should -BeTrue
+        Test-Path -LiteralPath $script:LPaths.LauncherPath -PathType Leaf | Should -BeTrue
+        Should -Invoke New-HuddleShortcut -Times 0 -Exactly
+        Should -Invoke Set-UserPathValue -Times 0 -Exactly
+        Should -Invoke Get-UserPathValue -Times 0 -Exactly
+        Test-Path -LiteralPath $script:LPaths.ShortcutPath | Should -BeFalse
+        $text = $lines -join "`n"
+        $text | Should -BeLike '*[[]ok] launcher*'
+        $text | Should -Not -BeLike '*] shortcut*'
+        $text | Should -Not -BeLike '*] path*'
+        $again = Get-HostLines { $script:LResult = Install-Launcher -Paths $script:LPaths -NoShellIntegration }
+        ($again -join "`n") | Should -BeLike '*[[]skip] launcher*'
+        $script:LResult | Should -BeFalse
+    }
+
     It 'first run writes huddle.cmd, creates the shortcut, appends InstallRoot to the user PATH and returns $true' {
         $lines = Get-HostLines { $script:LResult = Install-Launcher -Paths $script:LPaths }
         @($script:LResult).Count | Should -Be 1
@@ -2768,6 +2796,33 @@ Describe 'Invoke-Main orchestration' {
         $result.Code | Should -Be 1
         $result.Text | Should -BeLike '*[[]!!]*'
         Test-Path -LiteralPath $script:OInstall | Should -BeFalse
+    }
+
+    It '-NoShellIntegration installs without touching the shortcut or the user PATH' {
+        $arguments = $script:OArgs.Clone()
+        $arguments['NoShellIntegration'] = $true
+        $result = Invoke-MainCapture -Arguments $arguments
+        $result.Code | Should -Be 0
+        Test-Path -LiteralPath $script:OPaths.LauncherPath -PathType Leaf | Should -BeTrue
+        Should -Invoke New-HuddleShortcut -Times 0 -Exactly
+        Should -Invoke Set-UserPathValue -Times 0 -Exactly
+        $result.Text | Should -Not -BeLike '*[[]ok] shortcut*'
+        $result.Text | Should -Not -BeLike '*[[]ok] path*'
+    }
+
+    It 'HUDDLE_NO_SHELL_INTEGRATION=1 does the same as the switch' {
+        $saved = [Environment]::GetEnvironmentVariable('HUDDLE_NO_SHELL_INTEGRATION')
+        try {
+            [Environment]::SetEnvironmentVariable('HUDDLE_NO_SHELL_INTEGRATION', '1')
+            $result = Invoke-MainCapture -Arguments $script:OArgs
+        }
+        finally {
+            [Environment]::SetEnvironmentVariable('HUDDLE_NO_SHELL_INTEGRATION', $saved)
+        }
+
+        $result.Code | Should -Be 0
+        Should -Invoke New-HuddleShortcut -Times 0 -Exactly
+        Should -Invoke Set-UserPathValue -Times 0 -Exactly
     }
 
     It '-NoLaunch does not start the launcher' {
