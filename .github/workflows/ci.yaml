@@ -35,6 +35,13 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
+
+    # GitHub runs steps inside a container with `sh` (dash) unless told otherwise, and dash
+    # rejects `set -o pipefail`. The Gitea runner defaults to bash, so only this mirror needs it.
+    defaults:
+      run:
+        shell: bash
+
     container:
       # Exact patch, not the floating :10.0 tag. global.json requires 10.0.400 with
       # rollForward=latestPatch, so only a 10.0.4xx SDK satisfies it. Bump this together with
