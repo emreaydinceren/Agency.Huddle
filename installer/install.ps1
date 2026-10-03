@@ -2064,9 +2064,6 @@ function Invoke-InstallSteps {
         $archiveName = 'huddle-' + $Paths.Rid + '.zip'
         $sums = Get-ReleaseSums -Paths $Paths -BaseUrl $BaseUrl -Version $Version
         $expected = Get-ExpectedHash -Sums $sums -Name $archiveName
-        $source = Resolve-AssetSource -Name $archiveName -BaseUrl $BaseUrl -Version $Version
-        $archive = Get-VerifiedAsset -Name $archiveName -ExpectedSha256 $expected -Source $source -CacheDir $Paths.CacheDir
-
         $state = Read-InstallState -Path $Paths.StatePath
         $values = [ordered]@{}
         if ($null -ne $state) {
@@ -2081,7 +2078,17 @@ function Invoke-InstallSteps {
         # Each Install-* function decides for itself whether it is satisfied, stops the app only when a
         # change is certain, and never writes state. The key of a step is written right after that step.
         $step = 'app'
-        $appChanged = [bool](Install-App -Paths $Paths -Archive $archive -State $state -Force:$Force)
+        # A satisfied app step is decided from the SHA256SUMS line alone: the zip is not downloaded.
+        if ((-not $Force) -and (Test-StepSatisfied -State $state -Key 'appSha256' -Expected $expected) -and (Test-Path -LiteralPath $Paths.ExePath -PathType Leaf)) {
+            Write-Step -Status 'skip' -Name 'app' -Detail 'already installed'
+            $appChanged = $false
+        }
+        else {
+            $source = Resolve-AssetSource -Name $archiveName -BaseUrl $BaseUrl -Version $Version
+            $archive = Get-VerifiedAsset -Name $archiveName -ExpectedSha256 $expected -Source $source -CacheDir $Paths.CacheDir
+            $appChanged = [bool](Install-App -Paths $Paths -Archive $archive -State $state -Force:$Force)
+        }
+
         $info = Read-ReleaseInfo -Path $Paths.ReleaseInfoPath
         Update-InstallState -Path $Paths.StatePath -Values $values -Changes ([ordered]@{ version = [string]$info.version; appSha256 = $expected })
 

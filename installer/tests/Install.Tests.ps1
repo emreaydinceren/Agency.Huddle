@@ -2194,6 +2194,79 @@ Describe 'Invoke-Main orchestration' {
         (Get-TreeSnapshot -Root $script:OInstall) | Should -BeExactly $before
     }
 
+    It 'an up-to-date run with an empty download cache never fetches the app zip or anything else' {
+        $first = Invoke-MainCapture -Arguments $script:OArgs
+        $first.Code | Should -Be 0
+        if (Test-Path -LiteralPath $script:OPaths.CacheDir) {
+            Remove-Item -LiteralPath $script:OPaths.CacheDir -Recurse -Force
+        }
+
+        New-Item -ItemType Directory -Path $script:OPaths.CacheDir -Force | Out-Null
+        $script:OFetched = @()
+        $script:ODownloads = 0
+        Mock Get-VerifiedAsset {
+            $script:OFetched += $Name
+            return (Join-Path $script:ORelease $Name)
+        }
+        Mock Invoke-Download { $script:ODownloads++ }
+
+        $second = Invoke-MainCapture -Arguments $script:OArgs
+        $second.Code | Should -Be 0
+        $second.Text | Should -BeLike '*[[]skip] app - already installed*'
+        $second.Text | Should -BeLike '*Already up to date (1.2.3).*'
+        @($script:OFetched).Count | Should -Be 0
+        $script:ODownloads | Should -Be 0
+        @(Get-ChildItem -LiteralPath $script:OPaths.CacheDir -Force).Count | Should -Be 0
+    }
+
+    It 'a run with a changed archive fetches the app zip once' {
+        $first = Invoke-MainCapture -Arguments $script:OArgs
+        $first.Code | Should -Be 0
+        $null = New-ReleaseFolder -Dir $script:ORelease -ExeText 'exe v2'
+        $script:OFetched = @()
+        Mock Get-VerifiedAsset {
+            $script:OFetched += $Name
+            return (Join-Path $script:ORelease $Name)
+        }
+
+        $second = Invoke-MainCapture -Arguments $script:OArgs
+        $second.Code | Should -Be 0
+        Should -Invoke Get-VerifiedAsset -Times 1 -Exactly
+        @($script:OFetched) | Should -Be @('huddle-win-x64.zip')
+        $second.Text | Should -BeLike '*[[]ok] app*'
+    }
+
+    It 'a missing app host fetches the app zip even when the state hash matches' {
+        $first = Invoke-MainCapture -Arguments $script:OArgs
+        $first.Code | Should -Be 0
+        Remove-Item -LiteralPath $script:OPaths.ExePath -Force
+        $script:OFetched = @()
+        Mock Get-VerifiedAsset {
+            $script:OFetched += $Name
+            return (Join-Path $script:ORelease $Name)
+        }
+
+        $second = Invoke-MainCapture -Arguments $script:OArgs
+        $second.Code | Should -Be 0
+        Should -Invoke Get-VerifiedAsset -Times 1 -Exactly
+        Test-Path -LiteralPath $script:OPaths.ExePath | Should -BeTrue
+    }
+
+    It '-Force fetches the app zip even when the step is satisfied' {
+        $first = Invoke-MainCapture -Arguments $script:OArgs
+        $first.Code | Should -Be 0
+        $script:OFetched = @()
+        Mock Get-VerifiedAsset {
+            $script:OFetched += $Name
+            return (Join-Path $script:ORelease $Name)
+        }
+
+        $second = Invoke-MainCapture -Arguments ($script:OArgs + @{ Force = $true })
+        $second.Code | Should -Be 0
+        Should -Invoke Get-VerifiedAsset -Times 1 -Exactly
+        @($script:OFetched) | Should -Be @('huddle-win-x64.zip')
+    }
+
     It 'a run with a changed archive runs only the app step and keeps the data folder' {
         $first = Invoke-MainCapture -Arguments $script:OArgs
         $first.Code | Should -Be 0
