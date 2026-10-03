@@ -17,3 +17,4 @@ personas/
 # Hand-off notes between concurrent agent sessions. Working chatter, not
 # documentation: anything worth keeping moves into docs/.
 /Conversation/
+probe-build.log

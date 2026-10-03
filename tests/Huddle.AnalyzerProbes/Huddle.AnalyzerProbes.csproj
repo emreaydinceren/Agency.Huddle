@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Deliberate rule violations, one per analyzer rule, so a rule that stops firing is noticed.
+       NOT part of Huddle.slnx and never shipped: agents/scripts/Check-Analyzers.ps1 builds it with
+       warnings allowed and compares what fired against the "// probe: <RuleId>" tags in Probes/.
+       See docs/engineering/analyzer-decisions.md. -->
+  <PropertyGroup>
+    <RootNamespace>Agency.Huddle.AnalyzerProbes</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- The probes are meant to be wrong; compiler noise about unused things is not the point. -->
+    <NoWarn>$(NoWarn);CS0169;CS0649;CS0219;CS0414;CS0067;CS0168;CS1717;CS8618;CS0162;CS0642</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+  </ItemGroup>
+
+</Project>
