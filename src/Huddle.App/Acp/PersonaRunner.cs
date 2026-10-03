@@ -774,7 +774,7 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
             return;
         }
 
-        var status = new PersonaStatus(state, reason, DateTimeOffset.UtcNow);
+        var status = new PersonaStatus(state, reason, this.timeProvider.GetUtcNow());
         foreach (var handler in handlers.GetInvocationList())
         {
             try

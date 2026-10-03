@@ -1,0 +1,6 @@
+// Read by Microsoft.CodeAnalysis.BannedApiAnalyzers (RS0030) through the AdditionalFiles item in
+// Directory.Build.props. One documentation-comment ID per line, then ';' and the message the build
+// shows. A banned call is a build error here because warnings are errors.
+// Reasons live in agents/CSharpPrinciples.md ("Inject ambient dependencies too").
+
+M:System.Random.#ctor();A parameterless new Random() makes tests flaky; take an injected source of randomness, or a seeded Random from the caller.

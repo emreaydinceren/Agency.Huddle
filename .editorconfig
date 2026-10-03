@@ -347,3 +347,47 @@ dotnet_diagnostic.S2326.severity = warning  # unused type parameters should be r
 
 # S1125: redundant "== true"/"== false" comparisons on a non-nullable bool. Purely mechanical.
 dotnet_diagnostic.S1125.severity = warning
+
+#### Fourth batch: prose rules from agents/CSharpPrinciples.md that had no enforcement ####
+#### Each was probed against a full solution build and had zero hits (S6354: five, fixed). ####
+
+# S4462: never block on async code (.Result, .Wait(), .GetAwaiter().GetResult()).
+dotnet_diagnostic.S4462.severity = warning
+
+# S6354: inject TimeProvider instead of reading DateTime.Now/UtcNow/DateTimeOffset.Now directly.
+dotnet_diagnostic.S6354.severity = warning
+
+# "Fields are accessed as this.field": the qualification options above carry no severity, so
+# until now they enforced nothing. IDE0003 = remove 'this.' (n/a while the option is true),
+# IDE0009 = add 'this.' to a field, property, method or event access.
+dotnet_diagnostic.IDE0003.severity = warning
+dotnet_diagnostic.IDE0009.severity = warning
+
+# IDE0161: file-scoped namespaces (the option above is only a suggestion).
+dotnet_diagnostic.IDE0161.severity = warning
+
+# IDE0330: lock on System.Threading.Lock, not an object.
+dotnet_diagnostic.IDE0330.severity = warning
+
+# IDE1006: private fields are plain camelCase with no '_' prefix (constants stay PascalCase).
+# The const rule is listed first so it wins for 'private const'.
+dotnet_naming_rule.private_constants_should_be_pascal_case.severity = warning
+dotnet_naming_rule.private_constants_should_be_pascal_case.symbols = private_constants
+dotnet_naming_rule.private_constants_should_be_pascal_case.style = pascal_case
+
+dotnet_naming_rule.private_fields_should_be_camel_case.severity = warning
+dotnet_naming_rule.private_fields_should_be_camel_case.symbols = private_fields
+dotnet_naming_rule.private_fields_should_be_camel_case.style = camel_case
+
+dotnet_naming_symbols.private_constants.applicable_kinds = field
+dotnet_naming_symbols.private_constants.applicable_accessibilities = private
+dotnet_naming_symbols.private_constants.required_modifiers = const
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_fields.required_modifiers =
+
+dotnet_naming_style.camel_case.required_prefix =
+dotnet_naming_style.camel_case.required_suffix =
+dotnet_naming_style.camel_case.word_separator =
+dotnet_naming_style.camel_case.capitalization = camel_case

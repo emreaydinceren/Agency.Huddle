@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
-    Runs Check-Eol, Check-Diff, Check-Visibility, and Check-DocIndex in sequence, plus a protected-file hash guard, and
-    reports each script's exit code.
+    Runs Check-Eol, Check-Diff, Check-Visibility, Check-DocIndex and Check-TestDocs in sequence, plus a protected-file
+    hash guard, and reports each script's exit code.
 
 .DESCRIPTION
     Invokes Check-Eol.ps1 -Fix, Check-Diff.ps1 -Scope Mine, and Check-Visibility.ps1 in order via
@@ -17,9 +17,9 @@
     path); an agent must never edit protected.sha256 itself.
 
     The very last output line is always
-        CHECK-ALL Eol=<n> Diff=<n> Visibility=<n> DocIndex=<n> Protected=<n>
-    where 0 means ok. Exits 0 only if all five are 0, otherwise with the first non-zero value, in the
-    order Eol, Diff, Visibility, DocIndex, Protected.
+        CHECK-ALL Eol=<n> Diff=<n> Visibility=<n> DocIndex=<n> TestDocs=<n> Protected=<n>
+    where 0 means ok. Exits 0 only if all six are 0, otherwise with the first non-zero value, in the
+    order Eol, Diff, Visibility, DocIndex, TestDocs, Protected.
 
 .EXAMPLE
     pwsh agents/scripts/Check-All.ps1
@@ -60,6 +60,13 @@ if ($null -eq $exitCode) { $exitCode = 0 }
 Write-Host "== Check-DocIndex exit $exitCode =="
 $exitCodes['DocIndex'] = $exitCode
 
+# Run Check-TestDocs
+& (Join-Path $PSScriptRoot 'Check-TestDocs.ps1') *>&1
+$exitCode = $LASTEXITCODE
+if ($null -eq $exitCode) { $exitCode = 0 }
+Write-Host "== Check-TestDocs exit $exitCode =="
+$exitCodes['TestDocs'] = $exitCode
+
 # Protected-file guard: protected.sha256 lines are "<sha256-hex> <repo-relative-path>".
 $protected = 0
 $repoRoot = (git rev-parse --show-toplevel).Trim()
@@ -92,7 +99,7 @@ $exitCodes['Protected'] = $protected
 
 $firstNonZero = $exitCodes.Values | Where-Object { $_ -ne 0 } | Select-Object -First 1
 
-Write-Host "CHECK-ALL Eol=$($exitCodes['Eol']) Diff=$($exitCodes['Diff']) Visibility=$($exitCodes['Visibility']) DocIndex=$($exitCodes['DocIndex']) Protected=$($exitCodes['Protected'])"
+Write-Host "CHECK-ALL Eol=$($exitCodes['Eol']) Diff=$($exitCodes['Diff']) Visibility=$($exitCodes['Visibility']) DocIndex=$($exitCodes['DocIndex']) TestDocs=$($exitCodes['TestDocs']) Protected=$($exitCodes['Protected'])"
 
 if ($null -ne $firstNonZero) {
     exit $firstNonZero

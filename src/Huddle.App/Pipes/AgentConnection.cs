@@ -50,7 +50,8 @@ internal sealed class AgentConnection
         AgentGateway gateway,
         Drafts drafts,
         RoomEvents roomEvents,
-        ILogger<AgentConnection> logger)
+        ILogger<AgentConnection> logger,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(pipe);
         ArgumentNullException.ThrowIfNull(teamDirectory);
@@ -69,13 +70,14 @@ internal sealed class AgentConnection
         this.drafts = drafts;
         this.roomEvents = roomEvents;
         this.logger = logger;
+        this.ConnectedAt = (timeProvider ?? TimeProvider.System).GetUtcNow();
     }
 
     public string ConnectionId { get; } = Guid.CreateVersion7().ToString("N");
 
     public User? Agent { get; private set; }
 
-    public DateTimeOffset ConnectedAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset ConnectedAt { get; }
 
     public async Task RunAsync(CancellationToken ct)
     {
