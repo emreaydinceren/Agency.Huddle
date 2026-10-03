@@ -35,36 +35,23 @@ S8368 compiler-rejects
 S8380 compiler-rejects
 S8381 compiler-rejects
 
-S2115 needs-package
-S3363 needs-package
-S4433 needs-package
-S5659 needs-package
-S5753 needs-package
-S5766 needs-package
-S6377 needs-package
+S2115 probe-did-not-fire
+S5659 probe-did-not-fire
+S5753 no-technology
+S5766 not-yet-probed
 
-S1172 probe-did-not-fire
-S1607 probe-did-not-fire
-S1944 probe-did-not-fire
-S2187 probe-did-not-fire
 S2198 probe-did-not-fire
-S2612 probe-did-not-fire
 S3172 probe-did-not-fire
 S3397 probe-did-not-fire
-S3433 probe-did-not-fire
 S3458 probe-did-not-fire
-S3604 probe-did-not-fire
 S4015 probe-did-not-fire
 S4019 probe-did-not-fire
-S5332 probe-did-not-fire
-S5542 probe-did-not-fire
 S6797 probe-did-not-fire
 S6930 probe-did-not-fire
 S6931 probe-did-not-fire
 S6960 probe-did-not-fire
-S6967 probe-did-not-fire
 S6968 probe-did-not-fire
-S8367 probe-did-not-fire
+S8367 compiler-rejects
 
 S2857 not-yet-probed
 S2970 not-yet-probed

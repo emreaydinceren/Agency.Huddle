@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Probes for Sonar rules that need a package the repository does not reference (LDAP, XML signatures,
+       EF Core). The versions are overrides because nothing else here uses them. Not part of
+       Huddle.slnx; see tests/Huddle.AnalyzerProbes and agents/scripts/Check-Analyzers.ps1. -->
+  <PropertyGroup>
+    <RootNamespace>Agency.Huddle.AnalyzerProbes.Packages</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <NoWarn>$(NoWarn);CS0169;CS0649;CS0219;CS0414;CS0067;CS0168;CS1717;CS8618;CS0162;CS0642;NU1701;NU1903</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.DirectoryServices" VersionOverride="9.0.0" />
+    <PackageReference Include="System.Security.Cryptography.Xml" VersionOverride="9.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" VersionOverride="9.0.0" />
+  </ItemGroup>
+
+</Project>
