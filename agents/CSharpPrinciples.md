@@ -200,6 +200,10 @@ These do not fail the build, but the code is consistent about them and reviewers
 
 ## Suppressing a rule
 
+Before enabling, disabling or suppressing a rule, read
+[analyzer-decisions.md](../docs/engineering/analyzer-decisions.md): it records what each group of
+denied rules rests on and which ones are only assumed to work.
+
 Fix the code first. A suppression is for the rare case where the rule is wrong for one spot
 and the code is right, and it always carries the reason.
 

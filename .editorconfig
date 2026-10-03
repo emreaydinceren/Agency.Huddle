@@ -441,3 +441,13 @@ dotnet_naming_style.camel_case.required_prefix =
 dotnet_naming_style.camel_case.required_suffix =
 dotnet_naming_style.camel_case.word_separator =
 dotnet_naming_style.camel_case.capitalization = camel_case
+
+#### Sixth batch: eight more zero-hit rules, each proven to fire on a deliberate violation ####
+dotnet_diagnostic.S1163.severity = warning  # exceptions should not be thrown from finally blocks
+dotnet_diagnostic.S1848.severity = warning  # objects should not be created to be discarded
+dotnet_diagnostic.S2234.severity = warning  # arguments should be passed in the same order as the parameters are declared
+dotnet_diagnostic.S2386.severity = warning  # mutable fields should not be public static
+dotnet_diagnostic.S2737.severity = warning  # catch clauses should do more than rethrow
+dotnet_diagnostic.S2955.severity = warning  # unconstrained generic parameters should not be compared to null
+dotnet_diagnostic.S3244.severity = warning  # anonymous delegates should not be used to unsubscribe from events
+dotnet_diagnostic.S3881.severity = warning  # IDisposable should be implemented correctly
