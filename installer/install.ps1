@@ -703,6 +703,298 @@ function Install-App {
 }
 
 # ---------------------------------------------------------------------------
+# Install Node and the adapter (Spec 6, Findings F2)
+# ---------------------------------------------------------------------------
+
+# Seam: the only place the bundled node is asked for its version. Returns e.g. 'v24.21.0', or
+# $null when the file is missing, does not run or exits non-zero.
+function Get-InstalledNodeVersion {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$NodeExe
+    )
+
+    if (-not (Test-Path -LiteralPath $NodeExe -PathType Leaf)) {
+        return $null
+    }
+
+    try {
+        $output = & $NodeExe --version 2>$null
+        if ($LASTEXITCODE -ne 0) {
+            return $null
+        }
+
+        $first = @($output) | Select-Object -First 1
+        if ($null -eq $first) {
+            return $null
+        }
+
+        return ([string]$first).Trim()
+    }
+    catch {
+        return $null
+    }
+}
+
+# Installs the pinned Node into <InstallRoot>\node. Returns $true when it installed or replaced
+# node, $false when the step was skipped. It does NOT write state: the caller writes nodeVersion.
+# NodeBaseUrl (an https URL or an existing folder) defaults to https://nodejs.org/dist/<version>.
+function Install-Node {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        $Paths,
+
+        [Parameter(Mandatory)]
+        [string]$NodeVersion,
+
+        [AllowNull()]
+        $State,
+
+        [string]$NodeBaseUrl = '',
+
+        [switch]$Force
+    )
+
+    $ErrorActionPreference = 'Stop'
+
+    $version = 'v' + $NodeVersion.Trim().TrimStart('v', 'V')
+    if ($version -notmatch '^v\d+\.\d+\.\d+$') {
+        throw ('The Node version "' + $NodeVersion + '" is not of the form v24.21.0.')
+    }
+
+    $bare = $version.Substring(1)
+    $stateMatches = (Test-StepSatisfied -State $State -Key 'nodeVersion' -Expected $version) -or (Test-StepSatisfied -State $State -Key 'nodeVersion' -Expected $bare)
+    if ($stateMatches -and (Test-Path -LiteralPath $Paths.NodeExe -PathType Leaf)) {
+        $installed = Get-InstalledNodeVersion -NodeExe $Paths.NodeExe
+        if ($installed -and ([string]$installed).Trim().TrimStart('v', 'V') -eq $bare) {
+            Write-Step -Status 'skip' -Name 'node' -Detail ('already installed (' + $version + ')')
+            return $false
+        }
+    }
+
+    $nodeDir = Split-Path -Parent $Paths.NodeExe
+    $stage = $nodeDir + '.staging'
+    $old = $nodeDir + '.old'
+
+    # Leftovers of an interrupted run: a swap that died between its two renames, then stale folders.
+    if ((-not (Test-Path -LiteralPath $nodeDir)) -and (Test-Path -LiteralPath $old)) {
+        Move-Item -LiteralPath $old -Destination $nodeDir
+    }
+
+    foreach ($leftover in @($stage, $old)) {
+        if (Test-Path -LiteralPath $leftover) {
+            Remove-Item -LiteralPath $leftover -Recurse -Force
+        }
+    }
+
+    if (-not $NodeBaseUrl) {
+        $NodeBaseUrl = 'https://nodejs.org/dist/' + $version
+    }
+
+    $wrapper = 'node-' + $version + '-win-x64'
+    $zipName = $wrapper + '.zip'
+
+    Write-Step -Status '..' -Name 'node' -Detail ('downloading ' + $zipName)
+
+    # SHASUMS256.txt has no hash of its own to check against; it is fetched from the same
+    # TLS-protected origin as the zip and then decides the zip's expected hash.
+    $sumsSource = Resolve-AssetSource -Name 'SHASUMS256.txt' -BaseUrl $NodeBaseUrl
+    if ($sumsSource.Kind -eq 'file') {
+        $sumsPath = $sumsSource.Location
+    }
+    else {
+        if (-not (Test-Path -LiteralPath $Paths.CacheDir -PathType Container)) {
+            New-Item -ItemType Directory -Path $Paths.CacheDir -Force | Out-Null
+        }
+
+        $sumsPath = Join-Path $Paths.CacheDir ('node-' + $version + '-SHASUMS256.txt')
+        if (Test-Path -LiteralPath $sumsPath) {
+            Remove-Item -LiteralPath $sumsPath -Force
+        }
+
+        Invoke-Download -Url $sumsSource.Location -OutFile $sumsPath
+    }
+
+    $sums = Read-Sums -Text ([System.IO.File]::ReadAllText($sumsPath))
+    $expected = Get-ExpectedHash -Sums $sums -Name $zipName
+    $zipSource = Resolve-AssetSource -Name $zipName -BaseUrl $NodeBaseUrl
+    $archive = Get-VerifiedAsset -Name $zipName -ExpectedSha256 $expected -Source $zipSource -CacheDir $Paths.CacheDir
+
+    $oldMoved = $false
+    try {
+        New-Item -ItemType Directory -Path $stage -Force | Out-Null
+        Invoke-Tar -Archive $archive -Destination $stage
+
+        $inner = Join-Path $stage $wrapper
+        foreach ($required in @('node.exe', 'node_modules\npm\bin\npm-cli.js')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $inner $required) -PathType Leaf)) {
+                throw ('The Node archive does not contain ' + $wrapper + '\' + $required + '; the previous node was left untouched.')
+            }
+        }
+
+        if (Test-Path -LiteralPath $nodeDir) {
+            # A running adapter holds node.exe open; Windows cannot rename the folder around it.
+            $null = Stop-HuddleIfRunning -Paths $Paths -Force:$Force
+            Move-Item -LiteralPath $nodeDir -Destination $old
+            $oldMoved = $true
+        }
+
+        Move-Item -LiteralPath $inner -Destination $nodeDir
+    }
+    catch {
+        $failure = $_
+        try {
+            if ($oldMoved -and (-not (Test-Path -LiteralPath $nodeDir))) {
+                Move-Item -LiteralPath $old -Destination $nodeDir
+            }
+
+            if (Test-Path -LiteralPath $stage) {
+                Remove-Item -LiteralPath $stage -Recurse -Force
+            }
+        }
+        catch {
+            Write-Step -Status '!!' -Name 'node' -Detail ('rollback failed: ' + $_.Exception.Message) -Fix ('Restore ' + $nodeDir + ' from ' + $old + ' by hand.')
+        }
+
+        throw $failure
+    }
+
+    foreach ($leftover in @($stage, $old)) {
+        if (Test-Path -LiteralPath $leftover) {
+            try {
+                Remove-Item -LiteralPath $leftover -Recurse -Force
+            }
+            catch {
+                Write-Step -Status '..' -Name 'node' -Detail ('could not delete ' + $leftover + '; the next run removes it')
+            }
+        }
+    }
+
+    Write-Step -Status 'ok' -Name 'node' -Detail ('installed (' + $version + ')')
+    return $true
+}
+
+# Seam: runs "npm ci" with the BUNDLED node (never a global npm) and returns the exit code. The
+# node folder goes first on PATH for the child only, the working directory is the child's, and
+# stdout plus stderr end up in LogPath.
+function Invoke-NpmCi {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$NodeExe,
+
+        [Parameter(Mandatory)]
+        [string]$WorkingDirectory,
+
+        [Parameter(Mandatory)]
+        [string]$LogPath
+    )
+
+    $nodeDir = Split-Path -Parent $NodeExe
+    $npmCli = Join-Path $nodeDir 'node_modules\npm\bin\npm-cli.js'
+
+    $logDir = Split-Path -Parent $LogPath
+    if (-not (Test-Path -LiteralPath $logDir -PathType Container)) {
+        New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+    }
+
+    $errPath = $LogPath + '.err'
+    $argLine = '"' + $npmCli + '" ci --omit=dev --no-audit --no-fund'
+
+    $oldPath = $env:PATH
+    try {
+        if ($oldPath) {
+            $env:PATH = $nodeDir + ';' + $oldPath
+        }
+        else {
+            $env:PATH = $nodeDir
+        }
+
+        $process = Start-Process -FilePath $NodeExe -ArgumentList $argLine -WorkingDirectory $WorkingDirectory -NoNewWindow -Wait -PassThru -RedirectStandardOutput $LogPath -RedirectStandardError $errPath
+        $exitCode = [int]$process.ExitCode
+    }
+    finally {
+        $env:PATH = $oldPath
+    }
+
+    $text = ''
+    foreach ($file in @($LogPath, $errPath)) {
+        if (Test-Path -LiteralPath $file -PathType Leaf) {
+            $text = $text + [System.IO.File]::ReadAllText($file)
+        }
+    }
+
+    [System.IO.File]::WriteAllText($LogPath, $text, (New-Object System.Text.UTF8Encoding($false)))
+    if (Test-Path -LiteralPath $errPath) {
+        Remove-Item -LiteralPath $errPath -Force
+    }
+
+    return $exitCode
+}
+
+# Installs the adapter's production dependencies into <InstallRoot>\tools\acp with the bundled
+# node. Returns $true when npm ci ran, $false when the step was skipped. It does NOT write state:
+# the caller writes lockSha256 (the SHA-256 of tools\acp\package-lock.json).
+function Install-Adapter {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        $Paths,
+
+        [AllowNull()]
+        $State,
+
+        [switch]$Force
+    )
+
+    $ErrorActionPreference = 'Stop'
+
+    $acpDir = Join-Path $Paths.InstallRoot 'tools\acp'
+    $lockPath = Join-Path $acpDir 'package-lock.json'
+    if (-not (Test-Path -LiteralPath $lockPath -PathType Leaf)) {
+        throw ('Cannot install the adapter: ' + $lockPath + ' is missing from the release archive.')
+    }
+
+    $lockSha = Get-FileSha256 -Path $lockPath
+    if ((Test-StepSatisfied -State $State -Key 'lockSha256' -Expected $lockSha) -and (Test-Path -LiteralPath $Paths.AdapterEntry -PathType Leaf)) {
+        Write-Step -Status 'skip' -Name 'adapter' -Detail 'already installed'
+        return $false
+    }
+
+    if (-not (Test-Path -LiteralPath $Paths.NodeExe -PathType Leaf)) {
+        throw ('Cannot install the adapter: the bundled node is missing at ' + $Paths.NodeExe + '.')
+    }
+
+    # npm ci replaces node_modules, which a running adapter holds open.
+    $null = Stop-HuddleIfRunning -Paths $Paths -Force:$Force
+
+    $logPath = Join-Path $Paths.CacheDir 'npm-ci.log'
+    Write-Step -Status '..' -Name 'adapter' -Detail 'installing the adapter (npm ci)'
+
+    $exitCode = Invoke-NpmCi -NodeExe $Paths.NodeExe -WorkingDirectory $acpDir -LogPath $logPath
+    if ($exitCode -ne 0) {
+        $tail = '(the npm log is empty or missing: ' + $logPath + ')'
+        if (Test-Path -LiteralPath $logPath -PathType Leaf) {
+            $lines = @(Get-Content -LiteralPath $logPath -Tail 15)
+            if ($lines.Count -gt 0) {
+                $tail = $lines -join "`r`n"
+            }
+        }
+
+        throw ('npm ci failed (exit code ' + $exitCode + '). Last lines of ' + $logPath + ":`r`n" + $tail + "`r`n" + 'fix: if you are behind a proxy, set HTTPS_PROXY (and HTTP_PROXY) or run "npm config set proxy" and "npm config set https-proxy", then run the installer again.')
+    }
+
+    if (-not (Test-Path -LiteralPath $Paths.AdapterEntry -PathType Leaf)) {
+        throw ('npm ci finished but the adapter entry not found at ' + $Paths.AdapterEntry + '. fix: run the installer again; if it persists, delete ' + $acpDir + '\node_modules and retry.')
+    }
+
+    Write-Step -Status 'ok' -Name 'adapter' -Detail 'installed'
+    return $true
+}
+
+# ---------------------------------------------------------------------------
 # Prerequisite seams (every external effect of the checks sits behind one)
 # ---------------------------------------------------------------------------
 

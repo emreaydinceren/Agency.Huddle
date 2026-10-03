@@ -1030,6 +1030,368 @@ Describe 'Install-App' {
     }
 }
 
+Describe 'Get-InstalledNodeVersion' {
+    It 'returns the first line of node --version, trimmed' {
+        $cmd = Join-Path $TestDrive 'fake-node-ok.cmd'
+        [System.IO.File]::WriteAllText($cmd, "@echo off`r`necho v24.21.0`r`nexit /b 0`r`n")
+        Get-InstalledNodeVersion -NodeExe $cmd | Should -Be 'v24.21.0'
+    }
+
+    It 'returns $null when the executable does not exist' {
+        Get-InstalledNodeVersion -NodeExe (Join-Path $TestDrive 'no-such-node.exe') | Should -BeNullOrEmpty
+    }
+
+    It 'returns $null when node exits with a non-zero code' {
+        $cmd = Join-Path $TestDrive 'fake-node-bad.cmd'
+        [System.IO.File]::WriteAllText($cmd, "@echo off`r`necho v24.21.0`r`nexit /b 3`r`n")
+        Get-InstalledNodeVersion -NodeExe $cmd | Should -BeNullOrEmpty
+    }
+}
+
+Describe 'Install-Node' {
+    BeforeAll {
+        # A folder that plays nodejs.org/dist/vX: the Windows zip plus SHASUMS256.txt listing it.
+        function New-NodeRelease {
+            param([string]$Dir, [string]$Version = 'v24.21.0', [switch]$NoExe, [switch]$OmitFromSums)
+            New-Item -ItemType Directory -Path $Dir -Force | Out-Null
+            $wrapper = 'node-' + $Version + '-win-x64'
+            $src = Join-Path $TestDrive ('nsrc-' + [guid]::NewGuid().ToString('N'))
+            New-Item -ItemType Directory -Path (Join-Path $src "$wrapper\node_modules\npm\bin") -Force | Out-Null
+            if (-not $NoExe) {
+                [System.IO.File]::WriteAllText((Join-Path $src "$wrapper\node.exe"), ('node ' + $Version))
+            }
+            [System.IO.File]::WriteAllText((Join-Path $src "$wrapper\node_modules\npm\bin\npm-cli.js"), '// npm cli')
+            $zip = Join-Path $Dir ($wrapper + '.zip')
+            Compress-Archive -Path (Join-Path $src $wrapper) -DestinationPath $zip -Force
+            $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+            $lines = @(('f' * 64) + '  node-' + $Version + '-darwin-arm64.tar.gz')
+            if (-not $OmitFromSums) {
+                $lines += ($hash + '  ' + $wrapper + '.zip')
+            }
+            [System.IO.File]::WriteAllText((Join-Path $Dir 'SHASUMS256.txt'), (($lines -join "`r`n") + "`r`n"))
+            return $zip
+        }
+
+        function New-OldNode {
+            param($Paths)
+            New-Item -ItemType Directory -Path (Split-Path -Parent $Paths.NodeExe) -Force | Out-Null
+            [System.IO.File]::WriteAllText($Paths.NodeExe, 'old node')
+            [System.IO.File]::WriteAllText((Join-Path (Split-Path -Parent $Paths.NodeExe) 'old-only.txt'), 'old')
+        }
+    }
+
+    BeforeEach {
+        $script:NRoot = Join-Path $TestDrive ('node-' + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $script:NRoot | Out-Null
+        $script:NPaths = Resolve-InstallPaths -InstallRoot (Join-Path $script:NRoot 'install') -DataRoot (Join-Path $script:NRoot 'data-root')
+        $script:NSrc = Join-Path $script:NRoot 'dist'
+        $script:NZip = New-NodeRelease -Dir $script:NSrc
+        $script:NNodeDir = Split-Path -Parent $script:NPaths.NodeExe
+        $script:NNpmCli = Join-Path $script:NNodeDir 'node_modules\npm\bin\npm-cli.js'
+        $script:NState = [pscustomobject]@{ schema = '1'; nodeVersion = 'v24.21.0' }
+        Mock Invoke-Tar { Expand-Archive -LiteralPath $Archive -DestinationPath $Destination -Force }
+        Mock Stop-HuddleIfRunning { return $false }
+        Mock Get-InstalledNodeVersion { return 'v24.21.0' }
+    }
+
+    It 'installs node.exe and the npm CLI under <InstallRoot>\node on a fresh machine' {
+        $result = Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $null -NodeBaseUrl $script:NSrc 6>$null
+        @($result).Count | Should -Be 1
+        $result | Should -BeTrue
+        Test-Path -LiteralPath $script:NPaths.NodeExe -PathType Leaf | Should -BeTrue
+        Test-Path -LiteralPath $script:NNpmCli -PathType Leaf | Should -BeTrue
+    }
+
+    It 'leaves no wrapper folder, staging folder or old folder behind' {
+        $null = Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $null -NodeBaseUrl $script:NSrc 6>$null
+        Test-Path -LiteralPath (Join-Path $script:NNodeDir 'node-v24.21.0-win-x64') | Should -BeFalse
+        Test-Path -LiteralPath (Join-Path $script:NPaths.InstallRoot 'node-v24.21.0-win-x64') | Should -BeFalse
+        Test-Path -LiteralPath ($script:NNodeDir + '.staging') | Should -BeFalse
+        Test-Path -LiteralPath ($script:NNodeDir + '.old') | Should -BeFalse
+    }
+
+    It 'prints an ok line for the node step' {
+        $lines = Get-HostLines { Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $null -NodeBaseUrl $script:NSrc }
+        ($lines -join "`n") | Should -BeLike '*[[]ok] node*'
+    }
+
+    It 'accepts a version without the v prefix and still finds the v-prefixed archive' {
+        $result = Install-Node -Paths $script:NPaths -NodeVersion '24.21.0' -State $null -NodeBaseUrl $script:NSrc 6>$null
+        $result | Should -BeTrue
+        Test-Path -LiteralPath $script:NPaths.NodeExe | Should -BeTrue
+    }
+
+    It 'is skipped when the state matches, the exe exists and node --version prints the pinned version' {
+        New-OldNode -Paths $script:NPaths
+        Mock Get-VerifiedAsset { throw 'must not download' }
+        $lines = Get-HostLines { $script:NResult = Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $script:NState -NodeBaseUrl $script:NSrc }
+        $script:NResult | Should -BeFalse
+        ($lines -join "`n") | Should -BeLike '*[[]skip] node*'
+        Should -Invoke Get-VerifiedAsset -Times 0
+        Should -Invoke Stop-HuddleIfRunning -Times 0
+        [System.IO.File]::ReadAllText($script:NPaths.NodeExe) | Should -Be 'old node'
+    }
+
+    It 'is skipped when the state has no v prefix but the version matches' {
+        New-OldNode -Paths $script:NPaths
+        Mock Get-VerifiedAsset { throw 'must not download' }
+        $state = [pscustomobject]@{ nodeVersion = '24.21.0' }
+        Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $state -NodeBaseUrl $script:NSrc 6>$null | Should -BeFalse
+    }
+
+    It 'is not skipped when the state matches but node.exe is missing' {
+        $result = Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $script:NState -NodeBaseUrl $script:NSrc 6>$null
+        $result | Should -BeTrue
+        Test-Path -LiteralPath $script:NPaths.NodeExe | Should -BeTrue
+    }
+
+    It 'is not skipped when node --version cannot be read' {
+        New-OldNode -Paths $script:NPaths
+        Mock Get-InstalledNodeVersion { return $null }
+        $result = Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $script:NState -NodeBaseUrl $script:NSrc 6>$null
+        $result | Should -BeTrue
+        [System.IO.File]::ReadAllText($script:NPaths.NodeExe) | Should -Be 'node v24.21.0'
+    }
+
+    It 'is not skipped when node --version prints a different version than the pinned one' {
+        New-OldNode -Paths $script:NPaths
+        Mock Get-InstalledNodeVersion { return 'v22.1.0' }
+        Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $script:NState -NodeBaseUrl $script:NSrc 6>$null | Should -BeTrue
+    }
+
+    It 'replaces an older node and removes everything of the old folder' {
+        New-OldNode -Paths $script:NPaths
+        $old = [pscustomobject]@{ nodeVersion = 'v22.1.0' }
+        $result = Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $old -NodeBaseUrl $script:NSrc 6>$null
+        $result | Should -BeTrue
+        [System.IO.File]::ReadAllText($script:NPaths.NodeExe) | Should -Be 'node v24.21.0'
+        Test-Path -LiteralPath (Join-Path $script:NNodeDir 'old-only.txt') | Should -BeFalse
+        Test-Path -LiteralPath ($script:NNodeDir + '.old') | Should -BeFalse
+        Test-Path -LiteralPath ($script:NNodeDir + '.staging') | Should -BeFalse
+    }
+
+    It 'stops a running instance before replacing an existing node folder' {
+        New-OldNode -Paths $script:NPaths
+        $old = [pscustomobject]@{ nodeVersion = 'v22.1.0' }
+        $null = Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $old -NodeBaseUrl $script:NSrc -Force 6>$null
+        Should -Invoke Stop-HuddleIfRunning -Times 1 -ParameterFilter { $Force }
+    }
+
+    It 'uses the SHASUMS256.txt line of the zip as the expected hash and refuses a tampered zip' {
+        New-OldNode -Paths $script:NPaths
+        [System.IO.File]::WriteAllText($script:NZip, 'not the zip the sums list')
+        { Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $null -NodeBaseUrl $script:NSrc 6>$null } | Should -Throw '*Hash mismatch*'
+        [System.IO.File]::ReadAllText($script:NPaths.NodeExe) | Should -Be 'old node'
+    }
+
+    It 'passes the SHASUMS256.txt hash of the zip to Get-VerifiedAsset' {
+        Mock Get-VerifiedAsset { throw 'stop here' }
+        $expected = (Get-FileHash -LiteralPath $script:NZip -Algorithm SHA256).Hash.ToLowerInvariant()
+        { Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $null -NodeBaseUrl $script:NSrc 6>$null } | Should -Throw '*stop here*'
+        Should -Invoke Get-VerifiedAsset -Times 1 -ParameterFilter { $Name -eq 'node-v24.21.0-win-x64.zip' -and $ExpectedSha256 -eq $expected -and $CacheDir -eq $script:NPaths.CacheDir }
+    }
+
+    It 'throws a clear message when SHASUMS256.txt does not list the zip' {
+        $null = New-NodeRelease -Dir $script:NSrc -OmitFromSums
+        { Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $null -NodeBaseUrl $script:NSrc 6>$null } | Should -Throw "*'node-v24.21.0-win-x64.zip' is not listed*"
+    }
+
+    It 'downloads SHASUMS256.txt and the zip from nodejs.org/dist/<version> by default' {
+        Mock Invoke-Download { Copy-Item -LiteralPath (Join-Path $script:NSrc ($Url -replace '^.*/', '')) -Destination $OutFile -Force }
+        $null = Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $null 6>$null
+        Should -Invoke Invoke-Download -Times 1 -ParameterFilter { $Url -eq 'https://nodejs.org/dist/v24.21.0/SHASUMS256.txt' }
+        Should -Invoke Invoke-Download -Times 1 -ParameterFilter { $Url -eq 'https://nodejs.org/dist/v24.21.0/node-v24.21.0-win-x64.zip' }
+        Test-Path -LiteralPath $script:NPaths.NodeExe | Should -BeTrue
+    }
+
+    It 'throws and leaves the previous node untouched when the archive has no node.exe' {
+        New-OldNode -Paths $script:NPaths
+        $null = New-NodeRelease -Dir $script:NSrc -NoExe
+        { Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $null -NodeBaseUrl $script:NSrc 6>$null } | Should -Throw '*node.exe*'
+        [System.IO.File]::ReadAllText($script:NPaths.NodeExe) | Should -Be 'old node'
+        Should -Invoke Stop-HuddleIfRunning -Times 0
+        Test-Path -LiteralPath ($script:NNodeDir + '.staging') | Should -BeFalse
+    }
+
+    It 'restores the previous node when moving the new one into place fails' {
+        New-OldNode -Paths $script:NPaths
+        $script:RealMoveItem = Get-Command -Name Move-Item -CommandType Cmdlet
+        Mock Move-Item { & $script:RealMoveItem @PesterBoundParameters }
+        Mock Move-Item { throw 'simulated rename failure' } -ParameterFilter { $LiteralPath -like '*node-v24.21.0-win-x64' }
+        { Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $null -NodeBaseUrl $script:NSrc 6>$null } | Should -Throw '*simulated rename failure*'
+        [System.IO.File]::ReadAllText($script:NPaths.NodeExe) | Should -Be 'old node'
+        Test-Path -LiteralPath ($script:NNodeDir + '.old') | Should -BeFalse
+        Test-Path -LiteralPath ($script:NNodeDir + '.staging') | Should -BeFalse
+    }
+
+    It 'does not write the install state itself' {
+        $null = Install-Node -Paths $script:NPaths -NodeVersion 'v24.21.0' -State $null -NodeBaseUrl $script:NSrc 6>$null
+        Test-Path -LiteralPath $script:NPaths.StatePath | Should -BeFalse
+    }
+}
+
+Describe 'Invoke-NpmCi seam' {
+    BeforeAll {
+        # A fake node (a .cmd) that prints what the seam gave it, so the log shows cwd, PATH and arguments.
+        function New-FakeNode {
+            param([string]$Dir, [int]$ExitCode = 0)
+            New-Item -ItemType Directory -Path $Dir -Force | Out-Null
+            $cmd = Join-Path $Dir 'node.cmd'
+            $text = "@echo off`r`necho CWD=%CD%`r`necho PATH=%PATH%`r`necho ARGS=%*`r`necho some-error 1>&2`r`nexit /b $ExitCode`r`n"
+            [System.IO.File]::WriteAllText($cmd, $text)
+            return $cmd
+        }
+    }
+
+    BeforeEach {
+        $script:SRoot = Join-Path $TestDrive ('npm-' + [guid]::NewGuid().ToString('N'))
+        $script:SNodeDir = Join-Path $script:SRoot 'node'
+        $script:SWork = Join-Path $script:SRoot 'tools\acp'
+        New-Item -ItemType Directory -Path $script:SWork -Force | Out-Null
+        $script:SLog = Join-Path $script:SRoot 'cache\npm-ci.log'
+    }
+
+    It 'runs the bundled npm-cli.js with node, the node dir first on PATH and the working directory set' {
+        $node = New-FakeNode -Dir $script:SNodeDir
+        $before = $env:PATH
+        $code = Invoke-NpmCi -NodeExe $node -WorkingDirectory $script:SWork -LogPath $script:SLog
+        $code | Should -Be 0
+        $log = [System.IO.File]::ReadAllText($script:SLog)
+        $log | Should -BeLike ('*CWD=' + $script:SWork + '*')
+        $log | Should -BeLike ('*PATH=' + $script:SNodeDir + ';*')
+        $log | Should -BeLike '*ARGS=*node_modules\npm\bin\npm-cli.js" ci --omit=dev --no-audit --no-fund*'
+        $env:PATH | Should -Be $before
+    }
+
+    It 'writes the error stream to the log too and returns the exit code' {
+        $node = New-FakeNode -Dir $script:SNodeDir -ExitCode 7
+        $code = Invoke-NpmCi -NodeExe $node -WorkingDirectory $script:SWork -LogPath $script:SLog
+        $code | Should -Be 7
+        [System.IO.File]::ReadAllText($script:SLog) | Should -BeLike '*some-error*'
+    }
+
+    It 'creates the log folder and does not change the session location' {
+        $node = New-FakeNode -Dir $script:SNodeDir
+        $here = (Get-Location).Path
+        $null = Invoke-NpmCi -NodeExe $node -WorkingDirectory $script:SWork -LogPath $script:SLog
+        Test-Path -LiteralPath $script:SLog | Should -BeTrue
+        (Get-Location).Path | Should -Be $here
+    }
+}
+
+Describe 'Install-Adapter' {
+    BeforeEach {
+        $script:ARoot = Join-Path $TestDrive ('adapter-' + [guid]::NewGuid().ToString('N'))
+        $script:APaths = Resolve-InstallPaths -InstallRoot (Join-Path $script:ARoot 'install') -DataRoot (Join-Path $script:ARoot 'data-root')
+        $script:AAcp = Join-Path $script:APaths.InstallRoot 'tools\acp'
+        $script:ALock = Join-Path $script:AAcp 'package-lock.json'
+        New-Item -ItemType Directory -Path $script:AAcp -Force | Out-Null
+        New-Item -ItemType Directory -Path (Split-Path -Parent $script:APaths.NodeExe) -Force | Out-Null
+        [System.IO.File]::WriteAllText($script:APaths.NodeExe, 'node')
+        [System.IO.File]::WriteAllText($script:ALock, '{"lockfileVersion":3}')
+        $script:ALockHash = (Get-FileHash -LiteralPath $script:ALock -Algorithm SHA256).Hash.ToLowerInvariant()
+        $script:AState = [pscustomobject]@{ schema = '1'; lockSha256 = $script:ALockHash }
+        Mock Stop-HuddleIfRunning { return $false }
+        Mock Invoke-NpmCi {
+            New-Item -ItemType Directory -Path (Split-Path -Parent $script:APaths.AdapterEntry) -Force | Out-Null
+            [System.IO.File]::WriteAllText($script:APaths.AdapterEntry, '// adapter')
+            return 0
+        }
+    }
+
+    It 'runs npm ci when there is no state and returns $true' {
+        $result = Install-Adapter -Paths $script:APaths -State $null 6>$null
+        @($result).Count | Should -Be 1
+        $result | Should -BeTrue
+        Should -Invoke Invoke-NpmCi -Times 1
+        Test-Path -LiteralPath $script:APaths.AdapterEntry | Should -BeTrue
+    }
+
+    It 'runs npm ci when the lock hash differs from the state' {
+        $state = [pscustomobject]@{ lockSha256 = ('0' * 64) }
+        Install-Adapter -Paths $script:APaths -State $state 6>$null | Should -BeTrue
+        Should -Invoke Invoke-NpmCi -Times 1
+    }
+
+    It 'is skipped when the lock hash matches and the entry file exists' {
+        New-Item -ItemType Directory -Path (Split-Path -Parent $script:APaths.AdapterEntry) -Force | Out-Null
+        [System.IO.File]::WriteAllText($script:APaths.AdapterEntry, '// adapter')
+        $lines = Get-HostLines { $script:AResult = Install-Adapter -Paths $script:APaths -State $script:AState }
+        $script:AResult | Should -BeFalse
+        ($lines -join "`n") | Should -BeLike '*[[]skip] adapter*'
+        Should -Invoke Invoke-NpmCi -Times 0
+        Should -Invoke Stop-HuddleIfRunning -Times 0
+    }
+
+    It 'runs npm ci when the hash matches but the entry file is missing' {
+        Install-Adapter -Paths $script:APaths -State $script:AState 6>$null | Should -BeTrue
+        Should -Invoke Invoke-NpmCi -Times 1
+    }
+
+    It 'calls the seam with the bundled node, tools\acp as the working directory and <Cache>\npm-ci.log' {
+        $null = Install-Adapter -Paths $script:APaths -State $null 6>$null
+        $log = Join-Path $script:APaths.CacheDir 'npm-ci.log'
+        Should -Invoke Invoke-NpmCi -Times 1 -ParameterFilter {
+            $NodeExe -eq $script:APaths.NodeExe -and $WorkingDirectory -eq $script:AAcp -and $LogPath -eq $log
+        }
+    }
+
+    It 'stops a running instance before it replaces the adapter' {
+        $null = Install-Adapter -Paths $script:APaths -State $null -Force 6>$null
+        Should -Invoke Stop-HuddleIfRunning -Times 1 -ParameterFilter { $Force }
+    }
+
+    It 'throws with the last 15 log lines and a proxy fix when npm exits non-zero' {
+        Mock Invoke-NpmCi {
+            $lines = 1..20 | ForEach-Object { 'npm line ' + $_ }
+            New-Item -ItemType Directory -Path (Split-Path -Parent $LogPath) -Force | Out-Null
+            [System.IO.File]::WriteAllText($LogPath, (($lines -join "`r`n") + "`r`n"))
+            return 1
+        }
+        $message = ''
+        try {
+            $null = Install-Adapter -Paths $script:APaths -State $null 6>$null
+        }
+        catch {
+            $message = $_.Exception.Message
+        }
+        $message | Should -BeLike '*npm ci*exit code 1*'
+        $message | Should -BeLike '*npm line 20*'
+        $message | Should -BeLike '*npm line 6*'
+        $message | Should -Not -BeLike '*npm line 5*'
+        $message | Should -BeLike '*fix:*proxy*'
+        $message | Should -BeLike '*npm config set proxy*'
+        $message | Should -BeLike '*HTTPS_PROXY*'
+    }
+
+    It 'throws about a missing log when npm failed without writing one' {
+        Mock Invoke-NpmCi { return 1 }
+        { Install-Adapter -Paths $script:APaths -State $null 6>$null } | Should -Throw '*fix:*'
+    }
+
+    It 'throws "adapter entry not found" when npm succeeds but the entry file is missing' {
+        Mock Invoke-NpmCi { return 0 }
+        { Install-Adapter -Paths $script:APaths -State $null 6>$null } | Should -Throw '*adapter entry not found*'
+    }
+
+    It 'throws when the bundled node is missing, without running npm' {
+        Remove-Item -LiteralPath $script:APaths.NodeExe -Force
+        { Install-Adapter -Paths $script:APaths -State $null 6>$null } | Should -Throw '*node*'
+        Should -Invoke Invoke-NpmCi -Times 0
+    }
+
+    It 'throws when tools\acp\package-lock.json is missing' {
+        Remove-Item -LiteralPath $script:ALock -Force
+        { Install-Adapter -Paths $script:APaths -State $null 6>$null } | Should -Throw '*package-lock.json*'
+        Should -Invoke Invoke-NpmCi -Times 0
+    }
+
+    It 'does not write the install state itself' {
+        $null = Install-Adapter -Paths $script:APaths -State $null 6>$null
+        Test-Path -LiteralPath $script:APaths.StatePath | Should -BeFalse
+    }
+}
+
 Describe 'Release-time repository replacement' {
     BeforeAll {
         $rawText = [IO.File]::ReadAllText($ScriptPath)
