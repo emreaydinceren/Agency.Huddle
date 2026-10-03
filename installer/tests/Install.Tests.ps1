@@ -751,6 +751,285 @@ Describe 'Test-StepSatisfied' {
     }
 }
 
+Describe 'Stop-HuddleIfRunning' {
+    BeforeEach {
+        $script:StopRoot = Join-Path $TestDrive ('stop-' + [guid]::NewGuid().ToString('N'))
+        $script:StopPaths = Resolve-InstallPaths -InstallRoot (Join-Path $script:StopRoot 'install') -DataRoot (Join-Path $script:StopRoot 'data-root')
+        $script:RecordPath = Join-Path $script:StopPaths.DataRoot 'data\instance.json'
+        Mock Invoke-HuddleStop { return 0 }
+        Mock Test-ProcessRunning { return $false }
+        Mock Stop-HuddleProcess { }
+    }
+
+    It 'never calls Invoke-HuddleStop when no instance record exists' {
+        Stop-HuddleIfRunning -Paths $script:StopPaths | Should -BeFalse
+        Should -Invoke Invoke-HuddleStop -Times 0 -Exactly
+    }
+
+    It 'calls Invoke-HuddleStop once when an instance record exists and returns true' {
+        New-Item -ItemType Directory -Path (Split-Path -Parent $script:RecordPath) -Force | Out-Null
+        [System.IO.File]::WriteAllText($script:RecordPath, '{"url":"http://127.0.0.1:5000","stopToken":"t","pid":4242}')
+        Stop-HuddleIfRunning -Paths $script:StopPaths | Should -BeTrue
+        Should -Invoke Invoke-HuddleStop -Times 1 -Exactly
+        Should -Invoke Stop-HuddleProcess -Times 0 -Exactly
+    }
+
+    It 'throws a clear message when the process survives and -Force is not given' {
+        New-Item -ItemType Directory -Path (Split-Path -Parent $script:RecordPath) -Force | Out-Null
+        [System.IO.File]::WriteAllText($script:RecordPath, '{"url":"http://127.0.0.1:5000","stopToken":"t","pid":4242}')
+        Mock Test-ProcessRunning { return $true }
+        { Stop-HuddleIfRunning -Paths $script:StopPaths } | Should -Throw '*still running*-Force*'
+        Should -Invoke Stop-HuddleProcess -Times 0 -Exactly
+    }
+
+    It 'ends the surviving process with -Force' {
+        New-Item -ItemType Directory -Path (Split-Path -Parent $script:RecordPath) -Force | Out-Null
+        [System.IO.File]::WriteAllText($script:RecordPath, '{"url":"http://127.0.0.1:5000","stopToken":"t","pid":4242}')
+        Mock Test-ProcessRunning { return $true } -ParameterFilter { $ProcessId -eq 4242 }
+        Stop-HuddleIfRunning -Paths $script:StopPaths -Force | Should -BeTrue
+        Should -Invoke Stop-HuddleProcess -Times 1 -Exactly -ParameterFilter { $ProcessId -eq 4242 }
+    }
+
+    It 'throws when the stop request failed and the record has no usable pid, unless -Force' {
+        New-Item -ItemType Directory -Path (Split-Path -Parent $script:RecordPath) -Force | Out-Null
+        [System.IO.File]::WriteAllText($script:RecordPath, '{"url":"http://127.0.0.1:5000"}')
+        Mock Invoke-HuddleStop { return 1 }
+        { Stop-HuddleIfRunning -Paths $script:StopPaths } | Should -Throw '*exit code 1*'
+        Stop-HuddleIfRunning -Paths $script:StopPaths -Force 3>$null | Should -BeTrue
+    }
+}
+
+Describe 'Install seams' {
+    BeforeEach {
+        $script:SeamRoot = Join-Path $TestDrive ('seam-' + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $script:SeamRoot | Out-Null
+        $script:SeamPaths = Resolve-InstallPaths -InstallRoot (Join-Path $script:SeamRoot 'install') -DataRoot (Join-Path $script:SeamRoot 'data-root')
+        New-Item -ItemType Directory -Path $script:SeamPaths.InstallRoot | Out-Null
+    }
+
+    It 'Invoke-Tar extracts a zip archive into the destination' {
+        $src = Join-Path $script:SeamRoot 'src'
+        New-Item -ItemType Directory -Path (Join-Path $src 'app') -Force | Out-Null
+        [System.IO.File]::WriteAllText((Join-Path $src 'app\hello.txt'), 'hi')
+        $zip = Join-Path $script:SeamRoot 'a.zip'
+        Compress-Archive -Path (Join-Path $src '*') -DestinationPath $zip
+        $dest = Join-Path $script:SeamRoot 'out'
+        New-Item -ItemType Directory -Path $dest | Out-Null
+        Invoke-Tar -Archive $zip -Destination $dest
+        Test-Path -LiteralPath (Join-Path $dest 'app\hello.txt') | Should -BeTrue
+    }
+
+    It 'Invoke-Tar throws when the archive is not an archive' {
+        $bad = Join-Path $script:SeamRoot 'bad.zip'
+        [System.IO.File]::WriteAllText($bad, 'this is not a zip')
+        $dest = Join-Path $script:SeamRoot 'out2'
+        New-Item -ItemType Directory -Path $dest | Out-Null
+        { Invoke-Tar -Archive $bad -Destination $dest } | Should -Throw '*Could not extract*bad.zip*'
+    }
+
+    It 'Invoke-HuddleStop runs the launcher with the stop verb and returns its exit code' {
+        [System.IO.File]::WriteAllText($script:SeamPaths.LauncherPath, "@echo off`r`necho %1> `"%~dp0verb.txt`"`r`nexit /b 3`r`n")
+        Invoke-HuddleStop -Paths $script:SeamPaths | Should -Be 3
+        (Get-Content -LiteralPath (Join-Path $script:SeamPaths.InstallRoot 'verb.txt') -Raw).Trim() | Should -Be 'stop'
+    }
+
+    It 'Invoke-HuddleStop gives up after the time cap and returns -1' {
+        [System.IO.File]::WriteAllText($script:SeamPaths.LauncherPath, "@echo off`r`nping -n 20 127.0.0.1 >nul`r`n")
+        Invoke-HuddleStop -Paths $script:SeamPaths -TimeoutSeconds 1 | Should -Be -1
+    }
+
+    It 'Invoke-HuddleStop defaults to a 60 second cap' {
+        (Get-Command Invoke-HuddleStop).Parameters['TimeoutSeconds'].ParameterType | Should -Be ([int])
+        [IO.File]::ReadAllText($ScriptPath) | Should -Match '\[int\]\$TimeoutSeconds = 60'
+    }
+
+    It 'Test-ProcessRunning is false for a process that is not the Huddle app host' {
+        Test-ProcessRunning -ProcessId $PID | Should -BeFalse
+        Test-ProcessRunning -ProcessId 2147483000 | Should -BeFalse
+    }
+}
+
+Describe 'Install-App' {
+    BeforeAll {
+        # Builds a release-shaped zip: app\Huddle.App.exe, tools\acp\package*.json, release-info.json.
+        function New-TestArchive {
+            param([string]$Path, [switch]$NoExe)
+            $src = Join-Path $TestDrive ('src-' + [guid]::NewGuid().ToString('N'))
+            New-Item -ItemType Directory -Path (Join-Path $src 'app') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $src 'tools\acp') -Force | Out-Null
+            if ($NoExe) {
+                [System.IO.File]::WriteAllText((Join-Path $src 'app\readme.txt'), 'no exe here')
+            }
+            else {
+                [System.IO.File]::WriteAllText((Join-Path $src 'app\Huddle.App.exe'), 'new exe')
+            }
+            [System.IO.File]::WriteAllText((Join-Path $src 'tools\acp\package.json'), '{}')
+            [System.IO.File]::WriteAllText((Join-Path $src 'tools\acp\package-lock.json'), '{"lockfileVersion":3}')
+            [System.IO.File]::WriteAllText((Join-Path $src 'release-info.json'), '{"nodeVersion":"24.21.0"}')
+            Compress-Archive -Path (Join-Path $src '*') -DestinationPath $Path
+        }
+
+        # An installed tree from "the previous release".
+        function New-OldInstall {
+            param($Paths)
+            New-Item -ItemType Directory -Path (Join-Path $Paths.InstallRoot 'app') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $Paths.InstallRoot 'node') -Force | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $Paths.InstallRoot 'tools\acp\node_modules') -Force | Out-Null
+            [System.IO.File]::WriteAllText($Paths.ExePath, 'old exe')
+            [System.IO.File]::WriteAllText((Join-Path $Paths.InstallRoot 'app\old.txt'), 'old only')
+            [System.IO.File]::WriteAllText($Paths.NodeExe, 'old node')
+            [System.IO.File]::WriteAllText((Join-Path $Paths.InstallRoot 'tools\acp\node_modules\marker.txt'), 'marker')
+            [System.IO.File]::WriteAllText($Paths.LauncherPath, '@echo off')
+            Write-InstallState -Path $Paths.StatePath -State @{ version = '0.9.0'; appSha256 = ('ab' * 32); nodeVersion = '24.21.0'; lockSha256 = ('cd' * 32) }
+        }
+    }
+
+    BeforeEach {
+        $script:RealMoveItem = Get-Command -Name Move-Item -CommandType Cmdlet
+        $script:AppRoot = Join-Path $TestDrive ('app-' + [guid]::NewGuid().ToString('N'))
+        New-Item -ItemType Directory -Path $script:AppRoot | Out-Null
+        $script:AppPaths = Resolve-InstallPaths -InstallRoot (Join-Path $script:AppRoot 'install') -DataRoot (Join-Path $script:AppRoot 'data-root')
+        $script:Staging = $script:AppPaths.InstallRoot + '.staging'
+        $script:OldDir = $script:AppPaths.InstallRoot + '.old'
+        $script:AppArchive = Join-Path $script:AppRoot 'huddle-win-x64.zip'
+        New-TestArchive -Path $script:AppArchive
+        $script:AppHash = (Get-FileHash -LiteralPath $script:AppArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+        Mock Invoke-Tar { Expand-Archive -LiteralPath $Archive -DestinationPath $Destination -Force }
+        Mock Invoke-HuddleStop { return 0 }
+        Mock Test-ProcessRunning { return $false }
+        Mock Stop-HuddleProcess { }
+    }
+
+    It 'installs into an empty location and leaves no staging or old folder' {
+        $result = Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null
+        @($result).Count | Should -Be 1
+        $result | Should -BeTrue
+        Test-Path -LiteralPath $script:AppPaths.ExePath | Should -BeTrue
+        Test-Path -LiteralPath $script:AppPaths.ReleaseInfoPath | Should -BeTrue
+        Test-Path -LiteralPath (Join-Path $script:AppPaths.InstallRoot 'tools\acp\package-lock.json') | Should -BeTrue
+        Test-Path -LiteralPath $script:Staging | Should -BeFalse
+        Test-Path -LiteralPath $script:OldDir | Should -BeFalse
+    }
+
+    It 'does not write the install state itself' {
+        $null = Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null
+        Test-Path -LiteralPath $script:AppPaths.StatePath | Should -BeFalse
+    }
+
+    It 'skips the step when the state hash matches and the app host exists' {
+        New-OldInstall -Paths $script:AppPaths
+        $state = [pscustomobject]@{ appSha256 = $script:AppHash.ToUpperInvariant() }
+        $lines = Get-HostLines { Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $state }
+        ($lines -join "`n") | Should -Match '\[skip\] app'
+        Should -Invoke Invoke-Tar -Times 0 -Exactly
+        Should -Invoke Invoke-HuddleStop -Times 0 -Exactly
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'old exe'
+    }
+
+    It 'returns false when the step is skipped' {
+        New-OldInstall -Paths $script:AppPaths
+        $state = [pscustomobject]@{ appSha256 = $script:AppHash }
+        $result = Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $state 6>$null
+        @($result).Count | Should -Be 1
+        $result | Should -BeFalse
+    }
+
+    It 'installs again when the hash matches but the app host is missing' {
+        $state = [pscustomobject]@{ appSha256 = $script:AppHash }
+        Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $state 6>$null | Should -BeTrue
+        Test-Path -LiteralPath $script:AppPaths.ExePath | Should -BeTrue
+    }
+
+    It 'installs again when the state hash differs' {
+        New-OldInstall -Paths $script:AppPaths
+        $state = [pscustomobject]@{ appSha256 = ('ab' * 32) }
+        Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $state 6>$null | Should -BeTrue
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'new exe'
+    }
+
+    It 'replaces app but carries node, the adapter node_modules and the state over on an upgrade' {
+        New-OldInstall -Paths $script:AppPaths
+        $null = Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State (Read-InstallState -Path $script:AppPaths.StatePath) 6>$null
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'new exe'
+        Test-Path -LiteralPath (Join-Path $script:AppPaths.InstallRoot 'app\old.txt') | Should -BeFalse
+        [System.IO.File]::ReadAllText($script:AppPaths.NodeExe) | Should -Be 'old node'
+        [System.IO.File]::ReadAllText((Join-Path $script:AppPaths.InstallRoot 'tools\acp\node_modules\marker.txt')) | Should -Be 'marker'
+        Test-Path -LiteralPath (Join-Path $script:AppPaths.InstallRoot 'tools\acp\package.json') | Should -BeTrue
+        (Read-InstallState -Path $script:AppPaths.StatePath).nodeVersion | Should -Be '24.21.0'
+        Test-Path -LiteralPath $script:AppPaths.LauncherPath | Should -BeTrue
+        Test-Path -LiteralPath $script:Staging | Should -BeFalse
+        Test-Path -LiteralPath $script:OldDir | Should -BeFalse
+    }
+
+    It 'throws and leaves the previous install untouched when the archive has no app host' {
+        New-OldInstall -Paths $script:AppPaths
+        $bad = Join-Path $script:AppRoot 'bad-win-x64.zip'
+        New-TestArchive -Path $bad -NoExe
+        { Install-App -Paths $script:AppPaths -Archive $bad -State $null 6>$null } | Should -Throw '*Huddle.App.exe*'
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'old exe'
+        Test-Path -LiteralPath (Join-Path $script:AppPaths.InstallRoot 'app\old.txt') | Should -BeTrue
+        [System.IO.File]::ReadAllText($script:AppPaths.NodeExe) | Should -Be 'old node'
+        Test-Path -LiteralPath (Join-Path $script:AppPaths.InstallRoot 'tools\acp\node_modules\marker.txt') | Should -BeTrue
+        Test-Path -LiteralPath $script:Staging | Should -BeFalse
+        Test-Path -LiteralPath $script:OldDir | Should -BeFalse
+        Should -Invoke Invoke-HuddleStop -Times 0 -Exactly
+    }
+
+    It 'restores the previous install when renaming the staging folder fails' {
+        New-OldInstall -Paths $script:AppPaths
+        Mock Move-Item { & $script:RealMoveItem @PesterBoundParameters }
+        Mock Move-Item { throw 'simulated rename failure' } -ParameterFilter { $LiteralPath -eq $script:Staging }
+        { Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null } | Should -Throw '*simulated rename failure*'
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'old exe'
+        [System.IO.File]::ReadAllText($script:AppPaths.NodeExe) | Should -Be 'old node'
+        [System.IO.File]::ReadAllText((Join-Path $script:AppPaths.InstallRoot 'tools\acp\node_modules\marker.txt')) | Should -Be 'marker'
+        Test-Path -LiteralPath $script:AppPaths.StatePath | Should -BeTrue
+        Test-Path -LiteralPath $script:Staging | Should -BeFalse
+        Test-Path -LiteralPath $script:OldDir | Should -BeFalse
+    }
+
+    It 'restores the previous install when renaming it away fails' {
+        New-OldInstall -Paths $script:AppPaths
+        Mock Move-Item { & $script:RealMoveItem @PesterBoundParameters }
+        Mock Move-Item { throw 'simulated rename failure' } -ParameterFilter { $Destination -eq $script:OldDir }
+        { Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null } | Should -Throw '*simulated rename failure*'
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'old exe'
+        [System.IO.File]::ReadAllText($script:AppPaths.NodeExe) | Should -Be 'old node'
+        [System.IO.File]::ReadAllText((Join-Path $script:AppPaths.InstallRoot 'tools\acp\node_modules\marker.txt')) | Should -Be 'marker'
+        Test-Path -LiteralPath $script:Staging | Should -BeFalse
+        Test-Path -LiteralPath $script:OldDir | Should -BeFalse
+    }
+
+    It 'stops a running instance before replacing an install that changes' {
+        New-OldInstall -Paths $script:AppPaths
+        $record = Join-Path $script:AppPaths.DataRoot 'data\instance.json'
+        New-Item -ItemType Directory -Path (Split-Path -Parent $record) -Force | Out-Null
+        [System.IO.File]::WriteAllText($record, '{"url":"http://127.0.0.1:5000","stopToken":"t","pid":4242}')
+        $null = Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null
+        Should -Invoke Invoke-HuddleStop -Times 1 -Exactly
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'new exe'
+    }
+
+    It 'removes a stale staging folder left by an interrupted run' {
+        New-Item -ItemType Directory -Path (Join-Path $script:Staging 'app') -Force | Out-Null
+        [System.IO.File]::WriteAllText((Join-Path $script:Staging 'app\junk.txt'), 'junk')
+        $null = Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null
+        Test-Path -LiteralPath $script:Staging | Should -BeFalse
+        Test-Path -LiteralPath (Join-Path $script:AppPaths.InstallRoot 'app\junk.txt') | Should -BeFalse
+        Test-Path -LiteralPath $script:AppPaths.ExePath | Should -BeTrue
+    }
+
+    It 'restores the old folder when a previous run died between the two renames' {
+        New-OldInstall -Paths $script:AppPaths
+        Move-Item -LiteralPath $script:AppPaths.InstallRoot -Destination $script:OldDir
+        Mock Move-Item { & $script:RealMoveItem @PesterBoundParameters }
+        Mock Move-Item { throw 'simulated rename failure' } -ParameterFilter { $LiteralPath -eq $script:Staging }
+        { Install-App -Paths $script:AppPaths -Archive $script:AppArchive -State $null 6>$null } | Should -Throw '*simulated rename failure*'
+        [System.IO.File]::ReadAllText($script:AppPaths.ExePath) | Should -Be 'old exe'
+        Test-Path -LiteralPath $script:OldDir | Should -BeFalse
+    }
+}
+
 Describe 'Release-time repository replacement' {
     BeforeAll {
         $rawText = [IO.File]::ReadAllText($ScriptPath)

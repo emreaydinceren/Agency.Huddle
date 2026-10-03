@@ -408,6 +408,301 @@ function Test-StepSatisfied {
 }
 
 # ---------------------------------------------------------------------------
+# Stop a running instance and install the app (Spec 6, rules 3 and 4)
+# ---------------------------------------------------------------------------
+
+# Seam: the only place an archive is extracted.
+function Invoke-Tar {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Archive,
+
+        [Parameter(Mandatory)]
+        [string]$Destination
+    )
+
+    # Prefer the system bsdtar: a GNU tar earlier on PATH cannot read zip archives.
+    $tar = 'tar.exe'
+    if ($env:SystemRoot) {
+        $systemTar = Join-Path $env:SystemRoot 'System32\tar.exe'
+        if (Test-Path -LiteralPath $systemTar -PathType Leaf) {
+            $tar = $systemTar
+        }
+    }
+
+    $null = & $tar -xf $Archive -C $Destination
+    if ($LASTEXITCODE -ne 0) {
+        throw ('Could not extract ' + $Archive + ' (tar exit code ' + $LASTEXITCODE + ').')
+    }
+}
+
+# Seam: runs "<launcher> stop" and returns its exit code, or -1 when it did not finish within
+# the cap. The cap (60 s) is above the stop verb's own 45 s wait.
+function Invoke-HuddleStop {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        $Paths,
+
+        [int]$TimeoutSeconds = 60
+    )
+
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    if (Test-Path -LiteralPath $Paths.LauncherPath -PathType Leaf) {
+        $startInfo.FileName = 'cmd.exe'
+        $startInfo.Arguments = '/c ""' + $Paths.LauncherPath + '" stop"'
+    }
+    elseif (Test-Path -LiteralPath $Paths.ExePath -PathType Leaf) {
+        # No launcher yet: the app host finds its instance record through Team__DataDir.
+        $startInfo.FileName = $Paths.ExePath
+        $startInfo.Arguments = 'stop'
+        $startInfo.EnvironmentVariables['Team__DataDir'] = Join-Path $Paths.DataRoot 'data'
+    }
+    else {
+        return 127
+    }
+
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.RedirectStandardInput = $true
+
+    $process = [System.Diagnostics.Process]::Start($startInfo)
+    try {
+        $process.StandardInput.Close()
+        if (-not $process.WaitForExit($TimeoutSeconds * 1000)) {
+            try {
+                & taskkill.exe /PID $process.Id /T /F | Out-Null
+            }
+            catch {
+                Write-Verbose ('taskkill failed: ' + $_.Exception.Message)
+            }
+
+            return -1
+        }
+
+        return $process.ExitCode
+    }
+    finally {
+        $process.Dispose()
+    }
+}
+
+# Seam: true only for a live process that is the Huddle app host (guards against a recycled pid).
+function Test-ProcessRunning {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [int]$ProcessId
+    )
+
+    $process = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+    if ($null -eq $process) {
+        return $false
+    }
+
+    return [string]::Equals($process.ProcessName, 'Huddle.App', [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+# Seam: ends a process that survived the stop request (-Force only).
+function Stop-HuddleProcess {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [int]$ProcessId
+    )
+
+    Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+    Wait-Process -Id $ProcessId -Timeout 10 -ErrorAction SilentlyContinue
+}
+
+# Stops a running instance (instance record present). Returns whether a stop was attempted.
+function Stop-HuddleIfRunning {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        $Paths,
+
+        [switch]$Force
+    )
+
+    $recordPath = Join-Path (Join-Path $Paths.DataRoot 'data') 'instance.json'
+    if (-not (Test-Path -LiteralPath $recordPath -PathType Leaf)) {
+        return $false
+    }
+
+    $instancePid = 0
+    try {
+        $record = Get-Content -LiteralPath $recordPath -Raw | ConvertFrom-Json
+        $instancePid = [int]$record.PSObject.Properties['pid'].Value
+    }
+    catch {
+        # An unreadable record means no usable pid: the exit code of the stop request decides below.
+        $instancePid = 0
+    }
+
+    Write-Step -Status '..' -Name 'stop' -Detail 'stopping the running Agency Huddle'
+    $exitCode = Invoke-HuddleStop -Paths $Paths
+
+    if ($instancePid -gt 0) {
+        if (Test-ProcessRunning -ProcessId $instancePid) {
+            if (-not $Force) {
+                throw ('Agency Huddle (pid ' + $instancePid + ') is still running after the stop request. Close it and run the installer again, or pass -Force to end the process.')
+            }
+
+            Write-Step -Status '..' -Name 'stop' -Detail ('ending process ' + $instancePid + ' (-Force)')
+            Stop-HuddleProcess -ProcessId $instancePid
+        }
+    }
+    elseif ($exitCode -ne 0) {
+        if (-not $Force) {
+            throw ('The stop request for Agency Huddle failed (exit code ' + $exitCode + '). Close it and run the installer again, or pass -Force.')
+        }
+
+        Write-Step -Status '..' -Name 'stop' -Detail ('stop request exited with code ' + $exitCode + '; continuing because of -Force')
+    }
+
+    Write-Step -Status 'ok' -Name 'stop' -Detail 'stopped'
+    return $true
+}
+
+# Installs the app from a verified archive. Returns $true when the install changed, $false when
+# the step was skipped. Does not write the install state (Invoke-Main does, last).
+function Install-App {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        $Paths,
+
+        [Parameter(Mandatory)]
+        [string]$Archive,
+
+        [AllowNull()]
+        $State,
+
+        [switch]$Force
+    )
+
+    $ErrorActionPreference = 'Stop'
+
+    $archiveSha = Get-FileSha256 -Path $Archive
+    if ((Test-StepSatisfied -State $State -Key 'appSha256' -Expected $archiveSha) -and (Test-Path -LiteralPath $Paths.ExePath -PathType Leaf)) {
+        Write-Step -Status 'skip' -Name 'app' -Detail 'already installed'
+        return $false
+    }
+
+    $installRoot = $Paths.InstallRoot.TrimEnd('\', '/')
+    $staging = $installRoot + '.staging'
+    $old = $installRoot + '.old'
+
+    # Leftovers of an interrupted run: a swap that died between its two renames, then stale folders.
+    if ((-not (Test-Path -LiteralPath $installRoot)) -and (Test-Path -LiteralPath $old)) {
+        Move-Item -LiteralPath $old -Destination $installRoot
+    }
+
+    foreach ($leftover in @($staging, $old)) {
+        if (Test-Path -LiteralPath $leftover) {
+            Remove-Item -LiteralPath $leftover -Recurse -Force
+        }
+    }
+
+    $parent = Split-Path -Parent $installRoot
+    if (-not (Test-Path -LiteralPath $parent)) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+
+    Write-Step -Status '..' -Name 'app' -Detail 'extracting the release archive'
+
+    $carried = New-Object System.Collections.ArrayList
+    $oldMoved = $false
+    try {
+        New-Item -ItemType Directory -Path $staging | Out-Null
+        Invoke-Tar -Archive $Archive -Destination $staging
+
+        foreach ($required in @('app\Huddle.App.exe', 'release-info.json')) {
+            if (-not (Test-Path -LiteralPath (Join-Path $staging $required) -PathType Leaf)) {
+                throw ('The release archive does not contain ' + $required + '; the previous install was left untouched.')
+            }
+        }
+
+        if (Test-Path -LiteralPath $installRoot) {
+            # Windows cannot move a folder whose files a running process holds open.
+            $null = Stop-HuddleIfRunning -Paths $Paths -Force:$Force
+
+            foreach ($relative in @('node', 'tools\acp\node_modules')) {
+                $from = Join-Path $installRoot $relative
+                if (Test-Path -LiteralPath $from) {
+                    $to = Join-Path $staging $relative
+                    $toParent = Split-Path -Parent $to
+                    if (-not (Test-Path -LiteralPath $toParent)) {
+                        New-Item -ItemType Directory -Path $toParent -Force | Out-Null
+                    }
+
+                    if (Test-Path -LiteralPath $to) {
+                        Remove-Item -LiteralPath $to -Recurse -Force
+                    }
+
+                    Move-Item -LiteralPath $from -Destination $to
+                    $null = $carried.Add([pscustomobject]@{ From = $from; To = $to })
+                }
+            }
+
+            # Small files the other steps read next: copied, so the old tree stays whole for a rollback.
+            foreach ($file in @($Paths.StatePath, $Paths.LauncherPath)) {
+                $target = Join-Path $staging (Split-Path -Leaf $file)
+                if ((Test-Path -LiteralPath $file -PathType Leaf) -and (-not (Test-Path -LiteralPath $target))) {
+                    Copy-Item -LiteralPath $file -Destination $target
+                }
+            }
+
+            Move-Item -LiteralPath $installRoot -Destination $old
+            $oldMoved = $true
+        }
+
+        Move-Item -LiteralPath $staging -Destination $installRoot
+    }
+    catch {
+        $failure = $_
+        try {
+            if ($oldMoved -and (-not (Test-Path -LiteralPath $installRoot))) {
+                Move-Item -LiteralPath $old -Destination $installRoot
+            }
+
+            for ($i = $carried.Count - 1; $i -ge 0; $i--) {
+                $item = $carried[$i]
+                $fromParent = Split-Path -Parent $item.From
+                if (-not (Test-Path -LiteralPath $fromParent)) {
+                    New-Item -ItemType Directory -Path $fromParent -Force | Out-Null
+                }
+
+                Move-Item -LiteralPath $item.To -Destination $item.From
+            }
+
+            if (Test-Path -LiteralPath $staging) {
+                Remove-Item -LiteralPath $staging -Recurse -Force
+            }
+        }
+        catch {
+            Write-Step -Status '!!' -Name 'app' -Detail ('rollback failed: ' + $_.Exception.Message) -Fix ('Restore ' + $installRoot + ' from ' + $old + ' by hand.')
+        }
+
+        throw $failure
+    }
+
+    if (Test-Path -LiteralPath $old) {
+        try {
+            Remove-Item -LiteralPath $old -Recurse -Force
+        }
+        catch {
+            Write-Step -Status '..' -Name 'app' -Detail ('could not delete ' + $old + '; the next run removes it')
+        }
+    }
+
+    Write-Step -Status 'ok' -Name 'app' -Detail 'installed'
+    return $true
+}
+
+# ---------------------------------------------------------------------------
 # Prerequisite seams (every external effect of the checks sits behind one)
 # ---------------------------------------------------------------------------
 
