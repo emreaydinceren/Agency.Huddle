@@ -1,20 +1,34 @@
 # Analyzer decisions
 
 Which compiler and analyzer rules are switched off or turned up in this solution, what was
-decided about each group, and what the decision rested on. Read it before enabling,
-disabling or "cleaning up" a rule, so the answer is a lookup and not a guess.
+decided about each, and what the decision rested on. Read it before enabling, disabling or
+"cleaning up" a rule, so the answer is a lookup and not a guess.
 
-This is a record. The enforced house style is [CSharpPrinciples.md](../../agents/CSharpPrinciples.md);
-the files that carry the settings are `Directory.Build.props`, `Directory.Packages.props`,
-`.editorconfig` and `BannedSymbols.txt` at the repository root.
+This is a record of the **state of each rule**, not a log of the work that produced it. A rule is
+either [enabled](#enabled) or [denied](#denied), and each section says why and how sure we are.
+How a rule got there is in git history, not here.
+
+The enforced house style is [CSharpPrinciples.md](../../agents/CSharpPrinciples.md); the files that
+carry the settings are `Directory.Build.props`, `Directory.Packages.props`, `.editorconfig` and
+`BannedSymbols.txt` at the repository root.
 
 First written 2026-10-03 against SonarAnalyzer.CSharp 10.32.0.713. Update it in the same
 commit as any change to those files.
 
-**Where it stands.** The denylist was 282 entries on `main`. It is now 119: 20 rules that fire
-here and are noise or reviewed false positives, 98 that were read and denied for a stated
-reason, and 9 telemetry entries. The goal is to keep narrowing it; every entry should end up
-with a reason on this page, not a number in a list.
+**Where it stands.** The denylist was 282 entries on `main`. It is now 119:
+
+| Denied because | Count |
+| --- | --- |
+| The rule fires here and is noise, a false positive, or needs a change outside the chat side | 20 |
+| Technology this repository does not use | 22 |
+| Another rule already covers it | 14 |
+| Kept for a stated reason (reasoning, not a test) | 4 |
+| Tried, did not fire | 3 |
+| Style, naming, design opinion or micro-performance | 47 |
+| Sonar telemetry (`S9999-*`), not code rules | 9 |
+
+The goal is to keep narrowing it; every entry should end up with a reason on this page, not a
+number in a list.
 
 ## How a rule gets its severity
 
@@ -33,30 +47,28 @@ does nothing.
 
 ## Why so many rules are denied
 
-The denylist is a bulk switch-off, not 270 reviewed decisions. The repository's `.editorconfig`
+The denylist began as a bulk switch-off, not 270 reviewed decisions. The repository's `.editorconfig`
 was carried over from the Agency repository without the analyzer behind its `S####` rules, so
 those rules sat inert. When the package was added, enabling it would have failed the build on
 every default rule at once, so every default rule was denied by ID and a curated list was opted
-back in. The denylist was never reviewed rule by rule.
-
-That is why it is now split into three groups in `Directory.Build.props`, and why the next
-sections state, for each, how much judgement actually went into it.
+back in. The list has since been reviewed rule by rule; the sections below state, for each group,
+how much judgement went into it.
 
 ## What was measured
 
-On 2026-10-03 the solution was built with the whole denylist lifted
+The baseline was taken on 2026-10-03 with the whole denylist lifted
 (`dotnet build Huddle.slnx -p:TreatWarningsAsErrors=false -p:NoWarn=CS1591%3BNU1701`). Hits were
 de-duplicated by file and position, because a diagnostic can be printed once per target.
 
 - 273 of the denylisted rules were default-on and checked.
 - **237 of the 273 had zero hits** in `src` and `tests` combined.
-- The other 36 fired somewhere. The two outcomes are in [Enabled](#enabled) and
-  [Denied on purpose](#denied-on-purpose).
+- The other 36 fired somewhere. Fourteen of those were fixed and enabled; the rest stay denied
+  (see [Denied: the rule fires here](#denied-the-rule-fires-here)).
 
 Two cautions on those numbers:
 
-1. The count is from the tree *before* the changes in the section below, so it is a baseline,
-   not a current figure. Re-measure before relying on it.
+1. They are a baseline from before the rules were enabled, not a current figure. Re-measure before
+   relying on them.
 2. Overriding `NoWarn` on the command line replaces every `NoWarn` in every project, so the
    per-project `CA` suppressions are lifted too. Read only the `S####` lines from that build.
 
@@ -103,43 +115,23 @@ hole; enabling it makes that permanent.
 
 ### Correctness rules
 
-Twenty-four rules for code that does not do what it reads as doing: `S1862`, `S1871`, `S3923`,
-`S1764`, `S1656`, `S2201`, `S2674`, `S2688`, `S2692`, `S2183`, `S2184`, `S2275`, `S2437`, `S3169`,
-`S3172`, `S4143`, `S4581`, `S1944`, `S1696`, `S2995`, `S2996`, `S3005`, `S5856`, `S2701`.
+Thirty-two rules for code that does not do what it reads as doing.
 
-Twenty-one are proven. **Unproven:** `S2184` (not probed), `S3172` (did not fire on `a = a - b`
-for two `Action`s) and `S1944` (not probed).
+| Rule | Guards |
+| --- | --- |
+| `S1862`, `S1871`, `S3923`, `S1764`, `S1656`, `S2201`, `S2674`, `S2688`, `S2692`, `S2183`, `S2184`, `S2275`, `S2437`, `S3169`, `S3172`, `S4143`, `S4581`, `S1944`, `S1696`, `S2995`, `S2996`, `S3005`, `S5856`, `S2701` | Duplicate branches, self-assignment, ignored results, bad shifts, wrong comparisons, test assertions that cannot fail |
+| `S1163`, `S1848`, `S2234`, `S2386`, `S2737`, `S2955`, `S3244`, `S3881` | Throw in `finally`, object created and discarded, arguments in a different order than the parameters, public static mutable field, a `catch` that only rethrows, unconstrained generic compared to `null`, anonymous delegate used to unsubscribe, wrong `IDisposable` pattern |
 
-Two had hits and were fixed rather than suppressed:
+Proven: all except `S2184` (not probed), `S3172` (did not fire on `a = a - b` for two `Action`s)
+and `S1944` (not probed), which are **unproven**. `S1848` and `S1163` overlap `CA1806` and
+`CA2219`, which were already on, so they add no new coverage.
 
-| Rule | Site | Fix |
-| --- | --- | --- |
-| `S1871` | `RoomSessionPool` victim selection | Two identical branches merged into one condition |
-| `S1871` | `WikiLinkParser` line counting | Same |
-| `S2701` | `LibraryEditorTests`, two assertions | `Assert.Equal(false, x)` became `Assert.False(Assert.IsType<bool>(x))` |
+### Hazards, types, logging, tests, web and security: 88 rules judged on their titles
 
-### Sixth batch
-
-Eight more zero-hit rules, each proven to fire: `S1163` (throw in `finally`), `S1848` (object
-created and discarded), `S2234` (arguments in a different order than the parameters), `S2386`
-(public static mutable field), `S2737` (a `catch` that only rethrows), `S2955` (unconstrained
-generic compared to `null`), `S3244` (anonymous delegate used to unsubscribe), `S3881` (wrong
-`IDisposable` pattern).
-
-`S1848` and `S1163` overlap `CA1806` and `CA2219`, which were already on, so they add no new
-coverage.
-
-**Tried and put back:** `S2114` and `S2328` did not fire on a probe built to trigger them. Either
-the probe was wrong or the rule is narrower than its title; nobody checked which, so both stay
-denied until someone does.
-
-### Seventh batch
-
-The 189 rules that were denied only because they were default-on were each read on their Sonar
-title (listed with `agents/scripts/List-SonarRules.cs`). Eighty-eight guard correctness, security,
-a house rule or a technology this repository uses, and were enabled. All had zero hits on the
-whole solution. The grouping is mine, from the titles; the sites were not read because there were
-none to read.
+These had zero hits on the whole solution, were read on their Sonar title (listed with
+`agents/scripts/List-SonarRules.cs`), and guard correctness, security, a house rule or a
+technology this repository uses. The grouping is from the titles; no sites were read because there
+were none.
 
 | Group | Rules |
 | --- | --- |
@@ -150,14 +142,13 @@ none to read.
 | Blazor and web | `S6797`, `S6798`, `S6800`, `S6962`, `S6967`, `S6964`, `S6930`, `S6931`, `S6934`, `S6965`, `S6961`, `S6932` |
 | Security | `S6377`, `S7039`, `S1313`, `S2857` |
 
-**Proven (41)**, by a deliberate violation that failed the build with the rule's ID: `S1048`,
-`S1104`, `S1215`, `S1313`, `S2139`, `S2178`, `S2290`, `S2291`, `S2346`, `S2368`, `S2376`,
-`S2696`, `S2757`, `S2761`, `S2953`, `S3010`, `S3011`, `S3060`, `S3262`, `S3343`, `S3427`,
-`S3440`, `S3443`, `S3447`, `S3458`, `S3466`, `S3600`, `S3603`, `S3869`, `S3875`, `S3885`,
-`S3981`, `S4070`, `S4201`, `S4456`, `S4545`, `S5034`, `S6580`, `S6618`, `S6672`, `S6678`.
+**Proven (41):** `S1048`, `S1104`, `S1215`, `S1313`, `S2139`, `S2178`, `S2290`, `S2291`, `S2346`,
+`S2368`, `S2376`, `S2696`, `S2757`, `S2761`, `S2953`, `S3010`, `S3011`, `S3060`, `S3262`,
+`S3343`, `S3427`, `S3440`, `S3443`, `S3447`, `S3458`, `S3466`, `S3600`, `S3603`, `S3869`,
+`S3875`, `S3885`, `S3981`, `S4070`, `S4201`, `S4456`, `S4545`, `S5034`, `S6580`, `S6618`,
+`S6672`, `S6678`.
 
-**Unproven (47).** They produced no output on the real code and were not (or could not be)
-triggered by a probe: `S2187`, `S2198`, `S2345`, `S2372`, `S2857`, `S2925`, `S2934`, `S2970`,
+**Unproven (47):** `S2187`, `S2198`, `S2345`, `S2372`, `S2857`, `S2925`, `S2934`, `S2970`,
 `S3236`, `S3251`, `S3346`, `S3363`, `S3397`, `S3415`, `S3433`, `S3444`, `S3449`, `S3450`,
 `S3451`, `S3457`, `S3464`, `S3877`, `S3887`, `S3889`, `S3971`, `S3998`, `S4015`, `S4019`,
 `S4260`, `S4275`, `S4583`, `S6377`, `S6668`, `S6673`, `S6797`, `S6798`, `S6800`, `S6930`,
@@ -169,121 +160,110 @@ Some of the unproven rules were probed and did not fire: `S2372` (a getter that 
 what the rule looks for or the rule is narrower than its title. Nobody checked which. The test
 and web rules need a test or web project, and were not probed at all.
 
-A rule that was enabled and never fires is harmless but gives a false sense of cover. If one of
+A rule that is enabled and never fires is harmless but gives a false sense of cover. If one of
 these matters to you, write a probe for it first.
 
-### Eighth batch
+### Enabled after fixing real hits
 
-Ten denied rules were picked for value and enabled to see what the build said. Eight stay on; two
-were put back after the build disproved them.
+Each of these fired on real code, so each is proven. The fix is what the rule asked for, except
+the two suppressions, which are recorded as such.
 
-| Rule | What it caught | Outcome |
+| Rule | What it caught | Fix |
 | --- | --- | --- |
-| `S1643` | `PersonaFrontmatter.SplitFlowListItems` appended to a `string` in a loop, three places | Fixed with a `StringBuilder`. Proven by real hits. |
-| `S2123` | Two test counters declared as `void Count() => n++`, read later | Not a bug; the increment was the local function's result. Changed to `Interlocked.Increment`, which the same file already uses elsewhere. Proven by real hits. |
-| `S3241` | Two `SetupEditorModule` test helpers returned a tuple no caller used | Return type changed to `void`. Proven by real hits. |
-| `S3237` | `DuplexStream.Position`'s setter never reads `value` | A deliberate `NotSupportedException` setter on a `Stream` override, so a false positive. Narrow `#pragma` with the reason. Proven by a real hit. |
-| `S2971` | `TaskStoreMemoryWarningTests.Warnings` calls `ToList()` on a live list | Looks useless, but the logger appends from other threads and the call is the snapshot. Narrow `#pragma` with the reason; dropping it risked a flaky test. Proven by a real hit. |
-| `S1244`, `S6588`, `S6607` | Floating-point equality, a hand-built Unix epoch, sort before filter | Zero hits. Each proven by a deliberate violation. |
-| `S8969`, `S8970` | Redundant `!` | **Put back.** See [Denied on purpose](#denied-on-purpose): removing the `!` broke the build at two of three `S8969` sites and all four `S8970` sites. |
+| `S1871` | `RoomSessionPool` victim selection and `WikiLinkParser` line counting each had two identical branches | Merged into one condition |
+| `S2701` | `LibraryEditorTests`, two assertions of the form `Assert.Equal(false, x)` | `Assert.False(Assert.IsType<bool>(x))` |
+| `S6354` | Five uses of the ambient clock | Injected `TimeProvider` |
+| `S1643` | `PersonaFrontmatter.SplitFlowListItems` appended to a `string` in a loop, three places | `StringBuilder` |
+| `S2123` | Two test counters declared as `void Count() => n++`, read later | `Interlocked.Increment`, which the same file already uses elsewhere |
+| `S3241` | Two `SetupEditorModule` test helpers returned a tuple no caller used | Return type changed to `void` |
+| `S3237` | `DuplexStream.Position`'s setter never reads `value` | **False positive**: a deliberate `NotSupportedException` setter on a `Stream` override. Narrow `#pragma` with the reason. |
+| `S2971` | `TaskStoreMemoryWarningTests.Warnings` calls `ToList()` on a live list | **Looks useless, is not**: the logger appends from other threads and the call is the snapshot. Narrow `#pragma` with the reason; dropping it risked a flaky test. |
+| `S1481` | Fourteen unused locals in tests, one in `DotAcpAgentHostFactory` | Unused `ct` locals deleted; unused `out` variables became `out _`; unused service locals became `_ =`. In `DotAcpAgentHostFactory` the call can throw or construct a service, so it became `_ = ...` and is kept. |
+| `S1144` | `RoomSession.MaxDescriptionLength`, a test helper `PersonaText`, a test field `Empty`, and `appearanceLogger` | Deleted |
+| `S1066` | Nested `if` in `LibraryFileKinds` (the WebP signature check) and two in `SkillCatalogTests` | Merged into one condition |
+| `S1117` | Locals named `index`, `open`, `grouping` and `gate` that hid a field | Renamed to `textIndex`, `opening`, `groupingKey` and `openGate` |
+| `S2292` | `ManualTimeProvider.UtcNow` wrapped a backing field | Auto-property |
+| `S6562` | `new DateTime(2026, 11, 3)` in a test | `DateTimeKind.Unspecified`, the same kind it had before, now stated |
+| `S2479` | A raw `0x1F` control character inside the effort cache key in `ModelCatalogProbe` | `string.Concat(profileId, "\u001F", model)`: the same key, written so a reader can see it |
+| `S3358` | Eight nested ternaries: assignee resolution in `CreateTaskTool` and `UpdateTaskTool`, the avatar choice in `Appearance` and `TeammateCard`, the page title in `TeamPage`, `DetailKey` in `Tasks`, a note title in `MarkdownRenderer`, a skill's source in `SkillStore` | `if` chains, property-pattern and tuple `switch` expressions |
+| `S1118` | `public partial class Program` had an implicit public constructor | Protected constructor with a doc comment; the class stays `public partial` for `WebApplicationFactory<Program>` |
 
-One thing the batch also changed: `AgentConnection.HandleMessageDeltaAsync` used `this.Agent!.Id,
-this.Agent!.Name`. It now reads `this.Agent ?? throw new InvalidOperationException(...)` once, so
-the invariant "the handshake set the Agent first" is stated instead of asserted with `!`, and a
-broken one fails with a clear exception.
+Two side effects of these fixes are worth knowing:
 
-### Ninth batch
+- `AgentConnection.HandleMessageDeltaAsync` used `this.Agent!.Id, this.Agent!.Name`. It now reads
+  `this.Agent ?? throw new InvalidOperationException(...)` once, so the invariant "the handshake set
+  the Agent first" is stated instead of asserted with `!`.
+- `Tasks.razor`'s `DetailKey` returned a string literal, which `Check-Diff` reads as user-facing
+  text with no test; the fallback is a named constant, `NoDetailKey`.
 
-Ten denied rules that fired on only a few sites were enabled. Seven stay on, each proven by real
-hits and fixed; three were put back for reasons the build exposed, none of them "too noisy".
+### Enabled with no hits, each proven
 
-| Rule | What it caught | Outcome |
-| --- | --- | --- |
-| `S1481` | Fourteen unused locals in tests, one in `DotAcpAgentHostFactory` | Unused `ct` locals deleted; unused `out` variables became `out _`; unused service locals became `_ =`. In `DotAcpAgentHostFactory` the local was `GetRequiredService<FileChangeTracker>()`, which can throw or construct a service, so it became `_ = ...` and the call is kept. |
-| `S1144` | `RoomSession.MaxDescriptionLength`, a test helper `PersonaText`, a test field `Empty`, and `appearanceLogger` | Deleted. |
-| `S1066` | Nested `if` in `LibraryFileKinds` (the WebP signature check) and two in `SkillCatalogTests` | Merged into one condition. |
-| `S1117` | Locals named `index`, `open`, `grouping` and `gate` that hid a field | Renamed to `textIndex`, `opening`, `groupingKey` and `openGate`. |
-| `S2292` | `ManualTimeProvider.UtcNow` wrapped a backing field | Auto-property. |
-| `S6562` | `new DateTime(2026, 11, 3)` in a test | `DateTimeKind.Unspecified`, the same kind it had before, now stated. |
-| `S2479` | A raw `0x1F` control character inside the effort cache key in `ModelCatalogProbe` | Now `string.Concat(profileId, "\u001F", model)`. The same key, written so a reader can see it. `Check-Diff` would have flagged the `=> $"..."` shape as untested text. |
-| `S3878` | `Split([',', ';'])` in three places | **Put back.** It contradicts `S3220`, which is on. See [Denied on purpose](#denied-on-purpose). |
-| `S1450`, `S3376` | One site each, in `Huddle.Console` and `FakeRpcError` | **Not enabled.** Both are in the ACP effort's subtree. Revisit with them. |
+Each was proven by a deliberate violation that failed the build with its ID.
 
-### Tenth batch
+| Rule | Guards |
+| --- | --- |
+| `S1244` | Floating-point equality |
+| `S6588` | A hand-built Unix epoch instead of `UnixEpoch` |
+| `S6607` | Sorting before filtering (`OrderBy` before `Where`) |
+| `S6561` | `DateTime.Now` used for timing or benchmarking |
+| `S6608` | `Enumerable` methods on an `IList` where indexing works (the written `[0]` not `.First()` rule) |
+| `S6609`, `S6613` | `Enumerable` extension methods on a `Set` or `LinkedList` where the type's own `Min`/`Max` or `First`/`Last` property exists |
+| `S6617` | `Any` for a simple equality check where `Contains` works |
+| `S1940` | Boolean checks written inverted |
+| `S3247` | Duplicate casts |
+| `S4635` | `Substring` where a start index would do |
 
-Eleven denied rules that fired on a few sites were tried, then four more with no hits to make up
-the number. Ten are on. Every one of them is proven, either by real hits or by a deliberate
-violation that failed the build.
+## Denied
 
-| Rule | What it caught | Outcome |
-| --- | --- | --- |
-| `S3358` | Eight nested ternaries: assignee resolution in `CreateTaskTool` and `UpdateTaskTool`, the avatar choice in `Appearance` and `TeammateCard`, the page title in `TeamPage`, `DetailKey` in `Tasks`, a note title in `MarkdownRenderer`, a skill's source in `SkillStore` | `if` chains, property-pattern and tuple `switch` expressions. The avatar and skill ones read better as a `switch`. |
-| `S1118` | `public partial class Program` had an implicit public constructor | Protected constructor with a doc comment. The class stays `public partial` for `WebApplicationFactory<Program>`. |
-| `S6561`, `S6608`, `S6617`, `S1940`, `S3247`, `S4635`, `S6609`, `S6613` | No hits. They match the written rule "use `[0]` and `.Count`, not `.First()` and `.Count()`" and its neighbours | Each proven with a deliberate violation. |
+### Denied: the rule fires here
 
-`Tasks.razor`'s `DetailKey` returned a string literal, which `Check-Diff` reads as user-facing
-text with no test; the fallback is now a named constant, `NoDetailKey`.
-
-**Tried and put back.** None of these was "too noisy":
-
-- `S2325` (method could be `static`): see [Denied on purpose](#denied-on-purpose). In razor files it breaks the markup.
-- `S2094`, `S2365`, `S2743`, `S125`, `S4144`: each has at least one site in the ACP effort's subtree, and a rule applies to the whole solution, so enabling it means editing their code.
-- `S3218`, `S3398`: a real finding each, but the fix is churn across test fixtures for no defect.
-- `S3610`: did not fire on any of five shapes, so it joins `S2114` and `S2328` in the "tried, did not fire" group.
-
-**A mistake worth recording.** Removing `S6613` from the denylist with a regex glued its two
-neighbours into one token, `S6575S6640`, which would have silently turned both rules back on
-at their default severity. The build did not fail because neither had hits. It was caught only by
-diffing the denylist against `HEAD`. When editing that list by script, diff it afterwards.
-
-## Denied on purpose
-
-Twenty rules fire on this codebase and stay denied. (Thirty-four did at the baseline; fourteen
-of them were fixed and enabled, see the Eighth, Ninth and Tenth batches above.) `src` and `tests` are hit counts
-from the baseline above. **Reviewed** means someone read the sites and decided; **Noise** means
-the decision rests on the diagnostic's message and its hit count, with the sites not read.
+Twenty rules fire on this codebase and stay denied. Counts are from the baseline above; a rule
+listed under "Enabled after fixing real hits" is no longer in this table. **Reviewed** means
+someone read the sites and decided; **Noise** means the decision rests on the diagnostic's message
+and its hit count, with the sites not read; **Not enabled** means the rule is not wrong, but a site
+is in the ACP effort's subtree (the chat side does not edit it) or the fix is churn for no defect.
 
 | Rule | Message | src | tests | Status and decision |
 | --- | --- | --- | --- | --- |
 | `S6667` | Logging in a `catch` should pass the exception | 4 | 0 | **Reviewed, keep off.** The sites log an expected cancellation (`RoomSession.cs`) or a bad colour in user data (`AvatarStore.cs`); a stack trace would only be noise. Fixing it would make the logs worse. |
 | `S3264` | Unused event | 2 | 0 | **Reviewed, keep off.** False positive: `PersonaStore` raises `PersonaRenamed` and `PersonaRemoved` through `GetInvocationList()`, which the rule does not see. |
 | `S1994` | Loop's stop incrementer is not in the stop condition | 1 | 0 | **Reviewed, keep off.** `TaskIdAllocator` uses `for (suffix = 2; ; suffix++)` with a `return` inside; it is deliberate. |
+| `S8969` | Redundant null-forgiving `!` | 3 | 32 | **Reviewed, keep off.** Tried on the three source sites: at `PersonaRunner.cs:560` and `RoomSessionPool.cs:170` removing the `!` fails the build with `CS8602`, so the rule is wrong there. Only the `AgentConnection.cs` site was right. The 32 test sites were not tried; a rule that is wrong on two of three cannot be trusted without checking each fix against the compiler. |
+| `S8970` | `!` where nullable warnings are disabled | 4 | 0 | **Reviewed, keep off.** False positive on all four sites. They are `= default!` in `.razor` files, where nullable is enabled: removing the `!` fails the build with `CS8625` or `CS8601`. |
+| `S3878` | Needless array creation for `params` | 3 | 3 | **Reviewed, keep off.** It contradicts `S3220`, which is already on: `Split([',', ';'])` trips `S3878`, and `Split(',', ';')` trips `S3220`. Both cannot be on for `string.Split`. |
+| `S2325` | Method could be `static` | 3 | 0 | **Reviewed, keep off.** All three sites are razor handlers. Making one `static` breaks every `this.Member(...)` call in the markup (`CS0176`) and the generated event lambdas (`CS1662`), and the house rule requires `this.`. `CA1822` already covers ordinary classes. |
 | `S6966` | Await the async variant (`CancelAsync`, `DisposeAsync`) | 16 | 923 | Noise. It is a preference for the async overload, not a missing `await`. Almost all hits are tests. |
 | `S3267` | Loop could use `Where` | 69 | 2 | Noise. A style preference. |
 | `S108` | Empty block | 41 | 4 | Noise. |
-| `S125` | Commented-out code | 7 | 4 | Not enabled: two of the eleven sites are in `Huddle.Acp` and `Huddle.Console`. Plausibly worth a look, since commented-out code rots. |
-| `S8969` | Redundant null-forgiving `!` | 3 | 32 | **Reviewed, keep off.** Tried on the three source sites: at `PersonaRunner.cs:560` and `RoomSessionPool.cs:170` removing the `!` fails the build with `CS8602`, so the rule is wrong there. Only the `AgentConnection.cs` site was right. The 32 test sites were not tried; a rule that is wrong on two of three cannot be trusted without checking each fix against the compiler. |
-| `S8970` | `!` where nullable warnings are disabled | 4 | 0 | **Reviewed, keep off.** False positive on all four sites. They are `= default!` in `.razor` files, where nullable is enabled: removing the `!` fails the build with `CS8625` or `CS8601`. |
-| `S2094` | Empty record or class | 4 | 0 | Not enabled: three of the four sites (`AssemblyMarker`, `AgentPrompt`, `ElicitationResult`) are in `Huddle.Acp`, the ACP effort's subtree. |
-| `S2365` | Property copies a collection | 4 | 1 | Not enabled: two of the five sites are in `Huddle.Acp` and `Huddle.Acp.Tests`. The others are `Aliases`, `WatchedTaskIds` and `OnlineAgentIds`; not read. |
-| `S3878` | Needless array creation for `params` | 3 | 3 | **Reviewed, keep off.** It contradicts `S3220`, which is already on: `Split([',', ';'])` trips `S3878`, and `Split(',', ';')` trips `S3220`. Both cannot be on for `string.Split`. |
-| `S4144` | Method identical to another | 1 | 8 | Not enabled: one site is in `Huddle.Acp.Tests`. The rest are test methods that share a body. |
 | `S1135` | `TODO` comment | 2 | 2 | Noise. |
-| `S1450` | Field should be a local | 1 | 0 | Not enabled: the one site is `ConsoleLineReader` in `src/Huddle.Console`, the ACP effort's subtree, which the chat side does not edit (`CLAUDE.md`). Revisit with the ACP owner. |
-| `S2325` | Method could be `static` | 3 | 0 | **Reviewed, keep off.** All three sites are razor handlers. Making one `static` breaks every `this.Member(...)` call in the markup (`CS0176`) and the generated event lambdas (`CS1662`), and the house rule requires `this.`. `CA1822` already covers ordinary classes. |
+| `S125` | Commented-out code | 7 | 4 | Not enabled: two of the eleven sites are in `Huddle.Acp` and `Huddle.Console`. Plausibly worth a look, since commented-out code rots. |
+| `S2094` | Empty record or class | 4 | 0 | Not enabled: three of the four sites (`AssemblyMarker`, `AgentPrompt`, `ElicitationResult`) are in `Huddle.Acp`. |
+| `S2365` | Property copies a collection | 4 | 1 | Not enabled: two of the five sites are in `Huddle.Acp` and `Huddle.Acp.Tests`. The others are `Aliases`, `WatchedTaskIds` and `OnlineAgentIds`; not read. |
+| `S4144` | Method identical to another | 1 | 8 | Not enabled: one site is in `Huddle.Acp.Tests`. The rest are test methods that share a body. |
+| `S1450` | Field should be a local | 1 | 0 | Not enabled: the one site is `ConsoleLineReader` in `src/Huddle.Console`, which the chat side does not edit (`CLAUDE.md`). Revisit with the ACP owner. |
 | `S2743` | Static field in a generic type | 0 | 1 | Not enabled: the one site is `ListLogger` in `tests/Huddle.Acp.Tests`. |
-| `S3218` | Member shadows an outer member | 0 | 4 | Not enabled, by choice: four nested test fixtures expose a member named like one on the outer class (`Chat`, `Directory`, `Team`, ...). Renaming ripples through every use, for no defect. |
 | `S3376` | Class name should end in `Exception` | 0 | 1 | Not enabled: the one site is `FakeRpcError`, a file linked into two assemblies (`Huddle.Acp.Tests` and `Huddle.MockAdapter`) and owned by the ACP effort. Renaming it is their change. |
+| `S3218` | Member shadows an outer member | 0 | 4 | Not enabled, by choice: four nested test fixtures expose a member named like one on the outer class (`Chat`, `Directory`, `Team`, ...). Renaming ripples through every use, for no defect. |
 | `S3398` | Move method inside its class | 0 | 1 | Not enabled, by choice: one shared test helper (`WaitUntilAsync`) used by a single nested class. Moving it is churn. |
 
 The seven **Reviewed** rows are the only ones where the sites were read. For every other row,
-treat "Noise" as "not worth the cost at the time", not as "proven harmless".
+treat "Noise" as "not worth the cost at the time", not as "proven harmless". Seven rows wait on the
+ACP owner (`S125`, `S2094`, `S2365`, `S4144`, `S1450`, `S2743`, `S3376`); two (`S3218`, `S3398`)
+wait on a decision to accept churn.
 
-## Denied after review, zero hits
+### Denied after review: zero hits
 
-The 101 rules of the original 189 that stayed denied after the seventh batch (three of them were
-enabled in the eighth and eight in the tenth, leaving 90), in five groups, each its own `<NoWarn>`
-element in `Directory.Build.props` with the reason in a comment above it. They have zero hits, so
-the reason is never "it would break the build"; it is what the rule is. Judged on the Sonar
-title only.
+Rules that stayed denied after being read on their Sonar title, in five groups, each its own
+`<NoWarn>` element in `Directory.Build.props` with the reason in a comment above it. They have zero
+hits, so the reason is never "it would break the build"; it is what the rule is.
 
 | Group | Count | Rules | Why |
 | --- | --- | --- | --- |
 | Technology this repository does not use | 22 | `S6420`, `S6419`, `S6424`, `S6422` (Azure Functions), `S3597`, `S3598` (WCF), `S4210` (WinForms), `S4428`, `S4159`, `S4277` (MEF), `S4200`, `S4211`, `S3925`, `S3927`, `S3926` (legacy serialization), `S3431` (NUnit), `S6670`, `S6675` (the `Trace` API), `S8380`, `S8381`, `S8367`, `S8368` (C# 14 keyword-escape naming) | Nothing here to guard. The C# 14 ones are also reported by the compiler. |
 | Another rule already covers it | 14 | `S112` (`CA2201`), `S2629` (`CA2254`), `S3260` (`CA1852`), `S1172` (`IDE0060`), `S3445` (`CA2200`), `S101` (`IDE1006`), `S1155` (`CA1860`), `S1905` (`IDE0004`), `S2223` (`CA2211`), `S2681` (`IDE0011`), `S1699`, `S2306`, `S4220`, `S3903` | Enabling it would print each finding twice. The mapping is by title, not tested. |
 | Kept for a stated reason | 4 | `S4036`, `S1607`, `S6610`, `S1075` | See below. |
-| Tried, did not fire | 3 | `S2114`, `S2328`, `S3610` | See [Sixth batch](#sixth-batch) and [Tenth batch](#tenth-batch). |
-| Style, naming, design opinion or micro-performance | 47 | `S1110`, `S1116`, `S1121`, `S1123`, `S1133`, `S1134`, `S1168`, `S1185`, `S1186`, `S1199`, `S1210`, `S1264`, `S1694`, `S1939`, `S2166`, `S2219`, `S2344`, `S3217`, `S3246`, `S3249`, `S3261`, `S3263`, `S3400`, `S3453`, `S3456`, `S3459`, `S3604`, `S3610`, `S3897`, `S3904`, `S3963`, `S3972`, `S3973`, `S3993`, `S4035`, `S4050`, `S4052`, `S4061`, `S4136`, `S4524`, `S4663`, `S6575`, `S6640`, `S6960`, `S6968`, `S818`, `S907`, `S927` | Taste. None guards correctness or security. |
+| Tried, did not fire | 3 | `S2114`, `S2328`, `S3610` | A probe built to trigger each did not (`S3610` was tried on five shapes of nullable comparison). Either the probe was wrong or the rule is narrower than its title; nobody checked which, so all three stay denied until someone does. |
+| Style, naming, design opinion or micro-performance | 47 | `S1110`, `S1116`, `S1121`, `S1123`, `S1133`, `S1134`, `S1168`, `S1185`, `S1186`, `S1199`, `S1210`, `S1264`, `S1694`, `S1939`, `S2166`, `S2219`, `S2344`, `S3217`, `S3246`, `S3249`, `S3261`, `S3263`, `S3400`, `S3453`, `S3456`, `S3459`, `S3604`, `S3897`, `S3904`, `S3963`, `S3972`, `S3973`, `S3993`, `S4035`, `S4050`, `S4052`, `S4061`, `S4136`, `S4524`, `S4663`, `S6575`, `S6640`, `S6960`, `S6968`, `S818`, `S907`, `S927` | Taste. None guards correctness or security. |
 
 The four **kept for a stated reason** rest on reasoning, not on a test:
 
@@ -296,17 +276,12 @@ The four **kept for a stated reason** rest on reasoning, not on a test:
 - `S1075` (URIs should not be hardcoded): fixtures hardcode URIs legitimately. Zero hits today,
   which is mildly surprising; not investigated.
 
-Nine `S9999-*` entries in the last group are Sonar's own telemetry diagnostics, not code rules.
+Nine `S9999-*` entries are Sonar's own telemetry diagnostics, not code rules, and are denied for
+that reason.
 
 Nothing in these groups is urgent. The "style" group is the only one where a different taste
-would change the answer, and the `S6561` and `S6575` date rules are the ones closest to
-correctness. To clear a rule:
-
-1. Read its title (`dotnet run agents/scripts/List-SonarRules.cs`) and its page on
-   rules.sonarsource.com.
-2. Decide whether it guards correctness, security or a house rule, or is style.
-3. If it is worth having, move it to `.editorconfig` as a warning and prove it fires.
-4. If it is not, leave it and put the reason in the group's comment and in the table above.
+would change the answer, and the `S6575` date rule is the one closest to correctness. To clear a
+rule, follow [Changing a rule](#changing-a-rule).
 
 ## Non-Sonar settings
 
@@ -322,7 +297,7 @@ correctness. To clear a rule:
 | `CA1861` off in `Huddle.Acp.Tests` | `.csproj` | Constant arrays in test data. |
 | `CA2007` also in `Huddle.App` and `Huddle.Contracts` | `.csproj` | **Redundant** with the `.editorconfig` setting. Safe to remove; not yet removed. |
 | `CA1848` off in `Huddle.App` and `Huddle.Contracts` | `.csproj` | Documented allowance in `CSharpPrinciples.md`: direct `logger.LogX` calls are fine there. Leave it. |
-| `CA1031` off in `Huddle.App` and `Huddle.Contracts` | `.csproj` | **Open.** With the suppression lifted about 40 broad `catch` sites show up, far more than the four the Haiku audit counted. See below. |
+| `CA1031` off in `Huddle.App` and `Huddle.Contracts` | `.csproj` | **Open.** With the suppression lifted about 40 broad `catch` sites show up, far more than the four the Haiku audit counted. See [Deferred](#deferred). |
 
 ## Deferred
 
@@ -339,8 +314,9 @@ A Haiku agent read every inline suppression on 2026-10-03: six in `src` and thre
 carry a real justification and a narrow scope. `S127` twice (a deliberate scan advance bounded on
 the line above), `CA1031` in `Huddle.MockAdapter`'s entry point, `CS8524` (keeps `CS8509` alive),
 `CA1711` for a wire-spec type name, `CA1720` for a JSON Schema type word, `CA1835`, `S3871`,
-`CS0067` in tests. The agent's other claims were spot-checked, not re-derived; its `CA1031` count
-was wrong, as above.
+`CS0067` in tests. Two more were added since, both recorded under
+[Enabled after fixing real hits](#enabled-after-fixing-real-hits): `S3237` and `S2971`. The
+agent's other claims were spot-checked, not re-derived; its `CA1031` count was wrong, as above.
 
 ## Changing a rule
 
@@ -351,6 +327,12 @@ was wrong, as above.
 3. Prove it fires. Write a scratch file with a deliberate violation, build, expect the rule's
    ID, delete the file. "No output" does not mean "works".
 4. Fix real findings in the same change. Do not suppress to get a build through; the suppression
-   rules are in `CSharpPrinciples.md`.
+   rules are in `CSharpPrinciples.md`. If fixing a hit breaks the build, the rule is wrong for that
+   site: put it back and record why under
+   [Denied: the rule fires here](#denied-the-rule-fires-here).
 5. Move the rule between the groups in `Directory.Build.props` and add the `.editorconfig` line.
-6. Update this page in the same commit.
+   **Diff the denylist against `HEAD` afterwards.** A scripted edit once glued two neighbours into
+   one token (`S6575S6640`), which would have turned both rules back on at their default severity;
+   the build stayed green because neither has hits.
+6. Update this page in the same commit, by moving the rule between the sections above. Do not add
+   a section for the change.
