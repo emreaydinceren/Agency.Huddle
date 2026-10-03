@@ -47,7 +47,7 @@ project context; run it with the Execute-Project-Plan skill.
 - Must parse and run on **Windows PowerShell 5.1 and pwsh 7**: no `&&`/`||`, no ternary `?:`, no `??`, no `-Parallel`, no `ForEach-Object -Parallel`, no `Join-String`.
 - `Set-StrictMode -Version Latest` and `$ErrorActionPreference = 'Stop'` at the START OF `Invoke-Main` (function scope), never at the script's top level: under `irm | iex` a top-level setting would leak into the user's interactive session (found in review of task 17; a Pester test proves `EAP:Continue` afterwards). Tests set strict mode in `BeforeAll`.
 - **ASCII only** in `install.ps1` (it is fed to `Invoke-Expression` as a string; non-ASCII breaks under some encodings). One self-contained file, no dot-sourced helpers (`irm | iex` fetches one file).
-- Importable for tests: the last line is `if (-not $env:HUDDLE_INSTALL_NO_MAIN) { Invoke-Main }`. Tests set `$env:HUDDLE_INSTALL_NO_MAIN = '1'` and dot-source `installer/install.ps1`.
+- Importable for tests: the last statement is `if (-not $env:HUDDLE_INSTALL_NO_MAIN) { ... }` which runs `Invoke-Main @PSBoundParameters` and calls `exit` only when `$PSCommandPath` is set (Spec §7: never `exit` under `iex`), with no top-level variable left behind. Tests set `$env:HUDDLE_INSTALL_NO_MAIN = '1'` and dot-source `installer/install.ps1`.
 - Every external effect sits behind a **seam function** so Pester can `Mock` it: `Invoke-Tar`, `Invoke-NpmCi`, `Get-InstalledNodeVersion`, `Invoke-HuddleStop`, `Get-FreeDiskMb`, `Test-UrlReachable`, `Get-OsBuild`, `Get-HostArchitecture`, `Test-CommandAvailable`, `Get-UserPathValue`, `Set-UserPathValue`, `New-HuddleShortcut`, `Invoke-Download`. Nothing else shells out.
 - Pester **5.5+** (`Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck`). Run: `Invoke-Pester installer/tests -CI`.
 
@@ -516,7 +516,7 @@ All tasks edit the **one file** `installer/install.ps1` and its test file `insta
 - **Goal:** Make task 17.t green.
 - **Read first:** Task 17.t; Spec §3, §7; Conv C2.
 - **Risk:** `logic` (Sonnet).
-- **Deliverable:** Create `installer/install.ps1` (ASCII, CRLF): `[CmdletBinding()] param(...)` with the Spec §7 parameters; strict mode and `Stop`; `$script:HuddleRepo = if ($env:HUDDLE_REPO) { $env:HUDDLE_REPO } else { '__HUDDLE_REPO__' }`; `$script:ExitCodes`; `Write-Step -Status -Name -Detail -Fix`; `Resolve-InstallPaths`; `Resolve-AssetSource`; a stub `Invoke-Main` that returns 0; the final guard line from Conv C2. When the repo placeholder is unreplaced and no `-BaseUrl` is given, `Resolve-AssetSource` throws a message saying to run the installer from a release.
+- **Deliverable:** Create `installer/install.ps1` (ASCII, CRLF): `[CmdletBinding()] param(...)` with the Spec §7 parameters; (strict mode and `Stop` live inside `Invoke-Main`, Conv C2); `$script:HuddleRepo = if ($env:HUDDLE_REPO) { $env:HUDDLE_REPO } else { '__HUDDLE_REPO__' }`; `$script:ExitCodes`; `Write-Step -Status -Name -Detail -Fix`; `Resolve-InstallPaths`; `Resolve-AssetSource`; a stub `Invoke-Main` that returns 0; the final guard line from Conv C2. When the repo placeholder is unreplaced and no `-BaseUrl` is given, `Resolve-AssetSource` throws a message saying to run the installer from a release.
 - **Acceptance:** 17.t passes; `Invoke-ScriptAnalyzer installer/install.ps1` has no errors.
 
 ### Task 18.t — Test: prerequisite checks
@@ -677,7 +677,7 @@ All tasks edit the **one file** `installer/install.ps1` and its test file `insta
 - **Read first:** Task 27.t; Spec §6, §7; Findings F3 (sign-in step).
 - **Risk:** `logic` (Sonnet).
 - **Deliverable:** `Invoke-Main` sequence: mutex -> `Test-Prerequisites` (`-CheckOnly` exits) -> `-Uninstall` branch -> fetch `SHA256SUMS` -> compare against state to decide which steps run -> `Stop-HuddleIfRunning` only if something will change -> `Install-App` -> read `release-info.json` -> `Install-Node` -> `Install-Adapter` -> `Install-Launcher` -> write state keys (each after its step) -> summary -> sign-in note (per F3) -> launch unless `-NoLaunch`. Release the mutex in `finally`. Map failures to the Spec §7 exit codes; print `[!!]` with `fix:` for any exception, not a stack trace.
-- **Acceptance:** 27.t green; the whole `Install.Tests.ps1` green; `Invoke-ScriptAnalyzer installer/install.ps1` clean.
+- **Acceptance:** 27.t green; the whole `Install.Tests.ps1` green; `Invoke-ScriptAnalyzer installer/install.ps1` clean (not installed locally: say it was not run); and a real run through BOTH entry paths with a fake release folder: `powershell.exe -File installer/install.ps1 -BaseUrl <dir> -NoLaunch ...` returns the exit code, and `iex` of the file text with `HUDDLE_*` variables keeps the session alive (`EAP:Continue`, no leaked variable).
 
 ---
 
@@ -859,7 +859,7 @@ All tasks edit the **one file** `installer/install.sh` and `installer/tests/inst
 - **Read first:** Task 38.t; Spec §6, §7; Findings F3.
 - **Risk:** `logic` (Sonnet).
 - **Deliverable:** `main` in the same order as task 27.i, with the lock `mkdir "$CACHE/install.lock"` and `trap 'rmdir ...' EXIT`. Map failures to the Spec §7 exit codes and print `[!!]` with `fix:`, not shell traces (no `set -x`).
-- **Acceptance:** 38.t green; the whole `install_test.sh` green; `shellcheck -s sh` clean.
+- **Acceptance:** 38.t green; the whole `install_test.sh` green under `sh` and `dash`; `shellcheck -s sh` clean (not installed locally: say it was not run); and it works through BOTH `sh installer/install.sh ...` and `sh -s -- ... < installer/install.sh` (stdin is the script itself, so every child process the script starts must read `</dev/null`, and `[ -t 0 ]` is false).
 
 ---
 
@@ -886,7 +886,7 @@ All tasks edit the **one file** `installer/install.sh` and `installer/tests/inst
 - **Goal:** Run the installer unit tests wherever they are meaningful (Conv C2, C3).
 - **Read first:** Conv C2, C3; Spec §9 (permissions rules).
 - **Risk:** `boundary` (Sonnet; Opus review).
-- **Deliverable:** Trigger `pull_request` and `push` on paths `installer/**`, `agents/scripts/Check-Eol.ps1`, `.gitattributes`. `permissions: contents: read`. Jobs: `pester` (windows-latest: install Pester 5.5+, `Invoke-Pester installer/tests -CI`), `psscriptanalyzer` (windows-latest: `Invoke-ScriptAnalyzer installer -Recurse -Severity Warning,Error`, fail on any), `shell` (matrix ubuntu-latest, macos-latest: `sh installer/tests/run-all.sh`), `shellcheck` (ubuntu-latest: `shellcheck -s sh installer/*.sh installer/tests/*.sh`). Actions pinned to full SHAs with tag comments. Validate with `actionlint`.
+- **Deliverable:** Trigger `pull_request` and `push` on paths `installer/**`, `agents/scripts/Check-Eol.ps1`, `.gitattributes`. `permissions: contents: read`. Jobs: `pester` (windows-latest: install Pester 5.5+, `Invoke-Pester installer/tests -CI`), `psscriptanalyzer` (windows-latest: `Invoke-ScriptAnalyzer installer -Recurse -Severity Warning,Error -Settings installer/PSScriptAnalyzerSettings.psd1`, fail on any; create that settings file and exclude `PSAvoidUsingWriteHost` in it, because the installer prints its step lines with `Write-Host` on purpose), `shell` (matrix ubuntu-latest, macos-latest: `sh installer/tests/run-all.sh`), `shellcheck` (ubuntu-latest: `shellcheck -s sh installer/*.sh installer/tests/*.sh`). Actions pinned to full SHAs with tag comments. Validate with `actionlint`.
 - **Acceptance:** `actionlint` clean; every command in it runs locally (state which you could not run).
 
 ### Task 42 — `.github/workflows/release.yaml`
@@ -956,7 +956,7 @@ Read 2026-10-02 from the bundled binary's `--help` output (`--version` 2.1.257),
 | After task | Date | Main findings | Plan edits made |
 | --- | --- | --- | --- |
 | 15 | 2026-10-02 | Agents re-read the whole plan (7 of 7), `rules.md` is 44K characters not "97 lines", commands found by trial (red file flags, one class per run, PowerShell has no `head`), reports claimed checks that were not run, manager context 86K to 353K | Facts Core and brief rewritten (red-file flags, trimmed full-suite pipe, rules digest, report integrity); agent type `installer-dev` added; fakes `RecordingBrowserOpener`, `FakeLifetime`, `FakeDesktopShutdown` named up front in 10.t, 11.t and 12.t; 14.i acceptance uses the runner scripts; one fresh agent per pair from task 10 |
-| 30 | | | |
+| 30 | 2026-10-03 | The `installer-dev` agent type halved the worker baseline (25K vs 51-68K); the manager context (469K, 52M re-read) is now about two thirds of all tokens; fix rounds on resumed agents at ~100K context cost half of tasks 17-18; two design faults were found by the manager in review (`exit` under `iex`, leaked session state) and a release-breaking one by the retrospective (the repo placeholder would be rewritten by the global `sed`) | New `install-pitfalls.md` is brief step 3b for tasks 21+; Conv C2/guard text and Task 18.i aligned; Task 41 gets a PSScriptAnalyzer settings file excluding `PSAvoidUsingWriteHost`; 27.i and 38.i acceptance run both entry paths (`-File`/`iex`, `sh file`/`sh -s`); placeholder and session-leak fix pass; facts Core gained tool quirks and the red-capture command; resume in a fresh manager session |
 | 45 | | | |
 | 60 | | | |
 | 75 | | | |
