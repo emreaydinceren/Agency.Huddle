@@ -381,6 +381,37 @@ function Write-InstallState {
     Move-Item -LiteralPath $tmp -Destination $Path -Force
 }
 
+function Get-LauncherContent {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [pscustomobject]$Paths
+    )
+
+    $nodeDir = Split-Path -Parent $Paths.NodeExe
+    $nodeExe = $Paths.NodeExe
+    $dataDir = $Paths.DataRoot + '\data'
+    $exePath = $Paths.ExePath
+
+    # The outer quotes in set "VAR=value" protect spaces in the value
+    $lines = @(
+        '@echo off'
+        'setlocal'
+        'set "Team__Desktop__Enabled=true"'
+        'set "Team__Acp__Enabled=true"'
+        'set "Team__Acp__Command=' + $nodeExe + '"'
+        'set "Team__DataDir=' + $dataDir + '"'
+        'set "Team__PipeName=huddle-%USERNAME%"'
+        'set "ASPNETCORE_URLS=http://127.0.0.1:0"'
+        'set "ASPNETCORE_ENVIRONMENT=Production"'
+        'set "AllowedHosts=localhost;127.0.0.1"'
+        'set "PATH=' + $nodeDir + ';%PATH%"'
+        '"' + $exePath + '" %*'
+    )
+
+    return $lines -join "`r`n"
+}
+
 function Test-StepSatisfied {
     [CmdletBinding()]
     param(

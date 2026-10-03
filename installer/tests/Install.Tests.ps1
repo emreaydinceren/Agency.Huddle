@@ -1392,6 +1392,80 @@ Describe 'Install-Adapter' {
     }
 }
 
+Describe 'Get-LauncherContent' {
+    BeforeAll {
+        $testPaths = [pscustomobject]@{
+            InstallRoot = 'C:\Program Files\Agency.Huddle'
+            DataRoot    = 'C:\Users\test\AppData\Local\Agency.Huddle'
+            ExePath     = 'C:\Program Files\Agency.Huddle\app\Huddle.App.exe'
+            NodeExe     = 'C:\Program Files\Agency.Huddle\node\node.exe'
+        }
+
+        $testPathsWithSpaces = [pscustomobject]@{
+            InstallRoot = 'C:\Program Files\My Company\Agency.Huddle'
+            DataRoot    = 'C:\Users\test user\AppData\Local\Agency.Huddle'
+            ExePath     = 'C:\Program Files\My Company\Agency.Huddle\app\Huddle.App.exe'
+            NodeExe     = 'C:\Program Files\My Company\Agency.Huddle\node\node.exe'
+        }
+    }
+
+    It 'returns a string with the required lines in order' {
+        $content = Get-LauncherContent -Paths $testPaths
+        $lines = $content -split "`r`n"
+
+        $lines[0] | Should -Be '@echo off'
+        $lines[1] | Should -Be 'setlocal'
+        $lines[2] | Should -Be 'set "Team__Desktop__Enabled=true"'
+        $lines[3] | Should -Be 'set "Team__Acp__Enabled=true"'
+        $lines[4] | Should -Be 'set "Team__Acp__Command=C:\Program Files\Agency.Huddle\node\node.exe"'
+        $lines[5] | Should -Be 'set "Team__DataDir=C:\Users\test\AppData\Local\Agency.Huddle\data"'
+        $lines[6] | Should -Be 'set "Team__PipeName=huddle-%USERNAME%"'
+        $lines[7] | Should -Be 'set "ASPNETCORE_URLS=http://127.0.0.1:0"'
+        $lines[8] | Should -Be 'set "ASPNETCORE_ENVIRONMENT=Production"'
+        $lines[9] | Should -Be 'set "AllowedHosts=localhost;127.0.0.1"'
+        $lines[10] | Should -Be 'set "PATH=C:\Program Files\Agency.Huddle\node;%PATH%"'
+        $lines[11] | Should -Be '"C:\Program Files\Agency.Huddle\app\Huddle.App.exe" %*'
+    }
+
+    It 'quotes paths containing spaces' {
+        $content = Get-LauncherContent -Paths $testPathsWithSpaces
+        $lines = $content -split "`r`n"
+
+        # Expected lines for paths with spaces: no quotes INSIDE the set values
+        $lines[4] | Should -Be 'set "Team__Acp__Command=C:\Program Files\My Company\Agency.Huddle\node\node.exe"'
+        $lines[5] | Should -Be 'set "Team__DataDir=C:\Users\test user\AppData\Local\Agency.Huddle\data"'
+        $lines[10] | Should -Be 'set "PATH=C:\Program Files\My Company\Agency.Huddle\node;%PATH%"'
+        $lines[11] | Should -Be '"C:\Program Files\My Company\Agency.Huddle\app\Huddle.App.exe" %*'
+
+        # Verify no set lines contain =" (which would indicate nested quotes)
+        foreach ($line in $lines) {
+            if ($line -match '^set "') {
+                # Find the first = and check if there's a =" after it
+                $afterFirstEq = $line -replace '^[^=]*=', ''
+                $afterFirstEq | Should -Not -Match '="'
+            }
+        }
+    }
+
+    It 'uses CRLF line endings' {
+        $content = Get-LauncherContent -Paths $testPaths
+        $content | Should -Match "`r`n"
+        $content | Should -Not -Match "[^`r]`n"
+    }
+
+    It 'contains only ASCII characters' {
+        $content = Get-LauncherContent -Paths $testPaths
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes($content)
+        $bad = @($bytes | Where-Object { $_ -gt 127 })
+        $bad.Count | Should -Be 0
+    }
+
+    It 'does not contain bare LF without CR' {
+        $content = Get-LauncherContent -Paths $testPaths
+        $content | Should -Not -Match "[^`r]`n"
+    }
+}
+
 Describe 'Release-time repository replacement' {
     BeforeAll {
         $rawText = [IO.File]::ReadAllText($ScriptPath)
