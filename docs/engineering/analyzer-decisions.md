@@ -33,7 +33,7 @@ Every other default-on Sonar rule is enabled. The goal is still to narrow the 20
 | Sonar, default-on | `<NoWarn>` in `Directory.Build.props` | About 326 Sonar rules are on by default. They are switched off **by ID**, because Sonar's categories contain spaces and the `category-*` bulk override cannot match them. |
 | Sonar, opted in | `.editorconfig` | A rule leaves the denylist and gets an explicit `dotnet_diagnostic.Sxxxx.severity = warning`. |
 | Banned APIs | `BannedSymbols.txt` | `Microsoft.CodeAnalysis.BannedApiAnalyzers` raises `RS0030`. |
-| Prose rules no analyzer can express | `agents/scripts/Check-*.ps1` | `Check-Diff.ps1` (null-forgiving `!`, reasonless pragmas) and `Check-TestDocs.ps1` (a `///` summary on every added test). |
+| Prose rules no analyzer can express | `agents/scripts/Check-*.ps1` | `Check-Diff.ps1` (null-forgiving `!`, reasonless pragmas), `Check-TestDocs.ps1` (a `///` summary on every added test) and `Check-Analyzers.ps1` (the enabled rules still fire; the config files agree). |
 
 A rule in `NoWarn` stays off even if `.editorconfig` sets a severity for it. **To enable a
 rule, remove it from `NoWarn` and add the `.editorconfig` line.** Doing only one of the two
@@ -66,25 +66,56 @@ Two cautions on those numbers:
 2. Overriding `NoWarn` on the command line replaces every `NoWarn` in every project, so the
    per-project `CA` suppressions are lifted too. Read only the `S####` lines from that build.
 
+## Proof: the analyzer probes
+
+Enabling a rule proves nothing by itself: a rule can be on and never fire. Two projects outside
+`Huddle.slnx` hold one deliberate violation per rule, and `agents/scripts/Check-Analyzers.ps1`
+builds them and compares what fired with what each `// probe: Sxxxx` tag expects.
+
+- `tests/Huddle.AnalyzerProbes` holds the general probes. `tests/Huddle.AnalyzerProbes.Tests` holds the
+  xunit ones. **They are two projects because Sonar treats any project that references a test
+  framework as test code and skips most rules there.** 32 probes that fail with an `xunit.v3`
+  reference passed without it, so the same rule can be live in `src` and silent in
+  `tests`. Do not read a clean test project as evidence a rule passes.
+- The probe tag is answered only if that rule fires on the tag's own line or the next 8, so one
+  probe cannot be satisfied by another's output. A probe that stops firing fails the check: that is an
+  analyzer upgrade or a config change breaking a rule silently.
+- A probe must compile. The compiler's declaration errors stop the analyzers from running at all, which
+  is why a rule that needs invalid C# (`S3464`, the C# 14 identifier rules) cannot be probed.
+- `tests/Huddle.AnalyzerProbes/Unprobed.txt` lists every enabled rule with no probe and one of five
+  reasons. The check fails if an enabled rule is in neither place, or if a listed rule gets a probe or
+  stops being enabled.
+- The same script checks the configuration: every `NoWarn` token is a well-formed ID and none repeats,
+  no rule is both denylisted and given a severity, every denylisted Sonar rule is named on this page,
+  and the "It is now N" count above matches `Directory.Build.props`.
+
+`Check-All.ps1` runs it only when the branch touches the analyzer configuration, because it builds two
+projects and takes about a minute.
+
+Where the probes stand: of 295 enabled Sonar rules, 238 have a probe that fires and 57 do not. The 57 are
+18 `no-technology`, 6 `compiler-rejects`, 7 `needs-package`, 22 `probe-did-not-fire` and 4
+`not-yet-probed`. The `probe-did-not-fire` rules are the interesting ones; nobody has checked whether
+the probe or the rule is at fault. The `IDE*` and `RS0030` rules in the first Enabled table are not Sonar
+rules and are not tracked by the probes.
+
 ## Enabled
 
-**Proven** means a scratch file with a deliberate violation was built and failed with that rule's
-ID, and the scratch file was deleted; or the rule fired on real code. A rule that merely produced
-no output on the real code is **unproven**: it may be working, or it may never fire. Each table
-below says which. Titles are paraphrased; confirm the exact wording on rules.sonarsource.com
-before quoting one.
+Whether an enabled rule actually fires is not argued on this page. It is tested:
+[the analyzer probes](#proof-the-analyzer-probes) hold one deliberate violation per rule, and a rule
+with no probe is listed in `tests/Huddle.AnalyzerProbes/Unprobed.txt` with the reason. Titles below are
+paraphrased; confirm the exact wording on rules.sonarsource.com before quoting one.
 
 ### Prose rules that had no enforcement
 
 | Rule | Enforces | Hits when enabled |
 | --- | --- | --- |
-| `S4462` | No `.Result`, `.Wait()` or `.GetAwaiter().GetResult()` | 0, proven with `task.Result` |
-| `S6354` | `TimeProvider`, not `DateTime.Now` or `DateTimeOffset.UtcNow` | 5, fixed (proven by real hits) |
-| `IDE0009` | `this.` on field, property, method and event access | 0, **unproven** |
-| `IDE0161` | File-scoped namespaces | 0, **unproven** |
-| `IDE0330` | Lock on `System.Threading.Lock` | 0, **unproven** |
-| `IDE1006` | Private fields are camelCase with no `_` prefix; private constants stay PascalCase | 0, **unproven** |
-| `RS0030` | Parameterless `new Random()` is banned (`BannedSymbols.txt`) | 0, proven |
+| `S4462` | No `.Result`, `.Wait()` or `.GetAwaiter().GetResult()` | 0 |
+| `S6354` | `TimeProvider`, not `DateTime.Now` or `DateTimeOffset.UtcNow` | 5, fixed |
+| `IDE0009` | `this.` on field, property, method and event access | 0 (not covered by the probes, which only track Sonar rules) |
+| `IDE0161` | File-scoped namespaces | 0 (not covered by the probes, which only track Sonar rules) |
+| `IDE0330` | Lock on `System.Threading.Lock` | 0 (not covered by the probes, which only track Sonar rules) |
+| `IDE1006` | Private fields are camelCase with no `_` prefix; private constants stay PascalCase | 0 (not covered by the probes, which only track Sonar rules) |
+| `RS0030` | Parameterless `new Random()` is banned (`BannedSymbols.txt`) | 0 |
 
 `IDE0003` is also set to `warning`. It is the "remove `this.`" rule and cannot fire while the
 qualification option is `true`; it is set so the pair stays consistent if the option is flipped.
@@ -93,15 +124,12 @@ qualification option is `true`; it is set so the pair stays consistent if the op
 
 All 18 had zero hits.
 
-| Status | Rules |
-| --- | --- |
-| Proven | `S2077` (a concatenated `CommandText`), `S2245` (a seeded `new Random(1)`) |
-| **Unproven** | `S2257`, `S2612`, `S2092`, `S3330`, `S2115`, `S4433`, `S4502`, `S4507`, `S5332`, `S5344`, `S5443`, `S5445`, `S5659`, `S5693`, `S5753`, `S5766` |
-
-The unproven ones need specific ASP.NET, JWT, cookie, LDAP or cryptography APIs, and none of the
-code here uses them, so no probe was written. One probe was tried: `S5332` (clear-text
-protocols) did not fire on a `new Uri("http://...")` literal, so treat that rule's coverage as
-unknown. Enabling an unproven rule costs nothing, but do not read "zero hits" as "checked".
+`S2257`, `S2612`, `S2092`, `S3330`, `S2115`, `S4433`, `S4502`, `S4507`, `S5332`, `S5344`, `S5443`,
+`S5445`, `S5659`, `S5693`, `S5753`, `S5766`, `S2077`, `S2245`. Most are probed. The ones that are not
+(`S2115`, `S4433`, `S5659`, `S5753`, `S5766` need packages this repository does not reference;
+`S2612` and `S5332` did not fire on the probes written for them) are in `Unprobed.txt`, so treat
+their coverage as unknown. Enabling a rule that never fires costs nothing, but do not read "zero
+hits" as "checked".
 
 The Haiku audit flagged `S2077` as denied while the code runs SQL. A search of `src` for
 `CommandText` built by interpolation or concatenation found none, so it was not hiding a live
@@ -116,9 +144,8 @@ Thirty-two rules for code that does not do what it reads as doing.
 | `S1862`, `S1871`, `S3923`, `S1764`, `S1656`, `S2201`, `S2674`, `S2688`, `S2692`, `S2183`, `S2184`, `S2275`, `S2437`, `S3169`, `S3172`, `S4143`, `S4581`, `S1944`, `S1696`, `S2995`, `S2996`, `S3005`, `S5856`, `S2701` | Duplicate branches, self-assignment, ignored results, bad shifts, wrong comparisons, test assertions that cannot fail |
 | `S1163`, `S1848`, `S2234`, `S2386`, `S2737`, `S2955`, `S3244`, `S3881` | Throw in `finally`, object created and discarded, arguments in a different order than the parameters, public static mutable field, a `catch` that only rethrows, unconstrained generic compared to `null`, anonymous delegate used to unsubscribe, wrong `IDisposable` pattern |
 
-Proven: all except `S2184` (not probed), `S3172` (did not fire on `a = a - b` for two `Action`s)
-and `S1944` (not probed), which are **unproven**. `S1848` and `S1163` overlap `CA1806` and
-`CA2219`, which were already on, so they add no new coverage.
+`S3172` and `S1944` did not fire on their probes (see `Unprobed.txt`). `S1848` and `S1163` overlap
+`CA1806` and `CA2219`, which were already on, so they add no new coverage.
 
 ### Hazards, types, logging, tests, web and security: 88 rules judged on their titles
 
@@ -136,26 +163,11 @@ were none.
 | Blazor and web | `S6797`, `S6798`, `S6800`, `S6962`, `S6967`, `S6964`, `S6930`, `S6931`, `S6934`, `S6965`, `S6961`, `S6932` |
 | Security | `S6377`, `S7039`, `S1313`, `S2857` |
 
-**Proven (41):** `S1048`, `S1104`, `S1215`, `S1313`, `S2139`, `S2178`, `S2290`, `S2291`, `S2346`,
-`S2368`, `S2376`, `S2696`, `S2757`, `S2761`, `S2953`, `S3010`, `S3011`, `S3060`, `S3262`,
-`S3343`, `S3427`, `S3440`, `S3443`, `S3447`, `S3458`, `S3466`, `S3600`, `S3603`, `S3869`,
-`S3875`, `S3885`, `S3981`, `S4070`, `S4201`, `S4456`, `S4545`, `S5034`, `S6580`, `S6618`,
-`S6672`, `S6678`.
-
-**Unproven (47):** `S2187`, `S2198`, `S2345`, `S2372`, `S2857`, `S2925`, `S2934`, `S2970`,
-`S3236`, `S3251`, `S3346`, `S3363`, `S3397`, `S3415`, `S3433`, `S3444`, `S3449`, `S3450`,
-`S3451`, `S3457`, `S3464`, `S3877`, `S3887`, `S3889`, `S3971`, `S3998`, `S4015`, `S4019`,
-`S4260`, `S4275`, `S4583`, `S6377`, `S6668`, `S6673`, `S6797`, `S6798`, `S6800`, `S6930`,
-`S6931`, `S6932`, `S6934`, `S6961`, `S6962`, `S6964`, `S6965`, `S6967`, `S7039`.
-
-Some of the unproven rules were probed and did not fire: `S2372` (a getter that throws
-`InvalidOperationException`), `S2345`, `S3346` (`Debug.Assert(x++ > 0)`), `S3236`, `S3998`
-(`lock (typeof(T))`), `S3887`, `S4275`, `S2198`, `S3450`, `S3451`. Either the probe was not
-what the rule looks for or the rule is narrower than its title. Nobody checked which. The test
-and web rules need a test or web project, and were not probed at all.
-
-A rule that is enabled and never fires is harmless but gives a false sense of cover. If one of
-these matters to you, write a probe for it first.
+The probes show most of these fire. Twenty-odd did not, on probes built for them (`S2187`, `S2198`,
+`S2970`, `S3433`, `S3449`, `S3458`, `S4015`, `S4019`, `S6797`, `S6930`, `S6931`, `S6960`, `S6967`,
+`S6968` and others): either the probe was not what the rule looks for or the rule is narrower than
+its title. Nobody has checked which. `S3458` was listed here as proven by an earlier hand probe; the
+permanent probe could not reproduce it, so the earlier claim should not be relied on.
 
 ### Enabled after fixing real hits
 
@@ -230,19 +242,11 @@ and no code changed. They are in five loose groups, judged on their Sonar titles
 | Previously kept off for a stated reason that did not survive a measurement | `S4036` (agent adapters are spawned by command name: no hit), `S1607` (conditional `Skip`: no hit), `S6610` (the house `StringComparison.Ordinal` calls do not trip it), `S1075` (fixtures hardcode URIs: no hit) |
 | Style, naming and design | `S1110`, `S1121`, `S1133`, `S1134`, `S1185`, `S1186`, `S1199`, `S1264`, `S1694`, `S1939`, `S2219`, `S2344`, `S3217`, `S3246`, `S3249`, `S3261`, `S3263`, `S3400`, `S3453`, `S3456`, `S3459`, `S3604`, `S3897`, `S3904`, `S3963`, `S3972`, `S3973`, `S4035`, `S4052`, `S4061`, `S4136`, `S4524`, `S4663`, `S6575`, `S6960`, `S6968`, `S818` |
 
-**Proven (43)** by a deliberate violation that failed the build with the rule's ID: `S101`,
-`S112`, `S818`, `S1075`, `S1110`, `S1133`, `S1134`, `S1155`, `S1185`, `S1186`,
-`S1199`, `S1264`, `S1694`, `S1699`, `S1905`, `S1939`, `S2219`, `S2223`, `S2306`,
-`S2344`, `S2681`, `S3246`, `S3249`, `S3260`, `S3261`, `S3263`, `S3400`, `S3445`,
-`S3453`, `S3456`, `S3604`, `S3897`, `S3903`, `S3963`, `S3973`, `S4035`, `S4036`,
-`S4052`, `S4061`, `S4136`, `S4524`, `S4663`, `S6610`.
+Most of these are probed; the 22 for technology this repository does not use cannot be (`Unprobed.txt`
+says `no-technology`), and `S1121`, `S1172`, `S3217`, `S3604`, `S3972`, `S6968`, `S6960` and a few
+others did not fire on their probes. `S3604` was previously listed as proven by hand; the permanent
+probe did not reproduce it.
 
-**Unproven (34).** No probe made them fire, either because the technology is absent from this
-repository (the first group, 22 rules) or because the probe was not what the rule looks for:
-S1121, S1172, S1607, S2629, S3217, S3431, S3459, S3597, S3598, S3904, S3925, S3926, S3927, S3972, S4159, S4200, S4210, S4211, S4220, S4277, S4428, S6419, S6420, S6422, S6424, S6575, S6670, S6675, S6960, S6968, S8367, S8368, S8380, S8381.
-`S1121` (an assignment inside a declaration), `S1172` (an unused private-method parameter),
-`S3217`, `S3459` and `S3972` did not fire on probes built for them. Nobody checked whether the
-probe or the rule is at fault.
 ## Denied
 
 ### Denied: the rule fires here
@@ -339,8 +343,9 @@ agent's other claims were spot-checked, not re-derived; its `CA1031` count was w
    severity and title. Judge it on that, not on its number.
 2. Measure: build with the rule enabled and the denylist lifted, and read the hits. Zero hits is
    the cheap case; some hits means reading the sites.
-3. Prove it fires. Write a scratch file with a deliberate violation, build, expect the rule's
-   ID, delete the file. "No output" does not mean "works".
+3. Prove it fires. Add a probe to `tests/Huddle.AnalyzerProbes` (or `.Tests` for xunit rules) with a
+   `// probe: Sxxxx` tag, or give the rule a reason in `Unprobed.txt`, then run
+   `pwsh agents/scripts/Check-Analyzers.ps1`. "No output" does not mean "works".
 4. Fix real findings in the same change. Do not suppress to get a build through; the suppression
    rules are in `CSharpPrinciples.md`. If fixing a hit breaks the build, the rule is wrong for that
    site: put it back and record why under

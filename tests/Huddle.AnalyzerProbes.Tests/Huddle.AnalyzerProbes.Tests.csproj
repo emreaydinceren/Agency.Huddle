@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The xunit half of the analyzer probes. Sonar treats a project that references a test framework
+       as test code and skips most rules there, so these probes cannot share a project with the others.
+       Not part of Huddle.slnx; see tests/Huddle.AnalyzerProbes and agents/scripts/Check-Analyzers.ps1. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Agency.Huddle.AnalyzerProbes.Tests</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <NoWarn>$(NoWarn);CS0169;CS0649;CS0219;CS0414;CS0067;CS0168;CS1717;CS8618;CS0162;CS0642;CA1707</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+
+</Project>
