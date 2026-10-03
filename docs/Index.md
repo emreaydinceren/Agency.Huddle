@@ -177,6 +177,6 @@ Do not orient from these. They explain how the product got here.
 
 | Page | What it is |
 | --- | --- |
-| [why-agency-huddle.md](why-agency-huddle.md) | The essay: why a chat app, and where it differs from a pipeline. Updated 2026-10-01 |
+| [why-agency-huddle.md](why-agency-huddle.md) | The essay: why a chat app, and where it differs from a pipeline. Updated 2026-10-03 |
 | [engineering/product-observations.md](engineering/product-observations.md) | Observations about the product, kept as notes |
 | [Huddle.TeamPages-RetroActions.md](Huddle.TeamPages-RetroActions.md) | Actions from the Team Pages retrospectives |

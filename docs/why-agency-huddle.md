@@ -40,6 +40,33 @@ checks the result against something real. Without the last step it is just two
 agents agreeing. Everything below is how Agency.Huddle tries to supply all three,
 and where it does not yet.
 
+### Making members disagree on purpose
+
+A different title on the same model is a costume, not a perspective. Four things
+make members reach different conclusions, listed roughly by how hard each is to
+fake with a prompt:
+
+1. **Different models.** Members on one model share its priors however their roles
+   read. A Teammate's Model and Adapter are set per Teammate, so one team can span
+   vendors and the strongest lever is a setting.
+2. **Different information.** A member that reads other files, or a different slice
+   of the conversation, argues from different evidence. Each Teammate has its own
+   Work Dir and memory, so what it knows is its own.
+3. **Opposed incentives.** "Find what breaks" produces a different answer than
+   "Review this". Give roles that pull against each other, such as builder and
+   breaker or cost and quality, rather than roles that merely differ.
+4. **Independent first answers.** Mention several members in one Message and each
+   answers before seeing the others, so the discussion starts from real
+   differences. After that they read each other, as colleagues do. That is the
+   point, and it is why the first three levers matter: they decide whether a
+   disagreement survives the conversation.
+
+A **Skill** supplies a method, not a viewpoint, such as a threat-modelling
+procedure for the one Teammate who reviews security. Because Skills are assigned per
+Teammate, a method does not spread to the whole team and flatten it. The first lever
+depends on you setting each Teammate's Model; see
+[What we have not solved](#what-we-have-not-solved).
+
 ## The diagram with a hole in it
 
 ```text
@@ -218,9 +245,45 @@ on specialists to tag the coordinator back turned out to be a silent failure
 path — is in
 [ADR-0005](adr/0005-agent-topologies-are-emergent.md).
 
+## This repository is built the way it describes
+
+The argument above is that nobody can read everything a team of agents produces,
+so the work moves from reading output to engineering what checks it. This
+repository follows that rule, and each piece below can be opened and read:
+
+- **Rules are code, not review comments.** Warnings are errors, nullable
+  references are on, and the .NET and Sonar analyzers run inside the build, so a
+  style or language rule fails a build instead of waiting for someone to notice.
+  [CSharpPrinciples.md](../agents/CSharpPrinciples.md) lists them for the agents
+  that write the code.
+- **A test has to be able to fail.** `Prove-Mutation.ps1` changes one line of
+  source, runs the tests and restores the file byte for byte, so a green test that
+  exercises nothing shows itself. [Testing.md](../agents/Testing.md) says when to
+  use it.
+- **Gates are scripts.** `Check-All.ps1` runs the line-ending, diff, visibility and
+  documentation-index checks. CI repeats restore, build and test on every pull
+  request, with a secret scan and a vulnerable-dependency check beside them.
+- **Decisions are written down.** The [decision records](Index.md#4-decisions-adrs)
+  say why the system is shaped as it is, so an agent or a person reads the reason
+  instead of guessing at it.
+- **The documentation is routed.** [Index.md](Index.md) sends a reader to the one
+  page that owns an answer, with a rough cost in tokens, and `Check-DocIndex.ps1`
+  fails when a page is missing from it. An agent spends its context on the answer
+  rather than on working out the layout.
+
+None of this removes a person. A person sets what done means, and the checks say
+whether it was met. It also checks the repository, not your Teammates: a team in
+the app still has no built-in test step, as the table below says.
+
 ## What we have not solved
 
-A team fixes none of its own failure modes by default. Four are worth saying plainly:
+A team fixes none of its own failure modes by default. Five are worth saying plainly:
+
+- **Convergence.** A team the Chief of Staff proposes starts every Teammate on the
+  installation's default Model and Adapter, because a Candidate cannot carry either.
+  Until you change them on each Teammate card, the team is one model in several
+  roles, and a discussion between them can settle too easily
+  ([why this matters](#making-members-disagree-on-purpose)).
 
 - **Collaboration is not automatic value.** Teammates talking to each other is not
   a review. Mention a challenger to attack a specific piece of work.
