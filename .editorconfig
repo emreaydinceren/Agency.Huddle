@@ -573,3 +573,14 @@ dotnet_diagnostic.S3247.severity = warning  # Duplicate casts should not be made
 dotnet_diagnostic.S4635.severity = warning  # Start index should be used instead of calling Substring
 dotnet_diagnostic.S6609.severity = warning  # Min/Max properties of "Set" types should be used instead of the "Enumerable" extension methods
 dotnet_diagnostic.S6613.severity = warning  # First and "Last" properties of "LinkedList" should be used instead of the "First()" and "Last()" extension methods
+
+#### Style and design rules that guard correctness or an API contract ####
+dotnet_diagnostic.S6640.severity = warning  # Unsafe code blocks should not be used
+dotnet_diagnostic.S907.severity = warning  # "goto" statement should not be used
+dotnet_diagnostic.S1168.severity = warning  # Empty arrays and collections should be returned instead of null
+dotnet_diagnostic.S1123.severity = warning  # "Obsolete" attributes should include explanations
+dotnet_diagnostic.S1116.severity = warning  # Empty statements should be removed
+dotnet_diagnostic.S2166.severity = warning  # Classes named like "Exception" should extend "Exception" or a subclass
+dotnet_diagnostic.S3993.severity = warning  # Custom attributes should be marked with "System.AttributeUsageAttribute"
+dotnet_diagnostic.S927.severity = warning  # Parameter names should match base declaration and other partial definitions
+dotnet_diagnostic.S1210.severity = warning  # "Equals" and the comparison operators should be overridden when implementing "IComparable"

@@ -15,7 +15,7 @@ carry the settings are `Directory.Build.props`, `Directory.Packages.props`, `.ed
 First written 2026-10-03 against SonarAnalyzer.CSharp 10.32.0.713. Update it in the same
 commit as any change to those files.
 
-**Where it stands.** The denylist was 282 entries on `main`. It is now 119:
+**Where it stands.** The denylist was 282 entries on `main`. It is now 110:
 
 | Denied because | Count |
 | --- | --- |
@@ -23,8 +23,8 @@ commit as any change to those files.
 | Technology this repository does not use | 22 |
 | Another rule already covers it | 14 |
 | Kept for a stated reason (reasoning, not a test) | 4 |
-| Tried, did not fire | 3 |
-| Style, naming, design opinion or micro-performance | 47 |
+| Tried, did not fire | 4 |
+| Style, naming, design opinion or micro-performance | 37 |
 | Sonar telemetry (`S9999-*`), not code rules | 9 |
 
 The goal is to keep narrowing it; every entry should end up with a reason on this page, not a
@@ -212,6 +212,15 @@ Each was proven by a deliberate violation that failed the build with its ID.
 | `S1940` | Boolean checks written inverted |
 | `S3247` | Duplicate casts |
 | `S4635` | `Substring` where a start index would do |
+| `S6640` | Unsafe code blocks |
+| `S907` | `goto` |
+| `S1168` | Returning `null` where an empty array or collection belongs |
+| `S1123` | `[Obsolete]` without an explanation |
+| `S1116` | Empty statements |
+| `S2166` | A class named `...Exception` that does not extend `Exception` |
+| `S3993` | A custom attribute without `AttributeUsage` |
+| `S927` | An override whose parameter names differ from the base declaration |
+| `S1210` | `IComparable` implemented without `Equals` and the comparison operators |
 
 ## Denied
 
@@ -262,8 +271,8 @@ hits, so the reason is never "it would break the build"; it is what the rule is.
 | Technology this repository does not use | 22 | `S6420`, `S6419`, `S6424`, `S6422` (Azure Functions), `S3597`, `S3598` (WCF), `S4210` (WinForms), `S4428`, `S4159`, `S4277` (MEF), `S4200`, `S4211`, `S3925`, `S3927`, `S3926` (legacy serialization), `S3431` (NUnit), `S6670`, `S6675` (the `Trace` API), `S8380`, `S8381`, `S8367`, `S8368` (C# 14 keyword-escape naming) | Nothing here to guard. The C# 14 ones are also reported by the compiler. |
 | Another rule already covers it | 14 | `S112` (`CA2201`), `S2629` (`CA2254`), `S3260` (`CA1852`), `S1172` (`IDE0060`), `S3445` (`CA2200`), `S101` (`IDE1006`), `S1155` (`CA1860`), `S1905` (`IDE0004`), `S2223` (`CA2211`), `S2681` (`IDE0011`), `S1699`, `S2306`, `S4220`, `S3903` | Enabling it would print each finding twice. The mapping is by title, not tested. |
 | Kept for a stated reason | 4 | `S4036`, `S1607`, `S6610`, `S1075` | See below. |
-| Tried, did not fire | 3 | `S2114`, `S2328`, `S3610` | A probe built to trigger each did not (`S3610` was tried on five shapes of nullable comparison). Either the probe was wrong or the rule is narrower than its title; nobody checked which, so all three stay denied until someone does. |
-| Style, naming, design opinion or micro-performance | 47 | `S1110`, `S1116`, `S1121`, `S1123`, `S1133`, `S1134`, `S1168`, `S1185`, `S1186`, `S1199`, `S1210`, `S1264`, `S1694`, `S1939`, `S2166`, `S2219`, `S2344`, `S3217`, `S3246`, `S3249`, `S3261`, `S3263`, `S3400`, `S3453`, `S3456`, `S3459`, `S3604`, `S3897`, `S3904`, `S3963`, `S3972`, `S3973`, `S3993`, `S4035`, `S4050`, `S4052`, `S4061`, `S4136`, `S4524`, `S4663`, `S6575`, `S6640`, `S6960`, `S6968`, `S818`, `S907`, `S927` | Taste. None guards correctness or security. |
+| Tried, did not fire | 4 | `S2114`, `S2328`, `S3610`, `S4050` | A probe built to trigger each did not (`S3610` was tried on five shapes of nullable comparison; `S4050` on `+` without `-`, `Equals` without `==`, and `==` without `Equals`). Either the probe was wrong or the rule is narrower than its title; nobody checked which, so all three stay denied until someone does. |
+| Style, naming, design opinion or micro-performance | 37 | `S1110`, `S1121`, `S1133`, `S1134`, `S1185`, `S1186`, `S1199`, `S1264`, `S1694`, `S1939`, `S2219`, `S2344`, `S3217`, `S3246`, `S3249`, `S3261`, `S3263`, `S3400`, `S3453`, `S3456`, `S3459`, `S3604`, `S3897`, `S3904`, `S3963`, `S3972`, `S3973`, `S4035`, `S4052`, `S4061`, `S4136`, `S4524`, `S4663`, `S6575`, `S6960`, `S6968`, `S818` | Taste. None guards correctness or security. |
 
 The four **kept for a stated reason** rest on reasoning, not on a test:
 

@@ -39,7 +39,7 @@
     <!-- Tried and did not fire on a deliberate violation (S2114, S2328, S3610). Unknown whether the probe or the rule is at fault; see docs/engineering/analyzer-decisions.md. -->
     <NoWarn>$(NoWarn);S2114;S2328;S3610</NoWarn>
     <!-- Denied: style, naming, design opinion or micro-performance. Zero hits today, so each one is a taste decision; none guards correctness or security. -->
-    <NoWarn>$(NoWarn);S1110;S1116;S1121;S1123;S1133;S1134;S1168;S1185;S1186;S1199;S1210;S1264;S1694;S1939;S2166;S2219;S2344;S3217;S3246;S3249;S3261;S3263;S3400;S3453;S3456;S3459;S3604;S3897;S3904;S3963;S3972;S3973;S3993;S4035;S4050;S4052;S4061;S4136;S4524;S4663;S6575;S6640;S6960;S6968;S818;S907;S927</NoWarn>
+    <NoWarn>$(NoWarn);S1110;S1121;S1133;S1134;S1185;S1186;S1199;S1264;S1694;S1939;S2219;S2344;S3217;S3246;S3249;S3261;S3263;S3400;S3453;S3456;S3459;S3604;S3897;S3904;S3963;S3972;S3973;S4035;S4052;S4061;S4136;S4050;S4524;S4663;S6575;S6960;S6968;S818</NoWarn>
     <!-- Sonar's own bookkeeping diagnostics, not code rules. -->
     <NoWarn>$(NoWarn);S9999-cpd;S9999-log;S9999-metadata;S9999-metrics;S9999-symbolRef;S9999-telemetry;S9999-testMethodDeclaration;S9999-token-type;S9999-warning</NoWarn>
   </PropertyGroup>
