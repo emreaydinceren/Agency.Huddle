@@ -776,6 +776,223 @@ install_app() {
     return 0
 }
 
+# Set by install_node: 1 when the node folder was replaced, 0 when the step was skipped or failed.
+NODE_CHANGED=0
+
+# Seam: prints the version the node binary in $1 reports (`node --version`, e.g. v24.21.0).
+node_version_of() {
+    "$1" --version </dev/null
+}
+
+# Installs the Node release named by nodeVersion in <InstallRoot>/release-info.json (Spec section 6,
+# Findings F2) so that node/bin/node and node/lib/node_modules/npm/bin/npm-cli.js exist. $1 is an
+# optional base for SHASUMS256.txt and the tarball: an existing folder or an https URL, default
+# https://nodejs.org/dist/<version>. The tarball name comes from HOST_RID (osx-arm64 -> darwin-arm64,
+# osx-x64 -> darwin-x64) and is verified against its SHASUMS256.txt line. Sets NODE_CHANGED to 1 when
+# the node folder was replaced and 0 when the step was skipped (the state holds this version and the
+# installed binary prints it) or failed. Returns 1 on a failure, after logging it; the previous node
+# is left in place. A running instance is stopped only once the new node is verified and ready to be
+# swapped in. Does not write the install state (the caller does, last).
+install_node() {
+    local base version bare rid arch name wrapper root staging old sums_file saved_sums expected
+    local archive kind inner installed old_moved
+    base=${1:-}
+    NODE_CHANGED=0
+    root=${INSTALL_ROOT%/}
+    if [ ! -f "$root/release-info.json" ]; then
+        log_step fail node "$root/release-info.json does not exist" "Run the installer again so the app is installed first."
+        return 1
+    fi
+    version=$(sed -n 's/.*"nodeVersion" *: *"\([^"]*\)".*/\1/p' "$root/release-info.json" | head -1) || version=""
+    if [ -z "$version" ]; then
+        log_step fail node "release-info.json has no nodeVersion" "Download the release again."
+        return 1
+    fi
+    bare=${version#v}
+    if ! printf '%s\n' "$bare" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+        log_step fail node "the Node version '$version' is not of the form v24.21.0" "Download the release again."
+        return 1
+    fi
+    version="v$bare"
+    if [ -x "$NODE_BIN" ] && { step_satisfied "$STATE_FILE" node_version "$version" || step_satisfied "$STATE_FILE" node_version "$bare"; }; then
+        installed=$(node_version_of "$NODE_BIN" 2>/dev/null) || installed=""
+        installed=$(printf '%s' "$installed" | tr -d ' \r\n')
+        if [ "${installed#v}" = "$bare" ]; then
+            log_step skip node "already installed ($version)"
+            return 0
+        fi
+    fi
+    rid=${HOST_RID:-}
+    case $rid in
+        osx-arm64) arch=arm64 ;;
+        osx-x64) arch=x64 ;;
+        *)
+            log_step fail node "unsupported CPU '$rid'" "Agency Huddle needs an Apple Silicon or Intel Mac."
+            return 1
+            ;;
+    esac
+    wrapper="node-$version-darwin-$arch"
+    name="$wrapper.tar.gz"
+    if [ -z "$base" ]; then
+        base="https://nodejs.org/dist/$version"
+    fi
+    base=${base%/}
+    if [ -d "$base" ]; then
+        kind=file
+    else
+        case $base in
+            https://*) kind=url ;;
+            *)
+                log_step fail node "the Node source must be an https URL or an existing folder: $base"
+                return 1
+                ;;
+        esac
+    fi
+    log_step work node "downloading $name"
+    sums_file="$CACHE_DIR/node-$version-SHASUMS256.txt"
+    if ! mkdir -p "$CACHE_DIR" || ! rm -f "$sums_file"; then
+        log_step fail node "cannot use the download cache $CACHE_DIR" "Check the permissions on $CACHE_DIR."
+        return 1
+    fi
+    # SHASUMS256.txt has no hash of its own; it comes from the same TLS-protected origin as the
+    # tarball and decides the tarball's expected hash.
+    if [ "$kind" = file ]; then
+        cp "$base/SHASUMS256.txt" "$sums_file" || true
+    else
+        http_get "$base/SHASUMS256.txt" "$sums_file" || true
+    fi
+    # parse_sums replaces the release's SUMS, so the caller's SUMS is put back straight away.
+    saved_sums=${SUMS:-}
+    expected=""
+    if [ -f "$sums_file" ] && parse_sums "$sums_file"; then
+        expected=$(expected_hash "$name") || expected=""
+    fi
+    SUMS=$saved_sums
+    if [ -z "$expected" ]; then
+        log_step fail node "cannot read the checksum of $name from $base/SHASUMS256.txt" "Check your network or proxy settings (HTTPS_PROXY) and run the installer again."
+        return 1
+    fi
+    if ! archive=$(get_verified_asset "$name" "$expected" "$kind:$base/$name" "$CACHE_DIR"); then
+        log_step fail node "cannot get a verified $name" "Check your network or proxy settings (HTTPS_PROXY) and run the installer again."
+        return 1
+    fi
+    staging="$root/node.staging"
+    old="$root/node.old"
+    # Leftovers of an interrupted run: a swap that died between its two renames, then stale folders.
+    if [ ! -e "$root/node" ] && [ -e "$old" ]; then
+        if ! mv "$old" "$root/node"; then
+            log_step fail node "cannot restore $old" "Rename $old to $root/node by hand and run the installer again."
+            return 1
+        fi
+    fi
+    rm -rf "$staging" "$old"
+    if ! mkdir -p "$staging" || ! run_tar "$archive" "$staging"; then
+        rm -rf "$staging"
+        log_step fail node "cannot extract $archive" "Delete the file and run the installer again."
+        return 1
+    fi
+    inner="$staging/$wrapper"
+    if [ ! -f "$inner/bin/node" ] || [ ! -f "$inner/lib/node_modules/npm/bin/npm-cli.js" ]; then
+        rm -rf "$staging"
+        log_step fail node "the Node archive does not contain $wrapper/bin/node and lib/node_modules/npm/bin/npm-cli.js; the previous node was left untouched" "Delete $archive and run the installer again."
+        return 1
+    fi
+    if ! chmod +x "$inner/bin/node"; then
+        rm -rf "$staging"
+        log_step fail node "cannot make node runnable; the previous node was left untouched" "Run the installer again."
+        return 1
+    fi
+    old_moved=0
+    if [ -e "$root/node" ]; then
+        # A running adapter holds the node folder open, so the app stops before the swap.
+        if ! stop_huddle_if_running; then
+            rm -rf "$staging"
+            return 1
+        fi
+        if ! mv "$root/node" "$old"; then
+            rm -rf "$staging"
+            log_step fail node "cannot rename $root/node; the previous node was left untouched" "Close anything using it and run the installer again."
+            return 1
+        fi
+        old_moved=1
+    fi
+    if ! mv "$inner" "$root/node"; then
+        if [ "$old_moved" = 1 ] && [ ! -e "$root/node" ]; then
+            mv "$old" "$root/node" || true
+        fi
+        rm -rf "$staging"
+        log_step fail node "cannot move the new node into place; the previous node was restored" "Run the installer again."
+        return 1
+    fi
+    rm -rf "$staging" "$old"
+    NODE_CHANGED=1
+    log_step ok node "installed ($version)"
+    return 0
+}
+
+# Set by install_adapter: 1 when npm ci ran and installed the adapter, 0 when the step was skipped or failed.
+ADAPTER_CHANGED=0
+
+# Seam: runs the bundled node on the bundled npm CLI with the given arguments (never a global npm).
+# The caller sets the working directory and PATH; stdin is the caller's business.
+run_npm_ci() {
+    "$NODE_BIN" "$INSTALL_ROOT/node/lib/node_modules/npm/bin/npm-cli.js" "$@"
+}
+
+# Installs the adapter's production dependencies into <InstallRoot>/tools/acp with the bundled node
+# (Spec section 6). Sets ADAPTER_CHANGED to 1 when `npm ci` ran and 0 when the step was skipped (the
+# state holds the SHA-256 of package-lock.json and the adapter entry exists) or failed. Returns 1 on a
+# failure, after logging it and the last 15 lines of $CACHE_DIR/npm-ci.log. A running instance is
+# stopped only once `npm ci` is certain to run. Does not write the install state (the caller does,
+# last). Needs install_node to have run: it uses the node and npm under <InstallRoot>/node.
+install_adapter() {
+    local root acp_dir lock sha npm_cli log rc
+    ADAPTER_CHANGED=0
+    root=${INSTALL_ROOT%/}
+    acp_dir="$root/tools/acp"
+    lock="$acp_dir/package-lock.json"
+    npm_cli="$root/node/lib/node_modules/npm/bin/npm-cli.js"
+    log="$CACHE_DIR/npm-ci.log"
+    if [ ! -f "$lock" ]; then
+        log_step fail adapter "$lock does not exist" "Download the release again."
+        return 1
+    fi
+    sha=$(file_sha256 "$lock") || return 1
+    if [ -f "$ADAPTER_ENTRY" ] && step_satisfied "$STATE_FILE" lock_sha256 "$sha"; then
+        log_step skip adapter "already installed"
+        return 0
+    fi
+    if [ ! -x "$NODE_BIN" ] || [ ! -f "$npm_cli" ]; then
+        log_step fail adapter "the bundled node and npm are missing from $root/node" "Run the installer again so the node step runs first."
+        return 1
+    fi
+    if ! mkdir -p "$CACHE_DIR"; then
+        log_step fail adapter "cannot create $CACHE_DIR" "Check the permissions on $CACHE_DIR."
+        return 1
+    fi
+    # node_modules is replaced, and a running adapter holds files in it open.
+    if ! stop_huddle_if_running; then
+        return 1
+    fi
+    log_step work adapter "installing the adapter with npm ci"
+    rc=0
+    (
+        cd "$acp_dir" && PATH="$root/node/bin:$PATH" && export PATH && run_npm_ci ci --omit=dev --no-audit --no-fund
+    ) >"$log" 2>&1 </dev/null || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        tail -n 15 "$log" >&2
+        log_step fail adapter "npm ci failed (exit code $rc); the full log is $log" "Check your network, and if you are behind a proxy set HTTPS_PROXY (and HTTP_PROXY), then run the installer again."
+        return 1
+    fi
+    if [ ! -f "$ADAPTER_ENTRY" ]; then
+        log_step fail adapter "npm ci finished but claude-agent-acp is missing (expected $ADAPTER_ENTRY); the full log is $log" "Run the installer again, or check $log."
+        return 1
+    fi
+    ADAPTER_CHANGED=1
+    log_step ok adapter "installed"
+    return 0
+}
+
 main() {
     parse_args "$@"
     if [ -z "$OPT_BASE_URL" ] && [ "$HUDDLE_REPO" = "$HUDDLE_REPO_PLACEHOLDER" ]; then

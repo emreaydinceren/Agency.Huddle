@@ -1417,7 +1417,454 @@ test_install_app_leaves_the_script_with_one_placeholder() {
     t_assert_eq "1" "$count" "placeholder still appears exactly once"
 }
 
+# ---- Task 33: install_node -------------------------------------------------------------------------
+
+# nd_setup: an ap_setup sandbox whose release-info.json asks for Node v24.21.0 on Apple Silicon.
+# node_version_of is faked: the fake node is a script whose second line is "# fakenode <version>".
+nd_setup() {
+    ap_setup
+    HOST_RID=osx-arm64
+    NODE_CHANGED=unset
+    mkdir -p "$INSTALL_ROOT"
+    printf '{"version": "1.0.0", "nodeVersion": "v24.21.0"}\n' >"$INSTALL_ROOT/release-info.json"
+    node_version_of() {
+        printf 'node_version_of %s\n' "$1" >>"$AP_CALLS"
+        if [ -f "$1" ]; then
+            sed -n 's/^# fakenode //p' "$1"
+        fi
+    }
+}
+
+# nd_build_node <version> <arm64|x64> [tamper|nonpm]: puts node-<version>-darwin-<arch>.tar.gz and a
+# SHASUMS256.txt into $AP/nodebase, laid out like nodejs.org's archive (one wrapper folder).
+# Files are written without the execute bit, so the install must set it on bin/node.
+nd_build_node() {
+    nd_name="node-$1-darwin-$2"
+    nd_src="$AP/nodesrc"
+    rm -rf "$nd_src"
+    mkdir -p "$nd_src/$nd_name/bin" "$nd_src/$nd_name/lib/node_modules/npm/bin" "$AP/nodebase"
+    printf '#!/bin/sh\n# fakenode %s\n' "$1" >"$nd_src/$nd_name/bin/node"
+    printf '// npm for %s\n' "$1" >"$nd_src/$nd_name/lib/node_modules/npm/bin/npm-cli.js"
+    printf 'license\n' >"$nd_src/$nd_name/LICENSE"
+    if [ "${3:-}" = nonpm ]; then
+        rm -f "$nd_src/$nd_name/lib/node_modules/npm/bin/npm-cli.js"
+    fi
+    tar -czf "$AP/nodebase/$nd_name.tar.gz" -C "$nd_src" "$nd_name"
+    nd_hash=$(file_sha256 "$AP/nodebase/$nd_name.tar.gz")
+    if [ "${3:-}" = tamper ]; then
+        nd_hash=1111111111111111111111111111111111111111111111111111111111111111
+    fi
+    nd_zero=0000000000000000000000000000000000000000000000000000000000000000
+    {
+        printf '%s  node-%s-win-x64.zip\n' "$nd_zero" "$1"
+        printf '%s  node-%s-darwin-arm64.tar.gz\n' "$nd_zero" "$1"
+        printf '%s  node-%s-darwin-x64.tar.gz\n' "$nd_zero" "$1"
+    } >"$AP/nodebase/SHASUMS256.txt"
+    # The real line wins over the decoy of the same name (the last duplicate is used).
+    printf '%s  %s.tar.gz\n' "$nd_hash" "$nd_name" >>"$AP/nodebase/SHASUMS256.txt"
+}
+
+# nd_run [base]: runs install_node in this shell; NDRC is its status, NDOUT its output.
+nd_run() {
+    NDRC=0
+    install_node "${1-$AP/nodebase}" >"$AP/out" 2>&1 || NDRC=$?
+    NDOUT=$(cat "$AP/out")
+}
+
+test_install_node_fresh_install() {
+    nd_setup
+    nd_build_node v24.21.0 arm64
+    nd_run
+    t_assert_eq "0" "$NDRC" "install_node succeeded: $NDOUT"
+    t_assert_eq "1" "$NODE_CHANGED" "NODE_CHANGED"
+    t_assert_eq "yes" "$([ -x "$NODE_BIN" ] && echo yes || echo no)" "NODE_BIN is executable"
+    t_assert_file "$INSTALL_ROOT/node/lib/node_modules/npm/bin/npm-cli.js" "npm-cli.js under node/"
+    t_assert_no_file "$INSTALL_ROOT/node/node-v24.21.0-darwin-arm64" "no wrapper folder inside node/"
+    t_assert_no_file "$INSTALL_ROOT/node.staging" "staging folder removed"
+    t_assert_no_file "$INSTALL_ROOT/node.old" "old folder removed"
+    t_assert_no_file "$STATE_FILE" "install_node never writes state"
+    t_assert_contains "$NDOUT" "[ok] node" "success line"
+    t_assert_eq "v24.21.0" "$(node_version_of "$NODE_BIN")" "the installed node is the pinned one"
+}
+
+test_install_node_is_skipped_when_state_and_binary_agree() {
+    nd_setup
+    nd_build_node v24.21.0 arm64
+    nd_run
+    write_state_key "$STATE_FILE" node_version v24.21.0
+    printf 'keep\n' >"$INSTALL_ROOT/node/marker"
+    : >"$AP_CALLS"
+    NODE_CHANGED=unset
+    nd_run
+    t_assert_eq "0" "$NDRC" "second run succeeded"
+    t_assert_eq "0" "$NODE_CHANGED" "NODE_CHANGED after a skip"
+    t_assert_contains "$NDOUT" "[skip] node" "skip line"
+    t_assert_file "$INSTALL_ROOT/node/marker" "the node folder was not touched"
+    t_assert_eq "1" "$(ap_count_calls '^node_version_of')" "the installed binary was asked once"
+    t_assert_eq "0" "$(ap_count_calls '^stop')" "a skipped step does not stop the app"
+}
+
+test_install_node_is_not_skipped_when_the_binary_is_missing() {
+    nd_setup
+    nd_build_node v24.21.0 arm64
+    write_state_key "$STATE_FILE" node_version v24.21.0
+    nd_run
+    t_assert_eq "0" "$NDRC" "install_node succeeded: $NDOUT"
+    t_assert_eq "1" "$NODE_CHANGED" "NODE_CHANGED when state matches but node is missing"
+    t_assert_file "$NODE_BIN" "node installed"
+}
+
+test_install_node_is_not_skipped_when_the_binary_reports_another_version() {
+    nd_setup
+    nd_build_node v24.21.0 arm64
+    mkdir -p "$INSTALL_ROOT/node/bin"
+    printf '#!/bin/sh\n# fakenode v22.0.0\n' >"$NODE_BIN"
+    chmod +x "$NODE_BIN"
+    write_state_key "$STATE_FILE" node_version v24.21.0
+    nd_run
+    t_assert_eq "1" "$NODE_CHANGED" "a binary that prints another version is replaced"
+    t_assert_eq "v24.21.0" "$(node_version_of "$NODE_BIN")" "the pinned version is installed"
+}
+
+test_install_node_replaces_the_node_on_a_version_change() {
+    nd_setup
+    nd_build_node v24.21.0 arm64
+    nd_run
+    write_state_key "$STATE_FILE" node_version v24.21.0
+    printf 'old\n' >"$INSTALL_ROOT/node/old-marker"
+    ap_instance_json 4242
+    printf '{"version": "1.0.1", "nodeVersion": "v24.22.0"}\n' >"$INSTALL_ROOT/release-info.json"
+    nd_build_node v24.22.0 arm64
+    : >"$AP_CALLS"
+    nd_run
+    t_assert_eq "0" "$NDRC" "upgrade succeeded: $NDOUT"
+    t_assert_eq "1" "$NODE_CHANGED" "NODE_CHANGED"
+    t_assert_no_file "$INSTALL_ROOT/node/old-marker" "the old node folder is gone"
+    t_assert_eq "v24.22.0" "$(node_version_of "$NODE_BIN")" "the new version is installed"
+    t_assert_eq "1" "$(ap_count_calls '^stop old_present=0')" "the running app was stopped once, before the swap"
+    t_assert_no_file "$INSTALL_ROOT/node.old" "old folder removed"
+    t_assert_no_file "$INSTALL_ROOT/node.staging" "staging folder removed"
+}
+
+test_install_node_fresh_install_never_stops_the_app() {
+    nd_setup
+    nd_build_node v24.21.0 arm64
+    ap_instance_json 4242
+    nd_run
+    t_assert_eq "1" "$NODE_CHANGED" "installed"
+    t_assert_eq "0" "$(ap_count_calls '^stop')" "no node folder exists yet, so nothing can hold it open"
+}
+
+test_install_node_survivor_aborts_the_upgrade_untouched() {
+    nd_setup
+    nd_build_node v24.21.0 arm64
+    nd_run
+    write_state_key "$STATE_FILE" node_version v24.21.0
+    printf 'old\n' >"$INSTALL_ROOT/node/old-marker"
+    ap_instance_json 4242
+    AP_ALIVE=1
+    printf '{"version": "1.0.1", "nodeVersion": "v24.22.0"}\n' >"$INSTALL_ROOT/release-info.json"
+    nd_build_node v24.22.0 arm64
+    nd_run
+    AP_ALIVE=0
+    t_assert_eq "1" "$NDRC" "a surviving app fails the step"
+    t_assert_eq "0" "$NODE_CHANGED" "NODE_CHANGED"
+    t_assert_file "$INSTALL_ROOT/node/old-marker" "the previous node is untouched"
+    t_assert_no_file "$INSTALL_ROOT/node.staging" "staging folder removed"
+}
+
+test_install_node_rejects_a_tampered_tarball() {
+    nd_setup
+    nd_build_node v24.21.0 arm64
+    nd_run
+    write_state_key "$STATE_FILE" node_version v24.21.0
+    printf 'old\n' >"$INSTALL_ROOT/node/old-marker"
+    printf '{"version": "1.0.1", "nodeVersion": "v24.22.0"}\n' >"$INSTALL_ROOT/release-info.json"
+    nd_build_node v24.22.0 arm64 tamper
+    nd_run
+    t_assert_eq "1" "$NDRC" "a hash mismatch fails the step"
+    t_assert_eq "0" "$NODE_CHANGED" "NODE_CHANGED"
+    t_assert_contains "$NDOUT" "hash mismatch" "the reason is shown"
+    t_assert_contains "$NDOUT" "[!!] node" "failure line"
+    t_assert_file "$INSTALL_ROOT/node/old-marker" "the previous node is untouched"
+    t_assert_eq "v24.21.0" "$(node_version_of "$NODE_BIN")" "the previous node still runs"
+}
+
+test_install_node_rejects_an_archive_without_npm() {
+    nd_setup
+    nd_build_node v24.21.0 arm64 nonpm
+    nd_run
+    t_assert_eq "1" "$NDRC" "an archive without npm-cli.js fails"
+    t_assert_eq "0" "$NODE_CHANGED" "NODE_CHANGED"
+    t_assert_no_file "$INSTALL_ROOT/node" "nothing was installed"
+    t_assert_no_file "$INSTALL_ROOT/node.staging" "staging folder removed"
+}
+
+test_install_node_arch_x64_fetches_the_darwin_x64_name() {
+    nd_setup
+    HOST_RID=osx-x64
+    nd_build_node v24.21.0 x64
+    rm -f "$AP/nodebase/node-v24.21.0-darwin-arm64.tar.gz"
+    nd_run
+    t_assert_eq "0" "$NDRC" "x64 install succeeded: $NDOUT"
+    t_assert_file "$AP/data dir/cache/node-v24.21.0-darwin-x64.tar.gz" "the x64 tarball was cached"
+    t_assert_file "$INSTALL_ROOT/node/lib/node_modules/npm/bin/npm-cli.js" "npm-cli.js under node/"
+}
+
+test_install_node_unknown_arch_fails() {
+    nd_setup
+    nd_build_node v24.21.0 arm64
+    HOST_RID=""
+    nd_run
+    t_assert_eq "1" "$NDRC" "no HOST_RID fails"
+    t_assert_eq "0" "$NODE_CHANGED" "NODE_CHANGED"
+    t_assert_no_file "$INSTALL_ROOT/node" "nothing was installed"
+}
+
+test_install_node_needs_a_node_version_in_release_info() {
+    nd_setup
+    nd_build_node v24.21.0 arm64
+    printf '{"version": "1.0.0"}\n' >"$INSTALL_ROOT/release-info.json"
+    nd_run
+    t_assert_eq "1" "$NDRC" "no nodeVersion fails"
+    t_assert_contains "$NDOUT" "nodeVersion" "the message names the key"
+    printf '{"nodeVersion": "latest"}\n' >"$INSTALL_ROOT/release-info.json"
+    nd_run
+    t_assert_eq "1" "$NDRC" "a version that is not vX.Y.Z fails"
+    rm -f "$INSTALL_ROOT/release-info.json"
+    nd_run
+    t_assert_eq "1" "$NDRC" "no release-info.json fails"
+}
+
+test_install_node_keeps_the_release_sums() {
+    nd_setup
+    nd_build_node v24.21.0 arm64
+    SUMS="release-sums-marker${NL}"
+    nd_run
+    t_assert_eq "0" "$NDRC" "install_node succeeded: $NDOUT"
+    t_assert_eq "release-sums-marker${NL}" "$SUMS" "the release SUMS survive the Node SHASUMS"
+    SUMS=""
+}
+
+test_install_node_defaults_to_nodejs_org() {
+    nd_setup
+    nd_build_node v24.21.0 arm64
+    out=$(ap_child \
+        "HOST_RID=osx-arm64" \
+        "http_get() { printf 'get %s\n' \"\$1\" >&2; cp \"$AP/nodebase/\${1##*/}\" \"\$2\"; }" \
+        "node_version_of() { sed -n 's/^# fakenode //p' \"\$1\"; }" \
+        "install_node; echo \"rc=\$? changed=\$NODE_CHANGED\"")
+    t_assert_contains "$out" "get https://nodejs.org/dist/v24.21.0/SHASUMS256.txt" "SHASUMS comes from nodejs.org"
+    t_assert_contains "$out" "get https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-arm64.tar.gz" "the tarball comes from nodejs.org"
+    t_assert_contains "$out" "rc=0 changed=1" "installed through the default source"
+}
+
+test_install_node_uses_local_variables() {
+    nd_setup
+    nd_build_node v24.21.0 arm64
+    base=KEEP version=KEEP bare=KEEP rid=KEEP arch=KEEP name=KEEP wrapper=KEEP staging=KEEP old=KEEP
+    sums_file=KEEP expected=KEEP archive=KEEP source=KEEP kind=KEEP inner=KEEP installed=KEEP root=KEEP
+    saved_sums=KEEP file_path=KEEP rc=KEEP old_moved=KEEP
+    install_node "$AP/nodebase" >"$AP/out" 2>&1 || true
+    for kept in "$old_moved" "$base" "$version" "$bare" "$rid" "$arch" "$name" "$wrapper" "$staging" "$old" "$sums_file" "$expected" "$archive" "$source" "$kind" "$inner" "$installed" "$root" "$saved_sums" "$file_path" "$rc"; do
+        t_assert_eq "KEEP" "$kept" "a caller variable survived install_node"
+    done
+}
+
+# ---- Task 34: install_adapter ----------------------------------------------------------------------
+
+# ad_setup: an ap_setup sandbox with a bundled (fake) node and npm CLI, and tools/acp holding a lock
+# file. run_npm_ci is faked: it logs where and how it ran, then creates the adapter entry unless
+# AD_NPM_RC is non-zero (it then prints 20 numbered lines and returns that status).
+ad_setup() {
+    ap_setup
+    ADAPTER_CHANGED=unset
+    AD_NPM_RC=0
+    AD_NPM_ENTRY=1
+    mkdir -p "$INSTALL_ROOT/node/bin" "$INSTALL_ROOT/node/lib/node_modules/npm/bin" "$INSTALL_ROOT/tools/acp"
+    printf '#!/bin/sh\n' >"$NODE_BIN"
+    chmod +x "$NODE_BIN"
+    printf '// npm\n' >"$INSTALL_ROOT/node/lib/node_modules/npm/bin/npm-cli.js"
+    printf '{"lockfileVersion": 3}\n' >"$INSTALL_ROOT/tools/acp/package-lock.json"
+    run_npm_ci() {
+        printf 'npm_ci pwd=%s path1=%s args=%s\n' "$(pwd)" "${PATH%%:*}" "$*" >>"$AP_CALLS"
+        if [ "$AD_NPM_RC" -ne 0 ]; then
+            ad_n=1
+            while [ "$ad_n" -le 20 ]; do
+                printf 'npm line %s\n' "$ad_n"
+                ad_n=$((ad_n + 1))
+            done
+            return "$AD_NPM_RC"
+        fi
+        if [ "$AD_NPM_ENTRY" -eq 1 ]; then
+            mkdir -p "$(dirname "$ADAPTER_ENTRY")"
+            printf '// adapter\n' >"$ADAPTER_ENTRY"
+        fi
+        return 0
+    }
+}
+
+# ad_run: runs install_adapter in this shell; ADRC is its status, ADOUT its output.
+ad_run() {
+    ADRC=0
+    install_adapter >"$AP/out" 2>&1 || ADRC=$?
+    ADOUT=$(cat "$AP/out")
+}
+
+test_install_adapter_runs_npm_ci_when_nothing_is_installed() {
+    ad_setup
+    ad_run
+    ad_dir=$(cd "$INSTALL_ROOT/tools/acp" && pwd)
+    t_assert_eq "0" "$ADRC" "install_adapter succeeded: $ADOUT"
+    t_assert_eq "1" "$ADAPTER_CHANGED" "ADAPTER_CHANGED"
+    t_assert_file "$ADAPTER_ENTRY" "the adapter entry exists"
+    t_assert_eq "npm_ci pwd=$ad_dir path1=$INSTALL_ROOT/node/bin args=ci --omit=dev --no-audit --no-fund" "$(grep '^npm_ci' "$AP_CALLS")" "cwd, PATH and arguments of the npm ci call"
+    t_assert_eq "1" "$(ap_count_calls '^npm_ci')" "npm ci ran once"
+    t_assert_no_file "$STATE_FILE" "install_adapter never writes state"
+    t_assert_contains "$ADOUT" "[ok] adapter" "success line"
+    t_assert_file "$CACHE_DIR/npm-ci.log" "the log file exists"
+}
+
+test_install_adapter_is_skipped_when_the_lock_hash_matches_and_the_entry_exists() {
+    ad_setup
+    ad_run
+    write_state_key "$STATE_FILE" lock_sha256 "$(file_sha256 "$INSTALL_ROOT/tools/acp/package-lock.json")"
+    : >"$AP_CALLS"
+    ad_run
+    t_assert_eq "0" "$ADRC" "second run succeeded"
+    t_assert_eq "0" "$ADAPTER_CHANGED" "ADAPTER_CHANGED after a skip"
+    t_assert_contains "$ADOUT" "[skip] adapter" "skip line"
+    t_assert_eq "0" "$(ap_count_calls '^npm_ci')" "npm ci did not run"
+    t_assert_eq "0" "$(ap_count_calls '^stop')" "a skipped step does not stop the app"
+}
+
+test_install_adapter_runs_when_the_entry_is_missing() {
+    ad_setup
+    write_state_key "$STATE_FILE" lock_sha256 "$(file_sha256 "$INSTALL_ROOT/tools/acp/package-lock.json")"
+    ad_run
+    t_assert_eq "0" "$ADRC" "install_adapter succeeded: $ADOUT"
+    t_assert_eq "1" "$ADAPTER_CHANGED" "ADAPTER_CHANGED when the hash matches but the entry is missing"
+    t_assert_eq "1" "$(ap_count_calls '^npm_ci')" "npm ci ran"
+}
+
+test_install_adapter_runs_when_the_lock_hash_differs() {
+    ad_setup
+    ad_run
+    write_state_key "$STATE_FILE" lock_sha256 "$(file_sha256 "$INSTALL_ROOT/tools/acp/package-lock.json")"
+    printf '{"lockfileVersion": 3, "changed": true}\n' >"$INSTALL_ROOT/tools/acp/package-lock.json"
+    : >"$AP_CALLS"
+    ad_run
+    t_assert_eq "1" "$ADAPTER_CHANGED" "ADAPTER_CHANGED"
+    t_assert_eq "1" "$(ap_count_calls '^npm_ci')" "npm ci ran again"
+}
+
+test_install_adapter_stops_a_running_app_only_when_it_will_change() {
+    ad_setup
+    ap_instance_json 4242
+    ad_run
+    t_assert_eq "1" "$(ap_count_calls '^stop')" "the running app was stopped once"
+    write_state_key "$STATE_FILE" lock_sha256 "$(file_sha256 "$INSTALL_ROOT/tools/acp/package-lock.json")"
+    : >"$AP_CALLS"
+    ad_run
+    t_assert_eq "0" "$(ap_count_calls '^stop')" "a skip leaves the app alone"
+}
+
+test_install_adapter_survivor_aborts_before_npm_ci() {
+    ad_setup
+    ap_instance_json 4242
+    AP_ALIVE=1
+    ad_run
+    AP_ALIVE=0
+    t_assert_eq "1" "$ADRC" "a surviving app fails the step"
+    t_assert_eq "0" "$ADAPTER_CHANGED" "ADAPTER_CHANGED"
+    t_assert_eq "0" "$(ap_count_calls '^npm_ci')" "npm ci did not run"
+}
+
+test_install_adapter_failure_shows_the_log_tail_and_a_proxy_fix() {
+    ad_setup
+    AD_NPM_RC=7
+    ad_run
+    t_assert_eq "1" "$ADRC" "a failing npm ci fails the step"
+    t_assert_eq "0" "$ADAPTER_CHANGED" "ADAPTER_CHANGED"
+    t_assert_contains "$ADOUT" "[!!] adapter" "failure line"
+    t_assert_contains "$ADOUT" "exit code 7" "the exit code is shown"
+    t_assert_contains "$ADOUT" "npm line 20" "the last log line is shown"
+    t_assert_contains "$ADOUT" "npm line 6" "the 15th line from the end is shown"
+    t_assert_not_contains "$ADOUT" "npm line 5${NL}" "older lines are not shown"
+    t_assert_contains "$ADOUT" "fix:" "a fix line"
+    t_assert_contains "$ADOUT" "HTTPS_PROXY" "the fix names the proxy variable"
+    t_assert_contains "$(cat "$CACHE_DIR/npm-ci.log")" "npm line 1" "the log keeps the whole output"
+    t_assert_no_file "$ADAPTER_ENTRY" "no adapter entry after a failure"
+}
+
+test_install_adapter_verifies_the_entry_afterwards() {
+    ad_setup
+    AD_NPM_ENTRY=0
+    ad_run
+    t_assert_eq "1" "$ADRC" "an npm ci that leaves no entry fails the step"
+    t_assert_eq "0" "$ADAPTER_CHANGED" "ADAPTER_CHANGED"
+    t_assert_contains "$ADOUT" "[!!] adapter" "failure line"
+    t_assert_contains "$ADOUT" "claude-agent-acp" "the message names the adapter"
+}
+
+test_install_adapter_needs_the_bundled_node_and_a_lock_file() {
+    ad_setup
+    rm -f "$NODE_BIN"
+    ad_run
+    t_assert_eq "1" "$ADRC" "no bundled node fails"
+    t_assert_contains "$ADOUT" "fix:" "a fix line"
+    t_assert_eq "0" "$(ap_count_calls '^npm_ci')" "npm ci did not run"
+    ad_setup
+    rm -f "$INSTALL_ROOT/tools/acp/package-lock.json"
+    ad_run
+    t_assert_eq "1" "$ADRC" "no package-lock.json fails"
+    t_assert_eq "0" "$ADAPTER_CHANGED" "ADAPTER_CHANGED"
+}
+
+test_run_npm_ci_runs_the_bundled_node_on_the_bundled_npm() {
+    ad_setup
+    printf '#!/bin/sh\nprintf "node %%s\\n" "$*"\ncat >/dev/null\n' >"$NODE_BIN"
+    chmod +x "$NODE_BIN"
+    out=$(ap_child "run_npm_ci ci --omit=dev --no-audit --no-fund")
+    t_assert_eq "node $INSTALL_ROOT/node/lib/node_modules/npm/bin/npm-cli.js ci --omit=dev --no-audit --no-fund" "$out" "node runs npm-cli.js with the arguments, no global npm"
+}
+
+test_install_adapter_uses_local_variables() {
+    ad_setup
+    acp_dir=KEEP lock=KEEP sha=KEEP npm_cli=KEEP log=KEEP rc=KEEP root=KEEP
+    install_adapter >"$AP/out" 2>&1 || true
+    for kept in "$acp_dir" "$lock" "$sha" "$npm_cli" "$log" "$rc" "$root"; do
+        t_assert_eq "KEEP" "$kept" "a caller variable survived install_adapter"
+    done
+}
+
 t_run test_t_run_honours_t_only_and_prints_run_lines_only_for_failures
+t_run test_install_adapter_runs_npm_ci_when_nothing_is_installed
+t_run test_install_adapter_is_skipped_when_the_lock_hash_matches_and_the_entry_exists
+t_run test_install_adapter_runs_when_the_entry_is_missing
+t_run test_install_adapter_runs_when_the_lock_hash_differs
+t_run test_install_adapter_stops_a_running_app_only_when_it_will_change
+t_run test_install_adapter_survivor_aborts_before_npm_ci
+t_run test_install_adapter_failure_shows_the_log_tail_and_a_proxy_fix
+t_run test_install_adapter_verifies_the_entry_afterwards
+t_run test_install_adapter_needs_the_bundled_node_and_a_lock_file
+t_run test_run_npm_ci_runs_the_bundled_node_on_the_bundled_npm
+t_run test_install_adapter_uses_local_variables
+t_run test_install_node_fresh_install
+t_run test_install_node_is_skipped_when_state_and_binary_agree
+t_run test_install_node_is_not_skipped_when_the_binary_is_missing
+t_run test_install_node_is_not_skipped_when_the_binary_reports_another_version
+t_run test_install_node_replaces_the_node_on_a_version_change
+t_run test_install_node_fresh_install_never_stops_the_app
+t_run test_install_node_survivor_aborts_the_upgrade_untouched
+t_run test_install_node_rejects_a_tampered_tarball
+t_run test_install_node_rejects_an_archive_without_npm
+t_run test_install_node_arch_x64_fetches_the_darwin_x64_name
+t_run test_install_node_unknown_arch_fails
+t_run test_install_node_needs_a_node_version_in_release_info
+t_run test_install_node_keeps_the_release_sums
+t_run test_install_node_defaults_to_nodejs_org
+t_run test_install_node_uses_local_variables
 t_run test_install_app_fresh_install
 t_run test_install_app_clears_quarantine_on_the_install_root
 t_run test_install_app_signs_only_macho_files_that_fail_verification
