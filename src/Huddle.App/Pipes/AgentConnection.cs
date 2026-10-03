@@ -516,9 +516,11 @@ internal sealed class AgentConnection
         }
         catch (IOException)
         {
+            // Best effort: the stream is already closed, so the error cannot be delivered.
         }
         catch (ObjectDisposedException)
         {
+            // Best effort: the stream is already closed, so the error cannot be delivered.
         }
     }
 

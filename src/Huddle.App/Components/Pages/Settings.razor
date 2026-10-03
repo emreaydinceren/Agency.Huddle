@@ -244,9 +244,11 @@
         }
         catch (ObjectDisposedException)
         {
+            // Circuit gone; nothing to render.
         }
         catch (InvalidOperationException)
         {
+            // Renderer disposed mid-dispatch.
         }
     }
 }

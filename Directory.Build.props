@@ -29,7 +29,7 @@
          a bad colour; S3264: PersonaStore invokes its events through GetInvocationList; S1994: an
          intentional for loop that ends in a return; S8969 and S8970: removing the flagged "!" breaks
          the build; S3878 contradicts S3220; S2325 breaks razor markup) - see docs/engineering/analyzer-decisions.md. -->
-    <NoWarn>$(NoWarn);S108;S1135;S125;S1450;S1994;S2094;S2325;S2365;S2743;S3218;S3264;S3267;S3376;S3398;S3878;S4144;S6667;S6966;S8969;S8970</NoWarn>
+    <NoWarn>$(NoWarn);S1135;S125;S1450;S1994;S2094;S2325;S2365;S2743;S3218;S3264;S3267;S3376;S3398;S3878;S4144;S6667;S6966;S8969;S8970</NoWarn>
     <!-- Tried and did not fire on a deliberate violation (S2114, S2328, S3610, S4050). Unknown whether the probe or the rule is at fault; see docs/engineering/analyzer-decisions.md. -->
     <NoWarn>$(NoWarn);S2114;S2328;S3610;S4050</NoWarn>
     <!-- Sonar's own bookkeeping diagnostics, not code rules. -->
