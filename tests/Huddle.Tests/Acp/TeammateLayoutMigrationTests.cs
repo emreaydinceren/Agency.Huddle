@@ -448,9 +448,7 @@ public sealed class TeammateLayoutMigrationTests
         using TempDataDir dataDir = new();
         string markerPath = Path.Combine(dataDir.Path, "Teammates", ".layout-migrated");
         Directory.CreateDirectory(Path.GetDirectoryName(markerPath)!);
-        using (FileStream _ = File.Create(markerPath))
-        {
-        }
+        File.Create(markerPath).Dispose();
 
         WriteTasksFile(dataDir.Path, Path.Combine("Platform", "PLAT-1.md"), "flat");
         RecordingLogger<TeammateLayoutMigrationTests> logger = new();

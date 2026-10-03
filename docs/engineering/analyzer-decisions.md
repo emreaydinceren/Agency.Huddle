@@ -15,11 +15,11 @@ carry the settings are `Directory.Build.props`, `Directory.Packages.props`, `.ed
 First written 2026-10-03 against SonarAnalyzer.CSharp 10.32.0.713. Update it in the same
 commit as any change to those files.
 
-**Where it stands.** The denylist was 282 entries on `main`. It is now 33:
+**Where it stands.** The denylist was 282 entries on `main`. It is now 32:
 
 | Denied because | Count |
 | --- | --- |
-| The rule fires here and is noise, a false positive, or needs a change outside the chat side | 20 |
+| The rule fires here and is noise, a false positive, or needs a change outside the chat side | 19 |
 | Tried, did not fire | 4 |
 | Sonar telemetry (`S9999-*`), not code rules | 9 |
 
@@ -180,6 +180,7 @@ the two suppressions, which are recorded as such.
 | `S6562` | `new DateTime(2026, 11, 3)` in a test | `DateTimeKind.Unspecified`, the same kind it had before, now stated |
 | `S2479` | A raw `0x1F` control character inside the effort cache key in `ModelCatalogProbe` | `string.Concat(profileId, "\u001F", model)`: the same key, written so a reader can see it |
 | `S3358` | Eight nested ternaries: assignee resolution in `CreateTaskTool` and `UpdateTaskTool`, the avatar choice in `Appearance` and `TeammateCard`, the page title in `TeamPage`, `DetailKey` in `Tasks`, a note title in `MarkdownRenderer`, a skill's source in `SkillStore` | `if` chains, property-pattern and tuple `switch` expressions |
+| `S108` | Forty-one empty blocks: 38 empty `catch` blocks (the `DispatchAsync` helper copied into 18 razor components, plus `AgentConnection` and `TempDataDir`) and one empty `using` in `TeammateLayoutMigrationTests` | A comment saying why swallowing is safe, matching the house rule for general `catch` blocks; the `using` became `File.Create(markerPath).Dispose()`. **Exempt in the ACP subtree** (`src/Huddle.Acp`, `src/Huddle.Console`, `tests/Huddle.Acp.Tests`) by a path-scoped `none` in `.editorconfig`, because four empty blocks there (`AgentProcess.cs` twice, `ConsoleLineReader.cs`, `AgentProcessLauncherTests.cs`) belong to the ACP owner. Delete that section when they are filled. |
 | `S1118` | `public partial class Program` had an implicit public constructor | Protected constructor with a doc comment; the class stays `public partial` for `WebApplicationFactory<Program>` |
 
 Two side effects of these fixes are worth knowing:
@@ -246,7 +247,7 @@ probe or the rule is at fault.
 
 ### Denied: the rule fires here
 
-Twenty rules fire on this codebase and stay denied; they are the only denied rules that do. Counts are from the baseline above; a rule
+Nineteen rules fire on this codebase and stay denied; they are the only denied rules that do. Counts are from the baseline above; a rule
 listed under "Enabled after fixing real hits" is no longer in this table. **Reviewed** means
 someone read the sites and decided; **Noise** means the decision rests on the diagnostic's message
 and its hit count, with the sites not read; **Not enabled** means the rule is not wrong, but a site
@@ -263,8 +264,7 @@ is in the ACP effort's subtree (the chat side does not edit it) or the fix is ch
 | `S2325` | Method could be `static` | 3 | 0 | **Reviewed, keep off.** All three sites are razor handlers. Making one `static` breaks every `this.Member(...)` call in the markup (`CS0176`) and the generated event lambdas (`CS1662`), and the house rule requires `this.`. `CA1822` already covers ordinary classes. |
 | `S6966` | Await the async variant (`CancelAsync`, `DisposeAsync`) | 16 | 923 | Noise. It is a preference for the async overload, not a missing `await`. Almost all hits are tests. |
 | `S3267` | Loop could use `Where` | 69 | 2 | Noise. A style preference. |
-| `S108` | Empty block | 41 | 4 | Noise. |
-| `S1135` | `TODO` comment | 2 | 2 | Noise. |
+| `S1135` | `TODO` comment | 2 | 2 | **Reviewed, keep off.** Three of the four hits are false positives: the rule matches `ToDo`, the name of a task status, in `TaskState.cs` and `TestTasks.cs` (`Default: ToDo`). The fourth is a real follow-up note in `GetHelpToolTests.cs`, which a tracker would not want blocked on a build. |
 | `S125` | Commented-out code | 7 | 4 | Not enabled: two of the eleven sites are in `Huddle.Acp` and `Huddle.Console`. Plausibly worth a look, since commented-out code rots. |
 | `S2094` | Empty record or class | 4 | 0 | Not enabled: three of the four sites (`AssemblyMarker`, `AgentPrompt`, `ElicitationResult`) are in `Huddle.Acp`. |
 | `S2365` | Property copies a collection | 4 | 1 | Not enabled: two of the five sites are in `Huddle.Acp` and `Huddle.Acp.Tests`. The others are `Aliases`, `WatchedTaskIds` and `OnlineAgentIds`; not read. |
@@ -275,7 +275,7 @@ is in the ACP effort's subtree (the chat side does not edit it) or the fix is ch
 | `S3218` | Member shadows an outer member | 0 | 4 | Not enabled, by choice: four nested test fixtures expose a member named like one on the outer class (`Chat`, `Directory`, `Team`, ...). Renaming ripples through every use, for no defect. |
 | `S3398` | Move method inside its class | 0 | 1 | Not enabled, by choice: one shared test helper (`WaitUntilAsync`) used by a single nested class. Moving it is churn. |
 
-The seven **Reviewed** rows are the only ones where the sites were read. For every other row,
+The eight **Reviewed** rows are the only ones where the sites were read. For every other row,
 treat "Noise" as "not worth the cost at the time", not as "proven harmless". Seven rows wait on the
 ACP owner (`S125`, `S2094`, `S2365`, `S4144`, `S1450`, `S2743`, `S3376`); two (`S3218`, `S3398`)
 wait on a decision to accept churn.

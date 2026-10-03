@@ -663,3 +663,10 @@ dotnet_diagnostic.S6575.severity = warning  # Use "TimeZoneInfo.FindSystemTimeZo
 dotnet_diagnostic.S6960.severity = warning  # Controllers should not have mixed responsibilities
 dotnet_diagnostic.S6968.severity = warning  # Actions that return a value should be annotated with ProducesResponseTypeAttribute containing the return type
 dotnet_diagnostic.S818.severity = warning  # Literal suffixes should be upper case
+
+#### S108 (empty block): enabled solution-wide; the ACP effort's subtree is exempt until its owner fills the four empty blocks ####
+dotnet_diagnostic.S108.severity = warning  # Nested blocks of code should not be left empty
+
+[{src/Huddle.Acp/**.cs,src/Huddle.Console/**.cs,tests/Huddle.Acp.Tests/**.cs}]
+# AgentProcess.cs (2), ConsoleLineReader.cs (1), AgentProcessLauncherTests.cs (1): ACP-owned, not edited from the chat side.
+dotnet_diagnostic.S108.severity = none
