@@ -73,10 +73,13 @@ Enabling a rule proves nothing by itself: a rule can be on and never fire. Two p
 builds them and compares what fired with what each `// probe: Sxxxx` tag expects.
 
 - `tests/Huddle.AnalyzerProbes` holds the general probes. `tests/Huddle.AnalyzerProbes.Tests` holds the
-  xunit ones. **They are two projects because Sonar treats any project that references a test
-  framework as test code and skips most rules there.** 32 probes that fail with an `xunit.v3`
-  reference passed without it, so the same rule can be live in `src` and silent in
+  xunit ones and `tests/Huddle.AnalyzerProbes.Frameworks` the MSTest and NUnit ones (S1607, S2187 and
+  S3433 are written against those). **They are separate projects because Sonar treats any project
+  that references a test framework as test code and skips most rules there.** 32 probes that fail
+  with an `xunit.v3` reference passed without it, so the same rule can be live in `src` and silent in
   `tests`. Do not read a clean test project as evidence a rule passes.
+  `tests/Huddle.AnalyzerProbes.Packages` holds the probes that need a package nothing else here
+  references (EF Core, XML signatures, directory services); its versions are `VersionOverride`s.
 - The probe tag is answered only if that rule fires on the tag's own line or the next 8, so one
   probe cannot be satisfied by another's output. A probe that stops firing fails the check: that is an
   analyzer upgrade or a config change breaking a rule silently.
@@ -92,9 +95,8 @@ builds them and compares what fired with what each `// probe: Sxxxx` tag expects
 `Check-All.ps1` runs it only when the branch touches the analyzer configuration, because it builds two
 projects and takes about a minute.
 
-Where the probes stand: of 296 enabled Sonar rules, 239 have a probe that fires and 57 do not. The 57 are
-18 `no-technology`, 6 `compiler-rejects`, 7 `needs-package`, 22 `probe-did-not-fire` and 4
-`not-yet-probed`. The `probe-did-not-fire` rules are the interesting ones; nobody has checked whether
+Where the probes stand: of 296 enabled Sonar rules, 252 have a probe that fires and 44 do not. The 44 are
+19 `no-technology`, 7 `compiler-rejects`, 13 `probe-did-not-fire` and 5 `not-yet-probed`. The `probe-did-not-fire` rules are the interesting ones; nobody has checked whether
 the probe or the rule is at fault. The `IDE*` and `RS0030` rules in the first Enabled table are not Sonar
 rules and are not tracked by the probes.
 
@@ -163,11 +165,14 @@ were none.
 | Blazor and web | `S6797`, `S6798`, `S6800`, `S6962`, `S6967`, `S6964`, `S6930`, `S6931`, `S6934`, `S6965`, `S6961`, `S6932` |
 | Security | `S6377`, `S7039`, `S1313`, `S2857` |
 
-The probes show most of these fire. Twenty-odd did not, on probes built for them (`S2187`, `S2198`,
-`S2970`, `S3433`, `S3449`, `S3458`, `S4015`, `S4019`, `S6797`, `S6930`, `S6931`, `S6960`, `S6967`,
-`S6968` and others): either the probe was not what the rule looks for or the rule is narrower than
-its title. Nobody has checked which. `S3458` was listed here as proven by an earlier hand probe; the
-permanent probe could not reproduce it, so the earlier claim should not be relied on.
+The probes show most of these fire. `S2198`, `S3458`, `S4015`, `S4019`, `S6797`, `S6930`, `S6931`,
+`S6960` and `S6968` did not, on several probes each: either the probe was not what the rule looks for
+or the rule is narrower than its title. Nobody has checked which. `S3458` was listed here as proven
+by an earlier hand probe; the permanent probe could not reproduce it, so that claim should not be
+relied on. Several rules only fire in a particular shape, and the shape that works is recorded in
+`tests/Huddle.AnalyzerProbes/Probes/Gaps.cs`: `S1172` on a private method, `S1944` on a cast from a
+newly created base class to an interface, `S5332` on a host that is not `example.*`, `S6967` on a
+model with a validation attribute, `S3604` on an initialised property set in the constructor.
 
 ### Enabled after fixing real hits
 
@@ -242,10 +247,9 @@ and no code changed. They are in five loose groups, judged on their Sonar titles
 | Previously kept off for a stated reason that did not survive a measurement | `S4036` (agent adapters are spawned by command name: no hit), `S1607` (conditional `Skip`: no hit), `S6610` (the house `StringComparison.Ordinal` calls do not trip it), `S1075` (fixtures hardcode URIs: no hit) |
 | Style, naming and design | `S1110`, `S1121`, `S1133`, `S1134`, `S1185`, `S1186`, `S1199`, `S1264`, `S1694`, `S1939`, `S2219`, `S2344`, `S3217`, `S3246`, `S3249`, `S3261`, `S3263`, `S3400`, `S3453`, `S3456`, `S3459`, `S3604`, `S3897`, `S3904`, `S3963`, `S3972`, `S3973`, `S4035`, `S4052`, `S4061`, `S4136`, `S4524`, `S4663`, `S6575`, `S6960`, `S6968`, `S818` |
 
-Most of these are probed; the 22 for technology this repository does not use cannot be (`Unprobed.txt`
-says `no-technology`), and `S1121`, `S1172`, `S3217`, `S3604`, `S3972`, `S6968`, `S6960` and a few
-others did not fire on their probes. `S3604` was previously listed as proven by hand; the permanent
-probe did not reproduce it.
+Most of these are probed; the 22 for technology this repository does not use mostly cannot be
+(`Unprobed.txt` says `no-technology`). Of the rest only `S6968` and `S6960` did not fire on their
+probes.
 
 ## Denied
 

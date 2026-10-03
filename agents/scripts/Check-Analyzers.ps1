@@ -38,8 +38,9 @@ $ErrorActionPreference = 'Stop'
 $repoRoot = (git rev-parse --show-toplevel).Trim()
 $probeDir = Join-Path $repoRoot 'tests/Huddle.AnalyzerProbes'
 # Sonar treats a project that references a test framework as test code and skips most rules there, so
-# the xunit-specific probes live in a second project.
-$probeProjects = @('tests/Huddle.AnalyzerProbes', 'tests/Huddle.AnalyzerProbes.Tests') | ForEach-Object { Join-Path $repoRoot $_ }
+# the test-framework probes live in their own projects (xunit; MSTest and NUnit), and the probes that
+# need packages the repository does not use live in a fourth.
+$probeProjects = @('tests/Huddle.AnalyzerProbes', 'tests/Huddle.AnalyzerProbes.Tests', 'tests/Huddle.AnalyzerProbes.Frameworks', 'tests/Huddle.AnalyzerProbes.Packages') | ForEach-Object { Join-Path $repoRoot $_ }
 $counts = [ordered]@{ Probes = 0; Coverage = 0; Config = 0; Doc = 0 }
 $allowedReasons = @('no-technology', 'compiler-rejects', 'needs-package', 'probe-did-not-fire', 'not-yet-probed')
 

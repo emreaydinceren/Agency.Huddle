@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The MSTest and NUnit half of the analyzer probes: Sonar's test-hygiene rules (S1607, S2187, S3433)
+       are written against those frameworks. The versions are overrides because the repository itself
+       uses neither. Not part of Huddle.slnx; see tests/Huddle.AnalyzerProbes and
+       agents/scripts/Check-Analyzers.ps1. -->
+  <PropertyGroup>
+    <RootNamespace>Agency.Huddle.AnalyzerProbes.Frameworks</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <NoWarn>$(NoWarn);CS0169;CS0649;CS0219;CS0414;CS0067;CS0168;CS1717;CS8618;CS0162;CS0642;CA1707</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MSTest.TestFramework" VersionOverride="3.6.4" />
+    <PackageReference Include="NUnit" VersionOverride="4.3.2" />
+  </ItemGroup>
+
+</Project>
