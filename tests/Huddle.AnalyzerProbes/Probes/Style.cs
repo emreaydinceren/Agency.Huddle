@@ -34,6 +34,15 @@ public class StyleA
 
     public void Empty() { } // probe: S1186
 
+    public void EmptyCatch()
+    {
+        try { Marker(); }
+        // probe: S108
+        catch (IOException)
+        {
+        }
+    }
+
     public void NestedBlock() { { Marker(); } } // probe: S1199
 
     public void WhileFor() { int i = 0; /* probe: S1264 */ for (; i < 3;) { i++; } }
