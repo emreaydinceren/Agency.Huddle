@@ -542,3 +542,13 @@ dotnet_diagnostic.S6964.severity = warning  # Value type property used as input 
 dotnet_diagnostic.S6965.severity = warning  # REST API actions should be annotated with an HTTP verb attribute
 dotnet_diagnostic.S6967.severity = warning  # ModelState.IsValid should be called in controller actions
 dotnet_diagnostic.S7039.severity = warning  # Content Security Policies should be restrictive
+
+#### Eighth batch: eight rules that were denied, enabled after reading their sites. ####
+dotnet_diagnostic.S2123.severity = warning  # Values should not be uselessly incremented
+dotnet_diagnostic.S3237.severity = warning  # value contextual keyword should be used
+dotnet_diagnostic.S3241.severity = warning  # Methods should not return values that are never used
+dotnet_diagnostic.S2971.severity = warning  # LINQ expressions should be simplified
+dotnet_diagnostic.S1643.severity = warning  # Strings should not be concatenated using '+' in a loop
+dotnet_diagnostic.S6607.severity = warning  # The collection should be filtered before sorting by using "Where" before "OrderBy"
+dotnet_diagnostic.S1244.severity = warning  # Floating point numbers should not be tested for equality
+dotnet_diagnostic.S6588.severity = warning  # Use the "UnixEpoch" field instead of creating "DateTime" instances that point to the beginning of the Unix epoch

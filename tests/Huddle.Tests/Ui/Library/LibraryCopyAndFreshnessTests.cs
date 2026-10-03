@@ -368,14 +368,13 @@ public sealed class LibraryCopyAndFreshnessTests : IDisposable
 
     /// <summary>Stubs the <c>library-editor.js</c> module and its <c>create</c> handle, with <c>getText</c>
     /// defaulting to <paramref name="text"/> (as <see cref="LibraryDocumentEditTests"/> does).</summary>
-    private static (BunitJSModuleInterop Module, BunitJSModuleInterop Handle) SetupEditorModule(MudBunitContext ctx, string text)
+    private static void SetupEditorModule(MudBunitContext ctx, string text)
     {
         BunitJSModuleInterop module = ctx.JSInterop.SetupModule("./library-editor.js");
         BunitJSModuleInterop handle = module.SetupModule("create", _ => true);
         handle.Setup<string>("getText", _ => true).SetResult(text);
         handle.SetupVoid("setText", _ => true).SetVoidResult();
         handle.SetupVoid("dispose", _ => true).SetVoidResult();
-        return (module, handle);
     }
 
     private static IRenderedComponent<ContainerFragment> RenderDoc(

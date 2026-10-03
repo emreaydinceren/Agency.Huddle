@@ -322,7 +322,8 @@ internal sealed class AgentConnection
         }
         else
         {
-            this.drafts.Append(delta.MessageId, delta.RoomId, this.Agent!.Id, this.Agent!.Name, delta.Text);
+            User agent = this.Agent ?? throw new InvalidOperationException("A MessageDelta was handled before the handshake set the Agent.");
+            this.drafts.Append(delta.MessageId, delta.RoomId, agent.Id, agent.Name, delta.Text);
         }
 
         this.roomEvents.PublishDraftChanged(delta.RoomId);

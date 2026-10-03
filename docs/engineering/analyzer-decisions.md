@@ -11,8 +11,8 @@ the files that carry the settings are `Directory.Build.props`, `Directory.Packag
 First written 2026-10-03 against SonarAnalyzer.CSharp 10.32.0.713. Update it in the same
 commit as any change to those files.
 
-**Where it stands.** The denylist was 282 entries on `main`. It is now 144: 34 rules that fire
-here and are noise or reviewed false positives, 101 that were read and denied for a stated
+**Where it stands.** The denylist was 282 entries on `main`. It is now 136: 29 rules that fire
+here and are noise or reviewed false positives, 98 that were read and denied for a stated
 reason, and 9 telemetry entries. The goal is to keep narrowing it; every entry should end up
 with a reason on this page, not a number in a list.
 
@@ -172,9 +172,30 @@ and web rules need a test or web project, and were not probed at all.
 A rule that was enabled and never fires is harmless but gives a false sense of cover. If one of
 these matters to you, write a probe for it first.
 
+### Eighth batch
+
+Ten denied rules were picked for value and enabled to see what the build said. Eight stay on; two
+were put back after the build disproved them.
+
+| Rule | What it caught | Outcome |
+| --- | --- | --- |
+| `S1643` | `PersonaFrontmatter.SplitFlowListItems` appended to a `string` in a loop, three places | Fixed with a `StringBuilder`. Proven by real hits. |
+| `S2123` | Two test counters declared as `void Count() => n++`, read later | Not a bug; the increment was the local function's result. Changed to `Interlocked.Increment`, which the same file already uses elsewhere. Proven by real hits. |
+| `S3241` | Two `SetupEditorModule` test helpers returned a tuple no caller used | Return type changed to `void`. Proven by real hits. |
+| `S3237` | `DuplexStream.Position`'s setter never reads `value` | A deliberate `NotSupportedException` setter on a `Stream` override, so a false positive. Narrow `#pragma` with the reason. Proven by a real hit. |
+| `S2971` | `TaskStoreMemoryWarningTests.Warnings` calls `ToList()` on a live list | Looks useless, but the logger appends from other threads and the call is the snapshot. Narrow `#pragma` with the reason; dropping it risked a flaky test. Proven by a real hit. |
+| `S1244`, `S6588`, `S6607` | Floating-point equality, a hand-built Unix epoch, sort before filter | Zero hits. Each proven by a deliberate violation. |
+| `S8969`, `S8970` | Redundant `!` | **Put back.** See [Denied on purpose](#denied-on-purpose): removing the `!` broke the build at two of three `S8969` sites and all four `S8970` sites. |
+
+One thing the batch also changed: `AgentConnection.HandleMessageDeltaAsync` used `this.Agent!.Id,
+this.Agent!.Name`. It now reads `this.Agent ?? throw new InvalidOperationException(...)` once, so
+the invariant "the handshake set the Agent first" is stated instead of asserted with `!`, and a
+broken one fails with a clear exception.
+
 ## Denied on purpose
 
-Thirty-four rules fire on this codebase today and stay denied. `src` and `tests` are hit counts
+Twenty-nine rules fire on this codebase and stay denied. (Thirty-four did at the baseline; five of
+them were fixed and enabled, see [Eighth batch](#eighth-batch).) `src` and `tests` are hit counts
 from the baseline above. **Reviewed** means someone read the sites and decided; **Noise** means
 the decision rests on the diagnostic's message and its hit count, with the sites not read.
 
@@ -188,13 +209,8 @@ the decision rests on the diagnostic's message and its hit count, with the sites
 | `S108` | Empty block | 41 | 4 | Noise. |
 | `S125` | Commented-out code | 7 | 4 | Noise. Plausibly worth a look, since commented-out code rots. Not reviewed. |
 | `S3358` | Nested ternary | 8 | 0 | Noise. Style. |
-| `S8969` | Redundant null-forgiving `!` | 3 | 32 | **Candidate.** It flags a `!` the compiler does not need, which matches the house rule against `!`. Fix the 35 sites, then enable. |
-| `S8970` | `!` where nullable warnings are disabled | 4 | 0 | **Candidate**, same reasoning. |
-| `S2123` | Useless increment | 0 | 2 | **Candidate.** A wasted increment is a bug shape. Two test sites. |
-| `S3237` | `value` not used in a setter | 1 | 0 | **Candidate.** A setter that ignores its argument is usually a bug. |
-| `S3241` | Return value never used | 0 | 2 | Candidate, low value. |
-| `S2971` | Useless `ToList` | 0 | 1 | Candidate, low value. |
-| `S1643` | Use `StringBuilder` | 3 | 0 | Candidate if the loops are hot; not checked. |
+| `S8969` | Redundant null-forgiving `!` | 3 | 32 | **Reviewed, keep off.** Tried on the three source sites: at `PersonaRunner.cs:560` and `RoomSessionPool.cs:170` removing the `!` fails the build with `CS8602`, so the rule is wrong there. Only the `AgentConnection.cs` site was right. The 32 test sites were not tried; a rule that is wrong on two of three cannot be trusted without checking each fix against the compiler. |
+| `S8970` | `!` where nullable warnings are disabled | 4 | 0 | **Reviewed, keep off.** False positive on all four sites. They are `= default!` in `.razor` files, where nullable is enabled: removing the `!` fails the build with `CS8625` or `CS8601`. |
 | `S2094` | Empty record or class | 4 | 0 | Noise. Sites include `AssemblyMarker`, `AgentPrompt`, `ElicitationResult` and `LibraryImageResult`; not read. |
 | `S2365` | Property copies a collection | 4 | 1 | Noise. Sites are `Sinks`, `Aliases`, `WatchedTaskIds`, `OnlineAgentIds`; not read beyond the names. |
 | `S3878` | Needless array creation for `params` | 3 | 3 | Noise. |
@@ -215,12 +231,13 @@ the decision rests on the diagnostic's message and its hit count, with the sites
 | `S3398` | Move method inside its class | 0 | 1 | Noise. |
 | `S6562` | Provide `DateTimeKind` | 0 | 1 | Noise. |
 
-The three **Reviewed** rows are the only ones where the sites were read. For every other row,
+The five **Reviewed** rows are the only ones where the sites were read. For every other row,
 treat "Noise" as "not worth the cost at the time", not as "proven harmless".
 
 ## Denied after review, zero hits
 
-The 101 rules of the original 189 that stayed denied, in five groups, each its own `<NoWarn>`
+The 101 rules of the original 189 that stayed denied after the seventh batch (three of them,
+`S1244`, `S6588` and `S6607`, were enabled in the eighth, leaving 98), in five groups, each its own `<NoWarn>`
 element in `Directory.Build.props` with the reason in a comment above it. They have zero hits, so
 the reason is never "it would break the build"; it is what the rule is. Judged on the Sonar
 title only.
@@ -231,7 +248,7 @@ title only.
 | Another rule already covers it | 14 | `S112` (`CA2201`), `S2629` (`CA2254`), `S3260` (`CA1852`), `S1172` (`IDE0060`), `S3445` (`CA2200`), `S101` (`IDE1006`), `S1155` (`CA1860`), `S1905` (`IDE0004`), `S2223` (`CA2211`), `S2681` (`IDE0011`), `S1699`, `S2306`, `S4220`, `S3903` | Enabling it would print each finding twice. The mapping is by title, not tested. |
 | Kept for a stated reason | 4 | `S4036`, `S1607`, `S6610`, `S1075` | See below. |
 | Tried, did not fire | 2 | `S2114`, `S2328` | See [Sixth batch](#sixth-batch). |
-| Style, naming, design opinion or micro-performance | 59 | `S1110`, `S1116`, `S1121`, `S1123`, `S1133`, `S1134`, `S1168`, `S1185`, `S1186`, `S1199`, `S1210`, `S1244`, `S1264`, `S1694`, `S1939`, `S1940`, `S2166`, `S2219`, `S2344`, `S3217`, `S3246`, `S3247`, `S3249`, `S3261`, `S3263`, `S3400`, `S3453`, `S3456`, `S3459`, `S3604`, `S3610`, `S3897`, `S3904`, `S3963`, `S3972`, `S3973`, `S3993`, `S4035`, `S4050`, `S4052`, `S4061`, `S4136`, `S4524`, `S4635`, `S4663`, `S6561`, `S6575`, `S6588`, `S6607`, `S6608`, `S6609`, `S6613`, `S6617`, `S6640`, `S6960`, `S6968`, `S818`, `S907`, `S927` | Taste. None guards correctness or security. |
+| Style, naming, design opinion or micro-performance | 56 | `S1110`, `S1116`, `S1121`, `S1123`, `S1133`, `S1134`, `S1168`, `S1185`, `S1186`, `S1199`, `S1210`, `S1264`, `S1694`, `S1939`, `S1940`, `S2166`, `S2219`, `S2344`, `S3217`, `S3246`, `S3247`, `S3249`, `S3261`, `S3263`, `S3400`, `S3453`, `S3456`, `S3459`, `S3604`, `S3610`, `S3897`, `S3904`, `S3963`, `S3972`, `S3973`, `S3993`, `S4035`, `S4050`, `S4052`, `S4061`, `S4136`, `S4524`, `S4635`, `S4663`, `S6561`, `S6575`, `S6608`, `S6609`, `S6613`, `S6617`, `S6640`, `S6960`, `S6968`, `S818`, `S907`, `S927` | Taste. None guards correctness or security. |
 
 The four **kept for a stated reason** rest on reasoning, not on a test:
 
@@ -247,8 +264,8 @@ The four **kept for a stated reason** rest on reasoning, not on a test:
 Nine `S9999-*` entries in the last group are Sonar's own telemetry diagnostics, not code rules.
 
 Nothing in these groups is urgent. The "style" group is the only one where a different taste
-would change the answer, and the `S6561`, `S6575` and `S6588` date rules and `S6607` (filter
-before sort) are the ones closest to correctness. To clear a rule:
+would change the answer, and the `S6561` and `S6575` date rules are the ones closest to
+correctness. To clear a rule:
 
 1. Read its title (`dotnet run agents/scripts/List-SonarRules.cs`) and its page on
    rules.sonarsource.com.

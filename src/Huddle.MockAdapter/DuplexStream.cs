@@ -64,11 +64,13 @@ internal sealed class DuplexStream : Stream
             throw new NotSupportedException("A duplex stream has no defined position.");
         }
 
+#pragma warning disable S3237 // Stream.Position is part of the Stream contract; the setter throws deliberately, so it never reads value.
         set
         {
             ObjectDisposedException.ThrowIf(this.disposed, this);
             throw new NotSupportedException("A duplex stream has no defined position.");
         }
+#pragma warning restore S3237
     }
 
     /// <inheritdoc/>
