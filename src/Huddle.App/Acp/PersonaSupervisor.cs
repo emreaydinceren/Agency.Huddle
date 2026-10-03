@@ -209,14 +209,33 @@ internal sealed class PersonaSupervisor : BackgroundService
             this.statusHandlers.Clear();
         }
 
-        foreach (var (host, handler) in hostsToDispose)
-        {
-            if (handler is not null)
-            {
-                host.StatusChanged -= handler;
-            }
+        // Concurrent, because each Adapter host allows a stdin grace period before it kills its process:
+        // one after another, N Personas cost N grace periods and a stop window can be outrun, leaving
+        // adapter processes behind. Each runner is stopped inside its own try/catch, so one that throws
+        // is logged and never skips the others.
+        await Task.WhenAll(hostsToDispose.Select(entry => this.StopRunnerForShutdownAsync(entry.Host, entry.Handler))).ConfigureAwait(false);
+    }
 
+    /// <summary>
+    /// Stops one runner during shutdown and never throws: the process is exiting either way, and a
+    /// failure here must not stop <see cref="StopAsync"/> from reaching the runners after it.
+    /// </summary>
+    /// <param name="host">The runner to dispose.</param>
+    /// <param name="handler">The status handler to detach first, if one was attached.</param>
+    private async Task StopRunnerForShutdownAsync(PersonaRunner host, Action<PersonaStatus>? handler)
+    {
+        if (handler is not null)
+        {
+            host.StatusChanged -= handler;
+        }
+
+        try
+        {
             await host.DisposeAsync().ConfigureAwait(false);
+        }
+        catch (Exception exception)
+        {
+            this.logger.LogWarning(exception, "A Persona runner failed to stop cleanly during shutdown; stopping the others regardless.");
         }
     }
 

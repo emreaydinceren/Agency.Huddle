@@ -520,22 +520,29 @@ internal sealed class PersonaRunner : IAsyncDisposable, IRoomSessionOwner
         // "Disposal"). this.host is assigned BEFORE the pool is constructed, so a host that started
         // but never got as far as the pool (unreachable in practice, but not provably impossible) is
         // still disposed here rather than leaked.
-        if (this.pool is not null)
+        // try/finally: a host that throws while stopping must still let the stream close and the
+        // command list be forgotten - the exception then reaches the caller, which decides what to do.
+        try
         {
-            await this.pool.DisposeAsync();
+            if (this.pool is not null)
+            {
+                await this.pool.DisposeAsync();
+            }
+            else if (this.host is not null)
+            {
+                await this.host.DisposeAsync();
+            }
         }
-        else if (this.host is not null)
+        finally
         {
-            await this.host.DisposeAsync();
-        }
+            if (this.stream is not null)
+            {
+                await this.stream.DisposeAsync();
+            }
 
-        if (this.stream is not null)
-        {
-            await this.stream.DisposeAsync();
+            // A stopped Teammate offers nothing; the next runner relearns the list from its Adapter.
+            this.commands?.Forget(this.persona.Name);
         }
-
-        // A stopped Teammate offers nothing; the next runner relearns the list from its Adapter.
-        this.commands?.Forget(this.persona.Name);
     }
 
     public async ValueTask DisposeAsync()

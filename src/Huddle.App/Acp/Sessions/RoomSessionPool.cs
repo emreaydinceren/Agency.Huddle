@@ -304,25 +304,32 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
             await this.sweepTimer.DisposeAsync();
         }
 
-        if (this.sessionPerRoom)
+        // try/finally: the host owns the Adapter process, so it is disposed even when a session throws
+        // while closing - a skipped host is a `node` process that outlives the app.
+        try
         {
-            List<RoomSession> sessions;
-            lock (this.poolLock)
+            if (this.sessionPerRoom)
             {
-                sessions = [.. this.sessionsByRoom.Values];
-            }
+                List<RoomSession> sessions;
+                lock (this.poolLock)
+                {
+                    sessions = [.. this.sessionsByRoom.Values];
+                }
 
-            foreach (var session in sessions)
+                foreach (var session in sessions)
+                {
+                    await session.DisposeAsync();
+                }
+            }
+            else if (this.sharedSession is not null)
             {
-                await session.DisposeAsync();
+                await this.sharedSession.DisposeAsync();
             }
         }
-        else if (this.sharedSession is not null)
+        finally
         {
-            await this.sharedSession.DisposeAsync();
+            await this.host.DisposeAsync();
         }
-
-        await this.host.DisposeAsync();
     }
 
     /// <summary>The <see cref="TimerCallback"/> the sweep timer invokes every <see cref="SweepInterval"/>.</summary>
