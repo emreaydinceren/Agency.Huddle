@@ -98,7 +98,9 @@ paths = [
   # Vendored, pre-built CodeMirror 6 bundle (Library task 11.1): minified third-party JS, not
   # source we wrote, and dense enough to false-positive the generic secret regexes.
   '''(^|/)src/Huddle\.App/wwwroot/lib/codemirror/.*''',
-  # The analyzer probes need one fake high-entropy string literal so Sonar's S6418 has something to
-  # flag. The file holds that single probe; see tests/Huddle.AnalyzerProbes/Probes/Secrets.cs.
-  '''(^|/)tests/Huddle\.AnalyzerProbes/Probes/Secrets\.cs$''',
+  # The analyzer probes need fake secret-shaped literals so Sonar's S2068/S6418/S1313 have something
+  # to flag. Secrets.cs holds the one that must stay; Security.cs and Hazards.cs held the same
+  # kind of dummy value (a fake API key, a private IP) in earlier revisions, and the sync's history
+  # scan still sees those. Paths, not commits: the sync rewrites every hash before it scans.
+  '''(^|/)tests/Huddle\.AnalyzerProbes/Probes/(Secrets|Security|Hazards)\.cs$''',
 ]
