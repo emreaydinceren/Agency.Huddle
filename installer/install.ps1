@@ -83,12 +83,22 @@ function Resolve-InstallPaths {
     [CmdletBinding()]
     param(
         [string]$InstallRoot = '',
-        [string]$DataRoot = ''
+        [string]$DataRoot = '',
+        [string]$ShortcutPath = ''
     )
 
     $localAppData = $env:LOCALAPPDATA
     if (-not $localAppData) {
         $localAppData = [Environment]::GetFolderPath('LocalApplicationData')
+    }
+
+    if ([string]::IsNullOrWhiteSpace($ShortcutPath)) {
+        $appData = $env:APPDATA
+        if (-not $appData) {
+            $appData = [Environment]::GetFolderPath('ApplicationData')
+        }
+
+        $ShortcutPath = Join-Path $appData 'Microsoft\Windows\Start Menu\Programs\Agency Huddle.lnk'
     }
 
     if ([string]::IsNullOrWhiteSpace($InstallRoot)) {
@@ -109,7 +119,8 @@ function Resolve-InstallPaths {
         StatePath       = Join-Path $InstallRoot 'install-state.json'
         ReleaseInfoPath = Join-Path $InstallRoot 'release-info.json'
         LauncherPath    = Join-Path $InstallRoot 'huddle.cmd'
-        Rid             = 'win-x64'
+        ShortcutPath    = $ShortcutPath
+        Rid           = 'win-x64'
     }
 }
 
@@ -1023,6 +1034,428 @@ function Install-Adapter {
 
     Write-Step -Status 'ok' -Name 'adapter' -Detail 'installed'
     return $true
+}
+
+# ---------------------------------------------------------------------------
+# Entry points: launcher, Start menu shortcut and user PATH
+# ---------------------------------------------------------------------------
+
+# Seam: creates (or overwrites) a .lnk through the WScript.Shell COM object.
+function New-HuddleShortcut {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path,
+
+        [Parameter(Mandatory)]
+        [string]$Target,
+
+        [Parameter(Mandatory)]
+        [string]$WorkingDirectory,
+
+        [int]$WindowStyle = 7,
+
+        [string]$IconPath = ''
+    )
+
+    $parent = Split-Path -Parent $Path
+    if ($parent -and -not (Test-Path -LiteralPath $parent -PathType Container)) {
+        New-Item -ItemType Directory -Path $parent -Force | Out-Null
+    }
+
+    $shell = New-Object -ComObject WScript.Shell
+    if ($null -eq $shell) {
+        throw 'The Windows Script Host (WScript.Shell) is not available, so the Start menu shortcut cannot be created.'
+    }
+
+    try {
+        $link = $shell.CreateShortcut($Path)
+        $link.TargetPath = $Target
+        $link.WorkingDirectory = $WorkingDirectory
+        $link.WindowStyle = $WindowStyle
+        $link.Description = 'Agency Huddle'
+        if ($IconPath) {
+            $link.IconLocation = $IconPath + ',0'
+        }
+
+        $link.Save()
+    }
+    finally {
+        [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($shell)
+    }
+}
+
+# Seam: the target of an existing .lnk, or $null when the file is missing or unreadable.
+function Get-ShortcutTarget {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Path
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        return $null
+    }
+
+    $shell = New-Object -ComObject WScript.Shell
+    if ($null -eq $shell) {
+        return $null
+    }
+
+    try {
+        return [string]$shell.CreateShortcut($Path).TargetPath
+    }
+    catch {
+        # A shortcut that cannot be read has no known target: callers treat that as "not ours".
+        return $null
+    }
+    finally {
+        [void][System.Runtime.InteropServices.Marshal]::ReleaseComObject($shell)
+    }
+}
+
+# Seam: the current user's persistent PATH (registry), or $null when unset.
+function Get-UserPathValue {
+    [CmdletBinding()]
+    param()
+
+    return [Environment]::GetEnvironmentVariable('Path', 'User')
+}
+
+# Seam: replaces the current user's persistent PATH.
+function Set-UserPathValue {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [AllowEmptyString()]
+        [string]$Value
+    )
+
+    [Environment]::SetEnvironmentVariable('Path', $Value, 'User')
+}
+
+# Splits a PATH value into its non-empty entries.
+function Split-PathValue {
+    [CmdletBinding()]
+    param(
+        [AllowNull()]
+        [AllowEmptyString()]
+        [string]$Value
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return , @()
+    }
+
+    $entries = @($Value.Split(';') | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+    return , $entries
+}
+
+# True when a PATH entry names the folder: case-insensitive, trailing backslash tolerant.
+function Test-PathEntryMatch {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Entry,
+
+        [Parameter(Mandatory)]
+        [string]$Folder
+    )
+
+    $left = $Entry.Trim().TrimEnd('\', '/')
+    $right = $Folder.Trim().TrimEnd('\', '/')
+    return [string]::Equals($left, $right, [System.StringComparison]::OrdinalIgnoreCase)
+}
+
+# Writes huddle.cmd, the Start menu shortcut and the user PATH entry. Each is rewritten only when its
+# content differs. Returns $true when anything changed, $false when all three were already right.
+function Install-Launcher {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [pscustomobject]$Paths
+    )
+
+    $changed = $false
+
+    # Launcher: compare the bytes that would be written with the bytes on disk.
+    $expected = [System.Text.Encoding]::ASCII.GetBytes((Get-LauncherContent -Paths $Paths) + "`r`n")
+    $current = $null
+    if (Test-Path -LiteralPath $Paths.LauncherPath -PathType Leaf) {
+        $current = [System.IO.File]::ReadAllBytes($Paths.LauncherPath)
+    }
+
+    $same = $false
+    if ($null -ne $current -and $current.Length -eq $expected.Length) {
+        $same = ([System.Convert]::ToBase64String($current) -ceq [System.Convert]::ToBase64String($expected))
+    }
+
+    if ($same) {
+        Write-Step -Status 'skip' -Name 'launcher' -Detail 'huddle.cmd is up to date'
+    }
+    else {
+        if (-not (Test-Path -LiteralPath $Paths.InstallRoot -PathType Container)) {
+            New-Item -ItemType Directory -Path $Paths.InstallRoot -Force | Out-Null
+        }
+
+        [System.IO.File]::WriteAllBytes($Paths.LauncherPath, $expected)
+        Write-Step -Status 'ok' -Name 'launcher' -Detail ('wrote ' + $Paths.LauncherPath)
+        $changed = $true
+    }
+
+    # Shortcut: present and pointing at this launcher.
+    $target = Get-ShortcutTarget -Path $Paths.ShortcutPath
+    if ($target -and (Test-PathEntryMatch -Entry $target -Folder $Paths.LauncherPath)) {
+        Write-Step -Status 'skip' -Name 'shortcut' -Detail 'Start menu shortcut is up to date'
+    }
+    else {
+        New-HuddleShortcut -Path $Paths.ShortcutPath -Target $Paths.LauncherPath -WorkingDirectory $Paths.InstallRoot -WindowStyle 7 -IconPath $Paths.ExePath
+        Write-Step -Status 'ok' -Name 'shortcut' -Detail ('created ' + $Paths.ShortcutPath)
+        $changed = $true
+    }
+
+    # User PATH: append InstallRoot once.
+    $entries = Split-PathValue -Value (Get-UserPathValue)
+    $found = $false
+    foreach ($entry in $entries) {
+        if (Test-PathEntryMatch -Entry $entry -Folder $Paths.InstallRoot) {
+            $found = $true
+            break
+        }
+    }
+
+    if ($found) {
+        Write-Step -Status 'skip' -Name 'path' -Detail 'InstallRoot is already on the user PATH'
+    }
+    else {
+        Set-UserPathValue -Value ((@($entries) + $Paths.InstallRoot) -join ';')
+        Write-Step -Status 'ok' -Name 'path' -Detail 'added InstallRoot to the user PATH (open a new terminal to use huddle)'
+        $changed = $true
+    }
+
+    return $changed
+}
+
+# ---------------------------------------------------------------------------
+# Uninstall
+# ---------------------------------------------------------------------------
+
+# True when it is safe to delete the folder recursively. The path is resolved with GetFullPath first and
+# a wildcard is never accepted. Refuses: empty text, a drive or share root, fewer than 3 path segments, the
+# user profile (and any folder that contains it), LOCALAPPDATA and APPDATA themselves. With
+# -RequireStateFile the folder must also hold install-state.json (used for InstallRoot only).
+function Test-SafeToDelete {
+    [CmdletBinding()]
+    param(
+        [AllowEmptyString()]
+        [AllowNull()]
+        [string]$Path,
+
+        [switch]$RequireStateFile
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $false
+    }
+
+    if ($Path.IndexOfAny([char[]]@('*', '?')) -ge 0) {
+        return $false
+    }
+
+    try {
+        $resolved = [System.IO.Path]::GetFullPath($Path)
+    }
+    catch {
+        # A path .NET cannot resolve is not a path we will delete.
+        return $false
+    }
+
+    $full = $resolved.TrimEnd('\', '/')
+    $root = [System.IO.Path]::GetPathRoot($resolved)
+    if ([string]::IsNullOrEmpty($root) -or [string]::Equals($full, $root.TrimEnd('\', '/'), [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $false
+    }
+
+    $segments = @($full.Split([char[]]@('\', '/'), [System.StringSplitOptions]::RemoveEmptyEntries))
+    if ($segments.Count -lt 3) {
+        return $false
+    }
+
+    $profilePaths = @($env:USERPROFILE, [Environment]::GetFolderPath('UserProfile'))
+    foreach ($candidate in $profilePaths) {
+        if ([string]::IsNullOrWhiteSpace($candidate)) {
+            continue
+        }
+
+        try {
+            $protected = [System.IO.Path]::GetFullPath($candidate).TrimEnd('\', '/')
+        }
+        catch {
+            # An unresolvable profile path cannot be compared; the other candidates still apply.
+            continue
+        }
+
+        if ([string]::Equals($full, $protected, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $false
+        }
+
+        if ($protected.StartsWith($full + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $false
+        }
+    }
+
+    foreach ($candidate in @($env:LOCALAPPDATA, $env:APPDATA)) {
+        if ([string]::IsNullOrWhiteSpace($candidate)) {
+            continue
+        }
+
+        try {
+            $protected = [System.IO.Path]::GetFullPath($candidate).TrimEnd('\', '/')
+        }
+        catch {
+            # An unresolvable well-known folder cannot be compared; skip it.
+            continue
+        }
+
+        if ([string]::Equals($full, $protected, [System.StringComparison]::OrdinalIgnoreCase)) {
+            return $false
+        }
+    }
+
+    if ($RequireStateFile) {
+        if (-not (Test-Path -LiteralPath (Join-Path $full 'install-state.json') -PathType Leaf)) {
+            return $false
+        }
+    }
+
+    return $true
+}
+
+# Removes the install: stops a running instance, then the shortcut (only if it points at this launcher),
+# the PATH entry and InstallRoot (install-state.json last, so a failed run can be repeated). DataRoot is kept
+# unless -PurgeData. Every safety check runs before anything is changed. Returns an exit code (0 or 1).
+function Invoke-Uninstall {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [pscustomobject]$Paths,
+
+        [switch]$PurgeData,
+
+        [switch]$Force
+    )
+
+    try {
+        $installRoot = [System.IO.Path]::GetFullPath($Paths.InstallRoot)
+        $dataRoot = [System.IO.Path]::GetFullPath($Paths.DataRoot)
+    }
+    catch {
+        Write-Step -Status '!!' -Name 'uninstall' -Detail ('cannot resolve the install folders: ' + $_.Exception.Message) -Fix 'pass valid -InstallRoot and -DataRoot paths'
+        return 1
+    }
+
+    $installExists = Test-Path -LiteralPath $installRoot -PathType Container
+    $dataExists = Test-Path -LiteralPath $dataRoot -PathType Container
+
+    # Safety first: nothing is stopped, edited or deleted until every check has passed.
+    if ($installExists -and -not (Test-SafeToDelete -Path $installRoot -RequireStateFile)) {
+        Write-Step -Status '!!' -Name 'uninstall' -Detail ('refusing to delete ' + $installRoot + ': it has no install-state.json, or it is a drive root, a folder with fewer than 3 segments or your profile') -Fix 'check the -InstallRoot value; delete the folder by hand only if you are sure it is yours'
+        return 1
+    }
+
+    if ($PurgeData -and $dataExists -and -not (Test-SafeToDelete -Path $dataRoot)) {
+        Write-Step -Status '!!' -Name 'uninstall' -Detail ('refusing to delete the data folder ' + $dataRoot + ': it is a drive root, a folder with fewer than 3 segments or your profile') -Fix 'check the -DataRoot value'
+        return 1
+    }
+
+    if ($installExists -and -not $PurgeData) {
+        $installKey = $installRoot.TrimEnd('\', '/')
+        $dataKey = $dataRoot.TrimEnd('\', '/')
+        if ([string]::Equals($dataKey, $installKey, [System.StringComparison]::OrdinalIgnoreCase) -or $dataKey.StartsWith($installKey + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+            Write-Step -Status '!!' -Name 'uninstall' -Detail ('the data folder ' + $dataRoot + ' is inside the install folder, so removing the install would delete your data') -Fix 'move the data folder out, or pass -PurgeData if you want it deleted too'
+            return 1
+        }
+    }
+
+    if ($installExists) {
+        try {
+            $null = Stop-HuddleIfRunning -Paths $Paths -Force:$Force
+        }
+        catch {
+            Write-Step -Status '!!' -Name 'stop' -Detail $_.Exception.Message -Fix 'close Agency Huddle and run the uninstall again, or pass -Force to end the process'
+            return 1
+        }
+    }
+
+    $changed = $false
+    try {
+        if (Test-Path -LiteralPath $Paths.ShortcutPath -PathType Leaf) {
+            $target = Get-ShortcutTarget -Path $Paths.ShortcutPath
+            if ($target -and (Test-PathEntryMatch -Entry $target -Folder $Paths.LauncherPath)) {
+                Remove-Item -LiteralPath $Paths.ShortcutPath -Force -ErrorAction Stop
+                Write-Step -Status 'ok' -Name 'shortcut' -Detail 'removed the Start menu shortcut'
+                $changed = $true
+            }
+            else {
+                Write-Step -Status 'skip' -Name 'shortcut' -Detail 'kept: the shortcut does not point at this install'
+            }
+        }
+        else {
+            Write-Step -Status 'skip' -Name 'shortcut' -Detail 'no Start menu shortcut'
+        }
+
+        $entries = Split-PathValue -Value (Get-UserPathValue)
+        $kept = @($entries | Where-Object { -not (Test-PathEntryMatch -Entry $_ -Folder $Paths.InstallRoot) })
+        if ($kept.Count -ne @($entries).Count) {
+            Set-UserPathValue -Value ($kept -join ';')
+            Write-Step -Status 'ok' -Name 'path' -Detail 'removed InstallRoot from the user PATH'
+            $changed = $true
+        }
+        else {
+            Write-Step -Status 'skip' -Name 'path' -Detail 'InstallRoot is not on the user PATH'
+        }
+
+        if ($installExists) {
+            # install-state.json goes last: while it exists the folder is still recognised as ours and a
+            # second uninstall can finish the job.
+            foreach ($child in @(Get-ChildItem -LiteralPath $installRoot -Force -ErrorAction Stop)) {
+                if (-not [string]::Equals($child.Name, 'install-state.json', [System.StringComparison]::OrdinalIgnoreCase)) {
+                    Remove-Item -LiteralPath $child.FullName -Recurse -Force -ErrorAction Stop
+                }
+            }
+
+            Remove-Item -LiteralPath $installRoot -Recurse -Force -ErrorAction Stop
+            Write-Step -Status 'ok' -Name 'install' -Detail ('removed ' + $installRoot)
+            $changed = $true
+        }
+        else {
+            Write-Step -Status 'skip' -Name 'install' -Detail 'not installed'
+        }
+
+        if ($PurgeData) {
+            if ($dataExists) {
+                Remove-Item -LiteralPath $dataRoot -Recurse -Force -ErrorAction Stop
+                Write-Step -Status 'ok' -Name 'data' -Detail ('removed ' + $dataRoot)
+                $changed = $true
+            }
+            else {
+                Write-Step -Status 'skip' -Name 'data' -Detail 'no data folder'
+            }
+        }
+        elseif ($dataExists) {
+            Write-Step -Status 'ok' -Name 'data' -Detail ('kept ' + $dataRoot + ' (pass -PurgeData to delete it too)')
+        }
+    }
+    catch {
+        Write-Step -Status '!!' -Name 'uninstall' -Detail $_.Exception.Message -Fix 'close Agency Huddle and anything using files under the install folder, then run the uninstall again'
+        return 1
+    }
+
+    if (-not $changed) {
+        Write-Step -Status 'skip' -Name 'uninstall' -Detail 'nothing to remove'
+    }
+
+    return 0
 }
 
 # ---------------------------------------------------------------------------
