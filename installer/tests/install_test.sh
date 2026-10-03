@@ -817,6 +817,139 @@ test_download_functions_leave_the_script_with_one_placeholder() {
     t_assert_eq "1" "$count" "placeholder still appears exactly once"
 }
 
+test_read_state_key_missing_file() {
+    out=""
+    rc=0
+    out=$(read_state_key "/nonexistent/file" "app_sha256") || rc=$?
+    t_assert_eq "1" "$rc" "returns 1 for missing file"
+    t_assert_eq "" "$out" "prints nothing for missing file"
+}
+
+test_read_state_key_missing_key() {
+    state_file=$(mktemp)
+    printf "schema=1\nversion=1.0.0\n" >"$state_file"
+    out=""
+    rc=0
+    out=$(read_state_key "$state_file" "app_sha256") || rc=$?
+    t_assert_eq "1" "$rc" "returns 1 for missing key"
+    t_assert_eq "" "$out" "prints nothing for missing key"
+    rm -f "$state_file"
+}
+
+test_read_state_key_existing_key() {
+    state_file=$(mktemp)
+    printf "schema=1\napp_sha256=abc123def456\nversion=1.0.0\n" >"$state_file"
+    out=$(read_state_key "$state_file" "app_sha256")
+    t_assert_eq "abc123def456" "$out" "reads existing key"
+    rm -f "$state_file"
+}
+
+test_write_state_key_roundtrip() {
+    state_file=$(mktemp)
+    write_state_key "$state_file" "schema" "1"
+    write_state_key "$state_file" "version" "1.0.0"
+    write_state_key "$state_file" "app_sha256" "abc123"
+    v1=$(read_state_key "$state_file" "schema")
+    v2=$(read_state_key "$state_file" "version")
+    v3=$(read_state_key "$state_file" "app_sha256")
+    t_assert_eq "1" "$v1" "schema roundtrip"
+    t_assert_eq "1.0.0" "$v2" "version roundtrip"
+    t_assert_eq "abc123" "$v3" "app_sha256 roundtrip"
+    rm -f "$state_file"
+}
+
+test_write_state_key_keeps_others() {
+    state_file=$(mktemp)
+    write_state_key "$state_file" "schema" "1"
+    write_state_key "$state_file" "version" "1.0.0"
+    write_state_key "$state_file" "app_sha256" "old_hash"
+    write_state_key "$state_file" "app_sha256" "new_hash"
+    count=$(grep -c "^app_sha256=" "$state_file")
+    t_assert_eq "1" "$count" "key appears exactly once"
+    v1=$(read_state_key "$state_file" "schema")
+    v2=$(read_state_key "$state_file" "version")
+    v3=$(read_state_key "$state_file" "app_sha256")
+    t_assert_eq "1" "$v1" "schema preserved"
+    t_assert_eq "1.0.0" "$v2" "version preserved"
+    t_assert_eq "new_hash" "$v3" "app_sha256 replaced"
+    rm -f "$state_file"
+}
+
+test_write_state_key_values_with_equals() {
+    state_file=$(mktemp)
+    write_state_key "$state_file" "schema" "1"
+    write_state_key "$state_file" "data" "key=value=extra"
+    value=$(read_state_key "$state_file" "data")
+    t_assert_eq "key=value=extra" "$value" "values with = are preserved"
+    rm -f "$state_file"
+}
+
+test_write_state_key_no_temp_left() {
+    state_file=$(mktemp)
+    rm -f "$state_file"
+    write_state_key "$state_file" "schema" "1"
+    tmp_files=$(find "$(dirname "$state_file")" -maxdepth 1 -name "$(basename "$state_file").tmp*" 2>/dev/null | wc -l)
+    t_assert_eq "0" "$tmp_files" "no .tmp files left"
+    rm -f "$state_file"
+}
+
+test_step_satisfied_exact_match() {
+    state_file=$(mktemp)
+    write_state_key "$state_file" "app_sha256" "abc123"
+    rc=0
+    step_satisfied "$state_file" "app_sha256" "abc123" || rc=$?
+    t_assert_eq "0" "$rc" "returns 0 on exact match"
+    rm -f "$state_file"
+}
+
+test_step_satisfied_mismatch() {
+    state_file=$(mktemp)
+    write_state_key "$state_file" "app_sha256" "abc123"
+    rc=0
+    step_satisfied "$state_file" "app_sha256" "xyz789" || rc=$?
+    t_assert_eq "1" "$rc" "returns 1 on mismatch"
+    rm -f "$state_file"
+}
+
+test_step_satisfied_missing_key() {
+    state_file=$(mktemp)
+    write_state_key "$state_file" "schema" "1"
+    rc=0
+    step_satisfied "$state_file" "app_sha256" "abc123" || rc=$?
+    t_assert_eq "1" "$rc" "returns 1 when key is missing"
+    rm -f "$state_file"
+}
+
+test_state_functions_use_local_variables() {
+    file="KEEP"
+    key="KEEP"
+    value="KEEP"
+    expected="KEEP"
+    tmpfile="KEEP"
+    state_file=$(mktemp)
+    write_state_key "$state_file" "schema" "1"
+    read_state_key "$state_file" "schema" >/dev/null
+    step_satisfied "$state_file" "schema" "1" >/dev/null
+    t_assert_eq "KEEP" "$file" "file variable protected"
+    t_assert_eq "KEEP" "$key" "key variable protected"
+    t_assert_eq "KEEP" "$value" "value variable protected"
+    t_assert_eq "KEEP" "$expected" "expected variable protected"
+    t_assert_eq "KEEP" "$tmpfile" "tmpfile variable protected"
+    rm -f "$state_file"
+}
+
+t_run test_read_state_key_missing_file
+t_run test_read_state_key_missing_key
+t_run test_read_state_key_existing_key
+t_run test_write_state_key_roundtrip
+t_run test_write_state_key_keeps_others
+t_run test_write_state_key_values_with_equals
+t_run test_write_state_key_no_temp_left
+t_run test_step_satisfied_exact_match
+t_run test_step_satisfied_mismatch
+t_run test_step_satisfied_missing_key
+t_run test_state_functions_use_local_variables
+
 t_run test_file_sha256_known_vector
 t_run test_file_sha256_falls_back_to_shasum
 t_run test_file_sha256_without_tool_fails_with_message

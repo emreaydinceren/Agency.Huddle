@@ -495,6 +495,46 @@ get_verified_asset() {
     return 1
 }
 
+read_state_key() {
+    local file key value
+    file=$1
+    key=$2
+    if [ ! -f "$file" ]; then
+        return 1
+    fi
+    value=$(grep "^${key}=" "$file" | head -1 | sed "s/^${key}=//" 2>/dev/null)
+    if [ -z "$value" ]; then
+        return 1
+    fi
+    printf '%s' "$value"
+    return 0
+}
+
+write_state_key() {
+    local file key value tmpfile
+    file=$1
+    key=$2
+    value=$3
+    tmpfile="${file}.tmp.$$"
+    if [ -f "$file" ]; then
+        grep -v "^${key}=" "$file" >"$tmpfile" 2>/dev/null || true
+    fi
+    printf '%s=%s\n' "$key" "$value" >>"$tmpfile"
+    mv "$tmpfile" "$file"
+}
+
+step_satisfied() {
+    local file key expected value
+    file=$1
+    key=$2
+    expected=$3
+    value=$(read_state_key "$file" "$key") || return 1
+    if [ "$value" = "$expected" ]; then
+        return 0
+    fi
+    return 1
+}
+
 main() {
     parse_args "$@"
     if [ -z "$OPT_BASE_URL" ] && [ "$HUDDLE_REPO" = "$HUDDLE_REPO_PLACEHOLDER" ]; then
