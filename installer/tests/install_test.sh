@@ -2091,4 +2091,563 @@ t_run test_prereq_write_access_blocked_by_a_file
 t_run test_check_only_exit_codes_and_no_side_effects
 t_run test_check_only_folder_base_never_probes
 
+# ---- Task 36: install_launcher -------------------------------------------------------------------
+
+# Test doubles for the launcher seams. A "symlink" is a regular file whose first line is
+# SYMLINK:<target>: `ln -s` in Git Bash may copy instead of linking, so the tests assert on the
+# seam calls (kept in $AP_CALLS) and on this stand-in. They stay installed after la_setup.
+la_stubs() {
+    make_symlink() {
+        printf 'make_symlink %s %s\n' "$1" "$2" >>"$AP_CALLS"
+        printf 'SYMLINK:%s\n' "$1" >"$2"
+    }
+    read_symlink() {
+        local first
+        [ -f "$1" ] || return 1
+        first=$(head -1 "$1")
+        case $first in
+            SYMLINK:*)
+                printf '%s' "${first#SYMLINK:}"
+                return 0
+                ;;
+        esac
+        return 1
+    }
+    remove_symlink() {
+        printf 'remove_symlink %s\n' "$1" >>"$AP_CALLS"
+        rm -f "$1"
+    }
+    make_executable() {
+        printf 'make_executable %s\n' "$1" >>"$AP_CALLS"
+        chmod 755 "$1"
+    }
+}
+
+# A sandbox in the default layout (InstallRoot inside DataRoot, spaces in every path) with a
+# release-info.json, an empty bundle path and an empty link path.
+la_setup() {
+    ap_setup
+    la_stubs
+    DATA_ROOT="$AP/data dir"
+    parse_args --install-root "$DATA_ROOT/install" --data-root "$DATA_ROOT"
+    resolve_paths
+    LA_HOME="$AP/home dir"
+    APP_BUNDLE="$LA_HOME/Applications/Agency Huddle.app"
+    LINK_PATH="$LA_HOME/.local/bin/huddle"
+    mkdir -p "$INSTALL_ROOT"
+    printf '{"version": "1.2.3", "nodeVersion": "v24.21.0"}\n' >"$INSTALL_ROOT/release-info.json"
+    LAUNCHER_CHANGED=unset
+}
+
+# la_run: runs install_launcher in this shell; sets LA_RC and LA_OUT (stdout and stderr).
+la_run() {
+    LA_RC=0
+    install_launcher >"$AP/out" 2>&1 || LA_RC=$?
+    LA_OUT=$(cat "$AP/out")
+}
+
+# la_snapshot: a sorted listing of everything the launcher step may touch.
+la_snapshot() {
+    find "$INSTALL_ROOT" "$APP_BUNDLE" "$LA_HOME/.local" 2>/dev/null | sort
+}
+
+test_resolve_paths_app_bundle_and_link_path() {
+    parse_args
+    resolve_paths
+    t_assert_eq "$HOME/Applications/Agency Huddle.app" "$APP_BUNDLE" "APP_BUNDLE"
+    t_assert_eq "$HOME/.local/bin/huddle" "$LINK_PATH" "LINK_PATH"
+}
+
+test_install_launcher_first_run_creates_every_entry_point() {
+    la_setup
+    la_run
+    t_assert_eq "0" "$LA_RC" "exit code"
+    t_assert_eq "1" "$LAUNCHER_CHANGED" "LAUNCHER_CHANGED"
+    t_assert_file "$INSTALL_ROOT/bin/huddle" "bin/huddle"
+    t_assert_eq "$(launcher_content)" "$(cat "$INSTALL_ROOT/bin/huddle")" "launcher text"
+    if [ -x "$INSTALL_ROOT/bin/huddle" ]; then t_pass; else t_fail "bin/huddle is not executable"; fi
+    t_assert_file "$APP_BUNDLE/Contents/Info.plist" "Info.plist"
+    t_assert_eq "$(plist_content 1.2.3)" "$(cat "$APP_BUNDLE/Contents/Info.plist")" "plist text carries the release version"
+    t_assert_file "$APP_BUNDLE/Contents/MacOS/AgencyHuddle" "app stub"
+    t_assert_eq "$(app_stub_content)" "$(cat "$APP_BUNDLE/Contents/MacOS/AgencyHuddle")" "stub text"
+    if [ -x "$APP_BUNDLE/Contents/MacOS/AgencyHuddle" ]; then t_pass; else t_fail "app stub is not executable"; fi
+    calls=$(cat "$AP_CALLS")
+    t_assert_contains "$calls" "make_executable " "chmod went through the seam"
+    t_assert_contains "$calls" "make_symlink $INSTALL_ROOT/bin/huddle $LINK_PATH" "symlink through the seam, to bin/huddle"
+    t_assert_eq "$INSTALL_ROOT/bin/huddle" "$(read_symlink "$LINK_PATH")" "link target"
+    t_assert_contains "$LA_OUT" "[ok] launcher" "step line"
+}
+
+test_install_launcher_second_run_writes_nothing() {
+    la_setup
+    la_run
+    find "$INSTALL_ROOT" "$APP_BUNDLE" "$LA_HOME/.local" -type f -exec touch -t 200001010000 {} +
+    touch -t 200101010000 "$AP/ref"
+    before=$(la_snapshot)
+    : >"$AP_CALLS"
+    la_run
+    t_assert_eq "0" "$LA_RC" "exit code"
+    t_assert_eq "0" "$LAUNCHER_CHANGED" "LAUNCHER_CHANGED"
+    t_assert_eq "" "$(find "$INSTALL_ROOT" "$APP_BUNDLE" "$LA_HOME/.local" -type f -newer "$AP/ref")" "no file has a new mtime"
+    t_assert_eq "$before" "$(la_snapshot)" "no file or folder was added or removed"
+    t_assert_eq "" "$(cat "$AP_CALLS")" "no seam was called (no chmod, no ln, no rm)"
+    t_assert_contains "$LA_OUT" "[skip] launcher" "skip line"
+    t_assert_not_contains "$LA_OUT" "[ok]" "nothing reported as changed"
+}
+
+test_install_launcher_rewrites_changed_content() {
+    la_setup
+    la_run
+    printf 'old\n' >"$INSTALL_ROOT/bin/huddle"
+    printf 'old\n' >"$APP_BUNDLE/Contents/Info.plist"
+    printf 'old\n' >"$APP_BUNDLE/Contents/MacOS/AgencyHuddle"
+    chmod 644 "$APP_BUNDLE/Contents/MacOS/AgencyHuddle"
+    la_run
+    t_assert_eq "0" "$LA_RC" "exit code"
+    t_assert_eq "1" "$LAUNCHER_CHANGED" "LAUNCHER_CHANGED"
+    t_assert_eq "$(launcher_content)" "$(cat "$INSTALL_ROOT/bin/huddle")" "launcher restored"
+    t_assert_eq "$(plist_content 1.2.3)" "$(cat "$APP_BUNDLE/Contents/Info.plist")" "plist restored"
+    t_assert_eq "$(app_stub_content)" "$(cat "$APP_BUNDLE/Contents/MacOS/AgencyHuddle")" "stub restored"
+    if [ -x "$APP_BUNDLE/Contents/MacOS/AgencyHuddle" ]; then t_pass; else t_fail "app stub is not executable again"; fi
+    t_assert_not_contains "$(cat "$AP_CALLS")" "remove_symlink" "the correct link is left alone"
+}
+
+test_install_launcher_rewrites_when_the_version_changes() {
+    la_setup
+    la_run
+    printf '{"version": "2.0.0", "nodeVersion": "v24.21.0"}\n' >"$INSTALL_ROOT/release-info.json"
+    la_run
+    t_assert_eq "1" "$LAUNCHER_CHANGED" "LAUNCHER_CHANGED"
+    t_assert_eq "$(plist_content 2.0.0)" "$(cat "$APP_BUNDLE/Contents/Info.plist")" "plist carries the new version"
+}
+
+test_install_launcher_replaces_a_symlink_that_points_elsewhere() {
+    la_setup
+    mkdir -p "$LA_HOME/.local/bin"
+    printf 'SYMLINK:/somewhere/else/huddle\n' >"$LINK_PATH"
+    la_run
+    t_assert_eq "0" "$LA_RC" "exit code"
+    t_assert_eq "$INSTALL_ROOT/bin/huddle" "$(read_symlink "$LINK_PATH")" "link now points at bin/huddle"
+    calls=$(cat "$AP_CALLS")
+    t_assert_contains "$calls" "remove_symlink $LINK_PATH" "old link removed through the seam"
+    t_assert_contains "$calls" "make_symlink $INSTALL_ROOT/bin/huddle $LINK_PATH" "new link made through the seam"
+    t_assert_eq "1" "$LAUNCHER_CHANGED" "LAUNCHER_CHANGED"
+}
+
+test_install_launcher_never_overwrites_a_regular_file_at_the_link_path() {
+    la_setup
+    mkdir -p "$LA_HOME/.local/bin"
+    printf 'my own script\n' >"$LINK_PATH"
+    la_run
+    t_assert_eq "0" "$LA_RC" "the run continues"
+    t_assert_eq "my own script" "$(cat "$LINK_PATH")" "file untouched"
+    t_assert_not_contains "$(cat "$AP_CALLS")" "make_symlink" "no link made"
+    t_assert_not_contains "$(cat "$AP_CALLS")" "remove_symlink" "nothing removed"
+    t_assert_contains "$LA_OUT" "[warn] link" "warning line"
+    t_assert_contains "$LA_OUT" "$LINK_PATH" "warning names the path"
+    t_assert_file "$INSTALL_ROOT/bin/huddle" "the other entry points are still written"
+    t_assert_file "$APP_BUNDLE/Contents/Info.plist" "the bundle is still written"
+}
+
+test_install_launcher_hints_when_the_link_folder_is_not_on_path() {
+    la_setup
+    saved_path=$PATH
+    la_run
+    hints=$(printf '%s\n' "$LA_OUT" | grep -c 'hint:' || true)
+    t_assert_eq "1" "$hints" "exactly one hint line"
+    t_assert_contains "$LA_OUT" "hint: " "hint text"
+    t_assert_contains "$LA_OUT" "$LA_HOME/.local/bin" "hint names the folder"
+    for rc_file in .zshrc .zprofile .bashrc .bash_profile .profile; do
+        t_assert_no_file "$HOME/$rc_file" "no shell startup file written ($rc_file)"
+    done
+    PATH="$LA_HOME/.local/bin:$saved_path"
+    la_run
+    PATH=$saved_path
+    t_assert_not_contains "$LA_OUT" "hint:" "no hint when the folder is on PATH"
+}
+
+test_install_launcher_fails_without_release_info() {
+    la_setup
+    rm -f "$INSTALL_ROOT/release-info.json"
+    la_run
+    t_assert_eq "1" "$LA_RC" "exit code"
+    t_assert_contains "$LA_OUT" "[!!] launcher" "failure line"
+    t_assert_contains "$LA_OUT" "fix:" "fix line"
+    t_assert_eq "0" "$LAUNCHER_CHANGED" "LAUNCHER_CHANGED"
+    t_assert_no_file "$APP_BUNDLE/Contents/Info.plist" "no plist without a version"
+}
+
+test_install_launcher_protects_caller_variables() {
+    la_setup
+    dest="KEEP"
+    mode="KEEP"
+    scratch="KEEP"
+    version="KEEP"
+    link_dir="KEEP"
+    target="KEEP"
+    changed="KEEP"
+    la_run
+    t_assert_eq "KEEP" "$dest" "dest"
+    t_assert_eq "KEEP" "$mode" "mode"
+    t_assert_eq "KEEP" "$scratch" "scratch"
+    t_assert_eq "KEEP" "$version" "version"
+    t_assert_eq "KEEP" "$link_dir" "link_dir"
+    t_assert_eq "KEEP" "$target" "target"
+    t_assert_eq "KEEP" "$changed" "changed"
+}
+
+test_launcher_real_seams() {
+    la_setup
+    printf '#!/bin/sh\n# plain\n' >"$AP/plain"
+    out=$(ap_child "chmod 644 '$AP/plain'" "make_executable '$AP/plain'" "[ -x '$AP/plain' ] && echo exec=yes || echo exec=no" "read_symlink '$AP/plain' && echo link=yes || echo link=no")
+    t_assert_contains "$out" "exec=yes" "make_executable sets the execute bit"
+    t_assert_contains "$out" "link=no" "a regular file is not a symlink"
+}
+
+t_run test_resolve_paths_app_bundle_and_link_path
+t_run test_install_launcher_first_run_creates_every_entry_point
+t_run test_install_launcher_second_run_writes_nothing
+t_run test_install_launcher_rewrites_changed_content
+t_run test_install_launcher_rewrites_when_the_version_changes
+t_run test_install_launcher_replaces_a_symlink_that_points_elsewhere
+t_run test_install_launcher_never_overwrites_a_regular_file_at_the_link_path
+t_run test_install_launcher_hints_when_the_link_folder_is_not_on_path
+t_run test_install_launcher_fails_without_release_info
+t_run test_install_launcher_protects_caller_variables
+t_run test_launcher_real_seams
+
+# ---- Task 37: safe_to_delete and do_uninstall ------------------------------------------------------
+
+# un_setup: a complete install in the default layout (DataRoot/install inside DataRoot) built by the
+# launcher step, plus the state marker, an app host, user data and a cache. Uses the launcher
+# doubles, so the "symlink" is a stand-in file.
+un_setup() {
+    la_setup
+    la_run
+    printf 'schema=1\nversion=1.2.3\n' >"$INSTALL_ROOT/install-state"
+    mkdir -p "$INSTALL_ROOT/app" "$DATA_ROOT/data" "$DATA_ROOT/cache"
+    printf '#!/bin/sh\n' >"$INSTALL_ROOT/app/Huddle.App"
+    printf 'my rooms\n' >"$DATA_ROOT/data/rooms.json"
+    printf 'download\n' >"$DATA_ROOT/cache/asset.tar.gz"
+    : >"$AP_CALLS"
+}
+
+# un_run: runs do_uninstall in this shell; sets UN_RC and UN_OUT (stdout and stderr).
+un_run() {
+    UN_RC=0
+    do_uninstall >"$AP/out" 2>&1 || UN_RC=$?
+    UN_OUT=$(cat "$AP/out")
+}
+
+# un_refusal <install root> [home]: runs do_uninstall in a child shell where every deleting seam only
+# prints "REMOVE <path>", so a refusal is proven without risking the real folder. Prints the output
+# and an "rc=<n>" line.
+un_refusal() {
+    ap_child "remove_tree() { printf 'REMOVE %s\\n' \"\$1\"; }" \
+        "remove_symlink() { printf 'REMOVE %s\\n' \"\$1\"; }" \
+        "HOME='${2:-$HOME}'" \
+        "INSTALL_ROOT='$1'" \
+        "DATA_ROOT='$AP/data dir'" \
+        "APP_BUNDLE='$AP/absent.app'" \
+        "LINK_PATH='$AP/absent-link'" \
+        "rc=0" \
+        "do_uninstall || rc=\$?" \
+        "echo rc=\$rc"
+}
+
+test_safe_to_delete_accepts_a_folder_with_the_marker() {
+    un_setup
+    rc=0
+    safe_to_delete "$INSTALL_ROOT" install-state || rc=$?
+    t_assert_eq "0" "$rc" "install folder with install-state"
+    t_assert_contains "$SAFE_CANON" "data dir/install" "canonical path is returned"
+}
+
+test_safe_to_delete_rejects_without_the_marker() {
+    un_setup
+    rm -f "$INSTALL_ROOT/install-state"
+    rc=0
+    safe_to_delete "$INSTALL_ROOT" install-state || rc=$?
+    t_assert_eq "1" "$rc" "no marker"
+    t_assert_contains "$SAFE_REASON" "install-state" "reason names the marker"
+}
+
+test_safe_to_delete_rejects_empty_missing_relative_and_unmarked_calls() {
+    un_setup
+    rc=0
+    safe_to_delete "" install-state || rc=$?
+    t_assert_eq "1" "$rc" "empty path"
+    rc=0
+    safe_to_delete "$AP/does not exist" install-state || rc=$?
+    t_assert_eq "1" "$rc" "missing path"
+    rc=0
+    safe_to_delete "relative/dir" install-state || rc=$?
+    t_assert_eq "1" "$rc" "relative path"
+    rc=0
+    safe_to_delete "$INSTALL_ROOT" "" || rc=$?
+    t_assert_eq "1" "$rc" "a call without a marker is refused"
+}
+
+test_do_uninstall_removes_install_bundle_and_link_and_keeps_the_data() {
+    un_setup
+    un_run
+    t_assert_eq "0" "$UN_RC" "exit code"
+    t_assert_no_file "$INSTALL_ROOT" "InstallRoot removed"
+    t_assert_no_file "$APP_BUNDLE" "app bundle removed"
+    t_assert_no_file "$LINK_PATH" "link removed"
+    t_assert_contains "$(cat "$AP_CALLS")" "remove_symlink $LINK_PATH" "link removed through the seam"
+    t_assert_file "$DATA_ROOT/data/rooms.json" "user data kept"
+    t_assert_file "$DATA_ROOT/cache/asset.tar.gz" "cache kept"
+    t_assert_contains "$UN_OUT" "kept" "tells the user the data was kept"
+    t_assert_not_contains "$UN_OUT" "[!!]" "no failure line"
+}
+
+test_do_uninstall_purge_data_also_removes_the_data_root() {
+    un_setup
+    parse_args --install-root "$INSTALL_ROOT" --data-root "$DATA_ROOT" --purge-data
+    un_run
+    t_assert_eq "0" "$UN_RC" "exit code"
+    t_assert_no_file "$INSTALL_ROOT" "InstallRoot removed"
+    t_assert_no_file "$DATA_ROOT" "DataRoot removed"
+    t_assert_no_file "$LINK_PATH" "link removed"
+}
+
+test_do_uninstall_purge_after_a_plain_uninstall_removes_the_kept_data() {
+    un_setup
+    un_run
+    t_assert_file "$DATA_ROOT/data/rooms.json" "kept by the first run"
+    parse_args --install-root "$INSTALL_ROOT" --data-root "$DATA_ROOT" --purge-data
+    un_run
+    t_assert_eq "0" "$UN_RC" "exit code"
+    t_assert_no_file "$DATA_ROOT" "DataRoot removed by the second run"
+    t_assert_contains "$UN_OUT" "[skip] install" "the install was already gone"
+}
+
+test_do_uninstall_second_run_skips_and_succeeds() {
+    un_setup
+    un_run
+    : >"$AP_CALLS"
+    un_run
+    t_assert_eq "0" "$UN_RC" "exit code"
+    t_assert_contains "$UN_OUT" "[skip] install" "install skipped"
+    t_assert_contains "$UN_OUT" "[skip] app" "bundle skipped"
+    t_assert_contains "$UN_OUT" "[skip] link" "link skipped"
+    t_assert_not_contains "$UN_OUT" "[ok]" "nothing reported as removed"
+    t_assert_not_contains "$UN_OUT" "[!!]" "no failure"
+    t_assert_eq "" "$(cat "$AP_CALLS")" "nothing was touched"
+    t_assert_file "$DATA_ROOT/data/rooms.json" "user data still kept"
+}
+
+test_do_uninstall_with_nothing_anywhere_prints_skip_before_canonicalising() {
+    la_setup
+    parse_args --install-root "$AP/never/was/here/install" --data-root "$AP/never/was/here" --purge-data
+    resolve_paths
+    APP_BUNDLE="$AP/never/was/here/Agency Huddle.app"
+    LINK_PATH="$AP/never/was/here/huddle"
+    un_run
+    t_assert_eq "0" "$UN_RC" "exit code"
+    t_assert_contains "$UN_OUT" "[skip] install" "install skipped"
+    t_assert_contains "$UN_OUT" "[skip] data" "data skipped"
+    t_assert_not_contains "$UN_OUT" "[!!]" "no failure"
+    t_assert_no_file "$AP/never" "nothing was created"
+}
+
+test_do_uninstall_refuses_a_folder_without_the_marker() {
+    un_setup
+    rm -f "$INSTALL_ROOT/install-state"
+    un_run
+    t_assert_eq "1" "$UN_RC" "exit code"
+    t_assert_contains "$UN_OUT" "[!!]" "failure line"
+    t_assert_contains "$UN_OUT" "fix:" "fix line"
+    t_assert_file "$INSTALL_ROOT/app/Huddle.App" "install untouched"
+    t_assert_file "$APP_BUNDLE/Contents/Info.plist" "bundle untouched"
+    t_assert_file "$LINK_PATH" "link untouched"
+    t_assert_file "$DATA_ROOT/data/rooms.json" "data untouched"
+    t_assert_not_contains "$(cat "$AP_CALLS")" "remove_symlink" "no removal call"
+}
+
+test_do_uninstall_refuses_dangerous_roots_and_deletes_nothing() {
+    un_setup
+    mkdir -p "$AP/hh" "$AP/up/hh"
+    printf 'schema=1\n' >"$AP/hh/install-state"
+    printf 'schema=1\n' >"$AP/up/install-state"
+    out=$(un_refusal "/")
+    t_assert_contains "$out" "rc=1" "root: exit code"
+    t_assert_contains "$out" "filesystem root" "root: reason"
+    t_assert_not_contains "$out" "REMOVE" "root: nothing removed"
+    out=$(un_refusal "$AP/hh" "$AP/hh")
+    t_assert_contains "$out" "rc=1" "HOME: exit code"
+    t_assert_contains "$out" "home folder" "HOME: reason"
+    t_assert_not_contains "$out" "REMOVE" "HOME: nothing removed"
+    out=$(un_refusal "$AP/up" "$AP/up/hh")
+    t_assert_contains "$out" "rc=1" "parent of HOME: exit code"
+    t_assert_contains "$out" "home folder" "parent of HOME: reason"
+    t_assert_not_contains "$out" "REMOVE" "parent of HOME: nothing removed"
+    out=$(un_refusal "/usr")
+    t_assert_contains "$out" "rc=1" "one segment: exit code"
+    t_assert_contains "$out" "segments" "one segment: reason"
+    t_assert_not_contains "$out" "REMOVE" "one segment: nothing removed"
+    out=$(un_refusal "/usr/bin")
+    t_assert_contains "$out" "rc=1" "two segments: exit code"
+    t_assert_contains "$out" "segments" "two segments: reason"
+    t_assert_not_contains "$out" "REMOVE" "two segments: nothing removed"
+    out=$(un_refusal "")
+    t_assert_contains "$out" "rc=1" "empty: exit code"
+    t_assert_contains "$out" "empty" "empty: reason"
+    t_assert_not_contains "$out" "REMOVE" "empty: nothing removed"
+    t_assert_file "$AP/hh/install-state" "marker folder untouched"
+}
+
+test_do_uninstall_refuses_when_the_data_root_is_inside_the_install_root() {
+    un_setup
+    parse_args --install-root "$AP/shared" --data-root "$AP/shared/data dir"
+    resolve_paths
+    APP_BUNDLE="$AP/absent.app"
+    LINK_PATH="$AP/absent-link"
+    mkdir -p "$AP/shared/data dir/data"
+    printf 'schema=1\n' >"$AP/shared/install-state"
+    printf 'keep me\n' >"$AP/shared/data dir/data/rooms.json"
+    un_run
+    t_assert_eq "1" "$UN_RC" "exit code"
+    t_assert_contains "$UN_OUT" "--purge-data" "tells the user how to remove both"
+    t_assert_file "$AP/shared/data dir/data/rooms.json" "data survived"
+    t_assert_file "$AP/shared/install-state" "install untouched"
+}
+
+test_do_uninstall_purge_refuses_a_data_root_that_does_not_look_like_ours() {
+    un_setup
+    mkdir -p "$AP/other stuff/docs"
+    printf 'precious\n' >"$AP/other stuff/docs/a.txt"
+    parse_args --install-root "$INSTALL_ROOT" --data-root "$AP/other stuff" --purge-data
+    DATA_ROOT="$AP/other stuff"
+    un_run
+    t_assert_eq "1" "$UN_RC" "exit code"
+    t_assert_contains "$UN_OUT" "[!!]" "failure line"
+    t_assert_file "$AP/other stuff/docs/a.txt" "their files survived"
+    t_assert_file "$INSTALL_ROOT/install-state" "validation happens before any deletion"
+}
+
+test_do_uninstall_leaves_a_link_that_points_elsewhere() {
+    un_setup
+    printf 'SYMLINK:/somewhere/else/huddle\n' >"$LINK_PATH"
+    : >"$AP_CALLS"
+    un_run
+    t_assert_eq "0" "$UN_RC" "exit code"
+    t_assert_no_file "$INSTALL_ROOT" "install removed"
+    t_assert_file "$LINK_PATH" "foreign link left alone"
+    t_assert_contains "$UN_OUT" "[skip] link" "link skipped"
+    t_assert_not_contains "$(cat "$AP_CALLS")" "remove_symlink" "link not removed"
+}
+
+test_do_uninstall_leaves_a_regular_file_at_the_link_path() {
+    un_setup
+    printf 'my own script\n' >"$LINK_PATH"
+    un_run
+    t_assert_eq "0" "$UN_RC" "exit code"
+    t_assert_eq "my own script" "$(cat "$LINK_PATH")" "file untouched"
+    t_assert_no_file "$INSTALL_ROOT" "install removed"
+}
+
+test_do_uninstall_leaves_a_bundle_folder_that_is_not_ours() {
+    un_setup
+    rm -f "$APP_BUNDLE/Contents/Info.plist"
+    un_run
+    t_assert_eq "0" "$UN_RC" "exit code"
+    t_assert_file "$APP_BUNDLE/Contents/MacOS/AgencyHuddle" "folder left alone"
+    t_assert_contains "$UN_OUT" "[warn] app" "warning line"
+    t_assert_no_file "$INSTALL_ROOT" "install removed"
+}
+
+test_do_uninstall_stops_a_running_instance_before_deleting() {
+    un_setup
+    ap_instance_json 4242
+    run_huddle_stop() {
+        if [ -f "$INSTALL_ROOT/install-state" ] && [ -x "$INSTALL_ROOT/bin/huddle" ]; then
+            printf 'stop install_present=1\n' >>"$AP_CALLS"
+        else
+            printf 'stop install_present=0\n' >>"$AP_CALLS"
+        fi
+        return 0
+    }
+    un_run
+    t_assert_eq "0" "$UN_RC" "exit code"
+    t_assert_contains "$(cat "$AP_CALLS")" "stop install_present=1" "the stop request ran while the launcher still existed"
+    t_assert_no_file "$INSTALL_ROOT" "install removed afterwards"
+}
+
+test_do_uninstall_does_not_delete_when_the_app_will_not_stop() {
+    un_setup
+    ap_instance_json 4242
+    AP_STOP_RC=1
+    AP_ALIVE=1
+    un_run
+    t_assert_eq "1" "$UN_RC" "exit code"
+    t_assert_contains "$UN_OUT" "[!!] stop" "stop failure shown"
+    t_assert_file "$INSTALL_ROOT/install-state" "install untouched"
+    t_assert_file "$APP_BUNDLE/Contents/Info.plist" "bundle untouched"
+    t_assert_file "$LINK_PATH" "link untouched"
+}
+
+test_do_uninstall_does_not_stop_anything_when_nothing_is_installed() {
+    la_setup
+    parse_args --install-root "$AP/never/install" --data-root "$AP/never"
+    resolve_paths
+    APP_BUNDLE="$AP/never/a.app"
+    LINK_PATH="$AP/never/huddle"
+    ap_instance_json 4242
+    un_run
+    t_assert_eq "0" "$UN_RC" "exit code"
+    t_assert_eq "" "$(cat "$AP_CALLS")" "no stop request"
+}
+
+test_do_uninstall_protects_caller_variables() {
+    un_setup
+    have_install="KEEP"
+    current="KEEP"
+    purge="KEEP"
+    canon="KEEP"
+    dir="KEEP"
+    marker="KEEP"
+    home_canon="KEEP"
+    un_run
+    safe_to_delete "$AP" install-state || true
+    t_assert_eq "KEEP" "$have_install" "have_install"
+    t_assert_eq "KEEP" "$current" "current"
+    t_assert_eq "KEEP" "$purge" "purge"
+    t_assert_eq "KEEP" "$canon" "canon"
+    t_assert_eq "KEEP" "$dir" "dir"
+    t_assert_eq "KEEP" "$marker" "marker"
+    t_assert_eq "KEEP" "$home_canon" "home_canon"
+}
+
+test_remove_tree_refuses_empty_and_root() {
+    rc=0
+    remove_tree "" || rc=$?
+    t_assert_eq "1" "$rc" "empty"
+    rc=0
+    remove_tree "/" || rc=$?
+    t_assert_eq "1" "$rc" "root"
+}
+
+t_run test_safe_to_delete_accepts_a_folder_with_the_marker
+t_run test_safe_to_delete_rejects_without_the_marker
+t_run test_safe_to_delete_rejects_empty_missing_relative_and_unmarked_calls
+t_run test_do_uninstall_removes_install_bundle_and_link_and_keeps_the_data
+t_run test_do_uninstall_purge_data_also_removes_the_data_root
+t_run test_do_uninstall_purge_after_a_plain_uninstall_removes_the_kept_data
+t_run test_do_uninstall_second_run_skips_and_succeeds
+t_run test_do_uninstall_with_nothing_anywhere_prints_skip_before_canonicalising
+t_run test_do_uninstall_refuses_a_folder_without_the_marker
+t_run test_do_uninstall_refuses_dangerous_roots_and_deletes_nothing
+t_run test_do_uninstall_refuses_when_the_data_root_is_inside_the_install_root
+t_run test_do_uninstall_purge_refuses_a_data_root_that_does_not_look_like_ours
+t_run test_do_uninstall_leaves_a_link_that_points_elsewhere
+t_run test_do_uninstall_leaves_a_regular_file_at_the_link_path
+t_run test_do_uninstall_leaves_a_bundle_folder_that_is_not_ours
+t_run test_do_uninstall_stops_a_running_instance_before_deleting
+t_run test_do_uninstall_does_not_delete_when_the_app_will_not_stop
+t_run test_do_uninstall_does_not_stop_anything_when_nothing_is_installed
+t_run test_do_uninstall_protects_caller_variables
+t_run test_remove_tree_refuses_empty_and_root
+
 t_summary

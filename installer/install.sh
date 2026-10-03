@@ -71,6 +71,8 @@ resolve_paths() {
     ADAPTER_ENTRY="$INSTALL_ROOT/tools/acp/node_modules/@agentclientprotocol/claude-agent-acp/dist/index.js"
     STATE_FILE="$INSTALL_ROOT/install-state"
     CACHE_DIR="$DATA_ROOT/cache"
+    APP_BUNDLE="$HOME/Applications/Agency Huddle.app"
+    LINK_PATH="$HOME/.local/bin/huddle"
 }
 
 # Decides where the asset named $1 comes from. Sets ASSET_KIND (file or url) and ASSET_SRC.
@@ -1050,6 +1052,343 @@ plist_content() {
     printf '%s\n' "	<true/>"
     printf '%s\n' "</dict>"
     printf '%s' "</plist>"
+}
+
+# ---- Launcher, .app bundle and symlink (Spec sections 3 and 6) ------------------------------
+
+LAUNCHER_CHANGED=0
+FILE_WRITTEN=0
+
+# Seam: a scratch file outside the install folders; prints its path.
+make_temp_file() {
+    mktemp "${TMPDIR:-/tmp}/huddle-install.XXXXXX"
+}
+
+# Seam: sets the execute bit on the file $1.
+make_executable() {
+    chmod 755 "$1"
+}
+
+# Seam: makes the symbolic link $2 pointing at $1.
+make_symlink() {
+    ln -s "$1" "$2"
+}
+
+# Seam: prints the target of the symbolic link $1 and succeeds; fails for anything that is not a link.
+read_symlink() {
+    [ -L "$1" ] || return 1
+    readlink "$1"
+}
+
+# Seam: removes the symbolic link $1 (the caller has already checked that it is a link).
+remove_symlink() {
+    rm -f "$1"
+}
+
+# Writes the output of the command "$3..." to the file $1, but only when it differs from what is
+# there (cmp -s), so an unchanged file keeps its mtime. $2 is 1 to make the file executable. Sets
+# FILE_WRITTEN and LAUNCHER_CHANGED to 1 when the file changed. Returns 1 when something could not be written.
+write_if_changed() {
+    local dest exec_flag scratch staged
+    dest=$1
+    exec_flag=$2
+    shift 2
+    FILE_WRITTEN=0
+    scratch=$(make_temp_file) || return 1
+    if ! "$@" >"$scratch"; then
+        rm -f "$scratch"
+        return 1
+    fi
+    if [ -f "$dest" ] && cmp -s "$scratch" "$dest"; then
+        rm -f "$scratch"
+        if [ "$exec_flag" = 1 ] && [ ! -x "$dest" ]; then
+            make_executable "$dest" || return 1
+            FILE_WRITTEN=1
+            LAUNCHER_CHANGED=1
+        fi
+        return 0
+    fi
+    staged="$dest.new.$$"
+    if ! cp "$scratch" "$staged"; then
+        rm -f "$scratch" "$staged"
+        return 1
+    fi
+    rm -f "$scratch"
+    if [ "$exec_flag" = 1 ] && ! make_executable "$staged"; then
+        rm -f "$staged"
+        return 1
+    fi
+    if ! mv -f "$staged" "$dest"; then
+        rm -f "$staged"
+        return 1
+    fi
+    FILE_WRITTEN=1
+    LAUNCHER_CHANGED=1
+    return 0
+}
+
+# Re-asserts the entry points on every run and rewrites only what differs: <InstallRoot>/bin/huddle,
+# the .app bundle (Info.plist, MacOS/AgencyHuddle) and the symlink LINK_PATH. Reads the bundle
+# version from <InstallRoot>/release-info.json. Sets LAUNCHER_CHANGED (1 when anything changed).
+# A regular file at LINK_PATH is never overwritten (warns). Returns 1 when a file cannot be written.
+install_launcher() {
+    local info version link_dir link_target current link_ok
+    LAUNCHER_CHANGED=0
+    info="$INSTALL_ROOT/release-info.json"
+    version=""
+    if [ -f "$info" ]; then
+        version=$(sed -n 's/.*"version" *: *"\([^"]*\)".*/\1/p' "$info" | head -1) || version=""
+    fi
+    if [ -z "$version" ]; then
+        log_step fail launcher "$info has no version" "Run the installer again so the app is installed first."
+        return 1
+    fi
+    link_dir=$(dirname "$LINK_PATH")
+    link_target="$INSTALL_ROOT/bin/huddle"
+    if ! mkdir -p "$INSTALL_ROOT/bin" "$APP_BUNDLE/Contents/MacOS" "$link_dir"; then
+        log_step fail launcher "cannot create the launcher folders" "Check that you may write to $INSTALL_ROOT, $APP_BUNDLE and $link_dir."
+        return 1
+    fi
+    if ! write_if_changed "$link_target" 1 launcher_content ||
+        ! write_if_changed "$APP_BUNDLE/Contents/Info.plist" 0 plist_content "$version" ||
+        ! write_if_changed "$APP_BUNDLE/Contents/MacOS/AgencyHuddle" 1 app_stub_content; then
+        log_step fail launcher "cannot write the launcher files" "Check that you may write to $INSTALL_ROOT and $APP_BUNDLE."
+        return 1
+    fi
+    link_ok=1
+    if current=$(read_symlink "$LINK_PATH"); then
+        if [ "$current" != "$link_target" ]; then
+            if ! remove_symlink "$LINK_PATH" || ! make_symlink "$link_target" "$LINK_PATH"; then
+                log_step fail launcher "cannot replace the link $LINK_PATH" "Remove it by hand and run the installer again."
+                return 1
+            fi
+            LAUNCHER_CHANGED=1
+        fi
+    elif [ -e "$LINK_PATH" ] || [ -L "$LINK_PATH" ]; then
+        link_ok=0
+        log_step warn link "$LINK_PATH already exists and is not a link; left alone. Run $link_target instead."
+    else
+        if ! make_symlink "$link_target" "$LINK_PATH"; then
+            log_step fail launcher "cannot create the link $LINK_PATH" "Check that you may write to $link_dir."
+            return 1
+        fi
+        LAUNCHER_CHANGED=1
+    fi
+    if [ "$LAUNCHER_CHANGED" -eq 1 ]; then
+        log_step ok launcher "bin/huddle, Agency Huddle.app and the huddle link are in place"
+    else
+        log_step skip launcher "up to date"
+    fi
+    if [ "$link_ok" -eq 1 ]; then
+        case ":$PATH:" in
+            *":$link_dir:"*) ;;
+            *) printf 'hint: %s is not on your PATH, so "huddle" will not run from a terminal; add it to your shell profile.\n' "$link_dir" ;;
+        esac
+    fi
+    return 0
+}
+
+# ---- Uninstall (Spec section 6, rules 6 and 7) ----------------------------------------------
+
+SAFE_CANON=""
+SAFE_REASON=""
+
+# Seam: deletes the folder $1 recursively. Only ever called with a path safe_to_delete accepted;
+# it still refuses an empty path and the filesystem root.
+remove_tree() {
+    case ${1:-} in
+        '' | /) return 1 ;;
+    esac
+    rm -rf -- "$1"
+}
+
+# Decides whether the folder $1 may be deleted. $2 names a marker (relative to $1) that must exist
+# inside it, proving the folder is ours. Succeeds only for an absolute path to a real folder (not a
+# symbolic link) that is not the filesystem root, not the home folder or a folder holding it, has at
+# least 3 path segments once canonicalised (cd ... && pwd -P) and holds the marker. On success sets
+# SAFE_CANON to the canonical path; on failure sets SAFE_REASON.
+safe_to_delete() {
+    local dir marker canon home_dir home_canon slashes
+    dir=${1:-}
+    marker=${2:-}
+    SAFE_CANON=""
+    SAFE_REASON=""
+    if [ -z "$dir" ]; then
+        SAFE_REASON="the path is empty"
+        return 1
+    fi
+    if [ -z "$marker" ]; then
+        SAFE_REASON="no marker file was named for it"
+        return 1
+    fi
+    case $dir in
+        /*) ;;
+        *)
+            SAFE_REASON="the path is not absolute"
+            return 1
+            ;;
+    esac
+    if [ -L "$dir" ]; then
+        SAFE_REASON="it is a symbolic link"
+        return 1
+    fi
+    if [ ! -d "$dir" ]; then
+        SAFE_REASON="it is not a folder"
+        return 1
+    fi
+    canon=$(cd "$dir" 2>/dev/null && pwd -P) || canon=""
+    if [ -z "$canon" ]; then
+        SAFE_REASON="the folder cannot be resolved"
+        return 1
+    fi
+    if [ "$canon" = "/" ]; then
+        SAFE_REASON="it is the filesystem root"
+        return 1
+    fi
+    home_dir=${HOME:-}
+    if [ -n "$home_dir" ] && home_canon=$(cd "$home_dir" 2>/dev/null && pwd -P); then
+        case "$home_canon/" in
+            "$canon/"*)
+                SAFE_REASON="it is your home folder or a folder that contains your home folder"
+                return 1
+                ;;
+        esac
+    fi
+    slashes=$(printf '%s' "$canon" | tr -cd '/' | wc -c)
+    if [ "$((slashes))" -lt 3 ]; then
+        SAFE_REASON="it has fewer than 3 path segments"
+        return 1
+    fi
+    if [ ! -e "$canon/$marker" ]; then
+        SAFE_REASON="it does not contain $marker, so it does not look like an Agency Huddle folder"
+        return 1
+    fi
+    SAFE_CANON=$canon
+    return 0
+}
+
+# Removes the install folder, the .app bundle and the symlink; the data folder only with
+# --purge-data. Everything that is missing prints [skip]; every folder is checked with
+# safe_to_delete before anything is deleted, so a refusal deletes nothing. Stops a running app
+# first. Returns 0 (including "nothing installed"), 1 on a refusal or failure.
+do_uninstall() {
+    local purge have_install have_bundle have_link have_data install_canon bundle_canon data_canon data_any current removed
+    purge=${OPT_PURGE_DATA:-0}
+    if [ -z "$INSTALL_ROOT" ] || [ -z "$DATA_ROOT" ]; then
+        log_step fail uninstall "an install or data folder path is empty" "Pass --install-root and --data-root, or leave both out."
+        return 1
+    fi
+    have_install=0
+    have_bundle=0
+    have_link=0
+    have_data=0
+    install_canon=""
+    bundle_canon=""
+    data_canon=""
+    if [ -e "$INSTALL_ROOT" ] || [ -L "$INSTALL_ROOT" ]; then
+        have_install=1
+    else
+        log_step skip install "not installed ($INSTALL_ROOT)"
+    fi
+    if [ -e "$APP_BUNDLE" ] || [ -L "$APP_BUNDLE" ]; then
+        have_bundle=1
+    else
+        log_step skip app "no app bundle ($APP_BUNDLE)"
+    fi
+    if [ -e "$LINK_PATH" ] || [ -L "$LINK_PATH" ]; then
+        have_link=1
+    else
+        log_step skip link "no link ($LINK_PATH)"
+    fi
+    if [ "$purge" -eq 1 ]; then
+        if [ -e "$DATA_ROOT" ] || [ -L "$DATA_ROOT" ]; then
+            have_data=1
+        else
+            log_step skip data "no data folder ($DATA_ROOT)"
+        fi
+    fi
+
+    if [ "$have_install" -eq 1 ]; then
+        if ! safe_to_delete "$INSTALL_ROOT" install-state; then
+            log_step fail uninstall "refusing to remove $INSTALL_ROOT: $SAFE_REASON" "Pass --install-root with an Agency Huddle install folder, or delete the folder yourself."
+            return 1
+        fi
+        install_canon=$SAFE_CANON
+        data_any=$(cd "$DATA_ROOT" 2>/dev/null && pwd -P) || data_any=""
+        case "$data_any/" in
+            "$install_canon/"*)
+                if [ "$purge" -ne 1 ]; then
+                    log_step fail uninstall "the data folder $DATA_ROOT is inside the install folder $INSTALL_ROOT" "Pass --purge-data to remove both, or move the data folder out first."
+                    return 1
+                fi
+                ;;
+        esac
+    fi
+    if [ "$have_data" -eq 1 ]; then
+        if ! safe_to_delete "$DATA_ROOT" data && ! safe_to_delete "$DATA_ROOT" cache; then
+            log_step fail uninstall "refusing to remove $DATA_ROOT: $SAFE_REASON" "Pass --data-root with the Agency Huddle data folder, or delete the folder yourself."
+            return 1
+        fi
+        data_canon=$SAFE_CANON
+    fi
+    if [ "$have_bundle" -eq 1 ]; then
+        if safe_to_delete "$APP_BUNDLE" Contents/Info.plist; then
+            bundle_canon=$SAFE_CANON
+        else
+            have_bundle=0
+            log_step warn app "$APP_BUNDLE was left alone: $SAFE_REASON"
+        fi
+    fi
+    if [ "$have_link" -eq 1 ]; then
+        current=""
+        current=$(read_symlink "$LINK_PATH") || current=""
+        if [ "$current" != "$INSTALL_ROOT/bin/huddle" ]; then
+            have_link=0
+            log_step skip link "$LINK_PATH is not a link to this install; left alone"
+        fi
+    fi
+
+    if [ "$have_install" -eq 0 ] && [ "$have_bundle" -eq 0 ] && [ "$have_link" -eq 0 ] && [ "$have_data" -eq 0 ]; then
+        return 0
+    fi
+    stop_huddle_if_running || return 1
+
+    removed=0
+    if [ "$have_link" -eq 1 ]; then
+        if ! remove_symlink "$LINK_PATH"; then
+            log_step fail link "cannot remove $LINK_PATH" "Remove it by hand and run the uninstall again."
+            return 1
+        fi
+        log_step ok link "removed $LINK_PATH"
+        removed=1
+    fi
+    if [ "$have_bundle" -eq 1 ]; then
+        if ! remove_tree "$bundle_canon"; then
+            log_step fail app "cannot remove $APP_BUNDLE" "Remove it by hand and run the uninstall again."
+            return 1
+        fi
+        log_step ok app "removed $APP_BUNDLE"
+        removed=1
+    fi
+    if [ "$have_install" -eq 1 ]; then
+        if ! remove_tree "$install_canon"; then
+            log_step fail install "cannot remove $INSTALL_ROOT" "Close anything using it, remove it by hand and run the uninstall again."
+            return 1
+        fi
+        log_step ok install "removed $INSTALL_ROOT"
+        removed=1
+    fi
+    if [ "$have_data" -eq 1 ]; then
+        if [ -d "$data_canon" ] && ! remove_tree "$data_canon"; then
+            log_step fail data "cannot remove $DATA_ROOT" "Remove it by hand."
+            return 1
+        fi
+        log_step ok data "removed $DATA_ROOT"
+        removed=1
+    elif [ "$removed" -eq 1 ] && [ -d "$DATA_ROOT" ]; then
+        log_step skip data "kept $DATA_ROOT (--purge-data removes it)"
+    fi
+    return 0
 }
 
 main() {
