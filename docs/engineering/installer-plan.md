@@ -25,7 +25,7 @@ project context; run it with the Execute-Project-Plan skill.
 
 ## Assumptions to confirm before shipping (none block starting)
 
-- A1. The repo will be **public**; until then, `actions/attest-build-provenance` is skipped by an `if:` and anonymous downloads do not work. Trial the release on a throwaway public repo (manual step M1).
+- A1. **Settled 2026-10-03:** the repo is `github.com/emreaydinceren/Agency.Huddle`, meant to be **public**, and is only a scrubbed mirror of Gitea (nothing is pushed to it directly: `agents/GiteaToGitHubPlaybook.md`). The `if:` that skips `actions/attest-build-provenance` on a private repo stays as a safety net. The release workflow (task 42) is started by hand with `workflow_dispatch` on GitHub after a sync (manual step M1 is now: run the sync, then run the release workflow once).
 - A2. `<org>/<repo>` is unknown today, so scripts carry the placeholder `__HUDDLE_REPO__`, replaced by the release workflow with `${{ github.repository }}`. Override with `$env:HUDDLE_REPO` / `HUDDLE_REPO=`.
 - A3. Redistribution: the release contains no Anthropic binary (D3). If that changes, check Anthropic's terms first.
 - A4. v1 has **no in-app Quit button**. Windows users close the console window or run `huddle stop`; macOS users run `huddle stop`. Recorded as a known limit by task 43, and a candidate for `roadmap.md`.
@@ -210,12 +210,12 @@ Program wiring (task 14; `src/Huddle.App/Program.cs`, 102 lines, `CreateBuilder`
 
 ### Spec §9. Release workflow (`.github/workflows/release.yaml`)
 
-Trigger: push of tag `v*`, and `workflow_dispatch` with a `version` input. Jobs:
+**How it is triggered (settled 2026-10-03, `agents/GiteaToGitHubPlaybook.md` on origin/main).** Nothing is ever pushed to GitHub by hand: Gitea `main` is the source of truth and GitHub `main` is a scrubbed mirror that the manual Gitea workflow `sync-github.yaml` force-pushes. The mirror carries `main` only, so a `v*` tag would not exist on GitHub. The release workflow is therefore started by a **maintainer clicking `workflow_dispatch` on GitHub** (required input `version`, for example `1.0.0`; validated against the same pattern as the installers' `-Version`) after a sync. `publish` creates the release and its tag from the exact commit that was built: `gh release create "v$VERSION" dist/* --target "$GITHUB_SHA" --generate-notes`. The repository is public (`github.com/emreaydinceren/Agency.Huddle`), so the attestation step runs and `releases/latest/download/...` links work anonymously. The files under `.github/workflows/` reach GitHub only through that sync, so they cannot be exercised before the first sync. Jobs:
 1. `build` (ubuntu-latest, matrix `rid` = `win-x64`, `osx-arm64`, `osx-x64`): checkout, `actions/setup-dotnet` with `global-json-file: global.json`, `installer/build-release.sh --version <v> --rid <rid> --out dist`, upload artifact `dist-<rid>`.
 2. `assemble` (needs `build`): merge artifacts; copy `installer/install.ps1` and `install.sh` into `dist/` replacing `__HUDDLE_REPO__` with `${{ github.repository }}`; `installer/make-sums.sh dist <the five files>`; `actions/attest-build-provenance` over `dist/*` **only** `if: ${{ !github.event.repository.private }}`; upload artifact `release-dist`.
 3. `smoke-windows` (windows-latest, needs `assemble`): `powershell.exe -NoProfile -ExecutionPolicy Bypass -File installer/tests/smoke.ps1 -ReleaseDir dist` (Windows PowerShell 5.1 on purpose: that is what users run).
 4. `smoke-macos` (macos-latest, Apple Silicon, needs `assemble`): `sh installer/tests/smoke.sh dist`.
-5. `publish` (needs both smokes): `gh release create "$TAG" dist/* --generate-notes`. The release exists **only after both smokes pass**.
+5. `publish` (needs both smokes): `gh release create "v$VERSION" dist/* --target "$GITHUB_SHA" --generate-notes`. The release exists **only after both smokes pass**.
 
 Least privilege: workflow `permissions: {}`; `build`/`assemble` get `contents: read`; `assemble` adds `id-token: write` and `attestations: write`; `publish` alone gets `contents: write`. Every third-party action pinned to a **full commit SHA** with the tag in a trailing comment. The Intel build is not smoke-tested in CI (no free Intel runner): manual step M3.
 
