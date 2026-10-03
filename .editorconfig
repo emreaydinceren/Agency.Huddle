@@ -369,6 +369,56 @@ dotnet_diagnostic.IDE0161.severity = warning
 # IDE0330: lock on System.Threading.Lock, not an object.
 dotnet_diagnostic.IDE0330.severity = warning
 
+#### Fifth batch: security and correctness rules that were denylisted in Directory.Build.props ####
+#### only because they were default-on when the analyzer arrived. All had zero hits on the whole ####
+#### solution (S1871 and S2701 had two each, fixed in the same change). ####
+
+# Security: injection, weak randomness, insecure storage and transport, and unsafe web defaults.
+dotnet_diagnostic.S2077.severity = warning  # formatted SQL queries are security-sensitive
+dotnet_diagnostic.S2245.severity = warning  # pseudo-random generators are security-sensitive
+dotnet_diagnostic.S2257.severity = warning  # custom cryptographic algorithms should not be used
+dotnet_diagnostic.S2612.severity = warning  # file permissions should not be too broad
+dotnet_diagnostic.S2092.severity = warning  # cookies should be sent over HTTPS only (Secure)
+dotnet_diagnostic.S3330.severity = warning  # cookies should be HttpOnly
+dotnet_diagnostic.S2115.severity = warning  # a database should be password-protected
+dotnet_diagnostic.S4433.severity = warning  # LDAP connections should be authenticated
+dotnet_diagnostic.S4502.severity = warning  # disabling CSRF protection is security-sensitive
+dotnet_diagnostic.S4507.severity = warning  # delivering code in production with debug features is security-sensitive
+dotnet_diagnostic.S5332.severity = warning  # clear-text protocols are security-sensitive
+dotnet_diagnostic.S5344.severity = warning  # passwords should not be stored in plain text or with a fast hash
+dotnet_diagnostic.S5443.severity = warning  # publicly writable directories are security-sensitive
+dotnet_diagnostic.S5445.severity = warning  # insecure temporary file creation
+dotnet_diagnostic.S5659.severity = warning  # JWT should be signed and verified with a strong cipher
+dotnet_diagnostic.S5693.severity = warning  # the request body size limit should be restricted
+dotnet_diagnostic.S5753.severity = warning  # disabling ASP.NET request validation is security-sensitive
+dotnet_diagnostic.S5766.severity = warning  # deserializing untrusted data is security-sensitive
+
+# Correctness: code that does not do what it reads as doing.
+dotnet_diagnostic.S1862.severity = warning  # related if/else-if branches should not have the same condition
+dotnet_diagnostic.S1871.severity = warning  # two branches in a conditional should not have exactly the same implementation
+dotnet_diagnostic.S3923.severity = warning  # all branches in a conditional should not have the same implementation
+dotnet_diagnostic.S1764.severity = warning  # identical expressions should not be used on both sides of an operator
+dotnet_diagnostic.S1656.severity = warning  # variables should not be self-assigned
+dotnet_diagnostic.S2201.severity = warning  # return values from functions without side effects should not be ignored
+dotnet_diagnostic.S2674.severity = warning  # the return value of Stream.Read should not be ignored
+dotnet_diagnostic.S2688.severity = warning  # ==/!= should not be used with NaN
+dotnet_diagnostic.S2692.severity = warning  # IndexOf should be compared with >= 0, not > 0
+dotnet_diagnostic.S2183.severity = warning  # integral numbers should not be shifted by zero or more than their number of bits
+dotnet_diagnostic.S2184.severity = warning  # integer arithmetic should not be widened after the operation
+dotnet_diagnostic.S2275.severity = warning  # composite format strings should not lead to unexpected behavior
+dotnet_diagnostic.S2437.severity = warning  # unnecessary bit operations should not be performed
+dotnet_diagnostic.S3169.severity = warning  # multiple OrderBy calls should not be used
+dotnet_diagnostic.S3172.severity = warning  # delegates should not be subtracted
+dotnet_diagnostic.S4143.severity = warning  # collection elements should not be replaced unconditionally
+dotnet_diagnostic.S4581.severity = warning  # "new Guid()" should not be used
+dotnet_diagnostic.S1944.severity = warning  # invalid casts should be avoided
+dotnet_diagnostic.S1696.severity = warning  # NullReferenceException should not be caught
+dotnet_diagnostic.S2995.severity = warning  # "Object.ReferenceEquals" should not be used on value types
+dotnet_diagnostic.S2996.severity = warning  # "ThreadStatic" fields should not be initialized
+dotnet_diagnostic.S3005.severity = warning  # "ThreadStatic" should not be used on non-static fields
+dotnet_diagnostic.S5856.severity = warning  # regular expressions should be syntactically valid
+dotnet_diagnostic.S2701.severity = warning  # literal boolean values should not be used in assertions
+
 # IDE1006: private fields are plain camelCase with no '_' prefix (constants stay PascalCase).
 # The const rule is listed first so it wins for 'private const'.
 dotnet_naming_rule.private_constants_should_be_pascal_case.severity = warning

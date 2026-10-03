@@ -45,7 +45,7 @@ public sealed class LibraryEditorTests
 
         JSRuntimeInvocation invocation = Assert.Single(module.Invocations, i => i.Identifier == "create");
         Assert.Equal("# Title", invocation.Arguments[1]);
-        Assert.Equal(false, invocation.Arguments[2]);
+        Assert.False(Assert.IsType<bool>(invocation.Arguments[2]));
         Assert.Equal("markdown", invocation.Arguments[3]);
         Assert.IsType<DotNetObjectReference<LibraryEditor>>(invocation.Arguments[4]);
     }
@@ -58,7 +58,7 @@ public sealed class LibraryEditorTests
         (_, BunitJSModuleInterop module, _) = RenderEditor(context, readOnly: true);
 
         JSRuntimeInvocation invocation = Assert.Single(module.Invocations, i => i.Identifier == "create");
-        Assert.Equal(true, invocation.Arguments[2]);
+        Assert.True(Assert.IsType<bool>(invocation.Arguments[2]));
     }
 
     /// <summary><see cref="LibraryEditor.GetTextAsync"/> calls the handle's <c>getText</c> and returns its result.</summary>
