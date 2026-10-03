@@ -29,17 +29,17 @@
          a bad colour; S3264: PersonaStore invokes its events through GetInvocationList; S1994: an
          intentional for loop that ends in a return; S8969 and S8970: removing the flagged "!" breaks
          the build, so they are wrong at 6 of 7 source sites - see docs/engineering/analyzer-decisions.md). -->
-    <NoWarn>$(NoWarn);S108;S1118;S1135;S125;S1450;S1994;S2094;S2325;S2365;S2743;S3218;S3264;S3267;S3358;S3376;S3398;S3878;S4144;S6667;S6966;S8969;S8970</NoWarn>
+    <NoWarn>$(NoWarn);S108;S1135;S125;S1450;S1994;S2094;S2325;S2365;S2743;S3218;S3264;S3267;S3376;S3398;S3878;S4144;S6667;S6966;S8969;S8970</NoWarn>
     <!-- Denied: technology this repository does not use (Azure Functions, WCF, WinForms, MEF, legacy serialization, the Trace API, the C# 14 keyword-escape diagnostics the compiler already reports). -->
     <NoWarn>$(NoWarn);S3431;S3597;S3598;S3925;S3926;S3927;S4159;S4200;S4210;S4211;S4277;S4428;S6419;S6420;S6422;S6424;S6670;S6675;S8367;S8368;S8380;S8381</NoWarn>
     <!-- Denied: another analyzer or the compiler already covers it (CA2201, CA2254, CA1852, IDE0060, CA2200, CA2211, IDE0011, IDE1006 and others). Enabling it would only print each finding twice. -->
     <NoWarn>$(NoWarn);S101;S112;S1155;S1172;S1699;S1905;S2223;S2306;S2629;S2681;S3260;S3445;S3903;S4220</NoWarn>
     <!-- Denied for a stated reason, which is reasoning and not a test (see docs/engineering/analyzer-decisions.md): S4036 (adapters are spawned by command name), S1607 (conditional Skip is used for live-agent tests), S6610 (may conflict with the house StringComparison.Ordinal rule), S1075 (fixtures hardcode URIs). -->
     <NoWarn>$(NoWarn);S1075;S1607;S4036;S6610</NoWarn>
-    <!-- Tried and did not fire on a deliberate violation (S2114, S2328). Unknown whether the probe or the rule is at fault; see docs/engineering/analyzer-decisions.md. -->
-    <NoWarn>$(NoWarn);S2114;S2328</NoWarn>
+    <!-- Tried and did not fire on a deliberate violation (S2114, S2328, S3610). Unknown whether the probe or the rule is at fault; see docs/engineering/analyzer-decisions.md. -->
+    <NoWarn>$(NoWarn);S2114;S2328;S3610</NoWarn>
     <!-- Denied: style, naming, design opinion or micro-performance. Zero hits today, so each one is a taste decision; none guards correctness or security. -->
-    <NoWarn>$(NoWarn);S1110;S1116;S1121;S1123;S1133;S1134;S1168;S1185;S1186;S1199;S1210;S1264;S1694;S1939;S1940;S2166;S2219;S2344;S3217;S3246;S3247;S3249;S3261;S3263;S3400;S3453;S3456;S3459;S3604;S3610;S3897;S3904;S3963;S3972;S3973;S3993;S4035;S4050;S4052;S4061;S4136;S4524;S4635;S4663;S6561;S6575;S6608;S6609;S6613;S6617;S6640;S6960;S6968;S818;S907;S927</NoWarn>
+    <NoWarn>$(NoWarn);S1110;S1116;S1121;S1123;S1133;S1134;S1168;S1185;S1186;S1199;S1210;S1264;S1694;S1939;S2166;S2219;S2344;S3217;S3246;S3249;S3261;S3263;S3400;S3453;S3456;S3459;S3604;S3897;S3904;S3963;S3972;S3973;S3993;S4035;S4050;S4052;S4061;S4136;S4524;S4663;S6575;S6640;S6960;S6968;S818;S907;S927</NoWarn>
     <!-- Sonar's own bookkeeping diagnostics, not code rules. -->
     <NoWarn>$(NoWarn);S9999-cpd;S9999-log;S9999-metadata;S9999-metrics;S9999-symbolRef;S9999-telemetry;S9999-testMethodDeclaration;S9999-token-type;S9999-warning</NoWarn>
   </PropertyGroup>

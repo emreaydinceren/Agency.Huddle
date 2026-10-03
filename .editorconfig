@@ -561,3 +561,15 @@ dotnet_diagnostic.S1117.severity = warning  # Local variables should not shadow 
 dotnet_diagnostic.S2292.severity = warning  # Trivial properties should be auto-implemented
 dotnet_diagnostic.S6562.severity = warning  # Always set the "DateTimeKind" when creating new "DateTime" instances
 dotnet_diagnostic.S2479.severity = warning  # Whitespace and control characters in string literals should be explicit
+
+#### Tenth batch: ten denied rules, two that fired on a few sites and eight with no hits. ####
+dotnet_diagnostic.S1118.severity = warning  # Utility classes should not have public constructors
+dotnet_diagnostic.S3358.severity = warning  # Ternary operators should not be nested
+dotnet_diagnostic.S6561.severity = warning  # Avoid using "DateTime.Now" for benchmarking or timing operations
+dotnet_diagnostic.S6608.severity = warning  # Prefer indexing instead of "Enumerable" methods on types implementing "IList"
+dotnet_diagnostic.S6617.severity = warning  # Contains should be used instead of "Any" for simple equality checks
+dotnet_diagnostic.S1940.severity = warning  # Boolean checks should not be inverted
+dotnet_diagnostic.S3247.severity = warning  # Duplicate casts should not be made
+dotnet_diagnostic.S4635.severity = warning  # Start index should be used instead of calling Substring
+dotnet_diagnostic.S6609.severity = warning  # Min/Max properties of "Set" types should be used instead of the "Enumerable" extension methods
+dotnet_diagnostic.S6613.severity = warning  # First and "Last" properties of "LinkedList" should be used instead of the "First()" and "Last()" extension methods
