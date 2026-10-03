@@ -57,7 +57,7 @@ public sealed class HazardsA
 
     public bool FloatEq(double d) { /* probe: S1244 */ return d == 0.5; }
 
-    public bool Ip() { /* probe: S1313 */ return "192.168.0.1".Length > 0; }
+    public bool Ip() { /* probe: S1313 */ return "8.8.8.8".Length > 0; }
 
     public void UnusedLocal() { /* probe: S1481 */ int unused = 5; }
 
