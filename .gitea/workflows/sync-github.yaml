@@ -1,0 +1,158 @@
+name: Sync to GitHub (guarded outbound push)
+
+# Publishes a scrubbed export of Gitea `main` to the public GitHub mirror
+# (github.com/emreaydinceren/Agency.Huddle). Gitea is the source of truth and is NEVER
+# rewritten or force-pushed by this job — see agents/GiteaToGitHubPlaybook.md (the inviolable
+# rule, and why a guarded push, not Gitea's built-in push mirror).
+#
+# Manual-only on purpose: the "Run workflow" click IS the intent to publish upstream.
+# History is rewritten fresh on every run from a disposable clone — Gitea's own history is
+# untouched. git filter-repo is deterministic, so an unchanged prefix of history produces the
+# same SHAs run after run; only new commits differ. It is still always a force-push, because
+# the rewritten SHAs never match the Gitea ones.
+#
+# One-time manual setup this workflow cannot perform on its own:
+#   1. Create a GitHub PAT (fine-grained, scoped to emreaydinceren/Agency.Huddle only,
+#      Contents: Read and write) and store it as the `SYNC_GITHUB_TOKEN` repo secret.
+#   2. `SYNC_MAILMAP` and `SYNC_REPLACEMENTS` repo secrets hold the git-filter-repo rule
+#      files (author-identity consolidation and hostname/path/email redaction). They contain
+#      the real internal hostnames, which is why they are secrets, not tracked files.
+
+on:
+  workflow_dispatch: {}
+
+env:
+  MIRROR_REPO: emreaydinceren/Agency.Huddle
+
+jobs:
+  sync:
+    runs-on: dotnet-10
+    container:
+      # Same image the CI jobs use, so the runner already holds it. The job needs no .NET
+      # at all — only git, python3 and curl — so the tag is about not pulling a second image.
+      image: mcr.microsoft.com/dotnet/sdk:10.0.401
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: 📥 Full clone of Gitea main
+        env:
+          GIT_TOKEN: ${{ github.token }}
+        run: |
+          git config --global --add safe.directory '*'
+          AUTH_URL="${GITHUB_SERVER_URL/http:\/\//http:\/\/x-access-token:$GIT_TOKEN@}"
+          git clone --branch main "$AUTH_URL/$GITHUB_REPOSITORY.git" scrub-clone
+          git -C scrub-clone tag -l | xargs -r -n1 -I{} echo "found tag: {}"
+
+      - name: 🛠️ Install git-filter-repo and gitleaks
+        run: |
+          set -euo pipefail
+          apt-get update -qq && apt-get install -y -q python3
+          curl -sSLf https://raw.githubusercontent.com/newren/git-filter-repo/main/git-filter-repo -o /usr/local/bin/git-filter-repo
+          chmod +x /usr/local/bin/git-filter-repo
+          git-filter-repo --version
+
+          case "$(uname -m)" in
+            x86_64) ARCH=x64 ;;
+            aarch64|arm64) ARCH=arm64 ;;
+            *) echo "Unsupported arch: $(uname -m)"; exit 1 ;;
+          esac
+          VER=$(curl -sSLf https://api.github.com/repos/gitleaks/gitleaks/releases/latest \
+                | grep -oE '"tag_name": *"v[^"]+"' | head -1 | sed -E 's/.*"v?([^"]+)".*/\1/')
+          curl -sSLf "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_${ARCH}.tar.gz" -o /tmp/gitleaks.tgz
+          tar -xzf /tmp/gitleaks.tgz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: 📝 Write scrub rule files from secrets
+        env:
+          SYNC_MAILMAP: ${{ secrets.SYNC_MAILMAP }}
+          SYNC_REPLACEMENTS: ${{ secrets.SYNC_REPLACEMENTS }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SYNC_MAILMAP" ] || [ -z "$SYNC_REPLACEMENTS" ]; then
+            echo "::error::SYNC_MAILMAP and/or SYNC_REPLACEMENTS repo secrets are not set."
+            exit 1
+          fi
+          printf '%s\n' "$SYNC_MAILMAP" > mailmap.txt
+          printf '%s\n' "$SYNC_REPLACEMENTS" > replacements.txt
+
+      - name: ✂️ Rewrite history (path strip + text redaction + mailmap)
+        working-directory: scrub-clone
+        run: |
+          set -euo pipefail
+          # --replace-message is what catches Gitea's "Reviewed-on: <gitea-url>/pulls/<n>"
+          # trailers, which live in commit messages, not blobs. The --path strip is
+          # defensive: .claude/settings.local.json has never been committed, but it is the one
+          # file that would hold machine-specific permissions if it ever were.
+          git-filter-repo --force \
+            --path .claude/settings.local.json --invert-paths \
+            --replace-text ../replacements.txt \
+            --replace-message ../replacements.txt \
+            --mailmap ../mailmap.txt
+
+      - name: 🔎 Verify the rewrite (fail closed)
+        working-directory: scrub-clone
+        run: |
+          set -euo pipefail
+          fail=0
+
+          if [ -n "$(git log --all --oneline -- .claude/settings.local.json)" ]; then
+            echo "::error::.claude/settings.local.json still present in history after rewrite."
+            fail=1
+          fi
+
+          BAD_AUTHORS=$(git log --all --format='%ae%n%ce' | sort -u | grep -v '^13038027+emreaydinceren@users\.noreply\.github\.com$' || true)
+          if [ -n "$BAD_AUTHORS" ]; then
+            echo "::error::Unexpected author/committer email(s) survived the mailmap rewrite:"
+            echo "$BAD_AUTHORS"
+            fail=1
+          fi
+
+          # Needles come from ../replacements.txt (written from the SYNC_REPLACEMENTS secret in
+          # an earlier step) rather than being hardcoded here, so this tracked file never
+          # contains the real hostnames or paths itself — only the ephemeral runtime copy does.
+          # Checks both blob content (-S, what --replace-text covers) and commit messages
+          # (--grep, what --replace-message covers).
+          while IFS= read -r line; do
+            needle="${line%%==>*}"
+            [ -z "$needle" ] && continue
+            if [ -n "$(git log --all -S "$needle" --oneline)" ]; then
+              echo "::error::a redaction needle is still reachable in blob content after the replace-text rewrite."
+              fail=1
+            fi
+            if [ -n "$(git log --all --fixed-strings --grep="$needle" --oneline)" ]; then
+              echo "::error::a redaction needle is still reachable in a commit message after the replace-message rewrite."
+              fail=1
+            fi
+          done < ../replacements.txt
+
+          if [ "$fail" -ne 0 ]; then
+            echo "::error::Verification failed — refusing to push. Nothing was sent to GitHub."
+            exit 1
+          fi
+          echo "All verification checks passed."
+
+      # Two scans, because they catch different things. The history scan is the one that
+      # matters here: the internal-hostname findings in this repo live in OLD revisions of docs
+      # that no longer exist in the tree, so a tree-only scan would never have seen them.
+      - name: 🔐 Gitleaks scan of the rewritten history and tree (backstop, not a substitute for the above)
+        working-directory: scrub-clone
+        run: |
+          set -euo pipefail
+          gitleaks git . --config .gitleaks.toml --redact --no-banner --verbose --log-opts="--all"
+          gitleaks dir . --config .gitleaks.toml --redact --no-banner --verbose
+
+      - name: 🚀 Force-push the scrubbed export to GitHub
+        working-directory: scrub-clone
+        env:
+          SYNC_GITHUB_TOKEN: ${{ secrets.SYNC_GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$SYNC_GITHUB_TOKEN" ]; then
+            echo "::error::SYNC_GITHUB_TOKEN repo secret is not set."
+            exit 1
+          fi
+          git remote add github "https://x-access-token:${SYNC_GITHUB_TOKEN}@github.com/${MIRROR_REPO}.git"
+          git push --force github main
+          git push --force github --tags

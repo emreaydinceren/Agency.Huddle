@@ -1,0 +1,94 @@
+name: CI (GitHub)
+
+# Public validation gate for the GitHub mirror. This is the same restore, vulnerable-package
+# check, build, test and health-endpoint smoke test as the `validate` job in
+# .gitea/workflows/ci-pr.yaml — Huddle's suite is offline and deterministic, so unlike a
+# project that needs private infrastructure there is no "subset" to carve out. The one thing
+# it adds over Gitea is proof that a clean clone builds with only public inputs.
+#
+# What differs from the Gitea job, and why:
+#   - actions/checkout instead of a hand-rolled `git clone`. Gitea's SDK container has no
+#     Node.js, which JS actions need; GitHub-hosted runners mount their own into the container.
+#   - No secret-scan job. The guarded sync already gitleaks-scans the history and the tree
+#     before anything is pushed, and GitHub has nothing private to leak.
+#   - No release job: Huddle publishes no packages.
+# Keep the build, test and smoke steps in lockstep with ci-pr.yaml — a mirror that is greener
+# than the private gate is worse than no mirror.
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    container:
+      # Exact patch, not the floating :10.0 tag. global.json requires 10.0.400 with
+      # rollForward=latestPatch, so only a 10.0.4xx SDK satisfies it. Bump this together with
+      # global.json and the two Gitea workflows — one decision, three places.
+      image: mcr.microsoft.com/dotnet/sdk:10.0.401
+
+    env:
+      # Pinned off, not merely left unset. The E2E/ folder of Huddle.Acp.Tests drives a real
+      # adapter against a real model and spends money; E2E.Enabled is `TEAM_E2E == "1"`.
+      TEAM_E2E: "0"
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      # Huddle.Acp.Tests' AgentProcessLauncherTests ([Trait("Category", "Process")]) launch a
+      # real `node -e` subprocess to prove the stdio pipe wiring works. The SDK image has no
+      # Node on PATH (the runner's own Node lives outside the container), so those 6 tests fail
+      # with `Failed to start 'node'` without this step.
+      - name: 🟩 Install Node.js
+        run: |
+          set -euo pipefail
+          apt-get update -qq
+          apt-get install -y -qq nodejs
+          node --version
+
+      - name: 📦 Restore dependencies
+        run: dotnet restore Huddle.slnx
+
+      - name: 🔒 Check for vulnerable dependencies
+        run: |
+          dotnet list Huddle.slnx package --vulnerable --include-transitive 2>&1 | tee vuln-scan.log
+          if grep -q "has the following vulnerable packages" vuln-scan.log; then
+            echo "::error::Vulnerable dependency detected — see log above. Bump the version in Directory.Packages.props (central package management is on, so the version lives only there)."
+            exit 1
+          fi
+
+      # Directory.Build.props sets TreatWarningsAsErrors, so this step is the style gate too.
+      - name: 🛠️ Build solution
+        run: dotnet build Huddle.slnx --configuration Release --no-restore
+
+      # The trailing `--` is required: without it this SDK's Microsoft Testing Platform CLI
+      # exits 5 with "Zero tests ran", which reads as a no-op rather than a failure. The two
+      # --filter-not-method lines are the same quarantine ci-pr.yaml carries; the reason lives
+      # in docs/engineering/known-limits.md. Do not add one here without adding it there.
+      - name: 🧪 Run tests
+        run: |
+          dotnet test Huddle.slnx --configuration Release --no-build -- \
+            --filter-not-method "*.PromptAsync_StreamsChunksInOrder_ThenTurnCompleted" \
+            --filter-not-method "*.PromptAsync_ThoughtAndToolCallEvents_ArePublished"
+
+      # Starts the Release build as a real child process, GETs /health over a real socket and
+      # prints PASS/FAIL. Deliberately not an xUnit test: every test in tests/Huddle.Tests hosts
+      # the app in-process, so none of them can fail when the composed app does not boot as a
+      # process. It builds nothing, so it must follow the build step.
+      - name: 🩺 Health endpoint smoke test
+        run: pwsh -NoProfile -NonInteractive -File ./test-health.ps1 -Configuration Release -TimeoutSeconds 120
