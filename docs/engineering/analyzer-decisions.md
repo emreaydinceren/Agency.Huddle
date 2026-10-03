@@ -15,21 +15,15 @@ carry the settings are `Directory.Build.props`, `Directory.Packages.props`, `.ed
 First written 2026-10-03 against SonarAnalyzer.CSharp 10.32.0.713. Update it in the same
 commit as any change to those files.
 
-**Where it stands.** The denylist was 282 entries on `main`. It is now 110:
+**Where it stands.** The denylist was 282 entries on `main`. It is now 33:
 
 | Denied because | Count |
 | --- | --- |
 | The rule fires here and is noise, a false positive, or needs a change outside the chat side | 20 |
-| Technology this repository does not use | 22 |
-| Another rule already covers it | 14 |
-| Kept for a stated reason (reasoning, not a test) | 4 |
 | Tried, did not fire | 4 |
-| Style, naming, design opinion or micro-performance | 37 |
 | Sonar telemetry (`S9999-*`), not code rules | 9 |
 
-The goal is to keep narrowing it; every entry should end up with a reason on this page, not a
-number in a list.
-
+Every other default-on Sonar rule is enabled. The goal is still to narrow the 20 and the 4; every entry should have a reason on this page, not a number in a list.
 ## How a rule gets its severity
 
 | Layer | Where | Effect |
@@ -222,11 +216,37 @@ Each was proven by a deliberate violation that failed the build with its ID.
 | `S927` | An override whose parameter names differ from the base declaration |
 | `S1210` | `IComparable` implemented without `Equals` and the comparison operators |
 
+### The rest of the denylist, cleared in one step
+
+Seventy-seven rules were left on the denylist after review and had zero hits on the whole solution,
+so enabling them changes nothing today and guards new code. Enabling them did not break the build
+and no code changed. They are in five loose groups, judged on their Sonar titles only.
+
+| Group | Rules |
+| --- | --- |
+| Technology this repository does not use | `S6420`, `S6419`, `S6424`, `S6422` (Azure Functions), `S3597`, `S3598` (WCF), `S4210` (WinForms), `S4428`, `S4159`, `S4277` (MEF), `S4200`, `S4211`, `S3925`, `S3927`, `S3926` (legacy serialization), `S3431` (NUnit), `S6670`, `S6675` (the `Trace` API), `S8380`, `S8381`, `S8367`, `S8368` (C# 14 keyword-escape naming) |
+| Overlap with another analyzer (they would report a finding twice, which is moot at zero hits) | `S112` (`CA2201`), `S2629` (`CA2254`), `S3260` (`CA1852`), `S1172` (`IDE0060`), `S3445` (`CA2200`), `S101` (`IDE1006`), `S1155` (`CA1860`), `S1905` (`IDE0004`), `S2223` (`CA2211`), `S2681` (`IDE0011`), `S1699`, `S2306`, `S4220`, `S3903` |
+| Previously kept off for a stated reason that did not survive a measurement | `S4036` (agent adapters are spawned by command name: no hit), `S1607` (conditional `Skip`: no hit), `S6610` (the house `StringComparison.Ordinal` calls do not trip it), `S1075` (fixtures hardcode URIs: no hit) |
+| Style, naming and design | `S1110`, `S1121`, `S1133`, `S1134`, `S1185`, `S1186`, `S1199`, `S1264`, `S1694`, `S1939`, `S2219`, `S2344`, `S3217`, `S3246`, `S3249`, `S3261`, `S3263`, `S3400`, `S3453`, `S3456`, `S3459`, `S3604`, `S3897`, `S3904`, `S3963`, `S3972`, `S3973`, `S4035`, `S4052`, `S4061`, `S4136`, `S4524`, `S4663`, `S6575`, `S6960`, `S6968`, `S818` |
+
+**Proven (43)** by a deliberate violation that failed the build with the rule's ID: `S101`,
+`S112`, `S818`, `S1075`, `S1110`, `S1133`, `S1134`, `S1155`, `S1185`, `S1186`,
+`S1199`, `S1264`, `S1694`, `S1699`, `S1905`, `S1939`, `S2219`, `S2223`, `S2306`,
+`S2344`, `S2681`, `S3246`, `S3249`, `S3260`, `S3261`, `S3263`, `S3400`, `S3445`,
+`S3453`, `S3456`, `S3604`, `S3897`, `S3903`, `S3963`, `S3973`, `S4035`, `S4036`,
+`S4052`, `S4061`, `S4136`, `S4524`, `S4663`, `S6610`.
+
+**Unproven (34).** No probe made them fire, either because the technology is absent from this
+repository (the first group, 22 rules) or because the probe was not what the rule looks for:
+S1121, S1172, S1607, S2629, S3217, S3431, S3459, S3597, S3598, S3904, S3925, S3926, S3927, S3972, S4159, S4200, S4210, S4211, S4220, S4277, S4428, S6419, S6420, S6422, S6424, S6575, S6670, S6675, S6960, S6968, S8367, S8368, S8380, S8381.
+`S1121` (an assignment inside a declaration), `S1172` (an unused private-method parameter),
+`S3217`, `S3459` and `S3972` did not fire on probes built for them. Nobody checked whether the
+probe or the rule is at fault.
 ## Denied
 
 ### Denied: the rule fires here
 
-Twenty rules fire on this codebase and stay denied. Counts are from the baseline above; a rule
+Twenty rules fire on this codebase and stay denied; they are the only denied rules that do. Counts are from the baseline above; a rule
 listed under "Enabled after fixing real hits" is no longer in this table. **Reviewed** means
 someone read the sites and decided; **Noise** means the decision rests on the diagnostic's message
 and its hit count, with the sites not read; **Not enabled** means the rule is not wrong, but a site
@@ -260,38 +280,24 @@ treat "Noise" as "not worth the cost at the time", not as "proven harmless". Sev
 ACP owner (`S125`, `S2094`, `S2365`, `S4144`, `S1450`, `S2743`, `S3376`); two (`S3218`, `S3398`)
 wait on a decision to accept churn.
 
-### Denied after review: zero hits
+### Denied: tried, did not fire
 
-Rules that stayed denied after being read on their Sonar title, in five groups, each its own
-`<NoWarn>` element in `Directory.Build.props` with the reason in a comment above it. They have zero
-hits, so the reason is never "it would break the build"; it is what the rule is.
+| Rule | Title | What was tried |
+| --- | --- | --- |
+| `S2114` | Collections should not be passed as arguments to their own methods | A probe built to trigger it. |
+| `S2328` | `GetHashCode` should not reference mutable fields | A probe built to trigger it. |
+| `S3610` | Nullable type comparison should not be redundant | Five shapes of nullable comparison. |
+| `S4050` | Operators should be overloaded consistently | `+` without `-`, `Equals` without `==`, and `==` without `Equals`. |
 
-| Group | Count | Rules | Why |
-| --- | --- | --- | --- |
-| Technology this repository does not use | 22 | `S6420`, `S6419`, `S6424`, `S6422` (Azure Functions), `S3597`, `S3598` (WCF), `S4210` (WinForms), `S4428`, `S4159`, `S4277` (MEF), `S4200`, `S4211`, `S3925`, `S3927`, `S3926` (legacy serialization), `S3431` (NUnit), `S6670`, `S6675` (the `Trace` API), `S8380`, `S8381`, `S8367`, `S8368` (C# 14 keyword-escape naming) | Nothing here to guard. The C# 14 ones are also reported by the compiler. |
-| Another rule already covers it | 14 | `S112` (`CA2201`), `S2629` (`CA2254`), `S3260` (`CA1852`), `S1172` (`IDE0060`), `S3445` (`CA2200`), `S101` (`IDE1006`), `S1155` (`CA1860`), `S1905` (`IDE0004`), `S2223` (`CA2211`), `S2681` (`IDE0011`), `S1699`, `S2306`, `S4220`, `S3903` | Enabling it would print each finding twice. The mapping is by title, not tested. |
-| Kept for a stated reason | 4 | `S4036`, `S1607`, `S6610`, `S1075` | See below. |
-| Tried, did not fire | 4 | `S2114`, `S2328`, `S3610`, `S4050` | A probe built to trigger each did not (`S3610` was tried on five shapes of nullable comparison; `S4050` on `+` without `-`, `Equals` without `==`, and `==` without `Equals`). Either the probe was wrong or the rule is narrower than its title; nobody checked which, so all three stay denied until someone does. |
-| Style, naming, design opinion or micro-performance | 37 | `S1110`, `S1121`, `S1133`, `S1134`, `S1185`, `S1186`, `S1199`, `S1264`, `S1694`, `S1939`, `S2219`, `S2344`, `S3217`, `S3246`, `S3249`, `S3261`, `S3263`, `S3400`, `S3453`, `S3456`, `S3459`, `S3604`, `S3897`, `S3904`, `S3963`, `S3972`, `S3973`, `S4035`, `S4052`, `S4061`, `S4136`, `S4524`, `S4663`, `S6575`, `S6960`, `S6968`, `S818` | Taste. None guards correctness or security. |
+Either the probe was wrong or the rule is narrower than its title; nobody checked which, so all
+four stay denied until someone does. They have zero hits, so enabling them would cost nothing, but
+a rule known not to fire only gives false cover.
 
-The four **kept for a stated reason** rest on reasoning, not on a test:
+### Denied: Sonar telemetry
 
-- `S4036` (OS commands should not rely on `PATH` resolution): the app spawns agent adapters by
-  command name. Believed deliberate; not checked against the spawn code.
-- `S1607` (tests should not be ignored): conditional `Skip` is used for the live-agent tests, and
-  the CI quarantine may use it too. Not checked whether Sonar flags a conditional skip.
-- `S6610` (use the `char` overload of `StartsWith`): the house rule is
-  `StringComparison.Ordinal`. Whether the two actually conflict was not tested.
-- `S1075` (URIs should not be hardcoded): fixtures hardcode URIs legitimately. Zero hits today,
-  which is mildly surprising; not investigated.
+Nine `S9999-*` entries are Sonar's own bookkeeping diagnostics, not code rules.
 
-Nine `S9999-*` entries are Sonar's own telemetry diagnostics, not code rules, and are denied for
-that reason.
-
-Nothing in these groups is urgent. The "style" group is the only one where a different taste
-would change the answer, and the `S6575` date rule is the one closest to correctness. To clear a
-rule, follow [Changing a rule](#changing-a-rule).
-
+To clear any rule here, follow [Changing a rule](#changing-a-rule).
 ## Non-Sonar settings
 
 | Setting | Where | Decision and reason |
