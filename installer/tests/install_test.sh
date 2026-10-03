@@ -165,6 +165,16 @@ test_main_unreplaced_placeholder_exits_3() {
     t_assert_eq "0" "$rc" "base-url makes the repo irrelevant"
 }
 
+test_release_replacement_keeps_comparison_intact() {
+    placeholder_count=$(grep -o '__HUDDLE_REPO__' "$HERE/../install.sh" | wc -l | tr -d ' ')
+    t_assert_eq "1" "$placeholder_count" "the placeholder literal appears exactly once"
+    replaced="$TEST_HOME/install-replaced.sh"
+    sed "s|__HUDDLE_REPO__|owner/repo|g" "$HERE/../install.sh" >"$replaced"
+    err=$(env -u HUDDLE_REPO HUDDLE_INSTALL_NO_MAIN= "$T_SHELL" "$replaced" --check-only 2>&1 >/dev/null) || true
+    t_assert_not_contains "$err" "does not know which repository" "a released copy knows its repository"
+    rm -f "$replaced"
+}
+
 test_script_run_directly() {
     rc=0
     HUDDLE_INSTALL_NO_MAIN= "$T_SHELL" "$HERE/../install.sh" --bogus >/dev/null 2>&1 || rc=$?
@@ -506,6 +516,7 @@ t_run test_log_step_formats
 t_run test_sourcing_with_guard_runs_nothing
 t_run test_main_returns_zero_for_folder_base
 t_run test_main_unreplaced_placeholder_exits_3
+t_run test_release_replacement_keeps_comparison_intact
 t_run test_script_run_directly
 t_run test_prereq_all_good
 t_run test_prereq_old_macos_fails_with_fix

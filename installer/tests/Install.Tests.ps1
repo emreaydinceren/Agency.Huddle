@@ -751,6 +751,37 @@ Describe 'Test-StepSatisfied' {
     }
 }
 
+Describe 'Release-time repository replacement' {
+    BeforeAll {
+        $rawText = [IO.File]::ReadAllText($ScriptPath)
+        $literal = '__HUDDLE_' + 'REPO__'
+        # Runs a child Windows PowerShell that dot-sources a script with the guard on and resolves one asset.
+        function Get-ResolvedLocation {
+            param([string]$Path)
+            $quoted = $Path.Replace("'", "''")
+            $command = "`$env:HUDDLE_INSTALL_NO_MAIN='1'; Remove-Item Env:HUDDLE_REPO -ErrorAction SilentlyContinue; . '$quoted'; try { 'RESULT:' + (Resolve-AssetSource -Name 'x.zip' -Version 'latest').Location } catch { 'THROWN:' + `$_.Exception.Message }"
+            return (& $Ps51Path -NoProfile -Command $command) -join "`n"
+        }
+    }
+
+    It 'the placeholder literal appears exactly once in the file' {
+        ([regex]::Matches($rawText, [regex]::Escape($literal))).Count | Should -Be 1
+    }
+
+    It 'a copy with the placeholder replaced as the release workflow does resolves latest downloads' -Skip:$script:NoPs51 {
+        $copy = Join-Path $TestDrive 'install-replaced.ps1'
+        [IO.File]::WriteAllText($copy, $rawText.Replace($literal, 'owner/repo'), [Text.Encoding]::ASCII)
+        $output = Get-ResolvedLocation -Path $copy
+        $output | Should -Match 'RESULT:https://github.com/owner/repo/releases/latest/download/x.zip'
+        $output | Should -Not -Match 'THROWN'
+    }
+
+    It 'the unreplaced original still refuses to run without a base URL or repository' -Skip:$script:NoPs51 {
+        $output = Get-ResolvedLocation -Path $ScriptPath
+        $output | Should -Match 'THROWN:.*release'
+    }
+}
+
 Describe 'Running as a file or through iex' {
     BeforeAll {
         $installerDir = Split-Path -Parent $ScriptPath
@@ -778,6 +809,26 @@ Describe 'Running as a file or through iex' {
         $output = (& $Ps51Path -NoProfile -Command $command) -join "`n"
         $output | Should -Match 'EAP:Continue'
         $output | Should -Match 'STRICT:OK'
+    }
+
+    It 'under iex leaves no huddleExitCode variable behind in the session' -Skip:$script:NoPs51 {
+        $quotedDir = $installerDir.Replace("'", "''")
+        $quotedScript = $ScriptPath.Replace("'", "''")
+        $command = "Remove-Item Env:HUDDLE_INSTALL_NO_MAIN -ErrorAction SilentlyContinue; `$env:HUDDLE_CHECK_ONLY='1'; `$env:HUDDLE_BASE_URL='$quotedDir'; iex ([IO.File]::ReadAllText('$quotedScript')) | Out-Null; 'LEAK:' + [bool](Get-Variable huddleExitCode -ErrorAction SilentlyContinue)"
+        $output = (& $Ps51Path -NoProfile -Command $command) -join "`n"
+        $output | Should -Match 'LEAK:False'
+    }
+
+    It 'under iex adds no variable to the session apart from LASTEXITCODE (script-scope names do not persist)' -Skip:$script:NoPs51 {
+        $quotedDir = $installerDir.Replace("'", "''")
+        $quotedScript = $ScriptPath.Replace("'", "''")
+        $command = "Remove-Item Env:HUDDLE_INSTALL_NO_MAIN -ErrorAction SilentlyContinue; `$env:HUDDLE_CHECK_ONLY='1'; `$env:HUDDLE_BASE_URL='$quotedDir'; `$before = @(Get-Variable | ForEach-Object Name); iex ([IO.File]::ReadAllText('$quotedScript')) | Out-Null; 'ADDED:' + ((@(Get-Variable | ForEach-Object Name) | Where-Object { `$before -notcontains `$_ } | Sort-Object) -join ',')"
+        $output = (& $Ps51Path -NoProfile -Command $command) -join "`n"
+        $output | Should -Match 'ADDED:'
+        $added = (($output -split "`n" | Where-Object { $_ -like 'ADDED:*' } | Select-Object -First 1) -replace '^ADDED:', '').Trim()
+        $allowed = @('before', 'LASTEXITCODE')
+        $unexpected = @($added -split ',' | Where-Object { $_ -and ($allowed -notcontains $_) })
+        $unexpected | Should -BeNullOrEmpty
     }
 
     It 'as a file in Windows PowerShell 5.1 -CheckOnly exits 0' -Skip:$script:NoPs51 {

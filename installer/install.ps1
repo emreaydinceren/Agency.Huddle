@@ -24,7 +24,8 @@ param(
 # irm | iex this top level runs in the user's own session and must not change it.
 
 $script:HuddleRepo = if ($env:HUDDLE_REPO) { $env:HUDDLE_REPO } else { '__HUDDLE_REPO__' }
-$script:RepoPlaceholder = '__HUDDLE_REPO__'
+# Built from two parts so the release-time replacement of the literal above cannot rewrite it.
+$script:RepoPlaceholder = '__HUDDLE_' + 'REPO__'
 
 $script:ExitCodes = @{
     Success            = 0
@@ -760,11 +761,14 @@ function Invoke-Main {
 }
 
 if (-not $env:HUDDLE_INSTALL_NO_MAIN) {
-    $huddleExitCode = Invoke-Main @PSBoundParameters
     # Under iex (irm | iex) or as a scriptblock, exit would close the user's PowerShell window.
+    # No top-level variable is created here: under iex it would persist in the user's session.
     if ($PSCommandPath) {
-        exit $huddleExitCode
+        exit (Invoke-Main @PSBoundParameters)
     }
 
-    $global:LASTEXITCODE = $huddleExitCode
+    $global:LASTEXITCODE = Invoke-Main @PSBoundParameters
+
+    # At the prompt, $script: is the global scope, so the constants above would stay in the user's session.
+    Remove-Variable -Name HuddleRepo, RepoPlaceholder, ExitCodes, MinWindowsBuild, MinFreeMb, NetworkHosts, StateKeys -Scope Script -ErrorAction SilentlyContinue
 }
