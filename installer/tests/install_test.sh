@@ -1838,6 +1838,132 @@ test_install_adapter_uses_local_variables() {
     done
 }
 
+test_shell_quote_empty_string() {
+    result=$(shell_quote "")
+    t_assert_eq "''" "$result" "empty string"
+}
+
+test_shell_quote_no_special_chars() {
+    result=$(shell_quote "hello")
+    t_assert_eq "'hello'" "$result" "no special chars"
+}
+
+test_shell_quote_single_quote() {
+    result=$(shell_quote "it's")
+    t_assert_eq "'it'\"'\"'s'" "$result" "single quote escaped"
+}
+
+test_shell_quote_multiple_quotes() {
+    result=$(shell_quote "it's a'test")
+    expected="'it'\"'\"'s a'\"'\"'test'"
+    t_assert_eq "$expected" "$result" "multiple quotes"
+}
+
+test_shell_quote_space_and_quote() {
+    result=$(shell_quote "/path with space/and'quote")
+    expected="'/path with space/and'\"'\"'quote'"
+    t_assert_eq "$expected" "$result" "space and quote"
+}
+
+test_launcher_content_basic() {
+    parse_args
+    resolve_paths
+    output=$(launcher_content)
+    t_assert_contains "$output" "#!/bin/sh" "shebang"
+    t_assert_contains "$output" "set -eu" "set -eu"
+    t_assert_contains "$output" "export Team__Desktop__Enabled=true" "Desktop enabled"
+    t_assert_contains "$output" "export Team__Acp__Enabled=true" "ACP enabled"
+    t_assert_contains "$output" "export Team__PipeName=\"huddle-\$(id -un)\"" "PipeName with literal $(id -un)"
+    t_assert_not_contains "$output" "$(printf '\r')" "no CR characters"
+}
+
+test_launcher_content_with_space_in_paths() {
+    parse_args --install-root "$TEST_HOME/my app" --data-root "$TEST_HOME/data root"
+    resolve_paths
+    output=$(launcher_content)
+    expected_data_dir="'$TEST_HOME/data root/data'"
+    expected_app_exe="'$TEST_HOME/my app/app/Huddle.App'"
+    t_assert_contains "$output" "export Team__DataDir=$expected_data_dir" "DataDir quoted with space"
+    t_assert_contains "$output" "exec $expected_app_exe \"\$@\"" "APP_EXE quoted with space"
+}
+
+test_launcher_content_with_quote_in_path() {
+    parse_args --install-root "$TEST_HOME/app'test" --data-root "$TEST_HOME/data'root"
+    resolve_paths
+    output=$(launcher_content)
+    t_assert_not_contains "$output" "$(printf '\r')" "no CR in quoted paths"
+}
+
+test_app_stub_content_basic() {
+    parse_args
+    resolve_paths
+    output=$(app_stub_content)
+    first_line=$(printf '%s\n' "$output" | head -1)
+    t_assert_eq "#!/bin/sh" "$first_line" "shebang"
+    t_assert_contains "$output" "exec '$INSTALL_ROOT/bin/huddle'" "huddle launcher path"
+    t_assert_contains "$output" ">>" "append to log"
+    t_assert_contains "$output" "$DATA_ROOT/launcher.log" "log path"
+    t_assert_not_contains "$output" "$(printf '\r')" "no CR characters"
+}
+
+test_app_stub_content_with_space_and_quote() {
+    parse_args --install-root "$TEST_HOME/app'dir with space" --data-root "$TEST_HOME/data'dir"
+    resolve_paths
+    output=$(app_stub_content)
+    t_assert_not_contains "$output" "$(printf '\r')" "no CR in paths with space and quote"
+}
+
+test_plist_content_basic() {
+    version="1.2.3"
+    output=$(plist_content "$version")
+    t_assert_contains "$output" "<?xml" "XML header"
+    t_assert_contains "$output" "<plist version=\"1.0\">" "plist element"
+    t_assert_contains "$output" "<dict>" "dict element"
+    t_assert_contains "$output" "<key>CFBundleExecutable</key>" "CFBundleExecutable key"
+    t_assert_contains "$output" "<string>AgencyHuddle</string>" "CFBundleExecutable value"
+    t_assert_contains "$output" "<key>CFBundleIdentifier</key>" "CFBundleIdentifier key"
+    t_assert_contains "$output" "<string>com.agency.huddle</string>" "CFBundleIdentifier value"
+    t_assert_contains "$output" "<key>CFBundleName</key>" "CFBundleName key"
+    t_assert_contains "$output" "<string>Agency Huddle</string>" "CFBundleName value"
+    t_assert_contains "$output" "<key>CFBundlePackageType</key>" "CFBundlePackageType key"
+    t_assert_contains "$output" "<string>APPL</string>" "CFBundlePackageType value"
+    t_assert_contains "$output" "<key>CFBundleVersion</key>" "CFBundleVersion key"
+    t_assert_contains "$output" "<string>1.2.3</string>" "CFBundleVersion value"
+    t_assert_contains "$output" "<key>LSUIElement</key>" "LSUIElement key"
+    t_assert_contains "$output" "<true/>" "LSUIElement value"
+}
+
+test_plist_content_escapes_xml_special_chars() {
+    version="1.2.3-beta&special<chars>here"
+    output=$(plist_content "$version")
+    t_assert_contains "$output" "1.2.3-beta&amp;special&lt;chars&gt;here" "XML escape"
+    t_assert_not_contains "$output" "<1.2.3" "< is escaped"
+    t_assert_not_contains "$output" ">here" "> is escaped"
+}
+
+test_launcher_content_lines_exact_order() {
+    parse_args
+    resolve_paths
+    output=$(launcher_content)
+    lines=$(printf '%s' "$output" | tr '\n' '|')
+    t_assert_contains "$lines" "#!/bin/sh|set -eu|export Team__Desktop__Enabled=true|export Team__Acp__Enabled=true" "first four lines in order"
+    t_assert_not_contains "$output" "$(printf '\r')" "no carriage returns"
+}
+
+t_run test_shell_quote_empty_string
+t_run test_shell_quote_no_special_chars
+t_run test_shell_quote_single_quote
+t_run test_shell_quote_multiple_quotes
+t_run test_shell_quote_space_and_quote
+t_run test_launcher_content_basic
+t_run test_launcher_content_with_space_in_paths
+t_run test_launcher_content_with_quote_in_path
+t_run test_app_stub_content_basic
+t_run test_app_stub_content_with_space_and_quote
+t_run test_plist_content_basic
+t_run test_plist_content_escapes_xml_special_chars
+t_run test_launcher_content_lines_exact_order
+
 t_run test_t_run_honours_t_only_and_prints_run_lines_only_for_failures
 t_run test_install_adapter_runs_npm_ci_when_nothing_is_installed
 t_run test_install_adapter_is_skipped_when_the_lock_hash_matches_and_the_entry_exists

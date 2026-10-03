@@ -993,6 +993,65 @@ install_adapter() {
     return 0
 }
 
+# Quotes a string for use in shell: wraps it in single quotes, escaping ' as '"'"'
+shell_quote() {
+    local str="$1"
+    # Replace each single quote with '"'"' (close quote, double-quoted quote, open quote)
+    # This is equivalent to '\'' but using double quotes
+    printf '%s\n' "$str" | sed "s/'/'\"'\"'/g" | sed -e 's/^/'"'"'/' -e "s/$/'/"
+}
+
+# Generates the launcher shell script. Uses APP_EXE, NODE_BIN, DATA_ROOT, INSTALL_ROOT.
+launcher_content() {
+    local node_dir
+    node_dir=$(dirname "$NODE_BIN")
+
+    printf '%s\n' "#!/bin/sh"
+    printf '%s\n' "set -eu"
+    printf '%s\n' "export Team__Desktop__Enabled=true"
+    printf '%s\n' "export Team__Acp__Enabled=true"
+    printf "export Team__Acp__Command=%s\n" "$(shell_quote "$NODE_BIN")"
+    printf "export Team__DataDir=%s\n" "$(shell_quote "$DATA_ROOT/data")"
+    printf '%s\n' "export Team__PipeName=\"huddle-\$(id -un)\""
+    printf '%s\n' "export ASPNETCORE_URLS='http://127.0.0.1:0'"
+    printf '%s\n' "export ASPNETCORE_ENVIRONMENT=Production"
+    printf '%s\n' "export AllowedHosts='localhost;127.0.0.1'"
+    printf "export PATH=%s:\"\$PATH\"\n" "$(shell_quote "$node_dir")"
+    printf "exec %s \"\$@\"\n" "$(shell_quote "$APP_EXE")"
+}
+
+# Generates the app stub script for macOS .app bundle. Uses INSTALL_ROOT, DATA_ROOT.
+app_stub_content() {
+    printf '%s\n' "#!/bin/sh"
+    printf "exec %s \"\$@\" >>%s 2>&1\n" "$(shell_quote "$INSTALL_ROOT/bin/huddle")" "$(shell_quote "$DATA_ROOT/launcher.log")"
+}
+
+# Generates the Info.plist XML for macOS .app bundle. Takes VERSION as argument.
+plist_content() {
+    local version="$1"
+    local version_escaped
+    version_escaped=$(printf '%s' "$version" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+
+    printf '%s\n' "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
+    printf '%s\n' "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">"
+    printf '%s\n' "<plist version=\"1.0\">"
+    printf '%s\n' "<dict>"
+    printf '%s\n' "	<key>CFBundleExecutable</key>"
+    printf '%s\n' "	<string>AgencyHuddle</string>"
+    printf '%s\n' "	<key>CFBundleIdentifier</key>"
+    printf '%s\n' "	<string>com.agency.huddle</string>"
+    printf '%s\n' "	<key>CFBundleName</key>"
+    printf '%s\n' "	<string>Agency Huddle</string>"
+    printf '%s\n' "	<key>CFBundlePackageType</key>"
+    printf '%s\n' "	<string>APPL</string>"
+    printf '%s\n' "	<key>CFBundleVersion</key>"
+    printf "%s\n" "	<string>$version_escaped</string>"
+    printf '%s\n' "	<key>LSUIElement</key>"
+    printf '%s\n' "	<true/>"
+    printf '%s\n' "</dict>"
+    printf '%s' "</plist>"
+}
+
 main() {
     parse_args "$@"
     if [ -z "$OPT_BASE_URL" ] && [ "$HUDDLE_REPO" = "$HUDDLE_REPO_PLACEHOLDER" ]; then
