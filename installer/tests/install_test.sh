@@ -497,6 +497,350 @@ test_env_check_only_reaches_main() {
     t_assert_contains "$out" "[ok] macOS version" "env check-only prints the table"
 }
 
+# ---- Verified downloads (tasks 30): file_sha256, parse_sums, expected_hash, get_verified_asset ----
+
+HELLO_SHA=5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03
+A_SHA=$(printf '%064d' 0 | tr 0 a)
+B_SHA=$(printf '%064d' 0 | tr 0 b)
+ZERO_SHA=$(printf '%064d' 0)
+TAMPERED_SHA=92e78d0b032962f47792a9fa95fd981ef63e1e3ef074d536d6304c75eddbe29f
+
+# Fresh scratch folder for one download test. The cache path has a space in it on purpose (the
+# real one lives under "Application Support"). Resets the seam logs and the fake's behaviour.
+dl_setup() {
+    DL=$(mktemp -d "$TEST_HOME/dl.XXXXXX")
+    CACHE="$DL/Cache Dir/sub"
+    HG_LOG="$DL/http.log"
+    SLEEP_LOG="$DL/sleep.log"
+    HG_FAIL_FIRST=0
+    HG_BODY=good
+    : >"$HG_LOG"
+    : >"$SLEEP_LOG"
+}
+
+# Fake http_get: records "URL|OUTFILE" per call; the first HG_FAIL_FIRST calls leave junk in the
+# output file and fail; later calls write "hello\n" (or "tampered\n" when HG_BODY=tampered).
+# Counters live in files because get_verified_asset is usually called inside $( ).
+http_get() {
+    printf '%s|%s\n' "$1" "$2" >>"$HG_LOG"
+    hg_n=$(wc -l <"$HG_LOG" | tr -d ' ')
+    if [ "$hg_n" -le "$HG_FAIL_FIRST" ]; then
+        printf 'junk' >"$2"
+        return 22
+    fi
+    if [ "$HG_BODY" = tampered ]; then
+        printf 'tampered\n' >"$2"
+    else
+        printf 'hello\n' >"$2"
+    fi
+}
+
+# Fake sleep seam: records the requested seconds instead of waiting.
+sleep_seconds() {
+    printf '%s\n' "$1" >>"$SLEEP_LOG"
+}
+
+dl_calls() {
+    wc -l <"$HG_LOG" | tr -d ' '
+}
+
+test_file_sha256_known_vector() {
+    dl_setup
+    printf 'hello\n' >"$DL/f x"
+    t_assert_eq "$HELLO_SHA" "$(file_sha256 "$DL/f x")" "sha256 of a known file (path has a space)"
+    rc=0
+    out=$(file_sha256 "$DL/missing" 2>&1) || rc=$?
+    t_assert_eq "1" "$rc" "missing file returns 1"
+    t_assert_contains "$out" "$DL/missing" "missing file message names the path"
+}
+
+test_file_sha256_falls_back_to_shasum() {
+    dl_setup
+    printf 'hello\n' >"$DL/f"
+    stubs=$(make_stub_dir)
+    printf '#!/bin/sh\nprintf "%%s\\n" "$*" >"%s/shasum.args"\nprintf "%s  -\\n"\n' "$DL" "$HELLO_SHA" >"$stubs/shasum"
+    chmod +x "$stubs/shasum"
+    out=$( (PATH="$stubs"; file_sha256 "$DL/f") 2>&1 )
+    t_assert_eq "$HELLO_SHA" "$out" "hash comes from shasum when sha256sum is absent"
+    t_assert_eq "-a 256" "$(cat "$DL/shasum.args")" "shasum is asked for SHA-256"
+}
+
+test_file_sha256_without_tool_fails_with_message() {
+    dl_setup
+    printf 'hello\n' >"$DL/f"
+    stubs=$(make_stub_dir)
+    rc=0
+    out=$( (PATH="$stubs"; file_sha256 "$DL/f") 2>&1 ) || rc=$?
+    t_assert_eq "1" "$rc" "no hash tool returns 1"
+    t_assert_contains "$out" "sha256sum or shasum" "no hash tool message"
+}
+
+# Writes a SHA256SUMS fixture. $1 is the line ending ("\n" or "\r\n").
+write_sums() {
+    printf '%s  huddle-osx-arm64.tar.gz%b' "$A_SHA" "$2" >"$1"
+    printf '%s  huddle-osx-x64.tar.gz%b' "$(printf '%064d' 0 | tr 0 B)" "$2" >>"$1"
+    printf '%s *install.sh%b' "$B_SHA" "$2" >>"$1"
+    printf '%b' "$2" >>"$1"
+    printf 'this is not a hash line%b' "$2" >>"$1"
+    printf 'abc123  short.txt%b' "$2" >>"$1"
+    printf '%s  my file.txt%b' "$A_SHA" "$2" >>"$1"
+}
+
+test_parse_sums_and_expected_hash() {
+    dl_setup
+    write_sums "$DL/SHA256SUMS" '\n'
+    parse_sums "$DL/SHA256SUMS"
+    t_assert_eq "$A_SHA" "$(expected_hash huddle-osx-arm64.tar.gz)" "plain line"
+    t_assert_eq "$B_SHA" "$(expected_hash huddle-osx-x64.tar.gz)" "upper-case hash is lower-cased"
+    t_assert_eq "$B_SHA" "$(expected_hash install.sh)" "binary-mode star prefix is dropped"
+    t_assert_eq "$A_SHA" "$(expected_hash "my file.txt")" "a name with a space"
+    rc=0
+    expected_hash short.txt >/dev/null 2>&1 || rc=$?
+    t_assert_eq "1" "$rc" "a short hash is not a sums line"
+}
+
+test_parse_sums_tolerates_crlf() {
+    dl_setup
+    write_sums "$DL/SHA256SUMS" '\r\n'
+    parse_sums "$DL/SHA256SUMS"
+    t_assert_eq "$A_SHA" "$(expected_hash huddle-osx-arm64.tar.gz)" "CRLF file: first line"
+    t_assert_eq "$A_SHA" "$(expected_hash "my file.txt")" "CRLF file: last line, no stray CR in the name"
+    t_assert_eq "$B_SHA" "$(expected_hash install.sh)" "CRLF file: star line"
+}
+
+test_parse_sums_handles_missing_final_newline() {
+    dl_setup
+    printf '%s  a.zip\n%s  b.zip' "$A_SHA" "$B_SHA" >"$DL/SHA256SUMS"
+    parse_sums "$DL/SHA256SUMS"
+    t_assert_eq "$B_SHA" "$(expected_hash b.zip)" "last line without a newline is read"
+}
+
+test_expected_hash_unlisted_fails_with_message() {
+    dl_setup
+    write_sums "$DL/SHA256SUMS" '\n'
+    parse_sums "$DL/SHA256SUMS"
+    rc=0
+    out=$(expected_hash huddle-win-x64.zip 2>"$DL/err") || rc=$?
+    t_assert_eq "1" "$rc" "unlisted name returns 1"
+    t_assert_eq "" "$out" "nothing on stdout"
+    t_assert_contains "$(cat "$DL/err")" "'huddle-win-x64.zip' is not listed in SHA256SUMS" "message"
+    SUMS=""
+    rc=0
+    expected_hash huddle-osx-arm64.tar.gz >/dev/null 2>&1 || rc=$?
+    t_assert_eq "1" "$rc" "before parse_sums nothing is listed"
+}
+
+test_parse_sums_missing_file_fails_and_clears() {
+    dl_setup
+    write_sums "$DL/SHA256SUMS" '\n'
+    parse_sums "$DL/SHA256SUMS"
+    rc=0
+    parse_sums "$DL/nope" 2>"$DL/err" || rc=$?
+    t_assert_eq "1" "$rc" "missing sums file returns 1"
+    t_assert_contains "$(cat "$DL/err")" "SHA256SUMS" "message names SHA256SUMS"
+    rc=0
+    expected_hash huddle-osx-arm64.tar.gz >/dev/null 2>&1 || rc=$?
+    t_assert_eq "1" "$rc" "the previous table is cleared"
+}
+
+test_get_verified_asset_downloads_and_verifies() {
+    dl_setup
+    rc=0
+    out=$(get_verified_asset asset.tar.gz "$HELLO_SHA" "url:https://example.test/asset.tar.gz" "$CACHE" 2>"$DL/err") || rc=$?
+    t_assert_eq "0" "$rc" "exit code"
+    t_assert_eq "$CACHE/asset.tar.gz" "$out" "prints the cache path on stdout"
+    t_assert_file "$CACHE/asset.tar.gz" "file in the cache"
+    t_assert_eq "hello" "$(cat "$CACHE/asset.tar.gz")" "content"
+    t_assert_no_file "$CACHE/asset.tar.gz.partial" "no partial left"
+    t_assert_eq "1" "$(dl_calls)" "one download"
+    t_assert_eq "https://example.test/asset.tar.gz|$CACHE/asset.tar.gz.partial" "$(cat "$HG_LOG")" "downloaded to NAME.partial"
+    t_assert_eq "" "$(cat "$SLEEP_LOG")" "no backoff on success"
+}
+
+test_get_verified_asset_accepts_upper_case_expected_hash() {
+    dl_setup
+    upper=$(printf '%s' "$HELLO_SHA" | tr 'a-f' 'A-F')
+    rc=0
+    out=$(get_verified_asset asset.bin "$upper" "url:https://example.test/asset.bin" "$CACHE" 2>/dev/null) || rc=$?
+    t_assert_eq "0" "$rc" "upper-case expected hash"
+    t_assert_eq "$CACHE/asset.bin" "$out" "path"
+}
+
+test_get_verified_asset_mismatch_deletes_and_reports_both_hashes() {
+    dl_setup
+    HG_BODY=tampered
+    rc=0
+    out=$(get_verified_asset asset.tar.gz "$HELLO_SHA" "url:https://example.test/asset.tar.gz" "$CACHE" 2>"$DL/err") || rc=$?
+    t_assert_eq "1" "$rc" "mismatch returns 1"
+    t_assert_eq "" "$out" "nothing on stdout"
+    t_assert_no_file "$CACHE/asset.tar.gz" "bad file is not kept"
+    t_assert_no_file "$CACHE/asset.tar.gz.partial" "bad partial is deleted"
+    err=$(cat "$DL/err")
+    t_assert_contains "$err" "$HELLO_SHA" "message has the expected hash"
+    t_assert_contains "$err" "$TAMPERED_SHA" "message has the actual hash"
+    t_assert_contains "$err" "asset.tar.gz" "message names the asset"
+}
+
+test_get_verified_asset_cached_with_right_hash_skips_download() {
+    dl_setup
+    mkdir -p "$CACHE"
+    printf 'hello\n' >"$CACHE/asset.tar.gz"
+    rc=0
+    out=$(get_verified_asset asset.tar.gz "$HELLO_SHA" "url:https://example.test/asset.tar.gz" "$CACHE" 2>/dev/null) || rc=$?
+    t_assert_eq "0" "$rc" "exit code"
+    t_assert_eq "$CACHE/asset.tar.gz" "$out" "path"
+    t_assert_eq "0" "$(dl_calls)" "http_get was not called"
+}
+
+test_get_verified_asset_cached_with_wrong_hash_is_redownloaded() {
+    dl_setup
+    mkdir -p "$CACHE"
+    printf 'stale corrupt bytes\n' >"$CACHE/asset.tar.gz"
+    rc=0
+    out=$(get_verified_asset asset.tar.gz "$HELLO_SHA" "url:https://example.test/asset.tar.gz" "$CACHE" 2>/dev/null) || rc=$?
+    t_assert_eq "0" "$rc" "exit code"
+    t_assert_eq "1" "$(dl_calls)" "one download"
+    t_assert_eq "hello" "$(cat "$CACHE/asset.tar.gz")" "stale file replaced"
+}
+
+test_get_verified_asset_retries_with_backoff() {
+    dl_setup
+    HG_FAIL_FIRST=2
+    rc=0
+    out=$(get_verified_asset asset.tar.gz "$HELLO_SHA" "url:https://example.test/asset.tar.gz" "$CACHE" 2>/dev/null) || rc=$?
+    t_assert_eq "0" "$rc" "third attempt succeeds"
+    t_assert_eq "3" "$(dl_calls)" "three http_get calls"
+    t_assert_eq "1${NL}3" "$(cat "$SLEEP_LOG")" "waits 1 s then 3 s"
+    t_assert_eq "hello" "$(cat "$CACHE/asset.tar.gz")" "content from the good attempt"
+    t_assert_no_file "$CACHE/asset.tar.gz.partial" "no partial left"
+}
+
+test_get_verified_asset_three_failures_fail() {
+    dl_setup
+    HG_FAIL_FIRST=3
+    rc=0
+    out=$(get_verified_asset asset.tar.gz "$HELLO_SHA" "url:https://example.test/asset.tar.gz" "$CACHE" 2>"$DL/err") || rc=$?
+    t_assert_eq "1" "$rc" "returns 1"
+    t_assert_eq "" "$out" "nothing on stdout"
+    t_assert_eq "3" "$(dl_calls)" "exactly three attempts"
+    t_assert_eq "1${NL}3" "$(cat "$SLEEP_LOG")" "no wait after the last attempt"
+    t_assert_no_file "$CACHE/asset.tar.gz" "no final file"
+    t_assert_no_file "$CACHE/asset.tar.gz.partial" "junk partial is deleted"
+    t_assert_contains "$(cat "$DL/err")" "asset.tar.gz" "message names the asset"
+    t_assert_contains "$(cat "$DL/err")" "3 attempt" "message says how many attempts"
+}
+
+test_get_verified_asset_file_source_is_copied() {
+    dl_setup
+    mkdir -p "$DL/release dir"
+    printf 'hello\n' >"$DL/release dir/asset.tar.gz"
+    rc=0
+    out=$(get_verified_asset asset.tar.gz "$HELLO_SHA" "file:$DL/release dir/asset.tar.gz" "$CACHE" 2>/dev/null) || rc=$?
+    t_assert_eq "0" "$rc" "exit code"
+    t_assert_eq "$CACHE/asset.tar.gz" "$out" "path"
+    t_assert_eq "hello" "$(cat "$CACHE/asset.tar.gz")" "copied"
+    t_assert_file "$DL/release dir/asset.tar.gz" "the source stays in place"
+    t_assert_eq "0" "$(dl_calls)" "no download for a file source"
+    t_assert_no_file "$CACHE/asset.tar.gz.partial" "no partial left"
+}
+
+test_get_verified_asset_file_source_wrong_hash_fails_once() {
+    dl_setup
+    printf 'tampered\n' >"$DL/asset.tar.gz"
+    rc=0
+    out=$(get_verified_asset asset.tar.gz "$HELLO_SHA" "file:$DL/asset.tar.gz" "$CACHE" 2>"$DL/err") || rc=$?
+    t_assert_eq "1" "$rc" "returns 1"
+    t_assert_no_file "$CACHE/asset.tar.gz" "bad copy deleted"
+    t_assert_no_file "$CACHE/asset.tar.gz.partial" "bad partial deleted"
+    t_assert_file "$DL/asset.tar.gz" "the source file is never deleted"
+    t_assert_eq "" "$(cat "$SLEEP_LOG")" "a file source is tried once, no backoff"
+    t_assert_contains "$(cat "$DL/err")" "$HELLO_SHA" "expected hash in message"
+    t_assert_contains "$(cat "$DL/err")" "$TAMPERED_SHA" "actual hash in message"
+    t_assert_contains "$(cat "$DL/err")" "1 attempt" "one attempt"
+}
+
+test_get_verified_asset_missing_file_source_fails() {
+    dl_setup
+    rc=0
+    out=$(get_verified_asset asset.tar.gz "$HELLO_SHA" "file:$DL/nope" "$CACHE" 2>"$DL/err") || rc=$?
+    t_assert_eq "1" "$rc" "returns 1"
+    t_assert_contains "$(cat "$DL/err")" "asset.tar.gz" "message names the asset"
+    t_assert_no_file "$CACHE/asset.tar.gz.partial" "no partial left"
+}
+
+test_get_verified_asset_unknown_source_kind_fails() {
+    dl_setup
+    rc=0
+    out=$(get_verified_asset asset.tar.gz "$HELLO_SHA" "ftp:example" "$CACHE" 2>"$DL/err") || rc=$?
+    t_assert_eq "1" "$rc" "returns 1"
+    t_assert_contains "$(cat "$DL/err")" "ftp:example" "message names the source"
+    t_assert_eq "0" "$(dl_calls)" "nothing downloaded"
+}
+
+test_get_verified_asset_takes_resolve_asset_output() {
+    dl_setup
+    mkdir -p "$DL/rel"
+    printf 'hello\n' >"$DL/rel/asset.tar.gz"
+    parse_args --base-url "$DL/rel"
+    resolve_asset asset.tar.gz
+    rc=0
+    out=$(get_verified_asset asset.tar.gz "$HELLO_SHA" "$ASSET_KIND:$ASSET_SRC" "$CACHE" 2>/dev/null) || rc=$?
+    t_assert_eq "0" "$rc" "ASSET_KIND:ASSET_SRC is a valid SOURCE"
+    t_assert_eq "$CACHE/asset.tar.gz" "$out" "path"
+}
+
+# The real seams run in a child shell that re-sources install.sh, so the fakes above do not apply.
+test_http_get_runs_curl_with_fixed_flags() {
+    dl_setup
+    shell_path=$(command -v "$T_SHELL")
+    stubs=$(make_stub_dir)
+    printf '#!/bin/sh\nprintf "%%s\\n" "$@" >"%s/curl.args"\n' "$DL" >"$stubs/curl"
+    chmod +x "$stubs/curl"
+    rc=0
+    PATH="$stubs" HUDDLE_INSTALL_NO_MAIN=1 "$shell_path" -c '. "$1"; http_get https://example.test/a "$2"' sh "$HERE/../install.sh" "$DL/out" </dev/null >/dev/null 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "http_get succeeds when curl does"
+    t_assert_eq "-fsSL${NL}--retry${NL}0${NL}-o${NL}$DL/out${NL}https://example.test/a" "$(cat "$DL/curl.args")" "curl arguments"
+}
+
+test_sleep_seconds_runs_sleep() {
+    dl_setup
+    shell_path=$(command -v "$T_SHELL")
+    stubs=$(make_stub_dir)
+    printf '#!/bin/sh\nprintf "%%s\\n" "$1" >"%s/sleep.arg"\n' "$DL" >"$stubs/sleep"
+    chmod +x "$stubs/sleep"
+    PATH="$stubs" HUDDLE_INSTALL_NO_MAIN=1 "$shell_path" -c '. "$1"; sleep_seconds 3' sh "$HERE/../install.sh" </dev/null >/dev/null 2>&1 || true
+    t_assert_eq "3" "$(cat "$DL/sleep.arg")" "sleep_seconds passes the seconds to sleep"
+}
+
+test_download_functions_leave_the_script_with_one_placeholder() {
+    count=$(grep -o '__HUDDLE_REPO__' "$HERE/../install.sh" | wc -l | tr -d ' ')
+    t_assert_eq "1" "$count" "placeholder still appears exactly once"
+}
+
+t_run test_file_sha256_known_vector
+t_run test_file_sha256_falls_back_to_shasum
+t_run test_file_sha256_without_tool_fails_with_message
+t_run test_parse_sums_and_expected_hash
+t_run test_parse_sums_tolerates_crlf
+t_run test_parse_sums_handles_missing_final_newline
+t_run test_expected_hash_unlisted_fails_with_message
+t_run test_parse_sums_missing_file_fails_and_clears
+t_run test_get_verified_asset_downloads_and_verifies
+t_run test_get_verified_asset_accepts_upper_case_expected_hash
+t_run test_get_verified_asset_mismatch_deletes_and_reports_both_hashes
+t_run test_get_verified_asset_cached_with_right_hash_skips_download
+t_run test_get_verified_asset_cached_with_wrong_hash_is_redownloaded
+t_run test_get_verified_asset_retries_with_backoff
+t_run test_get_verified_asset_three_failures_fail
+t_run test_get_verified_asset_file_source_is_copied
+t_run test_get_verified_asset_file_source_wrong_hash_fails_once
+t_run test_get_verified_asset_missing_file_source_fails
+t_run test_get_verified_asset_unknown_source_kind_fails
+t_run test_get_verified_asset_takes_resolve_asset_output
+t_run test_http_get_runs_curl_with_fixed_flags
+t_run test_sleep_seconds_runs_sleep
+t_run test_download_functions_leave_the_script_with_one_placeholder
+
 t_run test_env_used_when_flag_absent
 t_run test_env_flag_beats_env
 t_run test_env_zero_and_empty_are_off

@@ -323,6 +323,178 @@ $PREREQ_RESULTS
 EOF
 }
 
+# ---- Verified downloads (Spec sections 2 and 6) ----------------------------------------------
+# Library functions here never exit; they print a message on stderr and return 1.
+
+# Seam: downloads the URL in $1 to the file in $2. No retry of its own (get_verified_asset owns
+# the retry policy). stdin is closed so nothing can ever read the piped script.
+http_get() {
+    curl -fsSL --retry 0 -o "$2" "$1" </dev/null
+}
+
+# Seam: waits $1 seconds (a seam so tests do not wait).
+sleep_seconds() {
+    sleep "$1" </dev/null
+}
+
+# Prints the lower-case SHA-256 of the file in $1 (sha256sum, else shasum -a 256). Returns 1 with
+# a message when the file cannot be read or no hash tool exists.
+file_sha256() {
+    local hash_out
+    if [ ! -f "$1" ]; then
+        printf 'install.sh: cannot read %s to hash it\n' "$1" >&2
+        return 1
+    fi
+    if command -v sha256sum >/dev/null 2>&1; then
+        hash_out=$(sha256sum <"$1") || hash_out=""
+    elif command -v shasum >/dev/null 2>&1; then
+        hash_out=$(shasum -a 256 <"$1") || hash_out=""
+    else
+        printf 'install.sh: no hash tool found (sha256sum or shasum is required)\n' >&2
+        return 1
+    fi
+    hash_out=${hash_out%% *}
+    if [ -z "$hash_out" ]; then
+        printf 'install.sh: could not compute the SHA-256 of %s\n' "$1" >&2
+        return 1
+    fi
+    printf '%s\n' "$hash_out"
+}
+
+# Loads the SHA256SUMS file in $1 into SUMS (lines of "<lower-case hash> <name>"). Accepts CRLF, a
+# missing final newline and the "*name" binary marker; lines that are not "<64 hex> <name>" are
+# ignored. Returns 1 with a message when the file does not exist. SUMS is cleared first.
+parse_sums() {
+    local line sum_hash sum_name cr
+    SUMS=""
+    if [ ! -f "$1" ]; then
+        printf 'install.sh: SHA256SUMS not found at %s\n' "$1" >&2
+        return 1
+    fi
+    cr=$(printf '\r')
+    while IFS= read -r line || [ -n "$line" ]; do
+        line=${line%"$cr"}
+        while [ "${line# }" != "$line" ]; do
+            line=${line# }
+        done
+        sum_hash=${line%% *}
+        sum_name=${line#"$sum_hash"}
+        while [ "${sum_name# }" != "$sum_name" ]; do
+            sum_name=${sum_name# }
+        done
+        sum_name=${sum_name#\*}
+        while [ "${sum_name% }" != "$sum_name" ]; do
+            sum_name=${sum_name% }
+        done
+        [ "${#sum_hash}" -eq 64 ] || continue
+        case $sum_hash in
+            *[!0-9a-fA-F]*) continue ;;
+        esac
+        [ -n "$sum_name" ] || continue
+        sum_hash=$(printf '%s' "$sum_hash" | tr 'A-F' 'a-f')
+        SUMS="$SUMS$sum_hash $sum_name$NL"
+    done <"$1"
+}
+
+# Prints the hash that SUMS (see parse_sums) lists for the file name in $1. Returns 1 with a
+# message when the name is not listed. The last line wins if a name appears twice.
+expected_hash() {
+    local found line_hash line_name
+    found=""
+    while IFS=' ' read -r line_hash line_name; do
+        [ -n "$line_hash" ] || continue
+        if [ "$line_name" = "$1" ]; then
+            found=$line_hash
+        fi
+    done <<EOF
+${SUMS:-}
+EOF
+    if [ -z "$found" ]; then
+        printf "install.sh: '%s' is not listed in SHA256SUMS\n" "$1" >&2
+        return 1
+    fi
+    printf '%s\n' "$found"
+}
+
+# get_verified_asset NAME SHA SOURCE CACHE
+# Puts a SHA-256-verified copy of NAME in the CACHE folder and prints its path. SOURCE is
+# "file:<path>" (copied once) or "url:<https url>" (3 attempts, 1 s then 3 s apart); that is
+# "$ASSET_KIND:$ASSET_SRC" from resolve_asset. A cached copy with the right hash is reused, one
+# with the wrong hash is replaced. Downloads land in NAME.partial and are renamed only after the
+# hash matches; a bad file is deleted. Returns 1 with a message (both hashes on a mismatch).
+get_verified_asset() {
+    local name expected source cache kind location final partial max attempt actual last backoff
+    name=$1
+    expected=$(printf '%s' "$2" | tr 'A-F' 'a-f')
+    source=$3
+    cache=$4
+    case $source in
+        file:*) kind=file; location=${source#file:} ;;
+        url:*) kind=url; location=${source#url:} ;;
+        *)
+            printf "install.sh: unknown source '%s' for %s (expected file:<path> or url:<url>)\n" "$source" "$name" >&2
+            return 1
+            ;;
+    esac
+    if ! mkdir -p "$cache"; then
+        printf 'install.sh: cannot create the download cache %s\n' "$cache" >&2
+        return 1
+    fi
+    final="$cache/$name"
+    partial="$final.partial"
+    if [ -f "$final" ]; then
+        actual=$(file_sha256 "$final" 2>/dev/null) || actual=""
+        if [ "$actual" = "$expected" ]; then
+            printf '%s\n' "$final"
+            return 0
+        fi
+        rm -f "$final"
+    fi
+    max=3
+    if [ "$kind" = file ]; then
+        max=1
+    fi
+    attempt=1
+    last=""
+    while [ "$attempt" -le "$max" ]; do
+        rm -f "$partial"
+        last=""
+        if [ "$kind" = file ]; then
+            if ! cp "$location" "$partial" 2>/dev/null; then
+                last="cannot copy $location"
+            fi
+        elif ! http_get "$location" "$partial"; then
+            last="download from $location failed"
+        fi
+        if [ -z "$last" ]; then
+            if actual=$(file_sha256 "$partial"); then
+                if [ "$actual" = "$expected" ]; then
+                    if mv -f "$partial" "$final"; then
+                        printf '%s\n' "$final"
+                        return 0
+                    fi
+                    last="cannot move $partial to $final"
+                else
+                    last="hash mismatch: expected $expected but got $actual"
+                fi
+            else
+                last="cannot hash the downloaded file"
+            fi
+        fi
+        rm -f "$partial"
+        if [ "$attempt" -lt "$max" ]; then
+            backoff=3
+            if [ "$attempt" -eq 1 ]; then
+                backoff=1
+            fi
+            sleep_seconds "$backoff"
+        fi
+        attempt=$((attempt + 1))
+    done
+    printf 'install.sh: could not get a verified %s after %s attempt(s): %s\n' "$name" "$max" "$last" >&2
+    return 1
+}
+
 main() {
     parse_args "$@"
     if [ -z "$OPT_BASE_URL" ] && [ "$HUDDLE_REPO" = "$HUDDLE_REPO_PLACEHOLDER" ]; then
