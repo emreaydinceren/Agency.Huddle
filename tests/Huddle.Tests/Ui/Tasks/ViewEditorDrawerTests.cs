@@ -553,7 +553,7 @@ public sealed class ViewEditorDrawerTests
     {
         CancellationToken ct = TestContext.Current.CancellationToken;
         using TaskToolHarness harness = await TaskToolHarness.CreateAsync(ct);
-        TaskView existing = Save(harness, "v1", ViewKind.List, name: "Taken");
+        _ = Save(harness, "v1", ViewKind.List, name: "Taken");
         // Saved valid under a placeholder name, then edited in the drawer to collide with "v1"'s
         // name and to lose Review's placement, so both problems appear from one draft at once.
         TaskView saved = Save(harness, "v2", ViewKind.Board, name: "Not Taken Yet", columns: BoardDefaultColumns);

@@ -11,7 +11,7 @@ the files that carry the settings are `Directory.Build.props`, `Directory.Packag
 First written 2026-10-03 against SonarAnalyzer.CSharp 10.32.0.713. Update it in the same
 commit as any change to those files.
 
-**Where it stands.** The denylist was 282 entries on `main`. It is now 136: 29 rules that fire
+**Where it stands.** The denylist was 282 entries on `main`. It is now 129: 22 rules that fire
 here and are noise or reviewed false positives, 98 that were read and denied for a stated
 reason, and 9 telemetry entries. The goal is to keep narrowing it; every entry should end up
 with a reason on this page, not a number in a list.
@@ -192,10 +192,27 @@ this.Agent!.Name`. It now reads `this.Agent ?? throw new InvalidOperationExcepti
 the invariant "the handshake set the Agent first" is stated instead of asserted with `!`, and a
 broken one fails with a clear exception.
 
+### Ninth batch
+
+Ten denied rules that fired on only a few sites were enabled. Seven stay on, each proven by real
+hits and fixed; three were put back for reasons the build exposed, none of them "too noisy".
+
+| Rule | What it caught | Outcome |
+| --- | --- | --- |
+| `S1481` | Fourteen unused locals in tests, one in `DotAcpAgentHostFactory` | Unused `ct` locals deleted; unused `out` variables became `out _`; unused service locals became `_ =`. In `DotAcpAgentHostFactory` the local was `GetRequiredService<FileChangeTracker>()`, which can throw or construct a service, so it became `_ = ...` and the call is kept. |
+| `S1144` | `RoomSession.MaxDescriptionLength`, a test helper `PersonaText`, a test field `Empty`, and `appearanceLogger` | Deleted. |
+| `S1066` | Nested `if` in `LibraryFileKinds` (the WebP signature check) and two in `SkillCatalogTests` | Merged into one condition. |
+| `S1117` | Locals named `index`, `open`, `grouping` and `gate` that hid a field | Renamed to `textIndex`, `opening`, `groupingKey` and `openGate`. |
+| `S2292` | `ManualTimeProvider.UtcNow` wrapped a backing field | Auto-property. |
+| `S6562` | `new DateTime(2026, 11, 3)` in a test | `DateTimeKind.Unspecified`, the same kind it had before, now stated. |
+| `S2479` | A raw `0x1F` control character inside the effort cache key in `ModelCatalogProbe` | Now `string.Concat(profileId, "\u001F", model)`. The same key, written so a reader can see it. `Check-Diff` would have flagged the `=> $"..."` shape as untested text. |
+| `S3878` | `Split([',', ';'])` in three places | **Put back.** It contradicts `S3220`, which is on. See [Denied on purpose](#denied-on-purpose). |
+| `S1450`, `S3376` | One site each, in `Huddle.Console` and `FakeRpcError` | **Not enabled.** Both are in the ACP effort's subtree. Revisit with them. |
+
 ## Denied on purpose
 
-Twenty-nine rules fire on this codebase and stay denied. (Thirty-four did at the baseline; five of
-them were fixed and enabled, see [Eighth batch](#eighth-batch).) `src` and `tests` are hit counts
+Twenty-two rules fire on this codebase and stay denied. (Thirty-four did at the baseline; twelve
+of them were fixed and enabled, see [Eighth batch](#eighth-batch) and [Ninth batch](#ninth-batch).) `src` and `tests` are hit counts
 from the baseline above. **Reviewed** means someone read the sites and decided; **Noise** means
 the decision rests on the diagnostic's message and its hit count, with the sites not read.
 
@@ -213,25 +230,18 @@ the decision rests on the diagnostic's message and its hit count, with the sites
 | `S8970` | `!` where nullable warnings are disabled | 4 | 0 | **Reviewed, keep off.** False positive on all four sites. They are `= default!` in `.razor` files, where nullable is enabled: removing the `!` fails the build with `CS8625` or `CS8601`. |
 | `S2094` | Empty record or class | 4 | 0 | Noise. Sites include `AssemblyMarker`, `AgentPrompt`, `ElicitationResult` and `LibraryImageResult`; not read. |
 | `S2365` | Property copies a collection | 4 | 1 | Noise. Sites are `Sinks`, `Aliases`, `WatchedTaskIds`, `OnlineAgentIds`; not read beyond the names. |
-| `S3878` | Needless array creation for `params` | 3 | 3 | Noise. |
+| `S3878` | Needless array creation for `params` | 3 | 3 | **Reviewed, keep off.** It contradicts `S3220`, which is already on: `Split([',', ';'])` trips `S3878`, and `Split(',', ';')` trips `S3220`. Both cannot be on for `string.Split`. |
 | `S4144` | Method identical to another | 1 | 8 | Noise. |
-| `S1481` | Unused local | 1 | 13 | Noise. `IDE0059` is the rule for dead stores. |
-| `S1144` | Unused private member | 1 | 3 | Noise. Not read. |
-| `S1066` | Mergeable `if` | 1 | 2 | Noise. |
-| `S1117` | Local hides a field | 3 | 1 | Noise. |
 | `S1118` | Utility class needs a `protected` constructor or `static` | 1 | 0 | Noise. |
 | `S1135` | `TODO` comment | 2 | 2 | Noise. |
-| `S1450` | Field should be a local | 1 | 0 | Noise. |
-| `S2292` | Use an auto-property | 0 | 1 | Noise. |
+| `S1450` | Field should be a local | 1 | 0 | Not enabled: the one site is `ConsoleLineReader` in `src/Huddle.Console`, the ACP effort's subtree, which the chat side does not edit (`CLAUDE.md`). Revisit with the ACP owner. |
 | `S2325` | Method could be `static` | 3 | 0 | Noise. `CA1822` already covers this for members. |
-| `S2479` | Control character in a literal | 1 | 0 | Noise. `ModelCatalogProbe` uses a raw `\u001F`. |
 | `S2743` | Static field in a generic type | 0 | 1 | Noise. Test code (`ListLogger`). |
 | `S3218` | Member shadows an outer member | 0 | 4 | Noise. |
-| `S3376` | Class name should end in `Exception` | 0 | 1 | Noise. Test code. |
+| `S3376` | Class name should end in `Exception` | 0 | 1 | Not enabled: the one site is `FakeRpcError`, a file linked into two assemblies (`Huddle.Acp.Tests` and `Huddle.MockAdapter`) and owned by the ACP effort. Renaming it is their change. |
 | `S3398` | Move method inside its class | 0 | 1 | Noise. |
-| `S6562` | Provide `DateTimeKind` | 0 | 1 | Noise. |
 
-The five **Reviewed** rows are the only ones where the sites were read. For every other row,
+The six **Reviewed** rows are the only ones where the sites were read. For every other row,
 treat "Noise" as "not worth the cost at the time", not as "proven harmless".
 
 ## Denied after review, zero hits

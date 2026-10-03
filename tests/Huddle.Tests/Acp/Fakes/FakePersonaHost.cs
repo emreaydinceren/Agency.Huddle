@@ -122,9 +122,9 @@ internal sealed class FakePersonaHost : IPersonaHost
             await Task.Delay(this.OpenDelay, cancellationToken).ConfigureAwait(false);
         }
 
-        if (this.OpenGate is { } gate)
+        if (this.OpenGate is { } openGate)
         {
-            await gate.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            await openGate.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
         }
 
         Exception? failure;

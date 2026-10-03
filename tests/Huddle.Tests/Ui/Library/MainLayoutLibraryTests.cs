@@ -328,7 +328,6 @@ public sealed class MainLayoutLibraryTests : IDisposable
     private sealed class HostFixture : IDisposable
     {
         private readonly TempDataDir dir;
-        private readonly RecordingLogger<AppearanceStore> appearanceLogger = new();
         private readonly PersonaStore personas;
         private readonly TaskStore tasks;
 

@@ -29,7 +29,7 @@
          a bad colour; S3264: PersonaStore invokes its events through GetInvocationList; S1994: an
          intentional for loop that ends in a return; S8969 and S8970: removing the flagged "!" breaks
          the build, so they are wrong at 6 of 7 source sites - see docs/engineering/analyzer-decisions.md). -->
-    <NoWarn>$(NoWarn);S1066;S108;S1117;S1118;S1135;S1144;S125;S1450;S1481;S1994;S2094;S2292;S2325;S2365;S2479;S2743;S3218;S3264;S3267;S3358;S3376;S3398;S3878;S4144;S6562;S6667;S6966;S8969;S8970</NoWarn>
+    <NoWarn>$(NoWarn);S108;S1118;S1135;S125;S1450;S1994;S2094;S2325;S2365;S2743;S3218;S3264;S3267;S3358;S3376;S3398;S3878;S4144;S6667;S6966;S8969;S8970</NoWarn>
     <!-- Denied: technology this repository does not use (Azure Functions, WCF, WinForms, MEF, legacy serialization, the Trace API, the C# 14 keyword-escape diagnostics the compiler already reports). -->
     <NoWarn>$(NoWarn);S3431;S3597;S3598;S3925;S3926;S3927;S4159;S4200;S4210;S4211;S4277;S4428;S6419;S6420;S6422;S6424;S6670;S6675;S8367;S8368;S8380;S8381</NoWarn>
     <!-- Denied: another analyzer or the compiler already covers it (CA2201, CA2254, CA1852, IDE0060, CA2200, CA2211, IDE0011, IDE1006 and others). Enabling it would only print each finding twice. -->

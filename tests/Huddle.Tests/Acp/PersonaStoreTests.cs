@@ -1483,7 +1483,6 @@ public sealed class PersonaStoreTests
     [Fact]
     public async Task Watcher_DefinitionMovedIntoWork_RaisesPersonasChanged()
     {
-        var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         var paths = new TeammatePaths(dir.Options());
         TestPersonaFiles.Write(paths, "Nova", PersonaText("Nova", "You are Nova."));

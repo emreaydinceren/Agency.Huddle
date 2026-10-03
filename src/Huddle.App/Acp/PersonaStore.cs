@@ -582,11 +582,11 @@ internal sealed class PersonaStore : IDisposable, IMentionAliasSource
         var occurrencesByName = new Dictionary<string, int>(StringComparer.Ordinal);
         var paths = new List<string>(texts.Count);
 
-        for (var index = 0; index < texts.Count; index++)
+        for (var textIndex = 0; textIndex < texts.Count; textIndex++)
         {
-            if (!PersonaFrontmatter.TryReadIdentity(texts[index], out var identity, out _))
+            if (!PersonaFrontmatter.TryReadIdentity(texts[textIndex], out var identity, out _))
             {
-                paths.Add(Path.Combine(this.Paths.DefinitionsRoot, $"__check-{index}.md"));
+                paths.Add(Path.Combine(this.Paths.DefinitionsRoot, $"__check-{textIndex}.md"));
                 continue;
             }
 

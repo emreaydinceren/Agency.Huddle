@@ -134,7 +134,7 @@ public sealed class TaskFileFormatTests
     {
         string text = SpecExampleWithLinesInserted("due_date: 2026-10-15", "owner: x", "estimate: 3");
 
-        bool result = TaskFileFormat.TryParse(text, "p.md", DefaultLocation, out TaskItem? task, out string error);
+        bool result = TaskFileFormat.TryParse(text, "p.md", DefaultLocation, out TaskItem? task, out _);
 
         Assert.True(result);
         Assert.NotNull(task);
@@ -444,7 +444,7 @@ public sealed class TaskFileFormatTests
         string text = MinimalTextWithChangeLog(logLines);
         TaskLocation location = new("Platform", null, locationClosed);
 
-        bool result = TaskFileFormat.TryParse(text, "p.md", location, out TaskItem? task, out string error);
+        bool result = TaskFileFormat.TryParse(text, "p.md", location, out TaskItem? task, out _);
 
         Assert.True(result);
         Assert.NotNull(task);
