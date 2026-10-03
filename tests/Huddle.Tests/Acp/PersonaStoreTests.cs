@@ -481,7 +481,7 @@ public sealed class PersonaStoreTests
         using var store = CreateStore(dir);
         store.Add(Identity("coo"), "first");
         var raisedCount = 0;
-        void Count() => raisedCount++;
+        void Count() => Interlocked.Increment(ref raisedCount);
         store.PersonasChanged += Count;
 
         store.Update("coo", PersonaText("coo", "second"), "claude-opus-4", "high", workMode: null);
@@ -1483,7 +1483,6 @@ public sealed class PersonaStoreTests
     [Fact]
     public async Task Watcher_DefinitionMovedIntoWork_RaisesPersonasChanged()
     {
-        var ct = TestContext.Current.CancellationToken;
         using var dir = new TempDataDir();
         var paths = new TeammatePaths(dir.Options());
         TestPersonaFiles.Write(paths, "Nova", PersonaText("Nova", "You are Nova."));

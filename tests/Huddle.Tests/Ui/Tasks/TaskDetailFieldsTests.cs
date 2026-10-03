@@ -310,7 +310,7 @@ public sealed class TaskDetailFieldsTests
         var cut = RenderDetail(ctx, task.Id, mode);
         string cssClass = which == "start" ? "task-detail-start-date" : "task-detail-due-date";
         IRenderedComponent<MudDatePicker> picker = cut.FindComponents<MudDatePicker>().Single(m => string.Equals(m.Instance.Class, cssClass, StringComparison.Ordinal));
-        DateTime picked = new(2026, 11, 3);
+        DateTime picked = new(2026, 11, 3, 0, 0, 0, DateTimeKind.Unspecified);
 
         await cut.InvokeAsync(() => picker.Instance.DateChanged.InvokeAsync(picked));
 

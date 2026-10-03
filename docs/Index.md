@@ -41,6 +41,7 @@ subtree a page is in: **chat** is the chat surface, **acp** is the ACP effort
 | Change anything a Human sees | [Huddle.UserGuide.md](Huddle.UserGuide.md): update it in the same change |
 | "Fix" something that looks missing | [known-limits.md](engineering/known-limits.md) first |
 | Revisit a decision | [decisions.md](engineering/decisions.md), then the ADR in §4 |
+| Enable, disable or suppress an analyzer rule | [analyzer-decisions.md](engineering/analyzer-decisions.md) first |
 | Add to the product plan | [roadmap.md](engineering/roadmap.md) |
 | Learn what the product is for | [why-agency-huddle.md](why-agency-huddle.md), then [Huddle.EngineeringGuide.md](Huddle.EngineeringGuide.md) |
 
@@ -87,6 +88,7 @@ that exercise it. All are **chat** unless stated.
 | [known-limits.md](engineering/known-limits.md) | What is deliberately absent, before you "fix" it | chat | ~1.9k |
 | [roadmap.md](engineering/roadmap.md) | The numbered plan, and what exists before work in `PersonaRunner`, `ReplyGate`, `app.css` or `Themes/` | chat | ~10.7k |
 | [decisions.md](engineering/decisions.md) | The decision record and the old-to-new vocabulary mapping | chat | ~6.3k |
+| [analyzer-decisions.md](engineering/analyzer-decisions.md) | Which compiler and Sonar rules are off or on, what each group rests on, and which are proven to fire | chat | ~4.5k |
 | [mudblazor.md](engineering/mudblazor.md) | Which MudBlazor facts were checked against the package | chat | small |
 | [acp-agent-guide.md](engineering/acp-agent-guide.md) | What was verified against the real adapter and what is only assumed. Written under the old `Team.*` names | acp | ~9k |
 | [acp-session-config.md](engineering/acp-session-config.md) | How an ACP agent advertises models and effort, and how a client selects them | acp | ~4k |

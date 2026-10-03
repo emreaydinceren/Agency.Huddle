@@ -48,13 +48,20 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         """;
 
     private readonly string connectionString;
+    private readonly TimeProvider timeProvider;
 
-    public SqliteTeamDirectory(IOptions<TeamOptions> options)
+    /// <param name="options">Supplies the data directory the database lives in.</param>
+    /// <param name="timeProvider">
+    /// The clock stamped onto a new Room and an archive. Optional and last so every earlier caller
+    /// compiles unchanged; <see langword="null"/> uses <see cref="TimeProvider.System"/>.
+    /// </param>
+    public SqliteTeamDirectory(IOptions<TeamOptions> options, TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(options);
 
         var dbPath = Path.Combine(options.Value.DataDir, "team.db");
         this.connectionString = $"Data Source={dbPath}";
+        this.timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task InitializeAsync(string humanName, CancellationToken ct = default)
@@ -320,7 +327,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         ArgumentNullException.ThrowIfNull(memberIds);
 
         var id = Guid.CreateVersion7().ToString("N");
-        var created = DateTimeOffset.UtcNow;
+        var created = this.timeProvider.GetUtcNow();
 
         await using var connection = await this.OpenConnectionAsync(ct);
         await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(ct);
@@ -452,7 +459,7 @@ public sealed class SqliteTeamDirectory : ITeamDirectory
         {
             command.CommandText = "INSERT OR REPLACE INTO archived_rooms(room_id, archived) VALUES($id, $at);";
             command.Parameters.AddWithValue("$id", roomId);
-            command.Parameters.AddWithValue("$at", DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture));
+            command.Parameters.AddWithValue("$at", this.timeProvider.GetUtcNow().ToString("o", CultureInfo.InvariantCulture));
         }
         else
         {

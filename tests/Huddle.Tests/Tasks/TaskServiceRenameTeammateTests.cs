@@ -245,7 +245,6 @@ public sealed class TaskServiceRenameTeammateTests
     [Fact]
     public async Task PersonasChangedHandler_CallsBackIntoTaskServiceFromAnotherThread_FinishesWithin10Seconds()
     {
-        CancellationToken ct = TestContext.Current.CancellationToken;
         using TempDataDir dir = new();
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);

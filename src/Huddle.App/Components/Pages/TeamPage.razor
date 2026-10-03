@@ -23,9 +23,19 @@
     TeamSummary? summary = this.Catalog.Find(this.Team);
     bool isProject = !string.IsNullOrWhiteSpace(this.Project);
     string? project = summary is not null && isProject ? this.FindProject(summary) : null;
-    string title = summary is null || (isProject && project is null)
-        ? "Huddle"
-        : (project is null ? $"{summary.Name} — Huddle" : $"{project} · {summary.Name} — Huddle");
+    string title;
+    if (summary is null || (isProject && project is null))
+    {
+        title = "Huddle";
+    }
+    else if (project is null)
+    {
+        title = $"{summary.Name} — Huddle";
+    }
+    else
+    {
+        title = $"{project} · {summary.Name} — Huddle";
+    }
 
     // Every tab uses the whole page, so the container drops the width cap and padding whenever the Team (and
     // Project) exist; the not-found and "turned off" notices keep the capped, padded container.

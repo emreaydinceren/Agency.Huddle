@@ -110,6 +110,7 @@ public sealed partial class ChatService
     private readonly ConcurrentDictionary<string, RoomBudget> budgets = new(StringComparer.Ordinal);
 
     private readonly int agentMessageBudget;
+    private readonly TimeProvider timeProvider;
 
     /// <param name="teamDirectory">The Team's Users and Rooms.</param>
     /// <param name="store">Where a posted Message's transcript is appended.</param>
@@ -138,6 +139,10 @@ public sealed partial class ChatService
     /// answering one form must not cancel another. Optional and last so every earlier caller compiles
     /// unchanged; <see langword="null"/> drops nothing.
     /// </param>
+    /// <param name="timeProvider">
+    /// The clock stamped onto each posted Message. Optional and last so every earlier caller compiles
+    /// unchanged; <see langword="null"/> uses <see cref="TimeProvider.System"/>.
+    /// </param>
     public ChatService(
         ITeamDirectory teamDirectory,
         IChatStore store,
@@ -147,7 +152,8 @@ public sealed partial class ChatService
         ProposalStore proposals,
         QuestionStore questions,
         ILogger<ChatService> logger,
-        ElicitationStore? elicitations = null)
+        ElicitationStore? elicitations = null,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(teamDirectory);
         ArgumentNullException.ThrowIfNull(store);
@@ -167,6 +173,7 @@ public sealed partial class ChatService
         this.questions = questions;
         this.elicitations = elicitations;
         this.logger = logger;
+        this.timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task<ChatMessage> PostAsync(
@@ -262,7 +269,7 @@ public sealed partial class ChatService
             IReadOnlyList<User> mentions = withheldFromAgentId is null
                 ? MentionParser.Parse(text, members, this.aliasSource.Aliases)
                 : [];
-            var message = new ChatMessage(id, DateTimeOffset.UtcNow, sender.Id, sender.Name, text);
+            var message = new ChatMessage(id, this.timeProvider.GetUtcNow(), sender.Id, sender.Name, text);
             await this.store.AppendAsync(roomId, message, ct);
 
             // Only a Message that reached the Transcript spends Budget, so a failed append above

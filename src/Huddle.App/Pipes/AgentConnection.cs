@@ -50,7 +50,8 @@ internal sealed class AgentConnection
         AgentGateway gateway,
         Drafts drafts,
         RoomEvents roomEvents,
-        ILogger<AgentConnection> logger)
+        ILogger<AgentConnection> logger,
+        TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(pipe);
         ArgumentNullException.ThrowIfNull(teamDirectory);
@@ -69,13 +70,14 @@ internal sealed class AgentConnection
         this.drafts = drafts;
         this.roomEvents = roomEvents;
         this.logger = logger;
+        this.ConnectedAt = (timeProvider ?? TimeProvider.System).GetUtcNow();
     }
 
     public string ConnectionId { get; } = Guid.CreateVersion7().ToString("N");
 
     public User? Agent { get; private set; }
 
-    public DateTimeOffset ConnectedAt { get; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset ConnectedAt { get; }
 
     public async Task RunAsync(CancellationToken ct)
     {
@@ -320,7 +322,8 @@ internal sealed class AgentConnection
         }
         else
         {
-            this.drafts.Append(delta.MessageId, delta.RoomId, this.Agent!.Id, this.Agent!.Name, delta.Text);
+            User agent = this.Agent ?? throw new InvalidOperationException("A MessageDelta was handled before the handshake set the Agent.");
+            this.drafts.Append(delta.MessageId, delta.RoomId, agent.Id, agent.Name, delta.Text);
         }
 
         this.roomEvents.PublishDraftChanged(delta.RoomId);

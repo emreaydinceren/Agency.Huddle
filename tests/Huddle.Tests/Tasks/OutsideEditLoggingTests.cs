@@ -98,7 +98,7 @@ public sealed class OutsideEditLoggingTests
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         TaskEvents events = new();
-        TaskService service = CreateTaskService(dir, store, personas, events);
+        _ = CreateTaskService(dir, store, personas, events);
 
         List<TaskChange> changes = [];
         events.TaskChanged += changes.Add;
@@ -128,7 +128,7 @@ public sealed class OutsideEditLoggingTests
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         TaskEvents events = new();
-        TaskService service = CreateTaskService(dir, store, personas, events);
+        _ = CreateTaskService(dir, store, personas, events);
 
         int raiseCount = 0;
         events.TaskChanged += _ => raiseCount++;
@@ -207,7 +207,7 @@ public sealed class OutsideEditLoggingTests
         };
 
         TaskEvents events = new();
-        TaskService service = CreateTaskService(dir, store, personas, events);
+        _ = CreateTaskService(dir, store, personas, events);
         List<TaskChange> changes = [];
         events.TaskChanged += changes.Add;
 
@@ -266,7 +266,7 @@ public sealed class OutsideEditLoggingTests
         using PersonaStore personas = TestTaskStore.CreatePersonaStore(dir);
         using TaskStore store = TestTaskStore.CreateTaskStore(dir, personas);
         TaskEvents events = new();
-        TaskService service = CreateTaskService(dir, store, personas, events);
+        _ = CreateTaskService(dir, store, personas, events);
 
         int raiseCount = 0;
         TaskCompletionSource firstRaised = new(TaskCreationOptions.RunContinuationsAsynchronously);

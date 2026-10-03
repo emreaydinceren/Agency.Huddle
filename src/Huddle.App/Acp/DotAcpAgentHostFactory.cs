@@ -209,7 +209,7 @@ internal sealed class DotAcpAgentHostFactory : IAgentHostFactory
         // Skill gating and before GetHelpTool is built, so get_help lists them too (rules.md row 34).
         if (this.options.FileChanges.Enabled && profile.ReadsFiles)
         {
-            var fileChanges = this.serviceProvider.GetRequiredService<FileChangeTracker>();
+            _ = this.serviceProvider.GetRequiredService<FileChangeTracker>();
             IAppTool watchFolderTool = ActivatorUtilities.CreateInstance<WatchFolderTool>(this.serviceProvider, persona.Name);
             IAppTool unwatchFolderTool = ActivatorUtilities.CreateInstance<UnwatchFolderTool>(this.serviceProvider, persona.Name);
             chatTools = [.. chatTools, watchFolderTool, unwatchFolderTool];

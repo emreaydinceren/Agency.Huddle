@@ -396,7 +396,6 @@ public sealed class LibraryTreeTests : IDisposable
         this.fixture.LibraryFixture.Reload();
         this.fixture.RescanTasks();
         LibraryPath teamsScope = this.fixture.LibraryFixture.ResolveTeams(string.Empty);
-        LibraryPath teamFolder = this.fixture.LibraryFixture.ResolveTeams("Engineering");
 
         await using MudBunitContext ctx = this.fixture.NewContext();
         IRenderedComponent<ContainerFragment> cut = RenderTree(ctx, [teamsScope]);

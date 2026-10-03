@@ -280,9 +280,12 @@ internal sealed class SkillStore : IDisposable
             onDisk.TryGetValue(name, out Dictionary<string, string>? diskFiles);
 
             Dictionary<string, string> merged = MergeFiles(defaultFiles, diskFiles);
-            SkillSource source = defaultFiles is not null && diskFiles is not null
-                ? SkillSource.Overridden
-                : defaultFiles is not null ? SkillSource.Default : SkillSource.Yours;
+            SkillSource source = (defaultFiles is not null, diskFiles is not null) switch
+            {
+                (true, true) => SkillSource.Overridden,
+                (true, false) => SkillSource.Default,
+                _ => SkillSource.Yours,
+            };
             string? folderPath = diskFiles is not null ? Path.Combine(this.skillsDir, name) : null;
 
             SkillValidation validation = SkillValidator.Validate(name, merged);

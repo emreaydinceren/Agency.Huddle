@@ -35,6 +35,20 @@ fails it. Knowing which layer a diagnostic comes from tells you where its rule l
 | `S` | SonarAnalyzer.CSharp, a curated subset | Opted in by ID in `.editorconfig`; everything else denylisted in `Directory.Build.props` |
 | `xUnit` | xunit.v3 analyzers, test projects only | Package defaults |
 
+Rules that used to be prose-only and are now enforced, so a violation is a failed build rather
+than a review comment:
+
+| Rule | Enforced by |
+| --- | --- |
+| No `.Result`, `.Wait()` or `.GetAwaiter().GetResult()` | `S4462` |
+| `TimeProvider`, never `DateTime.Now` / `DateTimeOffset.UtcNow` | `S6354`. Take an optional trailing `TimeProvider? timeProvider = null` and default it to `TimeProvider.System`, as `PersonaRunner` does. |
+| `this.` on every field, property, method and event access | `IDE0009` |
+| File-scoped namespaces | `IDE0161` |
+| Lock on `System.Threading.Lock` | `IDE0330` |
+| Private fields are `camelCase` with no `_` prefix | `IDE1006` (the `private_fields` naming rule in `.editorconfig`) |
+| No parameterless `new Random()` | `RS0030`, listed in `BannedSymbols.txt`. Add a line there to ban another API. |
+| Every test you add has a `///` summary | `agents/scripts/Check-TestDocs.ps1`, run by `Check-All.ps1`. Added lines only; older tests are not rechecked. |
+
 Per-project exceptions you can rely on: `Huddle.App` and `Huddle.Contracts` suppress
 `CA1848` (LoggerMessage) and `CA1031`; the test projects suppress `CA1707` (underscores
 in identifiers); `Huddle.Acp.Tests` also suppresses `CA1861`. Everywhere else, those
@@ -185,6 +199,10 @@ These do not fail the build, but the code is consistent about them and reviewers
 - Always verify builds pass (`dotnet build Huddle.slnx`) after code changes before declaring success — build the **solution**, not one project, because the test projects carry their own analyzers
 
 ## Suppressing a rule
+
+Before enabling, disabling or suppressing a rule, read
+[analyzer-decisions.md](../docs/engineering/analyzer-decisions.md): it records what each group of
+denied rules rests on and which ones are only assumed to work.
 
 Fix the code first. A suppression is for the rare case where the rule is wrong for one spot
 and the code is right, and it always carries the reason.

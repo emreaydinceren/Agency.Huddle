@@ -98,6 +98,11 @@ app.MapRazorComponents<App>()
 
 app.Run();
 
+/// <summary>The entry-point type. It is <c>public partial</c> so the integration tests can name it in <c>WebApplicationFactory&lt;Program&gt;</c>; nothing constructs it.</summary>
 public partial class Program
 {
+    /// <summary>Protected so the class is not constructible by callers, which is all the top-level statements need.</summary>
+    protected Program()
+    {
+    }
 }

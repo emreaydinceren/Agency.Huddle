@@ -404,11 +404,9 @@ internal sealed class RoomSessionPool : ITurnScheduler, IAsyncDisposable
 
             var candidateEmpty = candidate.QueueCount == 0;
             var victimEmpty = victim.QueueCount == 0;
-            if (candidateEmpty && !victimEmpty)
-            {
-                victim = candidate;
-            }
-            else if (candidateEmpty == victimEmpty && candidate.LastActivity < victim.LastActivity)
+            bool emptierThanVictim = candidateEmpty && !victimEmpty;
+            bool sameEmptinessButIdler = candidateEmpty == victimEmpty && candidate.LastActivity < victim.LastActivity;
+            if (emptierThanVictim || sameEmptinessButIdler)
             {
                 victim = candidate;
             }

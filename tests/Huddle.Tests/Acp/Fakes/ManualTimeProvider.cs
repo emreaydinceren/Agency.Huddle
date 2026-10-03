@@ -9,7 +9,6 @@ namespace Agency.Huddle.Tests.Acp.Fakes;
 internal sealed class ManualTimeProvider : TimeProvider
 {
     private readonly TimeZoneInfo? zone;
-    private DateTimeOffset utcNow;
 
     /// <summary>Creates a clock fixed at <see cref="TimeProvider.System"/>'s current instant, with the base <see cref="TimeProvider.LocalTimeZone"/> (the system's own).</summary>
     public ManualTimeProvider()
@@ -27,26 +26,22 @@ internal sealed class ManualTimeProvider : TimeProvider
     /// <param name="zone">This clock's fixed <see cref="LocalTimeZone"/>, or <see langword="null"/> to keep the base implementation's system zone.</param>
     public ManualTimeProvider(DateTimeOffset utcNow, TimeZoneInfo? zone = null)
     {
-        this.utcNow = utcNow;
+        this.UtcNow = utcNow;
         this.zone = zone;
     }
 
     /// <summary>This clock's current instant. Settable directly, as an alternative to <see cref="Advance"/>.</summary>
-    public DateTimeOffset UtcNow
-    {
-        get => this.utcNow;
-        set => this.utcNow = value;
-    }
+    public DateTimeOffset UtcNow { get; set; }
 
     /// <inheritdoc/>
-    public override DateTimeOffset GetUtcNow() => this.utcNow;
+    public override DateTimeOffset GetUtcNow() => this.UtcNow;
 
     /// <inheritdoc/>
     public override TimeZoneInfo LocalTimeZone => this.zone ?? base.LocalTimeZone;
 
     /// <summary>Moves this clock forward by <paramref name="delta"/>.</summary>
     /// <param name="delta">How far forward to move.</param>
-    public void Advance(TimeSpan delta) => this.utcNow += delta;
+    public void Advance(TimeSpan delta) => this.UtcNow += delta;
 
     /// <summary>
     /// Returns a no-op <see cref="ITimer"/> instead of a real one (D23 correction 15): the base

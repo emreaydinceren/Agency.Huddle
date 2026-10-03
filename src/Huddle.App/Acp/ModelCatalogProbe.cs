@@ -255,7 +255,7 @@ internal sealed class ModelCatalogProbe : IModelCatalog, IDisposable
     /// </summary>
     /// <param name="profileId">The RESOLVED Adapter profile's id - never the id as the caller requested it.</param>
     /// <param name="model">The model id, or <see langword="null"/> for the Adapter's own default.</param>
-    private static string EffortCacheKey(string profileId, string? model) => $"{profileId}{model}";
+    private static string EffortCacheKey(string profileId, string? model) => string.Concat(profileId, "\u001F", model);
 
     /// <summary>The catalogs one throwaway session can answer, read off the same session.</summary>
     private sealed record ProbeResult(

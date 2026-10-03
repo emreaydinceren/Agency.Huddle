@@ -261,12 +261,10 @@ public sealed class SkillCatalogTests
         bool skillMdNamesPropose = false;
         bool anyFileNamesCreateTeammate = false;
 
-        if (files.TryGetValue("SKILL.md", out skillMdText))
+        if (files.TryGetValue("SKILL.md", out skillMdText) &&
+            skillMdText.Contains("propose_teammates", StringComparison.Ordinal))
         {
-            if (skillMdText.Contains("propose_teammates", StringComparison.Ordinal))
-            {
-                skillMdNamesPropose = true;
-            }
+            skillMdNamesPropose = true;
         }
 
         foreach (var (_, text) in files)
@@ -293,12 +291,10 @@ public sealed class SkillCatalogTests
         {
             foreach (var (fileName, _) in files)
             {
-                if (!string.Equals(fileName, "SKILL.md", StringComparison.Ordinal))
+                if (!string.Equals(fileName, "SKILL.md", StringComparison.Ordinal) &&
+                    !skillMdText.Contains(fileName, StringComparison.Ordinal))
                 {
-                    if (!skillMdText.Contains(fileName, StringComparison.Ordinal))
-                    {
-                        violations.Add($"unnamed-file: supporting file '{fileName}' is not mentioned in SKILL.md");
-                    }
+                    violations.Add($"unnamed-file: supporting file '{fileName}' is not mentioned in SKILL.md");
                 }
             }
         }

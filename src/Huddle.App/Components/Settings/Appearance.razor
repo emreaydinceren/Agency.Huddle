@@ -260,11 +260,12 @@
     private void SeedAvatarEditorState()
     {
         var avatar = this.Avatars.Get(this.HumanName);
-        this.avatarChoice = avatar.Image is not null
-            ? AvatarChoice.Image
-            : avatar.Label is not null
-                ? AvatarChoice.Label
-                : AvatarChoice.Initials;
+        this.avatarChoice = avatar switch
+        {
+            { Image: not null } => AvatarChoice.Image,
+            { Label: not null } => AvatarChoice.Label,
+            _ => AvatarChoice.Initials,
+        };
         this.avatarLabel = avatar.Label ?? string.Empty;
         this.avatarImage = avatar.Image;
         this.avatarBackground = avatar.Background;

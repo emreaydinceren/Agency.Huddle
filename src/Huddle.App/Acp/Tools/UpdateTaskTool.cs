@@ -188,9 +188,10 @@ internal sealed class UpdateTaskTool(
         Optional<string?> assignee = default;
         if (assigneeText is not null)
         {
+            string? resolvedAssignee = string.Equals(assigneeText, "me", StringComparison.Ordinal) ? actor.Name : assigneeText;
             assignee = assigneeText.Length == 0
                 ? Optional<string?>.Set(null)
-                : Optional<string?>.Set(string.Equals(assigneeText, "me", StringComparison.Ordinal) ? actor.Name : assigneeText);
+                : Optional<string?>.Set(resolvedAssignee);
         }
 
         if (!TaskToolText.TryGetString(arguments, "team", out string? team, out refusal))

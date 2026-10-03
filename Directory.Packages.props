@@ -1,6 +1,7 @@
 <Project>
   <ItemGroup>
     <GlobalPackageReference Include="SonarAnalyzer.CSharp" Version="10.32.0.713" />
+    <GlobalPackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
     <PackageVersion Include="dotacp.client" Version="2026.7.19" />
     <PackageVersion Include="dotacp.protocol" Version="2026.7.19" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
