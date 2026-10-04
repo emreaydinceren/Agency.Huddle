@@ -150,3 +150,12 @@ public partial class Partial
     // probe: S3251
     partial void NotImplemented();
 }
+
+public class EmptyBlock
+{
+    public void Check(bool flag)
+    {
+        // probe: S108
+        if (flag) { }
+    }
+}
