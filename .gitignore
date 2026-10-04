@@ -20,3 +20,4 @@ personas/
 /dist/
 /artifacts/
 probe-build.log
+/testResults.xml
