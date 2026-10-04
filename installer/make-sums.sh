@@ -31,6 +31,7 @@ fi
 # Create temp files inside the target directory for atomic rename
 temp_sums=$(mktemp "$dir/.SHA256SUMS.XXXXXX")
 temp_sorted=$(mktemp "$dir/.SHA256SUMS.XXXXXX")
+# shellcheck disable=SC2064 # Expanding now is intended: the temp file names are fixed here and the trap must remove exactly these two.
 trap "rm -f '$temp_sums' '$temp_sorted'" EXIT
 
 # Generate hashes, sorted by filename

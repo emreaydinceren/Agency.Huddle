@@ -50,6 +50,8 @@ DATA_ROOT=""
 LAUNCHER=""
 INSTANCE_FILE=""
 INSTALL_LOG=""
+INSTALL_VIA_STDIN=0
+STEP1_INSTALLER=""
 INSTALL_RC=0
 RUN_RC=0
 INST_URL=""
@@ -187,6 +189,12 @@ show_step_rows() {
     grep -E '^\[(ok|skip|\.\.|!!|warn)\]' "$1" | sed 's/^/    /' || true
 }
 
+# Runs the installer the way `curl ... | sh` does: the script text arrives on stdin of `sh -s --`.
+# The redirect here overrides the </dev/null that run_timed puts on every command.
+run_installer_from_stdin() {
+    sh -s -- "$@" <"$STEP1_INSTALLER"
+}
+
 # run_installer BASE EXTRA-ARGS...: runs install.sh against the folder BASE inside the sandbox.
 # Sets INSTALL_LOG and INSTALL_RC and echoes the step rows.
 run_installer() {
@@ -195,8 +203,13 @@ run_installer() {
     shift
     LOG_N=$((LOG_N + 1))
     INSTALL_LOG="$LOG_DIR/install-$LOG_N.txt"
-    run_timed 900 "$INSTALL_LOG" sh "$INSTALL_SH" --base-url "$base" \
-        --install-root "$INSTALL_ROOT" --data-root "$DATA_ROOT" "$@"
+    if [ "${INSTALL_VIA_STDIN:-0}" = 1 ]; then
+        run_timed 900 "$INSTALL_LOG" run_installer_from_stdin --base-url "$base" \
+            --install-root "$INSTALL_ROOT" --data-root "$DATA_ROOT" "$@"
+    else
+        run_timed 900 "$INSTALL_LOG" sh "$INSTALL_SH" --base-url "$base" \
+            --install-root "$INSTALL_ROOT" --data-root "$DATA_ROOT" "$@"
+    fi
     INSTALL_RC=$RUN_RC
     show_step_rows "$INSTALL_LOG"
 }
@@ -336,14 +349,24 @@ trap 'exit 143' TERM
 
 # ---- setup ----------------------------------------------------------------------------------
 
-case $(uname -m) in
-    arm64) RID=osx-arm64 ;;
-    x86_64) RID=osx-x64 ;;
-    *)
-        echo "FAIL: unsupported CPU $(uname -m)"
-        exit 1
-        ;;
-esac
+# Same decision as install.sh (prereq_check_cpu): a Rosetta terminal on Apple Silicon reports x86_64,
+# so sysctl hw.optional.arm64 = 1 wins, otherwise uname -m decides.
+translated=""
+if command -v sysctl >/dev/null 2>&1; then
+    translated=$(sysctl -n hw.optional.arm64 2>/dev/null || true)
+fi
+if [ "$translated" = "1" ]; then
+    RID=osx-arm64
+else
+    case $(uname -m) in
+        arm64) RID=osx-arm64 ;;
+        x86_64) RID=osx-x64 ;;
+        *)
+            echo "FAIL: unsupported CPU $(uname -m)"
+            exit 1
+            ;;
+    esac
+fi
 ARCHIVE_NAME="huddle-$RID.tar.gz"
 
 mkdir -p "$1"
@@ -399,7 +422,17 @@ info "release archive: $(du -k "$RELEASE_DIR/$ARCHIVE_NAME" | awk '{ print int($
 # ---- STEP 1: install ------------------------------------------------------------------------
 
 begin_step 1 "install.sh into the sandbox (downloads Node and runs npm ci)"
+# Users run the stamped install.sh of the release through a pipe; the repo copy is the fallback.
+if [ -f "$RELEASE_DIR/install.sh" ]; then
+    STEP1_INSTALLER="$RELEASE_DIR/install.sh"
+    info "installer: the stamped $STEP1_INSTALLER, run as: sh -s -- ... < install.sh"
+else
+    STEP1_INSTALLER="$INSTALL_SH"
+    info "installer: $STEP1_INSTALLER (the repo copy: no install.sh in the release folder), run as: sh -s -- ... < install.sh"
+fi
+INSTALL_VIA_STDIN=1
 run_installer "$RELEASE_DIR" --no-launch
+INSTALL_VIA_STDIN=0
 [ "$INSTALL_RC" -eq 0 ] || die "install.sh exited with $INSTALL_RC; last lines: $(last_lines "$INSTALL_LOG" 6)"
 [ -x "$LAUNCHER" ] || die "bin/huddle was not written or is not executable"
 [ -x "$APP_EXE" ] || die "app/Huddle.App is missing or not executable"
@@ -499,7 +532,9 @@ fi
 wait "$launch1_pid" 2>/dev/null || true
 [ "$(count_procs "$APP_EXE")" -eq 0 ] || die "a Huddle.App process is still running after the upgrade"
 [ "$(installed_version)" = "$VERSION2" ] || die "install-state says version \"$(installed_version)\", expected $VERSION2"
-[ -f "$marker" ] && [ "$(cat "$marker")" = "keep me" ] || die "the marker file in the data root did not survive the upgrade"
+if [ ! -f "$marker" ] || [ "$(cat "$marker")" != "keep me" ]; then
+    die "the marker file in the data root did not survive the upgrade"
+fi
 
 # ---- STEP 8: start again, then stop ---------------------------------------------------------
 

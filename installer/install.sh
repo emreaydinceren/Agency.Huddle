@@ -130,6 +130,7 @@ resolve_paths() {
 
 # Decides where the asset named $1 comes from. Sets ASSET_KIND (file or url) and ASSET_SRC.
 resolve_asset() {
+    local base tag
     if [ -n "$OPT_BASE_URL" ]; then
         base=${OPT_BASE_URL%/}
         if [ -d "$OPT_BASE_URL" ]; then
@@ -147,7 +148,13 @@ resolve_asset() {
     if [ "$OPT_VERSION" = "latest" ]; then
         ASSET_SRC="https://github.com/$HUDDLE_REPO/releases/latest/download/$1"
     else
-        ASSET_SRC="https://github.com/$HUDDLE_REPO/releases/download/$OPT_VERSION/$1"
+        # The release workflow takes the version without the v and creates the tag v<version>;
+        # both spellings are accepted on the command line.
+        case $OPT_VERSION in
+            v*) tag=$OPT_VERSION ;;
+            *) tag="v$OPT_VERSION" ;;
+        esac
+        ASSET_SRC="https://github.com/$HUDDLE_REPO/releases/download/$tag/$1"
     fi
 }
 
@@ -623,6 +630,24 @@ process_running() {
     kill -0 "$1" 2>/dev/null
 }
 
+# Seam: prints the executable name (without folders) of the process $1, or nothing when it does not
+# exist. macOS and Linux `ps -o comm=` print the path or the name; leading and trailing blanks go.
+process_command_of() {
+    local comm
+    comm=$(ps -p "$1" -o comm= 2>/dev/null </dev/null) || comm=""
+    comm=${comm#"${comm%%[![:space:]]*}"}
+    comm=${comm%"${comm##*[![:space:]]}"}
+    printf '%s\n' "${comm##*/}"
+}
+
+# Succeeds when the process $1 is the Agency Huddle host (its executable is named like $APP_EXE).
+# A crashed app leaves its pid in instance.json, and the number may belong to anything by now.
+pid_is_the_app() {
+    local name
+    name=$(process_command_of "$1")
+    [ -n "$name" ] && [ "$name" = "${APP_EXE##*/}" ]
+}
+
 # Seam: succeeds while the Agency Huddle process $1 (the pid in instance.json) is still running.
 app_running() {
     process_running "$1"
@@ -686,6 +711,17 @@ stop_huddle_if_running() {
     log_step work stop "stopping the running Agency Huddle"
     rc=0
     run_huddle_stop || rc=$?
+    if [ "$pid" -gt 0 ] && [ "$rc" -eq 0 ] && [ ! -f "$record" ]; then
+        # The stop verb succeeded and removed the record (it waits for the process itself).
+        pid=0
+    elif [ "$pid" -gt 0 ] && ! pid_is_the_app "$pid"; then
+        # A crashed app leaves a stale record whose pid now belongs to another program (or to
+        # nothing): never wait for it and never kill it.
+        log_step skip stop "process $pid is not Agency Huddle; the instance record is stale"
+        rm -f "$record"
+        pid=0
+        rc=0
+    fi
     if [ "$pid" -gt 0 ]; then
         if ! wait_for_app_exit "$pid"; then
             if [ "${OPT_FORCE:-0}" -ne 1 ]; then
@@ -754,12 +790,16 @@ install_app_restore() {
 }
 
 # Succeeds when the folder $1 is safe to replace: it is an empty folder or holds one of the
-# files an Agency Huddle install always has (install-state or release-info.json).
+# files an Agency Huddle install always has (install-state, or release-info.json together with
+# app/Huddle.App: a lone release-info.json could belong to any project).
 folder_is_replaceable() {
     if [ ! -d "$1" ] || [ -L "$1" ]; then
         return 1
     fi
-    if [ -e "$1/install-state" ] || [ -e "$1/release-info.json" ]; then
+    if [ -e "$1/install-state" ]; then
+        return 0
+    fi
+    if [ -e "$1/release-info.json" ] && [ -e "$1/app/Huddle.App" ]; then
         return 0
     fi
     [ -z "$(ls -A "$1" 2>/dev/null)" ]
@@ -1254,7 +1294,6 @@ plist_content() {
 # ---- Launcher, .app bundle and symlink (Spec sections 3 and 6) ------------------------------
 
 LAUNCHER_CHANGED=0
-FILE_WRITTEN=0
 
 # Seam: a scratch file outside the install folders; prints its path.
 make_temp_file() {
@@ -1284,13 +1323,12 @@ remove_symlink() {
 
 # Writes the output of the command "$3..." to the file $1, but only when it differs from what is
 # there (cmp -s), so an unchanged file keeps its mtime. $2 is 1 to make the file executable. Sets
-# FILE_WRITTEN and LAUNCHER_CHANGED to 1 when the file changed. Returns 1 when something could not be written.
+# LAUNCHER_CHANGED to 1 when the file changed. Returns 1 when something could not be written.
 write_if_changed() {
     local dest exec_flag scratch staged
     dest=$1
     exec_flag=$2
     shift 2
-    FILE_WRITTEN=0
     scratch=$(make_temp_file) || return 1
     if ! "$@" >"$scratch"; then
         rm -f "$scratch"
@@ -1300,7 +1338,6 @@ write_if_changed() {
         rm -f "$scratch"
         if [ "$exec_flag" = 1 ] && [ ! -x "$dest" ]; then
             make_executable "$dest" || return 1
-            FILE_WRITTEN=1
             LAUNCHER_CHANGED=1
         fi
         return 0
@@ -1319,7 +1356,6 @@ write_if_changed() {
         rm -f "$staged"
         return 1
     fi
-    FILE_WRITTEN=1
     LAUNCHER_CHANGED=1
     return 0
 }
@@ -1802,6 +1838,36 @@ install_steps() {
     return 0
 }
 
+# Prints the canonical form of the folder $1 when it exists, else $1 itself (already absolute).
+canonical_or_self() {
+    (cd "$1" 2>/dev/null && pwd -P) || printf '%s\n' "$1"
+}
+
+# Rejects a layout in which the data folder lies inside the install folder (the swap of the install
+# folder would carry the data away) or the install folder lies inside the data folder, except the
+# documented default layout where the install folder is <data root>/install. Touches nothing.
+# Returns 3 (bad usage) after printing the failure.
+check_root_nesting() {
+    local install_canon data_canon
+    install_canon=$(canonical_or_self "$INSTALL_ROOT")
+    data_canon=$(canonical_or_self "$DATA_ROOT")
+    case "$data_canon/" in
+        "$install_canon/"*)
+            log_step fail usage "the data folder $DATA_ROOT is inside the install folder $INSTALL_ROOT" "Pass a --data-root outside the install folder, or leave both folders out." >&2
+            return 3
+            ;;
+    esac
+    case "$install_canon/" in
+        "$data_canon/"*)
+            if [ "$install_canon" != "$data_canon/install" ]; then
+                log_step fail usage "the install folder $INSTALL_ROOT is inside the data folder $DATA_ROOT" "Pass an --install-root outside the data folder (only <data root>/install is allowed), or leave both folders out." >&2
+                return 3
+            fi
+            ;;
+    esac
+    return 0
+}
+
 # Runs the whole installer and returns its exit code (0 success or up to date, 1 a step failed, 2
 # prerequisites unmet, 3 bad usage). Never exits: only the entry guard below does.
 # Order: arguments, prerequisites (an uninstall skips them: it must work offline and on a Mac that no
@@ -1822,6 +1888,9 @@ main() {
     fi
     resolve_asset SHA256SUMS || return $?
     resolve_paths
+    if [ "$OPT_UNINSTALL" != 1 ]; then
+        check_root_nesting || return $?
+    fi
     if [ "$OPT_UNINSTALL" != 1 ] || [ "$OPT_CHECK_ONLY" = 1 ]; then
         check_prerequisites
         print_prerequisites

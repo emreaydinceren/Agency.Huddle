@@ -6,6 +6,7 @@
 set -eu
 
 HERE=$(cd "$(dirname "$0")" && pwd)
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$HERE/lib.sh"
 
 SMOKE="$HERE/smoke.sh"

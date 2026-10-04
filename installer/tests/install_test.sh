@@ -4,7 +4,7 @@
 set -eu
 
 HERE=$(cd "$(dirname "$0")" && pwd)
-# shellcheck source=lib.sh
+# shellcheck source=SCRIPTDIR/lib.sh
 . "$HERE/lib.sh"
 
 HUDDLE_INSTALL_NO_MAIN=1
@@ -17,7 +17,7 @@ trap 'rm -rf "$TEST_HOME"' EXIT
 unset HUDDLE_VERSION HUDDLE_BASE_URL HUDDLE_INSTALL_ROOT HUDDLE_DATA_ROOT HUDDLE_CHECK_ONLY \
     HUDDLE_UNINSTALL HUDDLE_PURGE_DATA HUDDLE_FORCE HUDDLE_NO_LAUNCH
 
-# shellcheck source=../install.sh
+# shellcheck source=SCRIPTDIR/../install.sh
 . "$HERE/../install.sh"
 
 NL='
@@ -1039,6 +1039,9 @@ ap_stubs() {
     app_running() {
         process_running "$1"
     }
+    process_command_of() {
+        printf '%s\n' "${AP_COMM-${APP_EXE##*/}}"
+    }
     sleep_seconds() {
         printf 'sleep %s\n' "$1" >>"$AP_CALLS"
     }
@@ -1065,6 +1068,7 @@ ap_setup() {
     AP_STOP_RC=0
     AP_ALIVE=0
     AP_SIGN_RC=0
+    unset AP_COMM
     APP_CHANGED=unset
     ap_stubs
     parse_args --install-root "$AP/root dir/Agency Huddle" --data-root "$AP/data dir"
@@ -1297,6 +1301,8 @@ test_install_app_recovers_a_swap_that_died_between_its_renames() {
     mkdir -p "$INSTALL_ROOT.staging"
     printf 'junk\n' >"$INSTALL_ROOT.staging/junk"
     printf '{}\n' >"$INSTALL_ROOT.staging/release-info.json"
+    mkdir -p "$INSTALL_ROOT.staging/app"
+    printf 'host\n' >"$INSTALL_ROOT.staging/app/Huddle.App"
     ap_build_archive v2
     rc=0
     install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
@@ -1448,8 +1454,9 @@ test_install_app_does_not_restore_an_unmarked_old_into_a_missing_root() {
 test_install_app_deletes_a_marked_leftover_old_and_staging() {
     ap_setup
     ap_install_with_markers v1
-    mkdir -p "$INSTALL_ROOT.old" "$INSTALL_ROOT.staging"
+    mkdir -p "$INSTALL_ROOT.old/app" "$INSTALL_ROOT.staging"
     printf '{}\n' >"$INSTALL_ROOT.old/release-info.json"
+    printf 'host\n' >"$INSTALL_ROOT.old/app/Huddle.App"
     printf 'schema=1\n' >"$INSTALL_ROOT.staging/install-state"
     ap_build_archive v2
     rc=0
@@ -1611,6 +1618,120 @@ test_stop_failed_request_without_a_pid_decides_by_exit_code() {
     rc=0
     stop_huddle_if_running >"$AP/out3" 2>&1 || rc=$?
     t_assert_eq "0" "$rc" "a clean stop request without a pid is fine"
+}
+
+test_stop_never_waits_for_or_kills_an_unrelated_process_behind_a_stale_pid() {
+    ap_setup
+    ap_instance_json 4242
+    AP_ALIVE=1
+    AP_COMM=zsh
+    OPT_FORCE=1
+    rc=0
+    stop_huddle_if_running >"$AP/out" 2>&1 || rc=$?
+    OPT_FORCE=0
+    t_assert_eq "0" "$rc" "a stale record is not an error: $(cat "$AP/out")"
+    t_assert_eq "0" "$(ap_count_calls '^sleep')" "the unrelated process is not waited for"
+    t_assert_eq "0" "$(ap_count_calls '^kill')" "the unrelated process is not killed, even with --force"
+    t_assert_no_file "$DATA_ROOT/data/instance.json" "the stale record is removed"
+    t_assert_contains "$(cat "$AP/out")" "process 4242 is not Agency Huddle" "and the output says why"
+    ap_instance_json 4242
+    AP_COMM=""
+    rc=0
+    stop_huddle_if_running >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "a pid that names no process is stale too"
+    t_assert_eq "0" "$(ap_count_calls '^sleep')" "and costs no wait"
+}
+
+test_stop_still_waits_for_and_kills_the_real_app_pid() {
+    ap_setup
+    ap_instance_json 4242
+    AP_ALIVE=1
+    AP_COMM=Huddle.App
+    OPT_FORCE=1
+    rc=0
+    stop_huddle_if_running >"$AP/out" 2>&1 || rc=$?
+    OPT_FORCE=0
+    t_assert_eq "0" "$rc" "the survivor is ended: $(cat "$AP/out")"
+    t_assert_eq "10" "$(ap_count_calls '^sleep 1$')" "the app pid is waited for"
+    t_assert_eq "kill 4242" "$(grep '^kill' "$AP_CALLS")" "and killed with --force"
+}
+
+test_stop_skips_the_pid_wait_when_the_stop_verb_succeeded_and_removed_the_record() {
+    ap_setup
+    ap_instance_json 4242
+    AP_ALIVE=1
+    run_huddle_stop() {
+        printf 'stop\n' >>"$AP_CALLS"
+        rm -f "$DATA_ROOT/data/instance.json"
+        return 0
+    }
+    OPT_FORCE=0
+    rc=0
+    stop_huddle_if_running >"$AP/out" 2>&1 || rc=$?
+    t_assert_eq "0" "$rc" "a stop that cleaned up after itself succeeds: $(cat "$AP/out")"
+    t_assert_eq "0" "$(ap_count_calls '^sleep')" "no wait on the pid"
+    t_assert_eq "0" "$(ap_count_calls '^kill')" "no kill"
+}
+
+test_process_command_of_prints_the_executable_name_from_ps() {
+    ap_setup
+    mkdir -p "$AP/bin"
+    printf '#!/bin/sh\nif [ "$1 $2 $3" = "-p 77 -o" ] && [ "$4" = "comm=" ]; then\n    printf "  /Applications/My Apps/Huddle.App  \\n"\n    exit 0\nfi\nexit 1\n' >"$AP/bin/ps"
+    chmod +x "$AP/bin/ps"
+    out=$(ap_child "PATH=\"$AP/bin:\$PATH\"" 'printf "[%s]\n" "$(process_command_of 77)"' 'printf "[%s]\n" "$(process_command_of 99)"')
+    t_assert_eq "[Huddle.App]${NL}[]" "$out" "the base name of the command, and nothing for a missing process"
+}
+
+test_resolve_asset_adds_the_v_of_the_release_tag_to_a_bare_version() {
+    HUDDLE_REPO="owner/repo"
+    parse_args --version 1.0.0
+    resolve_asset "a.tgz"
+    t_assert_eq "https://github.com/owner/repo/releases/download/v1.0.0/a.tgz" "$ASSET_SRC" "bare version"
+    parse_args --version v1.0.0
+    resolve_asset "a.tgz"
+    t_assert_eq "https://github.com/owner/repo/releases/download/v1.0.0/a.tgz" "$ASSET_SRC" "tagged version unchanged"
+    parse_args --version 1.2.3-rc.1
+    resolve_asset "a.tgz"
+    t_assert_eq "https://github.com/owner/repo/releases/download/v1.2.3-rc.1/a.tgz" "$ASSET_SRC" "bare prerelease"
+    parse_args --version latest
+    resolve_asset "a.tgz"
+    t_assert_eq "https://github.com/owner/repo/releases/latest/download/a.tgz" "$ASSET_SRC" "latest unchanged"
+}
+
+test_folder_is_replaceable_needs_the_host_next_to_release_info() {
+    ap_setup
+    ap_dir="$AP/folder"
+    mkdir -p "$ap_dir"
+    rc=0
+    folder_is_replaceable "$ap_dir" || rc=$?
+    t_assert_eq "0" "$rc" "an empty folder is replaceable"
+    printf '{}\n' >"$ap_dir/release-info.json"
+    rc=0
+    folder_is_replaceable "$ap_dir" || rc=$?
+    t_assert_eq "1" "$rc" "a folder with only release-info.json is not ours"
+    mkdir -p "$ap_dir/app"
+    printf 'host\n' >"$ap_dir/app/Huddle.App"
+    rc=0
+    folder_is_replaceable "$ap_dir" || rc=$?
+    t_assert_eq "0" "$rc" "release-info.json with app/Huddle.App is replaceable"
+    rm -rf "$ap_dir"
+    mkdir -p "$ap_dir"
+    printf 'schema=1\n' >"$ap_dir/install-state"
+    rc=0
+    folder_is_replaceable "$ap_dir" || rc=$?
+    t_assert_eq "0" "$rc" "install-state alone is replaceable"
+}
+
+test_install_app_refuses_a_folder_with_only_a_release_info_file() {
+    ap_setup
+    mkdir -p "$INSTALL_ROOT"
+    printf '{}\n' >"$INSTALL_ROOT/release-info.json"
+    ap_build_archive v1
+    rc=0
+    install_app "$AP_ARCHIVE" >"$AP/out" 2>&1 || rc=$?
+    ap_assert_refused "lone release-info.json"
+    t_assert_file "$INSTALL_ROOT/release-info.json" "the folder is untouched"
+    t_assert_no_file "$INSTALL_ROOT.old" "nothing was renamed to .old"
 }
 
 test_run_huddle_stop_prefers_the_launcher() {
@@ -2442,6 +2563,26 @@ test_main_refuses_a_foreign_install_root_and_a_bad_version() {
     t_assert_eq "3" "$MN_RC" "a root install folder exits 3: $MN_OUT"
 }
 
+test_main_refuses_nested_data_and_install_folders() {
+    mn_setup
+    mn_run --data-root "$MN_ROOT/data"
+    t_assert_eq "3" "$MN_RC" "a data folder inside the install folder exits 3: $MN_OUT"
+    t_assert_contains "$MN_OUT" "[!!] usage - the data folder $MN_ROOT/data is inside the install folder $MN_ROOT" "the failure line"
+    t_assert_contains "$MN_OUT" "fix: " "with a fix"
+    t_assert_no_file "$MN_ROOT" "nothing was installed"
+    mn_run --install-root "$MN_DATA"
+    t_assert_eq "3" "$MN_RC" "the same folder for both exits 3: $MN_OUT"
+    mn_run --install-root "$MN_DATA/other"
+    t_assert_eq "3" "$MN_RC" "an install folder inside the data folder exits 3: $MN_OUT"
+    t_assert_contains "$MN_OUT" "[!!] usage - the install folder $MN_DATA/other is inside the data folder $MN_DATA" "the failure line"
+    t_assert_contains "$MN_OUT" "fix: " "with a fix"
+    t_assert_no_file "$MN_DATA/other" "nothing was installed"
+    mn_run --install-root "$MN_DATA/install/deeper"
+    t_assert_eq "3" "$MN_RC" "only <data root>/install itself is allowed: $MN_OUT"
+    mn_run
+    t_assert_eq "0" "$MN_RC" "the documented default layout (<data root>/install) installs: $MN_OUT"
+}
+
 test_main_first_run_installs_everything() {
     mn_setup
     mn_run
@@ -2880,6 +3021,13 @@ t_run test_stop_with_an_instance_record_calls_stop
 t_run test_stop_survivor_fails_without_force
 t_run test_stop_survivor_is_ended_with_force
 t_run test_stop_failed_request_without_a_pid_decides_by_exit_code
+t_run test_stop_never_waits_for_or_kills_an_unrelated_process_behind_a_stale_pid
+t_run test_stop_still_waits_for_and_kills_the_real_app_pid
+t_run test_stop_skips_the_pid_wait_when_the_stop_verb_succeeded_and_removed_the_record
+t_run test_process_command_of_prints_the_executable_name_from_ps
+t_run test_resolve_asset_adds_the_v_of_the_release_tag_to_a_bare_version
+t_run test_folder_is_replaceable_needs_the_host_next_to_release_info
+t_run test_install_app_refuses_a_folder_with_only_a_release_info_file
 t_run test_run_huddle_stop_prefers_the_launcher
 t_run test_run_huddle_stop_falls_back_to_the_host_with_the_data_dir
 t_run test_is_macho_reads_file_output
@@ -3524,6 +3672,7 @@ t_run test_do_uninstall_does_not_stop_anything_when_nothing_is_installed
 t_run test_do_uninstall_protects_caller_variables
 t_run test_remove_tree_refuses_empty_and_root
 t_run test_main_refuses_a_foreign_install_root_and_a_bad_version
+t_run test_main_refuses_nested_data_and_install_folders
 t_run test_main_first_run_installs_everything
 t_run test_main_second_run_skips_everything_and_changes_no_file
 t_run test_main_changed_archive_runs_only_the_app_step
