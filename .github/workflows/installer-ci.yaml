@@ -1,0 +1,114 @@
+name: Installer CI
+
+# Unit-level checks for everything under installer/: the Pester suites, PSScriptAnalyzer, the
+# POSIX shell suites (including dash, which is Ubuntu's /bin/sh) and shellcheck. The end-to-end
+# smoke tests (installer/tests/smoke.ps1, smoke.sh) run only in release.yaml, against a real
+# release folder. The pass/fail commands here are the ones to run locally.
+#
+# This file reaches GitHub only through the Gitea -> GitHub sync (agents/GiteaToGitHubPlaybook.md),
+# so it cannot run before the first sync. Every third-party action is pinned to a full commit SHA
+# with its tag in a trailing comment; nothing needs a secret.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'installer/**'
+      - 'agents/scripts/Check-Eol.ps1'
+      - '.gitattributes'
+      - '.github/workflows/installer-ci.yaml'
+  push:
+    branches: [main]
+    paths:
+      - 'installer/**'
+      - 'agents/scripts/Check-Eol.ps1'
+      - '.gitattributes'
+      - '.github/workflows/installer-ci.yaml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: installer-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pester:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      # The runner image carries Pester 3.4; the suites need 5.5 or newer.
+      - name: Install Pester
+        shell: pwsh
+        run: |
+          Install-Module Pester -MinimumVersion 5.5 -Force -Scope CurrentUser -SkipPublisherCheck
+          Import-Module Pester -MinimumVersion 5.5
+          (Get-Module Pester).Version.ToString()
+
+      - name: Run Pester
+        shell: pwsh
+        run: |
+          Import-Module Pester -MinimumVersion 5.5
+          Invoke-Pester installer/tests -CI
+
+  psscriptanalyzer:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: Install-Module PSScriptAnalyzer -MinimumVersion 1.21.0 -Force -Scope CurrentUser -SkipPublisherCheck
+
+      # Any finding at Warning or Error fails the job. The settings file excludes
+      # PSAvoidUsingWriteHost (the installer prints its step lines that way on purpose).
+      - name: Analyze
+        shell: pwsh
+        run: |
+          $findings = @(Invoke-ScriptAnalyzer installer -Recurse -Severity Warning,Error -Settings installer/PSScriptAnalyzerSettings.psd1)
+          if ($findings.Count -gt 0) {
+            $findings | Format-Table -AutoSize -Wrap RuleName, Severity, ScriptName, Line, Message | Out-String -Width 200
+            throw "PSScriptAnalyzer reported $($findings.Count) finding(s)."
+          }
+          'PSScriptAnalyzer: no findings.'
+
+  shell:
+    name: shell (${{ matrix.os }}, ${{ matrix.shell }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            shell: sh
+          # Ubuntu's /bin/sh is dash already; naming it runs the suites under dash directly.
+          - os: ubuntu-latest
+            shell: dash
+          # macOS's /bin/sh is bash 3.2 in POSIX mode: the shell the installer meets on a Mac.
+          - os: macos-latest
+            shell: sh
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - name: Run shell suites
+        env:
+          T_SHELL: ${{ matrix.shell }}
+        run: sh installer/tests/run-all.sh
+
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      # -x follows the `# shellcheck source=` directives in the test files. The dialect is dash
+      # (Ubuntu's /bin/sh): the installers use `local`, which dash and macOS sh support but
+      # `-s sh` reports as SC3043. Everything else stays POSIX-checked.
+      - name: Shellcheck
+        run: |
+          shellcheck --version
+          shellcheck -x -s dash installer/*.sh installer/tests/*.sh

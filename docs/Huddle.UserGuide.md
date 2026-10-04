@@ -15,6 +15,7 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 
 | If you want to… | Read |
 | --- | --- |
+| Get started with your own copy | [Install](#install) |
 | Understand how Teammates, Teams, Tasks and memory relate | [The data model](#the-data-model) |
 | Free a long-running Teammate's memory without restarting it | [Freeing a Teammate's memory with `/compact`](#freeing-a-teammates-memory-with-compact) |
 | Know which file a change lands in | [Where your data lives](#where-your-data-lives) and [What happens when…](#what-happens-when-reference) |
@@ -24,6 +25,60 @@ configuring models. See [the chat-surface hub](Huddle.EngineeringGuide.md) for t
 | Track work | [Tracking work with Tasks](#tracking-work-with-tasks) |
 | Share notes and documents | [Keeping notes in the Library](#keeping-notes-in-the-library) |
 | Teach Teammates a procedure | [Giving Teammates Skills](#giving-teammates-skills) |
+
+## Install
+
+Get Agency.Huddle running on your machine with one command. No admin rights are needed, and
+nothing has to be installed first.
+
+**Windows:** open PowerShell (a normal window) and run:
+
+```powershell
+irm https://github.com/emreaydinceren/Agency.Huddle/releases/latest/download/install.ps1 | iex
+```
+
+**macOS (Apple Silicon or Intel):** open Terminal and run:
+
+```sh
+curl -fsSL https://github.com/emreaydinceren/Agency.Huddle/releases/latest/download/install.sh | sh
+```
+
+The installer checks your machine first and tells you plainly if something is missing. It then
+downloads the app, sets it up in your own folders and starts it in your browser. Running the
+same command again is safe: it only changes what is out of date.
+
+**Signing in to Claude.** If you are not signed in yet, the installer prints a command to run
+once. It opens your browser:
+
+```sh
+claude auth login
+```
+
+**Starting it later.** On Windows use the Start menu entry `Agency Huddle`, or type `huddle`
+in a new PowerShell window. On macOS open `Agency Huddle` from your Applications folder in your
+home folder, or type `huddle` in Terminal.
+
+**Stopping it.** Run `huddle stop`. (Closing the browser tab does not stop the app; on Windows you can
+also close the console window it opened.)
+
+**Upgrading.** Run the install command again. Your rooms and settings are kept.
+
+**Uninstalling.** Your data is kept unless you ask for it to be removed.
+
+```powershell
+$env:HUDDLE_UNINSTALL='1'; irm https://github.com/emreaydinceren/Agency.Huddle/releases/latest/download/install.ps1 | iex
+```
+
+```sh
+curl -fsSL https://github.com/emreaydinceren/Agency.Huddle/releases/latest/download/install.sh | sh -s -- --uninstall
+```
+
+Add `$env:HUDDLE_PURGE_DATA='1'` (Windows) or `--purge-data` (macOS) as well to delete your data
+too.
+
+For the options, troubleshooting and how releases are made, see
+[Installer](engineering/installer.md).
+
 
 ## A quick tour of the screen
 

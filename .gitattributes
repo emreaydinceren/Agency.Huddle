@@ -1,0 +1,2 @@
+*.sh text eol=lf
+installer/tests/*.sh text eol=lf

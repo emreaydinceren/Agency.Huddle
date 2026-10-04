@@ -698,3 +698,27 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
     it was not load at all: it counted the bare substring `Amy` in the raw `/teammates` HTML, and the
     Blazor prerender marker's random base64 contains `Amy` about once in a hundred runs. It now
     counts the name element (`class="teammates-item-name">Amy<`); 3/288 failing before, 0/288 after.
+- **The installer and desktop mode are built, and these are the deliberate gaps.** See
+  [installer.md](installer.md) for what they do.
+  - **No in-app Quit button.** Stop the app with `huddle stop`, or on Windows close the console
+    window the launcher opened. A Quit button is roadmap item 24. Closing the browser tab does not stop
+    the app. `stop` waits up to 45 seconds; `-Force` / `--force` ends a process that has hung.
+  - **No code signing.** The installers are fetched by `irm` / `curl`, which add no download
+    mark to the files, so Windows SmartScreen and macOS Gatekeeper do not prompt. The binaries
+    themselves are unsigned (macOS ones are ad-hoc signed by the installer). Downloading the archives
+    in a browser and opening them by hand would show the prompts.
+  - **The Intel Mac build is not smoke-tested in CI.** `macos-latest` is Apple Silicon. An
+    Intel Mac is manual step M3 in [installer.md](installer.md).
+  - **`latest` can need a retry.** `SHA256SUMS` and the archive are two requests. A release
+    published between them fails the hash check; run the installer again.
+  - **The PowerShell installer leaves a little behind after `irm | iex`.** It removes its own
+    functions and variables, but one compiled helper type for the PATH broadcast stays in that
+    session until the window is closed.
+  - **Adapter shutdown is untested against a real Persona.** Persona runners now stop
+    concurrently, and a runner that fails no longer skips the others. The smoke tests start no
+    Persona (that would spend money), so a stop with live adapters has not been proved: if a
+    `node` process from the install folder survives a stop, the upgrade step cannot replace
+    `node` until it is gone.
+  - **macOS below 15 is refused.** .NET 10 supports macOS 15, 26 and 27; macOS 14 reached end
+    of life on 2026-09-14. Lower `MIN_MACOS_MAJOR` in `install.sh` if that proves too strict.
+  - **Linux is not supported.**

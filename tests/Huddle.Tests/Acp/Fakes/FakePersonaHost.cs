@@ -98,6 +98,19 @@ internal sealed class FakePersonaHost : IPersonaHost
     public Action? OnDispose { get; set; }
 
     /// <summary>
+    /// How long <see cref="DisposeAsync"/> waits, asynchronously, before it completes - stands in for
+    /// the stdin grace a real Adapter host allows before it kills its process, so a test can prove
+    /// several hosts are stopped together rather than one after another.
+    /// </summary>
+    public TimeSpan DisposeDelay { get; set; }
+
+    /// <summary>
+    /// Thrown by <see cref="DisposeAsync"/> after the delay, once <see cref="Disposed"/> is set - lets a
+    /// test prove one host failing to stop never prevents the others from being stopped.
+    /// </summary>
+    public Exception? DisposeFailure { get; set; }
+
+    /// <summary>
     /// The most sessions this host has ever had open (returned from <see cref="OpenAsync"/> but not
     /// yet disposed) at once - lets a test prove <c>RoomSessionPool</c>'s live cap (RS §6.14
     /// <c>MaxLiveSessions</c>) is actually honoured, not merely that the right sessions were
@@ -189,10 +202,19 @@ internal sealed class FakePersonaHost : IPersonaHost
         return Task.FromResult<IAgentSession?>(this.ResumeHandler(sessionId));
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         this.Disposed = true;
         this.OnDispose?.Invoke();
-        return ValueTask.CompletedTask;
+
+        if (this.DisposeDelay > TimeSpan.Zero)
+        {
+            await Task.Delay(this.DisposeDelay, CancellationToken.None);
+        }
+
+        if (this.DisposeFailure is not null)
+        {
+            throw this.DisposeFailure;
+        }
     }
 }

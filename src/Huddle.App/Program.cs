@@ -1,6 +1,7 @@
 using Agency.Huddle.App;
 using Agency.Huddle.App.Acp;
 using Agency.Huddle.App.Components;
+using Agency.Huddle.App.Desktop;
 using Agency.Huddle.App.Library;
 using Agency.Huddle.App.Logging;
 using Microsoft.AspNetCore.StaticFiles;
@@ -8,7 +9,38 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 using MudBlazor.Services;
 
+// "Agency.Huddle.App.exe stop" is a client verb, not a host: it never reaches CreateBuilder. The launcher
+// always sets Team__DataDir, so the environment (not configuration) is the source of the data dir here.
+if (args is ["stop"])
+{
+    string stopDataDir = Path.GetFullPath(
+        Environment.GetEnvironmentVariable("Team__DataDir") is { Length: > 0 } stopDir ? stopDir : "App_Data");
+    return await DesktopStopClient.RunAsync(
+        stopDataDir, null, Console.Out, TimeSpan.FromSeconds(45), CancellationToken.None);
+}
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Desktop mode: one instance per data dir. The lock is held until the process ends. A second launch
+// hands off to the running instance (opens its browser) and exits; the first launch removes a stale
+// instance.json a crashed predecessor left behind, before anything can read it as live.
+DesktopOptions desktop = builder.Configuration.GetSection(DesktopOptions.SectionName).Get<DesktopOptions>() ?? new();
+string desktopDataDir = Path.GetFullPath(builder.Configuration["Team:DataDir"] ?? "App_Data");
+IBrowserOpener handOffOpener = desktop.OpenBrowser ? new SystemBrowserOpener() : new NoopBrowserOpener();
+HandOffResult handOff = desktop.Enabled
+    ? await DesktopHandOff.AcquireOrHandOffAsync(
+        desktopDataDir, handOffOpener, TimeSpan.FromSeconds(15), TimeSpan.FromMilliseconds(200), CancellationToken.None)
+    : new HandOffResult(null, false);
+using InstanceLock? instanceLock = handOff.Lock;
+if (desktop.Enabled)
+{
+    if (instanceLock is null)
+    {
+        return handOff.Opened ? 0 : 1;
+    }
+
+    InstanceFile.Delete(desktopDataDir);
+}
 
 // First, and ahead of builder.Build(): service registration is resolved inside Build, and a
 // constructor that throws there takes the process with it - the empty Team:Acp:Enabled that
@@ -23,6 +55,8 @@ builder.Services.AddRazorComponents()
 builder.Services.AddMudServices();
 
 builder.Services.AddTeamServices(builder.Configuration);
+
+builder.Services.AddDesktopHost(builder.Configuration);
 
 // Liveness only, and deliberately with zero registered checks: 200 here means the process is
 // up, Kestrel is bound and the endpoint pipeline is built - nothing more. That is exactly what
@@ -93,10 +127,14 @@ app.MapGet("/library-files/{rootId}/{**path}", LibraryFilesEndpoint.HandleAsync)
 // component route whatever the order, and no component declares a catch-all route.
 app.MapHealthChecks("/health");
 
+app.MapDesktopEndpoints();
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
 app.Run();
+
+return 0;
 
 /// <summary>The entry-point type. It is <c>public partial</c> so the integration tests can name it in <c>WebApplicationFactory&lt;Program&gt;</c>; nothing constructs it.</summary>
 public partial class Program
