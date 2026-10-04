@@ -25,7 +25,7 @@ public sealed class BrowserOpenerTests
 
         System.Diagnostics.ProcessStartInfo startInfo = SystemBrowserOpener.BuildStartInfo(uri, DesktopPlatform.MacOS);
 
-        Assert.Equal("open", startInfo.FileName);
+        Assert.Equal("/usr/bin/open", startInfo.FileName);
         Assert.Single(startInfo.ArgumentList, "http://127.0.0.1:5123/");
     }
 
@@ -37,7 +37,7 @@ public sealed class BrowserOpenerTests
 
         System.Diagnostics.ProcessStartInfo startInfo = SystemBrowserOpener.BuildStartInfo(uri, DesktopPlatform.Linux);
 
-        Assert.Equal("xdg-open", startInfo.FileName);
+        Assert.Equal("/usr/bin/xdg-open", startInfo.FileName);
         Assert.Single(startInfo.ArgumentList, "http://127.0.0.1:5123/");
     }
 

@@ -56,12 +56,12 @@ internal sealed class SystemBrowserOpener : IBrowserOpener
             },
             DesktopPlatform.MacOS => new ProcessStartInfo
             {
-                FileName = "open",
+                FileName = "/usr/bin/open",
                 ArgumentList = { url.AbsoluteUri },
             },
             DesktopPlatform.Linux => new ProcessStartInfo
             {
-                FileName = "xdg-open",
+                FileName = "/usr/bin/xdg-open",
                 ArgumentList = { url.AbsoluteUri },
             },
             _ => throw new ArgumentException($"Unknown platform: {platform}", nameof(platform)),
@@ -80,9 +80,15 @@ internal sealed class SystemBrowserOpener : IBrowserOpener
 
         Uri uri = new(url);
 
-        DesktopPlatform platform = OperatingSystem.IsWindows() ? DesktopPlatform.Windows
-            : OperatingSystem.IsMacOS() ? DesktopPlatform.MacOS
-            : DesktopPlatform.Linux;
+        DesktopPlatform platform = DesktopPlatform.Linux;
+        if (OperatingSystem.IsWindows())
+        {
+            platform = DesktopPlatform.Windows;
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            platform = DesktopPlatform.MacOS;
+        }
 
         ProcessStartInfo startInfo = BuildStartInfo(uri, platform);
 
