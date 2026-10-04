@@ -714,9 +714,11 @@ so, and names its [Roadmap](roadmap.md) item or its ADR. Back to the hub: [Huddl
   - **The PowerShell installer leaves a little behind after `irm | iex`.** It removes its own
     functions and variables, but one compiled helper type for the PATH broadcast stays in that
     session until the window is closed.
-  - **Stopping the app can leave an adapter `node` process running.** Persona adapters are
-    stopped one after another and a failure skips the rest. A follow-up task hardens it. The
-    upgrade step cannot replace `node` while an adapter still runs.
+  - **Adapter shutdown is untested against a real Persona.** Persona runners now stop
+    concurrently, and a runner that fails no longer skips the others. The smoke tests start no
+    Persona (that would spend money), so a stop with live adapters has not been proved: if a
+    `node` process from the install folder survives a stop, the upgrade step cannot replace
+    `node` until it is gone.
   - **macOS below 15 is refused.** .NET 10 supports macOS 15, 26 and 27; macOS 14 reached end
     of life on 2026-09-14. Lower `MIN_MACOS_MAJOR` in `install.sh` if that proves too strict.
   - **Linux is not supported.**

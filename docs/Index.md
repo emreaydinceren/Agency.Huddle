@@ -87,7 +87,6 @@ that exercise it. All are **chat** unless stated.
 | [testing.md](engineering/testing.md) | How to add a test, and what no test can prove | chat | ~2.3k |
 | [known-limits.md](engineering/known-limits.md) | What is deliberately absent, before you "fix" it | chat | ~1.9k |
 | [roadmap.md](engineering/roadmap.md) | The numbered plan, and what exists before work in `PersonaRunner`, `ReplyGate`, `app.css` or `Themes/` | chat | ~10.7k |
-| [installer-plan.md](engineering/installer-plan.md) | The delivery plan for the Windows and macOS one-line installers: decisions, spec, 79 tasks. Read a task and the spec sections it cites, never the whole page | chat | ~22k |
 | [installer.md](engineering/installer.md) | How to install Agency.Huddle on Windows or macOS, what the installer checks and why it stays idempotent, release process, integrity verification | chat | ~4k |
 | [decisions.md](engineering/decisions.md) | The decision record and the old-to-new vocabulary mapping | chat | ~6.3k |
 | [analyzer-decisions.md](engineering/analyzer-decisions.md) | Which compiler and Sonar rules are off or on, what each group rests on, and which are proven to fire | chat | ~4.5k |
